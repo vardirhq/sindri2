@@ -38,7 +38,7 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
         &mut encoder,
         target.view(),
         &depth,
-        camera.view_projection(WIDTH as f32 / HEIGHT as f32) * model,
+        camera.view_projection(1.0) * model,
     );
     let readback = target.copy_to_buffer(&gpu.device, &mut encoder)?;
     gpu.queue.submit([encoder.finish()]);
