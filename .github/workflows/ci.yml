@@ -32,7 +32,7 @@ jobs:
       - name: Capture native editor workspace
         env:
           WGPU_BACKEND: vulkan
-        run: timeout 60s xvfb-run --auto-servernum sh ./scripts/capture-editor.sh target/render-artifacts/editor-workspace.png
+        run: timeout 60s xvfb-run --auto-servernum --server-args='-screen 0 1440x900x24' sh ./scripts/capture-editor.sh target/render-artifacts/editor-workspace.png
       - name: Capture scene-driven frame pipeline
         env:
           WGPU_BACKEND: vulkan
