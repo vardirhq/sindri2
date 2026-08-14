@@ -97,10 +97,10 @@ impl World {
         if previous == parent {
             return Ok(());
         }
-        if let Some(previous) = previous {
-            if let Some(data) = self.get_mut(previous) {
-                data.children.retain(|candidate| *candidate != child);
-            }
+        if let Some(previous) = previous
+            && let Some(data) = self.get_mut(previous)
+        {
+            data.children.retain(|candidate| *candidate != child);
         }
         self.get_mut(child).expect("validated child").parent = parent;
         if let Some(parent) = parent {
@@ -172,10 +172,10 @@ impl World {
 
     fn remove_one(&mut self, entity: EntityId) -> bool {
         let parent = self.get(entity).and_then(|data| data.parent);
-        if let Some(parent) = parent {
-            if let Some(data) = self.get_mut(parent) {
-                data.children.retain(|candidate| *candidate != entity);
-            }
+        if let Some(parent) = parent
+            && let Some(data) = self.get_mut(parent)
+        {
+            data.children.retain(|candidate| *candidate != entity);
         }
         let Some(slot) = self.slot_mut(entity) else {
             return false;

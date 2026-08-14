@@ -86,7 +86,7 @@ impl Texture2D {
         let cell_size = (size / cells).max(1);
         for y in 0..size {
             for x in 0..size {
-                let index = usize::from(((x / cell_size + y / cell_size) % 2) != 0);
+                let index = usize::from(!(x / cell_size + y / cell_size).is_multiple_of(2));
                 pixels.extend_from_slice(&colors[index]);
             }
         }

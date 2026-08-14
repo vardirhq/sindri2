@@ -826,12 +826,17 @@ It should become the main visual authoring environment for all Sindri project ty
 The editor remains conceptually:
 
 ```text
-Tauri
+Native Rust application
   +
-React / TypeScript UI
+egui / egui-winit / egui-wgpu
   +
-Sindri engine/runtime integration
+in-process Sindri runtime viewport
 ```
+
+This replaces the earlier Tauri/React direction. A system webview would put the
+native WGPU renderer behind a JavaScript message boundary and make viewport
+integration platform-dependent. The native editor instead shares Sindri's
+windowing and GPU foundations while keeping the UI layer replaceable.
 
 The editor should not become a separate engine implementation.
 
@@ -1470,7 +1475,7 @@ The new architecture should avoid making core engine crates directly depend on f
 - editor server
 - HTTP
 - AI
-- Tauri
+- editor UI integration
 
 These should be optional or layered dependencies.
 
@@ -1857,7 +1862,7 @@ The intended end state is:
 
 ```text
                          Sindri Editor
-                       Tauri + React/TS
+                    Native Rust + egui
                               │
                               │
                     engine/editor protocol

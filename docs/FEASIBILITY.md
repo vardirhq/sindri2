@@ -15,7 +15,7 @@ The legacy `vardirhq/sindri-engine` repository contains substantial reusable 2D 
 - **WASM calls are coarse-grained.** TypeScript sends command batches and receives event/query batches. The public SDK must not turn ordinary updates into thousands of calls per frame.
 - **The web loop and native loop share semantics, not identical plumbing.** Browser animation frames, async initialization, canvas lifecycle, and native `winit` event loops live behind platform adapters.
 - **WebGPU is the first browser target, not the only eventual backend.** Lack of WebGPU support must produce a clear capability error. A WebGL fallback is deliberately outside the first release.
-- **The editor embeds or talks to the real runtime.** React never reimplements the viewport renderer. A small, versioned editor protocol must precede editor migration.
+- **The native editor embeds the real runtime.** `egui` provides the tooling UI while the in-process Sindri runtime owns viewport rendering. A small, versioned editor command protocol must precede stateful editing.
 - **Custom components need schemas before editor editing.** JSON payloads allow early forward-compatible storage, but typed registration/metadata is required before the editor or TypeScript SDK can safely manipulate arbitrary components.
 - **2D and 3D share GPU infrastructure, not every high-level abstraction.** Separate transforms and render components are reasonable. Render passes establish ordering when 3D world content and 2D overlays coexist.
 - **The first release is a foundation release.** It excludes advanced PBR, skeletal animation, networking, a plugin market, native mobile, and WebGL fallback.
@@ -36,4 +36,3 @@ The legacy `vardirhq/sindri-engine` repository contains substantial reusable 2D 
 ## Definition of the first major release
 
 The realistic first major release is reached when a small scene containing a textured mesh and an animated sprite can be loaded from the same versioned scene file in a native Rust example, a browser TypeScript example, and the editor viewport. Input, resize, fixed simulation, asset loading, transform editing, and static web export must work. Everything beyond that is subsequent product development.
-
