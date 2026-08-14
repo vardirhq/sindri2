@@ -410,11 +410,7 @@ impl<T> AssetStore<T> {
         self.transition(handle, AssetStatus::Queued, StoredAsset::Loading)
     }
 
-    pub fn complete(
-        &mut self,
-        handle: &AssetHandle<T>,
-        value: T,
-    ) -> Result<(), AssetStoreError> {
+    pub fn complete(&mut self, handle: &AssetHandle<T>, value: T) -> Result<(), AssetStoreError> {
         self.transition(handle, AssetStatus::Loading, StoredAsset::Ready(value))
     }
 
