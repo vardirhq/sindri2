@@ -44,8 +44,8 @@ impl RotationInput {
 
     fn axis(&self) -> Vec2 {
         Vec2::new(
-            f32::from(self.right) - f32::from(self.left),
-            f32::from(self.down) - f32::from(self.up),
+            f32::from(u8::from(self.right)) - f32::from(u8::from(self.left)),
+            f32::from(u8::from(self.down)) - f32::from(u8::from(self.up)),
         )
     }
 }
