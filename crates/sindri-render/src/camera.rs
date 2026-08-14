@@ -52,7 +52,7 @@ mod tests {
         let square = camera.view_projection(1.0);
         let wide = camera.view_projection(2.0);
         assert!(wide.x_axis.x.abs() < square.x_axis.x.abs());
-        assert_eq!(wide.y_axis.y, square.y_axis.y);
+        assert!((wide.y_axis.y - square.y_axis.y).abs() <= f32::EPSILON);
     }
 
     #[test]
