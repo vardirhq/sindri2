@@ -90,10 +90,10 @@ Exit gate: the same render module displays the triangle on native and web hosts.
 
 - [ ] Define frame extraction/preparation/render stages
 - [ ] Define cameras, viewports, clear operations, layers, and explicit render-pass ordering
-- [ ] Add camera matrices and projection math tests
-- [ ] Add depth buffer and colored cube
+- [x] Add camera matrices and projection math tests
+- [x] Add depth buffer and colored cube
 - [ ] Add texture upload, sampler, and textured cube
-- [ ] Add mesh buffers, indices, vertex layouts, and mesh handles
+- [x] Add mesh buffers, indices, vertex layouts, and reusable mesh resources
 - [ ] Add orthographic camera and textured sprite
 - [ ] Add alpha blending and transparent ordering rules
 - [ ] Add sprite batching with measurable draw-call reduction

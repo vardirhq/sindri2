@@ -17,6 +17,10 @@ All notable changes to Sindri Next will be documented here.
 - Target-independent `sindri-render` triangle pipeline.
 - A single triangle example that targets native desktops and WebGPU browsers.
 - Browser-target compilation in CI.
+- Perspective camera matrices with projection math tests.
+- Resizable depth targets and reusable indexed colored-mesh buffers.
+- Depth-tested colored cube renderer with uniform-buffer transforms.
+- A shared native/WebGPU cube example with frame-time-based keyboard rotation.
 
 ### Changed
 
