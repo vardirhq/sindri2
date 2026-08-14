@@ -8,19 +8,43 @@ use crate::{ColoredVertex, DepthTarget, MeshBuffers};
 const SHADER: &str = include_str!("cube.wgsl");
 
 const VERTICES: [ColoredVertex; 8] = [
-    ColoredVertex { position: [-1.0, -1.0, 1.0], color: [1.0, 0.2, 0.2] },
-    ColoredVertex { position: [1.0, -1.0, 1.0], color: [0.2, 1.0, 0.2] },
-    ColoredVertex { position: [1.0, 1.0, 1.0], color: [0.2, 0.4, 1.0] },
-    ColoredVertex { position: [-1.0, 1.0, 1.0], color: [1.0, 0.8, 0.2] },
-    ColoredVertex { position: [-1.0, -1.0, -1.0], color: [0.8, 0.2, 1.0] },
-    ColoredVertex { position: [1.0, -1.0, -1.0], color: [0.2, 1.0, 1.0] },
-    ColoredVertex { position: [1.0, 1.0, -1.0], color: [1.0, 0.4, 0.8] },
-    ColoredVertex { position: [-1.0, 1.0, -1.0], color: [0.9, 0.9, 0.9] },
+    ColoredVertex {
+        position: [-1.0, -1.0, 1.0],
+        color: [1.0, 0.2, 0.2],
+    },
+    ColoredVertex {
+        position: [1.0, -1.0, 1.0],
+        color: [0.2, 1.0, 0.2],
+    },
+    ColoredVertex {
+        position: [1.0, 1.0, 1.0],
+        color: [0.2, 0.4, 1.0],
+    },
+    ColoredVertex {
+        position: [-1.0, 1.0, 1.0],
+        color: [1.0, 0.8, 0.2],
+    },
+    ColoredVertex {
+        position: [-1.0, -1.0, -1.0],
+        color: [0.8, 0.2, 1.0],
+    },
+    ColoredVertex {
+        position: [1.0, -1.0, -1.0],
+        color: [0.2, 1.0, 1.0],
+    },
+    ColoredVertex {
+        position: [1.0, 1.0, -1.0],
+        color: [1.0, 0.4, 0.8],
+    },
+    ColoredVertex {
+        position: [-1.0, 1.0, -1.0],
+        color: [0.9, 0.9, 0.9],
+    },
 ];
 
 const INDICES: [u16; 36] = [
-    0, 1, 2, 2, 3, 0, 1, 5, 6, 6, 2, 1, 5, 4, 7, 7, 6, 5, 4, 0, 3, 3, 7, 4,
-    3, 2, 6, 6, 7, 3, 4, 5, 1, 1, 0, 4,
+    0, 1, 2, 2, 3, 0, 1, 5, 6, 6, 2, 1, 5, 4, 7, 7, 6, 5, 4, 0, 3, 3, 7, 4, 3, 2, 6, 6, 7, 3, 4, 5,
+    1, 1, 0, 4,
 ];
 
 #[repr(C)]
@@ -46,20 +70,19 @@ impl CubeRenderer {
             }),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
-        let bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("Sindri cube bind group layout"),
-                entries: &[wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                }],
-            });
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("Sindri cube bind group layout"),
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+        });
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Sindri cube bind group"),
             layout: &bind_group_layout,
