@@ -358,7 +358,8 @@ impl ApplicationHandler<AppAction> for App {
 
 pub fn demo_badge_texture(device: &wgpu::Device, queue: &wgpu::Queue) -> Texture2D {
     const SIZE: u32 = 64;
-    let mut pixels = Vec::with_capacity(usize::try_from(SIZE * SIZE * 4).expect("badge fits usize"));
+    let mut pixels =
+        Vec::with_capacity(usize::try_from(SIZE * SIZE * 4).expect("badge fits usize"));
     for y in 0..SIZE {
         for x in 0..SIZE {
             let dx = i64::from(x) - 31;

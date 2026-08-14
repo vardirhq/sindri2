@@ -29,8 +29,7 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
     let gpu = GpuContext::request(&instance, None, &GpuRequestOptions::default()).await?;
     let target = OffscreenTarget::new(&gpu.device, WIDTH, HEIGHT)?;
     let depth = DepthTarget::new(&gpu.device, WIDTH, HEIGHT);
-    let cube_renderer =
-        TexturedCubeRenderer::new(&gpu.device, &gpu.queue, OffscreenTarget::FORMAT);
+    let cube_renderer = TexturedCubeRenderer::new(&gpu.device, &gpu.queue, OffscreenTarget::FORMAT);
     let sprite_renderer = SpriteRenderer::new(
         &gpu.device,
         OffscreenTarget::FORMAT,
