@@ -73,6 +73,10 @@ impl AssetLoadCompletion {
     pub fn into_result(self) -> Result<AssetBytes, AssetSourceError> {
         self.result
     }
+
+    pub fn into_parts(self) -> (AssetLoadRequest, Result<AssetBytes, AssetSourceError>) {
+        (self.request, self.result)
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

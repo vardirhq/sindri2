@@ -1,9 +1,10 @@
 //! Cross-platform byte sources for Sindri's logical asset IDs.
 //!
-//! This crate defines I/O boundaries only. Decoding, GPU upload, caching, and
-//! scheduling remain separate stages so native and browser hosts can drive the
-//! same source contract without pretending browser fetches are synchronous.
+//! This crate owns byte acquisition, bounded scheduling, and CPU-side decoding.
+//! GPU upload and caching remain separate stages so native and browser hosts can
+//! use the same pipeline without pretending browser fetches are synchronous.
 
+mod decode;
 mod memory;
 mod queue;
 mod source;
@@ -17,6 +18,10 @@ mod filesystem;
 pub use fetch::FetchAssetSource;
 #[cfg(not(target_arch = "wasm32"))]
 pub use filesystem::FileSystemAssetSource;
+pub use decode::{
+    AssetCompletionApplyError, AssetDecodeError, AssetDecoder, DecodedAssetCompletion,
+    SceneAssetDecoder, TextureAsset, TextureAssetDecoder, decode_completion,
+};
 pub use memory::MemoryAssetSource;
 pub use queue::{
     AssetLoadCompletion, AssetLoadQueue, AssetLoadQueueConfig, AssetLoadQueueCreateError,
