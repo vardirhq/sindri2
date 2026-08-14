@@ -1,0 +1,130 @@
+{
+  "format_version": 1,
+  "metadata": {
+    "name": "Shared 2D and 3D frame pipeline proof"
+  },
+  "entities": [
+    {
+      "id": "main-camera",
+      "name": "Main Camera",
+      "transform_3d": {
+        "position": [3.0, 2.0, 4.0]
+      },
+      "components": {
+        "sindri.camera": {
+          "projection": "perspective",
+          "target": [0.0, 0.0, 0.0],
+          "up": [0.0, 1.0, 0.0],
+          "vertical_fov_degrees": 45.0,
+          "near": 0.1,
+          "far": 100.0
+        }
+      }
+    },
+    {
+      "id": "overlay-camera",
+      "name": "Overlay Camera",
+      "components": {
+        "sindri.camera": {
+          "projection": "orthographic",
+          "center": [0.0, 0.0],
+          "vertical_size": 2.0,
+          "near": 0.0,
+          "far": 10.0
+        }
+      }
+    },
+    {
+      "id": "checker-cube",
+      "name": "Checker Cube",
+      "transform_3d": {},
+      "components": {
+        "sindri.mesh": {
+          "primitive": "cube",
+          "texture": "procedural:checkerboard",
+          "layer": 0
+        }
+      }
+    },
+    {
+      "id": "badge-back",
+      "transform_2d": {
+        "position": [-0.62, -0.56],
+        "scale": [0.38, 0.38]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "procedural:badge",
+          "anchor": "bottom_right",
+          "tint": [0.55, 0.72, 1.0, 0.62],
+          "depth": 5.0,
+          "layer": 100
+        }
+      }
+    },
+    {
+      "id": "badge-green",
+      "transform_2d": {
+        "position": [-0.44, -0.68],
+        "scale": [0.34, 0.34]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "procedural:badge",
+          "anchor": "bottom_right",
+          "tint": [0.72, 1.0, 0.72, 0.68],
+          "depth": 4.0,
+          "layer": 100
+        }
+      }
+    },
+    {
+      "id": "badge-orange",
+      "transform_2d": {
+        "position": [-0.28, -0.48],
+        "scale": [0.32, 0.32]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "procedural:badge",
+          "anchor": "bottom_right",
+          "tint": [1.0, 0.68, 0.55, 0.72],
+          "depth": 3.0,
+          "layer": 100
+        }
+      }
+    },
+    {
+      "id": "badge-purple",
+      "transform_2d": {
+        "position": [-0.12, -0.66],
+        "scale": [0.36, 0.36]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "procedural:badge",
+          "anchor": "bottom_right",
+          "tint": [0.92, 0.72, 1.0, 0.78],
+          "depth": 2.0,
+          "layer": 100
+        }
+      }
+    },
+    {
+      "id": "badge-front",
+      "transform_2d": {
+        "position": [-0.02, -0.42],
+        "scale": [0.42, 0.42]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "procedural:badge",
+          "anchor": "bottom_right",
+          "tint": [1.0, 1.0, 1.0, 0.88],
+          "depth": 1.0,
+          "layer": 100
+        }
+      }
+    }
+  ]
+}

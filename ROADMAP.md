@@ -88,8 +88,8 @@ Exit gate: the same render module displays the triangle on native and web hosts.
 
 ## Milestone 3 — Minimal shared renderer
 
-- [ ] Define frame extraction/preparation/render stages
-- [ ] Define cameras, viewports, clear operations, layers, and explicit render-pass ordering
+- [x] Define frame extraction/preparation/render stages
+- [x] Define cameras, viewports, clear operations, layers, and explicit render-pass ordering
 - [x] Add camera matrices and projection math tests
 - [x] Add depth buffer and colored cube
 - [x] Add texture upload, sampler, and textured cube

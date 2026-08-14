@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use glam::Mat4;
 use wgpu::util::DeviceExt;
 
-use crate::{DepthTarget, MeshBuffers, Texture2D, TexturedVertex};
+use crate::{ClearOperations, DepthTarget, MeshBuffers, Texture2D, TexturedVertex};
 
 const SHADER: &str = include_str!("textured_cube.wgsl");
 
@@ -195,6 +195,25 @@ impl TexturedCubeRenderer {
         depth: &DepthTarget,
         model_view_projection: Mat4,
     ) {
+        self.encode_with_clear(
+            queue,
+            encoder,
+            target,
+            depth,
+            model_view_projection,
+            ClearOperations::default(),
+        );
+    }
+
+    pub fn encode_with_clear(
+        &self,
+        queue: &wgpu::Queue,
+        encoder: &mut wgpu::CommandEncoder,
+        target: &wgpu::TextureView,
+        depth: &DepthTarget,
+        model_view_projection: Mat4,
+        clear: ClearOperations,
+    ) {
         queue.write_buffer(
             &self.uniform,
             0,
@@ -210,10 +229,10 @@ impl TexturedCubeRenderer {
                 resolve_target: None,
                 ops: wgpu::Operations {
                     load: wgpu::LoadOp::Clear(wgpu::Color {
-                        r: 0.018,
-                        g: 0.025,
-                        b: 0.045,
-                        a: 1.0,
+                        r: clear.color[0],
+                        g: clear.color[1],
+                        b: clear.color[2],
+                        a: clear.color[3],
                     }),
                     store: wgpu::StoreOp::Store,
                 },
@@ -221,7 +240,7 @@ impl TexturedCubeRenderer {
             depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
                 view: depth.view(),
                 depth_ops: Some(wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(1.0),
+                    load: wgpu::LoadOp::Clear(clear.depth),
                     store: wgpu::StoreOp::Store,
                 }),
                 stencil_ops: None,

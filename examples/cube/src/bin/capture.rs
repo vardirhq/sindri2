@@ -7,16 +7,15 @@ use std::{
 };
 
 #[cfg(not(target_arch = "wasm32"))]
-use glam::Mat4;
+use glam::Vec2;
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_cube::{demo_badge_texture, demo_sprite_batch};
+use sindri_cube::{
+    DemoScene, FrameTarget, demo_badge_texture, encode_prepared_frame,
+};
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_gpu::{GpuContext, GpuRequestOptions};
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_render::{
-    DepthTarget, OffscreenTarget, OrthographicCamera, PerspectiveCamera, SpriteBatchRenderer,
-    TexturedCubeRenderer,
-};
+use sindri_render::{DepthTarget, OffscreenTarget, SpriteBatchRenderer, TexturedCubeRenderer, Viewport};
 
 #[cfg(not(target_arch = "wasm32"))]
 const WIDTH: u32 = 512;
@@ -35,30 +34,26 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
         OffscreenTarget::FORMAT,
         demo_badge_texture(&gpu.device, &gpu.queue),
     );
-    let perspective_camera = PerspectiveCamera::default();
-    let orthographic_camera = OrthographicCamera::default();
-    let model = Mat4::IDENTITY;
+    let scene = DemoScene::load()?;
+    let prepared = scene.extract_frame(Viewport::new(WIDTH, HEIGHT), Vec2::ZERO)?;
 
     let mut encoder = gpu
         .device
         .create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Sindri screenshot encoder"),
         });
-    cube_renderer.encode(
+    let stats = encode_prepared_frame(
+        &cube_renderer,
+        &mut sprite_renderer,
+        &gpu.device,
         &gpu.queue,
         &mut encoder,
-        target.view(),
-        &depth,
-        perspective_camera.view_projection(1.0) * model,
-    );
-    let sprite_instances = demo_sprite_batch(1.0);
-    let stats = sprite_renderer.prepare(&gpu.device, &gpu.queue, &sprite_instances)?;
-    sprite_renderer.encode(
-        &gpu.queue,
-        &mut encoder,
-        target.view(),
-        orthographic_camera.view_projection(1.0),
-    );
+        FrameTarget {
+            color: target.view(),
+            depth: &depth,
+        },
+        &prepared,
+    )?;
     println!(
         "batched {} sprites into {} draw call, saving {} draw calls",
         stats.sprite_count(),
@@ -87,7 +82,7 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
     let path = std::env::args_os().nth(1).map_or_else(
-        || PathBuf::from("target/render-artifacts/cube-sprite-batch.png"),
+        || PathBuf::from("target/render-artifacts/scene-frame-pipeline.png"),
         PathBuf::from,
     );
     if let Err(error) = pollster::block_on(capture(&path)) {

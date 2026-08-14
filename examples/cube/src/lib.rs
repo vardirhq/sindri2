@@ -1,10 +1,10 @@
 use std::{future::Future, sync::Arc};
 
-use glam::{Mat4, UVec2, Vec2, Vec3};
+use glam::Vec2;
 use sindri_gpu::{GpuContext, GpuRequestOptions, SurfaceProfile};
 use sindri_render::{
-    DepthTarget, OrthographicCamera, PerspectiveCamera, SpriteBatchRenderer, SpriteInstance,
-    Texture2D, TexturedCubeRenderer, TransparentOrder,
+    DepthTarget, FrameCommand, PreparedFrame, SpriteBatchError, SpriteBatchRenderer,
+    SpriteBatchStats, Texture2D, TexturedCubeRenderer, Viewport,
 };
 use web_time::Instant;
 use wgpu::CurrentSurfaceTexture;
@@ -15,6 +15,16 @@ use winit::{
     keyboard::{KeyCode, PhysicalKey},
     window::{Window, WindowId},
 };
+
+mod scene;
+
+pub use scene::{DemoScene, DemoSceneError};
+
+#[derive(Clone, Copy)]
+pub struct FrameTarget<'a> {
+    pub color: &'a wgpu::TextureView,
+    pub depth: &'a DepthTarget,
+}
 
 #[cfg(not(target_arch = "wasm32"))]
 fn spawn(future: impl Future<Output = ()> + 'static) {
@@ -69,8 +79,7 @@ struct RenderState {
     depth: DepthTarget,
     cube_renderer: TexturedCubeRenderer,
     sprite_renderer: SpriteBatchRenderer,
-    perspective_camera: PerspectiveCamera,
-    orthographic_camera: OrthographicCamera,
+    scene: DemoScene,
     input: RotationInput,
     rotation: Vec2,
     last_frame: Instant,
@@ -106,6 +115,7 @@ impl RenderState {
             surface_profile.format(),
             demo_badge_texture(&gpu.device, &gpu.queue),
         );
+        let scene = DemoScene::load().map_err(|error| error.to_string())?;
 
         Ok(Self {
             instance,
@@ -116,8 +126,7 @@ impl RenderState {
             depth,
             cube_renderer,
             sprite_renderer,
-            perspective_camera: PerspectiveCamera::default(),
-            orthographic_camera: OrthographicCamera::default(),
+            scene,
             input: RotationInput::default(),
             rotation: Vec2::ZERO,
             last_frame: Instant::now(),
@@ -183,27 +192,27 @@ impl RenderState {
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("Sindri cube encoder"),
             });
-        let viewport =
-            UVec2::new(self.surface_profile.width(), self.surface_profile.height()).as_vec2();
-        let aspect = viewport.x / viewport.y;
-        let model = Mat4::from_rotation_y(self.rotation.x) * Mat4::from_rotation_x(self.rotation.y);
-        self.cube_renderer.encode(
+        let viewport = Viewport::new(
+            self.surface_profile.width(),
+            self.surface_profile.height(),
+        );
+        let prepared = self
+            .scene
+            .extract_frame(viewport, self.rotation)
+            .expect("embedded demo scene extracts into a valid frame");
+        encode_prepared_frame(
+            &self.cube_renderer,
+            &mut self.sprite_renderer,
+            &self.gpu.device,
             &self.gpu.queue,
             &mut encoder,
-            &view,
-            &self.depth,
-            self.perspective_camera.view_projection(aspect) * model,
-        );
-        let sprite_instances = demo_sprite_batch(aspect);
-        self.sprite_renderer
-            .prepare(&self.gpu.device, &self.gpu.queue, &sprite_instances)
-            .expect("demo sprite batch fits the GPU instance buffer");
-        self.sprite_renderer.encode(
-            &self.gpu.queue,
-            &mut encoder,
-            &view,
-            self.orthographic_camera.view_projection(aspect),
-        );
+            FrameTarget {
+                color: &view,
+                depth: &self.depth,
+            },
+            &prepared,
+        )
+        .expect("demo sprite batch fits the GPU instance buffer");
         self.gpu.queue.submit([encoder.finish()]);
         self.window.pre_present_notify();
         self.gpu.queue.present(frame);
@@ -388,52 +397,33 @@ pub fn demo_badge_texture(device: &wgpu::Device, queue: &wgpu::Queue) -> Texture
         .expect("static badge texture dimensions are valid")
 }
 
-pub fn demo_sprite_batch(aspect_ratio: f32) -> [SpriteInstance; 5] {
-    let right = aspect_ratio - 0.16;
-    let mut sprites = [
-        (
-            TransparentOrder::new(0, 5.0, 0).expect("static depth is finite"),
-            SpriteInstance::new(
-                Mat4::from_translation(Vec3::new(right - 0.62, -0.56, 0.0))
-                    * Mat4::from_scale(Vec3::new(0.38, 0.38, 1.0)),
-                [0.55, 0.72, 1.0, 0.62],
+pub fn encode_prepared_frame(
+    cube_renderer: &TexturedCubeRenderer,
+    sprite_renderer: &mut SpriteBatchRenderer,
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    encoder: &mut wgpu::CommandEncoder,
+    target: FrameTarget<'_>,
+    frame: &PreparedFrame,
+) -> Result<SpriteBatchStats, SpriteBatchError> {
+    let mut sprite_stats = SpriteBatchStats::default();
+    for pass in frame.passes() {
+        match &pass.command {
+            FrameCommand::TexturedCube { model } => cube_renderer.encode_with_clear(
+                queue,
+                encoder,
+                target.color,
+                target.depth,
+                pass.camera.view_projection * *model,
+                frame.clear(),
             ),
-        ),
-        (
-            TransparentOrder::new(0, 4.0, 1).expect("static depth is finite"),
-            SpriteInstance::new(
-                Mat4::from_translation(Vec3::new(right - 0.44, -0.68, 0.0))
-                    * Mat4::from_scale(Vec3::new(0.34, 0.34, 1.0)),
-                [0.72, 1.0, 0.72, 0.68],
-            ),
-        ),
-        (
-            TransparentOrder::new(0, 3.0, 2).expect("static depth is finite"),
-            SpriteInstance::new(
-                Mat4::from_translation(Vec3::new(right - 0.28, -0.48, 0.0))
-                    * Mat4::from_scale(Vec3::new(0.32, 0.32, 1.0)),
-                [1.0, 0.68, 0.55, 0.72],
-            ),
-        ),
-        (
-            TransparentOrder::new(0, 2.0, 3).expect("static depth is finite"),
-            SpriteInstance::new(
-                Mat4::from_translation(Vec3::new(right - 0.12, -0.66, 0.0))
-                    * Mat4::from_scale(Vec3::new(0.36, 0.36, 1.0)),
-                [0.92, 0.72, 1.0, 0.78],
-            ),
-        ),
-        (
-            TransparentOrder::new(0, 1.0, 4).expect("static depth is finite"),
-            SpriteInstance::new(
-                Mat4::from_translation(Vec3::new(right - 0.02, -0.42, 0.0))
-                    * Mat4::from_scale(Vec3::new(0.42, 0.42, 1.0)),
-                [1.0, 1.0, 1.0, 0.88],
-            ),
-        ),
-    ];
-    sprites.sort_by_key(|(order, _)| *order);
-    sprites.map(|(_, instance)| instance)
+            FrameCommand::SpriteBatch { instances } => {
+                sprite_stats = sprite_renderer.prepare(device, queue, instances)?;
+                sprite_renderer.encode(queue, encoder, target.color, pass.camera.view_projection);
+            }
+        }
+    }
+    Ok(sprite_stats)
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen::prelude::wasm_bindgen(start))]
