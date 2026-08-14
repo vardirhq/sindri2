@@ -188,7 +188,7 @@ impl EditorApp {
             });
     }
 
-    fn status_bar(&self, ui: &mut egui::Ui) {
+    fn status_bar(ui: &mut egui::Ui) {
         egui::Panel::bottom("editor-status")
             .exact_size(28.0)
             .frame(
@@ -258,7 +258,7 @@ impl EditorApp {
 impl eframe::App for EditorApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.top_bar(ui);
-        self.status_bar(ui);
+        Self::status_bar(ui);
         self.hierarchy_panel(ui);
         self.inspector_panel(ui);
         self.viewport(ui);
