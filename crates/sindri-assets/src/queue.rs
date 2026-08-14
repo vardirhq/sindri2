@@ -155,7 +155,8 @@ impl AssetLoadQueue {
         validate_config(config)?;
 
         let source: Arc<dyn AssetSource + Send + Sync> = Arc::new(source);
-        let (task_sender, task_receiver) = mpsc::sync_channel(config.capacity);
+        let (task_sender, task_receiver) =
+            mpsc::sync_channel::<AssetLoadRequest>(config.capacity);
         let task_receiver = Arc::new(Mutex::new(task_receiver));
         let (completion_sender, completion_receiver) = mpsc::channel();
         let mut workers = Vec::with_capacity(config.max_concurrent);
