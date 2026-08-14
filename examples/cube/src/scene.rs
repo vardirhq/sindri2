@@ -95,9 +95,8 @@ impl DemoScene {
                     near,
                     far,
                 } => {
-                    let authored_eye = Vec3::from_array(
-                        entity.transform_3d.unwrap_or_default().position,
-                    );
+                    let authored_eye =
+                        Vec3::from_array(entity.transform_3d.unwrap_or_default().position);
                     let target = Vec3::from_array(target);
                     let eye = target + (authored_eye - target) * camera_distance_scale;
                     cameras.perspective = Some(

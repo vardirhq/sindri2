@@ -138,11 +138,7 @@ impl RuntimeViewport {
         self.resize(width, height);
         let prepared = self
             .scene
-            .extract_frame_with_view(
-                Viewport::new(self.width, self.height),
-                rotation,
-                1.0 / zoom,
-            )
+            .extract_frame_with_view(Viewport::new(self.width, self.height), rotation, 1.0 / zoom)
             .map_err(|error| error.to_string())?;
         let mut encoder =
             self.render_state
@@ -173,8 +169,7 @@ impl RuntimeViewport {
         if self.width == width && self.height == height {
             return;
         }
-        let (texture, view) =
-            create_viewport_texture(&self.render_state.device, width, height);
+        let (texture, view) = create_viewport_texture(&self.render_state.device, width, height);
         self.render_state
             .renderer
             .write()
@@ -283,9 +278,7 @@ impl EditorApp {
         }
         self.capture_frame_count = self.capture_frame_count.saturating_add(1);
         if self.capture_frame_count >= 3 {
-            context.send_viewport_cmd(egui::ViewportCommand::Screenshot(
-                egui::UserData::default(),
-            ));
+            context.send_viewport_cmd(egui::ViewportCommand::Screenshot(egui::UserData::default()));
             self.capture_requested = true;
         }
     }
@@ -545,7 +538,9 @@ fn configure_theme(context: &egui::Context) {
     clippy::cast_sign_loss
 )]
 fn physical_viewport_dimension(points: f32, pixels_per_point: f32) -> u32 {
-    (points * pixels_per_point).round().clamp(1.0, u32::MAX as f32) as u32
+    (points * pixels_per_point)
+        .round()
+        .clamp(1.0, u32::MAX as f32) as u32
 }
 
 fn brand_mark(ui: &mut egui::Ui) {
