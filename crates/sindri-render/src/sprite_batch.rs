@@ -148,8 +148,8 @@ impl SpriteBatchRenderer {
                     ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                     count: None,
                 },
-        ],
-    });
+            ],
+        });
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Sindri sprite batch bind group"),
             layout: &bind_group_layout,
