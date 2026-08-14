@@ -123,7 +123,6 @@ fn image_error_kind(error: &image::ImageError) -> AssetLoadErrorKind {
         image::ImageError::Encoding(_) | image::ImageError::Parameter(_) => {
             AssetLoadErrorKind::Other
         }
-        _ => AssetLoadErrorKind::Other,
     }
 }
 
