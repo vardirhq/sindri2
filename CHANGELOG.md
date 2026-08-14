@@ -21,6 +21,9 @@ All notable changes to Sindri Next will be documented here.
 - Resizable depth targets and reusable indexed colored-mesh buffers.
 - Depth-tested colored cube renderer with uniform-buffer transforms.
 - A shared native/WebGPU cube example with frame-time-based keyboard rotation.
+- Validated RGBA texture uploads with reusable texture views and filtering samplers.
+- UV vertex layouts and a depth-tested textured cube pipeline.
+- Procedural checkerboard texture proof shared by native and WebGPU targets.
 
 ### Changed
 
