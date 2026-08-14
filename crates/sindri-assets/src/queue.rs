@@ -457,7 +457,10 @@ mod tests {
     #[test]
     fn invalid_queue_limits_are_reported() {
         assert!(matches!(
-            AssetLoadQueue::new(MemoryAssetSource::default(), AssetLoadQueueConfig::new(0, 1)),
+            AssetLoadQueue::new(
+                MemoryAssetSource::default(),
+                AssetLoadQueueConfig::new(0, 1)
+            ),
             Err(AssetLoadQueueCreateError::ZeroConcurrency)
         ));
         assert!(matches!(
