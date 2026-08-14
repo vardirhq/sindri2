@@ -10,6 +10,7 @@ repository.workspace = true
 [dependencies]
 bytemuck.workspace = true
 glam.workspace = true
+thiserror.workspace = true
 wgpu.workspace = true
 
 [lints]
