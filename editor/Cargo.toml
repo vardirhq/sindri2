@@ -9,7 +9,10 @@ publish = false
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 eframe.workspace = true
+glam.workspace = true
 sindri-core = { path = "../crates/sindri-core" }
+sindri-cube = { path = "../examples/cube" }
+sindri-render = { path = "../crates/sindri-render" }
 serde_json.workspace = true
 
 [lints]

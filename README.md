@@ -33,6 +33,12 @@ Run the native editor shell with:
 cargo run --package sindri-editor
 ```
 
+Capture a deterministic editor screenshot on Linux with `imagemagick`, `xdotool`, and `xvfb-run` installed:
+
+```bash
+xvfb-run --auto-servernum ./scripts/capture-editor.sh target/editor.png
+```
+
 ## Status
 
 Sindri Next is pre-alpha. Public APIs and serialized formats may change while the foundation milestones are being proven, but format changes will be explicit and versioned.
