@@ -24,7 +24,7 @@ bytemuck = { version = "1", features = ["derive"] }
 glam = { version = "0.30", features = ["bytemuck"] }
 thiserror = "2"
 wgpu = "30"
-eframe = { version = "0.36.1", default-features = false, features = ["__screenshot", "default_fonts", "wayland", "wgpu", "x11"] }
+eframe = { version = "0.36.1", default-features = false, features = ["default_fonts", "wayland", "wgpu", "x11"] }
 
 
 [workspace.lints.rust]

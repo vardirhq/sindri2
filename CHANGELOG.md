@@ -43,4 +43,4 @@ All notable changes to Sindri Next will be documented here.
 - Replaced the planned Tauri/React editor architecture with native `egui`, `egui-winit`, and `egui-wgpu` integration.
 - Increased the MSRV from Rust 1.87 to 1.95 for the first `egui` release aligned with `wgpu` 30.
 - Replaced the editor's painted viewport composition with the actual Sindri render pipeline while retaining the native UI overlays and controls.
-- Switched editor screenshot automation to eframe's bounded native capture lifecycle for reliable Xvfb CI runs.
+- Added a bounded X11 window-capture lifecycle for reliable full-editor WGPU screenshots in Xvfb CI runs.

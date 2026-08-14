@@ -28,12 +28,11 @@ jobs:
       - name: Install software Vulkan
         run: |
           sudo apt-get update
-          sudo apt-get install --yes libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xvfb
+          sudo apt-get install --yes imagemagick libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
       - name: Capture native editor runtime viewport
         env:
-          EFRAME_SCREENSHOT_TO: target/render-artifacts/editor-runtime-viewport.png
           WGPU_BACKEND: vulkan
-        run: timeout 60s xvfb-run --auto-servernum cargo run --package sindri-editor
+        run: timeout 60s xvfb-run --auto-servernum ./scripts/capture-editor.sh target/render-artifacts/editor-runtime-viewport.png
       - name: Capture scene-driven frame pipeline
         env:
           WGPU_BACKEND: vulkan

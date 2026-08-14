@@ -33,10 +33,10 @@ Run the native editor shell with:
 cargo run --package sindri-editor
 ```
 
-Capture a deterministic editor screenshot (under a display or `xvfb-run`) with:
+Capture a deterministic editor screenshot on Linux with `imagemagick`, `xdotool`, and `xvfb-run` installed:
 
 ```bash
-EFRAME_SCREENSHOT_TO=target/editor.png cargo run --package sindri-editor
+xvfb-run --auto-servernum ./scripts/capture-editor.sh target/editor.png
 ```
 
 ## Status
