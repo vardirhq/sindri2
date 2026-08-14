@@ -6,7 +6,8 @@ output_path=${1:?"usage: capture-editor.sh OUTPUT.png"}
 output_dir=$(dirname "$output_path")
 mkdir -p "$output_dir"
 
-cargo run --package sindri-editor &
+cargo build --package sindri-editor
+target/debug/sindri-editor &
 editor_pid=$!
 window_id=""
 
