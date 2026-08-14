@@ -6,7 +6,7 @@ This is the checkable engineering plan. Check an item only when its acceptance c
 
 - [x] Review the vision against the legacy `sindri-engine` implementation
 - [x] Record feasibility constraints and major risks
-- [x] Create a Rust 2024 workspace with an explicit MSRV (Rust 1.87 for `wgpu` 30)
+- [x] Create a Rust 2024 workspace with an explicit MSRV (Rust 1.95 for `wgpu` 30 and `egui` 0.36)
 - [x] Add formatting, Clippy, test CI, and dependency caching
 - [x] Establish `sindri-core` and the public `sindri` facade
 - [ ] Add `CONTRIBUTING.md`, code of conduct, and dual-license files
@@ -169,8 +169,10 @@ Exit gate: Sindri Next matches the useful core of legacy 2D without inheriting i
 
 ## Milestone 7 — Editor/runtime protocol and minimal editor
 
+- [x] Choose and document a native Rust `egui` editor with in-process WGPU viewport integration
+- [x] Establish a deliberately styled, resizable native editor shell
+- [x] Load the real demo scene for a read-only hierarchy and transform-inspector proof
 - [ ] Define versioned editor protocol and capability handshake
-- [ ] Choose and document in-process vs child-process viewport integration per platform
 - [ ] Load/save the real scene format
 - [ ] Render the actual Sindri runtime in the viewport
 - [ ] Display hierarchy from runtime scene state

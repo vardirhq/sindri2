@@ -25,7 +25,13 @@ cargo clippy --workspace --all-targets --all-features
 cargo test --workspace --all-features
 ```
 
-The workspace declares Rust 1.87 as its minimum supported Rust version, matching `wgpu` 30.
+The workspace declares Rust 1.95 as its minimum supported Rust version, matching the native `egui` 0.36 editor and `wgpu` 30.
+
+Run the native editor shell with:
+
+```bash
+cargo run --package sindri-editor
+```
 
 ## Status
 
