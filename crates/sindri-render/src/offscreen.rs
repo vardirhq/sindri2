@@ -160,7 +160,7 @@ fn rgba_bytes_per_row(width: u32) -> Result<u32, OffscreenError> {
         .ok_or(OffscreenError::DimensionsOverflow)
 }
 
-const fn align_to(value: u32, alignment: u32) -> Option<u32> {
+fn align_to(value: u32, alignment: u32) -> Option<u32> {
     value
         .checked_add(alignment - 1)
         .map(|rounded| rounded / alignment * alignment)
