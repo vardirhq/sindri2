@@ -1,6 +1,9 @@
 use glam::{Mat4, Quat, Vec2, Vec3};
 use serde::Deserialize;
-use sindri_core::{EntityData, SceneDocument, Transform2D, Transform3D, World, WorldError};
+use sindri_core::{
+    ComponentRegistryError, ComponentSchemaRegistry, SceneComponent, SceneDocument, Transform2D,
+    Transform3D, UnknownComponentPolicy, World, WorldError,
+};
 use sindri_render::{
     ClearOperations, ExtractedFrame, FrameCamera, FrameCommand, FramePass, FramePlanError,
     OrthographicCamera, PerspectiveCamera, PreparedFrame, RenderLayer, RenderStage, SpriteInstance,
@@ -8,22 +11,26 @@ use sindri_render::{
 };
 use thiserror::Error;
 
-const CAMERA_COMPONENT: &str = "sindri.camera";
-const MESH_COMPONENT: &str = "sindri.mesh";
-const SPRITE_COMPONENT: &str = "sindri.sprite";
 const SCENE_JSON: &str = include_str!("../assets/demo.scene.json");
 
 #[derive(Debug)]
 pub struct DemoScene {
     world: World,
+    components: ComponentSchemaRegistry,
 }
 
 impl DemoScene {
     pub fn load() -> Result<Self, DemoSceneError> {
         let document: SceneDocument = serde_json::from_str(SCENE_JSON)?;
+        let mut components = ComponentSchemaRegistry::default();
+        components.register::<CameraComponent>("Camera")?;
+        components.register::<MeshComponent>("Mesh")?;
+        components.register::<SpriteComponent>("Sprite")?;
+        components.validate_scene(&document, UnknownComponentPolicy::Reject)?;
         let loaded = World::from_scene(&document)?;
         Ok(Self {
             world: loaded.world,
+            components,
         })
     }
 
@@ -59,11 +66,12 @@ impl DemoScene {
 
     fn extract_cameras(&self, aspect: f32) -> Result<CompleteCameraMatrices, DemoSceneError> {
         let mut cameras = CameraMatrices::default();
-        for (_, entity) in self.world.entities() {
-            let Some(value) = entity.components.get(CAMERA_COMPONENT) else {
-                continue;
-            };
-            match decode_component::<CameraComponent>(entity, CAMERA_COMPONENT, value)? {
+        for (entity_id, camera) in self.components.query::<CameraComponent>(&self.world)? {
+            let entity = self
+                .world
+                .get(entity_id)
+                .expect("component query returned a live entity");
+            match camera {
                 CameraComponent::Perspective {
                     target,
                     up,
@@ -106,12 +114,12 @@ impl DemoScene {
     }
 
     fn extract_cube(&self, rotation: Vec2) -> Result<(Mat4, i32), DemoSceneError> {
-        for (_, entity) in self.world.entities() {
-            let Some(value) = entity.components.get(MESH_COMPONENT) else {
-                continue;
-            };
-            let mesh = decode_component::<MeshComponent>(entity, MESH_COMPONENT, value)?;
+        for (entity_id, mesh) in self.components.query::<MeshComponent>(&self.world)? {
             if mesh.primitive == MeshPrimitive::Cube {
+                let entity = self
+                    .world
+                    .get(entity_id)
+                    .expect("component query returned a live entity");
                 let authored = transform_3d_matrix(entity.transform_3d.unwrap_or_default());
                 let animated =
                     Mat4::from_rotation_y(rotation.x) * Mat4::from_rotation_x(rotation.y);
@@ -124,11 +132,11 @@ impl DemoScene {
     fn extract_sprites(&self, aspect: f32) -> Result<(i32, Vec<SpriteInstance>), DemoSceneError> {
         let mut extracted = Vec::new();
         let mut shared_layer = None;
-        for (entity_id, entity) in self.world.entities() {
-            let Some(value) = entity.components.get(SPRITE_COMPONENT) else {
-                continue;
-            };
-            let sprite = decode_component::<SpriteComponent>(entity, SPRITE_COMPONENT, value)?;
+        for (entity_id, sprite) in self.components.query::<SpriteComponent>(&self.world)? {
+            let entity = self
+                .world
+                .get(entity_id)
+                .expect("component query returned a live entity");
             let transform = entity.transform_2d.unwrap_or_default();
             let model = transform_2d_matrix(transform, sprite.anchor, aspect);
             let order = TransparentOrder::new(sprite.layer, sprite.depth, entity_id.index())?;
@@ -191,6 +199,10 @@ enum CameraComponent {
     },
 }
 
+impl SceneComponent for CameraComponent {
+    const TYPE_NAME: &'static str = "sindri.camera";
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 enum MeshPrimitive {
@@ -203,6 +215,10 @@ struct MeshComponent {
     #[serde(rename = "texture")]
     _texture: String,
     layer: i32,
+}
+
+impl SceneComponent for MeshComponent {
+    const TYPE_NAME: &'static str = "sindri.mesh";
 }
 
 #[derive(Clone, Copy, Deserialize)]
@@ -221,19 +237,8 @@ struct SpriteComponent {
     layer: i32,
 }
 
-fn decode_component<T: for<'de> Deserialize<'de>>(
-    entity: &EntityData,
-    component: &'static str,
-    value: &serde_json::Value,
-) -> Result<T, DemoSceneError> {
-    serde_json::from_value(value.clone()).map_err(|source| DemoSceneError::InvalidComponent {
-        entity: entity
-            .source_id
-            .as_ref()
-            .map_or_else(|| "<runtime>".to_owned(), |id| id.as_str().to_owned()),
-        component,
-        source,
-    })
+impl SceneComponent for SpriteComponent {
+    const TYPE_NAME: &'static str = "sindri.sprite";
 }
 
 fn transform_3d_matrix(transform: Transform3D) -> Mat4 {
@@ -259,18 +264,13 @@ pub enum DemoSceneError {
     #[error(transparent)]
     Json(#[from] serde_json::Error),
     #[error(transparent)]
+    ComponentRegistry(#[from] ComponentRegistryError),
+    #[error(transparent)]
     World(#[from] WorldError),
     #[error(transparent)]
     Frame(#[from] FramePlanError),
     #[error(transparent)]
     TransparentOrder(#[from] TransparentOrderError),
-    #[error("entity '{entity}' has invalid {component} data")]
-    InvalidComponent {
-        entity: String,
-        component: &'static str,
-        #[source]
-        source: serde_json::Error,
-    },
     #[error("demo scene is missing its {0}")]
     Missing(&'static str),
     #[error("the current sprite batch requires all sprites to share a render layer")]

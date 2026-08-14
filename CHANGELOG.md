@@ -33,6 +33,7 @@ All notable changes to Sindri Next will be documented here.
 - Dynamically growing instanced sprite batches with per-instance transforms/tints and draw-call statistics.
 - Explicit frame extraction and preparation with validated viewports, clear operations, layers, and deterministic pass ordering.
 - A versioned JSON scene that drives the shared cube and sprite-batch example through the same native, browser, and offscreen frame pipeline.
+- Typed scene-component registration with metadata, schema validation, configurable unknown-component handling, and typed world queries.
 
 ### Changed
 
