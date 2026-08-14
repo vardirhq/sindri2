@@ -175,4 +175,3 @@ mod tests {
         assert_eq!(options.required_limits, wgpu::Limits::default());
     }
 }
-

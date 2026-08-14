@@ -68,4 +68,3 @@ impl TriangleRenderer {
         pass.draw(0..3, 0..1);
     }
 }
-

@@ -44,9 +44,8 @@ impl RenderState {
             .await
             .map_err(|error| error.to_string())?;
         let size = window.inner_size();
-        let surface_profile =
-            SurfaceProfile::new(&surface, &gpu.adapter, size.width, size.height)
-                .map_err(|error| error.to_string())?;
+        let surface_profile = SurfaceProfile::new(&surface, &gpu.adapter, size.width, size.height)
+            .map_err(|error| error.to_string())?;
         surface_profile.configure(&surface, &gpu.device);
         let renderer = TriangleRenderer::new(&gpu.device, surface_profile.format());
 
@@ -226,7 +225,11 @@ impl ApplicationHandler<AppAction> for App {
         window_id: WindowId,
         event: WindowEvent,
     ) {
-        if self.window.as_ref().is_none_or(|window| window.id() != window_id) {
+        if self
+            .window
+            .as_ref()
+            .is_none_or(|window| window.id() != window_id)
+        {
             return;
         }
 
@@ -272,4 +275,3 @@ pub fn run() {
     #[cfg(not(target_arch = "wasm32"))]
     event_loop.run_app(&mut app).expect("event loop failed");
 }
-
