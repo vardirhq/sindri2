@@ -5,6 +5,7 @@
 //! same source contract without pretending browser fetches are synchronous.
 
 mod memory;
+mod queue;
 mod source;
 
 #[cfg(target_arch = "wasm32")]
@@ -17,4 +18,8 @@ pub use fetch::FetchAssetSource;
 #[cfg(not(target_arch = "wasm32"))]
 pub use filesystem::FileSystemAssetSource;
 pub use memory::MemoryAssetSource;
+pub use queue::{
+    AssetLoadCompletion, AssetLoadQueue, AssetLoadQueueConfig, AssetLoadQueueCreateError,
+    AssetLoadQueueError, AssetLoadRequest,
+};
 pub use source::{AssetBytes, AssetSource, AssetSourceError, AssetSourceFuture};
