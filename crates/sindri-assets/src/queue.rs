@@ -362,8 +362,8 @@ mod tests {
 
     #[test]
     fn native_workers_load_without_polling_sources_on_the_caller() {
-        let source = MemoryAssetSource::new();
-        source.insert(id("textures/player.png"), vec![1, 2, 3, 4]);
+        let mut source = MemoryAssetSource::default();
+        source.insert(AssetBytes::new(id("textures/player.png"), vec![1, 2, 3, 4]));
         let mut queue = AssetLoadQueue::new(source, AssetLoadQueueConfig::new(2, 8)).unwrap();
         let mut store = AssetStore::<AssetBytes>::default();
         let handle = store.request(id("textures/player.png"));
@@ -391,7 +391,8 @@ mod tests {
     #[test]
     fn completions_preserve_source_errors_and_handle_generations() {
         let mut queue =
-            AssetLoadQueue::new(MemoryAssetSource::new(), AssetLoadQueueConfig::new(1, 4)).unwrap();
+            AssetLoadQueue::new(MemoryAssetSource::default(), AssetLoadQueueConfig::new(1, 4))
+                .unwrap();
         let mut store = AssetStore::<AssetBytes>::default();
         let handle = store.request(id("missing.bin"));
         let request = AssetLoadRequest::new(&handle);
@@ -411,8 +412,8 @@ mod tests {
 
     #[test]
     fn an_expired_request_cannot_complete_a_replacement_generation() {
-        let source = MemoryAssetSource::new();
-        source.insert(id("shared.bin"), vec![7]);
+        let mut source = MemoryAssetSource::default();
+        source.insert(AssetBytes::new(id("shared.bin"), vec![7]));
         let mut queue = AssetLoadQueue::new(source, AssetLoadQueueConfig::new(1, 4)).unwrap();
         let mut store = AssetStore::<AssetBytes>::default();
         let expired = store.request(id("shared.bin"));
@@ -434,7 +435,8 @@ mod tests {
     #[test]
     fn duplicate_and_over_capacity_requests_are_rejected_without_blocking() {
         let mut queue =
-            AssetLoadQueue::new(MemoryAssetSource::new(), AssetLoadQueueConfig::new(1, 1)).unwrap();
+            AssetLoadQueue::new(MemoryAssetSource::default(), AssetLoadQueueConfig::new(1, 1))
+                .unwrap();
         let mut store = AssetStore::<AssetBytes>::default();
         let first = store.request(id("first.bin"));
         let first_request = AssetLoadRequest::new(&first);
@@ -455,11 +457,11 @@ mod tests {
     #[test]
     fn invalid_queue_limits_are_reported() {
         assert!(matches!(
-            AssetLoadQueue::new(MemoryAssetSource::new(), AssetLoadQueueConfig::new(0, 1)),
+            AssetLoadQueue::new(MemoryAssetSource::default(), AssetLoadQueueConfig::new(0, 1)),
             Err(AssetLoadQueueCreateError::ZeroConcurrency)
         ));
         assert!(matches!(
-            AssetLoadQueue::new(MemoryAssetSource::new(), AssetLoadQueueConfig::new(1, 0)),
+            AssetLoadQueue::new(MemoryAssetSource::default(), AssetLoadQueueConfig::new(1, 0)),
             Err(AssetLoadQueueCreateError::ZeroCapacity)
         ));
     }
