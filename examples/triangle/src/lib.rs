@@ -124,7 +124,7 @@ enum AppAction {
 enum AppState {
     Uninitialized,
     Loading,
-    Running(RenderState),
+    Running(Box<RenderState>),
     Failed,
 }
 
@@ -205,7 +205,7 @@ impl ApplicationHandler<AppAction> for App {
                     state.gpu.capabilities.adapter_name,
                     state.gpu.capabilities.backend
                 );
-                self.state = AppState::Running(state);
+                self.state = AppState::Running(Box::new(state));
                 if let Some(window) = &self.window {
                     let size = window.inner_size();
                     self.resize(size.width, size.height);
