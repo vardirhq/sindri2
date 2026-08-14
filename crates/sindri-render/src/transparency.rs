@@ -85,7 +85,10 @@ mod tests {
     fn equal_layer_depths_render_back_to_front() {
         let mut draws = [order(0, 1.0, 0), order(0, 8.0, 1), order(0, 3.0, 2)];
         draws.sort();
-        assert_eq!(draws.map(TransparentOrder::depth), [8.0, 3.0, 1.0]);
+        assert_eq!(
+            draws.map(|draw| draw.depth().to_bits()),
+            [8.0_f32.to_bits(), 3.0_f32.to_bits(), 1.0_f32.to_bits()]
+        );
     }
 
     #[test]
