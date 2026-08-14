@@ -1,0 +1,33 @@
+[package]
+name = "sindri-triangle"
+description = "Shared native and browser triangle proof for Sindri"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+log = "0.4"
+sindri-gpu = { path = "../../crates/sindri-gpu" }
+sindri-render = { path = "../../crates/sindri-render" }
+wgpu.workspace = true
+winit = "0.30.13"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+env_logger = "0.11"
+pollster = "0.4"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0.1"
+console_log = "1"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = ["Document", "HtmlCanvasElement", "Window"] }
+
+[lints]
+workspace = true
+

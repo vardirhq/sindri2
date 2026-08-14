@@ -5,6 +5,13 @@
 
 pub use sindri_core as core;
 
+#[cfg(feature = "render")]
+pub use sindri_gpu as gpu;
+#[cfg(feature = "render")]
+pub use sindri_render as render;
+
 pub mod prelude {
     pub use sindri_core::prelude::*;
+    #[cfg(feature = "render")]
+    pub use sindri_gpu::{GpuContext, GpuRequestOptions, SurfaceProfile};
 }
