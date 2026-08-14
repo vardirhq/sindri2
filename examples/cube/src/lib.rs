@@ -94,11 +94,7 @@ impl RenderState {
             surface_profile.width(),
             surface_profile.height(),
         );
-        let renderer = TexturedCubeRenderer::new(
-            &gpu.device,
-            &gpu.queue,
-            surface_profile.format(),
-        );
+        let renderer = TexturedCubeRenderer::new(&gpu.device, &gpu.queue, surface_profile.format());
 
         Ok(Self {
             instance,
