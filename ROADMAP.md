@@ -75,7 +75,7 @@ Exit gate: core runs without GPU/window/browser dependencies and scene fixtures 
 - [x] Add resource labels and actionable adapter/device/surface errors
 - [ ] Define typed buffer, texture, sampler, shader, and pipeline wrappers
 - [ ] Add render-target and depth-target management
-- [ ] Prove headless adapter initialization where CI supports it
+- [x] Prove headless adapter initialization on the Linux CI runner
 
 ### Proofs
 
@@ -98,7 +98,7 @@ Exit gate: the same render module displays the triangle on native and web hosts.
 - [ ] Add alpha blending and transparent ordering rules
 - [ ] Add sprite batching with measurable draw-call reduction
 - [ ] Render a 3D cube and 2D sprite/overlay in one runtime
-- [ ] Add minimal offscreen rendering test harness
+- [x] Add minimal offscreen rendering test harness with PNG artifacts
 
 Exit gate: a serialized scene drives a combined native 2D/3D example without renderer-specific scene data.
 
