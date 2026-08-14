@@ -24,6 +24,8 @@ All notable changes to Sindri Next will be documented here.
 - Validated RGBA texture uploads with reusable texture views and filtering samplers.
 - UV vertex layouts and a depth-tested textured cube pipeline.
 - Procedural checkerboard texture proof shared by native and WebGPU targets.
+- Offscreen color targets with aligned GPU readback and row-padding removal.
+- Deterministic headless cube capture uploaded as a PNG CI artifact.
 
 ### Changed
 
