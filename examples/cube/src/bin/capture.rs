@@ -37,7 +37,7 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
     );
     let perspective_camera = PerspectiveCamera::default();
     let orthographic_camera = OrthographicCamera::default();
-    let model = Mat4::from_rotation_y(0.72) * Mat4::from_rotation_x(-0.42);
+    let model = Mat4::IDENTITY;
 
     let mut encoder = gpu
         .device

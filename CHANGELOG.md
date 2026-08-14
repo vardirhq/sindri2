@@ -28,6 +28,8 @@ All notable changes to Sindri Next will be documented here.
 - Deterministic 512×512 headless cube capture, rendered through Mesa software Vulkan and uploaded as a PNG CI artifact.
 - Aspect-correct orthographic camera with projection tests.
 - Alpha-blended textured sprite renderer and a native/WebGPU cube-plus-overlay proof.
+- Configurable opaque, straight-alpha, premultiplied-alpha, and additive sprite blending.
+- Validated transparent draw keys with deterministic layer, back-to-front depth, and stable tie ordering.
 
 ### Changed
 

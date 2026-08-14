@@ -13,7 +13,7 @@ The repository is at its foundation stage. The renderer-independent core current
 - shared `wgpu` 30 device/surface negotiation
 - a reusable triangle renderer proven by one native/browser example
 
-Read the [project overview](PROJECT_OVERVIEW.md), the [feasibility review](docs/FEASIBILITY.md), and the checkable [roadmap](ROADMAP.md).
+Read the [project overview](PROJECT_OVERVIEW.md), the [feasibility review](docs/FEASIBILITY.md), the [transparent rendering policy](docs/rendering-transparency.md), and the checkable [roadmap](ROADMAP.md).
 
 The rendering proofs, including a headless PNG capture used by CI, now include the [shared triangle example](examples/triangle/README.md) and a [depth-tested textured cube with a 2D sprite overlay](examples/cube/README.md). Both use the same GPU and renderer crates on native desktops and in WebGPU browsers.
 
