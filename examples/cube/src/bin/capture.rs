@@ -9,13 +9,13 @@ use std::{
 #[cfg(not(target_arch = "wasm32"))]
 use glam::Vec2;
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_cube::{
-    DemoScene, FrameTarget, demo_badge_texture, encode_prepared_frame,
-};
+use sindri_cube::{DemoScene, FrameTarget, demo_badge_texture, encode_prepared_frame};
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_gpu::{GpuContext, GpuRequestOptions};
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_render::{DepthTarget, OffscreenTarget, SpriteBatchRenderer, TexturedCubeRenderer, Viewport};
+use sindri_render::{
+    DepthTarget, OffscreenTarget, SpriteBatchRenderer, TexturedCubeRenderer, Viewport,
+};
 
 #[cfg(not(target_arch = "wasm32"))]
 const WIDTH: u32 = 512;

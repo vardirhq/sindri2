@@ -113,7 +113,8 @@ impl DemoScene {
             let mesh = decode_component::<MeshComponent>(entity, MESH_COMPONENT, value)?;
             if mesh.primitive == MeshPrimitive::Cube {
                 let authored = transform_3d_matrix(entity.transform_3d.unwrap_or_default());
-                let animated = Mat4::from_rotation_y(rotation.x) * Mat4::from_rotation_x(rotation.y);
+                let animated =
+                    Mat4::from_rotation_y(rotation.x) * Mat4::from_rotation_x(rotation.y);
                 return Ok((authored * animated, mesh.layer));
             }
         }
@@ -130,15 +131,22 @@ impl DemoScene {
             let sprite = decode_component::<SpriteComponent>(entity, SPRITE_COMPONENT, value)?;
             let transform = entity.transform_2d.unwrap_or_default();
             let model = transform_2d_matrix(transform, sprite.anchor, aspect);
-            let order = TransparentOrder::new(sprite.layer, sprite.depth, u64::from(entity_id.index()))?;
-            if shared_layer.replace(sprite.layer).is_some_and(|layer| layer != sprite.layer) {
+            let order =
+                TransparentOrder::new(sprite.layer, sprite.depth, u64::from(entity_id.index()))?;
+            if shared_layer
+                .replace(sprite.layer)
+                .is_some_and(|layer| layer != sprite.layer)
+            {
                 return Err(DemoSceneError::MixedSpriteLayers);
             }
             extracted.push((order, SpriteInstance::new(model, sprite.tint)));
         }
         extracted.sort_by_key(|(order, _)| *order);
         let layer = shared_layer.ok_or(DemoSceneError::Missing("sprite overlay"))?;
-        Ok((layer, extracted.into_iter().map(|(_, sprite)| sprite).collect()))
+        Ok((
+            layer,
+            extracted.into_iter().map(|(_, sprite)| sprite).collect(),
+        ))
     }
 }
 

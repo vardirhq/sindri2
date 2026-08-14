@@ -192,10 +192,7 @@ impl RenderState {
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("Sindri cube encoder"),
             });
-        let viewport = Viewport::new(
-            self.surface_profile.width(),
-            self.surface_profile.height(),
-        );
+        let viewport = Viewport::new(self.surface_profile.width(), self.surface_profile.height());
         let prepared = self
             .scene
             .extract_frame(viewport, self.rotation)

@@ -122,9 +122,8 @@ impl ExtractedFrame {
         if !self.clear.color.into_iter().all(f64::is_finite) || !self.clear.depth.is_finite() {
             return Err(FramePlanError::NonFiniteClearValue);
         }
-        self.passes.sort_by_key(|pass| {
-            (pass.stage, pass.layer, pass.insertion_order)
-        });
+        self.passes
+            .sort_by_key(|pass| (pass.stage, pass.layer, pass.insertion_order));
         Ok(PreparedFrame {
             viewport: self.viewport,
             clear: self.clear,
@@ -212,6 +211,9 @@ mod tests {
 
     #[test]
     fn viewport_reports_aspect_ratio() {
-        assert_eq!(Viewport::new(1920, 1080).aspect_ratio().unwrap(), 16.0 / 9.0);
+        assert_eq!(
+            Viewport::new(1920, 1080).aspect_ratio().unwrap(),
+            16.0 / 9.0
+        );
     }
 }
