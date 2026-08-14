@@ -27,12 +27,8 @@ impl Default for PerspectiveCamera {
 impl PerspectiveCamera {
     pub fn view_projection(self, aspect_ratio: f32) -> Mat4 {
         let aspect_ratio = aspect_ratio.max(f32::EPSILON);
-        Mat4::perspective_rh(
-            self.vertical_fov_radians,
-            aspect_ratio,
-            self.near,
-            self.far,
-        ) * Mat4::look_at_rh(self.eye, self.target, self.up)
+        Mat4::perspective_rh(self.vertical_fov_radians, aspect_ratio, self.near, self.far)
+            * Mat4::look_at_rh(self.eye, self.target, self.up)
     }
 }
 
