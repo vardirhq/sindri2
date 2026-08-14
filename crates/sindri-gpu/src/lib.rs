@@ -78,7 +78,7 @@ impl GpuContext {
                 required_features: options.required_features,
                 required_limits,
                 experimental_features: wgpu::ExperimentalFeatures::disabled(),
-                memory_hints: options.memory_hints,
+                memory_hints: options.memory_hints.clone(),
                 trace: wgpu::Trace::Off,
             })
             .await?;
