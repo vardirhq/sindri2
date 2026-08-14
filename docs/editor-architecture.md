@@ -31,7 +31,12 @@ are added.
 
 - Dense, calm workspace rather than default toolkit styling.
 - Clear hierarchy between authored content, tools, and runtime status.
-- One warm Sindri accent; semantic axis and status colors remain distinct.
+- Use familiar editor geography: hierarchy left, scene/game center, inspector
+  right, and project/console below the authored workspace.
+- One warm Sindri accent, inherited from the legacy editor; semantic axis and
+  status colors remain distinct.
+- Borrow Unity's proven workspace grammar without copying its visual chrome or
+  exposing controls for engine features that do not exist yet.
 - Useful at 1080p, with resizable hierarchy and inspector panels.
 - Visual polish is maintained continuously rather than postponed to a rewrite.
 
@@ -39,6 +44,8 @@ are added.
 
 The first editor slice loads the real versioned demo scene, displays its entity
 hierarchy, selects entities, exposes editable transform values, and provides an
-interactive viewport composition. Scene saving, command-based mutations,
-undo/redo, and rendering the actual runtime into that viewport remain explicit
-follow-up work.
+interactive viewport composition. The shell includes Scene/Game and
+Project/Console workspace tabs so future capabilities have stable homes. The
+Game tab and asset indexing remain honest placeholders until their runtime
+systems land. Scene saving, command-based mutations, undo/redo, and rendering
+the actual runtime into that viewport remain explicit follow-up work.
