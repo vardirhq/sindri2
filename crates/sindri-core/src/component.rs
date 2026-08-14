@@ -162,9 +162,9 @@ fn validate_payload<T: SceneComponent>(payload: &Value) -> Result<(), serde_json
 fn validate_type_name(type_name: &'static str) -> Result<(), ComponentRegistryError> {
     let valid = !type_name.is_empty()
         && !type_name.split('.').any(str::is_empty)
-        && type_name
-            .chars()
-            .all(|character| character.is_ascii_alphanumeric() || matches!(character, '.' | '_' | '-'));
+        && type_name.chars().all(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, '.' | '_' | '-')
+        });
     if valid {
         Ok(())
     } else {
