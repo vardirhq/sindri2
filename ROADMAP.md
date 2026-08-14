@@ -104,7 +104,7 @@ Exit gate: a serialized scene drives a combined native 2D/3D example without ren
 
 ## Milestone 4 — Asset system
 
-- [ ] Define logical `AssetId`, typed handles, states, errors, and reference lifetimes
+- [x] Define logical `AssetId`, typed handles, states, errors, and reference lifetimes
 - [ ] Define asset source abstraction for filesystem and HTTP/fetch
 - [ ] Add async load queue that does not fake synchronous browser I/O
 - [ ] Load textures and scene JSON

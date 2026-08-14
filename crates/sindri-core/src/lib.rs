@@ -3,6 +3,7 @@
 //! This crate deliberately has no dependency on a window, GPU, browser, editor,
 //! physics engine, scripting runtime, or async executor.
 
+mod asset;
 mod component;
 mod engine;
 mod entity;
@@ -12,6 +13,10 @@ mod time;
 mod transform;
 mod world;
 
+pub use asset::{
+    AssetHandle, AssetId, AssetIdError, AssetLoadError, AssetLoadErrorKind, AssetStatus,
+    AssetStore, AssetStoreError, WeakAssetHandle,
+};
 pub use component::{
     ComponentMetadata, ComponentRegistryError, ComponentSchemaRegistry, SceneComponent,
     UnknownComponentPolicy,
@@ -29,8 +34,9 @@ pub use world::{EntityData, LoadedScene, World, WorldError};
 /// Common imports for native Sindri game code.
 pub mod prelude {
     pub use crate::{
-        ComponentSchemaRegistry, EngineCore, EngineLifecycle, EngineState, EntityData, EntityId,
-        FixedStepClock, FixedStepConfig, SceneComponent, SceneDocument, SceneEntity, SceneEntityId,
-        Transform2D, Transform3D, UnknownComponentPolicy, World,
+        AssetHandle, AssetId, AssetLoadErrorKind, AssetStatus, AssetStore, ComponentSchemaRegistry,
+        EngineCore, EngineLifecycle, EngineState, EntityData, EntityId, FixedStepClock,
+        FixedStepConfig, SceneComponent, SceneDocument, SceneEntity, SceneEntityId, Transform2D,
+        Transform3D, UnknownComponentPolicy, WeakAssetHandle, World,
     };
 }
