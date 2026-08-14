@@ -35,8 +35,8 @@ Exit gate: a clean clone passes format, lint, and test checks on the declared MS
 - [x] Add safe spawn, access, recursive destruction, and slot reuse
 - [x] Add hierarchy parenting with cycle prevention
 - [x] Keep serialized logical IDs separate from runtime handles
-- [ ] Define typed component registration and metadata
-- [ ] Add query API for built-in and registered component types
+- [x] Define typed component registration and metadata
+- [x] Add query API for built-in and registered component types
 - [ ] Add deferred world command buffer
 - [ ] Specify deterministic system ordering
 - [ ] Benchmark 1k, 10k, and 100k entity workloads before considering an archetype ECS
@@ -47,7 +47,7 @@ Exit gate: a clean clone passes format, lint, and test checks on the declared MS
 - [x] Validate duplicate IDs, missing parents, and hierarchy cycles
 - [x] Load a validated scene into a runtime world in two passes
 - [x] Preserve forward-compatible JSON component payloads
-- [ ] Define component schema registry and unknown-component behavior
+- [x] Define component schema registry and unknown-component behavior
 - [ ] Save a runtime world back to a scene without losing stable IDs
 - [ ] Add canonical pretty serialization for reviewable diffs
 - [ ] Add fixtures and golden round-trip tests
