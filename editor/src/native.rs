@@ -284,7 +284,6 @@ impl EditorApp {
                         ui.label(RichText::new("3").small().color(TEXT_MUTED));
                     }
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        ui.label(RichText::new("⋮").color(TEXT_MUTED));
                         ui.label(RichText::new("Search").small().color(TEXT_MUTED));
                     });
                 });
@@ -488,12 +487,6 @@ fn project_browser(ui: &mut egui::Ui) {
             ui.horizontal(|ui| {
                 asset_tile(ui, "SCN", "demo.scene.json");
             });
-            ui.add_space(6.0);
-            ui.label(
-                RichText::new("Asset indexing will populate this workspace.")
-                    .small()
-                    .color(TEXT_MUTED),
-            );
         });
     });
 }
