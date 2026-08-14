@@ -7,14 +7,15 @@ use eframe::egui::{
 use sindri_core::{SceneDocument, SceneEntity, Transform2D, Transform3D};
 
 const SCENE_JSON: &str = include_str!("../../examples/cube/assets/demo.scene.json");
-const ACCENT: Color32 = Color32::from_rgb(244, 120, 72);
-const ACCENT_SOFT: Color32 = Color32::from_rgb(92, 50, 43);
-const APP_BG: Color32 = Color32::from_rgb(11, 14, 20);
-const PANEL_BG: Color32 = Color32::from_rgb(17, 21, 29);
-const PANEL_RAISED: Color32 = Color32::from_rgb(23, 28, 38);
-const BORDER: Color32 = Color32::from_rgb(42, 49, 62);
-const TEXT: Color32 = Color32::from_rgb(225, 229, 237);
-const TEXT_MUTED: Color32 = Color32::from_rgb(126, 136, 153);
+const ACCENT: Color32 = Color32::from_rgb(238, 174, 62);
+const ACCENT_SOFT: Color32 = Color32::from_rgb(74, 57, 31);
+const APP_BG: Color32 = Color32::from_rgb(12, 15, 20);
+const PANEL_BG: Color32 = Color32::from_rgb(18, 22, 28);
+const PANEL_RAISED: Color32 = Color32::from_rgb(24, 29, 36);
+const BORDER: Color32 = Color32::from_rgb(47, 53, 63);
+const TEXT: Color32 = Color32::from_rgb(229, 226, 217);
+const TEXT_MUTED: Color32 = Color32::from_rgb(137, 141, 149);
+const STATUS_GOOD: Color32 = Color32::from_rgb(139, 177, 112);
 
 pub fn run() -> eframe::Result {
     let options = eframe::NativeOptions {
@@ -41,11 +42,25 @@ enum EditorMode {
     Scale,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ViewportTab {
+    Scene,
+    Game,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum BottomTab {
+    Project,
+    Console,
+}
+
 struct EditorApp {
     scene: SceneDocument,
     selected: usize,
     search: String,
     mode: EditorMode,
+    viewport_tab: ViewportTab,
+    bottom_tab: BottomTab,
     playing: bool,
     viewport_yaw: f32,
     viewport_pitch: f32,
@@ -71,6 +86,8 @@ impl EditorApp {
             selected,
             search: String::new(),
             mode: EditorMode::Select,
+            viewport_tab: ViewportTab::Scene,
+            bottom_tab: BottomTab::Project,
             playing: false,
             viewport_yaw: -0.62,
             viewport_pitch: 0.42,
@@ -78,39 +95,66 @@ impl EditorApp {
         }
     }
 
-    fn top_bar(&mut self, ui: &mut egui::Ui) {
+    fn menu_bar(ui: &mut egui::Ui) {
         egui::Panel::top("editor-top-bar")
-            .exact_size(52.0)
+            .exact_size(30.0)
             .frame(
                 egui::Frame::new()
                     .fill(PANEL_BG)
                     .stroke(Stroke::new(1.0, BORDER)),
             )
             .show(ui, |ui| {
-                ui.add_space(7.0);
                 ui.horizontal(|ui| {
-                    brand_mark(ui);
-                    ui.add_space(8.0);
-                    ui.label(RichText::new("SINDRI").strong().size(16.0).color(TEXT));
-                    ui.add_space(22.0);
-                    ui.label(RichText::new("demo.scene").size(13.0).color(TEXT));
-                    ui.label(RichText::new("/").color(TEXT_MUTED));
-                    ui.label(RichText::new("Shared 2D + 3D proof").color(TEXT_MUTED));
-
+                    brand_mark(ui, 20.0);
+                    ui.label(RichText::new("SINDRI").strong().size(14.0).color(TEXT));
+                    ui.add_space(14.0);
+                    menu_label(ui, "File");
+                    menu_label(ui, "Edit");
+                    menu_label(ui, "Assets");
+                    menu_label(ui, "Entity");
+                    menu_label(ui, "Window");
+                    menu_label(ui, "Help");
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        let play_label = if self.playing { "Stop" } else { "Play" };
-                        if accent_button(ui, play_label).clicked() {
+                        ui.label(RichText::new("Default  ▾").small().color(TEXT_MUTED));
+                        ui.label(RichText::new("Layout").small().color(TEXT_MUTED));
+                    });
+                });
+            });
+    }
+
+    fn tool_bar(&mut self, ui: &mut egui::Ui) {
+        egui::Panel::top("editor-tool-bar")
+            .exact_size(42.0)
+            .frame(
+                egui::Frame::new()
+                    .fill(PANEL_RAISED)
+                    .stroke(Stroke::new(1.0, BORDER)),
+            )
+            .show(ui, |ui| {
+                ui.add_space(5.0);
+                ui.columns(3, |columns| {
+                    columns[0].horizontal(|ui| {
+                        mode_button(ui, &mut self.mode, EditorMode::Select, "Select");
+                        mode_button(ui, &mut self.mode, EditorMode::Move, "Move");
+                        mode_button(ui, &mut self.mode, EditorMode::Rotate, "Rotate");
+                        mode_button(ui, &mut self.mode, EditorMode::Scale, "Scale");
+                    });
+                    columns[1].with_layout(Layout::left_to_right(Align::Center), |ui| {
+                        ui.add_space((ui.available_width() - 126.0).max(0.0) * 0.5);
+                        if toolbar_button(ui, if self.playing { "■" } else { "▶" }, self.playing)
+                            .on_hover_text(if self.playing { "Stop" } else { "Play" })
+                            .clicked()
+                        {
                             self.playing = !self.playing;
                         }
-                        ui.add_space(6.0);
+                        toolbar_button(ui, "Ⅱ", false).on_hover_text("Pause");
+                        toolbar_button(ui, "▣", false).on_hover_text("Step");
+                    });
+                    columns[2].with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        ui.label(RichText::new("Saved").small().color(STATUS_GOOD));
+                        ui.separator();
                         compact_button(ui, "Redo");
                         compact_button(ui, "Undo");
-                        ui.separator();
-                        ui.label(
-                            RichText::new("Saved")
-                                .small()
-                                .color(Color32::from_rgb(91, 194, 137)),
-                        );
                     });
                 });
             });
@@ -127,7 +171,11 @@ impl EditorApp {
                     .stroke(Stroke::new(1.0, BORDER)),
             )
             .show(ui, |ui| {
-                panel_heading(ui, "SCENE", "8 entities");
+                panel_heading(
+                    ui,
+                    "HIERARCHY",
+                    &format!("{} entities", self.scene.entities.len()),
+                );
                 ui.add_space(8.0);
                 ui.add_sized(
                     [ui.available_width(), 30.0],
@@ -137,7 +185,13 @@ impl EditorApp {
 
                 let needle = self.search.trim().to_lowercase();
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    ui.label(RichText::new("SCENE ROOT").small().color(TEXT_MUTED));
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new("▾").small().color(TEXT_MUTED));
+                        ui.label(RichText::new("demo.scene").strong().small().color(TEXT));
+                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                            ui.label(RichText::new("+").color(TEXT_MUTED));
+                        });
+                    });
                     ui.add_space(4.0);
                     for (index, entity) in self.scene.entities.iter().enumerate() {
                         let name = entity_name(entity);
@@ -198,11 +252,7 @@ impl EditorApp {
             )
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
-                    ui.label(
-                        RichText::new("Ready")
-                            .small()
-                            .color(Color32::from_rgb(91, 194, 137)),
-                    );
+                    ui.label(RichText::new("Ready").small().color(STATUS_GOOD));
                     ui.separator();
                     ui.label(RichText::new("wgpu 30").small().color(TEXT_MUTED));
                     ui.label(RichText::new("Vulkan").small().color(TEXT_MUTED));
@@ -217,50 +267,85 @@ impl EditorApp {
             });
     }
 
+    fn project_panel(&mut self, ui: &mut egui::Ui) {
+        egui::Panel::bottom("project-console")
+            .default_size(210.0)
+            .min_size(140.0)
+            .max_size(360.0)
+            .frame(
+                egui::Frame::new()
+                    .fill(PANEL_BG)
+                    .stroke(Stroke::new(1.0, BORDER)),
+            )
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    panel_tab(ui, &mut self.bottom_tab, BottomTab::Project, "Project");
+                    panel_tab(ui, &mut self.bottom_tab, BottomTab::Console, "Console");
+                    if self.bottom_tab == BottomTab::Console {
+                        ui.label(RichText::new("3").small().color(TEXT_MUTED));
+                    }
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        ui.label(RichText::new("⋮").color(TEXT_MUTED));
+                        ui.label(RichText::new("Search").small().color(TEXT_MUTED));
+                    });
+                });
+                ui.separator();
+                match self.bottom_tab {
+                    BottomTab::Project => project_browser(ui),
+                    BottomTab::Console => console_view(ui),
+                }
+            });
+    }
+
     fn viewport(&mut self, ui: &mut egui::Ui) {
         let context = ui.ctx().clone();
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(APP_BG))
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
-                    mode_button(ui, &mut self.mode, EditorMode::Select, "Select");
-                    mode_button(ui, &mut self.mode, EditorMode::Move, "Move");
-                    mode_button(ui, &mut self.mode, EditorMode::Rotate, "Rotate");
-                    mode_button(ui, &mut self.mode, EditorMode::Scale, "Scale");
-                    ui.separator();
-                    ui.label(RichText::new("Perspective").small().color(TEXT_MUTED));
-                    ui.label(RichText::new("Lit").small().color(TEXT_MUTED));
+                    viewport_tab(ui, &mut self.viewport_tab, ViewportTab::Scene, "Scene");
+                    viewport_tab(ui, &mut self.viewport_tab, ViewportTab::Game, "Game");
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        ui.label(RichText::new("Gizmos ▾").small().color(TEXT_MUTED));
+                        ui.label(RichText::new("Lit ▾").small().color(TEXT_MUTED));
+                        ui.label(RichText::new("Perspective ▾").small().color(TEXT_MUTED));
+                    });
                 });
-                ui.add_space(6.0);
+                ui.separator();
 
                 let (rect, response) = ui.allocate_exact_size(ui.available_size(), Sense::drag());
-                if response.dragged() {
+                if self.viewport_tab == ViewportTab::Scene && response.dragged() {
                     let delta = response.drag_motion();
                     self.viewport_yaw = (self.viewport_yaw + delta.x * 0.008) % TAU;
                     self.viewport_pitch = (self.viewport_pitch + delta.y * 0.008).clamp(-1.1, 1.1);
                 }
-                if response.hovered() {
+                if self.viewport_tab == ViewportTab::Scene && response.hovered() {
                     let zoom_delta = context.input(|input| input.smooth_scroll_delta.y);
                     self.viewport_zoom = (self.viewport_zoom + zoom_delta * 0.002).clamp(0.65, 1.8);
                 }
-                paint_viewport(
-                    ui.painter(),
-                    rect,
-                    self.viewport_yaw,
-                    self.viewport_pitch,
-                    self.viewport_zoom,
-                    &entity_name(&self.scene.entities[self.selected]),
-                );
+                match self.viewport_tab {
+                    ViewportTab::Scene => paint_viewport(
+                        ui.painter(),
+                        rect,
+                        self.viewport_yaw,
+                        self.viewport_pitch,
+                        self.viewport_zoom,
+                        &entity_name(&self.scene.entities[self.selected]),
+                    ),
+                    ViewportTab::Game => paint_game_placeholder(ui.painter(), rect),
+                }
             });
     }
 }
 
 impl eframe::App for EditorApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        self.top_bar(ui);
+        Self::menu_bar(ui);
+        self.tool_bar(ui);
         Self::status_bar(ui);
-        self.hierarchy_panel(ui);
         self.inspector_panel(ui);
+        self.project_panel(ui);
+        self.hierarchy_panel(ui);
         self.viewport(ui);
     }
 }
@@ -286,8 +371,8 @@ fn configure_theme(context: &egui::Context) {
     });
 }
 
-fn brand_mark(ui: &mut egui::Ui) {
-    let (rect, _) = ui.allocate_exact_size(Vec2::splat(28.0), Sense::hover());
+fn brand_mark(ui: &mut egui::Ui, size: f32) {
+    let (rect, _) = ui.allocate_exact_size(Vec2::splat(size), Sense::hover());
     let center = rect.center();
     let points = vec![
         Pos2::new(center.x, rect.top() + 3.0),
@@ -303,6 +388,10 @@ fn brand_mark(ui: &mut egui::Ui) {
     ui.painter().circle_filled(center, 4.0, PANEL_BG);
 }
 
+fn menu_label(ui: &mut egui::Ui, label: &str) -> Response {
+    ui.add(egui::Button::new(RichText::new(label).small().color(TEXT)).frame(false))
+}
+
 fn panel_heading(ui: &mut egui::Ui, title: &str, detail: &str) {
     ui.add_space(8.0);
     ui.horizontal(|ui| {
@@ -315,15 +404,20 @@ fn panel_heading(ui: &mut egui::Ui, title: &str, detail: &str) {
 
 fn compact_button(ui: &mut egui::Ui, label: &str) -> Response {
     ui.add_sized(
-        [58.0, 30.0],
+        [52.0, 28.0],
         egui::Button::new(RichText::new(label).small()),
     )
 }
 
-fn accent_button(ui: &mut egui::Ui, label: &str) -> Response {
+fn toolbar_button(ui: &mut egui::Ui, label: &str, active: bool) -> Response {
     ui.add_sized(
-        [76.0, 32.0],
-        egui::Button::new(RichText::new(label).strong().color(Color32::WHITE)).fill(ACCENT),
+        [38.0, 28.0],
+        egui::Button::new(RichText::new(label).strong().color(if active {
+            Color32::from_rgb(24, 20, 13)
+        } else {
+            TEXT
+        }))
+        .fill(if active { ACCENT } else { PANEL_BG }),
     )
 }
 
@@ -338,6 +432,108 @@ fn mode_button(ui: &mut egui::Ui, mode: &mut EditorMode, value: EditorMode, labe
     if ui.add(button).clicked() {
         *mode = value;
     }
+}
+
+fn viewport_tab(ui: &mut egui::Ui, tab: &mut ViewportTab, value: ViewportTab, label: &str) {
+    let selected = *tab == value;
+    let response = ui.add(
+        egui::Button::new(RichText::new(label).strong().small().color(if selected {
+            TEXT
+        } else {
+            TEXT_MUTED
+        }))
+        .selected(selected)
+        .frame(false),
+    );
+    if response.clicked() {
+        *tab = value;
+    }
+}
+
+fn panel_tab(ui: &mut egui::Ui, tab: &mut BottomTab, value: BottomTab, label: &str) {
+    let selected = *tab == value;
+    let response = ui.add(
+        egui::Button::new(RichText::new(label).strong().small().color(if selected {
+            TEXT
+        } else {
+            TEXT_MUTED
+        }))
+        .selected(selected)
+        .frame(false),
+    );
+    if response.clicked() {
+        *tab = value;
+    }
+}
+
+fn project_browser(ui: &mut egui::Ui) {
+    ui.horizontal(|ui| {
+        ui.allocate_ui_with_layout(
+            Vec2::new(178.0, ui.available_height()),
+            Layout::top_down(Align::Min),
+            |ui| {
+                ui.label(RichText::new("Favorites").small().color(TEXT_MUTED));
+                ui.label(RichText::new("  All assets").small().color(TEXT));
+                ui.add_space(6.0);
+                ui.label(RichText::new("Assets").small().color(TEXT_MUTED));
+                ui.label(RichText::new("▾  assets").small().color(TEXT));
+                ui.label(RichText::new("   ▸ scenes").small().color(TEXT));
+                ui.label(RichText::new("   ▸ textures").small().color(TEXT));
+                ui.label(RichText::new("   ▸ scripts").small().color(TEXT));
+            },
+        );
+        ui.separator();
+        ui.vertical(|ui| {
+            ui.label(RichText::new("Assets").small().color(TEXT_MUTED));
+            ui.add_space(8.0);
+            ui.horizontal_wrapped(|ui| {
+                asset_tile(ui, "SCN", "demo.scene.json");
+                ui.label(
+                    RichText::new("Asset indexing will populate this workspace.")
+                        .small()
+                        .color(TEXT_MUTED),
+                );
+            });
+        });
+    });
+}
+
+fn asset_tile(ui: &mut egui::Ui, kind: &str, label: &str) {
+    egui::Frame::new()
+        .fill(PANEL_RAISED)
+        .stroke(Stroke::new(1.0, BORDER))
+        .corner_radius(2)
+        .inner_margin(8)
+        .show(ui, |ui| {
+            ui.set_min_size(Vec2::new(94.0, 72.0));
+            ui.vertical_centered(|ui| {
+                ui.add_space(7.0);
+                ui.label(RichText::new(kind).strong().size(11.0).color(ACCENT));
+                ui.add_space(6.0);
+                ui.label(RichText::new(label).small().color(TEXT));
+            });
+        });
+}
+
+fn console_view(ui: &mut egui::Ui) {
+    egui::ScrollArea::vertical().show(ui, |ui| {
+        console_row(ui, STATUS_GOOD, "INFO", "Editor scene loaded and validated");
+        console_row(ui, STATUS_GOOD, "INFO", "wgpu adapter ready");
+        console_row(
+            ui,
+            ACCENT,
+            "TODO",
+            "Runtime play mode is not connected to the editor shell yet",
+        );
+    });
+}
+
+fn console_row(ui: &mut egui::Ui, color: Color32, level: &str, message: &str) {
+    ui.horizontal(|ui| {
+        ui.label(RichText::new(level).strong().small().color(color));
+        ui.label(RichText::new(message).small().color(TEXT));
+    });
+    ui.separator();
 }
 
 fn hierarchy_row(ui: &mut egui::Ui, kind: &str, name: &str, selected: bool) -> Response {
@@ -369,7 +565,7 @@ fn card(ui: &mut egui::Ui, title: &str, content: impl FnOnce(&mut egui::Ui)) {
     egui::Frame::new()
         .fill(PANEL_RAISED)
         .stroke(Stroke::new(1.0, BORDER))
-        .corner_radius(6)
+        .corner_radius(2)
         .inner_margin(10)
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
@@ -458,6 +654,27 @@ fn components_card(ui: &mut egui::Ui, entity: &SceneEntity) {
             }
         }
     });
+}
+
+fn paint_game_placeholder(painter: &egui::Painter, rect: Rect) {
+    painter.rect_filled(rect, 0.0, Color32::from_rgb(8, 11, 15));
+    let card = Rect::from_center_size(rect.center(), Vec2::new(360.0, 96.0));
+    painter.rect_filled(card, 3.0, PANEL_RAISED);
+    painter.rect_stroke(card, 3.0, Stroke::new(1.0, BORDER), StrokeKind::Inside);
+    painter.text(
+        card.center_top() + Vec2::new(0.0, 24.0),
+        egui::Align2::CENTER_CENTER,
+        "Game preview",
+        FontId::proportional(15.0),
+        TEXT,
+    );
+    painter.text(
+        card.center_bottom() - Vec2::new(0.0, 27.0),
+        egui::Align2::CENTER_CENTER,
+        "Available when editor play-mode integration lands",
+        FontId::proportional(11.0),
+        TEXT_MUTED,
+    );
 }
 
 fn paint_viewport(
