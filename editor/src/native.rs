@@ -78,15 +78,15 @@ impl EditorApp {
         }
     }
 
-    fn top_bar(&mut self, context: &egui::Context) {
-        egui::TopBottomPanel::top("editor-top-bar")
+    fn top_bar(&mut self, ui: &mut egui::Ui) {
+        egui::Panel::top("editor-top-bar")
             .exact_height(52.0)
             .frame(
                 egui::Frame::new()
                     .fill(PANEL_BG)
                     .stroke(Stroke::new(1.0, BORDER)),
             )
-            .show(context, |ui| {
+            .show(ui, |ui| {
                 ui.add_space(7.0);
                 ui.horizontal(|ui| {
                     brand_mark(ui);
@@ -116,8 +116,8 @@ impl EditorApp {
             });
     }
 
-    fn hierarchy_panel(&mut self, context: &egui::Context) {
-        egui::SidePanel::left("scene-hierarchy")
+    fn hierarchy_panel(&mut self, ui: &mut egui::Ui) {
+        egui::Panel::left("scene-hierarchy")
             .default_width(252.0)
             .min_width(210.0)
             .max_width(360.0)
@@ -126,7 +126,7 @@ impl EditorApp {
                     .fill(PANEL_BG)
                     .stroke(Stroke::new(1.0, BORDER)),
             )
-            .show(context, |ui| {
+            .show(ui, |ui| {
                 panel_heading(ui, "SCENE", "8 entities");
                 ui.add_space(8.0);
                 ui.add_sized(
@@ -155,8 +155,8 @@ impl EditorApp {
             });
     }
 
-    fn inspector_panel(&mut self, context: &egui::Context) {
-        egui::SidePanel::right("entity-inspector")
+    fn inspector_panel(&mut self, ui: &mut egui::Ui) {
+        egui::Panel::right("entity-inspector")
             .default_width(318.0)
             .min_width(280.0)
             .max_width(430.0)
@@ -165,7 +165,7 @@ impl EditorApp {
                     .fill(PANEL_BG)
                     .stroke(Stroke::new(1.0, BORDER)),
             )
-            .show(context, |ui| {
+            .show(ui, |ui| {
                 panel_heading(ui, "INSPECTOR", "Entity");
                 ui.add_space(12.0);
                 if let Some(entity) = self.scene.entities.get_mut(self.selected) {
@@ -188,15 +188,15 @@ impl EditorApp {
             });
     }
 
-    fn status_bar(&self, context: &egui::Context) {
-        egui::TopBottomPanel::bottom("editor-status")
+    fn status_bar(&self, ui: &mut egui::Ui) {
+        egui::Panel::bottom("editor-status")
             .exact_height(28.0)
             .frame(
                 egui::Frame::new()
                     .fill(PANEL_BG)
                     .stroke(Stroke::new(1.0, BORDER)),
             )
-            .show(context, |ui| {
+            .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.label(
                         RichText::new("Ready")
@@ -217,10 +217,11 @@ impl EditorApp {
             });
     }
 
-    fn viewport(&mut self, context: &egui::Context) {
+    fn viewport(&mut self, ui: &mut egui::Ui) {
+        let context = ui.ctx().clone();
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(APP_BG))
-            .show(context, |ui| {
+            .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     mode_button(ui, &mut self.mode, EditorMode::Select, "Select");
                     mode_button(ui, &mut self.mode, EditorMode::Move, "Move");
@@ -255,33 +256,35 @@ impl EditorApp {
 }
 
 impl eframe::App for EditorApp {
-    fn update(&mut self, context: &egui::Context, _frame: &mut eframe::Frame) {
-        self.top_bar(context);
-        self.status_bar(context);
-        self.hierarchy_panel(context);
-        self.inspector_panel(context);
-        self.viewport(context);
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        self.top_bar(ui);
+        self.status_bar(ui);
+        self.hierarchy_panel(ui);
+        self.inspector_panel(ui);
+        self.viewport(ui);
     }
 }
 
 fn configure_theme(context: &egui::Context) {
-    let mut style = (*context.style()).clone();
-    style.spacing.item_spacing = Vec2::new(8.0, 7.0);
-    style.spacing.button_padding = Vec2::new(10.0, 5.0);
-    style.visuals.dark_mode = true;
-    style.visuals.panel_fill = PANEL_BG;
-    style.visuals.window_fill = PANEL_RAISED;
-    style.visuals.extreme_bg_color = Color32::from_rgb(12, 16, 23);
-    style.visuals.faint_bg_color = Color32::from_rgb(28, 34, 45);
-    style.visuals.selection.bg_fill = ACCENT_SOFT;
-    style.visuals.selection.stroke = Stroke::new(1.0, ACCENT);
-    style.visuals.widgets.inactive.bg_fill = PANEL_RAISED;
-    style.visuals.widgets.inactive.bg_stroke = Stroke::new(1.0, BORDER);
-    style.visuals.widgets.hovered.bg_fill = Color32::from_rgb(33, 40, 52);
-    style.visuals.widgets.hovered.bg_stroke = Stroke::new(1.0, Color32::from_rgb(65, 75, 92));
-    style.visuals.widgets.active.bg_fill = ACCENT_SOFT;
-    style.visuals.widgets.active.bg_stroke = Stroke::new(1.0, ACCENT);
-    context.set_style(style);
+    context.set_theme(egui::Theme::Dark);
+    context.all_styles_mut(|style| {
+        style.spacing.item_spacing = Vec2::new(8.0, 7.0);
+        style.spacing.button_padding = Vec2::new(10.0, 5.0);
+        style.visuals.dark_mode = true;
+        style.visuals.panel_fill = PANEL_BG;
+        style.visuals.window_fill = PANEL_RAISED;
+        style.visuals.extreme_bg_color = Color32::from_rgb(12, 16, 23);
+        style.visuals.faint_bg_color = Color32::from_rgb(28, 34, 45);
+        style.visuals.selection.bg_fill = ACCENT_SOFT;
+        style.visuals.selection.stroke = Stroke::new(1.0, ACCENT);
+        style.visuals.widgets.inactive.bg_fill = PANEL_RAISED;
+        style.visuals.widgets.inactive.bg_stroke = Stroke::new(1.0, BORDER);
+        style.visuals.widgets.hovered.bg_fill = Color32::from_rgb(33, 40, 52);
+        style.visuals.widgets.hovered.bg_stroke =
+            Stroke::new(1.0, Color32::from_rgb(65, 75, 92));
+        style.visuals.widgets.active.bg_fill = ACCENT_SOFT;
+        style.visuals.widgets.active.bg_stroke = Stroke::new(1.0, ACCENT);
+    });
 }
 
 fn brand_mark(ui: &mut egui::Ui) {
