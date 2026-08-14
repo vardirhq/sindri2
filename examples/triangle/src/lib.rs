@@ -265,6 +265,7 @@ pub fn run() {
     let event_loop = EventLoop::with_user_event()
         .build()
         .expect("failed to create event loop");
+    #[cfg_attr(target_arch = "wasm32", allow(unused_mut))]
     let mut app = App::new(&event_loop);
 
     #[cfg(target_arch = "wasm32")]
