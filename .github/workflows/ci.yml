@@ -25,6 +25,15 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --all-features
       - run: cargo test --workspace --all-features
+      - name: Capture offscreen cube
+        run: cargo run --package sindri-cube --bin capture -- target/render-artifacts/textured-cube.png
+      - name: Upload rendered cube
+        uses: actions/upload-artifact@v4
+        with:
+          name: textured-cube-preview
+          path: target/render-artifacts/textured-cube.png
+          if-no-files-found: error
+          retention-days: 14
       - name: Check browser workspace
         run: |
           rustup target add wasm32-unknown-unknown
