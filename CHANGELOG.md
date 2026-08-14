@@ -25,7 +25,7 @@ All notable changes to Sindri Next will be documented here.
 - UV vertex layouts and a depth-tested textured cube pipeline.
 - Procedural checkerboard texture proof shared by native and WebGPU targets.
 - Offscreen color targets with aligned GPU readback and row-padding removal.
-- Deterministic headless cube capture uploaded as a PNG CI artifact.
+- Deterministic 512×512 headless cube capture, rendered through Mesa software Vulkan and uploaded as a PNG CI artifact.
 
 ### Changed
 
