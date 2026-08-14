@@ -13,7 +13,8 @@ pub use sindri_render as render;
 
 pub mod prelude {
     pub use sindri_assets::{
-        AssetLoadCompletion, AssetLoadQueue, AssetLoadQueueConfig, AssetLoadRequest, AssetSource,
+        AssetDecoder, AssetLoadCompletion, AssetLoadQueue, AssetLoadQueueConfig, AssetLoadRequest,
+        AssetSource, SceneAssetDecoder, TextureAsset, TextureAssetDecoder, decode_completion,
     };
     pub use sindri_core::prelude::*;
     #[cfg(feature = "render")]

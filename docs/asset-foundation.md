@@ -53,6 +53,12 @@ Queue capacity includes waiting, active, and completed-but-undrained requests. E
 4. Drain completions at a deliberate update point.
 5. Verify `completion.request().matches(&handle)` before completing or failing the store entry.
 
+## Typed decoding
+
+Source completions remain encoded bytes until a runtime selects an `AssetDecoder`. `TextureAssetDecoder` accepts PNG and JPEG data and produces dimensions plus tightly packed RGBA8 pixels suitable for the existing `Texture2D::from_rgba8` GPU upload path. `SceneAssetDecoder` deserializes a `SceneDocument` and runs the normal version, stable-ID, parent, and hierarchy validation before the scene can become ready.
+
+`decode_completion` preserves the request token and turns both source and decode failures into the common `AssetLoadError` model. Its `DecodedAssetCompletion::apply` method checks the retained handle generation before mutating an `AssetStore`, then drives the entry from loading to either ready or failed. A late completion for an expired generation returns a stale-completion error without touching the replacement entry.
+
 ## Deliberate boundaries
 
-This layer does not yet decode formats, upload GPU resources, define final root/URL rules, or watch files. Those responsibilities belong to the following asset-system milestones. Keeping storage, source, scheduling, decoding, and GPU upload concerns separate allows the same ownership and error semantics to be used by native and WebAssembly hosts.
+This layer does not yet upload GPU resources automatically, provide fallback assets, define final root/URL rules, or watch files. Those responsibilities belong to the following asset-system milestones. Keeping storage, source, scheduling, decoding, and GPU upload concerns separate allows the same ownership and error semantics to be used by native and WebAssembly hosts.
