@@ -461,7 +461,10 @@ mod tests {
             Err(AssetLoadQueueCreateError::ZeroConcurrency)
         ));
         assert!(matches!(
-            AssetLoadQueue::new(MemoryAssetSource::default(), AssetLoadQueueConfig::new(1, 0)),
+            AssetLoadQueue::new(
+                MemoryAssetSource::default(),
+                AssetLoadQueueConfig::new(1, 0)
+            ),
             Err(AssetLoadQueueCreateError::ZeroCapacity)
         ));
     }
