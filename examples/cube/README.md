@@ -1,6 +1,6 @@
 # Shared textured cube and sprite overlay
 
-This example combines Sindri's perspective camera, depth-tested textured cube, orthographic camera, and an alpha-blended, five-instance sprite batch through one application shared by native desktops and WebGPU browsers. Five tinted instances of the circular badge share one transparent RGBA texture and render as a single instanced draw after the 3D pass. Transparent draw policy and ordering semantics are documented in [`docs/rendering-transparency.md`](../../docs/rendering-transparency.md).
+This example combines Sindri's perspective camera, depth-tested textured cube, orthographic camera, and an alpha-blended, five-instance sprite batch through one application shared by native desktops and WebGPU browsers. Its cameras, cube, transforms, layers, and sprite instances are authored in `assets/demo.scene.json`, loaded through `sindri-core`, and extracted into a prepared frame before GPU work begins. Five tinted instances of the circular badge share one transparent RGBA texture and render as a single instanced draw after the 3D pass. Frame and transparent ordering semantics are documented in [`docs/rendering-frame-pipeline.md`](../../docs/rendering-frame-pipeline.md) and [`docs/rendering-transparency.md`](../../docs/rendering-transparency.md).
 
 Use the arrow keys to rotate the cube.
 
@@ -26,7 +26,7 @@ Open <http://localhost:8000>. A WebGPU-capable browser is required.
 Generate the same deterministic offscreen image used by CI:
 
 ```bash
-cargo run -p sindri-cube --bin capture -- target/render-artifacts/cube-sprite-batch.png
+cargo run -p sindri-cube --bin capture -- target/render-artifacts/scene-frame-pipeline.png
 ```
 
-Pull requests upload the resulting PNG as the `cube-sprite-batch-preview` workflow artifact.
+Pull requests upload the resulting PNG as the `scene-frame-pipeline-preview` workflow artifact.

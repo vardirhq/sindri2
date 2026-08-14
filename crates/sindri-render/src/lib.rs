@@ -3,6 +3,7 @@
 mod camera;
 mod cube;
 mod depth;
+mod frame;
 mod mesh;
 mod offscreen;
 mod sprite;
@@ -15,6 +16,10 @@ mod triangle;
 pub use camera::{OrthographicCamera, PerspectiveCamera};
 pub use cube::CubeRenderer;
 pub use depth::DepthTarget;
+pub use frame::{
+    ClearOperations, ExtractedFrame, FrameCamera, FrameCommand, FramePass, FramePlanError,
+    PreparedFrame, RenderLayer, RenderStage, Viewport,
+};
 pub use mesh::{ColoredVertex, MeshBuffers, TexturedVertex};
 pub use offscreen::{OffscreenError, OffscreenReadback, OffscreenTarget};
 pub use sprite::{SpriteBlendMode, SpriteRenderer};

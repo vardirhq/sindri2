@@ -31,6 +31,8 @@ All notable changes to Sindri Next will be documented here.
 - Configurable opaque, straight-alpha, premultiplied-alpha, and additive sprite blending.
 - Validated transparent draw keys with deterministic layer, back-to-front depth, and stable tie ordering.
 - Dynamically growing instanced sprite batches with per-instance transforms/tints and draw-call statistics.
+- Explicit frame extraction and preparation with validated viewports, clear operations, layers, and deterministic pass ordering.
+- A versioned JSON scene that drives the shared cube and sprite-batch example through the same native, browser, and offscreen frame pipeline.
 
 ### Changed
 
