@@ -42,6 +42,10 @@ All notable changes to Sindri Next will be documented here.
 
 ### Changed
 
+- Reframed the native editor shell around a familiar Unity-style workspace with
+  separate menu and tool bars, Scene/Game tabs, a Hierarchy, Inspector, and a
+  resizable Project/Console area while preserving Sindri's dark, amber visual
+  identity.
 - Increased the MSRV from Rust 1.85 to 1.87 to use the current `wgpu` 30 release.
 - Replaced the planned Tauri/React editor architecture with native `egui`, `egui-winit`, and `egui-wgpu` integration.
 - Increased the MSRV from Rust 1.87 to 1.95 for the first `egui` release aligned with `wgpu` 30.
