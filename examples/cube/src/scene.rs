@@ -39,8 +39,17 @@ impl DemoScene {
         viewport: Viewport,
         rotation: Vec2,
     ) -> Result<PreparedFrame, DemoSceneError> {
+        self.extract_frame_with_view(viewport, rotation, 1.0)
+    }
+
+    pub fn extract_frame_with_view(
+        &self,
+        viewport: Viewport,
+        rotation: Vec2,
+        camera_distance_scale: f32,
+    ) -> Result<PreparedFrame, DemoSceneError> {
         let aspect = viewport.aspect_ratio()?;
-        let cameras = self.extract_cameras(aspect)?;
+        let cameras = self.extract_cameras(aspect, camera_distance_scale)?;
         let (cube_model, cube_layer) = self.extract_cube(rotation)?;
         let (sprite_layer, sprites) = self.extract_sprites(aspect)?;
 
@@ -64,7 +73,14 @@ impl DemoScene {
         Ok(frame.prepare()?)
     }
 
-    fn extract_cameras(&self, aspect: f32) -> Result<CompleteCameraMatrices, DemoSceneError> {
+    fn extract_cameras(
+        &self,
+        aspect: f32,
+        camera_distance_scale: f32,
+    ) -> Result<CompleteCameraMatrices, DemoSceneError> {
+        if !camera_distance_scale.is_finite() || camera_distance_scale <= 0.0 {
+            return Err(DemoSceneError::InvalidCameraDistanceScale);
+        }
         let mut cameras = CameraMatrices::default();
         for (entity_id, camera) in self.components.query::<CameraComponent>(&self.world)? {
             let entity = self
@@ -79,11 +95,15 @@ impl DemoScene {
                     near,
                     far,
                 } => {
-                    let eye = entity.transform_3d.unwrap_or_default().position;
+                    let authored_eye = Vec3::from_array(
+                        entity.transform_3d.unwrap_or_default().position,
+                    );
+                    let target = Vec3::from_array(target);
+                    let eye = target + (authored_eye - target) * camera_distance_scale;
                     cameras.perspective = Some(
                         PerspectiveCamera {
-                            eye: Vec3::from_array(eye),
-                            target: Vec3::from_array(target),
+                            eye,
+                            target,
                             up: Vec3::from_array(up),
                             vertical_fov_radians: vertical_fov_degrees.to_radians(),
                             near,
@@ -275,6 +295,8 @@ pub enum DemoSceneError {
     Missing(&'static str),
     #[error("the current sprite batch requires all sprites to share a render layer")]
     MixedSpriteLayers,
+    #[error("camera distance scale must be finite and greater than zero")]
+    InvalidCameraDistanceScale,
 }
 
 #[cfg(test)]
@@ -294,5 +316,14 @@ mod tests {
             panic!("second pass should contain the sprite batch");
         };
         assert_eq!(instances.len(), 5);
+    }
+
+    #[test]
+    fn editor_view_rejects_invalid_camera_distance_scale() {
+        let scene = DemoScene::load().unwrap();
+        let error = scene
+            .extract_frame_with_view(Viewport::new(512, 512), Vec2::ZERO, 0.0)
+            .unwrap_err();
+        assert!(matches!(error, DemoSceneError::InvalidCameraDistanceScale));
     }
 }

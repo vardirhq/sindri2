@@ -35,9 +35,11 @@ All notable changes to Sindri Next will be documented here.
 - A versioned JSON scene that drives the shared cube and sprite-batch example through the same native, browser, and offscreen frame pipeline.
 - Typed scene-component registration with metadata, schema validation, configurable unknown-component handling, and typed world queries.
 - Native Rust editor shell with a styled hierarchy, interactive viewport composition, transform inspector, toolbar, and runtime status surfaces driven by the real demo scene document.
+- Shared-device editor viewport that renders the real prepared cube-and-sprite runtime frame into an egui texture, with drag rotation, zoom, resize handling, and a full-window CI screenshot artifact.
 
 ### Changed
 
 - Increased the MSRV from Rust 1.85 to 1.87 to use the current `wgpu` 30 release.
 - Replaced the planned Tauri/React editor architecture with native `egui`, `egui-winit`, and `egui-wgpu` integration.
 - Increased the MSRV from Rust 1.87 to 1.95 for the first `egui` release aligned with `wgpu` 30.
+- Replaced the editor's painted viewport composition with the actual Sindri render pipeline while retaining the native UI overlays and controls.

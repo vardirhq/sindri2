@@ -172,9 +172,10 @@ Exit gate: Sindri Next matches the useful core of legacy 2D without inheriting i
 - [x] Choose and document a native Rust `egui` editor with in-process WGPU viewport integration
 - [x] Establish a deliberately styled, resizable native editor shell
 - [x] Load the real demo scene for a read-only hierarchy and transform-inspector proof
+- [x] Capture the complete native editor window as a deterministic CI screenshot artifact
 - [ ] Define versioned editor protocol and capability handshake
 - [ ] Load/save the real scene format
-- [ ] Render the actual Sindri runtime in the viewport
+- [x] Render the actual Sindri runtime in the viewport through the editor's shared WGPU device
 - [ ] Display hierarchy from runtime scene state
 - [ ] Inspect/edit names, hierarchy, Transform2D, and Transform3D
 - [ ] Add selection and transform change commands

@@ -1,10 +1,21 @@
-use std::f32::consts::TAU;
-
-use eframe::egui::{
-    self, Align, Color32, FontId, Layout, Pos2, Rect, Response, RichText, Sense, Shape, Stroke,
-    StrokeKind, Vec2,
+use std::{
+    f32::consts::TAU,
+    fs::File,
+    io::BufWriter,
+    path::{Path, PathBuf},
 };
+
+use eframe::{
+    egui::{
+        self, Align, Color32, FontId, Layout, Pos2, Rect, Response, RichText, Sense, Shape, Stroke,
+        StrokeKind, Vec2,
+    },
+    wgpu,
+};
+use glam::Vec2 as GlamVec2;
 use sindri_core::{SceneDocument, SceneEntity, Transform2D, Transform3D};
+use sindri_cube::{DemoScene, FrameTarget, demo_badge_texture, encode_prepared_frame};
+use sindri_render::{DepthTarget, SpriteBatchRenderer, TexturedCubeRenderer, Viewport};
 
 const SCENE_JSON: &str = include_str!("../../examples/cube/assets/demo.scene.json");
 const ACCENT: Color32 = Color32::from_rgb(244, 120, 72);
@@ -15,8 +26,11 @@ const PANEL_RAISED: Color32 = Color32::from_rgb(23, 28, 38);
 const BORDER: Color32 = Color32::from_rgb(42, 49, 62);
 const TEXT: Color32 = Color32::from_rgb(225, 229, 237);
 const TEXT_MUTED: Color32 = Color32::from_rgb(126, 136, 153);
+const INITIAL_VIEWPORT_WIDTH: u32 = 960;
+const INITIAL_VIEWPORT_HEIGHT: u32 = 540;
 
 pub fn run() -> eframe::Result {
+    let capture_path = capture_path_from_args();
     let options = eframe::NativeOptions {
         renderer: eframe::Renderer::Wgpu,
         viewport: egui::ViewportBuilder::default()
@@ -29,8 +43,22 @@ pub fn run() -> eframe::Result {
     eframe::run_native(
         "Sindri Editor",
         options,
-        Box::new(|context| Ok(Box::new(EditorApp::new(context)))),
+        Box::new(move |context| Ok(Box::new(EditorApp::new(context, capture_path)))),
     )
+}
+
+fn capture_path_from_args() -> Option<PathBuf> {
+    let mut arguments = std::env::args().skip(1);
+    while let Some(argument) = arguments.next() {
+        if argument == "--capture" {
+            return Some(PathBuf::from(
+                arguments
+                    .next()
+                    .expect("--capture requires an output PNG path"),
+            ));
+        }
+    }
+    None
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -39,6 +67,152 @@ enum EditorMode {
     Move,
     Rotate,
     Scale,
+}
+
+struct RuntimeViewport {
+    render_state: eframe::egui_wgpu::RenderState,
+    _texture: wgpu::Texture,
+    view: wgpu::TextureView,
+    depth: DepthTarget,
+    texture_id: egui::TextureId,
+    cube_renderer: TexturedCubeRenderer,
+    sprite_renderer: SpriteBatchRenderer,
+    scene: DemoScene,
+    width: u32,
+    height: u32,
+}
+
+impl RuntimeViewport {
+    const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
+
+    fn new(context: &eframe::CreationContext<'_>) -> Result<Self, String> {
+        let render_state = context
+            .wgpu_render_state
+            .clone()
+            .ok_or_else(|| "the editor requires eframe's WGPU renderer".to_owned())?;
+        let (texture, view) = create_viewport_texture(
+            &render_state.device,
+            INITIAL_VIEWPORT_WIDTH,
+            INITIAL_VIEWPORT_HEIGHT,
+        );
+        let texture_id = render_state.renderer.write().register_native_texture(
+            &render_state.device,
+            &view,
+            wgpu::FilterMode::Linear,
+        );
+        let depth = DepthTarget::new(
+            &render_state.device,
+            INITIAL_VIEWPORT_WIDTH,
+            INITIAL_VIEWPORT_HEIGHT,
+        );
+        let cube_renderer =
+            TexturedCubeRenderer::new(&render_state.device, &render_state.queue, Self::FORMAT);
+        let sprite_renderer = SpriteBatchRenderer::new(
+            &render_state.device,
+            Self::FORMAT,
+            demo_badge_texture(&render_state.device, &render_state.queue),
+        );
+        let scene = DemoScene::load().map_err(|error| error.to_string())?;
+
+        Ok(Self {
+            render_state,
+            _texture: texture,
+            view,
+            depth,
+            texture_id,
+            cube_renderer,
+            sprite_renderer,
+            scene,
+            width: INITIAL_VIEWPORT_WIDTH,
+            height: INITIAL_VIEWPORT_HEIGHT,
+        })
+    }
+
+    fn render(
+        &mut self,
+        width: u32,
+        height: u32,
+        rotation: GlamVec2,
+        zoom: f32,
+    ) -> Result<(), String> {
+        self.resize(width, height);
+        let prepared = self
+            .scene
+            .extract_frame_with_view(
+                Viewport::new(self.width, self.height),
+                rotation,
+                1.0 / zoom,
+            )
+            .map_err(|error| error.to_string())?;
+        let mut encoder =
+            self.render_state
+                .device
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Sindri editor runtime viewport encoder"),
+                });
+        encode_prepared_frame(
+            &self.cube_renderer,
+            &mut self.sprite_renderer,
+            &self.render_state.device,
+            &self.render_state.queue,
+            &mut encoder,
+            FrameTarget {
+                color: &self.view,
+                depth: &self.depth,
+            },
+            &prepared,
+        )
+        .map_err(|error| error.to_string())?;
+        self.render_state.queue.submit([encoder.finish()]);
+        Ok(())
+    }
+
+    fn resize(&mut self, width: u32, height: u32) {
+        let width = width.max(1);
+        let height = height.max(1);
+        if self.width == width && self.height == height {
+            return;
+        }
+        let (texture, view) =
+            create_viewport_texture(&self.render_state.device, width, height);
+        self.render_state
+            .renderer
+            .write()
+            .update_egui_texture_from_wgpu_texture(
+                &self.render_state.device,
+                &view,
+                wgpu::FilterMode::Linear,
+                self.texture_id,
+            );
+        self._texture = texture;
+        self.view = view;
+        self.depth.resize(&self.render_state.device, width, height);
+        self.width = width;
+        self.height = height;
+    }
+}
+
+fn create_viewport_texture(
+    device: &wgpu::Device,
+    width: u32,
+    height: u32,
+) -> (wgpu::Texture, wgpu::TextureView) {
+    let texture = device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("Sindri editor runtime viewport"),
+        size: wgpu::Extent3d {
+            width: width.max(1),
+            height: height.max(1),
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: RuntimeViewport::FORMAT,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[RuntimeViewport::FORMAT],
+    });
+    let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+    (texture, view)
 }
 
 struct EditorApp {
@@ -50,10 +224,15 @@ struct EditorApp {
     viewport_yaw: f32,
     viewport_pitch: f32,
     viewport_zoom: f32,
+    runtime_viewport: RuntimeViewport,
+    runtime_error: Option<String>,
+    capture_path: Option<PathBuf>,
+    capture_requested: bool,
+    capture_frame_count: u8,
 }
 
 impl EditorApp {
-    fn new(context: &eframe::CreationContext<'_>) -> Self {
+    fn new(context: &eframe::CreationContext<'_>, capture_path: Option<PathBuf>) -> Self {
         configure_theme(&context.egui_ctx);
         let scene: SceneDocument = serde_json::from_str(SCENE_JSON)
             .expect("the embedded editor fixture must remain valid scene JSON");
@@ -65,6 +244,8 @@ impl EditorApp {
             .iter()
             .position(|entity| entity.id.as_str() == "checker-cube")
             .unwrap_or_default();
+        let runtime_viewport = RuntimeViewport::new(context)
+            .expect("the native editor must initialize its shared WGPU runtime viewport");
 
         Self {
             scene,
@@ -75,6 +256,37 @@ impl EditorApp {
             viewport_yaw: -0.62,
             viewport_pitch: 0.42,
             viewport_zoom: 1.0,
+            runtime_viewport,
+            runtime_error: None,
+            capture_path,
+            capture_requested: false,
+            capture_frame_count: 0,
+        }
+    }
+
+    fn handle_capture(&mut self, ui: &egui::Ui) {
+        let screenshot = ui.input(|input| {
+            input.events.iter().find_map(|event| match event {
+                egui::Event::Screenshot { image, .. } => Some(image.clone()),
+                _ => None,
+            })
+        });
+        if let (Some(image), Some(path)) = (screenshot, self.capture_path.take()) {
+            save_screenshot(&path, &image).expect("failed to save requested editor screenshot");
+            ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+        }
+    }
+
+    fn request_capture_after_warmup(&mut self, context: &egui::Context) {
+        if self.capture_path.is_none() || self.capture_requested {
+            return;
+        }
+        self.capture_frame_count = self.capture_frame_count.saturating_add(1);
+        if self.capture_frame_count >= 3 {
+            context.send_viewport_cmd(egui::ViewportCommand::Screenshot(
+                egui::UserData::default(),
+            ));
+            self.capture_requested = true;
         }
     }
 
@@ -228,6 +440,7 @@ impl EditorApp {
                     mode_button(ui, &mut self.mode, EditorMode::Rotate, "Rotate");
                     mode_button(ui, &mut self.mode, EditorMode::Scale, "Scale");
                     ui.separator();
+                    ui.label(RichText::new("Runtime").small().color(ACCENT));
                     ui.label(RichText::new("Perspective").small().color(TEXT_MUTED));
                     ui.label(RichText::new("Lit").small().color(TEXT_MUTED));
                 });
@@ -243,26 +456,66 @@ impl EditorApp {
                     let zoom_delta = context.input(|input| input.smooth_scroll_delta.y);
                     self.viewport_zoom = (self.viewport_zoom + zoom_delta * 0.002).clamp(0.65, 1.8);
                 }
-                paint_viewport(
+                let pixels_per_point = context.pixels_per_point();
+                let viewport_width = physical_viewport_dimension(rect.width(), pixels_per_point);
+                let viewport_height = physical_viewport_dimension(rect.height(), pixels_per_point);
+                self.runtime_error = self
+                    .runtime_viewport
+                    .render(
+                        viewport_width,
+                        viewport_height,
+                        GlamVec2::new(self.viewport_yaw, self.viewport_pitch),
+                        self.viewport_zoom,
+                    )
+                    .err();
+                ui.painter().image(
+                    self.runtime_viewport.texture_id,
+                    rect,
+                    Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+                    Color32::WHITE,
+                );
+                paint_runtime_overlay(
                     ui.painter(),
                     rect,
-                    self.viewport_yaw,
-                    self.viewport_pitch,
-                    self.viewport_zoom,
                     &entity_name(&self.scene.entities[self.selected]),
+                    self.runtime_error.as_deref(),
                 );
+                context.request_repaint();
             });
     }
 }
 
 impl eframe::App for EditorApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        self.handle_capture(ui);
         self.top_bar(ui);
         Self::status_bar(ui);
         self.hierarchy_panel(ui);
         self.inspector_panel(ui);
         self.viewport(ui);
+        self.request_capture_after_warmup(ui.ctx());
     }
+}
+
+fn save_screenshot(path: &Path, image: &egui::ColorImage) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+    let file = File::create(path).map_err(|error| error.to_string())?;
+    let width = u32::try_from(image.size[0]).map_err(|error| error.to_string())?;
+    let height = u32::try_from(image.size[1]).map_err(|error| error.to_string())?;
+    let mut encoder = png::Encoder::new(BufWriter::new(file), width, height);
+    encoder.set_color(png::ColorType::Rgba);
+    encoder.set_depth(png::BitDepth::Eight);
+    let mut writer = encoder.write_header().map_err(|error| error.to_string())?;
+    let pixels = image
+        .pixels
+        .iter()
+        .flat_map(|color| color.to_array())
+        .collect::<Vec<_>>();
+    writer
+        .write_image_data(&pixels)
+        .map_err(|error| error.to_string())
 }
 
 fn configure_theme(context: &egui::Context) {
@@ -284,6 +537,15 @@ fn configure_theme(context: &egui::Context) {
         style.visuals.widgets.active.bg_fill = ACCENT_SOFT;
         style.visuals.widgets.active.bg_stroke = Stroke::new(1.0, ACCENT);
     });
+}
+
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss
+)]
+fn physical_viewport_dimension(points: f32, pixels_per_point: f32) -> u32 {
+    (points * pixels_per_point).round().clamp(1.0, u32::MAX as f32) as u32
 }
 
 fn brand_mark(ui: &mut egui::Ui) {
@@ -460,22 +722,19 @@ fn components_card(ui: &mut egui::Ui, entity: &SceneEntity) {
     });
 }
 
-fn paint_viewport(
+fn paint_runtime_overlay(
     painter: &egui::Painter,
     rect: Rect,
-    yaw: f32,
-    pitch: f32,
-    zoom: f32,
     selected_name: &str,
+    runtime_error: Option<&str>,
 ) {
-    painter.rect_filled(rect, 0.0, Color32::from_rgb(9, 13, 20));
-    paint_grid(painter, rect);
-
-    let center = Pos2::new(rect.center().x, rect.center().y - rect.height() * 0.03);
-    let size = rect.width().min(rect.height()) * 0.18 * zoom;
-    paint_cube(painter, center, size, yaw, pitch);
-
-    let label_rect = Rect::from_min_size(rect.min + Vec2::new(14.0, 14.0), Vec2::new(210.0, 48.0));
+    painter.rect_stroke(
+        rect,
+        0.0,
+        Stroke::new(1.0, Color32::from_rgb(48, 58, 74)),
+        StrokeKind::Inside,
+    );
+    let label_rect = Rect::from_min_size(rect.min + Vec2::new(14.0, 14.0), Vec2::new(250.0, 50.0));
     painter.rect_filled(label_rect, 5.0, Color32::from_black_alpha(150));
     painter.text(
         label_rect.min + Vec2::new(11.0, 9.0),
@@ -487,115 +746,25 @@ fn paint_viewport(
     painter.text(
         label_rect.min + Vec2::new(11.0, 28.0),
         egui::Align2::LEFT_TOP,
-        "Drag to orbit  ·  Scroll to zoom",
+        "Live runtime  ·  Drag to rotate  ·  Scroll to zoom",
         FontId::proportional(10.0),
         TEXT_MUTED,
     );
+    if let Some(error) = runtime_error {
+        let error_rect = Rect::from_min_size(
+            Pos2::new(rect.left() + 14.0, rect.bottom() - 48.0),
+            Vec2::new((rect.width() - 28.0).max(1.0), 34.0),
+        );
+        painter.rect_filled(error_rect, 5.0, Color32::from_rgb(82, 30, 36));
+        painter.text(
+            error_rect.left_center() + Vec2::new(10.0, 0.0),
+            egui::Align2::LEFT_CENTER,
+            error,
+            FontId::proportional(11.0),
+            Color32::from_rgb(255, 184, 191),
+        );
+    }
     paint_axis_gizmo(painter, Pos2::new(rect.left() + 38.0, rect.bottom() - 38.0));
-}
-
-fn paint_grid(painter: &egui::Painter, rect: Rect) {
-    let horizon = rect.top() + rect.height() * 0.48;
-    let vanishing = Pos2::new(rect.center().x, horizon);
-    let grid = Color32::from_rgb(27, 35, 47);
-    let major = Color32::from_rgb(39, 48, 62);
-    for index in -12_i16..=12 {
-        let x = rect.center().x + f32::from(index) * rect.width() / 18.0;
-        painter.line_segment(
-            [vanishing, Pos2::new(x, rect.bottom())],
-            Stroke::new(
-                if index % 4 == 0 { 1.0 } else { 0.6 },
-                if index % 4 == 0 { major } else { grid },
-            ),
-        );
-    }
-    for index in 0_u8..14 {
-        let t = f32::from(index) / 13.0;
-        let y = horizon + t.powf(1.7) * (rect.bottom() - horizon);
-        painter.line_segment(
-            [Pos2::new(rect.left(), y), Pos2::new(rect.right(), y)],
-            Stroke::new(
-                if index % 4 == 0 { 1.0 } else { 0.6 },
-                if index % 4 == 0 { major } else { grid },
-            ),
-        );
-    }
-    painter.line_segment(
-        [
-            Pos2::new(rect.left(), horizon),
-            Pos2::new(rect.right(), horizon),
-        ],
-        Stroke::new(1.0, Color32::from_rgb(33, 42, 56)),
-    );
-}
-
-fn paint_cube(painter: &egui::Painter, center: Pos2, size: f32, yaw: f32, pitch: f32) {
-    let vertices = [
-        [-1.0, -1.0, -1.0],
-        [1.0, -1.0, -1.0],
-        [1.0, 1.0, -1.0],
-        [-1.0, 1.0, -1.0],
-        [-1.0, -1.0, 1.0],
-        [1.0, -1.0, 1.0],
-        [1.0, 1.0, 1.0],
-        [-1.0, 1.0, 1.0],
-    ];
-    let faces = [
-        ([0, 1, 2, 3], Color32::from_rgb(83, 95, 116)),
-        ([4, 7, 6, 5], ACCENT),
-        ([0, 4, 5, 1], Color32::from_rgb(181, 76, 55)),
-        ([3, 2, 6, 7], Color32::from_rgb(255, 151, 91)),
-        ([1, 5, 6, 2], Color32::from_rgb(136, 69, 60)),
-        ([0, 3, 7, 4], Color32::from_rgb(106, 119, 145)),
-    ];
-    let (sin_yaw, cos_yaw) = yaw.sin_cos();
-    let (sin_pitch, cos_pitch) = pitch.sin_cos();
-    let mut projected = [Pos2::ZERO; 8];
-    let mut depth = [0.0; 8];
-    for (index, [x, y, z]) in vertices.into_iter().enumerate() {
-        let rotated_x = x * cos_yaw + z * sin_yaw;
-        let yaw_z = -x * sin_yaw + z * cos_yaw;
-        let rotated_y = y * cos_pitch - yaw_z * sin_pitch;
-        let rotated_z = y * sin_pitch + yaw_z * cos_pitch;
-        let perspective = 1.0 / (1.0 + (rotated_z + 1.0) * 0.08);
-        projected[index] = Pos2::new(
-            center.x + rotated_x * size * perspective,
-            center.y - rotated_y * size * perspective,
-        );
-        depth[index] = rotated_z;
-    }
-    let mut ordered_faces = faces.map(|(indices, color)| {
-        let average = indices.into_iter().map(|index| depth[index]).sum::<f32>() / 4.0;
-        (average, indices, color)
-    });
-    ordered_faces.sort_by(|left, right| left.0.total_cmp(&right.0));
-    for (_, indices, color) in ordered_faces {
-        let points = indices.into_iter().map(|index| projected[index]).collect();
-        painter.add(Shape::convex_polygon(
-            points,
-            color,
-            Stroke::new(1.4, Color32::from_rgb(255, 184, 140)),
-        ));
-    }
-    let selection = Rect::from_center_size(center, Vec2::splat(size * 2.75));
-    painter.rect_stroke(
-        selection,
-        2.0,
-        Stroke::new(1.0, ACCENT),
-        StrokeKind::Outside,
-    );
-    for corner in [
-        selection.left_top(),
-        selection.right_top(),
-        selection.left_bottom(),
-        selection.right_bottom(),
-    ] {
-        painter.rect_filled(
-            Rect::from_center_size(corner, Vec2::splat(5.0)),
-            1.0,
-            ACCENT,
-        );
-    }
 }
 
 fn paint_axis_gizmo(painter: &egui::Painter, origin: Pos2) {

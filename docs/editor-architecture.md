@@ -37,8 +37,10 @@ are added.
 
 ## First shell boundary
 
-The first editor slice loads the real versioned demo scene, displays its entity
-hierarchy, selects entities, exposes editable transform values, and provides an
-interactive viewport composition. Scene saving, command-based mutations,
-undo/redo, and rendering the actual runtime into that viewport remain explicit
-follow-up work.
+The editor loads the real versioned demo scene, displays its entity hierarchy,
+selects entities, exposes editable transform values, and renders the prepared
+Sindri cube-and-sprite frame into a texture registered with egui. The runtime
+target and editor UI share eframe's WGPU device and queue; resizing recreates
+only the viewport color/depth targets. Scene saving, command-based mutations,
+undo/redo, and feeding inspector edits back through runtime commands remain
+explicit follow-up work.
