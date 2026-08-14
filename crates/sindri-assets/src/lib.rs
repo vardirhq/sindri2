@@ -14,14 +14,14 @@ mod fetch;
 #[cfg(not(target_arch = "wasm32"))]
 mod filesystem;
 
-#[cfg(target_arch = "wasm32")]
-pub use fetch::FetchAssetSource;
-#[cfg(not(target_arch = "wasm32"))]
-pub use filesystem::FileSystemAssetSource;
 pub use decode::{
     AssetCompletionApplyError, AssetDecodeError, AssetDecoder, DecodedAssetCompletion,
     SceneAssetDecoder, TextureAsset, TextureAssetDecoder, decode_completion,
 };
+#[cfg(target_arch = "wasm32")]
+pub use fetch::FetchAssetSource;
+#[cfg(not(target_arch = "wasm32"))]
+pub use filesystem::FileSystemAssetSource;
 pub use memory::MemoryAssetSource;
 pub use queue::{
     AssetLoadCompletion, AssetLoadQueue, AssetLoadQueueConfig, AssetLoadQueueCreateError,

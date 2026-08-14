@@ -278,10 +278,7 @@ mod tests {
 
         assert_eq!(texture.width(), 2);
         assert_eq!(texture.height(), 1);
-        assert_eq!(
-            texture.rgba8(),
-            &[255, 0, 0, 255, 0, 255, 0, 128]
-        );
+        assert_eq!(texture.rgba8(), &[255, 0, 0, 255, 0, 255, 0, 128]);
     }
 
     #[test]
@@ -352,7 +349,13 @@ mod tests {
         completion.apply(&mut store, &handle).unwrap();
         assert_eq!(store.status(&handle).unwrap(), AssetStatus::Ready);
         assert_eq!(
-            store.get(&handle).unwrap().unwrap().metadata.name.as_deref(),
+            store
+                .get(&handle)
+                .unwrap()
+                .unwrap()
+                .metadata
+                .name
+                .as_deref(),
             Some("Loaded room")
         );
     }
