@@ -45,4 +45,14 @@ fi
 sleep 2
 # The compositor redirects the WGPU-backed client window into an X pixmap that
 # ImageMagick can read deterministically.
-import -window "$window_id" "$output_path"
+capture_attempt=0
+while [ "$capture_attempt" -lt 20 ]; do
+    if import -window "$window_id" "$output_path" 2>/dev/null; then
+        exit 0
+    fi
+    capture_attempt=$((capture_attempt + 1))
+    sleep 0.5
+done
+
+echo "Sindri Editor window could not be captured" >&2
+exit 1
