@@ -8,6 +8,8 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+bytemuck.workspace = true
+glam.workspace = true
 wgpu.workspace = true
 
 [lints]
