@@ -7,13 +7,17 @@ output_dir=$(dirname "$output_path")
 mkdir -p "$output_dir"
 
 cargo build --package sindri-editor
+xcompmgr -a &
+compositor_pid=$!
 target/debug/sindri-editor &
 editor_pid=$!
 window_id=""
 
 cleanup() {
     kill "$editor_pid" 2>/dev/null || true
+    kill "$compositor_pid" 2>/dev/null || true
     wait "$editor_pid" 2>/dev/null || true
+    wait "$compositor_pid" 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
