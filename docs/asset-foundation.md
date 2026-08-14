@@ -25,7 +25,7 @@ queued -> loading -> ready
                   -> failed -> queued (retry)
 ```
 
-Invalid transitions return `AssetStoreError`. Loading failures retain the logical asset ID, a structured `AssetLoadErrorKind`, and a source-provided diagnostic message. The future asynchronous loading queue will drive this state machine without adding an executor dependency to `sindri-core`.
+Invalid transitions return `AssetStoreError`. Loading failures retain the logical asset ID, a structured `AssetLoadErrorKind`, and a source-provided diagnostic message. `sindri-core` remains executor-independent; the separate asset queue drives source work and returns completions for the runtime to apply to the store.
 
 ## Asset sources
 
@@ -37,8 +37,22 @@ The initial implementations are:
 - `FileSystemAssetSource` on native targets, with canonical-path checks that prevent symlinks from escaping the configured root
 - `FetchAssetSource` on WebAssembly, using the browser Fetch API and retaining HTTP status and content-type information
 
-Filesystem reads are intentionally not hidden behind a fake executor. They complete when their future is polled, so the upcoming native load queue must poll them on an I/O worker rather than the frame thread. Browser fetches remain genuinely asynchronous.
+Filesystem reads are intentionally not hidden behind a fake executor. They complete when their future is polled, so the native load queue creates and polls them entirely on bounded I/O workers rather than the frame thread. Browser fetches remain genuinely asynchronous.
+
+## Asynchronous load queue
+
+`AssetLoadQueue` accepts bounded `AssetLoadRequest` values and produces `AssetLoadCompletion` values. Every request contains both the logical ID and the originating typed handle's generation. A runtime checks that token against its retained handle before applying a completion, preventing a slow result for an expired asset from overwriting a replacement generation.
+
+On native targets, a fixed worker pool owns the complete source future lifecycle. This keeps synchronous filesystem work off the frame thread. On WebAssembly, the queue holds local futures and polls them without blocking whenever the runtime drains completions; the browser Fetch API supplies actual asynchronous progress between those polls. Neither path requires an executor in `sindri-core`.
+
+Queue capacity includes waiting, active, and completed-but-undrained requests. Enqueueing never waits: duplicate requests and backpressure are returned as explicit errors. The intended runtime flow is:
+
+1. Create a typed handle with `AssetStore::request`.
+2. Build and enqueue `AssetLoadRequest::new(&handle)`.
+3. Mark the store entry as loading only after enqueue succeeds.
+4. Drain completions at a deliberate update point.
+5. Verify `completion.request().matches(&handle)` before completing or failing the store entry.
 
 ## Deliberate boundaries
 
-This layer does not yet schedule concurrent loads, decode formats, upload GPU resources, define final root/URL rules, or watch files. Those responsibilities belong to the following asset-system milestones. Keeping storage and source concerns separate allows the same ownership and error semantics to be used by native and WebAssembly hosts.
+This layer does not yet decode formats, upload GPU resources, define final root/URL rules, or watch files. Those responsibilities belong to the following asset-system milestones. Keeping storage, source, scheduling, decoding, and GPU upload concerns separate allows the same ownership and error semantics to be used by native and WebAssembly hosts.

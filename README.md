@@ -12,6 +12,7 @@ The repository is at its foundation stage. The renderer-independent core current
 - stable serialized IDs kept separate from runtime handles
 - portable logical asset IDs with typed, lifetime-aware runtime handles
 - a shared asynchronous source contract with native filesystem and browser fetch implementations
+- a bounded cross-platform load queue with native I/O workers and non-blocking browser polling
 - shared `wgpu` 30 device/surface negotiation
 - a reusable triangle renderer proven by one native/browser example
 

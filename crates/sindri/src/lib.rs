@@ -12,6 +12,9 @@ pub use sindri_gpu as gpu;
 pub use sindri_render as render;
 
 pub mod prelude {
+    pub use sindri_assets::{
+        AssetLoadCompletion, AssetLoadQueue, AssetLoadQueueConfig, AssetLoadRequest, AssetSource,
+    };
     pub use sindri_core::prelude::*;
     #[cfg(feature = "render")]
     pub use sindri_gpu::{GpuContext, GpuRequestOptions, SurfaceProfile};
