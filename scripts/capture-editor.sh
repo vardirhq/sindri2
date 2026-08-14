@@ -46,9 +46,12 @@ sleep 2
 # The compositor redirects the WGPU-backed client window into an X pixmap that
 # ImageMagick can read deterministically.
 capture_attempt=0
-while [ "$capture_attempt" -lt 20 ]; do
+while [ "$capture_attempt" -lt 30 ]; do
     if import -window "$window_id" "$output_path" 2>/dev/null; then
-        exit 0
+        color_count=$(identify -format '%k' "$output_path" 2>/dev/null || echo 0)
+        if [ "$color_count" -gt 16 ]; then
+            exit 0
+        fi
     fi
     capture_attempt=$((capture_attempt + 1))
     sleep 0.5
