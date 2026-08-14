@@ -15,7 +15,7 @@ The repository is at its foundation stage. The renderer-independent core current
 
 Read the [project overview](PROJECT_OVERVIEW.md), the [feasibility review](docs/FEASIBILITY.md), and the checkable [roadmap](ROADMAP.md).
 
-The rendering proofs now include the [shared triangle example](examples/triangle/README.md) and a [depth-tested colored cube](examples/cube/README.md). Both use the same GPU and renderer crates on native desktops and in WebGPU browsers.
+The rendering proofs now include the [shared triangle example](examples/triangle/README.md) and a [depth-tested textured cube](examples/cube/README.md). Both use the same GPU and renderer crates on native desktops and in WebGPU browsers.
 
 ## Development
 

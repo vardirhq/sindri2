@@ -1,6 +1,6 @@
-# Shared depth-tested cube
+# Shared textured cube
 
-This example exercises Sindri's perspective camera, indexed mesh buffers, depth target, and cube renderer through one application shared by native desktops and WebGPU browsers.
+This example exercises Sindri's perspective camera, indexed UV mesh buffers, procedural RGBA texture upload, filtering sampler, depth target, and textured cube renderer through one application shared by native desktops and WebGPU browsers.
 
 Use the arrow keys to rotate the cube.
 

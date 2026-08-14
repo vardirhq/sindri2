@@ -2,7 +2,7 @@ use std::{future::Future, sync::Arc};
 
 use glam::{Mat4, UVec2, Vec2};
 use sindri_gpu::{GpuContext, GpuRequestOptions, SurfaceProfile};
-use sindri_render::{CubeRenderer, DepthTarget, PerspectiveCamera};
+use sindri_render::{DepthTarget, PerspectiveCamera, TexturedCubeRenderer};
 use web_time::Instant;
 use wgpu::CurrentSurfaceTexture;
 use winit::{
@@ -64,7 +64,7 @@ struct RenderState {
     surface: wgpu::Surface<'static>,
     surface_profile: SurfaceProfile,
     depth: DepthTarget,
-    renderer: CubeRenderer,
+    renderer: TexturedCubeRenderer,
     camera: PerspectiveCamera,
     input: RotationInput,
     rotation: Vec2,
@@ -94,7 +94,7 @@ impl RenderState {
             surface_profile.width(),
             surface_profile.height(),
         );
-        let renderer = CubeRenderer::new(&gpu.device, surface_profile.format());
+        let renderer = TexturedCubeRenderer::new(&gpu.device, &gpu.queue, surface_profile.format());
 
         Ok(Self {
             instance,
@@ -235,7 +235,7 @@ impl ApplicationHandler<AppAction> for App {
 
         #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
         let mut attributes = Window::default_attributes()
-            .with_title("Sindri — shared native/web cube")
+            .with_title("Sindri — shared native/web textured cube")
             .with_inner_size(winit::dpi::LogicalSize::new(960, 540));
 
         #[cfg(target_arch = "wasm32")]

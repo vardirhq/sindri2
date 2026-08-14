@@ -20,6 +20,30 @@ impl ColoredVertex {
     }
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct TexturedVertex {
+    pub position: [f32; 3],
+    pub uv: [f32; 2],
+}
+
+impl TexturedVertex {
+    const ATTRIBUTES: [wgpu::VertexAttribute; 2] =
+        wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x2];
+
+    pub const fn new(position: [f32; 3], uv: [f32; 2]) -> Self {
+        Self { position, uv }
+    }
+
+    pub const fn layout() -> wgpu::VertexBufferLayout<'static> {
+        wgpu::VertexBufferLayout {
+            array_stride: std::mem::size_of::<Self>() as wgpu::BufferAddress,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: &Self::ATTRIBUTES,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct MeshBuffers {
     vertex: wgpu::Buffer,
@@ -28,10 +52,10 @@ pub struct MeshBuffers {
 }
 
 impl MeshBuffers {
-    pub fn new(
+    pub fn new<Vertex: bytemuck::Pod>(
         device: &wgpu::Device,
         label: &str,
-        vertices: &[ColoredVertex],
+        vertices: &[Vertex],
         indices: &[u16],
     ) -> Self {
         let vertex = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
