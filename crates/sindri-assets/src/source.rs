@@ -33,6 +33,7 @@ impl AssetBytes {
         }
     }
 
+    #[must_use]
     pub fn with_content_type(mut self, content_type: impl Into<String>) -> Self {
         self.content_type = Some(content_type.into());
         self
@@ -81,6 +82,7 @@ impl AssetSourceError {
         }
     }
 
+    #[must_use]
     pub fn with_status_code(mut self, status_code: u16) -> Self {
         self.status_code = Some(status_code);
         self
