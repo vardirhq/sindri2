@@ -2,6 +2,7 @@
 members = [
     "editor",
     "crates/sindri",
+    "crates/sindri-assets",
     "crates/sindri-core",
     "crates/sindri-gpu",
     "crates/sindri-render",
@@ -25,6 +26,10 @@ glam = { version = "0.30", features = ["bytemuck"] }
 thiserror = "2"
 wgpu = "30"
 eframe = { version = "0.36.1", default-features = false, features = ["default_fonts", "wayland", "wgpu", "x11"] }
+js-sys = "0.3"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = "0.3"
 
 
 [workspace.lints.rust]
