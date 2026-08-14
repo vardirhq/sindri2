@@ -25,7 +25,9 @@ impl Viewport {
         if self.width == 0 || self.height == 0 {
             return Err(FramePlanError::EmptyViewport);
         }
-        Ok(self.width as f32 / self.height as f32)
+        let width = u16::try_from(self.width).map_err(|_| FramePlanError::ViewportTooLarge)?;
+        let height = u16::try_from(self.height).map_err(|_| FramePlanError::ViewportTooLarge)?;
+        Ok(f32::from(width) / f32::from(height))
     }
 }
 
@@ -157,6 +159,8 @@ impl PreparedFrame {
 pub enum FramePlanError {
     #[error("render viewport width and height must be non-zero")]
     EmptyViewport,
+    #[error("render viewport dimensions exceed the supported 65535-pixel limit")]
+    ViewportTooLarge,
     #[error("render clear values must be finite")]
     NonFiniteClearValue,
 }
@@ -211,9 +215,7 @@ mod tests {
 
     #[test]
     fn viewport_reports_aspect_ratio() {
-        assert_eq!(
-            Viewport::new(1920, 1080).aspect_ratio().unwrap(),
-            16.0 / 9.0
-        );
+        let aspect = Viewport::new(1920, 1080).aspect_ratio().unwrap();
+        assert!((aspect - 16.0 / 9.0).abs() <= f32::EPSILON);
     }
 }
