@@ -1,8 +1,11 @@
 use std::{future::Future, sync::Arc};
 
-use glam::{Mat4, UVec2, Vec2};
+use glam::{Mat4, UVec2, Vec2, Vec3};
 use sindri_gpu::{GpuContext, GpuRequestOptions, SurfaceProfile};
-use sindri_render::{DepthTarget, PerspectiveCamera, TexturedCubeRenderer};
+use sindri_render::{
+    DepthTarget, OrthographicCamera, PerspectiveCamera, SpriteRenderer, Texture2D,
+    TexturedCubeRenderer,
+};
 use web_time::Instant;
 use wgpu::CurrentSurfaceTexture;
 use winit::{
@@ -64,8 +67,10 @@ struct RenderState {
     surface: wgpu::Surface<'static>,
     surface_profile: SurfaceProfile,
     depth: DepthTarget,
-    renderer: TexturedCubeRenderer,
-    camera: PerspectiveCamera,
+    cube_renderer: TexturedCubeRenderer,
+    sprite_renderer: SpriteRenderer,
+    perspective_camera: PerspectiveCamera,
+    orthographic_camera: OrthographicCamera,
     input: RotationInput,
     rotation: Vec2,
     last_frame: Instant,
@@ -94,7 +99,13 @@ impl RenderState {
             surface_profile.width(),
             surface_profile.height(),
         );
-        let renderer = TexturedCubeRenderer::new(&gpu.device, &gpu.queue, surface_profile.format());
+        let cube_renderer =
+            TexturedCubeRenderer::new(&gpu.device, &gpu.queue, surface_profile.format());
+        let sprite_renderer = SpriteRenderer::new(
+            &gpu.device,
+            surface_profile.format(),
+            demo_badge_texture(&gpu.device, &gpu.queue),
+        );
 
         Ok(Self {
             instance,
@@ -103,8 +114,10 @@ impl RenderState {
             surface,
             surface_profile,
             depth,
-            renderer,
-            camera: PerspectiveCamera::default(),
+            cube_renderer,
+            sprite_renderer,
+            perspective_camera: PerspectiveCamera::default(),
+            orthographic_camera: OrthographicCamera::default(),
             input: RotationInput::default(),
             rotation: Vec2::new(0.45, -0.25),
             last_frame: Instant::now(),
@@ -174,12 +187,18 @@ impl RenderState {
             UVec2::new(self.surface_profile.width(), self.surface_profile.height()).as_vec2();
         let aspect = viewport.x / viewport.y;
         let model = Mat4::from_rotation_y(self.rotation.x) * Mat4::from_rotation_x(self.rotation.y);
-        self.renderer.encode(
+        self.cube_renderer.encode(
             &self.gpu.queue,
             &mut encoder,
             &view,
             &self.depth,
-            self.camera.view_projection(aspect) * model,
+            self.perspective_camera.view_projection(aspect) * model,
+        );
+        self.sprite_renderer.encode(
+            &self.gpu.queue,
+            &mut encoder,
+            &view,
+            self.orthographic_camera.view_projection(aspect) * sprite_overlay_transform(aspect),
         );
         self.gpu.queue.submit([encoder.finish()]);
         self.window.pre_present_notify();
@@ -335,6 +354,38 @@ impl ApplicationHandler<AppAction> for App {
             _ => {}
         }
     }
+}
+
+pub fn demo_badge_texture(device: &wgpu::Device, queue: &wgpu::Queue) -> Texture2D {
+    const SIZE: u32 = 64;
+    let mut pixels = Vec::with_capacity(usize::try_from(SIZE * SIZE * 4).expect("badge fits usize"));
+    for y in 0..SIZE {
+        for x in 0..SIZE {
+            let dx = i64::from(x) - 31;
+            let dy = i64::from(y) - 31;
+            let distance_squared = dx * dx + dy * dy;
+            let bolt = (30..=38).contains(&x) && (12..=31).contains(&y)
+                || (24..=38).contains(&x) && (27..=36).contains(&y)
+                || (24..=32).contains(&x) && (32..=51).contains(&y);
+            let color = if distance_squared > 31 * 31 {
+                [0, 0, 0, 0]
+            } else if distance_squared > 27 * 27 {
+                [240, 114, 43, 255]
+            } else if bolt {
+                [255, 244, 214, 255]
+            } else {
+                [18, 34, 55, 235]
+            };
+            pixels.extend_from_slice(&color);
+        }
+    }
+    Texture2D::from_rgba8(device, queue, "Sindri overlay badge", SIZE, SIZE, &pixels)
+        .expect("static badge texture dimensions are valid")
+}
+
+pub fn sprite_overlay_transform(aspect_ratio: f32) -> Mat4 {
+    Mat4::from_translation(Vec3::new(aspect_ratio - 0.38, -0.62, 0.0))
+        * Mat4::from_scale(Vec3::new(0.5, 0.5, 1.0))
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen::prelude::wasm_bindgen(start))]
