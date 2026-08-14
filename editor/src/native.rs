@@ -280,8 +280,7 @@ fn configure_theme(context: &egui::Context) {
         style.visuals.widgets.inactive.bg_fill = PANEL_RAISED;
         style.visuals.widgets.inactive.bg_stroke = Stroke::new(1.0, BORDER);
         style.visuals.widgets.hovered.bg_fill = Color32::from_rgb(33, 40, 52);
-        style.visuals.widgets.hovered.bg_stroke =
-            Stroke::new(1.0, Color32::from_rgb(65, 75, 92));
+        style.visuals.widgets.hovered.bg_stroke = Stroke::new(1.0, Color32::from_rgb(65, 75, 92));
         style.visuals.widgets.active.bg_fill = ACCENT_SOFT;
         style.visuals.widgets.active.bg_stroke = Stroke::new(1.0, ACCENT);
     });
