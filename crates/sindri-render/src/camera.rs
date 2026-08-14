@@ -1,4 +1,4 @@
-use glam::{Mat4, Vec3};
+use glam::{Mat4, Vec2, Vec3};
 
 /// Perspective camera using WebGPU's zero-to-one depth range.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -32,18 +32,56 @@ impl PerspectiveCamera {
     }
 }
 
+/// Centered orthographic camera for 2D worlds and screen-space overlays.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct OrthographicCamera {
+    pub center: Vec2,
+    pub vertical_size: f32,
+    pub near: f32,
+    pub far: f32,
+}
+
+impl Default for OrthographicCamera {
+    fn default() -> Self {
+        Self {
+            center: Vec2::ZERO,
+            vertical_size: 2.0,
+            near: 0.0,
+            far: 10.0,
+        }
+    }
+}
+
+impl OrthographicCamera {
+    pub fn view_projection(self, aspect_ratio: f32) -> Mat4 {
+        let aspect_ratio = aspect_ratio.max(f32::EPSILON);
+        let half_height = self.vertical_size.max(f32::EPSILON) * 0.5;
+        let half_width = half_height * aspect_ratio;
+        let eye = self.center.extend(1.0);
+        let target = self.center.extend(0.0);
+        Mat4::orthographic_rh(
+            -half_width,
+            half_width,
+            -half_height,
+            half_height,
+            self.near,
+            self.far.max(self.near + f32::EPSILON),
+        ) * Mat4::look_at_rh(eye, target, Vec3::Y)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn default_camera_matrix_is_finite() {
+    fn default_perspective_camera_matrix_is_finite() {
         let matrix = PerspectiveCamera::default().view_projection(16.0 / 9.0);
         assert!(matrix.to_cols_array().into_iter().all(f32::is_finite));
     }
 
     #[test]
-    fn aspect_ratio_changes_horizontal_projection() {
+    fn perspective_aspect_ratio_changes_horizontal_projection() {
         let camera = PerspectiveCamera::default();
         let square = camera.view_projection(1.0);
         let wide = camera.view_projection(2.0);
@@ -52,8 +90,34 @@ mod tests {
     }
 
     #[test]
-    fn zero_aspect_ratio_does_not_produce_non_finite_values() {
+    fn zero_perspective_aspect_ratio_does_not_produce_non_finite_values() {
         let matrix = PerspectiveCamera::default().view_projection(0.0);
         assert!(matrix.to_cols_array().into_iter().all(f32::is_finite));
+    }
+
+    #[test]
+    fn default_orthographic_camera_matrix_is_finite() {
+        let matrix = OrthographicCamera::default().view_projection(16.0 / 9.0);
+        assert!(matrix.to_cols_array().into_iter().all(f32::is_finite));
+    }
+
+    #[test]
+    fn orthographic_aspect_ratio_preserves_vertical_scale() {
+        let camera = OrthographicCamera::default();
+        let square = camera.view_projection(1.0);
+        let wide = camera.view_projection(2.0);
+        assert!(wide.x_axis.x.abs() < square.x_axis.x.abs());
+        assert!((wide.y_axis.y - square.y_axis.y).abs() <= f32::EPSILON);
+    }
+
+    #[test]
+    fn orthographic_center_maps_to_view_center() {
+        let camera = OrthographicCamera {
+            center: Vec2::new(12.0, -4.0),
+            ..OrthographicCamera::default()
+        };
+        let projected = camera.view_projection(1.0) * camera.center.extend(0.0).extend(1.0);
+        assert!(projected.x.abs() < 0.000_01);
+        assert!(projected.y.abs() < 0.000_01);
     }
 }

@@ -26,6 +26,8 @@ All notable changes to Sindri Next will be documented here.
 - Procedural checkerboard texture proof shared by native and WebGPU targets.
 - Offscreen color targets with aligned GPU readback and row-padding removal.
 - Deterministic 512×512 headless cube capture, rendered through Mesa software Vulkan and uploaded as a PNG CI artifact.
+- Aspect-correct orthographic camera with projection tests.
+- Alpha-blended textured sprite renderer and a native/WebGPU cube-plus-overlay proof.
 
 ### Changed
 

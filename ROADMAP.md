@@ -94,10 +94,10 @@ Exit gate: the same render module displays the triangle on native and web hosts.
 - [x] Add depth buffer and colored cube
 - [x] Add texture upload, sampler, and textured cube
 - [x] Add mesh buffers, indices, vertex layouts, and reusable mesh resources
-- [ ] Add orthographic camera and textured sprite
+- [x] Add orthographic camera and textured sprite
 - [ ] Add alpha blending and transparent ordering rules
 - [ ] Add sprite batching with measurable draw-call reduction
-- [ ] Render a 3D cube and 2D sprite/overlay in one runtime
+- [x] Render a 3D cube and 2D sprite/overlay in one native/WebGPU runtime
 - [x] Add minimal offscreen rendering test harness with a deterministic 512×512 PNG artifact
 
 Exit gate: a serialized scene drives a combined native 2D/3D example without renderer-specific scene data.
