@@ -434,9 +434,11 @@ mod tests {
 
     #[test]
     fn duplicate_and_over_capacity_requests_are_rejected_without_blocking() {
-        let mut queue =
-            AssetLoadQueue::new(MemoryAssetSource::default(), AssetLoadQueueConfig::new(1, 1))
-                .unwrap();
+        let mut queue = AssetLoadQueue::new(
+            MemoryAssetSource::default(),
+            AssetLoadQueueConfig::new(1, 1),
+        )
+        .unwrap();
         let mut store = AssetStore::<AssetBytes>::default();
         let first = store.request(id("first.bin"));
         let first_request = AssetLoadRequest::new(&first);
