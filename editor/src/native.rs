@@ -80,7 +80,7 @@ impl EditorApp {
 
     fn top_bar(&mut self, ui: &mut egui::Ui) {
         egui::Panel::top("editor-top-bar")
-            .exact_height(52.0)
+            .exact_size(52.0)
             .frame(
                 egui::Frame::new()
                     .fill(PANEL_BG)
@@ -118,9 +118,9 @@ impl EditorApp {
 
     fn hierarchy_panel(&mut self, ui: &mut egui::Ui) {
         egui::Panel::left("scene-hierarchy")
-            .default_width(252.0)
-            .min_width(210.0)
-            .max_width(360.0)
+            .default_size(252.0)
+            .min_size(210.0)
+            .max_size(360.0)
             .frame(
                 egui::Frame::new()
                     .fill(PANEL_BG)
@@ -157,9 +157,9 @@ impl EditorApp {
 
     fn inspector_panel(&mut self, ui: &mut egui::Ui) {
         egui::Panel::right("entity-inspector")
-            .default_width(318.0)
-            .min_width(280.0)
-            .max_width(430.0)
+            .default_size(318.0)
+            .min_size(280.0)
+            .max_size(430.0)
             .frame(
                 egui::Frame::new()
                     .fill(PANEL_BG)
@@ -190,7 +190,7 @@ impl EditorApp {
 
     fn status_bar(&self, ui: &mut egui::Ui) {
         egui::Panel::bottom("editor-status")
-            .exact_height(28.0)
+            .exact_size(28.0)
             .frame(
                 egui::Frame::new()
                     .fill(PANEL_BG)
