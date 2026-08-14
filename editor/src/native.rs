@@ -81,7 +81,11 @@ impl EditorApp {
     fn top_bar(&mut self, context: &egui::Context) {
         egui::TopBottomPanel::top("editor-top-bar")
             .exact_height(52.0)
-            .frame(egui::Frame::new().fill(PANEL_BG).stroke(Stroke::new(1.0, BORDER)))
+            .frame(
+                egui::Frame::new()
+                    .fill(PANEL_BG)
+                    .stroke(Stroke::new(1.0, BORDER)),
+            )
             .show(context, |ui| {
                 ui.add_space(7.0);
                 ui.horizontal(|ui| {
@@ -102,7 +106,11 @@ impl EditorApp {
                         compact_button(ui, "Redo");
                         compact_button(ui, "Undo");
                         ui.separator();
-                        ui.label(RichText::new("Saved").small().color(Color32::from_rgb(91, 194, 137)));
+                        ui.label(
+                            RichText::new("Saved")
+                                .small()
+                                .color(Color32::from_rgb(91, 194, 137)),
+                        );
                     });
                 });
             });
@@ -113,7 +121,11 @@ impl EditorApp {
             .default_width(252.0)
             .min_width(210.0)
             .max_width(360.0)
-            .frame(egui::Frame::new().fill(PANEL_BG).stroke(Stroke::new(1.0, BORDER)))
+            .frame(
+                egui::Frame::new()
+                    .fill(PANEL_BG)
+                    .stroke(Stroke::new(1.0, BORDER)),
+            )
             .show(context, |ui| {
                 panel_heading(ui, "SCENE", "8 entities");
                 ui.add_space(8.0);
@@ -148,7 +160,11 @@ impl EditorApp {
             .default_width(318.0)
             .min_width(280.0)
             .max_width(430.0)
-            .frame(egui::Frame::new().fill(PANEL_BG).stroke(Stroke::new(1.0, BORDER)))
+            .frame(
+                egui::Frame::new()
+                    .fill(PANEL_BG)
+                    .stroke(Stroke::new(1.0, BORDER)),
+            )
             .show(context, |ui| {
                 panel_heading(ui, "INSPECTOR", "Entity");
                 ui.add_space(12.0);
@@ -175,15 +191,27 @@ impl EditorApp {
     fn status_bar(&self, context: &egui::Context) {
         egui::TopBottomPanel::bottom("editor-status")
             .exact_height(28.0)
-            .frame(egui::Frame::new().fill(PANEL_BG).stroke(Stroke::new(1.0, BORDER)))
+            .frame(
+                egui::Frame::new()
+                    .fill(PANEL_BG)
+                    .stroke(Stroke::new(1.0, BORDER)),
+            )
             .show(context, |ui| {
                 ui.horizontal(|ui| {
-                    ui.label(RichText::new("Ready").small().color(Color32::from_rgb(91, 194, 137)));
+                    ui.label(
+                        RichText::new("Ready")
+                            .small()
+                            .color(Color32::from_rgb(91, 194, 137)),
+                    );
                     ui.separator();
                     ui.label(RichText::new("wgpu 30").small().color(TEXT_MUTED));
                     ui.label(RichText::new("Vulkan").small().color(TEXT_MUTED));
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        ui.label(RichText::new("8 entities  ·  2 cameras  ·  60 FPS").small().color(TEXT_MUTED));
+                        ui.label(
+                            RichText::new("8 entities  ·  2 cameras  ·  60 FPS")
+                                .small()
+                                .color(TEXT_MUTED),
+                        );
                     });
                 });
             });
@@ -284,7 +312,10 @@ fn panel_heading(ui: &mut egui::Ui, title: &str, detail: &str) {
 }
 
 fn compact_button(ui: &mut egui::Ui, label: &str) -> Response {
-    ui.add_sized([58.0, 30.0], egui::Button::new(RichText::new(label).small()))
+    ui.add_sized(
+        [58.0, 30.0],
+        egui::Button::new(RichText::new(label).small()),
+    )
 }
 
 fn accent_button(ui: &mut egui::Ui, label: &str) -> Response {
@@ -296,8 +327,12 @@ fn accent_button(ui: &mut egui::Ui, label: &str) -> Response {
 
 fn mode_button(ui: &mut egui::Ui, mode: &mut EditorMode, value: EditorMode, label: &str) {
     let selected = *mode == value;
-    let button = egui::Button::new(RichText::new(label).small().color(if selected { TEXT } else { TEXT_MUTED }))
-        .selected(selected);
+    let button = egui::Button::new(RichText::new(label).small().color(if selected {
+        TEXT
+    } else {
+        TEXT_MUTED
+    }))
+    .selected(selected);
     if ui.add(button).clicked() {
         *mode = value;
     }
@@ -307,14 +342,20 @@ fn hierarchy_row(ui: &mut egui::Ui, kind: &str, name: &str, selected: bool) -> R
     let text = format!("{kind}   {name}");
     ui.add_sized(
         [ui.available_width(), 30.0],
-        egui::Button::new(RichText::new(text).color(if selected { TEXT } else { Color32::from_rgb(186, 193, 205) }))
-            .selected(selected),
+        egui::Button::new(RichText::new(text).color(if selected {
+            TEXT
+        } else {
+            Color32::from_rgb(186, 193, 205)
+        }))
+        .selected(selected),
     )
 }
 
 fn inspector_identity(ui: &mut egui::Ui, entity: &mut SceneEntity) {
     ui.label(RichText::new(entity_kind(entity)).small().color(ACCENT));
-    let name = entity.name.get_or_insert_with(|| entity.id.as_str().to_owned());
+    let name = entity
+        .name
+        .get_or_insert_with(|| entity.id.as_str().to_owned());
     ui.add_sized(
         [ui.available_width(), 34.0],
         egui::TextEdit::singleline(name).font(FontId::proportional(17.0)),
@@ -384,7 +425,10 @@ fn vector_row_2d(ui: &mut egui::Ui, label: &str, values: &mut [f32; 2]) {
         for (index, column) in columns.iter_mut().enumerate() {
             column.horizontal(|ui| {
                 let axis = ["X", "Y"][index];
-                let color = [Color32::from_rgb(239, 92, 101), Color32::from_rgb(89, 201, 135)][index];
+                let color = [
+                    Color32::from_rgb(239, 92, 101),
+                    Color32::from_rgb(89, 201, 135),
+                ][index];
                 ui.label(RichText::new(axis).strong().small().color(color));
                 ui.add(egui::DragValue::new(&mut values[index]).speed(0.05));
             });
@@ -395,7 +439,11 @@ fn vector_row_2d(ui: &mut egui::Ui, label: &str, values: &mut [f32; 2]) {
 fn components_card(ui: &mut egui::Ui, entity: &SceneEntity) {
     card(ui, "COMPONENTS", |ui| {
         if entity.components.is_empty() {
-            ui.label(RichText::new("No registered components").small().color(TEXT_MUTED));
+            ui.label(
+                RichText::new("No registered components")
+                    .small()
+                    .color(TEXT_MUTED),
+            );
         } else {
             for name in entity.components.keys() {
                 ui.horizontal(|ui| {
@@ -453,7 +501,10 @@ fn paint_grid(painter: &egui::Painter, rect: Rect) {
         let x = rect.center().x + f32::from(index) * rect.width() / 18.0;
         painter.line_segment(
             [vanishing, Pos2::new(x, rect.bottom())],
-            Stroke::new(if index % 4 == 0 { 1.0 } else { 0.6 }, if index % 4 == 0 { major } else { grid }),
+            Stroke::new(
+                if index % 4 == 0 { 1.0 } else { 0.6 },
+                if index % 4 == 0 { major } else { grid },
+            ),
         );
     }
     for index in 0_u8..14 {
@@ -461,19 +512,31 @@ fn paint_grid(painter: &egui::Painter, rect: Rect) {
         let y = horizon + t.powf(1.7) * (rect.bottom() - horizon);
         painter.line_segment(
             [Pos2::new(rect.left(), y), Pos2::new(rect.right(), y)],
-            Stroke::new(if index % 4 == 0 { 1.0 } else { 0.6 }, if index % 4 == 0 { major } else { grid }),
+            Stroke::new(
+                if index % 4 == 0 { 1.0 } else { 0.6 },
+                if index % 4 == 0 { major } else { grid },
+            ),
         );
     }
     painter.line_segment(
-        [Pos2::new(rect.left(), horizon), Pos2::new(rect.right(), horizon)],
+        [
+            Pos2::new(rect.left(), horizon),
+            Pos2::new(rect.right(), horizon),
+        ],
         Stroke::new(1.0, Color32::from_rgb(33, 42, 56)),
     );
 }
 
 fn paint_cube(painter: &egui::Painter, center: Pos2, size: f32, yaw: f32, pitch: f32) {
     let vertices = [
-        [-1.0, -1.0, -1.0], [1.0, -1.0, -1.0], [1.0, 1.0, -1.0], [-1.0, 1.0, -1.0],
-        [-1.0, -1.0, 1.0], [1.0, -1.0, 1.0], [1.0, 1.0, 1.0], [-1.0, 1.0, 1.0],
+        [-1.0, -1.0, -1.0],
+        [1.0, -1.0, -1.0],
+        [1.0, 1.0, -1.0],
+        [-1.0, 1.0, -1.0],
+        [-1.0, -1.0, 1.0],
+        [1.0, -1.0, 1.0],
+        [1.0, 1.0, 1.0],
+        [-1.0, 1.0, 1.0],
     ];
     let faces = [
         ([0, 1, 2, 3], Color32::from_rgb(83, 95, 116)),
@@ -499,11 +562,10 @@ fn paint_cube(painter: &egui::Painter, center: Pos2, size: f32, yaw: f32, pitch:
         );
         depth[index] = rotated_z;
     }
-    let mut ordered_faces = faces
-        .map(|(indices, color)| {
-            let average = indices.into_iter().map(|index| depth[index]).sum::<f32>() / 4.0;
-            (average, indices, color)
-        });
+    let mut ordered_faces = faces.map(|(indices, color)| {
+        let average = indices.into_iter().map(|index| depth[index]).sum::<f32>() / 4.0;
+        (average, indices, color)
+    });
     ordered_faces.sort_by(|left, right| left.0.total_cmp(&right.0));
     for (_, indices, color) in ordered_faces {
         let points = indices.into_iter().map(|index| projected[index]).collect();
@@ -514,9 +576,23 @@ fn paint_cube(painter: &egui::Painter, center: Pos2, size: f32, yaw: f32, pitch:
         ));
     }
     let selection = Rect::from_center_size(center, Vec2::splat(size * 2.75));
-    painter.rect_stroke(selection, 2.0, Stroke::new(1.0, ACCENT), StrokeKind::Outside);
-    for corner in [selection.left_top(), selection.right_top(), selection.left_bottom(), selection.right_bottom()] {
-        painter.rect_filled(Rect::from_center_size(corner, Vec2::splat(5.0)), 1.0, ACCENT);
+    painter.rect_stroke(
+        selection,
+        2.0,
+        Stroke::new(1.0, ACCENT),
+        StrokeKind::Outside,
+    );
+    for corner in [
+        selection.left_top(),
+        selection.right_top(),
+        selection.left_bottom(),
+        selection.right_bottom(),
+    ] {
+        painter.rect_filled(
+            Rect::from_center_size(corner, Vec2::splat(5.0)),
+            1.0,
+            ACCENT,
+        );
     }
 }
 
@@ -530,7 +606,13 @@ fn paint_axis_gizmo(painter: &egui::Painter, origin: Pos2) {
     for (offset, color, label) in axes {
         let end = origin + offset;
         painter.line_segment([origin, end], Stroke::new(2.0, color));
-        painter.text(end, egui::Align2::CENTER_CENTER, label, FontId::proportional(10.0), color);
+        painter.text(
+            end,
+            egui::Align2::CENTER_CENTER,
+            label,
+            FontId::proportional(10.0),
+            color,
+        );
     }
 }
 
@@ -580,7 +662,12 @@ mod tests {
     fn embedded_scene_is_valid_and_contains_editor_selection() {
         let scene: SceneDocument = serde_json::from_str(SCENE_JSON).unwrap();
         scene.validate().unwrap();
-        assert!(scene.entities.iter().any(|entity| entity.id.as_str() == "checker-cube"));
+        assert!(
+            scene
+                .entities
+                .iter()
+                .any(|entity| entity.id.as_str() == "checker-cube")
+        );
     }
 
     #[test]
