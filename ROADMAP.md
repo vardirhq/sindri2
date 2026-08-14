@@ -92,7 +92,7 @@ Exit gate: the same render module displays the triangle on native and web hosts.
 - [ ] Define cameras, viewports, clear operations, layers, and explicit render-pass ordering
 - [x] Add camera matrices and projection math tests
 - [x] Add depth buffer and colored cube
-- [ ] Add texture upload, sampler, and textured cube
+- [x] Add texture upload, sampler, and textured cube
 - [x] Add mesh buffers, indices, vertex layouts, and reusable mesh resources
 - [ ] Add orthographic camera and textured sprite
 - [ ] Add alpha blending and transparent ordering rules
