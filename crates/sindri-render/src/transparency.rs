@@ -92,10 +92,7 @@ mod tests {
     fn submission_index_stabilizes_exact_ties() {
         let mut draws = [order(0, 2.0, 9), order(0, 2.0, 2), order(0, 2.0, 5)];
         draws.sort();
-        assert_eq!(
-            draws.map(TransparentOrder::submission_index),
-            [2, 5, 9]
-        );
+        assert_eq!(draws.map(TransparentOrder::submission_index), [2, 5, 9]);
     }
 
     #[test]
