@@ -43,7 +43,6 @@ if [ -z "$window_id" ]; then
 fi
 
 sleep 2
-# Capturing the X root is more reliable for WGPU-backed windows than asking
-# ImageMagick to read the composited client window directly. CI fixes the root
-# framebuffer to the editor's default viewport size.
-import -window root "$output_path"
+# The compositor redirects the WGPU-backed client window into an X pixmap that
+# ImageMagick can read deterministically.
+import -window "$window_id" "$output_path"
