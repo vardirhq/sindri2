@@ -28,7 +28,7 @@ jobs:
       - name: Install software Vulkan
         run: |
           sudo apt-get update
-          sudo apt-get install --yes imagemagick libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
+          sudo apt-get install --yes imagemagick libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xcompmgr xdotool xvfb
       - name: Capture native editor workspace
         env:
           WGPU_BACKEND: vulkan
