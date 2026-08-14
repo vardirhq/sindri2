@@ -71,7 +71,7 @@ enum EditorMode {
 
 struct RuntimeViewport {
     render_state: eframe::egui_wgpu::RenderState,
-    _texture: wgpu::Texture,
+    texture: wgpu::Texture,
     view: wgpu::TextureView,
     depth: DepthTarget,
     texture_id: egui::TextureId,
@@ -116,7 +116,7 @@ impl RuntimeViewport {
 
         Ok(Self {
             render_state,
-            _texture: texture,
+            texture,
             view,
             depth,
             texture_id,
@@ -136,6 +136,8 @@ impl RuntimeViewport {
         zoom: f32,
     ) -> Result<(), String> {
         self.resize(width, height);
+        debug_assert_eq!(self.texture.width(), self.width);
+        debug_assert_eq!(self.texture.height(), self.height);
         let prepared = self
             .scene
             .extract_frame_with_view(Viewport::new(self.width, self.height), rotation, 1.0 / zoom)
@@ -179,7 +181,7 @@ impl RuntimeViewport {
                 wgpu::FilterMode::Linear,
                 self.texture_id,
             );
-        self._texture = texture;
+        self.texture = texture;
         self.view = view;
         self.depth.resize(&self.render_state.device, width, height);
         self.width = width;
@@ -504,7 +506,7 @@ fn save_screenshot(path: &Path, image: &egui::ColorImage) -> Result<(), String> 
     let pixels = image
         .pixels
         .iter()
-        .flat_map(|color| color.to_array())
+        .flat_map(Color32::to_array)
         .collect::<Vec<_>>();
     writer
         .write_image_data(&pixels)
