@@ -141,8 +141,7 @@ pub struct AssetLoadQueue {
 }
 
 #[cfg(target_arch = "wasm32")]
-type LocalLoadFuture =
-    Pin<Box<dyn Future<Output = AssetLoadCompletion> + 'static>>;
+type LocalLoadFuture = Pin<Box<dyn Future<Output = AssetLoadCompletion> + 'static>>;
 
 impl AssetLoadQueue {
     #[cfg(not(target_arch = "wasm32"))]
@@ -383,16 +382,16 @@ mod tests {
 
         assert!(queue.is_empty());
         assert_eq!(store.status(&handle).unwrap(), AssetStatus::Ready);
-        assert_eq!(store.get(&handle).unwrap().unwrap().as_slice(), &[1, 2, 3, 4]);
+        assert_eq!(
+            store.get(&handle).unwrap().unwrap().as_slice(),
+            &[1, 2, 3, 4]
+        );
     }
 
     #[test]
     fn completions_preserve_source_errors_and_handle_generations() {
-        let mut queue = AssetLoadQueue::new(
-            MemoryAssetSource::new(),
-            AssetLoadQueueConfig::new(1, 4),
-        )
-        .unwrap();
+        let mut queue =
+            AssetLoadQueue::new(MemoryAssetSource::new(), AssetLoadQueueConfig::new(1, 4)).unwrap();
         let mut store = AssetStore::<AssetBytes>::default();
         let handle = store.request(id("missing.bin"));
         let request = AssetLoadRequest::new(&handle);
@@ -414,8 +413,7 @@ mod tests {
     fn an_expired_request_cannot_complete_a_replacement_generation() {
         let source = MemoryAssetSource::new();
         source.insert(id("shared.bin"), vec![7]);
-        let mut queue =
-            AssetLoadQueue::new(source, AssetLoadQueueConfig::new(1, 4)).unwrap();
+        let mut queue = AssetLoadQueue::new(source, AssetLoadQueueConfig::new(1, 4)).unwrap();
         let mut store = AssetStore::<AssetBytes>::default();
         let expired = store.request(id("shared.bin"));
         let expired_request = AssetLoadRequest::new(&expired);
@@ -435,11 +433,8 @@ mod tests {
 
     #[test]
     fn duplicate_and_over_capacity_requests_are_rejected_without_blocking() {
-        let mut queue = AssetLoadQueue::new(
-            MemoryAssetSource::new(),
-            AssetLoadQueueConfig::new(1, 1),
-        )
-        .unwrap();
+        let mut queue =
+            AssetLoadQueue::new(MemoryAssetSource::new(), AssetLoadQueueConfig::new(1, 1)).unwrap();
         let mut store = AssetStore::<AssetBytes>::default();
         let first = store.request(id("first.bin"));
         let first_request = AssetLoadRequest::new(&first);
