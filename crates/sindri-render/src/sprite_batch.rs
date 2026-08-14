@@ -119,8 +119,7 @@ impl SpriteBatchRenderer {
         });
         let instances = create_instance_buffer(device, DEFAULT_CAPACITY)
             .expect("default sprite batch capacity fits a GPU buffer");
-        let bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("Sindri sprite batch bind group layout"),
                 entries: &[
                     wgpu::BindGroupLayoutEntry {
@@ -149,8 +148,8 @@ impl SpriteBatchRenderer {
                         ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                         count: None,
                     },
-                ],
-            });
+            ],
+        });
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Sindri sprite batch bind group"),
             layout: &bind_group_layout,
@@ -184,7 +183,10 @@ impl SpriteBatchRenderer {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: Some("vs_main"),
-                buffers: &[Some(TexturedVertex::layout()), Some(SpriteInstance::layout())],
+                buffers: &[
+                    Some(TexturedVertex::layout()),
+                    Some(SpriteInstance::layout()),
+                ],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
@@ -301,8 +303,8 @@ fn create_instance_buffer(
     device: &wgpu::Device,
     capacity: u32,
 ) -> Result<wgpu::Buffer, SpriteBatchError> {
-    let stride =
-        u64::try_from(std::mem::size_of::<SpriteInstance>()).map_err(|_| SpriteBatchError::BufferSizeOverflow)?;
+    let stride = u64::try_from(std::mem::size_of::<SpriteInstance>())
+        .map_err(|_| SpriteBatchError::BufferSizeOverflow)?;
     let size = u64::from(capacity)
         .checked_mul(stride)
         .ok_or(SpriteBatchError::BufferSizeOverflow)?;

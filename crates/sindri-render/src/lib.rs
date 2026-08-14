@@ -18,9 +18,7 @@ pub use depth::DepthTarget;
 pub use mesh::{ColoredVertex, MeshBuffers, TexturedVertex};
 pub use offscreen::{OffscreenError, OffscreenReadback, OffscreenTarget};
 pub use sprite::{SpriteBlendMode, SpriteRenderer};
-pub use sprite_batch::{
-    SpriteBatchError, SpriteBatchRenderer, SpriteBatchStats, SpriteInstance,
-};
+pub use sprite_batch::{SpriteBatchError, SpriteBatchRenderer, SpriteBatchStats, SpriteInstance};
 pub use texture::{Texture2D, TextureError};
 pub use textured_cube::TexturedCubeRenderer;
 pub use transparency::{TransparentOrder, TransparentOrderError};
