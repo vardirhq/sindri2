@@ -1,0 +1,15 @@
+[package]
+name = "sindri"
+description = "The public Rust API for the Sindri game engine"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+sindri-core = { path = "../sindri-core", version = "0.1.0" }
+
+[lints]
+workspace = true
+

@@ -1,0 +1,243 @@
+# Sindri Next roadmap
+
+This is the checkable engineering plan. Check an item only when its acceptance criteria and relevant tests are complete. The roadmap is ordered by dependency, not excitement.
+
+## Milestone 0 — Architecture and repository baseline
+
+- [x] Review the vision against the legacy `sindri-engine` implementation
+- [x] Record feasibility constraints and major risks
+- [x] Create a Rust 2024 workspace with an explicit MSRV
+- [x] Add formatting, Clippy, test CI, and dependency caching
+- [x] Establish `sindri-core` and the public `sindri` facade
+- [ ] Add `CONTRIBUTING.md`, code of conduct, and dual-license files
+- [ ] Add dependency policy and automated dependency/security review
+- [ ] Decide versioning policy for Rust crates, scene files, editor protocol, and npm SDK
+- [ ] Add release/changelog validation
+
+Exit gate: a clean clone passes format, lint, and test checks on the declared MSRV.
+
+## Milestone 1 — Renderer-independent engine core
+
+### Lifecycle and time
+
+- [x] Define and test legal engine lifecycle transitions
+- [x] Implement capped frame delta and fixed-step accumulation
+- [x] Prevent a fixed-update spiral of death
+- [x] Define pause semantics
+- [ ] Add time scale without accumulating floating-point drift
+- [ ] Define lifecycle hooks and error propagation used by native and web hosts
+- [x] Add a platform-independent `EngineCore` advanced by runtime hosts
+- [ ] Add deterministic clock/test host
+
+### Entities and world
+
+- [x] Add generation-checked runtime entity handles
+- [x] Add safe spawn, access, recursive destruction, and slot reuse
+- [x] Add hierarchy parenting with cycle prevention
+- [x] Keep serialized logical IDs separate from runtime handles
+- [ ] Define typed component registration and metadata
+- [ ] Add query API for built-in and registered component types
+- [ ] Add deferred world command buffer
+- [ ] Specify deterministic system ordering
+- [ ] Benchmark 1k, 10k, and 100k entity workloads before considering an archetype ECS
+
+### Scenes and serialization
+
+- [x] Add versioned scene document and stable logical entity IDs
+- [x] Validate duplicate IDs, missing parents, and hierarchy cycles
+- [x] Load a validated scene into a runtime world in two passes
+- [x] Preserve forward-compatible JSON component payloads
+- [ ] Define component schema registry and unknown-component behavior
+- [ ] Save a runtime world back to a scene without losing stable IDs
+- [ ] Add canonical pretty serialization for reviewable diffs
+- [ ] Add fixtures and golden round-trip tests
+- [ ] Define scene migration API before format version 2 exists
+- [ ] Split editor-only metadata into a namespaced, ignorable section
+
+Exit gate: core runs without GPU/window/browser dependencies and scene fixtures round-trip deterministically.
+
+## Milestone 2 — Platform and GPU bootstrap
+
+### Boundaries
+
+- [ ] Add `sindri-platform` traits for surface, lifecycle, input source, clock, and asset I/O
+- [ ] Add desktop adapter using `winit`
+- [ ] Add web adapter using `wasm-bindgen`, `web-sys`, and async initialization
+- [ ] Keep target-specific conditionals inside platform crates
+- [ ] Produce explicit capability errors for unavailable WebGPU/surface features
+
+### GPU foundation
+
+- [ ] Add `sindri-gpu` with instance/adapter/device/queue ownership
+- [ ] Negotiate conservative cross-target limits and features
+- [ ] Handle surface configuration, resize, zero-sized surfaces, loss, and outdated frames
+- [ ] Add resource labels and uncaptured GPU error reporting
+- [ ] Define typed buffer, texture, sampler, shader, and pipeline wrappers
+- [ ] Add render-target and depth-target management
+- [ ] Prove headless adapter initialization where CI supports it
+
+### Proofs
+
+- [ ] Render a triangle natively
+- [ ] Render a triangle in a browser through WASM/WebGPU
+- [ ] Resize correctly on desktop and browser
+- [ ] Recover or fail clearly on surface loss
+
+Exit gate: the same render module displays the triangle on native and web hosts.
+
+## Milestone 3 — Minimal shared renderer
+
+- [ ] Define frame extraction/preparation/render stages
+- [ ] Define cameras, viewports, clear operations, layers, and explicit render-pass ordering
+- [ ] Add camera matrices and projection math tests
+- [ ] Add depth buffer and colored cube
+- [ ] Add texture upload, sampler, and textured cube
+- [ ] Add mesh buffers, indices, vertex layouts, and mesh handles
+- [ ] Add orthographic camera and textured sprite
+- [ ] Add alpha blending and transparent ordering rules
+- [ ] Add sprite batching with measurable draw-call reduction
+- [ ] Render a 3D cube and 2D sprite/overlay in one runtime
+- [ ] Add minimal offscreen rendering test harness
+
+Exit gate: a serialized scene drives a combined native 2D/3D example without renderer-specific scene data.
+
+## Milestone 4 — Asset system
+
+- [ ] Define logical `AssetId`, typed handles, states, errors, and reference lifetimes
+- [ ] Define asset source abstraction for filesystem and HTTP/fetch
+- [ ] Add async load queue that does not fake synchronous browser I/O
+- [ ] Load textures and scene JSON
+- [ ] Add fallback/error assets and actionable diagnostics
+- [ ] Add asset root and URL resolution rules
+- [ ] Add hot reload for native development
+- [ ] Define package/export manifest with content hashes
+- [ ] Prevent duplicate loads and release unused GPU assets
+- [ ] Add image decoding compatibility tests on native and WASM
+
+Exit gate: the same logical texture and scene references load from disk and static web hosting.
+
+## Milestone 5 — First-class TypeScript/Web SDK
+
+### WASM contract
+
+- [ ] Add a narrow `sindri-web` binding crate
+- [ ] Define versioned command, event, query, and error payloads
+- [ ] Implement command batching and bulk component writes
+- [ ] Implement event/query draining without per-entity frame calls
+- [ ] Benchmark boundary overhead and publish budgets
+- [ ] Make destruction/disposal explicit and leak-tested
+
+### TypeScript package
+
+- [ ] Create `packages/engine` with hand-designed public types
+- [ ] Hide generated bindings as package internals
+- [ ] Implement `Engine.create({ canvas })`
+- [ ] Add start, pause, resume, stop, resize, and destroy semantics
+- [ ] Add typed scene/entity handles with stale-handle errors
+- [ ] Add keyboard and pointer input
+- [ ] Add one safe gameplay update callback per frame
+- [ ] Add batched mutation helpers for high-entity workloads
+- [ ] Generate API docs and source maps
+- [ ] Package ESM JS, TypeScript declarations, and WASM correctly
+
+### Browser quality
+
+- [ ] Add Playwright smoke tests in Chromium
+- [ ] Test missing WebGPU messaging
+- [ ] Test canvas selector/element validation
+- [ ] Test resize, device-pixel ratio, visibility pause, and teardown
+- [ ] Test static hosting under a non-root base path
+
+Exit gate: `npm install @sindri/engine` can run a documented sprite-and-cube browser example without Rust code.
+
+## Milestone 6 — Focused 2D migration
+
+- [ ] Inventory each legacy 2D subsystem as port, refactor, replace, or defer
+- [ ] Port sprite animation and sprite sheets
+- [ ] Port camera 2D behavior and pixel snapping
+- [ ] Port tilemap data model and renderer
+- [ ] Port text rendering with a web-safe font asset strategy
+- [ ] Port particles after the render lifecycle is stable
+- [ ] Port layers, parallax, anchors, and sprite bounds
+- [ ] Port A* pathfinding into a renderer-free grid crate
+- [ ] Add optional Rapier2D adapter without core dependency
+- [ ] Build `hello-2d` and one small platformer vertical slice
+- [ ] Verify both examples natively and in browser
+
+Exit gate: Sindri Next matches the useful core of legacy 2D without inheriting its desktop/server/Lua coupling.
+
+## Milestone 7 — Editor/runtime protocol and minimal editor
+
+- [ ] Define versioned editor protocol and capability handshake
+- [ ] Choose and document in-process vs child-process viewport integration per platform
+- [ ] Load/save the real scene format
+- [ ] Render the actual Sindri runtime in the viewport
+- [ ] Display hierarchy from runtime scene state
+- [ ] Inspect/edit names, hierarchy, Transform2D, and Transform3D
+- [ ] Add selection and transform change commands
+- [ ] Add command-based undo/redo with transaction grouping
+- [ ] Add 2D pan/zoom and basic 3D orbit camera controls
+- [ ] Add play, pause, stop, and reset-to-authored-state
+- [ ] Add one sprite, one cube, and one camera editor fixture
+- [ ] Add protocol contract and save/reload integration tests
+
+Exit gate: editing a transform, saving, and reopening produces the same visible native/web scene.
+
+## Milestone 8 — Basic 3D product capability
+
+- [ ] Finalize mesh and material public APIs
+- [ ] Add glTF 2.0 mesh/material import using an established loader
+- [ ] Add normals, UVs, and basic unlit/standard material paths
+- [ ] Add directional light and ambient/environment term
+- [ ] Add frustum culling and mesh instancing after profiling
+- [ ] Add optional Rapier3D adapter
+- [ ] Add camera/editor gizmos and collider visualization
+- [ ] Build `hello-3d` and a small navigable scene
+- [ ] Validate representative integrated and discrete GPUs
+
+Exit gate: imported glTF content, camera, lighting, and collision work in native, browser, and editor preview.
+
+## Milestone 9 — Isometric and grid module
+
+- [ ] Extract coordinate/projection lessons from IsoGame without app-specific behavior
+- [ ] Add tested orthogonal/isometric grid coordinate types
+- [ ] Add world/grid/screen conversion with round-trip property tests
+- [ ] Add footprints, occupancy, placement validation, and wall edges
+- [ ] Add pathfinding overlays and interaction points
+- [ ] Define deterministic sprite-isometric depth keys
+- [ ] Add integer zoom and generated-anchor metadata
+- [ ] Add orthographic 3D isometric camera helpers
+- [ ] Add editor grid, tile, footprint, and height-layer tools
+- [ ] Build sprite-based `iso-room` example
+
+Exit gate: shared grid/gameplay logic supports both sprite isometric and orthographic 3D presentation.
+
+## Milestone 10 — Tooling, distribution, and 1.0 hardening
+
+- [ ] Implement minimal `sindri new/dev/build/test/editor` CLI
+- [ ] Create `npm create sindri-game`
+- [ ] Add native and static-web export pipelines
+- [ ] Add curated examples with CI build coverage
+- [ ] Add Rust and TypeScript getting-started guides side by side
+- [ ] Document supported browsers, GPUs, OSes, and MSRV
+- [ ] Add CPU, GPU, memory, startup, and WASM-size benchmarks
+- [ ] Add screenshot/render regression suite where stable
+- [ ] Audit unsafe code policy and dependencies
+- [ ] Stabilize public API and document deprecations
+- [ ] Complete license, notices, release notes, and publishing dry run
+
+Exit gate: all first-major-release success criteria in `PROJECT_OVERVIEW.md` pass from clean generated projects.
+
+## Explicitly deferred beyond the first major release
+
+- [ ] PBR and advanced shadows
+- [ ] Skeletal animation and animation editor
+- [ ] WebGL2 fallback
+- [ ] Networking/multiplayer
+- [ ] Native mobile and consoles
+- [ ] Render graphs and general compute API
+- [ ] Visual scripting or shader graphs
+- [ ] Terrain engine
+- [ ] Plugin marketplace
+- [ ] Cloud services
+- [ ] AI-assisted actions beyond a structured editor command proof
