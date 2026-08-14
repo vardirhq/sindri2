@@ -3,8 +3,8 @@ use std::{future::Future, sync::Arc};
 use glam::{Mat4, UVec2, Vec2, Vec3};
 use sindri_gpu::{GpuContext, GpuRequestOptions, SurfaceProfile};
 use sindri_render::{
-    DepthTarget, OrthographicCamera, PerspectiveCamera, SpriteRenderer, Texture2D,
-    TexturedCubeRenderer,
+    DepthTarget, OrthographicCamera, PerspectiveCamera, SpriteBatchRenderer, SpriteInstance,
+    Texture2D, TexturedCubeRenderer, TransparentOrder,
 };
 use web_time::Instant;
 use wgpu::CurrentSurfaceTexture;
@@ -68,7 +68,7 @@ struct RenderState {
     surface_profile: SurfaceProfile,
     depth: DepthTarget,
     cube_renderer: TexturedCubeRenderer,
-    sprite_renderer: SpriteRenderer,
+    sprite_renderer: SpriteBatchRenderer,
     perspective_camera: PerspectiveCamera,
     orthographic_camera: OrthographicCamera,
     input: RotationInput,
@@ -101,7 +101,7 @@ impl RenderState {
         );
         let cube_renderer =
             TexturedCubeRenderer::new(&gpu.device, &gpu.queue, surface_profile.format());
-        let sprite_renderer = SpriteRenderer::new(
+        let sprite_renderer = SpriteBatchRenderer::new(
             &gpu.device,
             surface_profile.format(),
             demo_badge_texture(&gpu.device, &gpu.queue),
@@ -194,11 +194,15 @@ impl RenderState {
             &self.depth,
             self.perspective_camera.view_projection(aspect) * model,
         );
+        let sprite_instances = demo_sprite_batch(aspect);
+        self.sprite_renderer
+            .prepare(&self.gpu.device, &self.gpu.queue, &sprite_instances)
+            .expect("demo sprite batch fits the GPU instance buffer");
         self.sprite_renderer.encode(
             &self.gpu.queue,
             &mut encoder,
             &view,
-            self.orthographic_camera.view_projection(aspect) * sprite_overlay_transform(aspect),
+            self.orthographic_camera.view_projection(aspect),
         );
         self.gpu.queue.submit([encoder.finish()]);
         self.window.pre_present_notify();
@@ -384,9 +388,52 @@ pub fn demo_badge_texture(device: &wgpu::Device, queue: &wgpu::Queue) -> Texture
         .expect("static badge texture dimensions are valid")
 }
 
-pub fn sprite_overlay_transform(aspect_ratio: f32) -> Mat4 {
-    Mat4::from_translation(Vec3::new(aspect_ratio - 0.38, -0.62, 0.0))
-        * Mat4::from_scale(Vec3::new(0.5, 0.5, 1.0))
+pub fn demo_sprite_batch(aspect_ratio: f32) -> [SpriteInstance; 5] {
+    let right = aspect_ratio - 0.16;
+    let mut sprites = [
+        (
+            TransparentOrder::new(0, 5.0, 0).expect("static depth is finite"),
+            SpriteInstance::new(
+                Mat4::from_translation(Vec3::new(right - 0.62, -0.56, 0.0))
+                    * Mat4::from_scale(Vec3::new(0.38, 0.38, 1.0)),
+                [0.55, 0.72, 1.0, 0.62],
+            ),
+        ),
+        (
+            TransparentOrder::new(0, 4.0, 1).expect("static depth is finite"),
+            SpriteInstance::new(
+                Mat4::from_translation(Vec3::new(right - 0.44, -0.68, 0.0))
+                    * Mat4::from_scale(Vec3::new(0.34, 0.34, 1.0)),
+                [0.72, 1.0, 0.72, 0.68],
+            ),
+        ),
+        (
+            TransparentOrder::new(0, 3.0, 2).expect("static depth is finite"),
+            SpriteInstance::new(
+                Mat4::from_translation(Vec3::new(right - 0.28, -0.48, 0.0))
+                    * Mat4::from_scale(Vec3::new(0.32, 0.32, 1.0)),
+                [1.0, 0.68, 0.55, 0.72],
+            ),
+        ),
+        (
+            TransparentOrder::new(0, 2.0, 3).expect("static depth is finite"),
+            SpriteInstance::new(
+                Mat4::from_translation(Vec3::new(right - 0.12, -0.66, 0.0))
+                    * Mat4::from_scale(Vec3::new(0.36, 0.36, 1.0)),
+                [0.92, 0.72, 1.0, 0.78],
+            ),
+        ),
+        (
+            TransparentOrder::new(0, 1.0, 4).expect("static depth is finite"),
+            SpriteInstance::new(
+                Mat4::from_translation(Vec3::new(right - 0.02, -0.42, 0.0))
+                    * Mat4::from_scale(Vec3::new(0.42, 0.42, 1.0)),
+                [1.0, 1.0, 1.0, 0.88],
+            ),
+        ),
+    ];
+    sprites.sort_by_key(|(order, _)| *order);
+    sprites.map(|(_, instance)| instance)
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen::prelude::wasm_bindgen(start))]

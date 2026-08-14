@@ -23,4 +23,4 @@ Opaque 3D passes render before transparent overlays. Transparent draws use `Tran
 
 Depth must be finite; NaN and infinity are rejected when the key is created. Submission indices make ordering deterministic across native and browser targets without treating insertion order as an undocumented side effect.
 
-Transparent sprite passes do not write depth. Callers must sort their prepared draw list before encoding. Sprite batching will preserve this ordering contract when it is added.
+Transparent sprite passes do not write depth. Callers must sort their prepared draw list before encoding. `SpriteBatchRenderer` consumes instances in that final order and preserves it within one instanced draw for each texture/blend-mode group.

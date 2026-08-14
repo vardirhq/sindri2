@@ -30,7 +30,7 @@ pub enum SpriteBlendMode {
 }
 
 impl SpriteBlendMode {
-    const fn blend_state(self) -> wgpu::BlendState {
+    pub(crate) const fn blend_state(self) -> wgpu::BlendState {
         match self {
             Self::Opaque => wgpu::BlendState::REPLACE,
             Self::Alpha => wgpu::BlendState::ALPHA_BLENDING,

@@ -29,15 +29,15 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes libvulkan1 mesa-vulkan-drivers
-      - name: Capture cube and sprite overlay
+      - name: Capture instanced sprite batch
         env:
           WGPU_BACKEND: vulkan
-        run: cargo run --package sindri-cube --bin capture -- target/render-artifacts/cube-sprite-overlay.png
-      - name: Upload cube and sprite overlay
+        run: cargo run --package sindri-cube --bin capture -- target/render-artifacts/cube-sprite-batch.png
+      - name: Upload instanced sprite batch
         uses: actions/upload-artifact@v4
         with:
-          name: cube-sprite-overlay-preview
-          path: target/render-artifacts/cube-sprite-overlay.png
+          name: cube-sprite-batch-preview
+          path: target/render-artifacts/cube-sprite-batch.png
           if-no-files-found: error
           retention-days: 14
       - name: Check browser workspace

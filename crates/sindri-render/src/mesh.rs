@@ -76,9 +76,17 @@ impl MeshBuffers {
     }
 
     pub fn draw<'pass>(&'pass self, pass: &mut wgpu::RenderPass<'pass>) {
+        self.draw_instances(pass, 0..1);
+    }
+
+    pub fn draw_instances<'pass>(
+        &'pass self,
+        pass: &mut wgpu::RenderPass<'pass>,
+        instances: std::ops::Range<u32>,
+    ) {
         pass.set_vertex_buffer(0, self.vertex.slice(..));
         pass.set_index_buffer(self.index.slice(..), wgpu::IndexFormat::Uint16);
-        pass.draw_indexed(0..self.index_count, 0, 0..1);
+        pass.draw_indexed(0..self.index_count, 0, instances);
     }
 
     pub const fn index_count(&self) -> u32 {
