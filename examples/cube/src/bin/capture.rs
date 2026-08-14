@@ -61,10 +61,10 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {
-    let path = std::env::args_os()
-        .nth(1)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("target/render-artifacts/textured-cube.png"));
+    let path = std::env::args_os().nth(1).map_or_else(
+        || PathBuf::from("target/render-artifacts/textured-cube.png"),
+        PathBuf::from,
+    );
     if let Err(error) = pollster::block_on(capture(&path)) {
         panic!("offscreen capture failed: {error}");
     }
