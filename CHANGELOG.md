@@ -35,6 +35,7 @@ All notable changes to Sindri Next will be documented here.
 - A versioned JSON scene that drives the shared cube and sprite-batch example through the same native, browser, and offscreen frame pipeline.
 - Typed scene-component registration with metadata, schema validation, configurable unknown-component handling, and typed world queries.
 - Native Rust editor shell with a styled hierarchy, interactive viewport composition, transform inspector, toolbar, and runtime status surfaces driven by the real demo scene document.
+- Portable logical asset IDs, typed strong and weak handles, explicit load states and failures, duplicate-request coalescing, and reference-counted collection semantics.
 
 ### Changed
 
