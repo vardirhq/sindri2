@@ -44,7 +44,10 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
     gpu.queue.submit([encoder.finish()]);
     let pixels = readback.read_rgba8(&gpu.device)?;
 
-    if let Some(parent) = path.parent().filter(|parent| !parent.as_os_str().is_empty()) {
+    if let Some(parent) = path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+    {
         fs::create_dir_all(parent)?;
     }
     let file = BufWriter::new(File::create(path)?);
