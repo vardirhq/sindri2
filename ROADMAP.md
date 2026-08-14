@@ -95,7 +95,7 @@ Exit gate: the same render module displays the triangle on native and web hosts.
 - [x] Add texture upload, sampler, and textured cube
 - [x] Add mesh buffers, indices, vertex layouts, and reusable mesh resources
 - [x] Add orthographic camera and textured sprite
-- [ ] Add alpha blending and transparent ordering rules
+- [x] Add configurable sprite blending and deterministic transparent ordering rules
 - [ ] Add sprite batching with measurable draw-call reduction
 - [x] Render a 3D cube and 2D sprite/overlay in one native/WebGPU runtime
 - [x] Add minimal offscreen rendering test harness with a deterministic 512×512 PNG artifact

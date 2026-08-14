@@ -119,7 +119,7 @@ impl RenderState {
             perspective_camera: PerspectiveCamera::default(),
             orthographic_camera: OrthographicCamera::default(),
             input: RotationInput::default(),
-            rotation: Vec2::new(0.45, -0.25),
+            rotation: Vec2::ZERO,
             last_frame: Instant::now(),
         })
     }

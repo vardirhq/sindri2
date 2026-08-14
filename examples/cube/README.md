@@ -1,6 +1,6 @@
 # Shared textured cube and sprite overlay
 
-This example combines Sindri's perspective camera, depth-tested textured cube, orthographic camera, and alpha-blended textured sprite through one application shared by native desktops and WebGPU browsers. The circular badge is a transparent RGBA texture rendered as a 2D overlay after the 3D pass.
+This example combines Sindri's perspective camera, depth-tested textured cube, orthographic camera, and alpha-blended textured sprite through one application shared by native desktops and WebGPU browsers. The circular badge is a transparent RGBA texture rendered as a 2D overlay after the 3D pass. Transparent draw policy and ordering semantics are documented in [`docs/rendering-transparency.md`](../../docs/rendering-transparency.md).
 
 Use the arrow keys to rotate the cube.
 

@@ -20,6 +20,26 @@ struct SpriteUniform {
     model_view_projection: [[f32; 4]; 4],
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum SpriteBlendMode {
+    Opaque,
+    #[default]
+    Alpha,
+    PremultipliedAlpha,
+    Additive,
+}
+
+impl SpriteBlendMode {
+    const fn blend_state(self) -> wgpu::BlendState {
+        match self {
+            Self::Opaque => wgpu::BlendState::REPLACE,
+            Self::Alpha => wgpu::BlendState::ALPHA_BLENDING,
+            Self::PremultipliedAlpha => wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING,
+            Self::Additive => wgpu::BlendState::ADDITIVE,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct SpriteRenderer {
     pipeline: wgpu::RenderPipeline,
@@ -27,6 +47,7 @@ pub struct SpriteRenderer {
     uniform: wgpu::Buffer,
     mesh: MeshBuffers,
     texture: Texture2D,
+    blend_mode: SpriteBlendMode,
 }
 
 impl SpriteRenderer {
@@ -34,6 +55,15 @@ impl SpriteRenderer {
         device: &wgpu::Device,
         target_format: wgpu::TextureFormat,
         texture: Texture2D,
+    ) -> Self {
+        Self::with_blend_mode(device, target_format, texture, SpriteBlendMode::Alpha)
+    }
+
+    pub fn with_blend_mode(
+        device: &wgpu::Device,
+        target_format: wgpu::TextureFormat,
+        texture: Texture2D,
+        blend_mode: SpriteBlendMode,
     ) -> Self {
         let uniform = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Sindri sprite uniform"),
@@ -115,7 +145,7 @@ impl SpriteRenderer {
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
                 targets: &[Some(wgpu::ColorTargetState {
                     format: target_format,
-                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                    blend: Some(blend_mode.blend_state()),
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
             }),
@@ -132,6 +162,7 @@ impl SpriteRenderer {
             uniform,
             mesh: MeshBuffers::new(device, "Sindri sprite quad", &VERTICES, &INDICES),
             texture,
+            blend_mode,
         }
     }
 
@@ -172,5 +203,9 @@ impl SpriteRenderer {
 
     pub const fn texture(&self) -> &Texture2D {
         &self.texture
+    }
+
+    pub const fn blend_mode(&self) -> SpriteBlendMode {
+        self.blend_mode
     }
 }
