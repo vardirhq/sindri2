@@ -115,7 +115,7 @@ impl EditorApp {
                     menu_label(ui, "Window");
                     menu_label(ui, "Help");
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        ui.label(RichText::new("Default  ▾").small().color(TEXT_MUTED));
+                        ui.label(RichText::new("Default").small().color(TEXT_MUTED));
                         ui.label(RichText::new("Layout").small().color(TEXT_MUTED));
                     });
                 });
@@ -186,7 +186,6 @@ impl EditorApp {
                 let needle = self.search.trim().to_lowercase();
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     ui.horizontal(|ui| {
-                        ui.label(RichText::new("▾").small().color(TEXT_MUTED));
                         ui.label(RichText::new("demo.scene").strong().small().color(TEXT));
                         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                             ui.label(RichText::new("+").color(TEXT_MUTED));
@@ -306,9 +305,9 @@ impl EditorApp {
                     viewport_tab(ui, &mut self.viewport_tab, ViewportTab::Scene, "Scene");
                     viewport_tab(ui, &mut self.viewport_tab, ViewportTab::Game, "Game");
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        ui.label(RichText::new("Gizmos ▾").small().color(TEXT_MUTED));
-                        ui.label(RichText::new("Lit ▾").small().color(TEXT_MUTED));
-                        ui.label(RichText::new("Perspective ▾").small().color(TEXT_MUTED));
+                        ui.label(RichText::new("Gizmos").small().color(TEXT_MUTED));
+                        ui.label(RichText::new("Lit").small().color(TEXT_MUTED));
+                        ui.label(RichText::new("Perspective").small().color(TEXT_MUTED));
                     });
                 });
                 ui.separator();
@@ -476,43 +475,46 @@ fn project_browser(ui: &mut egui::Ui) {
                 ui.label(RichText::new("  All assets").small().color(TEXT));
                 ui.add_space(6.0);
                 ui.label(RichText::new("Assets").small().color(TEXT_MUTED));
-                ui.label(RichText::new("▾  assets").small().color(TEXT));
-                ui.label(RichText::new("   ▸ scenes").small().color(TEXT));
-                ui.label(RichText::new("   ▸ textures").small().color(TEXT));
-                ui.label(RichText::new("   ▸ scripts").small().color(TEXT));
+                ui.label(RichText::new("  assets/").small().color(TEXT));
+                ui.label(RichText::new("    scenes/").small().color(TEXT));
+                ui.label(RichText::new("    textures/").small().color(TEXT));
+                ui.label(RichText::new("    scripts/").small().color(TEXT));
             },
         );
         ui.separator();
         ui.vertical(|ui| {
             ui.label(RichText::new("Assets").small().color(TEXT_MUTED));
             ui.add_space(8.0);
-            ui.horizontal_wrapped(|ui| {
+            ui.horizontal(|ui| {
                 asset_tile(ui, "SCN", "demo.scene.json");
-                ui.label(
-                    RichText::new("Asset indexing will populate this workspace.")
-                        .small()
-                        .color(TEXT_MUTED),
-                );
             });
+            ui.add_space(6.0);
+            ui.label(
+                RichText::new("Asset indexing will populate this workspace.")
+                    .small()
+                    .color(TEXT_MUTED),
+            );
         });
     });
 }
 
 fn asset_tile(ui: &mut egui::Ui, kind: &str, label: &str) {
-    egui::Frame::new()
-        .fill(PANEL_RAISED)
-        .stroke(Stroke::new(1.0, BORDER))
-        .corner_radius(2)
-        .inner_margin(8)
-        .show(ui, |ui| {
-            ui.set_min_size(Vec2::new(94.0, 72.0));
-            ui.vertical_centered(|ui| {
-                ui.add_space(7.0);
-                ui.label(RichText::new(kind).strong().size(11.0).color(ACCENT));
-                ui.add_space(6.0);
-                ui.label(RichText::new(label).small().color(TEXT));
+    ui.allocate_ui(Vec2::new(116.0, 78.0), |ui| {
+        egui::Frame::new()
+            .fill(PANEL_RAISED)
+            .stroke(Stroke::new(1.0, BORDER))
+            .corner_radius(2)
+            .inner_margin(8)
+            .show(ui, |ui| {
+                ui.set_min_size(Vec2::new(98.0, 60.0));
+                ui.vertical_centered(|ui| {
+                    ui.add_space(5.0);
+                    ui.label(RichText::new(kind).strong().size(11.0).color(ACCENT));
+                    ui.add_space(6.0);
+                    ui.label(RichText::new(label).small().color(TEXT));
+                });
             });
-        });
+    });
 }
 
 fn console_view(ui: &mut egui::Ui) {
@@ -645,7 +647,7 @@ fn components_card(ui: &mut egui::Ui, entity: &SceneEntity) {
         } else {
             for name in entity.components.keys() {
                 ui.horizontal(|ui| {
-                    ui.label(RichText::new("●").small().color(ACCENT));
+                    ui.label(RichText::new("|").strong().small().color(ACCENT));
                     ui.label(RichText::new(component_label(name)).color(TEXT));
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         ui.label(RichText::new("v1").small().color(TEXT_MUTED));
