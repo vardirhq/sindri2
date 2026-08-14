@@ -164,8 +164,7 @@ impl RenderState {
                 label: Some("Sindri cube encoder"),
             });
         let aspect = self.surface_profile.width() as f32 / self.surface_profile.height() as f32;
-        let model =
-            Mat4::from_rotation_y(self.rotation.x) * Mat4::from_rotation_x(self.rotation.y);
+        let model = Mat4::from_rotation_y(self.rotation.x) * Mat4::from_rotation_x(self.rotation.y);
         self.renderer.encode(
             &self.gpu.queue,
             &mut encoder,
