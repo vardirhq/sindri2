@@ -25,8 +25,20 @@ queued -> loading -> ready
                   -> failed -> queued (retry)
 ```
 
-Invalid transitions return `AssetStoreError`. Loading failures retain the logical asset ID, a structured `AssetLoadErrorKind`, and a source-provided diagnostic message. The future asynchronous loading queue and native/web asset sources will drive this state machine without adding an executor dependency to `sindri-core`.
+Invalid transitions return `AssetStoreError`. Loading failures retain the logical asset ID, a structured `AssetLoadErrorKind`, and a source-provided diagnostic message. The future asynchronous loading queue will drive this state machine without adding an executor dependency to `sindri-core`.
+
+## Asset sources
+
+The separate `sindri-assets` crate resolves an `AssetId` to undecoded `AssetBytes` through one object-safe asynchronous `AssetSource` contract. Sources report structured, ID-aware errors that convert into the core load-error model.
+
+The initial implementations are:
+
+- `MemoryAssetSource` for deterministic tests, generated content, and editor tooling
+- `FileSystemAssetSource` on native targets, with canonical-path checks that prevent symlinks from escaping the configured root
+- `FetchAssetSource` on WebAssembly, using the browser Fetch API and retaining HTTP status and content-type information
+
+Filesystem reads are intentionally not hidden behind a fake executor. They complete when their future is polled, so the upcoming native load queue must poll them on an I/O worker rather than the frame thread. Browser fetches remain genuinely asynchronous.
 
 ## Deliberate boundaries
 
-This layer does not yet resolve IDs, perform I/O, decode formats, upload GPU resources, or watch files. Those responsibilities belong to the following asset-system milestones. Keeping this foundation renderer-, platform-, and executor-independent allows the same ownership and error semantics to be used by native and WebAssembly hosts.
+This layer does not yet schedule concurrent loads, decode formats, upload GPU resources, define final root/URL rules, or watch files. Those responsibilities belong to the following asset-system milestones. Keeping storage and source concerns separate allows the same ownership and error semantics to be used by native and WebAssembly hosts.

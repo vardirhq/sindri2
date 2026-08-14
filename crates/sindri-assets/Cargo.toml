@@ -1,0 +1,25 @@
+[package]
+name = "sindri-assets"
+description = "Cross-platform asset source abstractions for Sindri"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+sindri-core = { path = "../sindri-core", version = "0.1.0" }
+thiserror.workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+js-sys.workspace = true
+wasm-bindgen.workspace = true
+wasm-bindgen-futures.workspace = true
+web-sys = { workspace = true, features = ["Headers", "Response", "Window"] }
+
+[dev-dependencies]
+pollster = "0.4"
+tempfile = "3"
+
+[lints]
+workspace = true
