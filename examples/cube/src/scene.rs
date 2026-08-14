@@ -57,7 +57,7 @@ impl DemoScene {
         Ok(frame.prepare()?)
     }
 
-    fn extract_cameras(&self, aspect: f32) -> Result<CameraMatrices, DemoSceneError> {
+    fn extract_cameras(&self, aspect: f32) -> Result<CompleteCameraMatrices, DemoSceneError> {
         let mut cameras = CameraMatrices::default();
         for (_, entity) in self.world.entities() {
             let Some(value) = entity.components.get(CAMERA_COMPONENT) else {
@@ -131,8 +131,7 @@ impl DemoScene {
             let sprite = decode_component::<SpriteComponent>(entity, SPRITE_COMPONENT, value)?;
             let transform = entity.transform_2d.unwrap_or_default();
             let model = transform_2d_matrix(transform, sprite.anchor, aspect);
-            let order =
-                TransparentOrder::new(sprite.layer, sprite.depth, u64::from(entity_id.index()))?;
+            let order = TransparentOrder::new(sprite.layer, sprite.depth, entity_id.index())?;
             if shared_layer
                 .replace(sprite.layer)
                 .is_some_and(|layer| layer != sprite.layer)
