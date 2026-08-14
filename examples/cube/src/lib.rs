@@ -1,6 +1,6 @@
 use std::{future::Future, sync::Arc};
 
-use glam::{Mat4, Vec2};
+use glam::{Mat4, UVec2, Vec2};
 use sindri_gpu::{GpuContext, GpuRequestOptions, SurfaceProfile};
 use sindri_render::{CubeRenderer, DepthTarget, PerspectiveCamera};
 use web_time::Instant;
@@ -25,27 +25,34 @@ fn spawn(future: impl Future<Output = ()> + 'static) {
 
 #[derive(Default)]
 struct RotationInput {
-    left: bool,
-    right: bool,
-    up: bool,
-    down: bool,
+    pressed: [bool; 4],
 }
 
 impl RotationInput {
+    const LEFT: usize = 0;
+    const RIGHT: usize = 1;
+    const UP: usize = 2;
+    const DOWN: usize = 3;
+
     fn set(&mut self, key: PhysicalKey, pressed: bool) {
-        match key {
-            PhysicalKey::Code(KeyCode::ArrowLeft) => self.left = pressed,
-            PhysicalKey::Code(KeyCode::ArrowRight) => self.right = pressed,
-            PhysicalKey::Code(KeyCode::ArrowUp) => self.up = pressed,
-            PhysicalKey::Code(KeyCode::ArrowDown) => self.down = pressed,
-            _ => {}
+        let index = match key {
+            PhysicalKey::Code(KeyCode::ArrowLeft) => Some(Self::LEFT),
+            PhysicalKey::Code(KeyCode::ArrowRight) => Some(Self::RIGHT),
+            PhysicalKey::Code(KeyCode::ArrowUp) => Some(Self::UP),
+            PhysicalKey::Code(KeyCode::ArrowDown) => Some(Self::DOWN),
+            _ => None,
+        };
+        if let Some(index) = index {
+            self.pressed[index] = pressed;
         }
     }
 
     fn axis(&self) -> Vec2 {
         Vec2::new(
-            f32::from(u8::from(self.right)) - f32::from(u8::from(self.left)),
-            f32::from(u8::from(self.down)) - f32::from(u8::from(self.up)),
+            f32::from(u8::from(self.pressed[Self::RIGHT]))
+                - f32::from(u8::from(self.pressed[Self::LEFT])),
+            f32::from(u8::from(self.pressed[Self::DOWN]))
+                - f32::from(u8::from(self.pressed[Self::UP])),
         )
     }
 }
@@ -163,7 +170,9 @@ impl RenderState {
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("Sindri cube encoder"),
             });
-        let aspect = self.surface_profile.width() as f32 / self.surface_profile.height() as f32;
+        let viewport =
+            UVec2::new(self.surface_profile.width(), self.surface_profile.height()).as_vec2();
+        let aspect = viewport.x / viewport.y;
         let model = Mat4::from_rotation_y(self.rotation.x) * Mat4::from_rotation_x(self.rotation.y);
         self.renderer.encode(
             &self.gpu.queue,
