@@ -27,14 +27,16 @@ impl FetchAssetSource {
     fn url(&self, id: &AssetId) -> Result<String, AssetSourceError> {
         let mut encoded = Vec::new();
         for segment in id.as_str().split('/') {
-            let segment = js_sys::encode_uri_component(segment).as_string().ok_or_else(|| {
-                AssetSourceError::new(
-                    id.clone(),
-                    self.name(),
-                    AssetLoadErrorKind::InvalidData,
-                    "could not encode the logical ID as a URL path",
-                )
-            })?;
+            let segment = js_sys::encode_uri_component(segment)
+                .as_string()
+                .ok_or_else(|| {
+                    AssetSourceError::new(
+                        id.clone(),
+                        self.name(),
+                        AssetLoadErrorKind::InvalidData,
+                        "could not encode the logical ID as a URL path",
+                    )
+                })?;
             encoded.push(segment);
         }
         Ok(format!("{}{}", self.root, encoded.join("/")))

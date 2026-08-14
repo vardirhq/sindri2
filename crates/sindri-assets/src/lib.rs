@@ -7,10 +7,10 @@
 mod memory;
 mod source;
 
-#[cfg(not(target_arch = "wasm32"))]
-mod filesystem;
 #[cfg(target_arch = "wasm32")]
 mod fetch;
+#[cfg(not(target_arch = "wasm32"))]
+mod filesystem;
 
 #[cfg(target_arch = "wasm32")]
 pub use fetch::FetchAssetSource;
