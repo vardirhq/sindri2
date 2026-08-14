@@ -56,10 +56,10 @@ impl AssetBytes {
 }
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
-#[error("{kind} in asset source '{source}' for '{id}': {message}")]
+#[error("{kind} in asset source '{source_name}' for '{id}': {message}")]
 pub struct AssetSourceError {
     id: AssetId,
-    source: &'static str,
+    source_name: &'static str,
     kind: AssetLoadErrorKind,
     message: String,
     status_code: Option<u16>,
@@ -68,13 +68,13 @@ pub struct AssetSourceError {
 impl AssetSourceError {
     pub fn new(
         id: AssetId,
-        source: &'static str,
+        source_name: &'static str,
         kind: AssetLoadErrorKind,
         message: impl Into<String>,
     ) -> Self {
         Self {
             id,
-            source,
+            source_name,
             kind,
             message: message.into(),
             status_code: None,
@@ -91,7 +91,7 @@ impl AssetSourceError {
     }
 
     pub const fn source_name(&self) -> &'static str {
-        self.source
+        self.source_name
     }
 
     pub const fn kind(&self) -> AssetLoadErrorKind {
@@ -112,7 +112,7 @@ impl From<AssetSourceError> for AssetLoadError {
         Self::new(
             error.id,
             error.kind,
-            format!("source '{}': {}", error.source, error.message),
+            format!("source '{}': {}", error.source_name, error.message),
         )
     }
 }
