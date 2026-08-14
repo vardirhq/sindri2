@@ -36,7 +36,7 @@ cargo run --package sindri-editor
 Capture a deterministic editor screenshot (under a display or `xvfb-run`) with:
 
 ```bash
-cargo run --package sindri-editor -- --capture target/editor.png
+EFRAME_SCREENSHOT_TO=target/editor.png cargo run --package sindri-editor
 ```
 
 ## Status

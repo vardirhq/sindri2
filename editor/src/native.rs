@@ -1,9 +1,4 @@
-use std::{
-    f32::consts::TAU,
-    fs::File,
-    io::BufWriter,
-    path::{Path, PathBuf},
-};
+use std::f32::consts::TAU;
 
 use eframe::{
     egui::{
@@ -30,7 +25,6 @@ const INITIAL_VIEWPORT_WIDTH: u32 = 960;
 const INITIAL_VIEWPORT_HEIGHT: u32 = 540;
 
 pub fn run() -> eframe::Result {
-    let capture_path = capture_path_from_args();
     let options = eframe::NativeOptions {
         renderer: eframe::Renderer::Wgpu,
         viewport: egui::ViewportBuilder::default()
@@ -43,22 +37,8 @@ pub fn run() -> eframe::Result {
     eframe::run_native(
         "Sindri Editor",
         options,
-        Box::new(move |context| Ok(Box::new(EditorApp::new(context, capture_path)))),
+        Box::new(|context| Ok(Box::new(EditorApp::new(context)))),
     )
-}
-
-fn capture_path_from_args() -> Option<PathBuf> {
-    let mut arguments = std::env::args().skip(1);
-    while let Some(argument) = arguments.next() {
-        if argument == "--capture" {
-            return Some(PathBuf::from(
-                arguments
-                    .next()
-                    .expect("--capture requires an output PNG path"),
-            ));
-        }
-    }
-    None
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -223,13 +203,10 @@ struct EditorApp {
     viewport_zoom: f32,
     runtime_viewport: RuntimeViewport,
     runtime_error: Option<String>,
-    capture_path: Option<PathBuf>,
-    capture_requested: bool,
-    capture_frame_count: u8,
 }
 
 impl EditorApp {
-    fn new(context: &eframe::CreationContext<'_>, capture_path: Option<PathBuf>) -> Self {
+    fn new(context: &eframe::CreationContext<'_>) -> Self {
         configure_theme(&context.egui_ctx);
         let scene: SceneDocument = serde_json::from_str(SCENE_JSON)
             .expect("the embedded editor fixture must remain valid scene JSON");
@@ -255,33 +232,6 @@ impl EditorApp {
             viewport_zoom: 1.0,
             runtime_viewport,
             runtime_error: None,
-            capture_path,
-            capture_requested: false,
-            capture_frame_count: 0,
-        }
-    }
-
-    fn handle_capture(&mut self, ui: &egui::Ui) {
-        let screenshot = ui.input(|input| {
-            input.events.iter().find_map(|event| match event {
-                egui::Event::Screenshot { image, .. } => Some(image.clone()),
-                _ => None,
-            })
-        });
-        if let (Some(image), Some(path)) = (screenshot, self.capture_path.take()) {
-            save_screenshot(&path, &image).expect("failed to save requested editor screenshot");
-            ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
-        }
-    }
-
-    fn request_capture_after_warmup(&mut self, context: &egui::Context) {
-        if self.capture_path.is_none() || self.capture_requested {
-            return;
-        }
-        self.capture_frame_count = self.capture_frame_count.saturating_add(1);
-        if self.capture_frame_count >= 3 {
-            context.send_viewport_cmd(egui::ViewportCommand::Screenshot(egui::UserData::default()));
-            self.capture_requested = true;
         }
     }
 
@@ -482,35 +432,12 @@ impl EditorApp {
 
 impl eframe::App for EditorApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        self.handle_capture(ui);
         self.top_bar(ui);
         Self::status_bar(ui);
         self.hierarchy_panel(ui);
         self.inspector_panel(ui);
         self.viewport(ui);
-        self.request_capture_after_warmup(ui.ctx());
     }
-}
-
-fn save_screenshot(path: &Path, image: &egui::ColorImage) -> Result<(), String> {
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
-    }
-    let file = File::create(path).map_err(|error| error.to_string())?;
-    let width = u32::try_from(image.size[0]).map_err(|error| error.to_string())?;
-    let height = u32::try_from(image.size[1]).map_err(|error| error.to_string())?;
-    let mut encoder = png::Encoder::new(BufWriter::new(file), width, height);
-    encoder.set_color(png::ColorType::Rgba);
-    encoder.set_depth(png::BitDepth::Eight);
-    let mut writer = encoder.write_header().map_err(|error| error.to_string())?;
-    let pixels = image
-        .pixels
-        .iter()
-        .flat_map(Color32::to_array)
-        .collect::<Vec<_>>();
-    writer
-        .write_image_data(&pixels)
-        .map_err(|error| error.to_string())
 }
 
 fn configure_theme(context: &egui::Context) {

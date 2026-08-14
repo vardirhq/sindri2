@@ -31,8 +31,9 @@ jobs:
           sudo apt-get install --yes libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xvfb
       - name: Capture native editor runtime viewport
         env:
+          EFRAME_SCREENSHOT_TO: target/render-artifacts/editor-runtime-viewport.png
           WGPU_BACKEND: vulkan
-        run: xvfb-run --auto-servernum cargo run --package sindri-editor -- --capture target/render-artifacts/editor-runtime-viewport.png
+        run: timeout 60s xvfb-run --auto-servernum cargo run --package sindri-editor
       - name: Capture scene-driven frame pipeline
         env:
           WGPU_BACKEND: vulkan
