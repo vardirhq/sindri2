@@ -30,6 +30,7 @@ All notable changes to Sindri Next will be documented here.
 - Alpha-blended textured sprite renderer and a native/WebGPU cube-plus-overlay proof.
 - Configurable opaque, straight-alpha, premultiplied-alpha, and additive sprite blending.
 - Validated transparent draw keys with deterministic layer, back-to-front depth, and stable tie ordering.
+- Dynamically growing instanced sprite batches with per-instance transforms/tints and draw-call statistics.
 
 ### Changed
 
