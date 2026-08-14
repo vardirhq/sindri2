@@ -10,8 +10,12 @@ The repository is at its foundation stage. The renderer-independent core current
 - safe entity hierarchies
 - versioned, editor-friendly scene documents
 - stable serialized IDs kept separate from runtime handles
+- shared `wgpu` 30 device/surface negotiation
+- a reusable triangle renderer proven by one native/browser example
 
 Read the [project overview](PROJECT_OVERVIEW.md), the [feasibility review](docs/FEASIBILITY.md), and the checkable [roadmap](ROADMAP.md).
+
+The first rendering proof is the [shared triangle example](examples/triangle/README.md), which uses the same GPU and renderer crates on native desktops and in WebGPU browsers.
 
 ## Development
 
@@ -21,7 +25,7 @@ cargo clippy --workspace --all-targets --all-features
 cargo test --workspace --all-features
 ```
 
-The workspace declares Rust 1.85 as its minimum supported Rust version.
+The workspace declares Rust 1.87 as its minimum supported Rust version, matching `wgpu` 30.
 
 ## Status
 

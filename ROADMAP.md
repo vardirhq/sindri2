@@ -6,7 +6,7 @@ This is the checkable engineering plan. Check an item only when its acceptance c
 
 - [x] Review the vision against the legacy `sindri-engine` implementation
 - [x] Record feasibility constraints and major risks
-- [x] Create a Rust 2024 workspace with an explicit MSRV
+- [x] Create a Rust 2024 workspace with an explicit MSRV (Rust 1.87 for `wgpu` 30)
 - [x] Add formatting, Clippy, test CI, and dependency caching
 - [x] Establish `sindri-core` and the public `sindri` facade
 - [ ] Add `CONTRIBUTING.md`, code of conduct, and dual-license files
@@ -60,28 +60,29 @@ Exit gate: core runs without GPU/window/browser dependencies and scene fixtures 
 
 ### Boundaries
 
-- [ ] Add `sindri-platform` traits for surface, lifecycle, input source, clock, and asset I/O
+- [ ] Add `sindri-platform` traits for lifecycle, input source, clock, and asset I/O
 - [ ] Add desktop adapter using `winit`
 - [ ] Add web adapter using `wasm-bindgen`, `web-sys`, and async initialization
-- [ ] Keep target-specific conditionals inside platform crates
+- [ ] Keep target-specific conditionals inside platform hosts
 - [ ] Produce explicit capability errors for unavailable WebGPU/surface features
 
 ### GPU foundation
 
-- [ ] Add `sindri-gpu` with instance/adapter/device/queue ownership
-- [ ] Negotiate conservative cross-target limits and features
-- [ ] Handle surface configuration, resize, zero-sized surfaces, loss, and outdated frames
-- [ ] Add resource labels and uncaptured GPU error reporting
+- [x] Add `sindri-gpu` adapter/device/queue ownership
+- [x] Negotiate conservative cross-target limits and features
+- [x] Add shared surface configuration and non-zero resize policy
+- [ ] Centralize surface loss, outdated, occlusion, and timeout recovery after the proof example
+- [x] Add resource labels and actionable adapter/device/surface errors
 - [ ] Define typed buffer, texture, sampler, shader, and pipeline wrappers
 - [ ] Add render-target and depth-target management
 - [ ] Prove headless adapter initialization where CI supports it
 
 ### Proofs
 
-- [ ] Render a triangle natively
-- [ ] Render a triangle in a browser through WASM/WebGPU
-- [ ] Resize correctly on desktop and browser
-- [ ] Recover or fail clearly on surface loss
+- [x] Render a triangle natively through a shared renderer
+- [x] Render the same triangle in a browser through WASM/WebGPU
+- [x] Resize correctly on desktop and browser
+- [x] Recover or fail clearly on surface loss
 
 Exit gate: the same render module displays the triangle on native and web hosts.
 
