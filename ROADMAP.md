@@ -231,6 +231,22 @@ Exit gate: shared grid/gameplay logic supports both sprite isometric and orthogr
 
 Exit gate: all first-major-release success criteria in `PROJECT_OVERVIEW.md` pass from clean generated projects.
 
+## Future research — first-class Sindri gameplay language
+
+This is a post-foundation research track, not part of the first major release. Do not begin language implementation until representative Rust and TypeScript vertical slices expose concrete gameplay-authoring problems. A Sindri language would complement, not replace, the first-class Rust and TypeScript workflows.
+
+- [ ] Document recurring gameplay-authoring pain points from representative Rust and TypeScript games
+- [ ] Define a language-neutral scripting host around versioned commands, events, queries, lifecycle hooks, and component schemas
+- [ ] Evaluate a custom language against embedded-language alternatives using explicit product and maintenance criteria
+- [ ] Prototype a Rust-implemented portable bytecode interpreter that behaves consistently on native and WebAssembly without a JIT
+- [ ] Generate typed component access, diagnostics, and autocomplete from the component schema registry
+- [ ] Specify safe entity and asset handles, coroutine cancellation, deterministic scheduling, and execution budgets
+- [ ] Prove function/module hot reload with preservation or explicit migration of compatible typed state
+- [ ] Define the editor, language-server, formatter, debugger, documentation, and testing commitments before making the language public
+- [ ] Decide whether the prototype provides enough gameplay-specific value to justify a permanent language ecosystem
+
+Exit gate: a representative scripted vertical slice runs with equivalent behavior on native and web, receives schema-derived tooling, and hot-reloads behavior while preserving compatible state.
+
 ## Explicitly deferred beyond the first major release
 
 - [ ] PBR and advanced shadows
