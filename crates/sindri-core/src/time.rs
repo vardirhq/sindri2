@@ -66,10 +66,8 @@ impl FixedStepClock {
         self.elapsed += frame_delta;
         self.accumulator += frame_delta;
 
-        let available = u32::try_from(
-            self.accumulator.as_nanos() / self.config.step.as_nanos(),
-        )
-        .unwrap_or(u32::MAX);
+        let available = u32::try_from(self.accumulator.as_nanos() / self.config.step.as_nanos())
+            .unwrap_or(u32::MAX);
         let fixed_steps = available.min(self.config.max_steps_per_frame);
         self.accumulator = self
             .accumulator
@@ -83,8 +81,7 @@ impl FixedStepClock {
             frame_delta,
             fixed_delta: self.config.step,
             fixed_steps,
-            interpolation_alpha: self.accumulator.as_secs_f64()
-                / self.config.step.as_secs_f64(),
+            interpolation_alpha: self.accumulator.as_secs_f64() / self.config.step.as_secs_f64(),
         }
     }
 

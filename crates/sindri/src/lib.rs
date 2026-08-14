@@ -8,4 +8,3 @@ pub use sindri_core as core;
 pub mod prelude {
     pub use sindri_core::prelude::*;
 }
-

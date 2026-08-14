@@ -90,10 +90,7 @@ impl EngineLifecycle {
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
 pub enum LifecycleError {
     #[error("invalid engine lifecycle transition from {from:?} to {to:?}")]
-    InvalidTransition {
-        from: EngineState,
-        to: EngineState,
-    },
+    InvalidTransition { from: EngineState, to: EngineState },
 }
 
 #[cfg(test)]
@@ -113,4 +110,3 @@ mod tests {
         assert_eq!(lifecycle.state(), EngineState::Destroyed);
     }
 }
-

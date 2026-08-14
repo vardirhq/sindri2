@@ -23,4 +23,3 @@ impl EntityId {
         self.generation
     }
 }
-
