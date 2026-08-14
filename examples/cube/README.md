@@ -20,3 +20,13 @@ python -m http.server --directory examples/cube 8000
 ```
 
 Open <http://localhost:8000>. A WebGPU-capable browser is required.
+
+## Render capture
+
+Generate the same deterministic offscreen image used by CI:
+
+```bash
+cargo run -p sindri-cube --bin capture -- target/render-artifacts/textured-cube.png
+```
+
+Pull requests upload the resulting PNG as the `textured-cube-preview` workflow artifact.
