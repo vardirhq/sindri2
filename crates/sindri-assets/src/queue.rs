@@ -390,9 +390,11 @@ mod tests {
 
     #[test]
     fn completions_preserve_source_errors_and_handle_generations() {
-        let mut queue =
-            AssetLoadQueue::new(MemoryAssetSource::default(), AssetLoadQueueConfig::new(1, 4))
-                .unwrap();
+        let mut queue = AssetLoadQueue::new(
+            MemoryAssetSource::default(),
+            AssetLoadQueueConfig::new(1, 4),
+        )
+        .unwrap();
         let mut store = AssetStore::<AssetBytes>::default();
         let handle = store.request(id("missing.bin"));
         let request = AssetLoadRequest::new(&handle);
