@@ -25,7 +25,13 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --all-features
       - run: cargo test --workspace --all-features
+      - name: Install software Vulkan
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libvulkan1 mesa-vulkan-drivers
       - name: Capture offscreen cube
+        env:
+          WGPU_BACKEND: vulkan
         run: cargo run --package sindri-cube --bin capture -- target/render-artifacts/textured-cube.png
       - name: Upload rendered cube
         uses: actions/upload-artifact@v4
