@@ -30,6 +30,35 @@ accepting whatever comes back, `SurfaceProfile` requires an sRGB format and fail
 `GpuError::NoSrgbSurfaceFormat` if the surface offers none. A host that cannot encode colour is a
 configuration to report, not one to render badly.
 
+## The other end: who samples the target
+
+Encoding on write is only half of it. Something reads that texture afterwards,
+and it has its own assumption about what the stored bytes mean.
+
+The editor renders its viewport into an sRGB target — correct — and then hands it
+to egui to draw. egui's shader states its expectation plainly:
+
+```wgsl
+// We expect "normal" textures that are NOT sRGB-aware.
+let tex_gamma = sample_texture(in);
+```
+
+It treats whatever it samples as already gamma-encoded, and decodes it before
+writing to an sRGB surface. Give it an sRGB *view* and the hardware decodes on
+read as well: two decodes against one encode, which is the same missing-encode
+arithmetic as above, arriving from the opposite direction. Authored orange
+`(240, 114, 43)` displayed as `(221, 43, 6)` — exactly `linear_from_srgb` of
+itself.
+
+So the viewport texture carries two views of the same bytes: the sRGB view the
+scene renders into, and the linear view egui samples. Neither half has to know
+what the other assumed, and no conversion happens twice.
+
+The general rule: **a colour target's format is a claim about its bytes, and
+every reader has to agree with it.** One shared constant fixes the writers. The
+readers have to be checked separately, because a sampler that disagrees produces
+exactly the same silent failure.
+
 ## Why a pixel check exists
 
 Every automated check the project had would pass a colour-space mistake: it compiles, it lints, it
@@ -43,3 +72,12 @@ in the CI log rather than requiring the artifact to be downloaded.
 
 The PNG is written before the check runs, so a frame that fails verification is still uploaded and
 can be looked at.
+
+That check covered one image, and the bug above lived in the other. CI has always captured a
+screenshot of the editor window, but nothing looked at it, so the viewport could disagree with the
+offscreen capture of the same scene for a release without failing anything.
+
+Both are now held to the same expectation. `AUTHORED_COLORS` and the tolerance live in one place in
+`sindri-cube`, and the `verify` binary reads back a captured PNG — decoded through the engine's own
+`TextureAssetDecoder`, so the check does not introduce a second opinion about what an image contains
+— and applies them. A capture that nobody examines is an artifact, not a test.

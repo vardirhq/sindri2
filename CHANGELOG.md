@@ -90,6 +90,8 @@ All notable changes to Sindri Next will be documented here.
 - A windowed host in `sindri-desktop` owning the window, event loop, device request, frame timing, and input, so an application supplies only how to build itself, what to do with a frame of time, and how to draw.
 - A clock the host reads on both native and browser targets, replacing hand-measured frame deltas.
 - Fallible application hooks, so a failure during a frame stops the host and is reported rather than logged and drawn over.
+- A `verify` binary that reads back a captured PNG and holds it to the colours the demo scene authors, decoded through the engine's own texture decoder.
+- Colour verification of the editor screenshot in CI, which was captured and uploaded but never examined.
 
 ### Changed
 
@@ -114,3 +116,5 @@ All notable changes to Sindri Next will be documented here.
 - Gave the path dependencies of `sindri-platform`, `sindri-desktop`, and `sindri-scene` explicit versions, without which crates.io rejects a publish.
 - Moved window creation, the browser canvas lookup, the four-state startup, and the async device request out of both examples and into the windowed host; the triangle example is now a quarter of its previous size.
 - Replaced the cube example's hand-measured, hand-capped frame delta with the host's clock and frame timer.
+- Fixed the editor viewport sampling its sRGB colour target through an sRGB view, so egui decoded a second time and every authored colour arrived far too dark; the scene render was correct and only the display of it was wrong.
+- Moved the authored-colour expectation and its tolerance out of the capture binary so the offscreen capture and the editor screenshot are held to one definition rather than two.
