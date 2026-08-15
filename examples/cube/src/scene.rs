@@ -19,6 +19,13 @@ pub struct DemoScene {
     components: ComponentSchemaRegistry,
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum WorldProjection {
+    #[default]
+    Perspective,
+    Orthographic,
+}
+
 impl DemoScene {
     pub fn load() -> Result<Self, DemoSceneError> {
         let document: SceneDocument = serde_json::from_str(SCENE_JSON)?;
@@ -39,8 +46,32 @@ impl DemoScene {
         viewport: Viewport,
         rotation: Vec2,
     ) -> Result<PreparedFrame, DemoSceneError> {
+        self.extract_frame_with_view(viewport, rotation, 1.0)
+    }
+
+    pub fn extract_frame_with_view(
+        &self,
+        viewport: Viewport,
+        rotation: Vec2,
+        camera_distance_scale: f32,
+    ) -> Result<PreparedFrame, DemoSceneError> {
+        self.extract_frame_with_projection(
+            viewport,
+            rotation,
+            camera_distance_scale,
+            WorldProjection::Perspective,
+        )
+    }
+
+    pub fn extract_frame_with_projection(
+        &self,
+        viewport: Viewport,
+        rotation: Vec2,
+        camera_distance_scale: f32,
+        projection: WorldProjection,
+    ) -> Result<PreparedFrame, DemoSceneError> {
         let aspect = viewport.aspect_ratio()?;
-        let cameras = self.extract_cameras(aspect)?;
+        let cameras = self.extract_cameras(aspect, camera_distance_scale)?;
         let (cube_model, cube_layer) = self.extract_cube(rotation)?;
         let (sprite_layer, sprites) = self.extract_sprites(aspect)?;
 
@@ -49,7 +80,10 @@ impl DemoScene {
             RenderStage::Opaque3d,
             RenderLayer(cube_layer),
             FrameCamera {
-                view_projection: cameras.perspective,
+                view_projection: match projection {
+                    WorldProjection::Perspective => cameras.perspective,
+                    WorldProjection::Orthographic => cameras.world_orthographic,
+                },
             },
             FrameCommand::TexturedCube { model: cube_model },
         ));
@@ -64,7 +98,14 @@ impl DemoScene {
         Ok(frame.prepare()?)
     }
 
-    fn extract_cameras(&self, aspect: f32) -> Result<CompleteCameraMatrices, DemoSceneError> {
+    fn extract_cameras(
+        &self,
+        aspect: f32,
+        camera_distance_scale: f32,
+    ) -> Result<CompleteCameraMatrices, DemoSceneError> {
+        if !camera_distance_scale.is_finite() || camera_distance_scale <= 0.0 {
+            return Err(DemoSceneError::InvalidCameraDistanceScale);
+        }
         let mut cameras = CameraMatrices::default();
         for (entity_id, camera) in self.components.query::<CameraComponent>(&self.world)? {
             let entity = self
@@ -79,17 +120,34 @@ impl DemoScene {
                     near,
                     far,
                 } => {
-                    let eye = entity.transform_3d.unwrap_or_default().position;
+                    let authored_eye =
+                        Vec3::from_array(entity.transform_3d.unwrap_or_default().position);
+                    let target = Vec3::from_array(target);
+                    let eye = target + (authored_eye - target) * camera_distance_scale;
+                    let up = Vec3::from_array(up);
+                    let vertical_fov_radians = vertical_fov_degrees.to_radians();
                     cameras.perspective = Some(
                         PerspectiveCamera {
-                            eye: Vec3::from_array(eye),
-                            target: Vec3::from_array(target),
-                            up: Vec3::from_array(up),
-                            vertical_fov_radians: vertical_fov_degrees.to_radians(),
+                            eye,
+                            target,
+                            up,
+                            vertical_fov_radians,
                             near,
                             far,
                         }
                         .view_projection(aspect),
+                    );
+                    let half_height = eye.distance(target) * (vertical_fov_radians * 0.5).tan();
+                    let half_width = half_height * aspect;
+                    cameras.world_orthographic = Some(
+                        Mat4::orthographic_rh(
+                            -half_width,
+                            half_width,
+                            -half_height,
+                            half_height,
+                            near,
+                            far,
+                        ) * Mat4::look_at_rh(eye, target, up),
                     );
                 }
                 CameraComponent::Orthographic {
@@ -160,6 +218,7 @@ impl DemoScene {
 #[derive(Default)]
 struct CameraMatrices {
     perspective: Option<Mat4>,
+    world_orthographic: Option<Mat4>,
     orthographic: Option<Mat4>,
 }
 
@@ -169,6 +228,9 @@ impl CameraMatrices {
             perspective: self
                 .perspective
                 .ok_or(DemoSceneError::Missing("perspective camera"))?,
+            world_orthographic: self
+                .world_orthographic
+                .ok_or(DemoSceneError::Missing("3D orthographic camera"))?,
             orthographic: self
                 .orthographic
                 .ok_or(DemoSceneError::Missing("orthographic camera"))?,
@@ -178,6 +240,7 @@ impl CameraMatrices {
 
 struct CompleteCameraMatrices {
     perspective: Mat4,
+    world_orthographic: Mat4,
     orthographic: Mat4,
 }
 
@@ -275,6 +338,8 @@ pub enum DemoSceneError {
     Missing(&'static str),
     #[error("the current sprite batch requires all sprites to share a render layer")]
     MixedSpriteLayers,
+    #[error("camera distance scale must be finite and greater than zero")]
+    InvalidCameraDistanceScale,
 }
 
 #[cfg(test)]
@@ -294,5 +359,34 @@ mod tests {
             panic!("second pass should contain the sprite batch");
         };
         assert_eq!(instances.len(), 5);
+    }
+
+    #[test]
+    fn editor_view_rejects_invalid_camera_distance_scale() {
+        let scene = DemoScene::load().unwrap();
+        let error = scene
+            .extract_frame_with_view(Viewport::new(512, 512), Vec2::ZERO, 0.0)
+            .unwrap_err();
+        assert!(matches!(error, DemoSceneError::InvalidCameraDistanceScale));
+    }
+
+    #[test]
+    fn editor_world_projection_switch_changes_the_opaque_camera() {
+        let scene = DemoScene::load().unwrap();
+        let viewport = Viewport::new(512, 512);
+        let perspective = scene
+            .extract_frame_with_projection(viewport, Vec2::ZERO, 1.0, WorldProjection::Perspective)
+            .unwrap();
+        let orthographic = scene
+            .extract_frame_with_projection(viewport, Vec2::ZERO, 1.0, WorldProjection::Orthographic)
+            .unwrap();
+        assert_ne!(
+            perspective.passes()[0].camera.view_projection,
+            orthographic.passes()[0].camera.view_projection
+        );
+        assert_eq!(
+            perspective.passes()[1].camera.view_projection,
+            orthographic.passes()[1].camera.view_projection
+        );
     }
 }

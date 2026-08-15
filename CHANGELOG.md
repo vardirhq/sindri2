@@ -39,9 +39,14 @@ All notable changes to Sindri Next will be documented here.
 - A cross-platform `sindri-assets` source contract with deterministic in-memory storage, root-confined native filesystem reads, and asynchronous browser Fetch API loading.
 - A bounded asynchronous asset-load queue with native I/O workers, non-blocking browser future polling, generation-safe completions, duplicate rejection, and backpressure.
 - Cross-platform PNG/JPEG texture decoding into upload-ready RGBA8 data, validated scene JSON decoding, and generation-checked completion application to typed asset stores.
+- Shared-device editor viewport that renders the real prepared cube-and-sprite runtime frame into an egui texture, with drag rotation, zoom, resize handling, and a full-window CI screenshot artifact.
+- Viewport-first editor workspace with a compact hierarchy, scene tool rail, real asset browser, inspector sections, Inter typography, and Material Symbols icons.
+- Switchable perspective and orbit-matched orthographic projection for the editor's real WGPU scene viewport.
 
 ### Changed
 
 - Increased the MSRV from Rust 1.85 to 1.87 to use the current `wgpu` 30 release.
 - Replaced the planned Tauri/React editor architecture with native `egui`, `egui-winit`, and `egui-wgpu` integration.
 - Increased the MSRV from Rust 1.87 to 1.95 for the first `egui` release aligned with `wgpu` 30.
+- Replaced the editor's painted viewport composition with the actual Sindri render pipeline while retaining the native UI overlays and controls.
+- Added a bounded X11 window-capture lifecycle for reliable full-editor WGPU screenshots in Xvfb CI runs.

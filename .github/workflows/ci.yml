@@ -28,16 +28,22 @@ jobs:
       - name: Install software Vulkan
         run: |
           sudo apt-get update
-          sudo apt-get install --yes libvulkan1 mesa-vulkan-drivers
+          sudo apt-get install --yes imagemagick libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
+      - name: Capture native editor runtime viewport
+        env:
+          WGPU_BACKEND: vulkan
+        run: timeout 60s xvfb-run --auto-servernum ./scripts/capture-editor.sh target/render-artifacts/editor-runtime-viewport.png
       - name: Capture scene-driven frame pipeline
         env:
           WGPU_BACKEND: vulkan
         run: cargo run --package sindri-cube --bin capture -- target/render-artifacts/scene-frame-pipeline.png
-      - name: Upload scene-driven frame pipeline
+      - name: Upload visual test captures
         uses: actions/upload-artifact@v4
         with:
-          name: scene-frame-pipeline-preview
-          path: target/render-artifacts/scene-frame-pipeline.png
+          name: visual-test-captures
+          path: |
+            target/render-artifacts/editor-runtime-viewport.png
+            target/render-artifacts/scene-frame-pipeline.png
           if-no-files-found: error
           retention-days: 14
       - name: Check browser workspace

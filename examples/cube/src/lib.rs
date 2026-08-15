@@ -18,7 +18,7 @@ use winit::{
 
 mod scene;
 
-pub use scene::{DemoScene, DemoSceneError};
+pub use scene::{DemoScene, DemoSceneError, WorldProjection};
 
 #[derive(Clone, Copy)]
 pub struct FrameTarget<'a> {
