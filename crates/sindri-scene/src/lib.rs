@@ -8,8 +8,10 @@
 
 mod components;
 mod extract;
+mod textures;
 
 pub use components::{
     CameraComponent, MeshComponent, MeshPrimitive, SpriteAnchor, SpriteComponent,
 };
 pub use extract::{CameraView, SceneExtractError, SceneExtractor, WorldProjection};
+pub use textures::{TextureBindings, unresolved_textures};

@@ -24,10 +24,12 @@ use sindri_core::{
     SceneDocument, Transform2D, Transform3D, World, WorldCommand,
 };
 use sindri_cube::{
-    CameraView, DemoScene, FrameTarget, WorldProjection, demo_badge_texture, encode_prepared_frame,
+    CameraView, DemoScene, FrameRenderers, FrameTarget, TextureBindings, WorldProjection,
+    demo_textures, encode_prepared_frame,
 };
 use sindri_render::{
-    COLOR_TARGET_FORMAT, DepthTarget, SpriteBatchRenderer, TexturedCubeRenderer, Viewport,
+    COLOR_TARGET_FORMAT, DepthTarget, SpriteBatchRenderer, TextureRegistry, TexturedCubeRenderer,
+    Viewport,
 };
 
 const INTER_FONT: &[u8] = include_bytes!("../assets/Inter.ttf");
@@ -98,6 +100,8 @@ struct RuntimeViewport {
     texture_id: egui::TextureId,
     cube_renderer: TexturedCubeRenderer,
     sprite_renderer: SpriteBatchRenderer,
+    textures: TextureRegistry,
+    bindings: TextureBindings,
     width: u32,
     height: u32,
 }
@@ -128,13 +132,9 @@ impl RuntimeViewport {
             INITIAL_VIEWPORT_WIDTH,
             INITIAL_VIEWPORT_HEIGHT,
         );
-        let cube_renderer =
-            TexturedCubeRenderer::new(&render_state.device, &render_state.queue, Self::FORMAT);
-        let sprite_renderer = SpriteBatchRenderer::new(
-            &render_state.device,
-            Self::FORMAT,
-            demo_badge_texture(&render_state.device, &render_state.queue),
-        );
+        let cube_renderer = TexturedCubeRenderer::new(&render_state.device, Self::FORMAT);
+        let sprite_renderer = SpriteBatchRenderer::new(&render_state.device, Self::FORMAT);
+        let (textures, bindings) = demo_textures(&render_state.device, &render_state.queue);
         Ok(Self {
             render_state,
             texture,
@@ -143,6 +143,8 @@ impl RuntimeViewport {
             texture_id,
             cube_renderer,
             sprite_renderer,
+            textures,
+            bindings,
             width: INITIAL_VIEWPORT_WIDTH,
             height: INITIAL_VIEWPORT_HEIGHT,
         })
@@ -169,6 +171,7 @@ impl RuntimeViewport {
                         CameraProjection::Orthographic => WorldProjection::Orthographic,
                     },
                 },
+                &self.bindings,
             )
             .map_err(|error| error.to_string())?;
         let mut encoder =
@@ -178,8 +181,11 @@ impl RuntimeViewport {
                     label: Some("Sindri editor runtime viewport encoder"),
                 });
         encode_prepared_frame(
-            &self.cube_renderer,
-            &mut self.sprite_renderer,
+            FrameRenderers {
+                cube: &mut self.cube_renderer,
+                sprites: &mut self.sprite_renderer,
+                textures: &self.textures,
+            },
             &self.render_state.device,
             &self.render_state.queue,
             &mut encoder,

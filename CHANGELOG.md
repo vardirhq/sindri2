@@ -71,6 +71,10 @@ All notable changes to Sindri Next will be documented here.
 - A single shared colour target format, so offscreen and in-editor targets cannot disagree about colour space.
 - A required sRGB swapchain format, reported as an error rather than silently accepted as a fallback.
 - Verification that the headless capture actually contains the colours the scene authored, reporting the frame's dominant colours when it does not.
+- Renderer texture handles and a registry, so one renderer draws every mesh and sprite in a scene instead of owning a single baked-in texture.
+- Scene texture references resolved through bindings, making the `texture` field on mesh and sprite components load-bearing for the first time.
+- Sprite batching split per texture as well as per layer, so a batch remains one draw call.
+- A missing-texture fallback drawn in place of an unbound reference, and a report naming every unresolved reference in a world.
 
 ### Changed
 

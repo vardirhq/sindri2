@@ -8,7 +8,7 @@ use std::{
 
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_cube::{DemoScene, FrameTarget, demo_badge_texture, encode_prepared_frame};
+use sindri_cube::{DemoScene, FrameRenderers, FrameTarget, demo_textures, encode_prepared_frame};
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_gpu::{GpuContext, GpuRequestOptions};
 #[cfg(not(target_arch = "wasm32"))]
@@ -99,14 +99,11 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
     let gpu = GpuContext::request(&instance, None, &GpuRequestOptions::default()).await?;
     let target = OffscreenTarget::new(&gpu.device, WIDTH, HEIGHT)?;
     let depth = DepthTarget::new(&gpu.device, WIDTH, HEIGHT);
-    let cube_renderer = TexturedCubeRenderer::new(&gpu.device, &gpu.queue, OffscreenTarget::FORMAT);
-    let mut sprite_renderer = SpriteBatchRenderer::new(
-        &gpu.device,
-        OffscreenTarget::FORMAT,
-        demo_badge_texture(&gpu.device, &gpu.queue),
-    );
+    let mut cube_renderer = TexturedCubeRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
+    let mut sprite_renderer = SpriteBatchRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
+    let (textures, bindings) = demo_textures(&gpu.device, &gpu.queue);
     let scene = DemoScene::load()?;
-    let prepared = scene.extract_frame(Viewport::new(WIDTH, HEIGHT))?;
+    let prepared = scene.extract_frame(Viewport::new(WIDTH, HEIGHT), &bindings)?;
 
     let mut encoder = gpu
         .device
@@ -114,8 +111,11 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
             label: Some("Sindri screenshot encoder"),
         });
     let stats = encode_prepared_frame(
-        &cube_renderer,
-        &mut sprite_renderer,
+        FrameRenderers {
+            cube: &mut cube_renderer,
+            sprites: &mut sprite_renderer,
+            textures: &textures,
+        },
         &gpu.device,
         &gpu.queue,
         &mut encoder,

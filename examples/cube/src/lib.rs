@@ -4,8 +4,8 @@ use glam::Vec2;
 use sindri_gpu::{GpuContext, GpuRequestOptions, SurfaceProfile};
 use sindri_platform::{InputState, Key};
 use sindri_render::{
-    DepthTarget, FrameCommand, PreparedFrame, SpriteBatchError, SpriteBatchRenderer,
-    SpriteBatchStats, Texture2D, TexturedCubeRenderer, Viewport,
+    DepthTarget, DrawContext, FrameCommand, PreparedFrame, SpriteBatchError, SpriteBatchRenderer,
+    SpriteBatchStats, Texture2D, TextureRegistry, TexturedCubeRenderer, Viewport,
 };
 use web_time::Instant;
 use wgpu::CurrentSurfaceTexture;
@@ -20,7 +20,7 @@ use winit::{
 mod scene;
 
 pub use scene::{DemoScene, DemoSceneError};
-pub use sindri_scene::{CameraView, WorldProjection};
+pub use sindri_scene::{CameraView, TextureBindings, WorldProjection};
 
 #[derive(Clone, Copy)]
 pub struct FrameTarget<'a> {
@@ -47,6 +47,8 @@ struct RenderState {
     depth: DepthTarget,
     cube_renderer: TexturedCubeRenderer,
     sprite_renderer: SpriteBatchRenderer,
+    textures: TextureRegistry,
+    bindings: TextureBindings,
     scene: DemoScene,
     input: InputState,
     rotation: Vec2,
@@ -76,13 +78,9 @@ impl RenderState {
             surface_profile.width(),
             surface_profile.height(),
         );
-        let cube_renderer =
-            TexturedCubeRenderer::new(&gpu.device, &gpu.queue, surface_profile.format());
-        let sprite_renderer = SpriteBatchRenderer::new(
-            &gpu.device,
-            surface_profile.format(),
-            demo_badge_texture(&gpu.device, &gpu.queue),
-        );
+        let cube_renderer = TexturedCubeRenderer::new(&gpu.device, surface_profile.format());
+        let sprite_renderer = SpriteBatchRenderer::new(&gpu.device, surface_profile.format());
+        let (textures, bindings) = demo_textures(&gpu.device, &gpu.queue);
         let scene = DemoScene::load().map_err(|error| error.to_string())?;
 
         Ok(Self {
@@ -94,6 +92,8 @@ impl RenderState {
             depth,
             cube_renderer,
             sprite_renderer,
+            textures,
+            bindings,
             scene,
             input: InputState::default(),
             rotation: Vec2::ZERO,
@@ -174,11 +174,14 @@ impl RenderState {
             .expect("the demo scene keeps its cube");
         let prepared = self
             .scene
-            .extract_frame(viewport)
+            .extract_frame(viewport, &self.bindings)
             .expect("embedded demo scene extracts into a valid frame");
         encode_prepared_frame(
-            &self.cube_renderer,
-            &mut self.sprite_renderer,
+            FrameRenderers {
+                cube: &mut self.cube_renderer,
+                sprites: &mut self.sprite_renderer,
+                textures: &self.textures,
+            },
             &self.gpu.device,
             &self.gpu.queue,
             &mut encoder,
@@ -349,6 +352,37 @@ impl ApplicationHandler<AppAction> for App {
     }
 }
 
+/// The demo's textures, registered under the references its scene names.
+///
+/// Both are generated rather than loaded, which is what `procedural:` marks.
+/// Anything that produces a `Texture2D` — including a decoded image asset —
+/// binds the same way.
+pub fn demo_textures(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+) -> (TextureRegistry, TextureBindings) {
+    let mut registry = TextureRegistry::new(device, queue);
+    let mut bindings = TextureBindings::new();
+
+    let checkerboard = registry.insert(
+        Texture2D::checkerboard(
+            device,
+            queue,
+            "Sindri cube checkerboard",
+            64,
+            8,
+            [[18, 34, 55, 255], [240, 114, 43, 255]],
+        )
+        .expect("static checkerboard texture dimensions are valid"),
+    );
+    bindings.bind("procedural:checkerboard", checkerboard);
+
+    let badge = registry.insert(demo_badge_texture(device, queue));
+    bindings.bind("procedural:badge", badge);
+
+    (registry, bindings)
+}
+
 pub fn demo_badge_texture(device: &wgpu::Device, queue: &wgpu::Queue) -> Texture2D {
     const SIZE: u32 = 64;
     let mut pixels =
@@ -377,28 +411,45 @@ pub fn demo_badge_texture(device: &wgpu::Device, queue: &wgpu::Queue) -> Texture
         .expect("static badge texture dimensions are valid")
 }
 
+/// The renderers a frame is drawn with.
+pub struct FrameRenderers<'a> {
+    pub cube: &'a mut TexturedCubeRenderer,
+    pub sprites: &'a mut SpriteBatchRenderer,
+    pub textures: &'a TextureRegistry,
+}
+
 pub fn encode_prepared_frame(
-    cube_renderer: &TexturedCubeRenderer,
-    sprite_renderer: &mut SpriteBatchRenderer,
+    renderers: FrameRenderers<'_>,
     device: &wgpu::Device,
     queue: &wgpu::Queue,
     encoder: &mut wgpu::CommandEncoder,
     target: FrameTarget<'_>,
     frame: &PreparedFrame,
 ) -> Result<SpriteBatchStats, SpriteBatchError> {
+    let FrameRenderers {
+        cube: cube_renderer,
+        sprites: sprite_renderer,
+        textures,
+    } = renderers;
     let mut sprite_stats = SpriteBatchStats::default();
     for pass in frame.passes() {
         match &pass.command {
-            FrameCommand::TexturedCube { model } => cube_renderer.encode_with_clear(
-                queue,
+            FrameCommand::TexturedCube { model, texture } => cube_renderer.encode_with_clear(
+                DrawContext {
+                    device,
+                    queue,
+                    textures,
+                    texture: *texture,
+                },
                 encoder,
                 target.color,
                 target.depth,
                 pass.camera.view_projection * *model,
                 frame.clear(),
             ),
-            FrameCommand::SpriteBatch { instances } => {
-                sprite_stats = sprite_renderer.prepare(device, queue, instances)?;
+            FrameCommand::SpriteBatch { texture, instances } => {
+                sprite_stats =
+                    sprite_renderer.prepare(device, queue, textures, *texture, instances)?;
                 sprite_renderer.encode(queue, encoder, target.color, pass.camera.view_projection);
             }
         }

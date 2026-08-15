@@ -8,11 +8,13 @@ use sindri_core::{
 use sindri_render::{
     ClearOperations, ExtractedFrame, FrameCamera, FrameCommand, FramePass, FramePlanError,
     OrthographicCamera, PerspectiveCamera, PreparedFrame, RenderLayer, RenderStage, SpriteInstance,
-    TransparentOrder, TransparentOrderError, Viewport,
+    TextureId, TransparentOrder, TransparentOrderError, Viewport,
 };
 use thiserror::Error;
 
-use crate::{CameraComponent, MeshComponent, MeshPrimitive, SpriteAnchor, SpriteComponent};
+use crate::{
+    CameraComponent, MeshComponent, MeshPrimitive, SpriteAnchor, SpriteComponent, TextureBindings,
+};
 
 /// Which projection the world camera uses.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -95,6 +97,7 @@ impl SceneExtractor {
         world: &World,
         viewport: Viewport,
         view: CameraView,
+        textures: &TextureBindings,
     ) -> Result<PreparedFrame, SceneExtractError> {
         let aspect = viewport.aspect_ratio()?;
         let cameras = self.resolve_cameras(world, aspect, view)?;
@@ -108,6 +111,7 @@ impl SceneExtractor {
             let command = match mesh.primitive {
                 MeshPrimitive::Cube => FrameCommand::TexturedCube {
                     model: transform_matrix(transform),
+                    texture: textures.resolve(&mesh.texture),
                 },
             };
             frame.push(FramePass::new(
@@ -121,7 +125,10 @@ impl SceneExtractor {
         }
 
         // Sprites batch per layer, back to front, with a stable tie-break.
-        let mut layers: BTreeMap<i32, Vec<(TransparentOrder, SpriteInstance)>> = BTreeMap::new();
+        // Keyed by layer and texture: a batch is one draw, so instances only
+        // share one when they share a texture.
+        let mut layers: BTreeMap<(i32, TextureId), Vec<(TransparentOrder, SpriteInstance)>> =
+            BTreeMap::new();
         for (entity, sprite) in self.components.query::<SpriteComponent>(world)? {
             let extent = cameras
                 .overlay_extent
@@ -131,13 +138,19 @@ impl SceneExtractor {
                 .and_then(|data| data.transform_2d)
                 .unwrap_or_default();
             let order = TransparentOrder::new(sprite.layer, sprite.depth, entity.index())?;
-            layers.entry(sprite.layer).or_default().push((
-                order,
-                SpriteInstance::new(sprite_matrix(transform, sprite.anchor, extent), sprite.tint),
-            ));
+            layers
+                .entry((sprite.layer, textures.resolve(&sprite.texture)))
+                .or_default()
+                .push((
+                    order,
+                    SpriteInstance::new(
+                        sprite_matrix(transform, sprite.anchor, extent),
+                        sprite.tint,
+                    ),
+                ));
         }
 
-        for (layer, mut sprites) in layers {
+        for ((layer, texture), mut sprites) in layers {
             sprites.sort_by_key(|(order, _)| *order);
             frame.push(FramePass::new(
                 RenderStage::Overlay,
@@ -148,6 +161,7 @@ impl SceneExtractor {
                         .ok_or(SceneExtractError::MissingOverlayCamera)?,
                 },
                 FrameCommand::SpriteBatch {
+                    texture,
                     instances: sprites.into_iter().map(|(_, sprite)| sprite).collect(),
                 },
             ));

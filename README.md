@@ -9,6 +9,7 @@ The repository is at its foundation stage. The renderer-independent core current
 - a platform boundary with keyboard and pointer input, clock traits, and fallible gameplay hooks
 - a host loop that runs a game headlessly, in a window, or in a browser
 - component-driven extraction that draws any scene without hand-written render code
+- scene texture references resolved to renderer textures, with a missing-texture fallback
 - generation-checked runtime entities
 - safe entity hierarchies
 - versioned, editor-friendly scene documents

@@ -158,3 +158,86 @@ mod tests {
         );
     }
 }
+
+/// A renderer-level handle to an uploaded texture.
+///
+/// Deliberately not an asset ID: `sindri-render` knows nothing about assets or
+/// scenes, so the layer that owns both maps one to the other.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct TextureId(u32);
+
+impl TextureId {
+    /// Creates a handle for `index`.
+    ///
+    /// Handles normally come from [`TextureRegistry::insert`]. Minting one
+    /// directly is safe because a registry draws an index it does not know as
+    /// the missing texture, which is what makes binding testable without a GPU.
+    pub const fn new(index: u32) -> Self {
+        Self(index)
+    }
+
+    pub const fn index(self) -> u32 {
+        self.0
+    }
+}
+
+/// The textures a frame may draw with.
+///
+/// Every registry has a fallback at [`TextureRegistry::MISSING`], so a draw
+/// whose texture failed to load still renders something obviously wrong rather
+/// than failing the frame or silently drawing the previous texture.
+#[derive(Debug)]
+pub struct TextureRegistry {
+    textures: Vec<Texture2D>,
+}
+
+impl TextureRegistry {
+    /// The magenta-and-black texture drawn in place of a missing one.
+    pub const MISSING: TextureId = TextureId(0);
+
+    /// Creates a registry containing only the missing-texture fallback.
+    pub fn new(device: &wgpu::Device, queue: &wgpu::Queue) -> Self {
+        let missing = Texture2D::checkerboard(
+            device,
+            queue,
+            "Sindri missing texture",
+            64,
+            8,
+            [[255, 0, 255, 255], [26, 26, 26, 255]],
+        )
+        .expect("the fallback texture has valid dimensions");
+        Self {
+            textures: vec![missing],
+        }
+    }
+
+    /// Adds a texture and returns the handle that draws it.
+    pub fn insert(&mut self, texture: Texture2D) -> TextureId {
+        let index = u32::try_from(self.textures.len()).expect("texture count exceeded u32::MAX");
+        self.textures.push(texture);
+        TextureId(index)
+    }
+
+    /// Returns the texture for `id`, falling back to the missing texture.
+    ///
+    /// A stale or foreign handle draws as missing rather than panicking, so one
+    /// bad reference cannot take down a frame.
+    pub fn get(&self, id: TextureId) -> &Texture2D {
+        self.textures
+            .get(id.index() as usize)
+            .unwrap_or_else(|| &self.textures[0])
+    }
+
+    pub fn len(&self) -> usize {
+        self.textures.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        // The fallback always occupies slot zero.
+        false
+    }
+
+    pub fn ids(&self) -> impl Iterator<Item = TextureId> {
+        (0..u32::try_from(self.textures.len()).unwrap_or(u32::MAX)).map(TextureId)
+    }
+}

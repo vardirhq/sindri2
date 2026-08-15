@@ -10,6 +10,7 @@ repository.workspace = true
 [dependencies]
 glam.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 sindri-core = { path = "../sindri-core" }
 sindri-render = { path = "../sindri-render" }
 thiserror.workspace = true

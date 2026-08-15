@@ -5,8 +5,10 @@
 
 use glam::Vec3;
 use sindri_core::{SceneDocument, Transform3D, UnknownComponentPolicy, World};
-use sindri_render::{FrameCommand, RenderStage, Viewport};
-use sindri_scene::{CameraView, SceneExtractError, SceneExtractor, WorldProjection};
+use sindri_render::{FrameCommand, RenderStage, TextureId, TextureRegistry, Viewport};
+use sindri_scene::{
+    CameraView, SceneExtractError, SceneExtractor, TextureBindings, WorldProjection,
+};
 
 const VIEWPORT: Viewport = Viewport::new(512, 512);
 
@@ -55,7 +57,12 @@ fn a_world_with_only_cameras_draws_nothing() {
     let world = world_from(&scene(""));
     let frame = SceneExtractor::new()
         .unwrap()
-        .extract(&world, VIEWPORT, CameraView::default())
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
         .expect("an empty scene extracts");
     assert!(frame.passes().is_empty());
 }
@@ -71,7 +78,12 @@ fn meshes_and_sprites_extract_into_ordered_passes() {
     ));
     let frame = SceneExtractor::new()
         .unwrap()
-        .extract(&world, VIEWPORT, CameraView::default())
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
         .expect("the scene extracts");
 
     assert_eq!(frame.passes().len(), 2);
@@ -92,14 +104,19 @@ fn sprites_batch_per_layer_and_sort_back_to_front() {
     ));
     let frame = SceneExtractor::new()
         .unwrap()
-        .extract(&world, VIEWPORT, CameraView::default())
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
         .expect("the scene extracts");
 
     assert_eq!(frame.passes().len(), 2, "one batch per layer");
     assert_eq!(frame.passes()[0].layer.0, 100);
     assert_eq!(frame.passes()[1].layer.0, 200);
 
-    let FrameCommand::SpriteBatch { instances } = &frame.passes()[0].command else {
+    let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[0].command else {
         panic!("the first overlay pass should be a sprite batch");
     };
     // Greater depth is further back, so it must be drawn first.
@@ -118,7 +135,12 @@ fn meshes_keep_one_pass_per_layer_in_layer_order() {
     ));
     let frame = SceneExtractor::new()
         .unwrap()
-        .extract(&world, VIEWPORT, CameraView::default())
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
         .expect("the scene extracts");
 
     assert_eq!(frame.passes().len(), 2);
@@ -139,10 +161,15 @@ fn sprite_anchors_resolve_against_the_overlay_extent() {
     ));
     let frame = SceneExtractor::new()
         .unwrap()
-        .extract(&world, VIEWPORT, CameraView::default())
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
         .expect("the scene extracts");
 
-    let FrameCommand::SpriteBatch { instances } = &frame.passes()[0].command else {
+    let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[0].command else {
         panic!("expected a sprite batch");
     };
     let translation = instances[0].model().w_axis.truncate();
@@ -179,9 +206,14 @@ fn writing_a_transform_changes_what_is_drawn() {
     });
 
     let frame = extractor
-        .extract(&world, VIEWPORT, CameraView::default())
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
         .expect("the scene extracts");
-    let FrameCommand::TexturedCube { model } = frame.passes()[0].command else {
+    let FrameCommand::TexturedCube { model, .. } = frame.passes()[0].command else {
         panic!("expected a cube");
     };
     assert_eq!(model.w_axis.truncate(), Vec3::new(4.0, 0.0, 0.0));
@@ -196,7 +228,12 @@ fn a_camera_view_moves_the_camera_without_moving_the_model() {
     ));
     let extractor = SceneExtractor::new().unwrap();
     let authored = extractor
-        .extract(&world, VIEWPORT, CameraView::default())
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
         .unwrap();
     let orbited = extractor
         .extract(
@@ -206,6 +243,7 @@ fn a_camera_view_moves_the_camera_without_moving_the_model() {
                 orbit: glam::Vec2::new(0.5, 0.25),
                 ..CameraView::default()
             },
+            &TextureBindings::new(),
         )
         .unwrap();
 
@@ -213,8 +251,10 @@ fn a_camera_view_moves_the_camera_without_moving_the_model() {
         authored.passes()[0].camera.view_projection,
         orbited.passes()[0].camera.view_projection
     );
-    let (FrameCommand::TexturedCube { model: before }, FrameCommand::TexturedCube { model: after }) =
-        (&authored.passes()[0].command, &orbited.passes()[0].command)
+    let (
+        FrameCommand::TexturedCube { model: before, .. },
+        FrameCommand::TexturedCube { model: after, .. },
+    ) = (&authored.passes()[0].command, &orbited.passes()[0].command)
     else {
         panic!("expected cubes");
     };
@@ -232,7 +272,12 @@ fn switching_the_world_projection_changes_only_the_world_camera() {
     ));
     let extractor = SceneExtractor::new().unwrap();
     let perspective = extractor
-        .extract(&world, VIEWPORT, CameraView::default())
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
         .unwrap();
     let orthographic = extractor
         .extract(
@@ -242,6 +287,7 @@ fn switching_the_world_projection_changes_only_the_world_camera() {
                 projection: WorldProjection::Orthographic,
                 ..CameraView::default()
             },
+            &TextureBindings::new(),
         )
         .unwrap();
 
@@ -262,9 +308,12 @@ fn drawing_without_a_camera_reports_which_one_is_missing() {
           "components": { "sindri.mesh": { "primitive": "cube", "texture": "t" } } }] }"#;
     let world = world_from(mesh_only);
     assert!(matches!(
-        SceneExtractor::new()
-            .unwrap()
-            .extract(&world, VIEWPORT, CameraView::default()),
+        SceneExtractor::new().unwrap().extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new()
+        ),
         Err(SceneExtractError::MissingWorldCamera)
     ));
 
@@ -273,9 +322,12 @@ fn drawing_without_a_camera_reports_which_one_is_missing() {
           "components": { "sindri.sprite": { "texture": "b" } } }] }"#;
     let world = world_from(sprite_only);
     assert!(matches!(
-        SceneExtractor::new()
-            .unwrap()
-            .extract(&world, VIEWPORT, CameraView::default()),
+        SceneExtractor::new().unwrap().extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new()
+        ),
         Err(SceneExtractError::MissingOverlayCamera)
     ));
 }
@@ -290,8 +342,120 @@ fn an_invalid_camera_distance_is_rejected() {
             CameraView {
                 distance_scale: 0.0,
                 ..CameraView::default()
-            }
+            },
+            &TextureBindings::new(),
         ),
         Err(SceneExtractError::InvalidCameraDistanceScale)
     ));
+}
+
+/// Sprites sharing a layer but not a texture cannot share a draw call.
+#[test]
+fn sprites_batch_per_texture_within_a_layer() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "a", "transform_2d": {},
+          "components": { "sindri.sprite": { "texture": "one.png", "depth": 2.0, "layer": 100 } } },
+        { "id": "b", "transform_2d": {},
+          "components": { "sindri.sprite": { "texture": "two.png", "depth": 1.0, "layer": 100 } } },
+        { "id": "c", "transform_2d": {},
+          "components": { "sindri.sprite": { "texture": "one.png", "depth": 3.0, "layer": 100 } } }"#,
+    ));
+    let mut bindings = TextureBindings::new();
+    bindings.bind("one.png", TextureId::new(1));
+    bindings.bind("two.png", TextureId::new(2));
+
+    let frame = SceneExtractor::new()
+        .unwrap()
+        .extract(&world, VIEWPORT, CameraView::default(), &bindings)
+        .expect("the scene extracts");
+
+    assert_eq!(frame.passes().len(), 2, "one batch per texture");
+    let batches: Vec<(TextureId, usize)> = frame
+        .passes()
+        .iter()
+        .map(|pass| match &pass.command {
+            FrameCommand::SpriteBatch { texture, instances } => (*texture, instances.len()),
+            FrameCommand::TexturedCube { .. } => panic!("expected sprite batches"),
+        })
+        .collect();
+    assert_eq!(batches, [(TextureId::new(1), 2), (TextureId::new(2), 1)]);
+}
+
+#[test]
+fn an_unbound_texture_draws_as_missing_rather_than_failing() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "cube", "transform_3d": {},
+          "components": { "sindri.mesh": { "primitive": "cube", "texture": "absent.png" } } }"#,
+    ));
+    let frame = SceneExtractor::new()
+        .unwrap()
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
+        .expect("a missing texture must not fail the frame");
+
+    let FrameCommand::TexturedCube { texture, .. } = frame.passes()[0].command else {
+        panic!("expected a cube");
+    };
+    assert_eq!(texture, TextureRegistry::MISSING);
+}
+
+#[test]
+fn the_bound_texture_reaches_the_draw() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "cube", "transform_3d": {},
+          "components": { "sindri.mesh": { "primitive": "cube", "texture": "world.png" } } }"#,
+    ));
+    let mut bindings = TextureBindings::new();
+    bindings.bind("world.png", TextureId::new(7));
+
+    let frame = SceneExtractor::new()
+        .unwrap()
+        .extract(&world, VIEWPORT, CameraView::default(), &bindings)
+        .expect("the scene extracts");
+    let FrameCommand::TexturedCube { texture, .. } = frame.passes()[0].command else {
+        panic!("expected a cube");
+    };
+    assert_eq!(texture, TextureId::new(7));
+}
+
+/// Missing textures are reported by name, not left as a magenta surprise.
+#[test]
+fn unresolved_references_are_reported_by_name() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "cube", "transform_3d": {},
+          "components": { "sindri.mesh": { "primitive": "cube", "texture": "have.png" } } },
+        { "id": "badge", "transform_2d": {},
+          "components": { "sindri.sprite": { "texture": "lost.png" } } }"#,
+    ));
+    let mut bindings = TextureBindings::new();
+    bindings.bind("have.png", TextureId::new(1));
+
+    let missing = sindri_scene::unresolved_textures(&world, &bindings);
+    assert_eq!(missing.len(), 1);
+    assert!(missing.contains("lost.png"));
+
+    bindings.bind("lost.png", TextureId::new(2));
+    assert!(sindri_scene::unresolved_textures(&world, &bindings).is_empty());
+}
+
+#[test]
+fn bindings_replace_rather_than_duplicate() {
+    let mut bindings = TextureBindings::new();
+    assert_eq!(bindings.bind("a.png", TextureId::new(1)), None);
+    assert_eq!(
+        bindings.bind("a.png", TextureId::new(2)),
+        Some(TextureId::new(1))
+    );
+    assert_eq!(bindings.len(), 1);
+    assert_eq!(bindings.resolve("a.png"), TextureId::new(2));
+    assert_eq!(bindings.resolve("b.png"), TextureRegistry::MISSING);
+    assert_eq!(bindings.get("b.png"), None);
 }

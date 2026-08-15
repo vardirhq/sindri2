@@ -1,7 +1,7 @@
 use glam::Mat4;
 use thiserror::Error;
 
-use crate::SpriteInstance;
+use crate::{SpriteInstance, TextureId};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Viewport {
@@ -68,8 +68,15 @@ pub struct FrameCamera {
 
 #[derive(Clone, Debug)]
 pub enum FrameCommand {
-    TexturedCube { model: Mat4 },
-    SpriteBatch { instances: Vec<SpriteInstance> },
+    TexturedCube {
+        model: Mat4,
+        texture: TextureId,
+    },
+    /// One batch per texture: instances sharing a texture draw in a single call.
+    SpriteBatch {
+        texture: TextureId,
+        instances: Vec<SpriteInstance>,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -178,6 +185,7 @@ mod tests {
             },
             FrameCommand::TexturedCube {
                 model: Mat4::IDENTITY,
+                texture: crate::TextureRegistry::MISSING,
             },
         )
     }
