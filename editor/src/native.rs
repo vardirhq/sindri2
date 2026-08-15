@@ -26,7 +26,9 @@ use sindri_core::{
 use sindri_cube::{
     CameraView, DemoScene, FrameTarget, WorldProjection, demo_badge_texture, encode_prepared_frame,
 };
-use sindri_render::{DepthTarget, SpriteBatchRenderer, TexturedCubeRenderer, Viewport};
+use sindri_render::{
+    COLOR_TARGET_FORMAT, DepthTarget, SpriteBatchRenderer, TexturedCubeRenderer, Viewport,
+};
 
 const INTER_FONT: &[u8] = include_bytes!("../assets/Inter.ttf");
 const ACCENT: Color32 = Color32::from_rgb(246, 169, 35);
@@ -101,12 +103,10 @@ struct RuntimeViewport {
 }
 
 impl RuntimeViewport {
-    /// Textures upload as sRGB, so sampling decodes to linear. Writing that
-    /// back into a non-sRGB target skips the matching encode and stores linear
-    /// values as if they were sRGB, which crushes midtones — orange reads as
-    /// red and navy as black. `egui` creates its own textures in this format
-    /// for the same reason.
-    const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
+    /// The shared colour target format. Defining one here is how the editor
+    /// previously drifted into a linear target and rendered every colour too
+    /// dark, so it defers to `sindri-render` instead.
+    const FORMAT: wgpu::TextureFormat = COLOR_TARGET_FORMAT;
 
     fn new(context: &eframe::CreationContext<'_>) -> Result<Self, String> {
         let render_state = context

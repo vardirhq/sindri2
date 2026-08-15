@@ -21,6 +21,78 @@ const WIDTH: u32 = 512;
 #[cfg(not(target_arch = "wasm32"))]
 const HEIGHT: u32 = 512;
 
+/// Colours the demo scene authors that must survive the render round trip.
+///
+/// Source textures are sRGB and shaders work in linear, so the target has to
+/// encode on write. A target that does not still renders a perfectly valid
+/// image — just the wrong colour — which no crash, lint, or headless test can
+/// notice. Checking the pixels is what catches it.
+#[cfg(not(target_arch = "wasm32"))]
+const AUTHORED_COLORS: [(&str, [u8; 3]); 2] = [
+    ("checkerboard orange", [240, 114, 43]),
+    ("checkerboard navy", [18, 34, 55]),
+];
+
+/// Per-channel slack, generous enough for texture filtering and a software
+/// rasteriser but far tighter than a colour-space mistake, which moves channels
+/// by 40 to 70.
+#[cfg(not(target_arch = "wasm32"))]
+const CHANNEL_TOLERANCE: i32 = 16;
+
+/// Each colour must cover at least this many pixels per thousand.
+#[cfg(not(target_arch = "wasm32"))]
+const MINIMUM_SHARE_PER_THOUSAND: usize = 5;
+
+#[cfg(not(target_arch = "wasm32"))]
+fn is_near(pixel: &[u8], expected: [u8; 3]) -> bool {
+    pixel
+        .iter()
+        .zip(expected)
+        .take(3)
+        .all(|(actual, expected)| {
+            (i32::from(*actual) - i32::from(expected)).abs() <= CHANNEL_TOLERANCE
+        })
+}
+
+/// Reports the most common colours in the image, to make a mismatch diagnosable.
+#[cfg(not(target_arch = "wasm32"))]
+fn dominant_colors(pixels: &[u8]) -> Vec<([u8; 3], usize)> {
+    let mut counts: std::collections::BTreeMap<[u8; 3], usize> = std::collections::BTreeMap::new();
+    for pixel in pixels.chunks_exact(4) {
+        // Quantise so near-identical shades group together.
+        let key = [pixel[0] & !7, pixel[1] & !7, pixel[2] & !7];
+        *counts.entry(key).or_default() += 1;
+    }
+    let mut ranked: Vec<_> = counts.into_iter().collect();
+    ranked.sort_by_key(|(_, count)| std::cmp::Reverse(*count));
+    ranked.truncate(5);
+    ranked
+}
+
+/// Fails when the rendered image is not the colour the scene authored.
+#[cfg(not(target_arch = "wasm32"))]
+fn verify_authored_colors(pixels: &[u8]) -> Result<(), String> {
+    let total = pixels.len() / 4;
+    for (name, expected) in AUTHORED_COLORS {
+        let found = pixels
+            .chunks_exact(4)
+            .filter(|pixel| is_near(pixel, expected))
+            .count();
+        if found * 1000 < total * MINIMUM_SHARE_PER_THOUSAND {
+            let dominant = dominant_colors(pixels);
+            return Err(format!(
+                "expected {name} {expected:?} to cover at least \
+                 {MINIMUM_SHARE_PER_THOUSAND} pixels per thousand, but only {found} of {total} \
+                 pixels are within {CHANNEL_TOLERANCE} per channel.\n\
+                 The most common colours were {dominant:?}.\n\
+                 A whole-image shift like this usually means a colour target is \
+                 not sRGB, so linear output was stored without being encoded."
+            ));
+        }
+    }
+    Ok(())
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
     let instance = wgpu::Instance::default();
@@ -75,6 +147,10 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
     encoder.set_depth(png::BitDepth::Eight);
     encoder.write_header()?.write_image_data(&pixels)?;
     println!("wrote {}", path.display());
+
+    // Checked after writing, so a failing frame is still uploaded to look at.
+    verify_authored_colors(&pixels)?;
+    println!("verified authored scene colours survived the render round trip");
     Ok(())
 }
 

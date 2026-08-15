@@ -68,6 +68,9 @@ All notable changes to Sindri Next will be documented here.
 - Sprite batching per render layer instead of requiring every sprite in a scene to share one.
 - Sprite anchors resolved against the overlay camera's extent, covering all nine corner, edge, and centre positions.
 - Camera views that orbit, scale distance, and switch projection without touching the scene.
+- A single shared colour target format, so offscreen and in-editor targets cannot disagree about colour space.
+- A required sRGB swapchain format, reported as an error rather than silently accepted as a fallback.
+- Verification that the headless capture actually contains the colours the scene authored, reporting the frame's dominant colours when it does not.
 
 ### Changed
 
