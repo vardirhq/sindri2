@@ -38,11 +38,19 @@ if [ -z "$window_id" ]; then
 fi
 
 sleep 2
-xdotool windowmove "$window_id" 0 0
+xdotool windowmap --sync "$window_id"
+xdotool windowmove --sync "$window_id" 0 0
+xdotool windowraise "$window_id"
+sleep 3
 
 attempt=0
-while [ "$attempt" -lt 20 ]; do
-    if import -window root -crop 1440x1024+0+0 "$output_path" 2>/dev/null; then
+while [ "$attempt" -lt 80 ]; do
+    if ! kill -0 "$editor_pid" 2>/dev/null; then
+        wait "$editor_pid"
+        exit 1
+    fi
+
+    if import -window "$window_id" "$output_path" 2>/dev/null; then
         exit 0
     fi
 
