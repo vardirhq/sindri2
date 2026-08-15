@@ -42,7 +42,7 @@ xdotool windowmove "$window_id" 0 0
 
 attempt=0
 while [ "$attempt" -lt 20 ]; do
-    if import -window "$window_id" "$output_path" 2>/dev/null; then
+    if import -window root -crop 1440x1024+0+0 "$output_path" 2>/dev/null; then
         exit 0
     fi
 
