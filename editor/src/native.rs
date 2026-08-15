@@ -24,7 +24,7 @@ use sindri_core::{
     SceneDocument, Transform2D, Transform3D, World, WorldCommand,
 };
 use sindri_cube::{
-    DemoScene, FrameTarget, WorldProjection, demo_badge_texture, encode_prepared_frame,
+    CameraView, DemoScene, FrameTarget, WorldProjection, demo_badge_texture, encode_prepared_frame,
 };
 use sindri_render::{DepthTarget, SpriteBatchRenderer, TexturedCubeRenderer, Viewport};
 
@@ -154,13 +154,15 @@ impl RuntimeViewport {
     ) -> Result<(), String> {
         self.resize(width, height);
         let prepared = scene
-            .extract_editor_frame(
+            .extract(
                 Viewport::new(self.width, self.height),
-                rotation,
-                1.0 / zoom,
-                match projection {
-                    CameraProjection::Perspective => WorldProjection::Perspective,
-                    CameraProjection::Orthographic => WorldProjection::Orthographic,
+                CameraView {
+                    orbit: rotation,
+                    distance_scale: 1.0 / zoom,
+                    projection: match projection {
+                        CameraProjection::Perspective => WorldProjection::Perspective,
+                        CameraProjection::Orthographic => WorldProjection::Orthographic,
+                    },
                 },
             )
             .map_err(|error| error.to_string())?;

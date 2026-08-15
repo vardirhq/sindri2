@@ -1,0 +1,18 @@
+[package]
+name = "sindri-scene"
+description = "Built-in Sindri scene components and world-to-frame extraction"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+glam.workspace = true
+serde.workspace = true
+sindri-core = { path = "../sindri-core" }
+sindri-render = { path = "../sindri-render" }
+thiserror.workspace = true
+
+[lints]
+workspace = true

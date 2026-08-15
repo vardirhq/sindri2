@@ -7,7 +7,6 @@ use std::{
 };
 
 #[cfg(not(target_arch = "wasm32"))]
-use glam::Vec2;
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_cube::{DemoScene, FrameTarget, demo_badge_texture, encode_prepared_frame};
 #[cfg(not(target_arch = "wasm32"))]
@@ -35,7 +34,7 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
         demo_badge_texture(&gpu.device, &gpu.queue),
     );
     let scene = DemoScene::load()?;
-    let prepared = scene.extract_frame(Viewport::new(WIDTH, HEIGHT), Vec2::ZERO)?;
+    let prepared = scene.extract_frame(Viewport::new(WIDTH, HEIGHT))?;
 
     let mut encoder = gpu
         .device

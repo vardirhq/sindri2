@@ -8,6 +8,7 @@ The repository is at its foundation stage. The renderer-independent core current
 - capped frame time and fixed-step simulation with drift-free rational time scale
 - a platform boundary with keyboard and pointer input, clock traits, and fallible gameplay hooks
 - a host loop that runs a game headlessly, in a window, or in a browser
+- component-driven extraction that draws any scene without hand-written render code
 - generation-checked runtime entities
 - safe entity hierarchies
 - versioned, editor-friendly scene documents
@@ -21,7 +22,7 @@ The repository is at its foundation stage. The renderer-independent core current
 - shared `wgpu` 30 device/surface negotiation
 - a reusable triangle renderer proven by one native/browser example
 
-Read the [project overview](PROJECT_OVERVIEW.md), the [feasibility review](docs/FEASIBILITY.md), the [asset foundation](docs/asset-foundation.md), the [component schema registry](docs/component-schema-registry.md), the [scene serialization contract](docs/scene-serialization.md), the [transparent rendering policy](docs/rendering-transparency.md), and the checkable [roadmap](ROADMAP.md).
+Read the [project overview](PROJECT_OVERVIEW.md), the [feasibility review](docs/FEASIBILITY.md), the [asset foundation](docs/asset-foundation.md), the [component schema registry](docs/component-schema-registry.md), the [scene serialization contract](docs/scene-serialization.md), the [scene extraction seam](docs/scene-extraction.md), the [transparent rendering policy](docs/rendering-transparency.md), and the checkable [roadmap](ROADMAP.md).
 
 The rendering proofs, including a headless PNG capture used by CI, now include the [shared triangle example](examples/triangle/README.md) and a [depth-tested textured cube with a 2D sprite overlay](examples/cube/README.md). Both use the same GPU and renderer crates on native desktops and in WebGPU browsers.
 
