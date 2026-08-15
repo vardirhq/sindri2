@@ -95,7 +95,7 @@ enum CameraProjection {
 struct RuntimeViewport {
     render_state: eframe::egui_wgpu::RenderState,
     texture: wgpu::Texture,
-    view: wgpu::TextureView,
+    views: ViewportViews,
     depth: DepthTarget,
     texture_id: egui::TextureId,
     cube_renderer: TexturedCubeRenderer,
@@ -117,14 +117,14 @@ impl RuntimeViewport {
             .wgpu_render_state
             .clone()
             .ok_or_else(|| "the editor requires eframe's WGPU renderer".to_owned())?;
-        let (texture, view) = create_viewport_texture(
+        let (texture, views) = create_viewport_texture(
             &render_state.device,
             INITIAL_VIEWPORT_WIDTH,
             INITIAL_VIEWPORT_HEIGHT,
         );
         let texture_id = render_state.renderer.write().register_native_texture(
             &render_state.device,
-            &view,
+            &views.sampled,
             wgpu::FilterMode::Linear,
         );
         let depth = DepthTarget::new(
@@ -138,7 +138,7 @@ impl RuntimeViewport {
         Ok(Self {
             render_state,
             texture,
-            view,
+            views,
             depth,
             texture_id,
             cube_renderer,
@@ -190,7 +190,7 @@ impl RuntimeViewport {
             &self.render_state.queue,
             &mut encoder,
             FrameTarget {
-                color: &self.view,
+                color: &self.views.target,
                 depth: &self.depth,
             },
             &prepared,
@@ -206,29 +206,62 @@ impl RuntimeViewport {
         if self.width == width && self.height == height {
             return;
         }
-        let (texture, view) = create_viewport_texture(&self.render_state.device, width, height);
+        let (texture, views) = create_viewport_texture(&self.render_state.device, width, height);
         self.render_state
             .renderer
             .write()
             .update_egui_texture_from_wgpu_texture(
                 &self.render_state.device,
-                &view,
+                &views.sampled,
                 wgpu::FilterMode::Linear,
                 self.texture_id,
             );
         self.texture = texture;
-        self.view = view;
+        self.views = views;
         self.depth.resize(&self.render_state.device, width, height);
         self.width = width;
         self.height = height;
     }
 }
 
+/// The two views of the viewport texture, which must not be the same view.
+///
+/// Rendering and sampling disagree about what the stored bytes mean, so each
+/// gets the view that makes its own half right. See [`create_viewport_texture`].
+struct ViewportViews {
+    /// The sRGB view the scene renders into, so the hardware encodes on write.
+    target: wgpu::TextureView,
+    /// The linear view egui samples, so the hardware does not decode on read.
+    sampled: wgpu::TextureView,
+}
+
+/// Builds the viewport texture and both views of it.
+///
+/// The texture is sRGB because [`sindri_render::COLOR_TARGET_FORMAT`] is what
+/// every Sindri colour target uses: shaders work in linear and the target
+/// encodes on write.
+///
+/// egui then samples that texture, and its shader says what it expects:
+///
+/// ```wgsl
+/// // We expect "normal" textures that are NOT sRGB-aware.
+/// let tex_gamma = sample_texture(in);
+/// ```
+///
+/// It treats whatever it samples as already gamma-encoded and decodes it before
+/// writing to an sRGB surface. Handing it an sRGB view means the hardware
+/// decodes on read as well, and two decodes against one encode is a frame that
+/// renders perfectly while being the wrong colour — authored orange arrives as
+/// `(221, 43, 6)` instead of `(240, 114, 43)`.
+///
+/// So the sampled view is the linear view of the same bytes. Nothing is
+/// converted twice, and neither half has to know what the other assumed.
 fn create_viewport_texture(
     device: &wgpu::Device,
     width: u32,
     height: u32,
-) -> (wgpu::Texture, wgpu::TextureView) {
+) -> (wgpu::Texture, ViewportViews) {
+    let sampled_format = RuntimeViewport::FORMAT.remove_srgb_suffix();
     let texture = device.create_texture(&wgpu::TextureDescriptor {
         label: Some("Sindri editor runtime viewport"),
         size: wgpu::Extent3d {
@@ -241,10 +274,19 @@ fn create_viewport_texture(
         dimension: wgpu::TextureDimension::D2,
         format: RuntimeViewport::FORMAT,
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
-        view_formats: &[RuntimeViewport::FORMAT],
+        view_formats: &[RuntimeViewport::FORMAT, sampled_format],
     });
-    let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-    (texture, view)
+    let target = texture.create_view(&wgpu::TextureViewDescriptor {
+        label: Some("Sindri editor viewport target"),
+        format: Some(RuntimeViewport::FORMAT),
+        ..Default::default()
+    });
+    let sampled = texture.create_view(&wgpu::TextureViewDescriptor {
+        label: Some("Sindri editor viewport sampled by egui"),
+        format: Some(sampled_format),
+        ..Default::default()
+    });
+    (texture, ViewportViews { target, sampled })
 }
 
 struct EditorApp {
