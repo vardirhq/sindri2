@@ -1,0 +1,66 @@
+{
+  "format_version": 1,
+  "metadata": {
+    "name": "Component payload fixture",
+    "editor": {
+      "grid_snap": 0.25,
+      "last_selection": "camera"
+    }
+  },
+  "entities": [
+    {
+      "id": "banner",
+      "transform_2d": {
+        "position": [0.0, -0.75],
+        "rotation_radians": 0.0,
+        "scale": [0.5, 0.125]
+      },
+      "components": {
+        "sindri.sprite": {
+          "depth": 1.0,
+          "layer": 100,
+          "texture": "procedural:badge",
+          "tint": [1.0, 1.0, 1.0, 0.88]
+        }
+      }
+    },
+    {
+      "id": "camera",
+      "name": "Main Camera",
+      "transform_3d": {
+        "position": [3.0, 2.0, 4.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "components": {
+        "sindri.camera": {
+          "far": 100.0,
+          "near": 0.1,
+          "projection": "perspective",
+          "target": [0.0, 0.0, 0.0],
+          "up": [0.0, 1.0, 0.0],
+          "vertical_fov_degrees": 45.0
+        }
+      },
+      "editor": {
+        "collapsed": true,
+        "pinned": false
+      }
+    },
+    {
+      "id": "unregistered",
+      "name": "Forward compatible",
+      "components": {
+        "studio.future.thing": {
+          "flag": true,
+          "list": [3, 1, 2],
+          "nested": {
+            "a": 1,
+            "b": 2
+          },
+          "text": "kept verbatim"
+        }
+      }
+    }
+  ]
+}

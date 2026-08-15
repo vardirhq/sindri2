@@ -1,0 +1,42 @@
+{
+  "format_version": 1,
+  "metadata": {
+    "name": "Hierarchy fixture"
+  },
+  "entities": [
+    {
+      "id": "arm",
+      "name": "Arm",
+      "parent": "torso",
+      "transform_3d": {
+        "position": [0.0, 1.25, 0.0],
+        "rotation": [0.0, 0.0, 0.3826834, 0.9238795],
+        "scale": [1.0, 1.0, 1.0]
+      }
+    },
+    {
+      "id": "root",
+      "name": "Root"
+    },
+    {
+      "id": "shadow",
+      "name": "Shadow",
+      "parent": "root",
+      "transform_2d": {
+        "position": [-0.5, 0.125],
+        "rotation_radians": 1.5707964,
+        "scale": [3.0, 0.25]
+      }
+    },
+    {
+      "id": "torso",
+      "name": "Torso",
+      "parent": "root",
+      "transform_3d": {
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 2.0, 1.0]
+      }
+    }
+  ]
+}
