@@ -4,7 +4,7 @@ use glam::Mat4;
 use thiserror::Error;
 use wgpu::util::DeviceExt;
 
-use crate::{MeshBuffers, SpriteBlendMode, Texture2D, TexturedVertex};
+use crate::{MeshBuffers, SpriteBlendMode, TextureId, TextureRegistry, TexturedVertex};
 
 const SHADER: &str = include_str!("sprite_batch.wgsl");
 const DEFAULT_CAPACITY: u32 = 64;
@@ -94,30 +94,27 @@ impl SpriteBatchStats {
 #[derive(Debug)]
 pub struct SpriteBatchRenderer {
     pipeline: wgpu::RenderPipeline,
-    bind_group: wgpu::BindGroup,
+    bind_group_layout: wgpu::BindGroupLayout,
+    /// One bind group per texture, built on first use and kept for reuse.
+    bind_groups: std::collections::HashMap<TextureId, wgpu::BindGroup>,
+    current: TextureId,
     uniform: wgpu::Buffer,
     mesh: MeshBuffers,
     instances: wgpu::Buffer,
     instance_capacity: u32,
     instance_count: u32,
-    texture: Texture2D,
     blend_mode: SpriteBlendMode,
     stats: SpriteBatchStats,
 }
 
 impl SpriteBatchRenderer {
-    pub fn new(
-        device: &wgpu::Device,
-        target_format: wgpu::TextureFormat,
-        texture: Texture2D,
-    ) -> Self {
-        Self::with_blend_mode(device, target_format, texture, SpriteBlendMode::Alpha)
+    pub fn new(device: &wgpu::Device, target_format: wgpu::TextureFormat) -> Self {
+        Self::with_blend_mode(device, target_format, SpriteBlendMode::Alpha)
     }
 
     pub fn with_blend_mode(
         device: &wgpu::Device,
         target_format: wgpu::TextureFormat,
-        texture: Texture2D,
         blend_mode: SpriteBlendMode,
     ) -> Self {
         let uniform = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -130,24 +127,6 @@ impl SpriteBatchRenderer {
         let instances = create_instance_buffer(device, DEFAULT_CAPACITY)
             .expect("default sprite batch capacity fits a GPU buffer");
         let bind_group_layout = create_bind_group_layout(device);
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Sindri sprite batch bind group"),
-            layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: uniform.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(texture.view()),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Sampler(texture.sampler()),
-                },
-            ],
-        });
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Sindri sprite batch shader"),
             source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(SHADER)),
@@ -188,24 +167,61 @@ impl SpriteBatchRenderer {
 
         Self {
             pipeline,
-            bind_group,
+            bind_group_layout,
+            bind_groups: std::collections::HashMap::new(),
+            current: TextureRegistry::MISSING,
             uniform,
             mesh: MeshBuffers::new(device, "Sindri sprite batch quad", &VERTICES, &INDICES),
             instances,
             instance_capacity: DEFAULT_CAPACITY,
             instance_count: 0,
-            texture,
             blend_mode,
             stats: SpriteBatchStats::default(),
         }
+    }
+
+    /// Returns the bind group for `texture`, creating it on first use.
+    fn bind_texture(
+        &mut self,
+        device: &wgpu::Device,
+        registry: &TextureRegistry,
+        texture: TextureId,
+    ) {
+        self.current = texture;
+        if self.bind_groups.contains_key(&texture) {
+            return;
+        }
+        let resolved = registry.get(texture);
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Sindri sprite batch bind group"),
+            layout: &self.bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: self.uniform.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(resolved.view()),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(resolved.sampler()),
+                },
+            ],
+        });
+        self.bind_groups.insert(texture, bind_group);
     }
 
     pub fn prepare(
         &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
+        registry: &TextureRegistry,
+        texture: TextureId,
         instances: &[SpriteInstance],
     ) -> Result<SpriteBatchStats, SpriteBatchError> {
+        self.bind_texture(device, registry, texture);
         let instance_count =
             u32::try_from(instances.len()).map_err(|_| SpriteBatchError::TooManyInstances)?;
         if instance_count > self.instance_capacity {
@@ -257,7 +273,11 @@ impl SpriteBatchRenderer {
             multiview_mask: None,
         });
         pass.set_pipeline(&self.pipeline);
-        pass.set_bind_group(0, &self.bind_group, &[]);
+        let bind_group = self
+            .bind_groups
+            .get(&self.current)
+            .expect("prepare binds the texture before encoding");
+        pass.set_bind_group(0, bind_group, &[]);
         pass.set_vertex_buffer(1, self.instances.slice(..));
         self.mesh.draw_instances(&mut pass, 0..self.instance_count);
     }
@@ -266,8 +286,9 @@ impl SpriteBatchRenderer {
         self.stats
     }
 
-    pub const fn texture(&self) -> &Texture2D {
-        &self.texture
+    /// The texture the next encode will draw with.
+    pub const fn texture(&self) -> TextureId {
+        self.current
     }
 
     pub const fn blend_mode(&self) -> SpriteBlendMode {

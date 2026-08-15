@@ -71,6 +71,14 @@ All notable changes to Sindri Next will be documented here.
 - A single shared colour target format, so offscreen and in-editor targets cannot disagree about colour space.
 - A required sRGB swapchain format, reported as an error rather than silently accepted as a fallback.
 - Verification that the headless capture actually contains the colours the scene authored, reporting the frame's dominant colours when it does not.
+- Renderer texture handles and a registry, so one renderer draws every mesh and sprite in a scene instead of owning a single baked-in texture.
+- Scene texture references resolved through bindings, making the `texture` field on mesh and sprite components load-bearing for the first time.
+- Sprite batching split per texture as well as per layer, so a batch remains one draw call.
+- A missing-texture fallback drawn in place of an unbound reference, and a report naming every unresolved reference in a world.
+- The demo's badge as a real PNG decoded through the asset pipeline, connecting `sindri-assets` to `sindri-render` for the first time.
+- Platform-independent asset URL resolution supporting relative, root-relative, and absolute bases, including static hosting under a non-root path.
+- Percent-encoded URL path segments, so asset IDs containing spaces or non-ASCII resolve to the file they name.
+- Rejection of URL roots carrying a query string or fragment, which would otherwise land in the middle of every asset URL.
 
 ### Changed
 
@@ -81,6 +89,8 @@ All notable changes to Sindri Next will be documented here.
 - Added a bounded X11 window-capture lifecycle for reliable full-editor WGPU screenshots in Xvfb CI runs.
 - Rewrote the shared demo scene asset in canonical form; the extracted frame and draw order are unchanged.
 - Replaced the cube example's hand-rolled key bitflags with the shared input state and the `winit` adapter.
+- Replaced the demo's procedural badge with `assets/textures/badge.png`, decoded at runtime; the image is byte-identical, so the rendered frame is unchanged.
+- Moved browser asset URL building out of the `wasm32`-only fetch source, where no test could reach it, into a tested module shared by every target.
 - Removed the editor's duplicate left tool rail; the scene view toolbar already drove the same select, move, rotate, and scale modes.
 - Replaced the cube example's bespoke extraction with the shared extractor, and moved its cube spin into the world so gameplay drives rendering through scene state.
 - Fixed the editor viewport rendering into a non-sRGB target, which stored linear colour as if it were sRGB and made the scene far darker and more saturated than the offscreen capture of the same content.

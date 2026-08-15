@@ -37,6 +37,30 @@ The initial implementations are:
 - `FileSystemAssetSource` on native targets, with canonical-path checks that prevent symlinks from escaping the configured root
 - `FetchAssetSource` on WebAssembly, using the browser Fetch API and retaining HTTP status and content-type information
 
+### Where a source looks
+
+The same `AssetId` must find the same file whether it is read from disk or fetched over HTTP, so
+both sources resolve it against a configured root and neither lets an ID reach outside one.
+
+`AssetId` does most of the work up front: an ID is relative, uses `/` separators, and cannot contain
+`\`, `:`, `?`, `#`, control characters, or a `.` or `..` segment. There is no ID that escapes a root
+by construction.
+
+On native targets `FileSystemAssetSource` joins the ID to its root and canonicalises the result,
+rejecting anything that lands outside — which also catches symlinks pointing away from the root, a
+case path arithmetic alone would miss.
+
+On the web `UrlRoot` builds the URL. A base may be empty (assets sit beside the page), relative
+(`assets/`), root-relative (`/games/demo/`), or absolute (`https://cdn.example.com/v2/`), and is
+normalised to end in a single slash. Bases carrying a query string or fragment are refused: the
+asset path is appended to the base, so anything after it would land in the middle of the URL and
+quietly request the wrong thing. Each path segment is percent-encoded to RFC 3986's unreserved set,
+so an ID containing spaces or non-ASCII resolves to a URL that requests the file it names, while the
+separators between segments stay separators.
+
+Resolution lives in `sindri-assets` rather than inside the browser source, so it is tested on every
+target. Rules compiled only for `wasm32` are rules nothing exercises.
+
 Filesystem reads are intentionally not hidden behind a fake executor. They complete when their future is polled, so the native load queue creates and polls them entirely on bounded I/O workers rather than the frame thread. Browser fetches remain genuinely asynchronous.
 
 ## Asynchronous load queue

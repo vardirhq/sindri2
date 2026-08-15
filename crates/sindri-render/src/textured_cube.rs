@@ -3,7 +3,9 @@ use std::borrow::Cow;
 use glam::Mat4;
 use wgpu::util::DeviceExt;
 
-use crate::{ClearOperations, DepthTarget, MeshBuffers, Texture2D, TexturedVertex};
+use crate::{
+    ClearOperations, DepthTarget, MeshBuffers, TextureId, TextureRegistry, TexturedVertex,
+};
 
 const SHADER: &str = include_str!("textured_cube.wgsl");
 
@@ -130,27 +132,30 @@ fn create_pipeline(
 #[derive(Debug)]
 pub struct TexturedCubeRenderer {
     pipeline: wgpu::RenderPipeline,
-    bind_group: wgpu::BindGroup,
+    bind_group_layout: wgpu::BindGroupLayout,
+    /// One bind group per texture, built on first use and kept for reuse.
+    bind_groups: std::collections::HashMap<TextureId, wgpu::BindGroup>,
+    current: TextureId,
     uniform: wgpu::Buffer,
     mesh: MeshBuffers,
-    texture: Texture2D,
+}
+
+/// The GPU handles and texture a draw resolves against.
+///
+/// Bundled because a draw needs all of them together, and threading four more
+/// parameters through every encode call obscures what is actually being drawn.
+#[derive(Clone, Copy)]
+pub struct DrawContext<'a> {
+    pub device: &'a wgpu::Device,
+    pub queue: &'a wgpu::Queue,
+    pub textures: &'a TextureRegistry,
+    pub texture: TextureId,
 }
 
 impl TexturedCubeRenderer {
-    pub fn new(
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        target_format: wgpu::TextureFormat,
-    ) -> Self {
-        let texture = Texture2D::checkerboard(
-            device,
-            queue,
-            "Sindri cube checkerboard",
-            64,
-            8,
-            [[18, 34, 55, 255], [240, 114, 43, 255]],
-        )
-        .expect("static checkerboard texture dimensions are valid");
+    /// Textures come from the frame's [`TextureRegistry`] rather than being
+    /// baked in, so one renderer draws every mesh in a scene.
+    pub fn new(device: &wgpu::Device, target_format: wgpu::TextureFormat) -> Self {
         let uniform = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Sindri textured cube uniform"),
             contents: bytemuck::bytes_of(&CubeUniform {
@@ -159,44 +164,60 @@ impl TexturedCubeRenderer {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
         let bind_group_layout = create_bind_group_layout(device);
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Sindri textured cube bind group"),
-            layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: uniform.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(texture.view()),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Sampler(texture.sampler()),
-                },
-            ],
-        });
         let pipeline = create_pipeline(device, target_format, &bind_group_layout);
         Self {
             pipeline,
-            bind_group,
+            bind_group_layout,
+            bind_groups: std::collections::HashMap::new(),
+            current: TextureRegistry::MISSING,
             uniform,
             mesh: MeshBuffers::new(device, "Sindri textured cube", &VERTICES, &INDICES),
-            texture,
         }
     }
 
+    /// Returns the bind group for `texture`, creating it on first use.
+    fn bind_texture(
+        &mut self,
+        device: &wgpu::Device,
+        registry: &TextureRegistry,
+        texture: TextureId,
+    ) {
+        self.current = texture;
+        if self.bind_groups.contains_key(&texture) {
+            return;
+        }
+        let resolved = registry.get(texture);
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Sindri textured cube bind group"),
+            layout: &self.bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: self.uniform.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(resolved.view()),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(resolved.sampler()),
+                },
+            ],
+        });
+        self.bind_groups.insert(texture, bind_group);
+    }
+
     pub fn encode(
-        &self,
-        queue: &wgpu::Queue,
+        &mut self,
+        context: DrawContext<'_>,
         encoder: &mut wgpu::CommandEncoder,
         target: &wgpu::TextureView,
         depth: &DepthTarget,
         model_view_projection: Mat4,
     ) {
         self.encode_with_clear(
-            queue,
+            context,
             encoder,
             target,
             depth,
@@ -206,14 +227,16 @@ impl TexturedCubeRenderer {
     }
 
     pub fn encode_with_clear(
-        &self,
-        queue: &wgpu::Queue,
+        &mut self,
+        context: DrawContext<'_>,
         encoder: &mut wgpu::CommandEncoder,
         target: &wgpu::TextureView,
         depth: &DepthTarget,
         model_view_projection: Mat4,
         clear: ClearOperations,
     ) {
+        self.bind_texture(context.device, context.textures, context.texture);
+        let queue = context.queue;
         queue.write_buffer(
             &self.uniform,
             0,
@@ -250,11 +273,16 @@ impl TexturedCubeRenderer {
             multiview_mask: None,
         });
         pass.set_pipeline(&self.pipeline);
-        pass.set_bind_group(0, &self.bind_group, &[]);
+        let bind_group = self
+            .bind_groups
+            .get(&self.current)
+            .expect("the texture is bound before encoding");
+        pass.set_bind_group(0, bind_group, &[]);
         self.mesh.draw(&mut pass);
     }
 
-    pub const fn texture(&self) -> &Texture2D {
-        &self.texture
+    /// The texture the next encode will draw with.
+    pub const fn texture(&self) -> TextureId {
+        self.current
     }
 }

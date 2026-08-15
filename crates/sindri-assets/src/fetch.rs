@@ -4,42 +4,33 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::Response;
 
-use crate::{AssetBytes, AssetSource, AssetSourceError, AssetSourceFuture};
+use crate::{AssetBytes, AssetSource, AssetSourceError, AssetSourceFuture, UrlRoot, UrlRootError};
 
 #[derive(Clone, Debug, Default)]
 pub struct FetchAssetSource {
-    root: String,
+    root: UrlRoot,
 }
 
 impl FetchAssetSource {
-    pub fn new(root: impl Into<String>) -> Self {
-        let mut root = root.into();
-        if !root.is_empty() && !root.ends_with('/') {
-            root.push('/');
-        }
-        Self { root }
+    /// Creates a source serving assets beneath `root`.
+    ///
+    /// See [`UrlRoot`] for the shapes a root may take and why a query string or
+    /// fragment is refused.
+    pub fn new(root: impl Into<String>) -> Result<Self, UrlRootError> {
+        Ok(Self {
+            root: UrlRoot::new(root)?,
+        })
     }
 
-    pub fn root(&self) -> &str {
+    /// Creates a source resolving against the page's own directory.
+    pub fn relative() -> Self {
+        Self {
+            root: UrlRoot::relative(),
+        }
+    }
+
+    pub const fn root(&self) -> &UrlRoot {
         &self.root
-    }
-
-    fn url(&self, id: &AssetId) -> Result<String, AssetSourceError> {
-        let mut encoded = Vec::new();
-        for segment in id.as_str().split('/') {
-            let segment = js_sys::encode_uri_component(segment)
-                .as_string()
-                .ok_or_else(|| {
-                    AssetSourceError::new(
-                        id.clone(),
-                        self.name(),
-                        AssetLoadErrorKind::InvalidData,
-                        "could not encode the logical ID as a URL path",
-                    )
-                })?;
-            encoded.push(segment);
-        }
-        Ok(format!("{}{}", self.root, encoded.join("/")))
     }
 }
 
@@ -50,7 +41,7 @@ impl AssetSource for FetchAssetSource {
 
     fn load<'a>(&'a self, id: &'a AssetId) -> AssetSourceFuture<'a> {
         Box::pin(async move {
-            let url = self.url(id)?;
+            let url = self.root.resolve(id);
             let window = web_sys::window().ok_or_else(|| {
                 AssetSourceError::new(
                     id.clone(),

@@ -8,6 +8,7 @@ mod decode;
 mod memory;
 mod queue;
 mod source;
+mod url;
 
 #[cfg(target_arch = "wasm32")]
 mod fetch;
@@ -28,3 +29,4 @@ pub use queue::{
     AssetLoadQueueError, AssetLoadRequest,
 };
 pub use source::{AssetBytes, AssetSource, AssetSourceError, AssetSourceFuture};
+pub use url::{UrlRoot, UrlRootError};

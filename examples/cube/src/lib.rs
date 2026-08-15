@@ -1,11 +1,13 @@
 use std::{future::Future, sync::Arc};
 
 use glam::Vec2;
+use sindri_assets::{AssetBytes, AssetDecoder, TextureAssetDecoder};
+use sindri_core::AssetId;
 use sindri_gpu::{GpuContext, GpuRequestOptions, SurfaceProfile};
 use sindri_platform::{InputState, Key};
 use sindri_render::{
-    DepthTarget, FrameCommand, PreparedFrame, SpriteBatchError, SpriteBatchRenderer,
-    SpriteBatchStats, Texture2D, TexturedCubeRenderer, Viewport,
+    DepthTarget, DrawContext, FrameCommand, PreparedFrame, SpriteBatchError, SpriteBatchRenderer,
+    SpriteBatchStats, Texture2D, TextureRegistry, TexturedCubeRenderer, Viewport,
 };
 use web_time::Instant;
 use wgpu::CurrentSurfaceTexture;
@@ -20,7 +22,7 @@ use winit::{
 mod scene;
 
 pub use scene::{DemoScene, DemoSceneError};
-pub use sindri_scene::{CameraView, WorldProjection};
+pub use sindri_scene::{CameraView, TextureBindings, WorldProjection};
 
 #[derive(Clone, Copy)]
 pub struct FrameTarget<'a> {
@@ -47,6 +49,8 @@ struct RenderState {
     depth: DepthTarget,
     cube_renderer: TexturedCubeRenderer,
     sprite_renderer: SpriteBatchRenderer,
+    textures: TextureRegistry,
+    bindings: TextureBindings,
     scene: DemoScene,
     input: InputState,
     rotation: Vec2,
@@ -76,13 +80,9 @@ impl RenderState {
             surface_profile.width(),
             surface_profile.height(),
         );
-        let cube_renderer =
-            TexturedCubeRenderer::new(&gpu.device, &gpu.queue, surface_profile.format());
-        let sprite_renderer = SpriteBatchRenderer::new(
-            &gpu.device,
-            surface_profile.format(),
-            demo_badge_texture(&gpu.device, &gpu.queue),
-        );
+        let cube_renderer = TexturedCubeRenderer::new(&gpu.device, surface_profile.format());
+        let sprite_renderer = SpriteBatchRenderer::new(&gpu.device, surface_profile.format());
+        let (textures, bindings) = demo_textures(&gpu.device, &gpu.queue);
         let scene = DemoScene::load().map_err(|error| error.to_string())?;
 
         Ok(Self {
@@ -94,6 +94,8 @@ impl RenderState {
             depth,
             cube_renderer,
             sprite_renderer,
+            textures,
+            bindings,
             scene,
             input: InputState::default(),
             rotation: Vec2::ZERO,
@@ -174,11 +176,14 @@ impl RenderState {
             .expect("the demo scene keeps its cube");
         let prepared = self
             .scene
-            .extract_frame(viewport)
+            .extract_frame(viewport, &self.bindings)
             .expect("embedded demo scene extracts into a valid frame");
         encode_prepared_frame(
-            &self.cube_renderer,
-            &mut self.sprite_renderer,
+            FrameRenderers {
+                cube: &mut self.cube_renderer,
+                sprites: &mut self.sprite_renderer,
+                textures: &self.textures,
+            },
             &self.gpu.device,
             &self.gpu.queue,
             &mut encoder,
@@ -349,7 +354,53 @@ impl ApplicationHandler<AppAction> for App {
     }
 }
 
-pub fn demo_badge_texture(device: &wgpu::Device, queue: &wgpu::Queue) -> Texture2D {
+/// The demo's textures, registered under the references its scene names.
+///
+/// The checkerboard is generated, which is what `procedural:` marks; the badge
+/// is a real PNG decoded through the asset pipeline. Both bind the same way,
+/// because binding cares about the reference, not where the pixels came from.
+pub fn demo_textures(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+) -> (TextureRegistry, TextureBindings) {
+    let mut registry = TextureRegistry::new(device, queue);
+    let mut bindings = TextureBindings::new();
+
+    let checkerboard = registry.insert(
+        Texture2D::checkerboard(
+            device,
+            queue,
+            "Sindri cube checkerboard",
+            64,
+            8,
+            [[18, 34, 55, 255], [240, 114, 43, 255]],
+        )
+        .expect("static checkerboard texture dimensions are valid"),
+    );
+    bindings.bind("procedural:checkerboard", checkerboard);
+
+    let badge = registry.insert(decode_texture(
+        device,
+        queue,
+        "textures/badge.png",
+        BADGE_PNG,
+    ));
+    bindings.bind("textures/badge.png", badge);
+
+    (registry, bindings)
+}
+
+/// The badge image, decoded from a real PNG through the asset pipeline.
+///
+/// Embedded rather than read from disk so the example needs no I/O on either
+/// target; the bytes still travel the same decode path a file or fetch would.
+const BADGE_PNG: &[u8] = include_bytes!("../assets/textures/badge.png");
+
+/// The badge as raw RGBA, which `assets/textures/badge.png` encodes.
+///
+/// Kept so a test can prove the shipped PNG is exactly this image, rather than
+/// trusting that swapping a generator for a file left the frame unchanged.
+pub fn demo_badge_pixels() -> Vec<u8> {
     const SIZE: u32 = 64;
     let mut pixels =
         Vec::with_capacity(usize::try_from(SIZE * SIZE * 4).expect("badge fits usize"));
@@ -373,32 +424,74 @@ pub fn demo_badge_texture(device: &wgpu::Device, queue: &wgpu::Queue) -> Texture
             pixels.extend_from_slice(&color);
         }
     }
-    Texture2D::from_rgba8(device, queue, "Sindri overlay badge", SIZE, SIZE, &pixels)
-        .expect("static badge texture dimensions are valid")
+    pixels
+}
+
+/// Decodes an embedded PNG into an upload-ready texture.
+///
+/// This is the whole bridge: `sindri-assets` turns bytes into a `TextureAsset`,
+/// and `sindri-render` turns that into something drawable. A file read or an
+/// HTTP fetch produces the same bytes and joins here.
+pub fn decode_texture(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    id: &str,
+    bytes: &[u8],
+) -> Texture2D {
+    let asset_id = AssetId::new(id).expect("demo asset IDs are valid");
+    let decoded = TextureAssetDecoder
+        .decode(AssetBytes::new(asset_id, bytes.to_vec()))
+        .expect("the embedded texture decodes");
+    Texture2D::from_rgba8(
+        device,
+        queue,
+        id,
+        decoded.width(),
+        decoded.height(),
+        decoded.rgba8(),
+    )
+    .expect("a decoded texture has valid dimensions")
+}
+
+/// The renderers a frame is drawn with.
+pub struct FrameRenderers<'a> {
+    pub cube: &'a mut TexturedCubeRenderer,
+    pub sprites: &'a mut SpriteBatchRenderer,
+    pub textures: &'a TextureRegistry,
 }
 
 pub fn encode_prepared_frame(
-    cube_renderer: &TexturedCubeRenderer,
-    sprite_renderer: &mut SpriteBatchRenderer,
+    renderers: FrameRenderers<'_>,
     device: &wgpu::Device,
     queue: &wgpu::Queue,
     encoder: &mut wgpu::CommandEncoder,
     target: FrameTarget<'_>,
     frame: &PreparedFrame,
 ) -> Result<SpriteBatchStats, SpriteBatchError> {
+    let FrameRenderers {
+        cube: cube_renderer,
+        sprites: sprite_renderer,
+        textures,
+    } = renderers;
     let mut sprite_stats = SpriteBatchStats::default();
     for pass in frame.passes() {
         match &pass.command {
-            FrameCommand::TexturedCube { model } => cube_renderer.encode_with_clear(
-                queue,
+            FrameCommand::TexturedCube { model, texture } => cube_renderer.encode_with_clear(
+                DrawContext {
+                    device,
+                    queue,
+                    textures,
+                    texture: *texture,
+                },
                 encoder,
                 target.color,
                 target.depth,
                 pass.camera.view_projection * *model,
                 frame.clear(),
             ),
-            FrameCommand::SpriteBatch { instances } => {
-                sprite_stats = sprite_renderer.prepare(device, queue, instances)?;
+            FrameCommand::SpriteBatch { texture, instances } => {
+                sprite_stats =
+                    sprite_renderer.prepare(device, queue, textures, *texture, instances)?;
                 sprite_renderer.encode(queue, encoder, target.color, pass.camera.view_projection);
             }
         }
@@ -429,4 +522,51 @@ pub fn run() {
     }
     #[cfg(not(target_arch = "wasm32"))]
     event_loop.run_app(&mut app).expect("event loop failed");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The shipped PNG must be exactly the image the demo used to generate, so
+    /// moving the badge onto the asset pipeline cannot change what is drawn.
+    #[test]
+    fn the_badge_png_decodes_to_the_authored_image() {
+        let id = AssetId::new("textures/badge.png").expect("a valid asset ID");
+        let decoded = TextureAssetDecoder
+            .decode(AssetBytes::new(id, BADGE_PNG.to_vec()))
+            .expect("the badge PNG decodes");
+
+        assert_eq!(decoded.width(), 64);
+        assert_eq!(decoded.height(), 64);
+        assert_eq!(
+            decoded.rgba8(),
+            demo_badge_pixels().as_slice(),
+            "the PNG and the generated image must be the same pixels"
+        );
+    }
+
+    /// Scene texture references are real asset IDs, not arbitrary strings.
+    #[test]
+    fn every_scene_texture_reference_is_a_loadable_asset_id() {
+        let document = DemoScene::authored_document().expect("the demo scene parses");
+        let mut checked = 0;
+        for entity in &document.entities {
+            for payload in entity.components.values() {
+                let Some(reference) = payload.get("texture").and_then(|value| value.as_str())
+                else {
+                    continue;
+                };
+                checked += 1;
+                if let Some(generated) = reference.strip_prefix("procedural:") {
+                    assert!(!generated.is_empty(), "a generated texture needs a name");
+                    continue;
+                }
+                AssetId::new(reference).unwrap_or_else(|error| {
+                    panic!("scene texture reference {reference:?} is not loadable: {error}")
+                });
+            }
+        }
+        assert!(checked > 0, "the demo scene should reference textures");
+    }
 }

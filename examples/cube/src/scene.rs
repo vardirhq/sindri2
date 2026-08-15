@@ -1,7 +1,7 @@
 use glam::{Quat, Vec2};
 use sindri_core::{SceneDocument, SceneJsonError, UnknownComponentPolicy, World, WorldError};
 use sindri_render::{PreparedFrame, Viewport};
-use sindri_scene::{CameraView, SceneExtractError, SceneExtractor};
+use sindri_scene::{CameraView, SceneExtractError, SceneExtractor, TextureBindings};
 use thiserror::Error;
 
 const SCENE_JSON: &str = include_str!("../assets/demo.scene.json");
@@ -73,8 +73,12 @@ impl DemoScene {
     }
 
     /// Extracts the current world through the authored camera.
-    pub fn extract_frame(&self, viewport: Viewport) -> Result<PreparedFrame, DemoSceneError> {
-        self.extract(viewport, CameraView::default())
+    pub fn extract_frame(
+        &self,
+        viewport: Viewport,
+        textures: &TextureBindings,
+    ) -> Result<PreparedFrame, DemoSceneError> {
+        self.extract(viewport, CameraView::default(), textures)
     }
 
     /// Extracts the current world through a viewer-adjusted camera.
@@ -82,8 +86,11 @@ impl DemoScene {
         &self,
         viewport: Viewport,
         view: CameraView,
+        textures: &TextureBindings,
     ) -> Result<PreparedFrame, DemoSceneError> {
-        Ok(self.extractor.extract(&self.world, viewport, view)?)
+        Ok(self
+            .extractor
+            .extract(&self.world, viewport, view, textures)?)
     }
 }
 
@@ -106,6 +113,15 @@ mod tests {
     use super::*;
 
     const VIEWPORT: Viewport = Viewport::new(512, 512);
+
+    /// The demo's texture references, bound to distinct handles so extraction
+    /// batches per texture the way the real host does.
+    fn bindings() -> TextureBindings {
+        let mut bindings = TextureBindings::new();
+        bindings.bind("procedural:checkerboard", sindri_render::TextureId::new(1));
+        bindings.bind("textures/badge.png", sindri_render::TextureId::new(2));
+        bindings
+    }
 
     /// The shipped scene asset is stored in canonical form. Regenerate it with
     /// `SINDRI_UPDATE_SCENE_FIXTURES=1 cargo test --package sindri-cube`.
@@ -130,12 +146,12 @@ mod tests {
     #[test]
     fn the_embedded_scene_extracts_an_opaque_pass_and_an_overlay_batch() {
         let scene = DemoScene::load().unwrap();
-        let frame = scene.extract_frame(VIEWPORT).unwrap();
+        let frame = scene.extract_frame(VIEWPORT, &bindings()).unwrap();
 
         assert_eq!(frame.passes().len(), 2);
         assert_eq!(frame.passes()[0].stage, RenderStage::Opaque3d);
         assert_eq!(frame.passes()[1].stage, RenderStage::Overlay);
-        let FrameCommand::SpriteBatch { instances } = &frame.passes()[1].command else {
+        let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[1].command else {
             panic!("the overlay pass should be a sprite batch");
         };
         assert_eq!(instances.len(), 5);
@@ -146,8 +162,8 @@ mod tests {
     #[test]
     fn the_overlay_keeps_its_authored_back_to_front_order() {
         let scene = DemoScene::load().unwrap();
-        let frame = scene.extract_frame(VIEWPORT).unwrap();
-        let FrameCommand::SpriteBatch { instances } = &frame.passes()[1].command else {
+        let frame = scene.extract_frame(VIEWPORT, &bindings()).unwrap();
+        let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[1].command else {
             panic!("the overlay pass should be a sprite batch");
         };
         let alphas: Vec<f32> = instances
@@ -161,8 +177,8 @@ mod tests {
     #[test]
     fn the_overlay_badges_sit_where_they_were_authored() {
         let scene = DemoScene::load().unwrap();
-        let frame = scene.extract_frame(VIEWPORT).unwrap();
-        let FrameCommand::SpriteBatch { instances } = &frame.passes()[1].command else {
+        let frame = scene.extract_frame(VIEWPORT, &bindings()).unwrap();
+        let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[1].command else {
             panic!("the overlay pass should be a sprite batch");
         };
         let positions: Vec<(f32, f32)> = instances
@@ -191,13 +207,13 @@ mod tests {
     #[test]
     fn spinning_the_cube_writes_the_world_and_changes_the_frame() {
         let mut scene = DemoScene::load().unwrap();
-        let resting = scene.extract_frame(VIEWPORT).unwrap();
+        let resting = scene.extract_frame(VIEWPORT, &bindings()).unwrap();
         scene.spin_cube(Vec2::new(0.8, 0.3)).unwrap();
-        let spun = scene.extract_frame(VIEWPORT).unwrap();
+        let spun = scene.extract_frame(VIEWPORT, &bindings()).unwrap();
 
         let (
-            FrameCommand::TexturedCube { model: before },
-            FrameCommand::TexturedCube { model: after },
+            FrameCommand::TexturedCube { model: before, .. },
+            FrameCommand::TexturedCube { model: after, .. },
         ) = (&resting.passes()[0].command, &spun.passes()[0].command)
         else {
             panic!("the opaque pass should draw the cube");
@@ -219,7 +235,7 @@ mod tests {
     #[test]
     fn an_editor_view_moves_the_camera_without_moving_the_model() {
         let scene = DemoScene::load().unwrap();
-        let authored = scene.extract_frame(VIEWPORT).unwrap();
+        let authored = scene.extract_frame(VIEWPORT, &bindings()).unwrap();
         let orbited = scene
             .extract(
                 VIEWPORT,
@@ -227,6 +243,7 @@ mod tests {
                     orbit: Vec2::new(0.5, 0.25),
                     ..CameraView::default()
                 },
+                &bindings(),
             )
             .unwrap();
 
@@ -235,8 +252,8 @@ mod tests {
             orbited.passes()[0].camera.view_projection
         );
         let (
-            FrameCommand::TexturedCube { model: before },
-            FrameCommand::TexturedCube { model: after },
+            FrameCommand::TexturedCube { model: before, .. },
+            FrameCommand::TexturedCube { model: after, .. },
         ) = (&authored.passes()[0].command, &orbited.passes()[0].command)
         else {
             panic!("the opaque pass should draw the cube");
