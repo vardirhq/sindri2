@@ -608,11 +608,7 @@ impl EditorApp {
                 ui.horizontal_centered(|ui| {
                     ui.add_space(12.0);
                     let healthy = self.runtime_error.is_none();
-                    ui.label(RichText::new("●").size(9.0).color(if healthy {
-                        SUCCESS
-                    } else {
-                        ACCENT_BRIGHT
-                    }));
+                    status_dot(ui, if healthy { SUCCESS } else { ACCENT_BRIGHT });
                     ui.label(
                         RichText::new(if healthy {
                             "Renderer ready"
@@ -982,7 +978,7 @@ fn components_sections(ui: &mut egui::Ui, components: &BTreeMap<String, Value>) 
             "sindri.camera" => {
                 property_label(ui, "Projection", "Perspective");
                 property_label(ui, "Field of view", "45°");
-                property_label(ui, "Clipping", "0.1 — 100");
+                property_label(ui, "Clipping", "0.1 - 100");
             }
             "sindri.sprite" => {
                 property_label(ui, "Texture", "procedural:badge");
@@ -1144,12 +1140,12 @@ fn console_view(ui: &mut egui::Ui, entity_count: usize, state: EngineState) {
     ui.add_space(8.0);
     for (color, text) in [
         (SUCCESS, "Renderer initialized".to_owned()),
-        (ACCENT, format!("Scene loaded — {entity_count} entities")),
+        (ACCENT, format!("Scene loaded - {entity_count} entities")),
         (TEXT_MUTED, format!("Engine {}", lifecycle_label(state))),
     ] {
         ui.horizontal(|ui| {
             ui.add_space(10.0);
-            ui.label(RichText::new("●").size(9.0).color(color));
+            status_dot(ui, color);
             ui.label(RichText::new(&text).size(11.0).color(TEXT_MUTED));
         });
     }
@@ -1252,6 +1248,16 @@ fn icon_button(ui: &mut egui::Ui, icon: MaterialIcon, selected: bool, tip: &str)
         )),
     )
     .on_hover_text(tip)
+}
+
+/// Draws a small status dot.
+///
+/// The bundled Inter subset carries 192 glyphs and has no `U+25CF`, so a text
+/// bullet renders as a missing-glyph box rather than a dot. Painting it keeps
+/// the indicator independent of font coverage.
+fn status_dot(ui: &mut egui::Ui, color: Color32) {
+    let (response, painter) = ui.allocate_painter(Vec2::splat(9.0), Sense::hover());
+    painter.circle_filled(response.rect.center(), 3.0, color);
 }
 
 fn transport_icon(

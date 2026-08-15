@@ -67,3 +67,5 @@ All notable changes to Sindri Next will be documented here.
 - Rewrote the shared demo scene asset in canonical form; the extracted frame and draw order are unchanged.
 - Replaced the editor's decorative transport cluster with working undo, redo, stop, pause, and play controls.
 - Replaced the editor's hardcoded console and status text with the live entity count, engine state, and renderer error state.
+- Fixed the editor hierarchy being clipped to the height of the adjacent tool rail, which hid most of the scene.
+- Replaced editor status bullets and em dashes, which the bundled Inter subset cannot render, with a painted dot and in-subset punctuation.
