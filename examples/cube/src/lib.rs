@@ -1,6 +1,8 @@
 use std::{future::Future, sync::Arc};
 
 use glam::Vec2;
+use sindri_assets::{AssetBytes, AssetDecoder, TextureAssetDecoder};
+use sindri_core::AssetId;
 use sindri_gpu::{GpuContext, GpuRequestOptions, SurfaceProfile};
 use sindri_platform::{InputState, Key};
 use sindri_render::{
@@ -354,9 +356,9 @@ impl ApplicationHandler<AppAction> for App {
 
 /// The demo's textures, registered under the references its scene names.
 ///
-/// Both are generated rather than loaded, which is what `procedural:` marks.
-/// Anything that produces a `Texture2D` — including a decoded image asset —
-/// binds the same way.
+/// The checkerboard is generated, which is what `procedural:` marks; the badge
+/// is a real PNG decoded through the asset pipeline. Both bind the same way,
+/// because binding cares about the reference, not where the pixels came from.
 pub fn demo_textures(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
@@ -377,13 +379,28 @@ pub fn demo_textures(
     );
     bindings.bind("procedural:checkerboard", checkerboard);
 
-    let badge = registry.insert(demo_badge_texture(device, queue));
-    bindings.bind("procedural:badge", badge);
+    let badge = registry.insert(decode_texture(
+        device,
+        queue,
+        "textures/badge.png",
+        BADGE_PNG,
+    ));
+    bindings.bind("textures/badge.png", badge);
 
     (registry, bindings)
 }
 
-pub fn demo_badge_texture(device: &wgpu::Device, queue: &wgpu::Queue) -> Texture2D {
+/// The badge image, decoded from a real PNG through the asset pipeline.
+///
+/// Embedded rather than read from disk so the example needs no I/O on either
+/// target; the bytes still travel the same decode path a file or fetch would.
+const BADGE_PNG: &[u8] = include_bytes!("../assets/textures/badge.png");
+
+/// The badge as raw RGBA, which `assets/textures/badge.png` encodes.
+///
+/// Kept so a test can prove the shipped PNG is exactly this image, rather than
+/// trusting that swapping a generator for a file left the frame unchanged.
+pub fn demo_badge_pixels() -> Vec<u8> {
     const SIZE: u32 = 64;
     let mut pixels =
         Vec::with_capacity(usize::try_from(SIZE * SIZE * 4).expect("badge fits usize"));
@@ -407,8 +424,33 @@ pub fn demo_badge_texture(device: &wgpu::Device, queue: &wgpu::Queue) -> Texture
             pixels.extend_from_slice(&color);
         }
     }
-    Texture2D::from_rgba8(device, queue, "Sindri overlay badge", SIZE, SIZE, &pixels)
-        .expect("static badge texture dimensions are valid")
+    pixels
+}
+
+/// Decodes an embedded PNG into an upload-ready texture.
+///
+/// This is the whole bridge: `sindri-assets` turns bytes into a `TextureAsset`,
+/// and `sindri-render` turns that into something drawable. A file read or an
+/// HTTP fetch produces the same bytes and joins here.
+pub fn decode_texture(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    id: &str,
+    bytes: &[u8],
+) -> Texture2D {
+    let asset_id = AssetId::new(id).expect("demo asset IDs are valid");
+    let decoded = TextureAssetDecoder
+        .decode(AssetBytes::new(asset_id, bytes.to_vec()))
+        .expect("the embedded texture decodes");
+    Texture2D::from_rgba8(
+        device,
+        queue,
+        id,
+        decoded.width(),
+        decoded.height(),
+        decoded.rgba8(),
+    )
+    .expect("a decoded texture has valid dimensions")
 }
 
 /// The renderers a frame is drawn with.
@@ -480,4 +522,51 @@ pub fn run() {
     }
     #[cfg(not(target_arch = "wasm32"))]
     event_loop.run_app(&mut app).expect("event loop failed");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The shipped PNG must be exactly the image the demo used to generate, so
+    /// moving the badge onto the asset pipeline cannot change what is drawn.
+    #[test]
+    fn the_badge_png_decodes_to_the_authored_image() {
+        let id = AssetId::new("textures/badge.png").expect("a valid asset ID");
+        let decoded = TextureAssetDecoder
+            .decode(AssetBytes::new(id, BADGE_PNG.to_vec()))
+            .expect("the badge PNG decodes");
+
+        assert_eq!(decoded.width(), 64);
+        assert_eq!(decoded.height(), 64);
+        assert_eq!(
+            decoded.rgba8(),
+            demo_badge_pixels().as_slice(),
+            "the PNG and the generated image must be the same pixels"
+        );
+    }
+
+    /// Scene texture references are real asset IDs, not arbitrary strings.
+    #[test]
+    fn every_scene_texture_reference_is_a_loadable_asset_id() {
+        let document = DemoScene::authored_document().expect("the demo scene parses");
+        let mut checked = 0;
+        for entity in &document.entities {
+            for payload in entity.components.values() {
+                let Some(reference) = payload.get("texture").and_then(|value| value.as_str())
+                else {
+                    continue;
+                };
+                checked += 1;
+                if let Some(generated) = reference.strip_prefix("procedural:") {
+                    assert!(!generated.is_empty(), "a generated texture needs a name");
+                    continue;
+                }
+                AssetId::new(reference).unwrap_or_else(|error| {
+                    panic!("scene texture reference {reference:?} is not loadable: {error}")
+                });
+            }
+        }
+        assert!(checked > 0, "the demo scene should reference textures");
+    }
 }

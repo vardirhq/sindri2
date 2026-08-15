@@ -38,6 +38,26 @@ A game registers its own component types alongside these with `SceneExtractor::r
   perspective camera. Drawing a mesh without one reports `MissingWorldCamera` rather than silently
   rendering nothing.
 
+## Textures
+
+A scene names a texture; the renderer knows only handles. `TextureBindings` is where the two meet,
+and it is the only place that knows both.
+
+```rust
+let mut bindings = TextureBindings::new();
+bindings.bind("textures/badge.png", registry.insert(decoded));
+```
+
+Binding cares about the reference, not where the pixels came from — a decoded PNG, a generated
+checkerboard, and a render target all bind the same way.
+
+A reference nothing has bound resolves to `TextureRegistry::MISSING`, a magenta checker. A missing
+texture therefore draws as obviously wrong rather than failing the frame or, worse, silently reusing
+whichever texture happened to be bound last. `unresolved_textures` names every reference a world
+draws that nothing has bound, so the diagnosis is a list rather than a magenta surface.
+
+Sprites batch per texture as well as per layer, because a batch is a single draw call.
+
 ## Anchors
 
 Sprite anchors resolve against the overlay camera's extent — half its `vertical_size`, widened by

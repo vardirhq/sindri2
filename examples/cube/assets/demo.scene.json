@@ -16,7 +16,7 @@
           "anchor": "bottom_right",
           "depth": 5.0,
           "layer": 100,
-          "texture": "procedural:badge",
+          "texture": "textures/badge.png",
           "tint": [0.55, 0.72, 1.0, 0.62]
         }
       }
@@ -33,7 +33,7 @@
           "anchor": "bottom_right",
           "depth": 1.0,
           "layer": 100,
-          "texture": "procedural:badge",
+          "texture": "textures/badge.png",
           "tint": [1.0, 1.0, 1.0, 0.88]
         }
       }
@@ -50,7 +50,7 @@
           "anchor": "bottom_right",
           "depth": 4.0,
           "layer": 100,
-          "texture": "procedural:badge",
+          "texture": "textures/badge.png",
           "tint": [0.72, 1.0, 0.72, 0.68]
         }
       }
@@ -67,7 +67,7 @@
           "anchor": "bottom_right",
           "depth": 3.0,
           "layer": 100,
-          "texture": "procedural:badge",
+          "texture": "textures/badge.png",
           "tint": [1.0, 0.68, 0.55, 0.72]
         }
       }
@@ -84,7 +84,7 @@
           "anchor": "bottom_right",
           "depth": 2.0,
           "layer": 100,
-          "texture": "procedural:badge",
+          "texture": "textures/badge.png",
           "tint": [0.92, 0.72, 1.0, 0.78]
         }
       }

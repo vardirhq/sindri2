@@ -119,7 +119,7 @@ mod tests {
     fn bindings() -> TextureBindings {
         let mut bindings = TextureBindings::new();
         bindings.bind("procedural:checkerboard", sindri_render::TextureId::new(1));
-        bindings.bind("procedural:badge", sindri_render::TextureId::new(2));
+        bindings.bind("textures/badge.png", sindri_render::TextureId::new(2));
         bindings
     }
 
