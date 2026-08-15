@@ -1,0 +1,30 @@
+version: 2
+
+updates:
+  # Workflow actions are pinned by major version, so these updates are the only
+  # ones that reliably produce a reviewable pull request here.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "Update"
+
+  # `Cargo.lock` is not committed, so Cargo updates can only propose changes to
+  # the requirements in `Cargo.toml`. Those are deliberately loose, which means
+  # this raises a pull request rarely — when a requirement genuinely has to move
+  # rather than on every upstream release. `cargo deny check advisories` covers
+  # what a lockfile bump would otherwise catch.
+  - package-ecosystem: cargo
+    directory: "/"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "Update"
+    ignore:
+      # Raising these is an MSRV decision, not a routine update: Rust 1.95 is
+      # set by `wgpu` 30 and `egui` 0.36.
+      - dependency-name: wgpu
+        update-types: ["version-update:semver-major"]
+      - dependency-name: eframe
+        update-types: ["version-update:semver-major"]

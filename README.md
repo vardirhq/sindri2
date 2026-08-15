@@ -50,6 +50,16 @@ Capture a deterministic editor screenshot on Linux with `imagemagick`, `xdotool`
 xvfb-run --auto-servernum ./scripts/capture-editor.sh target/editor.png
 ```
 
+## Contributing
+
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) for the checks, conventions, and commit style, and the [code of conduct](CODE_OF_CONDUCT.md) for what participation looks like. The [dependency policy](docs/dependency-policy.md) covers what the tree is allowed to contain and how it is enforced.
+
 ## Status
 
-Sindri Next is pre-alpha. Public APIs and serialized formats may change while the foundation milestones are being proven, but format changes will be explicit and versioned.
+Sindri Next is pre-alpha. Public APIs and serialized formats may change while the foundation milestones are being proven, but format changes will be explicit and versioned. What "versioned" means for crates and scene files — and what is deliberately still undecided for the editor protocol and the npm SDK — is written down in [`docs/versioning.md`](docs/versioning.md).
+
+## License
+
+Dual-licensed under either [Apache License 2.0](LICENSE-APACHE) or the [MIT license](LICENSE-MIT), at your option.
+
+Unless you state otherwise, any contribution you intentionally submit for inclusion in this project, as defined in the Apache 2.0 license, shall be dual-licensed as above, with no additional terms or conditions.

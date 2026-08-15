@@ -9,10 +9,10 @@ This is the checkable engineering plan. Check an item only when its acceptance c
 - [x] Create a Rust 2024 workspace with an explicit MSRV (Rust 1.95 for `wgpu` 30 and `egui` 0.36)
 - [x] Add formatting, Clippy, test CI, and dependency caching
 - [x] Establish `sindri-core` and the public `sindri` facade
-- [ ] Add `CONTRIBUTING.md`, code of conduct, and dual-license files
-- [ ] Add dependency policy and automated dependency/security review
-- [ ] Decide versioning policy for Rust crates, scene files, editor protocol, and npm SDK
-- [ ] Add release/changelog validation
+- [x] Add `CONTRIBUTING.md`, code of conduct, and dual-license files
+- [x] Add dependency policy and automated dependency/security review
+- [ ] Decide versioning policy for Rust crates, scene files, editor protocol, and npm SDK (crates and scene files decided; the editor protocol and npm SDK are deferred until they exist rather than guessed at)
+- [ ] Add release/changelog validation (deferred until there is a release process to validate)
 
 Exit gate: a clean clone passes format, lint, and test checks on the declared MSRV.
 

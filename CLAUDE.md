@@ -24,8 +24,13 @@ inferred from code:
 Per-subsystem contracts live in `docs/`: `asset-foundation.md`,
 `component-schema-registry.md`, `scene-serialization.md`, `scene-extraction.md`,
 `rendering-frame-pipeline.md`, `rendering-transparency.md`, `rendering-color.md`,
-`editor-architecture.md`. When you change a subsystem's behaviour, update its
-doc in the same change.
+`rendering-surface.md`, `editor-architecture.md`. When you change a subsystem's
+behaviour, update its doc in the same change.
+
+Project policy lives alongside them: `docs/versioning.md` (crate and scene
+format versions; the editor protocol and npm SDK are deliberately undecided) and
+`docs/dependency-policy.md` (what `cargo deny` enforces). `CONTRIBUTING.md`
+states the same conventions this file does, for humans.
 
 ## Workspace layout
 

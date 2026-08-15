@@ -8,7 +8,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-sindri-platform = { path = "../sindri-platform" }
+sindri-platform = { path = "../sindri-platform", version = "0.1.0" }
 winit = "0.30.13"
 
 [lints]
