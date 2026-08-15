@@ -948,7 +948,7 @@ fn folder_row(ui: &mut egui::Ui, label: &str, selected: bool, depth: usize) {
 fn asset_tile(ui: &mut egui::Ui, icon: MaterialIcon, label: &str) {
     ui.vertical(|ui| {
         ui.add_sized(
-            [72.0, 54.0],
+            [62.0, 54.0],
             egui::Button::new(icon.outlined().rich_text().size(27.0).color(
                 if label == "demo.scene" {
                     ACCENT
@@ -960,7 +960,7 @@ fn asset_tile(ui: &mut egui::Ui, icon: MaterialIcon, label: &str) {
             .stroke(Stroke::new(1.0, BORDER_SUBTLE)),
         );
         ui.add_sized(
-            [72.0, 17.0],
+            [62.0, 17.0],
             egui::Label::new(RichText::new(label).size(10.0).color(TEXT_MUTED)).truncate(),
         );
     });
