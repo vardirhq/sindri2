@@ -79,6 +79,9 @@ All notable changes to Sindri Next will be documented here.
 - Platform-independent asset URL resolution supporting relative, root-relative, and absolute bases, including static hosting under a non-root path.
 - Percent-encoded URL path segments, so asset IDs containing spaces or non-ASCII resolve to the file they name.
 - Rejection of URL roots carrying a query string or fragment, which would otherwise land in the middle of every asset URL.
+- A single presentation surface policy deciding what a ready, suboptimal, outdated, timed-out, occluded, lost, or validation-failed acquisition each means, checked case by case without a GPU.
+- A `WindowSurface` owning a surface, its configuration, and that recovery, so hosts acquire a frame or skip one and never write the decision themselves.
+- An error for a surface that was lost and could not be built again, which is the one acquisition failure retrying does not fix.
 
 ### Changed
 
@@ -98,3 +101,5 @@ All notable changes to Sindri Next will be documented here.
 - Replaced the editor's hardcoded console and status text with the live entity count, engine state, and renderer error state.
 - Fixed the editor hierarchy being clipped to the height of the adjacent tool rail, which hid most of the scene.
 - Replaced editor status bullets and em dashes, which the bundled Inter subset cannot render, with a painted dot and in-subset punctuation.
+- Replaced both proof examples' identical copies of the swapchain acquisition and recovery decision with the shared surface policy.
+- Replaced the examples' panic on a validation error during acquisition with a skipped frame, leaving the device's error scope to report it.

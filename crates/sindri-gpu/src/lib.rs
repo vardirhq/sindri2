@@ -5,6 +5,9 @@
 
 use thiserror::Error;
 
+mod surface;
+
+pub use surface::{SurfaceAction, SurfaceProfile, SurfaceSource, SurfaceStatus, WindowSurface};
 pub use wgpu;
 
 #[derive(Clone, Debug)]
@@ -98,61 +101,6 @@ impl GpuContext {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct SurfaceProfile {
-    config: wgpu::SurfaceConfiguration,
-}
-
-impl SurfaceProfile {
-    pub fn new(
-        surface: &wgpu::Surface<'_>,
-        adapter: &wgpu::Adapter,
-        width: u32,
-        height: u32,
-    ) -> Result<Self, GpuError> {
-        let width = width.max(1);
-        let height = height.max(1);
-        let mut config = surface
-            .get_default_config(adapter, width, height)
-            .ok_or(GpuError::UnsupportedSurface)?;
-        let capabilities = surface.get_capabilities(adapter);
-
-        // The renderer works in linear and relies on the target encoding on
-        // write. A non-sRGB swapchain would silently darken every colour, so it
-        // is refused rather than accepted as a fallback.
-        config.format = capabilities
-            .formats
-            .iter()
-            .copied()
-            .find(wgpu::TextureFormat::is_srgb)
-            .ok_or(GpuError::NoSrgbSurfaceFormat)?;
-        config.width = width;
-        config.height = height;
-        Ok(Self { config })
-    }
-
-    pub const fn format(&self) -> wgpu::TextureFormat {
-        self.config.format
-    }
-
-    pub const fn width(&self) -> u32 {
-        self.config.width
-    }
-
-    pub const fn height(&self) -> u32 {
-        self.config.height
-    }
-
-    pub fn resize(&mut self, width: u32, height: u32) {
-        self.config.width = width.max(1);
-        self.config.height = height.max(1);
-    }
-
-    pub fn configure(&self, surface: &wgpu::Surface<'_>, device: &wgpu::Device) {
-        surface.configure(device, &self.config);
-    }
-}
-
 #[derive(Debug, Error)]
 pub enum GpuError {
     #[error("no compatible GPU adapter was available: {0}")]
@@ -163,6 +111,8 @@ pub enum GpuError {
     MissingFeatures(wgpu::Features),
     #[error("surface has no supported presentation configuration")]
     UnsupportedSurface,
+    #[error("the presentation surface was lost and could not be created again: {0}")]
+    CreateSurface(#[from] wgpu::CreateSurfaceError),
     #[error(
         "surface offers no sRGB format, so rendered colours could not be encoded and every frame \
          would display too dark"
