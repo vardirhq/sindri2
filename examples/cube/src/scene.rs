@@ -28,17 +28,44 @@ pub enum WorldProjection {
 
 impl DemoScene {
     pub fn load() -> Result<Self, DemoSceneError> {
-        let document = SceneDocument::from_json(SCENE_JSON)?;
+        Self::from_document(&Self::authored_document()?)
+    }
+
+    /// The scene exactly as authored on disk, used to reset edited state.
+    pub fn authored_document() -> Result<SceneDocument, DemoSceneError> {
+        Ok(SceneDocument::from_json(SCENE_JSON)?)
+    }
+
+    /// Builds a runtime scene from any document that satisfies this demo's
+    /// component schema.
+    pub fn from_document(document: &SceneDocument) -> Result<Self, DemoSceneError> {
         let mut components = ComponentSchemaRegistry::default();
         components.register::<CameraComponent>("Camera")?;
         components.register::<MeshComponent>("Mesh")?;
         components.register::<SpriteComponent>("Sprite")?;
-        components.validate_scene(&document, UnknownComponentPolicy::Reject)?;
-        let loaded = World::from_scene(&document)?;
+        components.validate_scene(document, UnknownComponentPolicy::Reject)?;
+        let loaded = World::from_scene(document)?;
         Ok(Self {
             world: loaded.world,
             components,
         })
+    }
+
+    /// The live runtime world. Editing hosts read hierarchy and inspector
+    /// state from here so there is a single source of truth behind the
+    /// rendered frame.
+    pub const fn world(&self) -> &World {
+        &self.world
+    }
+
+    /// The live runtime world, for hosts applying [`sindri_core::WorldCommand`]s.
+    pub const fn world_mut(&mut self) -> &mut World {
+        &mut self.world
+    }
+
+    /// Serializes the current runtime state back to a scene document.
+    pub fn to_document(&self) -> Result<SceneDocument, DemoSceneError> {
+        Ok(self.world.to_scene()?)
     }
 
     pub fn extract_frame(

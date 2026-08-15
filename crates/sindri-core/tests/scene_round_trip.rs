@@ -10,7 +10,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use sindri_core::{SceneDocument, SceneEntityId, World};
+use sindri_core::{
+    CommandBuffer, CommandHistory, SceneDocument, SceneEntityId, Transform3D, World, WorldCommand,
+};
 
 const UPDATE_ENV: &str = "SINDRI_UPDATE_SCENE_FIXTURES";
 
@@ -156,4 +158,58 @@ fn unknown_component_payloads_survive_a_save() {
         .entity(&holder)
         .expect("saved scene keeps the unregistered component holder");
     assert_eq!(original.components, round_tripped.components);
+}
+
+/// The editor's exit gate in miniature: edit a transform through a command,
+/// save, reopen, and get the edit back.
+#[test]
+fn an_edited_transform_survives_a_save_and_reopen() {
+    let name = "hierarchy.scene.json";
+    let path = fixture_directory().join(name);
+    let (document, original_text) = read_fixture(&path, name);
+
+    let loaded = World::from_scene(&document).expect("fixture loads");
+    let mut world = loaded.world;
+    let torso = loaded.entity_map[&SceneEntityId::new("torso").unwrap()];
+
+    let edited = Transform3D {
+        position: [0.0, 3.5, 0.0],
+        rotation: [0.0, 0.0, 0.0, 1.0],
+        scale: [1.0, 2.0, 1.0],
+    };
+    let mut history = CommandHistory::default();
+    let mut buffer = CommandBuffer::new();
+    buffer.push(WorldCommand::SetTransform3D {
+        entity: torso,
+        transform: Some(edited),
+    });
+    history
+        .apply(buffer.into_transaction("Move torso"), &mut world)
+        .expect("the edit applies");
+
+    let saved_text = world
+        .to_scene()
+        .expect("edited world saves")
+        .to_canonical_json()
+        .expect("canonical json");
+    assert_ne!(saved_text, original_text, "the edit should change the file");
+
+    let reopened = SceneDocument::from_json(&saved_text).expect("saved scene reopens");
+    let reloaded = World::from_scene(&reopened).expect("saved scene loads");
+    let reloaded_torso = reloaded.entity_map[&SceneEntityId::new("torso").unwrap()];
+    assert_eq!(
+        reloaded.world.get(reloaded_torso).unwrap().transform_3d,
+        Some(edited)
+    );
+
+    // Undoing restores the authored file byte for byte.
+    history.undo(&mut world).expect("the edit reverses");
+    assert_eq!(
+        world
+            .to_scene()
+            .expect("restored world saves")
+            .to_canonical_json()
+            .expect("canonical json"),
+        original_text
+    );
 }

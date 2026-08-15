@@ -37,7 +37,7 @@ Exit gate: a clean clone passes format, lint, and test checks on the declared MS
 - [x] Keep serialized logical IDs separate from runtime handles
 - [x] Define typed component registration and metadata
 - [x] Add query API for built-in and registered component types
-- [ ] Add deferred world command buffer
+- [x] Add deferred world command buffer
 - [ ] Specify deterministic system ordering
 - [ ] Benchmark 1k, 10k, and 100k entity workloads before considering an archetype ECS
 
@@ -176,12 +176,12 @@ Exit gate: Sindri Next matches the useful core of legacy 2D without inheriting i
 - [ ] Define versioned editor protocol and capability handshake
 - [ ] Load/save the real scene format
 - [x] Render the actual Sindri runtime in the viewport through the editor's shared WGPU device
-- [ ] Display hierarchy from runtime scene state
-- [ ] Inspect/edit names, hierarchy, Transform2D, and Transform3D
-- [ ] Add selection and transform change commands
-- [ ] Add command-based undo/redo with transaction grouping
+- [x] Display hierarchy from runtime scene state
+- [ ] Inspect/edit names, hierarchy, Transform2D, and Transform3D (names and both transforms done; reparenting has a command but no UI)
+- [x] Add selection and transform change commands
+- [x] Add command-based undo/redo with transaction grouping
 - [ ] Add 2D pan/zoom and basic 3D orbit camera controls
-- [ ] Add play, pause, stop, and reset-to-authored-state
+- [x] Add play, pause, stop, and reset-to-authored-state
 - [ ] Add one sprite, one cube, and one camera editor fixture
 - [ ] Add protocol contract and save/reload integration tests
 

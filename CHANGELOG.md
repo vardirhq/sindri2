@@ -49,6 +49,13 @@ All notable changes to Sindri Next will be documented here.
 - Namespaced editor-only metadata on scene documents and entities, carried through the runtime untouched and strippable for export.
 - A scene migration API with forward-only, non-overlapping steps defined before format version 2 exists.
 - Scene validation for non-finite transform values that JSON cannot represent.
+- A deferred world command buffer whose commands each produce their own inverse, giving the core reversible edits rather than leaving undo to tools.
+- All-or-nothing transactions that roll back applied commands when a later one is rejected.
+- Bounded undo and redo history with labelled transaction grouping and an unrecorded zero-limit mode.
+- Merge runs that collapse a continuous drag into a single undo step.
+- Editor hierarchy, selection, and inspector driven by the live runtime world instead of a second copy of the scene document.
+- Editor name and transform edits applied through world commands, with undo/redo on the toolbar and Ctrl+Z/Ctrl+Shift+Z.
+- Editor play, pause, stop, and reset-to-authored-state driven by the real engine lifecycle state machine.
 
 ### Changed
 
@@ -58,3 +65,5 @@ All notable changes to Sindri Next will be documented here.
 - Replaced the editor's painted viewport composition with the actual Sindri render pipeline while retaining the native UI overlays and controls.
 - Added a bounded X11 window-capture lifecycle for reliable full-editor WGPU screenshots in Xvfb CI runs.
 - Rewrote the shared demo scene asset in canonical form; the extracted frame and draw order are unchanged.
+- Replaced the editor's decorative transport cluster with working undo, redo, stop, pause, and play controls.
+- Replaced the editor's hardcoded console and status text with the live entity count, engine state, and renderer error state.
