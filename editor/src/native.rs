@@ -254,10 +254,7 @@ struct EditorApp {
 impl EditorApp {
     fn new(context: &eframe::CreationContext<'_>) -> Self {
         configure_theme(&context.egui_ctx);
-        let scene: SceneDocument = serde_json::from_str(SCENE_JSON)
-            .expect("the embedded editor fixture must remain valid scene JSON");
-        scene
-            .validate()
+        let scene = SceneDocument::from_json(SCENE_JSON)
             .expect("the embedded editor fixture must remain a valid scene");
         let selected = scene
             .entities
@@ -1227,8 +1224,7 @@ mod tests {
 
     #[test]
     fn embedded_scene_is_valid_and_contains_editor_selection() {
-        let scene: SceneDocument = serde_json::from_str(SCENE_JSON).unwrap();
-        scene.validate().unwrap();
+        let scene = SceneDocument::from_json(SCENE_JSON).unwrap();
         assert!(
             scene
                 .entities

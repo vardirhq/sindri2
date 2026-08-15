@@ -221,12 +221,8 @@ mod tests {
     fn health_scene(payload: Value) -> SceneDocument {
         SceneDocument {
             entities: vec![SceneEntity {
-                id: SceneEntityId::new("player").unwrap(),
-                name: None,
-                parent: None,
-                transform_2d: None,
-                transform_3d: None,
                 components: BTreeMap::from([(Health::TYPE_NAME.to_owned(), payload)]),
+                ..SceneEntity::new(SceneEntityId::new("player").unwrap())
             }],
             ..SceneDocument::default()
         }

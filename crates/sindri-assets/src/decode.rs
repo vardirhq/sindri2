@@ -258,12 +258,8 @@ mod tests {
                 editor: BTreeMap::new(),
             },
             entities: vec![SceneEntity {
-                id: SceneEntityId::new("player").unwrap(),
                 name: Some("Player".into()),
-                parent: None,
-                transform_2d: None,
-                transform_3d: None,
-                components: BTreeMap::new(),
+                ..SceneEntity::new(SceneEntityId::new("player").unwrap())
             }],
             ..SceneDocument::default()
         }

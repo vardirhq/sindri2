@@ -1,8 +1,8 @@
 use glam::{Mat4, Quat, Vec2, Vec3};
 use serde::Deserialize;
 use sindri_core::{
-    ComponentRegistryError, ComponentSchemaRegistry, SceneComponent, SceneDocument, Transform2D,
-    Transform3D, UnknownComponentPolicy, World, WorldError,
+    ComponentRegistryError, ComponentSchemaRegistry, SceneComponent, SceneDocument, SceneJsonError,
+    Transform2D, Transform3D, UnknownComponentPolicy, World, WorldError,
 };
 use sindri_render::{
     ClearOperations, ExtractedFrame, FrameCamera, FrameCommand, FramePass, FramePlanError,
@@ -28,7 +28,7 @@ pub enum WorldProjection {
 
 impl DemoScene {
     pub fn load() -> Result<Self, DemoSceneError> {
-        let document: SceneDocument = serde_json::from_str(SCENE_JSON)?;
+        let document = SceneDocument::from_json(SCENE_JSON)?;
         let mut components = ComponentSchemaRegistry::default();
         components.register::<CameraComponent>("Camera")?;
         components.register::<MeshComponent>("Mesh")?;
@@ -348,7 +348,7 @@ fn transform_2d_matrix(transform: Transform2D, anchor: SpriteAnchor, aspect: f32
 #[derive(Debug, Error)]
 pub enum DemoSceneError {
     #[error(transparent)]
-    Json(#[from] serde_json::Error),
+    Scene(#[from] SceneJsonError),
     #[error(transparent)]
     ComponentRegistry(#[from] ComponentRegistryError),
     #[error(transparent)]
@@ -368,6 +368,44 @@ pub enum DemoSceneError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The shipped scene asset is stored in canonical form. Regenerate it with
+    /// `SINDRI_UPDATE_SCENE_FIXTURES=1 cargo test --package sindri-cube`.
+    #[test]
+    fn embedded_scene_is_canonical_and_round_trips_through_a_world() {
+        let document = SceneDocument::from_json(SCENE_JSON).unwrap();
+        let canonical = document.to_canonical_json().unwrap();
+
+        if std::env::var_os("SINDRI_UPDATE_SCENE_FIXTURES").is_some() {
+            let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("assets")
+                .join("demo.scene.json");
+            std::fs::write(path, &canonical).unwrap();
+            return;
+        }
+
+        assert_eq!(canonical, SCENE_JSON);
+        let loaded = World::from_scene(&document).unwrap();
+        assert_eq!(loaded.world.to_scene().unwrap(), document);
+    }
+
+    /// Canonical ordering must not disturb the authored draw order, which is
+    /// carried by explicit render layers and depths.
+    #[test]
+    fn canonical_ordering_does_not_change_the_extracted_frame() {
+        let scene = DemoScene::load().unwrap();
+        let frame = scene
+            .extract_frame(Viewport::new(512, 512), Vec2::ZERO)
+            .unwrap();
+        let FrameCommand::SpriteBatch { instances } = &frame.passes()[1].command else {
+            panic!("second pass should contain the sprite batch");
+        };
+        let alphas: Vec<f32> = instances
+            .iter()
+            .map(|instance| instance.tint()[3])
+            .collect();
+        assert_eq!(alphas, [0.62, 0.68, 0.72, 0.78, 0.88]);
+    }
 
     #[test]
     fn embedded_scene_extracts_ordered_opaque_and_overlay_passes() {

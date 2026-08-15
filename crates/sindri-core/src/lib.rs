@@ -8,6 +8,7 @@ mod component;
 mod engine;
 mod entity;
 mod lifecycle;
+mod migration;
 mod scene;
 mod time;
 mod transform;
@@ -24,8 +25,10 @@ pub use component::{
 pub use engine::{EngineCore, EngineError, EngineFrame};
 pub use entity::EntityId;
 pub use lifecycle::{EngineLifecycle, EngineState, LifecycleError};
+pub use migration::{SceneMigrationError, SceneMigrationStep, SceneMigrator};
 pub use scene::{
-    SCENE_FORMAT_VERSION, SceneDocument, SceneEntity, SceneEntityId, SceneError, SceneMetadata,
+    SCENE_FORMAT_VERSION, SceneDocument, SceneEntity, SceneEntityId, SceneError, SceneJsonError,
+    SceneMetadata,
 };
 pub use time::{FixedStepClock, FixedStepConfig, FrameSteps, TimeError};
 pub use transform::{Transform2D, Transform3D};
@@ -36,7 +39,7 @@ pub mod prelude {
     pub use crate::{
         AssetHandle, AssetId, AssetLoadErrorKind, AssetStatus, AssetStore, ComponentSchemaRegistry,
         EngineCore, EngineLifecycle, EngineState, EntityData, EntityId, FixedStepClock,
-        FixedStepConfig, SceneComponent, SceneDocument, SceneEntity, SceneEntityId, Transform2D,
-        Transform3D, UnknownComponentPolicy, WeakAssetHandle, World,
+        FixedStepConfig, SceneComponent, SceneDocument, SceneEntity, SceneEntityId, SceneMetadata,
+        SceneMigrator, Transform2D, Transform3D, UnknownComponentPolicy, WeakAssetHandle, World,
     };
 }

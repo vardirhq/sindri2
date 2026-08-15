@@ -48,11 +48,11 @@ Exit gate: a clean clone passes format, lint, and test checks on the declared MS
 - [x] Load a validated scene into a runtime world in two passes
 - [x] Preserve forward-compatible JSON component payloads
 - [x] Define component schema registry and unknown-component behavior
-- [ ] Save a runtime world back to a scene without losing stable IDs
-- [ ] Add canonical pretty serialization for reviewable diffs
-- [ ] Add fixtures and golden round-trip tests
-- [ ] Define scene migration API before format version 2 exists
-- [ ] Split editor-only metadata into a namespaced, ignorable section
+- [x] Save a runtime world back to a scene without losing stable IDs
+- [x] Add canonical pretty serialization for reviewable diffs
+- [x] Add fixtures and golden round-trip tests
+- [x] Define scene migration API before format version 2 exists
+- [x] Split editor-only metadata into a namespaced, ignorable section
 
 Exit gate: core runs without GPU/window/browser dependencies and scene fixtures round-trip deterministically.
 

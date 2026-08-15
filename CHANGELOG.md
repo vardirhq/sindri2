@@ -42,6 +42,13 @@ All notable changes to Sindri Next will be documented here.
 - Shared-device editor viewport that renders the real prepared cube-and-sprite runtime frame into an egui texture, with drag orbit, zoom, resize handling, and a full-window CI screenshot artifact.
 - Viewport-first editor workspace with a compact hierarchy, scene tool rail, real asset browser, inspector sections, Inter typography, and Material Symbols icons.
 - Switchable perspective and orbit-matched orthographic projection for the editor's real WGPU scene viewport.
+- Lossless world-to-scene saving that preserves authored stable IDs and reports runtime entities that have none.
+- Deterministic ID assignment for runtime-spawned entities that skips identities already in use.
+- Canonical scene serialization with sorted entities and keys, omitted empty sections, single-line scalar arrays, and fixed-point output.
+- Golden scene fixtures with load, save, re-serialize, and idempotence coverage, regenerable through `SINDRI_UPDATE_SCENE_FIXTURES`.
+- Namespaced editor-only metadata on scene documents and entities, carried through the runtime untouched and strippable for export.
+- A scene migration API with forward-only, non-overlapping steps defined before format version 2 exists.
+- Scene validation for non-finite transform values that JSON cannot represent.
 
 ### Changed
 
@@ -50,3 +57,4 @@ All notable changes to Sindri Next will be documented here.
 - Increased the MSRV from Rust 1.87 to 1.95 for the first `egui` release aligned with `wgpu` 30.
 - Replaced the editor's painted viewport composition with the actual Sindri render pipeline while retaining the native UI overlays and controls.
 - Added a bounded X11 window-capture lifecycle for reliable full-editor WGPU screenshots in Xvfb CI runs.
+- Rewrote the shared demo scene asset in canonical form; the extracted frame and draw order are unchanged.
