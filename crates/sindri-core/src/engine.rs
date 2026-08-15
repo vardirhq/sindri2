@@ -4,7 +4,7 @@ use thiserror::Error;
 
 use crate::{
     EngineLifecycle, EngineState, FixedStepClock, FixedStepConfig, FrameSteps, LifecycleError,
-    TimeError, World,
+    TimeError, TimeScale, World,
 };
 
 /// Platform-independent state owned by every Sindri runtime host.
@@ -35,8 +35,21 @@ impl EngineCore {
         &self.world
     }
 
-    pub fn world_mut(&mut self) -> &mut World {
+    pub const fn world_mut(&mut self) -> &mut World {
         &mut self.world
+    }
+
+    /// Total simulated time since the engine started, after time scaling.
+    pub const fn elapsed(&self) -> Duration {
+        self.clock.elapsed()
+    }
+
+    pub const fn time_scale(&self) -> TimeScale {
+        self.clock.time_scale()
+    }
+
+    pub const fn set_time_scale(&mut self, scale: TimeScale) {
+        self.clock.set_time_scale(scale);
     }
 
     pub fn initialize(&mut self) -> Result<(), EngineError> {

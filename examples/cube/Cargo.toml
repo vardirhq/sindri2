@@ -17,6 +17,8 @@ serde.workspace = true
 serde_json.workspace = true
 sindri-core = { path = "../../crates/sindri-core" }
 sindri-gpu = { path = "../../crates/sindri-gpu" }
+sindri-desktop = { path = "../../crates/sindri-desktop" }
+sindri-platform = { path = "../../crates/sindri-platform" }
 sindri-render = { path = "../../crates/sindri-render" }
 thiserror.workspace = true
 web-time = "1"

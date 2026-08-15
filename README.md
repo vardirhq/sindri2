@@ -5,7 +5,9 @@ Sindri Next is the new foundation for a coherent Rust-powered 2D and 3D game eng
 The repository is at its foundation stage. The renderer-independent core currently provides:
 
 - strict engine lifecycle semantics
-- capped frame time and fixed-step simulation
+- capped frame time and fixed-step simulation with drift-free rational time scale
+- a platform boundary with keyboard and pointer input, clock traits, and fallible gameplay hooks
+- a host loop that runs a game headlessly, in a window, or in a browser
 - generation-checked runtime entities
 - safe entity hierarchies
 - versioned, editor-friendly scene documents
