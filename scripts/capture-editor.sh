@@ -38,4 +38,17 @@ if [ -z "$window_id" ]; then
 fi
 
 sleep 2
-import -window "$window_id" "$output_path"
+xdotool windowmove "$window_id" 0 0
+
+attempt=0
+while [ "$attempt" -lt 20 ]; do
+    if import -window "$window_id" "$output_path" 2>/dev/null; then
+        exit 0
+    fi
+
+    attempt=$((attempt + 1))
+    sleep 0.25
+done
+
+echo "Sindri Editor window could not be captured" >&2
+exit 1
