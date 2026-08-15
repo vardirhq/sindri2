@@ -55,24 +55,42 @@ impl DemoScene {
         rotation: Vec2,
         camera_distance_scale: f32,
     ) -> Result<PreparedFrame, DemoSceneError> {
-        self.extract_frame_with_projection(
+        self.extract_configured_frame(
             viewport,
             rotation,
+            Vec2::ZERO,
             camera_distance_scale,
             WorldProjection::Perspective,
         )
     }
 
-    pub fn extract_frame_with_projection(
+    pub fn extract_editor_frame(
         &self,
         viewport: Viewport,
-        rotation: Vec2,
+        camera_orbit: Vec2,
+        camera_distance_scale: f32,
+        projection: WorldProjection,
+    ) -> Result<PreparedFrame, DemoSceneError> {
+        self.extract_configured_frame(
+            viewport,
+            Vec2::ZERO,
+            camera_orbit,
+            camera_distance_scale,
+            projection,
+        )
+    }
+
+    fn extract_configured_frame(
+        &self,
+        viewport: Viewport,
+        model_rotation: Vec2,
+        camera_orbit: Vec2,
         camera_distance_scale: f32,
         projection: WorldProjection,
     ) -> Result<PreparedFrame, DemoSceneError> {
         let aspect = viewport.aspect_ratio()?;
-        let cameras = self.extract_cameras(aspect, camera_distance_scale)?;
-        let (cube_model, cube_layer) = self.extract_cube(rotation)?;
+        let cameras = self.extract_cameras(aspect, camera_distance_scale, camera_orbit)?;
+        let (cube_model, cube_layer) = self.extract_cube(model_rotation)?;
         let (sprite_layer, sprites) = self.extract_sprites(aspect)?;
 
         let mut frame = ExtractedFrame::new(viewport, ClearOperations::default());
@@ -102,6 +120,7 @@ impl DemoScene {
         &self,
         aspect: f32,
         camera_distance_scale: f32,
+        camera_orbit: Vec2,
     ) -> Result<CompleteCameraMatrices, DemoSceneError> {
         if !camera_distance_scale.is_finite() || camera_distance_scale <= 0.0 {
             return Err(DemoSceneError::InvalidCameraDistanceScale);
@@ -123,8 +142,12 @@ impl DemoScene {
                     let authored_eye =
                         Vec3::from_array(entity.transform_3d.unwrap_or_default().position);
                     let target = Vec3::from_array(target);
-                    let eye = target + (authored_eye - target) * camera_distance_scale;
                     let up = Vec3::from_array(up);
+                    let authored_offset = (authored_eye - target) * camera_distance_scale;
+                    let yawed = Quat::from_axis_angle(up, camera_orbit.x) * authored_offset;
+                    let right = up.cross(yawed).normalize_or_zero();
+                    let offset = Quat::from_axis_angle(right, camera_orbit.y) * yawed;
+                    let eye = target + offset;
                     let vertical_fov_radians = vertical_fov_degrees.to_radians();
                     cameras.perspective = Some(
                         PerspectiveCamera {
@@ -375,10 +398,10 @@ mod tests {
         let scene = DemoScene::load().unwrap();
         let viewport = Viewport::new(512, 512);
         let perspective = scene
-            .extract_frame_with_projection(viewport, Vec2::ZERO, 1.0, WorldProjection::Perspective)
+            .extract_editor_frame(viewport, Vec2::ZERO, 1.0, WorldProjection::Perspective)
             .unwrap();
         let orthographic = scene
-            .extract_frame_with_projection(viewport, Vec2::ZERO, 1.0, WorldProjection::Orthographic)
+            .extract_editor_frame(viewport, Vec2::ZERO, 1.0, WorldProjection::Orthographic)
             .unwrap();
         assert_ne!(
             perspective.passes()[0].camera.view_projection,
@@ -388,5 +411,39 @@ mod tests {
             perspective.passes()[1].camera.view_projection,
             orthographic.passes()[1].camera.view_projection
         );
+    }
+
+    #[test]
+    fn editor_orbit_changes_the_camera_without_rotating_the_model() {
+        let scene = DemoScene::load().unwrap();
+        let viewport = Viewport::new(512, 512);
+        let original = scene
+            .extract_editor_frame(viewport, Vec2::ZERO, 1.0, WorldProjection::Perspective)
+            .unwrap();
+        let orbited = scene
+            .extract_editor_frame(
+                viewport,
+                Vec2::new(0.5, 0.25),
+                1.0,
+                WorldProjection::Perspective,
+            )
+            .unwrap();
+        assert_ne!(
+            original.passes()[0].camera.view_projection,
+            orbited.passes()[0].camera.view_projection
+        );
+        let FrameCommand::TexturedCube {
+            model: original_model,
+        } = original.passes()[0].command
+        else {
+            panic!("editor opaque pass should contain the cube");
+        };
+        let FrameCommand::TexturedCube {
+            model: orbited_model,
+        } = orbited.passes()[0].command
+        else {
+            panic!("editor opaque pass should contain the cube");
+        };
+        assert_eq!(original_model, orbited_model);
     }
 }

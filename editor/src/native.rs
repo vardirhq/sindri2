@@ -154,7 +154,7 @@ impl RuntimeViewport {
         self.resize(width, height);
         let prepared = self
             .scene
-            .extract_frame_with_projection(
+            .extract_editor_frame(
                 Viewport::new(self.width, self.height),
                 rotation,
                 1.0 / zoom,
@@ -276,8 +276,8 @@ impl EditorApp {
             bottom_tab: BottomTab::Project,
             projection: CameraProjection::Perspective,
             playing: false,
-            viewport_yaw: -0.62,
-            viewport_pitch: 0.42,
+            viewport_yaw: 0.0,
+            viewport_pitch: 0.0,
             viewport_zoom: 1.0,
             runtime_viewport,
             runtime_error: None,
