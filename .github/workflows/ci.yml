@@ -46,7 +46,7 @@ jobs:
           cargo run --package sindri-cube --bin verify -- target/render-artifacts/editor-runtime-viewport.png
           cargo run --package sindri-cube --bin verify -- target/render-artifacts/scene-frame-pipeline.png
       - name: Upload visual test captures
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: visual-test-captures
           path: |
