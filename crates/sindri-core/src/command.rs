@@ -142,12 +142,32 @@ impl WorldCommand {
 pub struct Transaction {
     label: String,
     commands: Vec<WorldCommand>,
+    merge_key: Option<String>,
 }
 
 impl Transaction {
     /// The human-readable name shown by undo and redo affordances.
     pub fn label(&self) -> &str {
         &self.label
+    }
+
+    /// Marks this transaction as continuing the run identified by `key`.
+    ///
+    /// A pointer drag produces one transaction per frame. Merging collapses a
+    /// run of them into a single undo step that returns to the value from
+    /// before the drag began, rather than stepping back through every
+    /// intermediate position.
+    #[must_use]
+    pub fn merging(self, key: impl Into<String>) -> Self {
+        Self {
+            merge_key: Some(key.into()),
+            ..self
+        }
+    }
+
+    /// The merge run this transaction belongs to, if any.
+    pub fn merge_key(&self) -> Option<&str> {
+        self.merge_key.as_deref()
     }
 
     pub fn commands(&self) -> &[WorldCommand] {
@@ -190,6 +210,7 @@ impl Transaction {
         Ok(Self {
             label: self.label,
             commands: inverses,
+            merge_key: self.merge_key,
         })
     }
 }
@@ -232,6 +253,7 @@ impl CommandBuffer {
         Transaction {
             label: label.into(),
             commands: self.commands,
+            merge_key: None,
         }
     }
 }
@@ -277,10 +299,30 @@ impl CommandHistory {
         if transaction.is_empty() {
             return Ok(());
         }
+        let continues_run = transaction.merge_key.as_deref().is_some_and(|key| {
+            self.undo
+                .last()
+                .is_some_and(|previous| previous.merge_key.as_deref() == Some(key))
+        });
         let inverse = transaction.apply(world)?;
         self.redo.clear();
+        if continues_run {
+            // The run's first inverse already restores the value from before
+            // the run started, so later ones are dropped rather than stacked.
+            return Ok(());
+        }
         self.push_undo(inverse);
         Ok(())
+    }
+
+    /// Ends the current merge run so the next edit starts a new undo step.
+    ///
+    /// Hosts call this when a continuous interaction finishes — a pointer
+    /// release, or a text field losing focus.
+    pub fn break_merge_run(&mut self) {
+        if let Some(transaction) = self.undo.last_mut() {
+            transaction.merge_key = None;
+        }
     }
 
     /// Reverses the most recent transaction, returning its label.
@@ -367,6 +409,14 @@ mod tests {
         });
         let child = world.spawn(EntityData::default());
         (world, parent, child)
+    }
+
+    fn position(world: &World, entity: EntityId) -> [f32; 3] {
+        world
+            .get(entity)
+            .and_then(|data| data.transform_3d)
+            .expect("entity has a 3D transform")
+            .position
     }
 
     fn edit(label: impl Into<String>, commands: Vec<WorldCommand>) -> Transaction {
@@ -667,6 +717,104 @@ mod tests {
         history.undo(&mut world).unwrap();
         history.undo(&mut world).unwrap();
         assert!(!history.can_undo());
+    }
+
+    #[test]
+    fn a_merge_run_collapses_into_one_undo_step() {
+        let (mut world, entity, _) = world_with_two_entities();
+        let mut history = CommandHistory::default();
+        let start = Transform3D::default();
+        world.get_mut(entity).unwrap().transform_3d = Some(start);
+
+        // Stand in for a drag: one transaction per frame, all merging.
+        for step in [1.0, 2.0, 3.0, 4.0, 5.0] {
+            let moved = Transform3D {
+                position: [step, 0.0, 0.0],
+                ..start
+            };
+            history
+                .apply(
+                    edit(
+                        "Move",
+                        vec![WorldCommand::SetTransform3D {
+                            entity,
+                            transform: Some(moved),
+                        }],
+                    )
+                    .merging("drag:torso"),
+                    &mut world,
+                )
+                .unwrap();
+        }
+        assert!(position(&world, entity)[0] > 4.9);
+
+        history.undo(&mut world).unwrap();
+        assert_eq!(world.get(entity).unwrap().transform_3d, Some(start));
+        assert!(!history.can_undo(), "the run should be a single step");
+
+        history.redo(&mut world).unwrap();
+        assert!(position(&world, entity)[0] > 4.9);
+    }
+
+    #[test]
+    fn breaking_a_run_starts_a_new_undo_step() {
+        let (mut world, entity, _) = world_with_two_entities();
+        let mut history = CommandHistory::default();
+
+        let drag = |history: &mut CommandHistory, world: &mut World, name: &str| {
+            history
+                .apply(
+                    edit(
+                        "Rename",
+                        vec![WorldCommand::SetName {
+                            entity,
+                            name: Some(name.to_owned()),
+                        }],
+                    )
+                    .merging("rename"),
+                    world,
+                )
+                .unwrap();
+        };
+
+        drag(&mut history, &mut world, "First");
+        drag(&mut history, &mut world, "Second");
+        history.break_merge_run();
+        drag(&mut history, &mut world, "Third");
+
+        history.undo(&mut world).unwrap();
+        assert_eq!(world.get(entity).unwrap().name.as_deref(), Some("Second"));
+        history.undo(&mut world).unwrap();
+        assert_eq!(world.get(entity).unwrap().name.as_deref(), Some("Parent"));
+        assert!(!history.can_undo());
+    }
+
+    #[test]
+    fn different_merge_keys_do_not_collapse_together() {
+        let (mut world, parent, child) = world_with_two_entities();
+        let mut history = CommandHistory::default();
+
+        for (entity, key) in [(parent, "drag:parent"), (child, "drag:child")] {
+            history
+                .apply(
+                    edit(
+                        "Move",
+                        vec![WorldCommand::SetTransform2D {
+                            entity,
+                            transform: Some(Transform2D::default()),
+                        }],
+                    )
+                    .merging(key),
+                    &mut world,
+                )
+                .unwrap();
+        }
+
+        history.undo(&mut world).unwrap();
+        assert_eq!(world.get(child).unwrap().transform_2d, None);
+        assert!(history.can_undo());
+        history.undo(&mut world).unwrap();
+        assert_eq!(world.get(parent).unwrap().transform_2d, None);
     }
 
     #[test]
