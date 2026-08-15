@@ -101,7 +101,12 @@ struct RuntimeViewport {
 }
 
 impl RuntimeViewport {
-    const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
+    /// Textures upload as sRGB, so sampling decodes to linear. Writing that
+    /// back into a non-sRGB target skips the matching encode and stores linear
+    /// values as if they were sRGB, which crushes midtones — orange reads as
+    /// red and navy as black. `egui` creates its own textures in this format
+    /// for the same reason.
+    const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
 
     fn new(context: &eframe::CreationContext<'_>) -> Result<Self, String> {
         let render_state = context

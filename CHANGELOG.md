@@ -80,6 +80,7 @@ All notable changes to Sindri Next will be documented here.
 - Replaced the cube example's hand-rolled key bitflags with the shared input state and the `winit` adapter.
 - Removed the editor's duplicate left tool rail; the scene view toolbar already drove the same select, move, rotate, and scale modes.
 - Replaced the cube example's bespoke extraction with the shared extractor, and moved its cube spin into the world so gameplay drives rendering through scene state.
+- Fixed the editor viewport rendering into a non-sRGB target, which stored linear colour as if it were sRGB and made the scene far darker and more saturated than the offscreen capture of the same content.
 - Replaced the editor's decorative transport cluster with working undo, redo, stop, pause, and play controls.
 - Replaced the editor's hardcoded console and status text with the live entity count, engine state, and renderer error state.
 - Fixed the editor hierarchy being clipped to the height of the adjacent tool rail, which hid most of the scene.
