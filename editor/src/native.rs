@@ -470,7 +470,13 @@ impl EditorApp {
                     .stroke(Stroke::new(1.0, BORDER)),
             )
             .show(ui, |ui| {
-                ui.horizontal(|ui| {
+                // The tool rail is a fixed-height column of buttons. Without an
+                // explicit height the row collapses to that column, and the
+                // hierarchy is clipped to whatever space is left beside it
+                // instead of filling the panel.
+                let panel_height = ui.available_height();
+                ui.horizontal_top(|ui| {
+                    ui.set_min_height(panel_height);
                     tool_rail(ui, &mut self.mode);
                     ui.separator();
                     ui.vertical(|ui| {
@@ -478,34 +484,37 @@ impl EditorApp {
                         panel_title(ui, "Hierarchy", Some(ICON_ADD));
                         search_field(ui, &mut self.search, "Search");
                         ui.add_space(6.0);
-                        egui::ScrollArea::vertical().show(ui, |ui| {
-                            hierarchy_group(ui, "World", ICON_ACCOUNT_TREE);
-                            let needle = self.search.trim().to_lowercase();
-                            let mut clicked = None;
-                            for (entity, depth) in hierarchy_rows(self.scene.world()) {
-                                let Some(data) = self.scene.world().get(entity) else {
-                                    continue;
-                                };
-                                let name = entity_name(data);
-                                if !needle.is_empty() && !name.to_lowercase().contains(&needle) {
-                                    continue;
+                        egui::ScrollArea::vertical()
+                            .auto_shrink([false; 2])
+                            .show(ui, |ui| {
+                                hierarchy_group(ui, "World", ICON_ACCOUNT_TREE);
+                                let needle = self.search.trim().to_lowercase();
+                                let mut clicked = None;
+                                for (entity, depth) in hierarchy_rows(self.scene.world()) {
+                                    let Some(data) = self.scene.world().get(entity) else {
+                                        continue;
+                                    };
+                                    let name = entity_name(data);
+                                    if !needle.is_empty() && !name.to_lowercase().contains(&needle)
+                                    {
+                                        continue;
+                                    }
+                                    if hierarchy_row(
+                                        ui,
+                                        entity_icon(data),
+                                        &name,
+                                        self.selection == Some(entity),
+                                        depth + 1,
+                                    )
+                                    .clicked()
+                                    {
+                                        clicked = Some(entity);
+                                    }
                                 }
-                                if hierarchy_row(
-                                    ui,
-                                    entity_icon(data),
-                                    &name,
-                                    self.selection == Some(entity),
-                                    depth + 1,
-                                )
-                                .clicked()
-                                {
-                                    clicked = Some(entity);
+                                if let Some(entity) = clicked {
+                                    self.select(Some(entity));
                                 }
-                            }
-                            if let Some(entity) = clicked {
-                                self.select(Some(entity));
-                            }
-                        });
+                            });
                     });
                 });
             });
