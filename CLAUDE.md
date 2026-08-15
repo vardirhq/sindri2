@@ -24,8 +24,8 @@ inferred from code:
 Per-subsystem contracts live in `docs/`: `asset-foundation.md`,
 `component-schema-registry.md`, `scene-serialization.md`, `scene-extraction.md`,
 `rendering-frame-pipeline.md`, `rendering-transparency.md`, `rendering-color.md`,
-`rendering-surface.md`, `editor-architecture.md`. When you change a subsystem's
-behaviour, update its doc in the same change.
+`rendering-surface.md`, `platform-host.md`, `editor-architecture.md`. When you
+change a subsystem's behaviour, update its doc in the same change.
 
 Project policy lives alongside them: `docs/versioning.md` (crate and scene
 format versions; the editor protocol and npm SDK are deliberately undecided) and
@@ -38,7 +38,7 @@ states the same conventions this file does, for humans.
 crates/
   sindri-core/      lifecycle, time, world/entities, scenes, commands, asset IDs
   sindri-platform/  host boundary: Clock, Game, EngineHost, input
-  sindri-desktop/   winit -> platform input translation
+  sindri-desktop/   winit window, event loop, and input translation (browser too)
   sindri-gpu/       wgpu adapter/device/queue and surface negotiation
   sindri-render/    target-independent renderers, frame stages, textures, cameras
   sindri-scene/     built-in sindri.* components; world -> frame extraction
@@ -57,7 +57,8 @@ scripts/            capture-editor.sh (Xvfb editor screenshot)
 ```text
 sindri-core   -> (nothing in-workspace)
 sindri-platform -> sindri-core
-sindri-desktop  -> sindri-platform
+sindri-desktop  -> sindri-platform + sindri-gpu (it owns the window, so it
+                   creates the surface)
 sindri-assets   -> sindri-core
 sindri-gpu      -> wgpu only (sindri-render is a dev-dependency, for tests)
 sindri-render   -> wgpu, glam, bytemuck only
@@ -132,7 +133,8 @@ type, the asset ID, the unresolved reference. Do not panic in library code;
 saying which.
 
 **Platform conditionals.** `#[cfg(target_arch = "wasm32")]` is confined to
-`sindri-assets` (fetch vs filesystem), the examples, and `editor/src/main.rs`.
+`sindri-assets` (fetch vs filesystem), `sindri-desktop` (canvas attachment,
+future spawning), `editor/src/main.rs`, and each example's logger setup.
 Keep it there. Logic that is compiled only for wasm32 is logic nothing tests —
 see `UrlRoot`, which exists specifically so browser URL rules are exercised on
 every target.
