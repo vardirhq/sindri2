@@ -1,9 +1,22 @@
-//! Translates `winit` events into Sindri's platform-independent input.
+//! The `winit` host: a window, an event loop, and the frame that runs in it.
 //!
-//! This is the only place in the engine that knows what a `winit` key is.
-//! Everything above it — gameplay, the host loop, tests — sees
+//! This is the only place in the engine that knows what a `winit` key or window
+//! is. Everything above it — gameplay, the host loop, tests — sees
 //! [`sindri_platform::InputEvent`], so the same game runs unchanged against a
 //! browser adapter or a scripted test.
+//!
+//! Despite the name, this crate serves the browser too. `winit` presents a
+//! canvas through the same event loop it presents a desktop window through, so
+//! splitting the two would duplicate a host to change six lines of it. What is
+//! genuinely target-specific — attaching a canvas, how a future is spawned,
+//! where time comes from — is confined to this crate rather than pushed out to
+//! every application.
+
+mod clock;
+mod host;
+
+pub use clock::WindowClock;
+pub use host::{AppContext, DesktopApp, DesktopError, Flow, WindowConfig, run};
 
 use sindri_platform::{InputEvent, Key, MouseButton};
 use winit::{

@@ -87,6 +87,9 @@ All notable changes to Sindri Next will be documented here.
 - Dependency policy enforced by `cargo deny`, covering licences, sources, wildcard requirements, and security advisories across all four supported targets.
 - A weekly scheduled advisory check and Dependabot updates, so a dependency problem surfaces without waiting for someone to open a pull request.
 - A versioning policy for crate versions and the scene format, naming the editor protocol and npm SDK as deliberately undecided until they exist.
+- A windowed host in `sindri-desktop` owning the window, event loop, device request, frame timing, and input, so an application supplies only how to build itself, what to do with a frame of time, and how to draw.
+- A clock the host reads on both native and browser targets, replacing hand-measured frame deltas.
+- Fallible application hooks, so a failure during a frame stops the host and is reported rather than logged and drawn over.
 
 ### Changed
 
@@ -109,3 +112,5 @@ All notable changes to Sindri Next will be documented here.
 - Replaced both proof examples' identical copies of the swapchain acquisition and recovery decision with the shared surface policy.
 - Replaced the examples' panic on a validation error during acquisition with a skipped frame, leaving the device's error scope to report it.
 - Gave the path dependencies of `sindri-platform`, `sindri-desktop`, and `sindri-scene` explicit versions, without which crates.io rejects a publish.
+- Moved window creation, the browser canvas lookup, the four-state startup, and the async device request out of both examples and into the windowed host; the triangle example is now a quarter of its previous size.
+- Replaced the cube example's hand-measured, hand-capped frame delta with the host's clock and frame timer.

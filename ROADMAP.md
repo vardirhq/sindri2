@@ -61,9 +61,9 @@ Exit gate: core runs without GPU/window/browser dependencies and scene fixtures 
 ### Boundaries
 
 - [x] Add `sindri-platform` traits for lifecycle, input source, clock, and asset I/O (asset I/O stays in `sindri-assets`)
-- [ ] Add desktop adapter using `winit` (event translation done in `sindri-desktop`; window and event-loop ownership still lives in each example)
-- [ ] Add web adapter using `wasm-bindgen`, `web-sys`, and async initialization
-- [ ] Keep target-specific conditionals inside platform hosts
+- [x] Add desktop adapter using `winit` — window, event loop, frame timing, and input all live in `sindri-desktop`
+- [ ] Add web adapter using `wasm-bindgen`, `web-sys`, and async initialization (the `winit` host already serves the browser through the same event loop; a `sindri-web` binding crate for the TypeScript SDK is Milestone 5)
+- [ ] Keep target-specific conditionals inside platform hosts (window, canvas, spawning, and clock conditionals now live in the host; each example still selects its own logger)
 - [ ] Produce explicit capability errors for unavailable WebGPU/surface features
 
 ### GPU foundation

@@ -1,22 +1,15 @@
-use std::{future::Future, sync::Arc};
+use std::time::Duration;
 
 use glam::Vec2;
 use sindri_assets::{AssetBytes, AssetDecoder, TextureAssetDecoder};
 use sindri_core::AssetId;
-use sindri_gpu::{GpuContext, GpuRequestOptions, WindowSurface};
+use sindri_desktop::{AppContext, DesktopApp, Flow, WindowConfig};
 use sindri_platform::{InputState, Key};
 use sindri_render::{
     DepthTarget, DrawContext, FrameCommand, PreparedFrame, SpriteBatchError, SpriteBatchRenderer,
     SpriteBatchStats, Texture2D, TextureRegistry, TexturedCubeRenderer, Viewport,
 };
-use web_time::Instant;
-use winit::{
-    application::ApplicationHandler,
-    event::WindowEvent,
-    event_loop::{ActiveEventLoop, EventLoop, EventLoopProxy},
-    keyboard::{KeyCode, PhysicalKey},
-    window::{Window, WindowId},
-};
+use thiserror::Error;
 
 mod scene;
 
@@ -29,296 +22,124 @@ pub struct FrameTarget<'a> {
     pub depth: &'a DepthTarget,
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-fn spawn(future: impl Future<Output = ()> + 'static) {
-    pollster::block_on(future);
-}
-
-#[cfg(target_arch = "wasm32")]
-fn spawn(future: impl Future<Output = ()> + 'static) {
-    wasm_bindgen_futures::spawn_local(future);
-}
-
-struct RenderState {
-    window: Arc<Window>,
-    gpu: GpuContext,
-    surface: WindowSurface,
+/// The demo as the windowed host runs it.
+///
+/// Gameplay writes the world and drawing reads it; nothing in between tells the
+/// renderer anything happened.
+struct CubeApp {
     depth: DepthTarget,
     cube_renderer: TexturedCubeRenderer,
     sprite_renderer: SpriteBatchRenderer,
     textures: TextureRegistry,
     bindings: TextureBindings,
     scene: DemoScene,
-    input: InputState,
     rotation: Vec2,
-    last_frame: Instant,
 }
 
-impl RenderState {
-    async fn new(
-        display: winit::event_loop::OwnedDisplayHandle,
-        window: Arc<Window>,
-    ) -> Result<Self, String> {
-        let instance = wgpu::Instance::new(
-            wgpu::InstanceDescriptor::new_with_display_handle_from_env(Box::new(display)),
-        );
-        // How the surface is built, so `WindowSurface` can build it again if it
-        // is ever lost. The first one is needed here to pick an adapter that can
-        // present to it.
-        let target = window.clone();
-        let source = move |instance: &wgpu::Instance| instance.create_surface(Arc::clone(&target));
-        let surface = source(&instance).map_err(|error| error.to_string())?;
-        let gpu = GpuContext::request(&instance, Some(&surface), &GpuRequestOptions::default())
-            .await
-            .map_err(|error| error.to_string())?;
-        let size = window.inner_size();
-        let surface = WindowSurface::new(instance, surface, source, &gpu, size.width, size.height)
-            .map_err(|error| error.to_string())?;
-        let depth = DepthTarget::new(&gpu.device, surface.width(), surface.height());
-        let cube_renderer = TexturedCubeRenderer::new(&gpu.device, surface.format());
-        let sprite_renderer = SpriteBatchRenderer::new(&gpu.device, surface.format());
-        let (textures, bindings) = demo_textures(&gpu.device, &gpu.queue);
-        let scene = DemoScene::load().map_err(|error| error.to_string())?;
+/// How fast the arrow keys turn the cube, in radians per second.
+const ROTATION_RATE: f32 = 1.8;
 
+/// The longest frame the demo will integrate over.
+///
+/// `sindri-core`'s fixed-step clock does this properly, with a fixed simulation
+/// rate and spiral-of-death protection. This example does not run through the
+/// engine loop yet, so it caps its own delta rather than letting one stalled
+/// frame spin the cube half a turn.
+const LONGEST_FRAME: f32 = 0.1;
+
+impl DesktopApp for CubeApp {
+    type Error = CubeError;
+
+    fn create(context: &AppContext<'_>) -> Result<Self, Self::Error> {
+        let (textures, bindings) = demo_textures(context.device(), context.queue());
         Ok(Self {
-            window,
-            gpu,
-            surface,
-            depth,
-            cube_renderer,
-            sprite_renderer,
+            depth: DepthTarget::new(context.device(), context.width(), context.height()),
+            cube_renderer: TexturedCubeRenderer::new(context.device(), context.format()),
+            sprite_renderer: SpriteBatchRenderer::new(context.device(), context.format()),
             textures,
             bindings,
-            scene,
-            input: InputState::default(),
+            scene: DemoScene::load()?,
             rotation: Vec2::ZERO,
-            last_frame: Instant::now(),
         })
     }
 
-    fn resize(&mut self, width: u32, height: u32) {
-        self.surface.resize(&self.gpu.device, width, height);
-        self.depth.resize(
-            &self.gpu.device,
-            self.surface.width(),
-            self.surface.height(),
-        );
-        self.window.request_redraw();
-    }
-
-    fn handle_input(&mut self, event: &WindowEvent) {
-        if let Some(event) = sindri_desktop::input_event(event, self.window.scale_factor()) {
-            self.input.apply(event);
+    fn update(&mut self, input: &InputState, delta: Duration) -> Result<Flow, Self::Error> {
+        if input.key_down(Key::Escape) {
+            return Ok(Flow::Exit);
         }
+
+        let seconds = delta.as_secs_f32().min(LONGEST_FRAME);
+        let axis = Vec2::new(
+            input.axis(Key::ArrowLeft, Key::ArrowRight),
+            input.axis(Key::ArrowUp, Key::ArrowDown),
+        );
+        self.rotation += axis * seconds * ROTATION_RATE;
+        // Gameplay writes the world. Extraction reads whatever it now holds.
+        self.scene.spin_cube(self.rotation)?;
+        Ok(Flow::Continue)
     }
 
-    fn render(&mut self) {
-        let now = Instant::now();
-        let delta_seconds = (now - self.last_frame).as_secs_f32().min(0.1);
-        self.last_frame = now;
-        let axis = Vec2::new(
-            self.input.axis(Key::ArrowLeft, Key::ArrowRight),
-            self.input.axis(Key::ArrowUp, Key::ArrowDown),
-        );
-        self.rotation += axis * delta_seconds * 1.8;
-        self.input.begin_frame();
+    fn resize(&mut self, context: &AppContext<'_>) -> Result<(), Self::Error> {
+        self.depth
+            .resize(context.device(), context.width(), context.height());
+        Ok(())
+    }
 
-        let frame = match self.surface.acquire(&self.gpu.device) {
-            Ok(Some(frame)) => frame,
-            // The surface handled whatever went wrong; the redraw request at
-            // the end of this event asks for the frame it cost.
-            Ok(None) => return,
-            Err(error) => {
-                log::error!("could not acquire a surface texture: {error}");
-                return;
-            }
-        };
-
-        let view = frame
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
-        let mut encoder = self
-            .gpu
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Sindri cube encoder"),
-            });
-        let viewport = Viewport::new(self.surface.width(), self.surface.height());
-        // Gameplay writes the world; extraction reads whatever it now holds.
-        self.scene
-            .spin_cube(self.rotation)
-            .expect("the demo scene keeps its cube");
-        let prepared = self
-            .scene
-            .extract_frame(viewport, &self.bindings)
-            .expect("embedded demo scene extracts into a valid frame");
+    fn render(
+        &mut self,
+        context: &AppContext<'_>,
+        view: &wgpu::TextureView,
+    ) -> Result<(), Self::Error> {
+        let viewport = Viewport::new(context.width(), context.height());
+        let prepared = self.scene.extract_frame(viewport, &self.bindings)?;
+        let mut encoder =
+            context
+                .device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Sindri cube encoder"),
+                });
         encode_prepared_frame(
             FrameRenderers {
                 cube: &mut self.cube_renderer,
                 sprites: &mut self.sprite_renderer,
                 textures: &self.textures,
             },
-            &self.gpu.device,
-            &self.gpu.queue,
+            context.device(),
+            context.queue(),
             &mut encoder,
             FrameTarget {
-                color: &view,
+                color: view,
                 depth: &self.depth,
             },
             &prepared,
-        )
-        .expect("demo sprite batch fits the GPU instance buffer");
-        self.gpu.queue.submit([encoder.finish()]);
-        self.window.pre_present_notify();
-        self.gpu.queue.present(frame);
+        )?;
+        context.queue().submit([encoder.finish()]);
+        Ok(())
     }
 }
 
-enum AppAction {
-    Initialized(Result<RenderState, String>),
+#[derive(Debug, Error)]
+pub enum CubeError {
+    #[error(transparent)]
+    Scene(#[from] DemoSceneError),
+    #[error(transparent)]
+    Batch(#[from] SpriteBatchError),
 }
 
-enum AppState {
-    Uninitialized,
-    Loading,
-    Running(Box<RenderState>),
-    Failed,
-}
-
-struct App {
-    proxy: EventLoopProxy<AppAction>,
-    window: Option<Arc<Window>>,
-    state: AppState,
-}
-
-impl App {
-    fn new(event_loop: &EventLoop<AppAction>) -> Self {
-        Self {
-            proxy: event_loop.create_proxy(),
-            window: None,
-            state: AppState::Uninitialized,
-        }
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen::prelude::wasm_bindgen(start))]
+pub fn run() {
+    #[cfg(target_arch = "wasm32")]
+    {
+        std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+        let _ = console_log::init_with_level(log::Level::Info);
     }
+    #[cfg(not(target_arch = "wasm32"))]
+    env_logger::init();
 
-    fn resize(&mut self, width: u32, height: u32) {
-        if let AppState::Running(state) = &mut self.state {
-            state.resize(width, height);
-        }
-    }
-}
-
-impl ApplicationHandler<AppAction> for App {
-    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        if !matches!(self.state, AppState::Uninitialized) {
-            return;
-        }
-        self.state = AppState::Loading;
-
-        #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
-        let mut attributes = Window::default_attributes()
-            .with_title("Sindri — shared native/web textured cube")
-            .with_inner_size(winit::dpi::LogicalSize::new(960, 540));
-
-        #[cfg(target_arch = "wasm32")]
-        {
-            use wasm_bindgen::JsCast;
-            use winit::platform::web::WindowAttributesExtWebSys;
-
-            let canvas = web_sys::window()
-                .and_then(|window| window.document())
-                .and_then(|document| document.get_element_by_id("sindri-canvas"))
-                .expect("#sindri-canvas must exist")
-                .dyn_into::<web_sys::HtmlCanvasElement>()
-                .expect("#sindri-canvas must be a canvas element");
-            attributes = attributes.with_canvas(Some(canvas));
-        }
-
-        let window = match event_loop.create_window(attributes) {
-            Ok(window) => Arc::new(window),
-            Err(error) => {
-                log::error!("failed to create window: {error}");
-                self.state = AppState::Failed;
-                event_loop.exit();
-                return;
-            }
-        };
-        self.window = Some(window.clone());
-        let display = event_loop.owned_display_handle();
-        let proxy = self.proxy.clone();
-
-        spawn(async move {
-            let result = RenderState::new(display, window).await;
-            if proxy.send_event(AppAction::Initialized(result)).is_err() {
-                log::error!("event loop closed before GPU initialization completed");
-            }
-        });
-    }
-
-    fn user_event(&mut self, event_loop: &ActiveEventLoop, event: AppAction) {
-        match event {
-            AppAction::Initialized(Ok(state)) => {
-                log::info!(
-                    "using GPU adapter '{}' via {:?}",
-                    state.gpu.capabilities.adapter_name,
-                    state.gpu.capabilities.backend
-                );
-                self.state = AppState::Running(Box::new(state));
-                if let Some(window) = &self.window {
-                    let size = window.inner_size();
-                    self.resize(size.width, size.height);
-                }
-            }
-            AppAction::Initialized(Err(error)) => {
-                log::error!("GPU initialization failed: {error}");
-                self.state = AppState::Failed;
-                event_loop.exit();
-            }
-        }
-    }
-
-    fn window_event(
-        &mut self,
-        event_loop: &ActiveEventLoop,
-        window_id: WindowId,
-        event: WindowEvent,
-    ) {
-        if self
-            .window
-            .as_ref()
-            .is_none_or(|window| window.id() != window_id)
-        {
-            return;
-        }
-
-        match event {
-            WindowEvent::CloseRequested => event_loop.exit(),
-            WindowEvent::Resized(size) => self.resize(size.width, size.height),
-            WindowEvent::KeyboardInput { event: ref key, .. } => {
-                if key.physical_key == PhysicalKey::Code(KeyCode::Escape) && key.state.is_pressed()
-                {
-                    event_loop.exit();
-                } else if let AppState::Running(state) = &mut self.state {
-                    state.handle_input(&event);
-                }
-            }
-            WindowEvent::Focused(_) | WindowEvent::CursorLeft { .. } => {
-                if let AppState::Running(state) = &mut self.state {
-                    state.handle_input(&event);
-                }
-            }
-            WindowEvent::RedrawRequested => {
-                if let AppState::Running(state) = &mut self.state {
-                    state.render();
-                    state.window.request_redraw();
-                }
-            }
-            WindowEvent::Occluded(false) => {
-                if let Some(window) = &self.window {
-                    window.request_redraw();
-                }
-            }
-            _ => {}
-        }
+    if let Err(error) = sindri_desktop::run::<CubeApp>(WindowConfig::new(
+        "Sindri — shared native/web textured cube",
+    )) {
+        log::error!("{error}");
     }
 }
 
@@ -465,31 +286,6 @@ pub fn encode_prepared_frame(
         }
     }
     Ok(sprite_stats)
-}
-
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen::prelude::wasm_bindgen(start))]
-pub fn run() {
-    #[cfg(target_arch = "wasm32")]
-    {
-        std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-        let _ = console_log::init_with_level(log::Level::Info);
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    env_logger::init();
-
-    let event_loop = EventLoop::with_user_event()
-        .build()
-        .expect("failed to create event loop");
-    #[cfg_attr(target_arch = "wasm32", allow(unused_mut))]
-    let mut app = App::new(&event_loop);
-
-    #[cfg(target_arch = "wasm32")]
-    {
-        use winit::platform::web::EventLoopExtWebSys;
-        event_loop.spawn_app(app);
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    event_loop.run_app(&mut app).expect("event loop failed");
 }
 
 #[cfg(test)]
