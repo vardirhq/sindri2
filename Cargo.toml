@@ -8,6 +8,7 @@ members = [
     "crates/sindri-gpu",
     "crates/sindri-platform",
     "crates/sindri-render",
+    "crates/sindri-scene",
     "examples/triangle",
     "examples/cube",
 ]

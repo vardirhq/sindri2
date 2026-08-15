@@ -10,6 +10,8 @@ pub use sindri_core as core;
 pub use sindri_gpu as gpu;
 #[cfg(feature = "render")]
 pub use sindri_render as render;
+#[cfg(feature = "render")]
+pub use sindri_scene as scene;
 
 pub mod prelude {
     pub use sindri_assets::{
@@ -19,4 +21,6 @@ pub mod prelude {
     pub use sindri_core::prelude::*;
     #[cfg(feature = "render")]
     pub use sindri_gpu::{GpuContext, GpuRequestOptions, SurfaceProfile};
+    #[cfg(feature = "render")]
+    pub use sindri_scene::{CameraView, SceneExtractor, WorldProjection};
 }

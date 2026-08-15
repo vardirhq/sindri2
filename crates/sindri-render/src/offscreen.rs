@@ -15,7 +15,8 @@ pub struct OffscreenTarget {
 }
 
 impl OffscreenTarget {
-    pub const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
+    /// See [`crate::COLOR_TARGET_FORMAT`] for why this is sRGB.
+    pub const FORMAT: wgpu::TextureFormat = crate::COLOR_TARGET_FORMAT;
 
     pub fn new(device: &wgpu::Device, width: u32, height: u32) -> Result<Self, OffscreenError> {
         let unpadded_bytes_per_row = rgba_bytes_per_row(width)?;

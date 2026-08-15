@@ -44,6 +44,11 @@ impl SpriteInstance {
         self.tint
     }
 
+    /// The per-instance model transform.
+    pub fn model(self) -> Mat4 {
+        Mat4::from_cols_array_2d(&self.model)
+    }
+
     pub const fn layout() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<Self>() as wgpu::BufferAddress,

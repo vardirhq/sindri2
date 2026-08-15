@@ -64,6 +64,13 @@ All notable changes to Sindri Next will be documented here.
 - Rational time scale that carries its division remainder between frames, so scaled time never drifts from the exact ratio of real time.
 - Separate scaled and real frame deltas, so interface animation keeps running while the simulation is slowed or frozen.
 - A `sindri-desktop` adapter translating `winit` keyboard, mouse, pointer, wheel, and focus events into platform input.
+- A `sindri-scene` crate owning the built-in `sindri.camera`, `sindri.mesh`, and `sindri.sprite` schemas and deriving frames from a world, so no scene needs hand-written extraction code.
+- Sprite batching per render layer instead of requiring every sprite in a scene to share one.
+- Sprite anchors resolved against the overlay camera's extent, covering all nine corner, edge, and centre positions.
+- Camera views that orbit, scale distance, and switch projection without touching the scene.
+- A single shared colour target format, so offscreen and in-editor targets cannot disagree about colour space.
+- A required sRGB swapchain format, reported as an error rather than silently accepted as a fallback.
+- Verification that the headless capture actually contains the colours the scene authored, reporting the frame's dominant colours when it does not.
 
 ### Changed
 
@@ -75,6 +82,8 @@ All notable changes to Sindri Next will be documented here.
 - Rewrote the shared demo scene asset in canonical form; the extracted frame and draw order are unchanged.
 - Replaced the cube example's hand-rolled key bitflags with the shared input state and the `winit` adapter.
 - Removed the editor's duplicate left tool rail; the scene view toolbar already drove the same select, move, rotate, and scale modes.
+- Replaced the cube example's bespoke extraction with the shared extractor, and moved its cube spin into the world so gameplay drives rendering through scene state.
+- Fixed the editor viewport rendering into a non-sRGB target, which stored linear colour as if it were sRGB and made the scene far darker and more saturated than the offscreen capture of the same content.
 - Replaced the editor's decorative transport cluster with working undo, redo, stop, pause, and play controls.
 - Replaced the editor's hardcoded console and status text with the live entity count, engine state, and renderer error state.
 - Fixed the editor hierarchy being clipped to the height of the adjacent tool rail, which hid most of the scene.

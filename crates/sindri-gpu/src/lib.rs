@@ -117,14 +117,15 @@ impl SurfaceProfile {
             .ok_or(GpuError::UnsupportedSurface)?;
         let capabilities = surface.get_capabilities(adapter);
 
-        if let Some(srgb) = capabilities
+        // The renderer works in linear and relies on the target encoding on
+        // write. A non-sRGB swapchain would silently darken every colour, so it
+        // is refused rather than accepted as a fallback.
+        config.format = capabilities
             .formats
             .iter()
             .copied()
             .find(wgpu::TextureFormat::is_srgb)
-        {
-            config.format = srgb;
-        }
+            .ok_or(GpuError::NoSrgbSurfaceFormat)?;
         config.width = width;
         config.height = height;
         Ok(Self { config })
@@ -162,11 +163,23 @@ pub enum GpuError {
     MissingFeatures(wgpu::Features),
     #[error("surface has no supported presentation configuration")]
     UnsupportedSurface,
+    #[error(
+        "surface offers no sRGB format, so rendered colours could not be encoded and every frame \
+         would display too dark"
+    )]
+    NoSrgbSurfaceFormat,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_shared_target_format_matches_what_surfaces_must_offer() {
+        // A surface is accepted only if it can encode sRGB, which is the same
+        // requirement the offscreen and editor targets satisfy by constant.
+        assert!(sindri_render::COLOR_TARGET_FORMAT.is_srgb());
+    }
 
     #[test]
     fn request_defaults_require_only_webgpu_baseline_limits() {

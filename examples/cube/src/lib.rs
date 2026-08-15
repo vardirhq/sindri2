@@ -19,7 +19,8 @@ use winit::{
 
 mod scene;
 
-pub use scene::{DemoScene, DemoSceneError, WorldProjection};
+pub use scene::{DemoScene, DemoSceneError};
+pub use sindri_scene::{CameraView, WorldProjection};
 
 #[derive(Clone, Copy)]
 pub struct FrameTarget<'a> {
@@ -167,9 +168,13 @@ impl RenderState {
                 label: Some("Sindri cube encoder"),
             });
         let viewport = Viewport::new(self.surface_profile.width(), self.surface_profile.height());
+        // Gameplay writes the world; extraction reads whatever it now holds.
+        self.scene
+            .spin_cube(self.rotation)
+            .expect("the demo scene keeps its cube");
         let prepared = self
             .scene
-            .extract_frame(viewport, self.rotation)
+            .extract_frame(viewport)
             .expect("embedded demo scene extracts into a valid frame");
         encode_prepared_frame(
             &self.cube_renderer,

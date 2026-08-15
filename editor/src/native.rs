@@ -24,9 +24,11 @@ use sindri_core::{
     SceneDocument, Transform2D, Transform3D, World, WorldCommand,
 };
 use sindri_cube::{
-    DemoScene, FrameTarget, WorldProjection, demo_badge_texture, encode_prepared_frame,
+    CameraView, DemoScene, FrameTarget, WorldProjection, demo_badge_texture, encode_prepared_frame,
 };
-use sindri_render::{DepthTarget, SpriteBatchRenderer, TexturedCubeRenderer, Viewport};
+use sindri_render::{
+    COLOR_TARGET_FORMAT, DepthTarget, SpriteBatchRenderer, TexturedCubeRenderer, Viewport,
+};
 
 const INTER_FONT: &[u8] = include_bytes!("../assets/Inter.ttf");
 const ACCENT: Color32 = Color32::from_rgb(246, 169, 35);
@@ -101,7 +103,10 @@ struct RuntimeViewport {
 }
 
 impl RuntimeViewport {
-    const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
+    /// The shared colour target format. Defining one here is how the editor
+    /// previously drifted into a linear target and rendered every colour too
+    /// dark, so it defers to `sindri-render` instead.
+    const FORMAT: wgpu::TextureFormat = COLOR_TARGET_FORMAT;
 
     fn new(context: &eframe::CreationContext<'_>) -> Result<Self, String> {
         let render_state = context
@@ -154,13 +159,15 @@ impl RuntimeViewport {
     ) -> Result<(), String> {
         self.resize(width, height);
         let prepared = scene
-            .extract_editor_frame(
+            .extract(
                 Viewport::new(self.width, self.height),
-                rotation,
-                1.0 / zoom,
-                match projection {
-                    CameraProjection::Perspective => WorldProjection::Perspective,
-                    CameraProjection::Orthographic => WorldProjection::Orthographic,
+                CameraView {
+                    orbit: rotation,
+                    distance_scale: 1.0 / zoom,
+                    projection: match projection {
+                        CameraProjection::Perspective => WorldProjection::Perspective,
+                        CameraProjection::Orthographic => WorldProjection::Orthographic,
+                    },
                 },
             )
             .map_err(|error| error.to_string())?;

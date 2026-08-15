@@ -28,7 +28,8 @@ impl Texture2D {
             });
         }
 
-        let format = wgpu::TextureFormat::Rgba8UnormSrgb;
+        // Source pixels are authored in sRGB; see `crate::COLOR_TARGET_FORMAT`.
+        let format = crate::COLOR_TARGET_FORMAT;
         let texture = device.create_texture_with_data(
             queue,
             &wgpu::TextureDescriptor {

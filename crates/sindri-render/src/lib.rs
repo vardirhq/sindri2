@@ -1,6 +1,7 @@
 //! Target-independent Sindri rendering building blocks.
 
 mod camera;
+mod color;
 mod cube;
 mod depth;
 mod frame;
@@ -14,6 +15,7 @@ mod transparency;
 mod triangle;
 
 pub use camera::{OrthographicCamera, PerspectiveCamera};
+pub use color::{COLOR_TARGET_FORMAT, ColorSpaceError, require_srgb_target};
 pub use cube::CubeRenderer;
 pub use depth::DepthTarget;
 pub use frame::{
