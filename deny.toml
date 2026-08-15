@@ -1,0 +1,75 @@
+# Dependency policy, enforced by `cargo deny check`.
+#
+# The workspace does not commit `Cargo.lock`, so a clean clone resolves fresh.
+# That makes this file the only durable statement of what the dependency tree is
+# allowed to contain: there is no lockfile to review a change against.
+
+[graph]
+# The targets Sindri actually builds for. Checking every target `wgpu` and
+# `winit` support would flag platform dependencies this project never compiles.
+targets = [
+    { triple = "x86_64-unknown-linux-gnu" },
+    { triple = "x86_64-pc-windows-msvc" },
+    { triple = "aarch64-apple-darwin" },
+    { triple = "wasm32-unknown-unknown" },
+]
+all-features = true
+
+[advisories]
+version = 2
+yanked = "deny"
+# Advisories are checked in their own CI job, because a new advisory in a
+# transitive dependency is not caused by the pull request that happens to run
+# next. Anything ignored here needs a comment saying why and when to revisit.
+#
+# An entry here is a decision to keep shipping something, so the job stays
+# useful: if the only finding is a known one, a new finding is visible.
+ignore = [
+    # `ttf-parser` is unmaintained. It arrives four levels down through
+    # `winit`'s Linux window decorations (sctk-adwaita -> ab_glyph ->
+    # owned_ttf_parser), there is no safe upgrade, and nothing in this
+    # workspace selects it. It is a parsing library reading fonts this project
+    # ships itself rather than fonts a game supplies, so the exposure is a
+    # maintenance risk rather than an attack surface.
+    #
+    # Revisit when `winit` drops `sctk-adwaita` or `ab_glyph` moves to
+    # `skrifa`; drop this entry the moment either lands.
+    "RUSTSEC-2026-0192",
+]
+
+[licenses]
+version = 2
+# Permissive licences only. A copyleft dependency would change what shipping a
+# Sindri game requires, which is a product decision rather than a build one.
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "ISC",
+    "MIT",
+    "Unicode-3.0",
+    "Zlib",
+    # Font licences, from the typefaces `egui` bundles. Sindri ships a font of
+    # its own under the same terms; see `editor/assets/Inter-OFL.txt`.
+    "OFL-1.1",
+    "Ubuntu-font-1.0",
+]
+confidence-threshold = 0.93
+
+[bans]
+# Duplicate versions are a warning, not an error: the `wgpu`, `winit`, and
+# `wasm-bindgen` trees legitimately carry several versions of small crates, and
+# failing on that would mean pinning transitive dependencies this project does
+# not own.
+multiple-versions = "warn"
+# A wildcard requirement resolves to whatever exists on the day of the build,
+# which a fresh-resolving workspace cannot tolerate.
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

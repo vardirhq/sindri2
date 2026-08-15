@@ -82,6 +82,11 @@ All notable changes to Sindri Next will be documented here.
 - A single presentation surface policy deciding what a ready, suboptimal, outdated, timed-out, occluded, lost, or validation-failed acquisition each means, checked case by case without a GPU.
 - A `WindowSurface` owning a surface, its configuration, and that recovery, so hosts acquire a frame or skip one and never write the decision themselves.
 - An error for a surface that was lost and could not be built again, which is the one acquisition failure retrying does not fix.
+- Apache 2.0 and MIT licence files, which every crate manifest has claimed since the workspace was created.
+- Contributing guide and code of conduct, recording the conventions the codebase already follows.
+- Dependency policy enforced by `cargo deny`, covering licences, sources, wildcard requirements, and security advisories across all four supported targets.
+- A weekly scheduled advisory check and Dependabot updates, so a dependency problem surfaces without waiting for someone to open a pull request.
+- A versioning policy for crate versions and the scene format, naming the editor protocol and npm SDK as deliberately undecided until they exist.
 
 ### Changed
 
@@ -103,3 +108,4 @@ All notable changes to Sindri Next will be documented here.
 - Replaced editor status bullets and em dashes, which the bundled Inter subset cannot render, with a painted dot and in-subset punctuation.
 - Replaced both proof examples' identical copies of the swapchain acquisition and recovery decision with the shared surface policy.
 - Replaced the examples' panic on a validation error during acquisition with a skipped frame, leaving the device's error scope to report it.
+- Gave the path dependencies of `sindri-platform`, `sindri-desktop`, and `sindri-scene` explicit versions, without which crates.io rejects a publish.

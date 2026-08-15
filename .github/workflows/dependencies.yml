@@ -1,0 +1,41 @@
+name: Dependencies
+
+on:
+  pull_request:
+    paths:
+      - "**/Cargo.toml"
+      - "deny.toml"
+      - ".github/workflows/dependencies.yml"
+  push:
+    branches: [main]
+  schedule:
+    # Advisories change without anyone touching this repository, so the checks
+    # run on their own schedule rather than only when a pull request arrives.
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  policy:
+    name: Licenses, sources, and bans
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check bans licenses sources
+
+  advisories:
+    name: Security advisories
+    runs-on: ubuntu-latest
+    # A newly published advisory in a transitive dependency is not caused by
+    # whichever pull request runs next, so this reports without blocking. The
+    # scheduled run is what makes that safe: an advisory is still surfaced when
+    # nobody is opening pull requests.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check advisories
