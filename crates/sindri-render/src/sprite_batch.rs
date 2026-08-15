@@ -39,6 +39,11 @@ impl SpriteInstance {
         }
     }
 
+    /// The per-instance tint in straight `[r, g, b, a]` order.
+    pub const fn tint(self) -> [f32; 4] {
+        self.tint
+    }
+
     pub const fn layout() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<Self>() as wgpu::BufferAddress,
