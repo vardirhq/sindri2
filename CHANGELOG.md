@@ -74,6 +74,7 @@ All notable changes to Sindri Next will be documented here.
 - Added a bounded X11 window-capture lifecycle for reliable full-editor WGPU screenshots in Xvfb CI runs.
 - Rewrote the shared demo scene asset in canonical form; the extracted frame and draw order are unchanged.
 - Replaced the cube example's hand-rolled key bitflags with the shared input state and the `winit` adapter.
+- Removed the editor's duplicate left tool rail; the scene view toolbar already drove the same select, move, rotate, and scale modes.
 - Replaced the editor's decorative transport cluster with working undo, redo, stop, pause, and play controls.
 - Replaced the editor's hardcoded console and status text with the live entity count, engine state, and renderer error state.
 - Fixed the editor hierarchy being clipped to the height of the adjacent tool rail, which hid most of the scene.
