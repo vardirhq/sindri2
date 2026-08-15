@@ -1,4 +1,4 @@
-use std::{f32::consts::TAU, sync::Arc};
+use std::{collections::BTreeMap, f32::consts::TAU, sync::Arc};
 
 use eframe::{
     egui::{
@@ -13,18 +13,21 @@ use egui_material_icons::{
         ICON_3D_ROTATION, ICON_ACCOUNT_TREE, ICON_ADD, ICON_ARROW_SELECTOR_TOOL, ICON_CAMERA_ALT,
         ICON_CODE, ICON_DEPLOYED_CODE, ICON_DESCRIPTION, ICON_EXPAND_MORE, ICON_FILTER_LIST,
         ICON_FOLDER, ICON_GRID_VIEW, ICON_IMAGE, ICON_LIGHT_MODE, ICON_MORE_VERT, ICON_OPEN_WITH,
-        ICON_PAUSE, ICON_PLAY_ARROW, ICON_SEARCH, ICON_SETTINGS, ICON_SKIP_NEXT, ICON_TUNE,
-        ICON_VIEW_IN_AR, ICON_VIEW_LIST,
+        ICON_PAUSE, ICON_PLAY_ARROW, ICON_REDO, ICON_SEARCH, ICON_SETTINGS, ICON_STOP, ICON_TUNE,
+        ICON_UNDO, ICON_VIEW_IN_AR, ICON_VIEW_LIST,
     },
 };
 use glam::Vec2 as GlamVec2;
-use sindri_core::{SceneDocument, SceneEntity, Transform2D, Transform3D};
+use serde_json::Value;
+use sindri_core::{
+    CommandBuffer, CommandHistory, EngineLifecycle, EngineState, EntityData, EntityId,
+    SceneDocument, Transform2D, Transform3D, World, WorldCommand,
+};
 use sindri_cube::{
     DemoScene, FrameTarget, WorldProjection, demo_badge_texture, encode_prepared_frame,
 };
 use sindri_render::{DepthTarget, SpriteBatchRenderer, TexturedCubeRenderer, Viewport};
 
-const SCENE_JSON: &str = include_str!("../../examples/cube/assets/demo.scene.json");
 const INTER_FONT: &[u8] = include_bytes!("../assets/Inter.ttf");
 const ACCENT: Color32 = Color32::from_rgb(246, 169, 35);
 const ACCENT_BRIGHT: Color32 = Color32::from_rgb(255, 187, 54);
@@ -93,7 +96,6 @@ struct RuntimeViewport {
     texture_id: egui::TextureId,
     cube_renderer: TexturedCubeRenderer,
     sprite_renderer: SpriteBatchRenderer,
-    scene: DemoScene,
     width: u32,
     height: u32,
 }
@@ -128,7 +130,6 @@ impl RuntimeViewport {
             Self::FORMAT,
             demo_badge_texture(&render_state.device, &render_state.queue),
         );
-        let scene = DemoScene::load().map_err(|error| error.to_string())?;
         Ok(Self {
             render_state,
             texture,
@@ -137,7 +138,6 @@ impl RuntimeViewport {
             texture_id,
             cube_renderer,
             sprite_renderer,
-            scene,
             width: INITIAL_VIEWPORT_WIDTH,
             height: INITIAL_VIEWPORT_HEIGHT,
         })
@@ -145,6 +145,7 @@ impl RuntimeViewport {
 
     fn render(
         &mut self,
+        scene: &DemoScene,
         width: u32,
         height: u32,
         rotation: GlamVec2,
@@ -152,8 +153,7 @@ impl RuntimeViewport {
         projection: CameraProjection,
     ) -> Result<(), String> {
         self.resize(width, height);
-        let prepared = self
-            .scene
+        let prepared = scene
             .extract_editor_frame(
                 Viewport::new(self.width, self.height),
                 rotation,
@@ -235,15 +235,17 @@ fn create_viewport_texture(
 }
 
 struct EditorApp {
-    scene: SceneDocument,
-    selected: usize,
+    scene: DemoScene,
+    authored: SceneDocument,
+    selection: Option<EntityId>,
+    history: CommandHistory,
     search: String,
     asset_search: String,
     mode: EditorMode,
     workspace_tab: WorkspaceTab,
     bottom_tab: BottomTab,
     projection: CameraProjection,
-    playing: bool,
+    lifecycle: EngineLifecycle,
     viewport_yaw: f32,
     viewport_pitch: f32,
     viewport_zoom: f32,
@@ -254,30 +256,126 @@ struct EditorApp {
 impl EditorApp {
     fn new(context: &eframe::CreationContext<'_>) -> Self {
         configure_theme(&context.egui_ctx);
-        let scene = SceneDocument::from_json(SCENE_JSON)
+        let authored = DemoScene::authored_document()
             .expect("the embedded editor fixture must remain a valid scene");
-        let selected = scene
-            .entities
-            .iter()
-            .position(|entity| entity.id.as_str() == "checker-cube")
-            .unwrap_or_default();
+        let scene = DemoScene::from_document(&authored)
+            .expect("the embedded editor fixture must satisfy the demo component schema");
+        let selection = find_by_source_id(scene.world(), "checker-cube");
         let runtime_viewport = RuntimeViewport::new(context)
             .expect("the native editor must initialize its shared WGPU runtime viewport");
         Self {
             scene,
-            selected,
+            authored,
+            selection,
+            history: CommandHistory::default(),
             search: String::new(),
             asset_search: String::new(),
             mode: EditorMode::Select,
             workspace_tab: WorkspaceTab::Scene,
             bottom_tab: BottomTab::Project,
             projection: CameraProjection::Perspective,
-            playing: false,
+            lifecycle: initialized_lifecycle(),
             viewport_yaw: 0.0,
             viewport_pitch: 0.0,
             viewport_zoom: 1.0,
             runtime_viewport,
             runtime_error: None,
+        }
+    }
+
+    /// Changes the selection, ending any in-progress merge run so the next
+    /// edit starts its own undo step.
+    fn select(&mut self, entity: Option<EntityId>) {
+        if self.selection != entity {
+            self.history.break_merge_run();
+            self.selection = entity;
+        }
+    }
+
+    /// Turns the difference between the drawn draft and the world into one
+    /// transaction, so inspector edits are undoable and reach the viewport.
+    fn commit_draft(&mut self, entity: EntityId, original: &EntityDraft, draft: &EntityDraft) {
+        let buffer = draft_commands(entity, original, draft);
+        if buffer.is_empty() {
+            return;
+        }
+
+        // One merge key per entity: a continuous drag stays a single undo step
+        // until the pointer is released or the selection changes.
+        let transaction = buffer
+            .into_transaction("Edit entity")
+            .merging(format!("inspector:{}", entity.index()));
+        if let Err(error) = self.history.apply(transaction, self.scene.world_mut()) {
+            self.runtime_error = Some(error.to_string());
+        }
+    }
+
+    fn undo(&mut self) {
+        self.history.break_merge_run();
+        if let Err(error) = self.history.undo(self.scene.world_mut()) {
+            self.runtime_error = Some(error.to_string());
+        }
+    }
+
+    fn redo(&mut self) {
+        self.history.break_merge_run();
+        if let Err(error) = self.history.redo(self.scene.world_mut()) {
+            self.runtime_error = Some(error.to_string());
+        }
+    }
+
+    /// Rebuilds the runtime scene from the authored document.
+    ///
+    /// Every runtime handle is replaced, so recorded history is discarded
+    /// rather than left pointing at entities that no longer exist.
+    fn reset_to_authored(&mut self) {
+        match DemoScene::from_document(&self.authored) {
+            Ok(scene) => {
+                self.scene = scene;
+                self.history.clear();
+                self.selection = find_by_source_id(self.scene.world(), "checker-cube");
+                self.lifecycle = initialized_lifecycle();
+                self.runtime_error = None;
+            }
+            Err(error) => self.runtime_error = Some(error.to_string()),
+        }
+    }
+
+    /// Play and pause move the engine lifecycle rather than a display flag, so
+    /// the editor exercises the same transitions a runtime host does.
+    fn toggle_playback(&mut self) {
+        let result = match self.lifecycle.state() {
+            EngineState::Running => self.lifecycle.pause(),
+            EngineState::Paused => self.lifecycle.resume(),
+            _ => self.lifecycle.start(),
+        };
+        if let Err(error) = result {
+            self.runtime_error = Some(error.to_string());
+        }
+    }
+
+    fn pause(&mut self) {
+        if self.lifecycle.state() == EngineState::Running
+            && let Err(error) = self.lifecycle.pause()
+        {
+            self.runtime_error = Some(error.to_string());
+        }
+    }
+
+    fn handle_shortcuts(&mut self, context: &egui::Context) {
+        let (undo, redo) = context.input_mut(|input| {
+            (
+                input.consume_key(egui::Modifiers::COMMAND, egui::Key::Z),
+                input.consume_key(
+                    egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
+                    egui::Key::Z,
+                ) || input.consume_key(egui::Modifiers::COMMAND, egui::Key::Y),
+            )
+        });
+        if redo {
+            self.redo();
+        } else if undo {
+            self.undo();
         }
     }
 
@@ -307,12 +405,43 @@ impl EditorApp {
                         );
                     }
                     ui.add_space((ui.available_width() * 0.22).max(16.0));
-                    transport_icon(ui, ICON_SKIP_NEXT, false, "Previous frame");
-                    transport_icon(ui, ICON_PLAY_ARROW, self.playing, "Play");
-                    transport_icon(ui, ICON_SKIP_NEXT, false, "Next frame");
-                    transport_icon(ui, ICON_PAUSE, false, "Pause");
-                    if play_button(ui, self.playing).clicked() {
-                        self.playing = !self.playing;
+                    let undo_tip = self.history.undo_label().map_or_else(
+                        || "Nothing to undo".to_owned(),
+                        |label| format!("Undo {label}"),
+                    );
+                    if transport_icon(ui, ICON_UNDO, false, self.history.can_undo(), &undo_tip)
+                        .clicked()
+                    {
+                        self.undo();
+                    }
+                    let redo_tip = self.history.redo_label().map_or_else(
+                        || "Nothing to redo".to_owned(),
+                        |label| format!("Redo {label}"),
+                    );
+                    if transport_icon(ui, ICON_REDO, false, self.history.can_redo(), &redo_tip)
+                        .clicked()
+                    {
+                        self.redo();
+                    }
+                    let running = self.lifecycle.state() == EngineState::Running;
+                    if transport_icon(
+                        ui,
+                        ICON_STOP,
+                        false,
+                        true,
+                        "Stop and reset to the authored scene",
+                    )
+                    .clicked()
+                    {
+                        self.reset_to_authored();
+                    }
+                    if transport_icon(ui, ICON_PAUSE, !running, running, "Pause").clicked() {
+                        self.pause();
+                    }
+                    if transport_icon(ui, ICON_PLAY_ARROW, running, true, "Play").clicked()
+                        || play_button(ui, running).clicked()
+                    {
+                        self.toggle_playback();
                     }
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         ui.add_space(12.0);
@@ -352,22 +481,29 @@ impl EditorApp {
                         egui::ScrollArea::vertical().show(ui, |ui| {
                             hierarchy_group(ui, "World", ICON_ACCOUNT_TREE);
                             let needle = self.search.trim().to_lowercase();
-                            for (index, entity) in self.scene.entities.iter().enumerate() {
-                                let name = entity_name(entity);
+                            let mut clicked = None;
+                            for (entity, depth) in hierarchy_rows(self.scene.world()) {
+                                let Some(data) = self.scene.world().get(entity) else {
+                                    continue;
+                                };
+                                let name = entity_name(data);
                                 if !needle.is_empty() && !name.to_lowercase().contains(&needle) {
                                     continue;
                                 }
                                 if hierarchy_row(
                                     ui,
-                                    entity_icon(entity),
+                                    entity_icon(data),
                                     &name,
-                                    index == self.selected,
-                                    1,
+                                    self.selection == Some(entity),
+                                    depth + 1,
                                 )
                                 .clicked()
                                 {
-                                    self.selected = index;
+                                    clicked = Some(entity);
                                 }
+                            }
+                            if let Some(entity) = clicked {
+                                self.select(Some(entity));
                             }
                         });
                     });
@@ -388,16 +524,28 @@ impl EditorApp {
             )
             .show(ui, |ui| {
                 panel_title(ui, "Inspector", None);
-                if let Some(entity) = self.scene.entities.get_mut(self.selected) {
+                let Some(entity) = self.selection else {
+                    return;
+                };
+                let Some(data) = self.scene.world().get(entity) else {
+                    return;
+                };
+                // Widgets edit a draft copy; every difference becomes a command,
+                // so the world is only ever written through the command layer.
+                let mut draft = EntityDraft::from(data);
+                let original = draft.clone();
+                let icon = entity_icon(data);
+                let components = data.components.clone();
+                {
                     egui::ScrollArea::vertical().show(ui, |ui| {
-                        inspector_identity(ui, entity);
-                        if let Some(transform) = &mut entity.transform_3d {
+                        inspector_identity(ui, icon, &mut draft);
+                        if let Some(transform) = &mut draft.transform_3d {
                             transform_3d_section(ui, transform);
                         }
-                        if let Some(transform) = &mut entity.transform_2d {
+                        if let Some(transform) = &mut draft.transform_2d {
                             transform_2d_section(ui, transform);
                         }
-                        components_sections(ui, entity);
+                        components_sections(ui, &components);
                         ui.add_space(10.0);
                         ui.add_sized(
                             [ui.available_width(), 31.0],
@@ -409,6 +557,7 @@ impl EditorApp {
                         );
                     });
                 }
+                self.commit_draft(entity, &original, &draft);
             });
     }
 
@@ -431,12 +580,14 @@ impl EditorApp {
                 ui.separator();
                 match self.bottom_tab {
                     BottomTab::Project => project_browser(ui, &mut self.asset_search),
-                    BottomTab::Console => console_view(ui),
+                    BottomTab::Console => {
+                        console_view(ui, self.scene.world().len(), self.lifecycle.state());
+                    }
                 }
             });
     }
 
-    fn status_bar(ui: &mut egui::Ui) {
+    fn status_bar(&self, ui: &mut egui::Ui) {
         egui::Panel::bottom("editor-status")
             .exact_size(26.0)
             .frame(
@@ -447,8 +598,21 @@ impl EditorApp {
             .show(ui, |ui| {
                 ui.horizontal_centered(|ui| {
                     ui.add_space(12.0);
-                    ui.label(RichText::new("●").size(9.0).color(SUCCESS));
-                    ui.label(RichText::new("Renderer ready").size(11.0).color(TEXT_MUTED));
+                    let healthy = self.runtime_error.is_none();
+                    ui.label(RichText::new("●").size(9.0).color(if healthy {
+                        SUCCESS
+                    } else {
+                        ACCENT_BRIGHT
+                    }));
+                    ui.label(
+                        RichText::new(if healthy {
+                            "Renderer ready"
+                        } else {
+                            "Renderer reported an error"
+                        })
+                        .size(11.0)
+                        .color(TEXT_MUTED),
+                    );
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         ui.add_space(12.0);
                         ui.label(
@@ -460,9 +624,13 @@ impl EditorApp {
                         );
                         ui.separator();
                         ui.label(
-                            RichText::new("0 Errors, 0 Warnings")
-                                .size(11.0)
-                                .color(TEXT_FAINT),
+                            RichText::new(if self.runtime_error.is_some() {
+                                "1 Error, 0 Warnings"
+                            } else {
+                                "0 Errors, 0 Warnings"
+                            })
+                            .size(11.0)
+                            .color(TEXT_FAINT),
                         );
                     });
                 });
@@ -535,6 +703,7 @@ impl EditorApp {
                 self.runtime_error = self
                     .runtime_viewport
                     .render(
+                        &self.scene,
                         physical_viewport_dimension(rect.width(), scale),
                         physical_viewport_dimension(rect.height(), scale),
                         GlamVec2::new(self.viewport_yaw, self.viewport_pitch),
@@ -551,7 +720,10 @@ impl EditorApp {
                 paint_runtime_overlay(
                     ui.painter(),
                     rect,
-                    &entity_name(&self.scene.entities[self.selected]),
+                    &self
+                        .selection
+                        .and_then(|entity| self.scene.world().get(entity))
+                        .map_or_else(|| "No selection".to_owned(), entity_name),
                     self.runtime_error.as_deref(),
                 );
                 context.request_repaint();
@@ -561,12 +733,17 @@ impl EditorApp {
 
 impl eframe::App for EditorApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        self.handle_shortcuts(ui.ctx());
         self.top_bar(ui);
-        Self::status_bar(ui);
+        self.status_bar(ui);
         self.hierarchy_panel(ui);
         self.inspector_panel(ui);
         self.asset_panel(ui);
         self.viewport(ui);
+        // Releasing the pointer ends a drag, so the next one is its own step.
+        if ui.ctx().input(|input| input.pointer.any_released()) {
+            self.history.break_merge_run();
+        }
     }
 }
 
@@ -719,22 +896,13 @@ fn hierarchy_row(
     .response
 }
 
-fn inspector_identity(ui: &mut egui::Ui, entity: &mut SceneEntity) {
+fn inspector_identity(ui: &mut egui::Ui, icon: MaterialIcon, draft: &mut EntityDraft) {
     ui.add_space(8.0);
     ui.horizontal(|ui| {
-        ui.label(
-            entity_icon(entity)
-                .outlined()
-                .rich_text()
-                .size(19.0)
-                .color(TEXT_MUTED),
-        );
-        let name = entity
-            .name
-            .get_or_insert_with(|| entity.id.as_str().to_owned());
+        ui.label(icon.outlined().rich_text().size(19.0).color(TEXT_MUTED));
         ui.add_sized(
             [ui.available_width() - 18.0, 29.0],
-            egui::TextEdit::singleline(name).font(FontId::proportional(13.0)),
+            egui::TextEdit::singleline(&mut draft.name).font(FontId::proportional(13.0)),
         );
     });
     ui.horizontal(|ui| {
@@ -792,8 +960,8 @@ fn transform_2d_section(ui: &mut egui::Ui, transform: &mut Transform2D) {
     });
 }
 
-fn components_sections(ui: &mut egui::Ui, entity: &SceneEntity) {
-    for name in entity.components.keys() {
+fn components_sections(ui: &mut egui::Ui, components: &BTreeMap<String, Value>) {
+    for name in components.keys() {
         let icon = match name.as_str() {
             "sindri.camera" => ICON_CAMERA_ALT,
             "sindri.sprite" => ICON_IMAGE,
@@ -963,17 +1131,29 @@ fn asset_tile(ui: &mut egui::Ui, icon: MaterialIcon, label: &str) {
     });
 }
 
-fn console_view(ui: &mut egui::Ui) {
+fn console_view(ui: &mut egui::Ui, entity_count: usize, state: EngineState) {
     ui.add_space(8.0);
     for (color, text) in [
-        (SUCCESS, "Renderer initialized with Vulkan"),
-        (ACCENT, "Loaded demo.scene — 8 entities"),
+        (SUCCESS, "Renderer initialized".to_owned()),
+        (ACCENT, format!("Scene loaded — {entity_count} entities")),
+        (TEXT_MUTED, format!("Engine {}", lifecycle_label(state))),
     ] {
         ui.horizontal(|ui| {
             ui.add_space(10.0);
             ui.label(RichText::new("●").size(9.0).color(color));
-            ui.label(RichText::new(text).size(11.0).color(TEXT_MUTED));
+            ui.label(RichText::new(&text).size(11.0).color(TEXT_MUTED));
         });
+    }
+}
+
+fn lifecycle_label(state: EngineState) -> &'static str {
+    match state {
+        EngineState::Created => "created",
+        EngineState::Initialized => "ready",
+        EngineState::Running => "running",
+        EngineState::Paused => "paused",
+        EngineState::Stopped => "stopped",
+        EngineState::Destroyed => "destroyed",
     }
 }
 
@@ -1065,17 +1245,35 @@ fn icon_button(ui: &mut egui::Ui, icon: MaterialIcon, selected: bool, tip: &str)
     .on_hover_text(tip)
 }
 
-fn transport_icon(ui: &mut egui::Ui, icon: MaterialIcon, selected: bool, tip: &str) {
-    ui.add_sized(
-        [26.0, 26.0],
-        egui::Button::new(icon.outlined().rich_text().size(16.0).color(if selected {
-            ACCENT
-        } else {
-            TEXT_FAINT
-        }))
-        .frame(false),
+fn transport_icon(
+    ui: &mut egui::Ui,
+    icon: MaterialIcon,
+    selected: bool,
+    enabled: bool,
+    tip: &str,
+) -> Response {
+    let color = if selected {
+        ACCENT
+    } else if enabled {
+        TEXT_FAINT
+    } else {
+        BORDER
+    };
+    ui.add_enabled(
+        enabled,
+        egui::Button::new(icon.outlined().rich_text().size(16.0).color(color))
+            .frame(false)
+            .min_size(Vec2::new(26.0, 26.0)),
     )
-    .on_hover_text(tip);
+    .on_hover_text(tip)
+}
+
+fn initialized_lifecycle() -> EngineLifecycle {
+    let mut lifecycle = EngineLifecycle::new();
+    lifecycle
+        .initialize()
+        .expect("a new lifecycle always accepts initialization");
+    lifecycle
 }
 
 fn play_button(ui: &mut egui::Ui, playing: bool) -> Response {
@@ -1176,14 +1374,119 @@ fn paint_axis_gizmo(painter: &egui::Painter, origin: Pos2) {
     }
 }
 
-fn entity_name(entity: &SceneEntity) -> String {
-    entity
-        .name
-        .clone()
-        .unwrap_or_else(|| humanize(entity.id.as_str()))
+/// The inspector's editable copy of an entity.
+///
+/// Widgets write here rather than into the world, so every change can be
+/// turned into a command instead of a silent mutation.
+#[derive(Clone, Debug, PartialEq)]
+struct EntityDraft {
+    name: String,
+    transform_2d: Option<Transform2D>,
+    transform_3d: Option<Transform3D>,
 }
 
-fn entity_icon(entity: &SceneEntity) -> MaterialIcon {
+impl From<&EntityData> for EntityDraft {
+    fn from(data: &EntityData) -> Self {
+        Self {
+            name: entity_name(data),
+            transform_2d: data.transform_2d,
+            transform_3d: data.transform_3d,
+        }
+    }
+}
+
+/// Turns the difference between an entity's stored state and the drawn draft
+/// into the commands that close the gap.
+fn draft_commands(entity: EntityId, original: &EntityDraft, draft: &EntityDraft) -> CommandBuffer {
+    let mut buffer = CommandBuffer::new();
+    if original.name != draft.name {
+        buffer.push(WorldCommand::SetName {
+            entity,
+            name: Some(draft.name.clone()),
+        });
+    }
+    if original.transform_2d != draft.transform_2d {
+        buffer.push(WorldCommand::SetTransform2D {
+            entity,
+            transform: draft.transform_2d,
+        });
+    }
+    if original.transform_3d != draft.transform_3d {
+        buffer.push(WorldCommand::SetTransform3D {
+            entity,
+            transform: draft.transform_3d,
+        });
+    }
+    buffer
+}
+
+/// Flattens the world into display rows, parents before their children.
+///
+/// Siblings are ordered by stable ID so the panel matches the order the scene
+/// is saved in, rather than the order slots happen to be allocated.
+fn hierarchy_rows(world: &World) -> Vec<(EntityId, usize)> {
+    let mut roots: Vec<EntityId> = world
+        .entities()
+        .filter(|(_, data)| data.parent.is_none())
+        .map(|(entity, _)| entity)
+        .collect();
+    roots.sort_by_key(|entity| hierarchy_sort_key(world, *entity));
+
+    let mut rows = Vec::new();
+    for root in roots {
+        push_hierarchy_row(world, root, 0, &mut rows);
+    }
+    rows
+}
+
+fn push_hierarchy_row(
+    world: &World,
+    entity: EntityId,
+    depth: usize,
+    rows: &mut Vec<(EntityId, usize)>,
+) {
+    rows.push((entity, depth));
+    let Some(data) = world.get(entity) else {
+        return;
+    };
+    let mut children = data.children.clone();
+    children.sort_by_key(|child| hierarchy_sort_key(world, *child));
+    for child in children {
+        push_hierarchy_row(world, child, depth + 1, rows);
+    }
+}
+
+fn hierarchy_sort_key(world: &World, entity: EntityId) -> String {
+    world
+        .get(entity)
+        .and_then(|data| data.source_id.as_ref())
+        .map_or_else(
+            || format!("~{:010}", entity.index()),
+            |id| id.as_str().to_owned(),
+        )
+}
+
+fn find_by_source_id(world: &World, source_id: &str) -> Option<EntityId> {
+    world
+        .entities()
+        .find(|(_, data)| {
+            data.source_id
+                .as_ref()
+                .is_some_and(|id| id.as_str() == source_id)
+        })
+        .map(|(entity, _)| entity)
+}
+
+fn entity_name(entity: &EntityData) -> String {
+    entity.name.clone().unwrap_or_else(|| {
+        entity
+            .source_id
+            .as_ref()
+            .map_or_else(|| "Entity".to_owned(), |id| humanize(id.as_str()))
+    })
+}
+
+fn entity_icon(entity: &EntityData) -> MaterialIcon {
     if entity.components.contains_key("sindri.camera") {
         ICON_CAMERA_ALT
     } else if entity.components.contains_key("sindri.mesh") {
@@ -1220,17 +1523,178 @@ fn hierarchy_indent(depth: usize, step: f32) -> f32 {
 
 #[cfg(test)]
 mod tests {
+    use sindri_core::{CommandHistory, SceneEntity, SceneEntityId};
+
     use super::*;
 
+    fn demo_world() -> World {
+        DemoScene::from_document(&DemoScene::authored_document().unwrap())
+            .unwrap()
+            .world()
+            .clone()
+    }
+
+    fn nested_scene() -> SceneDocument {
+        let mut torso = SceneEntity::new(SceneEntityId::new("torso").unwrap());
+        torso.parent = Some(SceneEntityId::new("root").unwrap());
+        let mut arm = SceneEntity::new(SceneEntityId::new("arm").unwrap());
+        arm.parent = Some(SceneEntityId::new("torso").unwrap());
+        let mut leg = SceneEntity::new(SceneEntityId::new("leg").unwrap());
+        leg.parent = Some(SceneEntityId::new("root").unwrap());
+
+        SceneDocument {
+            entities: vec![
+                SceneEntity::new(SceneEntityId::new("root").unwrap()),
+                torso,
+                arm,
+                leg,
+            ],
+            ..SceneDocument::default()
+        }
+    }
+
     #[test]
-    fn embedded_scene_is_valid_and_contains_editor_selection() {
-        let scene = SceneDocument::from_json(SCENE_JSON).unwrap();
-        assert!(
-            scene
-                .entities
-                .iter()
-                .any(|entity| entity.id.as_str() == "checker-cube")
+    fn the_embedded_scene_loads_into_a_runtime_world() {
+        let world = demo_world();
+        assert_eq!(world.len(), 8);
+        assert!(find_by_source_id(&world, "checker-cube").is_some());
+        assert!(find_by_source_id(&world, "not-an-entity").is_none());
+    }
+
+    #[test]
+    fn hierarchy_rows_nest_children_under_their_parents() {
+        let world = World::from_scene(&nested_scene()).unwrap().world;
+        let rows: Vec<(String, usize)> = hierarchy_rows(&world)
+            .into_iter()
+            .map(|(entity, depth)| (entity_name(world.get(entity).unwrap()), depth))
+            .collect();
+
+        assert_eq!(
+            rows,
+            vec![
+                ("Root".to_owned(), 0),
+                // Siblings follow stable-ID order, matching the saved file.
+                ("Leg".to_owned(), 1),
+                ("Torso".to_owned(), 1),
+                ("Arm".to_owned(), 2),
+            ]
         );
+    }
+
+    #[test]
+    fn every_entity_appears_exactly_once_in_the_hierarchy() {
+        let world = demo_world();
+        let rows = hierarchy_rows(&world);
+        assert_eq!(rows.len(), world.len());
+        let mut entities: Vec<_> = rows.iter().map(|(entity, _)| *entity).collect();
+        entities.sort_by_key(|entity| entity.index());
+        entities.dedup();
+        assert_eq!(entities.len(), world.len());
+    }
+
+    #[test]
+    fn an_untouched_draft_produces_no_commands() {
+        let world = demo_world();
+        let entity = find_by_source_id(&world, "checker-cube").unwrap();
+        let draft = EntityDraft::from(world.get(entity).unwrap());
+        assert!(draft_commands(entity, &draft.clone(), &draft).is_empty());
+    }
+
+    #[test]
+    fn inspector_edits_reach_the_world_and_undo_cleanly() {
+        let mut world = demo_world();
+        let entity = find_by_source_id(&world, "checker-cube").unwrap();
+        let original = EntityDraft::from(world.get(entity).unwrap());
+
+        let mut draft = original.clone();
+        draft.name = "Renamed Cube".to_owned();
+        draft.transform_3d = Some(Transform3D {
+            position: [1.0, 2.0, 3.0],
+            ..draft.transform_3d.unwrap_or_default()
+        });
+
+        let buffer = draft_commands(entity, &original, &draft);
+        assert_eq!(buffer.len(), 2);
+
+        let mut history = CommandHistory::default();
+        history
+            .apply(buffer.into_transaction("Edit entity"), &mut world)
+            .unwrap();
+        let edited = world.get(entity).unwrap();
+        assert_eq!(edited.name.as_deref(), Some("Renamed Cube"));
+        assert_eq!(edited.transform_3d, draft.transform_3d);
+
+        history.undo(&mut world).unwrap();
+        assert_eq!(EntityDraft::from(world.get(entity).unwrap()), original);
+    }
+
+    #[test]
+    fn a_drag_run_collapses_into_one_undo_step() {
+        let mut world = demo_world();
+        let entity = find_by_source_id(&world, "checker-cube").unwrap();
+        let original = EntityDraft::from(world.get(entity).unwrap());
+        let mut history = CommandHistory::default();
+
+        for step in [1.0_f32, 2.0, 3.0] {
+            let mut draft = original.clone();
+            draft.transform_3d = Some(Transform3D {
+                position: [step, 0.0, 0.0],
+                ..original.transform_3d.unwrap_or_default()
+            });
+            history
+                .apply(
+                    draft_commands(entity, &original, &draft)
+                        .into_transaction("Edit entity")
+                        .merging(format!("inspector:{}", entity.index())),
+                    &mut world,
+                )
+                .unwrap();
+        }
+
+        history.undo(&mut world).unwrap();
+        assert_eq!(EntityDraft::from(world.get(entity).unwrap()), original);
+        assert!(!history.can_undo());
+    }
+
+    #[test]
+    fn edits_survive_a_save_and_reload_of_the_real_scene() {
+        let mut world = demo_world();
+        let entity = find_by_source_id(&world, "checker-cube").unwrap();
+        let original = EntityDraft::from(world.get(entity).unwrap());
+        let mut draft = original.clone();
+        draft.transform_3d = Some(Transform3D {
+            position: [0.0, 1.5, 0.0],
+            ..original.transform_3d.unwrap_or_default()
+        });
+
+        CommandHistory::default()
+            .apply(
+                draft_commands(entity, &original, &draft).into_transaction("Move"),
+                &mut world,
+            )
+            .unwrap();
+
+        let saved = world.to_scene().unwrap().to_canonical_json().unwrap();
+        let reopened =
+            DemoScene::from_document(&SceneDocument::from_json(&saved).unwrap()).unwrap();
+        let reloaded = find_by_source_id(reopened.world(), "checker-cube").unwrap();
+        assert_eq!(
+            reopened.world().get(reloaded).unwrap().transform_3d,
+            draft.transform_3d
+        );
+    }
+
+    #[test]
+    fn the_lifecycle_drives_play_pause_and_stop() {
+        let mut lifecycle = initialized_lifecycle();
+        assert_eq!(lifecycle_label(lifecycle.state()), "ready");
+        lifecycle.start().unwrap();
+        assert_eq!(lifecycle_label(lifecycle.state()), "running");
+        lifecycle.pause().unwrap();
+        assert_eq!(lifecycle_label(lifecycle.state()), "paused");
+        lifecycle.resume().unwrap();
+        lifecycle.stop().unwrap();
+        assert_eq!(lifecycle_label(lifecycle.state()), "stopped");
     }
 
     #[test]

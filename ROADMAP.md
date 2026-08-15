@@ -176,12 +176,12 @@ Exit gate: Sindri Next matches the useful core of legacy 2D without inheriting i
 - [ ] Define versioned editor protocol and capability handshake
 - [ ] Load/save the real scene format
 - [x] Render the actual Sindri runtime in the viewport through the editor's shared WGPU device
-- [ ] Display hierarchy from runtime scene state
-- [ ] Inspect/edit names, hierarchy, Transform2D, and Transform3D
-- [ ] Add selection and transform change commands
-- [ ] Add command-based undo/redo with transaction grouping
+- [x] Display hierarchy from runtime scene state
+- [ ] Inspect/edit names, hierarchy, Transform2D, and Transform3D (names and both transforms done; reparenting has a command but no UI)
+- [x] Add selection and transform change commands
+- [x] Add command-based undo/redo with transaction grouping
 - [ ] Add 2D pan/zoom and basic 3D orbit camera controls
-- [ ] Add play, pause, stop, and reset-to-authored-state
+- [x] Add play, pause, stop, and reset-to-authored-state
 - [ ] Add one sprite, one cube, and one camera editor fixture
 - [ ] Add protocol contract and save/reload integration tests
 
