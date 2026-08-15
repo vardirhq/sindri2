@@ -109,7 +109,7 @@ Exit gate: a serialized scene drives a combined native 2D/3D example without ren
 - [x] Add async load queue that does not fake synchronous browser I/O
 - [x] Load textures and scene JSON
 - [ ] Add fallback/error assets and actionable diagnostics
-- [ ] Add asset root and URL resolution rules
+- [x] Add asset root and URL resolution rules
 - [ ] Add hot reload for native development
 - [ ] Define package/export manifest with content hashes
 - [ ] Prevent duplicate loads and release unused GPU assets
