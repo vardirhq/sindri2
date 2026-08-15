@@ -4,6 +4,7 @@
 //! physics engine, scripting runtime, or async executor.
 
 mod asset;
+mod command;
 mod component;
 mod engine;
 mod entity;
@@ -18,6 +19,7 @@ pub use asset::{
     AssetHandle, AssetId, AssetIdError, AssetLoadError, AssetLoadErrorKind, AssetStatus,
     AssetStore, AssetStoreError, WeakAssetHandle,
 };
+pub use command::{CommandBuffer, CommandError, CommandHistory, Transaction, WorldCommand};
 pub use component::{
     ComponentMetadata, ComponentRegistryError, ComponentSchemaRegistry, SceneComponent,
     UnknownComponentPolicy,
@@ -37,9 +39,10 @@ pub use world::{EntityData, LoadedScene, World, WorldError};
 /// Common imports for native Sindri game code.
 pub mod prelude {
     pub use crate::{
-        AssetHandle, AssetId, AssetLoadErrorKind, AssetStatus, AssetStore, ComponentSchemaRegistry,
-        EngineCore, EngineLifecycle, EngineState, EntityData, EntityId, FixedStepClock,
-        FixedStepConfig, SceneComponent, SceneDocument, SceneEntity, SceneEntityId, SceneMetadata,
-        SceneMigrator, Transform2D, Transform3D, UnknownComponentPolicy, WeakAssetHandle, World,
+        AssetHandle, AssetId, AssetLoadErrorKind, AssetStatus, AssetStore, CommandBuffer,
+        CommandHistory, ComponentSchemaRegistry, EngineCore, EngineLifecycle, EngineState,
+        EntityData, EntityId, FixedStepClock, FixedStepConfig, SceneComponent, SceneDocument,
+        SceneEntity, SceneEntityId, SceneMetadata, SceneMigrator, Transform2D, Transform3D,
+        UnknownComponentPolicy, WeakAssetHandle, World, WorldCommand,
     };
 }

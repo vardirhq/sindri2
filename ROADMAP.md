@@ -37,7 +37,7 @@ Exit gate: a clean clone passes format, lint, and test checks on the declared MS
 - [x] Keep serialized logical IDs separate from runtime handles
 - [x] Define typed component registration and metadata
 - [x] Add query API for built-in and registered component types
-- [ ] Add deferred world command buffer
+- [x] Add deferred world command buffer
 - [ ] Specify deterministic system ordering
 - [ ] Benchmark 1k, 10k, and 100k entity workloads before considering an archetype ECS
 

@@ -49,6 +49,9 @@ All notable changes to Sindri Next will be documented here.
 - Namespaced editor-only metadata on scene documents and entities, carried through the runtime untouched and strippable for export.
 - A scene migration API with forward-only, non-overlapping steps defined before format version 2 exists.
 - Scene validation for non-finite transform values that JSON cannot represent.
+- A deferred world command buffer whose commands each produce their own inverse, giving the core reversible edits rather than leaving undo to tools.
+- All-or-nothing transactions that roll back applied commands when a later one is rejected.
+- Bounded undo and redo history with labelled transaction grouping and an unrecorded zero-limit mode.
 
 ### Changed
 
