@@ -1,0 +1,15 @@
+[package]
+name = "sindri-platform"
+description = "Platform boundary traits and the shared host loop for Sindri"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+sindri-core = { path = "../sindri-core" }
+thiserror.workspace = true
+
+[lints]
+workspace = true

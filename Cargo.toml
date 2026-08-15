@@ -5,6 +5,7 @@ members = [
     "crates/sindri-assets",
     "crates/sindri-core",
     "crates/sindri-gpu",
+    "crates/sindri-platform",
     "crates/sindri-render",
     "examples/triangle",
     "examples/cube",
