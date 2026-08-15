@@ -193,6 +193,12 @@ lints, and passes every test while being the wrong colour — which is why the
 `capture` binary verifies the authored colours actually appear in the PNG. If you
 touch render targets, keep that check working.
 
+**Acquiring a swapchain texture has seven outcomes.** `WindowSurface::acquire` in
+`sindri-gpu` applies the one policy for all of them and hands back a frame or
+`None`; hosts must not re-derive it. Skipping and reconfiguring are not
+interchangeable — reconfiguring on an occluded frame rebuilds the swapchain
+every frame behind a minimised window. See `docs/rendering-surface.md`.
+
 **Textures bind by reference.** A scene names `textures/badge.png`; the renderer
 knows only `TextureId`. `TextureBindings` in `sindri-scene` is the only place
 that knows both. An unbound reference draws the magenta `TextureRegistry::MISSING`

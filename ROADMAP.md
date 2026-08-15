@@ -71,7 +71,7 @@ Exit gate: core runs without GPU/window/browser dependencies and scene fixtures 
 - [x] Add `sindri-gpu` adapter/device/queue ownership
 - [x] Negotiate conservative cross-target limits and features
 - [x] Add shared surface configuration and non-zero resize policy
-- [ ] Centralize surface loss, outdated, occlusion, and timeout recovery after the proof example
+- [x] Centralize surface loss, outdated, occlusion, and timeout recovery after the proof example
 - [x] Add resource labels and actionable adapter/device/surface errors
 - [ ] Define typed buffer, texture, sampler, shader, and pipeline wrappers
 - [ ] Add render-target and depth-target management

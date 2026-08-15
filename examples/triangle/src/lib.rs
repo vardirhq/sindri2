@@ -1,8 +1,7 @@
 use std::{future::Future, sync::Arc};
 
-use sindri_gpu::{GpuContext, GpuRequestOptions, SurfaceProfile};
+use sindri_gpu::{GpuContext, GpuRequestOptions, WindowSurface};
 use sindri_render::TriangleRenderer;
-use wgpu::CurrentSurfaceTexture;
 use winit::{
     application::ApplicationHandler,
     event::WindowEvent,
@@ -21,11 +20,9 @@ fn spawn(future: impl Future<Output = ()> + 'static) {
 }
 
 struct RenderState {
-    instance: wgpu::Instance,
     window: Arc<Window>,
     gpu: GpuContext,
-    surface: wgpu::Surface<'static>,
-    surface_profile: SurfaceProfile,
+    surface: WindowSurface,
     renderer: TriangleRenderer,
 }
 
@@ -37,61 +34,42 @@ impl RenderState {
         let instance = wgpu::Instance::new(
             wgpu::InstanceDescriptor::new_with_display_handle_from_env(Box::new(display)),
         );
-        let surface = instance
-            .create_surface(window.clone())
-            .map_err(|error| error.to_string())?;
+        // How the surface is built, so `WindowSurface` can build it again if it
+        // is ever lost. The first one is needed here to pick an adapter that can
+        // present to it.
+        let target = window.clone();
+        let source = move |instance: &wgpu::Instance| instance.create_surface(Arc::clone(&target));
+        let surface = source(&instance).map_err(|error| error.to_string())?;
         let gpu = GpuContext::request(&instance, Some(&surface), &GpuRequestOptions::default())
             .await
             .map_err(|error| error.to_string())?;
         let size = window.inner_size();
-        let surface_profile = SurfaceProfile::new(&surface, &gpu.adapter, size.width, size.height)
+        let surface = WindowSurface::new(instance, surface, source, &gpu, size.width, size.height)
             .map_err(|error| error.to_string())?;
-        surface_profile.configure(&surface, &gpu.device);
-        let renderer = TriangleRenderer::new(&gpu.device, surface_profile.format());
+        let renderer = TriangleRenderer::new(&gpu.device, surface.format());
 
         Ok(Self {
-            instance,
             window,
             gpu,
             surface,
-            surface_profile,
             renderer,
         })
     }
 
     fn resize(&mut self, width: u32, height: u32) {
-        self.surface_profile.resize(width, height);
-        self.surface_profile
-            .configure(&self.surface, &self.gpu.device);
+        self.surface.resize(&self.gpu.device, width, height);
         self.window.request_redraw();
     }
 
     fn render(&mut self) {
-        let frame = match self.surface.get_current_texture() {
-            CurrentSurfaceTexture::Success(frame) => frame,
-            CurrentSurfaceTexture::Timeout | CurrentSurfaceTexture::Occluded => return,
-            CurrentSurfaceTexture::Suboptimal(frame) => {
-                drop(frame);
-                self.reconfigure();
+        let frame = match self.surface.acquire(&self.gpu.device) {
+            Ok(Some(frame)) => frame,
+            // The surface handled whatever went wrong; the redraw request at
+            // the end of this event asks for the frame it cost.
+            Ok(None) => return,
+            Err(error) => {
+                log::error!("could not acquire a surface texture: {error}");
                 return;
-            }
-            CurrentSurfaceTexture::Outdated => {
-                self.reconfigure();
-                return;
-            }
-            CurrentSurfaceTexture::Lost => {
-                match self.instance.create_surface(self.window.clone()) {
-                    Ok(surface) => self.surface = surface,
-                    Err(error) => {
-                        log::error!("failed to recreate lost surface: {error}");
-                        return;
-                    }
-                }
-                self.reconfigure();
-                return;
-            }
-            CurrentSurfaceTexture::Validation => {
-                unreachable!("wgpu validation errors are not scoped in the triangle example")
             }
         };
 
@@ -108,12 +86,6 @@ impl RenderState {
         self.gpu.queue.submit([encoder.finish()]);
         self.window.pre_present_notify();
         self.gpu.queue.present(frame);
-    }
-
-    fn reconfigure(&self) {
-        self.surface_profile
-            .configure(&self.surface, &self.gpu.device);
-        self.window.request_redraw();
     }
 }
 

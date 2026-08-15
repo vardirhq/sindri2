@@ -21,9 +21,10 @@ The repository is at its foundation stage. The renderer-independent core current
 - a bounded cross-platform load queue with native I/O workers and non-blocking browser polling
 - typed texture and validated scene decoding with generation-safe store completion
 - shared `wgpu` 30 device/surface negotiation
+- one presentation surface policy, so hosts recover from a resized, hidden, or lost surface identically
 - a reusable triangle renderer proven by one native/browser example
 
-Read the [project overview](PROJECT_OVERVIEW.md), the [feasibility review](docs/FEASIBILITY.md), the [asset foundation](docs/asset-foundation.md), the [component schema registry](docs/component-schema-registry.md), the [scene serialization contract](docs/scene-serialization.md), the [scene extraction seam](docs/scene-extraction.md), the [transparent rendering policy](docs/rendering-transparency.md), the [colour handling contract](docs/rendering-color.md), and the checkable [roadmap](ROADMAP.md).
+Read the [project overview](PROJECT_OVERVIEW.md), the [feasibility review](docs/FEASIBILITY.md), the [asset foundation](docs/asset-foundation.md), the [component schema registry](docs/component-schema-registry.md), the [scene serialization contract](docs/scene-serialization.md), the [scene extraction seam](docs/scene-extraction.md), the [transparent rendering policy](docs/rendering-transparency.md), the [colour handling contract](docs/rendering-color.md), the [presentation surface policy](docs/rendering-surface.md), and the checkable [roadmap](ROADMAP.md).
 
 The rendering proofs, including a headless PNG capture used by CI, now include the [shared triangle example](examples/triangle/README.md) and a [depth-tested textured cube with a 2D sprite overlay](examples/cube/README.md). Both use the same GPU and renderer crates on native desktops and in WebGPU browsers.
 
