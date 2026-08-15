@@ -37,6 +37,14 @@ jobs:
         env:
           WGPU_BACKEND: vulkan
         run: cargo run --package sindri-cube --bin capture -- target/render-artifacts/scene-frame-pipeline.png
+      # Both images render the same scene, so both are held to the same colours.
+      # The editor screenshot went unexamined for a release while its viewport
+      # sampled through a view that decoded a second time: everything else
+      # passed and only the picture was wrong.
+      - name: Verify captured colours
+        run: |
+          cargo run --package sindri-cube --bin verify -- target/render-artifacts/editor-runtime-viewport.png
+          cargo run --package sindri-cube --bin verify -- target/render-artifacts/scene-frame-pipeline.png
       - name: Upload visual test captures
         uses: actions/upload-artifact@v4
         with:

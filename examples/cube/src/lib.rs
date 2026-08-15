@@ -11,8 +11,12 @@ use sindri_render::{
 };
 use thiserror::Error;
 
+mod colors;
 mod scene;
 
+pub use colors::{
+    AUTHORED_COLORS, CHANNEL_TOLERANCE, MINIMUM_SHARE_PER_THOUSAND, verify_authored_colors,
+};
 pub use scene::{DemoScene, DemoSceneError};
 pub use sindri_scene::{CameraView, TextureBindings, WorldProjection};
 
