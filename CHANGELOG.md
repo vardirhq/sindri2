@@ -57,6 +57,14 @@ All notable changes to Sindri Next will be documented here.
 - Editor name and transform edits applied through world commands, with undo/redo on the toolbar and Ctrl+Z/Ctrl+Shift+Z.
 - Editor play, pause, stop, and reset-to-authored-state driven by the real engine lifecycle state machine.
 
+- A `sindri-platform` boundary crate defining what a host supplies: a clock trait, platform-independent input, and the loop that turns them into gameplay calls.
+- Physical-key and mouse input with both held and per-frame edge state, ignoring operating-system key repeat and releasing everything on focus loss.
+- A `Game` trait with fallible start, fixed-update, update, and stop hooks, and an `EngineHost` that reports which phase a failure came from.
+- A manual clock and frame timer that make the whole loop testable with no window, GPU, or sleeping, including a frame-rate independence proof.
+- Rational time scale that carries its division remainder between frames, so scaled time never drifts from the exact ratio of real time.
+- Separate scaled and real frame deltas, so interface animation keeps running while the simulation is slowed or frozen.
+- A `sindri-desktop` adapter translating `winit` keyboard, mouse, pointer, wheel, and focus events into platform input.
+
 ### Changed
 
 - Increased the MSRV from Rust 1.85 to 1.87 to use the current `wgpu` 30 release.
@@ -65,6 +73,7 @@ All notable changes to Sindri Next will be documented here.
 - Replaced the editor's painted viewport composition with the actual Sindri render pipeline while retaining the native UI overlays and controls.
 - Added a bounded X11 window-capture lifecycle for reliable full-editor WGPU screenshots in Xvfb CI runs.
 - Rewrote the shared demo scene asset in canonical form; the extracted frame and draw order are unchanged.
+- Replaced the cube example's hand-rolled key bitflags with the shared input state and the `winit` adapter.
 - Replaced the editor's decorative transport cluster with working undo, redo, stop, pause, and play controls.
 - Replaced the editor's hardcoded console and status text with the live entity count, engine state, and renderer error state.
 - Fixed the editor hierarchy being clipped to the height of the adjacent tool rail, which hid most of the scene.

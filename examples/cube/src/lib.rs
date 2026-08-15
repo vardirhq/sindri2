@@ -2,6 +2,7 @@ use std::{future::Future, sync::Arc};
 
 use glam::Vec2;
 use sindri_gpu::{GpuContext, GpuRequestOptions, SurfaceProfile};
+use sindri_platform::{InputState, Key};
 use sindri_render::{
     DepthTarget, FrameCommand, PreparedFrame, SpriteBatchError, SpriteBatchRenderer,
     SpriteBatchStats, Texture2D, TexturedCubeRenderer, Viewport,
@@ -10,7 +11,7 @@ use web_time::Instant;
 use wgpu::CurrentSurfaceTexture;
 use winit::{
     application::ApplicationHandler,
-    event::{ElementState, WindowEvent},
+    event::WindowEvent,
     event_loop::{ActiveEventLoop, EventLoop, EventLoopProxy},
     keyboard::{KeyCode, PhysicalKey},
     window::{Window, WindowId},
@@ -36,40 +37,6 @@ fn spawn(future: impl Future<Output = ()> + 'static) {
     wasm_bindgen_futures::spawn_local(future);
 }
 
-#[derive(Default)]
-struct RotationInput {
-    pressed: [bool; 4],
-}
-
-impl RotationInput {
-    const LEFT: usize = 0;
-    const RIGHT: usize = 1;
-    const UP: usize = 2;
-    const DOWN: usize = 3;
-
-    fn set(&mut self, key: PhysicalKey, pressed: bool) {
-        let index = match key {
-            PhysicalKey::Code(KeyCode::ArrowLeft) => Some(Self::LEFT),
-            PhysicalKey::Code(KeyCode::ArrowRight) => Some(Self::RIGHT),
-            PhysicalKey::Code(KeyCode::ArrowUp) => Some(Self::UP),
-            PhysicalKey::Code(KeyCode::ArrowDown) => Some(Self::DOWN),
-            _ => None,
-        };
-        if let Some(index) = index {
-            self.pressed[index] = pressed;
-        }
-    }
-
-    fn axis(&self) -> Vec2 {
-        Vec2::new(
-            f32::from(u8::from(self.pressed[Self::RIGHT]))
-                - f32::from(u8::from(self.pressed[Self::LEFT])),
-            f32::from(u8::from(self.pressed[Self::DOWN]))
-                - f32::from(u8::from(self.pressed[Self::UP])),
-        )
-    }
-}
-
 struct RenderState {
     instance: wgpu::Instance,
     window: Arc<Window>,
@@ -80,7 +47,7 @@ struct RenderState {
     cube_renderer: TexturedCubeRenderer,
     sprite_renderer: SpriteBatchRenderer,
     scene: DemoScene,
-    input: RotationInput,
+    input: InputState,
     rotation: Vec2,
     last_frame: Instant,
 }
@@ -127,7 +94,7 @@ impl RenderState {
             cube_renderer,
             sprite_renderer,
             scene,
-            input: RotationInput::default(),
+            input: InputState::default(),
             rotation: Vec2::ZERO,
             last_frame: Instant::now(),
         })
@@ -145,15 +112,22 @@ impl RenderState {
         self.window.request_redraw();
     }
 
-    fn set_key(&mut self, key: PhysicalKey, state: ElementState) {
-        self.input.set(key, state.is_pressed());
+    fn handle_input(&mut self, event: &WindowEvent) {
+        if let Some(event) = sindri_desktop::input_event(event, self.window.scale_factor()) {
+            self.input.apply(event);
+        }
     }
 
     fn render(&mut self) {
         let now = Instant::now();
         let delta_seconds = (now - self.last_frame).as_secs_f32().min(0.1);
         self.last_frame = now;
-        self.rotation += self.input.axis() * delta_seconds * 1.8;
+        let axis = Vec2::new(
+            self.input.axis(Key::ArrowLeft, Key::ArrowRight),
+            self.input.axis(Key::ArrowUp, Key::ArrowDown),
+        );
+        self.rotation += axis * delta_seconds * 1.8;
+        self.input.begin_frame();
 
         let frame = match self.surface.get_current_texture() {
             CurrentSurfaceTexture::Success(frame) => frame,
@@ -341,13 +315,17 @@ impl ApplicationHandler<AppAction> for App {
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::Resized(size) => self.resize(size.width, size.height),
-            WindowEvent::KeyboardInput { event, .. } => {
-                if event.physical_key == PhysicalKey::Code(KeyCode::Escape)
-                    && event.state.is_pressed()
+            WindowEvent::KeyboardInput { event: ref key, .. } => {
+                if key.physical_key == PhysicalKey::Code(KeyCode::Escape) && key.state.is_pressed()
                 {
                     event_loop.exit();
                 } else if let AppState::Running(state) = &mut self.state {
-                    state.set_key(event.physical_key, event.state);
+                    state.handle_input(&event);
+                }
+            }
+            WindowEvent::Focused(_) | WindowEvent::CursorLeft { .. } => {
+                if let AppState::Running(state) = &mut self.state {
+                    state.handle_input(&event);
                 }
             }
             WindowEvent::RedrawRequested => {

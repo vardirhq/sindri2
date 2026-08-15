@@ -24,10 +24,10 @@ Exit gate: a clean clone passes format, lint, and test checks on the declared MS
 - [x] Implement capped frame delta and fixed-step accumulation
 - [x] Prevent a fixed-update spiral of death
 - [x] Define pause semantics
-- [ ] Add time scale without accumulating floating-point drift
-- [ ] Define lifecycle hooks and error propagation used by native and web hosts
+- [x] Add time scale without accumulating floating-point drift
+- [x] Define lifecycle hooks and error propagation used by native and web hosts
 - [x] Add a platform-independent `EngineCore` advanced by runtime hosts
-- [ ] Add deterministic clock/test host
+- [x] Add deterministic clock/test host
 
 ### Entities and world
 
@@ -60,8 +60,8 @@ Exit gate: core runs without GPU/window/browser dependencies and scene fixtures 
 
 ### Boundaries
 
-- [ ] Add `sindri-platform` traits for lifecycle, input source, clock, and asset I/O
-- [ ] Add desktop adapter using `winit`
+- [x] Add `sindri-platform` traits for lifecycle, input source, clock, and asset I/O (asset I/O stays in `sindri-assets`)
+- [ ] Add desktop adapter using `winit` (event translation done in `sindri-desktop`; window and event-loop ownership still lives in each example)
 - [ ] Add web adapter using `wasm-bindgen`, `web-sys`, and async initialization
 - [ ] Keep target-specific conditionals inside platform hosts
 - [ ] Produce explicit capability errors for unavailable WebGPU/surface features
