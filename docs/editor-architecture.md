@@ -40,8 +40,10 @@ are added.
 The editor opens a scene file, displays its entity hierarchy, selects entities,
 exposes editable transform values, and renders the prepared Sindri
 cube-and-sprite frame into a texture registered with egui. The runtime target
-and editor UI share eframe's WGPU device and queue; resizing recreates only the
-viewport color/depth targets.
+and editor UI share eframe's WGPU device and queue; resizing rebuilds the
+viewport's colour and depth targets together through
+`sindri_render::ViewportTarget`, which also owns the rule that a target drawn
+into through sRGB is sampled through linear.
 
 ## A scene is a file
 

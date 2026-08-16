@@ -54,6 +54,11 @@ So the viewport texture carries two views of the same bytes: the sRGB view the
 scene renders into, and the linear view egui samples. Neither half has to know
 what the other assumed, and no conversion happens twice.
 
+That rule lives in `sindri_render::ViewportTarget`, which owns the texture, both
+views, and the depth buffer sized alongside it. A target built any other way
+would be a second place to get this wrong, which is the whole shape of the
+original bug.
+
 The general rule: **a colour target's format is a claim about its bytes, and
 every reader has to agree with it.** One shared constant fixes the writers. The
 readers have to be checked separately, because a sampler that disagrees produces
