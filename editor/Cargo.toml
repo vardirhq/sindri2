@@ -17,6 +17,7 @@ sindri-render = { path = "../crates/sindri-render" }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+rfd = { version = "0.17.2", default-features = false, features = ["xdg-portal"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 sindri-scene = { path = "../crates/sindri-scene" }

@@ -145,3 +145,5 @@ All notable changes to Sindri Next will be documented here.
 - Added `perspective_projection`, `orthographic_projection`, and `look_at` to `sindri-render`, so the zero-to-one depth range and Y-up convention are chosen once rather than at each call site.
 - Updated `pollster` to 1.0.
 - Unpinned `png` to share `image`'s version, which stops every build compiling two copies of it.
+- Added File → Open scene to the editor, so it can open a scene other than the one it was started on.
+- Made the editor start with nothing selected, and let a click on the hierarchy's empty space or Escape clear the selection.

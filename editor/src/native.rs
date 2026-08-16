@@ -1,4 +1,9 @@
-use std::{collections::BTreeMap, f32::consts::TAU, sync::Arc};
+use std::{
+    collections::BTreeMap,
+    f32::consts::TAU,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use eframe::{
     egui::{
@@ -261,7 +266,10 @@ impl EditorApp {
         let world = scene
             .load_world(file.document())
             .expect("the opened scene must satisfy the demo component schema");
-        let selection = find_by_source_id(&world, "checker-cube");
+        // Nothing is selected until something is chosen. This used to name an
+        // entity from the demo scene, which selected the cube in that one scene
+        // and silently nothing in every other.
+        let selection = None;
         let render_state = context
             .wgpu_render_state
             .clone()
@@ -298,6 +306,56 @@ impl EditorApp {
         match self.file.save(&self.world) {
             Ok(()) => {
                 self.unsaved = false;
+                self.runtime_error = None;
+            }
+            Err(error) => self.runtime_error = Some(error.to_string()),
+        }
+    }
+
+    /// Asks for a scene file and opens it.
+    ///
+    /// Until this existed, the only way to open a scene was the command-line
+    /// argument, which meant the editor could edit exactly the scene it was
+    /// started on.
+    fn open_scene(&mut self) {
+        let started_in = self
+            .file
+            .path()
+            .and_then(Path::parent)
+            .map_or_else(|| PathBuf::from("."), Path::to_path_buf);
+        let Some(path) = rfd::FileDialog::new()
+            .add_filter("Sindri scene", &["json"])
+            .set_directory(started_in)
+            .pick_file()
+        else {
+            return;
+        };
+        self.open_path(&path);
+    }
+
+    /// Replaces the open scene with the one in `path`.
+    ///
+    /// A different scene is a different world, so every runtime handle in the
+    /// old one is now meaningless: history is cleared rather than left pointing
+    /// at entities that no longer exist, and so is the selection. The file is
+    /// only adopted once its world loads, so a scene that fails to open leaves
+    /// the editor on the one that was already working.
+    fn open_path(&mut self, path: &Path) {
+        let opened = match SceneFile::open(path) {
+            Ok(opened) => opened,
+            Err(error) => {
+                self.runtime_error = Some(error.to_string());
+                return;
+            }
+        };
+        match self.scene.load_world(opened.document()) {
+            Ok(world) => {
+                self.file = opened;
+                self.world = world;
+                self.history.clear();
+                self.selection = None;
+                self.unsaved = false;
+                self.lifecycle = initialized_lifecycle();
                 self.runtime_error = None;
             }
             Err(error) => self.runtime_error = Some(error.to_string()),
@@ -434,7 +492,7 @@ impl EditorApp {
                 self.world = world;
                 self.history.clear();
                 self.unsaved = false;
-                self.selection = find_by_source_id(&self.world, "checker-cube");
+                self.selection = None;
                 self.lifecycle = initialized_lifecycle();
                 self.runtime_error = None;
             }
@@ -584,7 +642,7 @@ impl EditorApp {
                     .show(ui, |ui| {
                         hierarchy_group(ui, "World", ICON_ACCOUNT_TREE);
                         let needle = self.search.trim().to_lowercase();
-                        let mut clicked = None;
+                        let mut clicked: Option<Option<EntityId>> = None;
                         for (entity, depth) in hierarchy_rows(&self.world) {
                             let Some(data) = self.world.get(entity) else {
                                 continue;
@@ -602,11 +660,20 @@ impl EditorApp {
                             )
                             .clicked()
                             {
-                                clicked = Some(entity);
+                                clicked = Some(Some(entity));
                             }
                         }
+                        // Clicking past the last row clears the selection.
+                        // Without somewhere to click that means "nothing", a
+                        // selection made by accident can only be replaced.
+                        if ui
+                            .allocate_response(ui.available_size(), egui::Sense::click())
+                            .clicked()
+                        {
+                            clicked = Some(None);
+                        }
                         if let Some(entity) = clicked {
-                            self.select(Some(entity));
+                            self.select(entity);
                         }
                     });
             });
@@ -711,14 +778,17 @@ impl EditorApp {
             });
     }
 
-    /// The one menu that does anything yet.
-    ///
     /// Save is disabled rather than hidden when there is no file behind the
     /// scene, so the reason it cannot be used is visible.
     fn file_menu(&mut self, ui: &mut egui::Ui) {
         let saveable = self.file.path().is_some();
         ui.menu_button(RichText::new("File").size(12.0).color(TEXT_MUTED), |ui| {
             ui.set_min_width(190.0);
+            if ui.button("Open scene…").clicked() {
+                self.open_scene();
+                ui.close();
+            }
+            ui.separator();
             if ui
                 .add_enabled(
                     saveable,
@@ -956,6 +1026,12 @@ impl eframe::App for EditorApp {
         // Releasing the pointer ends a drag, so the next one is its own step.
         if ui.ctx().input(|input| input.pointer.any_released()) {
             self.history.break_merge_run();
+        }
+        // Escape clears the selection wherever the pointer happens to be. The
+        // hierarchy's empty space does the same, but only while it has empty
+        // space to click.
+        if ui.ctx().input(|input| input.key_pressed(egui::Key::Escape)) {
+            self.select(None);
         }
     }
 }
@@ -1785,6 +1861,9 @@ fn hierarchy_sort_key(world: &World, entity: EntityId) -> String {
         )
 }
 
+/// Only tests look entities up by their authored ID; the editor works in
+/// runtime handles.
+#[cfg(test)]
 fn find_by_source_id(world: &World, source_id: &str) -> Option<EntityId> {
     world
         .entities()
