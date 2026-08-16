@@ -74,7 +74,7 @@ Exit gate: core runs without GPU/window/browser dependencies and scene fixtures 
 - [x] Centralize surface loss, outdated, occlusion, and timeout recovery after the proof example
 - [x] Add resource labels and actionable adapter/device/surface errors
 - [ ] Define typed buffer, texture, sampler, shader, and pipeline wrappers
-- [ ] Add render-target and depth-target management
+- [x] Add render-target and depth-target management — `ViewportTarget` owns a colour target, both of its views, and the depth buffer sized with it
 - [x] Prove headless adapter initialization on the Linux CI runner with Mesa software Vulkan
 
 ### Proofs
