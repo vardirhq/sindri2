@@ -45,6 +45,27 @@ viewport's colour and depth targets together through
 `sindri_render::ViewportTarget`, which also owns the rule that a target drawn
 into through sRGB is sampled through linear.
 
+## Two views of one world
+
+The scene view is where the editor moves around: orbit, pan, zoom, and a choice
+of projection, all through `CameraView`. The game view renders the same world
+through the authored camera and nothing else, which is the only question it
+exists to answer — what would the player see.
+
+That distinction is a tested rule rather than a convention. `camera_for` maps a
+tab to a camera, the game tab maps to `CameraView::default()`, and a test holds
+it there: an orbit or a pan leaking into the game view would quietly turn it
+into a second scene view.
+
+The two share their renderers and textures, because pipelines do not depend on
+which camera is looking, and each owns a `ViewportTarget` so egui has a texture
+per view. Only the visible one is drawn — rendering the hidden view would spend
+a frame's GPU work on something nobody is looking at.
+
+The game view carries no editor chrome: no selection label, no camera hints, no
+axis gizmo. A render failure is still reported across it, because a blank view
+with no explanation is worse than a view with a message on it.
+
 ## Moving the view without moving the scene
 
 Left drag orbits, middle drag or shift-drag pans, and the wheel zooms. All three
