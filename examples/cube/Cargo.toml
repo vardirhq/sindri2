@@ -26,7 +26,7 @@ wgpu.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11"
-png = "=0.17.16"
+png = "=0.18.1"
 pollster.workspace = true
 sindri-gpu = { path = "../../crates/sindri-gpu" }
 
