@@ -191,7 +191,7 @@ Exit gate: Sindri Next matches the useful core of legacy 2D without inheriting i
 - [x] Load/save the real scene format
 - [x] Render the actual Sindri runtime in the viewport through the editor's shared WGPU device
 - [x] Display hierarchy from runtime scene state
-- [ ] Inspect/edit names, hierarchy, Transform2D, and Transform3D (names and both transforms done; reparenting has a command but no UI)
+- [x] Inspect/edit names, hierarchy, Transform2D, and Transform3D — reparenting is a `Parent` menu in the inspector, offering only the moves `World::check_set_parent` allows; drag-reparenting in the hierarchy remains Milestone 11's item
 - [x] Add selection and transform change commands
 - [x] Add command-based undo/redo with transaction grouping
 - [x] Add 3D orbit, pan, and zoom camera controls, with a reset to the authored camera

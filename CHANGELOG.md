@@ -139,3 +139,5 @@ All notable changes to Sindri Next will be documented here.
 - Replaced the editor's game preview placeholder with a real rendered view, sharing the scene view's renderers and drawing only whichever view is visible.
 - Added an editor fixture scene holding one cube, one sprite, and the two cameras they need, opened with `cargo run -p sindri-editor -- editor/assets/fixture.scene.json`.
 - Added end-to-end editor tests that open the fixture, edit it through the command history, save, undo, and reload, proving an untouched scene saves byte for byte unchanged.
+- Added a `Parent` menu to the editor's inspector, so an entity can be moved under another or out to the root as one undoable step.
+- Added `World::check_set_parent`, which answers whether a reparent would be accepted without making it, so an interface can offer only the moves the command layer allows.

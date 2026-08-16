@@ -86,8 +86,15 @@ impl World {
         })
     }
 
-    pub fn set_parent(
-        &mut self,
+    /// Whether [`World::set_parent`] would accept this move, without making it.
+    ///
+    /// An interface that offers reparenting has to answer this before the move
+    /// happens — a hierarchy refusing a drop while it is being dragged is a
+    /// different thing from one that accepts it and then reports an error.
+    /// Sharing the rule with `set_parent` is what keeps the two answers the
+    /// same; asking it twice in two places is how they stop agreeing.
+    pub fn check_set_parent(
+        &self,
         child: EntityId,
         parent: Option<EntityId>,
     ) -> Result<(), WorldError> {
@@ -98,6 +105,15 @@ impl World {
                 return Err(WorldError::HierarchyCycle);
             }
         }
+        Ok(())
+    }
+
+    pub fn set_parent(
+        &mut self,
+        child: EntityId,
+        parent: Option<EntityId>,
+    ) -> Result<(), WorldError> {
+        self.check_set_parent(child, parent)?;
 
         let previous = self.get(child).and_then(|data| data.parent);
         if previous == parent {
@@ -500,5 +516,33 @@ mod tests {
             world.set_parent(parent, Some(child)),
             Err(WorldError::HierarchyCycle)
         );
+    }
+
+    /// The check exists so an interface can refuse a drop before making it. It
+    /// is only worth having if it answers exactly what the move would, so this
+    /// asks both about every pair in a three-deep chain.
+    #[test]
+    fn checking_a_reparent_agrees_with_making_one() {
+        let mut world = World::default();
+        let root = world.spawn(EntityData::default());
+        let middle = world.spawn(EntityData::default());
+        let leaf = world.spawn(EntityData::default());
+        world.set_parent(middle, Some(root)).unwrap();
+        world.set_parent(leaf, Some(middle)).unwrap();
+        let stale = world.spawn(EntityData::default());
+        world.despawn_recursive(stale).unwrap();
+
+        let entities = [root, middle, leaf, stale];
+        for child in entities {
+            for parent in entities.map(Some).into_iter().chain([None]) {
+                let checked = world.check_set_parent(child, parent);
+                let mut copy = world.clone();
+                let made = copy.set_parent(child, parent);
+                assert_eq!(
+                    checked, made,
+                    "check and move disagreed about {child:?} under {parent:?}"
+                );
+            }
+        }
     }
 }

@@ -385,6 +385,29 @@ impl EditorApp {
         }
     }
 
+    /// Moves an entity under a new parent, or out to the root with `None`.
+    ///
+    /// Its own transaction rather than part of the inspector draft: a parent
+    /// change is one discrete choice, and merging it into a transform drag
+    /// would make one undo step that both moved and reparented.
+    ///
+    /// The move is offered only where [`World::check_set_parent`] allows it, so
+    /// reaching the error here means the world changed under the open menu. It
+    /// is reported rather than ignored, because silently doing nothing is how
+    /// an interface teaches people it is unreliable.
+    fn reparent(&mut self, entity: EntityId, parent: Option<EntityId>) {
+        let mut buffer = CommandBuffer::new();
+        buffer.push(WorldCommand::SetParent { entity, parent });
+        self.history.break_merge_run();
+        match self
+            .history
+            .apply(buffer.into_transaction("Reparent entity"), &mut self.world)
+        {
+            Ok(()) => self.unsaved = true,
+            Err(error) => self.runtime_error = Some(error.to_string()),
+        }
+    }
+
     fn undo(&mut self) {
         self.history.break_merge_run();
         match self.history.undo(&mut self.world) {
@@ -614,9 +637,13 @@ impl EditorApp {
                 let original = draft.clone();
                 let icon = entity_icon(data);
                 let components = data.components.clone();
+                let parent = data.parent;
+                let choices = reparent_choices(&self.world, entity);
+                let mut reparented = ParentChoice::Unchanged;
                 {
                     egui::ScrollArea::vertical().show(ui, |ui| {
                         inspector_identity(ui, icon, &mut draft);
+                        reparented = inspector_parent(ui, entity, parent, &choices);
                         if let Some(transform) = &mut draft.transform_3d {
                             transform_3d_section(ui, transform);
                         }
@@ -636,6 +663,11 @@ impl EditorApp {
                     });
                 }
                 self.commit_draft(entity, &original, &draft);
+                match reparented {
+                    ParentChoice::Unchanged => {}
+                    ParentChoice::Root => self.reparent(entity, None),
+                    ParentChoice::Under(parent) => self.reparent(entity, Some(parent)),
+                }
             });
     }
 
@@ -1054,6 +1086,77 @@ fn hierarchy_row(
         )
     })
     .response
+}
+
+/// What the root is called wherever a parent is named.
+const ROOT_LABEL: &str = "World";
+
+/// The parents `entity` may legally be moved under, in the order the hierarchy
+/// lists them.
+///
+/// Legality is asked of the world rather than decided here, so the menu cannot
+/// offer a move the command layer would then refuse. The root is not in this
+/// list because it is not an entity; it is the separate "World" choice.
+fn reparent_choices(world: &World, entity: EntityId) -> Vec<(EntityId, String)> {
+    hierarchy_rows(world)
+        .into_iter()
+        .filter(|(candidate, _)| world.check_set_parent(entity, Some(*candidate)).is_ok())
+        .filter_map(|(candidate, _)| {
+            world
+                .get(candidate)
+                .map(|data| (candidate, entity_name(data)))
+        })
+        .collect()
+}
+
+/// What the parent menu came back with.
+///
+/// "Move to the root" and "nothing was chosen" are both an absence of a parent
+/// and are not the same answer, so they are separate variants rather than two
+/// layers of `Option` the caller has to remember the order of.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ParentChoice {
+    /// The menu offered no change: it is closed, or the current parent was
+    /// picked again.
+    Unchanged,
+    /// Move out to the root.
+    Root,
+    /// Move under this entity.
+    Under(EntityId),
+}
+
+/// The parent row, reporting a choice only when it is a change.
+fn inspector_parent(
+    ui: &mut egui::Ui,
+    entity: EntityId,
+    parent: Option<EntityId>,
+    choices: &[(EntityId, String)],
+) -> ParentChoice {
+    let mut chosen = parent;
+    let current = parent
+        .and_then(|parent| {
+            choices
+                .iter()
+                .find(|(candidate, _)| *candidate == parent)
+                .map(|(_, name)| name.clone())
+        })
+        .unwrap_or_else(|| ROOT_LABEL.to_owned());
+    ui.horizontal(|ui| {
+        ui.add_space(27.0);
+        ui.label(RichText::new("Parent").size(11.0).color(TEXT_FAINT));
+        egui::ComboBox::from_id_salt(("parent", entity.index()))
+            .selected_text(RichText::new(current).size(11.0).color(TEXT_MUTED))
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut chosen, None, ROOT_LABEL);
+                for (candidate, name) in choices {
+                    ui.selectable_value(&mut chosen, Some(*candidate), name);
+                }
+            });
+    });
+    if chosen == parent {
+        return ParentChoice::Unchanged;
+    }
+    chosen.map_or(ParentChoice::Root, ParentChoice::Under)
 }
 
 fn inspector_identity(ui: &mut egui::Ui, icon: MaterialIcon, draft: &mut EntityDraft) {
@@ -1827,6 +1930,89 @@ mod tests {
         entities.sort_by_key(|entity| entity.index());
         entities.dedup();
         assert_eq!(entities.len(), world.len());
+    }
+
+    /// The parent menu must not offer a move the command layer would refuse,
+    /// which for an ancestor means none of its own descendants.
+    #[test]
+    fn the_parent_menu_never_offers_a_move_that_would_make_a_cycle() {
+        let world = World::from_scene(&nested_scene()).unwrap().world;
+        let named = |id: &str| find_by_source_id(&world, id).unwrap();
+        let offered: Vec<String> = reparent_choices(&world, named("torso"))
+            .into_iter()
+            .map(|(_, name)| name)
+            .collect();
+
+        assert_eq!(
+            offered,
+            vec!["Root".to_owned(), "Leg".to_owned()],
+            "torso may move to the root or under its sibling, but not under \
+             itself or its own child"
+        );
+    }
+
+    /// The selected-parent label is looked up in this list, so a parent missing
+    /// from it would be drawn as though the entity sat at the root.
+    #[test]
+    fn the_parent_menu_always_contains_the_parent_an_entity_already_has() {
+        let world = World::from_scene(&nested_scene()).unwrap().world;
+        for (entity, data) in world.entities() {
+            let Some(parent) = data.parent else {
+                continue;
+            };
+            assert!(
+                reparent_choices(&world, entity)
+                    .iter()
+                    .any(|(candidate, _)| *candidate == parent),
+                "{} sits under a parent its own menu does not list",
+                entity_name(data)
+            );
+        }
+    }
+
+    /// A leaf can go anywhere, so this is the case that would hide a filter
+    /// that was accidentally excluding legal parents.
+    #[test]
+    fn a_leaf_may_move_under_anything_but_itself() {
+        let world = World::from_scene(&nested_scene()).unwrap().world;
+        let arm = find_by_source_id(&world, "arm").unwrap();
+        let offered: Vec<String> = reparent_choices(&world, arm)
+            .into_iter()
+            .map(|(_, name)| name)
+            .collect();
+
+        assert_eq!(
+            offered,
+            vec!["Root".to_owned(), "Leg".to_owned(), "Torso".to_owned()]
+        );
+    }
+
+    #[test]
+    fn reparenting_moves_the_entity_and_undoes_in_one_step() {
+        let mut world = World::from_scene(&nested_scene()).unwrap().world;
+        let arm = find_by_source_id(&world, "arm").unwrap();
+        let leg = find_by_source_id(&world, "leg").unwrap();
+        let torso = world.get(arm).unwrap().parent.unwrap();
+
+        let mut history = CommandHistory::default();
+        let mut buffer = CommandBuffer::new();
+        buffer.push(WorldCommand::SetParent {
+            entity: arm,
+            parent: Some(leg),
+        });
+        history
+            .apply(buffer.into_transaction("Reparent entity"), &mut world)
+            .unwrap();
+
+        assert_eq!(world.get(arm).unwrap().parent, Some(leg));
+        assert!(
+            !world.get(torso).unwrap().children.contains(&arm),
+            "the old parent should no longer claim the child"
+        );
+
+        history.undo(&mut world).unwrap();
+        assert_eq!(world.get(arm).unwrap().parent, Some(torso));
+        assert!(world.get(torso).unwrap().children.contains(&arm));
     }
 
     #[test]
