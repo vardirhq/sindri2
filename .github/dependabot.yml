@@ -9,6 +9,14 @@ updates:
       interval: weekly
     commit-message:
       prefix: "Update"
+    ignore:
+      # This action's version *is* the Rust version it installs, so it is
+      # pinned to the MSRV in `rust-toolchain.toml` rather than kept current.
+      # Dependabot sees a version number and offers to raise it; taking that
+      # offer would leave CI building on a newer compiler and silently no
+      # longer proving the MSRV holds. Moving it is one deliberate change to
+      # three places at once, not a dependency update.
+      - dependency-name: dtolnay/rust-toolchain
 
   # `Cargo.lock` is not committed, so Cargo updates can only propose changes to
   # the requirements in `Cargo.toml`. Those are deliberately loose, which means
