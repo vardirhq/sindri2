@@ -6,15 +6,31 @@ use thiserror::Error;
 
 const SCENE_JSON: &str = include_str!("../assets/demo.scene.json");
 
+/// The demo's component schemas, and the extraction they drive.
+///
+/// It deliberately owns no world. A world belongs to whoever is running the
+/// engine — `EngineCore` at runtime, the editor while authoring — and a scene
+/// that kept its own copy would mean two of them, with only one of them the one
+/// gameplay writes.
 #[derive(Debug)]
 pub struct DemoScene {
-    world: World,
     extractor: SceneExtractor,
 }
 
 impl DemoScene {
-    pub fn load() -> Result<Self, DemoSceneError> {
-        Self::from_document(&Self::authored_document()?)
+    /// The schemas alone, for a host that already has a world.
+    pub fn new() -> Result<Self, DemoSceneError> {
+        Ok(Self {
+            extractor: SceneExtractor::new()?,
+        })
+    }
+
+    /// The schemas and the authored world together, which is what a host that
+    /// is starting from the demo scene wants.
+    pub fn load() -> Result<(Self, World), DemoSceneError> {
+        let scene = Self::new()?;
+        let world = scene.load_world(&Self::authored_document()?)?;
+        Ok((scene, world))
     }
 
     /// The scene exactly as authored on disk, used to reset edited state.
@@ -22,76 +38,53 @@ impl DemoScene {
         Ok(SceneDocument::from_json(SCENE_JSON)?)
     }
 
-    /// Builds a runtime scene from any document the built-in components accept.
-    pub fn from_document(document: &SceneDocument) -> Result<Self, DemoSceneError> {
-        let extractor = SceneExtractor::new()?;
-        extractor.validate(document, UnknownComponentPolicy::Reject)?;
-        let loaded = World::from_scene(document)?;
-        Ok(Self {
-            world: loaded.world,
-            extractor,
-        })
+    /// Builds a runtime world from any document the built-in components accept.
+    pub fn load_world(&self, document: &SceneDocument) -> Result<World, DemoSceneError> {
+        self.extractor
+            .validate(document, UnknownComponentPolicy::Reject)?;
+        Ok(World::from_scene(document)?.world)
     }
 
-    /// The live runtime world. Editing hosts read hierarchy and inspector
-    /// state from here so there is a single source of truth behind the
-    /// rendered frame.
-    pub const fn world(&self) -> &World {
-        &self.world
-    }
-
-    /// The live runtime world, for hosts applying [`sindri_core::WorldCommand`]s.
-    pub const fn world_mut(&mut self) -> &mut World {
-        &mut self.world
-    }
-
-    /// Serializes the current runtime state back to a scene document.
-    pub fn to_document(&self) -> Result<SceneDocument, DemoSceneError> {
-        Ok(self.world.to_scene()?)
-    }
-
-    /// Turns the cube by writing its transform, the way gameplay would.
-    ///
-    /// Nothing downstream knows this happened: extraction simply reads whatever
-    /// the world now holds.
-    pub fn spin_cube(&mut self, rotation: Vec2) -> Result<(), DemoSceneError> {
-        let cube = self
-            .world
-            .entities()
-            .find(|(_, data)| data.components.contains_key("sindri.mesh"))
-            .map(|(entity, _)| entity)
-            .ok_or(DemoSceneError::Missing("cube mesh"))?;
-        let data = self
-            .world
-            .get_mut(cube)
-            .ok_or(DemoSceneError::Missing("cube mesh"))?;
-        let mut transform = data.transform_3d.unwrap_or_default();
-        transform.rotation =
-            (Quat::from_rotation_y(rotation.x) * Quat::from_rotation_x(rotation.y)).to_array();
-        data.transform_3d = Some(transform);
-        Ok(())
-    }
-
-    /// Extracts the current world through the authored camera.
+    /// Extracts a world through the authored camera.
     pub fn extract_frame(
         &self,
+        world: &World,
         viewport: Viewport,
         textures: &TextureBindings,
     ) -> Result<PreparedFrame, DemoSceneError> {
-        self.extract(viewport, CameraView::default(), textures)
+        self.extract(world, viewport, CameraView::default(), textures)
     }
 
-    /// Extracts the current world through a viewer-adjusted camera.
+    /// Extracts a world through a viewer-adjusted camera.
     pub fn extract(
         &self,
+        world: &World,
         viewport: Viewport,
         view: CameraView,
         textures: &TextureBindings,
     ) -> Result<PreparedFrame, DemoSceneError> {
-        Ok(self
-            .extractor
-            .extract(&self.world, viewport, view, textures)?)
+        Ok(self.extractor.extract(world, viewport, view, textures)?)
     }
+}
+
+/// Turns the cube by writing its transform, the way gameplay does.
+///
+/// Nothing downstream knows this happened: extraction simply reads whatever the
+/// world now holds.
+pub fn spin_cube(world: &mut World, rotation: Vec2) -> Result<(), DemoSceneError> {
+    let cube = world
+        .entities()
+        .find(|(_, data)| data.components.contains_key("sindri.mesh"))
+        .map(|(entity, _)| entity)
+        .ok_or(DemoSceneError::Missing("cube mesh"))?;
+    let data = world
+        .get_mut(cube)
+        .ok_or(DemoSceneError::Missing("cube mesh"))?;
+    let mut transform = data.transform_3d.unwrap_or_default();
+    transform.rotation =
+        (Quat::from_rotation_y(rotation.x) * Quat::from_rotation_x(rotation.y)).to_array();
+    data.transform_3d = Some(transform);
+    Ok(())
 }
 
 #[derive(Debug, Error)]
@@ -145,8 +138,8 @@ mod tests {
 
     #[test]
     fn the_embedded_scene_extracts_an_opaque_pass_and_an_overlay_batch() {
-        let scene = DemoScene::load().unwrap();
-        let frame = scene.extract_frame(VIEWPORT, &bindings()).unwrap();
+        let (scene, world) = DemoScene::load().unwrap();
+        let frame = scene.extract_frame(&world, VIEWPORT, &bindings()).unwrap();
 
         assert_eq!(frame.passes().len(), 2);
         assert_eq!(frame.passes()[0].stage, RenderStage::Opaque3d);
@@ -161,8 +154,8 @@ mod tests {
     /// the authored draw order, which layers and depths carry.
     #[test]
     fn the_overlay_keeps_its_authored_back_to_front_order() {
-        let scene = DemoScene::load().unwrap();
-        let frame = scene.extract_frame(VIEWPORT, &bindings()).unwrap();
+        let (scene, world) = DemoScene::load().unwrap();
+        let frame = scene.extract_frame(&world, VIEWPORT, &bindings()).unwrap();
         let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[1].command else {
             panic!("the overlay pass should be a sprite batch");
         };
@@ -176,8 +169,8 @@ mod tests {
     /// Retuning the badges for the shared anchor must leave them where they were.
     #[test]
     fn the_overlay_badges_sit_where_they_were_authored() {
-        let scene = DemoScene::load().unwrap();
-        let frame = scene.extract_frame(VIEWPORT, &bindings()).unwrap();
+        let (scene, world) = DemoScene::load().unwrap();
+        let frame = scene.extract_frame(&world, VIEWPORT, &bindings()).unwrap();
         let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[1].command else {
             panic!("the overlay pass should be a sprite batch");
         };
@@ -206,10 +199,10 @@ mod tests {
 
     #[test]
     fn spinning_the_cube_writes_the_world_and_changes_the_frame() {
-        let mut scene = DemoScene::load().unwrap();
-        let resting = scene.extract_frame(VIEWPORT, &bindings()).unwrap();
-        scene.spin_cube(Vec2::new(0.8, 0.3)).unwrap();
-        let spun = scene.extract_frame(VIEWPORT, &bindings()).unwrap();
+        let (scene, mut world) = DemoScene::load().unwrap();
+        let resting = scene.extract_frame(&world, VIEWPORT, &bindings()).unwrap();
+        spin_cube(&mut world, Vec2::new(0.8, 0.3)).unwrap();
+        let spun = scene.extract_frame(&world, VIEWPORT, &bindings()).unwrap();
 
         let (
             FrameCommand::TexturedCube { model: before, .. },
@@ -221,7 +214,7 @@ mod tests {
         assert_ne!(before, after);
 
         // The rotation lives in the scene now, so it survives a save.
-        let saved = scene.to_document().unwrap();
+        let saved = world.to_scene().unwrap();
         let cube = saved
             .entity(&sindri_core::SceneEntityId::new("checker-cube").unwrap())
             .expect("the cube is still in the scene");
@@ -234,10 +227,11 @@ mod tests {
 
     #[test]
     fn an_editor_view_moves_the_camera_without_moving_the_model() {
-        let scene = DemoScene::load().unwrap();
-        let authored = scene.extract_frame(VIEWPORT, &bindings()).unwrap();
+        let (scene, world) = DemoScene::load().unwrap();
+        let authored = scene.extract_frame(&world, VIEWPORT, &bindings()).unwrap();
         let orbited = scene
             .extract(
+                &world,
                 VIEWPORT,
                 CameraView {
                     orbit: Vec2::new(0.5, 0.25),

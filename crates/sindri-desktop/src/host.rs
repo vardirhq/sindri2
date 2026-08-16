@@ -10,7 +10,7 @@
 use std::{future::Future, sync::Arc, time::Duration};
 
 use sindri_gpu::{GpuContext, GpuError, GpuRequestOptions, WindowSurface};
-use sindri_platform::{FrameTimer, InputState};
+use sindri_platform::{FrameTimer, InputEvent};
 use thiserror::Error;
 use winit::{
     application::ApplicationHandler,
@@ -123,12 +123,19 @@ pub trait DesktopApp: Sized + 'static {
     /// pretend to be async to say so.
     fn create(context: &AppContext<'_>) -> Result<Self, Self::Error>;
 
-    /// Advances by the real time since the previous frame.
+    /// Applies one translated input event.
     ///
-    /// Input arrives already translated and accumulated, with per-frame edges
-    /// cleared by the host afterwards.
-    fn update(&mut self, input: &InputState, delta: Duration) -> Result<Flow, Self::Error> {
-        let _ = (input, delta);
+    /// Events are handed over rather than accumulated here, because whoever
+    /// runs the simulation already accumulates them and clears their per-frame
+    /// edges. Two `InputState`s would mean two answers to whether a key is
+    /// down.
+    fn input(&mut self, event: InputEvent) {
+        let _ = event;
+    }
+
+    /// Advances by the real time since the previous frame.
+    fn update(&mut self, delta: Duration) -> Result<Flow, Self::Error> {
+        let _ = delta;
         Ok(Flow::Continue)
     }
 
@@ -208,7 +215,6 @@ struct Running<A> {
     gpu: GpuContext,
     surface: WindowSurface,
     app: A,
-    input: InputState,
     clock: WindowClock,
     timer: FrameTimer,
 }
@@ -303,11 +309,7 @@ impl<A: DesktopApp> Host<A> {
         };
 
         let delta = running.timer.tick(&running.clock);
-        let flow = running
-            .app
-            .update(&running.input, delta)
-            .map_err(DesktopError::App)?;
-        running.input.begin_frame();
+        let flow = running.app.update(delta).map_err(DesktopError::App)?;
         if flow == Flow::Exit {
             return Ok(flow);
         }
@@ -388,7 +390,6 @@ impl<A: DesktopApp> ApplicationHandler<Startup> for Host<A> {
             gpu,
             surface,
             app,
-            input: InputState::default(),
             clock: WindowClock::new(),
             timer: FrameTimer::new(),
         }));
@@ -423,7 +424,7 @@ impl<A: DesktopApp> ApplicationHandler<Startup> for Host<A> {
         if let Some(input) = input_event(&event, scale_factor)
             && let State::Running(running) = &mut self.state
         {
-            running.input.apply(input);
+            running.app.input(input);
         }
 
         match event {

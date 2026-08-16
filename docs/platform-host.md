@@ -58,11 +58,18 @@ has no meaning in a browser. The host therefore reads a `WindowClock`, which is
 `Instant` natively and `performance.now()` on `wasm32` through `web-time` — one
 clock, no conditional around something as basic as what time it is.
 
-This is not yet the engine's fixed-step loop. `EngineHost` and the `Game` trait
-run a capped, fixed-step simulation with a time scale and spiral-of-death
-protection, all tested, and nothing outside their own tests uses them yet.
-Routing applications through them is the next step, and it is a larger one
-because it moves who owns the `World`.
+That delta then goes to the engine rather than to gameplay directly. `EngineHost`
+accumulates it into fixed simulation steps, so `Game::fixed_update` runs a whole
+number of times at an exact step regardless of how long the frame took, and a
+stalled frame is capped instead of being integrated in one lurch. The cube
+example used to integrate raw frame deltas with a hand-written cap, which meant
+a second of held input turned it further on a slow machine than a fast one; a
+test now holds it to the same rotation at 15, 60, and 144 frames per second.
+
+Input goes the same way. The host translates `winit` events and hands them over;
+`EngineHost` accumulates them and clears their per-frame edges as part of
+advancing. Two `InputState`s would be two answers to whether a key is down, so
+there is one, and it belongs to whoever runs the frame.
 
 ## Why the browser uses the "desktop" crate
 

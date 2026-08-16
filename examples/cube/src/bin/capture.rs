@@ -33,8 +33,8 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
     let mut cube_renderer = TexturedCubeRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
     let mut sprite_renderer = SpriteBatchRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
     let (textures, bindings) = demo_textures(&gpu.device, &gpu.queue);
-    let scene = DemoScene::load()?;
-    let prepared = scene.extract_frame(Viewport::new(WIDTH, HEIGHT), &bindings)?;
+    let (scene, world) = DemoScene::load()?;
+    let prepared = scene.extract_frame(&world, Viewport::new(WIDTH, HEIGHT), &bindings)?;
 
     let mut encoder = gpu
         .device
