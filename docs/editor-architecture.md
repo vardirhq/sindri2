@@ -37,10 +37,28 @@ are added.
 
 ## First shell boundary
 
-The editor loads the real versioned demo scene, displays its entity hierarchy,
-selects entities, exposes editable transform values, and renders the prepared
-Sindri cube-and-sprite frame into a texture registered with egui. The runtime
-target and editor UI share eframe's WGPU device and queue; resizing recreates
-only the viewport color/depth targets. Scene saving, command-based mutations,
-undo/redo, and feeding inspector edits back through runtime commands remain
-explicit follow-up work.
+The editor opens a scene file, displays its entity hierarchy, selects entities,
+exposes editable transform values, and renders the prepared Sindri
+cube-and-sprite frame into a texture registered with egui. The runtime target
+and editor UI share eframe's WGPU device and queue; resizing recreates only the
+viewport color/depth targets.
+
+## A scene is a file
+
+The editor takes a path — the demo scene by default, or one named on the command
+line — and reads it from disk. A missing or unreadable file is reported in the
+interface and the editor opens on the copy compiled into it, so it starts
+anywhere while saying what went wrong.
+
+Saving writes the world back through `World::to_scene` and canonical
+serialization, which is what makes it safe to offer: saving a scene nobody
+edited reproduces the file byte for byte, so a review sees the edit and nothing
+else. Reloading re-reads the file and discards unsaved edits along with their
+history, because every runtime handle is replaced.
+
+That closes the loop the milestone is judged on — edit a transform, save,
+reopen, and the scene is what it was left as — and it is the same file the
+runtime and the headless capture load.
+
+A versioned editor/runtime protocol, and editing anything beyond names and
+transforms, remain explicit follow-up work.

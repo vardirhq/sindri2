@@ -93,6 +93,8 @@ All notable changes to Sindri Next will be documented here.
 - A `verify` binary that reads back a captured PNG and holds it to the colours the demo scene authors, decoded through the engine's own texture decoder.
 - Colour verification of the editor screenshot in CI, which was captured and uploaded but never examined.
 - Gameplay running through the engine's fixed-step loop, so the demo turns at the same rate at any frame rate, proved at 15, 60, and 144 frames per second.
+- An editor that opens a scene file from disk, saves the world back to it in canonical form, and reloads it, with the open file and its unsaved state shown in the status bar.
+- A working File menu and Ctrl+S, replacing menu labels that did nothing.
 
 ### Changed
 
@@ -122,3 +124,5 @@ All notable changes to Sindri Next will be documented here.
 - Moved the demo's cube rotation into a `Game` implementation driven by `EngineHost`, replacing a frame delta integrated by hand in the middle of rendering.
 - Gave the world a single owner: a scene now carries its component schemas only, and extraction reads whichever world the engine or the editor holds.
 - Moved input accumulation out of the windowed host into the engine host, so one `InputState` answers whether a key is down.
+- Made the editor open the demo scene from disk rather than a copy compiled into the binary, falling back to the embedded copy and saying so when the file cannot be read.
+- Made the editor screenshot wait for a frame with content, so a window grabbed before it had drawn no longer produces a blank capture.

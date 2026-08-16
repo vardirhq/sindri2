@@ -43,6 +43,15 @@ xdotool windowmove --sync "$window_id" 0 0
 xdotool windowraise "$window_id"
 sleep 3
 
+# A window that exists but has not drawn yet grabs as a uniform black image.
+# Accepting one would upload an empty screenshot as the editor's artifact and
+# check its colours as though it were a frame, so a capture counts only once it
+# has content. Roughly one grab in five arrived blank before this.
+drawn() {
+    deviation=$(identify -format "%[fx:standard_deviation]" "$1" 2>/dev/null || echo 0)
+    awk -v deviation="$deviation" 'BEGIN { exit !(deviation > 0.01) }'
+}
+
 attempt=0
 while [ "$attempt" -lt 80 ]; do
     if ! kill -0 "$editor_pid" 2>/dev/null; then
@@ -50,7 +59,7 @@ while [ "$attempt" -lt 80 ]; do
         exit 1
     fi
 
-    if import -window "$window_id" "$output_path" 2>/dev/null; then
+    if import -window "$window_id" "$output_path" 2>/dev/null && drawn "$output_path"; then
         exit 0
     fi
 
@@ -58,5 +67,5 @@ while [ "$attempt" -lt 80 ]; do
     sleep 0.25
 done
 
-echo "Sindri Editor window could not be captured" >&2
+echo "Sindri Editor did not draw a frame to capture" >&2
 exit 1

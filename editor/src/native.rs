@@ -20,8 +20,8 @@ use egui_material_icons::{
 use glam::Vec2 as GlamVec2;
 use serde_json::Value;
 use sindri_core::{
-    CommandBuffer, CommandHistory, EngineLifecycle, EngineState, EntityData, EntityId,
-    SceneDocument, Transform2D, Transform3D, World, WorldCommand,
+    CommandBuffer, CommandHistory, EngineLifecycle, EngineState, EntityData, EntityId, Transform2D,
+    Transform3D, World, WorldCommand,
 };
 use sindri_cube::{
     CameraView, DemoScene, FrameRenderers, FrameTarget, TextureBindings, WorldProjection,
@@ -31,6 +31,8 @@ use sindri_render::{
     COLOR_TARGET_FORMAT, DepthTarget, SpriteBatchRenderer, TextureRegistry, TexturedCubeRenderer,
     Viewport,
 };
+
+use crate::scene_file::{DEFAULT_SCENE_PATH, SceneFile};
 
 const INTER_FONT: &[u8] = include_bytes!("../assets/Inter.ttf");
 const ACCENT: Color32 = Color32::from_rgb(246, 169, 35);
@@ -302,7 +304,8 @@ fn create_viewport_texture(
 struct EditorApp {
     scene: DemoScene,
     world: World,
-    authored: SceneDocument,
+    file: SceneFile,
+    unsaved: bool,
     selection: Option<EntityId>,
     history: CommandHistory,
     search: String,
@@ -323,18 +326,18 @@ impl EditorApp {
     fn new(context: &eframe::CreationContext<'_>) -> Self {
         configure_theme(&context.egui_ctx);
         let scene = DemoScene::new().expect("the built-in component schemas register");
-        let authored = DemoScene::authored_document()
-            .expect("the embedded editor fixture must remain a valid scene");
+        let (file, open_error) = open_requested_scene();
         let world = scene
-            .load_world(&authored)
-            .expect("the embedded editor fixture must satisfy the demo component schema");
+            .load_world(file.document())
+            .expect("the opened scene must satisfy the demo component schema");
         let selection = find_by_source_id(&world, "checker-cube");
         let runtime_viewport = RuntimeViewport::new(context)
             .expect("the native editor must initialize its shared WGPU runtime viewport");
         Self {
             scene,
             world,
-            authored,
+            file,
+            unsaved: false,
             selection,
             history: CommandHistory::default(),
             search: String::new(),
@@ -348,8 +351,28 @@ impl EditorApp {
             viewport_pitch: 0.0,
             viewport_zoom: 1.0,
             runtime_viewport,
-            runtime_error: None,
+            runtime_error: open_error,
         }
+    }
+
+    /// Writes the world back to the file it came from.
+    fn save(&mut self) {
+        match self.file.save(&self.world) {
+            Ok(()) => {
+                self.unsaved = false;
+                self.runtime_error = None;
+            }
+            Err(error) => self.runtime_error = Some(error.to_string()),
+        }
+    }
+
+    /// Re-reads the file, discarding unsaved edits along with their history.
+    fn reload(&mut self) {
+        if let Err(error) = self.file.reload() {
+            self.runtime_error = Some(error.to_string());
+            return;
+        }
+        self.reset_to_authored();
     }
 
     /// Changes the selection, ending any in-progress merge run so the next
@@ -374,22 +397,25 @@ impl EditorApp {
         let transaction = buffer
             .into_transaction("Edit entity")
             .merging(format!("inspector:{}", entity.index()));
-        if let Err(error) = self.history.apply(transaction, &mut self.world) {
-            self.runtime_error = Some(error.to_string());
+        match self.history.apply(transaction, &mut self.world) {
+            Ok(()) => self.unsaved = true,
+            Err(error) => self.runtime_error = Some(error.to_string()),
         }
     }
 
     fn undo(&mut self) {
         self.history.break_merge_run();
-        if let Err(error) = self.history.undo(&mut self.world) {
-            self.runtime_error = Some(error.to_string());
+        match self.history.undo(&mut self.world) {
+            Ok(_) => self.unsaved = true,
+            Err(error) => self.runtime_error = Some(error.to_string()),
         }
     }
 
     fn redo(&mut self) {
         self.history.break_merge_run();
-        if let Err(error) = self.history.redo(&mut self.world) {
-            self.runtime_error = Some(error.to_string());
+        match self.history.redo(&mut self.world) {
+            Ok(_) => self.unsaved = true,
+            Err(error) => self.runtime_error = Some(error.to_string()),
         }
     }
 
@@ -398,10 +424,11 @@ impl EditorApp {
     /// Every runtime handle is replaced, so recorded history is discarded
     /// rather than left pointing at entities that no longer exist.
     fn reset_to_authored(&mut self) {
-        match self.scene.load_world(&self.authored) {
+        match self.scene.load_world(self.file.document()) {
             Ok(world) => {
                 self.world = world;
                 self.history.clear();
+                self.unsaved = false;
                 self.selection = find_by_source_id(&self.world, "checker-cube");
                 self.lifecycle = initialized_lifecycle();
                 self.runtime_error = None;
@@ -432,15 +459,19 @@ impl EditorApp {
     }
 
     fn handle_shortcuts(&mut self, context: &egui::Context) {
-        let (undo, redo) = context.input_mut(|input| {
+        let (undo, redo, save) = context.input_mut(|input| {
             (
                 input.consume_key(egui::Modifiers::COMMAND, egui::Key::Z),
                 input.consume_key(
                     egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
                     egui::Key::Z,
                 ) || input.consume_key(egui::Modifiers::COMMAND, egui::Key::Y),
+                input.consume_key(egui::Modifiers::COMMAND, egui::Key::S),
             )
         });
+        if save {
+            self.save();
+        }
         if redo {
             self.redo();
         } else if undo {
@@ -467,7 +498,8 @@ impl EditorApp {
                             .color(ACCENT_BRIGHT),
                     );
                     ui.add_space(8.0);
-                    for menu in ["File", "Edit", "Scene", "View", "Build", "Tools", "Help"] {
+                    self.file_menu(ui);
+                    for menu in ["Edit", "Scene", "View", "Build", "Tools", "Help"] {
                         ui.add(
                             egui::Button::new(RichText::new(menu).size(12.0).color(TEXT_MUTED))
                                 .frame(false),
@@ -651,6 +683,39 @@ impl EditorApp {
             });
     }
 
+    /// The one menu that does anything yet.
+    ///
+    /// Save is disabled rather than hidden when there is no file behind the
+    /// scene, so the reason it cannot be used is visible.
+    fn file_menu(&mut self, ui: &mut egui::Ui) {
+        let saveable = self.file.path().is_some();
+        ui.menu_button(RichText::new("File").size(12.0).color(TEXT_MUTED), |ui| {
+            ui.set_min_width(190.0);
+            if ui
+                .add_enabled(
+                    saveable,
+                    egui::Button::new("Save scene").shortcut_text("Ctrl+S"),
+                )
+                .clicked()
+            {
+                self.save();
+                ui.close();
+            }
+            if ui
+                .add_enabled(saveable, egui::Button::new("Reload from disk"))
+                .clicked()
+            {
+                self.reload();
+                ui.close();
+            }
+            ui.separator();
+            if ui.button("Discard changes").clicked() {
+                self.reset_to_authored();
+                ui.close();
+            }
+        });
+    }
+
     fn status_bar(&self, ui: &mut egui::Ui) {
         egui::Panel::bottom("editor-status")
             .exact_size(26.0)
@@ -672,6 +737,22 @@ impl EditorApp {
                         })
                         .size(11.0)
                         .color(TEXT_MUTED),
+                    );
+                    ui.add_space(10.0);
+                    ui.label(RichText::new("|").size(11.0).color(BORDER));
+                    ui.add_space(10.0);
+                    ui.label(
+                        RichText::new(if self.unsaved {
+                            format!("{} (unsaved)", self.file.label())
+                        } else {
+                            self.file.label()
+                        })
+                        .size(11.0)
+                        .color(if self.unsaved {
+                            ACCENT
+                        } else {
+                            TEXT_MUTED
+                        }),
                     );
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         ui.add_space(12.0);
@@ -1575,9 +1656,27 @@ fn hierarchy_indent(depth: usize, step: f32) -> f32 {
     f32::from(u16::try_from(depth).unwrap_or(u16::MAX)) * step
 }
 
+/// Opens the scene named on the command line, or the demo scene beside it.
+///
+/// A missing or unreadable file is reported rather than fatal: the editor opens
+/// on the scene compiled into it and says what went wrong, which beats a window
+/// that never appears.
+fn open_requested_scene() -> (SceneFile, Option<String>) {
+    let requested = std::env::args().nth(1);
+    let path = requested.as_deref().unwrap_or(DEFAULT_SCENE_PATH);
+    match SceneFile::open(path) {
+        Ok(file) => (file, None),
+        Err(error) => {
+            let embedded = DemoScene::authored_document()
+                .expect("the embedded editor fixture must remain a valid scene");
+            (SceneFile::detached(embedded), Some(error.to_string()))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use sindri_core::{CommandHistory, SceneEntity, SceneEntityId};
+    use sindri_core::{CommandHistory, SceneDocument, SceneEntity, SceneEntityId};
 
     use super::*;
 
