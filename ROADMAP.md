@@ -62,8 +62,8 @@ Exit gate: core runs without GPU/window/browser dependencies and scene fixtures 
 
 - [x] Add `sindri-platform` traits for lifecycle, input source, clock, and asset I/O (asset I/O stays in `sindri-assets`)
 - [x] Add desktop adapter using `winit` — window, event loop, frame timing, and input all live in `sindri-desktop`
-- [ ] Add web adapter using `wasm-bindgen`, `web-sys`, and async initialization (the `winit` host already serves the browser through the same event loop; a `sindri-web` binding crate for the TypeScript SDK is Milestone 5)
-- [ ] Keep target-specific conditionals inside platform hosts (window, canvas, spawning, and clock conditionals now live in the host; each example still selects its own logger)
+- [x] Add web adapter using `wasm-bindgen`, `web-sys`, and async initialization — the `winit` host serves the browser through the same event loop, canvas attachment, and asynchronous device request; the `sindri-web` binding crate for the TypeScript SDK is Milestone 5 rather than a second host
+- [x] Keep target-specific conditionals inside platform hosts — window, canvas, future spawning, and the clock live in `sindri-desktop`; each application still picks its own logger, which is an application choice rather than a host detail
 - [ ] Produce explicit capability errors for unavailable WebGPU/surface features
 
 ### GPU foundation
@@ -162,6 +162,7 @@ Exit gate: `npm install @sindri/engine` can run a documented sprite-and-cube bro
 - [ ] Port layers, parallax, anchors, and sprite bounds
 - [ ] Port A* pathfinding into a renderer-free grid crate
 - [ ] Add optional Rapier2D adapter without core dependency
+- [ ] Add 2D pan/zoom viewport controls, which need a 2D scene rather than the screen-anchored overlay the demo uses
 - [ ] Build `hello-2d` and one small platformer vertical slice
 - [ ] Verify both examples natively and in browser
 
@@ -180,12 +181,15 @@ Exit gate: Sindri Next matches the useful core of legacy 2D without inheriting i
 - [ ] Inspect/edit names, hierarchy, Transform2D, and Transform3D (names and both transforms done; reparenting has a command but no UI)
 - [x] Add selection and transform change commands
 - [x] Add command-based undo/redo with transaction grouping
-- [ ] Add 2D pan/zoom and basic 3D orbit camera controls (3D orbit, pan, and zoom done, with a reset control; 2D pan/zoom waits for a 2D scene, since the demo's 2D content is a screen-anchored overlay rather than a world to move around in)
+- [x] Add 3D orbit, pan, and zoom camera controls, with a reset to the authored camera
 - [x] Add play, pause, stop, and reset-to-authored-state
 - [ ] Add one sprite, one cube, and one camera editor fixture
 - [ ] Add protocol contract and save/reload integration tests
 
 Exit gate: editing a transform, saving, and reopening produces the same visible native/web scene.
+
+This milestone is about the editor understanding the runtime model. Whether the
+editor is pleasant to use for an afternoon is tracked separately, below.
 
 ## Milestone 8 — Basic 3D product capability
 
@@ -232,6 +236,36 @@ Exit gate: shared grid/gameplay logic supports both sprite isometric and orthogr
 
 Exit gate: all first-major-release success criteria in `PROJECT_OVERVIEW.md` pass from clean generated projects.
 
+## Editor usability — continuous, not a milestone
+
+The milestones above ask whether the editor understands the engine. This asks
+whether it is bearable to sit in front of, which is a different question and is
+not answered by planning: items land here because using the editor turned one
+up, so the list is deliberately unordered and never finished.
+
+It is kept because work that has no home is work the plan cannot see. Everything
+below happened, or was wanted, off the back of actually opening the editor.
+
+Done:
+
+- [x] Open, save, and reload a scene file, with the open file and its unsaved state visible
+- [x] A working File menu and Ctrl+S, replacing labels that did nothing
+- [x] Settings that survive a launch, alongside the window geometry and panel sizes egui persists
+- [x] A project browser list view showing each asset's kind, defaulting to list until thumbnails exist
+- [x] A game view rendering the authored camera beside the scene view being edited
+- [x] Undo and redo on the toolbar and on the keyboard
+
+Wanted, in no particular order:
+
+- [ ] Read the project browser from a real asset directory; its contents are currently a fixed list
+- [ ] Named layout presets, including a two-column arrangement with the scene and game views stacked
+- [ ] Asset thumbnails, after which the grid view is worth defaulting to again
+- [ ] Reparenting in the hierarchy, which has a command and no interface
+- [ ] Transform gizmos in the viewport
+- [ ] Open a scene from the interface rather than only from the command line
+- [ ] Warn before discarding unsaved work on reload, reset, or exit
+- [ ] Filter the project browser and the hierarchy with the search fields that already exist
+
 ## Future research — first-class Sindri gameplay language
 
 This is a post-foundation research track, not part of the first major release. Do not begin language implementation until representative Rust and TypeScript vertical slices expose concrete gameplay-authoring problems. A Sindri language would complement, not replace, the first-class Rust and TypeScript workflows.
@@ -261,3 +295,4 @@ Exit gate: a representative scripted vertical slice runs with equivalent behavio
 - [ ] Plugin marketplace
 - [ ] Cloud services
 - [ ] AI-assisted actions beyond a structured editor command proof
+- [ ] Faster component storage: typed queries clone and deserialize each JSON payload, which `docs/entity-scaling.md` measured as the slowest part of reading a world and named as the thing to fix if any of it ever matters

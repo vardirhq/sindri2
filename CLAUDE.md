@@ -17,7 +17,9 @@ inferred from code:
   sections relevant to a change before making architectural decisions.
 - `ROADMAP.md` — the checkable engineering plan, ordered by dependency. Milestone
   checkboxes reflect real state; tick one only when its acceptance criteria and
-  tests are done.
+  tests are done. Work that using the editor turned up, rather than the plan
+  calling for it, belongs in its "Editor usability" track instead of being
+  wedged into a milestone.
 - `docs/FEASIBILITY.md` — the non-negotiable decisions (runtime handles vs scene
   IDs, versioned scenes, coarse WASM calls, WebGPU-first, etc.).
 
