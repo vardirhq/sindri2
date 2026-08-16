@@ -99,6 +99,8 @@ All notable changes to Sindri Next will be documented here.
 - A `ViewportTarget` owning a colour target, the two views a Sindri target is drawn into and sampled through, and the depth buffer rebuilt with it.
 - Camera panning in the editor viewport, measured in fractions of the framed height so a drag moves the picture the same distance at any zoom and under either projection.
 - A reset control returning the editor viewport to the camera the scene authored.
+- Editor settings that survive a launch — the project browser's presentation, the viewport projection, and the open bottom dock — alongside the window geometry and panel sizes egui persists itself.
+- A project browser list view showing each asset's name and kind, now the default.
 
 ### Changed
 
@@ -132,3 +134,4 @@ All notable changes to Sindri Next will be documented here.
 - Made the editor screenshot wait for a frame with content, so a window grabbed before it had drawn no longer produces a blank capture.
 - Fixed scene validation being quadratic in the number of entities, which every load, save, and canonical serialization paid: a ten thousand entity scene took about 1.4 seconds to validate and now takes ten milliseconds, and a hundred thousand entity scene completes at all.
 - Moved the editor's viewport colour and depth targets onto the shared `ViewportTarget`, so the rule that kept them in the right colour space lives in the renderer rather than in one caller.
+- Made the project browser's list and grid buttons switch the view; they were drawn but did nothing.

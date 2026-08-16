@@ -31,7 +31,10 @@ use sindri_render::{
     SpriteBatchRenderer, TextureRegistry, TexturedCubeRenderer, Viewport, ViewportTarget,
 };
 
-use crate::scene_file::{DEFAULT_SCENE_PATH, SceneFile};
+use crate::{
+    preferences::{AssetView, BottomTab, CameraProjection, Preferences},
+    scene_file::{DEFAULT_SCENE_PATH, SceneFile},
+};
 
 const INTER_FONT: &[u8] = include_bytes!("../assets/Inter.ttf");
 const ACCENT: Color32 = Color32::from_rgb(246, 169, 35);
@@ -79,18 +82,6 @@ enum EditorMode {
 enum WorkspaceTab {
     Scene,
     Game,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum BottomTab {
-    Project,
-    Console,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum CameraProjection {
-    Perspective,
-    Orthographic,
 }
 
 /// How the editor is looking at the scene, as opposed to what the scene says.
@@ -226,8 +217,7 @@ struct EditorApp {
     asset_search: String,
     mode: EditorMode,
     workspace_tab: WorkspaceTab,
-    bottom_tab: BottomTab,
-    projection: CameraProjection,
+    preferences: Preferences,
     lifecycle: EngineLifecycle,
     viewport_yaw: f32,
     viewport_pitch: f32,
@@ -240,6 +230,7 @@ struct EditorApp {
 impl EditorApp {
     fn new(context: &eframe::CreationContext<'_>) -> Self {
         configure_theme(&context.egui_ctx);
+        let preferences = Preferences::load(context.storage);
         let scene = DemoScene::new().expect("the built-in component schemas register");
         let (file, open_error) = open_requested_scene();
         let world = scene
@@ -259,8 +250,7 @@ impl EditorApp {
             asset_search: String::new(),
             mode: EditorMode::Select,
             workspace_tab: WorkspaceTab::Scene,
-            bottom_tab: BottomTab::Project,
-            projection: CameraProjection::Perspective,
+            preferences,
             lifecycle: initialized_lifecycle(),
             viewport_yaw: 0.0,
             viewport_pitch: 0.0,
@@ -630,12 +620,26 @@ impl EditorApp {
             )
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
-                    bottom_tab(ui, &mut self.bottom_tab, BottomTab::Project, "Project");
-                    bottom_tab(ui, &mut self.bottom_tab, BottomTab::Console, "Console");
+                    bottom_tab(
+                        ui,
+                        &mut self.preferences.bottom_tab,
+                        BottomTab::Project,
+                        "Project",
+                    );
+                    bottom_tab(
+                        ui,
+                        &mut self.preferences.bottom_tab,
+                        BottomTab::Console,
+                        "Console",
+                    );
                 });
                 ui.separator();
-                match self.bottom_tab {
-                    BottomTab::Project => project_browser(ui, &mut self.asset_search),
+                match self.preferences.bottom_tab {
+                    BottomTab::Project => project_browser(
+                        ui,
+                        &mut self.asset_search,
+                        &mut self.preferences.asset_view,
+                    ),
                     BottomTab::Console => {
                         console_view(ui, self.world.len(), self.lifecycle.state());
                     }
@@ -782,13 +786,13 @@ impl EditorApp {
                         ui.add_space(8.0);
                         projection_button(
                             ui,
-                            &mut self.projection,
+                            &mut self.preferences.projection,
                             CameraProjection::Orthographic,
                             "Ortho",
                         );
                         projection_button(
                             ui,
-                            &mut self.projection,
+                            &mut self.preferences.projection,
                             CameraProjection::Perspective,
                             "Perspective",
                         );
@@ -811,7 +815,7 @@ impl EditorApp {
                             orbit: GlamVec2::new(self.viewport_yaw, self.viewport_pitch),
                             zoom: self.viewport_zoom,
                             pan: self.viewport_pan,
-                            projection: self.projection,
+                            projection: self.preferences.projection,
                         },
                     )
                     .err();
@@ -836,6 +840,11 @@ impl EditorApp {
 }
 
 impl eframe::App for EditorApp {
+    /// Settings are written when eframe decides to, which includes shutdown.
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        self.preferences.save(storage);
+    }
+
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         self.handle_shortcuts(ui.ctx());
         self.top_bar(ui);
@@ -1127,7 +1136,24 @@ fn vector_row_2d(ui: &mut egui::Ui, label: &str, values: &mut [f32; 2]) {
     });
 }
 
-fn project_browser(ui: &mut egui::Ui, search: &mut String) {
+/// What the project browser shows, until it reads a real asset directory.
+///
+/// Each entry carries its kind as well as its name, because a list has room to
+/// say what a thing is and a grid of generic icons does not.
+fn project_assets() -> [(MaterialIcon, &'static str, &'static str); 8] {
+    [
+        (ICON_FOLDER, "Materials", "Folder"),
+        (ICON_FOLDER, "Models", "Folder"),
+        (ICON_FOLDER, "Scenes", "Folder"),
+        (ICON_FOLDER, "Scripts", "Folder"),
+        (ICON_DESCRIPTION, "demo.scene", "Scene"),
+        (ICON_VIEW_IN_AR, "checker_cube", "Mesh"),
+        (ICON_IMAGE, "badge", "Texture"),
+        (ICON_CODE, "scene.rs", "Script"),
+    ]
+}
+
+fn project_browser(ui: &mut egui::Ui, search: &mut String, view: &mut AssetView) {
     ui.horizontal(|ui| {
         ui.vertical(|ui| {
             ui.set_width(174.0);
@@ -1147,8 +1173,16 @@ fn project_browser(ui: &mut egui::Ui, search: &mut String) {
             ui.horizontal(|ui| {
                 ui.label(RichText::new("Assets").size(12.0).color(TEXT));
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    icon_button(ui, ICON_VIEW_LIST, false, "List view");
-                    icon_button(ui, ICON_GRID_VIEW, true, "Grid view");
+                    if icon_button(ui, ICON_VIEW_LIST, *view == AssetView::List, "List view")
+                        .clicked()
+                    {
+                        *view = AssetView::List;
+                    }
+                    if icon_button(ui, ICON_GRID_VIEW, *view == AssetView::Grid, "Grid view")
+                        .clicked()
+                    {
+                        *view = AssetView::Grid;
+                    }
                     icon_button(ui, ICON_FILTER_LIST, false, "Filter assets");
                     ui.add_sized(
                         [210.0, 27.0],
@@ -1157,20 +1191,53 @@ fn project_browser(ui: &mut egui::Ui, search: &mut String) {
                 });
             });
             ui.add_space(8.0);
-            ui.horizontal_wrapped(|ui| {
-                for (icon, label) in [
-                    (ICON_FOLDER, "Materials"),
-                    (ICON_FOLDER, "Models"),
-                    (ICON_FOLDER, "Scenes"),
-                    (ICON_FOLDER, "Scripts"),
-                    (ICON_DESCRIPTION, "demo.scene"),
-                    (ICON_VIEW_IN_AR, "checker_cube"),
-                    (ICON_IMAGE, "badge"),
-                    (ICON_CODE, "scene.rs"),
-                ] {
-                    asset_tile(ui, icon, label);
-                }
-            });
+            // A project has more assets than a dock has room for, in either
+            // presentation. Scrolling here is what lets the list be the default
+            // without the last few assets falling off the bottom.
+            egui::ScrollArea::vertical()
+                .auto_shrink([false, false])
+                .show(ui, |ui| match view {
+                    AssetView::Grid => {
+                        ui.horizontal_wrapped(|ui| {
+                            for (icon, label, _) in project_assets() {
+                                asset_tile(ui, icon, label);
+                            }
+                        });
+                    }
+                    AssetView::List => {
+                        // Rows are denser than egui's default spacing, so the
+                        // dock shows a useful number of them without taking
+                        // height from the viewport it sits under.
+                        ui.spacing_mut().item_spacing.y = 1.0;
+                        for (icon, label, kind) in project_assets() {
+                            asset_row(ui, icon, label, kind);
+                        }
+                    }
+                });
+        });
+    });
+}
+
+/// One asset as a row: what it is called, and what it is.
+fn asset_row(ui: &mut egui::Ui, icon: MaterialIcon, label: &str, kind: &str) {
+    let highlighted = label == "demo.scene";
+    ui.horizontal(|ui| {
+        ui.add_space(4.0);
+        ui.label(
+            icon.outlined()
+                .rich_text()
+                .size(15.0)
+                .color(if highlighted { ACCENT } else { TEXT_FAINT }),
+        );
+        ui.add_space(2.0);
+        ui.label(RichText::new(label).size(11.0).color(if highlighted {
+            TEXT
+        } else {
+            TEXT_MUTED
+        }));
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.add_space(10.0);
+            ui.label(RichText::new(kind).size(10.0).color(TEXT_FAINT));
         });
     });
 }
