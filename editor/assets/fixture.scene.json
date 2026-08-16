@@ -1,0 +1,74 @@
+{
+  "format_version": 1,
+  "metadata": {
+    "name": "Editor fixture"
+  },
+  "entities": [
+    {
+      "id": "cube",
+      "name": "Cube",
+      "transform_3d": {
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "components": {
+        "sindri.mesh": {
+          "layer": 0,
+          "primitive": "cube",
+          "texture": "procedural:checkerboard"
+        }
+      }
+    },
+    {
+      "id": "overlay-camera",
+      "name": "Overlay Camera",
+      "components": {
+        "sindri.camera": {
+          "center": [0.0, 0.0],
+          "far": 10.0,
+          "near": 0.0,
+          "projection": "orthographic",
+          "vertical_size": 2.0
+        }
+      }
+    },
+    {
+      "id": "sprite",
+      "name": "Sprite",
+      "transform_2d": {
+        "position": [0.0, 0.0],
+        "rotation_radians": 0.0,
+        "scale": [0.5, 0.5]
+      },
+      "components": {
+        "sindri.sprite": {
+          "anchor": "center",
+          "depth": 0.0,
+          "layer": 100,
+          "texture": "textures/badge.png",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "id": "world-camera",
+      "name": "World Camera",
+      "transform_3d": {
+        "position": [3.0, 2.0, 4.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "components": {
+        "sindri.camera": {
+          "far": 100.0,
+          "near": 0.1,
+          "projection": "perspective",
+          "target": [0.0, 0.0, 0.0],
+          "up": [0.0, 1.0, 0.0],
+          "vertical_fov_degrees": 45.0
+        }
+      }
+    }
+  ]
+}

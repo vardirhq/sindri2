@@ -196,8 +196,8 @@ Exit gate: Sindri Next matches the useful core of legacy 2D without inheriting i
 - [x] Add command-based undo/redo with transaction grouping
 - [x] Add 3D orbit, pan, and zoom camera controls, with a reset to the authored camera
 - [x] Add play, pause, stop, and reset-to-authored-state
-- [ ] Add one sprite, one cube, and one camera editor fixture
-- [ ] Add protocol contract and save/reload integration tests
+- [x] Add one sprite, one cube, and one camera editor fixture — `editor/assets/fixture.scene.json`; it holds two cameras rather than one, because a mesh needs a world camera and a sprite resolves its anchor against an overlay camera
+- [ ] Add protocol contract and save/reload integration tests (save, reload, and undo are covered end to end in `editor/tests/fixture_scene.rs`; the protocol contract waits on the protocol)
 
 Exit gate: editing a transform, saving, and reopening produces the same visible native/web scene.
 
