@@ -53,6 +53,30 @@ it and only the editor's view of it moves — which is why a save after looking
 around writes nothing. Panning can carry the subject off screen, so there is a
 reset control rather than an expectation that the viewer finds their way back.
 
+## Defaults, and what is remembered
+
+Settings survive a launch through eframe's storage: the project browser's
+presentation, the viewport projection, and which bottom dock is open, alongside
+the window geometry and panel sizes egui persists itself. Anything derived from
+the scene, the selection, or the current camera is state rather than preference,
+and restoring it would be restoring a moment rather than a choice.
+
+Persistence is what makes a default a small decision. A default only has to be a
+reasonable first guess, because disagreeing with it costs one click ever rather
+than one per launch, so defaults are chosen on their merits and not to satisfy
+whoever complained most recently.
+
+Two of them are worth writing down:
+
+- **The project browser opens as a list.** The grid's tiles show a generic icon
+  per file type rather than a picture of the asset, so until a thumbnail is a
+  thumbnail the grid spends more space to say less. This flips back when there
+  is something to look at.
+- **The workspace layout stays viewport-first**, as `design-qa.md` chose. A
+  layout that quarters the viewport to fit a second view is a different product
+  decision, not a preference, and it belongs behind a named layout rather than
+  in the default.
+
 ## A scene is a file
 
 The editor takes a path — the demo scene by default, or one named on the command
