@@ -5,7 +5,8 @@ Guidance for AI assistants working in this repository.
 ## What this is
 
 Sindri Next is a pre-alpha Rust game engine targeting native desktop and WebGPU
-browsers, with a planned TypeScript SDK and an integrated native editor. It is a
+browsers, with a planned TypeScript SDK and an integrated native editor that is
+meant to become a full authoring tool rather than a scene viewer. It is a
 Cargo workspace at foundation stage: the engine core, platform boundary, GPU and
 renderer layers, asset pipeline, and an editor shell exist; the web SDK, 2D
 migration, 3D product features, and isometric module do not.

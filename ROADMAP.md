@@ -153,11 +153,24 @@ Exit gate: `npm install @sindri/engine` can run a documented sprite-and-cube bro
 
 ## Milestone 6 — Focused 2D migration
 
+An item here is finished when the editor understands it, not when the runtime
+does. `PROJECT_OVERVIEW.md` makes that a project rule and Milestone 9 lists its
+editor tools accordingly; this milestone listed only runtime halves, so the
+authoring surfaces are named explicitly below.
+
+They follow their runtime half rather than lead it. A sheet editor edits a
+format, so the format, its serialization, and its renderer come first —
+designing a data model through the tool that paints it is how the model ends up
+shaped like the tool.
+
 - [ ] Inventory each legacy 2D subsystem as port, refactor, replace, or defer
 - [ ] Port sprite animation and sprite sheets
+- [ ] Add a sprite sheet authoring surface: slice a sheet into frames, name clips, set timing, preview playback
 - [ ] Port camera 2D behavior and pixel snapping
 - [ ] Port tilemap data model and renderer
+- [ ] Add tilemap authoring: a tile palette, paint and erase, and layer selection
 - [ ] Port text rendering with a web-safe font asset strategy
+- [ ] Add font and text authoring: choose a font asset and edit text content in the inspector
 - [ ] Port particles after the render lifecycle is stable
 - [ ] Port layers, parallax, anchors, and sprite bounds
 - [ ] Port A* pathfinding into a renderer-free grid crate
@@ -166,7 +179,7 @@ Exit gate: `npm install @sindri/engine` can run a documented sprite-and-cube bro
 - [ ] Build `hello-2d` and one small platformer vertical slice
 - [ ] Verify both examples natively and in browser
 
-Exit gate: Sindri Next matches the useful core of legacy 2D without inheriting its desktop/server/Lua coupling.
+Exit gate: Sindri Next matches the useful core of legacy 2D without inheriting its desktop/server/Lua coupling, and each ported system can be authored in the editor rather than only by hand in JSON.
 
 ## Milestone 7 — Editor/runtime protocol and minimal editor
 
@@ -236,6 +249,54 @@ Exit gate: shared grid/gameplay logic supports both sprite isometric and orthogr
 
 Exit gate: all first-major-release success criteria in `PROJECT_OVERVIEW.md` pass from clean generated projects.
 
+## Milestone 11 — The editor as a working tool
+
+The first major release needs the editor of Milestone 7: open a project, inspect
+entities, edit a transform, and preview the real scene. This milestone is the
+distance between that and an editor someone would choose to spend a day in.
+
+It comes last because it is where every other milestone's authoring surface
+converges. Editing a sprite sheet needs sprite sheets; painting tiles needs
+tilemaps; a gizmo needs something to transform. Those live with their features
+in Milestones 6, 8, and 9 rather than here, and what is left below is the work
+that belongs to no single engine feature.
+
+Full-fledged means complete for what Sindri does, not feature-for-feature with
+Unity — `PROJECT_OVERVIEW.md` rules that out, and an editor that grows ahead of
+the engine would be authoring things nothing can run.
+
+### Authoring the world
+
+- [ ] Create, duplicate, and delete entities from the interface
+- [ ] Add and remove components through the inspector, driven by the schema registry rather than a hardcoded list
+- [ ] Reparent by dragging in the hierarchy, using the command that already exists
+- [ ] Multi-select, and edit what a selection has in common
+- [ ] Copy, paste, and duplicate across scenes
+- [ ] Decide whether Sindri has prefabs, and if so what a prefab override is
+
+### Working on a project
+
+- [ ] Open a project rather than a single scene, and manage more than one scene at a time
+- [ ] Import assets from a watched directory, decoding and registering them without a rebuild
+- [ ] Surface project settings, whatever `sindri.toml` turns out to hold
+- [ ] Show real engine logs, errors, and asset failures in the console
+- [ ] Search and filter that reaches both the hierarchy and the project browser
+
+### Running the game
+
+- [ ] Play mode that runs the real game loop against the edited world, with pause and single step
+- [ ] Native preview, and web preview through the actual WASM build
+- [ ] Frame timing, draw calls, and entity counts where a developer can see them
+
+### Shape of the tool
+
+- [ ] Named layout presets, and panels that can be rearranged
+- [ ] Script editing, or a clean handoff to the editor a developer already uses
+- [ ] Expose editor actions as structured commands, which is what AI tooling operates through
+
+Exit gate: someone can build one of the shipped examples from scratch inside the
+editor — entities, components, assets, and all — without hand-editing JSON.
+
 ## Editor usability — continuous, not a milestone
 
 The milestones above ask whether the editor understands the engine. This asks
@@ -255,16 +316,15 @@ Done:
 - [x] A game view rendering the authored camera beside the scene view being edited
 - [x] Undo and redo on the toolbar and on the keyboard
 
-Wanted, in no particular order:
+Wanted, in no particular order. Several of these are small enough to do the
+moment they annoy someone, and are also named in Milestone 11 as part of the
+larger tool; doing one here early is the point rather than a conflict.
 
 - [ ] Read the project browser from a real asset directory; its contents are currently a fixed list
-- [ ] Named layout presets, including a two-column arrangement with the scene and game views stacked
 - [ ] Asset thumbnails, after which the grid view is worth defaulting to again
-- [ ] Reparenting in the hierarchy, which has a command and no interface
-- [ ] Transform gizmos in the viewport
-- [ ] Open a scene from the interface rather than only from the command line
 - [ ] Warn before discarding unsaved work on reload, reset, or exit
-- [ ] Filter the project browser and the hierarchy with the search fields that already exist
+- [ ] Open a scene from the interface rather than only from the command line
+- [ ] Show which entity a hierarchy row is, when its name is empty or repeated
 
 ## Future research — first-class Sindri gameplay language
 
