@@ -31,7 +31,8 @@ impl DesktopApp for MyGame {
     type Error = MyError;
 
     fn create(context: &AppContext<'_>) -> Result<Self, Self::Error> { /* build renderers */ }
-    fn update(&mut self, input: &InputState, delta: Duration) -> Result<Flow, Self::Error> { /* write the world */ }
+    fn input(&mut self, event: InputEvent) { /* hand to the engine */ }
+    fn update(&mut self, delta: Duration) -> Result<Flow, Self::Error> { /* advance the engine */ }
     fn resize(&mut self, context: &AppContext<'_>) -> Result<(), Self::Error> { /* resize depth targets */ }
     fn render(&mut self, context: &AppContext<'_>, view: &wgpu::TextureView) -> Result<(), Self::Error> { /* encode */ }
 }
