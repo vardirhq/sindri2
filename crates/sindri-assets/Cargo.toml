@@ -21,7 +21,7 @@ wasm-bindgen-futures.workspace = true
 web-sys = { workspace = true, features = ["Headers", "Response", "Window"] }
 
 [dev-dependencies]
-pollster = "0.4"
+pollster = "1.0"
 tempfile = "3"
 
 [lints]

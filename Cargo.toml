@@ -30,7 +30,7 @@ thiserror = "2"
 futures = "0.3"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 log = "0.4"
-pollster = "0.4"
+pollster = "1.0"
 web-time = "1"
 wgpu = "30"
 winit = "0.30.13"
