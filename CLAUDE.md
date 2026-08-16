@@ -27,6 +27,9 @@ Per-subsystem contracts live in `docs/`: `asset-foundation.md`,
 `rendering-surface.md`, `platform-host.md`, `editor-architecture.md`. When you
 change a subsystem's behaviour, update its doc in the same change.
 
+`docs/entity-scaling.md` records what the world costs at 1k, 10k, and 100k
+entities, and why an archetype ECS is not warranted.
+
 Project policy lives alongside them: `docs/versioning.md` (crate and scene
 format versions; the editor protocol and npm SDK are deliberately undecided) and
 `docs/dependency-policy.md` (what `cargo deny` enforces). `CONTRIBUTING.md`
