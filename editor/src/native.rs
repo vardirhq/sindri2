@@ -92,6 +92,17 @@ enum CameraProjection {
     Orthographic,
 }
 
+/// How the editor is looking at the scene, as opposed to what the scene says.
+///
+/// The authored camera lives in the world; this moves around it without
+/// touching a single entity.
+#[derive(Clone, Copy)]
+struct EditorCamera {
+    orbit: GlamVec2,
+    zoom: f32,
+    projection: CameraProjection,
+}
+
 struct RuntimeViewport {
     render_state: eframe::egui_wgpu::RenderState,
     texture: wgpu::Texture,
@@ -153,20 +164,19 @@ impl RuntimeViewport {
     fn render(
         &mut self,
         scene: &DemoScene,
-        width: u32,
-        height: u32,
-        rotation: GlamVec2,
-        zoom: f32,
-        projection: CameraProjection,
+        world: &World,
+        size: (u32, u32),
+        camera: EditorCamera,
     ) -> Result<(), String> {
-        self.resize(width, height);
+        self.resize(size.0, size.1);
         let prepared = scene
             .extract(
+                world,
                 Viewport::new(self.width, self.height),
                 CameraView {
-                    orbit: rotation,
-                    distance_scale: 1.0 / zoom,
-                    projection: match projection {
+                    orbit: camera.orbit,
+                    distance_scale: 1.0 / camera.zoom,
+                    projection: match camera.projection {
                         CameraProjection::Perspective => WorldProjection::Perspective,
                         CameraProjection::Orthographic => WorldProjection::Orthographic,
                     },
@@ -291,6 +301,7 @@ fn create_viewport_texture(
 
 struct EditorApp {
     scene: DemoScene,
+    world: World,
     authored: SceneDocument,
     selection: Option<EntityId>,
     history: CommandHistory,
@@ -311,15 +322,18 @@ struct EditorApp {
 impl EditorApp {
     fn new(context: &eframe::CreationContext<'_>) -> Self {
         configure_theme(&context.egui_ctx);
+        let scene = DemoScene::new().expect("the built-in component schemas register");
         let authored = DemoScene::authored_document()
             .expect("the embedded editor fixture must remain a valid scene");
-        let scene = DemoScene::from_document(&authored)
+        let world = scene
+            .load_world(&authored)
             .expect("the embedded editor fixture must satisfy the demo component schema");
-        let selection = find_by_source_id(scene.world(), "checker-cube");
+        let selection = find_by_source_id(&world, "checker-cube");
         let runtime_viewport = RuntimeViewport::new(context)
             .expect("the native editor must initialize its shared WGPU runtime viewport");
         Self {
             scene,
+            world,
             authored,
             selection,
             history: CommandHistory::default(),
@@ -360,21 +374,21 @@ impl EditorApp {
         let transaction = buffer
             .into_transaction("Edit entity")
             .merging(format!("inspector:{}", entity.index()));
-        if let Err(error) = self.history.apply(transaction, self.scene.world_mut()) {
+        if let Err(error) = self.history.apply(transaction, &mut self.world) {
             self.runtime_error = Some(error.to_string());
         }
     }
 
     fn undo(&mut self) {
         self.history.break_merge_run();
-        if let Err(error) = self.history.undo(self.scene.world_mut()) {
+        if let Err(error) = self.history.undo(&mut self.world) {
             self.runtime_error = Some(error.to_string());
         }
     }
 
     fn redo(&mut self) {
         self.history.break_merge_run();
-        if let Err(error) = self.history.redo(self.scene.world_mut()) {
+        if let Err(error) = self.history.redo(&mut self.world) {
             self.runtime_error = Some(error.to_string());
         }
     }
@@ -384,11 +398,11 @@ impl EditorApp {
     /// Every runtime handle is replaced, so recorded history is discarded
     /// rather than left pointing at entities that no longer exist.
     fn reset_to_authored(&mut self) {
-        match DemoScene::from_document(&self.authored) {
-            Ok(scene) => {
-                self.scene = scene;
+        match self.scene.load_world(&self.authored) {
+            Ok(world) => {
+                self.world = world;
                 self.history.clear();
-                self.selection = find_by_source_id(self.scene.world(), "checker-cube");
+                self.selection = find_by_source_id(&self.world, "checker-cube");
                 self.lifecycle = initialized_lifecycle();
                 self.runtime_error = None;
             }
@@ -534,8 +548,8 @@ impl EditorApp {
                         hierarchy_group(ui, "World", ICON_ACCOUNT_TREE);
                         let needle = self.search.trim().to_lowercase();
                         let mut clicked = None;
-                        for (entity, depth) in hierarchy_rows(self.scene.world()) {
-                            let Some(data) = self.scene.world().get(entity) else {
+                        for (entity, depth) in hierarchy_rows(&self.world) {
+                            let Some(data) = self.world.get(entity) else {
                                 continue;
                             };
                             let name = entity_name(data);
@@ -577,7 +591,7 @@ impl EditorApp {
                 let Some(entity) = self.selection else {
                     return;
                 };
-                let Some(data) = self.scene.world().get(entity) else {
+                let Some(data) = self.world.get(entity) else {
                     return;
                 };
                 // Widgets edit a draft copy; every difference becomes a command,
@@ -631,7 +645,7 @@ impl EditorApp {
                 match self.bottom_tab {
                     BottomTab::Project => project_browser(ui, &mut self.asset_search),
                     BottomTab::Console => {
-                        console_view(ui, self.scene.world().len(), self.lifecycle.state());
+                        console_view(ui, self.world.len(), self.lifecycle.state());
                     }
                 }
             });
@@ -750,11 +764,16 @@ impl EditorApp {
                     .runtime_viewport
                     .render(
                         &self.scene,
-                        physical_viewport_dimension(rect.width(), scale),
-                        physical_viewport_dimension(rect.height(), scale),
-                        GlamVec2::new(self.viewport_yaw, self.viewport_pitch),
-                        self.viewport_zoom,
-                        self.projection,
+                        &self.world,
+                        (
+                            physical_viewport_dimension(rect.width(), scale),
+                            physical_viewport_dimension(rect.height(), scale),
+                        ),
+                        EditorCamera {
+                            orbit: GlamVec2::new(self.viewport_yaw, self.viewport_pitch),
+                            zoom: self.viewport_zoom,
+                            projection: self.projection,
+                        },
                     )
                     .err();
                 ui.painter().image(
@@ -768,7 +787,7 @@ impl EditorApp {
                     rect,
                     &self
                         .selection
-                        .and_then(|entity| self.scene.world().get(entity))
+                        .and_then(|entity| self.world.get(entity))
                         .map_or_else(|| "No selection".to_owned(), entity_name),
                     self.runtime_error.as_deref(),
                 );
@@ -1562,11 +1581,14 @@ mod tests {
 
     use super::*;
 
+    fn demo_scene() -> DemoScene {
+        DemoScene::new().unwrap()
+    }
+
     fn demo_world() -> World {
-        DemoScene::from_document(&DemoScene::authored_document().unwrap())
+        demo_scene()
+            .load_world(&DemoScene::authored_document().unwrap())
             .unwrap()
-            .world()
-            .clone()
     }
 
     fn nested_scene() -> SceneDocument {
@@ -1710,11 +1732,12 @@ mod tests {
             .unwrap();
 
         let saved = world.to_scene().unwrap().to_canonical_json().unwrap();
-        let reopened =
-            DemoScene::from_document(&SceneDocument::from_json(&saved).unwrap()).unwrap();
-        let reloaded = find_by_source_id(reopened.world(), "checker-cube").unwrap();
+        let reopened = demo_scene()
+            .load_world(&SceneDocument::from_json(&saved).unwrap())
+            .unwrap();
+        let reloaded = find_by_source_id(&reopened, "checker-cube").unwrap();
         assert_eq!(
-            reopened.world().get(reloaded).unwrap().transform_3d,
+            reopened.get(reloaded).unwrap().transform_3d,
             draft.transform_3d
         );
     }

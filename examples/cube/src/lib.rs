@@ -3,8 +3,9 @@ use std::time::Duration;
 use glam::Vec2;
 use sindri_assets::{AssetBytes, AssetDecoder, TextureAssetDecoder};
 use sindri_core::AssetId;
+use sindri_core::FixedStepConfig;
 use sindri_desktop::{AppContext, DesktopApp, Flow, WindowConfig};
-use sindri_platform::{InputState, Key};
+use sindri_platform::{EngineHost, FrameContext, Game, HostError, InputEvent, Key};
 use sindri_render::{
     DepthTarget, DrawContext, FrameCommand, PreparedFrame, SpriteBatchError, SpriteBatchRenderer,
     SpriteBatchStats, Texture2D, TextureRegistry, TexturedCubeRenderer, Viewport,
@@ -17,7 +18,7 @@ mod scene;
 pub use colors::{
     AUTHORED_COLORS, CHANNEL_TOLERANCE, MINIMUM_SHARE_PER_THOUSAND, verify_authored_colors,
 };
-pub use scene::{DemoScene, DemoSceneError};
+pub use scene::{DemoScene, DemoSceneError, spin_cube};
 pub use sindri_scene::{CameraView, TextureBindings, WorldProjection};
 
 #[derive(Clone, Copy)]
@@ -26,60 +27,78 @@ pub struct FrameTarget<'a> {
     pub depth: &'a DepthTarget,
 }
 
-/// The demo as the windowed host runs it.
+/// The demo's gameplay: the half that only writes the world.
 ///
-/// Gameplay writes the world and drawing reads it; nothing in between tells the
-/// renderer anything happened.
-struct CubeApp {
-    depth: DepthTarget,
-    cube_renderer: TexturedCubeRenderer,
-    sprite_renderer: SpriteBatchRenderer,
-    textures: TextureRegistry,
-    bindings: TextureBindings,
-    scene: DemoScene,
+/// It never sees a device, a texture, or a frame. Rotating the cube is a
+/// transform written into whatever world the engine hands it, and the next
+/// extraction reads the world as it now is.
+#[derive(Debug, Default)]
+struct CubeGame {
     rotation: Vec2,
 }
 
 /// How fast the arrow keys turn the cube, in radians per second.
 const ROTATION_RATE: f32 = 1.8;
 
-/// The longest frame the demo will integrate over.
+impl Game for CubeGame {
+    type Error = DemoSceneError;
+
+    /// Runs at the fixed simulation rate, so the cube turns at the same speed
+    /// whatever the frame rate is. The engine caps and accumulates the real
+    /// delta; nothing here has to guard against a stalled frame.
+    fn fixed_update(&mut self, context: &mut FrameContext<'_>) -> Result<(), Self::Error> {
+        let axis = Vec2::new(
+            context.input.axis(Key::ArrowLeft, Key::ArrowRight),
+            context.input.axis(Key::ArrowUp, Key::ArrowDown),
+        );
+        self.rotation += axis * context.time.delta.as_secs_f32() * ROTATION_RATE;
+        spin_cube(context.world, self.rotation)
+    }
+}
+
+/// The demo as the windowed host runs it.
 ///
-/// `sindri-core`'s fixed-step clock does this properly, with a fixed simulation
-/// rate and spiral-of-death protection. This example does not run through the
-/// engine loop yet, so it caps its own delta rather than letting one stalled
-/// frame spin the cube half a turn.
-const LONGEST_FRAME: f32 = 0.1;
+/// The engine owns the world and the simulation; this owns the GPU resources
+/// and the drawing. Neither reaches into the other.
+struct CubeApp {
+    engine: EngineHost<CubeGame>,
+    scene: DemoScene,
+    depth: DepthTarget,
+    cube_renderer: TexturedCubeRenderer,
+    sprite_renderer: SpriteBatchRenderer,
+    textures: TextureRegistry,
+    bindings: TextureBindings,
+}
 
 impl DesktopApp for CubeApp {
     type Error = CubeError;
 
     fn create(context: &AppContext<'_>) -> Result<Self, Self::Error> {
         let (textures, bindings) = demo_textures(context.device(), context.queue());
+        let (scene, world) = DemoScene::load()?;
+        let mut engine = EngineHost::new(CubeGame::default(), FixedStepConfig::default())?;
+        *engine.world_mut() = world;
+        engine.start()?;
         Ok(Self {
+            engine,
+            scene,
             depth: DepthTarget::new(context.device(), context.width(), context.height()),
             cube_renderer: TexturedCubeRenderer::new(context.device(), context.format()),
             sprite_renderer: SpriteBatchRenderer::new(context.device(), context.format()),
             textures,
             bindings,
-            scene: DemoScene::load()?,
-            rotation: Vec2::ZERO,
         })
     }
 
-    fn update(&mut self, input: &InputState, delta: Duration) -> Result<Flow, Self::Error> {
-        if input.key_down(Key::Escape) {
+    fn input(&mut self, event: InputEvent) {
+        self.engine.queue_input(event);
+    }
+
+    fn update(&mut self, delta: Duration) -> Result<Flow, Self::Error> {
+        if self.engine.input().key_down(Key::Escape) {
             return Ok(Flow::Exit);
         }
-
-        let seconds = delta.as_secs_f32().min(LONGEST_FRAME);
-        let axis = Vec2::new(
-            input.axis(Key::ArrowLeft, Key::ArrowRight),
-            input.axis(Key::ArrowUp, Key::ArrowDown),
-        );
-        self.rotation += axis * seconds * ROTATION_RATE;
-        // Gameplay writes the world. Extraction reads whatever it now holds.
-        self.scene.spin_cube(self.rotation)?;
+        self.engine.advance(delta)?;
         Ok(Flow::Continue)
     }
 
@@ -95,7 +114,9 @@ impl DesktopApp for CubeApp {
         view: &wgpu::TextureView,
     ) -> Result<(), Self::Error> {
         let viewport = Viewport::new(context.width(), context.height());
-        let prepared = self.scene.extract_frame(viewport, &self.bindings)?;
+        let prepared = self
+            .scene
+            .extract_frame(self.engine.world(), viewport, &self.bindings)?;
         let mut encoder =
             context
                 .device()
@@ -128,6 +149,8 @@ pub enum CubeError {
     Scene(#[from] DemoSceneError),
     #[error(transparent)]
     Batch(#[from] SpriteBatchError),
+    #[error(transparent)]
+    Host(#[from] HostError<DemoSceneError>),
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen::prelude::wasm_bindgen(start))]
@@ -295,6 +318,63 @@ pub fn encode_prepared_frame(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Runs the demo's gameplay for one simulated second, delivered as `frames`
+    /// equal slices, and reports where the cube ended up.
+    fn cube_rotation_after_a_second(frames: u32) -> [f32; 4] {
+        let (_, world) = DemoScene::load().expect("the demo scene loads");
+        let mut engine = EngineHost::new(CubeGame::default(), FixedStepConfig::default())
+            .expect("the host starts");
+        *engine.world_mut() = world;
+        engine.start().expect("the engine starts");
+        engine.queue_input(InputEvent::KeyPressed(Key::ArrowRight));
+
+        let slice = Duration::from_secs(1) / frames;
+        for _ in 0..frames {
+            engine.advance(slice).expect("the demo never fails a frame");
+        }
+
+        let cube = engine
+            .world()
+            .entities()
+            .find(|(_, data)| data.components.contains_key("sindri.mesh"))
+            .map(|(entity, _)| entity)
+            .expect("the demo scene keeps its cube");
+        engine
+            .world()
+            .get(cube)
+            .and_then(|data| data.transform_3d)
+            .expect("the cube carries a 3D transform")
+            .rotation
+    }
+
+    /// The reason gameplay moved onto the engine loop. The cube used to
+    /// integrate whatever frame delta it was handed, so the same second of held
+    /// input turned it further on a slow machine than a fast one. Fixed steps
+    /// make a second of input a second of rotation.
+    #[test]
+    fn a_second_of_input_turns_the_cube_the_same_amount_at_any_frame_rate() {
+        let at_60 = cube_rotation_after_a_second(60);
+        let at_15 = cube_rotation_after_a_second(15);
+        let at_144 = cube_rotation_after_a_second(144);
+
+        for (fast, slow) in at_144.iter().zip(at_15) {
+            assert!(
+                (fast - slow).abs() < 1.0e-5,
+                "frame rate changed the result: {at_144:?} against {at_15:?}"
+            );
+        }
+        for (reference, other) in at_60.iter().zip(at_15) {
+            assert!(
+                (reference - other).abs() < 1.0e-5,
+                "frame rate changed the result: {at_60:?} against {at_15:?}"
+            );
+        }
+        assert!(
+            at_60[3] < 0.999,
+            "holding right for a second should have turned the cube, got {at_60:?}"
+        );
+    }
 
     /// The shipped PNG must be exactly the image the demo used to generate, so
     /// moving the badge onto the asset pipeline cannot change what is drawn.

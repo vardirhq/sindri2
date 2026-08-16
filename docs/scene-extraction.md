@@ -17,6 +17,20 @@ fn fixed_update(&mut self, context: &mut FrameContext<'_>) -> Result<(), Self::E
 
 Nothing tells the renderer this happened. The next extraction reads the world as it now is.
 
+## One world
+
+That only holds while there is one world. A scene that owned its own copy would
+leave gameplay writing one and the renderer reading another, and the bug would
+look like a rendering problem rather than a bookkeeping one.
+
+So a scene owns its component schemas and nothing else. The world belongs to
+whoever is running the engine — `EngineCore` behind `EngineHost` at runtime, the
+editor while authoring — and extraction takes it as an argument:
+
+```rust
+let prepared = scene.extract_frame(engine.world(), viewport, &bindings)?;
+```
+
 ## Built-in components
 
 | Type name | Draws |

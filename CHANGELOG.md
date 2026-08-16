@@ -92,6 +92,7 @@ All notable changes to Sindri Next will be documented here.
 - Fallible application hooks, so a failure during a frame stops the host and is reported rather than logged and drawn over.
 - A `verify` binary that reads back a captured PNG and holds it to the colours the demo scene authors, decoded through the engine's own texture decoder.
 - Colour verification of the editor screenshot in CI, which was captured and uploaded but never examined.
+- Gameplay running through the engine's fixed-step loop, so the demo turns at the same rate at any frame rate, proved at 15, 60, and 144 frames per second.
 
 ### Changed
 
@@ -118,3 +119,6 @@ All notable changes to Sindri Next will be documented here.
 - Replaced the cube example's hand-measured, hand-capped frame delta with the host's clock and frame timer.
 - Fixed the editor viewport sampling its sRGB colour target through an sRGB view, so egui decoded a second time and every authored colour arrived far too dark; the scene render was correct and only the display of it was wrong.
 - Moved the authored-colour expectation and its tolerance out of the capture binary so the offscreen capture and the editor screenshot are held to one definition rather than two.
+- Moved the demo's cube rotation into a `Game` implementation driven by `EngineHost`, replacing a frame delta integrated by hand in the middle of rendering.
+- Gave the world a single owner: a scene now carries its component schemas only, and extraction reads whichever world the engine or the editor holds.
+- Moved input accumulation out of the windowed host into the engine host, so one `InputState` answers whether a key is down.
