@@ -17,9 +17,9 @@ use egui_material_icons::{
     icons::{
         ICON_3D_ROTATION, ICON_ACCOUNT_TREE, ICON_ADD, ICON_ARROW_SELECTOR_TOOL, ICON_CAMERA_ALT,
         ICON_CODE, ICON_DEPLOYED_CODE, ICON_DESCRIPTION, ICON_EXPAND_MORE, ICON_FILTER_LIST,
-        ICON_FOLDER, ICON_GRID_VIEW, ICON_IMAGE, ICON_LIGHT_MODE, ICON_MORE_VERT, ICON_OPEN_WITH,
-        ICON_PAUSE, ICON_PLAY_ARROW, ICON_REDO, ICON_SEARCH, ICON_SETTINGS, ICON_STOP, ICON_TUNE,
-        ICON_UNDO, ICON_VIEW_IN_AR, ICON_VIEW_LIST,
+        ICON_FOLDER, ICON_GRID_VIEW, ICON_IMAGE, ICON_MORE_VERT, ICON_OPEN_WITH, ICON_PAUSE,
+        ICON_PLAY_ARROW, ICON_REDO, ICON_SEARCH, ICON_SETTINGS, ICON_STOP, ICON_TUNE, ICON_UNDO,
+        ICON_VIEW_IN_AR, ICON_VIEW_LIST,
     },
 };
 use glam::Vec2 as GlamVec2;
@@ -37,7 +37,8 @@ use sindri_render::{
 };
 
 use crate::{
-    preferences::{AssetView, BottomTab, CameraProjection, Preferences},
+    // `egui::Layout` is a different thing entirely and is already in scope.
+    preferences::{AssetView, BottomTab, CameraProjection, Layout as WorkspaceLayout, Preferences},
     scene_file::{DEFAULT_SCENE_PATH, SceneFile},
 };
 
@@ -254,7 +255,15 @@ struct EditorApp {
     renderers: SceneRenderers,
     scene_viewport: RuntimeViewport,
     game_viewport: RuntimeViewport,
-    runtime_error: Option<String>,
+    /// What the last action the user took had to say, if anything went wrong.
+    ///
+    /// Kept apart from `render_error` because the two have different lifetimes:
+    /// this one stays until something replaces it, while a render result is
+    /// recomputed every frame. They shared a field, and the render overwrote a
+    /// failed save within one frame of it happening.
+    notice: Option<String>,
+    /// Whatever the last frame's render reported.
+    render_error: Option<String>,
 }
 
 impl EditorApp {
@@ -297,7 +306,8 @@ impl EditorApp {
             renderers,
             scene_viewport,
             game_viewport,
-            runtime_error: open_error,
+            notice: open_error,
+            render_error: None,
         }
     }
 
@@ -306,9 +316,9 @@ impl EditorApp {
         match self.file.save(&self.world) {
             Ok(()) => {
                 self.unsaved = false;
-                self.runtime_error = None;
+                self.notice = None;
             }
-            Err(error) => self.runtime_error = Some(error.to_string()),
+            Err(error) => self.notice = Some(error.to_string()),
         }
     }
 
@@ -344,7 +354,7 @@ impl EditorApp {
         let opened = match SceneFile::open(path) {
             Ok(opened) => opened,
             Err(error) => {
-                self.runtime_error = Some(error.to_string());
+                self.notice = Some(error.to_string());
                 return;
             }
         };
@@ -356,16 +366,16 @@ impl EditorApp {
                 self.selection = None;
                 self.unsaved = false;
                 self.lifecycle = initialized_lifecycle();
-                self.runtime_error = None;
+                self.notice = None;
             }
-            Err(error) => self.runtime_error = Some(error.to_string()),
+            Err(error) => self.notice = Some(error.to_string()),
         }
     }
 
     /// Re-reads the file, discarding unsaved edits along with their history.
     fn reload(&mut self) {
         if let Err(error) = self.file.reload() {
-            self.runtime_error = Some(error.to_string());
+            self.notice = Some(error.to_string());
             return;
         }
         self.reset_to_authored();
@@ -417,6 +427,12 @@ impl EditorApp {
 
     /// Changes the selection, ending any in-progress merge run so the next
     /// edit starts its own undo step.
+    /// What to show the user, preferring what they just did over what the
+    /// renderer is doing, since an action's failure is the newer news.
+    fn problem(&self) -> Option<&str> {
+        self.notice.as_deref().or(self.render_error.as_deref())
+    }
+
     fn select(&mut self, entity: Option<EntityId>) {
         if self.selection != entity {
             self.history.break_merge_run();
@@ -439,7 +455,7 @@ impl EditorApp {
             .merging(format!("inspector:{}", entity.index()));
         match self.history.apply(transaction, &mut self.world) {
             Ok(()) => self.unsaved = true,
-            Err(error) => self.runtime_error = Some(error.to_string()),
+            Err(error) => self.notice = Some(error.to_string()),
         }
     }
 
@@ -462,7 +478,7 @@ impl EditorApp {
             .apply(buffer.into_transaction("Reparent entity"), &mut self.world)
         {
             Ok(()) => self.unsaved = true,
-            Err(error) => self.runtime_error = Some(error.to_string()),
+            Err(error) => self.notice = Some(error.to_string()),
         }
     }
 
@@ -470,7 +486,7 @@ impl EditorApp {
         self.history.break_merge_run();
         match self.history.undo(&mut self.world) {
             Ok(_) => self.unsaved = true,
-            Err(error) => self.runtime_error = Some(error.to_string()),
+            Err(error) => self.notice = Some(error.to_string()),
         }
     }
 
@@ -478,7 +494,7 @@ impl EditorApp {
         self.history.break_merge_run();
         match self.history.redo(&mut self.world) {
             Ok(_) => self.unsaved = true,
-            Err(error) => self.runtime_error = Some(error.to_string()),
+            Err(error) => self.notice = Some(error.to_string()),
         }
     }
 
@@ -494,9 +510,9 @@ impl EditorApp {
                 self.unsaved = false;
                 self.selection = None;
                 self.lifecycle = initialized_lifecycle();
-                self.runtime_error = None;
+                self.notice = None;
             }
-            Err(error) => self.runtime_error = Some(error.to_string()),
+            Err(error) => self.notice = Some(error.to_string()),
         }
     }
 
@@ -509,7 +525,7 @@ impl EditorApp {
             _ => self.lifecycle.start(),
         };
         if let Err(error) = result {
-            self.runtime_error = Some(error.to_string());
+            self.notice = Some(error.to_string());
         }
     }
 
@@ -517,7 +533,7 @@ impl EditorApp {
         if self.lifecycle.state() == EngineState::Running
             && let Err(error) = self.lifecycle.pause()
         {
-            self.runtime_error = Some(error.to_string());
+            self.notice = Some(error.to_string());
         }
     }
 
@@ -562,7 +578,14 @@ impl EditorApp {
                     );
                     ui.add_space(8.0);
                     self.file_menu(ui);
-                    for menu in ["Edit", "Scene", "View", "Build", "Tools", "Help"] {
+                    for menu in ["Edit", "Scene"] {
+                        ui.add(
+                            egui::Button::new(RichText::new(menu).size(12.0).color(TEXT_MUTED))
+                                .frame(false),
+                        );
+                    }
+                    self.view_menu(ui);
+                    for menu in ["Build", "Tools", "Help"] {
                         ui.add(
                             egui::Button::new(RichText::new(menu).size(12.0).color(TEXT_MUTED))
                                 .frame(false),
@@ -623,7 +646,13 @@ impl EditorApp {
     }
 
     fn hierarchy_panel(&mut self, ui: &mut egui::Ui) {
-        egui::Panel::left("scene-hierarchy")
+        // Distinct ids per side deliberately: switching layouts should not
+        // carry a width chosen for a different arrangement.
+        let panel = match self.preferences.layout {
+            WorkspaceLayout::TwoByThree => egui::Panel::right("hierarchy-column"),
+            WorkspaceLayout::Wide => egui::Panel::left("hierarchy-dock"),
+        };
+        panel
             .default_size(248.0)
             .min_size(210.0)
             .max_size(340.0)
@@ -739,10 +768,19 @@ impl EditorApp {
     }
 
     fn asset_panel(&mut self, ui: &mut egui::Ui) {
-        egui::Panel::bottom("asset-browser")
-            .default_size(226.0)
-            .min_size(140.0)
-            .max_size(330.0)
+        let (panel, default, min, max) = match self.preferences.layout {
+            // A tall column, which is what makes the list view worth having.
+            WorkspaceLayout::TwoByThree => {
+                (egui::Panel::right("project-column"), 280.0, 200.0, 420.0)
+            }
+            WorkspaceLayout::Wide => (egui::Panel::bottom("project-dock"), 226.0, 140.0, 330.0),
+        };
+        // The folder tree only fits when the browser is a wide dock.
+        let folders = self.preferences.layout == WorkspaceLayout::Wide;
+        panel
+            .default_size(default)
+            .min_size(min)
+            .max_size(max)
             .resizable(true)
             .frame(
                 egui::Frame::new()
@@ -770,12 +808,34 @@ impl EditorApp {
                         ui,
                         &mut self.asset_search,
                         &mut self.preferences.asset_view,
+                        folders,
                     ),
                     BottomTab::Console => {
                         console_view(ui, self.world.len(), self.lifecycle.state());
                     }
                 }
             });
+    }
+
+    /// Chooses how the workspace is arranged.
+    ///
+    /// The choice is a preference rather than session state, so it survives a
+    /// restart: rearranging the editor every time it opens is the thing this
+    /// exists to stop.
+    fn view_menu(&mut self, ui: &mut egui::Ui) {
+        ui.menu_button(RichText::new("View").size(12.0).color(TEXT_MUTED), |ui| {
+            ui.set_min_width(170.0);
+            ui.label(RichText::new("Layout").size(11.0).color(TEXT_FAINT));
+            for layout in WorkspaceLayout::ALL {
+                if ui
+                    .selectable_label(self.preferences.layout == layout, layout.label())
+                    .clicked()
+                {
+                    self.preferences.layout = layout;
+                    ui.close();
+                }
+            }
+        });
     }
 
     /// Save is disabled rather than hidden when there is no file behind the
@@ -825,7 +885,7 @@ impl EditorApp {
             .show(ui, |ui| {
                 ui.horizontal_centered(|ui| {
                     ui.add_space(12.0);
-                    let healthy = self.runtime_error.is_none();
+                    let healthy = self.problem().is_none();
                     status_dot(ui, if healthy { SUCCESS } else { ACCENT_BRIGHT });
                     ui.label(
                         RichText::new(if healthy {
@@ -863,7 +923,7 @@ impl EditorApp {
                         );
                         ui.separator();
                         ui.label(
-                            RichText::new(if self.runtime_error.is_some() {
+                            RichText::new(if self.problem().is_some() {
                                 "1 Error, 0 Warnings"
                             } else {
                                 "0 Errors, 0 Warnings"
@@ -893,31 +953,9 @@ impl EditorApp {
                 );
                 return;
             }
-            ui.add_space(8.0);
-            mode_icon(
-                ui,
-                &mut self.mode,
-                EditorMode::Select,
-                ICON_ARROW_SELECTOR_TOOL,
-                "Select",
-            );
-            mode_icon(ui, &mut self.mode, EditorMode::Move, ICON_OPEN_WITH, "Move");
-            mode_icon(
-                ui,
-                &mut self.mode,
-                EditorMode::Rotate,
-                ICON_3D_ROTATION,
-                "Rotate",
-            );
-            mode_icon(ui, &mut self.mode, EditorMode::Scale, ICON_TUNE, "Scale");
-            ui.separator();
-            icon_button(ui, ICON_VIEW_IN_AR, false, "Local coordinates");
-            icon_button(ui, ICON_LIGHT_MODE, false, "Lit shading");
-            // Panning can carry the subject off screen entirely, so the
-            // way back is a control rather than a remembered number.
-            if icon_button(ui, ICON_CAMERA_ALT, self.view_moved(), "Reset view").clicked() {
-                self.reset_view();
-            }
+            // The projection pair claims its width first so the icon row
+            // shrinks beside it. Laid out the other way round, a narrow
+            // viewport drew the icons straight over the buttons.
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 ui.add_space(8.0);
                 projection_button(
@@ -932,12 +970,134 @@ impl EditorApp {
                     CameraProjection::Perspective,
                     "Perspective",
                 );
+                ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                    ui.add_space(8.0);
+                    mode_icon(
+                        ui,
+                        &mut self.mode,
+                        EditorMode::Select,
+                        ICON_ARROW_SELECTOR_TOOL,
+                        "Select",
+                    );
+                    mode_icon(ui, &mut self.mode, EditorMode::Move, ICON_OPEN_WITH, "Move");
+                    mode_icon(
+                        ui,
+                        &mut self.mode,
+                        EditorMode::Rotate,
+                        ICON_3D_ROTATION,
+                        "Rotate",
+                    );
+                    mode_icon(ui, &mut self.mode, EditorMode::Scale, ICON_TUNE, "Scale");
+                    ui.separator();
+                    // "Local coordinates" and "Lit shading" used to sit here.
+                    // Neither did anything, and at this width they pushed the
+                    // controls that do work off the row. A button that cannot
+                    // be pressed usefully costs more than the space it takes.
+                    // Panning can carry the subject off screen entirely, so
+                    // the way back is a control rather than a remembered
+                    // number.
+                    if icon_button(ui, ICON_CAMERA_ALT, self.view_moved(), "Reset view").clicked() {
+                        self.reset_view();
+                    }
+                });
             });
         });
     }
 
-    fn viewport(&mut self, ui: &mut egui::Ui) {
+    /// Draws one view of the world into whatever space `ui` has left.
+    ///
+    /// The Scene view takes camera input and wears editor chrome; the Game view
+    /// takes neither, because chrome painted across what the player would see
+    /// makes it something else. Both go through here so the two views cannot
+    /// drift into being two renderers.
+    fn render_view(&mut self, ui: &mut egui::Ui, tab: WorkspaceTab) {
         let context = ui.ctx().clone();
+        let editing = tab == WorkspaceTab::Scene;
+        let (rect, response) = ui.allocate_exact_size(ui.available_size(), Sense::drag());
+        if editing {
+            self.move_camera(&context, &response, rect.height());
+        }
+        let scale = context.pixels_per_point();
+        let camera = camera_for(
+            tab,
+            EditorCamera {
+                orbit: GlamVec2::new(self.viewport_yaw, self.viewport_pitch),
+                zoom: self.viewport_zoom,
+                pan: self.viewport_pan,
+                projection: self.preferences.projection,
+            },
+        );
+        let viewport = if editing {
+            &mut self.scene_viewport
+        } else {
+            &mut self.game_viewport
+        };
+        let failure = viewport
+            .render(
+                &mut self.renderers,
+                &self.scene,
+                &self.world,
+                (
+                    physical_viewport_dimension(rect.width(), scale),
+                    physical_viewport_dimension(rect.height(), scale),
+                ),
+                camera,
+            )
+            .err();
+        // Two views can be live at once, and the first thing to go wrong is the
+        // thing worth reading, so a later success does not erase it.
+        if self.render_error.is_none() {
+            self.render_error = failure;
+        }
+        ui.painter().image(
+            viewport.texture_id,
+            rect,
+            Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+            Color32::WHITE,
+        );
+        if editing {
+            paint_runtime_overlay(
+                ui.painter(),
+                rect,
+                &self
+                    .selection
+                    .and_then(|entity| self.world.get(entity))
+                    .map_or_else(|| "No selection".to_owned(), entity_name),
+                self.problem(),
+            );
+        } else {
+            paint_viewport_border(ui.painter(), rect, self.problem());
+        }
+        context.request_repaint();
+    }
+
+    /// The 2 by 3 workspace: Scene above Game, with the panels beside them.
+    fn two_by_three_views(&mut self, ui: &mut egui::Ui) {
+        egui::CentralPanel::default()
+            .frame(egui::Frame::new().fill(APP_BG).inner_margin(0))
+            .show(ui, |ui| {
+                // The Game view is a bottom panel so it keeps its height while
+                // the Scene view takes whatever is left.
+                egui::Panel::bottom("game-view")
+                    .default_size(300.0)
+                    .min_size(120.0)
+                    .resizable(true)
+                    .frame(egui::Frame::new().fill(APP_BG).inner_margin(0))
+                    .show(ui, |ui| {
+                        view_title(ui, "Game");
+                        ui.separator();
+                        self.render_view(ui, WorkspaceTab::Game);
+                    });
+                view_title(ui, "Scene");
+                ui.separator();
+                self.scene_tools(ui, true);
+                ui.separator();
+                self.render_view(ui, WorkspaceTab::Scene);
+            });
+    }
+
+    /// The wide workspace: one view at a time, chosen by a tab.
+    fn tabbed_view(&mut self, ui: &mut egui::Ui) {
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(APP_BG).inner_margin(0))
             .show(ui, |ui| {
@@ -946,65 +1106,12 @@ impl EditorApp {
                     workspace_tab(ui, &mut self.workspace_tab, WorkspaceTab::Game, "Game");
                 });
                 ui.separator();
-                let editing = self.workspace_tab == WorkspaceTab::Scene;
-                self.scene_tools(ui, editing);
+                let tab = self.workspace_tab;
+                self.scene_tools(ui, tab == WorkspaceTab::Scene);
                 ui.separator();
-                let (rect, response) = ui.allocate_exact_size(ui.available_size(), Sense::drag());
-                if editing {
-                    self.move_camera(&context, &response, rect.height());
-                }
-                let scale = context.pixels_per_point();
-                let camera = camera_for(
-                    self.workspace_tab,
-                    EditorCamera {
-                        orbit: GlamVec2::new(self.viewport_yaw, self.viewport_pitch),
-                        zoom: self.viewport_zoom,
-                        pan: self.viewport_pan,
-                        projection: self.preferences.projection,
-                    },
-                );
                 // Only the visible view is drawn: rendering the hidden one would
                 // spend a frame's GPU work on something nobody is looking at.
-                let viewport = if editing {
-                    &mut self.scene_viewport
-                } else {
-                    &mut self.game_viewport
-                };
-                self.runtime_error = viewport
-                    .render(
-                        &mut self.renderers,
-                        &self.scene,
-                        &self.world,
-                        (
-                            physical_viewport_dimension(rect.width(), scale),
-                            physical_viewport_dimension(rect.height(), scale),
-                        ),
-                        camera,
-                    )
-                    .err();
-                ui.painter().image(
-                    viewport.texture_id,
-                    rect,
-                    Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
-                    Color32::WHITE,
-                );
-                if editing {
-                    paint_runtime_overlay(
-                        ui.painter(),
-                        rect,
-                        &self
-                            .selection
-                            .and_then(|entity| self.world.get(entity))
-                            .map_or_else(|| "No selection".to_owned(), entity_name),
-                        self.runtime_error.as_deref(),
-                    );
-                } else {
-                    // No selection label and no camera hints over the game view:
-                    // editor chrome painted across what the player would see
-                    // makes it something else.
-                    paint_viewport_border(ui.painter(), rect, self.runtime_error.as_deref());
-                }
-                context.request_repaint();
+                self.render_view(ui, tab);
             });
     }
 }
@@ -1019,10 +1126,24 @@ impl eframe::App for EditorApp {
         self.handle_shortcuts(ui.ctx());
         self.top_bar(ui);
         self.status_bar(ui);
-        self.hierarchy_panel(ui);
-        self.inspector_panel(ui);
-        self.asset_panel(ui);
-        self.viewport(ui);
+        // Panels claim space in the order they are shown, so this order is the
+        // arrangement: each right panel sits to the left of the one before it.
+        match self.preferences.layout {
+            WorkspaceLayout::TwoByThree => {
+                self.inspector_panel(ui);
+                self.asset_panel(ui);
+                self.hierarchy_panel(ui);
+                self.render_error = None;
+                self.two_by_three_views(ui);
+            }
+            WorkspaceLayout::Wide => {
+                self.hierarchy_panel(ui);
+                self.inspector_panel(ui);
+                self.asset_panel(ui);
+                self.render_error = None;
+                self.tabbed_view(ui);
+            }
+        }
         // Releasing the pointer ends a drag, so the next one is its own step.
         if ui.ctx().input(|input| input.pointer.any_released()) {
             self.history.break_merge_run();
@@ -1400,7 +1521,17 @@ fn project_assets() -> [(MaterialIcon, &'static str, &'static str); 8] {
     ]
 }
 
-fn project_browser(ui: &mut egui::Ui, search: &mut String, view: &mut AssetView) {
+/// The project browser, in one column or two.
+///
+/// Two panes need width the bottom dock has and a side column does not: at
+/// column width the folder tree and the asset list were drawing over each
+/// other. So the narrow arrangement drops the tree rather than shrinking it,
+/// which is also why a list reads better there than a grid of identical icons.
+fn project_browser(ui: &mut egui::Ui, search: &mut String, view: &mut AssetView, folders: bool) {
+    if !folders {
+        asset_column(ui, search, view);
+        return;
+    }
     ui.horizontal(|ui| {
         ui.vertical(|ui| {
             ui.set_width(174.0);
@@ -1416,53 +1547,55 @@ fn project_browser(ui: &mut egui::Ui, search: &mut String, view: &mut AssetView)
             }
         });
         ui.separator();
-        ui.vertical(|ui| {
-            ui.horizontal(|ui| {
-                ui.label(RichText::new("Assets").size(12.0).color(TEXT));
-                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    if icon_button(ui, ICON_VIEW_LIST, *view == AssetView::List, "List view")
-                        .clicked()
-                    {
-                        *view = AssetView::List;
-                    }
-                    if icon_button(ui, ICON_GRID_VIEW, *view == AssetView::Grid, "Grid view")
-                        .clicked()
-                    {
-                        *view = AssetView::Grid;
-                    }
-                    icon_button(ui, ICON_FILTER_LIST, false, "Filter assets");
-                    ui.add_sized(
-                        [210.0, 27.0],
-                        egui::TextEdit::singleline(search).hint_text("Search Assets"),
-                    );
-                });
-            });
-            ui.add_space(8.0);
-            // A project has more assets than a dock has room for, in either
-            // presentation. Scrolling here is what lets the list be the default
-            // without the last few assets falling off the bottom.
-            egui::ScrollArea::vertical()
-                .auto_shrink([false, false])
-                .show(ui, |ui| match view {
-                    AssetView::Grid => {
-                        ui.horizontal_wrapped(|ui| {
-                            for (icon, label, _) in project_assets() {
-                                asset_tile(ui, icon, label);
-                            }
-                        });
-                    }
-                    AssetView::List => {
-                        // Rows are denser than egui's default spacing, so the
-                        // dock shows a useful number of them without taking
-                        // height from the viewport it sits under.
-                        ui.spacing_mut().item_spacing.y = 1.0;
-                        for (icon, label, kind) in project_assets() {
-                            asset_row(ui, icon, label, kind);
-                        }
-                    }
-                });
+        ui.vertical(|ui| asset_column(ui, search, view));
+    });
+}
+
+/// The asset side of the browser: what it is showing, and how.
+fn asset_column(ui: &mut egui::Ui, search: &mut String, view: &mut AssetView) {
+    ui.horizontal(|ui| {
+        ui.label(RichText::new("Assets").size(12.0).color(TEXT));
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            if icon_button(ui, ICON_VIEW_LIST, *view == AssetView::List, "List view").clicked() {
+                *view = AssetView::List;
+            }
+            if icon_button(ui, ICON_GRID_VIEW, *view == AssetView::Grid, "Grid view").clicked() {
+                *view = AssetView::Grid;
+            }
+            icon_button(ui, ICON_FILTER_LIST, false, "Filter assets");
+            // Whatever is left after the buttons, rather than a fixed width
+            // that overflowed the moment the browser became a column.
+            let room = (ui.available_width() - 6.0).clamp(60.0, 210.0);
+            ui.add_sized(
+                [room, 27.0],
+                egui::TextEdit::singleline(search).hint_text("Search"),
+            );
         });
     });
+    ui.add_space(8.0);
+    // A project has more assets than a dock has room for, in either
+    // presentation. Scrolling here is what lets the list be the default
+    // without the last few assets falling off the bottom.
+    egui::ScrollArea::vertical()
+        .auto_shrink([false, false])
+        .show(ui, |ui| match view {
+            AssetView::Grid => {
+                ui.horizontal_wrapped(|ui| {
+                    for (icon, label, _) in project_assets() {
+                        asset_tile(ui, icon, label);
+                    }
+                });
+            }
+            AssetView::List => {
+                // Rows are denser than egui's default spacing, so the dock
+                // shows a useful number of them without taking height from
+                // the viewport it sits under.
+                ui.spacing_mut().item_spacing.y = 1.0;
+                for (icon, label, kind) in project_assets() {
+                    asset_row(ui, icon, label, kind);
+                }
+            }
+        });
 }
 
 /// One asset as a row: what it is called, and what it is.
@@ -1552,6 +1685,17 @@ fn lifecycle_label(state: EngineState) -> &'static str {
         EngineState::Stopped => "stopped",
         EngineState::Destroyed => "destroyed",
     }
+}
+
+/// The name above a view when both are on screen at once.
+///
+/// A label rather than a tab: in this layout the view is already visible, so a
+/// control that selects it would do nothing.
+fn view_title(ui: &mut egui::Ui, label: &str) {
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.label(RichText::new(label).size(12.0).color(TEXT));
+    });
 }
 
 fn workspace_tab(ui: &mut egui::Ui, current: &mut WorkspaceTab, value: WorkspaceTab, label: &str) {
