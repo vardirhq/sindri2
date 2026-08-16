@@ -180,7 +180,7 @@ Exit gate: Sindri Next matches the useful core of legacy 2D without inheriting i
 - [ ] Inspect/edit names, hierarchy, Transform2D, and Transform3D (names and both transforms done; reparenting has a command but no UI)
 - [x] Add selection and transform change commands
 - [x] Add command-based undo/redo with transaction grouping
-- [ ] Add 2D pan/zoom and basic 3D orbit camera controls
+- [ ] Add 2D pan/zoom and basic 3D orbit camera controls (3D orbit, pan, and zoom done, with a reset control; 2D pan/zoom waits for a 2D scene, since the demo's 2D content is a screen-anchored overlay rather than a world to move around in)
 - [x] Add play, pause, stop, and reset-to-authored-state
 - [ ] Add one sprite, one cube, and one camera editor fixture
 - [ ] Add protocol contract and save/reload integration tests
