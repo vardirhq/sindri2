@@ -261,6 +261,128 @@ fn a_camera_view_moves_the_camera_without_moving_the_model() {
     assert_eq!(before, after);
 }
 
+/// Where the authored target lands on screen once the view is panned.
+///
+/// The target sits at the centre of an unpanned frame, so its projected
+/// position is exactly the pan, which is what makes the convention checkable.
+fn projected_target(projection: WorldProjection, pan: glam::Vec2) -> glam::Vec2 {
+    let world = world_from(&scene(
+        r#",
+        { "id": "cube", "transform_3d": {},
+          "components": { "sindri.mesh": { "primitive": "cube", "texture": "t" } } }"#,
+    ));
+    let frame = SceneExtractor::new()
+        .unwrap()
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView {
+                pan,
+                projection,
+                ..CameraView::default()
+            },
+            &TextureBindings::new(),
+        )
+        .unwrap();
+    let clip = frame.passes()[0].camera.view_projection * glam::Vec4::new(0.0, 0.0, 0.0, 1.0);
+    glam::Vec2::new(clip.x / clip.w, clip.y / clip.w)
+}
+
+/// Panning is measured in fractions of the framed half-height, so half a unit
+/// moves the picture half a screen — and the same distance under either
+/// projection, which is the whole reason it is not measured in world units.
+#[test]
+fn panning_moves_the_picture_by_the_same_amount_under_both_projections() {
+    let unpanned = projected_target(WorldProjection::Perspective, glam::Vec2::ZERO);
+    assert!(
+        unpanned.abs_diff_eq(glam::Vec2::ZERO, 1.0e-5),
+        "an unpanned camera should frame its target at the centre, got {unpanned:?}"
+    );
+
+    // A square viewport, so a pan of 0.5 half-heights is 0.5 in clip space.
+    let perspective = projected_target(WorldProjection::Perspective, glam::Vec2::new(0.5, 0.0));
+    let orthographic = projected_target(WorldProjection::Orthographic, glam::Vec2::new(0.5, 0.0));
+
+    assert!(
+        (perspective.x - 0.5).abs() < 1.0e-4,
+        "panning right should move the picture right by half a screen, got {perspective:?}"
+    );
+    assert!(
+        perspective.abs_diff_eq(orthographic, 1.0e-4),
+        "the projections disagree about a pan: {perspective:?} against {orthographic:?}"
+    );
+}
+
+#[test]
+fn panning_up_moves_the_picture_up() {
+    let panned = projected_target(WorldProjection::Perspective, glam::Vec2::new(0.0, 0.5));
+    assert!(
+        (panned.y - 0.5).abs() < 1.0e-4,
+        "panning up should move the picture up, got {panned:?}"
+    );
+    assert!(panned.x.abs() < 1.0e-5, "panning up moved it sideways");
+}
+
+#[test]
+fn panning_moves_the_camera_without_moving_the_model() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "cube", "transform_3d": {},
+          "components": { "sindri.mesh": { "primitive": "cube", "texture": "t" } } }"#,
+    ));
+    let extractor = SceneExtractor::new().unwrap();
+    let authored = extractor
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
+        .unwrap();
+    let panned = extractor
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView {
+                pan: glam::Vec2::new(0.3, -0.2),
+                ..CameraView::default()
+            },
+            &TextureBindings::new(),
+        )
+        .unwrap();
+
+    assert_ne!(
+        authored.passes()[0].camera.view_projection,
+        panned.passes()[0].camera.view_projection
+    );
+    let (
+        FrameCommand::TexturedCube { model: before, .. },
+        FrameCommand::TexturedCube { model: after, .. },
+    ) = (&authored.passes()[0].command, &panned.passes()[0].command)
+    else {
+        panic!("expected cubes");
+    };
+    assert_eq!(before, after, "panning must not move what it is looking at");
+}
+
+#[test]
+fn a_pan_that_is_not_finite_is_rejected() {
+    let world = world_from(&scene(""));
+    let extracted = SceneExtractor::new().unwrap().extract(
+        &world,
+        VIEWPORT,
+        CameraView {
+            pan: glam::Vec2::new(f32::NAN, 0.0),
+            ..CameraView::default()
+        },
+        &TextureBindings::new(),
+    );
+    assert!(matches!(
+        extracted,
+        Err(SceneExtractError::InvalidCameraPan)
+    ));
+}
+
 #[test]
 fn switching_the_world_projection_changes_only_the_world_camera() {
     let world = world_from(&scene(

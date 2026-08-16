@@ -45,6 +45,14 @@ viewport's colour and depth targets together through
 `sindri_render::ViewportTarget`, which also owns the rule that a target drawn
 into through sRGB is sampled through linear.
 
+## Moving the view without moving the scene
+
+Left drag orbits, middle drag or shift-drag pans, and the wheel zooms. All three
+go through `CameraView`, so the authored camera stays exactly where the scene put
+it and only the editor's view of it moves — which is why a save after looking
+around writes nothing. Panning can carry the subject off screen, so there is a
+reset control rather than an expectation that the viewer finds their way back.
+
 ## A scene is a file
 
 The editor takes a path — the demo scene by default, or one named on the command

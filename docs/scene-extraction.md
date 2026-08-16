@@ -81,6 +81,11 @@ anchor is a corner, edge, or centre; the sprite's `Transform2D` position offsets
 ## Viewing without editing
 
 Gameplay renders through the authored camera. An editor moves around it without touching the scene,
-which is what `CameraView` describes: an orbit around the camera's target, a distance multiplier,
-and a projection choice. It changes the camera matrix only — models are never moved, so an orbiting
-editor camera cannot be confused with a rotating object.
+which is what `CameraView` describes: an orbit around the camera's target, a distance multiplier, a
+pan across the view plane, and a projection choice. It changes the camera matrix only — models are
+never moved, so an orbiting editor camera cannot be confused with a rotating object.
+
+Pan is measured in fractions of the framed half-height rather than in world units, so dragging moves
+the picture by the same amount whether the subject is a metre or a kilometre away, and the
+perspective and orthographic projections agree about what a pan of one half means. A test holds them
+to within a ten-thousandth of each other.

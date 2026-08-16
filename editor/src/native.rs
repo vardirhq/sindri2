@@ -101,6 +101,7 @@ enum CameraProjection {
 struct EditorCamera {
     orbit: GlamVec2,
     zoom: f32,
+    pan: GlamVec2,
     projection: CameraProjection,
 }
 
@@ -161,6 +162,7 @@ impl RuntimeViewport {
                 CameraView {
                     orbit: camera.orbit,
                     distance_scale: 1.0 / camera.zoom,
+                    pan: camera.pan,
                     projection: match camera.projection {
                         CameraProjection::Perspective => WorldProjection::Perspective,
                         CameraProjection::Orthographic => WorldProjection::Orthographic,
@@ -230,6 +232,7 @@ struct EditorApp {
     viewport_yaw: f32,
     viewport_pitch: f32,
     viewport_zoom: f32,
+    viewport_pan: GlamVec2,
     runtime_viewport: RuntimeViewport,
     runtime_error: Option<String>,
 }
@@ -262,6 +265,7 @@ impl EditorApp {
             viewport_yaw: 0.0,
             viewport_pitch: 0.0,
             viewport_zoom: 1.0,
+            viewport_pan: GlamVec2::ZERO,
             runtime_viewport,
             runtime_error: open_error,
         }
@@ -285,6 +289,50 @@ impl EditorApp {
             return;
         }
         self.reset_to_authored();
+    }
+
+    /// Turns pointer input over the viewport into camera movement.
+    ///
+    /// Left drag orbits, middle drag or shift-drag pans, and the wheel zooms.
+    /// None of it touches the scene: the authored camera stays where it is and
+    /// only the view of it moves.
+    fn move_camera(&mut self, context: &egui::Context, response: &Response, height: f32) {
+        if response.dragged() {
+            let delta = response.drag_motion();
+            if response.dragged_by(egui::PointerButton::Middle)
+                || context.input(|input| input.modifiers.shift)
+            {
+                // Panning drags the picture, so it is measured against the
+                // height of the viewport: dragging halfway up moves the scene
+                // halfway up, at any zoom and under either projection.
+                let height = height.max(1.0);
+                self.viewport_pan.x += delta.x * 2.0 / height;
+                self.viewport_pan.y -= delta.y * 2.0 / height;
+            } else if response.dragged_by(egui::PointerButton::Primary) {
+                self.viewport_yaw = (self.viewport_yaw + delta.x * 0.008) % TAU;
+                self.viewport_pitch = (self.viewport_pitch + delta.y * 0.008).clamp(-1.1, 1.1);
+            }
+        }
+        if response.hovered() {
+            let delta = context.input(|input| input.smooth_scroll_delta.y);
+            self.viewport_zoom = (self.viewport_zoom + delta * 0.002).clamp(0.65, 1.8);
+        }
+    }
+
+    /// Whether the viewer has moved away from the authored camera.
+    fn view_moved(&self) -> bool {
+        self.viewport_yaw != 0.0
+            || self.viewport_pitch != 0.0
+            || self.viewport_pan != GlamVec2::ZERO
+            || (self.viewport_zoom - 1.0).abs() > f32::EPSILON
+    }
+
+    /// Returns to the camera the scene authored, without touching the scene.
+    fn reset_view(&mut self) {
+        self.viewport_yaw = 0.0;
+        self.viewport_pitch = 0.0;
+        self.viewport_pan = GlamVec2::ZERO;
+        self.viewport_zoom = 1.0;
     }
 
     /// Changes the selection, ending any in-progress merge run so the next
@@ -725,6 +773,11 @@ impl EditorApp {
                     ui.separator();
                     icon_button(ui, ICON_VIEW_IN_AR, false, "Local coordinates");
                     icon_button(ui, ICON_LIGHT_MODE, false, "Lit shading");
+                    // Panning can carry the subject off screen entirely, so the
+                    // way back is a control rather than a remembered number.
+                    if icon_button(ui, ICON_CAMERA_ALT, self.view_moved(), "Reset view").clicked() {
+                        self.reset_view();
+                    }
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         ui.add_space(8.0);
                         projection_button(
@@ -743,15 +796,7 @@ impl EditorApp {
                 });
                 ui.separator();
                 let (rect, response) = ui.allocate_exact_size(ui.available_size(), Sense::drag());
-                if response.dragged() {
-                    let delta = response.drag_motion();
-                    self.viewport_yaw = (self.viewport_yaw + delta.x * 0.008) % TAU;
-                    self.viewport_pitch = (self.viewport_pitch + delta.y * 0.008).clamp(-1.1, 1.1);
-                }
-                if response.hovered() {
-                    let delta = context.input(|input| input.smooth_scroll_delta.y);
-                    self.viewport_zoom = (self.viewport_zoom + delta * 0.002).clamp(0.65, 1.8);
-                }
+                self.move_camera(&context, &response, rect.height());
                 let scale = context.pixels_per_point();
                 self.runtime_error = self
                     .runtime_viewport
@@ -765,6 +810,7 @@ impl EditorApp {
                         EditorCamera {
                             orbit: GlamVec2::new(self.viewport_yaw, self.viewport_pitch),
                             zoom: self.viewport_zoom,
+                            pan: self.viewport_pan,
                             projection: self.projection,
                         },
                     )
@@ -1382,7 +1428,7 @@ fn paint_runtime_overlay(
     painter.text(
         label_rect.min + Vec2::new(9.0, 24.0),
         egui::Align2::LEFT_TOP,
-        "Live WGPU viewport  ·  Drag to orbit",
+        "Live WGPU viewport  ·  Drag to orbit  ·  Shift-drag to pan",
         FontId::proportional(10.0),
         TEXT_FAINT,
     );

@@ -36,6 +36,13 @@ pub struct CameraView {
     pub orbit: Vec2,
     /// Multiplier on the authored eye-to-target distance.
     pub distance_scale: f32,
+    /// Sideways and upward shift across the view plane, in fractions of the
+    /// framed half-height.
+    ///
+    /// Measured against what the camera currently frames rather than in world
+    /// units, so dragging moves the picture by the same amount whether the
+    /// subject is a metre away or a kilometre, and the two projections agree.
+    pub pan: Vec2,
     pub projection: WorldProjection,
 }
 
@@ -44,6 +51,7 @@ impl Default for CameraView {
         Self {
             orbit: Vec2::ZERO,
             distance_scale: 1.0,
+            pan: Vec2::ZERO,
             projection: WorldProjection::Perspective,
         }
     }
@@ -179,6 +187,9 @@ impl SceneExtractor {
         if !view.distance_scale.is_finite() || view.distance_scale <= 0.0 {
             return Err(SceneExtractError::InvalidCameraDistanceScale);
         }
+        if !view.pan.is_finite() {
+            return Err(SceneExtractError::InvalidCameraPan);
+        }
         let mut resolved = ResolvedCameras::default();
 
         for (entity, camera) in self.components.query::<CameraComponent>(world)? {
@@ -200,8 +211,14 @@ impl SceneExtractor {
                     let target = Vec3::from_array(target);
                     let up = Vec3::from_array(up);
                     let offset = orbited_offset(authored_eye - target, up, view);
-                    let eye = target + offset;
                     let vertical_fov_radians = vertical_fov_degrees.to_radians();
+                    // Half the height the camera frames at the target, which is
+                    // what both projections size themselves by, so a pan of one
+                    // moves the picture by half a screen either way.
+                    let half_height = offset.length() * (vertical_fov_radians * 0.5).tan();
+                    let shift = panned_shift(offset, up, view.pan * half_height);
+                    let target = target + shift;
+                    let eye = target + offset;
 
                     resolved.world = Some(match view.projection {
                         WorldProjection::Perspective => PerspectiveCamera {
@@ -214,8 +231,6 @@ impl SceneExtractor {
                         }
                         .view_projection(aspect),
                         WorldProjection::Orthographic => {
-                            let half_height =
-                                eye.distance(target) * (vertical_fov_radians * 0.5).tan();
                             let half_width = half_height * aspect;
                             Mat4::orthographic_rh(
                                 -half_width,
@@ -270,6 +285,17 @@ struct OverlayExtent {
     half_extent: Vec2,
 }
 
+/// Turns a pan measured in framed units into a world-space shift.
+///
+/// The shift stays in the plane the camera faces, so panning slides the picture
+/// rather than pushing the camera towards or away from what it is looking at.
+fn panned_shift(offset: Vec3, up: Vec3, pan: Vec2) -> Vec3 {
+    let forward = -offset.normalize_or_zero();
+    let right = forward.cross(up).normalize_or_zero();
+    let plane_up = right.cross(forward);
+    right * -pan.x + plane_up * -pan.y
+}
+
 fn orbited_offset(authored_offset: Vec3, up: Vec3, view: CameraView) -> Vec3 {
     let scaled = authored_offset * view.distance_scale;
     let yawed = Quat::from_axis_angle(up, view.orbit.x) * scaled;
@@ -308,4 +334,6 @@ pub enum SceneExtractError {
     MissingOverlayCamera,
     #[error("camera distance scale must be finite and greater than zero")]
     InvalidCameraDistanceScale,
+    #[error("camera pan must be finite")]
+    InvalidCameraPan,
 }

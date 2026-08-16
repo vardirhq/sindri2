@@ -97,6 +97,8 @@ All notable changes to Sindri Next will be documented here.
 - A working File menu and Ctrl+S, replacing menu labels that did nothing.
 - An entity-scaling benchmark covering spawn, iteration, typed queries, teardown, and both directions of save and load at 1k, 10k, and 100k entities.
 - A `ViewportTarget` owning a colour target, the two views a Sindri target is drawn into and sampled through, and the depth buffer rebuilt with it.
+- Camera panning in the editor viewport, measured in fractions of the framed height so a drag moves the picture the same distance at any zoom and under either projection.
+- A reset control returning the editor viewport to the camera the scene authored.
 
 ### Changed
 
