@@ -137,3 +137,5 @@ All notable changes to Sindri Next will be documented here.
 - Moved the editor's viewport colour and depth targets onto the shared `ViewportTarget`, so the rule that kept them in the right colour space lives in the renderer rather than in one caller.
 - Made the project browser's list and grid buttons switch the view; they were drawn but did nothing.
 - Replaced the editor's game preview placeholder with a real rendered view, sharing the scene view's renderers and drawing only whichever view is visible.
+- Added an editor fixture scene holding one cube, one sprite, and the two cameras they need, opened with `cargo run -p sindri-editor -- editor/assets/fixture.scene.json`.
+- Added end-to-end editor tests that open the fixture, edit it through the command history, save, undo, and reload, proving an untouched scene saves byte for byte unchanged.
