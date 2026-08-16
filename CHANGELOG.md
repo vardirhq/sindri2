@@ -141,3 +141,7 @@ All notable changes to Sindri Next will be documented here.
 - Added end-to-end editor tests that open the fixture, edit it through the command history, save, undo, and reload, proving an untouched scene saves byte for byte unchanged.
 - Added a `Parent` menu to the editor's inspector, so an entity can be moved under another or out to the root as one undoable step.
 - Added `World::check_set_parent`, which answers whether a reparent would be accepted without making it, so an interface can offer only the moves the command layer allows.
+- Updated `glam` to 0.33, moving the camera matrices onto its new projection API.
+- Added `perspective_projection`, `orthographic_projection`, and `look_at` to `sindri-render`, so the zero-to-one depth range and Y-up convention are chosen once rather than at each call site.
+- Updated `pollster` to 1.0.
+- Unpinned `png` to share `image`'s version, which stops every build compiling two copies of it.

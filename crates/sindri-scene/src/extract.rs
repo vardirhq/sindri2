@@ -8,7 +8,7 @@ use sindri_core::{
 use sindri_render::{
     ClearOperations, ExtractedFrame, FrameCamera, FrameCommand, FramePass, FramePlanError,
     OrthographicCamera, PerspectiveCamera, PreparedFrame, RenderLayer, RenderStage, SpriteInstance,
-    TextureId, TransparentOrder, TransparentOrderError, Viewport,
+    TextureId, TransparentOrder, TransparentOrderError, Viewport, look_at, orthographic_projection,
 };
 use thiserror::Error;
 
@@ -232,14 +232,14 @@ impl SceneExtractor {
                         .view_projection(aspect),
                         WorldProjection::Orthographic => {
                             let half_width = half_height * aspect;
-                            Mat4::orthographic_rh(
+                            orthographic_projection(
                                 -half_width,
                                 half_width,
                                 -half_height,
                                 half_height,
                                 near,
                                 far,
-                            ) * Mat4::look_at_rh(eye, target, up)
+                            ) * look_at(eye, target, up)
                         }
                     });
                 }
