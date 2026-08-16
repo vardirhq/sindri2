@@ -95,6 +95,7 @@ All notable changes to Sindri Next will be documented here.
 - Gameplay running through the engine's fixed-step loop, so the demo turns at the same rate at any frame rate, proved at 15, 60, and 144 frames per second.
 - An editor that opens a scene file from disk, saves the world back to it in canonical form, and reloads it, with the open file and its unsaved state shown in the status bar.
 - A working File menu and Ctrl+S, replacing menu labels that did nothing.
+- An entity-scaling benchmark covering spawn, iteration, typed queries, teardown, and both directions of save and load at 1k, 10k, and 100k entities.
 
 ### Changed
 
@@ -126,3 +127,4 @@ All notable changes to Sindri Next will be documented here.
 - Moved input accumulation out of the windowed host into the engine host, so one `InputState` answers whether a key is down.
 - Made the editor open the demo scene from disk rather than a copy compiled into the binary, falling back to the embedded copy and saying so when the file cannot be read.
 - Made the editor screenshot wait for a frame with content, so a window grabbed before it had drawn no longer produces a blank capture.
+- Fixed scene validation being quadratic in the number of entities, which every load, save, and canonical serialization paid: a ten thousand entity scene took about 1.4 seconds to validate and now takes ten milliseconds, and a hundred thousand entity scene completes at all.

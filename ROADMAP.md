@@ -39,7 +39,7 @@ Exit gate: a clean clone passes format, lint, and test checks on the declared MS
 - [x] Add query API for built-in and registered component types
 - [x] Add deferred world command buffer
 - [ ] Specify deterministic system ordering
-- [ ] Benchmark 1k, 10k, and 100k entity workloads before considering an archetype ECS
+- [x] Benchmark 1k, 10k, and 100k entity workloads before considering an archetype ECS — see `docs/entity-scaling.md`; it found quadratic scene validation rather than an entity-storage problem, and an archetype ECS is not warranted
 
 ### Scenes and serialization
 
