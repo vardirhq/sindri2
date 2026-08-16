@@ -96,25 +96,63 @@ struct EditorCamera {
     projection: CameraProjection,
 }
 
-struct RuntimeViewport {
-    render_state: eframe::egui_wgpu::RenderState,
-    target: ViewportTarget,
-    texture_id: egui::TextureId,
-    cube_renderer: TexturedCubeRenderer,
-    sprite_renderer: SpriteBatchRenderer,
+/// The camera a workspace tab looks through.
+///
+/// The scene view is where the editor moves around; the game view is what the
+/// player would see, which means the authored camera and nothing else. If an
+/// orbit or a pan leaked into it, it would stop answering the only question it
+/// exists to answer.
+fn camera_for(tab: WorkspaceTab, editor: EditorCamera) -> CameraView {
+    match tab {
+        WorkspaceTab::Scene => CameraView {
+            orbit: editor.orbit,
+            distance_scale: 1.0 / editor.zoom,
+            pan: editor.pan,
+            projection: match editor.projection {
+                CameraProjection::Perspective => WorldProjection::Perspective,
+                CameraProjection::Orthographic => WorldProjection::Orthographic,
+            },
+        },
+        WorkspaceTab::Game => CameraView::default(),
+    }
+}
+
+/// The GPU resources every viewport draws with.
+///
+/// Held once rather than per viewport: pipelines and textures do not depend on
+/// which camera is looking, and two viewports that each built their own would
+/// pay twice for the same thing.
+struct SceneRenderers {
+    cube: TexturedCubeRenderer,
+    sprites: SpriteBatchRenderer,
     textures: TextureRegistry,
     bindings: TextureBindings,
 }
 
+impl SceneRenderers {
+    fn new(render_state: &eframe::egui_wgpu::RenderState) -> Self {
+        let (textures, bindings) = demo_textures(&render_state.device, &render_state.queue);
+        Self {
+            cube: TexturedCubeRenderer::new(&render_state.device, ViewportTarget::FORMAT),
+            sprites: SpriteBatchRenderer::new(&render_state.device, ViewportTarget::FORMAT),
+            textures,
+            bindings,
+        }
+    }
+}
+
+/// One rendered view of the world, and the egui texture it is drawn through.
+struct RuntimeViewport {
+    render_state: eframe::egui_wgpu::RenderState,
+    target: ViewportTarget,
+    texture_id: egui::TextureId,
+}
+
 impl RuntimeViewport {
-    fn new(context: &eframe::CreationContext<'_>) -> Result<Self, String> {
-        let render_state = context
-            .wgpu_render_state
-            .clone()
-            .ok_or_else(|| "the editor requires eframe's WGPU renderer".to_owned())?;
+    fn new(render_state: eframe::egui_wgpu::RenderState, label: &str) -> Self {
         let target = ViewportTarget::new(
             &render_state.device,
-            "Sindri editor runtime viewport",
+            label,
             INITIAL_VIEWPORT_WIDTH,
             INITIAL_VIEWPORT_HEIGHT,
         );
@@ -123,43 +161,28 @@ impl RuntimeViewport {
             target.sampled(),
             wgpu::FilterMode::Linear,
         );
-        let cube_renderer = TexturedCubeRenderer::new(&render_state.device, ViewportTarget::FORMAT);
-        let sprite_renderer =
-            SpriteBatchRenderer::new(&render_state.device, ViewportTarget::FORMAT);
-        let (textures, bindings) = demo_textures(&render_state.device, &render_state.queue);
-        Ok(Self {
+        Self {
             render_state,
             target,
             texture_id,
-            cube_renderer,
-            sprite_renderer,
-            textures,
-            bindings,
-        })
+        }
     }
 
     fn render(
         &mut self,
+        renderers: &mut SceneRenderers,
         scene: &DemoScene,
         world: &World,
         size: (u32, u32),
-        camera: EditorCamera,
+        camera: CameraView,
     ) -> Result<(), String> {
         self.resize(size.0, size.1);
         let prepared = scene
             .extract(
                 world,
                 Viewport::new(self.target.width(), self.target.height()),
-                CameraView {
-                    orbit: camera.orbit,
-                    distance_scale: 1.0 / camera.zoom,
-                    pan: camera.pan,
-                    projection: match camera.projection {
-                        CameraProjection::Perspective => WorldProjection::Perspective,
-                        CameraProjection::Orthographic => WorldProjection::Orthographic,
-                    },
-                },
-                &self.bindings,
+                camera,
+                &renderers.bindings,
             )
             .map_err(|error| error.to_string())?;
         let mut encoder =
@@ -170,9 +193,9 @@ impl RuntimeViewport {
                 });
         encode_prepared_frame(
             FrameRenderers {
-                cube: &mut self.cube_renderer,
-                sprites: &mut self.sprite_renderer,
-                textures: &self.textures,
+                cube: &mut renderers.cube,
+                sprites: &mut renderers.sprites,
+                textures: &renderers.textures,
             },
             &self.render_state.device,
             &self.render_state.queue,
@@ -223,7 +246,9 @@ struct EditorApp {
     viewport_pitch: f32,
     viewport_zoom: f32,
     viewport_pan: GlamVec2,
-    runtime_viewport: RuntimeViewport,
+    renderers: SceneRenderers,
+    scene_viewport: RuntimeViewport,
+    game_viewport: RuntimeViewport,
     runtime_error: Option<String>,
 }
 
@@ -237,8 +262,13 @@ impl EditorApp {
             .load_world(file.document())
             .expect("the opened scene must satisfy the demo component schema");
         let selection = find_by_source_id(&world, "checker-cube");
-        let runtime_viewport = RuntimeViewport::new(context)
-            .expect("the native editor must initialize its shared WGPU runtime viewport");
+        let render_state = context
+            .wgpu_render_state
+            .clone()
+            .expect("the native editor requires eframe's WGPU renderer");
+        let renderers = SceneRenderers::new(&render_state);
+        let scene_viewport = RuntimeViewport::new(render_state.clone(), "Sindri editor scene view");
+        let game_viewport = RuntimeViewport::new(render_state, "Sindri editor game view");
         Self {
             scene,
             world,
@@ -256,7 +286,9 @@ impl EditorApp {
             viewport_pitch: 0.0,
             viewport_zoom: 1.0,
             viewport_pan: GlamVec2::ZERO,
-            runtime_viewport,
+            renderers,
+            scene_viewport,
+            game_viewport,
             runtime_error: open_error,
         }
     }
@@ -742,6 +774,66 @@ impl EditorApp {
             });
     }
 
+    /// The row of tools above the viewport.
+    ///
+    /// The game view has none of them: they change what the editor is looking
+    /// at, and that view exists to show what the player would see.
+    fn scene_tools(&mut self, ui: &mut egui::Ui, editing: bool) {
+        ui.horizontal(|ui| {
+            if !editing {
+                // The game view is what the player sees, so the tools
+                // for changing what they are looking at do not apply.
+                ui.add_space(8.0);
+                ui.label(
+                    RichText::new("Rendering through the authored camera")
+                        .size(11.0)
+                        .color(TEXT_FAINT),
+                );
+                return;
+            }
+            ui.add_space(8.0);
+            mode_icon(
+                ui,
+                &mut self.mode,
+                EditorMode::Select,
+                ICON_ARROW_SELECTOR_TOOL,
+                "Select",
+            );
+            mode_icon(ui, &mut self.mode, EditorMode::Move, ICON_OPEN_WITH, "Move");
+            mode_icon(
+                ui,
+                &mut self.mode,
+                EditorMode::Rotate,
+                ICON_3D_ROTATION,
+                "Rotate",
+            );
+            mode_icon(ui, &mut self.mode, EditorMode::Scale, ICON_TUNE, "Scale");
+            ui.separator();
+            icon_button(ui, ICON_VIEW_IN_AR, false, "Local coordinates");
+            icon_button(ui, ICON_LIGHT_MODE, false, "Lit shading");
+            // Panning can carry the subject off screen entirely, so the
+            // way back is a control rather than a remembered number.
+            if icon_button(ui, ICON_CAMERA_ALT, self.view_moved(), "Reset view").clicked() {
+                self.reset_view();
+            }
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                ui.add_space(8.0);
+                projection_button(
+                    ui,
+                    &mut self.preferences.projection,
+                    CameraProjection::Orthographic,
+                    "Ortho",
+                );
+                projection_button(
+                    ui,
+                    &mut self.preferences.projection,
+                    CameraProjection::Perspective,
+                    "Perspective",
+                );
+            });
+        });
+    }
+
     fn viewport(&mut self, ui: &mut egui::Ui) {
         let context = ui.ctx().clone();
         egui::CentralPanel::default()
@@ -752,88 +844,64 @@ impl EditorApp {
                     workspace_tab(ui, &mut self.workspace_tab, WorkspaceTab::Game, "Game");
                 });
                 ui.separator();
-                if self.workspace_tab == WorkspaceTab::Game {
-                    empty_game_view(ui);
-                    return;
-                }
-                ui.horizontal(|ui| {
-                    ui.add_space(8.0);
-                    mode_icon(
-                        ui,
-                        &mut self.mode,
-                        EditorMode::Select,
-                        ICON_ARROW_SELECTOR_TOOL,
-                        "Select",
-                    );
-                    mode_icon(ui, &mut self.mode, EditorMode::Move, ICON_OPEN_WITH, "Move");
-                    mode_icon(
-                        ui,
-                        &mut self.mode,
-                        EditorMode::Rotate,
-                        ICON_3D_ROTATION,
-                        "Rotate",
-                    );
-                    mode_icon(ui, &mut self.mode, EditorMode::Scale, ICON_TUNE, "Scale");
-                    ui.separator();
-                    icon_button(ui, ICON_VIEW_IN_AR, false, "Local coordinates");
-                    icon_button(ui, ICON_LIGHT_MODE, false, "Lit shading");
-                    // Panning can carry the subject off screen entirely, so the
-                    // way back is a control rather than a remembered number.
-                    if icon_button(ui, ICON_CAMERA_ALT, self.view_moved(), "Reset view").clicked() {
-                        self.reset_view();
-                    }
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        ui.add_space(8.0);
-                        projection_button(
-                            ui,
-                            &mut self.preferences.projection,
-                            CameraProjection::Orthographic,
-                            "Ortho",
-                        );
-                        projection_button(
-                            ui,
-                            &mut self.preferences.projection,
-                            CameraProjection::Perspective,
-                            "Perspective",
-                        );
-                    });
-                });
+                let editing = self.workspace_tab == WorkspaceTab::Scene;
+                self.scene_tools(ui, editing);
                 ui.separator();
                 let (rect, response) = ui.allocate_exact_size(ui.available_size(), Sense::drag());
-                self.move_camera(&context, &response, rect.height());
+                if editing {
+                    self.move_camera(&context, &response, rect.height());
+                }
                 let scale = context.pixels_per_point();
-                self.runtime_error = self
-                    .runtime_viewport
+                let camera = camera_for(
+                    self.workspace_tab,
+                    EditorCamera {
+                        orbit: GlamVec2::new(self.viewport_yaw, self.viewport_pitch),
+                        zoom: self.viewport_zoom,
+                        pan: self.viewport_pan,
+                        projection: self.preferences.projection,
+                    },
+                );
+                // Only the visible view is drawn: rendering the hidden one would
+                // spend a frame's GPU work on something nobody is looking at.
+                let viewport = if editing {
+                    &mut self.scene_viewport
+                } else {
+                    &mut self.game_viewport
+                };
+                self.runtime_error = viewport
                     .render(
+                        &mut self.renderers,
                         &self.scene,
                         &self.world,
                         (
                             physical_viewport_dimension(rect.width(), scale),
                             physical_viewport_dimension(rect.height(), scale),
                         ),
-                        EditorCamera {
-                            orbit: GlamVec2::new(self.viewport_yaw, self.viewport_pitch),
-                            zoom: self.viewport_zoom,
-                            pan: self.viewport_pan,
-                            projection: self.preferences.projection,
-                        },
+                        camera,
                     )
                     .err();
                 ui.painter().image(
-                    self.runtime_viewport.texture_id,
+                    viewport.texture_id,
                     rect,
                     Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
                     Color32::WHITE,
                 );
-                paint_runtime_overlay(
-                    ui.painter(),
-                    rect,
-                    &self
-                        .selection
-                        .and_then(|entity| self.world.get(entity))
-                        .map_or_else(|| "No selection".to_owned(), entity_name),
-                    self.runtime_error.as_deref(),
-                );
+                if editing {
+                    paint_runtime_overlay(
+                        ui.painter(),
+                        rect,
+                        &self
+                            .selection
+                            .and_then(|entity| self.world.get(entity))
+                            .map_or_else(|| "No selection".to_owned(), entity_name),
+                        self.runtime_error.as_deref(),
+                    );
+                } else {
+                    // No selection label and no camera hints over the game view:
+                    // editor chrome painted across what the player would see
+                    // makes it something else.
+                    paint_viewport_border(ui.painter(), rect, self.runtime_error.as_deref());
+                }
                 context.request_repaint();
             });
     }
@@ -1451,31 +1519,6 @@ fn play_button(ui: &mut egui::Ui, playing: bool) -> Response {
     )
 }
 
-fn empty_game_view(ui: &mut egui::Ui) {
-    ui.centered_and_justified(|ui| {
-        ui.vertical_centered(|ui| {
-            ui.label(
-                ICON_PLAY_ARROW
-                    .outlined()
-                    .rich_text()
-                    .size(34.0)
-                    .color(TEXT_FAINT),
-            );
-            ui.label(
-                RichText::new("Game preview")
-                    .strong()
-                    .size(15.0)
-                    .color(TEXT_MUTED),
-            );
-            ui.label(
-                RichText::new("Enter Play mode to preview the active camera")
-                    .size(12.0)
-                    .color(TEXT_FAINT),
-            );
-        });
-    });
-}
-
 fn paint_runtime_overlay(
     painter: &egui::Painter,
     rect: Rect,
@@ -1499,6 +1542,20 @@ fn paint_runtime_overlay(
         FontId::proportional(10.0),
         TEXT_FAINT,
     );
+    paint_error_banner(painter, rect, error);
+    paint_axis_gizmo(painter, Pos2::new(rect.right() - 42.0, rect.top() + 48.0));
+}
+
+/// The game view's chrome: a frame, and anything that went wrong.
+///
+/// A render failure is still reported here, because a blank view with no
+/// explanation is worse than a view with a message across it.
+fn paint_viewport_border(painter: &egui::Painter, rect: Rect, error: Option<&str>) {
+    painter.rect_stroke(rect, 0.0, Stroke::new(1.0, BORDER), StrokeKind::Inside);
+    paint_error_banner(painter, rect, error);
+}
+
+fn paint_error_banner(painter: &egui::Painter, rect: Rect, error: Option<&str>) {
     if let Some(error) = error {
         let error_rect = Rect::from_min_size(
             Pos2::new(rect.left() + 12.0, rect.bottom() - 42.0),
@@ -1513,7 +1570,6 @@ fn paint_runtime_overlay(
             Color32::from_rgb(255, 184, 191),
         );
     }
-    paint_axis_gizmo(painter, Pos2::new(rect.right() - 42.0, rect.top() + 48.0));
 }
 
 fn paint_axis_gizmo(painter: &egui::Painter, origin: Pos2) {
@@ -1863,6 +1919,54 @@ mod tests {
         assert_eq!(
             reopened.get(reloaded).unwrap().transform_3d,
             draft.transform_3d
+        );
+    }
+
+    fn moved_camera() -> EditorCamera {
+        EditorCamera {
+            orbit: GlamVec2::new(0.7, -0.3),
+            zoom: 1.4,
+            pan: GlamVec2::new(0.25, 0.5),
+            projection: CameraProjection::Orthographic,
+        }
+    }
+
+    /// The game view answers one question — what would the player see — and an
+    /// orbit, pan, or zoom leaking into it would stop it answering that.
+    #[test]
+    fn the_game_view_ignores_wherever_the_editor_has_moved_its_camera() {
+        assert_eq!(
+            camera_for(WorkspaceTab::Game, moved_camera()),
+            CameraView::default(),
+            "the game view must render through the authored camera"
+        );
+    }
+
+    #[test]
+    fn the_scene_view_carries_every_editor_adjustment() {
+        let camera = camera_for(WorkspaceTab::Scene, moved_camera());
+        assert_eq!(camera.orbit, GlamVec2::new(0.7, -0.3));
+        assert_eq!(camera.pan, GlamVec2::new(0.25, 0.5));
+        assert!(
+            (camera.distance_scale - 1.0 / 1.4).abs() < 1.0e-6,
+            "zooming in should shorten the distance to the target"
+        );
+        assert_eq!(camera.projection, WorldProjection::Orthographic);
+    }
+
+    #[test]
+    fn an_unmoved_scene_view_matches_the_authored_camera() {
+        // Opening the editor and drawing nothing must not move the camera, or
+        // the scene and game views would disagree before anyone touched them.
+        let resting = EditorCamera {
+            orbit: GlamVec2::ZERO,
+            zoom: 1.0,
+            pan: GlamVec2::ZERO,
+            projection: CameraProjection::Perspective,
+        };
+        assert_eq!(
+            camera_for(WorkspaceTab::Scene, resting),
+            camera_for(WorkspaceTab::Game, resting)
         );
     }
 
