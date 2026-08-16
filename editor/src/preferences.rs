@@ -35,6 +35,37 @@ pub enum CameraProjection {
     Orthographic,
 }
 
+/// How the workspace arranges its panels.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Layout {
+    /// Scene above Game on the left, then Hierarchy, Project, and Inspector as
+    /// columns beside them.
+    ///
+    /// The default because it shows the scene and what the player would see at
+    /// the same time, which is the comparison an editor exists to make, and
+    /// because Project as a tall column is where a list of assets reads better
+    /// than a grid of identical icons.
+    #[default]
+    TwoByThree,
+    /// One view at a time with Project docked along the bottom.
+    ///
+    /// Keeps the whole width for the viewport, which suits a narrow screen or
+    /// working on one view without the other competing for attention.
+    Wide,
+}
+
+impl Layout {
+    pub const ALL: [Self; 2] = [Self::TwoByThree, Self::Wide];
+
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::TwoByThree => "2 by 3",
+            Self::Wide => "Wide",
+        }
+    }
+}
+
 /// Which dock at the bottom of the workspace is showing.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -52,6 +83,7 @@ pub enum BottomTab {
 #[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(default)]
 pub struct Preferences {
+    pub layout: Layout,
     pub asset_view: AssetView,
     pub projection: CameraProjection,
     pub bottom_tab: BottomTab,
@@ -88,9 +120,16 @@ mod tests {
         assert_eq!(Preferences::default().asset_view, AssetView::List);
     }
 
+    /// The layout question this settled: 2 by 3 is what the editor opens as.
+    #[test]
+    fn the_workspace_opens_in_the_two_by_three_layout() {
+        assert_eq!(Preferences::default().layout, Layout::TwoByThree);
+    }
+
     #[test]
     fn settings_survive_a_round_trip() {
         let chosen = Preferences {
+            layout: Layout::Wide,
             asset_view: AssetView::Grid,
             projection: CameraProjection::Orthographic,
             bottom_tab: BottomTab::Console,
@@ -133,6 +172,7 @@ mod tests {
     fn what_is_saved_is_what_comes_back() {
         let mut storage = FakeStorage::default();
         let chosen = Preferences {
+            layout: Layout::Wide,
             asset_view: AssetView::Grid,
             projection: CameraProjection::Orthographic,
             bottom_tab: BottomTab::Console,
