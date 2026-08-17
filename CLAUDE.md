@@ -246,7 +246,10 @@ overwrite a replacement. Never fake synchronous browser I/O.
 - If a change cannot be caught by any existing check, add the check that would
   catch it (the pixel verification in `capture` is the model here).
 - Keep examples curated. Two proofs exist because each proves something; do not
-  accumulate demos.
+  accumulate demos. The companion game in `ROADMAP.md` is the exception that
+  makes this affordable: it absorbs the per-milestone demos the plan used to
+  schedule, lives outside `examples/`, and is allowed to be untidy in ways a
+  proof is not.
 - Deferred work is deferred deliberately — WebGL2 fallback, PBR, skeletal
   animation, networking, render graphs, and advanced ECS scheduling are listed as
   non-goals in `ROADMAP.md` and `PROJECT_OVERVIEW.md`. Do not add them
