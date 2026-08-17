@@ -163,18 +163,23 @@ format, so the format, its serialization, and its renderer come first —
 designing a data model through the tool that paints it is how the model ends up
 shaped like the tool.
 
+- [ ] Collapse `Transform2D` into `Transform3D` as scene format version 2, so sprites and meshes share one world — the model is in `docs/2d-model.md`
+- [ ] Give sprites a world-space option, keeping screen-anchored as the default so overlays and both proofs are unchanged
+- [ ] Sort transparent sprites by camera distance rather than an authored depth field, with layer as the explicit override
+- [ ] Add 2D-shaped transform accessors that take and return X and Y only, so the common way a layered scene gets flattened is not expressible
+- [ ] Add a Z lock a transform can declare, respected by checked write paths and visible in the inspector
 - [ ] Inventory each legacy 2D subsystem as port, refactor, replace, or defer
 - [ ] Port sprite animation and sprite sheets
 - [ ] Add a sprite sheet authoring surface: slice a sheet into frames, name clips, set timing, preview playback
-- [ ] Port camera 2D behavior and pixel snapping
+- [ ] Port camera 2D behavior and pixel snapping — pixel snapping is an orthographic-camera feature, since apparent scale under perspective depends on depth; see `docs/2d-model.md`
 - [ ] Port tilemap data model and renderer
 - [ ] Add tilemap authoring: a tile palette, paint and erase, and layer selection
 - [ ] Port text rendering with a web-safe font asset strategy
 - [ ] Add font and text authoring: choose a font asset and edit text content in the inspector
 - [ ] Port particles after the render lifecycle is stable
-- [ ] Port layers, parallax, anchors, and sprite bounds
+- [ ] Port layers, anchors, and sprite bounds — parallax is not ported, because under one world with real depth it is what a perspective camera already does; see `docs/2d-model.md`
 - [ ] Port A* pathfinding into a renderer-free grid crate
-- [ ] Add optional Rapier2D adapter without core dependency
+- [ ] Add optional Rapier2D adapter without core dependency, with collision layers from the start — physics ignores Z, so depth cannot keep a parallax background out of the player's way, and collision layers are not render layers
 - [ ] Add 2D pan/zoom viewport controls, which need a 2D scene rather than the screen-anchored overlay the demo uses
 - [ ] Start the companion game and grow it through this milestone, verified natively and in browser — see "The companion game" below, which replaces the `hello-2d` and platformer slice this milestone used to schedule
 

@@ -126,6 +126,7 @@ The detailed contracts live alongside the code:
 - [component schema registry](docs/component-schema-registry.md)
 - [scene serialization](docs/scene-serialization.md)
 - [scene extraction](docs/scene-extraction.md)
+- [how Sindri does 2D](docs/2d-model.md)
 - [transparent rendering](docs/rendering-transparency.md)
 - [colour handling](docs/rendering-color.md)
 - [presentation surfaces](docs/rendering-surface.md)
