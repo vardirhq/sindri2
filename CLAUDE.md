@@ -25,7 +25,7 @@ inferred from code:
   IDs, versioned scenes, coarse WASM calls, WebGPU-first, etc.).
 
 Per-subsystem contracts live in `docs/`: `asset-foundation.md`,
-`component-schema-registry.md`, `scene-serialization.md`, `scene-extraction.md`,
+`component-schema-registry.md`, `scene-serialization.md`, `scene-extraction.md`, `2d-model.md`,
 `rendering-frame-pipeline.md`, `rendering-transparency.md`, `rendering-color.md`,
 `rendering-surface.md`, `platform-host.md`, `editor-architecture.md`. When you
 change a subsystem's behaviour, update its doc in the same change.
