@@ -1181,6 +1181,43 @@ Local-first AI support may remain valuable, but AI should not become a dependenc
 
 ---
 
+# The companion game
+
+Sindri is built alongside one game, grown rather than replaced, and that game is
+the measure of whether any of this works.
+
+The reasoning is not motivational, though it is that too. An engine developed
+without something being built on it optimises for the wrong things: the
+abstractions get elegant, the API gets general, and nobody finds out that
+placing a character on a floor takes eleven lines and two concepts that should
+not exist. A game finds that in an afternoon. It is the same argument as
+editor/runtime parity, one level up — a feature is not finished because it
+exists, it is finished when something real uses it.
+
+It is deliberately one game rather than a demo per feature. A demo proves a
+capability and is then abandoned, so it never has to survive the next change; a
+game that has to keep running is what turns a capability into something
+dependable.
+
+The discipline that keeps it from becoming a tech demo is a single rule: only
+add to the game what makes the game better. An engine feature that does not
+improve the game has told you something about the feature. This inverts the
+usual relationship, where the demo exists to display whatever was built last.
+
+It is not an example. `examples/` holds curated proofs — the triangle proves a
+shared renderer across targets, the cube proves a scene-driven frame pipeline —
+and each earns its place by proving exactly one thing. The game proves nothing
+in particular and is allowed to be untidy, so it lives outside that directory
+and the proofs stay as the neutral baseline.
+
+The game is isometric. That is where `IsoGame`'s lessons below are meant to
+land, and it keeps the game on the roadmap's path rather than beside it. Its
+needs are broad enough that building it exercises most of the engine without
+narrowing the engine to one genre, which is the risk a single companion game
+carries and the reason the two neutral proofs stay.
+
+---
+
 # Lessons to bring over from IsoGame
 
 The existing IsoGame project should not be copied wholesale into Sindri.

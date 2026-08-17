@@ -176,8 +176,7 @@ shaped like the tool.
 - [ ] Port A* pathfinding into a renderer-free grid crate
 - [ ] Add optional Rapier2D adapter without core dependency
 - [ ] Add 2D pan/zoom viewport controls, which need a 2D scene rather than the screen-anchored overlay the demo uses
-- [ ] Build `hello-2d` and one small platformer vertical slice
-- [ ] Verify both examples natively and in browser
+- [ ] Start the companion game and grow it through this milestone, verified natively and in browser — see "The companion game" below, which replaces the `hello-2d` and platformer slice this milestone used to schedule
 
 Exit gate: Sindri Next matches the useful core of legacy 2D without inheriting its desktop/server/Lua coupling, and each ported system can be authored in the editor rather than only by hand in JSON.
 
@@ -213,7 +212,7 @@ editor is pleasant to use for an afternoon is tracked separately, below.
 - [ ] Add frustum culling and mesh instancing after profiling
 - [ ] Add optional Rapier3D adapter
 - [ ] Add camera/editor gizmos and collider visualization
-- [ ] Build `hello-3d` and a small navigable scene
+- [ ] Put a 3D prop into the companion game's sprite scene, which is what `hello-3d` and a navigable scene were for
 - [ ] Validate representative integrated and discrete GPUs
 
 Exit gate: imported glTF content, camera, lighting, and collision work in native, browser, and editor preview.
@@ -229,7 +228,7 @@ Exit gate: imported glTF content, camera, lighting, and collision work in native
 - [ ] Add integer zoom and generated-anchor metadata
 - [ ] Add orthographic 3D isometric camera helpers
 - [ ] Add editor grid, tile, footprint, and height-layer tools
-- [ ] Build sprite-based `iso-room` example
+- [ ] Move the companion game onto this module, replacing the coordinate handling it grew of its own — it is the `iso-room` this milestone used to schedule
 
 Exit gate: shared grid/gameplay logic supports both sprite isometric and orthographic 3D presentation.
 
@@ -325,6 +324,59 @@ larger tool; doing one here early is the point rather than a conflict.
 - [ ] Warn before discarding unsaved work on reload, reset, or exit
 - [ ] Open a scene from the interface rather than only from the command line
 - [ ] Show which entity a hierarchy row is, when its name is empty or repeated
+
+## The companion game — continuous, not a milestone
+
+An engine with no game is a set of answers to questions nobody asked. This is
+the game that asks them.
+
+It is one game, built once and grown, rather than a demo per milestone. The plan
+used to schedule six throwaway artefacts — `hello-2d`, a platformer slice,
+`hello-3d`, a navigable scene, `iso-room`, and a scripted slice — each proving
+one milestone and then rotting. That is the accumulation `CLAUDE.md` warns
+against, arriving by instalments. Folding them into one living game is less work
+than building six, and it is the only one of the seven that is still running in
+a year.
+
+**It is a game first.** Not a feature showcase. The rule that keeps it honest:
+only add to the game what makes the game better. When an engine feature does not
+improve it, that is information about the feature, not a shortcoming of the
+game. A showcase never has to be fun, never has to ship, and never meets the
+awkward case — so it applies none of the pressure that makes an engine good.
+
+**It is isometric,** because Milestone 9 already is, so the game sits on the
+path rather than beside it; because isometric is sprites with depth sorting,
+layers, and transparent ordering, which is what the frame pipeline already does
+well; and because its needs are broad enough — grid maths, pathfinding, text,
+input, UI, eventually 3D props — that building it will not quietly reshape the
+engine around one genre.
+
+**It is not an example.** `examples/` holds curated proofs, each earning its
+place by proving one thing, and the game is not that. It lives in its own
+top-level directory, is allowed to be messy in ways a proof is not, and the
+triangle and cube stay as the neutral baseline that does not move when the game
+does.
+
+**It stays playable.** Every milestone that touches it leaves it running, with a
+tagged snapshot, so the engine's progress is something to look at rather than a
+list of ticks. A milestone that would leave the game broken is a milestone that
+is not finished.
+
+It cannot start yet. It needs sprite sheets with UV rects, world-space 2D
+positioning, and text — the first three items of Milestone 6 — because until
+then there is no way to draw a character, place it in a world, or tell the
+player anything.
+
+- [ ] Start the game once sprite sheets, world-space 2D, and text exist: one room, one character, one tile floor
+- [ ] Grow it with Milestone 6: animation, a tilemap floor, parallax, and a font rendering real text
+- [ ] Take the Milestone 7 editor to it, and record what authoring it in the editor is actually like
+- [ ] Give it depth with Milestone 8: a 3D prop in the same scene as the sprites
+- [ ] Rebuild its coordinate handling on Milestone 9's grid module rather than its own
+- [ ] Ship it through Milestone 10's export pipeline, natively and to the web, as the pipeline's real test
+- [ ] Rebuild it inside the editor for Milestone 11's exit gate
+
+Exit gate: the game is what someone is shown when they ask what Sindri is for,
+and it runs on both targets at every tagged snapshot.
 
 ## Future research — first-class Sindri gameplay language
 
