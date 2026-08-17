@@ -33,6 +33,11 @@ change a subsystem's behaviour, update its doc in the same change.
 `docs/entity-scaling.md` records what the world costs at 1k, 10k, and 100k
 entities, and why an archetype ECS is not warranted.
 
+`docs/capabilities.md` is the inventory of what actually works, what is drawn in
+the editor but does nothing, and what is missing. Read it before claiming the
+engine or the editor can do something, and update it in the same commit as any
+change that adds, removes, or wires up a capability.
+
 Project policy lives alongside them: `docs/versioning.md` (crate and scene
 format versions; the editor protocol and npm SDK are deliberately undecided) and
 `docs/dependency-policy.md` (what `cargo deny` enforces). `CONTRIBUTING.md`

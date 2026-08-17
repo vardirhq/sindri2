@@ -93,6 +93,17 @@ there. Tick the matching roadmap box only when the item is genuinely finished,
 including its tests; annotate a partially finished item in parentheses instead of
 ticking it.
 
+## The capability list
+
+[`docs/capabilities.md`](docs/capabilities.md) records what the engine and the
+editor can actually do, what the editor draws without wiring up, and what is
+missing. Update it in the same commit as any change that adds a capability,
+removes one, or connects a control that was previously inert.
+
+Entries describe what someone ran, not what a roadmap promises or a type
+signature implies. A wrong entry is worse than a missing one, so correcting a
+claim counts as a change worth making on its own.
+
 ## Versioning
 
 Crate versions, the scene `format_version`, and what a breaking change means for
