@@ -131,7 +131,6 @@ fn stripping_editor_metadata_preserves_the_runtime_scene() {
             assert_eq!(before.id, after.id, "{name}");
             assert_eq!(before.parent, after.parent, "{name}");
             assert_eq!(before.name, after.name, "{name}");
-            assert_eq!(before.transform_2d, after.transform_2d, "{name}");
             assert_eq!(before.transform_3d, after.transform_3d, "{name}");
             assert_eq!(before.components, after.components, "{name}");
             assert!(after.editor.is_empty(), "{name}");
@@ -212,4 +211,120 @@ fn an_edited_transform_survives_a_save_and_reopen() {
             .expect("canonical json"),
         original_text
     );
+}
+
+/// The first real format change, checked against documents written before it.
+///
+/// Format 2 collapsed the separate 2D transform into the one 3D transform.
+/// These are the version 1 fixtures as they were actually stored, kept so the
+/// upgrade is exercised against real files rather than a document written to
+/// suit the test.
+mod migration {
+    use sindri_core::{SceneMigrator, Transform3D};
+
+    use super::{PathBuf, fs};
+
+    fn legacy(name: &str) -> String {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/legacy")
+            .join(name);
+        fs::read_to_string(&path)
+            .unwrap_or_else(|error| panic!("{} should be readable: {error}", path.display()))
+    }
+
+    /// The strongest claim available: each version 1 fixture migrates to
+    /// exactly the version 2 fixture stored beside it. Not "it parses" — the
+    /// same document, byte for byte once canonicalised.
+    #[test]
+    fn a_version_1_scene_migrates_to_the_stored_version_2_fixture() {
+        for (before, after) in [
+            ("hierarchy.v1.json", "hierarchy.scene.json"),
+            ("components.v1.json", "components.scene.json"),
+        ] {
+            let migrated = super::SceneDocument::from_json_migrated(
+                &legacy(before),
+                &SceneMigrator::builtin(),
+            )
+            .unwrap_or_else(|error| panic!("{before} should migrate: {error}"));
+            assert_eq!(migrated.format_version, sindri_core::SCENE_FORMAT_VERSION);
+
+            let current = fs::read_to_string(
+                PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/fixtures")
+                    .join(after),
+            )
+            .expect("the current fixture is readable");
+            assert_eq!(
+                migrated.to_canonical_json().unwrap(),
+                current,
+                "{before} did not migrate to {after}"
+            );
+        }
+    }
+
+    /// The arithmetic, checked rather than assumed: a quarter turn about Z at
+    /// (1.5, -2.25) with a non-uniform 2D scale lands on the Z = 0 plane with
+    /// the angle as a quaternion and a Z scale of 1.
+    #[test]
+    fn a_flat_transform_becomes_a_transform_on_the_zero_plane() {
+        let json = r#"{
+            "format_version": 1,
+            "entities": [{
+                "id": "shadow",
+                "transform_2d": {
+                    "position": [1.5, -2.25],
+                    "rotation_radians": 1.5707963,
+                    "scale": [3.0, 0.25]
+                }
+            }]
+        }"#;
+        let document =
+            super::SceneDocument::from_json_migrated(json, &SceneMigrator::builtin()).unwrap();
+        let moved = document.entities[0].transform_3d.expect("it gained one");
+
+        let quarter_turn = (std::f32::consts::FRAC_PI_4).sin();
+        let close = |left: f32, right: f32| (left - right).abs() < 1.0e-6;
+        assert!(close(moved.position[0], 1.5) && close(moved.position[1], -2.25));
+        assert!(
+            close(moved.position[2], 0.0),
+            "it belongs on the Z = 0 plane"
+        );
+        assert!(close(moved.rotation[2], quarter_turn) && close(moved.rotation[3], quarter_turn));
+        assert!(close(moved.rotation[0], 0.0) && close(moved.rotation[1], 0.0));
+        assert!(
+            close(moved.scale[0], 3.0) && close(moved.scale[1], 0.25),
+            "the two authored scale components carry over unchanged"
+        );
+        assert!(close(moved.scale[2], 1.0), "and Z gains an identity scale");
+    }
+
+    /// An entity holding both described positions in two different spaces, so
+    /// there is no merge of them that is reliably the same scene. Saying so
+    /// beats silently preferring one and moving something.
+    #[test]
+    fn an_entity_with_both_transforms_is_refused_by_name() {
+        let json = r#"{
+            "format_version": 1,
+            "entities": [{
+                "id": "confused",
+                "transform_2d": { "position": [1.0, 2.0] },
+                "transform_3d": { "position": [9.0, 9.0, 9.0] }
+            }]
+        }"#;
+        let error = super::SceneDocument::from_json_migrated(json, &SceneMigrator::builtin())
+            .expect_err("it cannot be resolved");
+        assert!(error.to_string().contains("confused"), "{error}");
+    }
+
+    #[test]
+    fn a_default_transform_2d_survives_as_an_identity() {
+        let json =
+            r#"{ "format_version": 1, "entities": [{ "id": "plain", "transform_2d": {} }] }"#;
+        let document =
+            super::SceneDocument::from_json_migrated(json, &SceneMigrator::builtin()).unwrap();
+        assert_eq!(
+            document.entities[0].transform_3d,
+            Some(Transform3D::default())
+        );
+    }
 }

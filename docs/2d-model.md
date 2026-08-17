@@ -164,8 +164,13 @@ was deliberately built before a second version existed.
 
 The migration is mechanical: a `transform_2d` becomes a `transform_3d` with
 Z = 0, its `rotation_radians` becomes a quaternion about Z, and its two-component
-scale gains a Z of 1. Nothing is lost, so the step needs no policy and no
-choices from the author.
+scale gains a Z of 1. Nothing is lost.
+
+One case is not mechanical, which this document originally missed. Format 1
+allowed an entity to carry both transforms, and they described positions in
+different spaces, so there is no merge of them that is reliably the same scene.
+The migration refuses such an entity and names it, rather than preferring one
+and moving something without saying so.
 
 Golden fixtures cover both versions after this: a version 1 document must still
 load, and must produce exactly the version 2 document the migration promises.

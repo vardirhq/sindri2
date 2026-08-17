@@ -46,7 +46,7 @@ fn cameras() -> &'static str {
 
 fn scene(entities: &str) -> String {
     format!(
-        r#"{{ "format_version": 1, "entities": [{}{}] }}"#,
+        r#"{{ "format_version": 2, "entities": [{}{}] }}"#,
         cameras(),
         entities
     )
@@ -73,7 +73,7 @@ fn meshes_and_sprites_extract_into_ordered_passes() {
         r#",
         { "id": "cube", "transform_3d": {},
           "components": { "sindri.mesh": { "primitive": "cube", "texture": "t", "layer": 0 } } },
-        { "id": "badge", "transform_2d": {},
+        { "id": "badge", "transform_3d": {},
           "components": { "sindri.sprite": { "texture": "b", "anchor": "center", "layer": 100 } } }"#,
     ));
     let frame = SceneExtractor::new()
@@ -95,11 +95,11 @@ fn meshes_and_sprites_extract_into_ordered_passes() {
 fn sprites_batch_per_layer_and_sort_back_to_front() {
     let world = world_from(&scene(
         r#",
-        { "id": "near", "transform_2d": {},
+        { "id": "near", "transform_3d": {},
           "components": { "sindri.sprite": { "texture": "b", "depth": 1.0, "layer": 100 } } },
-        { "id": "far", "transform_2d": {},
+        { "id": "far", "transform_3d": {},
           "components": { "sindri.sprite": { "texture": "b", "depth": 9.0, "layer": 100 } } },
-        { "id": "other-layer", "transform_2d": {},
+        { "id": "other-layer", "transform_3d": {},
           "components": { "sindri.sprite": { "texture": "b", "depth": 1.0, "layer": 200 } } }"#,
     ));
     let frame = SceneExtractor::new()
@@ -156,7 +156,7 @@ fn meshes_keep_one_pass_per_layer_in_layer_order() {
 fn sprite_anchors_resolve_against_the_overlay_extent() {
     let world = world_from(&scene(
         r#",
-        { "id": "badge", "transform_2d": { "position": [-0.78, 0.44] },
+        { "id": "badge", "transform_3d": { "position": [-0.78, 0.44, 0.0] },
           "components": { "sindri.sprite": { "texture": "b", "anchor": "bottom_right" } } }"#,
     ));
     let frame = SceneExtractor::new()
@@ -389,7 +389,7 @@ fn switching_the_world_projection_changes_only_the_world_camera() {
         r#",
         { "id": "cube", "transform_3d": {},
           "components": { "sindri.mesh": { "primitive": "cube", "texture": "t" } } },
-        { "id": "badge", "transform_2d": {},
+        { "id": "badge", "transform_3d": {},
           "components": { "sindri.sprite": { "texture": "b", "layer": 100 } } }"#,
     ));
     let extractor = SceneExtractor::new().unwrap();
@@ -425,7 +425,7 @@ fn switching_the_world_projection_changes_only_the_world_camera() {
 
 #[test]
 fn drawing_without_a_camera_reports_which_one_is_missing() {
-    let mesh_only = r#"{ "format_version": 1, "entities": [
+    let mesh_only = r#"{ "format_version": 2, "entities": [
         { "id": "cube", "transform_3d": {},
           "components": { "sindri.mesh": { "primitive": "cube", "texture": "t" } } }] }"#;
     let world = world_from(mesh_only);
@@ -439,8 +439,8 @@ fn drawing_without_a_camera_reports_which_one_is_missing() {
         Err(SceneExtractError::MissingWorldCamera)
     ));
 
-    let sprite_only = r#"{ "format_version": 1, "entities": [
-        { "id": "badge", "transform_2d": {},
+    let sprite_only = r#"{ "format_version": 2, "entities": [
+        { "id": "badge", "transform_3d": {},
           "components": { "sindri.sprite": { "texture": "b" } } }] }"#;
     let world = world_from(sprite_only);
     assert!(matches!(
@@ -476,11 +476,11 @@ fn an_invalid_camera_distance_is_rejected() {
 fn sprites_batch_per_texture_within_a_layer() {
     let world = world_from(&scene(
         r#",
-        { "id": "a", "transform_2d": {},
+        { "id": "a", "transform_3d": {},
           "components": { "sindri.sprite": { "texture": "one.png", "depth": 2.0, "layer": 100 } } },
-        { "id": "b", "transform_2d": {},
+        { "id": "b", "transform_3d": {},
           "components": { "sindri.sprite": { "texture": "two.png", "depth": 1.0, "layer": 100 } } },
-        { "id": "c", "transform_2d": {},
+        { "id": "c", "transform_3d": {},
           "components": { "sindri.sprite": { "texture": "one.png", "depth": 3.0, "layer": 100 } } }"#,
     ));
     let mut bindings = TextureBindings::new();
@@ -554,7 +554,7 @@ fn unresolved_references_are_reported_by_name() {
         r#",
         { "id": "cube", "transform_3d": {},
           "components": { "sindri.mesh": { "primitive": "cube", "texture": "have.png" } } },
-        { "id": "badge", "transform_2d": {},
+        { "id": "badge", "transform_3d": {},
           "components": { "sindri.sprite": { "texture": "lost.png" } } }"#,
     ));
     let mut bindings = TextureBindings::new();

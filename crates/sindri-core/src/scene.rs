@@ -4,9 +4,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use thiserror::Error;
 
-use crate::{SceneMigrationError, SceneMigrator, Transform2D, Transform3D};
+use crate::{SceneMigrationError, SceneMigrator, Transform3D};
 
-pub const SCENE_FORMAT_VERSION: u32 = 1;
+pub const SCENE_FORMAT_VERSION: u32 = 2;
 
 /// A stable, project-authored entity identifier used only in serialized data.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
@@ -159,11 +159,6 @@ impl SceneDocument {
         }
 
         for entity in &self.entities {
-            if let Some(transform) = &entity.transform_2d
-                && !transform_2d_is_finite(transform)
-            {
-                return Err(SceneError::NonFiniteTransform(entity.id.clone()));
-            }
             if let Some(transform) = &entity.transform_3d
                 && !transform_3d_is_finite(transform)
             {
@@ -236,8 +231,6 @@ pub struct SceneEntity {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub parent: Option<SceneEntityId>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub transform_2d: Option<Transform2D>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub transform_3d: Option<Transform3D>,
     /// Forward-compatible component payloads keyed by registered component name.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
@@ -253,7 +246,6 @@ impl SceneEntity {
             id,
             name: None,
             parent: None,
-            transform_2d: None,
             transform_3d: None,
             components: BTreeMap::new(),
             editor: BTreeMap::new(),
@@ -380,12 +372,6 @@ fn inline_array(source: &str) -> String {
     output
 }
 
-fn transform_2d_is_finite(transform: &Transform2D) -> bool {
-    transform.position.iter().all(|value| value.is_finite())
-        && transform.rotation_radians.is_finite()
-        && transform.scale.iter().all(|value| value.is_finite())
-}
-
 fn transform_3d_is_finite(transform: &Transform3D) -> bool {
     transform.position.iter().all(|value| value.is_finite())
         && transform.rotation.iter().all(|value| value.is_finite())
@@ -499,9 +485,9 @@ mod tests {
     fn rejects_non_finite_transforms() {
         let scene = SceneDocument {
             entities: vec![SceneEntity {
-                transform_2d: Some(Transform2D {
-                    position: [f32::NAN, 0.0],
-                    ..Transform2D::default()
+                transform_3d: Some(Transform3D {
+                    position: [f32::NAN, 0.0, 0.0],
+                    ..Transform3D::default()
                 }),
                 ..entity("drifting", None)
             }],
@@ -563,7 +549,7 @@ mod tests {
         assert!(!json.contains("null"));
         assert!(!json.contains("components"));
         assert!(!json.contains("editor"));
-        assert!(json.contains("\"format_version\": 1"));
+        assert!(json.contains(&format!("\"format_version\": {SCENE_FORMAT_VERSION}")));
     }
 
     #[test]
@@ -594,8 +580,8 @@ mod tests {
         let without_editor = SceneDocument::from_json(&stripped).unwrap();
         assert_eq!(with_editor.entities.len(), without_editor.entities.len());
         assert_eq!(
-            with_editor.entities[0].transform_2d,
-            without_editor.entities[0].transform_2d
+            with_editor.entities[0].transform_3d,
+            without_editor.entities[0].transform_3d
         );
     }
 

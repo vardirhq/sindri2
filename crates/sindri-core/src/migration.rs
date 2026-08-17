@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use serde_json::Value;
+use serde_json::{Value, json};
 use thiserror::Error;
 
 use crate::SCENE_FORMAT_VERSION;
@@ -54,6 +54,19 @@ impl SceneMigrator {
         }
         self.steps.insert(from_version, (to_version, step));
         Ok(())
+    }
+
+    /// The migrator with every built-in step registered.
+    ///
+    /// Anything that opens a scene a person may have written earlier should use
+    /// this rather than assembling its own chain, so "can this runtime open
+    /// that file" has one answer instead of one per caller.
+    pub fn builtin() -> Self {
+        let mut migrator = Self::new();
+        migrator
+            .register(1, 2, collapse_transform_2d)
+            .expect("built-in steps are registered once and move forward");
+        migrator
     }
 
     pub fn is_empty(&self) -> bool {
@@ -129,6 +142,70 @@ pub enum SceneMigrationError {
     DuplicateStep { from_version: u32 },
     #[error("migrating scene format {from_version} failed: {reason}")]
     StepFailed { from_version: u32, reason: String },
+    #[error(
+        "entity '{entity}' has both a 2D and a 3D transform, which describe \
+         positions in different spaces; remove one before upgrading the scene"
+    )]
+    ConflictingTransforms { entity: String },
+}
+
+/// Format 2 replaced the separate 2D transform with the single 3D one, so a 2D
+/// transform becomes a 3D transform on the Z = 0 plane: the angle becomes a
+/// quaternion about Z and the two-component scale gains a Z of 1. Nothing is
+/// lost, so nothing here asks the author to choose.
+///
+/// Except in one case. An entity carrying both transforms is rejected rather
+/// than resolved: the two describe positions in different spaces, so no merge
+/// of them is reliably the same scene, and quietly preferring one would move
+/// something without saying so.
+fn collapse_transform_2d(document: &mut Value) -> Result<(), SceneMigrationError> {
+    let Some(entities) = document.get_mut("entities").and_then(Value::as_array_mut) else {
+        return Ok(());
+    };
+
+    for entity in entities {
+        let Some(fields) = entity.as_object_mut() else {
+            continue;
+        };
+        let Some(flat) = fields.remove("transform_2d") else {
+            continue;
+        };
+        if fields.contains_key("transform_3d") {
+            return Err(SceneMigrationError::ConflictingTransforms {
+                entity: fields
+                    .get("id")
+                    .and_then(Value::as_str)
+                    .unwrap_or("<an entity with no id>")
+                    .to_owned(),
+            });
+        }
+
+        let pair = |key: &str, fallback: [f64; 2]| -> [f64; 2] {
+            flat.get(key)
+                .and_then(Value::as_array)
+                .filter(|values| values.len() == 2)
+                .and_then(|values| Some([values[0].as_f64()?, values[1].as_f64()?]))
+                .unwrap_or(fallback)
+        };
+        let [x, y] = pair("position", [0.0, 0.0]);
+        let [scale_x, scale_y] = pair("scale", [1.0, 1.0]);
+        let angle = flat
+            .get("rotation_radians")
+            .and_then(Value::as_f64)
+            .unwrap_or(0.0);
+        let half = angle / 2.0;
+
+        fields.insert(
+            "transform_3d".to_owned(),
+            json!({
+                "position": [x, y, 0.0],
+                // Quaternion in [x, y, z, w] order, turning about Z alone.
+                "rotation": [0.0, 0.0, half.sin(), half.cos()],
+                "scale": [scale_x, scale_y, 1.0],
+            }),
+        );
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -180,7 +257,7 @@ mod tests {
 
     #[test]
     fn registered_steps_upgrade_older_documents() {
-        let mut migrator = SceneMigrator::new();
+        let mut migrator = SceneMigrator::builtin();
         migrator.register(0, 1, rename_label_to_name).unwrap();
 
         let document = SceneDocument::from_json_migrated(&legacy_document(), &migrator).unwrap();

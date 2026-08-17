@@ -12,7 +12,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use sindri_core::{SceneDocument, SceneJsonError, World, WorldError};
+use sindri_core::{SceneDocument, SceneJsonError, SceneMigrator, World, WorldError};
 use thiserror::Error;
 
 /// Where the editor looks when it is started with no argument.
@@ -36,9 +36,11 @@ impl SceneFile {
             path: path.display().to_string(),
             source,
         })?;
+        // Migrated rather than parsed strictly: an editor that cannot open a
+        // scene written by an older Sindri is an editor that loses work.
         Ok(Self {
             path: Some(path.to_path_buf()),
-            document: SceneDocument::from_json(&text)?,
+            document: SceneDocument::from_json_migrated(&text, &SceneMigrator::builtin())?,
         })
     }
 

@@ -147,6 +147,8 @@ All notable changes to Sindri Next will be documented here.
 - Unpinned `png` to share `image`'s version, which stops every build compiling two copies of it.
 - Added File → Open scene to the editor, so it can open a scene other than the one it was started on.
 - Made the editor start with nothing selected, and let a click on the hierarchy's empty space or Escape clear the selection.
+- Collapsed `Transform2D` into `Transform3D` so sprites and meshes share one world, as scene format version 2.
+- Added the scene format version 1 to 2 migration, so scenes written by an earlier Sindri still open; the editor now migrates rather than parsing strictly.
 - Added workspace layouts to the editor, chosen from the View menu and remembered between launches: `2 by 3` shows the scene above the game view with Hierarchy, Project, and Inspector beside them, and `Wide` keeps the previous single-view arrangement.
 - Made the editor render the scene and game views at the same time in the `2 by 3` layout, rather than only whichever tab was showing.
 - Fixed action failures being invisible: a failed save, open, or undo was overwritten by the next frame's render result within a frame of happening.

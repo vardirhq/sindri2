@@ -25,8 +25,8 @@ use egui_material_icons::{
 use glam::Vec2 as GlamVec2;
 use serde_json::Value;
 use sindri_core::{
-    CommandBuffer, CommandHistory, EngineLifecycle, EngineState, EntityData, EntityId, Transform2D,
-    Transform3D, World, WorldCommand,
+    CommandBuffer, CommandHistory, EngineLifecycle, EngineState, EntityData, EntityId, Transform3D,
+    World, WorldCommand,
 };
 use sindri_cube::{
     CameraView, DemoScene, FrameRenderers, FrameTarget, TextureBindings, WorldProjection,
@@ -743,9 +743,6 @@ impl EditorApp {
                         if let Some(transform) = &mut draft.transform_3d {
                             transform_3d_section(ui, transform);
                         }
-                        if let Some(transform) = &mut draft.transform_2d {
-                            transform_2d_section(ui, transform);
-                        }
                         components_sections(ui, &components);
                         ui.add_space(10.0);
                         ui.add_sized(
@@ -1407,19 +1404,6 @@ fn transform_3d_section(ui: &mut egui::Ui, transform: &mut Transform3D) {
     property_label(ui, "Rotation", "Quaternion");
 }
 
-fn transform_2d_section(ui: &mut egui::Ui, transform: &mut Transform2D) {
-    section_header(ui, ICON_OPEN_WITH, "Transform 2D");
-    vector_row_2d(ui, "Position", &mut transform.position);
-    vector_row_2d(ui, "Scale", &mut transform.scale);
-    ui.horizontal(|ui| {
-        ui.add_space(10.0);
-        ui.label(RichText::new("Rotation").size(11.0).color(TEXT_MUTED));
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.add(egui::DragValue::new(&mut transform.rotation_radians).speed(0.01));
-        });
-    });
-}
-
 fn components_sections(ui: &mut egui::Ui, components: &BTreeMap<String, Value>) {
     for name in components.keys() {
         let icon = match name.as_str() {
@@ -1476,28 +1460,6 @@ fn vector_row(ui: &mut egui::Ui, label: &str, values: &mut [f32; 3]) {
             );
             ui.add_sized(
                 [48.0, 23.0],
-                egui::DragValue::new(value).speed(0.05).max_decimals(3),
-            );
-        }
-    });
-}
-
-fn vector_row_2d(ui: &mut egui::Ui, label: &str, values: &mut [f32; 2]) {
-    ui.horizontal(|ui| {
-        ui.add_space(10.0);
-        ui.add_sized(
-            [50.0, 24.0],
-            egui::Label::new(RichText::new(label).size(11.0).color(TEXT_MUTED)),
-        );
-        for (index, value) in values.iter_mut().enumerate() {
-            ui.label(
-                RichText::new(["X", "Y"][index])
-                    .strong()
-                    .size(9.0)
-                    .color(TEXT_FAINT),
-            );
-            ui.add_sized(
-                [67.0, 23.0],
                 egui::DragValue::new(value).speed(0.05).max_decimals(3),
             );
         }
@@ -1920,7 +1882,6 @@ fn paint_axis_gizmo(painter: &egui::Painter, origin: Pos2) {
 #[derive(Clone, Debug, PartialEq)]
 struct EntityDraft {
     name: String,
-    transform_2d: Option<Transform2D>,
     transform_3d: Option<Transform3D>,
 }
 
@@ -1928,7 +1889,6 @@ impl From<&EntityData> for EntityDraft {
     fn from(data: &EntityData) -> Self {
         Self {
             name: entity_name(data),
-            transform_2d: data.transform_2d,
             transform_3d: data.transform_3d,
         }
     }
@@ -1942,12 +1902,6 @@ fn draft_commands(entity: EntityId, original: &EntityDraft, draft: &EntityDraft)
         buffer.push(WorldCommand::SetName {
             entity,
             name: Some(draft.name.clone()),
-        });
-    }
-    if original.transform_2d != draft.transform_2d {
-        buffer.push(WorldCommand::SetTransform2D {
-            entity,
-            transform: draft.transform_2d,
         });
     }
     if original.transform_3d != draft.transform_3d {

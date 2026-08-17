@@ -5,13 +5,16 @@
 
 use std::time::Duration;
 
-use sindri_core::{EntityData, EntityId, FixedStepConfig, TimeScale, Transform2D};
+use sindri_core::{EntityData, EntityId, FixedStepConfig, TimeScale, Transform3D};
 use sindri_platform::{
     EngineHost, FrameContext, FramePhase, FrameTimer, Game, HostError, InputEvent, Key, ManualClock,
 };
 use thiserror::Error;
 
 const STEP: Duration = Duration::from_millis(10);
+/// Where the player sits along Z, which nothing in this test should move.
+const PLAYER_DEPTH: f32 = -3.5;
+
 const SPEED: f32 = 100.0;
 
 fn config() -> FixedStepConfig {
@@ -42,11 +45,11 @@ struct Player {
 }
 
 impl Player {
-    fn position(&self, host: &EngineHost<Self>) -> [f32; 2] {
+    fn position(&self, host: &EngineHost<Self>) -> [f32; 3] {
         host.world()
             .get(self.entity.expect("the player spawned"))
-            .and_then(|data| data.transform_2d)
-            .expect("the player has a 2D transform")
+            .and_then(|data| data.transform_3d)
+            .expect("the player has a transform")
             .position
     }
 }
@@ -58,7 +61,12 @@ impl Game for Player {
         self.started = true;
         self.entity = Some(context.world.spawn(EntityData {
             name: Some("Player".into()),
-            transform_2d: Some(Transform2D::default()),
+            transform_3d: Some(Transform3D {
+                // Off the play plane on purpose: gameplay that moves in two
+                // dimensions must not quietly drag the third one with it.
+                position: [0.0, 0.0, PLAYER_DEPTH],
+                ..Transform3D::default()
+            }),
             ..EntityData::default()
         }));
         Ok(())
@@ -75,10 +83,10 @@ impl Game for Player {
             .world
             .get_mut(entity)
             .ok_or(PlayerError::MissingEntity)?;
-        let mut transform = data.transform_2d.unwrap_or_default();
+        let mut transform = data.transform_3d.unwrap_or_default();
         transform.position[0] += horizontal * SPEED * seconds;
         transform.position[1] += vertical * SPEED * seconds;
-        data.transform_2d = Some(transform);
+        data.transform_3d = Some(transform);
         Ok(())
     }
 
@@ -151,6 +159,11 @@ fn the_keyboard_moves_an_entity() {
         player[0]
     );
     assert!(player[1].abs() < f32::EPSILON);
+    assert!(
+        (player[2] - PLAYER_DEPTH).abs() < f32::EPSILON,
+        "moving in two dimensions must leave the third alone, but depth became {}",
+        player[2]
+    );
 }
 
 /// The property that makes fixed-step simulation worth having.
@@ -262,6 +275,7 @@ fn a_frozen_time_scale_still_delivers_frames() {
     assert_eq!(host.game().updates, 50, "frames keep arriving while frozen");
     let resting = host.game().position(&host);
     assert!(resting[0].abs() < f32::EPSILON && resting[1].abs() < f32::EPSILON);
+    assert!((resting[2] - PLAYER_DEPTH).abs() < f32::EPSILON);
 }
 
 #[test]
