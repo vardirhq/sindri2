@@ -131,6 +131,7 @@ The detailed contracts live alongside the code:
 - [presentation surfaces](docs/rendering-surface.md)
 - [windowed host](docs/platform-host.md)
 - [entity scaling](docs/entity-scaling.md)
+- [what Sindri can do today](docs/capabilities.md)
 - [versioning](docs/versioning.md)
 
 ## Development

@@ -181,6 +181,30 @@ shaped like the tool.
 
 Exit gate: Sindri Next matches the useful core of legacy 2D without inheriting its desktop/server/Lua coupling, and each ported system can be authored in the editor rather than only by hand in JSON.
 
+## Audio — unnumbered on purpose
+
+Audio depends on the platform boundary (Milestone 2) and the asset system
+(Milestone 4) and on nothing else, so it does not sit naturally before or after
+the 2D migration. It can be taken whenever a game needs to make a sound.
+
+It is unnumbered rather than inserted as a milestone because renumbering seven
+milestones to record one omission costs more than the omission does.
+`PROJECT_OVERVIEW.md` already places it — an asset type the asset system must
+support, a device integration behind the platform boundary, and explicitly not a
+dependency of any core crate — but no milestone ever scheduled it, so until now
+the plan described an engine that could not make a sound.
+
+- [ ] Define an audio asset type and its decoding path alongside textures
+- [ ] Add a platform audio boundary with a silent implementation, so tests and CI need no sound device and a headless run can still assert what was asked to play
+- [ ] Play one-shot sounds from gameplay through that boundary
+- [ ] Add looping music with volume, and tie stop and resume to the engine lifecycle so pausing the game pauses the sound
+- [ ] Add a browser backend behind the same boundary, including the user-gesture requirement browsers impose before any audio may start
+- [ ] Let a scene reference an audio asset through a component, and surface audio in the editor's project browser
+
+Exit gate: the companion game plays a sound when something happens, natively and
+in a browser, and a headless test can assert it was asked to without a sound
+device existing.
+
 ## Milestone 7 — Editor/runtime protocol and minimal editor
 
 - [x] Choose and document a native Rust `egui` editor with in-process WGPU viewport integration
