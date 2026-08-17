@@ -1,7 +1,7 @@
 use serde_json::Value;
 use thiserror::Error;
 
-use crate::{EntityId, Transform2D, Transform3D, World, WorldError};
+use crate::{EntityId, Transform3D, World, WorldError};
 
 /// A deferred mutation of a world.
 ///
@@ -21,10 +21,6 @@ pub enum WorldCommand {
     SetName {
         entity: EntityId,
         name: Option<String>,
-    },
-    SetTransform2D {
-        entity: EntityId,
-        transform: Option<Transform2D>,
     },
     SetTransform3D {
         entity: EntityId,
@@ -50,7 +46,6 @@ impl WorldCommand {
     pub const fn entity(&self) -> EntityId {
         match self {
             Self::SetName { entity, .. }
-            | Self::SetTransform2D { entity, .. }
             | Self::SetTransform3D { entity, .. }
             | Self::SetParent { entity, .. }
             | Self::SetComponent { entity, .. }
@@ -69,16 +64,6 @@ impl WorldCommand {
                 Ok(Self::SetName {
                     entity,
                     name: previous,
-                })
-            }
-            Self::SetTransform2D { entity, transform } => {
-                let data = world
-                    .get_mut(entity)
-                    .ok_or(WorldError::InvalidEntity(entity))?;
-                let previous = std::mem::replace(&mut data.transform_2d, transform);
-                Ok(Self::SetTransform2D {
-                    entity,
-                    transform: previous,
                 })
             }
             Self::SetTransform3D { entity, transform } => {
@@ -799,9 +784,9 @@ mod tests {
                 .apply(
                     edit(
                         "Move",
-                        vec![WorldCommand::SetTransform2D {
+                        vec![WorldCommand::SetTransform3D {
                             entity,
-                            transform: Some(Transform2D::default()),
+                            transform: Some(Transform3D::default()),
                         }],
                     )
                     .merging(key),
@@ -811,10 +796,10 @@ mod tests {
         }
 
         history.undo(&mut world).unwrap();
-        assert_eq!(world.get(child).unwrap().transform_2d, None);
+        assert_eq!(world.get(child).unwrap().transform_3d, None);
         assert!(history.can_undo());
         history.undo(&mut world).unwrap();
-        assert_eq!(world.get(parent).unwrap().transform_2d, None);
+        assert_eq!(world.get(parent).unwrap().transform_3d, None);
     }
 
     #[test]

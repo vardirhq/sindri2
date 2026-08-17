@@ -4,8 +4,7 @@ use serde_json::Value;
 use thiserror::Error;
 
 use crate::{
-    EntityId, SceneDocument, SceneEntity, SceneEntityId, SceneError, SceneMetadata, Transform2D,
-    Transform3D,
+    EntityId, SceneDocument, SceneEntity, SceneEntityId, SceneError, SceneMetadata, Transform3D,
 };
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -14,7 +13,6 @@ pub struct EntityData {
     pub name: Option<String>,
     pub parent: Option<EntityId>,
     pub children: Vec<EntityId>,
-    pub transform_2d: Option<Transform2D>,
     pub transform_3d: Option<Transform3D>,
     pub components: BTreeMap<String, Value>,
     /// Editor-only state that the runtime carries but never interprets.
@@ -161,7 +159,6 @@ impl World {
             let runtime = world.spawn(EntityData {
                 source_id: Some(entity.id.clone()),
                 name: entity.name.clone(),
-                transform_2d: entity.transform_2d,
                 transform_3d: entity.transform_3d,
                 components: entity.components.clone(),
                 editor: entity.editor.clone(),
@@ -213,7 +210,6 @@ impl World {
             entities.push(SceneEntity {
                 name: data.name.clone(),
                 parent,
-                transform_2d: data.transform_2d,
                 transform_3d: data.transform_3d,
                 components: data.components.clone(),
                 editor: data.editor.clone(),
@@ -372,9 +368,9 @@ mod tests {
 
         let mut child = SceneEntity::new(SceneEntityId::new("child").unwrap());
         child.parent = Some(SceneEntityId::new("root").unwrap());
-        child.transform_2d = Some(Transform2D {
-            position: [1.5, -2.25],
-            ..Transform2D::default()
+        child.transform_3d = Some(Transform3D {
+            position: [1.5, -2.25, 0.0],
+            ..Transform3D::default()
         });
 
         SceneDocument {
@@ -411,21 +407,21 @@ mod tests {
         let loaded = World::from_scene(&authored).unwrap();
         let mut world = loaded.world;
         let child = loaded.entity_map[&SceneEntityId::new("child").unwrap()];
-        world.get_mut(child).unwrap().transform_2d = Some(Transform2D {
-            position: [4.0, 8.0],
-            rotation_radians: 0.5,
-            scale: [2.0, 2.0],
+        world.get_mut(child).unwrap().transform_3d = Some(Transform3D {
+            position: [4.0, 8.0, -1.5],
+            rotation: [0.0, 0.0, 0.247_404, 0.968_912],
+            scale: [2.0, 2.0, 1.0],
         });
 
         let saved = world.to_scene().unwrap();
         let reloaded = World::from_scene(&saved).unwrap();
         let reloaded_child = reloaded.entity_map[&SceneEntityId::new("child").unwrap()];
         assert_eq!(
-            reloaded.world.get(reloaded_child).unwrap().transform_2d,
-            Some(Transform2D {
-                position: [4.0, 8.0],
-                rotation_radians: 0.5,
-                scale: [2.0, 2.0],
+            reloaded.world.get(reloaded_child).unwrap().transform_3d,
+            Some(Transform3D {
+                position: [4.0, 8.0, -1.5],
+                rotation: [0.0, 0.0, 0.247_404, 0.968_912],
+                scale: [2.0, 2.0, 1.0],
             })
         );
         assert_eq!(reloaded.world.to_scene().unwrap(), saved);

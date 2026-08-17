@@ -51,8 +51,10 @@ is detected rather than silently addressing whatever took its place. Spawning,
 access, recursive destruction, and slot reuse are all safe. Hierarchies support
 reparenting with cycle prevention, and `World::check_set_parent` answers whether
 a move is legal without making it. Each entity carries a name, a parent,
-children, an optional `Transform2D` and `Transform3D`, arbitrary JSON
-components, and an editor-only section the runtime never interprets.
+children, an optional `Transform3D`, arbitrary JSON components, and an
+editor-only section the runtime never interprets. There is one transform: a 2D
+entity is one that keeps to a plane, not one with a different transform type —
+see `docs/2d-model.md`.
 
 Entity storage was measured at 1k, 10k, and 100k entities before considering an
 archetype ECS; `docs/entity-scaling.md` records why one is not warranted.
@@ -75,7 +77,7 @@ format version does.
 ### Commands and undo
 
 Every world edit can go through a `WorldCommand` that produces its own inverse:
-set name, set either transform, set parent, set or remove a component.
+set name, set the transform, set parent, set or remove a component.
 `Transaction` is all-or-nothing, and `CommandHistory` gives bounded undo and
 redo with labelled steps and merge runs, so a continuous drag collapses into one
 undoable step rather than several hundred.
@@ -165,7 +167,7 @@ frame.
   back canonically, reloads from disk, and discards changes
 - Shows the hierarchy from live runtime state, nested, searchable, with
   selection — and with clearing the selection by clicking empty space or Escape
-- Inspector edits of name, `Transform2D`, and `Transform3D`
+- Inspector edits of name and the transform
 - Reparenting through a **Parent** menu that offers only the moves the world
   would accept
 - Undo and redo of every edit, with drag-merging so a slider drag is one step
@@ -209,10 +211,11 @@ Listed because a control that looks like a feature is worse than an absent one.
 
 ### Engine
 
-- **Sprites are pinned to the screen.** A sprite's `Transform2D` is an offset
-  within the overlay camera's extent, and the camera's view matrix cancels its
-  own centre, so moving a 2D camera moves nothing. There is no 2D world to move
-  a character through
+- **Sprites are pinned to the screen.** A sprite's transform is still read as an
+  offset within the overlay camera's extent, and the camera's view matrix
+  cancels its own centre, so moving a 2D camera moves nothing. The transforms
+  are now one, which is the precondition; the world-space sprite option is the
+  next item
 - **One texture is one sprite.** No UV rects, so no sprite sheets, no animation
   frames, no tilesets
 - **No text rendering.** No score, menu, or dialogue

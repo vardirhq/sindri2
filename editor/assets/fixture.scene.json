@@ -1,5 +1,5 @@
 {
-  "format_version": 1,
+  "format_version": 2,
   "metadata": {
     "name": "Editor fixture"
   },
@@ -36,10 +36,10 @@
     {
       "id": "sprite",
       "name": "Sprite",
-      "transform_2d": {
-        "position": [0.0, 0.0],
-        "rotation_radians": 0.0,
-        "scale": [0.5, 0.5]
+      "transform_3d": {
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.5, 0.5, 1.0]
       },
       "components": {
         "sindri.sprite": {

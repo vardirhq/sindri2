@@ -54,6 +54,18 @@ format already carries unknown data forward:
 - Changing what an existing field means, removing one, or changing how entities
   or hierarchy are encoded does move it.
 
+### Version 2
+
+The first increase, and the one the migrator was built for. Format 2 replaced
+the separate `transform_2d` with the single `transform_3d`, so a 2D transform
+migrates to the Z = 0 plane: its angle becomes a quaternion about Z and its
+two-component scale gains a Z of 1. Nothing is lost.
+
+The one case that is not mechanical is an entity that carried both transforms,
+which format 1 allowed. They described positions in different spaces, so no
+merge of them is reliably the same scene; the migration refuses it and names the
+entity rather than quietly preferring one and moving something.
+
 A version increase requires a registered `SceneMigrator` step **before** the new
 version is written anywhere. The migrator enforces the properties that keep a
 chain honest — forward-only, one step per source version, no step targeting an

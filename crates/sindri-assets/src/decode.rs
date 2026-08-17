@@ -299,7 +299,7 @@ mod tests {
     #[test]
     fn rejects_structurally_invalid_scenes() {
         let json = br#"{
-            "format_version": 1,
+            "format_version": 2,
             "entities": [{ "id": "child", "parent": "missing" }]
         }"#;
         let error = SceneAssetDecoder

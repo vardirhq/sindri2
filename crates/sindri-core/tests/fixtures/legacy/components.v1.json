@@ -1,5 +1,5 @@
 {
-  "format_version": 2,
+  "format_version": 1,
   "metadata": {
     "name": "Component payload fixture",
     "editor": {
@@ -10,10 +10,10 @@
   "entities": [
     {
       "id": "banner",
-      "transform_3d": {
-        "position": [0.0, -0.75, 0.0],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.5, 0.125, 1.0]
+      "transform_2d": {
+        "position": [0.0, -0.75],
+        "rotation_radians": 0.0,
+        "scale": [0.5, 0.125]
       },
       "components": {
         "sindri.sprite": {

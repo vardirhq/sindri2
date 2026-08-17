@@ -2,8 +2,8 @@ use std::collections::BTreeMap;
 
 use glam::{Mat4, Quat, Vec2, Vec3};
 use sindri_core::{
-    ComponentRegistryError, ComponentSchemaRegistry, SceneComponent, SceneDocument, Transform2D,
-    Transform3D, UnknownComponentPolicy, World,
+    ComponentRegistryError, ComponentSchemaRegistry, SceneComponent, SceneDocument, Transform3D,
+    UnknownComponentPolicy, World,
 };
 use sindri_render::{
     ClearOperations, ExtractedFrame, FrameCamera, FrameCommand, FramePass, FramePlanError,
@@ -143,7 +143,7 @@ impl SceneExtractor {
                 .ok_or(SceneExtractError::MissingOverlayCamera)?;
             let transform = world
                 .get(entity)
-                .and_then(|data| data.transform_2d)
+                .and_then(|data| data.transform_3d)
                 .unwrap_or_default();
             let order = TransparentOrder::new(sprite.layer, sprite.depth, entity.index())?;
             layers
@@ -311,12 +311,23 @@ fn transform_matrix(transform: Transform3D) -> Mat4 {
     )
 }
 
-fn sprite_matrix(transform: Transform2D, anchor: SpriteAnchor, extent: OverlayExtent) -> Mat4 {
+/// Where a screen-anchored sprite lands, given the one transform.
+///
+/// Only X and Y of the transform reach the overlay: a screen-space sprite is
+/// positioned against the camera's extent, so its Z has nowhere to go here.
+/// That changes when sprites gain a world-space option; until then this is the
+/// same arithmetic the separate 2D transform produced, reading the same two
+/// numbers from a different place.
+///
+/// The rotation is taken about Z alone, which is what a flat thing facing the
+/// camera can turn about.
+fn sprite_matrix(transform: Transform3D, anchor: SpriteAnchor, extent: OverlayExtent) -> Mat4 {
     let unit = Vec2::from_array(anchor.unit_offset());
     let origin = extent.center + unit * extent.half_extent;
-    let position = origin + Vec2::from_array(transform.position);
+    let position = origin + Vec2::new(transform.position[0], transform.position[1]);
+    let rotation = Quat::from_array(transform.rotation);
     Mat4::from_translation(position.extend(0.0))
-        * Mat4::from_rotation_z(transform.rotation_radians)
+        * Mat4::from_quat(rotation)
         * Mat4::from_scale(Vec3::new(transform.scale[0], transform.scale[1], 1.0))
 }
 

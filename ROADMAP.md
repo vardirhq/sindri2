@@ -163,7 +163,7 @@ format, so the format, its serialization, and its renderer come first —
 designing a data model through the tool that paints it is how the model ends up
 shaped like the tool.
 
-- [ ] Collapse `Transform2D` into `Transform3D` as scene format version 2, so sprites and meshes share one world — the model is in `docs/2d-model.md`
+- [x] Collapse `Transform2D` into `Transform3D` as scene format version 2, so sprites and meshes share one world — the model is in `docs/2d-model.md`; the render is pixel-identical across the change, and a version 1 fixture migrates to exactly the version 2 one stored beside it
 - [ ] Give sprites a world-space option, keeping screen-anchored as the default so overlays and both proofs are unchanged
 - [ ] Sort transparent sprites by camera distance rather than an authored depth field, with layer as the explicit override
 - [ ] Add 2D-shaped transform accessors that take and return X and Y only, so the common way a layered scene gets flattened is not expressible

@@ -1,15 +1,15 @@
 {
-  "format_version": 1,
+  "format_version": 2,
   "metadata": {
     "name": "Shared 2D and 3D frame pipeline proof"
   },
   "entities": [
     {
       "id": "badge-back",
-      "transform_2d": {
-        "position": [-0.78, 0.44],
-        "rotation_radians": 0.0,
-        "scale": [0.38, 0.38]
+      "transform_3d": {
+        "position": [-0.78, 0.44, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.38, 0.38, 1.0]
       },
       "components": {
         "sindri.sprite": {
@@ -23,10 +23,10 @@
     },
     {
       "id": "badge-front",
-      "transform_2d": {
-        "position": [-0.18, 0.58],
-        "rotation_radians": 0.0,
-        "scale": [0.42, 0.42]
+      "transform_3d": {
+        "position": [-0.18, 0.58, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.42, 0.42, 1.0]
       },
       "components": {
         "sindri.sprite": {
@@ -40,10 +40,10 @@
     },
     {
       "id": "badge-green",
-      "transform_2d": {
-        "position": [-0.6, 0.32],
-        "rotation_radians": 0.0,
-        "scale": [0.34, 0.34]
+      "transform_3d": {
+        "position": [-0.6, 0.32, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.34, 0.34, 1.0]
       },
       "components": {
         "sindri.sprite": {
@@ -57,10 +57,10 @@
     },
     {
       "id": "badge-orange",
-      "transform_2d": {
-        "position": [-0.44, 0.52],
-        "rotation_radians": 0.0,
-        "scale": [0.32, 0.32]
+      "transform_3d": {
+        "position": [-0.44, 0.52, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.32, 0.32, 1.0]
       },
       "components": {
         "sindri.sprite": {
@@ -74,10 +74,10 @@
     },
     {
       "id": "badge-purple",
-      "transform_2d": {
-        "position": [-0.28, 0.34],
-        "rotation_radians": 0.0,
-        "scale": [0.36, 0.36]
+      "transform_3d": {
+        "position": [-0.28, 0.34, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.36, 0.36, 1.0]
       },
       "components": {
         "sindri.sprite": {

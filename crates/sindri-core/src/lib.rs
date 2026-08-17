@@ -33,7 +33,7 @@ pub use scene::{
     SceneMetadata,
 };
 pub use time::{FixedStepClock, FixedStepConfig, FrameSteps, TimeError, TimeScale};
-pub use transform::{Transform2D, Transform3D};
+pub use transform::Transform3D;
 pub use world::{EntityData, LoadedScene, World, WorldError};
 
 /// Common imports for native Sindri game code.
@@ -42,7 +42,7 @@ pub mod prelude {
         AssetHandle, AssetId, AssetLoadErrorKind, AssetStatus, AssetStore, CommandBuffer,
         CommandHistory, ComponentSchemaRegistry, EngineCore, EngineLifecycle, EngineState,
         EntityData, EntityId, FixedStepClock, FixedStepConfig, SceneComponent, SceneDocument,
-        SceneEntity, SceneEntityId, SceneMetadata, SceneMigrator, TimeScale, Transform2D,
-        Transform3D, UnknownComponentPolicy, WeakAssetHandle, World, WorldCommand,
+        SceneEntity, SceneEntityId, SceneMetadata, SceneMigrator, TimeScale, Transform3D,
+        UnknownComponentPolicy, WeakAssetHandle, World, WorldCommand,
     };
 }
