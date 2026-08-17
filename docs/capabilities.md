@@ -155,6 +155,10 @@ Nothing pretends browser I/O is synchronous.
 Reflects `main`. The editor renders the real runtime frame through eframe's
 shared WGPU device — it is not a mock, and it does not create a second device.
 
+An action that fails says so: a sticky notice from the last thing you did is
+kept apart from the per-frame render result, which used to overwrite it within a
+frame.
+
 ### Works
 
 - Opens a scene from a command-line argument or **File → Open scene**, saves it
@@ -168,7 +172,11 @@ shared WGPU device — it is not a mock, and it does not create a second device.
 - A live viewport with orbit, pan, zoom, and reset-to-authored-camera
 - Perspective and orthographic toggle
 - Scene and Game views, the latter rendering through the authored camera with no
-  editor chrome painted over it
+  editor chrome painted over it — both live at once in the `2 by 3` layout
+- Two workspace layouts chosen from **View → Layout** and remembered between
+  launches: `2 by 3` puts Scene above Game with Hierarchy, Project, and
+  Inspector beside them, and `Wide` shows one view at a time over a Project
+  dock
 - Play, pause, stop, and reset-to-authored-state, driving the real engine
   lifecycle rather than a display flag
 - A Project dock with a list/grid toggle, and a Console dock
@@ -183,11 +191,11 @@ Listed because a control that looks like a feature is worse than an absent one.
   gizmos
 - **`+` Add entity** and **Add Component** — not handled. Entities and components
   can only come from a file
-- **Local coordinates**, **Lit shading**, **Filter assets** — decoration
+- **Filter assets** — decoration
 - **The project browser's contents** — eight hardcoded entries. It does not read
   a directory, so it shows the same list whatever scene is open
-- **Edit, Scene, View, Build, Tools, Help** — plain labels, not menus. Only File
-  opens
+- **Edit, Scene, Build, Tools, Help** — plain labels, not menus. File and View
+  open
 - **Tag** and **Layer** in the inspector, and the per-component property rows —
   fixed text, not the component's actual values
 - **The project name in the top bar** — a label
