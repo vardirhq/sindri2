@@ -359,7 +359,7 @@ anything about what it cannot yet do.
 - [ ] Stop discarding unsaved work without asking — reload, reset, and closing the window all do, and so does the Stop button, which resets the scene rather than stopping anything
 - [ ] Open a scene carrying components the built-in schemas do not know, which the format preserves and the editor currently refuses outright
 - [ ] Make the unsaved marker mean the file and the world differ, rather than that something was touched: undoing back to the saved state still reports unsaved work
-- [ ] Remove or implement the twenty controls that are drawn and do nothing, starting with the asset search box, which accepts typing and filters nothing
+- [ ] Remove or implement the twenty controls that are drawn and do nothing, starting with the two that look like they work: the asset search box, which accepts typing and filters nothing, and the scene view's axis gizmo, which is painted at fixed angles and never turns with the camera
 - [ ] Show what the engine reports in the console — notices, render failures, and the textures a scene names that nothing has bound
 - [ ] Remember the open scene between launches, and name it in the window title
 - [ ] Widen the viewport's zoom and pitch limits, which cannot frame a scene much larger than the demo, and add a way to frame the selection

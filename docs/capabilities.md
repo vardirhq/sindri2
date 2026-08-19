@@ -210,6 +210,8 @@ under use and what the editor cannot express at all. This is the summary.
   **Stop** does something, and what it does is discard every unsaved edit
 - **The asset search box** — accepts typing and filters nothing, which is worse
   than the buttons that visibly do nothing
+- **The axis gizmo in the scene view's corner** — painted at fixed angles, so it
+  shows the same orientation whichever way the camera is pointing
 - **`+` Add entity** and **Add Component** — not handled. Entities and components
   can only come from a file
 - **Filter assets**, the folder tree, and the asset rows themselves — decoration

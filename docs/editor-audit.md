@@ -8,6 +8,13 @@ memory of the code. This one was written by reading every path in
 looked load-bearing. It found things the shorter list had wrong, which is the
 argument for doing it this way.
 
+One warning about the method, from getting it wrong once. Sweeping by *control*
+— every widget with a response to trace — misses everything the editor paints
+directly, and painted chrome can mislead exactly as well as a dead button can.
+The axis gizmo was found by someone asking about it, not by this audit. Anything
+drawn with `Painter` deserves the same question as anything drawn with a widget:
+what is it claiming, and is that true?
+
 The point is not to be discouraging. The parts of this editor that work are the
 hard parts: every edit goes through the command layer, undo is real and groups
 a drag into one step, two live views render the actual runtime frame through
@@ -25,10 +32,11 @@ confirmation, and one of them is a button that reads as "stop playing".
 built-in schemas do not know fails to open at all, which is the opposite of
 what the format was designed for.
 
-**It says things that are not true.** Twenty controls are drawn and inert. One
-of them — the asset search box — accepts typing and filters nothing, which is
-worse than a button that visibly does nothing. Play moves a lifecycle state and
-runs no game.
+**It says things that are not true.** Twenty controls are drawn and inert. Two
+things are worse than inert because they look like they are working: the asset
+search box accepts typing and filters nothing, and the axis gizmo in the corner
+of the scene view is painted at fixed angles and never turns. Play moves a
+lifecycle state and runs no game.
 
 Underneath all three is one structural fact: the editor is a faithful *viewer*
 of a world and a competent *transform editor*, and almost nothing else. It
@@ -103,8 +111,11 @@ work, doesn't), **partial** (works, with a caveat worth knowing).
 | Reset view | works | Correctly disabled when the view has not moved |
 | Perspective / Ortho | works | Persists |
 | Drag to orbit, shift-drag to pan, wheel to zoom | **partial** | Zoom is clamped to 0.65–1.8 and pitch to ±1.1 rad (`native.rs:411`) |
+| Axis gizmo, top right of the scene view | **lies** | Three hardcoded pixel offsets (`native.rs:2002`); it takes no camera and cannot turn. Orbit behind the scene and it still says Z points down-left. Painted rather than a widget, so clicking an axis to snap to that view is not available either |
+| Viewport label and hint text | works | Names the selection, and the hints are accurate |
+| Error banner | works | A real render failure, painted across the view |
 | Click to select in the viewport | missing | There is no picking |
-| Gizmos | missing | |
+| Transform gizmos | missing | |
 
 ### Status bar
 
@@ -115,7 +126,7 @@ work, doesn't), **partial** (works, with a caveat worth knowing).
 | "1 Error, 0 Warnings" | **partial** | A boolean dressed as a count |
 | Settings gear | **inert** | A label (`native.rs:918`) |
 
-**Twenty inert controls, one that lies, one that is dangerous.**
+**Twenty inert controls, two that lie, one that is dangerous.**
 
 ## 2. What breaks under use
 
