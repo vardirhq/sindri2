@@ -152,3 +152,4 @@ All notable changes to Sindri Next will be documented here.
 - Added workspace layouts to the editor, chosen from the View menu and remembered between launches: `2 by 3` shows the scene above the game view with Hierarchy, Project, and Inspector beside them, and `Wide` keeps the previous single-view arrangement.
 - Made the editor render the scene and game views at the same time in the `2 by 3` layout, rather than only whichever tab was showing.
 - Fixed action failures being invisible: a failed save, open, or undo was overwritten by the next frame's render result within a frame of happening.
+- Moved the frame clear out of the mesh pass and into `encode_clear`, so a scene with several meshes no longer erases all but the last, and a scene with none still starts from a cleared colour and depth buffer.

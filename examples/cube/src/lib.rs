@@ -8,7 +8,7 @@ use sindri_desktop::{AppContext, DesktopApp, Flow, WindowConfig};
 use sindri_platform::{EngineHost, FrameContext, Game, HostError, InputEvent, Key};
 use sindri_render::{
     DepthTarget, DrawContext, FrameCommand, PreparedFrame, SpriteBatchError, SpriteBatchRenderer,
-    SpriteBatchStats, Texture2D, TextureRegistry, TexturedCubeRenderer, Viewport,
+    SpriteBatchStats, Texture2D, TextureRegistry, TexturedCubeRenderer, Viewport, encode_clear,
 };
 use thiserror::Error;
 
@@ -290,9 +290,14 @@ pub fn encode_prepared_frame(
         textures,
     } = renderers;
     let mut sprite_stats = SpriteBatchStats::default();
+    // Once, before anything draws. The frame owns what it starts as; a scene
+    // with two meshes would otherwise have the second clear away the first, and
+    // a scene with none would leave its sprites drawing against a depth buffer
+    // nothing had filled.
+    encode_clear(encoder, target.color, target.depth, frame.clear());
     for pass in frame.passes() {
         match &pass.command {
-            FrameCommand::TexturedCube { model, texture } => cube_renderer.encode_with_clear(
+            FrameCommand::TexturedCube { model, texture } => cube_renderer.encode(
                 DrawContext {
                     device,
                     queue,
@@ -303,7 +308,6 @@ pub fn encode_prepared_frame(
                 target.color,
                 target.depth,
                 pass.camera.view_projection * *model,
-                frame.clear(),
             ),
             FrameCommand::SpriteBatch { texture, instances } => {
                 sprite_stats =
