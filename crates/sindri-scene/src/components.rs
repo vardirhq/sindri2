@@ -57,7 +57,9 @@ impl SceneComponent for MeshComponent {
 pub enum SpriteSpace {
     /// Drawn through the overlay camera, anchored to its extent. A HUD is not
     /// in the world, so no world camera moves it and nothing in the world can
-    /// hide it.
+    /// hide it. Its Z says how far back in the stack it sits and nothing else:
+    /// it orders the sprite without moving it, so no HUD can be lost off the
+    /// far plane by typing a big number.
     #[default]
     Screen,
     /// Placed in the world by its transform and drawn through the world camera,
@@ -117,10 +119,9 @@ pub struct SpriteComponent {
     pub anchor: SpriteAnchor,
     #[serde(default = "opaque_white")]
     pub tint: [f32; 4],
-    /// Sorting depth within a layer. Greater depth draws first, so a larger
-    /// value sits further back.
-    #[serde(default)]
-    pub depth: f32,
+    /// The explicit override on draw order. Within a layer sprites sort by how
+    /// far from the camera they are; a layer beats that, so a sprite in a
+    /// higher one draws in front of something nearer the camera.
     #[serde(default)]
     pub layer: i32,
 }

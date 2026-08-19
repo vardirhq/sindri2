@@ -63,10 +63,20 @@ impl Default for PerspectiveCamera {
 }
 
 impl PerspectiveCamera {
+    /// Where the camera is and which way it faces, without the projection.
+    ///
+    /// Separate because transparent sorting needs it on its own: how far in
+    /// front of the camera something is is a view-space question, and asking it
+    /// of the combined matrix means dividing by a `w` that is zero for anything
+    /// on the camera plane.
+    pub fn view(self) -> Mat4 {
+        look_at(self.eye, self.target, self.up)
+    }
+
     pub fn view_projection(self, aspect_ratio: f32) -> Mat4 {
         let aspect_ratio = aspect_ratio.max(f32::EPSILON);
         perspective_projection(self.vertical_fov_radians, aspect_ratio, self.near, self.far)
-            * look_at(self.eye, self.target, self.up)
+            * self.view()
     }
 }
 
@@ -91,12 +101,18 @@ impl Default for OrthographicCamera {
 }
 
 impl OrthographicCamera {
+    /// The camera sits one unit along +Z from its centre and looks back at it,
+    /// so a greater Z is nearer the viewer. That choice lives here alone, since
+    /// both the projection and every sort key measured against this camera
+    /// depend on it.
+    pub fn view(self) -> Mat4 {
+        look_at(self.center.extend(1.0), self.center.extend(0.0), Vec3::Y)
+    }
+
     pub fn view_projection(self, aspect_ratio: f32) -> Mat4 {
         let aspect_ratio = aspect_ratio.max(f32::EPSILON);
         let half_height = self.vertical_size.max(f32::EPSILON) * 0.5;
         let half_width = half_height * aspect_ratio;
-        let eye = self.center.extend(1.0);
-        let target = self.center.extend(0.0);
         orthographic_projection(
             -half_width,
             half_width,
@@ -104,7 +120,7 @@ impl OrthographicCamera {
             half_height,
             self.near,
             self.far.max(self.near + f32::EPSILON),
-        ) * look_at(eye, target, Vec3::Y)
+        ) * self.view()
     }
 }
 
@@ -206,6 +222,39 @@ mod tests {
         let wide = camera.view_projection(2.0);
         assert!(wide.x_axis.x.abs() < square.x_axis.x.abs());
         assert!((wide.y_axis.y - square.y_axis.y).abs() <= f32::EPSILON);
+    }
+
+    /// The sort key transparent draws use: distance along the camera's forward
+    /// axis, which is what the view matrix measures.
+    #[test]
+    fn the_view_matrix_measures_distance_in_front_of_the_camera() {
+        let camera = PerspectiveCamera {
+            eye: Vec3::new(0.0, 0.0, 5.0),
+            target: Vec3::ZERO,
+            ..PerspectiveCamera::default()
+        };
+        let distance = |point: Vec3| -(camera.view() * point.extend(1.0)).z;
+
+        assert!((distance(Vec3::ZERO) - 5.0).abs() < 1.0e-5);
+        assert!((distance(Vec3::new(0.0, 0.0, -3.0)) - 8.0).abs() < 1.0e-5);
+        // Side by side at the same depth is the same distance: a straight line
+        // to the eye would call the offset one further away and sort it behind.
+        assert!(
+            (distance(Vec3::new(4.0, 0.0, 0.0)) - distance(Vec3::ZERO)).abs() < 1.0e-5,
+            "distance must be measured along the view axis, not to the eye"
+        );
+    }
+
+    /// Under the overlay camera, a greater Z is nearer the viewer.
+    #[test]
+    fn the_orthographic_view_puts_greater_z_nearer() {
+        let camera = OrthographicCamera::default();
+        let distance = |z: f32| -(camera.view() * Vec3::new(0.0, 0.0, z).extend(1.0)).z;
+        assert!(distance(-4.0) > distance(0.0));
+        assert!(
+            (distance(0.0) - 1.0).abs() < 1.0e-5,
+            "the eye is one unit away"
+        );
     }
 
     #[test]

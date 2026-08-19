@@ -298,12 +298,17 @@ mod tests {
 
     #[test]
     fn rejects_structurally_invalid_scenes() {
-        let json = br#"{
-            "format_version": 2,
-            "entities": [{ "id": "child", "parent": "missing" }]
-        }"#;
+        // Written against whatever the current format is, so a version bump
+        // does not turn this into a test that the version was rejected.
+        let json = format!(
+            r#"{{
+            "format_version": {},
+            "entities": [{{ "id": "child", "parent": "missing" }}]
+        }}"#,
+            sindri_core::SCENE_FORMAT_VERSION
+        );
         let error = SceneAssetDecoder
-            .decode(AssetBytes::new(id("scenes/broken.json"), json.to_vec()))
+            .decode(AssetBytes::new(id("scenes/broken.json"), json.into_bytes()))
             .unwrap_err();
 
         assert_eq!(error.kind(), AssetLoadErrorKind::InvalidData);

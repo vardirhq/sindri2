@@ -4,7 +4,9 @@
 //! world is extracted, and the resulting passes are inspected directly.
 
 use glam::{Vec2, Vec3};
-use sindri_core::{SceneDocument, Transform3D, UnknownComponentPolicy, World};
+use sindri_core::{
+    SCENE_FORMAT_VERSION, SceneDocument, Transform3D, UnknownComponentPolicy, World,
+};
 use sindri_render::{FrameCommand, RenderStage, SpriteDepth, TextureId, TextureRegistry, Viewport};
 use sindri_scene::{
     CameraView, SceneExtractError, SceneExtractor, TextureBindings, WorldProjection,
@@ -45,11 +47,13 @@ fn cameras() -> &'static str {
 }
 
 fn scene(entities: &str) -> String {
-    format!(
-        r#"{{ "format_version": 2, "entities": [{}{}] }}"#,
-        cameras(),
-        entities
-    )
+    document(&format!("{}{entities}", cameras()))
+}
+
+/// A document holding exactly the entities given, at whatever the current
+/// format version is.
+fn document(entities: &str) -> String {
+    format!(r#"{{ "format_version": {SCENE_FORMAT_VERSION}, "entities": [{entities}] }}"#)
 }
 
 #[test]
@@ -91,16 +95,21 @@ fn meshes_and_sprites_extract_into_ordered_passes() {
     assert_eq!(frame.passes()[1].stage, RenderStage::Overlay);
 }
 
+/// Sprites sort by where they are rather than by a number typed beside them:
+/// the overlay camera looks along the axis from `+Z`, so the lower Z is further
+/// away and is drawn first.
 #[test]
 fn sprites_batch_per_layer_and_sort_back_to_front() {
     let world = world_from(&scene(
         r#",
-        { "id": "near", "transform_3d": {},
-          "components": { "sindri.sprite": { "texture": "b", "depth": 1.0, "layer": 100 } } },
-        { "id": "far", "transform_3d": {},
-          "components": { "sindri.sprite": { "texture": "b", "depth": 9.0, "layer": 100 } } },
+        { "id": "near", "transform_3d": { "position": [0.0, 0.0, -1.0] },
+          "components": { "sindri.sprite": {
+            "texture": "b", "layer": 100, "tint": [1.0, 1.0, 1.0, 0.25] } } },
+        { "id": "far", "transform_3d": { "position": [0.0, 0.0, -9.0] },
+          "components": { "sindri.sprite": {
+            "texture": "b", "layer": 100, "tint": [1.0, 1.0, 1.0, 0.75] } } },
         { "id": "other-layer", "transform_3d": {},
-          "components": { "sindri.sprite": { "texture": "b", "depth": 1.0, "layer": 200 } } }"#,
+          "components": { "sindri.sprite": { "texture": "b", "layer": 200 } } }"#,
     ));
     let frame = SceneExtractor::new()
         .unwrap()
@@ -119,9 +128,100 @@ fn sprites_batch_per_layer_and_sort_back_to_front() {
     let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[0].command else {
         panic!("the first overlay pass should be a sprite batch");
     };
-    // Greater depth is further back, so it must be drawn first.
     assert_eq!(instances.len(), 2);
-    assert!(close(instances[0].tint()[3], 1.0));
+    let alphas: Vec<f32> = instances.iter().map(|sprite| sprite.tint()[3]).collect();
+    assert!(
+        close(alphas[0], 0.75) && close(alphas[1], 0.25),
+        "the further sprite must be drawn first, got {alphas:?}"
+    );
+}
+
+/// The Z of a screen-space sprite orders it without moving it. That is the one
+/// place the sort key and the drawn position deliberately disagree, and it is
+/// what keeps a HUD from disappearing when someone pushes it far back.
+#[test]
+fn a_screen_sprite_is_sorted_by_its_z_but_not_moved_by_it() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "front", "transform_3d": { "position": [0.1, 0.2, 0.0] },
+          "components": { "sindri.sprite": {
+            "texture": "b", "tint": [1.0, 1.0, 1.0, 0.25] } } },
+        { "id": "back", "transform_3d": { "position": [0.1, 0.2, -400.0] },
+          "components": { "sindri.sprite": {
+            "texture": "b", "tint": [1.0, 1.0, 1.0, 0.75] } } }"#,
+    ));
+    let frame = SceneExtractor::new()
+        .unwrap()
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
+        .expect("the scene extracts");
+
+    let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[0].command else {
+        panic!("expected a sprite batch");
+    };
+    assert!(
+        close(instances[0].tint()[3], 0.75),
+        "the sprite pushed back must be drawn first"
+    );
+    let placements: Vec<_> = instances
+        .iter()
+        .map(|sprite| sprite.model().w_axis.truncate())
+        .collect();
+    assert_eq!(
+        placements[0], placements[1],
+        "a screen sprite's Z must not move it, even four hundred units of it"
+    );
+    assert!(
+        close(placements[0].z, 0.0),
+        "screen sprites draw flat against the overlay, at {placements:?}"
+    );
+}
+
+/// A world sprite is sorted by its real distance from the camera, so moving the
+/// camera can reverse two sprites without either of them moving.
+#[test]
+fn world_sprites_sort_by_distance_from_the_camera_that_draws_them() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "east", "transform_3d": { "position": [3.0, 0.0, 0.0] },
+          "components": { "sindri.sprite": {
+            "texture": "b", "space": "world", "tint": [1.0, 1.0, 1.0, 0.25] } } },
+        { "id": "west", "transform_3d": { "position": [-3.0, 0.0, 0.0] },
+          "components": { "sindri.sprite": {
+            "texture": "b", "space": "world", "tint": [1.0, 1.0, 1.0, 0.75] } } }"#,
+    ));
+    let extractor = SceneExtractor::new().unwrap();
+    let alphas = |view| {
+        let frame = extractor
+            .extract(&world, VIEWPORT, view, &TextureBindings::new())
+            .expect("the scene extracts");
+        let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[0].command else {
+            panic!("expected a sprite batch");
+        };
+        instances
+            .iter()
+            .map(|sprite| sprite.tint()[3])
+            .collect::<Vec<f32>>()
+    };
+
+    // The authored camera is at (3, 2, 4), so the western sprite is further.
+    let authored = alphas(CameraView::default());
+    assert!(close(authored[0], 0.75) && close(authored[1], 0.25));
+
+    // Half a turn around the target puts the camera on the other side, and the
+    // pair must swap without the scene changing at all.
+    let orbited = alphas(CameraView {
+        orbit: Vec2::new(std::f32::consts::PI, 0.0),
+        ..CameraView::default()
+    });
+    assert!(
+        close(orbited[0], 0.25) && close(orbited[1], 0.75),
+        "orbiting past the sprites must reverse them, got {orbited:?}"
+    );
 }
 
 /// A world-space sprite is in the world: it is drawn through the world camera,
@@ -260,14 +360,16 @@ fn sprites_in_different_spaces_do_not_share_a_batch() {
 /// needs is now something the sprite says.
 #[test]
 fn each_sprite_space_asks_for_the_camera_it_uses() {
-    let world_sprite_without_a_world_camera = r#"{ "format_version": 2, "entities": [
+    let world_sprite_without_a_world_camera = document(
+        r#"
         { "id": "overlay-camera",
           "components": { "sindri.camera": {
             "projection": "orthographic", "center": [0.0, 0.0],
             "vertical_size": 2.0, "near": 0.0, "far": 10.0 } } },
         { "id": "prop", "transform_3d": {},
-          "components": { "sindri.sprite": { "texture": "b", "space": "world" } } }] }"#;
-    let world = world_from(world_sprite_without_a_world_camera);
+          "components": { "sindri.sprite": { "texture": "b", "space": "world" } } }"#,
+    );
+    let world = world_from(&world_sprite_without_a_world_camera);
     assert!(matches!(
         SceneExtractor::new().unwrap().extract(
             &world,
@@ -278,14 +380,16 @@ fn each_sprite_space_asks_for_the_camera_it_uses() {
         Err(SceneExtractError::MissingWorldCamera)
     ));
 
-    let screen_sprite_without_an_overlay_camera = r#"{ "format_version": 2, "entities": [
+    let screen_sprite_without_an_overlay_camera = document(
+        r#"
         { "id": "main-camera", "transform_3d": { "position": [3.0, 2.0, 4.0] },
           "components": { "sindri.camera": {
             "projection": "perspective", "target": [0.0, 0.0, 0.0], "up": [0.0, 1.0, 0.0],
             "vertical_fov_degrees": 45.0, "near": 0.1, "far": 100.0 } } },
         { "id": "badge", "transform_3d": {},
-          "components": { "sindri.sprite": { "texture": "b" } } }] }"#;
-    let world = world_from(screen_sprite_without_an_overlay_camera);
+          "components": { "sindri.sprite": { "texture": "b" } } }"#,
+    );
+    let world = world_from(&screen_sprite_without_an_overlay_camera);
     assert!(matches!(
         SceneExtractor::new().unwrap().extract(
             &world,
@@ -598,10 +702,12 @@ fn switching_the_world_projection_changes_only_the_world_camera() {
 
 #[test]
 fn drawing_without_a_camera_reports_which_one_is_missing() {
-    let mesh_only = r#"{ "format_version": 2, "entities": [
+    let mesh_only = document(
+        r#"
         { "id": "cube", "transform_3d": {},
-          "components": { "sindri.mesh": { "primitive": "cube", "texture": "t" } } }] }"#;
-    let world = world_from(mesh_only);
+          "components": { "sindri.mesh": { "primitive": "cube", "texture": "t" } } }"#,
+    );
+    let world = world_from(&mesh_only);
     assert!(matches!(
         SceneExtractor::new().unwrap().extract(
             &world,
@@ -612,10 +718,12 @@ fn drawing_without_a_camera_reports_which_one_is_missing() {
         Err(SceneExtractError::MissingWorldCamera)
     ));
 
-    let sprite_only = r#"{ "format_version": 2, "entities": [
+    let sprite_only = document(
+        r#"
         { "id": "badge", "transform_3d": {},
-          "components": { "sindri.sprite": { "texture": "b" } } }] }"#;
-    let world = world_from(sprite_only);
+          "components": { "sindri.sprite": { "texture": "b" } } }"#,
+    );
+    let world = world_from(&sprite_only);
     assert!(matches!(
         SceneExtractor::new().unwrap().extract(
             &world,
@@ -649,12 +757,12 @@ fn an_invalid_camera_distance_is_rejected() {
 fn sprites_batch_per_texture_within_a_layer() {
     let world = world_from(&scene(
         r#",
-        { "id": "a", "transform_3d": {},
-          "components": { "sindri.sprite": { "texture": "one.png", "depth": 2.0, "layer": 100 } } },
-        { "id": "b", "transform_3d": {},
-          "components": { "sindri.sprite": { "texture": "two.png", "depth": 1.0, "layer": 100 } } },
-        { "id": "c", "transform_3d": {},
-          "components": { "sindri.sprite": { "texture": "one.png", "depth": 3.0, "layer": 100 } } }"#,
+        { "id": "a", "transform_3d": { "position": [0.0, 0.0, -2.0] },
+          "components": { "sindri.sprite": { "texture": "one.png", "layer": 100 } } },
+        { "id": "b", "transform_3d": { "position": [0.0, 0.0, -1.0] },
+          "components": { "sindri.sprite": { "texture": "two.png", "layer": 100 } } },
+        { "id": "c", "transform_3d": { "position": [0.0, 0.0, -3.0] },
+          "components": { "sindri.sprite": { "texture": "one.png", "layer": 100 } } }"#,
     ));
     let mut bindings = TextureBindings::new();
     bindings.bind("one.png", TextureId::new(1));

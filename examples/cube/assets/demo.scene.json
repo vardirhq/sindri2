@@ -1,5 +1,5 @@
 {
-  "format_version": 2,
+  "format_version": 3,
   "metadata": {
     "name": "Shared 2D and 3D frame pipeline proof"
   },
@@ -7,14 +7,13 @@
     {
       "id": "badge-back",
       "transform_3d": {
-        "position": [-0.78, 0.44, 0.0],
+        "position": [-0.78, 0.44, -5.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.38, 0.38, 1.0]
       },
       "components": {
         "sindri.sprite": {
           "anchor": "bottom_right",
-          "depth": 5.0,
           "layer": 100,
           "texture": "textures/badge.png",
           "tint": [0.55, 0.72, 1.0, 0.62]
@@ -24,14 +23,13 @@
     {
       "id": "badge-front",
       "transform_3d": {
-        "position": [-0.18, 0.58, 0.0],
+        "position": [-0.18, 0.58, -1.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.42, 0.42, 1.0]
       },
       "components": {
         "sindri.sprite": {
           "anchor": "bottom_right",
-          "depth": 1.0,
           "layer": 100,
           "texture": "textures/badge.png",
           "tint": [1.0, 1.0, 1.0, 0.88]
@@ -41,14 +39,13 @@
     {
       "id": "badge-green",
       "transform_3d": {
-        "position": [-0.6, 0.32, 0.0],
+        "position": [-0.6, 0.32, -4.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.34, 0.34, 1.0]
       },
       "components": {
         "sindri.sprite": {
           "anchor": "bottom_right",
-          "depth": 4.0,
           "layer": 100,
           "texture": "textures/badge.png",
           "tint": [0.72, 1.0, 0.72, 0.68]
@@ -58,14 +55,13 @@
     {
       "id": "badge-orange",
       "transform_3d": {
-        "position": [-0.44, 0.52, 0.0],
+        "position": [-0.44, 0.52, -3.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.32, 0.32, 1.0]
       },
       "components": {
         "sindri.sprite": {
           "anchor": "bottom_right",
-          "depth": 3.0,
           "layer": 100,
           "texture": "textures/badge.png",
           "tint": [1.0, 0.68, 0.55, 0.72]
@@ -75,14 +71,13 @@
     {
       "id": "badge-purple",
       "transform_3d": {
-        "position": [-0.28, 0.34, 0.0],
+        "position": [-0.28, 0.34, -2.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.36, 0.36, 1.0]
       },
       "components": {
         "sindri.sprite": {
           "anchor": "bottom_right",
-          "depth": 2.0,
           "layer": 100,
           "texture": "textures/badge.png",
           "tint": [0.92, 0.72, 1.0, 0.78]

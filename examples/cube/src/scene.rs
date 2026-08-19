@@ -150,8 +150,9 @@ mod tests {
         assert_eq!(instances.len(), 5);
     }
 
-    /// Neither canonical entity ordering nor generalised anchoring may disturb
-    /// the authored draw order, which layers and depths carry.
+    /// Neither canonical entity ordering, generalised anchoring, nor sorting by
+    /// distance rather than an authored number may disturb the stack these
+    /// badges were drawn in. The alphas are the order: back to front.
     #[test]
     fn the_overlay_keeps_its_authored_back_to_front_order() {
         let (scene, world) = DemoScene::load().unwrap();

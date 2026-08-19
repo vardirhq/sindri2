@@ -118,7 +118,8 @@ validates and orders passes deterministically by stage, then layer, then
 insertion order; stage order is `Opaque3d`, `Transparent2d`, `Overlay`.
 
 What can actually be drawn: a triangle, a coloured cube, a textured cube with
-depth testing, and textured sprites with tint, anchor, layer, and sorting depth.
+depth testing, and textured sprites with tint, anchor, and layer, sorted back to
+front by how far from the camera they are.
 A sprite is either screen-anchored, which is the default and cannot be occluded
 by the world, or in the world, drawn through the world camera by its full
 transform and hidden by opaque geometry in front of it. Sprites batch per space,
@@ -218,10 +219,6 @@ Listed because a control that looks like a feature is worse than an absent one.
 
 ### Engine
 
-- **Sprites sort by a hand-authored depth field.** A world-space sprite is drawn
-  where it is, but within its layer it is ordered by the `depth` number someone
-  typed rather than by how far from the camera it actually is. Sorting by camera
-  distance is the next item
 - **One texture is one sprite.** No UV rects, so no sprite sheets, no animation
   frames, no tilesets
 - **No text rendering.** No score, menu, or dialogue

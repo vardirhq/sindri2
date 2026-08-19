@@ -1,5 +1,5 @@
 {
-  "format_version": 2,
+  "format_version": 3,
   "metadata": {
     "name": "Editor fixture"
   },
@@ -37,14 +37,13 @@
       "id": "sprite",
       "name": "Sprite",
       "transform_3d": {
-        "position": [0.0, 0.0, 0.0],
+        "position": [0.0, 0.0, -0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.5, 0.5, 1.0]
       },
       "components": {
         "sindri.sprite": {
           "anchor": "center",
-          "depth": 0.0,
           "layer": 100,
           "texture": "textures/badge.png",
           "tint": [1.0, 1.0, 1.0, 1.0]

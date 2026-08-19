@@ -67,6 +67,9 @@ impl SceneMigrator {
             .register(1, 2, collapse_transform_2d)
             .expect("built-in steps are registered once and move forward");
         migrator
+            .register(2, 3, sort_sprites_by_where_they_are)
+            .expect("built-in steps are registered once and move forward");
+        migrator
     }
 
     pub fn is_empty(&self) -> bool {
@@ -206,6 +209,76 @@ fn collapse_transform_2d(document: &mut Value) -> Result<(), SceneMigrationError
         );
     }
     Ok(())
+}
+
+/// Format 3 sorts transparent sprites by how far from the camera they are
+/// rather than by a `depth` number typed beside them, so the field goes and the
+/// transform's Z takes over the job.
+///
+/// A screen-space sprite's Z did nothing at all in format 2 — the overlay read
+/// only X and Y — so its `depth` becomes a Z, negated, because the overlay
+/// camera looks down the axis from `+Z` and a greater depth meant further away.
+/// The stack it describes comes out in the same order it went in.
+///
+/// A world-space sprite already had a Z that placed it, and that Z is now what
+/// orders it too, so its `depth` is simply dropped. That is the change itself
+/// rather than a loss: a sort key that disagreed with where the sprite was is
+/// exactly what this format stops allowing.
+// The step signature is fixed by `SceneMigrationStep`, so this returns a
+// `Result` it never uses: nothing here can fail, because a sprite either has a
+// depth to move or does not.
+#[allow(clippy::unnecessary_wraps)]
+fn sort_sprites_by_where_they_are(document: &mut Value) -> Result<(), SceneMigrationError> {
+    let Some(entities) = document.get_mut("entities").and_then(Value::as_array_mut) else {
+        return Ok(());
+    };
+
+    for entity in entities {
+        let Some(fields) = entity.as_object_mut() else {
+            continue;
+        };
+        let Some(sprite) = fields
+            .get_mut("components")
+            .and_then(Value::as_object_mut)
+            .and_then(|components| components.get_mut(SPRITE_COMPONENT))
+            .and_then(Value::as_object_mut)
+        else {
+            continue;
+        };
+        let in_the_world = sprite.get("space").and_then(Value::as_str) == Some("world");
+        let Some(depth) = sprite.remove("depth").as_ref().and_then(Value::as_f64) else {
+            continue;
+        };
+        if in_the_world {
+            continue;
+        }
+        set_transform_z(fields, -depth);
+    }
+    Ok(())
+}
+
+/// The component type name the format itself has to know, because the format is
+/// what changed. `sindri-scene` owns what the component means.
+const SPRITE_COMPONENT: &str = "sindri.sprite";
+
+/// Writes `z` into an entity's transform, giving it one if it had none.
+fn set_transform_z(fields: &mut serde_json::Map<String, Value>, z: f64) {
+    let transform = fields
+        .entry("transform_3d".to_owned())
+        .or_insert_with(|| json!({}));
+    let Some(transform) = transform.as_object_mut() else {
+        return;
+    };
+    let position = transform
+        .entry("position".to_owned())
+        .or_insert_with(|| json!([0.0, 0.0, 0.0]));
+    let Some(position) = position.as_array_mut() else {
+        return;
+    };
+    while position.len() < 3 {
+        position.push(json!(0.0));
+    }
+    position[2] = json!(z);
 }
 
 #[cfg(test)]

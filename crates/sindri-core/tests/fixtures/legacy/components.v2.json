@@ -1,5 +1,5 @@
 {
-  "format_version": 3,
+  "format_version": 2,
   "metadata": {
     "name": "Component payload fixture",
     "editor": {
@@ -11,12 +11,13 @@
     {
       "id": "banner",
       "transform_3d": {
-        "position": [0.0, -0.75, -1.0],
+        "position": [0.0, -0.75, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.5, 0.125, 1.0]
       },
       "components": {
         "sindri.sprite": {
+          "depth": 1.0,
           "layer": 100,
           "texture": "procedural:badge",
           "tint": [1.0, 1.0, 1.0, 0.88]

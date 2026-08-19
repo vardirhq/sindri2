@@ -165,7 +165,7 @@ shaped like the tool.
 
 - [x] Collapse `Transform2D` into `Transform3D` as scene format version 2, so sprites and meshes share one world — the model is in `docs/2d-model.md`; the render is pixel-identical across the change, and a version 1 fixture migrates to exactly the version 2 one stored beside it
 - [x] Give sprites a world-space option, keeping screen-anchored as the default so overlays and both proofs are unchanged — a sprite carries a `space`, and the two never share a batch because they differ in camera and pipeline; the offscreen capture is byte for byte what it was
-- [ ] Sort transparent sprites by camera distance rather than an authored depth field, with layer as the explicit override
+- [x] Sort transparent sprites by camera distance rather than an authored depth field, with layer as the explicit override — scene format version 3, whose migration turns a screen sprite's depth into the Z that now orders it; a world sprite reorders when the camera moves, a screen sprite's Z orders it without moving it
 - [ ] Add 2D-shaped transform accessors that take and return X and Y only, so the common way a layered scene gets flattened is not expressible
 - [ ] Add a Z lock a transform can declare, respected by checked write paths and visible in the inspector
 - [ ] Inventory each legacy 2D subsystem as port, refactor, replace, or defer

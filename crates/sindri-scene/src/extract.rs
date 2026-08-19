@@ -8,8 +8,8 @@ use sindri_core::{
 use sindri_render::{
     ClearOperations, ExtractedFrame, FrameCamera, FrameCommand, FramePass, FramePlanError,
     OrthographicCamera, PerspectiveCamera, PreparedFrame, RenderLayer, RenderStage, SpriteDepth,
-    SpriteInstance, TextureId, TransparentOrder, TransparentOrderError, Viewport, look_at,
-    orthographic_projection,
+    SpriteInstance, TextureId, TransparentOrder, TransparentOrderError, Viewport,
+    orthographic_projection, perspective_projection,
 };
 use thiserror::Error;
 
@@ -128,7 +128,10 @@ impl SceneExtractor {
                 RenderStage::Opaque3d,
                 RenderLayer(mesh.layer),
                 FrameCamera {
-                    view_projection: cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?,
+                    view_projection: cameras
+                        .world
+                        .ok_or(SceneExtractError::MissingWorldCamera)?
+                        .view_projection,
                 },
                 command,
             ));
@@ -147,17 +150,33 @@ impl SceneExtractor {
                 .get(entity)
                 .and_then(|data| data.transform_3d)
                 .unwrap_or_default();
-            let model = match sprite.screen_anchor() {
-                Some(anchor) => screen_sprite_matrix(
-                    transform,
-                    anchor,
-                    cameras
+            let (model, camera) = match sprite.screen_anchor() {
+                Some(anchor) => {
+                    let extent = cameras
                         .overlay_extent
-                        .ok_or(SceneExtractError::MissingOverlayCamera)?,
+                        .ok_or(SceneExtractError::MissingOverlayCamera)?;
+                    (
+                        screen_sprite_matrix(transform, anchor, extent),
+                        cameras
+                            .overlay
+                            .ok_or(SceneExtractError::MissingOverlayCamera)?,
+                    )
+                }
+                None => (
+                    transform_matrix(transform),
+                    cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?,
                 ),
-                None => transform_matrix(transform),
             };
-            let order = TransparentOrder::new(sprite.layer, sprite.depth, entity.index())?;
+            // A screen sprite is drawn flat against the overlay, but its Z
+            // still says how far back in the stack it sits, so the distance is
+            // measured against the authored Z rather than the flattened one. A
+            // world sprite's two Zs are the same number.
+            let position = model.w_axis.truncate().with_z(transform.position[2]);
+            let order = TransparentOrder::new(
+                sprite.layer,
+                camera_distance(camera.view, position),
+                entity.index(),
+            )?;
             batches
                 .entry((
                     sprite.space,
@@ -170,7 +189,7 @@ impl SceneExtractor {
 
         for ((space, layer, texture), mut sprites) in batches {
             sprites.sort_by_key(|(order, _)| *order);
-            let (stage, view_projection, depth) = match space {
+            let (stage, camera, depth) = match space {
                 SpriteSpace::Screen => (
                     RenderStage::Overlay,
                     cameras
@@ -187,7 +206,9 @@ impl SceneExtractor {
             frame.push(FramePass::new(
                 stage,
                 RenderLayer(layer),
-                FrameCamera { view_projection },
+                FrameCamera {
+                    view_projection: camera.view_projection,
+                },
                 FrameCommand::SpriteBatch {
                     texture,
                     depth,
@@ -241,16 +262,22 @@ impl SceneExtractor {
                     let target = target + shift;
                     let eye = target + offset;
 
-                    resolved.world = Some(match view.projection {
-                        WorldProjection::Perspective => PerspectiveCamera {
-                            eye,
-                            target,
-                            up,
-                            vertical_fov_radians,
-                            near,
-                            far,
+                    // One view for both projections: where the camera is and
+                    // what it looks at does not depend on how it flattens the
+                    // world, and a sprite must not change places when the
+                    // editor toggles between them.
+                    let camera = PerspectiveCamera {
+                        eye,
+                        target,
+                        up,
+                        vertical_fov_radians,
+                        near,
+                        far,
+                    };
+                    let projection = match view.projection {
+                        WorldProjection::Perspective => {
+                            perspective_projection(vertical_fov_radians, aspect, near, far)
                         }
-                        .view_projection(aspect),
                         WorldProjection::Orthographic => {
                             let half_width = half_height * aspect;
                             orthographic_projection(
@@ -260,8 +287,13 @@ impl SceneExtractor {
                                 half_height,
                                 near,
                                 far,
-                            ) * look_at(eye, target, up)
+                            )
                         }
+                    };
+                    let view = camera.view();
+                    resolved.world = Some(ResolvedCamera {
+                        view,
+                        view_projection: projection * view,
                     });
                 }
                 CameraComponent::Orthographic {
@@ -271,15 +303,16 @@ impl SceneExtractor {
                     far,
                 } => {
                     let center = Vec2::from_array(center);
-                    resolved.overlay = Some(
-                        OrthographicCamera {
-                            center,
-                            vertical_size,
-                            near,
-                            far,
-                        }
-                        .view_projection(aspect),
-                    );
+                    let camera = OrthographicCamera {
+                        center,
+                        vertical_size,
+                        near,
+                        far,
+                    };
+                    resolved.overlay = Some(ResolvedCamera {
+                        view: camera.view(),
+                        view_projection: camera.view_projection(aspect),
+                    });
                     let half_height = vertical_size * 0.5;
                     resolved.overlay_extent = Some(OverlayExtent {
                         center,
@@ -294,9 +327,17 @@ impl SceneExtractor {
 
 #[derive(Clone, Copy, Debug, Default)]
 struct ResolvedCameras {
-    world: Option<Mat4>,
-    overlay: Option<Mat4>,
+    world: Option<ResolvedCamera>,
+    overlay: Option<ResolvedCamera>,
     overlay_extent: Option<OverlayExtent>,
+}
+
+/// A camera as extraction needs it: the matrix that draws through it, and the
+/// view on its own, which is what a distance is measured in.
+#[derive(Clone, Copy, Debug)]
+struct ResolvedCamera {
+    view: Mat4,
+    view_projection: Mat4,
 }
 
 /// The overlay camera's visible half-size, which sprite anchors resolve against.
@@ -324,6 +365,18 @@ fn orbited_offset(authored_offset: Vec3, up: Vec3, view: CameraView) -> Vec3 {
     Quat::from_axis_angle(right, view.orbit.y) * yawed
 }
 
+/// How far in front of a camera a point is, which is what transparent draws
+/// sort by.
+///
+/// Measured along the camera's forward axis rather than as a straight line to
+/// the eye: two sprites side by side at the same depth have to sort as equally
+/// far away, and a radial distance would call the one nearer the edge of the
+/// screen further back. Nothing divides, so a sprite sitting exactly on the
+/// camera plane produces a number rather than an infinity.
+fn camera_distance(view: Mat4, position: Vec3) -> f32 {
+    -(view * position.extend(1.0)).z
+}
+
 fn transform_matrix(transform: Transform3D) -> Mat4 {
     Mat4::from_scale_rotation_translation(
         Vec3::from_array(transform.scale),
@@ -335,9 +388,10 @@ fn transform_matrix(transform: Transform3D) -> Mat4 {
 /// Where a screen-anchored sprite lands, given the one transform.
 ///
 /// Only X and Y of the transform reach the overlay: a screen-space sprite is
-/// positioned against the camera's extent, so its Z has nowhere to go. A
-/// world-space sprite has no such loss — it goes through `transform_matrix`,
-/// the same one a mesh does, because it is in the same world a mesh is.
+/// positioned against the camera's extent, and its Z orders it rather than
+/// placing it, so the matrix is flat. A world-space sprite has no such split —
+/// it goes through `transform_matrix`, the same one a mesh does, because it is
+/// in the same world a mesh is.
 ///
 /// The rotation is taken about Z alone, which is what a flat thing facing the
 /// camera can turn about.

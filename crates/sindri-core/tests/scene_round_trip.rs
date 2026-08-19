@@ -213,12 +213,13 @@ fn an_edited_transform_survives_a_save_and_reopen() {
     );
 }
 
-/// The first real format change, checked against documents written before it.
+/// Each format change, checked against documents written before it.
 ///
-/// Format 2 collapsed the separate 2D transform into the one 3D transform.
-/// These are the version 1 fixtures as they were actually stored, kept so the
-/// upgrade is exercised against real files rather than a document written to
-/// suit the test.
+/// Format 2 collapsed the separate 2D transform into the one 3D transform, and
+/// format 3 replaced the sprite's authored sorting depth with the Z it already
+/// had. These are the fixtures as they were actually stored at each version,
+/// kept so the upgrades are exercised against real files rather than documents
+/// written to suit the test.
 mod migration {
     use sindri_core::{SceneMigrator, Transform3D};
 
@@ -232,14 +233,18 @@ mod migration {
             .unwrap_or_else(|error| panic!("{} should be readable: {error}", path.display()))
     }
 
-    /// The strongest claim available: each version 1 fixture migrates to
-    /// exactly the version 2 fixture stored beside it. Not "it parses" — the
-    /// same document, byte for byte once canonicalised.
+    /// The strongest claim available: each stored older fixture migrates to
+    /// exactly the current fixture stored beside it. Not "it parses" — the same
+    /// document, byte for byte once canonicalised. A version 1 file runs the
+    /// whole chain, so the steps are checked composed as well as alone.
     #[test]
-    fn a_version_1_scene_migrates_to_the_stored_version_2_fixture() {
+    fn an_older_scene_migrates_to_the_stored_current_fixture() {
         for (before, after) in [
             ("hierarchy.v1.json", "hierarchy.scene.json"),
             ("components.v1.json", "components.scene.json"),
+            ("hierarchy.v2.json", "hierarchy.scene.json"),
+            ("components.v2.json", "components.scene.json"),
+            ("minimal.v2.json", "minimal.scene.json"),
         ] {
             let migrated = super::SceneDocument::from_json_migrated(
                 &legacy(before),
@@ -260,6 +265,73 @@ mod migration {
                 "{before} did not migrate to {after}"
             );
         }
+    }
+
+    /// Format 3's arithmetic: a screen sprite's sorting depth becomes the Z it
+    /// is sorted by, negated, because the overlay camera looks down the axis
+    /// from `+Z` and a greater depth meant further away. The stack comes out in
+    /// the order it went in.
+    #[test]
+    fn a_sorting_depth_becomes_the_z_that_replaced_it() {
+        let json = r#"{
+            "format_version": 2,
+            "entities": [
+                { "id": "near", "transform_3d": { "position": [1.0, 2.0, 0.0] },
+                  "components": { "sindri.sprite": { "texture": "b", "depth": 1.0 } } },
+                { "id": "far",
+                  "components": { "sindri.sprite": { "texture": "b", "depth": 4.0 } } },
+                { "id": "unsorted",
+                  "components": { "sindri.sprite": { "texture": "b" } } }
+            ]
+        }"#;
+        let document =
+            super::SceneDocument::from_json_migrated(json, &SceneMigrator::builtin()).unwrap();
+        let z = |id: &str| {
+            document
+                .entity(&sindri_core::SceneEntityId::new(id).unwrap())
+                .and_then(|entity| entity.transform_3d)
+                .map(|transform| transform.position[2])
+        };
+        assert_eq!(z("near"), Some(-1.0));
+        assert_eq!(
+            z("far"),
+            Some(-4.0),
+            "an entity with no transform gains one"
+        );
+        assert_eq!(z("unsorted"), None, "a sprite with no depth is left alone");
+        for entity in &document.entities {
+            let sprite = &entity.components["sindri.sprite"];
+            assert!(
+                sprite.get("depth").is_none(),
+                "the depth field must not survive the upgrade: {sprite}"
+            );
+        }
+    }
+
+    /// A world-space sprite's Z already placed it, and now orders it too, so
+    /// its depth is dropped rather than written over the position. Moving it
+    /// would be the one thing a migration must never do quietly.
+    #[test]
+    fn a_world_space_sprite_keeps_the_z_it_was_authored_at() {
+        let json = r#"{
+            "format_version": 2,
+            "entities": [{
+                "id": "prop",
+                "transform_3d": { "position": [0.0, 0.0, -7.0] },
+                "components": { "sindri.sprite": {
+                    "texture": "b", "space": "world", "depth": 2.0 } }
+            }]
+        }"#;
+        let document =
+            super::SceneDocument::from_json_migrated(json, &SceneMigrator::builtin()).unwrap();
+        let entity = &document.entities[0];
+        // Exactly the authored number, bit for bit: "close enough" is not the
+        // claim, since the point is that nothing touched it.
+        assert_eq!(
+            entity.transform_3d.unwrap().position[2].to_bits(),
+            (-7.0_f32).to_bits()
+        );
+        assert!(entity.components["sindri.sprite"].get("depth").is_none());
     }
 
     /// The arithmetic, checked rather than assumed: a quarter turn about Z at
