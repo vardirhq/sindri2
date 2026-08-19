@@ -165,11 +165,6 @@ Nothing pretends browser I/O is synchronous.
 Reflects `main`. The editor renders the real runtime frame through eframe's
 shared WGPU device — it is not a mock, and it does not create a second device.
 
-**It is currently read-only.** Every write to the world sits behind a selection,
-and a hierarchy row does not respond to a click, so nothing in the scene can be
-changed through the interface. `docs/editor-audit.md` has the evidence, the
-one-word cause, and what it blocks. Read the rest of this section as what works
-once that is fixed.
 
 An action that fails says so: a sticky notice from the last thing you did is
 kept apart from the per-frame render result, which used to overwrite it within a
@@ -179,13 +174,11 @@ frame.
 
 - Opens a scene from a command-line argument or **File → Open scene**, saves it
   back canonically, reloads from disk, and discards changes
-- Shows the hierarchy from live runtime state, nested, searchable — but a row
-  cannot be selected by clicking it, which is `docs/editor-audit.md`'s first
-  finding and the reason everything below marked "edit" is currently out of
-  reach
+- Shows the hierarchy from live runtime state, nested, searchable, with
+  selection anywhere on a row — and with clearing the selection by clicking
+  empty space or Escape
 - Inspector edits of name and the transform, including the Z lock, which takes
-  away the Z drag while it is on — reachable only when something has forced a
-  selection, so not reachable at all today
+  away the Z drag while it is on
 - Inspector rows showing each built-in component's own fields — the camera's
   projection and clipping, the mesh's primitive and texture, the sprite's
   texture, space, anchor, and layer

@@ -2,11 +2,15 @@
 
 What the editor actually does, control by control, as of `5661ea6`.
 
-**The finding that matters: the editor cannot edit anything.** Every path that
-writes to the world is behind a selection, and a selection cannot be made,
-because the hierarchy row hands back the wrong response object. It has been a
-scene viewer since 16 August, and nothing noticed — not the tests, not the
-screenshots, not the first version of this audit.
+**The finding that mattered: the editor could not edit anything.** Every path
+that writes to the world is behind a selection, and a selection could not be
+made, because the hierarchy row handed back the wrong response object. It was a
+scene viewer from 16 August until this audit, and nothing noticed — not the
+tests, not the screenshots, not the first version of this document.
+
+**Fixed** in the commit that follows this one; §1 keeps the story, because how it
+hid for a fortnight is the most useful thing in here. Everything else below
+stands as found.
 
 ## How this was done, and how the first attempt failed
 
@@ -41,7 +45,7 @@ next sweep should use it.
    suspected line, rebuild, and re-measure. A fix that makes the control work is
    proof of the cause; an argument about egui's semantics is not.
 
-## 1. The editor is read-only
+## 1. The editor was read-only
 
 Every write to the world goes through one of two places, and both sit inside
 `inspector_panel`, which returns immediately when nothing is selected
@@ -75,6 +79,19 @@ changed **0 pixels**, in a session where clicking Ortho changed 111,798 and the
 Console tab 122,990. Changing `.response` to `.inner`, rebuilding, and clicking
 the same pixel changed **35,351**, of which **34,263** were the inspector
 filling in. One word.
+
+**The fix, and one thing it taught.** Returning the button's response is enough
+to make the name clickable, and the row is more than its name. Wrapping the row
+in a scope that senses clicks covers the rest of it — except that a widget
+inside such a scope takes precedence over the scope, so the icon's `Label`,
+which senses hover, swallowed every click that landed on it. Probing offsets
+across the row found a dead band from 10 to 22 pixels in, exactly the icon's
+width. The icon now senses clicks too. None of that was visible from reading;
+all of it came from measuring.
+
+**Verified end to end.** In the running editor: clicking the row selects it, the
+inspector fills, typing `5` into Position X sets it to 5.00, and the status bar
+turns to `demo.scene.json (unsaved)`.
 
 **How long.** `hierarchy_row` has returned the layout's response since
 `f0e8c41`, the first editor commit, so row clicking has never worked. Until

@@ -1258,6 +1258,18 @@ fn hierarchy_group(ui: &mut egui::Ui, label: &str, icon: MaterialIcon) {
     });
 }
 
+/// One row of the hierarchy, reporting whether it was clicked.
+///
+/// The response has to be the button's, not the layout's. `ui.horizontal`
+/// allocates its region with `Sense::hover`, so asking that value whether it was
+/// clicked answers no forever — which is what it did from the first editor
+/// commit until this was found by driving the editor rather than reading it. The
+/// whole of selection, and therefore every edit the editor can make, hung on
+/// this one word.
+///
+/// The row's rect is re-sensed as well, so the icon and the padding beside the
+/// name select too. A row that answers only on its text is the same complaint in
+/// miniature.
 fn hierarchy_row(
     ui: &mut egui::Ui,
     icon: MaterialIcon,
@@ -1265,24 +1277,37 @@ fn hierarchy_row(
     selected: bool,
     depth: usize,
 ) -> Response {
-    ui.horizontal(|ui| {
-        ui.add_space(9.0 + hierarchy_indent(depth, 14.0));
-        ui.label(icon.outlined().rich_text().size(15.0).color(if selected {
-            ACCENT_BRIGHT
-        } else {
-            TEXT_MUTED
-        }));
-        ui.add(
-            egui::Button::new(RichText::new(name).size(12.0).color(if selected {
-                TEXT
-            } else {
-                TEXT_MUTED
-            }))
-            .selected(selected)
-            .frame(false),
-        )
-    })
-    .response
+    let row = ui.scope_builder(egui::UiBuilder::new().sense(Sense::click()), |ui| {
+        ui.horizontal(|ui| {
+            ui.add_space(9.0 + hierarchy_indent(depth, 14.0));
+            // The icon senses clicks so that it does not swallow them: a
+            // widget inside the scope takes precedence over the scope's own
+            // sense, so a hover-only label would be a dead patch in the middle
+            // of the row.
+            let icon = ui.add(
+                egui::Label::new(icon.outlined().rich_text().size(15.0).color(if selected {
+                    ACCENT_BRIGHT
+                } else {
+                    TEXT_MUTED
+                }))
+                .sense(Sense::click()),
+            );
+            let label = ui.add(
+                egui::Button::new(RichText::new(name).size(12.0).color(if selected {
+                    TEXT
+                } else {
+                    TEXT_MUTED
+                }))
+                .selected(selected)
+                .frame(false),
+            );
+            icon | label
+        })
+        .inner
+    });
+    // A scope's sense sits below the widgets inside it, so the name still
+    // answers for itself and the rest of the row answers for the scope.
+    row.response | row.inner
 }
 
 /// What the root is called wherever a parent is named.
@@ -2486,6 +2511,77 @@ mod tests {
         lifecycle.resume().unwrap();
         lifecycle.stop().unwrap();
         assert_eq!(lifecycle_label(lifecycle.state()), "stopped");
+    }
+
+    /// Presses and releases the pointer at `target`, and reports whether a
+    /// hierarchy row drawn at the same place says it was clicked.
+    ///
+    /// egui reports a click on the release, so the press and the release are
+    /// separate frames, as they are for a real pointer.
+    fn row_click_at(offset: Vec2) -> bool {
+        let context = egui::Context::default();
+        // The row draws a material icon, and the icon font is registered by the
+        // same call the running editor makes.
+        egui_material_icons::initialize(&context);
+        let row = std::cell::Cell::new(Rect::NOTHING);
+        let clicked = std::cell::Cell::new(false);
+        let draw = |events: Vec<egui::Event>| {
+            let input = egui::RawInput {
+                events,
+                ..Default::default()
+            };
+            context
+                .run_ui(input, |ui| {
+                    let response = hierarchy_row(ui, ICON_ACCOUNT_TREE, "Checker Cube", false, 0);
+                    row.set(response.rect);
+                    clicked.set(response.clicked());
+                })
+                .drop_without_applying_deltas();
+        };
+
+        draw(Vec::new());
+        let target = row.get().left_center() + offset;
+        let button = |pressed| egui::Event::PointerButton {
+            pos: target,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: egui::Modifiers::default(),
+        };
+        draw(vec![egui::Event::PointerMoved(target), button(true)]);
+        draw(vec![button(false)]);
+        clicked.get()
+    }
+
+    /// The bug that made the editor read-only for a fortnight.
+    ///
+    /// `hierarchy_row` returned the response of the `ui.horizontal` around the
+    /// button rather than the button's own. A layout is allocated with
+    /// `Sense::hover`, so it answers no to `clicked` forever, and selection —
+    /// which every edit in the editor is behind — could never happen. Reading
+    /// the code found nothing; driving the editor found it in one click.
+    #[test]
+    fn clicking_a_hierarchy_row_reports_the_click() {
+        assert!(
+            row_click_at(Vec2::new(60.0, 0.0)),
+            "clicking a row's name must select it"
+        );
+    }
+
+    /// A row answers everywhere, not only on its text.
+    ///
+    /// The offsets walk across the indent, the icon, and the name. The middle
+    /// of that range is where the icon sits, and it was a dead patch until the
+    /// icon was given a sense of its own: a widget inside a click-sensing scope
+    /// takes precedence over the scope, so a hover-only label swallows the
+    /// click rather than passing it down.
+    #[test]
+    fn a_hierarchy_row_answers_across_its_whole_width() {
+        for offset in [2.0_f32, 10.0, 16.0, 22.0, 30.0, 60.0, 90.0] {
+            assert!(
+                row_click_at(Vec2::new(offset, 0.0)),
+                "a click {offset} points into the row was lost"
+            );
+        }
     }
 
     #[test]
