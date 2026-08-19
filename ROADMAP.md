@@ -347,6 +347,7 @@ Done:
 - [x] Open a scene from the interface rather than only from the command line — **File → Open scene…**
 - [x] Audit the editor control by control, rather than describing it from memory — `docs/editor-audit.md`
 - [x] Make a hierarchy row selectable, which nothing could do since the first editor commit; every editing feature in the tool was behind it
+- [x] Open a scene carrying components the built-in schemas do not know, rather than refusing it and panicking on the way
 
 Wanted, in no particular order. Several of these are small enough to do the
 moment they annoy someone, and are also named in Milestone 11 as part of the
@@ -354,10 +355,8 @@ larger tool; doing one here early is the point rather than a conflict.
 
 `docs/editor-audit.md` found most of what follows and puts it in the order it
 would do the most good, which is roughly the order it is listed in here. The
-first of them is the editor being broken rather than incomplete, and the next two
-are about it losing work. What it cannot yet do comes after that.
+first two are about the editor losing work. What it cannot yet do comes after that.
 
-- [ ] Stop the editor panicking on a scene that parses but carries a component the built-in schemas do not know, and open such a scene rather than refusing it
 - [ ] Stop discarding unsaved work without asking — reload, reset, and closing the window all do, and so does the Stop button, which resets the scene rather than stopping anything
 - [ ] Make the unsaved marker mean the file and the world differ, rather than that something was touched: undoing back to the saved state still reports unsaved work
 - [ ] Remove or implement the nineteen controls that are drawn and do nothing, and the four tool modes that highlight and are wired to nothing, starting with the two that look like they work: the asset search box, which accepts typing and filters nothing, and the scene view's axis gizmo, which is painted at fixed angles and never turns with the camera

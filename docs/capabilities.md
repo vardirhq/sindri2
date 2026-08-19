@@ -173,7 +173,9 @@ frame.
 ### Works
 
 - Opens a scene from a command-line argument or **File → Open scene**, saves it
-  back canonically, reloads from disk, and discards changes
+  back canonically, reloads from disk, and discards changes — including a scene
+  carrying components it has never heard of, which it keeps through a save and
+  lists in the inspector
 - Shows the hierarchy from live runtime state, nested, searchable, with
   selection anywhere on a row — and with clearing the selection by clicking
   empty space or Escape

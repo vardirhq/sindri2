@@ -111,7 +111,7 @@ was preselected with a temporary patch to photograph the inspector, which
 stepped around the exact bug that makes the feature unreachable. Showing that a
 widget draws is not showing that a user can get to it.
 
-## 2. It crashes on a scene file it should open
+## 2. It crashed on a scene file it should open
 
 Starting the editor with a scene carrying a component the built-in schemas do
 not know **panics before the window opens**:
@@ -136,6 +136,18 @@ notice, so the editor survives and still refuses the scene.
 
 Any project that defines a component of its own cannot be opened, and opening it
 the obvious way crashes.
+
+**Fixed.** The editor loads through its own `SceneExtractor` with `Preserve`, so
+a component it has never heard of survives a load, an edit, and a save; the
+inspector lists the fields it carries. `EditorApp::new` no longer unwraps a
+failed load — it opens on an empty world and says what happened — and a file
+that cannot be read now falls back to an empty scene rather than quietly
+standing the demo scene in for the one that was asked for. Verified by opening
+the file that used to panic: the window comes up, the entity is selectable, and
+its unknown component shows as its own section.
+
+It also took the editor's scene loading off the cube example, which is one
+strand of the scaffolding §6 wants gone.
 
 ## 3. Every control, measured
 

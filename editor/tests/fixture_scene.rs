@@ -78,6 +78,63 @@ fn move_cube(world: &mut World, history: &mut CommandHistory, position: [f32; 3]
     moved
 }
 
+/// The editor opens a scene carrying a component it has never heard of, keeps
+/// the payload through an edit, and writes it back untouched.
+///
+/// It used to refuse such a scene, and from the command line it panicked before
+/// the window opened. The format exists to carry exactly this: a project that
+/// defines a component of its own is the normal case, not a broken file.
+#[test]
+fn a_scene_with_an_unknown_component_opens_and_keeps_it() {
+    let directory = tempfile::tempdir().expect("a scratch directory");
+    let path = directory.path().join("custom.scene.json");
+    fs::write(
+        &path,
+        r#"{
+  "format_version": 3,
+  "entities": [
+    { "id": "camera", "transform_3d": { "position": [3.0, 2.0, 4.0] },
+      "components": { "sindri.camera": { "projection": "perspective",
+        "target": [0.0, 0.0, 0.0], "up": [0.0, 1.0, 0.0],
+        "vertical_fov_degrees": 45.0, "near": 0.1, "far": 100.0 } } },
+    { "id": "player", "transform_3d": { "position": [1.0, 0.0, 0.0] },
+      "components": { "game.health": { "hit_points": 12, "regen": "slow" } } }
+  ]
+}"#,
+    )
+    .expect("the scene is written");
+
+    let mut file = SceneFile::open(&path).expect("the scene opens");
+    let extractor = SceneExtractor::new().expect("the built-in components register");
+    let mut world =
+        sindri_editor::native::load_world(&extractor, file.document()).expect("and loads");
+
+    let player = entity(&world, "player");
+    let mut buffer = CommandBuffer::new();
+    buffer.push(WorldCommand::SetTransform3D {
+        entity: player,
+        transform: Some(Transform3D {
+            position: [4.0, 0.0, 0.0],
+            ..Transform3D::default()
+        }),
+    });
+    CommandHistory::default()
+        .apply(buffer.into_transaction("Move"), &mut world)
+        .expect("editing an entity beside an unknown component is ordinary");
+
+    file.save(&world).expect("the scene saves");
+    let reopened = SceneFile::open(&path).expect("the scene opens again");
+    let carried = reopened
+        .document()
+        .entity(&SceneEntityId::new("player").unwrap())
+        .expect("the entity survived")
+        .components
+        .get("game.health")
+        .expect("and so did the component the editor knows nothing about");
+    assert_eq!(carried["hit_points"], 12);
+    assert_eq!(carried["regen"], "slow");
+}
+
 /// A Z lock declared in a file is respected by the path the interface writes
 /// through, and survives being saved and opened again. The inspector takes the
 /// Z drag away as well, but this is the half that holds when something other
