@@ -27,10 +27,24 @@ jobs:
       # Before the tests, not only before the captures: the workspace has GPU
       # tests now, and SINDRI_REQUIRE_GPU makes a missing adapter fail them
       # rather than skip them on the one machine installed to run them.
+      #
+      # apt waits on the dpkg lock forever by default, and the runner image
+      # holds it while unattended-upgrades runs. A step that normally takes
+      # fifteen seconds sat there for a quarter of an hour twice in a row, and
+      # would have held the runner until the six-hour job timeout. The lock
+      # timeout gives up instead of waiting, the retries cover a slow mirror,
+      # and the step timeout turns any remaining hang into a fast, legible
+      # failure rather than a job nobody can tell apart from a slow one.
       - name: Install software Vulkan
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        timeout-minutes: 5
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes imagemagick libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
+          apt_get() {
+            sudo apt-get -o DPkg::Lock::Timeout=120 -o Acquire::Retries=3 "$@"
+          }
+          apt_get update
+          apt_get install --yes imagemagick libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
       - name: Test
         env:
           WGPU_BACKEND: vulkan
