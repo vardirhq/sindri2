@@ -343,6 +343,7 @@ Done:
 - [x] A project browser list view showing each asset's kind, defaulting to list until thumbnails exist
 - [x] A game view rendering the authored camera beside the scene view being edited
 - [x] Undo and redo on the toolbar and on the keyboard
+- [x] Inspector component rows that read the selected entity's own payload, replacing fixed text that described the demo scene whatever was open
 
 Wanted, in no particular order. Several of these are small enough to do the
 moment they annoy someone, and are also named in Milestone 11 as part of the

@@ -155,3 +155,4 @@ All notable changes to Sindri Next will be documented here.
 - Moved the frame clear out of the mesh pass and into `encode_clear`, so a scene with several meshes no longer erases all but the last, and a scene with none still starts from a cleared colour and depth buffer.
 - Gave sprites a `space`: the default `screen` is the anchored overlay every sprite already was, and `world` places a sprite by its whole transform, draws it through the world camera, and lets opaque geometry in front of it hide it.
 - Added the first GPU-backed tests, run in CI on software Vulkan, proving a world-space sprite is occluded by a mesh in front of it and drawn when it is the only thing in the frame.
+- Made the editor's inspector show each built-in component's real fields instead of fixed text describing the demo scene.

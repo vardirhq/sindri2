@@ -171,7 +171,9 @@ frame.
   back canonically, reloads from disk, and discards changes
 - Shows the hierarchy from live runtime state, nested, searchable, with
   selection — and with clearing the selection by clicking empty space or Escape
-- Inspector edits of name and the transform
+- Inspector edits of name and the transform, with each built-in component's own
+  fields shown beneath them — the camera's projection and clipping, the mesh's
+  primitive and texture, the sprite's texture, space, anchor, and layer
 - Reparenting through a **Parent** menu that offers only the moves the world
   would accept
 - Undo and redo of every edit, with drag-merging so a slider drag is one step
@@ -202,8 +204,9 @@ Listed because a control that looks like a feature is worse than an absent one.
   a directory, so it shows the same list whatever scene is open
 - **Edit, Scene, Build, Tools, Help** — plain labels, not menus. File and View
   open
-- **Tag** and **Layer** in the inspector, and the per-component property rows —
-  fixed text, not the component's actual values
+- **Tag** and **Layer** in the inspector — fixed text. The per-component property
+  rows below them now read the entity's own payload, but they are a readout: a
+  component's fields cannot be edited from the inspector
 - **The project name in the top bar** — a label
 - **The Console** — three fixed lines. Two interpolate real values (entity count,
   lifecycle state), so it is a status readout rather than a log; nothing the

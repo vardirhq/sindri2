@@ -35,6 +35,9 @@ use sindri_cube::{
 use sindri_render::{
     SpriteBatchRenderer, TextureRegistry, TexturedCubeRenderer, Viewport, ViewportTarget,
 };
+use sindri_scene::{
+    CameraComponent, MeshComponent, MeshPrimitive, SpriteAnchor, SpriteComponent, SpriteSpace,
+};
 
 use crate::{
     // `egui::Layout` is a different thing entirely and is already in scope.
@@ -1404,8 +1407,15 @@ fn transform_3d_section(ui: &mut egui::Ui, transform: &mut Transform3D) {
     property_label(ui, "Rotation", "Quaternion");
 }
 
+/// The components an entity carries, read from the entity's own payloads.
+///
+/// The rows here used to be fixed text that described the demo scene whatever
+/// was open, which is worse than showing nothing: a sprite anchored bottom
+/// right read as an overlay badge. Each built-in component is deserialized
+/// through the same schema the runtime uses, so a row is either the value the
+/// scene holds or an admission that the payload could not be read.
 fn components_sections(ui: &mut egui::Ui, components: &BTreeMap<String, Value>) {
-    for name in components.keys() {
+    for (name, payload) in components {
         let icon = match name.as_str() {
             "sindri.camera" => ICON_CAMERA_ALT,
             "sindri.sprite" => ICON_IMAGE,
@@ -1413,23 +1423,120 @@ fn components_sections(ui: &mut egui::Ui, components: &BTreeMap<String, Value>) 
             _ => ICON_DEPLOYED_CODE,
         };
         section_header(ui, icon, &component_label(name));
-        match name.as_str() {
-            "sindri.camera" => {
-                property_label(ui, "Projection", "Perspective");
-                property_label(ui, "Field of view", "45°");
-                property_label(ui, "Clipping", "0.1 - 100");
-            }
-            "sindri.sprite" => {
-                property_label(ui, "Texture", "procedural:badge");
-                property_label(ui, "Layer", "Overlay");
-            }
-            "sindri.mesh" => {
-                property_label(ui, "Mesh", "Cube");
-                property_label(ui, "Material", "Checkerboard");
-                property_label(ui, "Layer", "World");
-            }
-            _ => property_label(ui, "Schema", "v1"),
+        for (label, value) in component_rows(name, payload) {
+            property_label(ui, &label, &value);
         }
+    }
+}
+
+/// What one component's rows say, kept apart from the drawing of them so the
+/// claim that they are the entity's own values is something a test can check.
+fn component_rows(name: &str, payload: &Value) -> Vec<(String, String)> {
+    fn row(label: &str, value: impl Into<String>) -> (String, String) {
+        (label.to_owned(), value.into())
+    }
+
+    match name {
+        "sindri.camera" => match serde_json::from_value::<CameraComponent>(payload.clone()) {
+            Ok(CameraComponent::Perspective {
+                vertical_fov_degrees,
+                near,
+                far,
+                ..
+            }) => vec![
+                row("Projection", "Perspective"),
+                row("Field of view", format!("{vertical_fov_degrees}°")),
+                row("Clipping", format!("{near} - {far}")),
+            ],
+            Ok(CameraComponent::Orthographic {
+                vertical_size,
+                near,
+                far,
+                ..
+            }) => vec![
+                row("Projection", "Orthographic"),
+                row("Vertical size", vertical_size.to_string()),
+                row("Clipping", format!("{near} - {far}")),
+            ],
+            Err(error) => unreadable_payload(&error),
+        },
+        "sindri.sprite" => match serde_json::from_value::<SpriteComponent>(payload.clone()) {
+            Ok(sprite) => {
+                let mut rows = vec![
+                    row("Texture", sprite.texture.clone()),
+                    row("Space", sprite_space_label(sprite.space)),
+                ];
+                // Only a screen-space sprite has an edge to hang from, so a
+                // world-space one is not offered an anchor to misread.
+                if let Some(anchor) = sprite.screen_anchor() {
+                    rows.push(row("Anchor", anchor_label(anchor)));
+                }
+                rows.push(row("Layer", sprite.layer.to_string()));
+                rows
+            }
+            Err(error) => unreadable_payload(&error),
+        },
+        "sindri.mesh" => match serde_json::from_value::<MeshComponent>(payload.clone()) {
+            Ok(mesh) => vec![
+                row(
+                    "Mesh",
+                    match mesh.primitive {
+                        MeshPrimitive::Cube => "Cube",
+                        // The enum is deliberately open: a primitive added to
+                        // the engine must not stop the editor building, and
+                        // this row is the only thing that has to catch up.
+                        _ => "Unnamed primitive",
+                    },
+                ),
+                row("Texture", mesh.texture.clone()),
+                row("Layer", mesh.layer.to_string()),
+            ],
+            Err(error) => unreadable_payload(&error),
+        },
+        _ => vec![row("Fields", payload_summary(payload))],
+    }
+}
+
+/// A payload the built-in schema rejected. Said out loud, because a component
+/// row that silently showed nothing would look like a component with nothing in
+/// it.
+fn unreadable_payload(error: &serde_json::Error) -> Vec<(String, String)> {
+    vec![("Unreadable".to_owned(), error.to_string())]
+}
+
+/// What a component nothing here knows about is carrying, which is at least its
+/// field names.
+fn payload_summary(payload: &Value) -> String {
+    payload.as_object().map_or_else(
+        || payload.to_string(),
+        |fields| {
+            if fields.is_empty() {
+                "none".to_owned()
+            } else {
+                fields.keys().cloned().collect::<Vec<_>>().join(", ")
+            }
+        },
+    )
+}
+
+const fn sprite_space_label(space: SpriteSpace) -> &'static str {
+    match space {
+        SpriteSpace::Screen => "Screen",
+        SpriteSpace::World => "World",
+    }
+}
+
+const fn anchor_label(anchor: SpriteAnchor) -> &'static str {
+    match anchor {
+        SpriteAnchor::Center => "Center",
+        SpriteAnchor::Top => "Top",
+        SpriteAnchor::Bottom => "Bottom",
+        SpriteAnchor::Left => "Left",
+        SpriteAnchor::Right => "Right",
+        SpriteAnchor::TopLeft => "Top left",
+        SpriteAnchor::TopRight => "Top right",
+        SpriteAnchor::BottomLeft => "Bottom left",
+        SpriteAnchor::BottomRight => "Bottom right",
     }
 }
 
@@ -2350,5 +2457,62 @@ mod tests {
     fn labels_are_human_readable() {
         assert_eq!(humanize("checker-cube"), "Checker Cube");
         assert_eq!(component_label("sindri.sprite"), "Sprite");
+    }
+
+    /// The inspector's component rows are the entity's own values. They were
+    /// fixed text for long enough that this is worth holding in place.
+    #[test]
+    fn component_rows_read_the_payload() {
+        let sprite = serde_json::json!({
+            "texture": "textures/badge.png",
+            "anchor": "bottom_right",
+            "layer": 100
+        });
+        assert_eq!(
+            component_rows("sindri.sprite", &sprite),
+            [
+                ("Texture".to_owned(), "textures/badge.png".to_owned()),
+                ("Space".to_owned(), "Screen".to_owned()),
+                ("Anchor".to_owned(), "Bottom right".to_owned()),
+                ("Layer".to_owned(), "100".to_owned()),
+            ]
+        );
+
+        let mesh = serde_json::json!({ "primitive": "cube", "texture": "procedural:checkerboard" });
+        assert_eq!(
+            component_rows("sindri.mesh", &mesh),
+            [
+                ("Mesh".to_owned(), "Cube".to_owned()),
+                ("Texture".to_owned(), "procedural:checkerboard".to_owned()),
+                ("Layer".to_owned(), "0".to_owned()),
+            ]
+        );
+    }
+
+    /// A world-space sprite has no edge to anchor to, so it is offered no
+    /// anchor row to read as though it did.
+    #[test]
+    fn a_world_space_sprite_is_shown_no_anchor() {
+        let sprite = serde_json::json!({
+            "texture": "textures/tree.png",
+            "space": "world",
+            "anchor": "top_left"
+        });
+        let rows = component_rows("sindri.sprite", &sprite);
+        assert_eq!(rows[1], ("Space".to_owned(), "World".to_owned()));
+        assert!(
+            !rows.iter().any(|(label, _)| label == "Anchor"),
+            "a world sprite was offered an anchor: {rows:?}"
+        );
+    }
+
+    /// A component nothing here knows about still says what it is carrying.
+    #[test]
+    fn an_unknown_component_lists_its_fields() {
+        let payload = serde_json::json!({ "speed": 4.0, "facing": "north" });
+        assert_eq!(
+            component_rows("game.walker", &payload),
+            [("Fields".to_owned(), "facing, speed".to_owned())]
+        );
     }
 }

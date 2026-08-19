@@ -14,13 +14,13 @@ glam.workspace = true
 sindri-core = { path = "../crates/sindri-core" }
 sindri-cube = { path = "../examples/cube" }
 sindri-render = { path = "../crates/sindri-render" }
+sindri-scene = { path = "../crates/sindri-scene" }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 rfd = { version = "0.17.2", default-features = false, features = ["xdg-portal"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-sindri-scene = { path = "../crates/sindri-scene" }
 tempfile = "3"
 
 [lints]
