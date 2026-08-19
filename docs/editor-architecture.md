@@ -111,6 +111,21 @@ edited reproduces the file byte for byte, so a review sees the edit and nothing
 else. Reloading re-reads the file and discards unsaved edits along with their
 history, because every runtime handle is replaced.
 
+Which is why nothing throws that work away without asking. Opening another
+scene, reloading, discarding changes, and closing the window each raise the same
+question, named after the loss they are about to cause, with saving offered as
+the third answer; closing cancels the window's close request while the question
+stands, and asks again once it is answered.
+
+Whether there is anything to lose is a question for the command history, not a
+flag. `CommandHistory::revision` numbers the state the world is in; the editor
+remembers the number it last saved, and unsaved work is the two differing. A
+flag cannot say this: a merged drag changes the world without growing the stack,
+and a bounded stack repeats its depths once it starts dropping entries, so
+neither "something was written" nor "the stack is this deep" is the same
+question. Undoing back to what was saved reads as saved again, and a state the
+history left behind is never numbered twice.
+
 That closes the loop the milestone is judged on — edit a transform, save,
 reopen, and the scene is what it was left as — and it is the same file the
 runtime and the headless capture load.

@@ -88,6 +88,75 @@ enum EditorMode {
     Scale,
 }
 
+/// Something the user asked for that would throw unsaved work away.
+///
+/// Each of these used to happen the moment it was clicked. Two of them are in a
+/// menu, one is the window's close button, and one was the Stop button, which
+/// reset the scene rather than stopping anything.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum Discarding {
+    OpenAnother,
+    Reload,
+    Reset,
+    Close,
+}
+
+impl Discarding {
+    /// What the user is about to lose the work to, in the words of the control
+    /// they pressed.
+    const fn question(self) -> &'static str {
+        match self {
+            Self::OpenAnother => "Open another scene and discard the changes to this one?",
+            Self::Reload => "Re-read this scene from disk and discard the changes?",
+            Self::Reset => "Discard the changes and go back to the scene as it was saved?",
+            Self::Close => "Close the editor and discard the changes?",
+        }
+    }
+
+    const fn verb(self) -> &'static str {
+        match self {
+            Self::OpenAnother => "Open anyway",
+            Self::Reload => "Reload anyway",
+            Self::Reset => "Discard",
+            Self::Close => "Close anyway",
+        }
+    }
+}
+
+/// The editing shortcuts pressed this frame.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+struct Shortcuts {
+    undo: bool,
+    redo: bool,
+    save: bool,
+}
+
+/// Reads the editing shortcuts, most specific first.
+///
+/// Order is the whole of it. egui matches modifiers logically, so an extra
+/// Shift is ignored and a Ctrl+Shift+Z tested against Ctrl+Z matches it —
+/// which meant the editor's redo shortcut was consumed by undo and performed
+/// one. Redo is asked first so that it sees its own keys.
+fn shortcuts(input: &mut egui::InputState) -> Shortcuts {
+    let redo = input.consume_key(
+        egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
+        egui::Key::Z,
+    ) || input.consume_key(egui::Modifiers::COMMAND, egui::Key::Y);
+    Shortcuts {
+        redo,
+        undo: input.consume_key(egui::Modifiers::COMMAND, egui::Key::Z),
+        save: input.consume_key(egui::Modifiers::COMMAND, egui::Key::S),
+    }
+}
+
+/// What the confirm dialog came back with.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum Answer {
+    Cancel,
+    Discard,
+    Save,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum WorkspaceTab {
     Scene,
@@ -243,7 +312,19 @@ struct EditorApp {
     scene: SceneExtractor,
     world: World,
     file: SceneFile,
-    unsaved: bool,
+    /// The history revision the open file was last agreed with.
+    ///
+    /// Unsaved work is the world having moved away from it, which undoing back
+    /// reverses. The flag this replaced was set by every edit and cleared only
+    /// by a save, so undoing to exactly the saved state still claimed there was
+    /// something to lose.
+    saved_revision: u64,
+    /// What the user asked for that would throw unsaved work away, waiting on
+    /// an answer.
+    confirming: Option<Discarding>,
+    /// Set once closing has been agreed to, so the close request the editor
+    /// cancelled to ask the question is not cancelled a second time.
+    closing: bool,
     selection: Option<EntityId>,
     history: CommandHistory,
     search: String,
@@ -299,7 +380,9 @@ impl EditorApp {
             scene,
             world,
             file,
-            unsaved: false,
+            saved_revision: 0,
+            confirming: None,
+            closing: false,
             selection,
             history: CommandHistory::default(),
             search: String::new(),
@@ -320,14 +403,45 @@ impl EditorApp {
         }
     }
 
+    /// Whether the world has moved away from what the file holds.
+    fn unsaved(&self) -> bool {
+        self.history.revision() != self.saved_revision
+    }
+
     /// Writes the world back to the file it came from.
     fn save(&mut self) {
         match self.file.save(&self.world) {
             Ok(()) => {
-                self.unsaved = false;
+                self.saved_revision = self.history.revision();
                 self.notice = None;
             }
             Err(error) => self.notice = Some(error.to_string()),
+        }
+    }
+
+    /// Does what was asked, or asks first when it would cost unsaved work.
+    fn discard_or_confirm(&mut self, action: Discarding, context: &egui::Context) {
+        if self.unsaved() {
+            self.confirming = Some(action);
+        } else {
+            self.discard(action, context);
+        }
+    }
+
+    /// Carries out an action that throws away whatever is unsaved.
+    fn discard(&mut self, action: Discarding, context: &egui::Context) {
+        self.confirming = None;
+        match action {
+            Discarding::OpenAnother => self.open_scene(),
+            Discarding::Reload => self.reload(),
+            Discarding::Reset => self.reset_to_authored(),
+            // Agreeing to close is not closing. The request that raised the
+            // question was cancelled, so nothing is asking the window to go any
+            // more; this asks again, and the flag lets that one through.
+            Discarding::Close => {
+                self.closing = true;
+                context.send_viewport_cmd(egui::ViewportCommand::Close);
+            }
         }
     }
 
@@ -373,7 +487,7 @@ impl EditorApp {
                 self.world = world;
                 self.history.clear();
                 self.selection = None;
-                self.unsaved = false;
+                self.saved_revision = self.history.revision();
                 self.lifecycle = initialized_lifecycle();
                 self.notice = None;
             }
@@ -462,9 +576,8 @@ impl EditorApp {
         let transaction = buffer
             .into_transaction("Edit entity")
             .merging(format!("inspector:{}", entity.index()));
-        match self.history.apply(transaction, &mut self.world) {
-            Ok(()) => self.unsaved = true,
-            Err(error) => self.notice = Some(error.to_string()),
+        if let Err(error) = self.history.apply(transaction, &mut self.world) {
+            self.notice = Some(error.to_string());
         }
     }
 
@@ -482,28 +595,25 @@ impl EditorApp {
         let mut buffer = CommandBuffer::new();
         buffer.push(WorldCommand::SetParent { entity, parent });
         self.history.break_merge_run();
-        match self
+        if let Err(error) = self
             .history
             .apply(buffer.into_transaction("Reparent entity"), &mut self.world)
         {
-            Ok(()) => self.unsaved = true,
-            Err(error) => self.notice = Some(error.to_string()),
+            self.notice = Some(error.to_string());
         }
     }
 
     fn undo(&mut self) {
         self.history.break_merge_run();
-        match self.history.undo(&mut self.world) {
-            Ok(_) => self.unsaved = true,
-            Err(error) => self.notice = Some(error.to_string()),
+        if let Err(error) = self.history.undo(&mut self.world) {
+            self.notice = Some(error.to_string());
         }
     }
 
     fn redo(&mut self) {
         self.history.break_merge_run();
-        match self.history.redo(&mut self.world) {
-            Ok(_) => self.unsaved = true,
-            Err(error) => self.notice = Some(error.to_string()),
+        if let Err(error) = self.history.redo(&mut self.world) {
+            self.notice = Some(error.to_string());
         }
     }
 
@@ -516,7 +626,7 @@ impl EditorApp {
             Ok(world) => {
                 self.world = world;
                 self.history.clear();
-                self.unsaved = false;
+                self.saved_revision = self.history.revision();
                 self.selection = None;
                 self.lifecycle = initialized_lifecycle();
                 self.notice = None;
@@ -538,6 +648,18 @@ impl EditorApp {
         }
     }
 
+    /// Ends a play session, leaving the world exactly as it is.
+    ///
+    /// There is nothing to restore yet because nothing runs — see
+    /// `docs/editor-audit.md`. When play mode does drive the world, stopping
+    /// should put back what it was before play started, and that restoration
+    /// belongs here.
+    fn stop_playback(&mut self) {
+        if let Err(error) = self.lifecycle.stop() {
+            self.notice = Some(error.to_string());
+        }
+    }
+
     fn pause(&mut self) {
         if self.lifecycle.state() == EngineState::Running
             && let Err(error) = self.lifecycle.pause()
@@ -546,23 +668,93 @@ impl EditorApp {
         }
     }
 
-    fn handle_shortcuts(&mut self, context: &egui::Context) {
-        let (undo, redo, save) = context.input_mut(|input| {
-            (
-                input.consume_key(egui::Modifiers::COMMAND, egui::Key::Z),
-                input.consume_key(
-                    egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
-                    egui::Key::Z,
-                ) || input.consume_key(egui::Modifiers::COMMAND, egui::Key::Y),
-                input.consume_key(egui::Modifiers::COMMAND, egui::Key::S),
-            )
+    /// Catches the window's close button while there is unsaved work.
+    ///
+    /// The close is cancelled and the question asked; answering it either lets
+    /// the next request through or leaves the editor open. Without this, the
+    /// most ordinary way to leave the editor is also the one way to lose an
+    /// afternoon without being asked.
+    fn handle_close_request(&mut self, context: &egui::Context) {
+        if !context.input(|input| input.viewport().close_requested()) {
+            return;
+        }
+        if self.closing || !self.unsaved() {
+            return;
+        }
+        context.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+        self.confirming = Some(Discarding::Close);
+    }
+
+    /// Asks before throwing work away, and reports whether it is asking.
+    ///
+    /// Returns `true` while the question is on screen, so the frame's remaining
+    /// input handling stands down rather than acting on keys aimed at the
+    /// dialog.
+    fn confirm_dialog(&mut self, context: &egui::Context) -> bool {
+        let Some(action) = self.confirming else {
+            return false;
+        };
+        let saveable = self.file.path().is_some();
+        let mut answered = None;
+        egui::Modal::new(egui::Id::new("sindri-discard-confirm")).show(context, |ui| {
+            ui.set_width(360.0);
+            ui.label(
+                RichText::new("Unsaved changes")
+                    .strong()
+                    .size(13.0)
+                    .color(TEXT),
+            );
+            ui.add_space(6.0);
+            ui.label(
+                RichText::new(action.question())
+                    .size(12.0)
+                    .color(TEXT_MUTED),
+            );
+            ui.add_space(14.0);
+            ui.horizontal(|ui| {
+                if ui.button("Cancel").clicked() {
+                    answered = Some(Answer::Cancel);
+                }
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    if ui
+                        .button(RichText::new(action.verb()).color(ACCENT_BRIGHT))
+                        .clicked()
+                    {
+                        answered = Some(Answer::Discard);
+                    }
+                    if ui
+                        .add_enabled(saveable, egui::Button::new("Save first"))
+                        .clicked()
+                    {
+                        answered = Some(Answer::Save);
+                    }
+                });
+            });
         });
-        if save {
+        match answered {
+            None => {}
+            Some(Answer::Cancel) => self.confirming = None,
+            Some(Answer::Discard) => self.discard(action, context),
+            Some(Answer::Save) => {
+                self.save();
+                // A failed save leaves the question standing rather than
+                // discarding the work it could not write.
+                if !self.unsaved() {
+                    self.discard(action, context);
+                }
+            }
+        }
+        self.confirming.is_some()
+    }
+
+    fn handle_shortcuts(&mut self, context: &egui::Context) {
+        let pressed = context.input_mut(shortcuts);
+        if pressed.save {
             self.save();
         }
-        if redo {
+        if pressed.redo {
             self.redo();
-        } else if undo {
+        } else if pressed.undo {
             self.undo();
         }
     }
@@ -620,16 +812,17 @@ impl EditorApp {
                         self.redo();
                     }
                     let running = self.lifecycle.state() == EngineState::Running;
-                    if transport_icon(
-                        ui,
-                        ICON_STOP,
-                        false,
-                        true,
-                        "Stop and reset to the authored scene",
-                    )
-                    .clicked()
-                    {
-                        self.reset_to_authored();
+                    // Stop stops. It used to reset the scene to the file,
+                    // which is what the symbol between Pause and Play means to
+                    // nobody, and it did that without asking. Going back to
+                    // the authored scene is File → Discard changes, which now
+                    // says what it will cost.
+                    let playing = matches!(
+                        self.lifecycle.state(),
+                        EngineState::Running | EngineState::Paused
+                    );
+                    if transport_icon(ui, ICON_STOP, false, playing, "Stop").clicked() {
+                        self.stop_playback();
                     }
                     if transport_icon(ui, ICON_PAUSE, !running, running, "Pause").clicked() {
                         self.pause();
@@ -851,7 +1044,7 @@ impl EditorApp {
         ui.menu_button(RichText::new("File").size(12.0).color(TEXT_MUTED), |ui| {
             ui.set_min_width(190.0);
             if ui.button("Open scene…").clicked() {
-                self.open_scene();
+                self.discard_or_confirm(Discarding::OpenAnother, ui.ctx());
                 ui.close();
             }
             ui.separator();
@@ -869,12 +1062,12 @@ impl EditorApp {
                 .add_enabled(saveable, egui::Button::new("Reload from disk"))
                 .clicked()
             {
-                self.reload();
+                self.discard_or_confirm(Discarding::Reload, ui.ctx());
                 ui.close();
             }
             ui.separator();
             if ui.button("Discard changes").clicked() {
-                self.reset_to_authored();
+                self.discard_or_confirm(Discarding::Reset, ui.ctx());
                 ui.close();
             }
         });
@@ -909,13 +1102,13 @@ impl EditorApp {
                     ui.label(RichText::new("|").size(11.0).color(BORDER));
                     ui.add_space(10.0);
                     ui.label(
-                        RichText::new(if self.unsaved {
+                        RichText::new(if self.unsaved() {
                             format!("{} (unsaved)", self.file.label())
                         } else {
                             self.file.label()
                         })
                         .size(11.0)
-                        .color(if self.unsaved {
+                        .color(if self.unsaved() {
                             ACCENT
                         } else {
                             TEXT_MUTED
@@ -1132,6 +1325,7 @@ impl eframe::App for EditorApp {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        self.handle_close_request(ui.ctx());
         self.handle_shortcuts(ui.ctx());
         self.top_bar(ui);
         self.status_bar(ui);
@@ -1156,6 +1350,11 @@ impl eframe::App for EditorApp {
         // Releasing the pointer ends a drag, so the next one is its own step.
         if ui.ctx().input(|input| input.pointer.any_released()) {
             self.history.break_merge_run();
+        }
+        // Drawn last so it sits over everything, and asked before Escape is
+        // read as clearing the selection.
+        if self.confirm_dialog(ui.ctx()) {
+            return;
         }
         // Escape clears the selection wherever the pointer happens to be. The
         // hierarchy's empty space does the same, but only while it has empty
@@ -2582,6 +2781,53 @@ mod tests {
         clicked.get()
     }
 
+    /// Which shortcuts a key press produces, read through a real egui frame.
+    fn shortcuts_for(modifiers: egui::Modifiers, key: egui::Key) -> Shortcuts {
+        let context = egui::Context::default();
+        let pressed = std::cell::Cell::new(Shortcuts::default());
+        let input = egui::RawInput {
+            events: vec![egui::Event::Key {
+                key,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers,
+            }],
+            ..Default::default()
+        };
+        context
+            .run_ui(input, |ui| {
+                pressed.set(ui.ctx().input_mut(shortcuts));
+            })
+            .drop_without_applying_deltas();
+        pressed.get()
+    }
+
+    /// Redo must be asked for before undo, because egui ignores an extra Shift
+    /// when matching: Ctrl+Shift+Z tested against Ctrl+Z matches, so the
+    /// editor's redo shortcut used to be consumed by undo and perform one.
+    #[test]
+    fn redo_is_not_swallowed_by_undo() {
+        let redo = shortcuts_for(
+            egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
+            egui::Key::Z,
+        );
+        assert!(redo.redo, "Ctrl+Shift+Z must redo");
+        assert!(!redo.undo, "and must not also undo");
+
+        let undo = shortcuts_for(egui::Modifiers::COMMAND, egui::Key::Z);
+        assert!(undo.undo && !undo.redo, "Ctrl+Z is still undo");
+
+        let also_redo = shortcuts_for(egui::Modifiers::COMMAND, egui::Key::Y);
+        assert!(
+            also_redo.redo && !also_redo.undo,
+            "and Ctrl+Y is still redo"
+        );
+
+        let save = shortcuts_for(egui::Modifiers::COMMAND, egui::Key::S);
+        assert!(save.save && !save.undo && !save.redo);
+    }
+
     /// The bug that made the editor read-only for a fortnight.
     ///
     /// `hierarchy_row` returned the response of the `ui.horizontal` around the
@@ -2612,6 +2858,56 @@ mod tests {
                 "a click {offset} points into the row was lost"
             );
         }
+    }
+
+    /// The marker means the file and the world differ, not that something was
+    /// touched. Undoing back to the saved state is being back at it.
+    #[test]
+    fn undoing_back_to_the_saved_state_is_not_unsaved_work() {
+        let mut world = demo_world();
+        let entity = find_by_source_id(&world, "checker-cube").unwrap();
+        let mut history = CommandHistory::default();
+        let saved_revision = history.revision();
+
+        let mut buffer = CommandBuffer::new();
+        buffer.push(WorldCommand::SetTransform3D {
+            entity,
+            transform: Some(Transform3D {
+                position: [3.0, 0.0, 0.0],
+                ..Transform3D::default()
+            }),
+        });
+        history
+            .apply(buffer.into_transaction("Move"), &mut world)
+            .unwrap();
+        assert_ne!(
+            history.revision(),
+            saved_revision,
+            "an edit is unsaved work"
+        );
+
+        history.undo(&mut world).unwrap();
+        assert_eq!(history.revision(), saved_revision, "and undoing it is not");
+    }
+
+    /// Every discarding action asks a question naming what it will do, so the
+    /// dialog cannot say "discard?" about closing the window.
+    #[test]
+    fn each_discarding_action_says_what_it_is_about_to_do() {
+        for action in [
+            Discarding::OpenAnother,
+            Discarding::Reload,
+            Discarding::Reset,
+            Discarding::Close,
+        ] {
+            assert!(action.question().ends_with('?'), "{action:?} must ask");
+            assert!(!action.verb().is_empty(), "{action:?} needs a button");
+        }
+        assert_ne!(
+            Discarding::Close.question(),
+            Discarding::Reload.question(),
+            "closing and reloading are different losses"
+        );
     }
 
     #[test]

@@ -161,7 +161,7 @@ the pointer highlight: the control is drawn and does nothing when pressed.
 | View → Layout | — | works, persists |
 | Edit, Scene, Build, Tools, Help | 0 px each | **inert** ×5 |
 | Undo / Redo | — | work; correctly disabled when empty |
-| Stop | 364 px | resets the scene; see §4 |
+| Stop | 364 px | resets the scene; see §4 — **fixed**, it now only stops |
 | Play / Pause | 364 px | button state only — no frame is advanced |
 | Project name "isogame ⌄" | 0 px | **inert** |
 | Hierarchy `+` | hover only | **inert** |
@@ -196,14 +196,25 @@ broken, one crash.**
 (`native.rs:619`), which rebuilds the world and clears the history. It sits
 between Pause and Play, where that symbol means "stop playing". Unreachable
 damage today, because no edit can be made; the moment §1 is fixed it becomes the
-sharpest edge in the editor.
+sharpest edge in the editor. **Fixed:** the button stops the lifecycle and
+nothing else, and is enabled only while something is running.
 
 **Nothing warns before discarding.** `open_path`, `reload`, `reset_to_authored`,
-and closing the window all drop unsaved edits without asking.
+and closing the window all drop unsaved edits without asking. **Fixed:** each of
+the four asks first, naming what it is about to do, and offers to save instead.
+Closing cancels the window's close request while the question stands.
 
 **The unsaved marker cannot return to clean.** `undo` and `redo` set
 `unsaved = true` unconditionally (`native.rs:491`, `499`), so undoing back to the
-saved state still claims unsaved work.
+saved state still claims unsaved work. **Fixed:** the history numbers the state
+the world is in, the editor remembers the number it saved, and "unsaved" is the
+two differing. Undoing back to the saved state is clean again, and a state left
+behind is never numbered twice.
+
+**Ctrl+Shift+Z undoes.** Found while checking the above: egui ignores an extra
+Shift when matching a shortcut, so Ctrl+Shift+Z matched the undo binding, which
+was tested first and consumed the key. Redo is now asked for first, with a test
+that presses the keys through a real frame.
 
 **Missing textures are silent.** The editor binds the two textures
 `sindri_cube::demo_textures` provides; anything else draws the magenta checker
@@ -252,15 +263,15 @@ need to bind textures the demo has never heard of.
 
 ## 7. What to fix, in order
 
-1. **`.inner` instead of `.response`** in `hierarchy_row`, with a test that
+1. ~~**`.inner` instead of `.response`** in `hierarchy_row`, with a test that
    clicking a row selects an entity. One word, and it unblocks every editing
-   feature in the tool.
-2. **Do not panic on a scene that parses.** Handle the failure `EditorApp::new`
+   feature in the tool.~~ Done — and the row answers across its whole width.
+2. ~~**Do not panic on a scene that parses.** Handle the failure `EditorApp::new`
    unwraps, and open with `Preserve` so components the editor does not know
-   survive a load, an edit, and a save.
-3. **Stop losing work.** Confirm before discarding, and reconsider what Stop
-   means while nothing runs.
-4. **Make the unsaved marker true.**
+   survive a load, an edit, and a save.~~ Done.
+3. ~~**Stop losing work.** Confirm before discarding, and reconsider what Stop
+   means while nothing runs.~~ Done.
+4. ~~**Make the unsaved marker true.**~~ Done.
 5. **Remove or implement** the nineteen inert controls, the four dead tool
    modes, and the two that lie. The gizmo has the camera's yaw and pitch
    available a few lines away and would be the first thing in the editor that

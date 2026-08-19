@@ -83,7 +83,9 @@ Every world edit can go through a `WorldCommand` that produces its own inverse:
 set name, set the transform, set parent, set or remove a component.
 `Transaction` is all-or-nothing, and `CommandHistory` gives bounded undo and
 redo with labelled steps and merge runs, so a continuous drag collapses into one
-undoable step rather than several hundred.
+undoable step rather than several hundred. The history also numbers the state
+the world is in, so a tool that remembers the number it last saved can tell
+whether the world and the file still agree — including after undoing back to it.
 
 ### Input
 
@@ -186,7 +188,13 @@ frame.
   texture, space, anchor, and layer
 - Reparenting through a **Parent** menu that offers only the moves the world
   would accept
-- Undo and redo of every edit, with drag-merging so a slider drag is one step
+- Undo and redo of every edit, with drag-merging so a slider drag is one step;
+  Ctrl+Z, Ctrl+Shift+Z, and Ctrl+Y
+- An unsaved marker that means the world and the file differ, so undoing back to
+  what was saved reads as saved again
+- A confirmation before anything that would throw unsaved work away — opening
+  another scene, reloading from disk, discarding changes, and closing the window
+  — each naming what it is about to do and offering to save instead
 - A live viewport with orbit, pan, zoom, and reset-to-authored-camera
 - Perspective and orthographic toggle
 - Scene and Game views, the latter rendering through the authored camera with no
@@ -195,8 +203,8 @@ frame.
   launches: `2 by 3` puts Scene above Game with Hierarchy, Project, and
   Inspector beside them, and `Wide` shows one view at a time over a Project
   dock
-- Play, pause, stop, and reset-to-authored-state, driving the real engine
-  lifecycle rather than a display flag
+- Play, pause, and stop, driving the real engine lifecycle rather than a display
+  flag, and a separate **Discard changes** that returns the world to the file
 - A Project dock with a list/grid toggle, and a Console dock
 - Preferences that survive a restart
 - A deterministic full-window screenshot captured in CI
@@ -209,9 +217,9 @@ under use and what the editor cannot express at all. This is the summary.
 
 - **Select, Move, Rotate, Scale** — they set a mode nothing reads. There are no
   gizmos
-- **Play and Pause** — they move the engine lifecycle and nothing else. No frame
-  is advanced, so no gameplay runs; the demo's own turning cube does not turn.
-  **Stop** does something, and what it does is discard every unsaved edit
+- **Play, Pause, and Stop** — they move the engine lifecycle and nothing else. No
+  frame is advanced, so no gameplay runs; the demo's own turning cube does not
+  turn
 - **The asset search box** — accepts typing and filters nothing, which is worse
   than the buttons that visibly do nothing
 - **The axis gizmo in the scene view's corner** — painted at fixed angles, so it

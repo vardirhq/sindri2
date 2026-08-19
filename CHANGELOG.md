@@ -162,3 +162,8 @@ All notable changes to Sindri Next will be documented here.
 - Added a Z lock a transform can declare, so an author can say that what layer a thing is on is deliberate: the command layer refuses a write that would move or drop a locked Z, and the inspector shows the lock and takes the Z drag away while it is on.
 - Fixed the editor being unable to select an entity: a hierarchy row reported the surrounding layout's response rather than the row's, so no click ever reached it and every edit in the editor — names, transforms, parents, undo — was unreachable. A row now answers across its whole width.
 - Fixed the editor refusing, and from the command line panicking on, a scene carrying a component its built-in schemas do not know: such a scene now opens, keeps the payload through an edit and a save, and shows its fields in the inspector.
+- Made the editor ask before throwing unsaved work away: opening another scene, reloading from disk, discarding changes, and closing the window each name what they are about to lose and offer to save first, rather than doing it silently.
+- Fixed the editor's Stop button discarding every unsaved edit; it now stops the engine lifecycle and nothing else, and is enabled only while something is running.
+- Added `CommandHistory::revision`, which numbers the state the world is in, so a tool can tell whether the world still matches what it saved rather than tracking that a write happened.
+- Fixed the editor claiming unsaved work after undoing back to the saved state, and claiming none after redoing away from it.
+- Fixed Ctrl+Shift+Z performing an undo in the editor: egui ignores an extra modifier when matching, so the redo shortcut was consumed by the undo binding tested before it.
