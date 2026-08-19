@@ -78,6 +78,58 @@ fn move_cube(world: &mut World, history: &mut CommandHistory, position: [f32; 3]
     moved
 }
 
+/// A Z lock declared in a file is respected by the path the interface writes
+/// through, and survives being saved and opened again. The inspector takes the
+/// Z drag away as well, but this is the half that holds when something other
+/// than the inspector does the writing.
+#[test]
+fn a_locked_transform_refuses_a_move_and_keeps_its_lock_through_a_save() {
+    let (_directory, path, mut file, mut world) = scratch();
+    let cube = entity(&world, "cube");
+    let mut history = CommandHistory::default();
+
+    let locked = Transform3D {
+        position: [0.0, 0.0, -4.0],
+        z_locked: true,
+        ..Transform3D::default()
+    };
+    let mut buffer = CommandBuffer::new();
+    buffer.push(WorldCommand::SetTransform3D {
+        entity: cube,
+        transform: Some(locked),
+    });
+    history
+        .apply(buffer.into_transaction("Lock Cube"), &mut world)
+        .expect("declaring a lock changes no layer");
+
+    let mut flattened = locked;
+    flattened.position[2] = 0.0;
+    let mut buffer = CommandBuffer::new();
+    buffer.push(WorldCommand::SetTransform3D {
+        entity: cube,
+        transform: Some(flattened),
+    });
+    history
+        .apply(buffer.into_transaction("Move Cube"), &mut world)
+        .expect_err("a locked transform must refuse to leave its layer");
+
+    file.save(&world).expect("the copy saves");
+    let reopened = SceneFile::open(&path).expect("the copy opens again");
+    let saved = World::from_scene(reopened.document())
+        .expect("the saved scene loads")
+        .world;
+    let transform = saved
+        .get(entity(&saved, "cube"))
+        .and_then(|data| data.transform_3d)
+        .expect("the cube kept its transform");
+    assert!(transform.z_locked, "the lock is part of the scene");
+    assert_eq!(
+        transform.position[2].to_bits(),
+        (-4.0_f32).to_bits(),
+        "and the refused move never happened"
+    );
+}
+
 /// The fixture's whole reason to exist. If it stops holding one of each, every
 /// assertion below still passes while testing something narrower.
 #[test]

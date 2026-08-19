@@ -146,6 +146,23 @@ bypasses it. It earns its place by being visible in the inspector and by saying
 what the author meant — "this stays on its layer" — rather than by being
 airtight. The API shape above is the real defence.
 
+It lives on the transform, as `z_locked`. The alternatives were a component of
+its own and a flag on the 2D body, and the transform wins because the lock is
+about one number on the transform: a component would have to be looked up by
+every path that writes a position, and a body would only cover the entities
+that have one, which is the wrong half — the scripts and animations that
+flatten a scene mostly belong to things with no physics at all.
+
+What respects it is `WorldCommand::SetTransform3D`, which is the single write
+path tools use, so the check sits where the editor, the eventual scripting
+boundary, and the web SDK all pass through. A refused command changes nothing
+and never enters the history, so a transaction that contains one rolls back
+whole.
+
+Removing a transform counts as moving it. An entity without one is at Z = 0, so
+dropping a locked transform lands a parallax layer in the play plane exactly as
+writing a different number would.
+
 ## Pixel-perfect requires an orthographic camera
 
 Pixel art wants one texel to land on one pixel. Under a perspective camera it
@@ -216,7 +233,5 @@ load, and must produce exactly the version 2 document the migration promises.
   sprite path. Sorting and batching argue for keeping the sprite path; sharing
   argues for quads. Decide when there is a reason to, not before
 - Where collision layers are defined — project settings, the scene, or both
-- Whether the Z lock lives on the transform, on the 2D body, or in a component
-  of its own. On the transform is the most obvious and the least composable
 - How the editor presents a Z that matters for depth but not for gameplay,
   which is a real authoring problem Unity has never fully solved

@@ -167,7 +167,7 @@ shaped like the tool.
 - [x] Give sprites a world-space option, keeping screen-anchored as the default so overlays and both proofs are unchanged — a sprite carries a `space`, and the two never share a batch because they differ in camera and pipeline; the offscreen capture is byte for byte what it was
 - [x] Sort transparent sprites by camera distance rather than an authored depth field, with layer as the explicit override — scene format version 3, whose migration turns a screen sprite's depth into the Z that now orders it; a world sprite reorders when the camera moves, a screen sprite's Z orders it without moving it
 - [x] Add 2D-shaped transform accessors that take and return X and Y only, so the common way a layered scene gets flattened is not expressible — position, translation, scale, and the turn about Z, on `Transform3D` itself
-- [ ] Add a Z lock a transform can declare, respected by checked write paths and visible in the inspector
+- [x] Add a Z lock a transform can declare, respected by checked write paths and visible in the inspector — `Transform3D::z_locked`, refused by `WorldCommand::SetTransform3D`, and shown in the inspector as a toggle that takes the Z drag away
 - [ ] Inventory each legacy 2D subsystem as port, refactor, replace, or defer
 - [ ] Port sprite animation and sprite sheets
 - [ ] Add a sprite sheet authoring surface: slice a sheet into frames, name clips, set timing, preview playback

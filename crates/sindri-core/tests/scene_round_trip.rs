@@ -175,6 +175,7 @@ fn an_edited_transform_survives_a_save_and_reopen() {
         position: [0.0, 3.5, 0.0],
         rotation: [0.0, 0.0, 0.0, 1.0],
         scale: [1.0, 2.0, 1.0],
+        ..Transform3D::default()
     };
     let mut history = CommandHistory::default();
     let mut buffer = CommandBuffer::new();
@@ -210,6 +211,44 @@ fn an_edited_transform_survives_a_save_and_reopen() {
             .to_canonical_json()
             .expect("canonical json"),
         original_text
+    );
+}
+
+/// A declared Z lock is part of the scene, and a transform that declares
+/// nothing writes nothing — which is why adding the field moved no version and
+/// left every stored fixture byte for byte what it was.
+#[test]
+fn a_locked_transform_saves_what_it_declared_and_nothing_else() {
+    let json = r#"{
+        "format_version": 3,
+        "entities": [
+            { "id": "background", "transform_3d": {
+                "position": [0.0, 0.0, -50.0], "z_locked": true } },
+            { "id": "player", "transform_3d": { "position": [1.0, 0.0, 0.0] } }
+        ]
+    }"#;
+    let document = SceneDocument::from_json(json).expect("the scene parses");
+    let loaded = World::from_scene(&document).expect("it loads");
+    let saved = loaded.world.to_scene().expect("it saves");
+
+    let locked = |document: &SceneDocument, id: &str| {
+        document
+            .entity(&SceneEntityId::new(id).unwrap())
+            .and_then(|entity| entity.transform_3d)
+            .map(|transform| transform.z_locked)
+    };
+    assert_eq!(locked(&saved, "background"), Some(true));
+    assert_eq!(locked(&saved, "player"), Some(false));
+
+    let canonical = saved.to_canonical_json().expect("canonical json");
+    assert!(
+        canonical.contains("\"z_locked\": true"),
+        "a declared lock must survive the round trip: {canonical}"
+    );
+    assert_eq!(
+        canonical.matches("z_locked").count(),
+        1,
+        "a transform that declares nothing must write nothing: {canonical}"
     );
 }
 

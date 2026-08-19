@@ -21,6 +21,13 @@ pub struct Transform3D {
     /// Quaternion in `[x, y, z, w]` order.
     pub rotation: [f32; 4],
     pub scale: [f32; 3],
+    /// Whether this transform declares that it stays on the layer it is on.
+    ///
+    /// See [`Transform3D::z_lock_rejects`] for what respects it. Omitted from a
+    /// saved scene when false, so declaring nothing writes nothing and every
+    /// scene that predates the lock is byte for byte what it was.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub z_locked: bool,
 }
 
 impl Default for Transform3D {
@@ -29,6 +36,7 @@ impl Default for Transform3D {
             position: [0.0, 0.0, 0.0],
             rotation: [0.0, 0.0, 0.0, 1.0],
             scale: [1.0, 1.0, 1.0],
+            z_locked: false,
         }
     }
 }
@@ -91,6 +99,30 @@ impl Transform3D {
         let (sin, cos) = (radians * 0.5).sin_cos();
         self.rotation = [0.0, 0.0, sin, cos];
     }
+
+    /// Whether replacing this transform with `next` would move it off the layer
+    /// it declared it stays on.
+    ///
+    /// This is the weaker of the two guards the 2D model describes, and it is
+    /// weak on purpose: it holds for writes that go through a path that can ask,
+    /// and a direct field assignment walks straight past it. What it buys is
+    /// that the author said something — "this stays on its layer" — which is
+    /// visible in the inspector, saved with the scene, and checked by the
+    /// command layer every tool writes through.
+    ///
+    /// Removing the transform counts as moving it. An entity without one is at
+    /// Z = 0, so dropping a locked transform lands a parallax layer in the play
+    /// plane exactly as writing a different number would.
+    pub fn z_lock_rejects(self, next: Option<Self>) -> bool {
+        if !self.z_locked {
+            return false;
+        }
+        // An exact comparison is the point rather than a hazard: any change to
+        // Z at all is a change of layer, and there is no tolerance within which
+        // one is the other.
+        #[allow(clippy::float_cmp)]
+        next.is_none_or(|next| next.position[2] != self.position[2])
+    }
 }
 
 #[cfg(test)]
@@ -146,6 +178,67 @@ mod tests {
                 "a 2D turn is about Z alone"
             );
         }
+    }
+
+    /// The lock is about the layer and nothing else: a locked transform can
+    /// still be moved around in its plane, resized, and turned.
+    #[test]
+    fn a_locked_transform_refuses_only_a_change_of_layer() {
+        let locked = Transform3D {
+            position: [1.0, 2.0, -50.0],
+            z_locked: true,
+            ..Transform3D::default()
+        };
+
+        let mut moved_in_plane = locked;
+        moved_in_plane.set_position_2d([9.0, 9.0]);
+        moved_in_plane.set_rotation_z_radians(1.0);
+        moved_in_plane.set_scale_2d([3.0, 3.0]);
+        assert!(!locked.z_lock_rejects(Some(moved_in_plane)));
+
+        let mut moved_off_layer = locked;
+        moved_off_layer.position[2] = 0.0;
+        assert!(locked.z_lock_rejects(Some(moved_off_layer)));
+
+        // Dropping the transform puts the entity at Z = 0 just as surely.
+        assert!(locked.z_lock_rejects(None));
+    }
+
+    /// A lock declared by the incoming transform does not apply to the write
+    /// that declares it, so locking something is never a thing you have to do
+    /// before you can put it where it goes.
+    #[test]
+    fn a_lock_only_binds_once_it_has_been_declared() {
+        let free = Transform3D::default();
+        let locked_elsewhere = Transform3D {
+            position: [0.0, 0.0, -12.0],
+            z_locked: true,
+            ..Transform3D::default()
+        };
+        assert!(!free.z_lock_rejects(Some(locked_elsewhere)));
+
+        // And unlocking in place is allowed, which is how you get permission to
+        // move afterwards.
+        let unlocked = Transform3D {
+            z_locked: false,
+            ..locked_elsewhere
+        };
+        assert!(!locked_elsewhere.z_lock_rejects(Some(unlocked)));
+    }
+
+    /// Signed zero is the same layer, whatever the bits say.
+    #[test]
+    fn a_negative_zero_layer_is_the_layer_it_already_was() {
+        let locked = Transform3D {
+            position: [0.0, 0.0, 0.0],
+            z_locked: true,
+            ..Transform3D::default()
+        };
+        let same_place = Transform3D {
+            position: [0.0, 0.0, -0.0],
+            ..locked
+        };
+        assert!(!locked.z_lock_rejects(Some(same_place)));
     }
 
     /// The rotation written is the quaternion the renderer expects, rather than
