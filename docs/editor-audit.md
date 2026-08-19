@@ -1,253 +1,252 @@
 # Editor audit
 
-What the editor actually does, control by control, as of `5150854`.
+What the editor actually does, control by control, as of `5661ea6`.
 
-`docs/capabilities.md` already carries a shorter version of this, written from
-memory of the code. This one was written by reading every path in
-`editor/src/`, running the editor under Xvfb, and probing the claims that
-looked load-bearing. It found things the shorter list had wrong, which is the
-argument for doing it this way.
+**The finding that matters: the editor cannot edit anything.** Every path that
+writes to the world is behind a selection, and a selection cannot be made,
+because the hierarchy row hands back the wrong response object. It has been a
+scene viewer since 16 August, and nothing noticed — not the tests, not the
+screenshots, not the first version of this audit.
 
-One warning about the method, from getting it wrong once. Sweeping by *control*
-— every widget with a response to trace — misses everything the editor paints
-directly, and painted chrome can mislead exactly as well as a dead button can.
-The axis gizmo was found by someone asking about it, not by this audit. Anything
-drawn with `Painter` deserves the same question as anything drawn with a widget:
-what is it claiming, and is that true?
+## How this was done, and how the first attempt failed
 
-The point is not to be discouraging. The parts of this editor that work are the
-hard parts: every edit goes through the command layer, undo is real and groups
-a drag into one step, two live views render the actual runtime frame through
-eframe's device, and failures reach the user instead of the log. What follows
-is the distance between that and something you could hand to someone.
+The first pass read every path in `editor/src/` and wrote down what the code
+appeared to do. It produced a plausible document with two categories of error in
+it.
 
-## The shape of it
+**It never ran the thing.** Twelve controls were marked "works" on the strength
+of a code reading. One of those — the hierarchy row, the single most important
+control in the editor — has never worked at all. Reading found the call to
+`.clicked()` and stopped there, without asking what object it was called on.
 
-Three kinds of problem, in the order they matter.
+**It swept controls, not pixels.** Anything painted straight onto the viewport
+was outside the net, which is how a static axis gizmo survived and had to be
+pointed out afterwards.
 
-**It loses work.** Four separate paths discard unsaved edits with no
-confirmation, and one of them is a button that reads as "stop playing".
+So this pass is built differently, and the method is written down because the
+next sweep should use it.
 
-**It refuses work the engine accepts.** A scene carrying any component the
-built-in schemas do not know fails to open at all, which is the opposite of
-what the format was designed for.
+1. **Drive the real editor.** Xvfb with `matchbox-window-manager` — without a
+   window manager, clicks never reach the app and every probe silently reads as
+   "nothing happened" — then `xdotool` for input.
+2. **Measure, do not look.** Screenshot before and after each click and diff
+   with `compare -metric AE`. A control that changes zero pixels did nothing.
+   This is objective, and it catches the controls that only look like they
+   responded.
+3. **Establish preconditions.** Reset persisted preferences before every run: a
+   remembered panel choice silently moves what a coordinate lands on. Locate
+   targets in the current frame rather than reusing coordinates from an earlier
+   session. Two probes here were invalidated by exactly that and had to be rerun.
+4. **Prove mechanisms by patching.** When a control does nothing, change the
+   suspected line, rebuild, and re-measure. A fix that makes the control work is
+   proof of the cause; an argument about egui's semantics is not.
 
-**It says things that are not true.** Twenty controls are drawn and inert. Two
-things are worse than inert because they look like they are working: the asset
-search box accepts typing and filters nothing, and the axis gizmo in the corner
-of the scene view is painted at fixed angles and never turns. Play moves a
-lifecycle state and runs no game.
+## 1. The editor is read-only
 
-Underneath all three is one structural fact: the editor is a faithful *viewer*
-of a world and a competent *transform editor*, and almost nothing else. It
-cannot create an entity, delete one, add a component, rotate anything, or click
-something in the viewport to select it.
+Every write to the world goes through one of two places, and both sit inside
+`inspector_panel`, which returns immediately when nothing is selected
+(`native.rs:727`):
 
-## 1. Every control
+- `commit_draft` — name, transform, and the Z lock (`native.rs:761`)
+- `reparent` — the parent menu (`native.rs:764`)
 
-Verdicts: **works**, **inert** (drawn, nothing behind it), **lies** (appears to
-work, doesn't), **partial** (works, with a caveat worth knowing).
+Undo and redo need history, and history needs an edit. So every mutation in the
+editor depends on a selection.
 
-### Top bar
+A selection can only be set in one place, `native.rs:708`, when a hierarchy row
+reports a click. It never does:
 
-| Control | Verdict | Note |
+```rust
+fn hierarchy_row(...) -> Response {
+    ui.horizontal(|ui| {
+        ...
+        ui.add(egui::Button::new(...))   // this response is the .inner
+    })
+    .response                            // this one is the layout's, Sense::hover()
+}
+```
+
+`ui.horizontal` allocates its region with `Sense::hover()`, so `.clicked()` on
+the value it returns is false forever. The button's own response — the one that
+knows it was pressed — is `.inner`, and it is discarded.
+
+**Measured.** Clicking the row label, its icon, and the far end of the row each
+changed **0 pixels**, in a session where clicking Ortho changed 111,798 and the
+Console tab 122,990. Changing `.response` to `.inner`, rebuilding, and clicking
+the same pixel changed **35,351**, of which **34,263** were the inspector
+filling in. One word.
+
+**How long.** `hierarchy_row` has returned the layout's response since
+`f0e8c41`, the first editor commit, so row clicking has never worked. Until
+`548633c` (16 August) the editor preselected `checker-cube` from the demo scene,
+so the inspector was always populated and the bug looked like nothing: choosing
+a different entity failed the way a misclick does. That commit changed the
+initial selection to `None` for good reasons, and turned a latent bug into a
+total one.
+
+**What it costs.** Name editing, transform editing, reparenting, undo, redo, and
+the Z lock shipped an hour before this audit are all unreachable. So is every
+finding below about losing unsaved work: no edit can be made, so there is
+nothing to lose. Two serious bugs have been masking each other.
+
+It also means the Z lock's verification was worth less than it looked. An entity
+was preselected with a temporary patch to photograph the inspector, which
+stepped around the exact bug that makes the feature unreachable. Showing that a
+widget draws is not showing that a user can get to it.
+
+## 2. It crashes on a scene file it should open
+
+Starting the editor with a scene carrying a component the built-in schemas do
+not know **panics before the window opens**:
+
+```
+$ cargo run -p sindri-editor -- custom.scene.json
+thread 'main' panicked at editor/src/native.rs:280:14:
+  the opened scene must satisfy the demo component schema
+```
+
+The file is valid. It parses, it migrates, and the format exists to carry
+payloads a runtime does not understand — `CLAUDE.md` calls
+`UnknownComponentPolicy::Preserve` "the compatibility default" and `Reject` the
+setting for proofs. The editor loads through `DemoScene::load_world`, which uses
+`Reject`.
+
+Two paths, two behaviours, both wrong. **From the command line**,
+`EditorApp::new` unwraps the failure and the process dies — `open_requested_scene`
+carefully handles a file that cannot be *read*, then hands the document to an
+`.expect`. **From File → Open scene**, the failure is caught and shown as a
+notice, so the editor survives and still refuses the scene.
+
+Any project that defines a component of its own cannot be opened, and opening it
+the obvious way crashes.
+
+## 3. Every control, measured
+
+Pixel deltas come from the live sweep. "hover only" means the sole change was
+the pointer highlight: the control is drawn and does nothing when pressed.
+
+| Control | Measured | Verdict |
 | --- | --- | --- |
-| File → Open scene… | works | Native file dialog, loads and adopts on success only |
-| File → Save scene | works | Disabled with no path, which is honest |
-| File → Reload from disk | **partial** | Works; discards unsaved edits without asking |
-| File → Discard changes | works | Does what it says |
-| View → Layout | works | Persists across launches |
-| Edit, Scene, Build, Tools, Help | **inert** ×5 | Plain buttons, not menus (`native.rs:584`, `591`) |
-| Undo / Redo icons | works | Correctly disabled, tooltips name the step |
-| Stop | **dangerous** | Calls `reset_to_authored` (`native.rs:619`) — see F1 |
-| Pause | **partial** | Moves lifecycle state; nothing is running to pause |
-| Play (icon and button) | **partial** | Same; see F5 |
-| "isogame ⌄" project name | **inert** | A label with a chevron (`native.rs:645`) |
+| File menu | 35,984 px | works |
+| File → Open / Save / Reload / Discard | — | work |
+| View → Layout | — | works, persists |
+| Edit, Scene, Build, Tools, Help | 0 px each | **inert** ×5 |
+| Undo / Redo | — | work; correctly disabled when empty |
+| Stop | 364 px | resets the scene; see §4 |
+| Play / Pause | 364 px | button state only — no frame is advanced |
+| Project name "isogame ⌄" | 0 px | **inert** |
+| Hierarchy `+` | hover only | **inert** |
+| **Hierarchy row** | **0 px** | **broken — §1** |
+| Hierarchy search | 112,072 px | works; filtered rows keep their indentation, so a match under a hidden parent sits indented under nothing |
+| Hierarchy empty space | — | clears a selection that cannot be made |
+| Select / Move / Rotate / Scale | 1,848 px each | **worse than inert** — the icon highlights, and `EditorMode` is written and never read |
+| Reset view | 129,795 px | works |
+| Perspective / Ortho | 111,798 px | works, persists |
+| Orbit, pan, zoom | 129,835 px | works; zoom clamped to 0.65–1.8, pitch to ±1.1 rad |
+| **Axis gizmo** | **0 px while the scene moved 116,782 px** | **static** — three hardcoded pixel offsets; it cannot turn |
+| Viewport click to select | 0 px | no picking |
+| Project / Console tabs | 122,990 px | work |
+| Grid / List | 154,079 / 384,933 px | work |
+| Asset filter icon | hover only | **inert** |
+| **Asset search box** | typing draws glyphs (579 px), list unchanged | **lies** — the needle is never read |
+| Asset rows, folder rows | 0–40 px | **inert**; `demo.scene` is highlighted by string comparison |
+| Console | — | three synthesized lines; nothing the engine reports reaches it |
+| Inspector: name, transform, parent, Z lock | — | **unreachable** (§1); they work when a selection is forced |
+| Inspector: Tag, Layer | — | **inert** fixed text |
+| Inspector: section chevron and ⋮ | — | **inert** ×2 |
+| Inspector: Rotation | — | the word "Quaternion"; no rotation editing exists |
+| Inspector: Add Component | — | **inert** |
+| Settings gear | 0 px | **inert** |
 
-### Hierarchy
+**Nineteen inert controls, four tool modes wired to nothing, two that lie, one
+broken, one crash.**
 
-| Control | Verdict | Note |
+## 4. What else breaks
+
+**Stop discards everything, silently.** Stop calls `reset_to_authored()`
+(`native.rs:619`), which rebuilds the world and clears the history. It sits
+between Pause and Play, where that symbol means "stop playing". Unreachable
+damage today, because no edit can be made; the moment §1 is fixed it becomes the
+sharpest edge in the editor.
+
+**Nothing warns before discarding.** `open_path`, `reload`, `reset_to_authored`,
+and closing the window all drop unsaved edits without asking.
+
+**The unsaved marker cannot return to clean.** `undo` and `redo` set
+`unsaved = true` unconditionally (`native.rs:491`, `499`), so undoing back to the
+saved state still claims unsaved work.
+
+**Missing textures are silent.** The editor binds the two textures
+`sindri_cube::demo_textures` provides; anything else draws the magenta checker
+with no explanation, though `sindri_scene::unresolved_textures` exists to name
+them.
+
+**The open scene is forgotten.** Nothing remembers the last file, and the window
+title is always "Sindri Editor".
+
+**Write-only state.** `mode` and `asset_search` are the only two `EditorApp`
+fields whose every reference is a write, and each corresponds to a control that
+appears to work.
+
+## 5. Engine capability the editor does not use
+
+Counted mechanically against `editor/src/`.
+
+| Capability | Editor uses | What it would give |
 | --- | --- | --- |
-| `+` add entity | **inert** | Response dropped (`native.rs:1218`) |
-| Search field | **partial** | Filters by name but keeps each row's depth, so children of filtered-out parents appear indented under nothing |
-| Entity rows | works | Selection, with the accent applied to the selected row |
-| Click on empty space | works | Clears the selection, as does Escape |
-| Drag to reparent | missing | Reparenting exists only in the inspector's menu |
-| Right-click / context menu | missing | No delete, duplicate, or rename in place |
+| `WorldCommand::SetComponent` / `RemoveComponent` | 0 | Add Component, already undoable |
+| `ComponentSchemaRegistry`, `query` | 0 | An inspector driven by schemas rather than a `match` on three type names |
+| `unresolved_textures` | 0 | Naming the textures a scene references and nothing binds |
+| `World::despawn_recursive`, `spawn` | 0 | Delete and create |
+| `World::assign_missing_source_ids` | 0 | **Needed before create ships**: `to_scene` refuses a runtime-spawned entity with no stable ID, so the first new entity would make the scene unsaveable |
+| `EngineCore`, `FixedStepConfig` | 0 | A play mode that runs |
+| `Transform3D::position_2d` and the rest | 0 | The inspector writes `position[2]` directly, which is the pattern the 2D accessors exist to replace |
 
-### Inspector
+## 6. Readiness for Milestone 6's authoring surfaces
 
-| Control | Verdict | Note |
-| --- | --- | --- |
-| Name field | **partial** | Edits and commits; a name can never be cleared back to unnamed |
-| Tag "Untagged" | **inert** | Fixed text (`native.rs:1370`) |
-| Layer "Default" | **inert** | Fixed text; also not the render layer, which is a different thing with the same word |
-| Parent menu | works | Offers only moves `World::check_set_parent` allows |
-| Section chevron and ⋮ | **inert** ×2 | Neither collapses a section nor opens a menu (`native.rs:1393`) |
-| Position X/Y/Z | works | Z disabled when the transform declares its Z locked |
-| Scale X/Y/Z | works | |
-| Rotation | **read-only** | The word "Quaternion" (`native.rs:1410`). Nothing in the editor can turn anything |
-| Z lock | works | |
-| Component rows | works | Real values from the entity's own payload, read-only |
-| Add Component | **inert** | Response dropped (`native.rs:754`) |
+Sprite sheets, tilemaps, and text each want a panel. Four things would be built
+three times otherwise.
 
-### Project and Console dock
+**The inspector is a `match` on three type names.** Every new component adds an
+arm. The schema registry is right there, unused.
 
-| Control | Verdict | Note |
-| --- | --- | --- |
-| Project / Console tabs | works | Choice persists |
-| Folder tree | **inert** | Six hardcoded rows, "Assets" permanently highlighted |
-| List / Grid toggle | works | |
-| Filter icon | **inert** | (`native.rs:1669`) |
-| Asset search box | **lies** | Accepts typing; the list is a fixed array that never sees the needle (`native.rs:1615`) |
-| Asset rows and tiles | **inert** | Not selectable, not openable; `demo.scene` is highlighted by string comparison |
-| Console | **inert** | Three synthesized lines. Two interpolate real values, so it is a status readout; nothing the engine reports reaches it (`native.rs:1768`) |
+**There is no asset concept.** A sheet slicer needs a sheet, a font picker needs
+fonts, a tile palette needs a tileset; all three need a browser that reads a
+directory.
 
-### Scene tools and viewport
+**`EditorMode` is dead state waiting for exactly this.** A tile painter is a
+tool mode. The enum and the toolbar exist and nothing reads them.
 
-| Control | Verdict | Note |
-| --- | --- | --- |
-| Select / Move / Rotate / Scale | **inert** ×4 | `EditorMode` is written and never read anywhere |
-| Reset view | works | Correctly disabled when the view has not moved |
-| Perspective / Ortho | works | Persists |
-| Drag to orbit, shift-drag to pan, wheel to zoom | **partial** | Zoom is clamped to 0.65–1.8 and pitch to ±1.1 rad (`native.rs:411`) |
-| Axis gizmo, top right of the scene view | **lies** | Three hardcoded pixel offsets (`native.rs:2002`); it takes no camera and cannot turn. Orbit behind the scene and it still says Z points down-left. Painted rather than a widget, so clicking an axis to snap to that view is not available either |
-| Viewport label and hint text | works | Names the selection, and the hints are accurate |
-| Error banner | works | A real render failure, painted across the view |
-| Click to select in the viewport | missing | There is no picking |
-| Transform gizmos | missing | |
-
-### Status bar
-
-| Control | Verdict | Note |
-| --- | --- | --- |
-| Status dot and text | works | Reflects the real problem state |
-| File name and unsaved marker | **partial** | See F4 — it can never return to clean without saving |
-| "1 Error, 0 Warnings" | **partial** | A boolean dressed as a count |
-| Settings gear | **inert** | A label (`native.rs:918`) |
-
-**Twenty inert controls, two that lie, one that is dangerous.**
-
-## 2. What breaks under use
-
-**F1 — Stop throws your work away.** The Stop button calls
-`reset_to_authored()`, which rebuilds the world from the file and clears the
-history. It sits between Pause and Play, where the universal meaning of that
-symbol is "stop playing". Its tooltip says "Stop and reset to the authored
-scene", which is accurate and is the only thing standing between a user and
-losing an afternoon. Because play mode does not run anything (F5), resetting is
-its *only* effect: it cannot be undone, and there is no confirmation.
-
-**F2 — Nothing warns before discarding.** `open_path`, `reload`,
-`reset_to_authored`, and closing the window all drop unsaved edits silently.
-The roadmap already wants this; it deserves to be first now rather than
-someday.
-
-**F3 — The editor refuses scenes the engine is built to carry.** The editor
-loads through `DemoScene::load_world`, which validates with
-`UnknownComponentPolicy::Reject`. Probed directly: a scene holding
-`game.health` alongside a normal camera parses, migrates, and then fails to
-open with *"entity 'player' contains unknown component type 'game.health'"*.
-`CLAUDE.md` calls `Preserve` "the compatibility default" and `Reject` the
-setting "for proofs that require every component to be actionable" — the editor
-is a tool, not a proof, and has the strict one. Any project that adds a
-component of its own cannot be opened at all.
-
-**F4 — The unsaved marker cannot return to clean.** `undo` and `redo` set
-`unsaved = true` unconditionally (`native.rs:491`, `499`). Undoing back to
-exactly the saved state still reports unsaved work, so the marker means "you
-have touched something", not "the file and the world differ".
-
-**F5 — Play does not run the game.** There is no `EngineHost`, no frame delta,
-and no fixed update anywhere in the editor; `toggle_playback` moves
-`EngineLifecycle` between states and that is all. The demo scene's own gameplay
-— the cube that turns under the arrow keys — never runs. The console line
-reading "Engine running" is true about the lifecycle and misleading about
-everything else.
-
-**F6 — Missing textures are invisible.** The editor binds exactly the two
-textures `sindri_cube::demo_textures` provides. Any other reference draws the
-magenta checker with no explanation, even though `sindri_scene::unresolved_textures`
-exists to name them and the editor never calls it.
-
-**F7 — The open scene is forgotten.** Nothing remembers the last file. Open a
-scene through the dialog, restart, and you are back on the demo. The window
-title is always "Sindri Editor", so the only place the open file appears is the
-status bar.
-
-## 3. What it cannot express at all
-
-Not bugs — things a person would reach for and not find.
-
-- **Create, delete, or duplicate an entity.** The command layer deliberately
-  does not spawn or destroy (a respawned entity invalidates recorded handles),
-  so this needs a decision at the core before the editor can offer it. This is
-  the one gap in this section that is genuinely engine-blocked.
-- **Add or remove a component.** `WorldCommand::SetComponent` and
-  `RemoveComponent` already exist, are already undoable, and the editor uses
-  neither. This is editor work only.
-- **Edit a rotation.** The format stores a quaternion, the renderer applies it,
-  `Transform3D::set_rotation_z_radians` exists for the 2D case, and the
-  inspector prints the word "Quaternion".
-- **Edit a component's fields.** Rows are read-only.
-- **Select in the viewport, or select more than one thing.**
-- **See the scene from far away.** The zoom clamp cannot frame anything much
-  bigger than the demo.
-- **Read a project directory.** There is no notion of a project, only a file.
-
-## 4. Readiness for what is coming
-
-Milestone 6 adds sprite sheets, tilemaps, and text, and the roadmap pairs each
-with an authoring surface. Four things would each be built three times unless
-they are built once first.
-
-**The inspector is a hardcoded match on type name.** `component_rows` matches
-`"sindri.camera"`, `"sindri.mesh"`, `"sindri.sprite"` and falls through to a
-field list. Every new component adds an arm. Meanwhile
-`ComponentSchemaRegistry` — which the extractor already owns and can hand over
-— knows the registered types and their metadata. A schema-driven inspector is
-the difference between three new panels and three new registrations.
-
-**There is no asset concept.** A sprite sheet editor needs a sheet to open, a
-font picker needs fonts to list, and a tile palette needs a tileset. All three
-need the project browser to read a directory, which it has never done.
-
-**`EditorMode` is dead state waiting for exactly this.** A tile painter and a
-sheet slicer are tool modes. The enum exists, the toolbar draws it, and nothing
-reads it — so the wiring is a smaller job than it looks, once there is
-something for a mode to mean.
-
-**The editor still depends on `sindri-cube`.** Component schemas and textures
-both come from the example. `CLAUDE.md` calls this temporary scaffolding; every
-authoring surface built on top of it makes the scaffolding harder to remove.
-Sprite sheets are the point where it starts to hurt, because the editor will
+**The editor still depends on `sindri-cube`** for component schemas and
+textures. Sprite sheets are where that starts to hurt, because the editor will
 need to bind textures the demo has never heard of.
 
-## 5. What I would fix first
+## 7. What to fix, in order
 
-Ordered by damage prevented per hour spent. The first four are small.
+1. **`.inner` instead of `.response`** in `hierarchy_row`, with a test that
+   clicking a row selects an entity. One word, and it unblocks every editing
+   feature in the tool.
+2. **Do not panic on a scene that parses.** Handle the failure `EditorApp::new`
+   unwraps, and open with `Preserve` so components the editor does not know
+   survive a load, an edit, and a save.
+3. **Stop losing work.** Confirm before discarding, and reconsider what Stop
+   means while nothing runs.
+4. **Make the unsaved marker true.**
+5. **Remove or implement** the nineteen inert controls, the four dead tool
+   modes, and the two that lie. The gizmo has the camera's yaw and pitch
+   available a few lines away and would be the first thing in the editor that
+   visibly answers the camera.
+6. **Give the console something real**: notices, render failures, unresolved
+   textures.
+7. **Remember the open scene**, name it in the title, and widen the camera
+   limits.
 
-1. **Stop losing work** (F1, F2). Confirm before any discard, and reconsider
-   what Stop should mean while nothing runs.
-2. **Open what the engine can open** (F3). `Preserve` instead of `Reject`, so
-   unknown components survive a load, an edit, and a save — which the scene
-   format already guarantees.
-3. **Make the unsaved marker true** (F4). Compare the world against the
-   document rather than setting a flag on every command.
-4. **Remove or implement the twenty inert controls.** Deleting one is a
-   ten-line change and makes the editor more honest immediately; the asset
-   search box in particular should either filter or go.
-5. **Give the console something real** (F6). Notices, render errors, and
-   unresolved textures already exist as values and have nowhere to be seen.
-6. **Remember the open scene, and put it in the title** (F7).
-7. **Widen the camera limits, and add frame-selected.**
+Then the larger builds: component add and remove through the schema registry,
+rotation editing, viewport picking, and a project browser that reads a
+directory.
 
-Then the larger builds, in the order the milestone wants them: component add
-and remove through the schema registry, rotation editing, viewport picking, and
-a project browser that reads a directory.
+## What this audit still does not cover
 
-## What this audit did not cover
-
-Performance (the editor repaints continuously by design, which has not been
-measured), anything about how it behaves on Windows or macOS, and the
-accessibility of the colour scheme. All three are worth their own pass.
+Windows and macOS behaviour, repaint cost, colour contrast, and what the
+hierarchy does with hundreds of entities. The live method above extends to all
+four.
