@@ -3,9 +3,7 @@ use std::borrow::Cow;
 use glam::Mat4;
 use wgpu::util::DeviceExt;
 
-use crate::{
-    ClearOperations, DepthTarget, MeshBuffers, TextureId, TextureRegistry, TexturedVertex,
-};
+use crate::{DepthTarget, MeshBuffers, TextureId, TextureRegistry, TexturedVertex};
 
 const SHADER: &str = include_str!("textured_cube.wgsl");
 
@@ -208,6 +206,11 @@ impl TexturedCubeRenderer {
         self.bind_groups.insert(texture, bind_group);
     }
 
+    /// Draws the cube into a frame something else has already cleared.
+    ///
+    /// Both attachments load: a renderer draws one thing, and deciding what the
+    /// rest of the frame starts as is not its to make. See
+    /// [`encode_clear`](crate::encode_clear).
     pub fn encode(
         &mut self,
         context: DrawContext<'_>,
@@ -215,25 +218,6 @@ impl TexturedCubeRenderer {
         target: &wgpu::TextureView,
         depth: &DepthTarget,
         model_view_projection: Mat4,
-    ) {
-        self.encode_with_clear(
-            context,
-            encoder,
-            target,
-            depth,
-            model_view_projection,
-            ClearOperations::default(),
-        );
-    }
-
-    pub fn encode_with_clear(
-        &mut self,
-        context: DrawContext<'_>,
-        encoder: &mut wgpu::CommandEncoder,
-        target: &wgpu::TextureView,
-        depth: &DepthTarget,
-        model_view_projection: Mat4,
-        clear: ClearOperations,
     ) {
         self.bind_texture(context.device, context.textures, context.texture);
         let queue = context.queue;
@@ -251,19 +235,14 @@ impl TexturedCubeRenderer {
                 depth_slice: None,
                 resolve_target: None,
                 ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color {
-                        r: clear.color[0],
-                        g: clear.color[1],
-                        b: clear.color[2],
-                        a: clear.color[3],
-                    }),
+                    load: wgpu::LoadOp::Load,
                     store: wgpu::StoreOp::Store,
                 },
             })],
             depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
                 view: depth.view(),
                 depth_ops: Some(wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(clear.depth),
+                    load: wgpu::LoadOp::Load,
                     store: wgpu::StoreOp::Store,
                 }),
                 stencil_ops: None,

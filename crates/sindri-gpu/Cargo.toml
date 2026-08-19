@@ -12,6 +12,8 @@ thiserror.workspace = true
 wgpu.workspace = true
 
 [dev-dependencies]
+glam.workspace = true
+pollster.workspace = true
 sindri-render = { path = "../sindri-render" }
 
 [lints]

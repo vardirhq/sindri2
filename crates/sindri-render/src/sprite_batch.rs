@@ -4,7 +4,9 @@ use glam::Mat4;
 use thiserror::Error;
 use wgpu::util::DeviceExt;
 
-use crate::{MeshBuffers, SpriteBlendMode, TextureId, TextureRegistry, TexturedVertex};
+use crate::{
+    DepthTarget, MeshBuffers, SpriteBlendMode, TextureId, TextureRegistry, TexturedVertex,
+};
 
 const SHADER: &str = include_str!("sprite_batch.wgsl");
 const DEFAULT_CAPACITY: u32 = 64;
@@ -15,6 +17,31 @@ const VERTICES: [TexturedVertex; 4] = [
     TexturedVertex::new([-0.5, 0.5, 0.0], [0.0, 0.0]),
 ];
 const INDICES: [u16; 6] = [0, 1, 2, 2, 3, 0];
+
+/// What a batch of sprites does about the depth the opaque stage wrote.
+///
+/// Sprites never write depth under either of these: blending is order
+/// dependent, so a depth write would make the result depend on draw order
+/// twice. What differs is whether something in front can hide them.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum SpriteDepth {
+    /// Draws over the world whatever the depth buffer holds. A screen-space
+    /// overlay is not in the world, so nothing in the world may occlude it.
+    #[default]
+    Ignore,
+    /// Hidden by opaque geometry nearer the camera, which is what being in the
+    /// world means.
+    Test,
+}
+
+impl SpriteDepth {
+    const fn compare(self) -> wgpu::CompareFunction {
+        match self {
+            Self::Ignore => wgpu::CompareFunction::Always,
+            Self::Test => wgpu::CompareFunction::Less,
+        }
+    }
+}
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -93,7 +120,10 @@ impl SpriteBatchStats {
 
 #[derive(Debug)]
 pub struct SpriteBatchRenderer {
-    pipeline: wgpu::RenderPipeline,
+    /// One pipeline per depth behaviour, because the comparison is pipeline
+    /// state: a batch cannot choose between them at draw time otherwise.
+    over_the_world: wgpu::RenderPipeline,
+    within_the_world: wgpu::RenderPipeline,
     bind_group_layout: wgpu::BindGroupLayout,
     /// One bind group per texture, built on first use and kept for reuse.
     bind_groups: std::collections::HashMap<TextureId, wgpu::BindGroup>,
@@ -136,37 +166,46 @@ impl SpriteBatchRenderer {
             bind_group_layouts: &[Some(&bind_group_layout)],
             immediate_size: 0,
         });
-        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("Sindri sprite batch pipeline"),
-            layout: Some(&layout),
-            vertex: wgpu::VertexState {
-                module: &shader,
-                entry_point: Some("vs_main"),
-                buffers: &[
-                    Some(TexturedVertex::layout()),
-                    Some(SpriteInstance::layout()),
-                ],
-                compilation_options: wgpu::PipelineCompilationOptions::default(),
-            },
-            fragment: Some(wgpu::FragmentState {
-                module: &shader,
-                entry_point: Some("fs_main"),
-                compilation_options: wgpu::PipelineCompilationOptions::default(),
-                targets: &[Some(wgpu::ColorTargetState {
-                    format: target_format,
-                    blend: Some(blend_mode.blend_state()),
-                    write_mask: wgpu::ColorWrites::ALL,
-                })],
-            }),
-            primitive: wgpu::PrimitiveState::default(),
-            depth_stencil: None,
-            multisample: wgpu::MultisampleState::default(),
-            multiview_mask: None,
-            cache: None,
-        });
+        let pipeline = |depth: SpriteDepth| {
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some("Sindri sprite batch pipeline"),
+                layout: Some(&layout),
+                vertex: wgpu::VertexState {
+                    module: &shader,
+                    entry_point: Some("vs_main"),
+                    buffers: &[
+                        Some(TexturedVertex::layout()),
+                        Some(SpriteInstance::layout()),
+                    ],
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                },
+                fragment: Some(wgpu::FragmentState {
+                    module: &shader,
+                    entry_point: Some("fs_main"),
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format: target_format,
+                        blend: Some(blend_mode.blend_state()),
+                        write_mask: wgpu::ColorWrites::ALL,
+                    })],
+                }),
+                primitive: wgpu::PrimitiveState::default(),
+                depth_stencil: Some(wgpu::DepthStencilState {
+                    format: DepthTarget::FORMAT,
+                    depth_write_enabled: Some(false),
+                    depth_compare: Some(depth.compare()),
+                    stencil: wgpu::StencilState::default(),
+                    bias: wgpu::DepthBiasState::default(),
+                }),
+                multisample: wgpu::MultisampleState::default(),
+                multiview_mask: None,
+                cache: None,
+            })
+        };
 
         Self {
-            pipeline,
+            over_the_world: pipeline(SpriteDepth::Ignore),
+            within_the_world: pipeline(SpriteDepth::Test),
             bind_group_layout,
             bind_groups: std::collections::HashMap::new(),
             current: TextureRegistry::MISSING,
@@ -239,12 +278,18 @@ impl SpriteBatchRenderer {
         Ok(self.stats)
     }
 
+    /// Draws the prepared batch into an already-cleared frame.
+    ///
+    /// The depth buffer is attached read-only whichever behaviour is asked for,
+    /// so the two differ in what they are hidden by and in nothing else.
     pub fn encode(
         &self,
         queue: &wgpu::Queue,
         encoder: &mut wgpu::CommandEncoder,
         target: &wgpu::TextureView,
+        depth_target: &DepthTarget,
         view_projection: Mat4,
+        depth: SpriteDepth,
     ) {
         if self.instance_count == 0 {
             return;
@@ -267,12 +312,22 @@ impl SpriteBatchRenderer {
                     store: wgpu::StoreOp::Store,
                 },
             })],
-            depth_stencil_attachment: None,
+            depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                view: depth_target.view(),
+                // No depth operations at all: sprites read the buffer and never
+                // write it, and saying so here is what makes that a rule rather
+                // than a pipeline setting someone could change alone.
+                depth_ops: None,
+                stencil_ops: None,
+            }),
             timestamp_writes: None,
             occlusion_query_set: None,
             multiview_mask: None,
         });
-        pass.set_pipeline(&self.pipeline);
+        pass.set_pipeline(match depth {
+            SpriteDepth::Ignore => &self.over_the_world,
+            SpriteDepth::Test => &self.within_the_world,
+        });
         let bind_group = self
             .bind_groups
             .get(&self.current)

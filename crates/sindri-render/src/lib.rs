@@ -28,8 +28,10 @@ pub use frame::{
 pub use mesh::{ColoredVertex, MeshBuffers, TexturedVertex};
 pub use offscreen::{OffscreenError, OffscreenReadback, OffscreenTarget};
 pub use sprite::{SpriteBlendMode, SpriteRenderer};
-pub use sprite_batch::{SpriteBatchError, SpriteBatchRenderer, SpriteBatchStats, SpriteInstance};
-pub use target::{ViewportTarget, sampled_format};
+pub use sprite_batch::{
+    SpriteBatchError, SpriteBatchRenderer, SpriteBatchStats, SpriteDepth, SpriteInstance,
+};
+pub use target::{ViewportTarget, encode_clear, sampled_format};
 pub use texture::{Texture2D, TextureError, TextureId, TextureRegistry};
 pub use textured_cube::{DrawContext, TexturedCubeRenderer};
 pub use transparency::{TransparentOrder, TransparentOrderError};

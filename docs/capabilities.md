@@ -119,8 +119,12 @@ insertion order; stage order is `Opaque3d`, `Transparent2d`, `Overlay`.
 
 What can actually be drawn: a triangle, a coloured cube, a textured cube with
 depth testing, and textured sprites with tint, anchor, layer, and sorting depth.
-Sprites batch per layer and texture, with a measured five-to-one draw-call
-reduction. Perspective and orthographic cameras exist with tested projection
+A sprite is either screen-anchored, which is the default and cannot be occluded
+by the world, or in the world, drawn through the world camera by its full
+transform and hidden by opaque geometry in front of it. Sprites batch per space,
+layer, and texture, with a measured five-to-one draw-call reduction. The frame
+clears once before anything draws, so a scene of only sprites has a depth buffer
+to test against. Perspective and orthographic cameras exist with tested projection
 maths, and the zero-to-one depth range and Y-up convention are chosen in one
 place rather than at each call site. Colour space is enforced by a shared
 constant, and the offscreen capture verifies authored colours actually survive
@@ -167,7 +171,9 @@ frame.
   back canonically, reloads from disk, and discards changes
 - Shows the hierarchy from live runtime state, nested, searchable, with
   selection — and with clearing the selection by clicking empty space or Escape
-- Inspector edits of name and the transform
+- Inspector edits of name and the transform, with each built-in component's own
+  fields shown beneath them — the camera's projection and clipping, the mesh's
+  primitive and texture, the sprite's texture, space, anchor, and layer
 - Reparenting through a **Parent** menu that offers only the moves the world
   would accept
 - Undo and redo of every edit, with drag-merging so a slider drag is one step
@@ -198,8 +204,9 @@ Listed because a control that looks like a feature is worse than an absent one.
   a directory, so it shows the same list whatever scene is open
 - **Edit, Scene, Build, Tools, Help** — plain labels, not menus. File and View
   open
-- **Tag** and **Layer** in the inspector, and the per-component property rows —
-  fixed text, not the component's actual values
+- **Tag** and **Layer** in the inspector — fixed text. The per-component property
+  rows below them now read the entity's own payload, but they are a readout: a
+  component's fields cannot be edited from the inspector
 - **The project name in the top bar** — a label
 - **The Console** — three fixed lines. Two interpolate real values (entity count,
   lifecycle state), so it is a status readout rather than a log; nothing the
@@ -211,11 +218,10 @@ Listed because a control that looks like a feature is worse than an absent one.
 
 ### Engine
 
-- **Sprites are pinned to the screen.** A sprite's transform is still read as an
-  offset within the overlay camera's extent, and the camera's view matrix
-  cancels its own centre, so moving a 2D camera moves nothing. The transforms
-  are now one, which is the precondition; the world-space sprite option is the
-  next item
+- **Sprites sort by a hand-authored depth field.** A world-space sprite is drawn
+  where it is, but within its layer it is ordered by the `depth` number someone
+  typed rather than by how far from the camera it actually is. Sorting by camera
+  distance is the next item
 - **One texture is one sprite.** No UV rects, so no sprite sheets, no animation
   frames, no tilesets
 - **No text rendering.** No score, menu, or dialogue

@@ -1,6 +1,52 @@
 //! Colour and depth targets that are sized, formatted, and rebuilt together.
 
-use crate::{COLOR_TARGET_FORMAT, DepthTarget};
+use crate::{COLOR_TARGET_FORMAT, ClearOperations, DepthTarget};
+
+/// Clears a frame's colour and depth before any pass draws into them.
+///
+/// Clearing belongs to the frame rather than to whichever renderer happens to
+/// draw first. When it belonged to the opaque mesh pass, a second mesh erased
+/// the first, and a scene with no mesh at all cleared nothing: its sprites drew
+/// over whatever the previous frame left, against a depth buffer no one had
+/// filled. A scene of only sprites is what a 2D game is, so that case is the
+/// normal one rather than the exception.
+///
+/// Every pass afterwards loads what this left.
+pub fn encode_clear(
+    encoder: &mut wgpu::CommandEncoder,
+    color: &wgpu::TextureView,
+    depth: &DepthTarget,
+    clear: ClearOperations,
+) {
+    encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        label: Some("Sindri frame clear"),
+        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+            view: color,
+            depth_slice: None,
+            resolve_target: None,
+            ops: wgpu::Operations {
+                load: wgpu::LoadOp::Clear(wgpu::Color {
+                    r: clear.color[0],
+                    g: clear.color[1],
+                    b: clear.color[2],
+                    a: clear.color[3],
+                }),
+                store: wgpu::StoreOp::Store,
+            },
+        })],
+        depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+            view: depth.view(),
+            depth_ops: Some(wgpu::Operations {
+                load: wgpu::LoadOp::Clear(clear.depth),
+                store: wgpu::StoreOp::Store,
+            }),
+            stencil_ops: None,
+        }),
+        timestamp_writes: None,
+        occlusion_query_set: None,
+        multiview_mask: None,
+    });
+}
 
 /// The format a sampler must read a Sindri colour target through.
 ///

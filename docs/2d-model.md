@@ -156,6 +156,18 @@ screen space, anchored to an edge, ignoring the world camera.
 That is what the current sprite behaviour already is, and it stays. What changes
 is that it stops being the *only* behaviour.
 
+A sprite therefore carries a `space`: `screen`, which is the default and the
+behaviour every sprite had before there was a choice, or `world`, which places
+it by its transform, draws it through the world camera, and lets opaque geometry
+in front of it hide it. Nothing else about the sprite changes, and no scene
+changes meaning by gaining the field. `docs/scene-extraction.md` holds the table
+of what each space decides.
+
+The two are separated at the batch, not at the draw: a screen sprite and a world
+sprite never share a draw call, because they differ in the camera and in the
+pipeline. And a world sprite still sorts within its batch by the authored
+`depth` field until that becomes camera distance, which is the next item.
+
 ## Scene format
 
 Replacing `Transform2D` with `Transform3D` changes the serialized format, so

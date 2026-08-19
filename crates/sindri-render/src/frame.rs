@@ -1,7 +1,7 @@
 use glam::Mat4;
 use thiserror::Error;
 
-use crate::{SpriteInstance, TextureId};
+use crate::{SpriteDepth, SpriteInstance, TextureId};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Viewport {
@@ -75,6 +75,10 @@ pub enum FrameCommand {
     /// One batch per texture: instances sharing a texture draw in a single call.
     SpriteBatch {
         texture: TextureId,
+        /// Whether the batch is in the world, and so hidden by what is in front
+        /// of it, or over it. The batch carries it because the pipeline does:
+        /// the answer cannot be read off the instances.
+        depth: SpriteDepth,
         instances: Vec<SpriteInstance>,
     },
 }
