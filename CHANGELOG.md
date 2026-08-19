@@ -158,3 +158,4 @@ All notable changes to Sindri Next will be documented here.
 - Made the editor's inspector show each built-in component's real fields instead of fixed text describing the demo scene.
 - Sorted transparent sprites by how far they are from the camera rather than by a `depth` field authored beside them, with the render layer as the explicit override; the field is gone as scene format version 3, and the migration turns a screen sprite's depth into the Z that now orders it.
 - Added `PerspectiveCamera::view` and `OrthographicCamera::view`, so where a camera is and what it looks at can be asked for without its projection.
+- Added 2D-shaped accessors to `Transform3D` — `position_2d`, `set_position_2d`, `translate_2d`, `scale_2d`, `set_scale_2d`, and the turn about Z — so code thinking in two dimensions has a call that cannot flatten the Z a layered scene depends on.

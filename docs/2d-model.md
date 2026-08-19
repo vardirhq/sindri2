@@ -125,6 +125,12 @@ cannot express a change to Z because the signature has no third argument. The
 same goes for a 2D body's write-back: it does not take a Z to ignore, it takes
 an XY and an angle.
 
+`Transform3D` carries them: `position_2d`, `set_position_2d`, `translate_2d`,
+`scale_2d`, `set_scale_2d`, and the pair for the turn about Z, which is the only
+turn a flat thing facing the camera has. The three-dimensional fields are still
+there and still public, because sometimes a 2D thing genuinely needs to change
+layer; what the 2D calls do is make that a thing you say on purpose.
+
 This is the one that actually works, because it is not a rule anyone has to
 remember. Anyone thinking in 2D reaches for the 2D call, and the 2D call is
 incapable of the mistake. It is the same reasoning that made colour space a

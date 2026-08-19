@@ -52,8 +52,10 @@ access, recursive destruction, and slot reuse are all safe. Hierarchies support
 reparenting with cycle prevention, and `World::check_set_parent` answers whether
 a move is legal without making it. Each entity carries a name, a parent,
 children, an optional `Transform3D`, arbitrary JSON components, and an
-editor-only section the runtime never interprets. There is one transform: a 2D
-entity is one that keeps to a plane, not one with a different transform type —
+editor-only section the runtime never interprets. There is one transform, with
+2D-shaped accessors that read and write X and Y and cannot express a change to
+Z: a 2D entity is one that keeps to a plane, not one with a different transform
+type —
 see `docs/2d-model.md`.
 
 Entity storage was measured at 1k, 10k, and 100k entities before considering an

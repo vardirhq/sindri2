@@ -393,8 +393,11 @@ fn transform_matrix(transform: Transform3D) -> Mat4 {
 /// it goes through `transform_matrix`, the same one a mesh does, because it is
 /// in the same world a mesh is.
 ///
-/// The rotation is taken about Z alone, which is what a flat thing facing the
-/// camera can turn about.
+/// The whole rotation still reaches the overlay: a quad turned about X or Y
+/// foreshortens under the orthographic camera, which is a card flip rather than
+/// a mistake. Only the position and the scale are read two-dimensionally, and
+/// they are read through the transform's own 2D accessors so that this agrees
+/// with every other piece of code that means "in the plane".
 fn screen_sprite_matrix(
     transform: Transform3D,
     anchor: SpriteAnchor,
@@ -402,11 +405,11 @@ fn screen_sprite_matrix(
 ) -> Mat4 {
     let unit = Vec2::from_array(anchor.unit_offset());
     let origin = extent.center + unit * extent.half_extent;
-    let position = origin + Vec2::new(transform.position[0], transform.position[1]);
+    let position = origin + Vec2::from_array(transform.position_2d());
     let rotation = Quat::from_array(transform.rotation);
     Mat4::from_translation(position.extend(0.0))
         * Mat4::from_quat(rotation)
-        * Mat4::from_scale(Vec3::new(transform.scale[0], transform.scale[1], 1.0))
+        * Mat4::from_scale(Vec2::from_array(transform.scale_2d()).extend(1.0))
 }
 
 #[derive(Debug, Error)]
