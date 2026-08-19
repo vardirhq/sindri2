@@ -200,12 +200,19 @@ frame.
 ### Drawn, but does nothing
 
 Listed because a control that looks like a feature is worse than an absent one.
+`docs/editor-audit.md` is the full sweep — control by control, with what breaks
+under use and what the editor cannot express at all. This is the summary.
 
 - **Select, Move, Rotate, Scale** — they set a mode nothing reads. There are no
   gizmos
+- **Play and Pause** — they move the engine lifecycle and nothing else. No frame
+  is advanced, so no gameplay runs; the demo's own turning cube does not turn.
+  **Stop** does something, and what it does is discard every unsaved edit
+- **The asset search box** — accepts typing and filters nothing, which is worse
+  than the buttons that visibly do nothing
 - **`+` Add entity** and **Add Component** — not handled. Entities and components
   can only come from a file
-- **Filter assets** — decoration
+- **Filter assets**, the folder tree, and the asset rows themselves — decoration
 - **The project browser's contents** — eight hardcoded entries. It does not read
   a directory, so it shows the same list whatever scene is open
 - **Edit, Scene, Build, Tools, Help** — plain labels, not menus. File and View
