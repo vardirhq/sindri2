@@ -326,6 +326,11 @@ pub enum WorldError {
     HierarchyCycle,
     #[error("entity {0:?} has no stable scene ID and cannot be saved")]
     UnstableEntity(EntityId),
+    #[error(
+        "entity {0:?} declares its transform's Z locked; unlock it before \
+         moving it off that layer"
+    )]
+    TransformZLocked(EntityId),
     #[error(transparent)]
     InvalidScene(#[from] SceneError),
 }
@@ -411,6 +416,7 @@ mod tests {
             position: [4.0, 8.0, -1.5],
             rotation: [0.0, 0.0, 0.247_404, 0.968_912],
             scale: [2.0, 2.0, 1.0],
+            ..Transform3D::default()
         });
 
         let saved = world.to_scene().unwrap();
@@ -422,6 +428,7 @@ mod tests {
                 position: [4.0, 8.0, -1.5],
                 rotation: [0.0, 0.0, 0.247_404, 0.968_912],
                 scale: [2.0, 2.0, 1.0],
+                ..Transform3D::default()
             })
         );
         assert_eq!(reloaded.world.to_scene().unwrap(), saved);

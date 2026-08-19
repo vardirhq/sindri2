@@ -54,8 +54,9 @@ a move is legal without making it. Each entity carries a name, a parent,
 children, an optional `Transform3D`, arbitrary JSON components, and an
 editor-only section the runtime never interprets. There is one transform, with
 2D-shaped accessors that read and write X and Y and cannot express a change to
-Z: a 2D entity is one that keeps to a plane, not one with a different transform
-type —
+Z, and a Z lock a transform can declare that the command layer refuses to write
+past: a 2D entity is one that keeps to a plane, not one with a different
+transform type —
 see `docs/2d-model.md`.
 
 Entity storage was measured at 1k, 10k, and 100k entities before considering an
@@ -174,9 +175,11 @@ frame.
   back canonically, reloads from disk, and discards changes
 - Shows the hierarchy from live runtime state, nested, searchable, with
   selection — and with clearing the selection by clicking empty space or Escape
-- Inspector edits of name and the transform, with each built-in component's own
-  fields shown beneath them — the camera's projection and clipping, the mesh's
-  primitive and texture, the sprite's texture, space, anchor, and layer
+- Inspector edits of name and the transform, including the Z lock, which takes
+  away the Z drag while it is on
+- Inspector rows showing each built-in component's own fields — the camera's
+  projection and clipping, the mesh's primitive and texture, the sprite's
+  texture, space, anchor, and layer
 - Reparenting through a **Parent** menu that offers only the moves the world
   would accept
 - Undo and redo of every edit, with drag-merging so a slider drag is one step

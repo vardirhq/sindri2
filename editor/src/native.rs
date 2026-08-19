@@ -1402,9 +1402,36 @@ fn section_header(ui: &mut egui::Ui, icon: MaterialIcon, title: &str) {
 
 fn transform_3d_section(ui: &mut egui::Ui, transform: &mut Transform3D) {
     section_header(ui, ICON_OPEN_WITH, "Transform");
-    vector_row(ui, "Position", &mut transform.position);
-    vector_row(ui, "Scale", &mut transform.scale);
+    // The Z drag is taken away rather than left to fail: the command layer
+    // would refuse the edit anyway, and a control that cannot do what it looks
+    // like it does is the thing this editor is trying not to grow.
+    vector_row(ui, "Position", &mut transform.position, transform.z_locked);
+    vector_row(ui, "Scale", &mut transform.scale, false);
     property_label(ui, "Rotation", "Quaternion");
+    property_toggle(ui, "Z lock", &mut transform.z_locked, "Locked", "Free");
+}
+
+/// A property row whose value is a choice rather than a readout.
+///
+/// Shaped like [`property_label`] because it sits among those rows, and reading
+/// as a label until you notice it responds is the point: what it says is the
+/// state, and pressing it is how the state changes.
+fn property_toggle(ui: &mut egui::Ui, label: &str, value: &mut bool, on: &str, off: &str) {
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.label(RichText::new(label).size(11.0).color(TEXT_MUTED));
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.add_space(7.0);
+            let text = if *value { on } else { off };
+            let color = if *value { ACCENT } else { TEXT_MUTED };
+            if ui
+                .selectable_label(*value, RichText::new(text).size(11.0).color(color))
+                .clicked()
+            {
+                *value = !*value;
+            }
+        });
+    });
 }
 
 /// The components an entity carries, read from the entity's own payloads.
@@ -1551,7 +1578,12 @@ fn property_label(ui: &mut egui::Ui, label: &str, value: &str) {
     });
 }
 
-fn vector_row(ui: &mut egui::Ui, label: &str, values: &mut [f32; 3]) {
+/// Three drags for a vector, with the last one optionally taken away.
+///
+/// `lock_z` is what a transform that declares its Z locked looks like here: the
+/// number is still shown, because what layer a thing is on is worth reading
+/// even when it is not yours to change.
+fn vector_row(ui: &mut egui::Ui, label: &str, values: &mut [f32; 3], lock_z: bool) {
     ui.horizontal(|ui| {
         ui.add_space(10.0);
         ui.add_sized(
@@ -1559,16 +1591,19 @@ fn vector_row(ui: &mut egui::Ui, label: &str, values: &mut [f32; 3]) {
             egui::Label::new(RichText::new(label).size(11.0).color(TEXT_MUTED)),
         );
         for (index, value) in values.iter_mut().enumerate() {
+            let locked = lock_z && index == 2;
             ui.label(
                 RichText::new(["X", "Y", "Z"][index])
                     .strong()
                     .size(9.0)
                     .color(TEXT_FAINT),
             );
-            ui.add_sized(
-                [48.0, 23.0],
-                egui::DragValue::new(value).speed(0.05).max_decimals(3),
-            );
+            ui.add_enabled_ui(!locked, |ui| {
+                ui.add_sized(
+                    [48.0, 23.0],
+                    egui::DragValue::new(value).speed(0.05).max_decimals(3),
+                );
+            });
         }
     });
 }

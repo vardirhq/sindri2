@@ -54,6 +54,11 @@ where things are relative to the camera (see [transparent rendering](rendering-t
 which is why sorting entities is safe: it keeps saves stable while entities are added, removed, and
 reparented.
 
+A transform may also declare `z_locked`, which says that what layer it is on is
+deliberate. It is omitted when false, so a scene that declares nothing writes
+nothing and a scene written before the lock existed is byte for byte what it
+was. See [how Sindri does 2D](2d-model.md) for what respects it.
+
 Scenes reject non-finite transform values. JSON has no `NaN` or `Infinity` literal, so a scene
 containing one could not be read back; validation catches it at the point it is introduced instead.
 
