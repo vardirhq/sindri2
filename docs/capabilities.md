@@ -165,6 +165,7 @@ Nothing pretends browser I/O is synchronous.
 Reflects `main`. The editor renders the real runtime frame through eframe's
 shared WGPU device — it is not a mock, and it does not create a second device.
 
+
 An action that fails says so: a sticky notice from the last thing you did is
 kept apart from the per-frame render result, which used to overwrite it within a
 frame.
@@ -172,9 +173,12 @@ frame.
 ### Works
 
 - Opens a scene from a command-line argument or **File → Open scene**, saves it
-  back canonically, reloads from disk, and discards changes
+  back canonically, reloads from disk, and discards changes — including a scene
+  carrying components it has never heard of, which it keeps through a save and
+  lists in the inspector
 - Shows the hierarchy from live runtime state, nested, searchable, with
-  selection — and with clearing the selection by clicking empty space or Escape
+  selection anywhere on a row — and with clearing the selection by clicking
+  empty space or Escape
 - Inspector edits of name and the transform, including the Z lock, which takes
   away the Z drag while it is on
 - Inspector rows showing each built-in component's own fields — the camera's
@@ -200,12 +204,21 @@ frame.
 ### Drawn, but does nothing
 
 Listed because a control that looks like a feature is worse than an absent one.
+`docs/editor-audit.md` is the full sweep — control by control, with what breaks
+under use and what the editor cannot express at all. This is the summary.
 
 - **Select, Move, Rotate, Scale** — they set a mode nothing reads. There are no
   gizmos
+- **Play and Pause** — they move the engine lifecycle and nothing else. No frame
+  is advanced, so no gameplay runs; the demo's own turning cube does not turn.
+  **Stop** does something, and what it does is discard every unsaved edit
+- **The asset search box** — accepts typing and filters nothing, which is worse
+  than the buttons that visibly do nothing
+- **The axis gizmo in the scene view's corner** — painted at fixed angles, so it
+  shows the same orientation whichever way the camera is pointing
 - **`+` Add entity** and **Add Component** — not handled. Entities and components
   can only come from a file
-- **Filter assets** — decoration
+- **Filter assets**, the folder tree, and the asset rows themselves — decoration
 - **The project browser's contents** — eight hardcoded entries. It does not read
   a directory, so it shows the same list whatever scene is open
 - **Edit, Scene, Build, Tools, Help** — plain labels, not menus. File and View

@@ -25,18 +25,19 @@ use egui_material_icons::{
 use glam::Vec2 as GlamVec2;
 use serde_json::Value;
 use sindri_core::{
-    CommandBuffer, CommandHistory, EngineLifecycle, EngineState, EntityData, EntityId, Transform3D,
-    World, WorldCommand,
+    CommandBuffer, CommandHistory, EngineLifecycle, EngineState, EntityData, EntityId,
+    SceneDocument, Transform3D, UnknownComponentPolicy, World, WorldCommand,
 };
 use sindri_cube::{
-    CameraView, DemoScene, FrameRenderers, FrameTarget, TextureBindings, WorldProjection,
-    demo_textures, encode_prepared_frame,
+    CameraView, FrameRenderers, FrameTarget, TextureBindings, WorldProjection, demo_textures,
+    encode_prepared_frame,
 };
 use sindri_render::{
     SpriteBatchRenderer, TextureRegistry, TexturedCubeRenderer, Viewport, ViewportTarget,
 };
 use sindri_scene::{
-    CameraComponent, MeshComponent, MeshPrimitive, SpriteAnchor, SpriteComponent, SpriteSpace,
+    CameraComponent, MeshComponent, MeshPrimitive, SceneExtractor, SpriteAnchor, SpriteComponent,
+    SpriteSpace,
 };
 
 use crate::{
@@ -180,7 +181,7 @@ impl RuntimeViewport {
     fn render(
         &mut self,
         renderers: &mut SceneRenderers,
-        scene: &DemoScene,
+        scene: &SceneExtractor,
         world: &World,
         size: (u32, u32),
         camera: CameraView,
@@ -239,7 +240,7 @@ impl RuntimeViewport {
 }
 
 struct EditorApp {
-    scene: DemoScene,
+    scene: SceneExtractor,
     world: World,
     file: SceneFile,
     unsaved: bool,
@@ -273,11 +274,16 @@ impl EditorApp {
     fn new(context: &eframe::CreationContext<'_>) -> Self {
         configure_theme(&context.egui_ctx);
         let preferences = Preferences::load(context.storage);
-        let scene = DemoScene::new().expect("the built-in component schemas register");
+        let scene = SceneExtractor::new().expect("the built-in component schemas register");
         let (file, open_error) = open_requested_scene();
-        let world = scene
-            .load_world(file.document())
-            .expect("the opened scene must satisfy the demo component schema");
+        // A scene that will not load must not take the editor down with it.
+        // This used to unwrap, so a file that parsed and then failed validation
+        // killed the process before the window existed — and the failure it
+        // unwrapped was one the editor should not have had in the first place.
+        let (world, load_error) = match load_world(&scene, file.document()) {
+            Ok(world) => (world, None),
+            Err(error) => (World::default(), Some(error)),
+        };
         // Nothing is selected until something is chosen. This used to name an
         // entity from the demo scene, which selected the cube in that one scene
         // and silently nothing in every other.
@@ -309,7 +315,7 @@ impl EditorApp {
             renderers,
             scene_viewport,
             game_viewport,
-            notice: open_error,
+            notice: open_error.or(load_error),
             render_error: None,
         }
     }
@@ -361,7 +367,7 @@ impl EditorApp {
                 return;
             }
         };
-        match self.scene.load_world(opened.document()) {
+        match load_world(&self.scene, opened.document()) {
             Ok(world) => {
                 self.file = opened;
                 self.world = world;
@@ -371,7 +377,7 @@ impl EditorApp {
                 self.lifecycle = initialized_lifecycle();
                 self.notice = None;
             }
-            Err(error) => self.notice = Some(error.to_string()),
+            Err(error) => self.notice = Some(error),
         }
     }
 
@@ -506,7 +512,7 @@ impl EditorApp {
     /// Every runtime handle is replaced, so recorded history is discarded
     /// rather than left pointing at entities that no longer exist.
     fn reset_to_authored(&mut self) {
-        match self.scene.load_world(self.file.document()) {
+        match load_world(&self.scene, self.file.document()) {
             Ok(world) => {
                 self.world = world;
                 self.history.clear();
@@ -515,7 +521,7 @@ impl EditorApp {
                 self.lifecycle = initialized_lifecycle();
                 self.notice = None;
             }
-            Err(error) => self.notice = Some(error.to_string()),
+            Err(error) => self.notice = Some(error),
         }
     }
 
@@ -888,10 +894,13 @@ impl EditorApp {
                     let healthy = self.problem().is_none();
                     status_dot(ui, if healthy { SUCCESS } else { ACCENT_BRIGHT });
                     ui.label(
+                        // Not "the renderer reported an error": what went wrong
+                        // is as likely to be a file that would not open, and
+                        // the notice beside the viewport says which.
                         RichText::new(if healthy {
                             "Renderer ready"
                         } else {
-                            "Renderer reported an error"
+                            "Something went wrong"
                         })
                         .size(11.0)
                         .color(TEXT_MUTED),
@@ -1258,6 +1267,18 @@ fn hierarchy_group(ui: &mut egui::Ui, label: &str, icon: MaterialIcon) {
     });
 }
 
+/// One row of the hierarchy, reporting whether it was clicked.
+///
+/// The response has to be the button's, not the layout's. `ui.horizontal`
+/// allocates its region with `Sense::hover`, so asking that value whether it was
+/// clicked answers no forever — which is what it did from the first editor
+/// commit until this was found by driving the editor rather than reading it. The
+/// whole of selection, and therefore every edit the editor can make, hung on
+/// this one word.
+///
+/// The row's rect is re-sensed as well, so the icon and the padding beside the
+/// name select too. A row that answers only on its text is the same complaint in
+/// miniature.
 fn hierarchy_row(
     ui: &mut egui::Ui,
     icon: MaterialIcon,
@@ -1265,24 +1286,37 @@ fn hierarchy_row(
     selected: bool,
     depth: usize,
 ) -> Response {
-    ui.horizontal(|ui| {
-        ui.add_space(9.0 + hierarchy_indent(depth, 14.0));
-        ui.label(icon.outlined().rich_text().size(15.0).color(if selected {
-            ACCENT_BRIGHT
-        } else {
-            TEXT_MUTED
-        }));
-        ui.add(
-            egui::Button::new(RichText::new(name).size(12.0).color(if selected {
-                TEXT
-            } else {
-                TEXT_MUTED
-            }))
-            .selected(selected)
-            .frame(false),
-        )
-    })
-    .response
+    let row = ui.scope_builder(egui::UiBuilder::new().sense(Sense::click()), |ui| {
+        ui.horizontal(|ui| {
+            ui.add_space(9.0 + hierarchy_indent(depth, 14.0));
+            // The icon senses clicks so that it does not swallow them: a
+            // widget inside the scope takes precedence over the scope's own
+            // sense, so a hover-only label would be a dead patch in the middle
+            // of the row.
+            let icon = ui.add(
+                egui::Label::new(icon.outlined().rich_text().size(15.0).color(if selected {
+                    ACCENT_BRIGHT
+                } else {
+                    TEXT_MUTED
+                }))
+                .sense(Sense::click()),
+            );
+            let label = ui.add(
+                egui::Button::new(RichText::new(name).size(12.0).color(if selected {
+                    TEXT
+                } else {
+                    TEXT_MUTED
+                }))
+                .selected(selected)
+                .frame(false),
+            );
+            icon | label
+        })
+        .inner
+    });
+    // A scope's sense sits below the widgets inside it, so the name still
+    // answers for itself and the rest of the row answers for the scope.
+    row.response | row.inner
 }
 
 /// What the root is called wherever a parent is named.
@@ -2169,28 +2203,50 @@ fn open_requested_scene() -> (SceneFile, Option<String>) {
     let path = requested.as_deref().unwrap_or(DEFAULT_SCENE_PATH);
     match SceneFile::open(path) {
         Ok(file) => (file, None),
-        Err(error) => {
-            let embedded = DemoScene::authored_document()
-                .expect("the embedded editor fixture must remain a valid scene");
-            (SceneFile::detached(embedded), Some(error.to_string()))
-        }
+        // An empty scene rather than the demo one. Standing in a working scene
+        // for the file someone asked for reads as though it opened, and the
+        // notice beside it as though something minor went wrong.
+        Err(error) => (
+            SceneFile::detached(SceneDocument::default()),
+            Some(error.to_string()),
+        ),
     }
+}
+
+/// Builds a runtime world from a document the editor has opened.
+///
+/// `Preserve` rather than `Reject`: a scene may carry components this build has
+/// never heard of, and the format exists to keep them through a load, an edit,
+/// and a save. Rejecting them is how the editor came to refuse — and from the
+/// command line, crash on — any project that defined a component of its own.
+pub fn load_world(extractor: &SceneExtractor, document: &SceneDocument) -> Result<World, String> {
+    extractor
+        .validate(document, UnknownComponentPolicy::Preserve)
+        .map_err(|error| error.to_string())?;
+    Ok(World::from_scene(document)
+        .map_err(|error| error.to_string())?
+        .world)
 }
 
 #[cfg(test)]
 mod tests {
     use sindri_core::{CommandHistory, SceneDocument, SceneEntity, SceneEntityId};
+    // The demo scene is embedded in the example, so a test reaches it without
+    // depending on the working directory. Only the tests want it: the editor
+    // itself no longer loads through the example's scene type.
+    use sindri_cube::DemoScene;
 
     use super::*;
 
-    fn demo_scene() -> DemoScene {
-        DemoScene::new().unwrap()
+    fn extractor() -> SceneExtractor {
+        SceneExtractor::new().unwrap()
     }
 
+    /// The scene the editor opens with no argument, loaded the way the editor
+    /// loads it.
     fn demo_world() -> World {
-        demo_scene()
-            .load_world(&DemoScene::authored_document().unwrap())
-            .unwrap()
+        load_world(&extractor(), &DemoScene::authored_document().unwrap())
+            .expect("the demo scene loads")
     }
 
     fn nested_scene() -> SceneDocument {
@@ -2417,9 +2473,8 @@ mod tests {
             .unwrap();
 
         let saved = world.to_scene().unwrap().to_canonical_json().unwrap();
-        let reopened = demo_scene()
-            .load_world(&SceneDocument::from_json(&saved).unwrap())
-            .unwrap();
+        let reopened =
+            load_world(&extractor(), &SceneDocument::from_json(&saved).unwrap()).unwrap();
         let reloaded = find_by_source_id(&reopened, "checker-cube").unwrap();
         assert_eq!(
             reopened.get(reloaded).unwrap().transform_3d,
@@ -2486,6 +2541,77 @@ mod tests {
         lifecycle.resume().unwrap();
         lifecycle.stop().unwrap();
         assert_eq!(lifecycle_label(lifecycle.state()), "stopped");
+    }
+
+    /// Presses and releases the pointer at `target`, and reports whether a
+    /// hierarchy row drawn at the same place says it was clicked.
+    ///
+    /// egui reports a click on the release, so the press and the release are
+    /// separate frames, as they are for a real pointer.
+    fn row_click_at(offset: Vec2) -> bool {
+        let context = egui::Context::default();
+        // The row draws a material icon, and the icon font is registered by the
+        // same call the running editor makes.
+        egui_material_icons::initialize(&context);
+        let row = std::cell::Cell::new(Rect::NOTHING);
+        let clicked = std::cell::Cell::new(false);
+        let draw = |events: Vec<egui::Event>| {
+            let input = egui::RawInput {
+                events,
+                ..Default::default()
+            };
+            context
+                .run_ui(input, |ui| {
+                    let response = hierarchy_row(ui, ICON_ACCOUNT_TREE, "Checker Cube", false, 0);
+                    row.set(response.rect);
+                    clicked.set(response.clicked());
+                })
+                .drop_without_applying_deltas();
+        };
+
+        draw(Vec::new());
+        let target = row.get().left_center() + offset;
+        let button = |pressed| egui::Event::PointerButton {
+            pos: target,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: egui::Modifiers::default(),
+        };
+        draw(vec![egui::Event::PointerMoved(target), button(true)]);
+        draw(vec![button(false)]);
+        clicked.get()
+    }
+
+    /// The bug that made the editor read-only for a fortnight.
+    ///
+    /// `hierarchy_row` returned the response of the `ui.horizontal` around the
+    /// button rather than the button's own. A layout is allocated with
+    /// `Sense::hover`, so it answers no to `clicked` forever, and selection —
+    /// which every edit in the editor is behind — could never happen. Reading
+    /// the code found nothing; driving the editor found it in one click.
+    #[test]
+    fn clicking_a_hierarchy_row_reports_the_click() {
+        assert!(
+            row_click_at(Vec2::new(60.0, 0.0)),
+            "clicking a row's name must select it"
+        );
+    }
+
+    /// A row answers everywhere, not only on its text.
+    ///
+    /// The offsets walk across the indent, the icon, and the name. The middle
+    /// of that range is where the icon sits, and it was a dead patch until the
+    /// icon was given a sense of its own: a widget inside a click-sensing scope
+    /// takes precedence over the scope, so a hover-only label swallows the
+    /// click rather than passing it down.
+    #[test]
+    fn a_hierarchy_row_answers_across_its_whole_width() {
+        for offset in [2.0_f32, 10.0, 16.0, 22.0, 30.0, 60.0, 90.0] {
+            assert!(
+                row_click_at(Vec2::new(offset, 0.0)),
+                "a click {offset} points into the row was lost"
+            );
+        }
     }
 
     #[test]
