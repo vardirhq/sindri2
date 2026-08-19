@@ -80,16 +80,21 @@ it, which stage it lands in, and what its transform means.
 
 | `space` | Camera | Stage | Depth | Transform |
 | --- | --- | --- | --- | --- |
-| `screen` (default) | Orthographic overlay | `Overlay` | Ignored — nothing in the world may hide a HUD | X and Y offset an anchor; Z has nowhere to go |
+| `screen` (default) | Orthographic overlay | `Overlay` | Ignored — nothing in the world may hide a HUD | X and Y offset an anchor; Z orders it without moving it |
 | `world` | Perspective world camera | `Transparent2d` | Tested, never written | The whole transform, exactly as a mesh reads it |
 
 The default is what every sprite already was, so a scene written before the choice existed draws
 where it always did. Two sprites in different spaces never share a batch however much else they have
 in common, because a batch is one draw call and these differ in both the camera and the pipeline.
 
-Within a batch, sprites still sort back to front by the authored `depth` field. Sorting a world
-sprite by its distance from the camera instead is the next item in `ROADMAP.md`'s 2D migration;
-until then a world sprite's `depth` is a hand-authored sort key like any other sprite's.
+Within a batch, sprites sort back to front by how far they are from the camera that draws them,
+measured along its forward axis. A world sprite's order therefore changes when the camera moves,
+without the scene changing at all. A screen sprite's does not: the overlay camera does not move, and
+its Z orders it without placing it — the one deliberate disagreement between where a sprite sorts
+and where it is drawn, and what keeps a HUD from vanishing when it is pushed a long way back.
+
+`layer` is the explicit override and beats both. A sprite in a higher layer draws in front of
+something nearer the camera, which is the rule people are surprised by once and then rely on.
 
 ## Anchors
 

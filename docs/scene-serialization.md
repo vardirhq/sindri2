@@ -49,9 +49,10 @@ already in use, so the same world always produces the same assignment.
 
 Serializing an already canonical document is a fixed point, so repeated saves stop producing diffs.
 
-Document order carries no rendering meaning. Draw order is expressed by explicit render layers and
-depths (see [transparent rendering](rendering-transparency.md)), which is why sorting entities is
-safe: it keeps saves stable while entities are added, removed, and reparented.
+Document order carries no rendering meaning. Draw order comes from explicit render layers and from
+where things are relative to the camera (see [transparent rendering](rendering-transparency.md)),
+which is why sorting entities is safe: it keeps saves stable while entities are added, removed, and
+reparented.
 
 Scenes reject non-finite transform values. JSON has no `NaN` or `Infinity` literal, so a scene
 containing one could not be read back; validation catches it at the point it is introduced instead.
@@ -82,7 +83,7 @@ data a newer one authored. See the [component schema registry](component-schema-
 Every document declares `format_version`. The current format is `SCENE_FORMAT_VERSION`, and a
 runtime rejects any other version rather than guessing at its meaning.
 
-`SceneMigrator` exists before format version 2 does, so the first real format change is a
+`SceneMigrator` existed before format version 2 did, so each real format change has been a
 registration rather than a redesign:
 
 ```rust

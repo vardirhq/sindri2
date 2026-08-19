@@ -66,6 +66,23 @@ which format 1 allowed. They described positions in different spaces, so no
 merge of them is reliably the same scene; the migration refuses it and names the
 entity rather than quietly preferring one and moving something.
 
+### Version 3
+
+Transparent sprites sort by how far they are from the camera rather than by a
+`depth` number authored beside them, so the field goes and the transform's Z
+takes over the job.
+
+A screen-space sprite's Z did nothing in format 2 — the overlay read only X and
+Y — so its `depth` becomes a Z, negated, because the overlay camera looks down
+the axis from `+Z` and a greater depth meant further away. The stack comes out
+in the order it went in, which the offscreen capture holds to byte for byte.
+
+A world-space sprite already had a Z that placed it, and that Z now orders it as
+well, so its `depth` is dropped rather than written over the position. That is
+the format change rather than a loss: a sort key that disagreed with where the
+sprite actually was is what this version stops allowing. Moving a sprite would
+be the one thing a migration must never do quietly, so the migration does not.
+
 A version increase requires a registered `SceneMigrator` step **before** the new
 version is written anywhere. The migrator enforces the properties that keep a
 chain honest — forward-only, one step per source version, no step targeting an

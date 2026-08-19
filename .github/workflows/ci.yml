@@ -27,10 +27,50 @@ jobs:
       # Before the tests, not only before the captures: the workspace has GPU
       # tests now, and SINDRI_REQUIRE_GPU makes a missing adapter fail them
       # rather than skip them on the one machine installed to run them.
+      #
+      # The image does not name a mirror in its sources at all: it points them
+      # at a mirrorlist, and Azure's mirror is the first entry in it. When that
+      # mirror stops answering — 502 for an hour, then nothing — every index
+      # request is ignored, apt sits on the retries, and a step that takes
+      # fifteen seconds is still going when something kills it. Dropping that
+      # one entry leaves the public archive, which answered in about a second
+      # throughout, and costs the few seconds a mirror outside the datacentre
+      # does.
+      #
+      # The rest is about failing rather than hanging. apt waits on the dpkg
+      # lock forever by default and on a stalled download for a long time; the
+      # timeouts give up instead, and the step timeout turns whatever is left
+      # into a failure someone can read in two lines rather than a job nobody
+      # can tell apart from a slow one.
       - name: Install software Vulkan
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        timeout-minutes: 5
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes imagemagick libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
+          mirrors=/etc/apt/apt-mirrors.txt
+          if [ -f "$mirrors" ]; then
+            sudo sed -i '/azure\.archive\.ubuntu\.com/d' "$mirrors"
+            # Never leave apt with no mirror at all, whatever the list held.
+            if ! grep -q . "$mirrors"; then
+              echo 'http://archive.ubuntu.com/ubuntu/' | sudo tee "$mirrors" > /dev/null
+            fi
+          fi
+          # An image that names the host directly rather than through a list.
+          for list in /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources; do
+            if [ -f "$list" ]; then
+              sudo sed -i 's|://azure.archive.ubuntu.com/|://archive.ubuntu.com/|g' "$list"
+            fi
+          done
+          # What apt was actually asked for, so the next mirror failure names
+          # itself instead of being inferred from what is missing.
+          cat "$mirrors" 2>/dev/null || true
+          grep -rhE '^(deb |URIs:)' /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null || true
+          apt_get() {
+            sudo apt-get -o DPkg::Lock::Timeout=120 -o Acquire::Retries=3 \
+              -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 "$@"
+          }
+          apt_get update
+          apt_get install --yes imagemagick libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
       - name: Test
         env:
           WGPU_BACKEND: vulkan

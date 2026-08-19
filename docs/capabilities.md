@@ -52,8 +52,10 @@ access, recursive destruction, and slot reuse are all safe. Hierarchies support
 reparenting with cycle prevention, and `World::check_set_parent` answers whether
 a move is legal without making it. Each entity carries a name, a parent,
 children, an optional `Transform3D`, arbitrary JSON components, and an
-editor-only section the runtime never interprets. There is one transform: a 2D
-entity is one that keeps to a plane, not one with a different transform type —
+editor-only section the runtime never interprets. There is one transform, with
+2D-shaped accessors that read and write X and Y and cannot express a change to
+Z: a 2D entity is one that keeps to a plane, not one with a different transform
+type —
 see `docs/2d-model.md`.
 
 Entity storage was measured at 1k, 10k, and 100k entities before considering an
@@ -118,7 +120,8 @@ validates and orders passes deterministically by stage, then layer, then
 insertion order; stage order is `Opaque3d`, `Transparent2d`, `Overlay`.
 
 What can actually be drawn: a triangle, a coloured cube, a textured cube with
-depth testing, and textured sprites with tint, anchor, layer, and sorting depth.
+depth testing, and textured sprites with tint, anchor, and layer, sorted back to
+front by how far from the camera they are.
 A sprite is either screen-anchored, which is the default and cannot be occluded
 by the world, or in the world, drawn through the world camera by its full
 transform and hidden by opaque geometry in front of it. Sprites batch per space,
@@ -218,10 +221,6 @@ Listed because a control that looks like a feature is worse than an absent one.
 
 ### Engine
 
-- **Sprites sort by a hand-authored depth field.** A world-space sprite is drawn
-  where it is, but within its layer it is ordered by the `depth` number someone
-  typed rather than by how far from the camera it actually is. Sorting by camera
-  distance is the next item
 - **One texture is one sprite.** No UV rects, so no sprite sheets, no animation
   frames, no tilesets
 - **No text rendering.** No score, menu, or dialogue

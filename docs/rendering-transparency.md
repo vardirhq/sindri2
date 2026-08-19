@@ -18,10 +18,12 @@ A texture's encoding must match its selected blend mode. Mixing straight and pre
 Opaque 3D passes render before transparent overlays. Transparent draws use `TransparentOrder` and are sorted in ascending key order:
 
 1. Lower integer layer first.
-2. Within a layer, greater camera depth first (back-to-front).
+2. Within a layer, greater distance from the camera first (back-to-front).
 3. Exact ties use ascending submission index.
 
-Depth must be finite; NaN and infinity are rejected when the key is created. Submission indices make ordering deterministic across native and browser targets without treating insertion order as an undocumented side effect.
+The distance is geometry rather than an authored number: how far in front of the camera the draw is, measured along the camera's forward axis rather than as a straight line to the eye, so two things side by side at the same depth sort as equally far away. `layer` is the one authored override, and it wins — a sprite in a higher layer draws in front of something nearer the camera.
+
+The distance must be finite; NaN and infinity are rejected when the key is created. Measuring in view space rather than dividing a clip-space depth is what keeps that from being a real risk: a draw sitting exactly on the camera plane still produces a number. Submission indices make ordering deterministic across native and browser targets without treating insertion order as an undocumented side effect.
 
 Transparent sprite passes do not write depth. Callers must sort their prepared draw list before encoding. `SpriteBatchRenderer` consumes instances in that final order and preserves it within one instanced draw for each texture/blend-mode group.
 

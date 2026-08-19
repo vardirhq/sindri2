@@ -59,10 +59,16 @@ Sprites are transparent, and transparent geometry cannot rely on depth testing �
 blending is order-dependent, so a depth buffer gives you whichever result the
 draw order happened to produce.
 
-So explicit back-to-front ordering stays. `TransparentOrder` already exists and
-already orders by layer, then depth, then insertion; what changes is where the
-depth comes from. It stops being a hand-authored `depth` field on the sprite and
-becomes distance from the camera.
+So explicit back-to-front ordering stays. `TransparentOrder` orders by layer,
+then depth, then insertion; what changed is where the depth comes from. It is no
+longer a hand-authored `depth` field on the sprite — it is the distance from the
+camera, measured along the camera's forward axis so that two sprites side by
+side at the same depth sort as equally far away.
+
+A screen-space sprite is the one place where that distance is not where the
+sprite is drawn. The overlay reads only X and Y, so a HUD sprite's Z orders it
+without moving it — which also means no HUD can be lost off a far plane by
+being pushed a long way back.
 
 **Precedence, decided once:** layer first, then camera distance, then insertion
 order. A layer is an explicit authored override, so it wins over geometry; two
@@ -119,6 +125,12 @@ cannot express a change to Z because the signature has no third argument. The
 same goes for a 2D body's write-back: it does not take a Z to ignore, it takes
 an XY and an angle.
 
+`Transform3D` carries them: `position_2d`, `set_position_2d`, `translate_2d`,
+`scale_2d`, `set_scale_2d`, and the pair for the turn about Z, which is the only
+turn a flat thing facing the camera has. The three-dimensional fields are still
+there and still public, because sometimes a 2D thing genuinely needs to change
+layer; what the 2D calls do is make that a thing you say on purpose.
+
 This is the one that actually works, because it is not a rule anyone has to
 remember. Anyone thinking in 2D reaches for the 2D call, and the 2D call is
 incapable of the mistake. It is the same reasoning that made colour space a
@@ -165,8 +177,9 @@ of what each space decides.
 
 The two are separated at the batch, not at the draw: a screen sprite and a world
 sprite never share a draw call, because they differ in the camera and in the
-pipeline. And a world sprite still sorts within its batch by the authored
-`depth` field until that becomes camera distance, which is the next item.
+pipeline. Each sorts within its batch by its distance from the camera that
+draws it, so a world sprite's order changes when the camera moves and a HUD's
+does not.
 
 ## Scene format
 
