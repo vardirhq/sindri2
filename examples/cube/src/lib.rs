@@ -309,10 +309,21 @@ pub fn encode_prepared_frame(
                 target.depth,
                 pass.camera.view_projection * *model,
             ),
-            FrameCommand::SpriteBatch { texture, instances } => {
+            FrameCommand::SpriteBatch {
+                texture,
+                depth,
+                instances,
+            } => {
                 sprite_stats =
                     sprite_renderer.prepare(device, queue, textures, *texture, instances)?;
-                sprite_renderer.encode(queue, encoder, target.color, pass.camera.view_projection);
+                sprite_renderer.encode(
+                    queue,
+                    encoder,
+                    target.color,
+                    target.depth,
+                    pass.camera.view_projection,
+                    *depth,
+                );
             }
         }
     }

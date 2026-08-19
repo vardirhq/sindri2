@@ -10,7 +10,7 @@ That split is the point. Gameplay only ever writes to the world:
 fn fixed_update(&mut self, context: &mut FrameContext<'_>) -> Result<(), Self::Error> {
     let entity = self.player;
     let data = context.world.get_mut(entity).ok_or(Error::Missing)?;
-    data.transform_2d = Some(moved);
+    data.transform_3d = Some(moved);
     Ok(())
 }
 ```
@@ -37,7 +37,7 @@ let prepared = scene.extract_frame(engine.world(), viewport, &bindings)?;
 | --- | --- |
 | `sindri.camera` | The world camera (`perspective`) or the overlay camera (`orthographic`) |
 | `sindri.mesh` | One opaque pass per mesh, at the mesh's render layer |
-| `sindri.sprite` | One batched overlay pass per sprite layer |
+| `sindri.sprite` | One batched pass per space, sprite layer, and texture |
 
 A game registers its own component types alongside these with `SceneExtractor::register`.
 
@@ -48,9 +48,10 @@ A game registers its own component types alongside these with `SceneExtractor::r
 - **Batching by layer.** Sprites group into one batch per render layer rather than requiring every
   sprite in a scene to share one, and sort back to front within a layer using the
   [transparent draw key](rendering-transparency.md).
-- **Cameras are required only when something needs them.** A scene with no meshes needs no
-  perspective camera. Drawing a mesh without one reports `MissingWorldCamera` rather than silently
-  rendering nothing.
+- **Cameras are required only when something needs them.** A scene with no meshes and no
+  world-space sprites needs no perspective camera. Drawing either without one reports
+  `MissingWorldCamera` rather than silently rendering nothing, and a screen-space sprite with no
+  orthographic camera reports `MissingOverlayCamera`.
 
 ## Textures
 
@@ -72,11 +73,33 @@ draws that nothing has bound, so the diagnosis is a list rather than a magenta s
 
 Sprites batch per texture as well as per layer, because a batch is a single draw call.
 
+## Sprite space
+
+A sprite says which space it is in, and the answer decides three things at once: which camera draws
+it, which stage it lands in, and what its transform means.
+
+| `space` | Camera | Stage | Depth | Transform |
+| --- | --- | --- | --- | --- |
+| `screen` (default) | Orthographic overlay | `Overlay` | Ignored — nothing in the world may hide a HUD | X and Y offset an anchor; Z has nowhere to go |
+| `world` | Perspective world camera | `Transparent2d` | Tested, never written | The whole transform, exactly as a mesh reads it |
+
+The default is what every sprite already was, so a scene written before the choice existed draws
+where it always did. Two sprites in different spaces never share a batch however much else they have
+in common, because a batch is one draw call and these differ in both the camera and the pipeline.
+
+Within a batch, sprites still sort back to front by the authored `depth` field. Sorting a world
+sprite by its distance from the camera instead is the next item in `ROADMAP.md`'s 2D migration;
+until then a world sprite's `depth` is a hand-authored sort key like any other sprite's.
+
 ## Anchors
 
 Sprite anchors resolve against the overlay camera's extent — half its `vertical_size`, widened by
 the viewport aspect — so a sprite keeps its relationship to an edge as the window changes shape. An
-anchor is a corner, edge, or centre; the sprite's `Transform2D` position offsets from there.
+anchor is a corner, edge, or centre; the sprite's transform position offsets from there in X and Y.
+
+Anchoring is a screen-space idea: a world-space sprite has no edge to hold on to. That is a shape in
+the type rather than a rule to remember — `SpriteComponent::screen_anchor` returns an `Option`, so
+extraction cannot read an anchor for a sprite that has no business having one.
 
 ## Viewing without editing
 

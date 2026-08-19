@@ -3,9 +3,9 @@
 //! Everything here runs without a GPU: a scene is loaded into a world, the
 //! world is extracted, and the resulting passes are inspected directly.
 
-use glam::Vec3;
+use glam::{Vec2, Vec3};
 use sindri_core::{SceneDocument, Transform3D, UnknownComponentPolicy, World};
-use sindri_render::{FrameCommand, RenderStage, TextureId, TextureRegistry, Viewport};
+use sindri_render::{FrameCommand, RenderStage, SpriteDepth, TextureId, TextureRegistry, Viewport};
 use sindri_scene::{
     CameraView, SceneExtractError, SceneExtractor, TextureBindings, WorldProjection,
 };
@@ -122,6 +122,179 @@ fn sprites_batch_per_layer_and_sort_back_to_front() {
     // Greater depth is further back, so it must be drawn first.
     assert_eq!(instances.len(), 2);
     assert!(close(instances[0].tint()[3], 1.0));
+}
+
+/// A world-space sprite is in the world: it is drawn through the world camera,
+/// in the transparent stage rather than the overlay, and its transform reaches
+/// it whole — Z included, which a screen-anchored sprite has nowhere to put.
+#[test]
+fn world_space_sprites_draw_through_the_world_camera_with_their_full_transform() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "prop", "transform_3d": { "position": [1.0, 2.0, -3.0] },
+          "components": { "sindri.sprite": { "texture": "b", "space": "world" } } }"#,
+    ));
+    let frame = SceneExtractor::new()
+        .unwrap()
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
+        .expect("the scene extracts");
+
+    assert_eq!(frame.passes().len(), 1);
+    assert_eq!(frame.passes()[0].stage, RenderStage::Transparent2d);
+    let FrameCommand::SpriteBatch {
+        depth, instances, ..
+    } = &frame.passes()[0].command
+    else {
+        panic!("expected a sprite batch");
+    };
+    assert_eq!(*depth, SpriteDepth::Test, "world sprites test depth");
+    let translation = instances[0].model().w_axis.truncate();
+    assert!(
+        close(translation.x, 1.0) && close(translation.y, 2.0) && close(translation.z, -3.0),
+        "the world sprite landed at {translation:?} rather than where it was authored"
+    );
+
+    // The world camera moved, so the sprite's picture must move with it. This
+    // is what a screen-anchored sprite cannot do: the overlay camera cancels
+    // its own centre.
+    let orbited = SceneExtractor::new()
+        .unwrap()
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView {
+                orbit: Vec2::new(0.4, 0.0),
+                ..CameraView::default()
+            },
+            &TextureBindings::new(),
+        )
+        .expect("the scene extracts");
+    assert_ne!(
+        frame.passes()[0].camera.view_projection,
+        orbited.passes()[0].camera.view_projection
+    );
+}
+
+/// The default is what every sprite already was, so a scene written before the
+/// choice existed keeps drawing exactly where it did.
+#[test]
+fn a_sprite_that_names_no_space_is_still_screen_anchored() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "badge", "transform_3d": { "position": [-0.78, 0.44, 0.0] },
+          "components": { "sindri.sprite": { "texture": "b", "anchor": "bottom_right" } } },
+        { "id": "explicit", "transform_3d": { "position": [-0.78, 0.44, 0.0] },
+          "components": { "sindri.sprite": { "texture": "b", "space": "screen",
+            "anchor": "bottom_right", "layer": 5 } } }"#,
+    ));
+    let frame = SceneExtractor::new()
+        .unwrap()
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
+        .expect("the scene extracts");
+
+    let placements: Vec<_> = frame
+        .passes()
+        .iter()
+        .map(|pass| {
+            let FrameCommand::SpriteBatch {
+                depth, instances, ..
+            } = &pass.command
+            else {
+                panic!("expected sprite batches");
+            };
+            (pass.stage, *depth, instances[0].model().w_axis.truncate())
+        })
+        .collect();
+    assert_eq!(
+        placements.len(),
+        2,
+        "different layers are different batches"
+    );
+    assert_eq!(placements[0].0, RenderStage::Overlay);
+    assert_eq!(placements[0].1, SpriteDepth::Ignore);
+    assert_eq!(
+        placements[0].2, placements[1].2,
+        "naming the default must not move the sprite"
+    );
+}
+
+/// Two spaces are two cameras and two pipelines, so they cannot share a draw
+/// call however much else they have in common.
+#[test]
+fn sprites_in_different_spaces_do_not_share_a_batch() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "hud", "transform_3d": {},
+          "components": { "sindri.sprite": { "texture": "b", "layer": 100 } } },
+        { "id": "prop", "transform_3d": {},
+          "components": { "sindri.sprite": { "texture": "b", "space": "world", "layer": 100 } } }"#,
+    ));
+    let frame = SceneExtractor::new()
+        .unwrap()
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
+        .expect("the scene extracts");
+
+    // Same layer, same texture, and still two passes — and the world one is
+    // drawn first, because the overlay is over everything.
+    assert_eq!(frame.passes().len(), 2);
+    assert_eq!(frame.passes()[0].stage, RenderStage::Transparent2d);
+    assert_eq!(frame.passes()[1].stage, RenderStage::Overlay);
+}
+
+/// A camera is required only when something needs it, and which camera a sprite
+/// needs is now something the sprite says.
+#[test]
+fn each_sprite_space_asks_for_the_camera_it_uses() {
+    let world_sprite_without_a_world_camera = r#"{ "format_version": 2, "entities": [
+        { "id": "overlay-camera",
+          "components": { "sindri.camera": {
+            "projection": "orthographic", "center": [0.0, 0.0],
+            "vertical_size": 2.0, "near": 0.0, "far": 10.0 } } },
+        { "id": "prop", "transform_3d": {},
+          "components": { "sindri.sprite": { "texture": "b", "space": "world" } } }] }"#;
+    let world = world_from(world_sprite_without_a_world_camera);
+    assert!(matches!(
+        SceneExtractor::new().unwrap().extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new()
+        ),
+        Err(SceneExtractError::MissingWorldCamera)
+    ));
+
+    let screen_sprite_without_an_overlay_camera = r#"{ "format_version": 2, "entities": [
+        { "id": "main-camera", "transform_3d": { "position": [3.0, 2.0, 4.0] },
+          "components": { "sindri.camera": {
+            "projection": "perspective", "target": [0.0, 0.0, 0.0], "up": [0.0, 1.0, 0.0],
+            "vertical_fov_degrees": 45.0, "near": 0.1, "far": 100.0 } } },
+        { "id": "badge", "transform_3d": {},
+          "components": { "sindri.sprite": { "texture": "b" } } }] }"#;
+    let world = world_from(screen_sprite_without_an_overlay_camera);
+    assert!(matches!(
+        SceneExtractor::new().unwrap().extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new()
+        ),
+        Err(SceneExtractError::MissingOverlayCamera)
+    ));
 }
 
 #[test]
@@ -497,7 +670,9 @@ fn sprites_batch_per_texture_within_a_layer() {
         .passes()
         .iter()
         .map(|pass| match &pass.command {
-            FrameCommand::SpriteBatch { texture, instances } => (*texture, instances.len()),
+            FrameCommand::SpriteBatch {
+                texture, instances, ..
+            } => (*texture, instances.len()),
             FrameCommand::TexturedCube { .. } => panic!("expected sprite batches"),
         })
         .collect();

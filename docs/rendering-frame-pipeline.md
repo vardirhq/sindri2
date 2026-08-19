@@ -19,6 +19,11 @@ The current stage order is:
 Layers order passes within a stage. Equal stage/layer pairs preserve extraction order. Transparent
 sprites inside a batch continue to use `TransparentOrder` before they enter the frame packet.
 
+`Transparent2d` holds world-space sprites, which are drawn through the world camera and tested
+against the depth the opaque stage wrote; `Overlay` holds screen-anchored ones, which nothing in the
+world may hide. See [scene extraction](scene-extraction.md) for which space a sprite is in and
+[transparency](rendering-transparency.md) for what each does about depth.
+
 ## Clearing belongs to the frame
 
 `ClearOperations` is frame-wide state, and the frame is cleared once by

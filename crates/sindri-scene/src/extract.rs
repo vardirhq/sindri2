@@ -7,13 +7,15 @@ use sindri_core::{
 };
 use sindri_render::{
     ClearOperations, ExtractedFrame, FrameCamera, FrameCommand, FramePass, FramePlanError,
-    OrthographicCamera, PerspectiveCamera, PreparedFrame, RenderLayer, RenderStage, SpriteInstance,
-    TextureId, TransparentOrder, TransparentOrderError, Viewport, look_at, orthographic_projection,
+    OrthographicCamera, PerspectiveCamera, PreparedFrame, RenderLayer, RenderStage, SpriteDepth,
+    SpriteInstance, TextureId, TransparentOrder, TransparentOrderError, Viewport, look_at,
+    orthographic_projection,
 };
 use thiserror::Error;
 
 use crate::{
-    CameraComponent, MeshComponent, MeshPrimitive, SpriteAnchor, SpriteComponent, TextureBindings,
+    CameraComponent, MeshComponent, MeshPrimitive, SpriteAnchor, SpriteComponent, SpriteSpace,
+    TextureBindings,
 };
 
 /// Which projection the world camera uses.
@@ -132,44 +134,63 @@ impl SceneExtractor {
             ));
         }
 
-        // Sprites batch per layer, back to front, with a stable tie-break.
-        // Keyed by layer and texture: a batch is one draw, so instances only
-        // share one when they share a texture.
-        let mut layers: BTreeMap<(i32, TextureId), Vec<(TransparentOrder, SpriteInstance)>> =
-            BTreeMap::new();
+        // Sprites batch per space, layer, and texture, back to front within a
+        // batch, with a stable tie-break. A batch is one draw, so instances
+        // share one only when they share the texture it binds — and the space,
+        // which decides both the camera and the pipeline.
+        let mut batches: BTreeMap<
+            (SpriteSpace, i32, TextureId),
+            Vec<(TransparentOrder, SpriteInstance)>,
+        > = BTreeMap::new();
         for (entity, sprite) in self.components.query::<SpriteComponent>(world)? {
-            let extent = cameras
-                .overlay_extent
-                .ok_or(SceneExtractError::MissingOverlayCamera)?;
             let transform = world
                 .get(entity)
                 .and_then(|data| data.transform_3d)
                 .unwrap_or_default();
+            let model = match sprite.screen_anchor() {
+                Some(anchor) => screen_sprite_matrix(
+                    transform,
+                    anchor,
+                    cameras
+                        .overlay_extent
+                        .ok_or(SceneExtractError::MissingOverlayCamera)?,
+                ),
+                None => transform_matrix(transform),
+            };
             let order = TransparentOrder::new(sprite.layer, sprite.depth, entity.index())?;
-            layers
-                .entry((sprite.layer, textures.resolve(&sprite.texture)))
+            batches
+                .entry((
+                    sprite.space,
+                    sprite.layer,
+                    textures.resolve(&sprite.texture),
+                ))
                 .or_default()
-                .push((
-                    order,
-                    SpriteInstance::new(
-                        sprite_matrix(transform, sprite.anchor, extent),
-                        sprite.tint,
-                    ),
-                ));
+                .push((order, SpriteInstance::new(model, sprite.tint)));
         }
 
-        for ((layer, texture), mut sprites) in layers {
+        for ((space, layer, texture), mut sprites) in batches {
             sprites.sort_by_key(|(order, _)| *order);
-            frame.push(FramePass::new(
-                RenderStage::Overlay,
-                RenderLayer(layer),
-                FrameCamera {
-                    view_projection: cameras
+            let (stage, view_projection, depth) = match space {
+                SpriteSpace::Screen => (
+                    RenderStage::Overlay,
+                    cameras
                         .overlay
                         .ok_or(SceneExtractError::MissingOverlayCamera)?,
-                },
+                    SpriteDepth::Ignore,
+                ),
+                SpriteSpace::World => (
+                    RenderStage::Transparent2d,
+                    cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?,
+                    SpriteDepth::Test,
+                ),
+            };
+            frame.push(FramePass::new(
+                stage,
+                RenderLayer(layer),
+                FrameCamera { view_projection },
                 FrameCommand::SpriteBatch {
                     texture,
+                    depth,
                     instances: sprites.into_iter().map(|(_, sprite)| sprite).collect(),
                 },
             ));
@@ -314,14 +335,17 @@ fn transform_matrix(transform: Transform3D) -> Mat4 {
 /// Where a screen-anchored sprite lands, given the one transform.
 ///
 /// Only X and Y of the transform reach the overlay: a screen-space sprite is
-/// positioned against the camera's extent, so its Z has nowhere to go here.
-/// That changes when sprites gain a world-space option; until then this is the
-/// same arithmetic the separate 2D transform produced, reading the same two
-/// numbers from a different place.
+/// positioned against the camera's extent, so its Z has nowhere to go. A
+/// world-space sprite has no such loss — it goes through `transform_matrix`,
+/// the same one a mesh does, because it is in the same world a mesh is.
 ///
 /// The rotation is taken about Z alone, which is what a flat thing facing the
 /// camera can turn about.
-fn sprite_matrix(transform: Transform3D, anchor: SpriteAnchor, extent: OverlayExtent) -> Mat4 {
+fn screen_sprite_matrix(
+    transform: Transform3D,
+    anchor: SpriteAnchor,
+    extent: OverlayExtent,
+) -> Mat4 {
     let unit = Vec2::from_array(anchor.unit_offset());
     let origin = extent.center + unit * extent.half_extent;
     let position = origin + Vec2::new(transform.position[0], transform.position[1]);
@@ -339,9 +363,9 @@ pub enum SceneExtractError {
     Frame(#[from] FramePlanError),
     #[error(transparent)]
     TransparentOrder(#[from] TransparentOrderError),
-    #[error("the scene draws meshes but has no perspective camera")]
+    #[error("the scene draws in the world but has no perspective camera")]
     MissingWorldCamera,
-    #[error("the scene draws sprites but has no orthographic camera")]
+    #[error("the scene draws screen-space sprites but has no orthographic camera")]
     MissingOverlayCamera,
     #[error("camera distance scale must be finite and greater than zero")]
     InvalidCameraDistanceScale,

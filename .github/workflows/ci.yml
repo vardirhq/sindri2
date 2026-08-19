@@ -24,11 +24,18 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets --all-features
-      - run: cargo test --workspace --all-features
+      # Before the tests, not only before the captures: the workspace has GPU
+      # tests now, and SINDRI_REQUIRE_GPU makes a missing adapter fail them
+      # rather than skip them on the one machine installed to run them.
       - name: Install software Vulkan
         run: |
           sudo apt-get update
           sudo apt-get install --yes imagemagick libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
+      - name: Test
+        env:
+          WGPU_BACKEND: vulkan
+          SINDRI_REQUIRE_GPU: 1
+        run: cargo test --workspace --all-features
       - name: Capture native editor runtime viewport
         env:
           WGPU_BACKEND: vulkan
