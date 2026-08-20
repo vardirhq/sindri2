@@ -102,6 +102,13 @@ All notable changes to Sindri Next will be documented here.
 - Editor settings that survive a launch — the project browser's presentation, the viewport projection, and the open bottom dock — alongside the window geometry and panel sizes egui persists itself.
 - A project browser list view showing each asset's name and kind, now the default.
 - A game view rendering the real scene through the authored camera, so what the player would see sits beside what is being edited.
+- Decay, an experimental gameplay language in the isolated `decay/` workspace, with a lexer, parser, semantic analyzer, portable symbolic IR, and interpreter that depends on no engine crate.
+- Decay is the decided scripting direction for Sindri Next; no embedded language is adopted.
+- Decay `let` and `var` bindings execute, and a binding declares its value rather than storing it.
+- Decay blocks carry their scope into the IR and the runtime, so a shadowing declaration no longer replaces the name it shadows.
+- A Decay call-depth limit, so runaway recursion returns an error instead of aborting the process.
+- The Decay example the documentation leads with is executed by a test, against a recording host.
+- Decay's CI checks that the language compiles for `wasm32-unknown-unknown`.
 
 ### Changed
 

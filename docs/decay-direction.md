@@ -161,7 +161,7 @@ If ordinary gameplay routinely requires dropping into Rust, the Decay/editor abs
 
 # Evidence and recommendation
 
-> **Status:** engineering input on the direction above, from a spike run on 2026-08-20. The product decision is still the one recorded at the top of this document; this section records what was measured and what it implies.
+> **Status: superseded.** This section recorded engineering input from a spike run on 2026-08-20, and recommended deferring Decay in favour of Rhai. **That recommendation was not taken. Decay was built, and is now the decided direction; Rhai is not adopted.** The recommendation is kept below rather than deleted, because the reasoning it rests on is still the material for judging Decay later, and rewriting it to agree with what happened would destroy the only record of what was predicted. Read it as the case that was argued, not as current advice. What follows the recommendation — why Lua was disqualified, what the spike measured, and the conditions for revisiting — is unaffected and still holds. The reconciliation is at the end of this document.
 
 ## The recommendation
 
@@ -242,3 +242,52 @@ The largest risk in the direction above is not the language. It is that the prod
 4. **Judge Decay on evidence** against the four conditions above.
 
 Milestone 5 as written — a first-class TypeScript SDK as the browser authoring story — should be reconsidered under this direction, as the note above says. That is a roadmap change and is not made here.
+
+---
+
+# Reconciliation, after Decay was built
+
+Written 2026-08-20, after reading and running the foundation that landed in `decay/`.
+
+## What the recommendation got wrong
+
+**The static-typing argument was missed entirely.** The case above weighed effort, maintenance, and timing, and on all three Rhai still wins. What it never weighed is the one thing Rhai structurally cannot do: Rhai is dynamically typed, and this project's stated thesis is *editor-first authoring*. An editor property panel needs a typed, named, declared field it can draw a widget for without executing anything. Decay's `IrField { exported, type_name }` is exactly that, and it exists today. With Rhai the same capability is a convention layer and a lot of hoping.
+
+That is the argument that justifies owning a compiler, and it is a product argument rather than a performance one. Performance was never the case: Rhai is also a tree-walking interpreter, so Decay's runtime is not buying speed over it.
+
+**The effort estimate was right, and is not the point.** What exists is a lexer, parser, checker, IR and interpreter — the enjoyable fifth. Loops, collections, a stdlib, strings, closures, execution budgets, hot reload with live state, an LSP, a formatter, a debugger, and documentation that stays true are the other four fifths and the permanent commitment. Nothing observed changes that estimate. It is a price, not a refutation.
+
+## What the recommendation got right, demonstrated
+
+The third reason given for deferring was that *this codebase has a specific failure mode a language would amplify*: the asset queue went a release with no caller, the editor could not select an entity for a fortnight, nineteen controls were drawn and inert.
+
+Decay reproduced it precisely. Three thousand lines, twenty-one passing tests, its own CI — and no engine caller. The first thing to actually run a script found three faults reachable from the first line anyone would write:
+
+- every `let` local failed at runtime, because a binding's own initialization was refused for not being mutable;
+- a shadowing declaration replaced the name it shadowed for the rest of the function, type-checking cleanly and returning the wrong number;
+- unbounded recursion overflowed the host stack and aborted the process, which for a runtime meant to run inside the editor takes the editor with it.
+
+The README's own headline example did not execute. All three are fixed and tested now. The lesson is not that the code was poor — the layering, the host boundary, and the parser's error recovery are all better than this stage usually gets. The lesson is that depth without a caller hides faults that one caller finds immediately.
+
+## The decision
+
+**Decay is the scripting language for Sindri Next. Rhai is not adopted, and the question is closed.** Decided 2026-08-20, after the foundation was built and reviewed.
+
+This settles a real cost rather than a preference: a scripting host maintained against two runtimes is worse than either, and the typed-authoring argument that justifies Decay only pays off if Decay is the actual path rather than a hedge. Nothing in the tree ever depended on Rhai — the spike was deliberately never committed — so there is nothing to remove. What ends is treating it as a live option.
+
+The rest of this document keeps the case for Rhai intact, because a decision recorded without the argument it beat is not a decision anyone can revisit competently. In particular, **why Lua was disqualified still governs**: vendored C Lua cannot target `wasm32-unknown-unknown`, browser reach is non-negotiable, and Decay is now checked against that target in its own CI for exactly that reason.
+
+**Do not deepen the language next.** Build `sindri-decay`: one script, one transform, in the editor. Plan item 6 of `decay/README.md` became item 1 for this reason. Whatever survives contact with the engine is the language that was actually needed; everything added before that contact is a guess, and user scripts turn guesses into data that has to be migrated.
+
+**Keep the isolation absolute — going all in on Decay does not mean fusing it to the engine.** Nothing under `decay/` may depend on a `sindri-*` crate. The moment engine internals become language semantics, the decision stops being reversible, and the whole reason the recommendation above could be overruled cheaply is that it is still reversible today.
+
+## What the four conditions become
+
+The "When to revisit" list above was written as a gate on *starting*. That gate is behind us, so the same four conditions are better read as the things that decide whether to *continue*, judged when `sindri-decay` exists and the companion game has been scripted with it:
+
+1. Does the typed authoring surface actually make the editor better than a dynamic language would, in a panel someone used?
+2. Are authors served by the type model, or fighting it because it is too thin — member types are still `Unknown`?
+3. Can the compiler, LSP, and debugger be owned indefinitely, now that the size of the remaining work is visible rather than estimated?
+4. Did the engine generate the language's requirements, or did the language keep guessing at them?
+
+Two yeses and the decision is vindicated. Two nos and the isolation is what keeps the cost of having been wrong small — which is the point of keeping it, and the reason committing to Decay is affordable at all.

@@ -28,7 +28,7 @@ vec2(x, y)
 print, math.*
 ```
 
-Every one of those was exercised by the Rhai spike's shape: per-instance state, lifecycle calls, component handles, and engine functions. The host milestone should treat this list as its acceptance criteria rather than inventing one.
+That list is the acceptance criteria for Sindri Next's scripting host, and it should be treated as such rather than reinvented. It is language-neutral on purpose: per-instance state, lifecycle calls, component handles, and engine functions are what a host has to offer whatever evaluates the script. Decay is what will evaluate it — see `docs/decay-direction.md` — and it already has the first of those four.
 
 **The legacy already converged on two designs Sindri Next has independently.** `ScriptCommandBuffer` routes script writes through a buffer rather than letting scripts touch the world directly — the same reasoning behind `WorldCommand` and `Transaction`. And script hot reload is `SystemTime` polling, which is exactly the approach `AssetWatch` now uses for textures. Neither needs re-deciding.
 
@@ -45,7 +45,7 @@ Every one of those was exercised by the Rhai spike's shape: per-instance state, 
 | **A\* pathfinding** | `pathfinding.rs` (685) | **Port** | `PathfindingGrid` and `AStarPathfinder` are renderer-free already, which is what the milestone asks for. `grid.rs` (209) is a general grid with coordinate conversion and neighbour queries and should travel with it. |
 | **Platformer navigation** | `pathfinding.rs` (`PlatformGraph`, `PlatformPathfinder`) | **Defer** | Jump and fall edges between platform nodes are a different feature from grid A\*, and no milestone schedules them. Porting them alongside A\* because they share a file would be inheriting scope. |
 | **Physics** | `physics.rs` (768), `scene_physics.rs` (392) | **Replace** | The milestone wants an optional Rapier2D adapter with no core dependency and collision layers from the start. Legacy embeds Rapier in the engine crate and has no layers. The behaviour is a reference; the structure is the thing being changed. |
-| **Scripting** | `script.rs` (2,214) | **Replace** | Lua cannot reach the browser. Replace the runtime, port the *interface* — see the surface listed above, and `decay-direction.md` for what replaces it. |
+| **Scripting** | `script.rs` (2,214) | **Replace** | Lua cannot reach the browser. Replace the runtime, port the *interface* — see the surface listed above. Decay replaces it; `decay-direction.md` records the decision. |
 | **Audio** | `audio.rs` (234) | **Refactor** | `rodio` is a defensible native backend, but the unnumbered Audio track's own first move is a platform boundary with a silent implementation, and the browser needs a different backend behind it. The decoding path belongs with textures in `sindri-assets`, which is where the milestone that just closed put every other asset type. |
 | **HUD** | `hud.rs` (382) | **Defer** | Screen-space text and sprites with alignment. Once text rendering and screen-anchored sprites exist, a HUD is composition rather than a subsystem, and it is not clear it needs engine support at all. Revisit when the companion game wants one. |
 | **2D lighting** | `render/light.rs` (107) | **Defer** | Point lights are in neither Milestone 6 nor `PROJECT_OVERVIEW.md`'s 2D scope. Not scheduled, so not ported. |

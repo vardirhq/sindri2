@@ -25,9 +25,14 @@ jobs:
         working-directory: decay
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      # The repository root pins 1.95.0 in rust-toolchain.toml, and rustup
+      # honours it from any subdirectory -- so `stable` here was never what
+      # ran. Naming the same version says what happens, and keeps saying it if
+      # Decay is ever extracted to a repository of its own.
+      - uses: dtolnay/rust-toolchain@1.95.0
         with:
           components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: decay
@@ -37,3 +42,9 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test
         run: cargo test --workspace
+      # Reaching the browser is the reason this language exists rather than an
+      # embedded Lua: vendored C Lua cannot target wasm32-unknown-unknown at
+      # all. Decay compiles for it today, and a check is the only thing that
+      # keeps that true.
+      - name: Browser target
+        run: cargo check --workspace --all-targets --target wasm32-unknown-unknown

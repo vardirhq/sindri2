@@ -44,6 +44,16 @@ pub enum RuntimeError {
     InvalidBinary,
     ExpectedBool,
     InvalidJump(usize),
+    /// A script called deeper than [`Runtime::call_depth_limit`] allows.
+    ///
+    /// Without it, unbounded recursion overflowed the host's own stack and
+    /// aborted the process — which, for a runtime meant to execute author
+    /// scripts inside the editor, takes the editor and any unsaved work with
+    /// it. A limit turns that into a value a caller can report.
+    CallDepthExceeded {
+        function: String,
+        limit: usize,
+    },
     Host(String),
 }
 
@@ -92,15 +102,41 @@ impl ScriptInstance {
     }
 }
 
+/// How deep Decay calls may nest before [`RuntimeError::CallDepthExceeded`].
+///
+/// Far past anything gameplay needs, and far short of what overflows the host's
+/// stack — the gap between those two is wide enough that the number does not
+/// have to be exact.
+pub const DEFAULT_CALL_DEPTH_LIMIT: usize = 64;
+
 pub struct Runtime<'a, H: Host> {
     program: &'a IrProgram,
     host: H,
+    call_depth_limit: usize,
+    depth: usize,
 }
 
 impl<'a, H: Host> Runtime<'a, H> {
     #[must_use]
     pub fn new(program: &'a IrProgram, host: H) -> Self {
-        Self { program, host }
+        Self {
+            program,
+            host,
+            call_depth_limit: DEFAULT_CALL_DEPTH_LIMIT,
+            depth: 0,
+        }
+    }
+
+    /// Sets how deep Decay calls may nest.
+    #[must_use]
+    pub const fn with_call_depth_limit(mut self, limit: usize) -> Self {
+        self.call_depth_limit = limit;
+        self
+    }
+
+    #[must_use]
+    pub const fn call_depth_limit(&self) -> usize {
+        self.call_depth_limit
     }
 
     pub fn into_host(self) -> H {
@@ -202,7 +238,20 @@ impl<'a, H: Host> Runtime<'a, H> {
             })
             .collect();
         let mut frame = Frame::new(locals);
-        self.execute_function(container, fields, function, &mut frame)
+
+        // Counted here rather than around `execute_instructions`, because a
+        // field initializer and a function body both run instructions and only
+        // one of them is a call.
+        if self.depth >= self.call_depth_limit {
+            return Err(RuntimeError::CallDepthExceeded {
+                function: function_name.to_owned(),
+                limit: self.call_depth_limit,
+            });
+        }
+        self.depth += 1;
+        let result = self.execute_function(container, fields, function, &mut frame);
+        self.depth -= 1;
+        result
     }
 
     fn execute_function(
@@ -236,10 +285,11 @@ impl<'a, H: Host> Runtime<'a, H> {
                     frame.stack.push(value);
                 }
                 Instruction::Declare { name, mutable } => {
-                    frame.locals.insert(
-                        name.clone(),
+                    let value = frame.stack.pop().ok_or(RuntimeError::StackUnderflow)?;
+                    frame.declare(
+                        name,
                         Slot {
-                            value: Value::Null,
+                            value,
                             mutable: *mutable,
                         },
                     );
@@ -301,6 +351,14 @@ impl<'a, H: Host> Runtime<'a, H> {
                     ip = *target;
                     continue;
                 }
+                Instruction::ScopeEnter => frame.scopes.push(HashMap::new()),
+                Instruction::ScopeExit => {
+                    // The base scope holds the parameters, so it is never the
+                    // one being closed.
+                    if frame.scopes.len() > 1 {
+                        frame.scopes.pop();
+                    }
+                }
             }
             ip += 1;
         }
@@ -315,7 +373,7 @@ impl<'a, H: Host> Runtime<'a, H> {
     ) -> Result<Value, RuntimeError> {
         if path.0.len() == 1 {
             let name = &path.0[0];
-            if let Some(slot) = frame.locals.get(name).or_else(|| fields.get(name)) {
+            if let Some(slot) = frame.lookup(name).or_else(|| fields.get(name)) {
                 return Ok(slot.value.clone());
             }
         }
@@ -339,7 +397,7 @@ impl<'a, H: Host> Runtime<'a, H> {
     ) -> Result<(), RuntimeError> {
         if path.0.len() == 1 {
             let name = &path.0[0];
-            if let Some(slot) = frame.locals.get_mut(name) {
+            if let Some(slot) = frame.lookup_mut(name) {
                 if !slot.mutable {
                     return Err(RuntimeError::Immutable(name.clone()));
                 }
@@ -373,15 +431,37 @@ impl<'a, H: Host> Runtime<'a, H> {
 }
 
 struct Frame {
-    locals: HashMap<String, Slot>,
+    /// Innermost scope last. The base scope holds the parameters and the
+    /// function body's own bindings, which is the arrangement the analyzer
+    /// checks against: a parameter and a body binding of the same name are a
+    /// duplicate, not a shadow.
+    scopes: Vec<HashMap<String, Slot>>,
     stack: Vec<Value>,
 }
+
 impl Frame {
     fn new(locals: HashMap<String, Slot>) -> Self {
         Self {
-            locals,
+            scopes: vec![locals],
             stack: Vec::new(),
         }
+    }
+
+    fn declare(&mut self, name: &str, slot: Slot) {
+        if let Some(scope) = self.scopes.last_mut() {
+            scope.insert(name.to_owned(), slot);
+        }
+    }
+
+    fn lookup(&self, name: &str) -> Option<&Slot> {
+        self.scopes.iter().rev().find_map(|scope| scope.get(name))
+    }
+
+    fn lookup_mut(&mut self, name: &str) -> Option<&mut Slot> {
+        self.scopes
+            .iter_mut()
+            .rev()
+            .find_map(|scope| scope.get_mut(name))
     }
 }
 
@@ -443,7 +523,7 @@ fn booleans(
 
 #[cfg(test)]
 mod tests {
-    use super::{EmptyHost, Host, Path, Runtime, RuntimeError, Value};
+    use super::{DEFAULT_CALL_DEPTH_LIMIT, EmptyHost, Host, Path, Runtime, RuntimeError, Value};
     use decay_ir::lower_with_environment;
     use decay_semantic::{Environment, Type};
     use std::collections::HashMap;
@@ -504,6 +584,84 @@ mod tests {
             Ok(Value::Number(2.0))
         );
         assert_eq!(instance.field("count"), Some(&Value::Number(2.0)));
+    }
+
+    /// Every `let` local used to fail here, because the binding's own
+    /// initialization went through the same store as an assignment and was
+    /// refused for not being mutable. No test executed one, so nothing noticed
+    /// — including the example in the README.
+    #[test]
+    fn a_let_local_can_be_bound_and_read() {
+        let lowered = decay_ir::lower(
+            r"script T { fn run() -> f32 { let speed: f32 = 6.0; return speed * 2.0; } }",
+        );
+        let program = lowered.program.expect("valid program");
+        let mut runtime = Runtime::new(&program, EmptyHost);
+        assert_eq!(runtime.call("T", "run", vec![]), Ok(Value::Number(12.0)));
+    }
+
+    /// The analyzer has always scoped blocks. The IR did not, so a shadowing
+    /// declaration overwrote the name it shadowed and kept it overwritten —
+    /// type-checking cleanly and then returning the wrong number.
+    #[test]
+    fn a_binding_inside_a_block_does_not_outlive_it() {
+        let lowered = decay_ir::lower(
+            r"script T { fn run(flag: bool) -> f32 { var x: f32 = 1.0; if flag { var x: f32 = 2.0; } return x; } }",
+        );
+        let program = lowered.program.expect("valid program");
+        let mut runtime = Runtime::new(&program, EmptyHost);
+        assert_eq!(
+            runtime.call("T", "run", vec![Value::Bool(true)]),
+            Ok(Value::Number(1.0)),
+            "the inner binding shadows the outer one rather than replacing it"
+        );
+    }
+
+    /// A block still writes through to what it did not declare, which is the
+    /// half of scoping that shadowing must not break.
+    #[test]
+    fn a_block_still_assigns_to_a_name_it_did_not_declare() {
+        let lowered = decay_ir::lower(
+            r"script T { fn run(flag: bool) -> f32 { var x: f32 = 1.0; if flag { x = 2.0; } return x; } }",
+        );
+        let program = lowered.program.expect("valid program");
+        let mut runtime = Runtime::new(&program, EmptyHost);
+        assert_eq!(
+            runtime.call("T", "run", vec![Value::Bool(true)]),
+            Ok(Value::Number(2.0))
+        );
+    }
+
+    /// Unbounded recursion overflowed the host's stack and aborted the process.
+    /// A runtime that executes author scripts inside the editor has to hand the
+    /// problem back instead of taking the editor with it.
+    #[test]
+    fn runaway_recursion_is_an_error_rather_than_a_crash() {
+        let lowered = decay_ir::lower(r"script T { fn boom() -> f32 { return boom(); } }");
+        let program = lowered.program.expect("valid program");
+        let mut runtime = Runtime::new(&program, EmptyHost);
+        assert_eq!(
+            runtime.call("T", "boom", vec![]),
+            Err(RuntimeError::CallDepthExceeded {
+                function: "boom".to_owned(),
+                limit: DEFAULT_CALL_DEPTH_LIMIT,
+            })
+        );
+    }
+
+    /// The limit has to leave room for the nesting real code does, so it is
+    /// checked from both sides rather than only from the runaway one.
+    #[test]
+    fn nesting_below_the_limit_still_runs() {
+        let lowered = decay_ir::lower(
+            r"script T { fn down(n: f32) -> f32 { if n <= 0.0 { return 0.0; } return 1.0 + down(n - 1.0); } }",
+        );
+        let program = lowered.program.expect("valid program");
+        let mut runtime = Runtime::new(&program, EmptyHost).with_call_depth_limit(8);
+        assert_eq!(
+            runtime.call("T", "down", vec![Value::Number(5.0)]),
+            Ok(Value::Number(5.0))
+        );
     }
 
     #[derive(Default)]

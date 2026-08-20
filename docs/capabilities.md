@@ -300,8 +300,8 @@ collapsed and overflowed nothing; and the settings gear.
 
 ### Engine
 
-- **One texture is one sprite.** No UV rects, so no sprite sheets, no animation
-  frames, no tilesets
+- **No tilesets.** Sprites address part of a texture and animate through a
+  sheet, but a tilemap has no data model, no component, and no renderer
 - **No text rendering.** No score, menu, or dialogue
 - **One mesh primitive: `Cube`.** No quad, sphere, or glTF import
 - **No audio.** Now scheduled in `ROADMAP.md`; it previously had no item at all
@@ -310,7 +310,8 @@ collapsed and overflowed nothing; and the settings gear.
   adapter is planned as optional rather than built in
 - No tilemaps, particles, parallax, or pathfinding
 - No TypeScript SDK; the WASM binding crate does not exist
-- No asset manifest
+- **Nothing runs a script.** Decay exists as a language and cannot reach the
+  engine; see below
 - Hot reload covers assets, not the scene file: editing a scene on disk while it
   is open is not noticed
 - No deterministic system ordering
@@ -323,3 +324,50 @@ collapsed and overflowed nothing; and the settings gear.
 - No component editing beyond names and transforms
 - No prefabs, no play-mode-against-a-copy, no build or export controls
 - No versioned editor protocol; the editor and runtime are one process
+- Cannot open, edit, or run a Decay script
+
+---
+
+## Decay
+
+The gameplay language, in `decay/` — a **separate Cargo workspace**, not a
+member of this one. Nothing under `decay/` depends on a `sindri-*` crate and no
+engine crate depends on Decay, so everything below is true of the language in
+isolation and none of it is true of the engine.
+
+### Works
+
+A script is text on disk that a test can run. `decay-syntax` lexes and parses
+it, reporting diagnostics with a span, line, and column; the parser recovers
+rather than stopping at the first error, and survives two hundred thousand
+random token sequences without panicking or hanging. `decay-semantic` resolves
+names through block scopes, checks a small type model (`f32`, `bool`, `String`,
+`unit`, named host types), enforces `let` against `var`, and rejects duplicate
+members and locals. Host globals such as `Input` enter through an
+`Environment` rather than being builtins.
+
+`decay-ir` lowers a checked program to a symbolic instruction list, with member
+chains becoming paths such as `this.transform.position.x` rather than anything
+the IR interprets. `decay-runtime` executes it: bindings, arithmetic,
+comparisons, `if`/`else`, returns, calls between Decay functions, and script
+instances whose fields persist across calls. Everything external crosses a
+three-method `Host` trait — load a path, store a path, call a path.
+
+The whole workspace compiles for `wasm32-unknown-unknown`, which its CI checks.
+`decay/examples/player.decay` is executed by a test rather than only shown in
+the README.
+
+### Not yet
+
+- **No engine binding.** There is no `sindri-decay`, no component, no scene
+  representation, and no way to attach a script to an entity. The language has
+  never run inside the engine or the editor
+- **No loops**, and therefore no operation budget — call depth is bounded, which
+  is the only unbounded path today
+- No arrays, maps, closures, or first-class functions
+- No standard library; not even `math`
+- Member types are unchecked — `this.transform.position.x` is `Unknown` to the
+  analyzer, so nothing catches a misspelled component field
+- No hot reload, no LSP, no formatter, no debugger
+- Nothing has been *executed* on the browser target, only compiled
+- The only numeric type is spelled `f32` and every value it holds is an `f64`

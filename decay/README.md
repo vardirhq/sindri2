@@ -64,12 +64,37 @@ The first interpreter intentionally executes the symbolic IR directly. It is not
 It supports:
 
 - numeric, boolean, string, null, and unit values;
-- locals and mutable bindings;
+- `let` and `var` bindings, scoped to the block that declares them;
 - arithmetic, comparisons, boolean operators, and unary operators;
 - `if`/`else` jumps and returns;
-- calls between Decay functions;
+- calls between Decay functions, bounded by a call-depth limit;
 - persistent per-instance script fields across multiple function calls;
 - host loads, stores, and calls through a narrow `Host` trait.
+
+Two rules are worth stating because they are structural rather than incidental.
+
+**A binding is not an assignment.** `Instruction::Declare` pops the initial
+value and binds it; `Instruction::Store` assigns to a name that already exists
+and is subject to its mutability. Collapsing the two is what made every `let`
+local fail at runtime for the whole of the foundation branch — the binding's own
+initialization was refused for not being mutable, including in the example
+below. Keeping them separate means there is no initializing store to make an
+exception for.
+
+**A block is a scope in the IR, not only in the analyzer.** `ScopeEnter` and
+`ScopeExit` bracket every branch and bare block. Without them the runtime had
+one flat map per frame, so a shadowing declaration replaced the name it shadowed
+for the rest of the function — type-checking cleanly and then returning the
+wrong number.
+
+**A runaway script is stopped rather than fatal.** Decay calls may nest
+`DEFAULT_CALL_DEPTH_LIMIT` deep, after which the runtime returns
+`RuntimeError::CallDepthExceeded`. Unbounded recursion previously overflowed the
+host's own stack and aborted the process, which for a runtime meant to execute
+author scripts inside the editor takes the editor and any unsaved work with it.
+The limit is per `Runtime` and adjustable with `with_call_depth_limit`. Note
+that it bounds recursion only: an operation budget becomes necessary the moment
+loops exist, and does not yet.
 
 A host can therefore implement a path such as `Input.axis` without the Decay runtime knowing what input means. The same mechanism can later expose `this.transform.position.x`, entities, components, assets, and events from Sindri through a dedicated `sindri-decay` crate.
 
@@ -88,13 +113,39 @@ script Counter {
 
 can be instantiated once and called repeatedly, with `count` surviving between calls.
 
+## The example is a test
+
+`examples/player.decay` is the script this README leads with, and
+`crates/decay-runtime/tests/example_script.rs` analyzes, lowers, and runs it
+against a recording host, asserting both the number it computes and the calls
+that leave through the host boundary.
+
+It exists because that example did not run. Every `let` local in it failed, and
+nothing noticed for the length of the foundation branch: no unit test bound a
+`let` local, and no test executed the example. A documented example that does
+not execute is worse than none, because it is believed. Anything the
+documentation claims Decay can do belongs in that test.
+
 ## Near-term plan
 
-1. Harden runtime errors and execution limits.
-2. Add loops and the control-flow IR they require.
-3. Add arrays/maps only when a representative gameplay script needs them.
-4. Define typed host members so `Input.axis` and `this.transform.position` can be checked instead of remaining unknown host paths.
-5. Add lifecycle-oriented runtime helpers for `start`, `update`, and `fixed_update` without coupling them to Sindri.
-6. Only after that create `sindri-decay` and expose engine concepts through the host boundary.
+1. **Bind Decay to the engine.** A minimal `sindri-decay` driving one script on
+   one transform in the editor, ahead of any further language work.
+2. Define typed host members so `Input.axis` and `this.transform.position` are
+   checked instead of remaining unknown host paths.
+3. Add lifecycle-oriented runtime helpers for `start`, `update`, and
+   `fixed_update` without coupling them to Sindri.
+4. Add loops, the control-flow IR they require, and the operation budget that
+   becomes necessary once a script can loop.
+5. Add arrays and maps only when a representative gameplay script needs them.
 
-The syntax, type model, IR, and runtime are not stable. The point of this phase is to discover what deserves to become stable before user scripts make every early guess expensive.
+The reordering is deliberate, and it is the one thing this phase has already
+learned. The foundation reached three thousand lines with no engine caller, and
+what that cost was not visible until something ran the example: the `let` bug,
+the scoping bug, and the recursion abort were all reachable from the first
+script anyone would write. `docs/capabilities.md` in the engine repository
+exists for the same reason. More language before a caller buys more of that.
+
+The syntax, type model, IR, and runtime are not stable. The point of this phase
+is to discover what deserves to become stable before user scripts make every
+early guess expensive. One decision worth making early rather than discovering:
+the only numeric type is spelled `f32`, but every value it holds is an `f64`.
