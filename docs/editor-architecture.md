@@ -111,6 +111,47 @@ edited reproduces the file byte for byte, so a review sees the edit and nothing
 else. Reloading re-reads the file and discards unsaved edits along with their
 history, because every runtime handle is replaced.
 
+Which is why nothing throws that work away without asking. Opening another
+scene, reloading, discarding changes, and closing the window each raise the same
+question, named after the loss they are about to cause, with saving offered as
+the third answer; closing cancels the window's close request while the question
+stands, and asks again once it is answered.
+
+Whether there is anything to lose is a question for the command history, not a
+flag. `CommandHistory::revision` numbers the state the world is in; the editor
+remembers the number it last saved, and unsaved work is the two differing. A
+flag cannot say this: a merged drag changes the world without growing the stack,
+and a bounded stack repeats its depths once it starts dropping entries, so
+neither "something was written" nor "the stack is this deep" is the same
+question. Undoing back to what was saved reads as saved again, and a state the
+history left behind is never numbered twice.
+
+Which scene is open is a preference rather than session state, and the distinction is worth naming
+because everything else the editor remembers is a choice: it is not where the camera happened to be
+pointing when the window closed, it is which project someone is working on. A path on the command
+line still wins, and a remembered scene that has moved or been deleted since falls back to the demo
+one and says so — that choice was made last week and its failure is not the user's doing now. The
+window title carries the same file name and unsaved marker as the status bar, so a task switcher can
+tell two editors apart.
+
+## What the editor has to say
+
+Anything the editor reports goes to two places at once, and the split is what makes each of them
+work. The notice beside the viewport is one line and is replaced by the next thing that happens; the
+console keeps everything, in order. Every failure goes through one call so the two cannot disagree
+about what happened.
+
+The console is bounded, and it collapses a message repeated back to back into a count. That second
+rule is not tidiness: a render failure recurs every frame, and without it two hundred copies of the
+same line would push whatever explains it out of the top within four seconds. It is also what lets
+the status bar count errors and warnings honestly — one thing wrong, however many frames said so.
+
+A scene announces itself when it opens: what it is called, how many entities it holds, and every
+texture it names that nothing has bound. That last one is why the console had to become real.
+An unresolved texture draws the magenta checker rather than failing the frame, which is the right
+call and also means being told is the only way anyone finds out; `unresolved_textures` has existed
+since bindings did and nothing asked it.
+
 That closes the loop the milestone is judged on — edit a transform, save,
 reopen, and the scene is what it was left as — and it is the same file the
 runtime and the headless capture load.

@@ -139,6 +139,13 @@ pub struct Transaction {
     label: String,
     commands: Vec<WorldCommand>,
     merge_key: Option<String>,
+    /// The history revision of the state this entry moves back to.
+    ///
+    /// Written by [`CommandHistory`] as a transaction enters a stack, and
+    /// meaningless until then. It rides along with the entry so that undo and
+    /// redo restore the revision the world actually had, rather than a stack
+    /// depth that says nothing about which edits are in it.
+    previous_revision: u64,
 }
 
 impl Transaction {
@@ -159,6 +166,11 @@ impl Transaction {
             merge_key: Some(key.into()),
             ..self
         }
+    }
+
+    /// The revision the world returns to when this entry is applied.
+    const fn previous_revision(&self) -> u64 {
+        self.previous_revision
     }
 
     /// The merge run this transaction belongs to, if any.
@@ -207,6 +219,7 @@ impl Transaction {
             label: self.label,
             commands: inverses,
             merge_key: self.merge_key,
+            previous_revision: self.previous_revision,
         })
     }
 }
@@ -250,6 +263,8 @@ impl CommandBuffer {
             label: label.into(),
             commands: self.commands,
             merge_key: None,
+            // Replaced by the history when this enters a stack.
+            previous_revision: 0,
         }
     }
 }
@@ -260,6 +275,11 @@ pub struct CommandHistory {
     undo: Vec<Transaction>,
     redo: Vec<Transaction>,
     limit: usize,
+    /// Which state the world is in, as far as this history knows.
+    revision: u64,
+    /// The next unused revision. Only ever moves forward, so a state that has
+    /// been left behind can never be mistaken for one returned to.
+    next_revision: u64,
 }
 
 impl Default for CommandHistory {
@@ -280,7 +300,31 @@ impl CommandHistory {
             undo: Vec::new(),
             redo: Vec::new(),
             limit,
+            revision: 0,
+            next_revision: 1,
         }
+    }
+
+    /// Identifies the state the world is in, as far as history is concerned.
+    ///
+    /// Two equal revisions mean the same edits have been applied, so a caller
+    /// that remembers the revision it last saved at can ask whether the world
+    /// has come back to it — including by undoing, which restores the revision
+    /// along with the state. A fresh edit never reuses one, so a different
+    /// route to a similar-looking world does not read as unchanged.
+    ///
+    /// This exists because the obvious alternatives are wrong. A flag set on
+    /// every edit can never return to clean. A stack depth does not move during
+    /// a merged drag, though the world does, and it repeats itself once the
+    /// bounded stack starts dropping its oldest entry.
+    pub const fn revision(&self) -> u64 {
+        self.revision
+    }
+
+    /// Moves to a state nothing has been at before.
+    fn advance_revision(&mut self) {
+        self.revision = self.next_revision;
+        self.next_revision += 1;
     }
 
     /// Applies `transaction`, recording it as one undo step.
@@ -300,13 +344,19 @@ impl CommandHistory {
                 .last()
                 .is_some_and(|previous| previous.merge_key.as_deref() == Some(key))
         });
-        let inverse = transaction.apply(world)?;
+        let leaving = self.revision;
+        let mut inverse = transaction.apply(world)?;
         self.redo.clear();
+        // Every applied edit moves to a state nothing has been at before,
+        // including one that merges into the run above it: the drag changed the
+        // world even though the stack did not grow.
+        self.advance_revision();
         if continues_run {
             // The run's first inverse already restores the value from before
             // the run started, so later ones are dropped rather than stacked.
             return Ok(());
         }
+        inverse.previous_revision = leaving;
         self.push_undo(inverse);
         Ok(())
     }
@@ -327,7 +377,12 @@ impl CommandHistory {
             return Ok(None);
         };
         let label = transaction.label().to_owned();
-        let inverse = transaction.apply(world)?;
+        let returning_to = transaction.previous_revision();
+        let mut inverse = transaction.apply(world)?;
+        // The entry going onto the other stack carries the state being left,
+        // so redoing arrives back at exactly the revision undo departed from.
+        inverse.previous_revision = self.revision;
+        self.revision = returning_to;
         self.redo.push(inverse);
         Ok(Some(label))
     }
@@ -338,7 +393,10 @@ impl CommandHistory {
             return Ok(None);
         };
         let label = transaction.label().to_owned();
-        let inverse = transaction.apply(world)?;
+        let returning_to = transaction.previous_revision();
+        let mut inverse = transaction.apply(world)?;
+        inverse.previous_revision = self.revision;
+        self.revision = returning_to;
         self.push_undo(inverse);
         Ok(Some(label))
     }
@@ -366,6 +424,10 @@ impl CommandHistory {
     pub fn clear(&mut self) {
         self.undo.clear();
         self.redo.clear();
+        // A cleared history belongs to a world that was rebuilt, which is a
+        // state nothing has been at before rather than the one this history
+        // happened to be showing.
+        self.advance_revision();
     }
 
     fn push_undo(&mut self, transaction: Transaction) {
@@ -603,6 +665,145 @@ mod tests {
         ));
         assert_eq!(world.get(other).unwrap().name, None);
         assert_eq!(layer_bits(&world, entity), (-50.0_f32).to_bits());
+    }
+
+    /// What the revision is for: a caller can ask whether the world has come
+    /// back to a state it remembers, without comparing whole documents.
+    #[test]
+    fn undoing_back_to_a_state_returns_its_revision() {
+        let (mut world, entity, _) = world_with_two_entities();
+        let mut history = CommandHistory::default();
+        let saved = history.revision();
+
+        let moved = Transform3D {
+            position: [1.0, 2.0, 3.0],
+            ..Transform3D::default()
+        };
+        history
+            .apply(
+                edit(
+                    "Move",
+                    vec![WorldCommand::SetTransform3D {
+                        entity,
+                        transform: Some(moved),
+                    }],
+                ),
+                &mut world,
+            )
+            .unwrap();
+        assert_ne!(history.revision(), saved, "an edit is a different state");
+
+        history.undo(&mut world).unwrap();
+        assert_eq!(
+            history.revision(),
+            saved,
+            "undoing back to where it was saved must read as saved"
+        );
+
+        history.redo(&mut world).unwrap();
+        assert_ne!(history.revision(), saved);
+        history.undo(&mut world).unwrap();
+        assert_eq!(history.revision(), saved, "and again, however many times");
+    }
+
+    /// A drag merges into one undo step, so the stack does not grow while the
+    /// world keeps changing. The revision has to move anyway, or a drag that
+    /// began at the saved state would read as though nothing had happened.
+    #[test]
+    fn a_merged_run_moves_the_revision_every_time_it_changes_the_world() {
+        let (mut world, entity, _) = world_with_two_entities();
+        let mut history = CommandHistory::default();
+        let saved = history.revision();
+
+        let mut seen = vec![saved];
+        for step in [1.0_f32, 2.0, 3.0, 4.0] {
+            let mut buffer = CommandBuffer::new();
+            buffer.push(WorldCommand::SetTransform3D {
+                entity,
+                transform: Some(Transform3D {
+                    position: [step, 0.0, 0.0],
+                    ..Transform3D::default()
+                }),
+            });
+            history
+                .apply(buffer.into_transaction("Drag").merging("drag"), &mut world)
+                .unwrap();
+            assert!(
+                !seen.contains(&history.revision()),
+                "every step of a drag is a state of its own"
+            );
+            seen.push(history.revision());
+        }
+
+        history.undo(&mut world).unwrap();
+        assert_eq!(
+            history.revision(),
+            saved,
+            "and undoing the run returns to before it started"
+        );
+    }
+
+    /// A different edit made after undoing cannot land on the abandoned state,
+    /// however much the stacks happen to line up.
+    #[test]
+    fn an_edit_after_undoing_never_reuses_the_state_it_replaced() {
+        let (mut world, entity, other) = world_with_two_entities();
+        let mut history = CommandHistory::default();
+        let rename = |name: &str| {
+            edit(
+                "Rename",
+                vec![WorldCommand::SetName {
+                    entity,
+                    name: Some(name.to_owned()),
+                }],
+            )
+        };
+
+        history.apply(rename("First"), &mut world).unwrap();
+        let abandoned = history.revision();
+        history.undo(&mut world).unwrap();
+        history
+            .apply(
+                edit(
+                    "Rename other",
+                    vec![WorldCommand::SetName {
+                        entity: other,
+                        name: Some("Other".to_owned()),
+                    }],
+                ),
+                &mut world,
+            )
+            .unwrap();
+
+        assert_ne!(history.revision(), abandoned);
+        assert!(history.undo(&mut world).unwrap().is_some());
+        assert_ne!(
+            history.revision(),
+            abandoned,
+            "the stacks match the abandoned state's shape, and the world does not"
+        );
+    }
+
+    /// Rebuilding a world is not a return to anything.
+    #[test]
+    fn clearing_the_history_moves_to_a_state_of_its_own() {
+        let (mut world, entity, _) = world_with_two_entities();
+        let mut history = CommandHistory::default();
+        let empty = history.revision();
+        history
+            .apply(
+                edit(
+                    "Rename",
+                    vec![WorldCommand::SetName {
+                        entity,
+                        name: Some("Renamed".to_owned()),
+                    }],
+                ),
+                &mut world,
+            )
+            .unwrap();
+        history.clear();
+        assert_ne!(history.revision(), empty);
     }
 
     #[test]

@@ -83,7 +83,9 @@ Every world edit can go through a `WorldCommand` that produces its own inverse:
 set name, set the transform, set parent, set or remove a component.
 `Transaction` is all-or-nothing, and `CommandHistory` gives bounded undo and
 redo with labelled steps and merge runs, so a continuous drag collapses into one
-undoable step rather than several hundred.
+undoable step rather than several hundred. The history also numbers the state
+the world is in, so a tool that remembers the number it last saved can tell
+whether the world and the file still agree — including after undoing back to it.
 
 ### Input
 
@@ -186,8 +188,20 @@ frame.
   texture, space, anchor, and layer
 - Reparenting through a **Parent** menu that offers only the moves the world
   would accept
-- Undo and redo of every edit, with drag-merging so a slider drag is one step
-- A live viewport with orbit, pan, zoom, and reset-to-authored-camera
+- Undo and redo of every edit, with drag-merging so a slider drag is one step;
+  Ctrl+Z, Ctrl+Shift+Z, and Ctrl+Y
+- An unsaved marker that means the world and the file differ, so undoing back to
+  what was saved reads as saved again
+- A confirmation before anything that would throw unsaved work away — opening
+  another scene, reloading from disk, discarding changes, and closing the window
+  — each naming what it is about to do and offering to save instead
+- A live viewport with orbit, pan, zoom, reset-to-authored-camera, and **Focus
+  selection** (F), which centres the view on the selected entity; the zoom spans
+  a factor of four hundred and moves proportionally, and the orbit cannot be
+  driven onto the pole
+- An axis indicator in the scene view's corner drawn from the same camera view
+  the frame under it was drawn through, foreshortening and reordering its arms
+  as the camera turns
 - Perspective and orthographic toggle
 - Scene and Game views, the latter rendering through the authored camera with no
   editor chrome painted over it — both live at once in the `2 by 3` layout
@@ -195,9 +209,18 @@ frame.
   launches: `2 by 3` puts Scene above Game with Hierarchy, Project, and
   Inspector beside them, and `Wide` shows one view at a time over a Project
   dock
-- Play, pause, stop, and reset-to-authored-state, driving the real engine
-  lifecycle rather than a display flag
-- A Project dock with a list/grid toggle, and a Console dock
+- Play, pause, and stop, driving the real engine lifecycle rather than a display
+  flag, and a separate **Discard changes** that returns the world to the file
+- A Project dock listing the real contents of the directory the open scene
+  lives in, with a list/grid toggle, a search that filters it, a refresh, and a
+  double click on a scene row to open it
+- A Console dock holding what the editor has actually said — every failure, what
+  each scene turned out to be when it opened, and every texture it names that
+  nothing has bound — bounded, with a repeated message collapsed into a count so
+  a per-frame render failure cannot bury what explains it, and feeding the error
+  and warning counts in the status bar
+- Reopening the scene the editor was last left in, overridden by a path on the
+  command line, with the file and its unsaved state named in the window title
 - Preferences that survive a restart
 - A deterministic full-window screenshot captured in CI
 
@@ -205,31 +228,23 @@ frame.
 
 Listed because a control that looks like a feature is worse than an absent one.
 `docs/editor-audit.md` is the full sweep — control by control, with what breaks
-under use and what the editor cannot express at all. This is the summary.
+under use and what the editor cannot express at all. This is the summary, and
+it is deliberately short now: everything the audit found is either working or
+gone, and what is left here is waiting on a build rather than on a handler.
 
-- **Select, Move, Rotate, Scale** — they set a mode nothing reads. There are no
-  gizmos
 - **Play and Pause** — they move the engine lifecycle and nothing else. No frame
-  is advanced, so no gameplay runs; the demo's own turning cube does not turn.
-  **Stop** does something, and what it does is discard every unsaved edit
-- **The asset search box** — accepts typing and filters nothing, which is worse
-  than the buttons that visibly do nothing
-- **The axis gizmo in the scene view's corner** — painted at fixed angles, so it
-  shows the same orientation whichever way the camera is pointing
-- **`+` Add entity** and **Add Component** — not handled. Entities and components
-  can only come from a file
-- **Filter assets**, the folder tree, and the asset rows themselves — decoration
-- **The project browser's contents** — eight hardcoded entries. It does not read
-  a directory, so it shows the same list whatever scene is open
-- **Edit, Scene, Build, Tools, Help** — plain labels, not menus. File and View
-  open
-- **Tag** and **Layer** in the inspector — fixed text. The per-component property
-  rows below them now read the entity's own payload, but they are a readout: a
-  component's fields cannot be edited from the inspector
-- **The project name in the top bar** — a label
-- **The Console** — three fixed lines. Two interpolate real values (entity count,
-  lifecycle state), so it is a status readout rather than a log; nothing the
-  engine reports reaches it
+  is advanced, so no gameplay runs; the demo's own turning cube does not turn
+- **Rotation** in the inspector — the word "Quaternion". The format stores a
+  rotation and the renderer applies it; nothing edits it
+
+Removed rather than left drawn, because each was a promise about a feature that
+does not exist: the Select, Move, Rotate, and Scale tool modes, which set a mode
+nothing read and had no gizmos to drive; "Scene", "Build", "Tools", and "Help",
+which were labels shaped like menus; the top bar's project name; the hierarchy's
+add-entity button and the inspector's Add Component, which need spawn and
+component commands behind them; the inspector's Tag and Layer, which are not
+things a Sindri entity has; the collapse chevrons and overflow menus that
+collapsed and overflowed nothing; and the settings gear.
 
 ---
 

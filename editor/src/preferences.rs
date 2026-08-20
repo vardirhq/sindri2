@@ -77,16 +77,28 @@ pub enum BottomTab {
 
 /// Editor settings that outlive a session.
 ///
-/// Deliberately small. Anything derived from the scene, the selection, or the
-/// current camera is state rather than preference, and restoring it would be
-/// restoring a moment rather than a choice.
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
+/// Deliberately small. Anything derived from the selection or the current
+/// camera is state rather than preference, and restoring it would be restoring
+/// a moment rather than a choice.
+///
+/// The open scene is the one thing here that looks like state and is not. It is
+/// not where the camera happened to be pointing when the editor closed; it is
+/// which project someone is working on, and answering that question again by
+/// hand every launch is the thing this whole module exists to stop.
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(default)]
 pub struct Preferences {
     pub layout: Layout,
     pub asset_view: AssetView,
     pub projection: CameraProjection,
     pub bottom_tab: BottomTab,
+    /// The scene file the editor last had open, reopened on the next launch.
+    ///
+    /// A path rather than anything richer, and one the editor is free to fail
+    /// to open: a project can move or be deleted between launches, and an
+    /// editor that refuses to start because a remembered file is gone is worse
+    /// than one that opens on the default and says why.
+    pub last_scene: Option<String>,
 }
 
 impl Preferences {
@@ -102,8 +114,8 @@ impl Preferences {
             .unwrap_or_default()
     }
 
-    pub fn save(self, storage: &mut dyn eframe::Storage) {
-        if let Ok(text) = serde_json::to_string(&self) {
+    pub fn save(&self, storage: &mut dyn eframe::Storage) {
+        if let Ok(text) = serde_json::to_string(self) {
             storage.set_string(KEY, text);
         }
     }
@@ -133,6 +145,7 @@ mod tests {
             asset_view: AssetView::Grid,
             projection: CameraProjection::Orthographic,
             bottom_tab: BottomTab::Console,
+            last_scene: Some("projects/level.scene.json".to_owned()),
         };
         let text = serde_json::to_string(&chosen).unwrap();
         assert_eq!(serde_json::from_str::<Preferences>(&text).unwrap(), chosen);
@@ -145,6 +158,10 @@ mod tests {
         let partial: Preferences = serde_json::from_str(r#"{"asset_view":"grid"}"#).unwrap();
         assert_eq!(partial.asset_view, AssetView::Grid);
         assert_eq!(partial.projection, CameraProjection::Perspective);
+        assert_eq!(
+            partial.last_scene, None,
+            "settings from before the editor remembered a scene open the default one"
+        );
     }
 
     /// Somewhere to write to, so the round trip through storage is checked
@@ -176,6 +193,7 @@ mod tests {
             asset_view: AssetView::Grid,
             projection: CameraProjection::Orthographic,
             bottom_tab: BottomTab::Console,
+            last_scene: Some("projects/level.scene.json".to_owned()),
         };
 
         chosen.save(&mut storage);

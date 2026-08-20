@@ -117,3 +117,26 @@ Pan is measured in fractions of the framed half-height rather than in world unit
 the picture by the same amount whether the subject is a metre or a kilometre away, and the
 perspective and orthographic projections agree about what a pan of one half means. A test holds them
 to within a ten-thousandth of each other.
+
+A viewport that paints its own chrome — an axis indicator, a grid, a gizmo — has to know which way
+the world is facing to draw any of it truthfully, and one that moves the camera on the user's behalf
+has to know how much of the world is framed. `SceneExtractor::world_camera` answers both under the
+same `CameraView` a frame would be extracted with, returning a `ViewCamera` — the view matrix and
+the framed half-height — or `None` when the world holds no perspective camera. The alternative is a
+second copy of the orbit maths beside the first, which is how an indicator ends up disagreeing with
+the picture it is drawn on top of; the editor's axis gizmo was painted at three fixed offsets and
+claimed the same orientation from every angle.
+
+The framed half-height is the pan's own unit: a pan of one moves the picture by exactly that much.
+That makes it what turns a distance on screen back into a pan, which is how the editor's **Focus
+selection** centres the view on something without knowing anything about how the camera got where it
+is.
+
+The orbit cannot be driven onto the pole. There the offset is parallel to the camera's up axis and
+nothing says which way round the picture goes; `look_at` returns a matrix rather than failing, and
+the roll it picks is decided by leftover rounding error, so dragging through straight down whips the
+whole scene round to face the other way. Pitch turns the offset in the plane that holds it and `up`,
+so it adds directly to the angle between them, and `orbited_offset` clamps it there — a hundredth of
+a radian short of either pole. The clamp lives in the orbit maths rather than in the caller because
+this is where the authored elevation is known: a viewport clamping its own pitch would be guessing
+how far the scene had already tilted.

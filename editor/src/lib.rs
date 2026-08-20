@@ -8,10 +8,14 @@
 //! tested by opening it and looking.
 
 #[cfg(not(target_arch = "wasm32"))]
+pub mod console;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod fixture;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod native;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod preferences;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod project;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod scene_file;

@@ -220,6 +220,37 @@ impl SceneExtractor {
         Ok(frame.prepare()?)
     }
 
+    /// Where the world camera ends up looking, under the same adjustment a
+    /// frame would be extracted with.
+    ///
+    /// An editor paints chrome of its own — an axis indicator, a grid, a
+    /// gizmo — and moves the camera on the user's behalf, and both need to know
+    /// which way the world is facing and how much of it is framed. Without this
+    /// it either extracts a frame it throws away or keeps a second copy of the
+    /// orbit maths, and a second copy is how an indicator ends up disagreeing
+    /// with the picture it sits on top of.
+    ///
+    /// No projection: chrome sits in the corner of a viewport rather than in
+    /// the world, and where a thing is on screen relative to the middle does
+    /// not depend on how the world is flattened. `None` means the world holds
+    /// no perspective camera, which is what extraction reports as
+    /// [`SceneExtractError::MissingWorldCamera`].
+    pub fn world_camera(
+        &self,
+        world: &World,
+        view: CameraView,
+    ) -> Result<Option<ViewCamera>, SceneExtractError> {
+        // Any aspect ratio will do: it shapes a projection, and none is
+        // returned.
+        Ok(self
+            .resolve_cameras(world, 1.0, view)?
+            .world
+            .map(|camera| ViewCamera {
+                view: camera.view,
+                framed_half_height: camera.framed_half_height,
+            }))
+    }
+
     fn resolve_cameras(
         &self,
         world: &World,
@@ -294,6 +325,7 @@ impl SceneExtractor {
                     resolved.world = Some(ResolvedCamera {
                         view,
                         view_projection: projection * view,
+                        framed_half_height: half_height,
                     });
                 }
                 CameraComponent::Orthographic {
@@ -309,11 +341,12 @@ impl SceneExtractor {
                         near,
                         far,
                     };
+                    let half_height = vertical_size * 0.5;
                     resolved.overlay = Some(ResolvedCamera {
                         view: camera.view(),
                         view_projection: camera.view_projection(aspect),
+                        framed_half_height: half_height,
                     });
-                    let half_height = vertical_size * 0.5;
                     resolved.overlay_extent = Some(OverlayExtent {
                         center,
                         half_extent: Vec2::new(half_height * aspect, half_height),
@@ -338,6 +371,25 @@ struct ResolvedCameras {
 struct ResolvedCamera {
     view: Mat4,
     view_projection: Mat4,
+    framed_half_height: f32,
+}
+
+/// The world camera as a viewport's own chrome and camera controls need it.
+///
+/// Handed out by [`SceneExtractor::world_camera`], which is the only supported
+/// way to ask: everything here is derived from the authored camera and the
+/// viewer's adjustment together, and deriving it a second time somewhere else
+/// is how two answers about the same camera come to disagree.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ViewCamera {
+    /// The matrix a frame drawn now would be seen through.
+    pub view: Mat4,
+    /// Half the height the camera frames at its target, in world units.
+    ///
+    /// This is the unit a pan is measured in — a pan of one moves the picture
+    /// by exactly this much — so it is also what turns a distance on screen
+    /// back into a pan, which is how a viewport centres itself on something.
+    pub framed_half_height: f32,
 }
 
 /// The overlay camera's visible half-size, which sprite anchors resolve against.
@@ -358,11 +410,38 @@ fn panned_shift(offset: Vec3, up: Vec3, pan: Vec2) -> Vec3 {
     right * -pan.x + plane_up * -pan.y
 }
 
+/// How close to straight up or straight down an orbit may take the camera.
+///
+/// At the pole the offset is parallel to `up`, and the pair no longer says
+/// which way round the picture goes. `look_at` still returns a matrix there
+/// rather than failing, which is worse than failing: the roll it picks is
+/// decided by whatever rounding error survived, so dragging through straight
+/// down whips the whole scene round to face the other way. Stopping a hundredth
+/// of a radian short costs nothing anyone can see and removes the case.
+const POLAR_LIMIT: f32 = 0.01;
+
+/// Where the camera sits after the viewer's orbit, relative to its target.
+///
+/// Pitch turns the offset in the plane that holds it and `up`, so it adds
+/// directly to the angle between them. That is what makes the guard here exact:
+/// the limit is applied to the angle it actually produces, rather than to a
+/// pitch that a caller would have to combine with an authored elevation it
+/// cannot see to know whether it was safe.
 fn orbited_offset(authored_offset: Vec3, up: Vec3, view: CameraView) -> Vec3 {
     let scaled = authored_offset * view.distance_scale;
     let yawed = Quat::from_axis_angle(up, view.orbit.x) * scaled;
     let right = up.cross(yawed).normalize_or_zero();
-    Quat::from_axis_angle(right, view.orbit.y) * yawed
+    if right == Vec3::ZERO {
+        // Authored looking straight down its own up axis. There is no axis to
+        // pitch about, and the scene chose this, so it is left alone.
+        return yawed;
+    }
+    let polar = up.angle_between(yawed);
+    let pitch = view.orbit.y.clamp(
+        POLAR_LIMIT - polar,
+        std::f32::consts::PI - POLAR_LIMIT - polar,
+    );
+    Quat::from_axis_angle(right, pitch) * yawed
 }
 
 /// How far in front of a camera a point is, which is what transparent draws

@@ -864,3 +864,142 @@ fn bindings_replace_rather_than_duplicate() {
     assert_eq!(bindings.resolve("b.png"), TextureRegistry::MISSING);
     assert_eq!(bindings.get("b.png"), None);
 }
+
+/// What a viewport's own chrome is drawn from. The orbit that turns the picture
+/// has to turn the view it is asked for, or an axis indicator drawn from it
+/// will disagree with the scene under it — which is exactly what the editor's
+/// did while it was painted at fixed angles.
+#[test]
+fn the_world_camera_view_answers_the_orbit_the_frame_was_drawn_with() {
+    let world = world_from(&scene(""));
+    let extractor = SceneExtractor::new().expect("built-in components register");
+
+    let resting = extractor
+        .world_camera(&world, CameraView::default())
+        .expect("the world holds a perspective camera")
+        .expect("a perspective camera resolves")
+        .view;
+    // The authored camera sits at (3, 2, 4) looking at the origin, so world X
+    // is already partly towards the viewer rather than straight across.
+    let across = resting.transform_vector3(Vec3::X);
+    assert!(across.x > 0.0, "world X points right of the picture");
+    assert!(across.z > 0.0, "and towards the viewer");
+
+    let quarter_turn = extractor
+        .world_camera(
+            &world,
+            CameraView {
+                orbit: Vec2::new(std::f32::consts::FRAC_PI_2, 0.0),
+                ..CameraView::default()
+            },
+        )
+        .expect("the world holds a perspective camera")
+        .expect("a perspective camera resolves")
+        .view;
+    let turned = quarter_turn.transform_vector3(Vec3::X);
+    assert!(
+        (turned - across).length() > 0.5,
+        "a quarter turn has to move the axes: {across} became {turned}"
+    );
+}
+
+/// A world with nothing to look through says so rather than inventing a view.
+#[test]
+fn a_world_with_no_perspective_camera_has_no_view_to_offer() {
+    let world = world_from(&document(
+        r#"{ "id": "cube", "transform_3d": {},
+          "components": { "sindri.mesh": { "primitive": "cube", "texture": "t.png" } } }"#,
+    ));
+    let extractor = SceneExtractor::new().expect("built-in components register");
+    assert_eq!(
+        extractor
+            .world_camera(&world, CameraView::default())
+            .expect("asking is not an error"),
+        None
+    );
+}
+
+/// A pan of one moves the picture by exactly the framed half-height, which is
+/// what lets an editor turn a distance on screen back into a pan and centre
+/// itself on something.
+#[test]
+fn a_pan_of_one_moves_the_picture_by_the_framed_half_height() {
+    let world = world_from(&scene(""));
+    let extractor = SceneExtractor::new().expect("built-in components register");
+    let camera = |pan| {
+        extractor
+            .world_camera(
+                &world,
+                CameraView {
+                    pan,
+                    ..CameraView::default()
+                },
+            )
+            .expect("the world holds a perspective camera")
+            .expect("a perspective camera resolves")
+    };
+
+    let resting = camera(Vec2::ZERO);
+    let panned = camera(Vec2::new(0.0, 1.0));
+    assert!(
+        close(panned.framed_half_height, resting.framed_half_height),
+        "panning frames the same amount of world"
+    );
+    // The origin was in the middle; after a pan of one upwards it is exactly a
+    // half-height below it, measured in the view's own units.
+    let before = resting.view.transform_point3(Vec3::ZERO);
+    let after = panned.view.transform_point3(Vec3::ZERO);
+    assert!(
+        close(after.y - before.y, resting.framed_half_height),
+        "a pan of one moved the origin by {} rather than {}",
+        after.y - before.y,
+        resting.framed_half_height
+    );
+}
+
+/// The camera must never reach the pole, whatever it is asked for.
+///
+/// There the offset is parallel to `up` and nothing says which way round the
+/// picture goes, so dragging through straight down whips the scene round to
+/// face the other way. `look_at` returns a matrix rather than failing, which is
+/// why this has to be checked on the angle rather than on a NaN. The guard
+/// lives in the orbit maths because that is where the authored elevation is
+/// known: a caller clamping its own pitch would be guessing at how far the
+/// scene had already tilted.
+#[test]
+fn an_orbit_stops_short_of_the_pole_however_far_it_is_driven() {
+    let world = world_from(&scene(""));
+    let extractor = SceneExtractor::new().expect("built-in components register");
+    let up = Vec3::Y;
+    // The authored camera sits at (3, 2, 4), which is 1.19 radians off the up
+    // axis, so this is the pitch that lands exactly on the pole.
+    let onto_the_pole = -up.angle_between(Vec3::new(3.0, 2.0, 4.0));
+
+    for pitch in [onto_the_pole, -100.0, -2.0, -1.5, 1.5, 2.0, 100.0] {
+        for yaw in [0.0, 1.0, -2.5] {
+            let camera = extractor
+                .world_camera(
+                    &world,
+                    CameraView {
+                        orbit: Vec2::new(yaw, pitch),
+                        ..CameraView::default()
+                    },
+                )
+                .expect("the world holds a perspective camera")
+                .expect("a perspective camera resolves");
+            assert!(
+                camera.view.is_finite(),
+                "yaw {yaw} pitch {pitch} produced {:?}",
+                camera.view
+            );
+            // No pan, so the target is the origin and the camera's own position
+            // is the offset the orbit produced.
+            let eye = camera.view.inverse().w_axis.truncate();
+            let polar = up.angle_between(eye);
+            assert!(
+                polar > 0.005 && polar < std::f32::consts::PI - 0.005,
+                "yaw {yaw} pitch {pitch} put the camera {polar} radians from the pole"
+            );
+        }
+    }
+}

@@ -15,14 +15,13 @@ use eframe::{
 use egui_material_icons::{
     MaterialIcon,
     icons::{
-        ICON_3D_ROTATION, ICON_ACCOUNT_TREE, ICON_ADD, ICON_ARROW_SELECTOR_TOOL, ICON_CAMERA_ALT,
-        ICON_CODE, ICON_DEPLOYED_CODE, ICON_DESCRIPTION, ICON_EXPAND_MORE, ICON_FILTER_LIST,
-        ICON_FOLDER, ICON_GRID_VIEW, ICON_IMAGE, ICON_MORE_VERT, ICON_OPEN_WITH, ICON_PAUSE,
-        ICON_PLAY_ARROW, ICON_REDO, ICON_SEARCH, ICON_SETTINGS, ICON_STOP, ICON_TUNE, ICON_UNDO,
-        ICON_VIEW_IN_AR, ICON_VIEW_LIST,
+        ICON_ACCOUNT_TREE, ICON_CAMERA_ALT, ICON_CENTER_FOCUS_STRONG, ICON_CODE,
+        ICON_DEPLOYED_CODE, ICON_DESCRIPTION, ICON_FOLDER, ICON_GRID_VIEW, ICON_IMAGE,
+        ICON_OPEN_WITH, ICON_PAUSE, ICON_PLAY_ARROW, ICON_REDO, ICON_REFRESH, ICON_SEARCH,
+        ICON_STOP, ICON_UNDO, ICON_VIEW_IN_AR, ICON_VIEW_LIST,
     },
 };
-use glam::Vec2 as GlamVec2;
+use glam::{Mat4, Vec2 as GlamVec2, Vec3};
 use serde_json::Value;
 use sindri_core::{
     CommandBuffer, CommandHistory, EngineLifecycle, EngineState, EntityData, EntityId,
@@ -37,12 +36,14 @@ use sindri_render::{
 };
 use sindri_scene::{
     CameraComponent, MeshComponent, MeshPrimitive, SceneExtractor, SpriteAnchor, SpriteComponent,
-    SpriteSpace,
+    SpriteSpace, ViewCamera,
 };
 
 use crate::{
+    console::{Console, Entry, Level},
     // `egui::Layout` is a different thing entirely and is already in scope.
     preferences::{AssetView, BottomTab, CameraProjection, Layout as WorkspaceLayout, Preferences},
+    project::{AssetKind, ProjectEntry, ProjectTree},
     scene_file::{DEFAULT_SCENE_PATH, SceneFile},
 };
 
@@ -80,12 +81,88 @@ pub fn run() -> eframe::Result {
     )
 }
 
+/// Something the user asked for that would throw unsaved work away.
+///
+/// Each of these used to happen the moment it was clicked. Two of them are in a
+/// menu, one is the window's close button, and one was the Stop button, which
+/// reset the scene rather than stopping anything.
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum Discarding {
+    OpenAnother,
+    /// A scene chosen in the project browser, which knows the path already and
+    /// so has no dialog to open.
+    OpenPath(PathBuf),
+    Reload,
+    Reset,
+    Close,
+}
+
+impl Discarding {
+    /// What the user is about to lose the work to, in the words of the control
+    /// they pressed.
+    const fn question(&self) -> &'static str {
+        match self {
+            Self::OpenAnother | Self::OpenPath(_) => {
+                "Open another scene and discard the changes to this one?"
+            }
+            Self::Reload => "Re-read this scene from disk and discard the changes?",
+            Self::Reset => "Discard the changes and go back to the scene as it was saved?",
+            Self::Close => "Close the editor and discard the changes?",
+        }
+    }
+
+    const fn verb(&self) -> &'static str {
+        match self {
+            Self::OpenAnother | Self::OpenPath(_) => "Open anyway",
+            Self::Reload => "Reload anyway",
+            Self::Reset => "Discard",
+            Self::Close => "Close anyway",
+        }
+    }
+}
+
+/// The editing shortcuts pressed this frame.
+///
+/// Four bools, which the pedantic lint reads as a struct that should have been
+/// an enum. It should not: these are independent, a frame can carry more than
+/// one, and each is exactly the yes-or-no its key asks.
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+struct Shortcuts {
+    focus: bool,
+    undo: bool,
+    redo: bool,
+    save: bool,
+}
+
+/// Reads the editing shortcuts, most specific first.
+///
+/// Order is the whole of it. egui matches modifiers logically, so an extra
+/// Shift is ignored and a Ctrl+Shift+Z tested against Ctrl+Z matches it —
+/// which meant the editor's redo shortcut was consumed by undo and performed
+/// one. Redo is asked first so that it sees its own keys.
+fn shortcuts(input: &mut egui::InputState) -> Shortcuts {
+    let redo = input.consume_key(
+        egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
+        egui::Key::Z,
+    ) || input.consume_key(egui::Modifiers::COMMAND, egui::Key::Y);
+    Shortcuts {
+        redo,
+        undo: input.consume_key(egui::Modifiers::COMMAND, egui::Key::Z),
+        save: input.consume_key(egui::Modifiers::COMMAND, egui::Key::S),
+        // Unmodified, as it is everywhere else that frames a selection. A text
+        // field with focus consumes the key before this sees it, so typing an
+        // "f" into a name does not move the camera.
+        focus: input.consume_key(egui::Modifiers::NONE, egui::Key::F),
+    }
+}
+
+/// What the confirm dialog came back with.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum EditorMode {
-    Select,
-    Move,
-    Rotate,
-    Scale,
+enum Answer {
+    Cancel,
+    Discard,
+    Save,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -105,6 +182,48 @@ struct EditorCamera {
     pan: GlamVec2,
     projection: CameraProjection,
 }
+
+impl Default for EditorCamera {
+    fn default() -> Self {
+        Self {
+            orbit: GlamVec2::ZERO,
+            zoom: 1.0,
+            pan: GlamVec2::ZERO,
+            projection: CameraProjection::Perspective,
+        }
+    }
+}
+
+/// The pan that would put `position` in the middle of what `camera` frames.
+///
+/// The pan's own definition, read backwards: a pan of one moves the picture by
+/// exactly the framed half-height, so a subject that far from the middle is
+/// exactly one pan away from it. Kept apart from the control that calls it
+/// because the way this goes wrong is a sign, and a sign is only visible by
+/// asking where the subject ended up.
+fn pan_to_centre(camera: ViewCamera, pan: GlamVec2, position: Vec3) -> GlamVec2 {
+    if camera.framed_half_height <= 0.0 {
+        return pan;
+    }
+    let offset = camera.view.transform_point3(position);
+    pan - GlamVec2::new(offset.x, offset.y) / camera.framed_half_height
+}
+
+/// How far from the authored camera's own elevation a drag can pitch.
+///
+/// A little under a right angle either way. The orbit cannot reach the pole
+/// whatever this says — the extractor guarantees that, where the authored
+/// elevation is known — so this is only about how much drag is worth spending.
+const PITCH_LIMIT: f32 = 1.5;
+
+/// How far in and out the wheel can take the scene view.
+///
+/// The old pair, 0.65 to 1.8, could not frame anything much larger or smaller
+/// than the demo cube: not quite twice as far out, and not quite twice as
+/// close. A scene is whatever someone builds, so the range is a factor of four
+/// hundred and the wheel moves through it proportionally.
+const MIN_ZOOM: f32 = 0.05;
+const MAX_ZOOM: f32 = 20.0;
 
 /// The camera a workspace tab looks through.
 ///
@@ -243,12 +362,29 @@ struct EditorApp {
     scene: SceneExtractor,
     world: World,
     file: SceneFile,
-    unsaved: bool,
+    /// The history revision the open file was last agreed with.
+    ///
+    /// Unsaved work is the world having moved away from it, which undoing back
+    /// reverses. The flag this replaced was set by every edit and cleared only
+    /// by a save, so undoing to exactly the saved state still claimed there was
+    /// something to lose.
+    saved_revision: u64,
+    /// What the user asked for that would throw unsaved work away, waiting on
+    /// an answer.
+    confirming: Option<Discarding>,
+    /// Set once closing has been agreed to, so the close request the editor
+    /// cancelled to ask the question is not cancelled a second time.
+    closing: bool,
     selection: Option<EntityId>,
     history: CommandHistory,
     search: String,
     asset_search: String,
-    mode: EditorMode,
+    /// The directory the open scene lives in, as it was last read.
+    ///
+    /// Read when a scene is opened rather than every frame: the browser redraws
+    /// at the viewport's frame rate and a directory does not, so a walk per
+    /// frame would be a syscall for every row sixty times a second.
+    project: ProjectTree,
     workspace_tab: WorkspaceTab,
     preferences: Preferences,
     lifecycle: EngineLifecycle,
@@ -268,6 +404,14 @@ struct EditorApp {
     notice: Option<String>,
     /// Whatever the last frame's render reported.
     render_error: Option<String>,
+    /// Everything the editor has said, in order.
+    console: Console,
+    /// The window title as last set.
+    ///
+    /// Kept so the title is sent when it changes rather than every frame: a
+    /// viewport command per frame is sixty round trips a second to say the same
+    /// thing.
+    title: String,
 }
 
 impl EditorApp {
@@ -275,7 +419,7 @@ impl EditorApp {
         configure_theme(&context.egui_ctx);
         let preferences = Preferences::load(context.storage);
         let scene = SceneExtractor::new().expect("the built-in component schemas register");
-        let (file, open_error) = open_requested_scene();
+        let (file, open_error) = open_requested_scene(preferences.last_scene.as_deref());
         // A scene that will not load must not take the editor down with it.
         // This used to unwrap, so a file that parsed and then failed validation
         // killed the process before the window existed — and the failure it
@@ -295,16 +439,19 @@ impl EditorApp {
         let renderers = SceneRenderers::new(&render_state);
         let scene_viewport = RuntimeViewport::new(render_state.clone(), "Sindri editor scene view");
         let game_viewport = RuntimeViewport::new(render_state, "Sindri editor game view");
-        Self {
+        let project = ProjectTree::beside(file.path());
+        let mut app = Self {
             scene,
             world,
             file,
-            unsaved: false,
+            saved_revision: 0,
+            confirming: None,
+            closing: false,
             selection,
             history: CommandHistory::default(),
             search: String::new(),
             asset_search: String::new(),
-            mode: EditorMode::Select,
+            project,
             workspace_tab: WorkspaceTab::Scene,
             preferences,
             lifecycle: initialized_lifecycle(),
@@ -317,17 +464,60 @@ impl EditorApp {
             game_viewport,
             notice: open_error.or(load_error),
             render_error: None,
+            console: Console::default(),
+            title: String::new(),
+        };
+        // Said after the field is built rather than during it, because what
+        // there is to say is read off the world and the bindings.
+        if let Some(failure) = app.notice.clone() {
+            app.console.error(failure);
         }
+        app.announce_scene();
+        app.remember_open_scene();
+        app
+    }
+
+    /// Whether the world has moved away from what the file holds.
+    fn unsaved(&self) -> bool {
+        self.history.revision() != self.saved_revision
     }
 
     /// Writes the world back to the file it came from.
     fn save(&mut self) {
         match self.file.save(&self.world) {
             Ok(()) => {
-                self.unsaved = false;
+                self.saved_revision = self.history.revision();
                 self.notice = None;
+                self.console.info(format!("Saved {}", self.file.label()));
             }
-            Err(error) => self.notice = Some(error.to_string()),
+            Err(error) => self.report(error.to_string()),
+        }
+    }
+
+    /// Does what was asked, or asks first when it would cost unsaved work.
+    fn discard_or_confirm(&mut self, action: Discarding, context: &egui::Context) {
+        if self.unsaved() {
+            self.confirming = Some(action);
+        } else {
+            self.discard(action, context);
+        }
+    }
+
+    /// Carries out an action that throws away whatever is unsaved.
+    fn discard(&mut self, action: Discarding, context: &egui::Context) {
+        self.confirming = None;
+        match action {
+            Discarding::OpenAnother => self.open_scene(),
+            Discarding::OpenPath(path) => self.open_path(&path),
+            Discarding::Reload => self.reload(),
+            Discarding::Reset => self.reset_to_authored(),
+            // Agreeing to close is not closing. The request that raised the
+            // question was cancelled, so nothing is asking the window to go any
+            // more; this asks again, and the flag lets that one through.
+            Discarding::Close => {
+                self.closing = true;
+                context.send_viewport_cmd(egui::ViewportCommand::Close);
+            }
         }
     }
 
@@ -363,31 +553,45 @@ impl EditorApp {
         let opened = match SceneFile::open(path) {
             Ok(opened) => opened,
             Err(error) => {
-                self.notice = Some(error.to_string());
+                self.report(error.to_string());
                 return;
             }
         };
         match load_world(&self.scene, opened.document()) {
             Ok(world) => {
                 self.file = opened;
+                self.project = ProjectTree::beside(self.file.path());
                 self.world = world;
                 self.history.clear();
                 self.selection = None;
-                self.unsaved = false;
+                self.saved_revision = self.history.revision();
                 self.lifecycle = initialized_lifecycle();
                 self.notice = None;
+                self.announce_scene();
+                self.remember_open_scene();
             }
-            Err(error) => self.notice = Some(error),
+            Err(error) => self.report(error),
         }
     }
 
     /// Re-reads the file, discarding unsaved edits along with their history.
     fn reload(&mut self) {
         if let Err(error) = self.file.reload() {
-            self.notice = Some(error.to_string());
+            self.report(error.to_string());
             return;
         }
+        self.refresh_project();
         self.reset_to_authored();
+    }
+
+    /// Re-reads the directory the browser is showing.
+    ///
+    /// The tree is cached, so a file added or removed outside the editor is
+    /// invisible until something asks for it again. Opening or reloading a
+    /// scene asks, and so does the browser's own refresh control — which is
+    /// what used to be an inert filter icon.
+    fn refresh_project(&mut self) {
+        self.project = ProjectTree::beside(self.file.path());
     }
 
     /// Turns pointer input over the viewport into camera movement.
@@ -409,13 +613,64 @@ impl EditorApp {
                 self.viewport_pan.y -= delta.y * 2.0 / height;
             } else if response.dragged_by(egui::PointerButton::Primary) {
                 self.viewport_yaw = (self.viewport_yaw + delta.x * 0.008) % TAU;
-                self.viewport_pitch = (self.viewport_pitch + delta.y * 0.008).clamp(-1.1, 1.1);
+                // Most of a right angle either way, from wherever the scene
+                // authored its camera. The extractor stops the orbit short of
+                // the pole itself, because that is where it knows how far the
+                // authored camera was already tilted; this only decides how far
+                // a drag is worth carrying.
+                self.viewport_pitch =
+                    (self.viewport_pitch + delta.y * 0.008).clamp(-PITCH_LIMIT, PITCH_LIMIT);
             }
         }
         if response.hovered() {
             let delta = context.input(|input| input.smooth_scroll_delta.y);
-            self.viewport_zoom = (self.viewport_zoom + delta * 0.002).clamp(0.65, 1.8);
+            // Multiplied rather than added: the range spans a factor of four
+            // hundred, and a fixed step that moves the picture usefully at one
+            // end does nothing at the other. A notch of the wheel is the same
+            // proportion of the distance wherever the camera is.
+            self.viewport_zoom =
+                (self.viewport_zoom * (delta * 0.002).exp()).clamp(MIN_ZOOM, MAX_ZOOM);
         }
+    }
+
+    /// Puts the selected entity in the middle of the scene view.
+    ///
+    /// Centres rather than fits: fitting needs the bounds of what is selected,
+    /// and an entity's bounds are a mesh's business, not a transform's. What
+    /// this fixes is the ordinary way a subject is lost — panned off the edge,
+    /// or never in frame because the authored camera was aimed elsewhere.
+    ///
+    /// The arithmetic is the pan's own definition read backwards. A pan of one
+    /// moves the picture by exactly the framed half-height, so a subject sitting
+    /// that far from the middle is exactly one pan away from it, and the
+    /// extractor is asked for both numbers rather than the editor keeping its
+    /// own copy of either.
+    fn focus_selection(&mut self) {
+        let Some(position) = self
+            .selection
+            .and_then(|entity| self.world.get(entity))
+            .and_then(|data| data.transform_3d)
+            .map(|transform| Vec3::from_array(transform.position))
+        else {
+            return;
+        };
+        let Ok(Some(camera)) = self.scene.world_camera(&self.world, self.scene_camera()) else {
+            return;
+        };
+        self.viewport_pan = pan_to_centre(camera, self.viewport_pan, position);
+    }
+
+    /// The camera the scene view is looking through.
+    fn scene_camera(&self) -> CameraView {
+        camera_for(
+            WorkspaceTab::Scene,
+            EditorCamera {
+                orbit: GlamVec2::new(self.viewport_yaw, self.viewport_pitch),
+                zoom: self.viewport_zoom,
+                pan: self.viewport_pan,
+                projection: self.preferences.projection,
+            },
+        )
     }
 
     /// Whether the viewer has moved away from the authored camera.
@@ -442,6 +697,68 @@ impl EditorApp {
         self.notice.as_deref().or(self.render_error.as_deref())
     }
 
+    /// Records which scene to reopen on the next launch.
+    ///
+    /// A detached scene clears it rather than leaving the previous one: the
+    /// editor should reopen where it was left, and it was left nowhere.
+    fn remember_open_scene(&mut self) {
+        self.preferences.last_scene = self.file.path().map(|path| path.display().to_string());
+    }
+
+    /// Names the open scene in the window title.
+    ///
+    /// The title is where an operating system shows what a window is for — in a
+    /// task switcher, a dock, a window list — and "Sindri Editor" answers that
+    /// with the name of the program. The file goes first because that is the
+    /// part a switcher has room for, and the unsaved marker goes with it,
+    /// matching the status bar rather than inventing a second vocabulary.
+    fn update_title(&mut self, context: &egui::Context) {
+        let title = format!(
+            "{}{} - Sindri Editor",
+            self.file.label(),
+            if self.unsaved() { " (unsaved)" } else { "" }
+        );
+        if title == self.title {
+            return;
+        }
+        context.send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
+        self.title = title;
+    }
+
+    /// Says that something the user asked for did not happen.
+    ///
+    /// The notice is the one line beside the viewport and is replaced by the
+    /// next thing that goes wrong; the console keeps it. Every failure goes
+    /// through here so the two cannot disagree about what happened.
+    fn report(&mut self, message: String) {
+        self.console.error(&message);
+        self.notice = Some(message);
+    }
+
+    /// Says what a scene turned out to be once it was loaded.
+    ///
+    /// A texture a scene names and nothing has bound draws the magenta checker
+    /// rather than failing the frame, which is the right call and also means
+    /// the only way anyone finds out is being told. `unresolved_textures` has
+    /// existed since bindings did and nothing asked it.
+    fn announce_scene(&mut self) {
+        self.console.info(format!(
+            "Opened {} - {} entities",
+            self.file.label(),
+            self.world.len()
+        ));
+        let mut unresolved: Vec<String> =
+            sindri_scene::unresolved_textures(&self.world, &self.renderers.bindings)
+                .into_iter()
+                .collect();
+        unresolved.sort();
+        for texture in unresolved {
+            self.console.warning(format!(
+                "{texture} is not bound, drawing the missing checker"
+            ));
+        }
+    }
+
     fn select(&mut self, entity: Option<EntityId>) {
         if self.selection != entity {
             self.history.break_merge_run();
@@ -462,9 +779,8 @@ impl EditorApp {
         let transaction = buffer
             .into_transaction("Edit entity")
             .merging(format!("inspector:{}", entity.index()));
-        match self.history.apply(transaction, &mut self.world) {
-            Ok(()) => self.unsaved = true,
-            Err(error) => self.notice = Some(error.to_string()),
+        if let Err(error) = self.history.apply(transaction, &mut self.world) {
+            self.report(error.to_string());
         }
     }
 
@@ -482,28 +798,25 @@ impl EditorApp {
         let mut buffer = CommandBuffer::new();
         buffer.push(WorldCommand::SetParent { entity, parent });
         self.history.break_merge_run();
-        match self
+        if let Err(error) = self
             .history
             .apply(buffer.into_transaction("Reparent entity"), &mut self.world)
         {
-            Ok(()) => self.unsaved = true,
-            Err(error) => self.notice = Some(error.to_string()),
+            self.report(error.to_string());
         }
     }
 
     fn undo(&mut self) {
         self.history.break_merge_run();
-        match self.history.undo(&mut self.world) {
-            Ok(_) => self.unsaved = true,
-            Err(error) => self.notice = Some(error.to_string()),
+        if let Err(error) = self.history.undo(&mut self.world) {
+            self.report(error.to_string());
         }
     }
 
     fn redo(&mut self) {
         self.history.break_merge_run();
-        match self.history.redo(&mut self.world) {
-            Ok(_) => self.unsaved = true,
-            Err(error) => self.notice = Some(error.to_string()),
+        if let Err(error) = self.history.redo(&mut self.world) {
+            self.report(error.to_string());
         }
     }
 
@@ -516,12 +829,13 @@ impl EditorApp {
             Ok(world) => {
                 self.world = world;
                 self.history.clear();
-                self.unsaved = false;
+                self.saved_revision = self.history.revision();
                 self.selection = None;
                 self.lifecycle = initialized_lifecycle();
                 self.notice = None;
+                self.announce_scene();
             }
-            Err(error) => self.notice = Some(error),
+            Err(error) => self.report(error),
         }
     }
 
@@ -534,7 +848,19 @@ impl EditorApp {
             _ => self.lifecycle.start(),
         };
         if let Err(error) = result {
-            self.notice = Some(error.to_string());
+            self.report(error.to_string());
+        }
+    }
+
+    /// Ends a play session, leaving the world exactly as it is.
+    ///
+    /// There is nothing to restore yet because nothing runs — see
+    /// `docs/editor-audit.md`. When play mode does drive the world, stopping
+    /// should put back what it was before play started, and that restoration
+    /// belongs here.
+    fn stop_playback(&mut self) {
+        if let Err(error) = self.lifecycle.stop() {
+            self.report(error.to_string());
         }
     }
 
@@ -542,28 +868,101 @@ impl EditorApp {
         if self.lifecycle.state() == EngineState::Running
             && let Err(error) = self.lifecycle.pause()
         {
-            self.notice = Some(error.to_string());
+            self.report(error.to_string());
         }
     }
 
-    fn handle_shortcuts(&mut self, context: &egui::Context) {
-        let (undo, redo, save) = context.input_mut(|input| {
-            (
-                input.consume_key(egui::Modifiers::COMMAND, egui::Key::Z),
-                input.consume_key(
-                    egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
-                    egui::Key::Z,
-                ) || input.consume_key(egui::Modifiers::COMMAND, egui::Key::Y),
-                input.consume_key(egui::Modifiers::COMMAND, egui::Key::S),
-            )
+    /// Catches the window's close button while there is unsaved work.
+    ///
+    /// The close is cancelled and the question asked; answering it either lets
+    /// the next request through or leaves the editor open. Without this, the
+    /// most ordinary way to leave the editor is also the one way to lose an
+    /// afternoon without being asked.
+    fn handle_close_request(&mut self, context: &egui::Context) {
+        if !context.input(|input| input.viewport().close_requested()) {
+            return;
+        }
+        if self.closing || !self.unsaved() {
+            return;
+        }
+        context.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+        self.confirming = Some(Discarding::Close);
+    }
+
+    /// Asks before throwing work away, and reports whether it is asking.
+    ///
+    /// Returns `true` while the question is on screen, so the frame's remaining
+    /// input handling stands down rather than acting on keys aimed at the
+    /// dialog.
+    fn confirm_dialog(&mut self, context: &egui::Context) -> bool {
+        let Some(action) = self.confirming.clone() else {
+            return false;
+        };
+        let saveable = self.file.path().is_some();
+        let mut answered = None;
+        egui::Modal::new(egui::Id::new("sindri-discard-confirm")).show(context, |ui| {
+            ui.set_width(360.0);
+            ui.label(
+                RichText::new("Unsaved changes")
+                    .strong()
+                    .size(13.0)
+                    .color(TEXT),
+            );
+            ui.add_space(6.0);
+            ui.label(
+                RichText::new(action.question())
+                    .size(12.0)
+                    .color(TEXT_MUTED),
+            );
+            ui.add_space(14.0);
+            ui.horizontal(|ui| {
+                if ui.button("Cancel").clicked() {
+                    answered = Some(Answer::Cancel);
+                }
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    if ui
+                        .button(RichText::new(action.verb()).color(ACCENT_BRIGHT))
+                        .clicked()
+                    {
+                        answered = Some(Answer::Discard);
+                    }
+                    if ui
+                        .add_enabled(saveable, egui::Button::new("Save first"))
+                        .clicked()
+                    {
+                        answered = Some(Answer::Save);
+                    }
+                });
+            });
         });
-        if save {
+        match answered {
+            None => {}
+            Some(Answer::Cancel) => self.confirming = None,
+            Some(Answer::Discard) => self.discard(action, context),
+            Some(Answer::Save) => {
+                self.save();
+                // A failed save leaves the question standing rather than
+                // discarding the work it could not write.
+                if !self.unsaved() {
+                    self.discard(action, context);
+                }
+            }
+        }
+        self.confirming.is_some()
+    }
+
+    fn handle_shortcuts(&mut self, context: &egui::Context) {
+        let pressed = context.input_mut(shortcuts);
+        if pressed.save {
             self.save();
         }
-        if redo {
+        if pressed.redo {
             self.redo();
-        } else if undo {
+        } else if pressed.undo {
             self.undo();
+        }
+        if pressed.focus {
+            self.focus_selection();
         }
     }
 
@@ -587,19 +986,11 @@ impl EditorApp {
                     );
                     ui.add_space(8.0);
                     self.file_menu(ui);
-                    for menu in ["Edit", "Scene"] {
-                        ui.add(
-                            egui::Button::new(RichText::new(menu).size(12.0).color(TEXT_MUTED))
-                                .frame(false),
-                        );
-                    }
+                    self.edit_menu(ui);
                     self.view_menu(ui);
-                    for menu in ["Build", "Tools", "Help"] {
-                        ui.add(
-                            egui::Button::new(RichText::new(menu).size(12.0).color(TEXT_MUTED))
-                                .frame(false),
-                        );
-                    }
+                    // "Scene", "Build", "Tools", and "Help" used to sit here.
+                    // None of them opened: they were labels shaped like menus,
+                    // which is a promise about four features that do not exist.
                     ui.add_space((ui.available_width() * 0.22).max(16.0));
                     let undo_tip = self.history.undo_label().map_or_else(
                         || "Nothing to undo".to_owned(),
@@ -620,16 +1011,17 @@ impl EditorApp {
                         self.redo();
                     }
                     let running = self.lifecycle.state() == EngineState::Running;
-                    if transport_icon(
-                        ui,
-                        ICON_STOP,
-                        false,
-                        true,
-                        "Stop and reset to the authored scene",
-                    )
-                    .clicked()
-                    {
-                        self.reset_to_authored();
+                    // Stop stops. It used to reset the scene to the file,
+                    // which is what the symbol between Pause and Play means to
+                    // nobody, and it did that without asking. Going back to
+                    // the authored scene is File → Discard changes, which now
+                    // says what it will cost.
+                    let playing = matches!(
+                        self.lifecycle.state(),
+                        EngineState::Running | EngineState::Paused
+                    );
+                    if transport_icon(ui, ICON_STOP, false, playing, "Stop").clicked() {
+                        self.stop_playback();
                     }
                     if transport_icon(ui, ICON_PAUSE, !running, running, "Pause").clicked() {
                         self.pause();
@@ -639,17 +1031,10 @@ impl EditorApp {
                     {
                         self.toggle_playback();
                     }
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        ui.add_space(12.0);
-                        ui.label(
-                            ICON_EXPAND_MORE
-                                .outlined()
-                                .rich_text()
-                                .size(16.0)
-                                .color(TEXT_FAINT),
-                        );
-                        ui.label(RichText::new("isogame").size(12.0).color(TEXT_MUTED));
-                    });
+                    // A project name and a chevron used to sit at this end,
+                    // naming a project that did not exist and opening nothing.
+                    // What project is open is the browser's business, and it
+                    // says so from the directory it is reading.
                 });
             });
     }
@@ -672,7 +1057,7 @@ impl EditorApp {
                     .stroke(Stroke::new(1.0, BORDER)),
             )
             .show(ui, |ui| {
-                panel_title(ui, "Hierarchy", Some(ICON_ADD));
+                panel_title(ui, "Hierarchy");
                 search_field(ui, &mut self.search, "Search");
                 ui.add_space(6.0);
                 egui::ScrollArea::vertical()
@@ -729,7 +1114,7 @@ impl EditorApp {
                     .stroke(Stroke::new(1.0, BORDER)),
             )
             .show(ui, |ui| {
-                panel_title(ui, "Inspector", None);
+                panel_title(ui, "Inspector");
                 let Some(entity) = self.selection else {
                     return;
                 };
@@ -753,15 +1138,11 @@ impl EditorApp {
                             transform_3d_section(ui, transform);
                         }
                         components_sections(ui, &components);
-                        ui.add_space(10.0);
-                        ui.add_sized(
-                            [ui.available_width(), 31.0],
-                            egui::Button::new(
-                                RichText::new("Add Component").size(12.0).color(TEXT),
-                            )
-                            .fill(PANEL_RAISED)
-                            .stroke(Stroke::new(1.0, BORDER)),
-                        );
+                        // An "Add Component" button used to close the panel.
+                        // Nothing handled it, and adding one properly means
+                        // choosing a type from the schema registry and writing
+                        // a default payload through `SetComponent` — a build,
+                        // not a button.
                     });
                 }
                 self.commit_draft(entity, &original, &draft);
@@ -774,6 +1155,9 @@ impl EditorApp {
     }
 
     fn asset_panel(&mut self, ui: &mut egui::Ui) {
+        let context = ui.ctx().clone();
+        let mut action = BrowserAction::None;
+        let mut clear_console = false;
         let (panel, default, min, max) = match self.preferences.layout {
             // A tall column, which is what makes the list view worth having.
             WorkspaceLayout::TwoByThree => {
@@ -810,17 +1194,35 @@ impl EditorApp {
                 });
                 ui.separator();
                 match self.preferences.bottom_tab {
-                    BottomTab::Project => project_browser(
-                        ui,
-                        &mut self.asset_search,
-                        &mut self.preferences.asset_view,
-                        folders,
-                    ),
+                    BottomTab::Project => {
+                        action = project_browser(
+                            ui,
+                            &mut self.asset_search,
+                            &mut self.preferences.asset_view,
+                            folders,
+                            &self.project,
+                            self.file.path(),
+                        );
+                    }
                     BottomTab::Console => {
-                        console_view(ui, self.world.len(), self.lifecycle.state());
+                        if console_view(ui, &self.console, self.lifecycle.state()) {
+                            clear_console = true;
+                        }
                     }
                 }
             });
+        if clear_console {
+            self.console.clear();
+        }
+        // Acted on outside the panel, because both answers write to the field
+        // the browser was reading from.
+        match action {
+            BrowserAction::None => {}
+            BrowserAction::Refresh => self.refresh_project(),
+            BrowserAction::Open(path) => {
+                self.discard_or_confirm(Discarding::OpenPath(path), &context);
+            }
+        }
     }
 
     /// Chooses how the workspace is arranged.
@@ -851,7 +1253,7 @@ impl EditorApp {
         ui.menu_button(RichText::new("File").size(12.0).color(TEXT_MUTED), |ui| {
             ui.set_min_width(190.0);
             if ui.button("Open scene…").clicked() {
-                self.open_scene();
+                self.discard_or_confirm(Discarding::OpenAnother, ui.ctx());
                 ui.close();
             }
             ui.separator();
@@ -869,12 +1271,51 @@ impl EditorApp {
                 .add_enabled(saveable, egui::Button::new("Reload from disk"))
                 .clicked()
             {
-                self.reload();
+                self.discard_or_confirm(Discarding::Reload, ui.ctx());
                 ui.close();
             }
             ui.separator();
             if ui.button("Discard changes").clicked() {
-                self.reset_to_authored();
+                self.discard_or_confirm(Discarding::Reset, ui.ctx());
+                ui.close();
+            }
+        });
+    }
+
+    /// Undo and redo, in the menu people look in for them.
+    ///
+    /// The same two actions as the toolbar icons and the keyboard, labelled
+    /// with what they would undo, which is the thing a menu can say and an icon
+    /// cannot. "Edit" was a label shaped like a menu until this.
+    fn edit_menu(&mut self, ui: &mut egui::Ui) {
+        ui.menu_button(RichText::new("Edit").size(12.0).color(TEXT_MUTED), |ui| {
+            ui.set_min_width(190.0);
+            let undo = self.history.undo_label().map_or_else(
+                || "Undo".to_owned(),
+                |label| format!("Undo {}", label.to_lowercase()),
+            );
+            if ui
+                .add_enabled(
+                    self.history.can_undo(),
+                    egui::Button::new(undo).shortcut_text("Ctrl+Z"),
+                )
+                .clicked()
+            {
+                self.undo();
+                ui.close();
+            }
+            let redo = self.history.redo_label().map_or_else(
+                || "Redo".to_owned(),
+                |label| format!("Redo {}", label.to_lowercase()),
+            );
+            if ui
+                .add_enabled(
+                    self.history.can_redo(),
+                    egui::Button::new(redo).shortcut_text("Ctrl+Shift+Z"),
+                )
+                .clicked()
+            {
+                self.redo();
                 ui.close();
             }
         });
@@ -909,13 +1350,13 @@ impl EditorApp {
                     ui.label(RichText::new("|").size(11.0).color(BORDER));
                     ui.add_space(10.0);
                     ui.label(
-                        RichText::new(if self.unsaved {
+                        RichText::new(if self.unsaved() {
                             format!("{} (unsaved)", self.file.label())
                         } else {
                             self.file.label()
                         })
                         .size(11.0)
-                        .color(if self.unsaved {
+                        .color(if self.unsaved() {
                             ACCENT
                         } else {
                             TEXT_MUTED
@@ -923,23 +1364,19 @@ impl EditorApp {
                     );
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         ui.add_space(12.0);
-                        ui.label(
-                            ICON_SETTINGS
-                                .outlined()
-                                .rich_text()
-                                .size(15.0)
-                                .color(TEXT_FAINT),
-                        );
-                        ui.separator();
-                        ui.label(
-                            RichText::new(if self.problem().is_some() {
-                                "1 Error, 0 Warnings"
+                        // Counted rather than guessed from whether a notice is
+                        // showing, which is what this used to do: it said "1
+                        // Error" for anything at all and never mentioned a
+                        // warning, because nothing in the editor could produce
+                        // one.
+                        let counts = self.console.counts();
+                        ui.label(RichText::new(counts.summary()).size(11.0).color(
+                            if counts.errors > 0 {
+                                ACCENT_BRIGHT
                             } else {
-                                "0 Errors, 0 Warnings"
-                            })
-                            .size(11.0)
-                            .color(TEXT_FAINT),
-                        );
+                                TEXT_FAINT
+                            },
+                        ));
                     });
                 });
             });
@@ -981,32 +1418,28 @@ impl EditorApp {
                 );
                 ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
                     ui.add_space(8.0);
-                    mode_icon(
-                        ui,
-                        &mut self.mode,
-                        EditorMode::Select,
-                        ICON_ARROW_SELECTOR_TOOL,
-                        "Select",
-                    );
-                    mode_icon(ui, &mut self.mode, EditorMode::Move, ICON_OPEN_WITH, "Move");
-                    mode_icon(
-                        ui,
-                        &mut self.mode,
-                        EditorMode::Rotate,
-                        ICON_3D_ROTATION,
-                        "Rotate",
-                    );
-                    mode_icon(ui, &mut self.mode, EditorMode::Scale, ICON_TUNE, "Scale");
-                    ui.separator();
-                    // "Local coordinates" and "Lit shading" used to sit here.
-                    // Neither did anything, and at this width they pushed the
-                    // controls that do work off the row. A button that cannot
-                    // be pressed usefully costs more than the space it takes.
+                    // Select, Move, Rotate, and Scale used to sit here. They
+                    // highlighted, wrote an `EditorMode` nothing read, and
+                    // there are no gizmos for them to drive — four buttons
+                    // promising direct manipulation the editor cannot do.
+                    // "Local coordinates" and "Lit shading" went the same way
+                    // earlier. A button that cannot be pressed usefully costs
+                    // more than the space it takes.
+                    //
                     // Panning can carry the subject off screen entirely, so
                     // the way back is a control rather than a remembered
                     // number.
                     if icon_button(ui, ICON_CAMERA_ALT, self.view_moved(), "Reset view").clicked() {
                         self.reset_view();
+                    }
+                    if ui
+                        .add_enabled_ui(self.selection.is_some(), |ui| {
+                            icon_button(ui, ICON_CENTER_FOCUS_STRONG, false, "Focus selection (F)")
+                        })
+                        .inner
+                        .clicked()
+                    {
+                        self.focus_selection();
                     }
                 });
             });
@@ -1027,15 +1460,11 @@ impl EditorApp {
             self.move_camera(&context, &response, rect.height());
         }
         let scale = context.pixels_per_point();
-        let camera = camera_for(
-            tab,
-            EditorCamera {
-                orbit: GlamVec2::new(self.viewport_yaw, self.viewport_pitch),
-                zoom: self.viewport_zoom,
-                pan: self.viewport_pan,
-                projection: self.preferences.projection,
-            },
-        );
+        let camera = if editing {
+            self.scene_camera()
+        } else {
+            camera_for(tab, EditorCamera::default())
+        };
         let viewport = if editing {
             &mut self.scene_viewport
         } else {
@@ -1055,8 +1484,13 @@ impl EditorApp {
             .err();
         // Two views can be live at once, and the first thing to go wrong is the
         // thing worth reading, so a later success does not erase it.
-        if self.render_error.is_none() {
-            self.render_error = failure;
+        if let Some(failure) = failure {
+            // The console collapses this: a render failure recurs every frame,
+            // and one entry with a count says more than sixty a second.
+            self.console.error(&failure);
+            if self.render_error.is_none() {
+                self.render_error = Some(failure);
+            }
         }
         ui.painter().image(
             viewport.texture_id,
@@ -1065,6 +1499,14 @@ impl EditorApp {
             Color32::WHITE,
         );
         if editing {
+            // The same view the frame under it was drawn through, asked for
+            // rather than re-derived, so the axes cannot drift from the picture.
+            let axes = self
+                .scene
+                .world_camera(&self.world, camera)
+                .ok()
+                .flatten()
+                .map(|camera| camera.view);
             paint_runtime_overlay(
                 ui.painter(),
                 rect,
@@ -1073,6 +1515,7 @@ impl EditorApp {
                     .and_then(|entity| self.world.get(entity))
                     .map_or_else(|| "No selection".to_owned(), entity_name),
                 self.problem(),
+                axes,
             );
         } else {
             paint_viewport_border(ui.painter(), rect, self.problem());
@@ -1132,6 +1575,8 @@ impl eframe::App for EditorApp {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        self.update_title(ui.ctx());
+        self.handle_close_request(ui.ctx());
         self.handle_shortcuts(ui.ctx());
         self.top_bar(ui);
         self.status_bar(ui);
@@ -1156,6 +1601,11 @@ impl eframe::App for EditorApp {
         // Releasing the pointer ends a drag, so the next one is its own step.
         if ui.ctx().input(|input| input.pointer.any_released()) {
             self.history.break_merge_run();
+        }
+        // Drawn last so it sits over everything, and asked before Escape is
+        // read as clearing the selection.
+        if self.confirm_dialog(ui.ctx()) {
+            return;
         }
         // Escape clears the selection wherever the pointer happens to be. The
         // hierarchy's empty space does the same, but only while it has empty
@@ -1216,17 +1666,17 @@ fn physical_viewport_dimension(points: f32, scale: f32) -> u32 {
     (points * scale).round().clamp(1.0, u32::MAX as f32) as u32
 }
 
-fn panel_title(ui: &mut egui::Ui, title: &str, action: Option<MaterialIcon>) {
+/// A panel's heading.
+///
+/// The hierarchy's used to carry an "Add entity" button. Nothing handled it,
+/// and creating an entity is not a button away: the world would need a spawn
+/// command to make it undoable and a stable ID assigned before the scene could
+/// be saved again. It comes back when both exist.
+fn panel_title(ui: &mut egui::Ui, title: &str) {
     ui.add_space(4.0);
     ui.horizontal(|ui| {
         ui.add_space(8.0);
         ui.label(RichText::new(title).strong().size(12.0).color(TEXT));
-        if let Some(action) = action {
-            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                ui.add_space(6.0);
-                icon_button(ui, action, false, "Add entity");
-            });
-        }
     });
     ui.add_space(3.0);
     ui.separator();
@@ -1252,16 +1702,12 @@ fn search_field(ui: &mut egui::Ui, value: &mut String, hint: &str) {
     });
 }
 
+/// The root the hierarchy hangs from.
+///
+/// A collapse chevron used to sit in front of it, and nothing collapsed.
 fn hierarchy_group(ui: &mut egui::Ui, label: &str, icon: MaterialIcon) {
     ui.horizontal(|ui| {
-        ui.add_space(6.0);
-        ui.label(
-            ICON_EXPAND_MORE
-                .outlined()
-                .rich_text()
-                .size(15.0)
-                .color(TEXT_FAINT),
-        );
+        ui.add_space(10.0);
         ui.label(icon.outlined().rich_text().size(15.0).color(TEXT_MUTED));
         ui.label(RichText::new(label).size(12.0).color(TEXT));
     });
@@ -1399,38 +1845,24 @@ fn inspector_identity(ui: &mut egui::Ui, icon: MaterialIcon, draft: &mut EntityD
             egui::TextEdit::singleline(&mut draft.name).font(FontId::proportional(13.0)),
         );
     });
-    ui.horizontal(|ui| {
-        ui.add_space(27.0);
-        ui.label(RichText::new("Tag  Untagged").size(11.0).color(TEXT_FAINT));
-        ui.separator();
-        ui.label(RichText::new("Layer  Default").size(11.0).color(TEXT_FAINT));
-    });
+    // "Tag  Untagged" and "Layer  Default" used to sit under the name. Neither
+    // is a thing a Sindri entity has, so they were two lines of a different
+    // engine's inspector printed over this one's.
 }
 
+/// The heading above one section of the inspector.
+///
+/// A collapse chevron and an overflow menu used to sit at either end of it.
+/// Neither was handled: nothing collapsed and nothing overflowed. Adding and
+/// removing a component is what the menu would hold, and that is a real build
+/// against the schema registry rather than a glyph.
 fn section_header(ui: &mut egui::Ui, icon: MaterialIcon, title: &str) {
     ui.add_space(4.0);
     ui.separator();
     ui.horizontal(|ui| {
-        ui.add_space(6.0);
-        ui.label(
-            ICON_EXPAND_MORE
-                .outlined()
-                .rich_text()
-                .size(15.0)
-                .color(TEXT_FAINT),
-        );
+        ui.add_space(10.0);
         ui.label(icon.outlined().rich_text().size(16.0).color(ACCENT));
         ui.label(RichText::new(title).strong().size(12.0).color(TEXT));
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.add_space(5.0);
-            ui.label(
-                ICON_MORE_VERT
-                    .outlined()
-                    .rich_text()
-                    .size(15.0)
-                    .color(TEXT_FAINT),
-            );
-        });
     });
 }
 
@@ -1646,17 +2078,27 @@ fn vector_row(ui: &mut egui::Ui, label: &str, values: &mut [f32; 3], lock_z: boo
 ///
 /// Each entry carries its kind as well as its name, because a list has room to
 /// say what a thing is and a grid of generic icons does not.
-fn project_assets() -> [(MaterialIcon, &'static str, &'static str); 8] {
-    [
-        (ICON_FOLDER, "Materials", "Folder"),
-        (ICON_FOLDER, "Models", "Folder"),
-        (ICON_FOLDER, "Scenes", "Folder"),
-        (ICON_FOLDER, "Scripts", "Folder"),
-        (ICON_DESCRIPTION, "demo.scene", "Scene"),
-        (ICON_VIEW_IN_AR, "checker_cube", "Mesh"),
-        (ICON_IMAGE, "badge", "Texture"),
-        (ICON_CODE, "scene.rs", "Script"),
-    ]
+/// What a frame of the project browser asked for.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+enum BrowserAction {
+    #[default]
+    None,
+    /// Re-read the directory, because the editor caches it.
+    Refresh,
+    /// Open a scene the browser is showing.
+    Open(PathBuf),
+}
+
+/// The icon a kind of file is drawn with.
+const fn asset_icon(kind: AssetKind) -> MaterialIcon {
+    match kind {
+        AssetKind::Folder => ICON_FOLDER,
+        AssetKind::Scene => ICON_DESCRIPTION,
+        AssetKind::Texture | AssetKind::Font => ICON_IMAGE,
+        AssetKind::Mesh => ICON_VIEW_IN_AR,
+        AssetKind::Script => ICON_CODE,
+        AssetKind::Other => ICON_DEPLOYED_CODE,
+    }
 }
 
 /// The project browser, in one column or two.
@@ -1665,34 +2107,43 @@ fn project_assets() -> [(MaterialIcon, &'static str, &'static str); 8] {
 /// column width the folder tree and the asset list were drawing over each
 /// other. So the narrow arrangement drops the tree rather than shrinking it,
 /// which is also why a list reads better there than a grid of identical icons.
-fn project_browser(ui: &mut egui::Ui, search: &mut String, view: &mut AssetView, folders: bool) {
+fn project_browser(
+    ui: &mut egui::Ui,
+    search: &mut String,
+    view: &mut AssetView,
+    folders: bool,
+    project: &ProjectTree,
+    open: Option<&Path>,
+) -> BrowserAction {
     if !folders {
-        asset_column(ui, search, view);
-        return;
+        return asset_column(ui, search, view, project, open);
     }
+    let mut action = BrowserAction::None;
     ui.horizontal(|ui| {
         ui.vertical(|ui| {
             ui.set_width(174.0);
-            for (label, selected, depth) in [
-                ("Assets", true, 0),
-                ("Materials", false, 1),
-                ("Models", false, 1),
-                ("Scenes", false, 1),
-                ("Scripts", false, 1),
-                ("Textures", false, 1),
-            ] {
-                folder_row(ui, label, selected, depth);
+            folder_row(ui, &project.label(), true, 0);
+            for folder in project.folders() {
+                folder_row(ui, &folder.name, false, folder.depth + 1);
             }
         });
         ui.separator();
-        ui.vertical(|ui| asset_column(ui, search, view));
+        ui.vertical(|ui| action = asset_column(ui, search, view, project, open));
     });
+    action
 }
 
 /// The asset side of the browser: what it is showing, and how.
-fn asset_column(ui: &mut egui::Ui, search: &mut String, view: &mut AssetView) {
+fn asset_column(
+    ui: &mut egui::Ui,
+    search: &mut String,
+    view: &mut AssetView,
+    project: &ProjectTree,
+    open: Option<&Path>,
+) -> BrowserAction {
+    let mut action = BrowserAction::None;
     ui.horizontal(|ui| {
-        ui.label(RichText::new("Assets").size(12.0).color(TEXT));
+        ui.label(RichText::new(project.label()).size(12.0).color(TEXT));
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             if icon_button(ui, ICON_VIEW_LIST, *view == AssetView::List, "List view").clicked() {
                 *view = AssetView::List;
@@ -1700,7 +2151,12 @@ fn asset_column(ui: &mut egui::Ui, search: &mut String, view: &mut AssetView) {
             if icon_button(ui, ICON_GRID_VIEW, *view == AssetView::Grid, "Grid view").clicked() {
                 *view = AssetView::Grid;
             }
-            icon_button(ui, ICON_FILTER_LIST, false, "Filter assets");
+            // The directory is read when a scene is opened, so a file added
+            // outside the editor needs asking for. This slot used to hold a
+            // filter icon that did nothing.
+            if icon_button(ui, ICON_REFRESH, false, "Re-read the project directory").clicked() {
+                action = BrowserAction::Refresh;
+            }
             // Whatever is left after the buttons, rather than a fixed width
             // that overflowed the moment the browser became a column.
             let room = (ui.available_width() - 6.0).clamp(60.0, 210.0);
@@ -1711,53 +2167,153 @@ fn asset_column(ui: &mut egui::Ui, search: &mut String, view: &mut AssetView) {
         });
     });
     ui.add_space(8.0);
+    if let Some(error) = project.error() {
+        ui.horizontal(|ui| {
+            ui.add_space(8.0);
+            ui.label(RichText::new(error).size(11.0).color(TEXT_FAINT));
+        });
+        return action;
+    }
+    let searching = !search.trim().is_empty();
+    let entries = project.matching(search);
+    if entries.is_empty() {
+        ui.horizontal(|ui| {
+            ui.add_space(8.0);
+            let message = if searching {
+                "Nothing matches"
+            } else {
+                "This directory is empty"
+            };
+            ui.label(RichText::new(message).size(11.0).color(TEXT_FAINT));
+        });
+        return action;
+    }
     // A project has more assets than a dock has room for, in either
     // presentation. Scrolling here is what lets the list be the default
     // without the last few assets falling off the bottom.
     egui::ScrollArea::vertical()
         .auto_shrink([false, false])
-        .show(ui, |ui| match view {
-            AssetView::Grid => {
-                ui.horizontal_wrapped(|ui| {
-                    for (icon, label, _) in project_assets() {
-                        asset_tile(ui, icon, label);
+        .show(ui, |ui| {
+            match view {
+                AssetView::Grid => {
+                    ui.horizontal_wrapped(|ui| {
+                        for entry in &entries {
+                            if asset_tile(ui, entry, open).double_clicked() {
+                                action = BrowserAction::Open(entry.path.clone());
+                            }
+                        }
+                    });
+                }
+                AssetView::List => {
+                    // Rows are denser than egui's default spacing, so the dock
+                    // shows a useful number of them without taking height from
+                    // the viewport it sits under.
+                    ui.spacing_mut().item_spacing.y = 1.0;
+                    for entry in &entries {
+                        // A search shows a flat list, so an indentation would
+                        // point at a parent the search has removed.
+                        let depth = if searching { 0 } else { entry.depth };
+                        if asset_row(ui, entry, depth, searching, open).double_clicked() {
+                            action = BrowserAction::Open(entry.path.clone());
+                        }
                     }
-                });
-            }
-            AssetView::List => {
-                // Rows are denser than egui's default spacing, so the dock
-                // shows a useful number of them without taking height from
-                // the viewport it sits under.
-                ui.spacing_mut().item_spacing.y = 1.0;
-                for (icon, label, kind) in project_assets() {
-                    asset_row(ui, icon, label, kind);
                 }
             }
+            if project.truncated() {
+                ui.horizontal(|ui| {
+                    ui.add_space(8.0);
+                    ui.label(
+                        RichText::new("More files than the browser reads")
+                            .size(10.0)
+                            .color(TEXT_FAINT),
+                    );
+                });
+            }
         });
+    action
 }
 
-/// One asset as a row: what it is called, and what it is.
-fn asset_row(ui: &mut egui::Ui, icon: MaterialIcon, label: &str, kind: &str) {
-    let highlighted = label == "demo.scene";
-    ui.horizontal(|ui| {
-        ui.add_space(4.0);
-        ui.label(
-            icon.outlined()
-                .rich_text()
-                .size(15.0)
-                .color(if highlighted { ACCENT } else { TEXT_FAINT }),
-        );
-        ui.add_space(2.0);
-        ui.label(RichText::new(label).size(11.0).color(if highlighted {
-            TEXT
-        } else {
-            TEXT_MUTED
-        }));
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.add_space(10.0);
-            ui.label(RichText::new(kind).size(10.0).color(TEXT_FAINT));
-        });
+/// One asset as a row: what it is called, what it is, and whether it is the
+/// scene the editor has open.
+///
+/// A scene row answers a double click, because opening one is the only thing
+/// the editor can do with a file. Every other row is a listing and says so by
+/// not responding — a listing that lists is not the same as a control that
+/// looks like it does something.
+fn asset_row(
+    ui: &mut egui::Ui,
+    entry: &ProjectEntry,
+    depth: usize,
+    searching: bool,
+    open: Option<&Path>,
+) -> Response {
+    let openable = entry.kind == AssetKind::Scene;
+    let highlighted = open.is_some_and(|path| path == entry.path);
+    let sense = if openable {
+        Sense::click()
+    } else {
+        Sense::hover()
+    };
+    let row = ui.scope_builder(egui::UiBuilder::new().sense(sense), |ui| {
+        ui.horizontal(|ui| {
+            ui.add_space(4.0 + hierarchy_indent(depth, 12.0));
+            // Every label in the row is given the row's own sense. A widget
+            // inside a scope takes precedence over the scope, and an ordinary
+            // label is selectable text, so it answers a double click by
+            // selecting a word rather than letting the row have it.
+            let icon = ui.add(
+                egui::Label::new(
+                    asset_icon(entry.kind)
+                        .outlined()
+                        .rich_text()
+                        .size(15.0)
+                        .color(if highlighted { ACCENT } else { TEXT_FAINT }),
+                )
+                .sense(sense),
+            );
+            ui.add_space(2.0);
+            // Under a search the path below the root is what tells two files of
+            // the same name apart.
+            let text = if searching {
+                &entry.relative
+            } else {
+                &entry.name
+            };
+            let label = ui.add(
+                egui::Label::new(RichText::new(text).size(11.0).color(if highlighted {
+                    TEXT
+                } else {
+                    TEXT_MUTED
+                }))
+                // Not selectable text: a double click on a file name means
+                // open it, and selecting the word "json" is not a thing anyone
+                // wanted from a file listing.
+                .selectable(false)
+                .sense(sense),
+            );
+            let kind = ui
+                .with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    ui.add_space(10.0);
+                    ui.add(
+                        egui::Label::new(
+                            RichText::new(entry.kind.label())
+                                .size(10.0)
+                                .color(TEXT_FAINT),
+                        )
+                        .sense(sense),
+                    )
+                })
+                .inner;
+            icon | label | kind
+        })
+        .inner
     });
+    let row = row.response | row.inner;
+    if openable {
+        row.on_hover_text("Double-click to open")
+    } else {
+        row
+    }
 }
 
 fn folder_row(ui: &mut egui::Ui, label: &str, selected: bool, depth: usize) {
@@ -1778,40 +2334,99 @@ fn folder_row(ui: &mut egui::Ui, label: &str, selected: bool, depth: usize) {
     });
 }
 
-fn asset_tile(ui: &mut egui::Ui, icon: MaterialIcon, label: &str) {
+fn asset_tile(ui: &mut egui::Ui, entry: &ProjectEntry, open: Option<&Path>) -> Response {
+    let highlighted = open.is_some_and(|path| path == entry.path);
     ui.vertical(|ui| {
-        ui.add_sized(
+        let tile = ui.add_sized(
             [62.0, 54.0],
-            egui::Button::new(icon.outlined().rich_text().size(27.0).color(
-                if label == "demo.scene" {
-                    ACCENT
-                } else {
-                    TEXT_MUTED
-                },
-            ))
+            egui::Button::new(
+                asset_icon(entry.kind)
+                    .outlined()
+                    .rich_text()
+                    .size(27.0)
+                    .color(if highlighted { ACCENT } else { TEXT_MUTED }),
+            )
             .fill(PANEL_RAISED)
             .stroke(Stroke::new(1.0, BORDER_SUBTLE)),
         );
         ui.add_sized(
             [62.0, 17.0],
-            egui::Label::new(RichText::new(label).size(10.0).color(TEXT_MUTED)).truncate(),
+            egui::Label::new(RichText::new(&entry.name).size(10.0).color(TEXT_MUTED)).truncate(),
         );
-    });
+        if entry.kind == AssetKind::Scene {
+            tile.on_hover_text("Double-click to open")
+        } else {
+            tile
+        }
+    })
+    .inner
 }
 
-fn console_view(ui: &mut egui::Ui, entity_count: usize, state: EngineState) {
-    ui.add_space(8.0);
-    for (color, text) in [
-        (SUCCESS, "Renderer initialized".to_owned()),
-        (ACCENT, format!("Scene loaded - {entity_count} entities")),
-        (TEXT_MUTED, format!("Engine {}", lifecycle_label(state))),
-    ] {
-        ui.horizontal(|ui| {
-            ui.add_space(10.0);
-            status_dot(ui, color);
-            ui.label(RichText::new(&text).size(11.0).color(TEXT_MUTED));
+/// What the editor has said, newest at the bottom.
+///
+/// This used to be three fixed lines, two of them interpolating a real number,
+/// which made it a status readout wearing a log's clothes. The engine's state
+/// is still worth a line, so it is one — at the top, marked as the standing
+/// state rather than something that just happened.
+///
+/// Returns true when the user asked to clear it.
+fn console_view(ui: &mut egui::Ui, console: &Console, state: EngineState) -> bool {
+    let mut cleared = false;
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        status_dot(ui, ACCENT);
+        ui.label(
+            RichText::new(format!("Engine {}", lifecycle_label(state)))
+                .size(11.0)
+                .color(TEXT_MUTED),
+        );
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.add_space(8.0);
+            if ui
+                .add_enabled(
+                    !console.is_empty(),
+                    egui::Button::new(RichText::new("Clear").size(11.0).color(TEXT_MUTED))
+                        .frame(false),
+                )
+                .clicked()
+            {
+                cleared = true;
+            }
         });
-    }
+    });
+    ui.separator();
+    egui::ScrollArea::vertical()
+        .auto_shrink([false, false])
+        // Pinned to the newest entry: a log you have to scroll to the bottom of
+        // to see what just happened is a log nobody reads.
+        .stick_to_bottom(true)
+        .show(ui, |ui| {
+            ui.spacing_mut().item_spacing.y = 1.0;
+            for entry in console.entries() {
+                console_row(ui, entry);
+            }
+        });
+    cleared
+}
+
+fn console_row(ui: &mut egui::Ui, entry: &Entry) {
+    let color = match entry.level {
+        Level::Info => TEXT_MUTED,
+        Level::Warning => ACCENT_BRIGHT,
+        Level::Error => Color32::from_rgb(255, 138, 148),
+    };
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        status_dot(ui, color);
+        ui.label(RichText::new(&entry.message).size(11.0).color(color));
+        if entry.count > 1 {
+            ui.label(
+                RichText::new(format!("x{}", entry.count))
+                    .size(10.0)
+                    .color(TEXT_FAINT),
+            );
+        }
+    });
 }
 
 fn lifecycle_label(state: EngineState) -> &'static str {
@@ -1894,18 +2509,6 @@ fn projection_button(
     }
 }
 
-fn mode_icon(
-    ui: &mut egui::Ui,
-    mode: &mut EditorMode,
-    value: EditorMode,
-    icon: MaterialIcon,
-    tip: &str,
-) {
-    if icon_button(ui, icon, *mode == value, tip).clicked() {
-        *mode = value;
-    }
-}
-
 fn icon_button(ui: &mut egui::Ui, icon: MaterialIcon, selected: bool, tip: &str) -> Response {
     ui.add_sized(
         [28.0, 28.0],
@@ -1985,6 +2588,7 @@ fn paint_runtime_overlay(
     rect: Rect,
     selected_name: &str,
     error: Option<&str>,
+    axes: Option<Mat4>,
 ) {
     painter.rect_stroke(rect, 0.0, Stroke::new(1.0, BORDER), StrokeKind::Inside);
     let label_rect = Rect::from_min_size(rect.min + Vec2::new(12.0, 12.0), Vec2::new(218.0, 42.0));
@@ -2004,7 +2608,13 @@ fn paint_runtime_overlay(
         TEXT_FAINT,
     );
     paint_error_banner(painter, rect, error);
-    paint_axis_gizmo(painter, Pos2::new(rect.right() - 42.0, rect.top() + 48.0));
+    if let Some(view) = axes {
+        paint_axis_gizmo(
+            painter,
+            Pos2::new(rect.right() - 42.0, rect.top() + 48.0),
+            view,
+        );
+    }
 }
 
 /// The game view's chrome: a frame, and anything that went wrong.
@@ -2033,12 +2643,44 @@ fn paint_error_banner(painter: &egui::Painter, rect: Rect, error: Option<&str>) 
     }
 }
 
-fn paint_axis_gizmo(painter: &egui::Painter, origin: Pos2) {
-    for (offset, color, label) in [
-        (Vec2::new(19.0, 7.0), Color32::from_rgb(239, 92, 101), "X"),
-        (Vec2::new(0.0, -22.0), Color32::from_rgb(89, 201, 135), "Y"),
-        (Vec2::new(-14.0, 11.0), Color32::from_rgb(91, 151, 239), "Z"),
-    ] {
+/// How long an axis arm is when it points straight across the screen.
+const AXIS_ARM: f32 = 22.0;
+
+/// Where the three world axes point on screen, and in what order to draw them.
+///
+/// This used to be three hardcoded offsets, so the indicator claimed the same
+/// orientation whichever way the camera was facing — the one control in the
+/// editor that was wrong rather than merely idle, and the one the first audit
+/// walked past because it swept controls instead of pixels.
+///
+/// Each axis is turned by the camera's view and then flattened: the screen's Y
+/// grows downwards, so the view's Y is negated, and an axis pointing at or away
+/// from the viewer foreshortens to a stub of its own accord. The order is back
+/// to front by how near the viewer each arm ends, so the arm behind is drawn
+/// under the ones in front rather than over them.
+fn axis_arms(view: Mat4, length: f32) -> [(Vec2, Color32, &'static str); 3] {
+    let mut arms = [
+        (Vec3::X, Color32::from_rgb(239, 92, 101), "X"),
+        (Vec3::Y, Color32::from_rgb(89, 201, 135), "Y"),
+        (Vec3::Z, Color32::from_rgb(91, 151, 239), "Z"),
+    ]
+    .map(|(axis, color, label)| {
+        let facing = view.transform_vector3(axis);
+        (
+            facing,
+            Vec2::new(facing.x, -facing.y) * length,
+            color,
+            label,
+        )
+    });
+    // Ascending depth: in view space the camera looks down -Z, so the largest Z
+    // is the arm nearest the viewer and is drawn last.
+    arms.sort_by(|left, right| left.0.z.total_cmp(&right.0.z));
+    arms.map(|(_, offset, color, label)| (offset, color, label))
+}
+
+fn paint_axis_gizmo(painter: &egui::Painter, origin: Pos2, view: Mat4) {
+    for (offset, color, label) in axis_arms(view, AXIS_ARM) {
         let end = origin + offset;
         painter.line_segment([origin, end], Stroke::new(2.0, color));
         painter.text(
@@ -2198,14 +2840,35 @@ fn hierarchy_indent(depth: usize, step: f32) -> f32 {
 /// A missing or unreadable file is reported rather than fatal: the editor opens
 /// on the scene compiled into it and says what went wrong, which beats a window
 /// that never appears.
-fn open_requested_scene() -> (SceneFile, Option<String>) {
-    let requested = std::env::args().nth(1);
-    let path = requested.as_deref().unwrap_or(DEFAULT_SCENE_PATH);
+fn open_requested_scene(remembered: Option<&str>) -> (SceneFile, Option<String>) {
+    open_scene_for(std::env::args().nth(1).as_deref(), remembered)
+}
+
+/// Opens whichever scene was asked for, in order of how deliberately.
+///
+/// A path on the command line is the most deliberate thing anyone can say, so
+/// it wins. Otherwise the scene the editor was last left in, which is what
+/// makes reopening the editor continue rather than restart. Otherwise the demo
+/// scene, so a clean clone is useful.
+///
+/// A remembered scene that has moved or been deleted since is not a reason to
+/// open on nothing: that choice was made last week, the failure is not the
+/// user's doing now, and falling back to the default while saying what happened
+/// leaves them somewhere they can work. A path given on the command line gets
+/// no such fallback — standing in a different scene for the one someone just
+/// named reads as though it opened.
+fn open_scene_for(argument: Option<&str>, remembered: Option<&str>) -> (SceneFile, Option<String>) {
+    let path = argument.or(remembered).unwrap_or(DEFAULT_SCENE_PATH);
     match SceneFile::open(path) {
         Ok(file) => (file, None),
-        // An empty scene rather than the demo one. Standing in a working scene
-        // for the file someone asked for reads as though it opened, and the
-        // notice beside it as though something minor went wrong.
+        // The reported failure is the remembered scene's, not the fallback's:
+        // what went wrong is that the file someone was working in is not
+        // there, and the demo scene's absence would not be news.
+        Err(error) if argument.is_none() && remembered.is_some() => (
+            SceneFile::open(DEFAULT_SCENE_PATH)
+                .unwrap_or_else(|_| SceneFile::detached(SceneDocument::default())),
+            Some(error.to_string()),
+        ),
         Err(error) => (
             SceneFile::detached(SceneDocument::default()),
             Some(error.to_string()),
@@ -2235,6 +2898,7 @@ mod tests {
     // depending on the working directory. Only the tests want it: the editor
     // itself no longer loads through the example's scene type.
     use sindri_cube::DemoScene;
+    use sindri_render::look_at;
 
     use super::*;
 
@@ -2582,6 +3246,271 @@ mod tests {
         clicked.get()
     }
 
+    /// Whether an asset row reports a double click `offset` points into it.
+    ///
+    /// Driven through real frames for the same reason the hierarchy row is: the
+    /// row is a sensing scope wrapped around labels, and whether a label
+    /// swallows the click is not something reading the code answers.
+    fn asset_row_double_click_at(kind: AssetKind, offset: Vec2) -> bool {
+        let context = egui::Context::default();
+        egui_material_icons::initialize(&context);
+        let entry = ProjectEntry {
+            path: PathBuf::from("/project/level.scene.json"),
+            name: "level.scene.json".to_owned(),
+            relative: "level.scene.json".to_owned(),
+            kind,
+            depth: 0,
+        };
+        let row = std::cell::Cell::new(Rect::NOTHING);
+        let opened = std::cell::Cell::new(false);
+        let draw = |events: Vec<egui::Event>| {
+            let input = egui::RawInput {
+                events,
+                ..Default::default()
+            };
+            context
+                .run_ui(input, |ui| {
+                    let response = asset_row(ui, &entry, 0, false, None);
+                    row.set(response.rect);
+                    opened.set(response.double_clicked());
+                })
+                .drop_without_applying_deltas();
+        };
+
+        draw(Vec::new());
+        let target = row.get().left_center() + offset;
+        let button = |pressed| egui::Event::PointerButton {
+            pos: target,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: egui::Modifiers::default(),
+        };
+        draw(vec![egui::Event::PointerMoved(target), button(true)]);
+        draw(vec![button(false)]);
+        draw(vec![button(true)]);
+        draw(vec![button(false)]);
+        opened.get()
+    }
+
+    /// The editor reopens where it was left, and a path on the command line
+    /// still wins — the most deliberate thing anyone can say about which scene
+    /// to open should not be overruled by a choice made last week.
+    #[test]
+    fn the_remembered_scene_is_reopened_unless_one_was_named() {
+        let directory = tempfile::tempdir().unwrap();
+        let write = |name: &str| {
+            let path = directory.path().join(name);
+            std::fs::write(
+                &path,
+                DemoScene::authored_document()
+                    .unwrap()
+                    .to_canonical_json()
+                    .unwrap(),
+            )
+            .unwrap();
+            path.display().to_string()
+        };
+        let remembered = write("remembered.scene.json");
+        let named = write("named.scene.json");
+
+        let (file, error) = open_scene_for(None, Some(&remembered));
+        assert_eq!(error, None);
+        assert_eq!(file.label(), "remembered.scene.json");
+
+        let (file, error) = open_scene_for(Some(&named), Some(&remembered));
+        assert_eq!(error, None);
+        assert_eq!(
+            file.label(),
+            "named.scene.json",
+            "an argument outranks what was remembered"
+        );
+    }
+
+    /// A project can move or be deleted between launches. Refusing to open
+    /// anything because of that would make a remembered path a liability.
+    #[test]
+    fn a_remembered_scene_that_is_gone_says_so_rather_than_opening_nothing() {
+        let directory = tempfile::tempdir().unwrap();
+        let missing = directory.path().join("gone.scene.json");
+        let (_, error) = open_scene_for(None, Some(&missing.display().to_string()));
+        let error = error.expect("a scene that is not there is worth saying");
+        assert!(error.contains("gone.scene.json"), "{error}");
+    }
+
+    /// Which shortcuts a key press produces, read through a real egui frame.
+    fn shortcuts_for(modifiers: egui::Modifiers, key: egui::Key) -> Shortcuts {
+        let context = egui::Context::default();
+        let pressed = std::cell::Cell::new(Shortcuts::default());
+        let input = egui::RawInput {
+            events: vec![egui::Event::Key {
+                key,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers,
+            }],
+            ..Default::default()
+        };
+        context
+            .run_ui(input, |ui| {
+                pressed.set(ui.ctx().input_mut(shortcuts));
+            })
+            .drop_without_applying_deltas();
+        pressed.get()
+    }
+
+    /// Where one axis ends up on screen, by name.
+    fn arm(view: Mat4, axis: &str) -> Vec2 {
+        axis_arms(view, 1.0)
+            .into_iter()
+            .find(|(_, _, label)| *label == axis)
+            .map(|(offset, _, _)| offset)
+            .expect("every axis is drawn")
+    }
+
+    /// The indicator has to answer the camera. It was painted at three fixed
+    /// offsets, so it claimed the same orientation from every angle — the one
+    /// control in the editor that was wrong rather than merely idle.
+    #[test]
+    fn the_axis_indicator_turns_with_the_camera() {
+        let front = look_at(Vec3::new(0.0, 0.0, 10.0), Vec3::ZERO, Vec3::Y);
+        assert!(arm(front, "X").x > 0.9, "X points across the picture");
+        assert!(
+            arm(front, "Y").y < -0.9,
+            "Y points up it, and the screen's Y grows downwards"
+        );
+        assert!(
+            arm(front, "Z").length() < 0.01,
+            "Z points at the viewer, so it has nowhere to go on screen"
+        );
+
+        // A quarter turn to the side and the two swap: Z now lies across the
+        // picture and X points at the viewer.
+        let side = look_at(Vec3::new(10.0, 0.0, 0.0), Vec3::ZERO, Vec3::Y);
+        // Standing on +X and facing the origin puts world +Z on the left,
+        // which is where X's arm no longer is.
+        assert!(
+            arm(side, "Z").x < -0.9,
+            "Z has taken the across-screen axis"
+        );
+        assert!(arm(side, "X").length() < 0.01, "and X points at the viewer");
+        assert!(arm(side, "Y").y < -0.9, "up is still up");
+    }
+
+    /// An arm behind the origin is drawn under the ones in front of it, so the
+    /// indicator reads as three arms in space rather than three flat lines.
+    #[test]
+    fn the_axis_indicator_draws_back_to_front() {
+        // Looking from above and to one side, so no two arms share a depth.
+        let view = look_at(Vec3::new(4.0, 3.0, 5.0), Vec3::ZERO, Vec3::Y);
+        let order: Vec<&str> = axis_arms(view, AXIS_ARM)
+            .iter()
+            .map(|(_, _, label)| *label)
+            .collect();
+        let depth = |axis: Vec3| view.transform_vector3(axis).z;
+        let mut expected = [
+            (depth(Vec3::X), "X"),
+            (depth(Vec3::Y), "Y"),
+            (depth(Vec3::Z), "Z"),
+        ];
+        expected.sort_by(|left, right| left.0.total_cmp(&right.0));
+        let expected: Vec<&str> = expected.iter().map(|(_, label)| *label).collect();
+        assert_eq!(order, expected, "the nearest arm is drawn last");
+    }
+
+    /// Framing a subject puts it in the middle, which is the whole claim.
+    ///
+    /// Checked against the extractor rather than against the number the editor
+    /// computed: the pan is worked out by reading the pan's own definition
+    /// backwards, and the way that goes wrong is a sign, which only shows up by
+    /// asking where the subject ended up.
+    #[test]
+    fn focusing_a_selection_puts_it_in_the_middle_of_the_view() {
+        let extractor = extractor();
+        let world = demo_world();
+        let entity = find_by_source_id(&world, "checker-cube").unwrap();
+        let position = Vec3::from_array(world.get(entity).unwrap().transform_3d.unwrap().position);
+
+        // Somewhere the subject is well off centre to begin with.
+        let mut pan = GlamVec2::new(0.8, -0.5);
+        let view = |pan| CameraView {
+            orbit: GlamVec2::new(0.4, -0.2),
+            distance_scale: 1.0,
+            pan,
+            projection: sindri_scene::WorldProjection::Perspective,
+        };
+        let camera = extractor
+            .world_camera(&world, view(pan))
+            .unwrap()
+            .expect("the demo scene has a perspective camera");
+        let before = camera.view.transform_point3(position);
+        assert!(
+            before.x.abs() + before.y.abs() > 0.5,
+            "the subject has to start off centre for this to prove anything"
+        );
+
+        pan = pan_to_centre(camera, pan, position);
+
+        let after = extractor
+            .world_camera(&world, view(pan))
+            .unwrap()
+            .unwrap()
+            .view
+            .transform_point3(position);
+        assert!(
+            after.x.abs() < 1.0e-4 && after.y.abs() < 1.0e-4,
+            "the subject should be in the middle and is at ({}, {})",
+            after.x,
+            after.y
+        );
+    }
+
+    /// The wheel moves the same proportion of the distance wherever it is, or
+    /// the far end of a four-hundredfold range is unusable.
+    #[test]
+    fn zooming_is_proportional_rather_than_a_fixed_step() {
+        let step = |zoom: f32| (zoom * (50.0_f32 * 0.002).exp()).clamp(MIN_ZOOM, MAX_ZOOM);
+        let near = MIN_ZOOM * 2.0;
+        let far = MAX_ZOOM * 0.5;
+        let ratio = |zoom: f32| step(zoom) / zoom;
+        assert!(
+            (ratio(near) - ratio(far)).abs() < 1.0e-5,
+            "one notch is {} of the distance close in and {} far out",
+            ratio(near),
+            ratio(far)
+        );
+        assert_eq!(
+            step(MAX_ZOOM).to_bits(),
+            MAX_ZOOM.to_bits(),
+            "and it stops at the far end"
+        );
+    }
+
+    /// Redo must be asked for before undo, because egui ignores an extra Shift
+    /// when matching: Ctrl+Shift+Z tested against Ctrl+Z matches, so the
+    /// editor's redo shortcut used to be consumed by undo and perform one.
+    #[test]
+    fn redo_is_not_swallowed_by_undo() {
+        let redo = shortcuts_for(
+            egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
+            egui::Key::Z,
+        );
+        assert!(redo.redo, "Ctrl+Shift+Z must redo");
+        assert!(!redo.undo, "and must not also undo");
+
+        let undo = shortcuts_for(egui::Modifiers::COMMAND, egui::Key::Z);
+        assert!(undo.undo && !undo.redo, "Ctrl+Z is still undo");
+
+        let also_redo = shortcuts_for(egui::Modifiers::COMMAND, egui::Key::Y);
+        assert!(
+            also_redo.redo && !also_redo.undo,
+            "and Ctrl+Y is still redo"
+        );
+
+        let save = shortcuts_for(egui::Modifiers::COMMAND, egui::Key::S);
+        assert!(save.save && !save.undo && !save.redo);
+    }
+
     /// The bug that made the editor read-only for a fortnight.
     ///
     /// `hierarchy_row` returned the response of the `ui.horizontal` around the
@@ -2612,6 +3541,84 @@ mod tests {
                 "a click {offset} points into the row was lost"
             );
         }
+    }
+
+    /// A scene row opens the scene, and answers everywhere rather than only on
+    /// its text — the same complaint as the hierarchy row, in the other panel.
+    ///
+    /// The labels have to carry the row's sense: a widget inside a sensing
+    /// scope takes precedence over the scope, and an ordinary egui label is
+    /// selectable text, so it answered the double click by selecting the word
+    /// "json" and the row never heard about it.
+    #[test]
+    fn double_clicking_a_scene_row_opens_it() {
+        for offset in [2.0_f32, 10.0, 20.0, 40.0, 80.0] {
+            assert!(
+                asset_row_double_click_at(AssetKind::Scene, Vec2::new(offset, 0.0)),
+                "a double click {offset} points into a scene row was lost"
+            );
+        }
+    }
+
+    /// Everything else in the browser is a listing. A texture row that
+    /// responded would be offering something the editor cannot do.
+    #[test]
+    fn a_row_that_is_not_a_scene_is_a_listing() {
+        assert!(!asset_row_double_click_at(
+            AssetKind::Texture,
+            Vec2::new(40.0, 0.0)
+        ));
+    }
+
+    /// The marker means the file and the world differ, not that something was
+    /// touched. Undoing back to the saved state is being back at it.
+    #[test]
+    fn undoing_back_to_the_saved_state_is_not_unsaved_work() {
+        let mut world = demo_world();
+        let entity = find_by_source_id(&world, "checker-cube").unwrap();
+        let mut history = CommandHistory::default();
+        let saved_revision = history.revision();
+
+        let mut buffer = CommandBuffer::new();
+        buffer.push(WorldCommand::SetTransform3D {
+            entity,
+            transform: Some(Transform3D {
+                position: [3.0, 0.0, 0.0],
+                ..Transform3D::default()
+            }),
+        });
+        history
+            .apply(buffer.into_transaction("Move"), &mut world)
+            .unwrap();
+        assert_ne!(
+            history.revision(),
+            saved_revision,
+            "an edit is unsaved work"
+        );
+
+        history.undo(&mut world).unwrap();
+        assert_eq!(history.revision(), saved_revision, "and undoing it is not");
+    }
+
+    /// Every discarding action asks a question naming what it will do, so the
+    /// dialog cannot say "discard?" about closing the window.
+    #[test]
+    fn each_discarding_action_says_what_it_is_about_to_do() {
+        for action in [
+            Discarding::OpenAnother,
+            Discarding::OpenPath(PathBuf::from("other.scene.json")),
+            Discarding::Reload,
+            Discarding::Reset,
+            Discarding::Close,
+        ] {
+            assert!(action.question().ends_with('?'), "{action:?} must ask");
+            assert!(!action.verb().is_empty(), "{action:?} needs a button");
+        }
+        assert_ne!(
+            Discarding::Close.question(),
+            Discarding::Reload.question(),
+            "closing and reloading are different losses"
+        );
     }
 
     #[test]

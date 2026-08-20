@@ -13,5 +13,5 @@ mod textures;
 pub use components::{
     CameraComponent, MeshComponent, MeshPrimitive, SpriteAnchor, SpriteComponent, SpriteSpace,
 };
-pub use extract::{CameraView, SceneExtractError, SceneExtractor, WorldProjection};
+pub use extract::{CameraView, SceneExtractError, SceneExtractor, ViewCamera, WorldProjection};
 pub use textures::{TextureBindings, unresolved_textures};
