@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   check:
-    name: Decay syntax
+    name: Decay workspace
     runs-on: ubuntu-latest
     defaults:
       run:
