@@ -7,9 +7,12 @@ use glam::{Vec2, Vec3};
 use sindri_core::{
     SCENE_FORMAT_VERSION, SceneDocument, Transform3D, UnknownComponentPolicy, World,
 };
-use sindri_render::{FrameCommand, RenderStage, SpriteDepth, TextureId, TextureRegistry, Viewport};
+use sindri_render::{
+    FrameCommand, RenderStage, SpriteDepth, TextureId, TextureRegistry, UvRect, Viewport,
+};
 use sindri_scene::{
-    CameraView, SceneExtractError, SceneExtractor, TextureBindings, WorldProjection,
+    CameraView, SceneExtractError, SceneExtractor, SpriteAnimations, SpriteSheet, TextureBindings,
+    WorldProjection,
 };
 
 const VIEWPORT: Viewport = Viewport::new(512, 512);
@@ -1135,5 +1138,213 @@ fn a_rect_outside_the_texture_is_refused() {
             &TextureBindings::new(),
         )
         .expect_err("a rect reaching past the edge is not a frame");
+    assert!(error.to_string().contains("outside"), "{error}");
+}
+
+/// A world holding one sprite that reads a two-by-two sheet, with a `walk` clip
+/// running its four cells at a tenth of a second each.
+fn animated_sheet(playing: &str, looping: bool, speed: f32) -> World {
+    world_from(&scene(&format!(
+        r#",
+        {{ "id": "runner", "transform_3d": {{}},
+          "components": {{
+            "sindri.sprite": {{ "texture": "sheet.png" }},
+            "sindri.sprite_animation": {{
+              "sheet": {{ "columns": 2, "rows": 2 }},
+              "clips": {{ "walk": {{ "frames": [0, 1, 2, 3],
+                "seconds_per_frame": 0.1, "looping": {looping} }} }},
+              "playing": {playing},
+              "speed": {speed}
+            }}
+          }} }}"#
+    )))
+}
+
+fn animated_bindings() -> TextureBindings {
+    let mut bindings = TextureBindings::new();
+    bindings.bind("sheet.png", TextureId::new(1));
+    bindings
+}
+
+fn only_instance_rect(frame: &sindri_render::PreparedFrame) -> UvRect {
+    let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[0].command else {
+        panic!("the scene draws one sprite batch");
+    };
+    assert_eq!(instances.len(), 1, "one sprite, one instance");
+    instances[0].uv_rect()
+}
+
+fn runner(world: &World) -> sindri_core::EntityId {
+    world
+        .entities()
+        .find(|(_, data)| data.components.contains_key("sindri.sprite_animation"))
+        .map(|(entity, _)| entity)
+        .expect("the world holds the animated sprite")
+}
+
+/// What the whole feature is for: time passing changes which part of the sheet a
+/// sprite draws, without the scene changing at all.
+#[test]
+fn advancing_time_moves_a_sprite_through_its_sheet() {
+    let world = animated_sheet(r#""walk""#, true, 1.0);
+    let extractor = SceneExtractor::new().expect("built-in components register");
+    let bindings = animated_bindings();
+    let mut animations = SpriteAnimations::new();
+
+    let mut seen = Vec::new();
+    for _ in 0..4 {
+        animations
+            .advance(&world, extractor.components(), 0.1)
+            .expect("the clip advances");
+        let frame = extractor
+            .extract_animated(
+                &world,
+                VIEWPORT,
+                CameraView::default(),
+                &bindings,
+                &animations,
+            )
+            .expect("the animated scene extracts");
+        seen.push(only_instance_rect(&frame));
+    }
+
+    let cells: Vec<UvRect> = (0..4)
+        .map(|cell| {
+            SpriteSheet {
+                columns: 2,
+                rows: 2,
+            }
+            .cell(cell)
+            .expect("a cell of a two by two sheet")
+        })
+        .collect();
+    // The first advance is a whole frame, so the run starts on cell one and
+    // wraps back to cell zero.
+    assert_eq!(seen, [cells[1], cells[2], cells[3], cells[0]]);
+}
+
+/// Nothing about the world changes as an animation runs. Playback is runtime
+/// state, so a scene saved mid-run is the scene that was opened.
+#[test]
+fn playing_an_animation_does_not_change_the_scene() {
+    let world = animated_sheet(r#""walk""#, true, 1.0);
+    let extractor = SceneExtractor::new().expect("built-in components register");
+    let saved = |world: &World| {
+        world
+            .to_scene()
+            .expect("the world saves")
+            .to_canonical_json()
+            .expect("and writes canonically")
+    };
+    let before = saved(&world);
+
+    let mut animations = SpriteAnimations::new();
+    for _ in 0..10 {
+        animations
+            .advance(&world, extractor.components(), 0.1)
+            .expect("the clip advances");
+    }
+
+    assert_eq!(saved(&world), before);
+}
+
+/// A sprite whose animation has never been advanced draws its own authored
+/// rect, which is what makes the authored rect the pose a scene shows at rest.
+#[test]
+fn an_unplayed_animation_leaves_the_sprites_own_rect_alone() {
+    let world = animated_sheet(r#""walk""#, true, 1.0);
+    let frame = SceneExtractor::new()
+        .expect("built-in components register")
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &animated_bindings(),
+        )
+        .expect("the scene extracts");
+    assert_eq!(only_instance_rect(&frame), UvRect::FULL);
+}
+
+/// A clip nothing selected leaves the sprite alone too, rather than picking a
+/// frame for it.
+#[test]
+fn an_animation_with_no_clip_playing_draws_nothing_of_its_own() {
+    let world = animated_sheet("null", true, 1.0);
+    let extractor = SceneExtractor::new().expect("built-in components register");
+    let mut animations = SpriteAnimations::new();
+    animations
+        .advance(&world, extractor.components(), 1.0)
+        .expect("an animation with nothing playing still advances");
+
+    let frame = extractor
+        .extract_animated(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &animated_bindings(),
+            &animations,
+        )
+        .expect("the scene extracts");
+    assert_eq!(only_instance_rect(&frame), UvRect::FULL);
+    assert!(animations.frame(runner(&world)).is_none());
+}
+
+#[test]
+fn speed_scales_how_fast_a_clip_runs() {
+    let extractor = SceneExtractor::new().expect("built-in components register");
+    for (speed, expected) in [(0.0, 0), (0.5, 1), (2.0, 0)] {
+        let world = animated_sheet(r#""walk""#, true, speed);
+        let mut animations = SpriteAnimations::new();
+        // Two tenths of a second: none of a frame at zero, one frame at half
+        // speed, four frames — a whole loop — at double.
+        animations
+            .advance(&world, extractor.components(), 0.2)
+            .expect("the clip advances");
+        assert_eq!(
+            animations.frame(runner(&world)),
+            Some(expected),
+            "at speed {speed}"
+        );
+    }
+}
+
+#[test]
+fn a_clip_that_does_not_loop_finishes_and_can_be_restarted() {
+    let world = animated_sheet(r#""walk""#, false, 1.0);
+    let extractor = SceneExtractor::new().expect("built-in components register");
+    let mut animations = SpriteAnimations::new();
+    animations
+        .advance(&world, extractor.components(), 10.0)
+        .expect("the clip advances");
+
+    let entity = runner(&world);
+    assert_eq!(animations.frame(entity), Some(3), "it holds its last frame");
+    assert!(animations.is_finished(entity));
+
+    animations.restart(entity);
+    assert_eq!(animations.frame(entity), Some(0));
+    assert!(!animations.is_finished(entity));
+}
+
+/// A clip naming a cell the sheet does not have fails with a message about the
+/// sheet rather than drawing a neighbouring frame's edge texels.
+#[test]
+fn a_clip_naming_a_cell_outside_the_sheet_is_refused() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "runner", "transform_3d": {},
+          "components": {
+            "sindri.sprite": { "texture": "sheet.png" },
+            "sindri.sprite_animation": {
+              "sheet": { "columns": 2, "rows": 2 },
+              "clips": { "walk": { "frames": [0, 9], "seconds_per_frame": 0.1 } },
+              "playing": "walk"
+            }
+          } }"#,
+    ));
+    let extractor = SceneExtractor::new().expect("built-in components register");
+    let error = SpriteAnimations::new()
+        .advance(&world, extractor.components(), 0.1)
+        .expect_err("a cell the sheet does not have is not a frame");
     assert!(error.to_string().contains("outside"), "{error}");
 }

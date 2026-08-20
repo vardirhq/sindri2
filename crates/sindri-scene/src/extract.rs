@@ -14,8 +14,8 @@ use sindri_render::{
 use thiserror::Error;
 
 use crate::{
-    CameraComponent, MeshComponent, MeshPrimitive, SpriteAnchor, SpriteComponent, SpriteSpace,
-    TextureBindings,
+    AnimationError, CameraComponent, MeshComponent, MeshPrimitive, SpriteAnchor,
+    SpriteAnimationComponent, SpriteAnimations, SpriteComponent, SpriteSpace, TextureBindings,
 };
 
 /// Which projection the world camera uses.
@@ -76,6 +76,7 @@ impl SceneExtractor {
         components.register::<CameraComponent>("Camera")?;
         components.register::<MeshComponent>("Mesh")?;
         components.register::<SpriteComponent>("Sprite")?;
+        components.register::<SpriteAnimationComponent>("Sprite Animation")?;
         Ok(Self { components })
     }
 
@@ -101,7 +102,11 @@ impl SceneExtractor {
         Ok(())
     }
 
-    /// Extracts every drawable in `world` into an ordered frame.
+    /// Extracts every drawable in `world` into an ordered frame, with no
+    /// animation playing.
+    ///
+    /// A sprite carrying clips draws its own authored rect, which is the pose a
+    /// scene shows before anything has run it.
     pub fn extract(
         &self,
         world: &World,
@@ -109,10 +114,34 @@ impl SceneExtractor {
         view: CameraView,
         textures: &TextureBindings,
     ) -> Result<PreparedFrame, SceneExtractError> {
+        self.extract_animated(world, viewport, view, textures, &SpriteAnimations::new())
+    }
+
+    /// Extracts every drawable in `world`, with each animated sprite showing the
+    /// frame `animations` has it on.
+    pub fn extract_animated(
+        &self,
+        world: &World,
+        viewport: Viewport,
+        view: CameraView,
+        textures: &TextureBindings,
+        animations: &SpriteAnimations,
+    ) -> Result<PreparedFrame, SceneExtractError> {
         let aspect = viewport.aspect_ratio()?;
         let cameras = self.resolve_cameras(world, aspect, view)?;
         let mut frame = ExtractedFrame::new(viewport, ClearOperations::default());
+        self.push_meshes(world, &cameras, textures, &mut frame)?;
+        self.push_sprites(world, &cameras, textures, animations, &mut frame)?;
+        Ok(frame.prepare()?)
+    }
 
+    fn push_meshes(
+        &self,
+        world: &World,
+        cameras: &ResolvedCameras,
+        textures: &TextureBindings,
+        frame: &mut ExtractedFrame,
+    ) -> Result<(), SceneExtractError> {
         for (entity, mesh) in self.components.query::<MeshComponent>(world)? {
             let transform = world
                 .get(entity)
@@ -136,7 +165,17 @@ impl SceneExtractor {
                 command,
             ));
         }
+        Ok(())
+    }
 
+    fn push_sprites(
+        &self,
+        world: &World,
+        cameras: &ResolvedCameras,
+        textures: &TextureBindings,
+        animations: &SpriteAnimations,
+        frame: &mut ExtractedFrame,
+    ) -> Result<(), SceneExtractError> {
         // Sprites batch per space, layer, and texture, back to front within a
         // batch, with a stable tie-break. A batch is one draw, so instances
         // share one only when they share the texture it binds — and the space,
@@ -186,7 +225,12 @@ impl SceneExtractor {
                 .or_default()
                 .push((
                     order,
-                    SpriteInstance::new(model, sprite.tint).with_uv_rect(sprite.uv_rect()?),
+                    SpriteInstance::new(model, sprite.tint).with_uv_rect(
+                        match animations.rect(entity) {
+                            Some(rect) => rect,
+                            None => sprite.uv_rect()?,
+                        },
+                    ),
                 ));
         }
 
@@ -219,8 +263,7 @@ impl SceneExtractor {
                 },
             ));
         }
-
-        Ok(frame.prepare()?)
+        Ok(())
     }
 
     /// Where the world camera ends up looking, under the same adjustment a
@@ -512,4 +555,6 @@ pub enum SceneExtractError {
     InvalidCameraPan,
     #[error(transparent)]
     UvRect(#[from] UvRectError),
+    #[error(transparent)]
+    Animation(#[from] AnimationError),
 }

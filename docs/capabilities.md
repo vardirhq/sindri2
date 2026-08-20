@@ -128,9 +128,13 @@ front by how far from the camera they are.
 A sprite addresses part of a texture through a checked `UvRect`, so a sprite
 sheet is expressible: `UvRect::cell` slices a grid, the rect rides on the
 instance so every frame of one sheet stays in one draw call, and a GPU test
-reads the pixels back to prove the shader honours it. Nothing yet *animates*
-that rect — there is no clip or frame timing, so advancing a sheet is the
-caller's to do.
+reads the pixels back to prove the shader honours it. That rect animates from
+clips authored in the scene: `sindri.sprite_animation` names the
+sheet's grid, the clips cut from it, and which one plays, and
+`SpriteAnimations` holds where each sprite has got to. Playback is runtime
+state, so watching an animation run does not rewrite the scene it came from.
+What is missing is authoring: clips are typed into the scene file by hand,
+because the editor has no sheet slicer or clip list yet.
 A sprite is either screen-anchored, which is the default and cannot be occluded
 by the world, or in the world, drawn through the world camera by its full
 transform and hidden by opaque geometry in front of it. Sprites batch per space,

@@ -22,5 +22,5 @@ pub mod prelude {
     #[cfg(feature = "render")]
     pub use sindri_gpu::{GpuContext, GpuRequestOptions, SurfaceProfile};
     #[cfg(feature = "render")]
-    pub use sindri_scene::{CameraView, SceneExtractor, WorldProjection};
+    pub use sindri_scene::{CameraView, SceneExtractor, SpriteAnimations, WorldProjection};
 }
