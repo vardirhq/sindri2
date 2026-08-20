@@ -25,7 +25,7 @@ use glam::{Mat4, Vec2 as GlamVec2, Vec3};
 use serde_json::Value;
 use sindri_core::{
     CommandBuffer, CommandHistory, EngineLifecycle, EngineState, EntityData, EntityId,
-    SceneDocument, Transform3D, UnknownComponentPolicy, World, WorldCommand,
+    FixedStepConfig, SceneDocument, Transform3D, UnknownComponentPolicy, World, WorldCommand,
 };
 use sindri_render::{
     FrameRenderers, FrameTarget, SpriteBatchRenderer, TexturedCubeRenderer, Viewport,
@@ -33,7 +33,7 @@ use sindri_render::{
 };
 use sindri_scene::{
     CameraComponent, CameraView, MeshComponent, MeshPrimitive, SceneExtractor, SpriteAnchor,
-    SpriteComponent, SpriteSpace, ViewCamera, WorldProjection,
+    SpriteAnimations, SpriteComponent, SpriteSpace, ViewCamera, WorldProjection,
 };
 
 use crate::{
@@ -265,6 +265,19 @@ impl SceneRenderers {
 }
 
 /// One rendered view of the world, and the egui texture it is drawn through.
+/// Everything a frame is derived from: the world, the schemas that read it, and
+/// the runtime state beside it.
+///
+/// Together rather than as five arguments, because they are one thing — the
+/// state of the open scene — and each view draws all of it or none of it.
+#[derive(Clone, Copy)]
+struct SceneSource<'a> {
+    scene: &'a SceneExtractor,
+    world: &'a World,
+    animations: &'a SpriteAnimations,
+    textures: &'a SceneTextures,
+}
+
 struct RuntimeViewport {
     render_state: eframe::egui_wgpu::RenderState,
     target: ViewportTarget,
@@ -294,19 +307,19 @@ impl RuntimeViewport {
     fn render(
         &mut self,
         renderers: &mut SceneRenderers,
-        textures: &SceneTextures,
-        scene: &SceneExtractor,
-        world: &World,
+        source: SceneSource<'_>,
         size: (u32, u32),
         camera: CameraView,
     ) -> Result<(), String> {
         self.resize(size.0, size.1);
-        let prepared = scene
-            .extract(
-                world,
+        let prepared = source
+            .scene
+            .extract_animated(
+                source.world,
                 Viewport::new(self.target.width(), self.target.height()),
                 camera,
-                textures.bindings(),
+                source.textures.bindings(),
+                source.animations,
             )
             .map_err(|error| error.to_string())?;
         let mut encoder =
@@ -319,7 +332,7 @@ impl RuntimeViewport {
             FrameRenderers {
                 cube: &mut renderers.cube,
                 sprites: &mut renderers.sprites,
-                textures: textures.registry(),
+                textures: source.textures.registry(),
             },
             &self.render_state.device,
             &self.render_state.queue,
@@ -401,6 +414,12 @@ struct EditorApp {
     textured_revision: u64,
     scene_viewport: RuntimeViewport,
     game_viewport: RuntimeViewport,
+    /// Where each animated sprite has got to.
+    ///
+    /// Runtime state, so it lives here rather than in the world: an animation
+    /// playing must not be an unsaved change. Play advances it, pause holds it,
+    /// and stop puts every clip back to its first frame.
+    animations: SpriteAnimations,
     /// What the last action the user took had to say, if anything went wrong.
     ///
     /// Kept apart from `render_error` because the two have different lifetimes:
@@ -474,6 +493,7 @@ impl EditorApp {
             textured_revision: 0,
             scene_viewport,
             game_viewport,
+            animations: SpriteAnimations::new(),
             notice: open_error.or(load_error),
             render_error: None,
             console: Console::default(),
@@ -580,6 +600,9 @@ impl EditorApp {
                 self.selection = None;
                 self.saved_revision = self.history.revision();
                 self.lifecycle = initialized_lifecycle();
+                // A cursor belongs to the world it was advanced against, and
+                // a freshly loaded world reuses entity slots from the start.
+                self.animations = SpriteAnimations::new();
                 self.notice = None;
                 self.announce_scene();
                 self.reload_textures();
@@ -868,6 +891,9 @@ impl EditorApp {
                 self.saved_revision = self.history.revision();
                 self.selection = None;
                 self.lifecycle = initialized_lifecycle();
+                // A cursor belongs to the world it was advanced against, and
+                // a freshly loaded world reuses entity slots from the start.
+                self.animations = SpriteAnimations::new();
                 self.notice = None;
                 self.announce_scene();
                 self.reload_textures();
@@ -889,15 +915,42 @@ impl EditorApp {
         }
     }
 
-    /// Ends a play session, leaving the world exactly as it is.
+    /// Ends a play session, putting back what playing changed.
     ///
-    /// There is nothing to restore yet because nothing runs — see
-    /// `docs/editor-audit.md`. When play mode does drive the world, stopping
-    /// should put back what it was before play started, and that restoration
-    /// belongs here.
+    /// Today that is the animation cursors and nothing else, because animation
+    /// is the only thing play drives. When play mode does write to the world,
+    /// restoring the world belongs here too — see `docs/editor-audit.md`.
     fn stop_playback(&mut self) {
         if let Err(error) = self.lifecycle.stop() {
             self.report(error.to_string());
+        }
+        self.animations = SpriteAnimations::new();
+    }
+
+    /// Moves every animated sprite on by whatever this frame is worth.
+    ///
+    /// Called every frame rather than only while playing, so a scene at rest
+    /// shows its clips' first frames and a clip that cannot be played says so
+    /// without anyone pressing Play. What the transport changes is how much time
+    /// a frame is worth, which is [`animation_delta`].
+    fn advance_animations(&mut self, context: &egui::Context) {
+        if self.lifecycle.state() == EngineState::Running {
+            // Nothing else asks for a frame while the pointer is still, so
+            // without this an animation plays only as fast as the mouse moves.
+            context.request_repaint();
+        }
+        let delta = animation_delta(
+            self.lifecycle.state(),
+            context.input(|input| input.stable_dt),
+        );
+        if let Err(error) = self
+            .animations
+            .advance(&self.world, self.scene.components(), delta)
+        {
+            // Collapsed by the console the same way a render failure is: a
+            // broken clip fails every frame, and one entry with a count says
+            // more than sixty a second.
+            self.console.error(error.to_string());
         }
     }
 
@@ -1510,9 +1563,12 @@ impl EditorApp {
         let failure = viewport
             .render(
                 &mut self.renderers,
-                &self.textures,
-                &self.scene,
-                &self.world,
+                SceneSource {
+                    scene: &self.scene,
+                    world: &self.world,
+                    animations: &self.animations,
+                    textures: &self.textures,
+                },
                 (
                     physical_viewport_dimension(rect.width(), scale),
                     physical_viewport_dimension(rect.height(), scale),
@@ -1619,6 +1675,7 @@ impl eframe::App for EditorApp {
         let state = self.render_state.clone();
         let arrived = self.textures.poll(&state.device, &state.queue);
         self.record_texture_notes(arrived);
+        self.advance_animations(ui.ctx());
         self.update_title(ui.ctx());
         self.handle_close_request(ui.ctx());
         self.handle_shortcuts(ui.ctx());
@@ -2607,6 +2664,21 @@ fn transport_icon(
     .on_hover_text(tip)
 }
 
+/// How much time an animation takes from a frame, given where the transport is.
+///
+/// Only a running engine moves an animation on; paused holds where it is, which
+/// is not the same as advancing by nothing only because stopping resets. The cap
+/// is the same quarter second `FixedStepConfig` caps a frame at, shared rather
+/// than chosen again here, so a window left behind another one for a minute
+/// comes back where it left off rather than wherever a minute of animation
+/// lands.
+fn animation_delta(state: EngineState, frame_seconds: f32) -> f32 {
+    if state != EngineState::Running || !frame_seconds.is_finite() || frame_seconds < 0.0 {
+        return 0.0;
+    }
+    frame_seconds.min(FixedStepConfig::default().max_frame_delta.as_secs_f32())
+}
+
 fn initialized_lifecycle() -> EngineLifecycle {
     let mut lifecycle = EngineLifecycle::new();
     lifecycle
@@ -3238,6 +3310,39 @@ mod tests {
         assert_eq!(
             camera_for(WorkspaceTab::Scene, resting),
             camera_for(WorkspaceTab::Game, resting)
+        );
+    }
+
+    /// The transport decides whether an animation moves, and nothing else does.
+    #[test]
+    fn only_a_running_engine_moves_an_animation_on() {
+        let cap = FixedStepConfig::default().max_frame_delta.as_secs_f32();
+        assert_eq!(
+            animation_delta(EngineState::Running, 0.016).to_bits(),
+            0.016_f32.to_bits(),
+            "a running frame is worth its own length"
+        );
+        for state in [
+            EngineState::Created,
+            EngineState::Initialized,
+            EngineState::Paused,
+            EngineState::Stopped,
+        ] {
+            assert_eq!(
+                animation_delta(state, 0.016).to_bits(),
+                0.0_f32.to_bits(),
+                "{state:?} does not move an animation on"
+            );
+        }
+        assert_eq!(
+            animation_delta(EngineState::Running, 60.0).to_bits(),
+            cap.to_bits(),
+            "and a minute behind another window is capped, not caught up on"
+        );
+        assert_eq!(
+            animation_delta(EngineState::Running, f32::NAN).to_bits(),
+            0.0_f32.to_bits(),
+            "a frame time that is not a length of time is worth nothing"
         );
     }
 

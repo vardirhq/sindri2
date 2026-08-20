@@ -254,7 +254,11 @@ frame.
   Inspector beside them, and `Wide` shows one view at a time over a Project
   dock
 - Play, pause, and stop, driving the real engine lifecycle rather than a display
-  flag, and a separate **Discard changes** that returns the world to the file
+  flag, and a separate **Discard changes** that returns the world to the file.
+  Play advances sprite animations — the first thing it actually runs — pause
+  holds the frame, and stop puts every clip back to its start. A scene at rest
+  shows its clips' first frames, so a broken clip is reported without anyone
+  pressing anything
 - A Project dock listing the real contents of the directory the open scene
   lives in, with a list/grid toggle, a search that filters it, a refresh, and a
   double click on a scene row to open it
@@ -276,8 +280,8 @@ under use and what the editor cannot express at all. This is the summary, and
 it is deliberately short now: everything the audit found is either working or
 gone, and what is left here is waiting on a build rather than on a handler.
 
-- **Play and Pause** — they move the engine lifecycle and nothing else. No frame
-  is advanced, so no gameplay runs; the demo's own turning cube does not turn
+- **Play and Pause** — the only thing they run is sprite animation. No gameplay
+  is stepped, so the demo's own turning cube does not turn
 - **Rotation** in the inspector — the word "Quaternion". The format stores a
   rotation and the renderer applies it; nothing edits it
 
