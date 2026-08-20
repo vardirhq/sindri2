@@ -109,6 +109,14 @@ All notable changes to Sindri Next will be documented here.
 - A Decay call-depth limit, so runaway recursion returns an error instead of aborting the process.
 - The Decay example the documentation leads with is executed by a test, against a recording host.
 - Decay's CI checks that the language compiles for `wasm32-unknown-unknown`.
+- `sindri-decay`, binding the Decay language to a world: a `sindri.script` component, a host that gives Decay's symbolic paths a meaning on one entity's transform, and a driver that runs every script once a frame.
+- Authored `@export` properties, carried in the scene and applied to a script instance before it starts, with a property naming an unexported or undeclared field refused rather than ignored.
+- Decay scripts loaded through `sindri-assets` and hot-reloaded from the same file watch textures use.
+- The editor snapshots the world when Play is pressed and restores it on Stop, so a script writing to the world cannot cost unsaved work.
+- `TextAssetDecoder`, for assets that are text.
+- `decay/LANGUAGE.md`, a language reference stating the grammar, what does not exist, and which behaviours will surprise you, with its claims enforced by a test.
+- `docs/scripting.md`, the contract for how a script reaches a world.
+- `.decay` files listed as scripts in the project browser rather than as plain files.
 
 ### Changed
 

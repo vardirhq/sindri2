@@ -221,11 +221,15 @@ fn the_fixture_is_one_of_each_drawable_and_the_cameras_they_need() {
 /// `Reject` is the strong claim: every component in the fixture is one the
 /// engine understands, rather than JSON that happens to parse.
 #[test]
-fn every_component_in_the_fixture_matches_a_built_in_schema() {
-    SceneExtractor::new()
-        .expect("the built-in components register")
+fn every_component_in_the_fixture_matches_a_schema_the_editor_knows() {
+    // The editor's registry rather than the engine's built-ins: the fixture
+    // carries `sindri.script`, which the editor registers because a language is
+    // not something `sindri-scene` may learn about. Reject rather than Preserve,
+    // so a component nothing understands fails here instead of opening into a
+    // scene that silently does less than it says.
+    sindri_editor::native::scene_extractor()
         .validate(&document(), UnknownComponentPolicy::Reject)
-        .expect("the fixture uses only components the engine understands");
+        .expect("the fixture uses only components the editor understands");
 }
 
 #[test]

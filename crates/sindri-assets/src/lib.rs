@@ -21,7 +21,7 @@ mod watch;
 
 pub use decode::{
     AssetCompletionApplyError, AssetDecodeError, AssetDecoder, DecodedAssetCompletion,
-    SceneAssetDecoder, TextureAsset, TextureAssetDecoder, decode_completion,
+    SceneAssetDecoder, TextAssetDecoder, TextureAsset, TextureAssetDecoder, decode_completion,
 };
 #[cfg(target_arch = "wasm32")]
 pub use fetch::FetchAssetSource;

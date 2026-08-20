@@ -1,0 +1,19 @@
+// Turns whatever it is attached to, at a speed the scene chooses.
+//
+// The first Decay script the engine runs. It exists to be watched: open the
+// fixture, press Play, and the cube turns because this said so.
+script Spin {
+    // Authored in the scene rather than here. `let` means the script does not
+    // reassign it; @export means the author does.
+    @export
+    let turns_per_second: f32 = 0.25;
+
+    // Instance state. It survives between frames and is deliberately not in the
+    // scene, so watching the cube turn is not an unsaved change to the file.
+    var elapsed: f32 = 0.0;
+
+    fn update(dt: f32) {
+        elapsed += dt;
+        this.transform.rotation_z = elapsed * turns_per_second * 6.2831855;
+    }
+}

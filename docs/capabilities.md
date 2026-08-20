@@ -310,8 +310,8 @@ collapsed and overflowed nothing; and the settings gear.
   adapter is planned as optional rather than built in
 - No tilemaps, particles, parallax, or pathfinding
 - No TypeScript SDK; the WASM binding crate does not exist
-- **Nothing runs a script.** Decay exists as a language and cannot reach the
-  engine; see below
+- No spawning, input, timing, or cross-entity access from a script — a script
+  reaches its own transform and nothing else; see below
 - Hot reload covers assets, not the scene file: editing a scene on disk while it
   is open is not noticed
 - No deterministic system ordering
@@ -324,7 +324,10 @@ collapsed and overflowed nothing; and the settings gear.
 - No component editing beyond names and transforms
 - No prefabs, no play-mode-against-a-copy, no build or export controls
 - No versioned editor protocol; the editor and runtime are one process
-- Cannot open, edit, or run a Decay script
+- Cannot open or edit a Decay script — the project browser lists `.decay` files
+  as scripts, and opening one does nothing
+- No inspector for `sindri.script`: an exported property is authored by editing
+  the scene file by hand
 
 ---
 
@@ -337,7 +340,21 @@ isolation and none of it is true of the engine.
 
 ### Works
 
-A script is text on disk that a test can run. `decay-syntax` lexes and parses
+**A script drives a real entity.** `sindri-decay` binds the language to a world:
+a `sindri.script` component names a source and a container, `WorldHost` gives
+Decay's symbolic paths a meaning in terms of one entity's transform, and the
+editor runs every script once a frame with whatever the transport says a frame
+is worth. Authored `@export` properties reach the script before its first line.
+Sources load through `sindri-assets` and hot-reload from the same `AssetWatch`
+the textures use. Verified in the editor: the fixture's cube turns because
+`editor/assets/scripts/spin.decay` says so, and Stop restores the world to the
+pixel.
+
+A script reaches its own transform's position, scale, and Z rotation, plus six
+maths functions, and nothing else — the whole table is in `docs/scripting.md`.
+A failing script reports itself and does not stop the others.
+
+A script is also text on disk that a test can run. `decay-syntax` lexes and parses
 it, reporting diagnostics with a span, line, and column; the parser recovers
 rather than stopping at the first error, and survives two hundred thousand
 random token sequences without panicking or hanging. `decay-semantic` resolves
@@ -359,15 +376,16 @@ the README.
 
 ### Not yet
 
-- **No engine binding.** There is no `sindri-decay`, no component, no scene
-  representation, and no way to attach a script to an entity. The language has
-  never run inside the engine or the editor
 - **No loops**, and therefore no operation budget — call depth is bounded, which
   is the only unbounded path today
 - No arrays, maps, closures, or first-class functions
 - No standard library; not even `math`
 - Member types are unchecked — `this.transform.position.x` is `Unknown` to the
   analyzer, so nothing catches a misspelled component field
-- No hot reload, no LSP, no formatter, no debugger
+- Calling a sibling function as `this.helper()` silently becomes a host call and
+  fails; sibling functions must be called by bare name
+- No LSP, no formatter, no debugger, no syntax highlighting anywhere
+- No script state migration across a reload: a changed file recompiles, and the
+  running instance keeps whatever fields it had
 - Nothing has been *executed* on the browser target, only compiled
 - The only numeric type is spelled `f32` and every value it holds is an `f64`

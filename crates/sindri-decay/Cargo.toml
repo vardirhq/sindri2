@@ -1,0 +1,19 @@
+[package]
+name = "sindri-decay"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+sindri-core = { path = "../sindri-core" }
+decay-ir = { path = "../../decay/crates/decay-ir" }
+decay-runtime = { path = "../../decay/crates/decay-runtime" }
+decay-semantic = { path = "../../decay/crates/decay-semantic" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

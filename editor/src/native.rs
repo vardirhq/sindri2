@@ -27,6 +27,7 @@ use sindri_core::{
     CommandBuffer, CommandHistory, EngineLifecycle, EngineState, EntityData, EntityId,
     FixedStepConfig, SceneDocument, Transform3D, UnknownComponentPolicy, World, WorldCommand,
 };
+use sindri_decay::ScriptComponent;
 use sindri_render::{
     FrameRenderers, FrameTarget, SpriteBatchRenderer, TexturedCubeRenderer, Viewport,
     ViewportTarget, encode_prepared_frame,
@@ -42,6 +43,7 @@ use crate::{
     preferences::{AssetView, BottomTab, CameraProjection, Layout as WorkspaceLayout, Preferences},
     project::{AssetKind, ProjectEntry, ProjectTree},
     scene_file::{DEFAULT_SCENE_PATH, SceneFile},
+    scripts::{SceneScripts, ScriptNote},
     textures::{SceneTextures, TextureNote},
 };
 
@@ -420,6 +422,15 @@ struct EditorApp {
     /// playing must not be an unsaved change. Play advances it, pause holds it,
     /// and stop puts every clip back to its first frame.
     animations: SpriteAnimations,
+    /// The scripts the open scene runs, and the sources behind them.
+    scripts: SceneScripts,
+    /// The world as it was when Play was pressed.
+    ///
+    /// Scripts write to the world, which animation never did, so stopping has
+    /// to put back what playing changed. Restoring the *authored document*
+    /// instead would also throw away every edit made before pressing Play,
+    /// which is the author's work rather than the run's.
+    play_snapshot: Option<World>,
     /// What the last action the user took had to say, if anything went wrong.
     ///
     /// Kept apart from `render_error` because the two have different lifetimes:
@@ -443,7 +454,7 @@ impl EditorApp {
     fn new(context: &eframe::CreationContext<'_>) -> Self {
         configure_theme(&context.egui_ctx);
         let preferences = Preferences::load(context.storage);
-        let scene = SceneExtractor::new().expect("the built-in component schemas register");
+        let scene = scene_extractor();
         let (file, open_error) = open_requested_scene(preferences.last_scene.as_deref());
         // A scene that will not load must not take the editor down with it.
         // This used to unwrap, so a file that parsed and then failed validation
@@ -494,6 +505,8 @@ impl EditorApp {
             scene_viewport,
             game_viewport,
             animations: SpriteAnimations::new(),
+            scripts: SceneScripts::for_scene(None),
+            play_snapshot: None,
             notice: open_error.or(load_error),
             render_error: None,
             console: Console::default(),
@@ -507,6 +520,7 @@ impl EditorApp {
         app.announce_scene();
         let notes = app.textures.request(&app.world);
         app.record_texture_notes(notes);
+        app.reload_scripts();
         app.remember_open_scene();
         app
     }
@@ -603,9 +617,11 @@ impl EditorApp {
                 // A cursor belongs to the world it was advanced against, and
                 // a freshly loaded world reuses entity slots from the start.
                 self.animations = SpriteAnimations::new();
+                self.play_snapshot = None;
                 self.notice = None;
                 self.announce_scene();
                 self.reload_textures();
+                self.reload_scripts();
                 self.remember_open_scene();
             }
             Err(error) => self.report(error),
@@ -805,6 +821,68 @@ impl EditorApp {
         self.textured_revision = self.history.revision();
         let notes = self.textures.request(&self.world);
         self.record_texture_notes(notes);
+        self.refresh_scripts();
+    }
+
+    /// Asks again for whatever scripts the world names, after an edit that
+    /// could have changed it.
+    ///
+    /// Shares `textured_revision` deliberately: both ask "has the world changed
+    /// since we last looked", and two counters that must agree is one more
+    /// thing to keep in step than there is any reason for.
+    fn refresh_scripts(&mut self) {
+        let notes = self.scripts.request(&self.world, self.scene.components());
+        self.record_script_notes(notes);
+    }
+
+    /// Points the scripts at the open scene's directory and asks for its
+    /// sources.
+    ///
+    /// Rebuilt rather than re-rooted for the same reason the textures are: a
+    /// new scene resolves its references somewhere else, and the previous
+    /// scene's sources and running instances go when the old one drops.
+    fn reload_scripts(&mut self) {
+        self.scripts = SceneScripts::for_scene(self.file.path());
+        let notes = self.scripts.request(&self.world, self.scene.components());
+        self.record_script_notes(notes);
+    }
+
+    fn record_script_notes(&mut self, notes: Vec<ScriptNote>) {
+        for note in notes {
+            match note {
+                ScriptNote::Loaded(message) | ScriptNote::Reloaded(message) => {
+                    self.console.info(message);
+                }
+                ScriptNote::Failed(message) => self.console.warning(message),
+            }
+        }
+    }
+
+    /// Takes delivery of any script that arrived, then moves every script on by
+    /// whatever this frame is worth.
+    ///
+    /// Called every frame, like the animations, and for the same reason: a
+    /// script that will not compile should say so when the scene opens rather
+    /// than waiting for someone to press Play. What the transport changes is
+    /// how much time a frame is worth, so a scene at rest runs nothing.
+    fn advance_scripts(&mut self, context: &egui::Context) {
+        let notes = self.scripts.poll();
+        self.record_script_notes(notes);
+
+        let delta = animation_delta(
+            self.lifecycle.state(),
+            context.input(|input| input.stable_dt),
+        );
+        if delta == 0.0 {
+            return;
+        }
+        let components = self.scene.components().clone();
+        for failure in self.scripts.advance(&mut self.world, &components, delta) {
+            // Collapsed by the console the same way a broken clip is: a script
+            // that fails does it sixty times a second, and one line with a
+            // count says more than sixty that scroll.
+            self.console.error(failure.to_string());
+        }
     }
 
     fn record_texture_notes(&mut self, notes: Vec<TextureNote>) {
@@ -894,9 +972,11 @@ impl EditorApp {
                 // A cursor belongs to the world it was advanced against, and
                 // a freshly loaded world reuses entity slots from the start.
                 self.animations = SpriteAnimations::new();
+                self.play_snapshot = None;
                 self.notice = None;
                 self.announce_scene();
                 self.reload_textures();
+                self.reload_scripts();
             }
             Err(error) => self.report(error),
         }
@@ -908,7 +988,13 @@ impl EditorApp {
         let result = match self.lifecycle.state() {
             EngineState::Running => self.lifecycle.pause(),
             EngineState::Paused => self.lifecycle.resume(),
-            _ => self.lifecycle.start(),
+            _ => {
+                // Taken before the first frame runs, and only on a fresh start
+                // rather than on resume, so pausing and carrying on does not
+                // move the point stop returns to.
+                self.play_snapshot = Some(self.world.clone());
+                self.lifecycle.start()
+            }
         };
         if let Err(error) = result {
             self.report(error.to_string());
@@ -917,14 +1003,27 @@ impl EditorApp {
 
     /// Ends a play session, putting back what playing changed.
     ///
-    /// Today that is the animation cursors and nothing else, because animation
-    /// is the only thing play drives. When play mode does write to the world,
-    /// restoring the world belongs here too — see `docs/editor-audit.md`.
+    /// Scripts write to the world, so the world is part of what playing
+    /// changed — and restoring it is what makes Play safe to press on work in
+    /// progress. The snapshot is the world as it was when Play was pressed,
+    /// not the authored document: a scene edited and then played must come
+    /// back to the edit, or pressing Play would quietly discard it.
+    ///
+    /// Undo history is deliberately left alone. A script moving something is
+    /// not an action the author took, so it was never on the history, and
+    /// putting the world back does not change what undo means.
     fn stop_playback(&mut self) {
         if let Err(error) = self.lifecycle.stop() {
             self.report(error.to_string());
         }
         self.animations = SpriteAnimations::new();
+        // Entity handles survive, because this is the same world restored
+        // rather than one reloaded from a document — so the selection and the
+        // history keep pointing at the things they named.
+        if let Some(snapshot) = self.play_snapshot.take() {
+            self.world = snapshot;
+        }
+        self.scripts.restart();
     }
 
     /// Moves every animated sprite on by whatever this frame is worth.
@@ -1676,6 +1775,7 @@ impl eframe::App for EditorApp {
         let arrived = self.textures.poll(&state.device, &state.queue);
         self.record_texture_notes(arrived);
         self.advance_animations(ui.ctx());
+        self.advance_scripts(ui.ctx());
         self.update_title(ui.ctx());
         self.handle_close_request(ui.ctx());
         self.handle_shortcuts(ui.ctx());
@@ -2993,6 +3093,22 @@ fn open_scene_for(argument: Option<&str>, remembered: Option<&str>) -> (SceneFil
             Some(error.to_string()),
         ),
     }
+}
+
+/// The component schemas the editor understands.
+///
+/// `sindri.script` is registered here rather than in `sindri-scene`, because
+/// the engine's scene crate must not learn about a language —
+/// `SceneExtractor::register` exists for exactly this, a component the host
+/// brings of its own. It is one function rather than an inline registration so
+/// that the editor and everything asserting about the editor's scenes agree by
+/// construction instead of by both remembering the same list.
+pub fn scene_extractor() -> SceneExtractor {
+    let mut scene = SceneExtractor::new().expect("the built-in component schemas register");
+    scene
+        .register::<ScriptComponent>("Script")
+        .expect("sindri.script registers");
+    scene
 }
 
 /// Builds a runtime world from a document the editor has opened.

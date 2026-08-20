@@ -126,6 +126,30 @@ fn image_error_kind(error: &image::ImageError) -> AssetLoadErrorKind {
     }
 }
 
+/// Decodes an asset that is just text, such as a `.decay` script.
+///
+/// Deliberately knows nothing about what the text says. A script is source to
+/// whoever compiles it and bytes to the pipeline that fetches it, and keeping
+/// the seam there is what lets `sindri-decay` do no I/O at all.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct TextAssetDecoder;
+
+impl AssetDecoder for TextAssetDecoder {
+    type Asset = String;
+
+    fn decode(&self, bytes: AssetBytes) -> Result<Self::Asset, AssetDecodeError> {
+        let id = bytes.id().clone();
+        String::from_utf8(bytes.as_slice().to_vec()).map_err(|error| {
+            AssetDecodeError::new(
+                id,
+                "text",
+                AssetLoadErrorKind::InvalidData,
+                error.to_string(),
+            )
+        })
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SceneAssetDecoder;
 
@@ -221,6 +245,23 @@ pub enum AssetCompletionApplyError {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn text_decodes_as_utf8_and_refuses_what_is_not() {
+        let decoder = super::TextAssetDecoder;
+        let id: AssetId = "scripts/spin.decay".parse().unwrap();
+        assert_eq!(
+            decoder
+                .decode(AssetBytes::new(id.clone(), b"script Spin {}".to_vec()))
+                .unwrap(),
+            "script Spin {}"
+        );
+        assert!(
+            decoder
+                .decode(AssetBytes::new(id, vec![0xff, 0xfe]))
+                .is_err()
+        );
+    }
+
     use std::collections::BTreeMap;
 
     #[cfg(not(target_arch = "wasm32"))]
