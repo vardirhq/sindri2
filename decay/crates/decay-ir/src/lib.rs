@@ -66,15 +66,41 @@ impl Path {
 pub enum Instruction {
     Push(Constant),
     Load(Path),
+    /// Assigns to a name that already exists, and is subject to its
+    /// mutability. Binding a new name is [`Instruction::Declare`].
     Store(Path),
-    Declare { name: String, mutable: bool },
+    /// Pops the initial value and binds it to a new name in the innermost
+    /// scope.
+    ///
+    /// Declaring takes the value rather than leaving the slot empty for a
+    /// following `Store`, because a `let` binding's own initialization would
+    /// then have to be an exception to the runtime's immutability rule. It was
+    /// not, so every `let` local failed at runtime; taking the value here means
+    /// there is no initializing store to make an exception for.
+    Declare {
+        name: String,
+        mutable: bool,
+    },
     Unary(UnaryOp),
     Binary(BinaryOp),
-    Call { callee: Path, argument_count: usize },
+    Call {
+        callee: Path,
+        argument_count: usize,
+    },
     Pop,
     Return,
     JumpIfFalse(usize),
     Jump(usize),
+    /// Opens a nested scope, so that a name declared inside a block leaves
+    /// with it.
+    ///
+    /// The analyzer has always scoped blocks; without these the IR did not,
+    /// and a shadowing declaration overwrote the name it shadowed for the rest
+    /// of the function.
+    ScopeEnter,
+    /// Closes the scope [`Instruction::ScopeEnter`] opened, discarding what it
+    /// declared.
+    ScopeExit,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -183,6 +209,18 @@ impl Lowerer {
         }
     }
 
+    /// A block that introduces a scope of its own.
+    ///
+    /// Every branch is wrapped rather than only the ones that declare
+    /// something, so the enter and exit stay paired however the jumps around
+    /// them are patched. A `Return` leaving a scope unclosed costs nothing:
+    /// the frame goes with it.
+    fn lower_scoped_block(block: &Block, instructions: &mut Vec<Instruction>) {
+        instructions.push(Instruction::ScopeEnter);
+        Self::lower_block(block, instructions);
+        instructions.push(Instruction::ScopeExit);
+    }
+
     fn lower_stmt(statement: &Stmt, instructions: &mut Vec<Instruction>) {
         match statement {
             Stmt::Binding {
@@ -191,15 +229,18 @@ impl Lowerer {
                 initializer,
                 ..
             } => {
+                // The initializer is evaluated before the name exists, which is
+                // also what the language means: a binding cannot refer to
+                // itself.
+                if let Some(initializer) = initializer {
+                    Self::lower_expr(initializer, instructions);
+                } else {
+                    instructions.push(Instruction::Push(Constant::Null));
+                }
                 instructions.push(Instruction::Declare {
                     name: name.clone(),
                     mutable: *mutable,
                 });
-                if let Some(initializer) = initializer {
-                    Self::lower_expr(initializer, instructions);
-                    instructions.push(Instruction::Store(Path(vec![name.clone()])));
-                    instructions.push(Instruction::Pop);
-                }
             }
             Stmt::Expr { expr, .. } => {
                 Self::lower_expr(expr, instructions);
@@ -221,14 +262,14 @@ impl Lowerer {
                 let jump_if_false = instructions.len();
                 instructions.push(Instruction::JumpIfFalse(usize::MAX));
 
-                Self::lower_block(then_branch, instructions);
+                Self::lower_scoped_block(then_branch, instructions);
 
                 if let Some(else_branch) = else_branch {
                     let jump_to_end = instructions.len();
                     instructions.push(Instruction::Jump(usize::MAX));
                     let else_start = instructions.len();
                     instructions[jump_if_false] = Instruction::JumpIfFalse(else_start);
-                    Self::lower_block(else_branch, instructions);
+                    Self::lower_scoped_block(else_branch, instructions);
                     let end = instructions.len();
                     instructions[jump_to_end] = Instruction::Jump(end);
                 } else {
@@ -236,7 +277,7 @@ impl Lowerer {
                     instructions[jump_if_false] = Instruction::JumpIfFalse(end);
                 }
             }
-            Stmt::Block(block) => Self::lower_block(block, instructions),
+            Stmt::Block(block) => Self::lower_scoped_block(block, instructions),
         }
     }
 
@@ -411,6 +452,67 @@ mod tests {
                 _ => {}
             }
         }
+    }
+
+    /// A binding evaluates its initializer and then `Declare` takes the value.
+    /// The shape matters: the moment initialization becomes a `Store`, it is
+    /// subject to the mutability rule and every `let` binding fails.
+    #[test]
+    fn a_binding_declares_its_value_rather_than_storing_it() {
+        let lowered = lower(r"script T { fn run() { let speed: f32 = 6.0; } }");
+        let program = lowered.program.expect("program should lower");
+        let instructions = &program.containers[0].functions[0].instructions;
+
+        assert_eq!(
+            instructions[..2],
+            [
+                Instruction::Push(Constant::Number(6.0)),
+                Instruction::Declare {
+                    name: "speed".into(),
+                    mutable: false,
+                },
+            ]
+        );
+        assert!(
+            !instructions
+                .iter()
+                .any(|instruction| matches!(instruction, Instruction::Store(_))),
+            "a binding is not a store"
+        );
+    }
+
+    /// Blocks carry their scope into the IR, and the enter/exit stay paired
+    /// whichever way the branch jumps.
+    #[test]
+    fn blocks_open_and_close_a_scope() {
+        let lowered = lower(
+            r"script T { fn run(flag: bool) { if flag { var x: f32 = 1.0; } else { var x: f32 = 2.0; } } }",
+        );
+        let program = lowered.program.expect("program should lower");
+        let instructions = &program.containers[0].functions[0].instructions;
+
+        let enters = instructions
+            .iter()
+            .filter(|instruction| **instruction == Instruction::ScopeEnter)
+            .count();
+        let exits = instructions
+            .iter()
+            .filter(|instruction| **instruction == Instruction::ScopeExit)
+            .count();
+        assert_eq!((enters, exits), (2, 2), "one scope per branch");
+
+        // Whichever branch runs, it enters exactly one scope and leaves it.
+        let mut depth = 0i32;
+        let mut lowest = 0i32;
+        for instruction in instructions {
+            match instruction {
+                Instruction::ScopeEnter => depth += 1,
+                Instruction::ScopeExit => depth -= 1,
+                _ => {}
+            }
+            lowest = lowest.min(depth);
+        }
+        assert_eq!(lowest, 0, "no exit precedes its enter");
     }
 
     #[test]
