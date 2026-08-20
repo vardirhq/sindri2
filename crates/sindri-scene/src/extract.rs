@@ -220,6 +220,32 @@ impl SceneExtractor {
         Ok(frame.prepare()?)
     }
 
+    /// Where the world camera ends up looking, under the same adjustment a
+    /// frame would be extracted with.
+    ///
+    /// An editor paints chrome of its own — an axis indicator, a grid, a
+    /// gizmo — and has to know which way the world is facing to draw any of it
+    /// truthfully. Without this it either extracts a frame it throws away or
+    /// keeps a second copy of the orbit maths, and a second copy is how an
+    /// indicator ends up disagreeing with the picture it sits on top of.
+    ///
+    /// The view alone, not the projection: chrome sits in the corner of a
+    /// viewport rather than in the world, so how the world is flattened is not
+    /// its business. `None` means the world holds no perspective camera, which
+    /// is what extraction reports as [`SceneExtractError::MissingWorldCamera`].
+    pub fn world_camera_view(
+        &self,
+        world: &World,
+        view: CameraView,
+    ) -> Result<Option<Mat4>, SceneExtractError> {
+        // Any aspect ratio will do: it shapes a projection, and none is
+        // returned.
+        Ok(self
+            .resolve_cameras(world, 1.0, view)?
+            .world
+            .map(|camera| camera.view))
+    }
+
     fn resolve_cameras(
         &self,
         world: &World,

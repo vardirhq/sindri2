@@ -117,3 +117,11 @@ Pan is measured in fractions of the framed half-height rather than in world unit
 the picture by the same amount whether the subject is a metre or a kilometre away, and the
 perspective and orthographic projections agree about what a pan of one half means. A test holds them
 to within a ten-thousandth of each other.
+
+A viewport that paints its own chrome — an axis indicator, a grid, a gizmo — has to know which way
+the world is facing to draw any of it truthfully. `SceneExtractor::world_camera_view` answers that
+under the same `CameraView` a frame would be extracted with, returning the view matrix alone and
+`None` when the world holds no perspective camera. The alternative is a second copy of the orbit
+maths beside the first, which is how an indicator ends up disagreeing with the picture it is drawn
+on top of — the editor's axis gizmo was painted at three fixed offsets and claimed the same
+orientation from every angle.

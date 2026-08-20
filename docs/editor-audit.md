@@ -172,7 +172,7 @@ the pointer highlight: the control is drawn and does nothing when pressed.
 | Reset view | 129,795 px | works |
 | Perspective / Ortho | 111,798 px | works, persists |
 | Orbit, pan, zoom | 129,835 px | works; zoom clamped to 0.65–1.8, pitch to ±1.1 rad |
-| **Axis gizmo** | **0 px while the scene moved 116,782 px** | **static** — three hardcoded pixel offsets; it cannot turn |
+| **Axis gizmo** | **0 px while the scene moved 116,782 px** | **static** — three hardcoded pixel offsets; it cannot turn. **Fixed**: 259 px under the same orbit |
 | Viewport click to select | 0 px | no picking |
 | Project / Console tabs | 122,990 px | work |
 | Grid / List | 154,079 / 384,933 px | work |

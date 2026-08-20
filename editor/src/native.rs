@@ -22,7 +22,7 @@ use egui_material_icons::{
         ICON_VIEW_IN_AR, ICON_VIEW_LIST,
     },
 };
-use glam::Vec2 as GlamVec2;
+use glam::{Mat4, Vec2 as GlamVec2, Vec3};
 use serde_json::Value;
 use sindri_core::{
     CommandBuffer, CommandHistory, EngineLifecycle, EngineState, EntityData, EntityId,
@@ -1258,6 +1258,13 @@ impl EditorApp {
             Color32::WHITE,
         );
         if editing {
+            // The same view the frame under it was drawn through, asked for
+            // rather than re-derived, so the axes cannot drift from the picture.
+            let axes = self
+                .scene
+                .world_camera_view(&self.world, camera)
+                .ok()
+                .flatten();
             paint_runtime_overlay(
                 ui.painter(),
                 rect,
@@ -1266,6 +1273,7 @@ impl EditorApp {
                     .and_then(|entity| self.world.get(entity))
                     .map_or_else(|| "No selection".to_owned(), entity_name),
                 self.problem(),
+                axes,
             );
         } else {
             paint_viewport_border(ui.painter(), rect, self.problem());
@@ -2184,6 +2192,7 @@ fn paint_runtime_overlay(
     rect: Rect,
     selected_name: &str,
     error: Option<&str>,
+    axes: Option<Mat4>,
 ) {
     painter.rect_stroke(rect, 0.0, Stroke::new(1.0, BORDER), StrokeKind::Inside);
     let label_rect = Rect::from_min_size(rect.min + Vec2::new(12.0, 12.0), Vec2::new(218.0, 42.0));
@@ -2203,7 +2212,13 @@ fn paint_runtime_overlay(
         TEXT_FAINT,
     );
     paint_error_banner(painter, rect, error);
-    paint_axis_gizmo(painter, Pos2::new(rect.right() - 42.0, rect.top() + 48.0));
+    if let Some(view) = axes {
+        paint_axis_gizmo(
+            painter,
+            Pos2::new(rect.right() - 42.0, rect.top() + 48.0),
+            view,
+        );
+    }
 }
 
 /// The game view's chrome: a frame, and anything that went wrong.
@@ -2232,12 +2247,44 @@ fn paint_error_banner(painter: &egui::Painter, rect: Rect, error: Option<&str>) 
     }
 }
 
-fn paint_axis_gizmo(painter: &egui::Painter, origin: Pos2) {
-    for (offset, color, label) in [
-        (Vec2::new(19.0, 7.0), Color32::from_rgb(239, 92, 101), "X"),
-        (Vec2::new(0.0, -22.0), Color32::from_rgb(89, 201, 135), "Y"),
-        (Vec2::new(-14.0, 11.0), Color32::from_rgb(91, 151, 239), "Z"),
-    ] {
+/// How long an axis arm is when it points straight across the screen.
+const AXIS_ARM: f32 = 22.0;
+
+/// Where the three world axes point on screen, and in what order to draw them.
+///
+/// This used to be three hardcoded offsets, so the indicator claimed the same
+/// orientation whichever way the camera was facing — the one control in the
+/// editor that was wrong rather than merely idle, and the one the first audit
+/// walked past because it swept controls instead of pixels.
+///
+/// Each axis is turned by the camera's view and then flattened: the screen's Y
+/// grows downwards, so the view's Y is negated, and an axis pointing at or away
+/// from the viewer foreshortens to a stub of its own accord. The order is back
+/// to front by how near the viewer each arm ends, so the arm behind is drawn
+/// under the ones in front rather than over them.
+fn axis_arms(view: Mat4, length: f32) -> [(Vec2, Color32, &'static str); 3] {
+    let mut arms = [
+        (Vec3::X, Color32::from_rgb(239, 92, 101), "X"),
+        (Vec3::Y, Color32::from_rgb(89, 201, 135), "Y"),
+        (Vec3::Z, Color32::from_rgb(91, 151, 239), "Z"),
+    ]
+    .map(|(axis, color, label)| {
+        let facing = view.transform_vector3(axis);
+        (
+            facing,
+            Vec2::new(facing.x, -facing.y) * length,
+            color,
+            label,
+        )
+    });
+    // Ascending depth: in view space the camera looks down -Z, so the largest Z
+    // is the arm nearest the viewer and is drawn last.
+    arms.sort_by(|left, right| left.0.z.total_cmp(&right.0.z));
+    arms.map(|(_, offset, color, label)| (offset, color, label))
+}
+
+fn paint_axis_gizmo(painter: &egui::Painter, origin: Pos2, view: Mat4) {
+    for (offset, color, label) in axis_arms(view, AXIS_ARM) {
         let end = origin + offset;
         painter.line_segment([origin, end], Stroke::new(2.0, color));
         painter.text(
@@ -2434,6 +2481,7 @@ mod tests {
     // depending on the working directory. Only the tests want it: the editor
     // itself no longer loads through the example's scene type.
     use sindri_cube::DemoScene;
+    use sindri_render::look_at;
 
     use super::*;
 
@@ -2801,6 +2849,65 @@ mod tests {
             })
             .drop_without_applying_deltas();
         pressed.get()
+    }
+
+    /// Where one axis ends up on screen, by name.
+    fn arm(view: Mat4, axis: &str) -> Vec2 {
+        axis_arms(view, 1.0)
+            .into_iter()
+            .find(|(_, _, label)| *label == axis)
+            .map(|(offset, _, _)| offset)
+            .expect("every axis is drawn")
+    }
+
+    /// The indicator has to answer the camera. It was painted at three fixed
+    /// offsets, so it claimed the same orientation from every angle — the one
+    /// control in the editor that was wrong rather than merely idle.
+    #[test]
+    fn the_axis_indicator_turns_with_the_camera() {
+        let front = look_at(Vec3::new(0.0, 0.0, 10.0), Vec3::ZERO, Vec3::Y);
+        assert!(arm(front, "X").x > 0.9, "X points across the picture");
+        assert!(
+            arm(front, "Y").y < -0.9,
+            "Y points up it, and the screen's Y grows downwards"
+        );
+        assert!(
+            arm(front, "Z").length() < 0.01,
+            "Z points at the viewer, so it has nowhere to go on screen"
+        );
+
+        // A quarter turn to the side and the two swap: Z now lies across the
+        // picture and X points at the viewer.
+        let side = look_at(Vec3::new(10.0, 0.0, 0.0), Vec3::ZERO, Vec3::Y);
+        // Standing on +X and facing the origin puts world +Z on the left,
+        // which is where X's arm no longer is.
+        assert!(
+            arm(side, "Z").x < -0.9,
+            "Z has taken the across-screen axis"
+        );
+        assert!(arm(side, "X").length() < 0.01, "and X points at the viewer");
+        assert!(arm(side, "Y").y < -0.9, "up is still up");
+    }
+
+    /// An arm behind the origin is drawn under the ones in front of it, so the
+    /// indicator reads as three arms in space rather than three flat lines.
+    #[test]
+    fn the_axis_indicator_draws_back_to_front() {
+        // Looking from above and to one side, so no two arms share a depth.
+        let view = look_at(Vec3::new(4.0, 3.0, 5.0), Vec3::ZERO, Vec3::Y);
+        let order: Vec<&str> = axis_arms(view, AXIS_ARM)
+            .iter()
+            .map(|(_, _, label)| *label)
+            .collect();
+        let depth = |axis: Vec3| view.transform_vector3(axis).z;
+        let mut expected = [
+            (depth(Vec3::X), "X"),
+            (depth(Vec3::Y), "Y"),
+            (depth(Vec3::Z), "Z"),
+        ];
+        expected.sort_by(|left, right| left.0.total_cmp(&right.0));
+        let expected: Vec<&str> = expected.iter().map(|(_, label)| *label).collect();
+        assert_eq!(order, expected, "the nearest arm is drawn last");
     }
 
     /// Redo must be asked for before undo, because egui ignores an extra Shift

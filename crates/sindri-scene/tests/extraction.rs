@@ -864,3 +864,55 @@ fn bindings_replace_rather_than_duplicate() {
     assert_eq!(bindings.resolve("b.png"), TextureRegistry::MISSING);
     assert_eq!(bindings.get("b.png"), None);
 }
+
+/// What a viewport's own chrome is drawn from. The orbit that turns the picture
+/// has to turn the view it is asked for, or an axis indicator drawn from it
+/// will disagree with the scene under it — which is exactly what the editor's
+/// did while it was painted at fixed angles.
+#[test]
+fn the_world_camera_view_answers_the_orbit_the_frame_was_drawn_with() {
+    let world = world_from(&scene(""));
+    let extractor = SceneExtractor::new().expect("built-in components register");
+
+    let resting = extractor
+        .world_camera_view(&world, CameraView::default())
+        .expect("the world holds a perspective camera")
+        .expect("a perspective camera resolves");
+    // The authored camera sits at (3, 2, 4) looking at the origin, so world X
+    // is already partly towards the viewer rather than straight across.
+    let across = resting.transform_vector3(Vec3::X);
+    assert!(across.x > 0.0, "world X points right of the picture");
+    assert!(across.z > 0.0, "and towards the viewer");
+
+    let quarter_turn = extractor
+        .world_camera_view(
+            &world,
+            CameraView {
+                orbit: Vec2::new(std::f32::consts::FRAC_PI_2, 0.0),
+                ..CameraView::default()
+            },
+        )
+        .expect("the world holds a perspective camera")
+        .expect("a perspective camera resolves");
+    let turned = quarter_turn.transform_vector3(Vec3::X);
+    assert!(
+        (turned - across).length() > 0.5,
+        "a quarter turn has to move the axes: {across} became {turned}"
+    );
+}
+
+/// A world with nothing to look through says so rather than inventing a view.
+#[test]
+fn a_world_with_no_perspective_camera_has_no_view_to_offer() {
+    let world = world_from(&document(
+        r#"{ "id": "cube", "transform_3d": {},
+          "components": { "sindri.mesh": { "primitive": "cube", "texture": "t.png" } } }"#,
+    ));
+    let extractor = SceneExtractor::new().expect("built-in components register");
+    assert_eq!(
+        extractor
+            .world_camera_view(&world, CameraView::default())
+            .expect("asking is not an error"),
+        None
+    );
+}

@@ -167,3 +167,5 @@ All notable changes to Sindri Next will be documented here.
 - Added `CommandHistory::revision`, which numbers the state the world is in, so a tool can tell whether the world still matches what it saved rather than tracking that a write happened.
 - Fixed the editor claiming unsaved work after undoing back to the saved state, and claiming none after redoing away from it.
 - Fixed Ctrl+Shift+Z performing an undo in the editor: egui ignores an extra modifier when matching, so the redo shortcut was consumed by the undo binding tested before it.
+- Added `SceneExtractor::world_camera_view`, which answers where the world camera looks under a given view adjustment, so a viewport can draw its own chrome without extracting a frame or keeping a second copy of the orbit maths.
+- Fixed the editor's axis indicator being painted at three fixed offsets: it now turns, foreshortens, and reorders its arms with the camera, which is the first thing in the editor that visibly answers where the viewport is looking from.

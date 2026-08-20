@@ -196,6 +196,9 @@ frame.
   another scene, reloading from disk, discarding changes, and closing the window
   — each naming what it is about to do and offering to save instead
 - A live viewport with orbit, pan, zoom, and reset-to-authored-camera
+- An axis indicator in the scene view's corner drawn from the same camera view
+  the frame under it was drawn through, foreshortening and reordering its arms
+  as the camera turns
 - Perspective and orthographic toggle
 - Scene and Game views, the latter rendering through the authored camera with no
   editor chrome painted over it — both live at once in the `2 by 3` layout
@@ -222,8 +225,6 @@ under use and what the editor cannot express at all. This is the summary.
   turn
 - **The asset search box** — accepts typing and filters nothing, which is worse
   than the buttons that visibly do nothing
-- **The axis gizmo in the scene view's corner** — painted at fixed angles, so it
-  shows the same orientation whichever way the camera is pointing
 - **`+` Add entity** and **Add Component** — not handled. Entities and components
   can only come from a file
 - **Filter assets**, the folder tree, and the asset rows themselves — decoration
