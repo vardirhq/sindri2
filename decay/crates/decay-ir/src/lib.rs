@@ -4,9 +4,9 @@
 //! control flow, values, names, member paths and calls, but it does not know
 //! what a Transform, Entity, Input service, or any other host concept is.
 
-use decay_semantic::{Analysis, Environment, analyze, analyze_with_environment};
+use decay_semantic::{Analysis, Environment, analyze_with_environment};
 use decay_syntax::{
-    AssignOp, BinaryOp, Block, Expr, ExprKind, FunctionDecl, Item, Member, Span, Stmt, UnaryOp,
+    AssignOp, BinaryOp, Block, Expr, ExprKind, FunctionDecl, Item, Member, Stmt, UnaryOp,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -145,7 +145,10 @@ impl Lowerer {
                     fields.push(IrField {
                         name: field.name.clone(),
                         mutable: field.mutable,
-                        exported: field.attributes.iter().any(|attribute| attribute.name == "export"),
+                        exported: field
+                            .attributes
+                            .iter()
+                            .any(|attribute| attribute.name == "export"),
                         type_name: field.ty.as_ref().map(|ty| ty.name.clone()),
                         initializer,
                     });
@@ -243,9 +246,11 @@ impl Lowerer {
             ExprKind::Identifier(name) => {
                 instructions.push(Instruction::Load(Path(vec![name.clone()])))
             }
-            ExprKind::Number(value) => instructions.push(Instruction::Push(Constant::Number(*value))),
+            ExprKind::Number(value) => {
+                instructions.push(Instruction::Push(Constant::Number(*value)));
+            }
             ExprKind::String(value) => {
-                instructions.push(Instruction::Push(Constant::String(value.clone())))
+                instructions.push(Instruction::Push(Constant::String(value.clone())));
             }
             ExprKind::Bool(value) => instructions.push(Instruction::Push(Constant::Bool(*value))),
             ExprKind::Null => instructions.push(Instruction::Push(Constant::Null)),
@@ -260,7 +265,8 @@ impl Lowerer {
                 instructions.push(Instruction::Binary(*op));
             }
             ExprKind::Assign { target, op, value } => {
-                let path = Self::path_from_expr(target).unwrap_or_else(|| Path(vec!["<invalid>".into()]));
+                let path = Self::path_from_expr(target)
+                    .unwrap_or_else(|| Path(vec!["<invalid>".into()]));
                 if matches!(op, AssignOp::Assign) {
                     Self::lower_expr(value, instructions);
                 } else {
@@ -322,7 +328,9 @@ impl Lowerer {
 
 #[cfg(test)]
 mod tests {
-    use super::{Constant, Instruction, Path, lower};
+    use decay_semantic::{Environment, Type};
+
+    use super::{Constant, Instruction, Path, lower, lower_with_environment};
 
     #[test]
     fn lowers_member_assignment_to_symbolic_path() {
@@ -354,8 +362,11 @@ mod tests {
     }
 
     #[test]
-    fn lowers_host_call_without_knowing_host_semantics() {
-        let lowered = lower(
+    fn lowers_declared_host_call_without_knowing_host_semantics() {
+        let mut environment = Environment::new();
+        environment.add_value("Input", Type::Named("Input".to_owned()));
+
+        let lowered = lower_with_environment(
             r#"
             script Player {
                 fn update() {
@@ -363,6 +374,7 @@ mod tests {
                 }
             }
             "#,
+            &environment,
         );
         let program = lowered.program.expect("program should lower");
         let instructions = &program.containers[0].functions[0].instructions;
@@ -372,6 +384,24 @@ mod tests {
             Instruction::Call { callee, argument_count: 2 }
                 if callee == &Path(vec!["Input".into(), "axis".into()])
         )));
+    }
+
+    #[test]
+    fn undeclared_host_names_do_not_become_language_builtins() {
+        let lowered = lower(
+            r#"
+            script Player {
+                fn update() {
+                    Input.axis("left", "right");
+                }
+            }
+            "#,
+        );
+
+        assert!(lowered.program.is_none());
+        assert!(lowered.analysis.diagnostics.iter().any(|diagnostic| {
+            diagnostic.message.contains("unknown name `Input`")
+        }));
     }
 
     #[test]
