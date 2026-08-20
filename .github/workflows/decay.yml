@@ -14,7 +14,7 @@ on:
       - '.github/workflows/decay.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   check:
@@ -25,26 +25,14 @@ jobs:
         working-directory: decay
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: decay
-      - name: Apply rustfmt
-        run: cargo fmt --all
-      - name: Commit rustfmt changes
-        working-directory: .
-        run: |
-          if ! git diff --quiet -- decay; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -- decay
-            git commit -m "style(decay): apply rustfmt"
-            git push
-          fi
+      - name: Format
+        run: cargo fmt --all --check
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Test
