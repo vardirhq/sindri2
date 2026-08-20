@@ -10,10 +10,13 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use decay_ir::{IrContainer, IrProgram, lower_with_environment};
 use decay_runtime::{Runtime, ScriptInstance, Value};
-use decay_semantic::{Environment, FunctionType, Type};
+use decay_semantic::{Environment, FunctionType, HostType, Type};
 use sindri_core::{ComponentSchemaRegistry, EntityId, World};
 
-use crate::{ScriptComponent, ScriptFailure, WorldHost};
+use crate::{
+    ScriptComponent, ScriptFailure, WorldHost,
+    surface::{AXES, FUNCTIONS, HostFunction, SCALARS, TRANSFORM, TRANSFORM_MEMBER, VEC3, VECTORS},
+};
 
 /// The lifecycle function called once, before the first update.
 const START: &str = "start";
@@ -52,32 +55,50 @@ impl ScriptSources {
     }
 }
 
-/// The host globals a Decay script may name.
+/// What a Decay script may name, as types the analyzer can check.
 ///
 /// Registered here rather than being builtins of the language, which is the
 /// boundary Decay is built around: `decay-semantic` knows that `sin` exists
 /// only because this said so, and knows nothing about what it does.
+///
+/// Every entry is derived from [`crate::surface`], the same tables
+/// [`crate::WorldHost`] reaches the world through. A path the analyzer accepts
+/// and the host cannot answer is a clean compile followed by a runtime failure,
+/// so the two are not allowed to be written separately.
 #[must_use]
 pub fn environment() -> Environment {
     let mut environment = Environment::new();
-    for name in ["abs", "sqrt", "sin", "cos"] {
+
+    let mut vec3 = HostType::new();
+    for (axis, _) in AXES {
+        vec3 = vec3.with_value(*axis, Type::F32);
+    }
+    environment.add_type(VEC3, vec3);
+
+    let mut transform = HostType::new();
+    for (name, _) in VECTORS {
+        transform = transform.with_value(*name, Type::Named(VEC3.to_owned()));
+    }
+    for (name, _) in SCALARS {
+        transform = transform.with_value(*name, Type::F32);
+    }
+    environment.add_type(TRANSFORM, transform);
+
+    environment.add_this_value(TRANSFORM_MEMBER, Type::Named(TRANSFORM.to_owned()));
+
+    for (name, function) in FUNCTIONS {
         environment.add_function(
-            name,
+            *name,
             FunctionType {
-                params: vec![Type::F32],
+                params: match function {
+                    HostFunction::Unary(_) => vec![Type::F32],
+                    HostFunction::Binary(_) => vec![Type::F32, Type::F32],
+                },
                 return_type: Type::F32,
             },
         );
     }
-    for name in ["min", "max"] {
-        environment.add_function(
-            name,
-            FunctionType {
-                params: vec![Type::F32, Type::F32],
-                return_type: Type::F32,
-            },
-        );
-    }
+
     environment
 }
 

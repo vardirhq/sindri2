@@ -27,6 +27,7 @@ mod component;
 mod error;
 mod host;
 mod scripts;
+mod surface;
 
 pub use component::ScriptComponent;
 pub use error::ScriptFailure;

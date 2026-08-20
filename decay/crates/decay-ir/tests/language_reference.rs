@@ -9,7 +9,7 @@
 //! wrong: fix the document in the same commit as the change.
 
 use decay_ir::lower_with_environment;
-use decay_semantic::{Environment, FunctionType, Type};
+use decay_semantic::{Environment, FunctionType, HostType, Type};
 
 /// A host offering the one function the reference's example calls.
 fn environment() -> Environment {
@@ -108,8 +108,53 @@ fn the_surprises_are_still_surprising() {
         "script T { let a: f32 = b; let b: f32 = 2.0; }",
     );
     accepted(
-        "an unchecked member path, because member types are unknown",
+        "any path into a type the host has not described",
         "script T { fn f() { this.transfrom.position.x = 1.0; } }",
+    );
+    rejected(
+        "reaching for a method on a container, because there are none",
+        "script T { fn helper() -> f32 { return 1.0; } fn f() { this.helper(); } }",
+    );
+}
+
+/// The other half of the member rule: once a host describes a type, its members
+/// are checked. Both halves matter — checking is the point, and staying
+/// permissive about the undescribed is what makes describing a host gradual.
+#[test]
+fn a_described_type_is_checked_and_an_undescribed_one_is_not() {
+    let mut described = Environment::new();
+    described.add_type(
+        "Vec3",
+        HostType::new()
+            .with_value("x", Type::F32)
+            .with_value("y", Type::F32),
+    );
+    described.add_this_value("position", Type::Named("Vec3".to_owned()));
+    // Named but never described, which is the permissive case.
+    described.add_this_value("body", Type::Named("RigidBody".to_owned()));
+
+    let check = |source: &str| {
+        lower_with_environment(source, &described)
+            .analysis
+            .diagnostics
+            .is_empty()
+    };
+
+    assert!(
+        check("script T { fn f() { this.position.x = 1.0; } }"),
+        "a member the host described is accepted"
+    );
+    assert!(
+        !check("script T { fn f() { this.position.z = 1.0; } }"),
+        "a member it did not describe on a type it did is refused"
+    );
+    assert!(
+        !check("script T { fn f() { this.anything = 1.0; } }"),
+        "and once `this` is described, a member it does not have is refused too"
+    );
+    assert!(
+        check("script T { fn f() { this.body.anything.at.all = 1.0; } }"),
+        "but a named type it never described stays permissive"
     );
 }
 
