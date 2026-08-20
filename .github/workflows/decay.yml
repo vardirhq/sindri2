@@ -33,7 +33,34 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: decay
-      - name: Apply Clippy fixes
+      - name: Apply structural Clippy fixes
+        if: github.event_name == 'pull_request'
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          parser = Path("crates/decay-syntax/src/parser.rs")
+          text = parser.read_text()
+          text = text.replace(
+              "use crate::{Diagnostic, Span, Token, TokenKind, ast::*, lex, line_column};",
+              "use crate::{ast::{AssignOp, Attribute, BinaryOp, Block, ContainerDecl, Expr, ExprKind, FieldDecl, FunctionDecl, Item, Member, Param, Program, Stmt, TypeRef, UnaryOp}, Diagnostic, Span, Token, TokenKind, lex, line_column};",
+          )
+          text = text.replace(
+              "        loop {\n            let Some((precedence, op)) = binary_operator(&self.current().kind) else {\n                break;\n            };\n            if precedence < min_precedence {",
+              "        while let Some((precedence, op)) = binary_operator(&self.current().kind) {\n            if precedence < min_precedence {",
+          )
+          text = text.replace("expect_simple(TokenKind::", "expect_simple(&TokenKind::")
+          text = text.replace("expected: TokenKind, message: &str", "expected: &TokenKind, message: &str")
+          text = text.replace("self.at(&expected)", "self.at(expected)")
+          parser.write_text(text)
+
+          semantic = Path("crates/decay-semantic/src/lib.rs")
+          text = semantic.read_text()
+          text = text.replace("self.compatible(", "Self::compatible(")
+          text = text.replace("fn compatible(&self, expected: &Type, actual: &Type)", "fn compatible(expected: &Type, actual: &Type)")
+          semantic.write_text(text)
+          PY
+      - name: Apply machine Clippy fixes
         if: github.event_name == 'pull_request'
         run: cargo clippy --fix --workspace --all-targets --allow-dirty --allow-staged -- -D warnings
       - name: Apply rustfmt
@@ -47,7 +74,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add -- decay
-            git commit -m "style(decay): apply clippy fixes"
+            git commit -m "style(decay): satisfy clippy"
             git pull --rebase origin "${{ github.event.pull_request.head.ref }}"
             git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
           fi
