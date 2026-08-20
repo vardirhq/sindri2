@@ -1,5 +1,6 @@
 use serde::Deserialize;
 use sindri_core::SceneComponent;
+use sindri_render::{UvRect, UvRectError};
 
 /// A camera authored into a scene.
 ///
@@ -119,6 +120,19 @@ pub struct SpriteComponent {
     pub anchor: SpriteAnchor,
     #[serde(default = "opaque_white")]
     pub tint: [f32; 4],
+    /// Which part of the texture to draw, as `[x, y, width, height]` in
+    /// normalized coordinates.
+    ///
+    /// The whole texture unless a scene says otherwise, so every scene written
+    /// before sheets existed reads exactly as it did — and saves exactly as it
+    /// did too, since a component is a typed view of a stored payload and the
+    /// payload is what gets written back.
+    ///
+    /// Read through [`SpriteComponent::uv_rect`], which checks it: a rect of no
+    /// area or one reaching past the edge is a picture that is quietly wrong
+    /// rather than an error.
+    #[serde(default = "full_uv_rect")]
+    pub uv_rect: [f32; 4],
     /// The explicit override on draw order. Within a layer sprites sort by how
     /// far from the camera they are; a layer beats that, so a sprite in a
     /// higher one draws in front of something nearer the camera.
@@ -130,7 +144,21 @@ const fn opaque_white() -> [f32; 4] {
     [1.0, 1.0, 1.0, 1.0]
 }
 
+fn full_uv_rect() -> [f32; 4] {
+    UvRect::FULL.to_array()
+}
+
 impl SpriteComponent {
+    /// The part of the texture this sprite draws, checked.
+    ///
+    /// Checked here rather than at deserialization because a scene carrying a
+    /// bad rect should still open — the editor exists to fix it, and refusing
+    /// the file would be refusing to let anyone.
+    pub fn uv_rect(&self) -> Result<UvRect, UvRectError> {
+        let [x, y, width, height] = self.uv_rect;
+        UvRect::new(x, y, width, height)
+    }
+
     /// The anchor this sprite resolves against, or `None` when it is in the
     /// world, where there is no screen edge to anchor to.
     pub const fn screen_anchor(&self) -> Option<SpriteAnchor> {

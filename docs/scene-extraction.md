@@ -38,6 +38,7 @@ let prepared = scene.extract_frame(engine.world(), viewport, &bindings)?;
 | `sindri.camera` | The world camera (`perspective`) or the overlay camera (`orthographic`) |
 | `sindri.mesh` | One opaque pass per mesh, at the mesh's render layer |
 | `sindri.sprite` | One batched pass per space, sprite layer, and texture |
+| `sindri.sprite_animation` | Nothing of its own — it decides which part of the sheet the entity's sprite draws |
 
 A game registers its own component types alongside these with `SceneExtractor::register`.
 
@@ -88,6 +89,67 @@ that produce it. The `procedural:` prefix is not decoration — a colon is a res
 without anybody remembering a rule. The table is shared rather than copied per host because the
 capture verifies these exact colours in a rendered image and the editor draws the same scene; two
 hosts choosing their own navy would be a difference nothing catches until a screenshot looks wrong.
+
+## Texture rects
+
+A sprite draws part of a texture rather than all of one. `uv_rect` is `[x, y, width, height]` in
+normalized texture coordinates, defaulting to the whole image, which is what every sprite drew before
+the field existed — so no scene changes meaning by gaining it.
+
+Normalized rather than pixels, and that is the load-bearing choice. A sheet sliced into a grid has
+cells `1 / columns` wide wherever the sheet's resolution lands, so a normalized rect survives an
+artist doubling the sheet and a pixel rect does not; and nothing between the scene and the shader has
+to know a texture's dimensions. `UvRect::cell(column, row, columns, rows)` is that slice, and divides
+in `f64` before narrowing once, so the last column of a sheet that does not divide evenly in binary
+still ends on the edge rather than a hair past it.
+
+`UvRect` is constructed checked, because the ways to get this wrong are quiet: a zero-width rect
+samples one column of texels down the whole sprite, and one reaching past the edge samples whatever
+the sampler's addressing mode decides — a different picture on a different clamp mode rather than an
+error. `SpriteComponent::uv_rect()` returns the checked rect, and extraction propagates
+`SceneExtractError::UvRect` rather than drawing something plausible.
+
+The rect rides on the instance, not on the pipeline, so every frame of one sheet stays in a single
+batch: a sprite sheet is one texture, one draw call, and as many rects as there are sprites.
+
+## Sprite animation
+
+`sindri.sprite_animation` sits beside `sindri.sprite` on the same entity and decides which rect the
+sprite draws. The sprite still owns the texture, tint, space, anchor, and layer; the animation owns
+the sheet's grid, the clips cut from it, and which clip is playing. They are two components rather
+than one animated-sprite component on purpose — the legacy engine duplicated every sprite field onto
+its animated variant, and a duplicated field is how a tint set on one of them stops being the tint
+that draws.
+
+```json
+"sindri.sprite_animation": {
+  "sheet": { "columns": 4, "rows": 2 },
+  "clips": { "walk": { "frames": [0, 1, 2, 3], "seconds_per_frame": 0.1, "looping": true } },
+  "playing": "walk",
+  "speed": 1.0
+}
+```
+
+Cells are numbered row by row from the top left, which is how a sheet exporter lays one out. Every
+frame of a clip lasts the same time; a pose held longer is written by repeating its cell, which is
+how sheet tools express it anyway and is one way of saying it rather than two that can disagree.
+
+**Where playback lives is the load-bearing decision.** A clip and its timing are authored, so they are
+in the scene. The frame a sprite happens to be on halfway through a run is not, so it is not.
+`SpriteAnimations` holds that cursor beside the world — `advance(world, components, dt)` moves every
+animated sprite on, and `extract_animated` draws each one where the cursor says. Keeping it out of the
+component is what stops watching an animation play from rewriting the file it came from: a scene saved
+mid-run has to be the scene that was opened, and a test asserts exactly that.
+
+The cursors that survive an `advance` are exactly the ones the world still justifies, so an entity
+that is despawned or loses its animation loses its cursor with it. Switching clips restarts rather
+than resuming at whatever frame number the last clip had reached. Which clip plays is authored, so a
+game switches clips by writing to the world; `restart` is the one thing that is not a change to the
+scene, and it exists because a clip that has finished otherwise has no way back to its start.
+
+`extract` is `extract_animated` with nothing playing, which is why a sprite carrying clips draws its
+own authored rect until something runs it. That makes the authored rect the pose a scene shows at
+rest — worth authoring as the clip's first frame.
 
 ## Sprite space
 

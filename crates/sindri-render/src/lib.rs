@@ -15,6 +15,7 @@ mod texture;
 mod textured_cube;
 mod transparency;
 mod triangle;
+mod uv_rect;
 
 pub use camera::{
     OrthographicCamera, PerspectiveCamera, look_at, orthographic_projection, perspective_projection,
@@ -38,3 +39,4 @@ pub use texture::{Texture2D, TextureError, TextureId, TextureRegistry};
 pub use textured_cube::{DrawContext, TexturedCubeRenderer};
 pub use transparency::{TransparentOrder, TransparentOrderError};
 pub use triangle::TriangleRenderer;
+pub use uv_rect::{UvRect, UvRectError};

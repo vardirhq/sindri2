@@ -5,7 +5,7 @@ use thiserror::Error;
 use wgpu::util::DeviceExt;
 
 use crate::{
-    DepthTarget, MeshBuffers, SpriteBlendMode, TextureId, TextureRegistry, TexturedVertex,
+    DepthTarget, MeshBuffers, SpriteBlendMode, TextureId, TextureRegistry, TexturedVertex, UvRect,
 };
 
 const SHADER: &str = include_str!("sprite_batch.wgsl");
@@ -48,22 +48,43 @@ impl SpriteDepth {
 pub struct SpriteInstance {
     model: [[f32; 4]; 4],
     tint: [f32; 4],
+    uv_rect: [f32; 4],
 }
 
 impl SpriteInstance {
-    const ATTRIBUTES: [wgpu::VertexAttribute; 5] = wgpu::vertex_attr_array![
+    const ATTRIBUTES: [wgpu::VertexAttribute; 6] = wgpu::vertex_attr_array![
         2 => Float32x4,
         3 => Float32x4,
         4 => Float32x4,
         5 => Float32x4,
-        6 => Float32x4
+        6 => Float32x4,
+        7 => Float32x4
     ];
 
+    /// A sprite drawn from the whole of its texture.
     pub fn new(model: Mat4, tint: [f32; 4]) -> Self {
         Self {
             model: model.to_cols_array_2d(),
             tint,
+            uv_rect: UvRect::FULL.to_array(),
         }
+    }
+
+    /// Draws only part of the texture, which is what a sprite sheet is.
+    ///
+    /// Per instance rather than per batch, deliberately: a sheet's whole point
+    /// is many different frames of one texture, and if the rect belonged to the
+    /// batch then every frame would be its own draw call — which is the cost the
+    /// sheet exists to avoid.
+    #[must_use]
+    pub fn with_uv_rect(mut self, uv_rect: UvRect) -> Self {
+        self.uv_rect = uv_rect.to_array();
+        self
+    }
+
+    /// The part of the texture this instance draws.
+    pub fn uv_rect(self) -> UvRect {
+        UvRect::from_array(self.uv_rect)
     }
 
     /// The per-instance tint in straight `[r, g, b, a]` order.

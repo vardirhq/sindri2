@@ -6,10 +6,14 @@
 //! ordered frame from whatever a world currently holds, so gameplay only ever
 //! writes to the world and no scene needs hand-written extraction code.
 
+mod animation;
 mod components;
 mod extract;
 mod textures;
 
+pub use animation::{
+    AnimationClip, AnimationError, SpriteAnimationComponent, SpriteAnimations, SpriteSheet,
+};
 pub use components::{
     CameraComponent, MeshComponent, MeshPrimitive, SpriteAnchor, SpriteComponent, SpriteSpace,
 };

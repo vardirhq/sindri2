@@ -19,8 +19,8 @@ use sindri_core::{
 use sindri_editor::{fixture, scene_file::SceneFile};
 use std::path::Path;
 
-use sindri_render::{RenderStage, TextureId, Viewport};
-use sindri_scene::{CameraView, SceneExtractor, TextureBindings};
+use sindri_render::{FrameCommand, RenderStage, SpriteInstance, TextureId, UvRect, Viewport};
+use sindri_scene::{CameraView, SceneExtractor, SpriteAnimations, SpriteSheet, TextureBindings};
 
 const UPDATE_ENV: &str = "SINDRI_UPDATE_SCENE_FIXTURES";
 const VIEWPORT: Viewport = Viewport::new(512, 512);
@@ -191,7 +191,7 @@ fn a_locked_transform_refuses_a_move_and_keeps_its_lock_through_a_save() {
 /// The fixture's whole reason to exist. If it stops holding one of each, every
 /// assertion below still passes while testing something narrower.
 #[test]
-fn the_fixture_is_one_cube_one_sprite_and_the_cameras_they_need() {
+fn the_fixture_is_one_of_each_drawable_and_the_cameras_they_need() {
     let document = document();
     let count = |type_name: &str| {
         document
@@ -202,14 +202,20 @@ fn the_fixture_is_one_cube_one_sprite_and_the_cameras_they_need() {
     };
 
     assert_eq!(count("sindri.mesh"), 1, "the fixture is one cube");
-    assert_eq!(count("sindri.sprite"), 1, "the fixture is one sprite");
+    assert_eq!(
+        count("sindri.sprite"),
+        2,
+        "one still sprite and one that animates, because an animation decides \
+         which part of its sprite's texture is drawn rather than drawing itself"
+    );
+    assert_eq!(count("sindri.sprite_animation"), 1);
     assert_eq!(
         count("sindri.camera"),
         2,
         "a mesh needs a world camera and a sprite resolves its anchor against \
          an overlay camera, so the minimum is two rather than one"
     );
-    assert_eq!(document.entities.len(), 4, "and nothing else");
+    assert_eq!(document.entities.len(), 5, "and nothing else");
 }
 
 /// `Reject` is the strong claim: every component in the fixture is one the
@@ -223,7 +229,7 @@ fn every_component_in_the_fixture_matches_a_built_in_schema() {
 }
 
 #[test]
-fn the_fixture_extracts_to_one_mesh_pass_and_one_sprite_pass() {
+fn the_fixture_extracts_to_one_mesh_pass_and_a_sprite_pass_per_texture() {
     let world = World::from_scene(&document())
         .expect("the fixture loads")
         .world;
@@ -241,7 +247,88 @@ fn the_fixture_extracts_to_one_mesh_pass_and_one_sprite_pass() {
         .expect("the fixture extracts");
 
     let stages: Vec<RenderStage> = frame.passes().iter().map(|pass| pass.stage).collect();
-    assert_eq!(stages, [RenderStage::Opaque3d, RenderStage::Overlay]);
+    assert_eq!(
+        stages,
+        [
+            RenderStage::Opaque3d,
+            RenderStage::Overlay,
+            RenderStage::Overlay
+        ],
+        "the two sprites name different textures, and a batch is one draw call"
+    );
+}
+
+/// The fixture's animated sprite draws a different part of its sheet as time
+/// passes, through the same extraction the editor's viewport uses.
+///
+/// Without this the spinner would be a scene that merely parses: an animation
+/// that never moved would still open, still validate, and still draw.
+#[test]
+fn the_fixtures_animation_draws_a_different_frame_as_time_passes() {
+    let world = World::from_scene(&document())
+        .expect("the fixture loads")
+        .world;
+    let extractor = SceneExtractor::new().expect("the built-in components register");
+    let mut textures = TextureBindings::new();
+    for (index, reference) in sindri_scene::referenced_textures(&world).iter().enumerate() {
+        let id = u32::try_from(index).expect("a fixture's textures fit a u32") + 1;
+        textures.bind(reference.as_str(), TextureId::new(id));
+    }
+
+    let mut animations = SpriteAnimations::new();
+    let mut seen = Vec::new();
+    // Four frames at the fixture's own timing, which is a whole turn of the
+    // clip and back to where it started.
+    for _ in 0..4 {
+        animations
+            .advance(&world, extractor.components(), 0.15)
+            .expect("the fixture's clip plays");
+        let frame = extractor
+            .extract_animated(
+                &world,
+                VIEWPORT,
+                CameraView::default(),
+                &textures,
+                &animations,
+            )
+            .expect("the fixture extracts");
+        let rects: Vec<UvRect> = frame
+            .passes()
+            .iter()
+            .filter_map(|pass| match &pass.command {
+                FrameCommand::SpriteBatch { instances, .. } => Some(instances),
+                FrameCommand::TexturedCube { .. } => None,
+            })
+            .flatten()
+            .map(|instance: &SpriteInstance| instance.uv_rect())
+            .filter(|rect| !rect.is_full())
+            .collect();
+        assert_eq!(rects.len(), 1, "only the spinner reads part of its texture");
+        seen.push(rects[0]);
+    }
+
+    let distinct: Vec<&UvRect> = seen
+        .iter()
+        .enumerate()
+        .filter(|(index, rect)| !seen[..*index].contains(rect))
+        .map(|(_, rect)| rect)
+        .collect();
+    assert_eq!(
+        distinct.len(),
+        4,
+        "four frames of the clip are four different parts of the sheet, and \
+         these were {seen:?}"
+    );
+    assert_eq!(
+        seen[3],
+        SpriteSheet {
+            columns: 2,
+            rows: 2
+        }
+        .cell(0)
+        .expect("a cell of the fixture's sheet"),
+        "and a looping clip comes back to where it started"
+    );
 }
 
 /// Every texture the fixture names is one the editor can bind, so opening it

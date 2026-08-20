@@ -156,3 +156,89 @@ Advanced engine/plugin developer
 ```
 
 If ordinary gameplay routinely requires dropping into Rust, the Decay/editor abstraction is not doing enough.
+
+---
+
+# Evidence and recommendation
+
+> **Status:** engineering input on the direction above, from a spike run on 2026-08-20. The product decision is still the one recorded at the top of this document; this section records what was measured and what it implies.
+
+## The recommendation
+
+**Do not build Decay yet. Build the scripting host, and put an existing embeddable language behind it. Rhai is the one to use.**
+
+Decay stays on the table as a name and as a future compiler. What should not happen now is writing a lexer, parser, type checker, IR, VM, memory model, LSP, and debugger for an engine that cannot yet support a game worth scripting.
+
+## Why not now
+
+Three reasons, in order of weight.
+
+**There is nothing to script.** One mesh primitive, no text, no audio, no collision, no tilemaps. The first Decay program could move a transform and little else. A language designed against imagined requirements is the most expensive kind of mistake to undo, because user scripts are user data.
+
+**The cost is not the compiler.** A parser and a tree-walking evaluator are weeks. Error messages that name the real problem, an LSP with completion over engine types, a debugger, a formatter, a stdlib, and documentation that stays true are a permanent commitment. GDScript is a decade of full-time work; Unity shipped two scripting languages and buried both.
+
+**This codebase has a specific failure mode a language would amplify.** The asset queue went a release with no caller. The editor could not select an entity for a fortnight. Nineteen controls were drawn and inert. A compiler is that risk at maximum: months of work with nothing playable at the end.
+
+## Why Rhai
+
+The shortlist for a Rust engine that must run on `wasm32-unknown-unknown` is Rhai, Rune, and Koto.
+
+**Lua is disqualified on a technicality that matters.** Lua is C, and `wasm32-unknown-unknown` has no libc. Reaching the browser means Emscripten or an immature pure-Rust reimplementation. Every part of this project — CI, `.cargo/config.toml`, `wasm-pack`, the decode compatibility tests — targets `wasm32-unknown-unknown`. Adopting the industry-standard game scripting language would mean abandoning the browser toolchain.
+
+Rhai over the other two: it is the most maintained, it is built for embedding in a Rust host with a real story for exposing engine types, its syntax is already Rust-flavoured, and it ships the sandboxing a host running user scripts needs.
+
+## What the spike measured
+
+A throwaway crate, `rhai 1.25.1` on Rust 1.95.0, one test body run natively and in Node under `wasm32-unknown-unknown` — the same dual-attribute arrangement `decode_compatibility.rs` uses. Four tests: a script instance driving a component across three frames, a script writing to shared engine state, a runaway loop, and a syntax error.
+
+**It runs on the browser target, with one caveat.** Rhai reaches `getrandom` through `ahash` and `const-random`, which refuses to compile for `wasm32-unknown-unknown` without an opt-in. Rhai's own `wasm-bindgen` feature resolves it, declared per target:
+
+```toml
+[dependencies]
+rhai = { version = "1", features = ["f32_float"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+rhai = { version = "1", features = ["f32_float", "wasm-bindgen"] }
+```
+
+With that, all four tests pass in Node. This is a contained cost, not a standing tax, and the note already accepts that a browser build may carry JavaScript glue.
+
+**Rhai's float is `f64` unless told otherwise.** The engine is `f32` throughout — `glam`, `Transform3D`, every component. Without the `f32_float` feature the mismatch surfaces inside the script as `function not found: * (f32, f64)`, which is a genuinely bad error for an author to hit. The feature fixes it; the lesson is that the numeric type is a decision to make deliberately rather than discover.
+
+**Reserved words constrain the engine API.** `spawn` and `go` are both reserved and cannot be registered as function names. The API surface has to be checked against Rhai's reserved list rather than chosen freely.
+
+**Write-back works, which was the open architectural question.** `this.transform.x += movement * this.speed * dt` persists through a custom type nested in a script instance's state map, for both compound and plain assignment. Per-instance state as a `this` map, with lifecycle functions called per frame, is a workable shape.
+
+**Sandboxing works.** `set_max_operations` cut an infinite loop rather than hanging the frame. That is expensive to build and comes free.
+
+**Parse errors carry line and column.**
+
+To reproduce: the crate above, plus `wasm-bindgen-cli` at the version the workspace resolves and a `wasm32-unknown-unknown` runner in `.cargo/config.toml`, then `cargo test --target wasm32-unknown-unknown`. It is deliberately not in the tree or in CI, because the dependency has not been adopted.
+
+**What the spike did not measure:** performance under a real entity count, hot reload of a script that already has live state, editor property introspection, or the debugging and editor-integration story. Those are the questions the host milestone should answer.
+
+## What keeps the decision reversible
+
+The language is replaceable; the host interface is not. Scripts should see only entities, components, handles, events, and input, through a narrow typed surface — the discipline `TextureBindings` and the command layer already follow. If a script can reach the engine only through that seam, swapping the language later costs a syntax migration rather than an architecture one. If it can reach anything else, no choice of language saves it.
+
+A naming option worth considering: let **Decay** name the layer rather than the implementation — the `.decay` extension, the prelude, the engine API, the lifecycle callbacks, the editor integration — with Rhai evaluating it today. Say so plainly in the documentation. Do not build a front end to make Rhai resemble the sample syntax above: the moment a transform sits in between, every error message names a line the author did not write, and a compiler is being written anyway with none of the benefits.
+
+## When to revisit
+
+Write Decay when at least three of these hold:
+
+1. A shipped game exists and profiling shows script execution is a real frame-time cost, measured rather than predicted.
+2. Authors are hitting the dynamic-typing wall in ways the editor's property panel cannot cover.
+3. A compiler, an LSP, and a debugger can be owned indefinitely, not as a project.
+4. The engine is complete enough that language design has real requirements to serve.
+
+## Proposed sequencing
+
+The largest risk in the direction above is not the language. It is that the product model is *editor + CLI + export*, and there is no CLI and no export — the workflow today is `cargo run` and `wasm-pack`.
+
+1. **CLI and export.** `sindri build --target web` producing a directory and the asset manifest that already exists. A fraction of a compiler's cost, and it validates "the same project model, editor optional" immediately.
+2. **Milestone 6, with the companion game.** So that scripting has something to script, and so the game generates the language's requirements rather than the other way round.
+3. **The scripting host**, with Rhai behind it.
+4. **Judge Decay on evidence** against the four conditions above.
+
+Milestone 5 as written — a first-class TypeScript SDK as the browser authoring story — should be reconsidered under this direction, as the note above says. That is a roadmap change and is not made here.

@@ -19,6 +19,8 @@ struct VertexInput {
     @location(4) model_2: vec4<f32>,
     @location(5) model_3: vec4<f32>,
     @location(6) tint: vec4<f32>,
+    // x, y, width, height in normalized texture space.
+    @location(7) uv_rect: vec4<f32>,
 }
 
 struct VertexOutput {
@@ -32,7 +34,9 @@ fn vs_main(input: VertexInput) -> VertexOutput {
     let model = mat4x4<f32>(input.model_0, input.model_1, input.model_2, input.model_3);
     var output: VertexOutput;
     output.position = uniforms.view_projection * model * vec4<f32>(input.position, 1.0);
-    output.uv = input.uv;
+    // The quad's own coordinates run 0..1; the rect says which part of
+    // the texture that maps onto, so the whole texture is 0, 0, 1, 1.
+    output.uv = input.uv_rect.xy + input.uv * input.uv_rect.zw;
     output.tint = input.tint;
     return output;
 }
