@@ -5,6 +5,7 @@
 //! use the same pipeline without pretending browser fetches are synchronous.
 
 mod decode;
+mod loader;
 mod memory;
 mod queue;
 mod source;
@@ -23,6 +24,7 @@ pub use decode::{
 pub use fetch::FetchAssetSource;
 #[cfg(not(target_arch = "wasm32"))]
 pub use filesystem::FileSystemAssetSource;
+pub use loader::{AssetLoadOutcome, AssetLoader, AssetLoaderError};
 pub use memory::MemoryAssetSource;
 pub use queue::{
     AssetLoadCompletion, AssetLoadQueue, AssetLoadQueueConfig, AssetLoadQueueCreateError,
