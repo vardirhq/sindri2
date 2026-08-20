@@ -1,0 +1,16 @@
+script PlayerController {
+    @export
+    let speed: f32 = 6.0;
+
+    @export
+    let jump_force: f32 = 8.0;
+
+    fn update(dt: f32) {
+        let movement = Input.axis("move_left", "move_right");
+        this.transform.position.x += movement * speed * dt;
+
+        if Input.just_pressed("jump") {
+            this.rigidbody.add_impulse(vec3(0.0, jump_force, 0.0));
+        }
+    }
+}
