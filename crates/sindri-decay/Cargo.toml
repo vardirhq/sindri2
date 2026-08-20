@@ -5,6 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+# Not publishable, because it depends on the Decay crates and those are not.
+# Every other engine crate is publishable and declares its path dependencies
+# with a version to say so; this one would be claiming a release it cannot make.
+publish = false
 
 [dependencies]
 sindri-core = { path = "../sindri-core" }

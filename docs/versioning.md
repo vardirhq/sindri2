@@ -27,6 +27,26 @@ major release criterion, not a foundation one.
 carry the workspace version because they live in the workspace, not because
 anyone depends on it.
 
+`sindri-decay` is `publish = false` too, for a different reason: it depends on
+the Decay crates, and those are not publishable. Every other engine crate
+declares its path dependencies with a version — `{ path = "...", version =
+"0.1.0" }` — which is what says "this is a real release and the path is only for
+local development". `sindri-decay` cannot say that truthfully yet.
+
+## Decay
+
+The crates under `decay/` are a separate workspace on their own version, `0.0.1`,
+and are all `publish = false`.
+
+Nothing there is released, and the version is deliberately below the engine's to
+say the language is at an earlier stage than what it plugs into. It moves when
+someone decides it should, not with the engine.
+
+Being unpublishable is enforced rather than intended: `cargo deny` refuses a
+crate that declares itself publishable while depending on a sibling by path,
+because crates.io does not accept path dependencies. Marking them private is the
+honest form of what was already true.
+
 ### MSRV
 
 The minimum supported Rust version is declared in `rust-toolchain.toml` and
