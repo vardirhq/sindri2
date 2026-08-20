@@ -1,0 +1,13 @@
+{
+  "format_version": 1,
+  "assets": {
+    "demo.scene.json": {
+      "bytes": 3280,
+      "hash": "sha256:eb499519f8197762e127c9d3213e1249835e310871d7c2666f10786538a0f041"
+    },
+    "textures/badge.png": {
+      "bytes": 362,
+      "hash": "sha256:cfcce5a427b228994ec8a9ff677161066773ba0f190acaef1e3b52f12cdcc348"
+    }
+  }
+}

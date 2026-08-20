@@ -105,6 +105,28 @@ Existing and not existing are both states, so an asset appearing where one was m
 
 Native only. A browser has no modification time to read, and no editor to reload into.
 
+## Decoding the same way everywhere
+
+The promise this layer exists for is that one scene file works from disk and from static web hosting. That has to hold for the bytes as well as the paths: a texture that decodes natively and not in the browser build, or decodes to something slightly different, turns "the same scene" into a claim nobody checked — and it would be found by someone looking at a picture rather than by a test.
+
+`crates/sindri-assets/tests/decode_compatibility.rs` runs one body on both targets: `#[test]` natively, `#[wasm_bindgen_test]` under `wasm32-unknown-unknown`, where wasm-bindgen's runner executes it in Node. The corpus is embedded rather than read from disk, because what is under test is the decoder and not the source.
+
+It is deliberately awkward — every colour type PNG defines, sixteen bits per channel, an interlaced encoding, and a JPEG — because those are the paths where a decoder's feature set can differ between builds. Each image is two by two, small enough that every expected pixel is written down: an encoding with no alpha channel has to arrive opaque, a palette has to be resolved to colours, sixteen bits have to narrow to eight, and an interlaced encoding has to produce the same pixels as the progressive encoding of the same image. The JPEG is checked with a tolerance, since it is lossy and a decoder producing the wrong picture would miss by far more than a rounding step. Bytes that are not an image have to be an error naming the asset on both targets, because a decoder that panicked would take a browser tab down with it.
+
+Running it needs `wasm-bindgen-cli` at the version the workspace resolves; `.cargo/config.toml` names the runner and the install command.
+
+## What a project ships
+
+A scene names `textures/badge.png`. On a developer's machine that resolves to a file, and a wrong one fails loudly. On static web hosting it resolves to a URL, and the ways it can be wrong are quieter: a truncated response, a stale CDN entry, a deploy that replaced half the files. The bytes arrive, they decode, and the picture is last week's.
+
+`AssetManifest` is the project saying in advance what each asset is — its length and the SHA-256 of its stored bytes, before any decoding. A build knows what to publish without walking a directory at deploy time, and a load can check what arrived against what was promised. It is not a security boundary, since anyone who can replace an asset can replace the manifest beside it, but it is the digest the browser's subresource integrity uses, so the day it feeds a `<link integrity>` the numbers are already right.
+
+The file is versioned like a scene, ordered by asset ID so a diff shows the asset that changed and nothing else, and canonical without needing a canonicaliser: the structure is flat and the assets sit in a sorted map, so pretty-printing is already stable. The hash is written as `sha256:` and sixty-four hex characters — hex rather than base64 because a manifest is read in review, and the bytes base64 would save are not worth squinting at.
+
+An asset the manifest does not mention loads normally. A manifest is a statement about what it lists, not a claim that nothing else exists, which is what keeps it a promise rather than a requirement. `AssetLoader::with_manifest` holds arriving bytes to it, checking the length first because that is free and is what a truncated response fails on. The editor picks up `sindri.manifest.json` from the directory a scene lives in if there is one, and treats a malformed one as absent rather than fatal — it describes the assets, and refusing to open a scene because a file beside it is broken would be refusing to let anyone fix it.
+
+`examples/cube/assets/sindri.manifest.json` is committed rather than generated at deploy time, because a manifest built from whatever happened to be on the deploy machine is not a promise about anything. A test regenerates it and compares, so editing an asset without updating the manifest fails there rather than at somebody's browser.
+
 ## Deliberate boundaries
 
 GPU upload stays outside. A loader that owned a device could not be tested without one, and the host is the only thing that has one: it reads a ready `TextureAsset` and puts it on the GPU itself. Fallback assets, final root/URL rules, hot reload, and a content-hashed manifest remain for the rest of the asset-system milestone. Keeping storage, source, scheduling, decoding, and GPU upload separate is what lets native and WebAssembly hosts share the same ownership and error semantics.

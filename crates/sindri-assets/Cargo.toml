@@ -10,7 +10,9 @@ repository.workspace = true
 [dependencies]
 futures.workspace = true
 image.workspace = true
+serde.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
 sindri-core = { path = "../sindri-core", version = "0.1.0" }
 thiserror.workspace = true
 
@@ -23,6 +25,12 @@ web-sys = { workspace = true, features = ["Headers", "Response", "Window"] }
 [dev-dependencies]
 pollster = "1.0"
 tempfile = "3"
+
+# The decode compatibility tests run on both targets: `#[test]` natively and
+# `#[wasm_bindgen_test]` in Node, so a texture that decodes here and not in the
+# browser build is a failing test rather than a picture somebody notices.
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+wasm-bindgen-test = "0.3"
 
 [lints]
 workspace = true

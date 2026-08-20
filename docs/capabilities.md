@@ -175,6 +175,18 @@ On native, `AssetWatch` notices when the file behind a loaded asset changes and
 `AssetLoader::reload` loads it again, by polling modification time and length
 rather than subscribing to filesystem events.
 
+`AssetManifest` records what a project ships — each asset's length and the
+SHA-256 of its stored bytes — as a versioned, ID-ordered file. A loader given one
+holds arriving bytes to it, so a truncated response or a stale cache entry is an
+error naming the asset rather than a picture from last week; an asset the
+manifest does not list still loads. The editor picks one up from the directory a
+scene lives in.
+
+A corpus of deliberately awkward images — every PNG colour type, sixteen bits per
+channel, an interlaced encoding, and a JPEG — is decoded and checked pixel by
+pixel on both native and `wasm32-unknown-unknown`, so a texture cannot decode one
+way in the editor and another in the browser.
+
 ---
 
 ## The editor

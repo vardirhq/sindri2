@@ -112,17 +112,25 @@ rustup target add wasm32-unknown-unknown
 cargo check --workspace --all-features --target wasm32-unknown-unknown
 wasm-pack build examples/cube --target web --out-dir pkg
 
+# image decoding, run in Node on the browser target (the version must match the
+# wasm-bindgen the workspace resolves; .cargo/config.toml names the runner)
+cargo install wasm-bindgen-cli --version 0.2.127 --locked
+cargo test -p sindri-assets --target wasm32-unknown-unknown --test decode_compatibility
+
 # editor screenshot (needs imagemagick, xdotool, xvfb)
 xvfb-run --auto-servernum ./scripts/capture-editor.sh target/editor.png
 
 # regenerate golden scene fixtures, deliberately
 SINDRI_UPDATE_SCENE_FIXTURES=1 cargo test --package sindri-core
+
+# regenerate the demo's asset manifest after changing an asset
+SINDRI_UPDATE_ASSET_MANIFEST=1 cargo test --package sindri-cube
 ```
 
 CI (`.github/workflows/ci.yml`) runs fmt, clippy, tests, both render captures
-(under Mesa software Vulkan, `WGPU_BACKEND=vulkan`), and the wasm32 check, with
-`RUSTFLAGS: -D warnings`. **Any warning fails CI**, so clippy must be clean, not
-merely non-fatal.
+(under Mesa software Vulkan, `WGPU_BACKEND=vulkan`), the wasm32 check, and the
+image decoding corpus on the browser target, with `RUSTFLAGS: -D warnings`.
+**Any warning fails CI**, so clippy must be clean, not merely non-fatal.
 
 ## Conventions
 
@@ -153,7 +161,9 @@ saying which.
 future spawning), `editor/src/main.rs`, and each example's logger setup.
 Keep it there. Logic that is compiled only for wasm32 is logic nothing tests —
 see `UrlRoot`, which exists specifically so browser URL rules are exercised on
-every target.
+every target. Where a browser-target difference cannot be designed away, run the
+test on both: `decode_compatibility.rs` is one body with `#[test]` natively and
+`#[wasm_bindgen_test]` on wasm32.
 
 **Documentation.** Every crate root has a `//!` doc comment stating what the
 crate owns and, more importantly, what it deliberately does not. Public items
