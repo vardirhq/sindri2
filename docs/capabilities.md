@@ -125,6 +125,12 @@ insertion order; stage order is `Opaque3d`, `Transparent2d`, `Overlay`.
 What can actually be drawn: a triangle, a coloured cube, a textured cube with
 depth testing, and textured sprites with tint, anchor, and layer, sorted back to
 front by how far from the camera they are.
+A sprite addresses part of a texture through a checked `UvRect`, so a sprite
+sheet is expressible: `UvRect::cell` slices a grid, the rect rides on the
+instance so every frame of one sheet stays in one draw call, and a GPU test
+reads the pixels back to prove the shader honours it. Nothing yet *animates*
+that rect — there is no clip or frame timing, so advancing a sheet is the
+caller's to do.
 A sprite is either screen-anchored, which is the default and cannot be occluded
 by the world, or in the world, drawn through the world camera by its full
 transform and hidden by opaque geometry in front of it. Sprites batch per space,

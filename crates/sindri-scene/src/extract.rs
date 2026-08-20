@@ -8,7 +8,7 @@ use sindri_core::{
 use sindri_render::{
     ClearOperations, ExtractedFrame, FrameCamera, FrameCommand, FramePass, FramePlanError,
     OrthographicCamera, PerspectiveCamera, PreparedFrame, RenderLayer, RenderStage, SpriteDepth,
-    SpriteInstance, TextureId, TransparentOrder, TransparentOrderError, Viewport,
+    SpriteInstance, TextureId, TransparentOrder, TransparentOrderError, UvRectError, Viewport,
     orthographic_projection, perspective_projection,
 };
 use thiserror::Error;
@@ -184,7 +184,10 @@ impl SceneExtractor {
                     textures.resolve(&sprite.texture),
                 ))
                 .or_default()
-                .push((order, SpriteInstance::new(model, sprite.tint)));
+                .push((
+                    order,
+                    SpriteInstance::new(model, sprite.tint).with_uv_rect(sprite.uv_rect()?),
+                ));
         }
 
         for ((space, layer, texture), mut sprites) in batches {
@@ -507,4 +510,6 @@ pub enum SceneExtractError {
     InvalidCameraDistanceScale,
     #[error("camera pan must be finite")]
     InvalidCameraPan,
+    #[error(transparent)]
+    UvRect(#[from] UvRectError),
 }

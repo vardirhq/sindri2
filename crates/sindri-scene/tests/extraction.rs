@@ -1036,3 +1036,104 @@ fn a_world_lists_every_texture_it_draws_with_once() {
         "and what is missing is what is referenced and not bound"
     );
 }
+
+/// The property a sprite sheet exists for: many frames of one texture stay one
+/// draw call. If the rect belonged to the batch instead of the instance, every
+/// frame would be its own draw and the sheet would buy nothing.
+#[test]
+fn frames_of_one_sheet_share_a_single_batch() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "a", "transform_3d": {},
+          "components": { "sindri.sprite": { "texture": "sheet.png",
+            "uv_rect": [0.0, 0.0, 0.5, 0.5] } } },
+        { "id": "b", "transform_3d": {},
+          "components": { "sindri.sprite": { "texture": "sheet.png",
+            "uv_rect": [0.5, 0.0, 0.5, 0.5] } } },
+        { "id": "c", "transform_3d": {},
+          "components": { "sindri.sprite": { "texture": "sheet.png",
+            "uv_rect": [0.0, 0.5, 0.5, 0.5] } } }"#,
+    ));
+    let mut bindings = TextureBindings::new();
+    bindings.bind("sheet.png", TextureId::new(1));
+
+    let frame = SceneExtractor::new()
+        .expect("built-in components register")
+        .extract(&world, VIEWPORT, CameraView::default(), &bindings)
+        .expect("the sheet extracts");
+
+    let batches: Vec<&FrameCommand> = frame
+        .passes()
+        .iter()
+        .map(|pass| &pass.command)
+        .filter(|command| matches!(command, FrameCommand::SpriteBatch { .. }))
+        .collect();
+    assert_eq!(
+        batches.len(),
+        1,
+        "three frames of one sheet is one draw call"
+    );
+
+    let FrameCommand::SpriteBatch { instances, .. } = batches[0] else {
+        unreachable!("filtered to sprite batches");
+    };
+    let mut rects: Vec<[f32; 4]> = instances
+        .iter()
+        .map(|instance| instance.uv_rect().to_array())
+        .collect();
+    rects.sort_by(|left, right| left.partial_cmp(right).expect("rects are finite"));
+    assert_eq!(
+        rects,
+        [
+            [0.0, 0.0, 0.5, 0.5],
+            [0.0, 0.5, 0.5, 0.5],
+            [0.5, 0.0, 0.5, 0.5],
+        ],
+        "and each instance kept its own frame"
+    );
+}
+
+/// A scene written before rects existed reads as the whole texture, which is
+/// what it drew.
+#[test]
+fn a_sprite_that_names_no_rect_draws_the_whole_texture() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "badge", "transform_3d": {},
+          "components": { "sindri.sprite": { "texture": "badge.png" } } }"#,
+    ));
+    let mut bindings = TextureBindings::new();
+    bindings.bind("badge.png", TextureId::new(1));
+
+    let frame = SceneExtractor::new()
+        .expect("built-in components register")
+        .extract(&world, VIEWPORT, CameraView::default(), &bindings)
+        .expect("the scene extracts");
+    let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[0].command else {
+        panic!("the scene draws one sprite batch");
+    };
+    assert!(instances[0].uv_rect().is_full());
+}
+
+/// A rect that is not a piece of the image fails the frame with a message
+/// naming what was asked for, rather than sampling whatever the clamp mode
+/// decides and drawing a subtly wrong picture.
+#[test]
+fn a_rect_outside_the_texture_is_refused() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "bad", "transform_3d": {},
+          "components": { "sindri.sprite": { "texture": "sheet.png",
+            "uv_rect": [0.75, 0.0, 0.5, 0.5] } } }"#,
+    ));
+    let error = SceneExtractor::new()
+        .expect("built-in components register")
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
+        .expect_err("a rect reaching past the edge is not a frame");
+    assert!(error.to_string().contains("outside"), "{error}");
+}

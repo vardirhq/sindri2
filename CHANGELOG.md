@@ -200,3 +200,4 @@ All notable changes to Sindri Next will be documented here.
 - Made the editor pick up `sindri.manifest.json` from the directory a scene lives in, treating a malformed one as absent rather than refusing to open the scene.
 - Added `docs/2d-inventory.md`, recording what each legacy 2D subsystem should become — port, refactor, replace, or defer — read from the legacy engine rather than from memory of it.
 - Added a committed manifest for the demo's assets, with a test that regenerates it and compares, so editing an asset without updating the manifest fails there rather than in somebody's browser.
+- Gave a sprite a checked `UvRect`, so it draws part of a texture rather than all of one and a sprite sheet becomes expressible; the rect rides on the instance, so every frame of one sheet stays in a single draw call, and a GPU test reads the pixels back to prove the shader honours it.

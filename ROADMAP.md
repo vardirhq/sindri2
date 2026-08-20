@@ -169,7 +169,7 @@ shaped like the tool.
 - [x] Add 2D-shaped transform accessors that take and return X and Y only, so the common way a layered scene gets flattened is not expressible — position, translation, scale, and the turn about Z, on `Transform3D` itself
 - [x] Add a Z lock a transform can declare, respected by checked write paths and visible in the inspector — `Transform3D::z_locked`, refused by `WorldCommand::SetTransform3D`, and shown in the inspector as a toggle that takes the Z drag away
 - [x] Inventory each legacy 2D subsystem as port, refactor, replace, or defer — `docs/2d-inventory.md`, read from the legacy code at `77e0489` rather than from memory of it
-- [ ] Give a sprite a UV rect, so it can address part of a texture — the inventory found that sprite animation and tilemaps both block on this, and a sprite is currently one whole texture
+- [x] Give a sprite a UV rect, so it can address part of a texture — the inventory found that sprite animation and tilemaps both block on this; `UvRect` is checked at construction and normalized so a grid slice does not depend on the sheet's resolution, it rides on the instance so a sheet stays one draw call, and a GPU test reads the pixels back to prove the shader honours it
 - [ ] Port sprite animation and sprite sheets
 - [ ] Add a sprite sheet authoring surface: slice a sheet into frames, name clips, set timing, preview playback
 - [ ] Port camera 2D behavior and pixel snapping — pixel snapping is an orthographic-camera feature, since apparent scale under perspective depends on depth; see `docs/2d-model.md`

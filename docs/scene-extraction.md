@@ -89,6 +89,28 @@ without anybody remembering a rule. The table is shared rather than copied per h
 capture verifies these exact colours in a rendered image and the editor draws the same scene; two
 hosts choosing their own navy would be a difference nothing catches until a screenshot looks wrong.
 
+## Texture rects
+
+A sprite draws part of a texture rather than all of one. `uv_rect` is `[x, y, width, height]` in
+normalized texture coordinates, defaulting to the whole image, which is what every sprite drew before
+the field existed — so no scene changes meaning by gaining it.
+
+Normalized rather than pixels, and that is the load-bearing choice. A sheet sliced into a grid has
+cells `1 / columns` wide wherever the sheet's resolution lands, so a normalized rect survives an
+artist doubling the sheet and a pixel rect does not; and nothing between the scene and the shader has
+to know a texture's dimensions. `UvRect::cell(column, row, columns, rows)` is that slice, and divides
+in `f64` before narrowing once, so the last column of a sheet that does not divide evenly in binary
+still ends on the edge rather than a hair past it.
+
+`UvRect` is constructed checked, because the ways to get this wrong are quiet: a zero-width rect
+samples one column of texels down the whole sprite, and one reaching past the edge samples whatever
+the sampler's addressing mode decides — a different picture on a different clamp mode rather than an
+error. `SpriteComponent::uv_rect()` returns the checked rect, and extraction propagates
+`SceneExtractError::UvRect` rather than drawing something plausible.
+
+The rect rides on the instance, not on the pipeline, so every frame of one sheet stays in a single
+batch: a sprite sheet is one texture, one draw call, and as many rects as there are sprites.
+
 ## Sprite space
 
 A sprite says which space it is in, and the answer decides three things at once: which camera draws
