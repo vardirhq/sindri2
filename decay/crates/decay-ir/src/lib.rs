@@ -243,13 +243,13 @@ impl Lowerer {
     fn lower_expr(expr: &Expr, instructions: &mut Vec<Instruction>) {
         match &expr.kind {
             ExprKind::Identifier(name) => {
-                instructions.push(Instruction::Load(Path(vec![name.clone()])))
+                instructions.push(Instruction::Load(Path(vec![name.clone()])));
             }
             ExprKind::Number(value) => {
-                instructions.push(Instruction::Push(Constant::Number(*value)))
+                instructions.push(Instruction::Push(Constant::Number(*value)));
             }
             ExprKind::String(value) => {
-                instructions.push(Instruction::Push(Constant::String(value.clone())))
+                instructions.push(Instruction::Push(Constant::String(value.clone())));
             }
             ExprKind::Bool(value) => instructions.push(Instruction::Push(Constant::Bool(*value))),
             ExprKind::Null => instructions.push(Instruction::Push(Constant::Null)),
@@ -334,13 +334,13 @@ mod tests {
     #[test]
     fn lowers_member_assignment_to_symbolic_path() {
         let lowered = lower(
-            r#"
+            r"
             script Player {
                 fn update(dt: f32) {
                     this.transform.position.x += 6.0 * dt;
                 }
             }
-            "#,
+            ",
         );
         let program = lowered.program.expect("program should lower");
         let instructions = &program.containers[0].functions[0].instructions;
@@ -387,7 +387,7 @@ mod tests {
     #[test]
     fn patches_if_else_jump_targets() {
         let lowered = lower(
-            r#"
+            r"
             script Test {
                 fn run(flag: bool) {
                     if flag {
@@ -397,7 +397,7 @@ mod tests {
                     }
                 }
             }
-            "#,
+            ",
         );
         let program = lowered.program.expect("program should lower");
         let instructions = &program.containers[0].functions[0].instructions;
@@ -416,13 +416,13 @@ mod tests {
     #[test]
     fn refuses_to_lower_semantically_invalid_source() {
         let lowered = lower(
-            r#"
+            r"
             script Broken {
                 fn run() {
                     let value: bool = 1.0;
                 }
             }
-            "#,
+            ",
         );
 
         assert!(lowered.program.is_none());

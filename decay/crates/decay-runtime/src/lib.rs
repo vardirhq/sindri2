@@ -319,10 +319,11 @@ impl<'a, H: Host> Runtime<'a, H> {
                 return Ok(slot.value.clone());
             }
         }
-        if path.0.len() == 2 && path.0[0] == "this" {
-            if let Some(slot) = fields.get(&path.0[1]) {
-                return Ok(slot.value.clone());
-            }
+        if path.0.len() == 2
+            && path.0[0] == "this"
+            && let Some(slot) = fields.get(&path.0[1])
+        {
+            return Ok(slot.value.clone());
         }
         self.host
             .load(path)?
@@ -353,14 +354,15 @@ impl<'a, H: Host> Runtime<'a, H> {
                 return Ok(());
             }
         }
-        if path.0.len() == 2 && path.0[0] == "this" {
-            if let Some(slot) = fields.get_mut(&path.0[1]) {
-                if !slot.mutable {
-                    return Err(RuntimeError::Immutable(path.dotted()));
-                }
-                slot.value = value;
-                return Ok(());
+        if path.0.len() == 2
+            && path.0[0] == "this"
+            && let Some(slot) = fields.get_mut(&path.0[1])
+        {
+            if !slot.mutable {
+                return Err(RuntimeError::Immutable(path.dotted()));
             }
+            slot.value = value;
+            return Ok(());
         }
         if self.host.store(path, value)? {
             Ok(())
@@ -449,7 +451,7 @@ mod tests {
     #[test]
     fn executes_arithmetic_and_return() {
         let lowered = decay_ir::lower(
-            r#"script Math { fn double(value: f32) -> f32 { return value * 2.0; } }"#,
+            r"script Math { fn double(value: f32) -> f32 { return value * 2.0; } }",
         );
         let program = lowered.program.expect("valid program");
         let mut runtime = Runtime::new(&program, EmptyHost);
@@ -462,7 +464,7 @@ mod tests {
     #[test]
     fn executes_if_else() {
         let lowered = decay_ir::lower(
-            r#"script Choice { fn pick(flag: bool) -> f32 { if flag { return 1.0; } else { return 2.0; } } }"#,
+            r"script Choice { fn pick(flag: bool) -> f32 { if flag { return 1.0; } else { return 2.0; } } }",
         );
         let program = lowered.program.expect("valid program");
         let mut runtime = Runtime::new(&program, EmptyHost);
@@ -475,7 +477,7 @@ mod tests {
     #[test]
     fn calls_other_decay_functions() {
         let lowered = decay_ir::lower(
-            r#"script Math { fn double(value: f32) -> f32 { return value * 2.0; } fn eight() -> f32 { return double(4.0); } }"#,
+            r"script Math { fn double(value: f32) -> f32 { return value * 2.0; } fn eight() -> f32 { return double(4.0); } }",
         );
         let program = lowered.program.expect("valid program");
         let mut runtime = Runtime::new(&program, EmptyHost);
@@ -488,7 +490,7 @@ mod tests {
     #[test]
     fn instance_fields_persist_between_calls() {
         let lowered = decay_ir::lower(
-            r#"script Counter { var count: f32 = 0.0; fn tick() -> f32 { count += 1.0; return count; } }"#,
+            r"script Counter { var count: f32 = 0.0; fn tick() -> f32 { count += 1.0; return count; } }",
         );
         let program = lowered.program.expect("valid program");
         let mut runtime = Runtime::new(&program, EmptyHost);

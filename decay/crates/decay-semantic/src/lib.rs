@@ -464,11 +464,11 @@ impl<'a, 'd> Analyzer<'a, 'd> {
         let target_type = self.assignment_target_type(target);
         let value_type = self.expr_type(value);
 
-        if !matches!(op, AssignOp::Assign) {
+        if matches!(op, AssignOp::Assign) {
+            self.check_assignable(&target_type, &value_type, value.span);
+        } else {
             self.require_type(&target_type, &Type::F32, target.span);
             self.require_type(&value_type, &Type::F32, value.span);
-        } else {
-            self.check_assignable(&target_type, &value_type, value.span);
         }
 
         target_type
@@ -651,7 +651,7 @@ mod tests {
     #[test]
     fn accepts_typed_gameplay_code() {
         let analysis = analyze(
-            r#"
+            r"
             script Player {
                 let speed: f32 = 6.0;
 
@@ -664,7 +664,7 @@ mod tests {
                     }
                 }
             }
-            "#,
+            ",
         );
 
         assert!(
@@ -677,7 +677,7 @@ mod tests {
     #[test]
     fn reports_unknown_names_and_type_mismatches() {
         let analysis = analyze(
-            r#"
+            r"
             script Broken {
                 fn update(dt: f32) {
                     var alive: bool = true;
@@ -685,7 +685,7 @@ mod tests {
                     missing = dt;
                 }
             }
-            "#,
+            ",
         );
 
         assert!(analysis.diagnostics.iter().any(|diagnostic| {
@@ -701,14 +701,14 @@ mod tests {
     #[test]
     fn rejects_assignment_to_immutable_bindings() {
         let analysis = analyze(
-            r#"
+            r"
             script Player {
                 fn update() {
                     let speed: f32 = 6.0;
                     speed = 8.0;
                 }
             }
-            "#,
+            ",
         );
 
         assert!(analysis.diagnostics.iter().any(|diagnostic| {
@@ -752,7 +752,7 @@ mod tests {
     #[test]
     fn catches_duplicate_members_and_locals() {
         let analysis = analyze(
-            r#"
+            r"
             script Player {
                 let speed: f32 = 1.0;
                 let speed: f32 = 2.0;
@@ -762,7 +762,7 @@ mod tests {
                     let value: f32 = 2.0;
                 }
             }
-            "#,
+            ",
         );
 
         assert!(

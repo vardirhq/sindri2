@@ -353,7 +353,7 @@ mod tests {
 
     #[test]
     fn lexes_a_decay_gameplay_shape() {
-        let source = r#"
+        let source = r"
             script Player {
                 @export
                 let speed: f32 = 6.0;
@@ -362,7 +362,7 @@ mod tests {
                     this.transform.position.x += speed * dt;
                 }
             }
-        "#;
+        ";
 
         let lexed = lex(source);
         assert!(lexed.diagnostics.is_empty(), "{:?}", lexed.diagnostics);

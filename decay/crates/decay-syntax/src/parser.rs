@@ -1,4 +1,11 @@
-use crate::{Diagnostic, Span, Token, TokenKind, ast::*, lex, line_column};
+use crate::{
+    Diagnostic, Span, Token, TokenKind,
+    ast::{
+        AssignOp, Attribute, BinaryOp, Block, ContainerDecl, Expr, ExprKind, FieldDecl,
+        FunctionDecl, Item, Member, Param, Program, Stmt, TypeRef, UnaryOp,
+    },
+    lex, line_column,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Parsed {
@@ -619,7 +626,7 @@ mod tests {
     #[test]
     fn parses_component_and_control_flow() {
         let parsed = parse(
-            r#"
+            r"
             component Health {
                 @export
                 var current: f32 = 100.0;
@@ -631,7 +638,7 @@ mod tests {
                     }
                 }
             }
-        "#,
+        ",
         );
         assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
         assert!(matches!(parsed.program.items[0], Item::Component(_)));
