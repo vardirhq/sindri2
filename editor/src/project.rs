@@ -69,7 +69,10 @@ impl AssetKind {
         match lower.rsplit_once('.').map(|(_, extension)| extension) {
             Some("png" | "jpg" | "jpeg" | "webp" | "bmp" | "ktx2" | "dds") => Self::Texture,
             Some("gltf" | "glb" | "obj" | "fbx") => Self::Mesh,
-            Some("rs" | "ts" | "js" | "lua" | "wgsl") => Self::Script,
+            // `decay` first because it is the engine's own: a `.decay` file is
+            // a script the editor can actually run, and the rest are scripts
+            // only in the sense that they are code sitting in a project.
+            Some("decay" | "rs" | "ts" | "js" | "wgsl") => Self::Script,
             Some("ttf" | "otf" | "woff" | "woff2") => Self::Font,
             _ => Self::Other,
         }
@@ -260,6 +263,7 @@ mod tests {
         fs::write(root.join("textures/tiles.png"), "").unwrap();
         fs::create_dir(root.join("scripts")).unwrap();
         fs::write(root.join("scripts/scene.rs"), "").unwrap();
+        fs::write(root.join("scripts/spin.decay"), "").unwrap();
         directory
     }
 
@@ -280,6 +284,7 @@ mod tests {
                 "demo.scene.json",
                 "scripts",
                 "scene.rs",
+                "spin.decay",
                 "settings.json",
                 "textures",
                 "badge.png",
@@ -334,6 +339,9 @@ mod tests {
         );
         assert_eq!(kind("badge.png"), Some(AssetKind::Texture));
         assert_eq!(kind("scene.rs"), Some(AssetKind::Script));
+        // The engine's own language, which the browser listed as a plain file
+        // until it was named here.
+        assert_eq!(kind("spin.decay"), Some(AssetKind::Script));
         assert_eq!(kind("textures"), Some(AssetKind::Folder));
     }
 

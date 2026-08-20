@@ -2,6 +2,16 @@
 
 Decay is an experimental gameplay language for Sindri Next.
 
+**[`LANGUAGE.md`](LANGUAGE.md) is the language reference** — the full grammar,
+every operator, and, more usefully at this stage, explicit lists of what does
+*not* exist and which behaviours will surprise you. Read it before writing a
+script. Its claims are enforced by `crates/decay-ir/tests/language_reference.rs`,
+so a document that goes stale fails the build rather than quietly misleading
+whoever reads it next.
+
+`docs/scripting.md` in the engine repository covers the other half: how a script
+reaches a world, what paths it can touch, and how the editor runs it.
+
 This directory is deliberately isolated from the engine workspace while the language model is being proven. Nothing under `decay/` may depend on a `sindri-*` crate during this phase, and no engine crate should need to change for Decay language work.
 
 ## Current foundation
@@ -128,22 +138,33 @@ documentation claims Decay can do belongs in that test.
 
 ## Near-term plan
 
-1. **Bind Decay to the engine.** A minimal `sindri-decay` driving one script on
-   one transform in the editor, ahead of any further language work.
-2. Define typed host members so `Input.axis` and `this.transform.position` are
-   checked instead of remaining unknown host paths.
+1. ~~**Bind Decay to the engine.**~~ Done: `crates/sindri-decay` drives a script
+   on an entity's transform, and the editor's fixture spins its cube because a
+   `.decay` file says so. See `docs/scripting.md`.
+2. **Define typed host members** so `Input.axis` and `this.transform.position`
+   are checked instead of remaining unknown host paths. This is now the item
+   that unblocks the most: it is what turns a misspelled component field from a
+   runtime `UnknownPath` into a compile error, and it is the prerequisite for
+   any editor tooling that wants to complete a path.
 3. Add lifecycle-oriented runtime helpers for `start`, `update`, and
    `fixed_update` without coupling them to Sindri.
 4. Add loops, the control-flow IR they require, and the operation budget that
    becomes necessary once a script can loop.
 5. Add arrays and maps only when a representative gameplay script needs them.
 
-The reordering is deliberate, and it is the one thing this phase has already
+Binding first was the right call, and it is the one thing this phase has already
 learned. The foundation reached three thousand lines with no engine caller, and
 what that cost was not visible until something ran the example: the `let` bug,
 the scoping bug, and the recursion abort were all reachable from the first
 script anyone would write. `docs/capabilities.md` in the engine repository
-exists for the same reason. More language before a caller buys more of that.
+exists for the same reason.
+
+The binding then found the next set immediately, which is the argument working
+twice: `this.helper()` silently becomes a host call rather than calling a
+sibling function, and a field initializer that reads a field declared below it
+compiles and fails at runtime. Both are in `LANGUAGE.md` under
+[Surprising behaviour](LANGUAGE.md#surprising-behaviour), and both want fixing
+rather than documenting forever.
 
 The syntax, type model, IR, and runtime are not stable. The point of this phase
 is to discover what deserves to become stable before user scripts make every

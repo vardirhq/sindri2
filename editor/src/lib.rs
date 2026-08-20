@@ -19,5 +19,9 @@ pub mod preferences;
 pub mod project;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod scene_file;
+
+/// The Decay scripts an open scene runs.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod scripts;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod textures;

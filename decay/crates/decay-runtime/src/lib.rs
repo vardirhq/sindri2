@@ -100,6 +100,39 @@ impl ScriptInstance {
     pub fn field(&self, name: &str) -> Option<&Value> {
         self.fields.get(name).map(|slot| &slot.value)
     }
+
+    /// Sets a field from outside the script, as an authoring tool does.
+    ///
+    /// This deliberately ignores the field's mutability. `@export let speed`
+    /// means *the author sets this and the script does not*, so the host
+    /// writing it is the point rather than a violation — the immutability the
+    /// analyzer enforces is immutability to the script's own code. Callers that
+    /// want to honour `@export` should check
+    /// [`decay_ir::IrField::exported`] before calling; the runtime does not
+    /// know what a property panel is.
+    ///
+    /// Fails for a name the container does not declare, rather than adding one:
+    /// a typo in an authored property is otherwise a value that silently goes
+    /// nowhere.
+    pub fn set_field(&mut self, name: &str, value: Value) -> Result<(), RuntimeError> {
+        match self.fields.get_mut(name) {
+            Some(slot) => {
+                slot.value = value;
+                Ok(())
+            }
+            None => Err(RuntimeError::UnknownPath(format!(
+                "{}.{name}",
+                self.container_name
+            ))),
+        }
+    }
+
+    /// Every field this instance holds, in declaration-independent order.
+    pub fn fields(&self) -> impl Iterator<Item = (&str, &Value)> {
+        self.fields
+            .iter()
+            .map(|(name, slot)| (name.as_str(), &slot.value))
+    }
 }
 
 /// How deep Decay calls may nest before [`RuntimeError::CallDepthExceeded`].
@@ -661,6 +694,42 @@ mod tests {
         assert_eq!(
             runtime.call("T", "down", vec![Value::Number(5.0)]),
             Ok(Value::Number(5.0))
+        );
+    }
+
+    /// The host sets an exported field before the script runs, which is what
+    /// `@export` is for. It ignores mutability on purpose: `let` means the
+    /// script does not reassign it, not that the author cannot author it.
+    #[test]
+    fn a_host_can_set_an_exported_field_the_script_treats_as_immutable() {
+        let lowered = decay_ir::lower(
+            r"script Player { let speed: f32 = 1.0; fn run() -> f32 { return speed; } }",
+        );
+        let program = lowered.program.expect("valid program");
+        let mut runtime = Runtime::new(&program, EmptyHost);
+        let mut instance = runtime.instantiate("Player").expect("instance");
+
+        instance
+            .set_field("speed", Value::Number(6.0))
+            .expect("an authored property is applied");
+        assert_eq!(
+            runtime.call_instance(&mut instance, "run", vec![]),
+            Ok(Value::Number(6.0))
+        );
+    }
+
+    /// A property naming a field that does not exist is a mistake worth
+    /// hearing about, not a value that quietly goes nowhere.
+    #[test]
+    fn setting_a_field_the_script_does_not_declare_is_refused() {
+        let lowered = decay_ir::lower(r"script Player { let speed: f32 = 1.0; }");
+        let program = lowered.program.expect("valid program");
+        let mut runtime = Runtime::new(&program, EmptyHost);
+        let mut instance = runtime.instantiate("Player").expect("instance");
+
+        assert_eq!(
+            instance.set_field("sped", Value::Number(6.0)),
+            Err(RuntimeError::UnknownPath("Player.sped".to_owned()))
         );
     }
 

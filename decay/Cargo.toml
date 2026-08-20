@@ -13,6 +13,11 @@ edition = "2024"
 rust-version = "1.95"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/vardirhq/sindri2"
+# Decay is pre-alpha and its crates refer to each other by path. crates.io does
+# not accept path dependencies, so a crate declaring itself publishable while
+# depending on a sibling by path is claiming something that cannot happen --
+# which is exactly what `cargo deny` refuses, and it is right to.
+publish = false
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

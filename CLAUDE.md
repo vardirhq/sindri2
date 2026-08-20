@@ -34,6 +34,11 @@ change a subsystem's behaviour, update its doc in the same change.
 from `vardirhq/sindri-engine` rather than from memory of it. Milestone 6's ports
 follow it.
 
+`docs/scripting.md` is the contract for how a Decay script reaches a world:
+the `sindri.script` component, the whole table of paths a script may touch, and
+why play mode snapshots the world. The language itself is documented in
+`decay/LANGUAGE.md`, whose claims are enforced by a test.
+
 `docs/entity-scaling.md` records what the world costs at 1k, 10k, and 100k
 entities, and why an archetype ECS is not warranted.
 
@@ -68,12 +73,21 @@ scripts/            capture-editor.sh (Xvfb editor screenshot)
 decay/              a separate Cargo workspace: the Decay gameplay language
 ```
 
-`decay/` is **not a member of this workspace** and is not built by the engine's
-commands. It has its own `Cargo.toml`, its own CI workflow
-(`.github/workflows/decay.yml`), and its own `README.md`. Nothing under
-`decay/` may depend on a `sindri-*` crate, and no engine crate depends on it:
-there is no binding yet. Read `decay/README.md` before working in there, and
-`docs/decay-direction.md` for why the language exists at all.
+`decay/` is **not a member of this workspace**, and holding that is more work
+than it looks. It has its own `Cargo.toml`, its own CI workflow
+(`.github/workflows/decay.yml`), its own `README.md`, and its own
+`LANGUAGE.md`. Nothing under `decay/` may depend on a `sindri-*` crate.
+
+The root `Cargo.toml` must keep `exclude = ["decay"]`. A path dependency alone
+does not preserve a nested workspace: cargo makes the path dependencies of a
+member into members too, which silently gave the decay crates the engine's
+version and lint set instead of their own. Excluding them is what actually
+holds the boundary, and the boundary is the insurance policy on having written
+a language at all.
+
+`sindri-decay` is the one crate that crosses, and it crosses one way. Read
+`decay/README.md` and `decay/LANGUAGE.md` before working in there, and
+`docs/decay-direction.md` for why the language exists.
 
 ### Dependency rules (enforce these)
 
@@ -87,7 +101,8 @@ sindri-gpu      -> wgpu only (sindri-render is a dev-dependency, for tests)
 sindri-render   -> wgpu, glam, bytemuck only
 sindri-scene    -> sindri-core + sindri-render
 sindri          -> assets, core, and (feature `render`) gpu, render, scene
-editor          -> assets, core, render, scene (sindri-cube is dev-only)
+sindri-decay    -> sindri-core + the decay/ language crates, one way only
+editor          -> assets, core, decay, render, scene (sindri-cube is dev-only)
 ```
 
 - `sindri-core` depends on no window, GPU, browser, editor, physics, scripting,

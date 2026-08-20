@@ -438,7 +438,9 @@ The next item is not more language. It is `sindri-decay` — one script driving 
 
 - [x] Evaluate a custom language against embedded-language alternatives using explicit product and maintenance criteria (`docs/decay-direction.md`, including a Rhai spike)
 - [x] Prototype a Rust-implemented portable interpreter that behaves consistently on native and WebAssembly without a JIT (the IR is symbolic and portable, and the whole workspace compiles for `wasm32-unknown-unknown`, which Decay's CI now checks — it is not yet a bytecode VM, and nothing has been *executed* on the browser target)
-- [ ] **Bind Decay to the engine: a `sindri-decay` crate driving one script on one transform in the editor** — ahead of any further language work
+- [x] Bind Decay to the engine: a `sindri-decay` crate driving one script on one transform in the editor (`sindri.script`, a `WorldHost` mapping symbolic paths to a transform, and the editor's fixture spinning its cube from a `.decay` file — see `docs/scripting.md`)
+- [x] Write a language reference a person or a model can work from, with its claims enforced by a test (`decay/LANGUAGE.md`)
+- [ ] **Define typed host members** so `this.transform.position` and `Input.axis` are checked instead of remaining unknown paths. Now the item that unblocks the most: it turns a misspelled component field from a runtime failure into a compile error, and **nothing else can complete a path until it exists**
 - [ ] Define a language-neutral scripting host around versioned commands, events, queries, lifecycle hooks, and component schemas (the `Host` trait is the seam; it carries loads, stores, and calls, and knows none of these concepts yet)
 - [ ] Generate typed component access, diagnostics, and autocomplete from the component schema registry (Decay's `Environment` is where host globals enter, and `IrField` already carries `exported` and `type_name` — this is the capability Rhai structurally could not have offered, and the reason the language has a case)
 - [ ] Specify safe entity and asset handles, coroutine cancellation, deterministic scheduling, and execution budgets (call depth is bounded; an operation budget is required before loops land)
@@ -446,6 +448,23 @@ The next item is not more language. It is `sindri-decay` — one script driving 
 - [ ] Document recurring gameplay-authoring pain points from representative Rust and TypeScript games
 - [ ] Define the editor, language-server, formatter, debugger, documentation, and testing commitments before making the language public
 - [ ] Decide whether the prototype provides enough gameplay-specific value to justify a permanent language ecosystem
+
+### Editing a script somewhere other than the editor
+
+The thing Unity gets right: opening a script in an external editor and finding
+it already knows the project — what components exist, what a field is, where a
+name is used. That is not magic and it is not an IDE feature. It is two pieces,
+and Decay is unusually well placed for both because `decay-semantic` already
+computes scopes, types, and spanned diagnostics, and the engine already has a
+component schema registry.
+
+- [ ] **Emit a host manifest.** The editor writes a generated, versioned file describing the host surface: every registered component and its schema, every `@export`-able field type, every host function and path. This is Decay's `.csproj` — the thing Unity regenerates when assets change, and the only reason OmniSharp knows anything. `ComponentSchemaRegistry` and `Environment` are already the two halves of it
+- [ ] **Serialize `Environment` to and from that manifest**, so the compiler a tool runs is configured identically to the one the engine runs. A language server that disagrees with the runtime about what exists is worse than none
+- [ ] **`decay-lsp`**: diagnostics, hover, go-to-definition, completion, find-references, over `decay-semantic`. Diagnostics come nearly free — they already carry line, column, and span. Completion after a `.` requires typed host members and cannot ship before them
+- [ ] Decide whether references cross files. One file is one compilation unit today, so find-references is per-file; project-wide anything needs multi-file compilation first
+- [ ] A syntax definition (TextMate or tree-sitter) — cheap, independent of everything above, and the first thing anyone notices
+
+Sequenced after typed host members deliberately: a language server whose completion cannot see past a dot is a demo, and building it first would mean building it twice.
 
 Exit gate: a representative scripted vertical slice runs with equivalent behavior on native and web, receives schema-derived tooling, and hot-reloads behavior while preserving compatible state.
 

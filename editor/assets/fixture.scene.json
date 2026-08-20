@@ -17,6 +17,13 @@
           "layer": 0,
           "primitive": "cube",
           "texture": "procedural:checkerboard"
+        },
+        "sindri.script": {
+          "properties": {
+            "turns_per_second": 0.25
+          },
+          "script": "Spin",
+          "source": "scripts/spin.decay"
         }
       }
     },
