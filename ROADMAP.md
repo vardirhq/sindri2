@@ -112,7 +112,7 @@ Exit gate: a serialized scene drives a combined native 2D/3D example without ren
 - [x] Add asset root and URL resolution rules
 - [x] Add hot reload for native development (assets; editing the open scene file on disk is not watched)
 - [ ] Define package/export manifest with content hashes
-- [ ] Prevent duplicate loads and release unused GPU assets (duplicates are prevented and a scene's textures are released with the scene; releasing one texture at a time still needs slot reuse in the registry)
+- [x] Prevent duplicate loads and release unused GPU assets
 - [ ] Add image decoding compatibility tests on native and WASM
 
 Exit gate: the same logical texture and scene references load from disk and static web hosting.

@@ -140,6 +140,7 @@ impl SceneTextures {
         let Self {
             loader: Some(loader),
             watch,
+            registry,
             bindings,
             ..
         } = self
@@ -160,7 +161,9 @@ impl SceneTextures {
         // texture, and the binding goes back to resolving as missing rather
         // than to a handle nothing owns.
         for released in loader.retain(&wanted) {
-            bindings.unbind(released.as_str());
+            if let Some(texture) = bindings.unbind(released.as_str()) {
+                registry.remove(texture);
+            }
         }
         if let Some(watch) = watch.as_mut() {
             watch.retain(&wanted);
@@ -216,6 +219,11 @@ impl SceneTextures {
                             // before, which is what makes a reload visible: the
                             // old handle is simply no longer bound.
                             let again = bindings.bind(id.as_str(), registry.insert(texture));
+                            // And the texture it replaced goes, or reloading one
+                            // image fifty times would hold fifty copies of it.
+                            if let Some(replaced) = again {
+                                registry.remove(replaced);
+                            }
                             let message = format!("{id} ({}x{})", asset_size.0, asset_size.1);
                             notes.push(if again.is_some() {
                                 TextureNote::Reloaded(format!("Reloaded {message}"))

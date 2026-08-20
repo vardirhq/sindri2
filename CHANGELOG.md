@@ -192,3 +192,5 @@ All notable changes to Sindri Next will be documented here.
 - Gave the editor's fixture scene its own copy of the badge texture, so it resolves from its own directory like any other project's, with a test holding it to naming only textures that actually resolve.
 - Added hot reload for native development: saving a texture the open scene uses shows the edit in the editor within about a second, without restarting and without blinking through the missing checker.
 - Added `AssetWatch`, which notices that the file behind an asset changed by polling its modification time and length, and `AssetLoader::reload`, which loads an asset again because what is held is stale rather than because it failed.
+- Made `TextureId` a generation-checked slot handle, so the texture registry can release a texture and reuse its slot while a handle nobody updated still resolves to the missing checker rather than to whatever landed there next.
+- Made the editor release the GPU texture a reload or an edit replaced, which hot reload turned from a slow leak across a session into one per keystroke.

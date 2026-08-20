@@ -160,6 +160,10 @@ rejects duplicates, and carries a generation token so a late completion cannot
 overwrite a replacement. Textures and scene JSON decode through typed decoders.
 Nothing pretends browser I/O is synchronous.
 
+A `TextureId` is a generation-checked slot handle, so the renderer's texture
+registry can release one texture and reuse its slot without a handle nobody
+updated drawing whatever lands there next.
+
 `AssetLoader` drives all of that in one place — request, enqueue, drain, decode,
 apply — so a caller does not have to know the order. Requesting is idempotent, a
 failure is reported once rather than retried forever, and `retain` releases what
@@ -280,8 +284,7 @@ collapsed and overflowed nothing; and the settings gear.
   adapter is planned as optional rather than built in
 - No tilemaps, particles, parallax, or pathfinding
 - No TypeScript SDK; the WASM binding crate does not exist
-- No asset manifest, and no slot reuse in the texture registry — a scene's
-  textures are released when the scene is replaced, but not one at a time
+- No asset manifest
 - Hot reload covers assets, not the scene file: editing a scene on disk while it
   is open is not noticed
 - No deterministic system ordering

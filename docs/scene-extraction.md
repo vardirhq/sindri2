@@ -68,7 +68,10 @@ checkerboard, and a render target all bind the same way.
 
 A reference nothing has bound resolves to `TextureRegistry::MISSING`, a magenta checker. A missing
 texture therefore draws as obviously wrong rather than failing the frame or, worse, silently reusing
-whichever texture happened to be bound last. `unresolved_textures` names every reference a world
+whichever texture happened to be bound last. A `TextureId` is a slot and a generation, the same shape
+as an `EntityId`: the registry reuses the slot of a released texture, and the generation is what stops
+a handle nobody updated drawing whatever landed there next — which would be the same failure as
+reusing the last-bound texture, arrived at from the other direction. `unresolved_textures` names every reference a world
 draws that nothing has bound, so the diagnosis is a list rather than a magenta surface.
 
 Sprites batch per texture as well as per layer, because a batch is a single draw call.

@@ -163,22 +163,46 @@ mod tests {
 ///
 /// Deliberately not an asset ID: `sindri-render` knows nothing about assets or
 /// scenes, so the layer that owns both maps one to the other.
+///
+/// A slot and a generation, the same shape as an `EntityId`, and for the same
+/// reason. A registry that reuses the slot of a released texture would otherwise
+/// let an old handle draw whatever landed there next, which is worse than
+/// drawing nothing: a stale binding would show a real texture, plausibly, and
+/// the wrong one. The generation makes a released handle resolve to the missing
+/// checker, which is the answer this type has always promised.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct TextureId(u32);
+pub struct TextureId {
+    index: u32,
+    generation: u32,
+}
 
 impl TextureId {
-    /// Creates a handle for `index`.
+    /// Creates a handle for the first use of `index`.
     ///
     /// Handles normally come from [`TextureRegistry::insert`]. Minting one
-    /// directly is safe because a registry draws an index it does not know as
-    /// the missing texture, which is what makes binding testable without a GPU.
+    /// directly is safe because a registry draws a slot or generation it does
+    /// not know as the missing texture, which is what makes binding testable
+    /// without a GPU.
     pub const fn new(index: u32) -> Self {
-        Self(index)
+        Self {
+            index,
+            generation: 0,
+        }
     }
 
     pub const fn index(self) -> u32 {
-        self.0
+        self.index
     }
+
+    pub const fn generation(self) -> u32 {
+        self.generation
+    }
+}
+
+#[derive(Debug)]
+struct TextureSlot {
+    generation: u32,
+    texture: Option<Texture2D>,
 }
 
 /// The textures a frame may draw with.
@@ -186,14 +210,25 @@ impl TextureId {
 /// Every registry has a fallback at [`TextureRegistry::MISSING`], so a draw
 /// whose texture failed to load still renders something obviously wrong rather
 /// than failing the frame or silently drawing the previous texture.
+///
+/// Slots are reused as textures are released, because a registry that only grew
+/// would hold every texture a session ever loaded — which stopped being
+/// theoretical the moment hot reload made replacing one a keystroke.
 #[derive(Debug)]
 pub struct TextureRegistry {
-    textures: Vec<Texture2D>,
+    slots: Vec<TextureSlot>,
+    free: Vec<u32>,
 }
 
 impl TextureRegistry {
     /// The magenta-and-black texture drawn in place of a missing one.
-    pub const MISSING: TextureId = TextureId(0);
+    ///
+    /// Slot zero, and it is never released, so this handle is valid for the
+    /// life of the registry.
+    pub const MISSING: TextureId = TextureId {
+        index: 0,
+        generation: 0,
+    };
 
     /// Creates a registry containing only the missing-texture fallback.
     pub fn new(device: &wgpu::Device, queue: &wgpu::Queue) -> Self {
@@ -207,29 +242,85 @@ impl TextureRegistry {
         )
         .expect("the fallback texture has valid dimensions");
         Self {
-            textures: vec![missing],
+            slots: vec![TextureSlot {
+                generation: 0,
+                texture: Some(missing),
+            }],
+            free: Vec::new(),
         }
     }
 
     /// Adds a texture and returns the handle that draws it.
+    ///
+    /// Reuses the slot of a released texture when there is one. The slot's
+    /// generation was already moved on by the release, so the handle returned
+    /// here can never be mistaken for the one that used to live there.
     pub fn insert(&mut self, texture: Texture2D) -> TextureId {
-        let index = u32::try_from(self.textures.len()).expect("texture count exceeded u32::MAX");
-        self.textures.push(texture);
-        TextureId(index)
+        if let Some(index) = self.free.pop() {
+            let slot = &mut self.slots[index as usize];
+            slot.texture = Some(texture);
+            return TextureId {
+                index,
+                generation: slot.generation,
+            };
+        }
+        let index = u32::try_from(self.slots.len()).expect("texture count exceeded u32::MAX");
+        self.slots.push(TextureSlot {
+            generation: 0,
+            texture: Some(texture),
+        });
+        TextureId {
+            index,
+            generation: 0,
+        }
+    }
+
+    /// Releases a texture, freeing it on the GPU, and reports whether it held
+    /// one.
+    ///
+    /// Every handle to it becomes stale immediately — the slot's generation
+    /// moves on whether or not anything is put back in it — so a binding nobody
+    /// updated draws the missing checker rather than the next texture to occupy
+    /// the slot.
+    ///
+    /// The fallback is not releasable. It is what every stale handle resolves
+    /// to, so releasing it would leave a registry with nothing to answer with.
+    pub fn remove(&mut self, id: TextureId) -> bool {
+        if id == Self::MISSING {
+            return false;
+        }
+        let Some(slot) = self.slot_mut(id) else {
+            return false;
+        };
+        if slot.texture.take().is_none() {
+            return false;
+        }
+        slot.generation = slot.generation.wrapping_add(1);
+        self.free.push(id.index());
+        true
     }
 
     /// Returns the texture for `id`, falling back to the missing texture.
     ///
-    /// A stale or foreign handle draws as missing rather than panicking, so one
-    /// bad reference cannot take down a frame.
+    /// A stale, released, or foreign handle draws as missing rather than
+    /// panicking, so one bad reference cannot take down a frame.
     pub fn get(&self, id: TextureId) -> &Texture2D {
-        self.textures
-            .get(id.index() as usize)
-            .unwrap_or_else(|| &self.textures[0])
+        self.slot(id)
+            .and_then(|slot| slot.texture.as_ref())
+            .unwrap_or_else(|| {
+                self.slots[0]
+                    .texture
+                    .as_ref()
+                    .expect("the fallback texture is never released")
+            })
     }
 
+    /// How many textures the registry is holding, fallback included.
     pub fn len(&self) -> usize {
-        self.textures.len()
+        self.slots
+            .iter()
+            .filter(|slot| slot.texture.is_some())
+            .count()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -237,7 +328,25 @@ impl TextureRegistry {
         false
     }
 
+    /// Every handle the registry currently answers for.
     pub fn ids(&self) -> impl Iterator<Item = TextureId> {
-        (0..u32::try_from(self.textures.len()).unwrap_or(u32::MAX)).map(TextureId)
+        self.slots
+            .iter()
+            .enumerate()
+            .filter(|(_, slot)| slot.texture.is_some())
+            .map(|(index, slot)| TextureId {
+                index: u32::try_from(index).unwrap_or(u32::MAX),
+                generation: slot.generation,
+            })
+    }
+
+    fn slot(&self, id: TextureId) -> Option<&TextureSlot> {
+        let slot = self.slots.get(id.index() as usize)?;
+        (slot.generation == id.generation()).then_some(slot)
+    }
+
+    fn slot_mut(&mut self, id: TextureId) -> Option<&mut TextureSlot> {
+        let slot = self.slots.get_mut(id.index() as usize)?;
+        (slot.generation == id.generation()).then_some(slot)
     }
 }
