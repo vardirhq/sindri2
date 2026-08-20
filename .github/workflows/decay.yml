@@ -14,7 +14,7 @@ on:
       - '.github/workflows/decay.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   check:
@@ -25,12 +25,32 @@ jobs:
         working-directory: decay
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: decay
+      - name: Apply Clippy fixes
+        if: github.event_name == 'push'
+        run: cargo clippy --fix --workspace --all-targets --allow-dirty --allow-staged -- -D warnings
+      - name: Apply rustfmt
+        if: github.event_name == 'push'
+        run: cargo fmt --all
+      - name: Commit automatic fixes
+        if: github.event_name == 'push'
+        working-directory: .
+        run: |
+          if ! git diff --quiet -- decay; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -- decay
+            git commit -m "style(decay): apply clippy fixes"
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
       - name: Format
         run: cargo fmt --all --check
       - name: Clippy
