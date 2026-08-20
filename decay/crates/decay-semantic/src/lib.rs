@@ -168,7 +168,10 @@ impl<'a, 'd> Analyzer<'a, 'd> {
                 Item::Script(container) | Item::Component(container) => container,
             };
 
-            if containers.insert(container.name.clone(), container.span).is_some() {
+            if containers
+                .insert(container.name.clone(), container.span)
+                .is_some()
+            {
                 self.error(
                     container.span,
                     format!("duplicate declaration `{}`", container.name),
@@ -185,10 +188,7 @@ impl<'a, 'd> Analyzer<'a, 'd> {
         for member in &container.members {
             match member {
                 Member::Field(field) => {
-                    let ty = field
-                        .ty
-                        .as_ref()
-                        .map_or(Type::Unknown, Type::from_ref);
+                    let ty = field.ty.as_ref().map_or(Type::Unknown, Type::from_ref);
                     self.insert_member(
                         &mut members,
                         &field.name,
@@ -205,9 +205,7 @@ impl<'a, 'd> Analyzer<'a, 'd> {
                         params: function
                             .params
                             .iter()
-                            .map(|param| {
-                                param.ty.as_ref().map_or(Type::Unknown, Type::from_ref)
-                            })
+                            .map(|param| param.ty.as_ref().map_or(Type::Unknown, Type::from_ref))
                             .collect(),
                         return_type: function
                             .return_type
@@ -340,7 +338,10 @@ impl<'a, 'd> Analyzer<'a, 'd> {
                 let declared_type = ty.as_ref().map(Type::from_ref);
 
                 if declared_type.is_none() && initializer.is_none() {
-                    self.error(*span, format!("binding `{name}` needs a type or initializer"));
+                    self.error(
+                        *span,
+                        format!("binding `{name}` needs a type or initializer"),
+                    );
                 }
 
                 if let Some(expected) = &declared_type {
@@ -361,7 +362,9 @@ impl<'a, 'd> Analyzer<'a, 'd> {
                 self.expr_type(expr);
             }
             Stmt::Return { value, span } => {
-                let actual = value.as_ref().map_or(Type::Unit, |expr| self.expr_type(expr));
+                let actual = value
+                    .as_ref()
+                    .map_or(Type::Unit, |expr| self.expr_type(expr));
                 let expected = self.current_return.clone();
                 self.check_assignable(&expected, &actual, *span);
             }
@@ -431,10 +434,7 @@ impl<'a, 'd> Analyzer<'a, 'd> {
                 self.require_type(&right_type, &Type::F32, right.span);
                 Type::F32
             }
-            BinaryOp::Less
-            | BinaryOp::LessEqual
-            | BinaryOp::Greater
-            | BinaryOp::GreaterEqual => {
+            BinaryOp::Less | BinaryOp::LessEqual | BinaryOp::Greater | BinaryOp::GreaterEqual => {
                 self.require_type(&left_type, &Type::F32, left.span);
                 self.require_type(&right_type, &Type::F32, right.span);
                 Type::Bool
@@ -644,7 +644,9 @@ fn line_column(source: &str, offset: usize) -> (usize, usize) {
 
 #[cfg(test)]
 mod tests {
-    use super::{DiagnosticPhase, Environment, FunctionType, Type, analyze, analyze_with_environment};
+    use super::{
+        DiagnosticPhase, Environment, FunctionType, Type, analyze, analyze_with_environment,
+    };
 
     #[test]
     fn accepts_typed_gameplay_code() {
@@ -665,7 +667,11 @@ mod tests {
             "#,
         );
 
-        assert!(analysis.diagnostics.is_empty(), "{:?}", analysis.diagnostics);
+        assert!(
+            analysis.diagnostics.is_empty(),
+            "{:?}",
+            analysis.diagnostics
+        );
     }
 
     #[test]
@@ -706,7 +712,9 @@ mod tests {
         );
 
         assert!(analysis.diagnostics.iter().any(|diagnostic| {
-            diagnostic.message.contains("cannot assign to immutable `speed`")
+            diagnostic
+                .message
+                .contains("cannot assign to immutable `speed`")
         }));
     }
 
@@ -734,7 +742,11 @@ mod tests {
             &environment,
         );
 
-        assert!(analysis.diagnostics.is_empty(), "{:?}", analysis.diagnostics);
+        assert!(
+            analysis.diagnostics.is_empty(),
+            "{:?}",
+            analysis.diagnostics
+        );
     }
 
     #[test]
@@ -753,11 +765,17 @@ mod tests {
             "#,
         );
 
-        assert!(analysis.diagnostics.iter().any(|diagnostic| {
-            diagnostic.message.contains("duplicate member `speed`")
-        }));
-        assert!(analysis.diagnostics.iter().any(|diagnostic| {
-            diagnostic.message.contains("duplicate local `value`")
-        }));
+        assert!(
+            analysis
+                .diagnostics
+                .iter()
+                .any(|diagnostic| { diagnostic.message.contains("duplicate member `speed`") })
+        );
+        assert!(
+            analysis
+                .diagnostics
+                .iter()
+                .any(|diagnostic| { diagnostic.message.contains("duplicate local `value`") })
+        );
     }
 }

@@ -26,7 +26,12 @@ struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     fn new(source: &'a str, tokens: Vec<Token>, diagnostics: Vec<Diagnostic>) -> Self {
-        Self { source, tokens, cursor: 0, diagnostics }
+        Self {
+            source,
+            tokens,
+            cursor: 0,
+            diagnostics,
+        }
     }
 
     fn parse_program(&mut self) -> Program {
@@ -41,7 +46,9 @@ impl<'a> Parser<'a> {
                 self.advance();
                 None
             };
-            if let Some(item) = item { items.push(item); }
+            if let Some(item) = item {
+                items.push(item);
+            }
         }
         Program { items }
     }
@@ -57,7 +64,10 @@ impl<'a> Parser<'a> {
             let attributes = self.parse_attributes();
             if self.at(&TokenKind::Fn) {
                 if !attributes.is_empty() {
-                    self.error_span(attributes[0].span, "attributes on functions are not supported yet");
+                    self.error_span(
+                        attributes[0].span,
+                        "attributes on functions are not supported yet",
+                    );
                 }
                 if let Some(function) = self.parse_function() {
                     members.push(Member::Function(function));
@@ -76,10 +86,19 @@ impl<'a> Parser<'a> {
             }
         }
 
-        let end = self.expect_simple(TokenKind::RightBrace, "expected `}` after declaration body")
+        let end = self
+            .expect_simple(TokenKind::RightBrace, "expected `}` after declaration body")
             .unwrap_or_else(|| self.current().span);
-        let decl = ContainerDecl { name, members, span: start.join(end) };
-        Some(if script { Item::Script(decl) } else { Item::Component(decl) })
+        let decl = ContainerDecl {
+            name,
+            members,
+            span: start.join(end),
+        };
+        Some(if script {
+            Item::Script(decl)
+        } else {
+            Item::Component(decl)
+        })
     }
 
     fn parse_attributes(&mut self) -> Vec<Attribute> {
@@ -87,8 +106,13 @@ impl<'a> Parser<'a> {
         while self.at(&TokenKind::At) {
             let start = self.current().span;
             self.advance();
-            if let Some((name, name_span)) = self.expect_identifier("expected attribute name after `@`") {
-                attributes.push(Attribute { name, span: start.join(name_span) });
+            if let Some((name, name_span)) =
+                self.expect_identifier("expected attribute name after `@`")
+            {
+                attributes.push(Attribute {
+                    name,
+                    span: start.join(name_span),
+                });
             } else {
                 break;
             }
@@ -104,9 +128,18 @@ impl<'a> Parser<'a> {
         let ty = self.parse_optional_type();
         let initializer = if self.consume_simple(&TokenKind::Equal).is_some() {
             Some(self.parse_expression()?)
-        } else { None };
+        } else {
+            None
+        };
         let end = self.expect_simple(TokenKind::Semicolon, "expected `;` after field")?;
-        Some(FieldDecl { attributes, mutable, name, ty, initializer, span: start.join(end) })
+        Some(FieldDecl {
+            attributes,
+            mutable,
+            name,
+            ty,
+            initializer,
+            span: start.join(end),
+        })
     }
 
     fn parse_function(&mut self) -> Option<FunctionDecl> {
@@ -119,25 +152,44 @@ impl<'a> Parser<'a> {
                 let (name, name_span) = self.expect_identifier("expected parameter name")?;
                 let ty = self.parse_optional_type();
                 let end = ty.as_ref().map_or(name_span, |ty| ty.span);
-                params.push(Param { name, ty, span: name_span.join(end) });
-                if self.consume_simple(&TokenKind::Comma).is_none() { break; }
+                params.push(Param {
+                    name,
+                    ty,
+                    span: name_span.join(end),
+                });
+                if self.consume_simple(&TokenKind::Comma).is_none() {
+                    break;
+                }
             }
         }
         self.expect_simple(TokenKind::RightParen, "expected `)` after parameters")?;
         let return_type = if self.consume_simple(&TokenKind::Arrow).is_some() {
             Some(self.parse_type()?)
-        } else { None };
+        } else {
+            None
+        };
         let body = self.parse_block()?;
         let span = start.join(body.span);
-        Some(FunctionDecl { name, params, return_type, body, span })
+        Some(FunctionDecl {
+            name,
+            params,
+            return_type,
+            body,
+            span,
+        })
     }
 
     fn parse_optional_type(&mut self) -> Option<TypeRef> {
-        if self.consume_simple(&TokenKind::Colon).is_some() { self.parse_type() } else { None }
+        if self.consume_simple(&TokenKind::Colon).is_some() {
+            self.parse_type()
+        } else {
+            None
+        }
     }
 
     fn parse_type(&mut self) -> Option<TypeRef> {
-        self.expect_identifier("expected type name").map(|(name, span)| TypeRef { name, span })
+        self.expect_identifier("expected type name")
+            .map(|(name, span)| TypeRef { name, span })
     }
 
     fn parse_block(&mut self) -> Option<Block> {
@@ -151,14 +203,25 @@ impl<'a> Parser<'a> {
             }
         }
         let end = self.expect_simple(TokenKind::RightBrace, "expected `}` after block")?;
-        Some(Block { statements, span: start.join(end) })
+        Some(Block {
+            statements,
+            span: start.join(end),
+        })
     }
 
     fn parse_statement(&mut self) -> Option<Stmt> {
-        if self.at(&TokenKind::Let) || self.at(&TokenKind::Var) { return self.parse_binding_statement(); }
-        if self.at(&TokenKind::Return) { return self.parse_return_statement(); }
-        if self.at(&TokenKind::If) { return self.parse_if_statement(); }
-        if self.at(&TokenKind::LeftBrace) { return self.parse_block().map(Stmt::Block); }
+        if self.at(&TokenKind::Let) || self.at(&TokenKind::Var) {
+            return self.parse_binding_statement();
+        }
+        if self.at(&TokenKind::Return) {
+            return self.parse_return_statement();
+        }
+        if self.at(&TokenKind::If) {
+            return self.parse_if_statement();
+        }
+        if self.at(&TokenKind::LeftBrace) {
+            return self.parse_block().map(Stmt::Block);
+        }
 
         let expr = self.parse_expression()?;
         let end = self.expect_simple(TokenKind::Semicolon, "expected `;` after expression")?;
@@ -174,16 +237,31 @@ impl<'a> Parser<'a> {
         let ty = self.parse_optional_type();
         let initializer = if self.consume_simple(&TokenKind::Equal).is_some() {
             Some(self.parse_expression()?)
-        } else { None };
+        } else {
+            None
+        };
         let end = self.expect_simple(TokenKind::Semicolon, "expected `;` after binding")?;
-        Some(Stmt::Binding { mutable, name, ty, initializer, span: start.join(end) })
+        Some(Stmt::Binding {
+            mutable,
+            name,
+            ty,
+            initializer,
+            span: start.join(end),
+        })
     }
 
     fn parse_return_statement(&mut self) -> Option<Stmt> {
         let start = self.expect_simple(TokenKind::Return, "expected `return`")?;
-        let value = if self.at(&TokenKind::Semicolon) { None } else { Some(self.parse_expression()?) };
+        let value = if self.at(&TokenKind::Semicolon) {
+            None
+        } else {
+            Some(self.parse_expression()?)
+        };
         let end = self.expect_simple(TokenKind::Semicolon, "expected `;` after return")?;
-        Some(Stmt::Return { value, span: start.join(end) })
+        Some(Stmt::Return {
+            value,
+            span: start.join(end),
+        })
     }
 
     fn parse_if_statement(&mut self) -> Option<Stmt> {
@@ -195,11 +273,20 @@ impl<'a> Parser<'a> {
             let block = self.parse_block()?;
             end = block.span;
             Some(block)
-        } else { None };
-        Some(Stmt::If { condition, then_branch, else_branch, span: start.join(end) })
+        } else {
+            None
+        };
+        Some(Stmt::If {
+            condition,
+            then_branch,
+            else_branch,
+            span: start.join(end),
+        })
     }
 
-    fn parse_expression(&mut self) -> Option<Expr> { self.parse_assignment() }
+    fn parse_expression(&mut self) -> Option<Expr> {
+        self.parse_assignment()
+    }
 
     fn parse_assignment(&mut self) -> Option<Expr> {
         let target = self.parse_binary(0)?;
@@ -214,18 +301,36 @@ impl<'a> Parser<'a> {
         self.advance();
         let value = self.parse_assignment()?;
         let span = target.span.join(value.span);
-        Some(Expr { kind: ExprKind::Assign { target: Box::new(target), op, value: Box::new(value) }, span })
+        Some(Expr {
+            kind: ExprKind::Assign {
+                target: Box::new(target),
+                op,
+                value: Box::new(value),
+            },
+            span,
+        })
     }
 
     fn parse_binary(&mut self, min_precedence: u8) -> Option<Expr> {
         let mut left = self.parse_unary()?;
         loop {
-            let Some((precedence, op)) = binary_operator(&self.current().kind) else { break; };
-            if precedence < min_precedence { break; }
+            let Some((precedence, op)) = binary_operator(&self.current().kind) else {
+                break;
+            };
+            if precedence < min_precedence {
+                break;
+            }
             self.advance();
             let right = self.parse_binary(precedence + 1)?;
             let span = left.span.join(right.span);
-            left = Expr { kind: ExprKind::Binary { left: Box::new(left), op, right: Box::new(right) }, span };
+            left = Expr {
+                kind: ExprKind::Binary {
+                    left: Box::new(left),
+                    op,
+                    right: Box::new(right),
+                },
+                span,
+            };
         }
         Some(left)
     }
@@ -241,7 +346,13 @@ impl<'a> Parser<'a> {
             self.advance();
             let expr = self.parse_unary()?;
             let span = start.join(expr.span);
-            return Some(Expr { kind: ExprKind::Unary { op, expr: Box::new(expr) }, span });
+            return Some(Expr {
+                kind: ExprKind::Unary {
+                    op,
+                    expr: Box::new(expr),
+                },
+                span,
+            });
         }
         self.parse_postfix()
     }
@@ -250,9 +361,16 @@ impl<'a> Parser<'a> {
         let mut expr = self.parse_primary()?;
         loop {
             if self.consume_simple(&TokenKind::Dot).is_some() {
-                let (field, field_span) = self.expect_identifier("expected member name after `.`")?;
+                let (field, field_span) =
+                    self.expect_identifier("expected member name after `.`")?;
                 let span = expr.span.join(field_span);
-                expr = Expr { kind: ExprKind::Member { object: Box::new(expr), field }, span };
+                expr = Expr {
+                    kind: ExprKind::Member {
+                        object: Box::new(expr),
+                        field,
+                    },
+                    span,
+                };
                 continue;
             }
             if self.consume_simple(&TokenKind::LeftParen).is_some() {
@@ -260,12 +378,21 @@ impl<'a> Parser<'a> {
                 if !self.at(&TokenKind::RightParen) {
                     loop {
                         args.push(self.parse_expression()?);
-                        if self.consume_simple(&TokenKind::Comma).is_none() { break; }
+                        if self.consume_simple(&TokenKind::Comma).is_none() {
+                            break;
+                        }
                     }
                 }
-                let end = self.expect_simple(TokenKind::RightParen, "expected `)` after arguments")?;
+                let end =
+                    self.expect_simple(TokenKind::RightParen, "expected `)` after arguments")?;
                 let span = expr.span.join(end);
-                expr = Expr { kind: ExprKind::Call { callee: Box::new(expr), args }, span };
+                expr = Expr {
+                    kind: ExprKind::Call {
+                        callee: Box::new(expr),
+                        args,
+                    },
+                    span,
+                };
                 continue;
             }
             break;
@@ -276,33 +403,69 @@ impl<'a> Parser<'a> {
     fn parse_primary(&mut self) -> Option<Expr> {
         let token = self.current().clone();
         let kind = match token.kind {
-            TokenKind::Identifier(name) => { self.advance(); ExprKind::Identifier(name) }
-            TokenKind::Number(value) => { self.advance(); ExprKind::Number(value) }
-            TokenKind::String(value) => { self.advance(); ExprKind::String(value) }
-            TokenKind::True => { self.advance(); ExprKind::Bool(true) }
-            TokenKind::False => { self.advance(); ExprKind::Bool(false) }
-            TokenKind::Null => { self.advance(); ExprKind::Null }
+            TokenKind::Identifier(name) => {
+                self.advance();
+                ExprKind::Identifier(name)
+            }
+            TokenKind::Number(value) => {
+                self.advance();
+                ExprKind::Number(value)
+            }
+            TokenKind::String(value) => {
+                self.advance();
+                ExprKind::String(value)
+            }
+            TokenKind::True => {
+                self.advance();
+                ExprKind::Bool(true)
+            }
+            TokenKind::False => {
+                self.advance();
+                ExprKind::Bool(false)
+            }
+            TokenKind::Null => {
+                self.advance();
+                ExprKind::Null
+            }
             TokenKind::LeftParen => {
                 self.advance();
                 let inner = self.parse_expression()?;
-                let end = self.expect_simple(TokenKind::RightParen, "expected `)` after expression")?;
-                return Some(Expr { span: token.span.join(end), kind: ExprKind::Group(Box::new(inner)) });
+                let end =
+                    self.expect_simple(TokenKind::RightParen, "expected `)` after expression")?;
+                return Some(Expr {
+                    span: token.span.join(end),
+                    kind: ExprKind::Group(Box::new(inner)),
+                });
             }
-            _ => { self.error_here("expected expression"); return None; }
+            _ => {
+                self.error_here("expected expression");
+                return None;
+            }
         };
-        Some(Expr { kind, span: token.span })
+        Some(Expr {
+            kind,
+            span: token.span,
+        })
     }
 
     fn synchronize_member(&mut self) {
         while !self.at(&TokenKind::Eof) && !self.at(&TokenKind::RightBrace) {
-            if self.at(&TokenKind::Fn) || self.at(&TokenKind::Let) || self.at(&TokenKind::Var) || self.at(&TokenKind::At) { break; }
+            if self.at(&TokenKind::Fn)
+                || self.at(&TokenKind::Let)
+                || self.at(&TokenKind::Var)
+                || self.at(&TokenKind::At)
+            {
+                break;
+            }
             self.advance();
         }
     }
 
     fn synchronize_statement(&mut self) {
         while !self.at(&TokenKind::Eof) && !self.at(&TokenKind::RightBrace) {
-            if self.consume_simple(&TokenKind::Semicolon).is_some() { break; }
+            if self.consume_simple(&TokenKind::Semicolon).is_some() {
+                break;
+            }
             self.advance();
         }
     }
@@ -334,7 +497,9 @@ impl<'a> Parser<'a> {
             let span = self.current().span;
             self.advance();
             Some(span)
-        } else { None }
+        } else {
+            None
+        }
     }
 
     fn at(&self, expected: &TokenKind) -> bool {
@@ -346,14 +511,23 @@ impl<'a> Parser<'a> {
     }
 
     fn advance(&mut self) {
-        if self.cursor + 1 < self.tokens.len() { self.cursor += 1; }
+        if self.cursor + 1 < self.tokens.len() {
+            self.cursor += 1;
+        }
     }
 
-    fn error_here(&mut self, message: &str) { self.error_span(self.current().span, message); }
+    fn error_here(&mut self, message: &str) {
+        self.error_span(self.current().span, message);
+    }
 
     fn error_span(&mut self, span: Span, message: &str) {
         let (line, column) = line_column(self.source, span.start);
-        self.diagnostics.push(Diagnostic { message: message.to_owned(), span, line, column });
+        self.diagnostics.push(Diagnostic {
+            message: message.to_owned(),
+            span,
+            line,
+            column,
+        });
     }
 }
 
@@ -382,7 +556,8 @@ mod tests {
 
     #[test]
     fn parses_script_fields_functions_and_member_assignment() {
-        let parsed = parse(r#"
+        let parsed = parse(
+            r#"
             script PlayerController {
                 @export
                 let speed: f32 = 6.0;
@@ -392,18 +567,29 @@ mod tests {
                     this.transform.position.x += movement * speed * dt;
                 }
             }
-        "#);
+        "#,
+        );
         assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
-        let Item::Script(script) = &parsed.program.items[0] else { panic!("expected script"); };
+        let Item::Script(script) = &parsed.program.items[0] else {
+            panic!("expected script");
+        };
         assert_eq!(script.name, "PlayerController");
-        let Member::Field(field) = &script.members[0] else { panic!("expected field"); };
+        let Member::Field(field) = &script.members[0] else {
+            panic!("expected field");
+        };
         assert_eq!(field.attributes[0].name, "export");
         assert_eq!(field.ty.as_ref().unwrap().name, "f32");
-        let Member::Function(function) = &script.members[1] else { panic!("expected function"); };
+        let Member::Function(function) = &script.members[1] else {
+            panic!("expected function");
+        };
         assert_eq!(function.name, "update");
         assert_eq!(function.params[0].name, "dt");
-        let Stmt::Expr { expr, .. } = &function.body.statements[1] else { panic!("expected expression statement"); };
-        let ExprKind::Assign { op, .. } = &expr.kind else { panic!("expected assignment"); };
+        let Stmt::Expr { expr, .. } = &function.body.statements[1] else {
+            panic!("expected expression statement");
+        };
+        let ExprKind::Assign { op, .. } = &expr.kind else {
+            panic!("expected assignment");
+        };
         assert_eq!(*op, AssignOp::Add);
     }
 
@@ -411,16 +597,29 @@ mod tests {
     fn observes_operator_precedence() {
         let parsed = parse("script Test { fn update() { let value = 1.0 + 2.0 * 3.0; } }");
         assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
-        let Item::Script(script) = &parsed.program.items[0] else { panic!() };
-        let Member::Function(function) = &script.members[0] else { panic!() };
-        let Stmt::Binding { initializer: Some(expr), .. } = &function.body.statements[0] else { panic!() };
-        let ExprKind::Binary { right, .. } = &expr.kind else { panic!() };
+        let Item::Script(script) = &parsed.program.items[0] else {
+            panic!()
+        };
+        let Member::Function(function) = &script.members[0] else {
+            panic!()
+        };
+        let Stmt::Binding {
+            initializer: Some(expr),
+            ..
+        } = &function.body.statements[0]
+        else {
+            panic!()
+        };
+        let ExprKind::Binary { right, .. } = &expr.kind else {
+            panic!()
+        };
         assert!(matches!(right.kind, ExprKind::Binary { .. }));
     }
 
     #[test]
     fn parses_component_and_control_flow() {
-        let parsed = parse(r#"
+        let parsed = parse(
+            r#"
             component Health {
                 @export
                 var current: f32 = 100.0;
@@ -432,7 +631,8 @@ mod tests {
                     }
                 }
             }
-        "#);
+        "#,
+        );
         assert!(parsed.diagnostics.is_empty(), "{:?}", parsed.diagnostics);
         assert!(matches!(parsed.program.items[0], Item::Component(_)));
     }

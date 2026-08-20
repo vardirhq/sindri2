@@ -366,10 +366,25 @@ mod tests {
 
         let lexed = lex(source);
         assert!(lexed.diagnostics.is_empty(), "{:?}", lexed.diagnostics);
-        assert!(lexed.tokens.iter().any(|token| token.kind == TokenKind::Script));
+        assert!(
+            lexed
+                .tokens
+                .iter()
+                .any(|token| token.kind == TokenKind::Script)
+        );
         assert!(lexed.tokens.iter().any(|token| token.kind == TokenKind::At));
-        assert!(lexed.tokens.iter().any(|token| token.kind == TokenKind::PlusEqual));
-        assert!(lexed.tokens.iter().any(|token| token.kind == TokenKind::Number(6.0)));
+        assert!(
+            lexed
+                .tokens
+                .iter()
+                .any(|token| token.kind == TokenKind::PlusEqual)
+        );
+        assert!(
+            lexed
+                .tokens
+                .iter()
+                .any(|token| token.kind == TokenKind::Number(6.0))
+        );
     }
 
     #[test]
@@ -377,7 +392,11 @@ mod tests {
         let lexed = lex("let speed = 6.0; // tuned in editor\nlet jump = 8.0;");
         assert!(lexed.diagnostics.is_empty());
         assert_eq!(
-            lexed.tokens.iter().filter(|token| token.kind == TokenKind::Let).count(),
+            lexed
+                .tokens
+                .iter()
+                .filter(|token| token.kind == TokenKind::Let)
+                .count(),
             2
         );
     }

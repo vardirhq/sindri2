@@ -67,16 +67,10 @@ pub enum Instruction {
     Push(Constant),
     Load(Path),
     Store(Path),
-    Declare {
-        name: String,
-        mutable: bool,
-    },
+    Declare { name: String, mutable: bool },
     Unary(UnaryOp),
     Binary(BinaryOp),
-    Call {
-        callee: Path,
-        argument_count: usize,
-    },
+    Call { callee: Path, argument_count: usize },
     Pop,
     Return,
     JumpIfFalse(usize),
@@ -174,7 +168,11 @@ impl Lowerer {
 
         IrFunction {
             name: function.name.clone(),
-            params: function.params.iter().map(|param| param.name.clone()).collect(),
+            params: function
+                .params
+                .iter()
+                .map(|param| param.name.clone())
+                .collect(),
             instructions,
         }
     }
@@ -247,7 +245,9 @@ impl Lowerer {
             ExprKind::Identifier(name) => {
                 instructions.push(Instruction::Load(Path(vec![name.clone()])))
             }
-            ExprKind::Number(value) => instructions.push(Instruction::Push(Constant::Number(*value))),
+            ExprKind::Number(value) => {
+                instructions.push(Instruction::Push(Constant::Number(*value)))
+            }
             ExprKind::String(value) => {
                 instructions.push(Instruction::Push(Constant::String(value.clone())))
             }
@@ -264,7 +264,8 @@ impl Lowerer {
                 instructions.push(Instruction::Binary(*op));
             }
             ExprKind::Assign { target, op, value } => {
-                let path = Self::path_from_expr(target).unwrap_or_else(|| Path(vec!["<invalid>".into()]));
+                let path =
+                    Self::path_from_expr(target).unwrap_or_else(|| Path(vec!["<invalid>".into()]));
                 if matches!(op, AssignOp::Assign) {
                     Self::lower_expr(value, instructions);
                 } else {
