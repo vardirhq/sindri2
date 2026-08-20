@@ -1,7 +1,13 @@
-//! Lexical foundation for the Decay gameplay language.
+//! Syntax foundation for the Decay gameplay language.
 //!
 //! This crate deliberately has no dependency on Sindri. Decay syntax should be
 //! testable and extractable before any engine binding exists.
+
+pub mod ast;
+mod parser;
+
+pub use ast::*;
+pub use parser::{Parsed, parse};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Span {
@@ -13,6 +19,11 @@ impl Span {
     #[must_use]
     pub const fn new(start: usize, end: usize) -> Self {
         Self { start, end }
+    }
+
+    #[must_use]
+    pub const fn join(self, other: Self) -> Self {
+        Self::new(self.start, other.end)
     }
 }
 
@@ -327,10 +338,12 @@ const fn is_identifier_continue(ch: char) -> bool {
     is_identifier_start(ch) || ch.is_ascii_digit()
 }
 
-fn line_column(source: &str, offset: usize) -> (usize, usize) {
+pub(crate) fn line_column(source: &str, offset: usize) -> (usize, usize) {
     let prefix = &source[..offset.min(source.len())];
     let line = prefix.bytes().filter(|byte| *byte == b'\n').count() + 1;
-    let column = prefix.rsplit_once('\n').map_or(prefix.len() + 1, |(_, tail)| tail.len() + 1);
+    let column = prefix
+        .rsplit_once('\n')
+        .map_or(prefix.len() + 1, |(_, tail)| tail.len() + 1);
     (line, column)
 }
 
@@ -364,10 +377,7 @@ mod tests {
         let lexed = lex("let speed = 6.0; // tuned in editor\nlet jump = 8.0;");
         assert!(lexed.diagnostics.is_empty());
         assert_eq!(
-            lexed.tokens
-                .iter()
-                .filter(|token| token.kind == TokenKind::Let)
-                .count(),
+            lexed.tokens.iter().filter(|token| token.kind == TokenKind::Let).count(),
             2
         );
     }
