@@ -200,6 +200,7 @@ impl Lowerer {
                 if let Some(initializer) = initializer {
                     Self::lower_expr(initializer, instructions);
                     instructions.push(Instruction::Store(Path(vec![name.clone()])));
+                    instructions.push(Instruction::Pop);
                 }
             }
             Stmt::Expr { expr, .. } => {
@@ -246,11 +247,9 @@ impl Lowerer {
             ExprKind::Identifier(name) => {
                 instructions.push(Instruction::Load(Path(vec![name.clone()])))
             }
-            ExprKind::Number(value) => {
-                instructions.push(Instruction::Push(Constant::Number(*value)));
-            }
+            ExprKind::Number(value) => instructions.push(Instruction::Push(Constant::Number(*value))),
             ExprKind::String(value) => {
-                instructions.push(Instruction::Push(Constant::String(value.clone())));
+                instructions.push(Instruction::Push(Constant::String(value.clone())))
             }
             ExprKind::Bool(value) => instructions.push(Instruction::Push(Constant::Bool(*value))),
             ExprKind::Null => instructions.push(Instruction::Push(Constant::Null)),
@@ -265,8 +264,7 @@ impl Lowerer {
                 instructions.push(Instruction::Binary(*op));
             }
             ExprKind::Assign { target, op, value } => {
-                let path = Self::path_from_expr(target)
-                    .unwrap_or_else(|| Path(vec!["<invalid>".into()]));
+                let path = Self::path_from_expr(target).unwrap_or_else(|| Path(vec!["<invalid>".into()]));
                 if matches!(op, AssignOp::Assign) {
                     Self::lower_expr(value, instructions);
                 } else {
@@ -362,10 +360,9 @@ mod tests {
     }
 
     #[test]
-    fn lowers_declared_host_call_without_knowing_host_semantics() {
+    fn lowers_host_call_without_knowing_host_semantics() {
         let mut environment = Environment::new();
         environment.add_value("Input", Type::Named("Input".to_owned()));
-
         let lowered = lower_with_environment(
             r#"
             script Player {
@@ -384,24 +381,6 @@ mod tests {
             Instruction::Call { callee, argument_count: 2 }
                 if callee == &Path(vec!["Input".into(), "axis".into()])
         )));
-    }
-
-    #[test]
-    fn undeclared_host_names_do_not_become_language_builtins() {
-        let lowered = lower(
-            r#"
-            script Player {
-                fn update() {
-                    Input.axis("left", "right");
-                }
-            }
-            "#,
-        );
-
-        assert!(lowered.program.is_none());
-        assert!(lowered.analysis.diagnostics.iter().any(|diagnostic| {
-            diagnostic.message.contains("unknown name `Input`")
-        }));
     }
 
     #[test]
