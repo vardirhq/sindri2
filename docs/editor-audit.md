@@ -171,7 +171,7 @@ the pointer highlight: the control is drawn and does nothing when pressed.
 | Select / Move / Rotate / Scale | 1,848 px each | **worse than inert** — the icon highlights, and `EditorMode` is written and never read. **Removed**, with the enum |
 | Reset view | 129,795 px | works |
 | Perspective / Ortho | 111,798 px | works, persists |
-| Orbit, pan, zoom | 129,835 px | works; zoom clamped to 0.65–1.8, pitch to ±1.1 rad |
+| Orbit, pan, zoom | 129,835 px | works; zoom clamped to 0.65–1.8, pitch to ±1.1 rad. **Widened**: zoom 0.05–20 and proportional, pitch ±1.5 with the pole guarded in the extractor |
 | **Axis gizmo** | **0 px while the scene moved 116,782 px** | **static** — three hardcoded pixel offsets; it cannot turn. **Fixed**: 259 px under the same orbit |
 | Viewport click to select | 0 px | no picking |
 | Project / Console tabs | 122,990 px | work |
@@ -179,7 +179,7 @@ the pointer highlight: the control is drawn and does nothing when pressed.
 | Asset filter icon | hover only | **inert** — **replaced** by a working refresh |
 | **Asset search box** | typing draws glyphs (579 px), list unchanged | **lies** — the needle is never read. **Fixed**: 2,651 px, filtering real files |
 | Asset rows, folder rows | 0–40 px | **inert**; `demo.scene` is highlighted by string comparison. **Fixed**: real files, the open scene highlighted because it is open, and a scene row opens on a double click |
-| Console | — | three synthesized lines; nothing the engine reports reaches it |
+| Console | — | three synthesized lines; nothing the engine reports reaches it. **Fixed**: a real log, feeding the status bar's counts |
 | Inspector: name, transform, parent, Z lock | — | **unreachable** (§1); they work when a selection is forced |
 | Inspector: Tag, Layer | — | **inert** fixed text — **removed**; a Sindri entity has neither |
 | Inspector: section chevron and ⋮ | — | **inert** ×2 — **removed**, along with the hierarchy root's chevron |
@@ -223,10 +223,11 @@ that presses the keys through a real frame.
 **Missing textures are silent.** The editor binds the two textures
 `sindri_cube::demo_textures` provides; anything else draws the magenta checker
 with no explanation, though `sindri_scene::unresolved_textures` exists to name
-them.
+them. **Fixed:** every scene announces its unresolved references in the console
+as it opens.
 
 **The open scene is forgotten.** Nothing remembers the last file, and the window
-title is always "Sindri Editor".
+title is always "Sindri Editor". **Fixed:** both.
 
 **Write-only state.** `mode` and `asset_search` are the only two `EditorApp`
 fields whose every reference is a write, and each corresponds to a control that
@@ -286,10 +287,12 @@ need to bind textures the demo has never heard of.
    filters a browser that reads a real directory. The rest were removed, which
    for the tool modes took `EditorMode` with them and for "Add Component" and
    the hierarchy's `+` means waiting on builds items 8 and 9 name.
-6. **Give the console something real**: notices, render failures, unresolved
-   textures.
-7. **Remember the open scene**, name it in the title, and widen the camera
-   limits.
+6. ~~**Give the console something real**: notices, render failures, unresolved
+   textures.~~ Done, and bounded, with a repeated message collapsed into a count
+   so a per-frame render failure cannot bury what explains it.
+7. ~~**Remember the open scene**, name it in the title, and widen the camera
+   limits.~~ Done. Framing the selection came with the camera work, and the
+   orbit is now incapable of reaching the pole.
 
 Then the larger builds: spawning and despawning as commands, so creating and
 deleting an entity is undoable and a new entity gets a stable ID before the

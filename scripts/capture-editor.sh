@@ -23,7 +23,9 @@ while [ "$attempt" -lt 120 ]; do
         exit 1
     fi
 
-    window_id=$(xdotool search --name '^Sindri Editor$' 2>/dev/null | head -n 1 || true)
+    # The title carries the open scene now — "demo.scene.json - Sindri Editor" —
+    # so this matches the program name at the end rather than the whole title.
+    window_id=$(xdotool search --name 'Sindri Editor$' 2>/dev/null | head -n 1 || true)
     if [ -n "$window_id" ]; then
         break
     fi

@@ -8,6 +8,8 @@
 //! tested by opening it and looking.
 
 #[cfg(not(target_arch = "wasm32"))]
+pub mod console;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod fixture;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod native;

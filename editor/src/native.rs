@@ -15,10 +15,10 @@ use eframe::{
 use egui_material_icons::{
     MaterialIcon,
     icons::{
-        ICON_ACCOUNT_TREE, ICON_CAMERA_ALT, ICON_CODE, ICON_DEPLOYED_CODE, ICON_DESCRIPTION,
-        ICON_FOLDER, ICON_GRID_VIEW, ICON_IMAGE, ICON_OPEN_WITH, ICON_PAUSE, ICON_PLAY_ARROW,
-        ICON_REDO, ICON_REFRESH, ICON_SEARCH, ICON_STOP, ICON_UNDO, ICON_VIEW_IN_AR,
-        ICON_VIEW_LIST,
+        ICON_ACCOUNT_TREE, ICON_CAMERA_ALT, ICON_CENTER_FOCUS_STRONG, ICON_CODE,
+        ICON_DEPLOYED_CODE, ICON_DESCRIPTION, ICON_FOLDER, ICON_GRID_VIEW, ICON_IMAGE,
+        ICON_OPEN_WITH, ICON_PAUSE, ICON_PLAY_ARROW, ICON_REDO, ICON_REFRESH, ICON_SEARCH,
+        ICON_STOP, ICON_UNDO, ICON_VIEW_IN_AR, ICON_VIEW_LIST,
     },
 };
 use glam::{Mat4, Vec2 as GlamVec2, Vec3};
@@ -36,10 +36,11 @@ use sindri_render::{
 };
 use sindri_scene::{
     CameraComponent, MeshComponent, MeshPrimitive, SceneExtractor, SpriteAnchor, SpriteComponent,
-    SpriteSpace,
+    SpriteSpace, ViewCamera,
 };
 
 use crate::{
+    console::{Console, Entry, Level},
     // `egui::Layout` is a different thing entirely and is already in scope.
     preferences::{AssetView, BottomTab, CameraProjection, Layout as WorkspaceLayout, Preferences},
     project::{AssetKind, ProjectEntry, ProjectTree},
@@ -121,8 +122,14 @@ impl Discarding {
 }
 
 /// The editing shortcuts pressed this frame.
+///
+/// Four bools, which the pedantic lint reads as a struct that should have been
+/// an enum. It should not: these are independent, a frame can carry more than
+/// one, and each is exactly the yes-or-no its key asks.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 struct Shortcuts {
+    focus: bool,
     undo: bool,
     redo: bool,
     save: bool,
@@ -143,6 +150,10 @@ fn shortcuts(input: &mut egui::InputState) -> Shortcuts {
         redo,
         undo: input.consume_key(egui::Modifiers::COMMAND, egui::Key::Z),
         save: input.consume_key(egui::Modifiers::COMMAND, egui::Key::S),
+        // Unmodified, as it is everywhere else that frames a selection. A text
+        // field with focus consumes the key before this sees it, so typing an
+        // "f" into a name does not move the camera.
+        focus: input.consume_key(egui::Modifiers::NONE, egui::Key::F),
     }
 }
 
@@ -171,6 +182,48 @@ struct EditorCamera {
     pan: GlamVec2,
     projection: CameraProjection,
 }
+
+impl Default for EditorCamera {
+    fn default() -> Self {
+        Self {
+            orbit: GlamVec2::ZERO,
+            zoom: 1.0,
+            pan: GlamVec2::ZERO,
+            projection: CameraProjection::Perspective,
+        }
+    }
+}
+
+/// The pan that would put `position` in the middle of what `camera` frames.
+///
+/// The pan's own definition, read backwards: a pan of one moves the picture by
+/// exactly the framed half-height, so a subject that far from the middle is
+/// exactly one pan away from it. Kept apart from the control that calls it
+/// because the way this goes wrong is a sign, and a sign is only visible by
+/// asking where the subject ended up.
+fn pan_to_centre(camera: ViewCamera, pan: GlamVec2, position: Vec3) -> GlamVec2 {
+    if camera.framed_half_height <= 0.0 {
+        return pan;
+    }
+    let offset = camera.view.transform_point3(position);
+    pan - GlamVec2::new(offset.x, offset.y) / camera.framed_half_height
+}
+
+/// How far from the authored camera's own elevation a drag can pitch.
+///
+/// A little under a right angle either way. The orbit cannot reach the pole
+/// whatever this says — the extractor guarantees that, where the authored
+/// elevation is known — so this is only about how much drag is worth spending.
+const PITCH_LIMIT: f32 = 1.5;
+
+/// How far in and out the wheel can take the scene view.
+///
+/// The old pair, 0.65 to 1.8, could not frame anything much larger or smaller
+/// than the demo cube: not quite twice as far out, and not quite twice as
+/// close. A scene is whatever someone builds, so the range is a factor of four
+/// hundred and the wheel moves through it proportionally.
+const MIN_ZOOM: f32 = 0.05;
+const MAX_ZOOM: f32 = 20.0;
 
 /// The camera a workspace tab looks through.
 ///
@@ -351,6 +404,14 @@ struct EditorApp {
     notice: Option<String>,
     /// Whatever the last frame's render reported.
     render_error: Option<String>,
+    /// Everything the editor has said, in order.
+    console: Console,
+    /// The window title as last set.
+    ///
+    /// Kept so the title is sent when it changes rather than every frame: a
+    /// viewport command per frame is sixty round trips a second to say the same
+    /// thing.
+    title: String,
 }
 
 impl EditorApp {
@@ -358,7 +419,7 @@ impl EditorApp {
         configure_theme(&context.egui_ctx);
         let preferences = Preferences::load(context.storage);
         let scene = SceneExtractor::new().expect("the built-in component schemas register");
-        let (file, open_error) = open_requested_scene();
+        let (file, open_error) = open_requested_scene(preferences.last_scene.as_deref());
         // A scene that will not load must not take the editor down with it.
         // This used to unwrap, so a file that parsed and then failed validation
         // killed the process before the window existed — and the failure it
@@ -379,7 +440,7 @@ impl EditorApp {
         let scene_viewport = RuntimeViewport::new(render_state.clone(), "Sindri editor scene view");
         let game_viewport = RuntimeViewport::new(render_state, "Sindri editor game view");
         let project = ProjectTree::beside(file.path());
-        Self {
+        let mut app = Self {
             scene,
             world,
             file,
@@ -403,7 +464,17 @@ impl EditorApp {
             game_viewport,
             notice: open_error.or(load_error),
             render_error: None,
+            console: Console::default(),
+            title: String::new(),
+        };
+        // Said after the field is built rather than during it, because what
+        // there is to say is read off the world and the bindings.
+        if let Some(failure) = app.notice.clone() {
+            app.console.error(failure);
         }
+        app.announce_scene();
+        app.remember_open_scene();
+        app
     }
 
     /// Whether the world has moved away from what the file holds.
@@ -417,8 +488,9 @@ impl EditorApp {
             Ok(()) => {
                 self.saved_revision = self.history.revision();
                 self.notice = None;
+                self.console.info(format!("Saved {}", self.file.label()));
             }
-            Err(error) => self.notice = Some(error.to_string()),
+            Err(error) => self.report(error.to_string()),
         }
     }
 
@@ -481,7 +553,7 @@ impl EditorApp {
         let opened = match SceneFile::open(path) {
             Ok(opened) => opened,
             Err(error) => {
-                self.notice = Some(error.to_string());
+                self.report(error.to_string());
                 return;
             }
         };
@@ -495,15 +567,17 @@ impl EditorApp {
                 self.saved_revision = self.history.revision();
                 self.lifecycle = initialized_lifecycle();
                 self.notice = None;
+                self.announce_scene();
+                self.remember_open_scene();
             }
-            Err(error) => self.notice = Some(error),
+            Err(error) => self.report(error),
         }
     }
 
     /// Re-reads the file, discarding unsaved edits along with their history.
     fn reload(&mut self) {
         if let Err(error) = self.file.reload() {
-            self.notice = Some(error.to_string());
+            self.report(error.to_string());
             return;
         }
         self.refresh_project();
@@ -539,13 +613,64 @@ impl EditorApp {
                 self.viewport_pan.y -= delta.y * 2.0 / height;
             } else if response.dragged_by(egui::PointerButton::Primary) {
                 self.viewport_yaw = (self.viewport_yaw + delta.x * 0.008) % TAU;
-                self.viewport_pitch = (self.viewport_pitch + delta.y * 0.008).clamp(-1.1, 1.1);
+                // Most of a right angle either way, from wherever the scene
+                // authored its camera. The extractor stops the orbit short of
+                // the pole itself, because that is where it knows how far the
+                // authored camera was already tilted; this only decides how far
+                // a drag is worth carrying.
+                self.viewport_pitch =
+                    (self.viewport_pitch + delta.y * 0.008).clamp(-PITCH_LIMIT, PITCH_LIMIT);
             }
         }
         if response.hovered() {
             let delta = context.input(|input| input.smooth_scroll_delta.y);
-            self.viewport_zoom = (self.viewport_zoom + delta * 0.002).clamp(0.65, 1.8);
+            // Multiplied rather than added: the range spans a factor of four
+            // hundred, and a fixed step that moves the picture usefully at one
+            // end does nothing at the other. A notch of the wheel is the same
+            // proportion of the distance wherever the camera is.
+            self.viewport_zoom =
+                (self.viewport_zoom * (delta * 0.002).exp()).clamp(MIN_ZOOM, MAX_ZOOM);
         }
+    }
+
+    /// Puts the selected entity in the middle of the scene view.
+    ///
+    /// Centres rather than fits: fitting needs the bounds of what is selected,
+    /// and an entity's bounds are a mesh's business, not a transform's. What
+    /// this fixes is the ordinary way a subject is lost — panned off the edge,
+    /// or never in frame because the authored camera was aimed elsewhere.
+    ///
+    /// The arithmetic is the pan's own definition read backwards. A pan of one
+    /// moves the picture by exactly the framed half-height, so a subject sitting
+    /// that far from the middle is exactly one pan away from it, and the
+    /// extractor is asked for both numbers rather than the editor keeping its
+    /// own copy of either.
+    fn focus_selection(&mut self) {
+        let Some(position) = self
+            .selection
+            .and_then(|entity| self.world.get(entity))
+            .and_then(|data| data.transform_3d)
+            .map(|transform| Vec3::from_array(transform.position))
+        else {
+            return;
+        };
+        let Ok(Some(camera)) = self.scene.world_camera(&self.world, self.scene_camera()) else {
+            return;
+        };
+        self.viewport_pan = pan_to_centre(camera, self.viewport_pan, position);
+    }
+
+    /// The camera the scene view is looking through.
+    fn scene_camera(&self) -> CameraView {
+        camera_for(
+            WorkspaceTab::Scene,
+            EditorCamera {
+                orbit: GlamVec2::new(self.viewport_yaw, self.viewport_pitch),
+                zoom: self.viewport_zoom,
+                pan: self.viewport_pan,
+                projection: self.preferences.projection,
+            },
+        )
     }
 
     /// Whether the viewer has moved away from the authored camera.
@@ -572,6 +697,68 @@ impl EditorApp {
         self.notice.as_deref().or(self.render_error.as_deref())
     }
 
+    /// Records which scene to reopen on the next launch.
+    ///
+    /// A detached scene clears it rather than leaving the previous one: the
+    /// editor should reopen where it was left, and it was left nowhere.
+    fn remember_open_scene(&mut self) {
+        self.preferences.last_scene = self.file.path().map(|path| path.display().to_string());
+    }
+
+    /// Names the open scene in the window title.
+    ///
+    /// The title is where an operating system shows what a window is for — in a
+    /// task switcher, a dock, a window list — and "Sindri Editor" answers that
+    /// with the name of the program. The file goes first because that is the
+    /// part a switcher has room for, and the unsaved marker goes with it,
+    /// matching the status bar rather than inventing a second vocabulary.
+    fn update_title(&mut self, context: &egui::Context) {
+        let title = format!(
+            "{}{} - Sindri Editor",
+            self.file.label(),
+            if self.unsaved() { " (unsaved)" } else { "" }
+        );
+        if title == self.title {
+            return;
+        }
+        context.send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
+        self.title = title;
+    }
+
+    /// Says that something the user asked for did not happen.
+    ///
+    /// The notice is the one line beside the viewport and is replaced by the
+    /// next thing that goes wrong; the console keeps it. Every failure goes
+    /// through here so the two cannot disagree about what happened.
+    fn report(&mut self, message: String) {
+        self.console.error(&message);
+        self.notice = Some(message);
+    }
+
+    /// Says what a scene turned out to be once it was loaded.
+    ///
+    /// A texture a scene names and nothing has bound draws the magenta checker
+    /// rather than failing the frame, which is the right call and also means
+    /// the only way anyone finds out is being told. `unresolved_textures` has
+    /// existed since bindings did and nothing asked it.
+    fn announce_scene(&mut self) {
+        self.console.info(format!(
+            "Opened {} - {} entities",
+            self.file.label(),
+            self.world.len()
+        ));
+        let mut unresolved: Vec<String> =
+            sindri_scene::unresolved_textures(&self.world, &self.renderers.bindings)
+                .into_iter()
+                .collect();
+        unresolved.sort();
+        for texture in unresolved {
+            self.console.warning(format!(
+                "{texture} is not bound, drawing the missing checker"
+            ));
+        }
+    }
+
     fn select(&mut self, entity: Option<EntityId>) {
         if self.selection != entity {
             self.history.break_merge_run();
@@ -593,7 +780,7 @@ impl EditorApp {
             .into_transaction("Edit entity")
             .merging(format!("inspector:{}", entity.index()));
         if let Err(error) = self.history.apply(transaction, &mut self.world) {
-            self.notice = Some(error.to_string());
+            self.report(error.to_string());
         }
     }
 
@@ -615,21 +802,21 @@ impl EditorApp {
             .history
             .apply(buffer.into_transaction("Reparent entity"), &mut self.world)
         {
-            self.notice = Some(error.to_string());
+            self.report(error.to_string());
         }
     }
 
     fn undo(&mut self) {
         self.history.break_merge_run();
         if let Err(error) = self.history.undo(&mut self.world) {
-            self.notice = Some(error.to_string());
+            self.report(error.to_string());
         }
     }
 
     fn redo(&mut self) {
         self.history.break_merge_run();
         if let Err(error) = self.history.redo(&mut self.world) {
-            self.notice = Some(error.to_string());
+            self.report(error.to_string());
         }
     }
 
@@ -646,8 +833,9 @@ impl EditorApp {
                 self.selection = None;
                 self.lifecycle = initialized_lifecycle();
                 self.notice = None;
+                self.announce_scene();
             }
-            Err(error) => self.notice = Some(error),
+            Err(error) => self.report(error),
         }
     }
 
@@ -660,7 +848,7 @@ impl EditorApp {
             _ => self.lifecycle.start(),
         };
         if let Err(error) = result {
-            self.notice = Some(error.to_string());
+            self.report(error.to_string());
         }
     }
 
@@ -672,7 +860,7 @@ impl EditorApp {
     /// belongs here.
     fn stop_playback(&mut self) {
         if let Err(error) = self.lifecycle.stop() {
-            self.notice = Some(error.to_string());
+            self.report(error.to_string());
         }
     }
 
@@ -680,7 +868,7 @@ impl EditorApp {
         if self.lifecycle.state() == EngineState::Running
             && let Err(error) = self.lifecycle.pause()
         {
-            self.notice = Some(error.to_string());
+            self.report(error.to_string());
         }
     }
 
@@ -772,6 +960,9 @@ impl EditorApp {
             self.redo();
         } else if pressed.undo {
             self.undo();
+        }
+        if pressed.focus {
+            self.focus_selection();
         }
     }
 
@@ -966,6 +1157,7 @@ impl EditorApp {
     fn asset_panel(&mut self, ui: &mut egui::Ui) {
         let context = ui.ctx().clone();
         let mut action = BrowserAction::None;
+        let mut clear_console = false;
         let (panel, default, min, max) = match self.preferences.layout {
             // A tall column, which is what makes the list view worth having.
             WorkspaceLayout::TwoByThree => {
@@ -1013,10 +1205,15 @@ impl EditorApp {
                         );
                     }
                     BottomTab::Console => {
-                        console_view(ui, self.world.len(), self.lifecycle.state());
+                        if console_view(ui, &self.console, self.lifecycle.state()) {
+                            clear_console = true;
+                        }
                     }
                 }
             });
+        if clear_console {
+            self.console.clear();
+        }
         // Acted on outside the panel, because both answers write to the field
         // the browser was reading from.
         match action {
@@ -1167,15 +1364,19 @@ impl EditorApp {
                     );
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         ui.add_space(12.0);
-                        ui.label(
-                            RichText::new(if self.problem().is_some() {
-                                "1 Error, 0 Warnings"
+                        // Counted rather than guessed from whether a notice is
+                        // showing, which is what this used to do: it said "1
+                        // Error" for anything at all and never mentioned a
+                        // warning, because nothing in the editor could produce
+                        // one.
+                        let counts = self.console.counts();
+                        ui.label(RichText::new(counts.summary()).size(11.0).color(
+                            if counts.errors > 0 {
+                                ACCENT_BRIGHT
                             } else {
-                                "0 Errors, 0 Warnings"
-                            })
-                            .size(11.0)
-                            .color(TEXT_FAINT),
-                        );
+                                TEXT_FAINT
+                            },
+                        ));
                     });
                 });
             });
@@ -1231,6 +1432,15 @@ impl EditorApp {
                     if icon_button(ui, ICON_CAMERA_ALT, self.view_moved(), "Reset view").clicked() {
                         self.reset_view();
                     }
+                    if ui
+                        .add_enabled_ui(self.selection.is_some(), |ui| {
+                            icon_button(ui, ICON_CENTER_FOCUS_STRONG, false, "Focus selection (F)")
+                        })
+                        .inner
+                        .clicked()
+                    {
+                        self.focus_selection();
+                    }
                 });
             });
         });
@@ -1250,15 +1460,11 @@ impl EditorApp {
             self.move_camera(&context, &response, rect.height());
         }
         let scale = context.pixels_per_point();
-        let camera = camera_for(
-            tab,
-            EditorCamera {
-                orbit: GlamVec2::new(self.viewport_yaw, self.viewport_pitch),
-                zoom: self.viewport_zoom,
-                pan: self.viewport_pan,
-                projection: self.preferences.projection,
-            },
-        );
+        let camera = if editing {
+            self.scene_camera()
+        } else {
+            camera_for(tab, EditorCamera::default())
+        };
         let viewport = if editing {
             &mut self.scene_viewport
         } else {
@@ -1278,8 +1484,13 @@ impl EditorApp {
             .err();
         // Two views can be live at once, and the first thing to go wrong is the
         // thing worth reading, so a later success does not erase it.
-        if self.render_error.is_none() {
-            self.render_error = failure;
+        if let Some(failure) = failure {
+            // The console collapses this: a render failure recurs every frame,
+            // and one entry with a count says more than sixty a second.
+            self.console.error(&failure);
+            if self.render_error.is_none() {
+                self.render_error = Some(failure);
+            }
         }
         ui.painter().image(
             viewport.texture_id,
@@ -1292,9 +1503,10 @@ impl EditorApp {
             // rather than re-derived, so the axes cannot drift from the picture.
             let axes = self
                 .scene
-                .world_camera_view(&self.world, camera)
+                .world_camera(&self.world, camera)
                 .ok()
-                .flatten();
+                .flatten()
+                .map(|camera| camera.view);
             paint_runtime_overlay(
                 ui.painter(),
                 rect,
@@ -1363,6 +1575,7 @@ impl eframe::App for EditorApp {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        self.update_title(ui.ctx());
         self.handle_close_request(ui.ctx());
         self.handle_shortcuts(ui.ctx());
         self.top_bar(ui);
@@ -2149,19 +2362,71 @@ fn asset_tile(ui: &mut egui::Ui, entry: &ProjectEntry, open: Option<&Path>) -> R
     .inner
 }
 
-fn console_view(ui: &mut egui::Ui, entity_count: usize, state: EngineState) {
-    ui.add_space(8.0);
-    for (color, text) in [
-        (SUCCESS, "Renderer initialized".to_owned()),
-        (ACCENT, format!("Scene loaded - {entity_count} entities")),
-        (TEXT_MUTED, format!("Engine {}", lifecycle_label(state))),
-    ] {
-        ui.horizontal(|ui| {
-            ui.add_space(10.0);
-            status_dot(ui, color);
-            ui.label(RichText::new(&text).size(11.0).color(TEXT_MUTED));
+/// What the editor has said, newest at the bottom.
+///
+/// This used to be three fixed lines, two of them interpolating a real number,
+/// which made it a status readout wearing a log's clothes. The engine's state
+/// is still worth a line, so it is one — at the top, marked as the standing
+/// state rather than something that just happened.
+///
+/// Returns true when the user asked to clear it.
+fn console_view(ui: &mut egui::Ui, console: &Console, state: EngineState) -> bool {
+    let mut cleared = false;
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        status_dot(ui, ACCENT);
+        ui.label(
+            RichText::new(format!("Engine {}", lifecycle_label(state)))
+                .size(11.0)
+                .color(TEXT_MUTED),
+        );
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.add_space(8.0);
+            if ui
+                .add_enabled(
+                    !console.is_empty(),
+                    egui::Button::new(RichText::new("Clear").size(11.0).color(TEXT_MUTED))
+                        .frame(false),
+                )
+                .clicked()
+            {
+                cleared = true;
+            }
         });
-    }
+    });
+    ui.separator();
+    egui::ScrollArea::vertical()
+        .auto_shrink([false, false])
+        // Pinned to the newest entry: a log you have to scroll to the bottom of
+        // to see what just happened is a log nobody reads.
+        .stick_to_bottom(true)
+        .show(ui, |ui| {
+            ui.spacing_mut().item_spacing.y = 1.0;
+            for entry in console.entries() {
+                console_row(ui, entry);
+            }
+        });
+    cleared
+}
+
+fn console_row(ui: &mut egui::Ui, entry: &Entry) {
+    let color = match entry.level {
+        Level::Info => TEXT_MUTED,
+        Level::Warning => ACCENT_BRIGHT,
+        Level::Error => Color32::from_rgb(255, 138, 148),
+    };
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        status_dot(ui, color);
+        ui.label(RichText::new(&entry.message).size(11.0).color(color));
+        if entry.count > 1 {
+            ui.label(
+                RichText::new(format!("x{}", entry.count))
+                    .size(10.0)
+                    .color(TEXT_FAINT),
+            );
+        }
+    });
 }
 
 fn lifecycle_label(state: EngineState) -> &'static str {
@@ -2575,14 +2840,35 @@ fn hierarchy_indent(depth: usize, step: f32) -> f32 {
 /// A missing or unreadable file is reported rather than fatal: the editor opens
 /// on the scene compiled into it and says what went wrong, which beats a window
 /// that never appears.
-fn open_requested_scene() -> (SceneFile, Option<String>) {
-    let requested = std::env::args().nth(1);
-    let path = requested.as_deref().unwrap_or(DEFAULT_SCENE_PATH);
+fn open_requested_scene(remembered: Option<&str>) -> (SceneFile, Option<String>) {
+    open_scene_for(std::env::args().nth(1).as_deref(), remembered)
+}
+
+/// Opens whichever scene was asked for, in order of how deliberately.
+///
+/// A path on the command line is the most deliberate thing anyone can say, so
+/// it wins. Otherwise the scene the editor was last left in, which is what
+/// makes reopening the editor continue rather than restart. Otherwise the demo
+/// scene, so a clean clone is useful.
+///
+/// A remembered scene that has moved or been deleted since is not a reason to
+/// open on nothing: that choice was made last week, the failure is not the
+/// user's doing now, and falling back to the default while saying what happened
+/// leaves them somewhere they can work. A path given on the command line gets
+/// no such fallback — standing in a different scene for the one someone just
+/// named reads as though it opened.
+fn open_scene_for(argument: Option<&str>, remembered: Option<&str>) -> (SceneFile, Option<String>) {
+    let path = argument.or(remembered).unwrap_or(DEFAULT_SCENE_PATH);
     match SceneFile::open(path) {
         Ok(file) => (file, None),
-        // An empty scene rather than the demo one. Standing in a working scene
-        // for the file someone asked for reads as though it opened, and the
-        // notice beside it as though something minor went wrong.
+        // The reported failure is the remembered scene's, not the fallback's:
+        // what went wrong is that the file someone was working in is not
+        // there, and the demo scene's absence would not be news.
+        Err(error) if argument.is_none() && remembered.is_some() => (
+            SceneFile::open(DEFAULT_SCENE_PATH)
+                .unwrap_or_else(|_| SceneFile::detached(SceneDocument::default())),
+            Some(error.to_string()),
+        ),
         Err(error) => (
             SceneFile::detached(SceneDocument::default()),
             Some(error.to_string()),
@@ -3006,6 +3292,51 @@ mod tests {
         opened.get()
     }
 
+    /// The editor reopens where it was left, and a path on the command line
+    /// still wins — the most deliberate thing anyone can say about which scene
+    /// to open should not be overruled by a choice made last week.
+    #[test]
+    fn the_remembered_scene_is_reopened_unless_one_was_named() {
+        let directory = tempfile::tempdir().unwrap();
+        let write = |name: &str| {
+            let path = directory.path().join(name);
+            std::fs::write(
+                &path,
+                DemoScene::authored_document()
+                    .unwrap()
+                    .to_canonical_json()
+                    .unwrap(),
+            )
+            .unwrap();
+            path.display().to_string()
+        };
+        let remembered = write("remembered.scene.json");
+        let named = write("named.scene.json");
+
+        let (file, error) = open_scene_for(None, Some(&remembered));
+        assert_eq!(error, None);
+        assert_eq!(file.label(), "remembered.scene.json");
+
+        let (file, error) = open_scene_for(Some(&named), Some(&remembered));
+        assert_eq!(error, None);
+        assert_eq!(
+            file.label(),
+            "named.scene.json",
+            "an argument outranks what was remembered"
+        );
+    }
+
+    /// A project can move or be deleted between launches. Refusing to open
+    /// anything because of that would make a remembered path a liability.
+    #[test]
+    fn a_remembered_scene_that_is_gone_says_so_rather_than_opening_nothing() {
+        let directory = tempfile::tempdir().unwrap();
+        let missing = directory.path().join("gone.scene.json");
+        let (_, error) = open_scene_for(None, Some(&missing.display().to_string()));
+        let error = error.expect("a scene that is not there is worth saying");
+        assert!(error.contains("gone.scene.json"), "{error}");
+    }
+
     /// Which shortcuts a key press produces, read through a real egui frame.
     fn shortcuts_for(modifiers: egui::Modifiers, key: egui::Key) -> Shortcuts {
         let context = egui::Context::default();
@@ -3085,6 +3416,74 @@ mod tests {
         expected.sort_by(|left, right| left.0.total_cmp(&right.0));
         let expected: Vec<&str> = expected.iter().map(|(_, label)| *label).collect();
         assert_eq!(order, expected, "the nearest arm is drawn last");
+    }
+
+    /// Framing a subject puts it in the middle, which is the whole claim.
+    ///
+    /// Checked against the extractor rather than against the number the editor
+    /// computed: the pan is worked out by reading the pan's own definition
+    /// backwards, and the way that goes wrong is a sign, which only shows up by
+    /// asking where the subject ended up.
+    #[test]
+    fn focusing_a_selection_puts_it_in_the_middle_of_the_view() {
+        let extractor = extractor();
+        let world = demo_world();
+        let entity = find_by_source_id(&world, "checker-cube").unwrap();
+        let position = Vec3::from_array(world.get(entity).unwrap().transform_3d.unwrap().position);
+
+        // Somewhere the subject is well off centre to begin with.
+        let mut pan = GlamVec2::new(0.8, -0.5);
+        let view = |pan| CameraView {
+            orbit: GlamVec2::new(0.4, -0.2),
+            distance_scale: 1.0,
+            pan,
+            projection: sindri_scene::WorldProjection::Perspective,
+        };
+        let camera = extractor
+            .world_camera(&world, view(pan))
+            .unwrap()
+            .expect("the demo scene has a perspective camera");
+        let before = camera.view.transform_point3(position);
+        assert!(
+            before.x.abs() + before.y.abs() > 0.5,
+            "the subject has to start off centre for this to prove anything"
+        );
+
+        pan = pan_to_centre(camera, pan, position);
+
+        let after = extractor
+            .world_camera(&world, view(pan))
+            .unwrap()
+            .unwrap()
+            .view
+            .transform_point3(position);
+        assert!(
+            after.x.abs() < 1.0e-4 && after.y.abs() < 1.0e-4,
+            "the subject should be in the middle and is at ({}, {})",
+            after.x,
+            after.y
+        );
+    }
+
+    /// The wheel moves the same proportion of the distance wherever it is, or
+    /// the far end of a four-hundredfold range is unusable.
+    #[test]
+    fn zooming_is_proportional_rather_than_a_fixed_step() {
+        let step = |zoom: f32| (zoom * (50.0_f32 * 0.002).exp()).clamp(MIN_ZOOM, MAX_ZOOM);
+        let near = MIN_ZOOM * 2.0;
+        let far = MAX_ZOOM * 0.5;
+        let ratio = |zoom: f32| step(zoom) / zoom;
+        assert!(
+            (ratio(near) - ratio(far)).abs() < 1.0e-5,
+            "one notch is {} of the distance close in and {} far out",
+            ratio(near),
+            ratio(far)
+        );
+        assert_eq!(
+            step(MAX_ZOOM).to_bits(),
+            MAX_ZOOM.to_bits(),
+            "and it stops at the far end"
+        );
     }
 
     /// Redo must be asked for before undo, because egui ignores an extra Shift

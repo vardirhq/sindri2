@@ -195,7 +195,10 @@ frame.
 - A confirmation before anything that would throw unsaved work away — opening
   another scene, reloading from disk, discarding changes, and closing the window
   — each naming what it is about to do and offering to save instead
-- A live viewport with orbit, pan, zoom, and reset-to-authored-camera
+- A live viewport with orbit, pan, zoom, reset-to-authored-camera, and **Focus
+  selection** (F), which centres the view on the selected entity; the zoom spans
+  a factor of four hundred and moves proportionally, and the orbit cannot be
+  driven onto the pole
 - An axis indicator in the scene view's corner drawn from the same camera view
   the frame under it was drawn through, foreshortening and reordering its arms
   as the camera turns
@@ -210,7 +213,14 @@ frame.
   flag, and a separate **Discard changes** that returns the world to the file
 - A Project dock listing the real contents of the directory the open scene
   lives in, with a list/grid toggle, a search that filters it, a refresh, and a
-  double click on a scene row to open it; and a Console dock
+  double click on a scene row to open it
+- A Console dock holding what the editor has actually said — every failure, what
+  each scene turned out to be when it opened, and every texture it names that
+  nothing has bound — bounded, with a repeated message collapsed into a count so
+  a per-frame render failure cannot bury what explains it, and feeding the error
+  and warning counts in the status bar
+- Reopening the scene the editor was last left in, overridden by a path on the
+  command line, with the file and its unsaved state named in the window title
 - Preferences that survive a restart
 - A deterministic full-window screenshot captured in CI
 
@@ -224,9 +234,6 @@ gone, and what is left here is waiting on a build rather than on a handler.
 
 - **Play and Pause** — they move the engine lifecycle and nothing else. No frame
   is advanced, so no gameplay runs; the demo's own turning cube does not turn
-- **The Console** — three fixed lines. Two interpolate real values (entity count,
-  lifecycle state), so it is a status readout rather than a log; nothing the
-  engine reports reaches it
 - **Rotation** in the inspector — the word "Quaternion". The format stores a
   rotation and the renderer applies it; nothing edits it
 

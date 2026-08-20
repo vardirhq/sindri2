@@ -175,3 +175,11 @@ All notable changes to Sindri Next will be documented here.
 - Replaced the project browser's inert filter icon with a refresh that re-reads the directory, which is what a cached listing needs when a file appears beside it.
 - Added an Edit menu holding undo and redo, each labelled with what it would undo; "Edit" was a label shaped like a menu that opened nothing.
 - Removed the editor controls that were drawn and did nothing: the Select, Move, Rotate, and Scale tool modes and the `EditorMode` they wrote to, the "Scene", "Build", "Tools", and "Help" labels shaped like menus, the top bar's project name, the hierarchy's add-entity button, the inspector's Tag, Layer, and Add Component, the collapse chevrons and overflow menus that collapsed and overflowed nothing, and the settings gear.
+- Replaced the editor's three fixed console lines with a real log: every failure, what each scene turned out to be when it opened, and every texture it names that nothing has bound, bounded and with a message repeated back to back collapsed into a count so a per-frame render failure cannot bury what explains it.
+- Made the editor's error and warning counts count what the console holds, rather than saying "1 Error" for anything at all and never mentioning a warning.
+- Made the editor reopen the scene it was last left in, overridden by a path on the command line, falling back to the demo scene and saying so when the remembered file has moved or been deleted.
+- Named the open scene and its unsaved state in the editor's window title, so a task switcher can tell two editors apart.
+- Widened the editor viewport's zoom from a factor of under three to a factor of four hundred and made the wheel move it proportionally, so a scene much larger or smaller than the demo can be framed at all.
+- Added **Focus selection** to the editor viewport, on the toolbar and on F, which centres the view on the selected entity.
+- Stopped an orbit being driven onto the camera's pole, where nothing says which way round the picture goes and dragging through straight down whipped the whole scene round to face the other way.
+- Renamed `SceneExtractor::world_camera_view` to `world_camera`, returning a `ViewCamera` carrying the framed half-height as well as the view, which is the unit a pan is measured in and so what turns a distance on screen back into one.
