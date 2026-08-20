@@ -105,3 +105,12 @@ jobs:
         run: |
           rustup target add wasm32-unknown-unknown
           cargo check --workspace --all-features --target wasm32-unknown-unknown
+      # A texture that decodes natively and not in the browser build is the
+      # failure the asset system's whole promise rests on, so the decode corpus
+      # is run on the browser target too, in Node through wasm-bindgen's runner.
+      # The version has to match the wasm-bindgen the workspace resolves.
+      - name: Test image decoding in the browser build
+        run: |
+          cargo install wasm-bindgen-cli --version 0.2.127 --locked
+          cargo test --package sindri-assets --target wasm32-unknown-unknown \
+            --test decode_compatibility

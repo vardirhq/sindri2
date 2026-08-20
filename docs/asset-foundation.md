@@ -105,6 +105,16 @@ Existing and not existing are both states, so an asset appearing where one was m
 
 Native only. A browser has no modification time to read, and no editor to reload into.
 
+## Decoding the same way everywhere
+
+The promise this layer exists for is that one scene file works from disk and from static web hosting. That has to hold for the bytes as well as the paths: a texture that decodes natively and not in the browser build, or decodes to something slightly different, turns "the same scene" into a claim nobody checked — and it would be found by someone looking at a picture rather than by a test.
+
+`crates/sindri-assets/tests/decode_compatibility.rs` runs one body on both targets: `#[test]` natively, `#[wasm_bindgen_test]` under `wasm32-unknown-unknown`, where wasm-bindgen's runner executes it in Node. The corpus is embedded rather than read from disk, because what is under test is the decoder and not the source.
+
+It is deliberately awkward — every colour type PNG defines, sixteen bits per channel, an interlaced encoding, and a JPEG — because those are the paths where a decoder's feature set can differ between builds. Each image is two by two, small enough that every expected pixel is written down: an encoding with no alpha channel has to arrive opaque, a palette has to be resolved to colours, sixteen bits have to narrow to eight, and an interlaced encoding has to produce the same pixels as the progressive encoding of the same image. The JPEG is checked with a tolerance, since it is lossy and a decoder producing the wrong picture would miss by far more than a rounding step. Bytes that are not an image have to be an error naming the asset on both targets, because a decoder that panicked would take a browser tab down with it.
+
+Running it needs `wasm-bindgen-cli` at the version the workspace resolves; `.cargo/config.toml` names the runner and the install command.
+
 ## Deliberate boundaries
 
 GPU upload stays outside. A loader that owned a device could not be tested without one, and the host is the only thing that has one: it reads a ready `TextureAsset` and puts it on the GPU itself. Fallback assets, final root/URL rules, hot reload, and a content-hashed manifest remain for the rest of the asset-system milestone. Keeping storage, source, scheduling, decoding, and GPU upload separate is what lets native and WebAssembly hosts share the same ownership and error semantics.

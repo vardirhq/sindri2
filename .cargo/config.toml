@@ -1,0 +1,9 @@
+# Tests built for the browser target run in Node through wasm-bindgen's runner,
+# which `cargo test --target wasm32-unknown-unknown` invokes as the runner for
+# each test binary. Install it with:
+#
+#     cargo install wasm-bindgen-cli --version 0.2.127 --locked
+#
+# The version has to match the `wasm-bindgen` the workspace resolves.
+[target.wasm32-unknown-unknown]
+runner = "wasm-bindgen-test-runner"

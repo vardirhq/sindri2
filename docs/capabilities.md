@@ -175,6 +175,11 @@ On native, `AssetWatch` notices when the file behind a loaded asset changes and
 `AssetLoader::reload` loads it again, by polling modification time and length
 rather than subscribing to filesystem events.
 
+A corpus of deliberately awkward images — every PNG colour type, sixteen bits per
+channel, an interlaced encoding, and a JPEG — is decoded and checked pixel by
+pixel on both native and `wasm32-unknown-unknown`, so a texture cannot decode one
+way in the editor and another in the browser.
+
 ---
 
 ## The editor
