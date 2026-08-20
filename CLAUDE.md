@@ -65,7 +65,15 @@ examples/cube/      sindri-cube: scene-driven cube + sprite overlay, and the
                     `capture` binary used as a CI render artifact
 docs/               subsystem contracts
 scripts/            capture-editor.sh (Xvfb editor screenshot)
+decay/              a separate Cargo workspace: the Decay gameplay language
 ```
+
+`decay/` is **not a member of this workspace** and is not built by the engine's
+commands. It has its own `Cargo.toml`, its own CI workflow
+(`.github/workflows/decay.yml`), and its own `README.md`. Nothing under
+`decay/` may depend on a `sindri-*` crate, and no engine crate depends on it:
+there is no binding yet. Read `decay/README.md` before working in there, and
+`docs/decay-direction.md` for why the language exists at all.
 
 ### Dependency rules (enforce these)
 
@@ -129,9 +137,18 @@ SINDRI_UPDATE_SCENE_FIXTURES=1 cargo test --package sindri-core
 
 # regenerate the demo's asset manifest after changing an asset
 SINDRI_UPDATE_ASSET_MANIFEST=1 cargo test --package sindri-cube
+
+# the Decay language, which is a separate workspace and not covered above
+cd decay
+cargo fmt --all --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
 ```
 
-CI (`.github/workflows/ci.yml`) runs fmt, clippy, tests, both render captures
+CI is two workflows. `.github/workflows/decay.yml` runs fmt, clippy, and tests
+for the `decay/` workspace, and only when something under `decay/` changes.
+`.github/workflows/ci.yml` covers everything else: fmt, clippy, tests, both
+render captures
 (under Mesa software Vulkan, `WGPU_BACKEND=vulkan`), the wasm32 check, and the
 image decoding corpus on the browser target, with `RUSTFLAGS: -D warnings`.
 **Any warning fails CI**, so clippy must be clean, not merely non-fatal.

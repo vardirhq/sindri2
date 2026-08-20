@@ -428,17 +428,22 @@ player anything.
 Exit gate: the game is what someone is shown when they ask what Sindri is for,
 and it runs on both targets at every tagged snapshot.
 
-## Future research — first-class Sindri gameplay language
+## Decay — the gameplay language, started ahead of this plan
 
-This is a post-foundation research track, not part of the first major release. Do not begin language implementation until representative Rust and TypeScript vertical slices expose concrete gameplay-authoring problems. A Sindri language would complement, not replace, the first-class Rust and TypeScript workflows.
+**This track was begun deliberately out of order, and Decay is now the decided direction.** The advice recorded in `docs/decay-direction.md` was to defer a bespoke language and put Rhai behind a scripting host; that recommendation was not taken, and the question is closed — Sindri Next scripts in Decay, and no embedded language is adopted. `decay/` is a separate workspace with a lexer, parser, semantic analyzer, symbolic IR, and interpreter. The boxes below are the original research framing, kept because the questions are still the right ones, with the state of each marked honestly.
 
-- [ ] Document recurring gameplay-authoring pain points from representative Rust and TypeScript games
-- [ ] Define a language-neutral scripting host around versioned commands, events, queries, lifecycle hooks, and component schemas
-- [ ] Evaluate a custom language against embedded-language alternatives using explicit product and maintenance criteria
-- [ ] Prototype a Rust-implemented portable bytecode interpreter that behaves consistently on native and WebAssembly without a JIT
-- [ ] Generate typed component access, diagnostics, and autocomplete from the component schema registry
-- [ ] Specify safe entity and asset handles, coroutine cancellation, deterministic scheduling, and execution budgets
+What the language has and does not have is in `decay/README.md`, and the engine-facing summary is in `docs/capabilities.md`. The rule that keeps this affordable: **nothing under `decay/` may depend on a `sindri-*` crate, and no engine crate depends on Decay.** The language is replaceable for exactly as long as that holds.
+
+The next item is not more language. It is `sindri-decay` — one script driving one transform in the editor. The foundation reached three thousand lines with no engine caller, and the first thing that ran a script found three faults reachable from the first line anyone would write, including one that aborted the process. This repository's specific failure mode is depth without a caller, and `docs/capabilities.md` exists because of it.
+
+- [x] Evaluate a custom language against embedded-language alternatives using explicit product and maintenance criteria (`docs/decay-direction.md`, including a Rhai spike)
+- [x] Prototype a Rust-implemented portable interpreter that behaves consistently on native and WebAssembly without a JIT (the IR is symbolic and portable, and the whole workspace compiles for `wasm32-unknown-unknown`, which Decay's CI now checks — it is not yet a bytecode VM, and nothing has been *executed* on the browser target)
+- [ ] **Bind Decay to the engine: a `sindri-decay` crate driving one script on one transform in the editor** — ahead of any further language work
+- [ ] Define a language-neutral scripting host around versioned commands, events, queries, lifecycle hooks, and component schemas (the `Host` trait is the seam; it carries loads, stores, and calls, and knows none of these concepts yet)
+- [ ] Generate typed component access, diagnostics, and autocomplete from the component schema registry (Decay's `Environment` is where host globals enter, and `IrField` already carries `exported` and `type_name` — this is the capability Rhai structurally could not have offered, and the reason the language has a case)
+- [ ] Specify safe entity and asset handles, coroutine cancellation, deterministic scheduling, and execution budgets (call depth is bounded; an operation budget is required before loops land)
 - [ ] Prove function/module hot reload with preservation or explicit migration of compatible typed state
+- [ ] Document recurring gameplay-authoring pain points from representative Rust and TypeScript games
 - [ ] Define the editor, language-server, formatter, debugger, documentation, and testing commitments before making the language public
 - [ ] Decide whether the prototype provides enough gameplay-specific value to justify a permanent language ecosystem
 
