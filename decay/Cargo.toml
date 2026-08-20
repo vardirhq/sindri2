@@ -1,5 +1,8 @@
 [workspace]
-members = ["crates/decay-syntax"]
+members = [
+    "crates/decay-syntax",
+    "crates/decay-semantic",
+]
 resolver = "3"
 
 [workspace.package]
