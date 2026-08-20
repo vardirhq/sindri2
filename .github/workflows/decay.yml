@@ -34,13 +34,13 @@ jobs:
         with:
           workspaces: decay
       - name: Apply Clippy fixes
-        if: github.event_name == 'push'
+        if: github.event_name == 'pull_request'
         run: cargo clippy --fix --workspace --all-targets --allow-dirty --allow-staged -- -D warnings
       - name: Apply rustfmt
-        if: github.event_name == 'push'
+        if: github.event_name == 'pull_request'
         run: cargo fmt --all
       - name: Commit automatic fixes
-        if: github.event_name == 'push'
+        if: github.event_name == 'pull_request'
         working-directory: .
         run: |
           if ! git diff --quiet -- decay; then
@@ -48,8 +48,8 @@ jobs:
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add -- decay
             git commit -m "style(decay): apply clippy fixes"
-            git pull --rebase origin "${GITHUB_REF_NAME}"
-            git push origin "HEAD:${GITHUB_REF_NAME}"
+            git pull --rebase origin "${{ github.event.pull_request.head.ref }}"
+            git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
           fi
       - name: Format
         run: cargo fmt --all --check
