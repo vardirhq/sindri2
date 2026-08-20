@@ -1,0 +1,39 @@
+name: Decay
+
+on:
+  push:
+    branches:
+      - main
+      - 'feat/decay-*'
+    paths:
+      - 'decay/**'
+      - '.github/workflows/decay.yml'
+  pull_request:
+    paths:
+      - 'decay/**'
+      - '.github/workflows/decay.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Decay syntax
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: decay
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: decay
+      - name: Format
+        run: cargo fmt --all --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Test
+        run: cargo test --workspace
