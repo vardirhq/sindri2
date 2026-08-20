@@ -30,6 +30,10 @@ Per-subsystem contracts live in `docs/`: `asset-foundation.md`,
 `rendering-surface.md`, `platform-host.md`, `editor-architecture.md`. When you
 change a subsystem's behaviour, update its doc in the same change.
 
+`docs/2d-inventory.md` records what each legacy 2D subsystem should become, read
+from `vardirhq/sindri-engine` rather than from memory of it. Milestone 6's ports
+follow it.
+
 `docs/entity-scaling.md` records what the world costs at 1k, 10k, and 100k
 entities, and why an archetype ECS is not warranted.
 

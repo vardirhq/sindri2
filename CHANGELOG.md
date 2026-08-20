@@ -198,4 +198,5 @@ All notable changes to Sindri Next will be documented here.
 - Added `AssetManifest`, a versioned file recording each asset's length and the SHA-256 of its stored bytes, so a build knows what to publish and a load can check what arrived against what was promised.
 - Made `AssetLoader` optionally verify arriving bytes against a manifest, turning a truncated response or a stale cache entry into an error naming the asset rather than a picture from last week; an asset the manifest does not list still loads.
 - Made the editor pick up `sindri.manifest.json` from the directory a scene lives in, treating a malformed one as absent rather than refusing to open the scene.
+- Added `docs/2d-inventory.md`, recording what each legacy 2D subsystem should become — port, refactor, replace, or defer — read from the legacy engine rather than from memory of it.
 - Added a committed manifest for the demo's assets, with a test that regenerates it and compares, so editing an asset without updating the manifest fails there rather than in somebody's browser.

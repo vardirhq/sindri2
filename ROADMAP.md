@@ -168,7 +168,8 @@ shaped like the tool.
 - [x] Sort transparent sprites by camera distance rather than an authored depth field, with layer as the explicit override — scene format version 3, whose migration turns a screen sprite's depth into the Z that now orders it; a world sprite reorders when the camera moves, a screen sprite's Z orders it without moving it
 - [x] Add 2D-shaped transform accessors that take and return X and Y only, so the common way a layered scene gets flattened is not expressible — position, translation, scale, and the turn about Z, on `Transform3D` itself
 - [x] Add a Z lock a transform can declare, respected by checked write paths and visible in the inspector — `Transform3D::z_locked`, refused by `WorldCommand::SetTransform3D`, and shown in the inspector as a toggle that takes the Z drag away
-- [ ] Inventory each legacy 2D subsystem as port, refactor, replace, or defer
+- [x] Inventory each legacy 2D subsystem as port, refactor, replace, or defer — `docs/2d-inventory.md`, read from the legacy code at `77e0489` rather than from memory of it
+- [ ] Give a sprite a UV rect, so it can address part of a texture — the inventory found that sprite animation and tilemaps both block on this, and a sprite is currently one whole texture
 - [ ] Port sprite animation and sprite sheets
 - [ ] Add a sprite sheet authoring surface: slice a sheet into frames, name clips, set timing, preview playback
 - [ ] Port camera 2D behavior and pixel snapping — pixel snapping is an orthographic-camera feature, since apparent scale under perspective depends on depth; see `docs/2d-model.md`
@@ -178,7 +179,7 @@ shaped like the tool.
 - [ ] Add font and text authoring: choose a font asset and edit text content in the inspector
 - [ ] Port particles after the render lifecycle is stable
 - [ ] Port layers, anchors, and sprite bounds — parallax is not ported, because under one world with real depth it is what a perspective camera already does; see `docs/2d-model.md`
-- [ ] Port A* pathfinding into a renderer-free grid crate
+- [ ] Port A* pathfinding into a renderer-free grid crate, with the general grid beside it; the legacy platform-jump graph is deferred rather than carried along because it shares a file
 - [ ] Add optional Rapier2D adapter without core dependency, with collision layers from the start — physics ignores Z, so depth cannot keep a parallax background out of the player's way, and collision layers are not render layers
 - [ ] Add 2D pan/zoom viewport controls, which need a 2D scene rather than the screen-anchored overlay the demo uses
 - [ ] Start the companion game and grow it through this milestone, verified natively and in browser — see "The companion game" below, which replaces the `hello-2d` and platformer slice this milestone used to schedule
