@@ -21,8 +21,8 @@ use std::{
 };
 
 use sindri_assets::{
-    AssetLoadOutcome, AssetLoadQueueConfig, AssetLoader, AssetWatch, FileSystemAssetSource,
-    TextureAsset, TextureAssetDecoder,
+    AssetLoadOutcome, AssetLoadQueueConfig, AssetLoader, AssetManifest, AssetWatch,
+    FileSystemAssetSource, MANIFEST_FILE_NAME, TextureAsset, TextureAssetDecoder,
 };
 use sindri_core::{AssetId, World};
 use sindri_render::{Texture2D, TextureError, TextureRegistry};
@@ -105,7 +105,17 @@ impl SceneTextures {
         let root = root_of(scene);
         Self {
             loader: root.as_deref().and_then(|root| {
-                AssetLoader::new(FileSystemAssetSource::new(root), QUEUE, TextureAssetDecoder).ok()
+                let loader =
+                    AssetLoader::new(FileSystemAssetSource::new(root), QUEUE, TextureAssetDecoder)
+                        .ok()?;
+                // A project that ships a manifest gets its assets checked
+                // against it. One that does not is not held to anything, which
+                // is what makes the manifest a promise rather than a
+                // requirement.
+                Some(match manifest_beside(root) {
+                    Some(manifest) => loader.with_manifest(manifest),
+                    None => loader,
+                })
             }),
             watch: root.map(AssetWatch::new),
             last_examined: Instant::now(),
@@ -287,6 +297,17 @@ impl SceneTextures {
             .as_ref()
             .is_some_and(|loader| loader.outstanding() > 0)
     }
+}
+
+/// The project's manifest, if it ships one.
+///
+/// A manifest that will not read or will not parse is treated as absent rather
+/// than fatal: it describes the assets, and an editor that refused to open a
+/// scene because a file beside it was malformed would be refusing to let anyone
+/// fix it.
+fn manifest_beside(root: &Path) -> Option<AssetManifest> {
+    let text = std::fs::read_to_string(root.join(MANIFEST_FILE_NAME)).ok()?;
+    AssetManifest::from_json(&text).ok()
 }
 
 /// The directory a scene's references resolve against.

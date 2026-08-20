@@ -122,6 +122,9 @@ xvfb-run --auto-servernum ./scripts/capture-editor.sh target/editor.png
 
 # regenerate golden scene fixtures, deliberately
 SINDRI_UPDATE_SCENE_FIXTURES=1 cargo test --package sindri-core
+
+# regenerate the demo's asset manifest after changing an asset
+SINDRI_UPDATE_ASSET_MANIFEST=1 cargo test --package sindri-cube
 ```
 
 CI (`.github/workflows/ci.yml`) runs fmt, clippy, tests, both render captures

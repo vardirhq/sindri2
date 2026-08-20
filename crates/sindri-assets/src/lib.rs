@@ -6,6 +6,7 @@
 
 mod decode;
 mod loader;
+mod manifest;
 mod memory;
 mod queue;
 mod source;
@@ -27,6 +28,10 @@ pub use fetch::FetchAssetSource;
 #[cfg(not(target_arch = "wasm32"))]
 pub use filesystem::FileSystemAssetSource;
 pub use loader::{AssetLoadOutcome, AssetLoader, AssetLoaderError};
+pub use manifest::{
+    AssetManifest, ContentHash, MANIFEST_FILE_NAME, MANIFEST_FORMAT_VERSION, ManifestEntry,
+    ManifestError,
+};
 pub use memory::MemoryAssetSource;
 pub use queue::{
     AssetLoadCompletion, AssetLoadQueue, AssetLoadQueueConfig, AssetLoadQueueCreateError,

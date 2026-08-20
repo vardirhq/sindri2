@@ -25,7 +25,7 @@ use thiserror::Error;
 
 use crate::{
     AssetCompletionApplyError, AssetDecoder, AssetLoadQueue, AssetLoadQueueConfig,
-    AssetLoadQueueCreateError, AssetLoadQueueError, AssetLoadRequest, AssetSource,
+    AssetLoadQueueCreateError, AssetLoadQueueError, AssetLoadRequest, AssetManifest, AssetSource,
     decode_completion,
 };
 
@@ -72,6 +72,12 @@ pub struct AssetLoader<D: AssetDecoder> {
     queue: AssetLoadQueue,
     decoder: D,
     handles: BTreeMap<AssetId, AssetHandle<D::Asset>>,
+    /// What each asset is supposed to be, if the project said.
+    ///
+    /// Checked against the bytes that arrive, before anything decodes them: a
+    /// truncated response or a stale cache entry usually still decodes, and the
+    /// result is a picture from last week rather than an error.
+    manifest: Option<AssetManifest>,
 }
 
 impl<D: AssetDecoder> AssetLoader<D> {
@@ -93,6 +99,7 @@ impl<D: AssetDecoder> AssetLoader<D> {
             queue: AssetLoadQueue::new(source, config)?,
             decoder,
             handles: BTreeMap::new(),
+            manifest: None,
         })
     }
 
@@ -110,7 +117,19 @@ impl<D: AssetDecoder> AssetLoader<D> {
             queue: AssetLoadQueue::new(source, config)?,
             decoder,
             handles: BTreeMap::new(),
+            manifest: None,
         })
+    }
+
+    /// Holds every arriving asset to what the project said it would be.
+    ///
+    /// Optional because a project need not have a manifest, and an asset the
+    /// manifest does not mention still loads: this is a promise about what was
+    /// listed, not a claim that nothing else exists.
+    #[must_use]
+    pub fn with_manifest(mut self, manifest: AssetManifest) -> Self {
+        self.manifest = Some(manifest);
+        self
     }
 
     /// Asks for an asset, if it has not been asked for already.
@@ -185,12 +204,31 @@ impl<D: AssetDecoder> AssetLoader<D> {
     pub fn poll(&mut self) -> Vec<AssetLoadOutcome> {
         let mut outcomes = Vec::new();
         for completion in self.queue.drain() {
-            let decoded = decode_completion(completion, &self.decoder);
-            let id = decoded.request().id().clone();
+            let id = completion.request().id().clone();
             let Some(handle) = self.handles.get(&id) else {
                 // Released while it was in flight. Nothing wants it now.
                 continue;
             };
+            // A newer request for the same ID replaced this one. The generation
+            // token exists for exactly this, and the right answer is silence:
+            // the replacement is still coming.
+            if !completion.request().matches(handle) {
+                continue;
+            }
+            // The manifest decides whether these are the asset's bytes before
+            // anything decodes them. A truncated response or a stale cache entry
+            // usually still decodes, and the result is a picture from last week.
+            if let Some(mismatch) = self.manifest.as_ref().and_then(|manifest| {
+                completion
+                    .result()
+                    .ok()
+                    .and_then(|bytes| manifest.verify(&id, bytes.as_slice()).err())
+            }) {
+                let _ = self.store.fail(handle, mismatch.kind(), mismatch.message());
+                outcomes.push(AssetLoadOutcome::Failed(mismatch));
+                continue;
+            }
+            let decoded = decode_completion(completion, &self.decoder);
             // Read before applying, because applying consumes it, and whether
             // this is news of an arrival or of a failure is the whole answer.
             let failure = decoded.result().err().cloned();
@@ -199,9 +237,8 @@ impl<D: AssetDecoder> AssetLoader<D> {
                     Some(error) => AssetLoadOutcome::Failed(error),
                     None => AssetLoadOutcome::Ready(id),
                 }),
-                // A newer request for the same ID replaced this one. The
-                // generation token exists for exactly this, and the right answer
-                // is silence: the replacement is still coming.
+                // Ruled out above, and still handled: silence is the right
+                // answer to a completion whose replacement is on its way.
                 Err(AssetCompletionApplyError::Stale { .. }) => {}
                 Err(AssetCompletionApplyError::Store(error)) => {
                     outcomes.push(AssetLoadOutcome::Failed(AssetLoadError::new(
@@ -462,6 +499,52 @@ mod tests {
         loader.reload(&id("art.png")).unwrap();
         assert_eq!(loader.outstanding(), 1);
         assert_eq!(settle(&mut loader).len(), 1);
+    }
+
+    /// What a manifest is for: bytes that are not what the project promised are
+    /// refused, rather than decoded into a picture from last week.
+    #[test]
+    fn bytes_that_disagree_with_the_manifest_are_refused() {
+        let mut manifest = AssetManifest::new();
+        manifest.insert(id("art.png"), b"what the project shipped");
+
+        let mut loader = loader(&[("art.png", b"something else entirely")]).with_manifest(manifest);
+        loader.request(id("art.png")).unwrap();
+
+        let outcomes = settle(&mut loader);
+        assert_eq!(outcomes.len(), 1);
+        let AssetLoadOutcome::Failed(error) = &outcomes[0] else {
+            panic!("a substituted asset must not load: {outcomes:?}");
+        };
+        assert_eq!(error.id(), &id("art.png"));
+        assert_eq!(loader.status(&id("art.png")), Some(AssetStatus::Failed));
+        assert_eq!(loader.get(&id("art.png")), None);
+    }
+
+    /// The bytes the manifest describes load exactly as they would without one,
+    /// and an asset it never mentions is not forbidden for being absent.
+    #[test]
+    fn a_manifest_does_not_stand_in_the_way_of_what_matches_it() {
+        let mut manifest = AssetManifest::new();
+        manifest.insert(id("listed.png"), b"listed bytes");
+
+        let mut loader = loader(&[
+            ("listed.png", b"listed bytes"),
+            ("unlisted.png", b"generated later"),
+        ])
+        .with_manifest(manifest);
+        loader.request(id("listed.png")).unwrap();
+        loader.request(id("unlisted.png")).unwrap();
+
+        let outcomes = settle(&mut loader);
+        assert!(
+            outcomes
+                .iter()
+                .all(|outcome| matches!(outcome, AssetLoadOutcome::Ready(_))),
+            "{outcomes:?}"
+        );
+        assert_eq!(loader.get(&id("listed.png")), Some(&12));
+        assert_eq!(loader.get(&id("unlisted.png")), Some(&15));
     }
 
     /// An asset released while it was still loading must not come back and take

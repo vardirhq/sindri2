@@ -111,7 +111,7 @@ Exit gate: a serialized scene drives a combined native 2D/3D example without ren
 - [x] Add fallback/error assets and actionable diagnostics (the missing-texture checker draws in place of an unresolved reference, and every load failure names the asset, the source, and what went wrong)
 - [x] Add asset root and URL resolution rules
 - [x] Add hot reload for native development (assets; editing the open scene file on disk is not watched)
-- [ ] Define package/export manifest with content hashes
+- [x] Define package/export manifest with content hashes
 - [x] Prevent duplicate loads and release unused GPU assets
 - [x] Add image decoding compatibility tests on native and WASM
 
