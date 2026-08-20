@@ -1,0 +1,17 @@
+[package]
+name = "decay-runtime"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+decay-ir = { path = "../decay-ir" }
+decay-syntax = { path = "../decay-syntax" }
+
+[dev-dependencies]
+decay-semantic = { path = "../decay-semantic" }
+
+[lints]
+workspace = true

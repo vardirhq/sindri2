@@ -1,0 +1,13 @@
+[package]
+name = "decay-semantic"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+decay-syntax = { path = "../decay-syntax" }
+
+[lints]
+workspace = true
