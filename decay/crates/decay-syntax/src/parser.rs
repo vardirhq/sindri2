@@ -64,7 +64,7 @@ impl<'a> Parser<'a> {
         let start = self.current().span;
         self.advance();
         let (name, _) = self.expect_identifier("expected a name after declaration keyword")?;
-        self.expect_simple(TokenKind::LeftBrace, "expected `{` after declaration name")?;
+        self.expect_simple(&TokenKind::LeftBrace, "expected `{` after declaration name")?;
 
         let mut members = Vec::new();
         while !self.at(&TokenKind::RightBrace) && !self.at(&TokenKind::Eof) {
@@ -94,7 +94,10 @@ impl<'a> Parser<'a> {
         }
 
         let end = self
-            .expect_simple(TokenKind::RightBrace, "expected `}` after declaration body")
+            .expect_simple(
+                &TokenKind::RightBrace,
+                "expected `}` after declaration body",
+            )
             .unwrap_or_else(|| self.current().span);
         let decl = ContainerDecl {
             name,
@@ -138,7 +141,7 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
-        let end = self.expect_simple(TokenKind::Semicolon, "expected `;` after field")?;
+        let end = self.expect_simple(&TokenKind::Semicolon, "expected `;` after field")?;
         Some(FieldDecl {
             attributes,
             mutable,
@@ -150,9 +153,9 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_function(&mut self) -> Option<FunctionDecl> {
-        let start = self.expect_simple(TokenKind::Fn, "expected `fn`")?;
+        let start = self.expect_simple(&TokenKind::Fn, "expected `fn`")?;
         let (name, _) = self.expect_identifier("expected function name")?;
-        self.expect_simple(TokenKind::LeftParen, "expected `(` after function name")?;
+        self.expect_simple(&TokenKind::LeftParen, "expected `(` after function name")?;
         let mut params = Vec::new();
         if !self.at(&TokenKind::RightParen) {
             loop {
@@ -169,7 +172,7 @@ impl<'a> Parser<'a> {
                 }
             }
         }
-        self.expect_simple(TokenKind::RightParen, "expected `)` after parameters")?;
+        self.expect_simple(&TokenKind::RightParen, "expected `)` after parameters")?;
         let return_type = if self.consume_simple(&TokenKind::Arrow).is_some() {
             Some(self.parse_type()?)
         } else {
@@ -200,7 +203,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_block(&mut self) -> Option<Block> {
-        let start = self.expect_simple(TokenKind::LeftBrace, "expected `{`")?;
+        let start = self.expect_simple(&TokenKind::LeftBrace, "expected `{`")?;
         let mut statements = Vec::new();
         while !self.at(&TokenKind::RightBrace) && !self.at(&TokenKind::Eof) {
             if let Some(statement) = self.parse_statement() {
@@ -209,7 +212,7 @@ impl<'a> Parser<'a> {
                 self.synchronize_statement();
             }
         }
-        let end = self.expect_simple(TokenKind::RightBrace, "expected `}` after block")?;
+        let end = self.expect_simple(&TokenKind::RightBrace, "expected `}` after block")?;
         Some(Block {
             statements,
             span: start.join(end),
@@ -231,7 +234,7 @@ impl<'a> Parser<'a> {
         }
 
         let expr = self.parse_expression()?;
-        let end = self.expect_simple(TokenKind::Semicolon, "expected `;` after expression")?;
+        let end = self.expect_simple(&TokenKind::Semicolon, "expected `;` after expression")?;
         let span = expr.span.join(end);
         Some(Stmt::Expr { expr, span })
     }
@@ -247,7 +250,7 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
-        let end = self.expect_simple(TokenKind::Semicolon, "expected `;` after binding")?;
+        let end = self.expect_simple(&TokenKind::Semicolon, "expected `;` after binding")?;
         Some(Stmt::Binding {
             mutable,
             name,
@@ -258,13 +261,13 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_return_statement(&mut self) -> Option<Stmt> {
-        let start = self.expect_simple(TokenKind::Return, "expected `return`")?;
+        let start = self.expect_simple(&TokenKind::Return, "expected `return`")?;
         let value = if self.at(&TokenKind::Semicolon) {
             None
         } else {
             Some(self.parse_expression()?)
         };
-        let end = self.expect_simple(TokenKind::Semicolon, "expected `;` after return")?;
+        let end = self.expect_simple(&TokenKind::Semicolon, "expected `;` after return")?;
         Some(Stmt::Return {
             value,
             span: start.join(end),
@@ -272,7 +275,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_if_statement(&mut self) -> Option<Stmt> {
-        let start = self.expect_simple(TokenKind::If, "expected `if`")?;
+        let start = self.expect_simple(&TokenKind::If, "expected `if`")?;
         let condition = self.parse_expression()?;
         let then_branch = self.parse_block()?;
         let mut end = then_branch.span;
@@ -320,10 +323,7 @@ impl<'a> Parser<'a> {
 
     fn parse_binary(&mut self, min_precedence: u8) -> Option<Expr> {
         let mut left = self.parse_unary()?;
-        loop {
-            let Some((precedence, op)) = binary_operator(&self.current().kind) else {
-                break;
-            };
+        while let Some((precedence, op)) = binary_operator(&self.current().kind) {
             if precedence < min_precedence {
                 break;
             }
@@ -391,7 +391,7 @@ impl<'a> Parser<'a> {
                     }
                 }
                 let end =
-                    self.expect_simple(TokenKind::RightParen, "expected `)` after arguments")?;
+                    self.expect_simple(&TokenKind::RightParen, "expected `)` after arguments")?;
                 let span = expr.span.join(end);
                 expr = Expr {
                     kind: ExprKind::Call {
@@ -438,7 +438,7 @@ impl<'a> Parser<'a> {
                 self.advance();
                 let inner = self.parse_expression()?;
                 let end =
-                    self.expect_simple(TokenKind::RightParen, "expected `)` after expression")?;
+                    self.expect_simple(&TokenKind::RightParen, "expected `)` after expression")?;
                 return Some(Expr {
                     span: token.span.join(end),
                     kind: ExprKind::Group(Box::new(inner)),
@@ -488,8 +488,8 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn expect_simple(&mut self, expected: TokenKind, message: &str) -> Option<Span> {
-        if self.at(&expected) {
+    fn expect_simple(&mut self, expected: &TokenKind, message: &str) -> Option<Span> {
+        if self.at(expected) {
             let span = self.current().span;
             self.advance();
             Some(span)

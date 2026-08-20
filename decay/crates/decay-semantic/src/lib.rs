@@ -445,7 +445,7 @@ impl<'a, 'd> Analyzer<'a, 'd> {
                 Type::Bool
             }
             BinaryOp::Equal | BinaryOp::NotEqual => {
-                if !self.compatible(&left_type, &right_type) {
+                if !Self::compatible(&left_type, &right_type) {
                     self.error(
                         right.span,
                         format!(
@@ -589,7 +589,7 @@ impl<'a, 'd> Analyzer<'a, 'd> {
     }
 
     fn require_type(&mut self, actual: &Type, expected: &Type, span: Span) {
-        if !self.compatible(expected, actual) {
+        if !Self::compatible(expected, actual) {
             self.error(
                 span,
                 format!(
@@ -602,7 +602,7 @@ impl<'a, 'd> Analyzer<'a, 'd> {
     }
 
     fn check_assignable(&mut self, expected: &Type, actual: &Type, span: Span) {
-        if !self.compatible(expected, actual) {
+        if !Self::compatible(expected, actual) {
             self.error(
                 span,
                 format!(
@@ -614,7 +614,7 @@ impl<'a, 'd> Analyzer<'a, 'd> {
         }
     }
 
-    fn compatible(&self, expected: &Type, actual: &Type) -> bool {
+    fn compatible(expected: &Type, actual: &Type) -> bool {
         matches!(expected, Type::Unknown)
             || matches!(actual, Type::Unknown)
             || expected == actual
