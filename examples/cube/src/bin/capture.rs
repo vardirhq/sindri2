@@ -8,16 +8,15 @@ use std::{
 
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_cube::{
-    DemoScene, FrameRenderers, FrameTarget, demo_textures, encode_prepared_frame,
-    verify_authored_colors,
-};
+use sindri_cube::{DemoScene, demo_textures, verify_authored_colors};
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_gpu::{GpuContext, GpuRequestOptions};
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_render::{
     DepthTarget, OffscreenTarget, SpriteBatchRenderer, TexturedCubeRenderer, Viewport,
 };
+#[cfg(not(target_arch = "wasm32"))]
+use sindri_render::{FrameRenderers, FrameTarget, encode_prepared_frame};
 
 #[cfg(not(target_arch = "wasm32"))]
 const WIDTH: u32 = 512;

@@ -83,6 +83,28 @@ Source completions remain encoded bytes until a runtime selects an `AssetDecoder
 
 `decode_completion` preserves the request token and turns both source and decode failures into the common `AssetLoadError` model. Its `DecodedAssetCompletion::apply` method checks the retained handle generation before mutating an `AssetStore`, then drives the entry from loading to either ready or failed. A late completion for an expired generation returns a stale-completion error without touching the replacement entry.
 
+## Driving all of it
+
+Everything above was in place for a release and had no caller. The demo's badge was `include_bytes!`, the editor bound two textures a demo crate handed it, and the only stage with a user was the decoder. The reason is visible in the shape: loading one asset correctly is six steps in a particular order — request a handle, enqueue it, move the entry to loading, drain, decode, apply against the handle that is still current — and each one fails quietly rather than loudly when it is skipped.
+
+`AssetLoader<D>` is those six steps written once. It owns a store, a queue, and a decoder; `request` is idempotent, so a scene naming one texture from twenty entities costs one load; `poll` drains, decodes, applies, and reports each asset as ready or failed exactly once. A completion whose handle generation has been superseded is dropped in silence, because the replacement is still coming. A failure is an answer: asking again does not retry, and `retry` says so explicitly.
+
+One trap it hides is worth naming, because it is the kind that would be found late. Taking a fresh handle for an asset that failed does not reset the entry behind it, so a naive retry moves a `Failed` entry straight to `Loading` and is refused. The loader puts it back to queued first.
+
+The loader also owns liveness. It holds a strong handle per asset, which is what keeps store entries alive at all, and `retain` is how a host narrows that to what it still wants — returning the IDs that were released, so whatever was built on top of them can go too.
+
+## Reloading
+
+`AssetWatch` notices that the file behind an asset has changed, and `AssetLoader::reload` loads it again. Together they are hot reload for native development, which is the point at which an editor stops being a thing you restart to see a texture you just saved.
+
+It polls modification times rather than subscribing to filesystem events. A watcher crate would be more efficient and would bring a background thread, a platform-specific event model, and a set of coalescing rules to get wrong; the set of files being watched is a scene's assets, which is tens, and stating tens of paths once a second costs nothing measurable. Both the modification time and the length are read, because either alone misses edits — a filesystem recording whole seconds cannot separate two saves within one, and a rewrite of the same length leaves the length saying nothing. A same-second edit that preserves the length exactly is missed, which is stated rather than pretended away.
+
+Existing and not existing are both states, so an asset appearing where one was missing is a change: a load that failed becomes a working one without a restart. Reporting a change updates what is remembered, so one change is reported once; a caller that declines to act is not told again, which is better than a watcher that repeats itself forever.
+
+`reload` differs from `retry` in what it starts from and what it means: one is "that did not work", the other is "that worked and is now stale". An asset already in flight is left alone, because the read under way may be picking up the new bytes anyway.
+
+Native only. A browser has no modification time to read, and no editor to reload into.
+
 ## Deliberate boundaries
 
-This layer does not yet upload GPU resources automatically, provide fallback assets, define final root/URL rules, or watch files. Those responsibilities belong to the following asset-system milestones. Keeping storage, source, scheduling, decoding, and GPU upload concerns separate allows the same ownership and error semantics to be used by native and WebAssembly hosts.
+GPU upload stays outside. A loader that owned a device could not be tested without one, and the host is the only thing that has one: it reads a ready `TextureAsset` and puts it on the GPU itself. Fallback assets, final root/URL rules, hot reload, and a content-hashed manifest remain for the rest of the asset-system milestone. Keeping storage, source, scheduling, decoding, and GPU upload separate is what lets native and WebAssembly hosts share the same ownership and error semantics.

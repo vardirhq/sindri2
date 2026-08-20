@@ -160,6 +160,21 @@ rejects duplicates, and carries a generation token so a late completion cannot
 overwrite a replacement. Textures and scene JSON decode through typed decoders.
 Nothing pretends browser I/O is synchronous.
 
+A `TextureId` is a generation-checked slot handle, so the renderer's texture
+registry can release one texture and reuse its slot without a handle nobody
+updated drawing whatever lands there next.
+
+`AssetLoader` drives all of that in one place — request, enqueue, drain, decode,
+apply — so a caller does not have to know the order. Requesting is idempotent, a
+failure is reported once rather than retried forever, and `retain` releases what
+is no longer wanted and says which IDs went, so a host can drop whatever it
+built from them. GPU upload stays with the host, which is the only thing that
+owns a device.
+
+On native, `AssetWatch` notices when the file behind a loaded asset changes and
+`AssetLoader::reload` loads it again, by polling modification time and length
+rather than subscribing to filesystem events.
+
 ---
 
 ## The editor
@@ -195,6 +210,13 @@ frame.
 - A confirmation before anything that would throw unsaved work away — opening
   another scene, reloading from disk, discarding changes, and closing the window
   — each naming what it is about to do and offering to save instead
+- Hot reload: saving a texture the open scene uses shows the edit within about a
+  second, without restarting, and without blinking through the missing checker
+- Loading the textures a scene names from the directory the scene lives in,
+  through the real asset pipeline, so opening a project's scene shows that
+  project's art rather than the two textures a demo crate supplied; each load or
+  failure is named in the console, and the engine's procedural textures are
+  generated rather than loaded
 - A live viewport with orbit, pan, zoom, reset-to-authored-camera, and **Focus
   selection** (F), which centres the view on the selected entity; the zoom spans
   a factor of four hundred and moves proportionally, and the orbit cannot be
@@ -262,7 +284,9 @@ collapsed and overflowed nothing; and the settings gear.
   adapter is planned as optional rather than built in
 - No tilemaps, particles, parallax, or pathfinding
 - No TypeScript SDK; the WASM binding crate does not exist
-- No hot reload, asset manifest, or GPU asset release
+- No asset manifest
+- Hot reload covers assets, not the scene file: editing a scene on disk while it
+  is open is not noticed
 - No deterministic system ordering
 
 ### Editor

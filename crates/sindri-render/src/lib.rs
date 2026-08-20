@@ -4,6 +4,7 @@ mod camera;
 mod color;
 mod cube;
 mod depth;
+mod encode;
 mod frame;
 mod mesh;
 mod offscreen;
@@ -21,6 +22,7 @@ pub use camera::{
 pub use color::{COLOR_TARGET_FORMAT, ColorSpaceError, require_srgb_target};
 pub use cube::CubeRenderer;
 pub use depth::DepthTarget;
+pub use encode::{FrameRenderers, FrameTarget, encode_prepared_frame};
 pub use frame::{
     ClearOperations, ExtractedFrame, FrameCamera, FrameCommand, FramePass, FramePlanError,
     PreparedFrame, RenderLayer, RenderStage, Viewport,

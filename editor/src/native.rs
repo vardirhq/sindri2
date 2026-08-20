@@ -27,16 +27,13 @@ use sindri_core::{
     CommandBuffer, CommandHistory, EngineLifecycle, EngineState, EntityData, EntityId,
     SceneDocument, Transform3D, UnknownComponentPolicy, World, WorldCommand,
 };
-use sindri_cube::{
-    CameraView, FrameRenderers, FrameTarget, TextureBindings, WorldProjection, demo_textures,
-    encode_prepared_frame,
-};
 use sindri_render::{
-    SpriteBatchRenderer, TextureRegistry, TexturedCubeRenderer, Viewport, ViewportTarget,
+    FrameRenderers, FrameTarget, SpriteBatchRenderer, TexturedCubeRenderer, Viewport,
+    ViewportTarget, encode_prepared_frame,
 };
 use sindri_scene::{
-    CameraComponent, MeshComponent, MeshPrimitive, SceneExtractor, SpriteAnchor, SpriteComponent,
-    SpriteSpace, ViewCamera,
+    CameraComponent, CameraView, MeshComponent, MeshPrimitive, SceneExtractor, SpriteAnchor,
+    SpriteComponent, SpriteSpace, ViewCamera, WorldProjection,
 };
 
 use crate::{
@@ -45,6 +42,7 @@ use crate::{
     preferences::{AssetView, BottomTab, CameraProjection, Layout as WorkspaceLayout, Preferences},
     project::{AssetKind, ProjectEntry, ProjectTree},
     scene_file::{DEFAULT_SCENE_PATH, SceneFile},
+    textures::{SceneTextures, TextureNote},
 };
 
 const INTER_FONT: &[u8] = include_bytes!("../assets/Inter.ttf");
@@ -246,26 +244,22 @@ fn camera_for(tab: WorkspaceTab, editor: EditorCamera) -> CameraView {
     }
 }
 
-/// The GPU resources every viewport draws with.
+/// The GPU pipelines every viewport draws with.
 ///
-/// Held once rather than per viewport: pipelines and textures do not depend on
-/// which camera is looking, and two viewports that each built their own would
-/// pay twice for the same thing.
+/// Held once rather than per viewport: a pipeline does not depend on which
+/// camera is looking, and two viewports that each built their own would pay
+/// twice for the same thing. The textures used to live here too, handed over by
+/// the cube example; they belong to the open scene, which is where they are now.
 struct SceneRenderers {
     cube: TexturedCubeRenderer,
     sprites: SpriteBatchRenderer,
-    textures: TextureRegistry,
-    bindings: TextureBindings,
 }
 
 impl SceneRenderers {
     fn new(render_state: &eframe::egui_wgpu::RenderState) -> Self {
-        let (textures, bindings) = demo_textures(&render_state.device, &render_state.queue);
         Self {
             cube: TexturedCubeRenderer::new(&render_state.device, ViewportTarget::FORMAT),
             sprites: SpriteBatchRenderer::new(&render_state.device, ViewportTarget::FORMAT),
-            textures,
-            bindings,
         }
     }
 }
@@ -300,6 +294,7 @@ impl RuntimeViewport {
     fn render(
         &mut self,
         renderers: &mut SceneRenderers,
+        textures: &SceneTextures,
         scene: &SceneExtractor,
         world: &World,
         size: (u32, u32),
@@ -311,7 +306,7 @@ impl RuntimeViewport {
                 world,
                 Viewport::new(self.target.width(), self.target.height()),
                 camera,
-                &renderers.bindings,
+                textures.bindings(),
             )
             .map_err(|error| error.to_string())?;
         let mut encoder =
@@ -324,7 +319,7 @@ impl RuntimeViewport {
             FrameRenderers {
                 cube: &mut renderers.cube,
                 sprites: &mut renderers.sprites,
-                textures: &renderers.textures,
+                textures: textures.registry(),
             },
             &self.render_state.device,
             &self.render_state.queue,
@@ -393,6 +388,17 @@ struct EditorApp {
     viewport_zoom: f32,
     viewport_pan: GlamVec2,
     renderers: SceneRenderers,
+    /// eframe's device and queue, kept because textures are uploaded whenever a
+    /// load completes rather than only while a viewport is being drawn.
+    render_state: eframe::egui_wgpu::RenderState,
+    /// The textures the open scene draws with, loaded from its own directory.
+    textures: SceneTextures,
+    /// The history revision the textures were last asked about.
+    ///
+    /// An edit can point a mesh at a different texture, and the world is the
+    /// only statement of what a scene references, so a change to it is the
+    /// signal to ask again. The revision is what makes "changed" cheap to spot.
+    textured_revision: u64,
     scene_viewport: RuntimeViewport,
     game_viewport: RuntimeViewport,
     /// What the last action the user took had to say, if anything went wrong.
@@ -437,6 +443,9 @@ impl EditorApp {
             .clone()
             .expect("the native editor requires eframe's WGPU renderer");
         let renderers = SceneRenderers::new(&render_state);
+        let textures =
+            SceneTextures::for_scene(&render_state.device, &render_state.queue, file.path());
+        let state_for_textures = render_state.clone();
         let scene_viewport = RuntimeViewport::new(render_state.clone(), "Sindri editor scene view");
         let game_viewport = RuntimeViewport::new(render_state, "Sindri editor game view");
         let project = ProjectTree::beside(file.path());
@@ -460,6 +469,9 @@ impl EditorApp {
             viewport_zoom: 1.0,
             viewport_pan: GlamVec2::ZERO,
             renderers,
+            render_state: state_for_textures,
+            textures,
+            textured_revision: 0,
             scene_viewport,
             game_viewport,
             notice: open_error.or(load_error),
@@ -473,6 +485,8 @@ impl EditorApp {
             app.console.error(failure);
         }
         app.announce_scene();
+        let notes = app.textures.request(&app.world);
+        app.record_texture_notes(notes);
         app.remember_open_scene();
         app
     }
@@ -568,6 +582,7 @@ impl EditorApp {
                 self.lifecycle = initialized_lifecycle();
                 self.notice = None;
                 self.announce_scene();
+                self.reload_textures();
                 self.remember_open_scene();
             }
             Err(error) => self.report(error),
@@ -736,26 +751,47 @@ impl EditorApp {
     }
 
     /// Says what a scene turned out to be once it was loaded.
-    ///
-    /// A texture a scene names and nothing has bound draws the magenta checker
-    /// rather than failing the frame, which is the right call and also means
-    /// the only way anyone finds out is being told. `unresolved_textures` has
-    /// existed since bindings did and nothing asked it.
     fn announce_scene(&mut self) {
         self.console.info(format!(
             "Opened {} - {} entities",
             self.file.label(),
             self.world.len()
         ));
-        let mut unresolved: Vec<String> =
-            sindri_scene::unresolved_textures(&self.world, &self.renderers.bindings)
-                .into_iter()
-                .collect();
-        unresolved.sort();
-        for texture in unresolved {
-            self.console.warning(format!(
-                "{texture} is not bound, drawing the missing checker"
-            ));
+    }
+
+    /// Starts the open scene's textures loading from its own directory.
+    ///
+    /// A new scene resolves its references against a new directory, so the
+    /// whole set is rebuilt rather than re-rooted. That is also how the previous
+    /// scene's textures are released: the registry that owned them is dropped,
+    /// and a `Texture2D` frees its GPU texture when it goes.
+    fn reload_textures(&mut self) {
+        let state = self.render_state.clone();
+        self.textures = SceneTextures::for_scene(&state.device, &state.queue, self.file.path());
+        self.textured_revision = self.history.revision();
+        let notes = self.textures.request(&self.world);
+        self.record_texture_notes(notes);
+    }
+
+    /// Asks again for whatever the world references, after an edit that could
+    /// have changed it.
+    fn refresh_textures(&mut self) {
+        if self.textured_revision == self.history.revision() {
+            return;
+        }
+        self.textured_revision = self.history.revision();
+        let notes = self.textures.request(&self.world);
+        self.record_texture_notes(notes);
+    }
+
+    fn record_texture_notes(&mut self, notes: Vec<TextureNote>) {
+        for note in notes {
+            match note {
+                TextureNote::Loaded(message) | TextureNote::Reloaded(message) => {
+                    self.console.info(message);
+                }
+                TextureNote::Failed(message) => self.console.warning(message),
+            }
         }
     }
 
@@ -834,6 +870,7 @@ impl EditorApp {
                 self.lifecycle = initialized_lifecycle();
                 self.notice = None;
                 self.announce_scene();
+                self.reload_textures();
             }
             Err(error) => self.report(error),
         }
@@ -1473,6 +1510,7 @@ impl EditorApp {
         let failure = viewport
             .render(
                 &mut self.renderers,
+                &self.textures,
                 &self.scene,
                 &self.world,
                 (
@@ -1575,6 +1613,12 @@ impl eframe::App for EditorApp {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        // Before anything is drawn, so a texture that arrived since the last
+        // frame is bound by the time this one extracts.
+        self.refresh_textures();
+        let state = self.render_state.clone();
+        let arrived = self.textures.poll(&state.device, &state.queue);
+        self.record_texture_notes(arrived);
         self.update_title(ui.ctx());
         self.handle_close_request(ui.ctx());
         self.handle_shortcuts(ui.ctx());
@@ -2415,10 +2459,13 @@ fn console_row(ui: &mut egui::Ui, entry: &Entry) {
         Level::Warning => ACCENT_BRIGHT,
         Level::Error => Color32::from_rgb(255, 138, 148),
     };
-    ui.horizontal(|ui| {
+    ui.horizontal_top(|ui| {
         ui.add_space(10.0);
         status_dot(ui, color);
-        ui.label(RichText::new(&entry.message).size(11.0).color(color));
+        // Wrapped, not truncated: an asset failure names a path and an
+        // operating system error, and a line that runs off the edge of the dock
+        // is a line nobody can act on.
+        ui.add(egui::Label::new(RichText::new(&entry.message).size(11.0).color(color)).wrap());
         if entry.count > 1 {
             ui.label(
                 RichText::new(format!("x{}", entry.count))

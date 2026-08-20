@@ -5,6 +5,7 @@
 //! use the same pipeline without pretending browser fetches are synchronous.
 
 mod decode;
+mod loader;
 mod memory;
 mod queue;
 mod source;
@@ -14,6 +15,8 @@ mod url;
 mod fetch;
 #[cfg(not(target_arch = "wasm32"))]
 mod filesystem;
+#[cfg(not(target_arch = "wasm32"))]
+mod watch;
 
 pub use decode::{
     AssetCompletionApplyError, AssetDecodeError, AssetDecoder, DecodedAssetCompletion,
@@ -23,6 +26,7 @@ pub use decode::{
 pub use fetch::FetchAssetSource;
 #[cfg(not(target_arch = "wasm32"))]
 pub use filesystem::FileSystemAssetSource;
+pub use loader::{AssetLoadOutcome, AssetLoader, AssetLoaderError};
 pub use memory::MemoryAssetSource;
 pub use queue::{
     AssetLoadCompletion, AssetLoadQueue, AssetLoadQueueConfig, AssetLoadQueueCreateError,
@@ -30,3 +34,5 @@ pub use queue::{
 };
 pub use source::{AssetBytes, AssetSource, AssetSourceError, AssetSourceFuture};
 pub use url::{UrlRoot, UrlRootError};
+#[cfg(not(target_arch = "wasm32"))]
+pub use watch::AssetWatch;

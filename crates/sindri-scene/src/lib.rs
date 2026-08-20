@@ -14,4 +14,7 @@ pub use components::{
     CameraComponent, MeshComponent, MeshPrimitive, SpriteAnchor, SpriteComponent, SpriteSpace,
 };
 pub use extract::{CameraView, SceneExtractError, SceneExtractor, ViewCamera, WorldProjection};
-pub use textures::{TextureBindings, unresolved_textures};
+pub use textures::{
+    PROCEDURAL_TEXTURES, ProceduralTexture, TextureBindings, referenced_textures,
+    unresolved_textures,
+};

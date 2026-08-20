@@ -134,6 +134,34 @@ one and says so — that choice was made last week and its failure is not the us
 window title carries the same file name and unsaved marker as the status bar, so a task switcher can
 tell two editors apart.
 
+## A scene brings its own textures
+
+The editor used to bind exactly two textures: a checkerboard and a badge, both handed over by the
+cube example, both named by the demo scene. Every other reference in every other scene drew the
+magenta missing checker. Nothing had failed to load, because nothing had been asked to load.
+
+A scene's texture references say what it needs, and the directory the scene lives in is where they
+resolve, so opening a project's scene shows that project's art. References that name a file go
+through `sindri-assets` — a `FileSystemAssetSource` rooted at the scene's directory, feeding the
+bounded queue, decoded and uploaded when they arrive. References the engine generates are bound
+before any of that starts, and the two cannot be confused because a procedural reference is not a
+valid `AssetId`.
+
+Opening a different scene builds a new set rather than re-rooting the old one, which is also how the
+previous scene's textures are released: the registry that owned them is dropped, and a `Texture2D`
+frees its GPU texture when it goes. Within a scene, an edit that points a mesh somewhere else asks
+again — the world is the only statement of what is referenced, so a change to the history's revision
+is the signal to re-request, and the loader coalesces so asking about a whole world is cheap.
+
+Loading is genuinely asynchronous, which shows: a scene opens and its textures appear a frame or two
+later, drawing as the missing checker until they do. That is the honest behaviour and the one the
+browser will force anyway.
+
+Once a texture has loaded, the file behind it is watched. Saving it in an image editor loads it
+again and rebinds, within about a second, without restarting anything — and the binding is left
+pointing at the old texture until the new one arrives, so an edit does not blink the scene through
+the missing checker on its way to showing itself.
+
 ## What the editor has to say
 
 Anything the editor reports goes to two places at once, and the split is what makes each of them

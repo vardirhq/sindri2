@@ -68,10 +68,26 @@ checkerboard, and a render target all bind the same way.
 
 A reference nothing has bound resolves to `TextureRegistry::MISSING`, a magenta checker. A missing
 texture therefore draws as obviously wrong rather than failing the frame or, worse, silently reusing
-whichever texture happened to be bound last. `unresolved_textures` names every reference a world
+whichever texture happened to be bound last. A `TextureId` is a slot and a generation, the same shape
+as an `EntityId`: the registry reuses the slot of a released texture, and the generation is what stops
+a handle nobody updated drawing whatever landed there next — which would be the same failure as
+reusing the last-bound texture, arrived at from the other direction. `unresolved_textures` names every reference a world
 draws that nothing has bound, so the diagnosis is a list rather than a magenta surface.
 
 Sprites batch per texture as well as per layer, because a batch is a single draw call.
+
+`referenced_textures` lists every texture a world draws with, which is the statement of what a scene
+needs loading — `unresolved_textures` is that list narrowed to what nothing has bound. A host loads
+the first and reports the second.
+
+What a reference *is* decides how it is satisfied. One that parses as an `AssetId` names a file, and
+resolves against the directory the scene lives in. One that does not is the engine's to generate:
+`PROCEDURAL_TEXTURES` is the table of those, holding the reference a scene writes and the parameters
+that produce it. The `procedural:` prefix is not decoration — a colon is a reserved delimiter in an
+`AssetId`, so a procedural reference cannot be parsed as one, and the two kinds cannot be confused
+without anybody remembering a rule. The table is shared rather than copied per host because the
+capture verifies these exact colours in a rendered image and the editor draws the same scene; two
+hosts choosing their own navy would be a difference nothing catches until a screenshot looks wrong.
 
 ## Sprite space
 

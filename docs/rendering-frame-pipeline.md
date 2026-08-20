@@ -36,10 +36,19 @@ scene with no mesh cleared nothing at all, leaving its sprites drawing over the
 previous frame and testing against a depth buffer nobody had filled. A scene of
 only sprites is what a 2D game is, so that case is the ordinary one.
 
+## Drawing a prepared frame
+
+`encode_prepared_frame` is the third stage: given the renderers, a target, and a prepared frame, it
+clears once and encodes each pass in the order preparation put them in. It knows nothing about
+worlds, components, or scenes — a prepared frame is a list of commands and the matrices to draw them
+with — which is why it belongs in `sindri-render` rather than in whichever host needed it first. It
+lived in the cube example for a release, which made the editor depend on an example in order to draw
+anything at all.
+
 The cube example is the reference integration. A versioned `SceneDocument` is deserialized from
 JSON, validated, loaded into `World`, and extracted into an opaque textured-cube pass followed by a
-five-instance overlay pass. Native, WebGPU, and software-Vulkan capture paths consume that same
-prepared frame.
+five-instance overlay pass. Native, WebGPU, the software-Vulkan capture, and the editor's two
+viewports all consume that same prepared frame through that same encoder.
 
 ## Current boundary
 

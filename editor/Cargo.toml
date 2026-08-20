@@ -11,8 +11,9 @@ publish = false
 eframe.workspace = true
 egui_material_icons = { version = "0.8", default-features = false, features = ["outline"] }
 glam.workspace = true
+wgpu.workspace = true
+sindri-assets = { path = "../crates/sindri-assets" }
 sindri-core = { path = "../crates/sindri-core" }
-sindri-cube = { path = "../examples/cube" }
 sindri-render = { path = "../crates/sindri-render" }
 sindri-scene = { path = "../crates/sindri-scene" }
 serde.workspace = true
@@ -21,6 +22,9 @@ thiserror.workspace = true
 rfd = { version = "0.17.2", default-features = false, features = ["xdg-portal"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+# The demo scene, used only to give the tests a real world to work in. The
+# editor itself no longer depends on an example to draw or to load a texture.
+sindri-cube = { path = "../examples/cube" }
 tempfile = "3"
 
 [lints]
