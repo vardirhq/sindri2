@@ -4,14 +4,15 @@ Decay is an experimental gameplay language for Sindri Next.
 
 This directory is deliberately isolated from the engine workspace while the language model is being proven. Nothing under `decay/` may depend on a `sindri-*` crate during this phase, and no engine crate should need to change for Decay language work.
 
-## Current slice
+## Current foundation
 
-Decay now has two independent frontend crates:
+Decay now has three independent compiler layers:
 
-- `decay-syntax` — source spans, tokens, lexer, AST, parser, precedence, member/call chains, assignments, declarations, blocks, and syntax diagnostics;
-- `decay-semantic` — scopes, symbols, primitive/named types, mutability checks, duplicate detection, call arity/type checks, return checks, and semantic diagnostics.
+- `decay-syntax` — source spans, tokens, lexer, parser, AST, and syntax diagnostics;
+- `decay-semantic` — scopes, symbols, the initial type model, mutability rules, function checks, and semantic diagnostics;
+- `decay-ir` — portable symbolic IR with constants, paths, calls, operators, declarations, returns, and patched control-flow jumps.
 
-The parser accepts gameplay-shaped code such as:
+The frontend already understands gameplay-shaped source such as:
 
 ```rust
 script PlayerController {
@@ -19,63 +20,79 @@ script PlayerController {
     let speed: f32 = 6.0;
 
     fn update(dt: f32) {
-        var movement: f32 = 1.0;
-        movement += speed * dt;
+        this.transform.position.x += speed * dt;
     }
 }
 ```
 
-The semantic layer deliberately does not know that Sindri has input, transforms, sprites, cameras, or any other engine concept. Hosts inject external values and functions through `Environment`; a future `sindri-decay` crate can therefore provide the game API without making engine details part of the language compiler.
+`decay-semantic` deliberately receives host globals through an `Environment`; names such as `Input` are not Decay builtins. `decay-ir` preserves that boundary by lowering member chains to symbolic paths such as `this.transform.position.x` rather than importing engine types.
 
-Run the workspace independently from Sindri:
+Run the Decay workspace independently:
 
 ```bash
 cd decay
-cargo test
+cargo fmt --all --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
 ```
 
 ## Boundary
 
-The language frontend should remain independent from Sindri. Future crates should preserve this split:
+The language core should remain independent from Sindri:
 
 ```text
 decay-syntax      lexer, parser, AST, diagnostics
       |
-decay-semantic    names, types, validation, host environment
+decay-semantic    names, types, validation, host environment contract
       |
-decay-runtime     portable execution model
+decay-ir          portable symbolic execution representation
+      |
+decay-runtime     future interpreter / VM
       |
       +-------------------- no Sindri dependency
 
-sindri-decay      engine bindings, added only after the language core is proven
+sindri-decay      future engine bindings
 ```
 
 This makes the language replaceable, testable, and extractable. It also prevents engine internals from becoming accidental language semantics.
 
-## Current semantic rules
+## IR direction
 
-The intentionally small type model currently understands `f32`, `bool`, `String`, unit, null, named host/user types, and an explicit unknown type used at unresolved host boundaries.
+The initial IR is intentionally symbolic rather than tied to a particular VM layout. For example:
 
-The analyzer currently catches:
+```text
+this.transform.position.x += speed * dt
+```
 
-- unknown names;
-- duplicate containers, members, parameters, and locals;
-- assignment to immutable bindings;
-- obvious assignment/type mismatches;
-- invalid arithmetic, logical, and comparison operands;
-- non-boolean `if` conditions;
-- return type mismatches;
-- calls to known functions with the wrong argument count or argument types.
+lowers conceptually to:
 
-Member access remains deliberately open until a host supplies a member schema. That lets the language core stay independent while preserving the eventual shape of APIs such as `this.transform.position`.
+```text
+LOAD this.transform.position.x
+LOAD speed
+LOAD dt
+BINARY multiply
+BINARY add
+STORE this.transform.position.x
+POP
+```
+
+Calls use symbolic paths as well:
+
+```text
+Input.axis("left", "right")
+```
+
+becomes a call to the path `Input.axis` with two arguments. A host must declare `Input` before semantic analysis accepts that source.
+
+This representation gives the runtime a small contract without making the compiler know what an entity, transform, camera, or input service is.
 
 ## Near-term plan
 
-1. Improve semantic type information for user components and member access.
-2. Define a small, versionable intermediate representation rather than committing directly to a VM instruction set.
-3. Lower a representative script into that IR and prove deterministic output.
-4. Add a minimal interpreter/runtime for ordinary language values and control flow.
-5. Prove stateful lifecycle calls without any Sindri dependency.
-6. Only then design the Sindri host boundary and engine-facing type schema.
+1. Validate the IR against more control-flow and expression cases.
+2. Define runtime value semantics and stack behavior explicitly.
+3. Add the first portable interpreter for the IR.
+4. Prove deterministic execution of ordinary Decay functions without a game engine.
+5. Add a host-call interface to the runtime without adding Sindri dependencies.
+6. Only after that create `sindri-decay` and expose engine concepts through the host boundary.
 
-The syntax is not stable. The point of this phase is to discover what deserves to become stable before user scripts make every early guess expensive.
+The syntax, type model, and IR are not stable. The point of this phase is to discover what deserves to become stable before user scripts make every early guess expensive.
