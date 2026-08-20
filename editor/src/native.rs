@@ -15,11 +15,10 @@ use eframe::{
 use egui_material_icons::{
     MaterialIcon,
     icons::{
-        ICON_3D_ROTATION, ICON_ACCOUNT_TREE, ICON_ADD, ICON_ARROW_SELECTOR_TOOL, ICON_CAMERA_ALT,
-        ICON_CODE, ICON_DEPLOYED_CODE, ICON_DESCRIPTION, ICON_EXPAND_MORE, ICON_FOLDER,
-        ICON_GRID_VIEW, ICON_IMAGE, ICON_MORE_VERT, ICON_OPEN_WITH, ICON_PAUSE, ICON_PLAY_ARROW,
-        ICON_REDO, ICON_REFRESH, ICON_SEARCH, ICON_SETTINGS, ICON_STOP, ICON_TUNE, ICON_UNDO,
-        ICON_VIEW_IN_AR, ICON_VIEW_LIST,
+        ICON_ACCOUNT_TREE, ICON_CAMERA_ALT, ICON_CODE, ICON_DEPLOYED_CODE, ICON_DESCRIPTION,
+        ICON_FOLDER, ICON_GRID_VIEW, ICON_IMAGE, ICON_OPEN_WITH, ICON_PAUSE, ICON_PLAY_ARROW,
+        ICON_REDO, ICON_REFRESH, ICON_SEARCH, ICON_STOP, ICON_UNDO, ICON_VIEW_IN_AR,
+        ICON_VIEW_LIST,
     },
 };
 use glam::{Mat4, Vec2 as GlamVec2, Vec3};
@@ -79,14 +78,6 @@ pub fn run() -> eframe::Result {
         options,
         Box::new(|context| Ok(Box::new(EditorApp::new(context)))),
     )
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum EditorMode {
-    Select,
-    Move,
-    Rotate,
-    Scale,
 }
 
 /// Something the user asked for that would throw unsaved work away.
@@ -341,7 +332,6 @@ struct EditorApp {
     /// at the viewport's frame rate and a directory does not, so a walk per
     /// frame would be a syscall for every row sixty times a second.
     project: ProjectTree,
-    mode: EditorMode,
     workspace_tab: WorkspaceTab,
     preferences: Preferences,
     lifecycle: EngineLifecycle,
@@ -401,7 +391,6 @@ impl EditorApp {
             search: String::new(),
             asset_search: String::new(),
             project,
-            mode: EditorMode::Select,
             workspace_tab: WorkspaceTab::Scene,
             preferences,
             lifecycle: initialized_lifecycle(),
@@ -806,19 +795,11 @@ impl EditorApp {
                     );
                     ui.add_space(8.0);
                     self.file_menu(ui);
-                    for menu in ["Edit", "Scene"] {
-                        ui.add(
-                            egui::Button::new(RichText::new(menu).size(12.0).color(TEXT_MUTED))
-                                .frame(false),
-                        );
-                    }
+                    self.edit_menu(ui);
                     self.view_menu(ui);
-                    for menu in ["Build", "Tools", "Help"] {
-                        ui.add(
-                            egui::Button::new(RichText::new(menu).size(12.0).color(TEXT_MUTED))
-                                .frame(false),
-                        );
-                    }
+                    // "Scene", "Build", "Tools", and "Help" used to sit here.
+                    // None of them opened: they were labels shaped like menus,
+                    // which is a promise about four features that do not exist.
                     ui.add_space((ui.available_width() * 0.22).max(16.0));
                     let undo_tip = self.history.undo_label().map_or_else(
                         || "Nothing to undo".to_owned(),
@@ -859,17 +840,10 @@ impl EditorApp {
                     {
                         self.toggle_playback();
                     }
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        ui.add_space(12.0);
-                        ui.label(
-                            ICON_EXPAND_MORE
-                                .outlined()
-                                .rich_text()
-                                .size(16.0)
-                                .color(TEXT_FAINT),
-                        );
-                        ui.label(RichText::new("isogame").size(12.0).color(TEXT_MUTED));
-                    });
+                    // A project name and a chevron used to sit at this end,
+                    // naming a project that did not exist and opening nothing.
+                    // What project is open is the browser's business, and it
+                    // says so from the directory it is reading.
                 });
             });
     }
@@ -892,7 +866,7 @@ impl EditorApp {
                     .stroke(Stroke::new(1.0, BORDER)),
             )
             .show(ui, |ui| {
-                panel_title(ui, "Hierarchy", Some(ICON_ADD));
+                panel_title(ui, "Hierarchy");
                 search_field(ui, &mut self.search, "Search");
                 ui.add_space(6.0);
                 egui::ScrollArea::vertical()
@@ -949,7 +923,7 @@ impl EditorApp {
                     .stroke(Stroke::new(1.0, BORDER)),
             )
             .show(ui, |ui| {
-                panel_title(ui, "Inspector", None);
+                panel_title(ui, "Inspector");
                 let Some(entity) = self.selection else {
                     return;
                 };
@@ -973,15 +947,11 @@ impl EditorApp {
                             transform_3d_section(ui, transform);
                         }
                         components_sections(ui, &components);
-                        ui.add_space(10.0);
-                        ui.add_sized(
-                            [ui.available_width(), 31.0],
-                            egui::Button::new(
-                                RichText::new("Add Component").size(12.0).color(TEXT),
-                            )
-                            .fill(PANEL_RAISED)
-                            .stroke(Stroke::new(1.0, BORDER)),
-                        );
+                        // An "Add Component" button used to close the panel.
+                        // Nothing handled it, and adding one properly means
+                        // choosing a type from the schema registry and writing
+                        // a default payload through `SetComponent` — a build,
+                        // not a button.
                     });
                 }
                 self.commit_draft(entity, &original, &draft);
@@ -1115,6 +1085,45 @@ impl EditorApp {
         });
     }
 
+    /// Undo and redo, in the menu people look in for them.
+    ///
+    /// The same two actions as the toolbar icons and the keyboard, labelled
+    /// with what they would undo, which is the thing a menu can say and an icon
+    /// cannot. "Edit" was a label shaped like a menu until this.
+    fn edit_menu(&mut self, ui: &mut egui::Ui) {
+        ui.menu_button(RichText::new("Edit").size(12.0).color(TEXT_MUTED), |ui| {
+            ui.set_min_width(190.0);
+            let undo = self.history.undo_label().map_or_else(
+                || "Undo".to_owned(),
+                |label| format!("Undo {}", label.to_lowercase()),
+            );
+            if ui
+                .add_enabled(
+                    self.history.can_undo(),
+                    egui::Button::new(undo).shortcut_text("Ctrl+Z"),
+                )
+                .clicked()
+            {
+                self.undo();
+                ui.close();
+            }
+            let redo = self.history.redo_label().map_or_else(
+                || "Redo".to_owned(),
+                |label| format!("Redo {}", label.to_lowercase()),
+            );
+            if ui
+                .add_enabled(
+                    self.history.can_redo(),
+                    egui::Button::new(redo).shortcut_text("Ctrl+Shift+Z"),
+                )
+                .clicked()
+            {
+                self.redo();
+                ui.close();
+            }
+        });
+    }
+
     fn status_bar(&self, ui: &mut egui::Ui) {
         egui::Panel::bottom("editor-status")
             .exact_size(26.0)
@@ -1158,14 +1167,6 @@ impl EditorApp {
                     );
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         ui.add_space(12.0);
-                        ui.label(
-                            ICON_SETTINGS
-                                .outlined()
-                                .rich_text()
-                                .size(15.0)
-                                .color(TEXT_FAINT),
-                        );
-                        ui.separator();
                         ui.label(
                             RichText::new(if self.problem().is_some() {
                                 "1 Error, 0 Warnings"
@@ -1216,27 +1217,14 @@ impl EditorApp {
                 );
                 ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
                     ui.add_space(8.0);
-                    mode_icon(
-                        ui,
-                        &mut self.mode,
-                        EditorMode::Select,
-                        ICON_ARROW_SELECTOR_TOOL,
-                        "Select",
-                    );
-                    mode_icon(ui, &mut self.mode, EditorMode::Move, ICON_OPEN_WITH, "Move");
-                    mode_icon(
-                        ui,
-                        &mut self.mode,
-                        EditorMode::Rotate,
-                        ICON_3D_ROTATION,
-                        "Rotate",
-                    );
-                    mode_icon(ui, &mut self.mode, EditorMode::Scale, ICON_TUNE, "Scale");
-                    ui.separator();
-                    // "Local coordinates" and "Lit shading" used to sit here.
-                    // Neither did anything, and at this width they pushed the
-                    // controls that do work off the row. A button that cannot
-                    // be pressed usefully costs more than the space it takes.
+                    // Select, Move, Rotate, and Scale used to sit here. They
+                    // highlighted, wrote an `EditorMode` nothing read, and
+                    // there are no gizmos for them to drive — four buttons
+                    // promising direct manipulation the editor cannot do.
+                    // "Local coordinates" and "Lit shading" went the same way
+                    // earlier. A button that cannot be pressed usefully costs
+                    // more than the space it takes.
+                    //
                     // Panning can carry the subject off screen entirely, so
                     // the way back is a control rather than a remembered
                     // number.
@@ -1465,17 +1453,17 @@ fn physical_viewport_dimension(points: f32, scale: f32) -> u32 {
     (points * scale).round().clamp(1.0, u32::MAX as f32) as u32
 }
 
-fn panel_title(ui: &mut egui::Ui, title: &str, action: Option<MaterialIcon>) {
+/// A panel's heading.
+///
+/// The hierarchy's used to carry an "Add entity" button. Nothing handled it,
+/// and creating an entity is not a button away: the world would need a spawn
+/// command to make it undoable and a stable ID assigned before the scene could
+/// be saved again. It comes back when both exist.
+fn panel_title(ui: &mut egui::Ui, title: &str) {
     ui.add_space(4.0);
     ui.horizontal(|ui| {
         ui.add_space(8.0);
         ui.label(RichText::new(title).strong().size(12.0).color(TEXT));
-        if let Some(action) = action {
-            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                ui.add_space(6.0);
-                icon_button(ui, action, false, "Add entity");
-            });
-        }
     });
     ui.add_space(3.0);
     ui.separator();
@@ -1501,16 +1489,12 @@ fn search_field(ui: &mut egui::Ui, value: &mut String, hint: &str) {
     });
 }
 
+/// The root the hierarchy hangs from.
+///
+/// A collapse chevron used to sit in front of it, and nothing collapsed.
 fn hierarchy_group(ui: &mut egui::Ui, label: &str, icon: MaterialIcon) {
     ui.horizontal(|ui| {
-        ui.add_space(6.0);
-        ui.label(
-            ICON_EXPAND_MORE
-                .outlined()
-                .rich_text()
-                .size(15.0)
-                .color(TEXT_FAINT),
-        );
+        ui.add_space(10.0);
         ui.label(icon.outlined().rich_text().size(15.0).color(TEXT_MUTED));
         ui.label(RichText::new(label).size(12.0).color(TEXT));
     });
@@ -1648,38 +1632,24 @@ fn inspector_identity(ui: &mut egui::Ui, icon: MaterialIcon, draft: &mut EntityD
             egui::TextEdit::singleline(&mut draft.name).font(FontId::proportional(13.0)),
         );
     });
-    ui.horizontal(|ui| {
-        ui.add_space(27.0);
-        ui.label(RichText::new("Tag  Untagged").size(11.0).color(TEXT_FAINT));
-        ui.separator();
-        ui.label(RichText::new("Layer  Default").size(11.0).color(TEXT_FAINT));
-    });
+    // "Tag  Untagged" and "Layer  Default" used to sit under the name. Neither
+    // is a thing a Sindri entity has, so they were two lines of a different
+    // engine's inspector printed over this one's.
 }
 
+/// The heading above one section of the inspector.
+///
+/// A collapse chevron and an overflow menu used to sit at either end of it.
+/// Neither was handled: nothing collapsed and nothing overflowed. Adding and
+/// removing a component is what the menu would hold, and that is a real build
+/// against the schema registry rather than a glyph.
 fn section_header(ui: &mut egui::Ui, icon: MaterialIcon, title: &str) {
     ui.add_space(4.0);
     ui.separator();
     ui.horizontal(|ui| {
-        ui.add_space(6.0);
-        ui.label(
-            ICON_EXPAND_MORE
-                .outlined()
-                .rich_text()
-                .size(15.0)
-                .color(TEXT_FAINT),
-        );
+        ui.add_space(10.0);
         ui.label(icon.outlined().rich_text().size(16.0).color(ACCENT));
         ui.label(RichText::new(title).strong().size(12.0).color(TEXT));
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.add_space(5.0);
-            ui.label(
-                ICON_MORE_VERT
-                    .outlined()
-                    .rich_text()
-                    .size(15.0)
-                    .color(TEXT_FAINT),
-            );
-        });
     });
 }
 
@@ -2271,18 +2241,6 @@ fn projection_button(
         .clicked()
     {
         *current = value;
-    }
-}
-
-fn mode_icon(
-    ui: &mut egui::Ui,
-    mode: &mut EditorMode,
-    value: EditorMode,
-    icon: MaterialIcon,
-    tip: &str,
-) {
-    if icon_button(ui, icon, *mode == value, tip).clicked() {
-        *mode = value;
     }
 }
 

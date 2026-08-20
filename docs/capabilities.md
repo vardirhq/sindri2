@@ -218,24 +218,26 @@ frame.
 
 Listed because a control that looks like a feature is worse than an absent one.
 `docs/editor-audit.md` is the full sweep — control by control, with what breaks
-under use and what the editor cannot express at all. This is the summary.
+under use and what the editor cannot express at all. This is the summary, and
+it is deliberately short now: everything the audit found is either working or
+gone, and what is left here is waiting on a build rather than on a handler.
 
-- **Select, Move, Rotate, Scale** — they set a mode nothing reads. There are no
-  gizmos
-- **Play, Pause, and Stop** — they move the engine lifecycle and nothing else. No
-  frame is advanced, so no gameplay runs; the demo's own turning cube does not
-  turn
-- **`+` Add entity** and **Add Component** — not handled. Entities and components
-  can only come from a file
-- **Edit, Scene, Build, Tools, Help** — plain labels, not menus. File and View
-  open
-- **Tag** and **Layer** in the inspector — fixed text. The per-component property
-  rows below them now read the entity's own payload, but they are a readout: a
-  component's fields cannot be edited from the inspector
-- **The project name in the top bar** — a label
+- **Play and Pause** — they move the engine lifecycle and nothing else. No frame
+  is advanced, so no gameplay runs; the demo's own turning cube does not turn
 - **The Console** — three fixed lines. Two interpolate real values (entity count,
   lifecycle state), so it is a status readout rather than a log; nothing the
   engine reports reaches it
+- **Rotation** in the inspector — the word "Quaternion". The format stores a
+  rotation and the renderer applies it; nothing edits it
+
+Removed rather than left drawn, because each was a promise about a feature that
+does not exist: the Select, Move, Rotate, and Scale tool modes, which set a mode
+nothing read and had no gizmos to drive; "Scene", "Build", "Tools", and "Help",
+which were labels shaped like menus; the top bar's project name; the hierarchy's
+add-entity button and the inspector's Add Component, which need spawn and
+component commands behind them; the inspector's Tag and Layer, which are not
+things a Sindri entity has; the collapse chevrons and overflow menus that
+collapsed and overflowed nothing; and the settings gear.
 
 ---
 
