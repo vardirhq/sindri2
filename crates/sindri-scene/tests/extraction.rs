@@ -1003,3 +1003,36 @@ fn an_orbit_stops_short_of_the_pole_however_far_it_is_driven() {
         }
     }
 }
+
+/// A scene's texture references are the only statement anywhere of what it
+/// needs loading, so asking for them has to include the ones already bound.
+#[test]
+fn a_world_lists_every_texture_it_draws_with_once() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "cube", "transform_3d": {},
+          "components": { "sindri.mesh": { "primitive": "cube", "texture": "shared.png" } } },
+        { "id": "badge", "transform_3d": {},
+          "components": { "sindri.sprite": { "texture": "shared.png" } } },
+        { "id": "other", "transform_3d": {},
+          "components": { "sindri.sprite": { "texture": "textures/badge.png" } } }"#,
+    ));
+
+    let referenced = sindri_scene::referenced_textures(&world);
+    assert_eq!(
+        referenced.iter().map(String::as_str).collect::<Vec<_>>(),
+        ["shared.png", "textures/badge.png"],
+        "one entry per texture, however many entities name it"
+    );
+
+    let mut bindings = TextureBindings::new();
+    bindings.bind("shared.png", TextureId::new(1));
+    assert_eq!(
+        sindri_scene::unresolved_textures(&world, &bindings)
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>(),
+        ["textures/badge.png"],
+        "and what is missing is what is referenced and not bound"
+    );
+}

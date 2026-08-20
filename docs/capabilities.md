@@ -160,6 +160,13 @@ rejects duplicates, and carries a generation token so a late completion cannot
 overwrite a replacement. Textures and scene JSON decode through typed decoders.
 Nothing pretends browser I/O is synchronous.
 
+`AssetLoader` drives all of that in one place — request, enqueue, drain, decode,
+apply — so a caller does not have to know the order. Requesting is idempotent, a
+failure is reported once rather than retried forever, and `retain` releases what
+is no longer wanted and says which IDs went, so a host can drop whatever it
+built from them. GPU upload stays with the host, which is the only thing that
+owns a device.
+
 ---
 
 ## The editor
@@ -195,6 +202,11 @@ frame.
 - A confirmation before anything that would throw unsaved work away — opening
   another scene, reloading from disk, discarding changes, and closing the window
   — each naming what it is about to do and offering to save instead
+- Loading the textures a scene names from the directory the scene lives in,
+  through the real asset pipeline, so opening a project's scene shows that
+  project's art rather than the two textures a demo crate supplied; each load or
+  failure is named in the console, and the engine's procedural textures are
+  generated rather than loaded
 - A live viewport with orbit, pan, zoom, reset-to-authored-camera, and **Focus
   selection** (F), which centres the view on the selected entity; the zoom spans
   a factor of four hundred and moves proportionally, and the orbit cannot be
@@ -262,7 +274,8 @@ collapsed and overflowed nothing; and the settings gear.
   adapter is planned as optional rather than built in
 - No tilemaps, particles, parallax, or pathfinding
 - No TypeScript SDK; the WASM binding crate does not exist
-- No hot reload, asset manifest, or GPU asset release
+- No hot reload, asset manifest, or slot reuse in the texture registry — a scene's
+  textures are released when the scene is replaced, but not one at a time
 - No deterministic system ordering
 
 ### Editor

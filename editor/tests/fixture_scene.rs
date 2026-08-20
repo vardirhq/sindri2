@@ -17,15 +17,16 @@ use sindri_core::{
     UnknownComponentPolicy, World, WorldCommand,
 };
 use sindri_editor::{fixture, scene_file::SceneFile};
+use std::path::Path;
+
 use sindri_render::{RenderStage, TextureId, Viewport};
 use sindri_scene::{CameraView, SceneExtractor, TextureBindings};
 
 const UPDATE_ENV: &str = "SINDRI_UPDATE_SCENE_FIXTURES";
 const VIEWPORT: Viewport = Viewport::new(512, 512);
 
-/// The two references `sindri_cube::demo_textures` binds. The editor renders
-/// through those until it reads a real asset directory.
-const BOUND_TEXTURES: [&str; 2] = ["procedural:checkerboard", "textures/badge.png"];
+/// Where the fixture's textures resolve, which is the directory it lives in.
+const FIXTURE_ASSETS: &str = "assets";
 
 fn document() -> SceneDocument {
     fixture::open()
@@ -226,10 +227,12 @@ fn the_fixture_extracts_to_one_mesh_pass_and_one_sprite_pass() {
     let world = World::from_scene(&document())
         .expect("the fixture loads")
         .world;
+    // Bound from what the fixture names, so the test does not carry its own
+    // idea of which textures the scene uses.
     let mut textures = TextureBindings::new();
-    for (index, name) in BOUND_TEXTURES.iter().enumerate() {
-        let id = u32::try_from(index).expect("two textures fit") + 1;
-        textures.bind(*name, TextureId::new(id));
+    for (index, reference) in sindri_scene::referenced_textures(&world).iter().enumerate() {
+        let id = u32::try_from(index).expect("a fixture's textures fit a u32") + 1;
+        textures.bind(reference.as_str(), TextureId::new(id));
     }
 
     let frame = SceneExtractor::new()
@@ -244,7 +247,7 @@ fn the_fixture_extracts_to_one_mesh_pass_and_one_sprite_pass() {
 /// Every texture the fixture names is one the editor can bind, so opening it
 /// does not greet you with the missing-texture checker.
 #[test]
-fn the_fixture_only_names_textures_the_editor_can_bind() {
+fn every_texture_the_fixture_names_can_actually_be_drawn() {
     let document = document();
     let named: Vec<&str> = document
         .entities
@@ -257,15 +260,27 @@ fn the_fixture_only_names_textures_the_editor_can_bind() {
         })
         .filter_map(|payload| payload.get("texture")?.as_str())
         .collect();
+    assert!(!named.is_empty(), "the fixture draws something");
 
     for texture in &named {
+        // Either the engine generates it, or it is a file sitting beside the
+        // scene. Nothing else resolves, and a fixture that opened showing the
+        // missing-texture checker would be a poor thing to start the editor in.
+        if sindri_scene::PROCEDURAL_TEXTURES
+            .iter()
+            .any(|procedural| procedural.reference == *texture)
+        {
+            continue;
+        }
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join(FIXTURE_ASSETS)
+            .join(texture);
         assert!(
-            BOUND_TEXTURES.contains(texture),
-            "{texture} is not bound, so the fixture would open showing the \
-             missing-texture checker"
+            path.is_file(),
+            "{texture} is neither generated nor a file at {}",
+            path.display()
         );
     }
-    assert_eq!(named.len(), 2, "the cube and the sprite each name one");
 }
 
 #[test]

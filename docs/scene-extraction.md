@@ -73,6 +73,19 @@ draws that nothing has bound, so the diagnosis is a list rather than a magenta s
 
 Sprites batch per texture as well as per layer, because a batch is a single draw call.
 
+`referenced_textures` lists every texture a world draws with, which is the statement of what a scene
+needs loading — `unresolved_textures` is that list narrowed to what nothing has bound. A host loads
+the first and reports the second.
+
+What a reference *is* decides how it is satisfied. One that parses as an `AssetId` names a file, and
+resolves against the directory the scene lives in. One that does not is the engine's to generate:
+`PROCEDURAL_TEXTURES` is the table of those, holding the reference a scene writes and the parameters
+that produce it. The `procedural:` prefix is not decoration — a colon is a reserved delimiter in an
+`AssetId`, so a procedural reference cannot be parsed as one, and the two kinds cannot be confused
+without anybody remembering a rule. The table is shared rather than copied per host because the
+capture verifies these exact colours in a rendered image and the editor draws the same scene; two
+hosts choosing their own navy would be a difference nothing catches until a screenshot looks wrong.
+
 ## Sprite space
 
 A sprite says which space it is in, and the answer decides three things at once: which camera draws

@@ -75,6 +75,7 @@ sindri-gpu      -> wgpu only (sindri-render is a dev-dependency, for tests)
 sindri-render   -> wgpu, glam, bytemuck only
 sindri-scene    -> sindri-core + sindri-render
 sindri          -> assets, core, and (feature `render`) gpu, render, scene
+editor          -> assets, core, render, scene (sindri-cube is dev-only)
 ```
 
 - `sindri-core` depends on no window, GPU, browser, editor, physics, scripting,
@@ -85,8 +86,12 @@ sindri          -> assets, core, and (feature `render`) gpu, render, scene
 - Engine crates never depend on the editor.
 - New crates are created at proven platform or dependency boundaries only, not
   to make the graph look complete.
-- Known wrinkle: `editor` depends on `sindri-cube` (the example) for its demo
-  scene and renderers. That is temporary scaffolding, not a pattern to extend.
+- The editor once depended on `sindri-cube` (the example) for its renderers and
+  its textures. It no longer does: `encode_prepared_frame` moved into
+  `sindri-render`, where it always belonged, and the editor loads a scene's
+  textures through `sindri-assets`. `sindri-cube` is a dev-dependency of the
+  editor now, for the demo scene its tests read, and nothing should promote it
+  back.
 
 ## Commands
 

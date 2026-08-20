@@ -19,3 +19,5 @@ pub mod preferences;
 pub mod project;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod scene_file;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod textures;
