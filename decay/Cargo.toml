@@ -2,6 +2,7 @@
 members = [
     "crates/decay-syntax",
     "crates/decay-semantic",
+    "crates/decay-ir",
 ]
 resolver = "3"
 
