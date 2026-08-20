@@ -350,6 +350,8 @@ Done:
 - [x] Open a scene carrying components the built-in schemas do not know, rather than refusing it and panicking on the way
 - [x] Ask before discarding unsaved work, and stop the Stop button resetting the scene
 - [x] Make the unsaved marker mean the file and the world differ, on the back of `CommandHistory::revision`
+- [x] Turn the scene view's axis indicator with the camera, drawn from the same view the frame under it was drawn through
+- [x] Read the project browser from the directory the open scene lives in, filter it with the search box that used to filter nothing, and open a scene by double-clicking its row
 
 Wanted, in no particular order. Several of these are small enough to do the
 moment they annoy someone, and are also named in Milestone 11 as part of the
@@ -359,13 +361,12 @@ larger tool; doing one here early is the point rather than a conflict.
 would do the most good, which is roughly the order it is listed in here. The
 first two are done and have moved above. What it cannot yet do comes next.
 
-- [ ] Remove or implement the nineteen controls that are drawn and do nothing, and the four tool modes that highlight and are wired to nothing, starting with the two that look like they work: the asset search box, which accepts typing and filters nothing, and the scene view's axis gizmo, which is painted at fixed angles and never turns with the camera
+- [ ] Remove or implement the controls that are drawn and do nothing, and the four tool modes that highlight and are wired to nothing
 - [ ] Show what the engine reports in the console — notices, render failures, and the textures a scene names that nothing has bound
 - [ ] Remember the open scene between launches, and name it in the window title
 - [ ] Widen the viewport's zoom and pitch limits, which cannot frame a scene much larger than the demo, and add a way to frame the selection
 - [ ] Edit a rotation, which the format stores, the renderer applies, and the inspector prints the word "Quaternion" for
 - [ ] Select by clicking in the viewport rather than only in the hierarchy list
-- [ ] Read the project browser from a real asset directory; its contents are currently a fixed list
 - [ ] Asset thumbnails, after which the grid view is worth defaulting to again
 - [ ] Show which entity a hierarchy row is, when its name is empty or repeated
 - [ ] Keep a filtered hierarchy readable: rows keep their indentation, so a match under a filtered-out parent sits indented under nothing

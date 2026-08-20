@@ -16,9 +16,9 @@ use egui_material_icons::{
     MaterialIcon,
     icons::{
         ICON_3D_ROTATION, ICON_ACCOUNT_TREE, ICON_ADD, ICON_ARROW_SELECTOR_TOOL, ICON_CAMERA_ALT,
-        ICON_CODE, ICON_DEPLOYED_CODE, ICON_DESCRIPTION, ICON_EXPAND_MORE, ICON_FILTER_LIST,
-        ICON_FOLDER, ICON_GRID_VIEW, ICON_IMAGE, ICON_MORE_VERT, ICON_OPEN_WITH, ICON_PAUSE,
-        ICON_PLAY_ARROW, ICON_REDO, ICON_SEARCH, ICON_SETTINGS, ICON_STOP, ICON_TUNE, ICON_UNDO,
+        ICON_CODE, ICON_DEPLOYED_CODE, ICON_DESCRIPTION, ICON_EXPAND_MORE, ICON_FOLDER,
+        ICON_GRID_VIEW, ICON_IMAGE, ICON_MORE_VERT, ICON_OPEN_WITH, ICON_PAUSE, ICON_PLAY_ARROW,
+        ICON_REDO, ICON_REFRESH, ICON_SEARCH, ICON_SETTINGS, ICON_STOP, ICON_TUNE, ICON_UNDO,
         ICON_VIEW_IN_AR, ICON_VIEW_LIST,
     },
 };
@@ -43,6 +43,7 @@ use sindri_scene::{
 use crate::{
     // `egui::Layout` is a different thing entirely and is already in scope.
     preferences::{AssetView, BottomTab, CameraProjection, Layout as WorkspaceLayout, Preferences},
+    project::{AssetKind, ProjectEntry, ProjectTree},
     scene_file::{DEFAULT_SCENE_PATH, SceneFile},
 };
 
@@ -93,9 +94,12 @@ enum EditorMode {
 /// Each of these used to happen the moment it was clicked. Two of them are in a
 /// menu, one is the window's close button, and one was the Stop button, which
 /// reset the scene rather than stopping anything.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 enum Discarding {
     OpenAnother,
+    /// A scene chosen in the project browser, which knows the path already and
+    /// so has no dialog to open.
+    OpenPath(PathBuf),
     Reload,
     Reset,
     Close,
@@ -104,18 +108,20 @@ enum Discarding {
 impl Discarding {
     /// What the user is about to lose the work to, in the words of the control
     /// they pressed.
-    const fn question(self) -> &'static str {
+    const fn question(&self) -> &'static str {
         match self {
-            Self::OpenAnother => "Open another scene and discard the changes to this one?",
+            Self::OpenAnother | Self::OpenPath(_) => {
+                "Open another scene and discard the changes to this one?"
+            }
             Self::Reload => "Re-read this scene from disk and discard the changes?",
             Self::Reset => "Discard the changes and go back to the scene as it was saved?",
             Self::Close => "Close the editor and discard the changes?",
         }
     }
 
-    const fn verb(self) -> &'static str {
+    const fn verb(&self) -> &'static str {
         match self {
-            Self::OpenAnother => "Open anyway",
+            Self::OpenAnother | Self::OpenPath(_) => "Open anyway",
             Self::Reload => "Reload anyway",
             Self::Reset => "Discard",
             Self::Close => "Close anyway",
@@ -329,6 +335,12 @@ struct EditorApp {
     history: CommandHistory,
     search: String,
     asset_search: String,
+    /// The directory the open scene lives in, as it was last read.
+    ///
+    /// Read when a scene is opened rather than every frame: the browser redraws
+    /// at the viewport's frame rate and a directory does not, so a walk per
+    /// frame would be a syscall for every row sixty times a second.
+    project: ProjectTree,
     mode: EditorMode,
     workspace_tab: WorkspaceTab,
     preferences: Preferences,
@@ -376,6 +388,7 @@ impl EditorApp {
         let renderers = SceneRenderers::new(&render_state);
         let scene_viewport = RuntimeViewport::new(render_state.clone(), "Sindri editor scene view");
         let game_viewport = RuntimeViewport::new(render_state, "Sindri editor game view");
+        let project = ProjectTree::beside(file.path());
         Self {
             scene,
             world,
@@ -387,6 +400,7 @@ impl EditorApp {
             history: CommandHistory::default(),
             search: String::new(),
             asset_search: String::new(),
+            project,
             mode: EditorMode::Select,
             workspace_tab: WorkspaceTab::Scene,
             preferences,
@@ -433,6 +447,7 @@ impl EditorApp {
         self.confirming = None;
         match action {
             Discarding::OpenAnother => self.open_scene(),
+            Discarding::OpenPath(path) => self.open_path(&path),
             Discarding::Reload => self.reload(),
             Discarding::Reset => self.reset_to_authored(),
             // Agreeing to close is not closing. The request that raised the
@@ -484,6 +499,7 @@ impl EditorApp {
         match load_world(&self.scene, opened.document()) {
             Ok(world) => {
                 self.file = opened;
+                self.project = ProjectTree::beside(self.file.path());
                 self.world = world;
                 self.history.clear();
                 self.selection = None;
@@ -501,7 +517,18 @@ impl EditorApp {
             self.notice = Some(error.to_string());
             return;
         }
+        self.refresh_project();
         self.reset_to_authored();
+    }
+
+    /// Re-reads the directory the browser is showing.
+    ///
+    /// The tree is cached, so a file added or removed outside the editor is
+    /// invisible until something asks for it again. Opening or reloading a
+    /// scene asks, and so does the browser's own refresh control — which is
+    /// what used to be an inert filter icon.
+    fn refresh_project(&mut self) {
+        self.project = ProjectTree::beside(self.file.path());
     }
 
     /// Turns pointer input over the viewport into camera movement.
@@ -691,7 +718,7 @@ impl EditorApp {
     /// input handling stands down rather than acting on keys aimed at the
     /// dialog.
     fn confirm_dialog(&mut self, context: &egui::Context) -> bool {
-        let Some(action) = self.confirming else {
+        let Some(action) = self.confirming.clone() else {
             return false;
         };
         let saveable = self.file.path().is_some();
@@ -967,6 +994,8 @@ impl EditorApp {
     }
 
     fn asset_panel(&mut self, ui: &mut egui::Ui) {
+        let context = ui.ctx().clone();
+        let mut action = BrowserAction::None;
         let (panel, default, min, max) = match self.preferences.layout {
             // A tall column, which is what makes the list view worth having.
             WorkspaceLayout::TwoByThree => {
@@ -1003,17 +1032,30 @@ impl EditorApp {
                 });
                 ui.separator();
                 match self.preferences.bottom_tab {
-                    BottomTab::Project => project_browser(
-                        ui,
-                        &mut self.asset_search,
-                        &mut self.preferences.asset_view,
-                        folders,
-                    ),
+                    BottomTab::Project => {
+                        action = project_browser(
+                            ui,
+                            &mut self.asset_search,
+                            &mut self.preferences.asset_view,
+                            folders,
+                            &self.project,
+                            self.file.path(),
+                        );
+                    }
                     BottomTab::Console => {
                         console_view(ui, self.world.len(), self.lifecycle.state());
                     }
                 }
             });
+        // Acted on outside the panel, because both answers write to the field
+        // the browser was reading from.
+        match action {
+            BrowserAction::None => {}
+            BrowserAction::Refresh => self.refresh_project(),
+            BrowserAction::Open(path) => {
+                self.discard_or_confirm(Discarding::OpenPath(path), &context);
+            }
+        }
     }
 
     /// Chooses how the workspace is arranged.
@@ -1853,17 +1895,27 @@ fn vector_row(ui: &mut egui::Ui, label: &str, values: &mut [f32; 3], lock_z: boo
 ///
 /// Each entry carries its kind as well as its name, because a list has room to
 /// say what a thing is and a grid of generic icons does not.
-fn project_assets() -> [(MaterialIcon, &'static str, &'static str); 8] {
-    [
-        (ICON_FOLDER, "Materials", "Folder"),
-        (ICON_FOLDER, "Models", "Folder"),
-        (ICON_FOLDER, "Scenes", "Folder"),
-        (ICON_FOLDER, "Scripts", "Folder"),
-        (ICON_DESCRIPTION, "demo.scene", "Scene"),
-        (ICON_VIEW_IN_AR, "checker_cube", "Mesh"),
-        (ICON_IMAGE, "badge", "Texture"),
-        (ICON_CODE, "scene.rs", "Script"),
-    ]
+/// What a frame of the project browser asked for.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+enum BrowserAction {
+    #[default]
+    None,
+    /// Re-read the directory, because the editor caches it.
+    Refresh,
+    /// Open a scene the browser is showing.
+    Open(PathBuf),
+}
+
+/// The icon a kind of file is drawn with.
+const fn asset_icon(kind: AssetKind) -> MaterialIcon {
+    match kind {
+        AssetKind::Folder => ICON_FOLDER,
+        AssetKind::Scene => ICON_DESCRIPTION,
+        AssetKind::Texture | AssetKind::Font => ICON_IMAGE,
+        AssetKind::Mesh => ICON_VIEW_IN_AR,
+        AssetKind::Script => ICON_CODE,
+        AssetKind::Other => ICON_DEPLOYED_CODE,
+    }
 }
 
 /// The project browser, in one column or two.
@@ -1872,34 +1924,43 @@ fn project_assets() -> [(MaterialIcon, &'static str, &'static str); 8] {
 /// column width the folder tree and the asset list were drawing over each
 /// other. So the narrow arrangement drops the tree rather than shrinking it,
 /// which is also why a list reads better there than a grid of identical icons.
-fn project_browser(ui: &mut egui::Ui, search: &mut String, view: &mut AssetView, folders: bool) {
+fn project_browser(
+    ui: &mut egui::Ui,
+    search: &mut String,
+    view: &mut AssetView,
+    folders: bool,
+    project: &ProjectTree,
+    open: Option<&Path>,
+) -> BrowserAction {
     if !folders {
-        asset_column(ui, search, view);
-        return;
+        return asset_column(ui, search, view, project, open);
     }
+    let mut action = BrowserAction::None;
     ui.horizontal(|ui| {
         ui.vertical(|ui| {
             ui.set_width(174.0);
-            for (label, selected, depth) in [
-                ("Assets", true, 0),
-                ("Materials", false, 1),
-                ("Models", false, 1),
-                ("Scenes", false, 1),
-                ("Scripts", false, 1),
-                ("Textures", false, 1),
-            ] {
-                folder_row(ui, label, selected, depth);
+            folder_row(ui, &project.label(), true, 0);
+            for folder in project.folders() {
+                folder_row(ui, &folder.name, false, folder.depth + 1);
             }
         });
         ui.separator();
-        ui.vertical(|ui| asset_column(ui, search, view));
+        ui.vertical(|ui| action = asset_column(ui, search, view, project, open));
     });
+    action
 }
 
 /// The asset side of the browser: what it is showing, and how.
-fn asset_column(ui: &mut egui::Ui, search: &mut String, view: &mut AssetView) {
+fn asset_column(
+    ui: &mut egui::Ui,
+    search: &mut String,
+    view: &mut AssetView,
+    project: &ProjectTree,
+    open: Option<&Path>,
+) -> BrowserAction {
+    let mut action = BrowserAction::None;
     ui.horizontal(|ui| {
-        ui.label(RichText::new("Assets").size(12.0).color(TEXT));
+        ui.label(RichText::new(project.label()).size(12.0).color(TEXT));
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             if icon_button(ui, ICON_VIEW_LIST, *view == AssetView::List, "List view").clicked() {
                 *view = AssetView::List;
@@ -1907,7 +1968,12 @@ fn asset_column(ui: &mut egui::Ui, search: &mut String, view: &mut AssetView) {
             if icon_button(ui, ICON_GRID_VIEW, *view == AssetView::Grid, "Grid view").clicked() {
                 *view = AssetView::Grid;
             }
-            icon_button(ui, ICON_FILTER_LIST, false, "Filter assets");
+            // The directory is read when a scene is opened, so a file added
+            // outside the editor needs asking for. This slot used to hold a
+            // filter icon that did nothing.
+            if icon_button(ui, ICON_REFRESH, false, "Re-read the project directory").clicked() {
+                action = BrowserAction::Refresh;
+            }
             // Whatever is left after the buttons, rather than a fixed width
             // that overflowed the moment the browser became a column.
             let room = (ui.available_width() - 6.0).clamp(60.0, 210.0);
@@ -1918,53 +1984,153 @@ fn asset_column(ui: &mut egui::Ui, search: &mut String, view: &mut AssetView) {
         });
     });
     ui.add_space(8.0);
+    if let Some(error) = project.error() {
+        ui.horizontal(|ui| {
+            ui.add_space(8.0);
+            ui.label(RichText::new(error).size(11.0).color(TEXT_FAINT));
+        });
+        return action;
+    }
+    let searching = !search.trim().is_empty();
+    let entries = project.matching(search);
+    if entries.is_empty() {
+        ui.horizontal(|ui| {
+            ui.add_space(8.0);
+            let message = if searching {
+                "Nothing matches"
+            } else {
+                "This directory is empty"
+            };
+            ui.label(RichText::new(message).size(11.0).color(TEXT_FAINT));
+        });
+        return action;
+    }
     // A project has more assets than a dock has room for, in either
     // presentation. Scrolling here is what lets the list be the default
     // without the last few assets falling off the bottom.
     egui::ScrollArea::vertical()
         .auto_shrink([false, false])
-        .show(ui, |ui| match view {
-            AssetView::Grid => {
-                ui.horizontal_wrapped(|ui| {
-                    for (icon, label, _) in project_assets() {
-                        asset_tile(ui, icon, label);
+        .show(ui, |ui| {
+            match view {
+                AssetView::Grid => {
+                    ui.horizontal_wrapped(|ui| {
+                        for entry in &entries {
+                            if asset_tile(ui, entry, open).double_clicked() {
+                                action = BrowserAction::Open(entry.path.clone());
+                            }
+                        }
+                    });
+                }
+                AssetView::List => {
+                    // Rows are denser than egui's default spacing, so the dock
+                    // shows a useful number of them without taking height from
+                    // the viewport it sits under.
+                    ui.spacing_mut().item_spacing.y = 1.0;
+                    for entry in &entries {
+                        // A search shows a flat list, so an indentation would
+                        // point at a parent the search has removed.
+                        let depth = if searching { 0 } else { entry.depth };
+                        if asset_row(ui, entry, depth, searching, open).double_clicked() {
+                            action = BrowserAction::Open(entry.path.clone());
+                        }
                     }
-                });
-            }
-            AssetView::List => {
-                // Rows are denser than egui's default spacing, so the dock
-                // shows a useful number of them without taking height from
-                // the viewport it sits under.
-                ui.spacing_mut().item_spacing.y = 1.0;
-                for (icon, label, kind) in project_assets() {
-                    asset_row(ui, icon, label, kind);
                 }
             }
+            if project.truncated() {
+                ui.horizontal(|ui| {
+                    ui.add_space(8.0);
+                    ui.label(
+                        RichText::new("More files than the browser reads")
+                            .size(10.0)
+                            .color(TEXT_FAINT),
+                    );
+                });
+            }
         });
+    action
 }
 
-/// One asset as a row: what it is called, and what it is.
-fn asset_row(ui: &mut egui::Ui, icon: MaterialIcon, label: &str, kind: &str) {
-    let highlighted = label == "demo.scene";
-    ui.horizontal(|ui| {
-        ui.add_space(4.0);
-        ui.label(
-            icon.outlined()
-                .rich_text()
-                .size(15.0)
-                .color(if highlighted { ACCENT } else { TEXT_FAINT }),
-        );
-        ui.add_space(2.0);
-        ui.label(RichText::new(label).size(11.0).color(if highlighted {
-            TEXT
-        } else {
-            TEXT_MUTED
-        }));
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.add_space(10.0);
-            ui.label(RichText::new(kind).size(10.0).color(TEXT_FAINT));
-        });
+/// One asset as a row: what it is called, what it is, and whether it is the
+/// scene the editor has open.
+///
+/// A scene row answers a double click, because opening one is the only thing
+/// the editor can do with a file. Every other row is a listing and says so by
+/// not responding — a listing that lists is not the same as a control that
+/// looks like it does something.
+fn asset_row(
+    ui: &mut egui::Ui,
+    entry: &ProjectEntry,
+    depth: usize,
+    searching: bool,
+    open: Option<&Path>,
+) -> Response {
+    let openable = entry.kind == AssetKind::Scene;
+    let highlighted = open.is_some_and(|path| path == entry.path);
+    let sense = if openable {
+        Sense::click()
+    } else {
+        Sense::hover()
+    };
+    let row = ui.scope_builder(egui::UiBuilder::new().sense(sense), |ui| {
+        ui.horizontal(|ui| {
+            ui.add_space(4.0 + hierarchy_indent(depth, 12.0));
+            // Every label in the row is given the row's own sense. A widget
+            // inside a scope takes precedence over the scope, and an ordinary
+            // label is selectable text, so it answers a double click by
+            // selecting a word rather than letting the row have it.
+            let icon = ui.add(
+                egui::Label::new(
+                    asset_icon(entry.kind)
+                        .outlined()
+                        .rich_text()
+                        .size(15.0)
+                        .color(if highlighted { ACCENT } else { TEXT_FAINT }),
+                )
+                .sense(sense),
+            );
+            ui.add_space(2.0);
+            // Under a search the path below the root is what tells two files of
+            // the same name apart.
+            let text = if searching {
+                &entry.relative
+            } else {
+                &entry.name
+            };
+            let label = ui.add(
+                egui::Label::new(RichText::new(text).size(11.0).color(if highlighted {
+                    TEXT
+                } else {
+                    TEXT_MUTED
+                }))
+                // Not selectable text: a double click on a file name means
+                // open it, and selecting the word "json" is not a thing anyone
+                // wanted from a file listing.
+                .selectable(false)
+                .sense(sense),
+            );
+            let kind = ui
+                .with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    ui.add_space(10.0);
+                    ui.add(
+                        egui::Label::new(
+                            RichText::new(entry.kind.label())
+                                .size(10.0)
+                                .color(TEXT_FAINT),
+                        )
+                        .sense(sense),
+                    )
+                })
+                .inner;
+            icon | label | kind
+        })
+        .inner
     });
+    let row = row.response | row.inner;
+    if openable {
+        row.on_hover_text("Double-click to open")
+    } else {
+        row
+    }
 }
 
 fn folder_row(ui: &mut egui::Ui, label: &str, selected: bool, depth: usize) {
@@ -1985,25 +2151,32 @@ fn folder_row(ui: &mut egui::Ui, label: &str, selected: bool, depth: usize) {
     });
 }
 
-fn asset_tile(ui: &mut egui::Ui, icon: MaterialIcon, label: &str) {
+fn asset_tile(ui: &mut egui::Ui, entry: &ProjectEntry, open: Option<&Path>) -> Response {
+    let highlighted = open.is_some_and(|path| path == entry.path);
     ui.vertical(|ui| {
-        ui.add_sized(
+        let tile = ui.add_sized(
             [62.0, 54.0],
-            egui::Button::new(icon.outlined().rich_text().size(27.0).color(
-                if label == "demo.scene" {
-                    ACCENT
-                } else {
-                    TEXT_MUTED
-                },
-            ))
+            egui::Button::new(
+                asset_icon(entry.kind)
+                    .outlined()
+                    .rich_text()
+                    .size(27.0)
+                    .color(if highlighted { ACCENT } else { TEXT_MUTED }),
+            )
             .fill(PANEL_RAISED)
             .stroke(Stroke::new(1.0, BORDER_SUBTLE)),
         );
         ui.add_sized(
             [62.0, 17.0],
-            egui::Label::new(RichText::new(label).size(10.0).color(TEXT_MUTED)).truncate(),
+            egui::Label::new(RichText::new(&entry.name).size(10.0).color(TEXT_MUTED)).truncate(),
         );
-    });
+        if entry.kind == AssetKind::Scene {
+            tile.on_hover_text("Double-click to open")
+        } else {
+            tile
+        }
+    })
+    .inner
 }
 
 fn console_view(ui: &mut egui::Ui, entity_count: usize, state: EngineState) {
@@ -2829,6 +3002,52 @@ mod tests {
         clicked.get()
     }
 
+    /// Whether an asset row reports a double click `offset` points into it.
+    ///
+    /// Driven through real frames for the same reason the hierarchy row is: the
+    /// row is a sensing scope wrapped around labels, and whether a label
+    /// swallows the click is not something reading the code answers.
+    fn asset_row_double_click_at(kind: AssetKind, offset: Vec2) -> bool {
+        let context = egui::Context::default();
+        egui_material_icons::initialize(&context);
+        let entry = ProjectEntry {
+            path: PathBuf::from("/project/level.scene.json"),
+            name: "level.scene.json".to_owned(),
+            relative: "level.scene.json".to_owned(),
+            kind,
+            depth: 0,
+        };
+        let row = std::cell::Cell::new(Rect::NOTHING);
+        let opened = std::cell::Cell::new(false);
+        let draw = |events: Vec<egui::Event>| {
+            let input = egui::RawInput {
+                events,
+                ..Default::default()
+            };
+            context
+                .run_ui(input, |ui| {
+                    let response = asset_row(ui, &entry, 0, false, None);
+                    row.set(response.rect);
+                    opened.set(response.double_clicked());
+                })
+                .drop_without_applying_deltas();
+        };
+
+        draw(Vec::new());
+        let target = row.get().left_center() + offset;
+        let button = |pressed| egui::Event::PointerButton {
+            pos: target,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: egui::Modifiers::default(),
+        };
+        draw(vec![egui::Event::PointerMoved(target), button(true)]);
+        draw(vec![button(false)]);
+        draw(vec![button(true)]);
+        draw(vec![button(false)]);
+        opened.get()
+    }
+
     /// Which shortcuts a key press produces, read through a real egui frame.
     fn shortcuts_for(modifiers: egui::Modifiers, key: egui::Key) -> Shortcuts {
         let context = egui::Context::default();
@@ -2967,6 +3186,33 @@ mod tests {
         }
     }
 
+    /// A scene row opens the scene, and answers everywhere rather than only on
+    /// its text — the same complaint as the hierarchy row, in the other panel.
+    ///
+    /// The labels have to carry the row's sense: a widget inside a sensing
+    /// scope takes precedence over the scope, and an ordinary egui label is
+    /// selectable text, so it answered the double click by selecting the word
+    /// "json" and the row never heard about it.
+    #[test]
+    fn double_clicking_a_scene_row_opens_it() {
+        for offset in [2.0_f32, 10.0, 20.0, 40.0, 80.0] {
+            assert!(
+                asset_row_double_click_at(AssetKind::Scene, Vec2::new(offset, 0.0)),
+                "a double click {offset} points into a scene row was lost"
+            );
+        }
+    }
+
+    /// Everything else in the browser is a listing. A texture row that
+    /// responded would be offering something the editor cannot do.
+    #[test]
+    fn a_row_that_is_not_a_scene_is_a_listing() {
+        assert!(!asset_row_double_click_at(
+            AssetKind::Texture,
+            Vec2::new(40.0, 0.0)
+        ));
+    }
+
     /// The marker means the file and the world differ, not that something was
     /// touched. Undoing back to the saved state is being back at it.
     #[test]
@@ -3003,6 +3249,7 @@ mod tests {
     fn each_discarding_action_says_what_it_is_about_to_do() {
         for action in [
             Discarding::OpenAnother,
+            Discarding::OpenPath(PathBuf::from("other.scene.json")),
             Discarding::Reload,
             Discarding::Reset,
             Discarding::Close,

@@ -208,7 +208,9 @@ frame.
   dock
 - Play, pause, and stop, driving the real engine lifecycle rather than a display
   flag, and a separate **Discard changes** that returns the world to the file
-- A Project dock with a list/grid toggle, and a Console dock
+- A Project dock listing the real contents of the directory the open scene
+  lives in, with a list/grid toggle, a search that filters it, a refresh, and a
+  double click on a scene row to open it; and a Console dock
 - Preferences that survive a restart
 - A deterministic full-window screenshot captured in CI
 
@@ -223,13 +225,8 @@ under use and what the editor cannot express at all. This is the summary.
 - **Play, Pause, and Stop** — they move the engine lifecycle and nothing else. No
   frame is advanced, so no gameplay runs; the demo's own turning cube does not
   turn
-- **The asset search box** — accepts typing and filters nothing, which is worse
-  than the buttons that visibly do nothing
 - **`+` Add entity** and **Add Component** — not handled. Entities and components
   can only come from a file
-- **Filter assets**, the folder tree, and the asset rows themselves — decoration
-- **The project browser's contents** — eight hardcoded entries. It does not read
-  a directory, so it shows the same list whatever scene is open
 - **Edit, Scene, Build, Tools, Help** — plain labels, not menus. File and View
   open
 - **Tag** and **Layer** in the inspector — fixed text. The per-component property

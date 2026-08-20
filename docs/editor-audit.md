@@ -176,9 +176,9 @@ the pointer highlight: the control is drawn and does nothing when pressed.
 | Viewport click to select | 0 px | no picking |
 | Project / Console tabs | 122,990 px | work |
 | Grid / List | 154,079 / 384,933 px | work |
-| Asset filter icon | hover only | **inert** |
-| **Asset search box** | typing draws glyphs (579 px), list unchanged | **lies** — the needle is never read |
-| Asset rows, folder rows | 0–40 px | **inert**; `demo.scene` is highlighted by string comparison |
+| Asset filter icon | hover only | **inert** — **replaced** by a working refresh |
+| **Asset search box** | typing draws glyphs (579 px), list unchanged | **lies** — the needle is never read. **Fixed**: 2,651 px, filtering real files |
+| Asset rows, folder rows | 0–40 px | **inert**; `demo.scene` is highlighted by string comparison. **Fixed**: real files, the open scene highlighted because it is open, and a scene row opens on a double click |
 | Console | — | three synthesized lines; nothing the engine reports reaches it |
 | Inspector: name, transform, parent, Z lock | — | **unreachable** (§1); they work when a selection is forced |
 | Inspector: Tag, Layer | — | **inert** fixed text |
@@ -226,7 +226,7 @@ title is always "Sindri Editor".
 
 **Write-only state.** `mode` and `asset_search` are the only two `EditorApp`
 fields whose every reference is a write, and each corresponds to a control that
-appears to work.
+appears to work. **`asset_search` is read now**; `mode` still is not.
 
 ## 5. Engine capability the editor does not use
 
@@ -252,7 +252,8 @@ arm. The schema registry is right there, unused.
 
 **There is no asset concept.** A sheet slicer needs a sheet, a font picker needs
 fonts, a tile palette needs a tileset; all three need a browser that reads a
-directory.
+directory. **The browser reads one now**, which is the first half; picking an
+asset for a component field is the second.
 
 **`EditorMode` is dead state waiting for exactly this.** A tile painter is a
 tool mode. The enum and the toolbar exist and nothing reads them.

@@ -169,3 +169,7 @@ All notable changes to Sindri Next will be documented here.
 - Fixed Ctrl+Shift+Z performing an undo in the editor: egui ignores an extra modifier when matching, so the redo shortcut was consumed by the undo binding tested before it.
 - Added `SceneExtractor::world_camera_view`, which answers where the world camera looks under a given view adjustment, so a viewport can draw its own chrome without extracting a frame or keeping a second copy of the orbit maths.
 - Fixed the editor's axis indicator being painted at three fixed offsets: it now turns, foreshortens, and reorders its arms with the camera, which is the first thing in the editor that visibly answers where the viewport is looking from.
+- Made the editor's project browser read the directory the open scene lives in, replacing eight hardcoded entries that named files no project contained, with the walk bounded in depth and count so opening a scene in a source tree does not stall the editor.
+- Fixed the editor's asset search box accepting typing and filtering nothing: it now filters the browser to matching files, listed flat by their path below the root so a match is never indented under a parent the search removed.
+- Added opening a scene by double-clicking its row in the project browser, which asks about unsaved work the same way every other way of leaving a scene does.
+- Replaced the project browser's inert filter icon with a refresh that re-reads the directory, which is what a cached listing needs when a file appears beside it.
