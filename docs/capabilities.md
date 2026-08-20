@@ -167,6 +167,10 @@ is no longer wanted and says which IDs went, so a host can drop whatever it
 built from them. GPU upload stays with the host, which is the only thing that
 owns a device.
 
+On native, `AssetWatch` notices when the file behind a loaded asset changes and
+`AssetLoader::reload` loads it again, by polling modification time and length
+rather than subscribing to filesystem events.
+
 ---
 
 ## The editor
@@ -202,6 +206,8 @@ frame.
 - A confirmation before anything that would throw unsaved work away — opening
   another scene, reloading from disk, discarding changes, and closing the window
   — each naming what it is about to do and offering to save instead
+- Hot reload: saving a texture the open scene uses shows the edit within about a
+  second, without restarting, and without blinking through the missing checker
 - Loading the textures a scene names from the directory the scene lives in,
   through the real asset pipeline, so opening a project's scene shows that
   project's art rather than the two textures a demo crate supplied; each load or
@@ -274,8 +280,10 @@ collapsed and overflowed nothing; and the settings gear.
   adapter is planned as optional rather than built in
 - No tilemaps, particles, parallax, or pathfinding
 - No TypeScript SDK; the WASM binding crate does not exist
-- No hot reload, asset manifest, or slot reuse in the texture registry — a scene's
+- No asset manifest, and no slot reuse in the texture registry — a scene's
   textures are released when the scene is replaced, but not one at a time
+- Hot reload covers assets, not the scene file: editing a scene on disk while it
+  is open is not noticed
 - No deterministic system ordering
 
 ### Editor

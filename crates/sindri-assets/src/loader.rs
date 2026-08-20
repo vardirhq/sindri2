@@ -139,15 +139,33 @@ impl<D: AssetDecoder> AssetLoader<D> {
         self.start(id.clone())
     }
 
+    /// Loads an asset again, whatever it holds now.
+    ///
+    /// What hot reload calls when the file behind an asset has changed: the
+    /// value held is out of date, and having loaded successfully is exactly why
+    /// it must load again. An asset already in flight is left alone — the read
+    /// under way may be picking up the new bytes anyway, and if it is not, the
+    /// next save reports the change again.
+    pub fn reload(&mut self, id: &AssetId) -> Result<(), AssetLoaderError> {
+        if self.status(id) == Some(AssetStatus::Loading) {
+            return Ok(());
+        }
+        self.handles.remove(id);
+        self.start(id.clone())
+    }
+
     /// The six steps, in the order that works.
     fn start(&mut self, id: AssetId) -> Result<(), AssetLoaderError> {
         let handle = self.store.request(id.clone());
         // Taking out a new handle does not reset the entry behind it: an asset
-        // that failed is still failed, and a failed entry cannot go straight to
-        // loading. This is the trap that makes the sequence worth having in one
-        // place — nothing about `request` suggests the state survived.
-        if self.store.status(&handle)? == AssetStatus::Failed {
-            self.store.retry(&handle)?;
+        // that failed is still failed and a loaded one is still loaded, and
+        // neither can go straight to loading. This is the trap that makes the
+        // sequence worth having in one place — nothing about `request` suggests
+        // the state survived.
+        match self.store.status(&handle)? {
+            AssetStatus::Failed => self.store.retry(&handle)?,
+            AssetStatus::Ready => self.store.reload(&handle)?,
+            AssetStatus::Queued | AssetStatus::Loading => {}
         }
         // Enqueued before the entry moves to loading, so a queue that is full
         // leaves nothing claiming to be in flight. The handle is dropped on the
@@ -395,6 +413,55 @@ mod tests {
             [&id("kept.png")],
             "and the loader is no longer holding it"
         );
+    }
+
+    /// What hot reload is: an asset that already loaded is loaded again, and the
+    /// new bytes replace the old value.
+    #[test]
+    fn reloading_a_ready_asset_loads_it_again() {
+        let mut source = MemoryAssetSource::default();
+        source.insert(AssetBytes::new(id("art.png"), b"four".to_vec()));
+        let mut loader = AssetLoader::new(source, AssetLoadQueueConfig::default(), CountingDecoder)
+            .expect("the queue starts");
+
+        loader.request(id("art.png")).unwrap();
+        settle(&mut loader);
+        assert_eq!(loader.get(&id("art.png")), Some(&4));
+
+        loader.reload(&id("art.png")).unwrap();
+        assert_eq!(loader.outstanding(), 1, "asking again is a new load");
+        assert_eq!(
+            settle(&mut loader),
+            [AssetLoadOutcome::Ready(id("art.png"))],
+            "and it is reported as arriving, so a host can take it"
+        );
+        assert_eq!(loader.get(&id("art.png")), Some(&4));
+    }
+
+    /// Unlike `request`, which is idempotent on purpose, `reload` is the caller
+    /// saying the held value is wrong.
+    #[test]
+    fn reloading_is_not_refused_the_way_re_requesting_is() {
+        let mut loader = loader(&[("art.png", b"bytes")]);
+        loader.request(id("art.png")).unwrap();
+        settle(&mut loader);
+
+        loader.request(id("art.png")).unwrap();
+        assert_eq!(loader.outstanding(), 0, "asking again does nothing");
+        loader.reload(&id("art.png")).unwrap();
+        assert_eq!(loader.outstanding(), 1, "saying it is stale does");
+        settle(&mut loader);
+    }
+
+    /// A file that changes while its first read is in flight must not be
+    /// enqueued twice.
+    #[test]
+    fn reloading_something_still_loading_leaves_it_alone() {
+        let mut loader = loader(&[("art.png", b"bytes")]);
+        loader.request(id("art.png")).unwrap();
+        loader.reload(&id("art.png")).unwrap();
+        assert_eq!(loader.outstanding(), 1);
+        assert_eq!(settle(&mut loader).len(), 1);
     }
 
     /// An asset released while it was still loading must not come back and take

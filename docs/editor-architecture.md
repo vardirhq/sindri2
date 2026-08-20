@@ -157,6 +157,11 @@ Loading is genuinely asynchronous, which shows: a scene opens and its textures a
 later, drawing as the missing checker until they do. That is the honest behaviour and the one the
 browser will force anyway.
 
+Once a texture has loaded, the file behind it is watched. Saving it in an image editor loads it
+again and rebinds, within about a second, without restarting anything — and the binding is left
+pointing at the old texture until the new one arrives, so an edit does not blink the scene through
+the missing checker on its way to showing itself.
+
 ## What the editor has to say
 
 Anything the editor reports goes to two places at once, and the split is what makes each of them

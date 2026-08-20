@@ -17,11 +17,12 @@
 use std::{
     collections::BTreeSet,
     path::{Path, PathBuf},
+    time::{Duration, Instant},
 };
 
 use sindri_assets::{
-    AssetLoadOutcome, AssetLoadQueueConfig, AssetLoader, FileSystemAssetSource, TextureAsset,
-    TextureAssetDecoder,
+    AssetLoadOutcome, AssetLoadQueueConfig, AssetLoader, AssetWatch, FileSystemAssetSource,
+    TextureAsset, TextureAssetDecoder,
 };
 use sindri_core::{AssetId, World};
 use sindri_render::{Texture2D, TextureError, TextureRegistry};
@@ -35,11 +36,20 @@ use sindri_scene::{PROCEDURAL_TEXTURES, TextureBindings, referenced_textures};
 /// dropping the overflow.
 const QUEUE: AssetLoadQueueConfig = AssetLoadQueueConfig::new(2, 64);
 
+/// How often the files behind a scene's textures are examined.
+///
+/// A second is far below the time it takes to notice an edit did not appear,
+/// and far above the cost of stating a scene's worth of paths. Polling rather
+/// than subscribing is deliberate — see `AssetWatch`.
+const WATCH_INTERVAL: Duration = Duration::from_secs(1);
+
 /// Something worth telling the user about a texture.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TextureNote {
     /// It is on the GPU and bound.
     Loaded(String),
+    /// It changed on disk and has been loaded again.
+    Reloaded(String),
     /// It will not arrive, and this says why. The missing checker draws instead.
     Failed(String),
 }
@@ -56,6 +66,14 @@ pub struct SceneTextures {
     /// scene that has never been saved, or one that failed to open. Procedural
     /// textures still work, because they do not come from anywhere.
     loader: Option<AssetLoader<TextureAssetDecoder>>,
+    /// What the files behind the loaded textures looked like when last examined.
+    ///
+    /// Hot reload for native development, which is the point at which the
+    /// editor stops being a thing you restart to see a texture you just saved.
+    watch: Option<AssetWatch>,
+    /// When the files were last examined, so the frame loop is not stating
+    /// paths sixty times a second to learn nothing.
+    last_examined: Instant,
     registry: TextureRegistry,
     bindings: TextureBindings,
 }
@@ -84,10 +102,13 @@ impl SceneTextures {
             );
             bindings.bind(procedural.reference, texture);
         }
+        let root = root_of(scene);
         Self {
-            loader: root_of(scene).and_then(|root| {
+            loader: root.as_deref().and_then(|root| {
                 AssetLoader::new(FileSystemAssetSource::new(root), QUEUE, TextureAssetDecoder).ok()
             }),
+            watch: root.map(AssetWatch::new),
+            last_examined: Instant::now(),
             registry,
             bindings,
         }
@@ -118,6 +139,7 @@ impl SceneTextures {
 
         let Self {
             loader: Some(loader),
+            watch,
             bindings,
             ..
         } = self
@@ -139,6 +161,9 @@ impl SceneTextures {
         // than to a handle nothing owns.
         for released in loader.retain(&wanted) {
             bindings.unbind(released.as_str());
+        }
+        if let Some(watch) = watch.as_mut() {
+            watch.retain(&wanted);
         }
         for id in &wanted {
             if bindings.get(id.as_str()).is_some() {
@@ -167,15 +192,17 @@ impl SceneTextures {
     /// because the device belongs to the host, and a loader that owned one could
     /// not be tested without one.
     pub fn poll(&mut self, device: &wgpu::Device, queue: &wgpu::Queue) -> Vec<TextureNote> {
+        let mut notes = self.examine_files();
         let Self {
             loader: Some(loader),
+            watch,
             registry,
             bindings,
+            ..
         } = self
         else {
-            return Vec::new();
+            return notes;
         };
-        let mut notes = Vec::new();
         for outcome in loader.poll() {
             match outcome {
                 AssetLoadOutcome::Ready(id) => {
@@ -185,11 +212,21 @@ impl SceneTextures {
                     let asset_size = (asset.width(), asset.height());
                     match upload(device, queue, id.as_str(), asset) {
                         Ok(texture) => {
-                            bindings.bind(id.as_str(), registry.insert(texture));
-                            notes.push(TextureNote::Loaded(format!(
-                                "Loaded {id} ({}x{})",
-                                asset_size.0, asset_size.1
-                            )));
+                            // Replaces whatever the reference resolved to
+                            // before, which is what makes a reload visible: the
+                            // old handle is simply no longer bound.
+                            let again = bindings.bind(id.as_str(), registry.insert(texture));
+                            let message = format!("{id} ({}x{})", asset_size.0, asset_size.1);
+                            notes.push(if again.is_some() {
+                                TextureNote::Reloaded(format!("Reloaded {message}"))
+                            } else {
+                                TextureNote::Loaded(format!("Loaded {message}"))
+                            });
+                            // Watched only once it has actually loaded, so the
+                            // stamp records the file the picture is showing.
+                            if let Some(watch) = watch.as_mut() {
+                                watch.watch(&id);
+                            }
                         }
                         Err(error) => notes.push(TextureNote::Failed(format!("{id}: {error}"))),
                     }
@@ -202,6 +239,35 @@ impl SceneTextures {
                     error.id(),
                     error.message()
                 ))),
+            }
+        }
+        notes
+    }
+
+    /// Looks at the files behind the loaded textures, at most once a second, and
+    /// loads again whatever changed.
+    ///
+    /// This is the whole of hot reload from the editor's side. The binding is
+    /// left pointing at the old texture until the new one arrives, so saving an
+    /// image does not blink the scene through the missing checker on its way to
+    /// showing the edit.
+    fn examine_files(&mut self) -> Vec<TextureNote> {
+        if self.last_examined.elapsed() < WATCH_INTERVAL {
+            return Vec::new();
+        }
+        self.last_examined = Instant::now();
+        let Self {
+            loader: Some(loader),
+            watch: Some(watch),
+            ..
+        } = self
+        else {
+            return Vec::new();
+        };
+        let mut notes = Vec::new();
+        for id in watch.changed() {
+            if let Err(error) = loader.reload(&id) {
+                notes.push(TextureNote::Failed(format!("{id}: {error}")));
             }
         }
         notes

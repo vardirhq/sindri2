@@ -15,6 +15,8 @@ mod url;
 mod fetch;
 #[cfg(not(target_arch = "wasm32"))]
 mod filesystem;
+#[cfg(not(target_arch = "wasm32"))]
+mod watch;
 
 pub use decode::{
     AssetCompletionApplyError, AssetDecodeError, AssetDecoder, DecodedAssetCompletion,
@@ -32,3 +34,5 @@ pub use queue::{
 };
 pub use source::{AssetBytes, AssetSource, AssetSourceError, AssetSourceFuture};
 pub use url::{UrlRoot, UrlRootError};
+#[cfg(not(target_arch = "wasm32"))]
+pub use watch::AssetWatch;

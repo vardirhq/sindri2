@@ -190,3 +190,5 @@ All notable changes to Sindri Next will be documented here.
 - Moved `encode_prepared_frame` and its target and renderer types out of the cube example and into `sindri-render`, which is where a stage that knows nothing about worlds or scenes belongs; the editor no longer depends on an example in order to draw.
 - Made the editor's console wrap long lines, so an asset failure naming a path and an operating system error can be read rather than clipped at the edge of the dock.
 - Gave the editor's fixture scene its own copy of the badge texture, so it resolves from its own directory like any other project's, with a test holding it to naming only textures that actually resolve.
+- Added hot reload for native development: saving a texture the open scene uses shows the edit in the editor within about a second, without restarting and without blinking through the missing checker.
+- Added `AssetWatch`, which notices that the file behind an asset changed by polling its modification time and length, and `AssetLoader::reload`, which loads an asset again because what is held is stale rather than because it failed.

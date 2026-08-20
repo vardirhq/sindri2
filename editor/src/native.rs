@@ -787,7 +787,9 @@ impl EditorApp {
     fn record_texture_notes(&mut self, notes: Vec<TextureNote>) {
         for note in notes {
             match note {
-                TextureNote::Loaded(message) => self.console.info(message),
+                TextureNote::Loaded(message) | TextureNote::Reloaded(message) => {
+                    self.console.info(message);
+                }
                 TextureNote::Failed(message) => self.console.warning(message),
             }
         }

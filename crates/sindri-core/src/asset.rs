@@ -428,6 +428,17 @@ impl<T> AssetStore<T> {
         self.transition(handle, AssetStatus::Failed, StoredAsset::Queued)
     }
 
+    /// Marks a ready asset as needing loading again.
+    ///
+    /// What hot reload does: the bytes on disk changed, so the value held is
+    /// out of date, and the fact that it loaded successfully is exactly why it
+    /// must load again. Separate from [`Self::retry`] because the two start
+    /// from opposite states and mean opposite things — one is "that did not
+    /// work", the other is "that worked and is now stale".
+    pub fn reload(&mut self, handle: &AssetHandle<T>) -> Result<(), AssetStoreError> {
+        self.transition(handle, AssetStatus::Ready, StoredAsset::Queued)
+    }
+
     pub fn get(&self, handle: &AssetHandle<T>) -> Result<Option<&T>, AssetStoreError> {
         Ok(match &self.entry(handle)?.state {
             StoredAsset::Ready(value) => Some(value),

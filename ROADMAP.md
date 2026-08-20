@@ -110,7 +110,7 @@ Exit gate: a serialized scene drives a combined native 2D/3D example without ren
 - [x] Load textures and scene JSON, driven end to end by `AssetLoader` and used by the editor
 - [x] Add fallback/error assets and actionable diagnostics (the missing-texture checker draws in place of an unresolved reference, and every load failure names the asset, the source, and what went wrong)
 - [x] Add asset root and URL resolution rules
-- [ ] Add hot reload for native development
+- [x] Add hot reload for native development (assets; editing the open scene file on disk is not watched)
 - [ ] Define package/export manifest with content hashes
 - [ ] Prevent duplicate loads and release unused GPU assets (duplicates are prevented and a scene's textures are released with the scene; releasing one texture at a time still needs slot reuse in the registry)
 - [ ] Add image decoding compatibility tests on native and WASM
