@@ -10,5 +10,8 @@ repository.workspace = true
 decay-ir = { path = "../decay-ir" }
 decay-syntax = { path = "../decay-syntax" }
 
+[dev-dependencies]
+decay-semantic = { path = "../decay-semantic" }
+
 [lints]
 workspace = true
