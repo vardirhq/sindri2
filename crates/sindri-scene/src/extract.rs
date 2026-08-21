@@ -14,8 +14,9 @@ use sindri_render::{
 use thiserror::Error;
 
 use crate::{
-    AnimationError, CameraComponent, MeshComponent, MeshPrimitive, SpriteAnchor,
-    SpriteAnimationComponent, SpriteAnimations, SpriteComponent, SpriteSpace, TextureBindings,
+    AnimationError, CameraComponent, MeshComponent, MeshPrimitive, PROCEDURAL_TEXTURES,
+    SpriteAnchor, SpriteAnimationComponent, SpriteAnimations, SpriteComponent, SpriteSpace,
+    TextureBindings,
 };
 
 /// Which projection the world camera uses.
@@ -73,9 +74,40 @@ impl SceneExtractor {
     /// Registers the built-in `sindri.*` components.
     pub fn new() -> Result<Self, SceneExtractError> {
         let mut components = ComponentSchemaRegistry::default();
-        components.register::<CameraComponent>("Camera")?;
-        components.register::<MeshComponent>("Mesh")?;
-        components.register::<SpriteComponent>("Sprite")?;
+        // Each default is what a freshly added component of that type looks
+        // like, and is what makes the type addable at all. They are chosen to
+        // be visible rather than neutral: a sprite added to an entity should
+        // appear, or the author is left wondering whether the click worked.
+        components.register_with_default::<CameraComponent>(
+            "Camera",
+            serde_json::json!({
+                "projection": "perspective",
+                "target": [0.0, 0.0, 0.0],
+                "up": [0.0, 1.0, 0.0],
+                "vertical_fov_degrees": 60.0,
+                "near": 0.1,
+                "far": 100.0
+            }),
+        )?;
+        components.register_with_default::<MeshComponent>(
+            "Mesh",
+            serde_json::json!({
+                "primitive": "cube",
+                "texture": PROCEDURAL_TEXTURES[0].reference,
+                "layer": 0
+            }),
+        )?;
+        components.register_with_default::<SpriteComponent>(
+            "Sprite",
+            serde_json::json!({
+                "texture": PROCEDURAL_TEXTURES[0].reference,
+                "tint": [1.0, 1.0, 1.0, 1.0],
+                "layer": 0
+            }),
+        )?;
+        // No default: an animation with no sheet and no clips is a component
+        // that does nothing, and one with an invented sheet would claim a
+        // texture is laid out a way it is not.
         components.register::<SpriteAnimationComponent>("Sprite Animation")?;
         Ok(Self { components })
     }

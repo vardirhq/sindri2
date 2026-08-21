@@ -15,7 +15,7 @@ use eframe::{
 use egui_material_icons::{
     MaterialIcon,
     icons::{
-        ICON_ACCOUNT_TREE, ICON_CAMERA_ALT, ICON_CENTER_FOCUS_STRONG, ICON_CODE,
+        ICON_ACCOUNT_TREE, ICON_CAMERA_ALT, ICON_CENTER_FOCUS_STRONG, ICON_CODE, ICON_DELETE,
         ICON_DEPLOYED_CODE, ICON_DESCRIPTION, ICON_FOLDER, ICON_GRID_VIEW, ICON_IMAGE,
         ICON_OPEN_WITH, ICON_PAUSE, ICON_PLAY_ARROW, ICON_REDO, ICON_REFRESH, ICON_SEARCH,
         ICON_STOP, ICON_UNDO, ICON_VIEW_IN_AR, ICON_VIEW_LIST,
@@ -24,22 +24,21 @@ use egui_material_icons::{
 use glam::{Mat4, Vec2 as GlamVec2, Vec3};
 use serde_json::Value;
 use sindri_core::{
-    CommandBuffer, CommandHistory, EngineLifecycle, EngineState, EntityData, EntityId,
-    FixedStepConfig, SceneDocument, Transform3D, UnknownComponentPolicy, World, WorldCommand,
+    CommandBuffer, CommandHistory, ComponentMetadata, ComponentSchemaRegistry, EngineLifecycle,
+    EngineState, EntityData, EntityId, FixedStepConfig, SceneDocument, Transform3D,
+    UnknownComponentPolicy, World, WorldCommand,
 };
-use sindri_decay::ScriptComponent;
+use sindri_decay::{ScriptComponent, ScriptValue};
 use sindri_render::{
     FrameRenderers, FrameTarget, SpriteBatchRenderer, TexturedCubeRenderer, Viewport,
     ViewportTarget, encode_prepared_frame,
 };
-use sindri_scene::{
-    CameraComponent, CameraView, MeshComponent, MeshPrimitive, SceneExtractor, SpriteAnchor,
-    SpriteAnimations, SpriteComponent, SpriteSpace, ViewCamera, WorldProjection,
-};
+use sindri_scene::{CameraView, SceneExtractor, SpriteAnimations, ViewCamera, WorldProjection};
 
 use crate::{
     console::{Console, Entry, Level},
     input::EditorInput,
+    inspector,
     // `egui::Layout` is a different thing entirely and is already in scope.
     preferences::{AssetView, BottomTab, CameraProjection, Layout as WorkspaceLayout, Preferences},
     project::{AssetKind, ProjectEntry, ProjectTree},
@@ -885,10 +884,17 @@ impl EditorApp {
             self.lifecycle.state() == EngineState::Running && !context.egui_wants_keyboard_input();
         self.input.update(context, listening);
 
+        // Compiled whatever the transport says, so a broken script reports at
+        // the scene it was opened with and the inspector can read what a script
+        // wants authored without anyone pressing Play.
+        let components = self.scene.components().clone();
+        for failure in self.scripts.compile(&self.world, &components) {
+            self.console.error(failure.to_string());
+        }
+
         if delta == 0.0 {
             return;
         }
-        let components = self.scene.components().clone();
         let report = self
             .scripts
             .advance(&mut self.world, &components, self.input.state(), delta);
@@ -956,6 +962,83 @@ impl EditorApp {
         if let Err(error) = self.history.apply(transaction, &mut self.world) {
             self.report(error.to_string());
         }
+    }
+
+    /// The components this entity does not have and the registry can create.
+    ///
+    /// A type with no default payload is missing from the list rather than
+    /// offered and refused: a button that adds a component the engine will
+    /// then reject is worse than no button, which is why the old Add Component
+    /// was removed instead of left drawn.
+    fn addable_components(&self, present: &BTreeMap<String, Value>) -> Vec<ComponentMetadata> {
+        addable_components(self.scene.components(), present)
+    }
+
+    /// Turns every changed component payload into a command.
+    ///
+    /// Each is checked against its own schema first. A payload is written back
+    /// exactly as stored, so an edit that stopped it decoding would produce a
+    /// scene the engine refuses to open — and the author would find out on the
+    /// next launch rather than at the field they were editing.
+    fn commit_components(
+        &mut self,
+        entity: EntityId,
+        original: &BTreeMap<String, Value>,
+        draft: &BTreeMap<String, Value>,
+    ) {
+        let (buffer, refused) =
+            component_commands(entity, original, draft, self.scene.components());
+        for message in refused {
+            self.console.warning(message);
+        }
+        if buffer.is_empty() {
+            return;
+        }
+        // The same merge key the rest of the inspector uses, so dragging a tint
+        // is one undo step rather than one per frame of the drag.
+        let transaction = buffer
+            .into_transaction("Edit components")
+            .merging(format!("inspector:{}", entity.index()));
+        if let Err(error) = self.history.apply(transaction, &mut self.world) {
+            self.report(error.to_string());
+        }
+    }
+
+    /// Adds a component with the payload its schema says a fresh one starts as.
+    fn add_component(&mut self, entity: EntityId, type_name: &str) {
+        let Some(payload) = self.scene.components().default_payload(type_name).cloned() else {
+            return;
+        };
+        let mut buffer = CommandBuffer::new();
+        buffer.push(WorldCommand::SetComponent {
+            entity,
+            type_name: type_name.to_owned(),
+            payload,
+        });
+        self.history.break_merge_run();
+        if let Err(error) = self
+            .history
+            .apply(buffer.into_transaction("Add component"), &mut self.world)
+        {
+            self.report(error.to_string());
+        }
+        self.refresh_textures();
+    }
+
+    fn remove_component(&mut self, entity: EntityId, type_name: &str) {
+        let mut buffer = CommandBuffer::new();
+        buffer.push(WorldCommand::RemoveComponent {
+            entity,
+            type_name: type_name.to_owned(),
+        });
+        self.history.break_merge_run();
+        if let Err(error) = self
+            .history
+            .apply(buffer.into_transaction("Remove component"), &mut self.world)
+        {
+            self.report(error.to_string());
+        }
+        self.refresh_textures();
     }
 
     /// Moves an entity under a new parent, or out to the root with `None`.
@@ -1352,26 +1435,34 @@ impl EditorApp {
                 let mut draft = EntityDraft::from(data);
                 let original = draft.clone();
                 let icon = entity_icon(data);
-                let components = data.components.clone();
+                let original_components = data.components.clone();
+                let mut components = original_components.clone();
                 let parent = data.parent;
                 let choices = reparent_choices(&self.world, entity);
                 let mut reparented = ParentChoice::Unchanged;
+                let mut removed = None;
+                let mut added = None;
+                let addable = self.addable_components(&components);
                 {
+                    let scripts = &self.scripts;
                     egui::ScrollArea::vertical().show(ui, |ui| {
                         inspector_identity(ui, icon, &mut draft);
                         reparented = inspector_parent(ui, entity, parent, &choices);
                         if let Some(transform) = &mut draft.transform_3d {
                             transform_3d_section(ui, transform);
                         }
-                        components_sections(ui, &components);
-                        // An "Add Component" button used to close the panel.
-                        // Nothing handled it, and adding one properly means
-                        // choosing a type from the schema registry and writing
-                        // a default payload through `SetComponent` — a build,
-                        // not a button.
+                        removed = components_sections(ui, &mut components, scripts);
+                        added = add_component_button(ui, &addable);
                     });
                 }
                 self.commit_draft(entity, &original, &draft);
+                self.commit_components(entity, &original_components, &components);
+                if let Some(type_name) = removed {
+                    self.remove_component(entity, &type_name);
+                }
+                if let Some(type_name) = added {
+                    self.add_component(entity, &type_name);
+                }
                 match reparented {
                     ParentChoice::Unchanged => {}
                     ParentChoice::Root => self.reparent(entity, None),
@@ -2145,130 +2236,333 @@ fn property_toggle(ui: &mut egui::Ui, label: &str, value: &mut bool, on: &str, o
 /// right read as an overlay badge. Each built-in component is deserialized
 /// through the same schema the runtime uses, so a row is either the value the
 /// scene holds or an admission that the payload could not be read.
-fn components_sections(ui: &mut egui::Ui, components: &BTreeMap<String, Value>) {
-    for (name, payload) in components {
+/// Draws every component on an entity, editable, and reports what changed.
+///
+/// The payload is edited in place on a draft; the caller diffs it and turns
+/// each difference into a `SetComponent`. Nothing here writes to the world.
+fn components_sections(
+    ui: &mut egui::Ui,
+    components: &mut BTreeMap<String, Value>,
+    scripts: &SceneScripts,
+) -> Option<String> {
+    let mut removed = None;
+    for (name, payload) in components.iter_mut() {
         let icon = match name.as_str() {
             "sindri.camera" => ICON_CAMERA_ALT,
             "sindri.sprite" => ICON_IMAGE,
             "sindri.mesh" => ICON_VIEW_IN_AR,
+            "sindri.script" => ICON_CODE,
             _ => ICON_DEPLOYED_CODE,
         };
-        section_header(ui, icon, &component_label(name));
-        for (label, value) in component_rows(name, payload) {
-            property_label(ui, &label, &value);
+        ui.add_space(4.0);
+        ui.separator();
+        ui.horizontal(|ui| {
+            ui.add_space(10.0);
+            ui.label(icon.outlined().rich_text().size(16.0).color(ACCENT));
+            ui.label(
+                RichText::new(component_label(name))
+                    .strong()
+                    .size(12.0)
+                    .color(TEXT),
+            );
+            if inspector::is_removable(name) {
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    ui.add_space(7.0);
+                    if ui
+                        .small_button(ICON_DELETE.outlined().rich_text().size(13.0))
+                        .on_hover_text(format!("Remove {}", component_label(name)))
+                        .clicked()
+                    {
+                        removed = Some(name.clone());
+                    }
+                });
+            }
+        });
+
+        // A script's @export fields come first and are drawn from what the
+        // script declared, which is the whole reason the language is typed.
+        // The rest of the payload -- the source, the container -- follows as
+        // ordinary rows.
+        if name == "sindri.script" {
+            script_exports_section(ui, payload, scripts);
+        }
+        object_rows(ui, name, payload, name == "sindri.script");
+    }
+    removed
+}
+
+/// The rows of one payload, indented under its heading.
+///
+/// `skip_properties` keeps a script's authored values from appearing twice:
+/// they are drawn above as typed fields, from what the script declared.
+fn object_rows(ui: &mut egui::Ui, type_name: &str, payload: &mut Value, skip_properties: bool) {
+    let Value::Object(fields) = payload else {
+        return;
+    };
+    // Which fields apply can depend on the others, so the decision is made
+    // against the payload as it was before this frame's edits.
+    let whole = Value::Object(fields.clone());
+    for (key, value) in fields.iter_mut() {
+        if skip_properties && key == "properties" {
+            continue;
+        }
+        if !inspector::applies(type_name, key, &whole) {
+            continue;
+        }
+        value_row(ui, key, value, 10.0);
+    }
+}
+
+/// One field, drawn as whatever its stored shape deserves.
+fn value_row(ui: &mut egui::Ui, key: &str, value: &mut Value, indent: f32) {
+    let label = inspector::humanize(key);
+    match inspector::value_kind(value) {
+        inspector::ValueKind::Number => {
+            let mut number = value.as_f64().unwrap_or_default();
+            // Integers stay integers, so editing a layer does not turn `3`
+            // into `3.0` and change a scene byte for byte.
+            let whole = value.is_i64() || value.is_u64();
+            if number_row(ui, &label, &mut number, indent, whole) {
+                *value = if whole {
+                    #[allow(clippy::cast_possible_truncation)]
+                    Value::from(number.round() as i64)
+                } else {
+                    Value::from(number)
+                };
+            }
+        }
+        inspector::ValueKind::Bool => {
+            let mut flag = value.as_bool().unwrap_or_default();
+            if bool_row(ui, &label, &mut flag, indent) {
+                *value = Value::Bool(flag);
+            }
+        }
+        inspector::ValueKind::Text => {
+            let mut text = value.as_str().unwrap_or_default().to_owned();
+            if text_row(ui, &label, &mut text, indent) {
+                *value = Value::String(text);
+            }
+        }
+        inspector::ValueKind::Numbers(len) => {
+            let labels = inspector::axis_labels(key, len);
+            let mut numbers: Vec<f64> = value
+                .as_array()
+                .map(|items| {
+                    items
+                        .iter()
+                        .map(|item| item.as_f64().unwrap_or_default())
+                        .collect()
+                })
+                .unwrap_or_default();
+            if numbers_row(ui, &label, &labels, &mut numbers, indent) {
+                *value = Value::Array(numbers.into_iter().map(Value::from).collect());
+            }
+        }
+        inspector::ValueKind::Object => {
+            ui.horizontal(|ui| {
+                ui.add_space(indent);
+                ui.label(RichText::new(&label).size(11.0).color(TEXT_MUTED));
+            });
+            let Value::Object(nested) = value else {
+                return;
+            };
+            for (key, value) in nested.iter_mut() {
+                value_row(ui, key, value, indent + 12.0);
+            }
+        }
+        // Shown as stored and left alone. A text field over a tilemap's tiles
+        // or a clip table is a way to break a scene, not a way to edit one.
+        inspector::ValueKind::Opaque => {
+            property_label(ui, &label, &opaque_summary(value));
         }
     }
 }
 
-/// What one component's rows say, kept apart from the drawing of them so the
-/// claim that they are the entity's own values is something a test can check.
-fn component_rows(name: &str, payload: &Value) -> Vec<(String, String)> {
-    fn row(label: &str, value: impl Into<String>) -> (String, String) {
-        (label.to_owned(), value.into())
+/// What an uneditable value says about itself.
+fn opaque_summary(value: &Value) -> String {
+    match value {
+        Value::Null => "not set".to_owned(),
+        Value::Array(items) => format!("{} items", items.len()),
+        other => other.to_string(),
+    }
+}
+
+/// A script's `@export` fields, drawn from what the script declared.
+///
+/// This is the capability that justified a statically typed language: the panel
+/// knows a field exists, what it is called, what type it is, and what it starts
+/// as, without running anything. A field the scene has not set shows its
+/// default and says so.
+fn script_exports_section(ui: &mut egui::Ui, payload: &mut Value, scripts: &SceneScripts) {
+    let source = payload.get("source").and_then(Value::as_str).unwrap_or("");
+    let script = payload.get("script").and_then(Value::as_str).unwrap_or("");
+    let Some(exports) = scripts.exports(source, script) else {
+        // Not the same as having no properties, and saying so matters: a panel
+        // that showed nothing would look like a script with nothing to author.
+        property_label(ui, "Properties", "waiting for the script");
+        return;
+    };
+    if exports.is_empty() {
+        property_label(ui, "Properties", "none declared");
+        return;
     }
 
-    match name {
-        "sindri.camera" => match serde_json::from_value::<CameraComponent>(payload.clone()) {
-            Ok(CameraComponent::Perspective {
-                vertical_fov_degrees,
-                near,
-                far,
-                ..
-            }) => vec![
-                row("Projection", "Perspective"),
-                row("Field of view", format!("{vertical_fov_degrees}°")),
-                row("Clipping", format!("{near} - {far}")),
-            ],
-            Ok(CameraComponent::Orthographic {
-                vertical_size,
-                near,
-                far,
-                ..
-            }) => vec![
-                row("Projection", "Orthographic"),
-                row("Vertical size", vertical_size.to_string()),
-                row("Clipping", format!("{near} - {far}")),
-            ],
-            Err(error) => unreadable_payload(&error),
-        },
-        "sindri.sprite" => match serde_json::from_value::<SpriteComponent>(payload.clone()) {
-            Ok(sprite) => {
-                let mut rows = vec![
-                    row("Texture", sprite.texture.clone()),
-                    row("Space", sprite_space_label(sprite.space)),
-                ];
-                // Only a screen-space sprite has an edge to hang from, so a
-                // world-space one is not offered an anchor to misread.
-                if let Some(anchor) = sprite.screen_anchor() {
-                    rows.push(row("Anchor", anchor_label(anchor)));
+    for export in exports {
+        let stored = payload
+            .get("properties")
+            .and_then(|properties| properties.get(&export.name))
+            .cloned();
+        let authored = stored.is_some();
+        let mut value = stored.unwrap_or_else(|| script_value_json(&export.default));
+        let label = inspector::humanize(&export.name);
+
+        let before = value.clone();
+        value_row(ui, &export.name, &mut value, 10.0);
+        if value != before {
+            // Setting a property is what puts it in the scene: a field left
+            // alone stays absent, so a scene records the author's choices
+            // rather than a copy of every default.
+            let properties = payload
+                .as_object_mut()
+                .expect("a script component is an object")
+                .entry("properties")
+                .or_insert_with(|| Value::Object(serde_json::Map::new()));
+            if let Some(properties) = properties.as_object_mut() {
+                properties.insert(export.name.clone(), value);
+            }
+        } else if !authored {
+            ui.horizontal(|ui| {
+                ui.add_space(22.0);
+                ui.label(
+                    RichText::new(format!(
+                        "default{}",
+                        export
+                            .type_name
+                            .as_ref()
+                            .map_or_else(String::new, |name| format!(" · {name}"))
+                    ))
+                    .size(9.0)
+                    .color(TEXT_MUTED),
+                );
+            });
+        }
+        let _ = label;
+    }
+}
+
+/// A Decay value as the JSON a scene stores.
+fn script_value_json(value: &ScriptValue) -> Value {
+    match value {
+        ScriptValue::Number(number) => Value::from(*number),
+        ScriptValue::Bool(flag) => Value::Bool(*flag),
+        ScriptValue::String(text) => Value::String(text.clone()),
+        ScriptValue::Null | ScriptValue::Unit => Value::Null,
+    }
+}
+
+/// A labelled drag, reporting whether it moved.
+fn number_row(ui: &mut egui::Ui, label: &str, value: &mut f64, indent: f32, whole: bool) -> bool {
+    let mut changed = false;
+    ui.horizontal(|ui| {
+        ui.add_space(indent);
+        ui.label(RichText::new(label).size(11.0).color(TEXT_MUTED));
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.add_space(7.0);
+            let drag = egui::DragValue::new(value).speed(if whole { 1.0 } else { 0.01 });
+            let drag = if whole { drag.fixed_decimals(0) } else { drag };
+            changed = ui.add(drag).changed();
+        });
+    });
+    changed
+}
+
+fn bool_row(ui: &mut egui::Ui, label: &str, value: &mut bool, indent: f32) -> bool {
+    let mut changed = false;
+    ui.horizontal(|ui| {
+        ui.add_space(indent);
+        ui.label(RichText::new(label).size(11.0).color(TEXT_MUTED));
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.add_space(7.0);
+            changed = ui.checkbox(value, "").changed();
+        });
+    });
+    changed
+}
+
+fn text_row(ui: &mut egui::Ui, label: &str, value: &mut String, indent: f32) -> bool {
+    let mut changed = false;
+    ui.horizontal(|ui| {
+        ui.add_space(indent);
+        ui.label(RichText::new(label).size(11.0).color(TEXT_MUTED));
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.add_space(7.0);
+            changed = ui
+                .add(egui::TextEdit::singleline(value).desired_width(150.0))
+                .changed();
+        });
+    });
+    changed
+}
+
+/// A row of drags for a short numeric array, each under its own axis letter.
+fn numbers_row(
+    ui: &mut egui::Ui,
+    label: &str,
+    axes: &[String],
+    values: &mut [f64],
+    indent: f32,
+) -> bool {
+    let mut changed = false;
+    ui.horizontal(|ui| {
+        ui.add_space(indent);
+        ui.label(RichText::new(label).size(11.0).color(TEXT_MUTED));
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.add_space(7.0);
+            for (index, value) in values.iter_mut().enumerate().rev() {
+                changed |= ui
+                    .add(
+                        egui::DragValue::new(value)
+                            .speed(0.01)
+                            .prefix(format!("{} ", axes.get(index).map_or("", String::as_str))),
+                    )
+                    .changed();
+            }
+        });
+    });
+    changed
+}
+
+/// The Add Component menu, offering only what can actually be added.
+///
+/// Absent entirely when there is nothing to add, rather than shown disabled: an
+/// entity that already has everything is not a state worth drawing a greyed-out
+/// control for.
+fn add_component_button(ui: &mut egui::Ui, addable: &[ComponentMetadata]) -> Option<String> {
+    if addable.is_empty() {
+        return None;
+    }
+    let mut chosen = None;
+    ui.add_space(8.0);
+    ui.separator();
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        // Words rather than a bare "+", because an inspector has several things
+        // it could plausibly be adding. Drawn like the File and View menus,
+        // which is what it is.
+        ui.menu_button(
+            RichText::new("Add Component").size(12.0).color(TEXT),
+            |ui| {
+                ui.set_min_width(170.0);
+                for metadata in addable {
+                    if ui.button(&metadata.display_name).clicked() {
+                        chosen = Some(metadata.type_name.clone());
+                        ui.close();
+                    }
                 }
-                rows.push(row("Layer", sprite.layer.to_string()));
-                rows
-            }
-            Err(error) => unreadable_payload(&error),
-        },
-        "sindri.mesh" => match serde_json::from_value::<MeshComponent>(payload.clone()) {
-            Ok(mesh) => vec![
-                row(
-                    "Mesh",
-                    match mesh.primitive {
-                        MeshPrimitive::Cube => "Cube",
-                        // The enum is deliberately open: a primitive added to
-                        // the engine must not stop the editor building, and
-                        // this row is the only thing that has to catch up.
-                        _ => "Unnamed primitive",
-                    },
-                ),
-                row("Texture", mesh.texture.clone()),
-                row("Layer", mesh.layer.to_string()),
-            ],
-            Err(error) => unreadable_payload(&error),
-        },
-        _ => vec![row("Fields", payload_summary(payload))],
-    }
-}
-
-/// A payload the built-in schema rejected. Said out loud, because a component
-/// row that silently showed nothing would look like a component with nothing in
-/// it.
-fn unreadable_payload(error: &serde_json::Error) -> Vec<(String, String)> {
-    vec![("Unreadable".to_owned(), error.to_string())]
-}
-
-/// What a component nothing here knows about is carrying, which is at least its
-/// field names.
-fn payload_summary(payload: &Value) -> String {
-    payload.as_object().map_or_else(
-        || payload.to_string(),
-        |fields| {
-            if fields.is_empty() {
-                "none".to_owned()
-            } else {
-                fields.keys().cloned().collect::<Vec<_>>().join(", ")
-            }
-        },
-    )
-}
-
-const fn sprite_space_label(space: SpriteSpace) -> &'static str {
-    match space {
-        SpriteSpace::Screen => "Screen",
-        SpriteSpace::World => "World",
-    }
-}
-
-const fn anchor_label(anchor: SpriteAnchor) -> &'static str {
-    match anchor {
-        SpriteAnchor::Center => "Center",
-        SpriteAnchor::Top => "Top",
-        SpriteAnchor::Bottom => "Bottom",
-        SpriteAnchor::Left => "Left",
-        SpriteAnchor::Right => "Right",
-        SpriteAnchor::TopLeft => "Top left",
-        SpriteAnchor::TopRight => "Top right",
-        SpriteAnchor::BottomLeft => "Bottom left",
-        SpriteAnchor::BottomRight => "Bottom right",
-    }
+            },
+        );
+    });
+    chosen
 }
 
 fn property_label(ui: &mut egui::Ui, label: &str, value: &str) {
@@ -2970,6 +3264,60 @@ impl From<&EntityData> for EntityDraft {
 
 /// Turns the difference between an entity's stored state and the drawn draft
 /// into the commands that close the gap.
+/// Turns every changed component payload into a command, and says what it
+/// refused.
+///
+/// Kept apart from the drawing of it so the claims — that an edit becomes a
+/// command, and that one which breaks a schema becomes nothing — are things a
+/// test can check without a window or a GPU.
+///
+/// A payload is written back exactly as stored, so an edit that stopped it
+/// decoding would produce a scene the engine refuses to open. Checking here
+/// means the author hears about it at the field they were editing rather than
+/// at the next launch.
+fn component_commands(
+    entity: EntityId,
+    original: &BTreeMap<String, Value>,
+    draft: &BTreeMap<String, Value>,
+    components: &ComponentSchemaRegistry,
+) -> (CommandBuffer, Vec<String>) {
+    let mut buffer = CommandBuffer::new();
+    let mut refused = Vec::new();
+    for (type_name, payload) in draft {
+        if original.get(type_name) == Some(payload) {
+            continue;
+        }
+        if let Err(error) = components.validate_payload(type_name, payload) {
+            refused.push(error.to_string());
+            continue;
+        }
+        buffer.push(WorldCommand::SetComponent {
+            entity,
+            type_name: type_name.clone(),
+            payload: payload.clone(),
+        });
+    }
+    (buffer, refused)
+}
+
+/// The components an entity does not have and the registry can create.
+///
+/// A type with no default payload is missing from the list rather than offered
+/// and refused: a button that adds a component the engine will then reject is
+/// worse than no button, which is why the old Add Component was removed rather
+/// than left drawn.
+fn addable_components(
+    components: &ComponentSchemaRegistry,
+    present: &BTreeMap<String, Value>,
+) -> Vec<ComponentMetadata> {
+    components
+        .registered_components()
+        .filter(|metadata| !present.contains_key(&metadata.type_name))
+        .filter(|metadata| components.default_payload(&metadata.type_name).is_some())
+        .cloned()
+        .collect()
+}
+
 fn draft_commands(entity: EntityId, original: &EntityDraft, draft: &EntityDraft) -> CommandBuffer {
     let mut buffer = CommandBuffer::new();
     if original.name != draft.name {
@@ -3360,6 +3708,133 @@ mod tests {
 
         history.undo(&mut world).unwrap();
         assert_eq!(EntityDraft::from(world.get(entity).unwrap()), original);
+    }
+
+    /// The whole point: a component edit reaches the world through the command
+    /// layer, and undo puts it back. Until this existed, a component was a
+    /// read-only label and every value was set by editing the scene file.
+    #[test]
+    fn a_component_edit_reaches_the_world_and_undoes_cleanly() {
+        let mut world = demo_world();
+        let entity = find_by_source_id(&world, "checker-cube").unwrap();
+        let original = world.get(entity).unwrap().components.clone();
+
+        let mut draft = original.clone();
+        draft
+            .get_mut("sindri.mesh")
+            .unwrap()
+            .as_object_mut()
+            .unwrap()
+            .insert("layer".to_owned(), serde_json::json!(4));
+
+        let (buffer, refused) =
+            component_commands(entity, &original, &draft, extractor().components());
+        assert!(refused.is_empty(), "{refused:?}");
+        assert_eq!(buffer.len(), 1);
+
+        let mut history = CommandHistory::default();
+        history
+            .apply(buffer.into_transaction("Edit components"), &mut world)
+            .unwrap();
+        assert_eq!(
+            world.get(entity).unwrap().components["sindri.mesh"]["layer"],
+            serde_json::json!(4)
+        );
+
+        history.undo(&mut world).unwrap();
+        assert_eq!(world.get(entity).unwrap().components, original);
+    }
+
+    /// An edit that would stop a component decoding never becomes a command.
+    /// The payload is written back exactly as stored, so letting it through
+    /// would produce a scene the engine refuses to open — discovered at the
+    /// next launch rather than at the field being edited.
+    #[test]
+    fn an_edit_that_breaks_a_schema_is_refused_rather_than_written() {
+        let world = demo_world();
+        let entity = find_by_source_id(&world, "checker-cube").unwrap();
+        let original = world.get(entity).unwrap().components.clone();
+
+        let mut draft = original.clone();
+        draft
+            .get_mut("sindri.mesh")
+            .unwrap()
+            .as_object_mut()
+            .unwrap()
+            .insert("primitive".to_owned(), serde_json::json!("dodecahedron"));
+
+        let (buffer, refused) =
+            component_commands(entity, &original, &draft, extractor().components());
+        assert!(buffer.is_empty(), "nothing is written");
+        assert_eq!(refused.len(), 1, "and the author is told why");
+        assert!(refused[0].contains("sindri.mesh"), "{refused:?}");
+    }
+
+    /// A component nothing understands is still editable, which is what the
+    /// preserve policy promises and could not previously deliver.
+    #[test]
+    fn an_unknown_component_can_still_be_edited() {
+        let world = demo_world();
+        let entity = find_by_source_id(&world, "checker-cube").unwrap();
+        let original: BTreeMap<String, Value> =
+            [("game.health".to_owned(), serde_json::json!({ "hp": 3 }))]
+                .into_iter()
+                .collect();
+        let mut draft = original.clone();
+        draft.get_mut("game.health").unwrap()["hp"] = serde_json::json!(5);
+
+        let (buffer, refused) =
+            component_commands(entity, &original, &draft, extractor().components());
+        assert!(
+            refused.is_empty(),
+            "nothing is known about its shape, so nothing is claimed"
+        );
+        assert_eq!(buffer.len(), 1);
+    }
+
+    /// Add Component offers what the entity lacks and the registry can create,
+    /// and nothing else.
+    #[test]
+    fn add_component_offers_only_what_it_can_actually_add() {
+        let extractor = extractor();
+        let present: BTreeMap<String, Value> = [("sindri.mesh".to_owned(), serde_json::json!({}))]
+            .into_iter()
+            .collect();
+        let offered: Vec<String> = addable_components(extractor.components(), &present)
+            .into_iter()
+            .map(|metadata| metadata.type_name)
+            .collect();
+
+        assert!(
+            !offered.contains(&"sindri.mesh".to_owned()),
+            "not one it already has"
+        );
+        assert!(offered.contains(&"sindri.sprite".to_owned()));
+        assert!(
+            !offered.contains(&"sindri.sprite_animation".to_owned()),
+            "and not one with no sensible blank, which the engine would refuse"
+        );
+    }
+
+    /// Every default the registry offers has to produce a component the engine
+    /// accepts, or Add Component is a button that breaks a scene.
+    #[test]
+    fn every_offered_default_is_one_the_engine_accepts() {
+        let extractor = extractor();
+        let components = extractor.components();
+        for metadata in addable_components(components, &BTreeMap::new()) {
+            let payload = components
+                .default_payload(&metadata.type_name)
+                .expect("it was offered, so it has one");
+            components
+                .validate_payload(&metadata.type_name, payload)
+                .unwrap_or_else(|error| {
+                    panic!(
+                        "the default for {} does not decode: {error}",
+                        metadata.type_name
+                    )
+                });
+        }
     }
 
     #[test]
@@ -3930,62 +4405,5 @@ mod tests {
     fn labels_are_human_readable() {
         assert_eq!(humanize("checker-cube"), "Checker Cube");
         assert_eq!(component_label("sindri.sprite"), "Sprite");
-    }
-
-    /// The inspector's component rows are the entity's own values. They were
-    /// fixed text for long enough that this is worth holding in place.
-    #[test]
-    fn component_rows_read_the_payload() {
-        let sprite = serde_json::json!({
-            "texture": "textures/badge.png",
-            "anchor": "bottom_right",
-            "layer": 100
-        });
-        assert_eq!(
-            component_rows("sindri.sprite", &sprite),
-            [
-                ("Texture".to_owned(), "textures/badge.png".to_owned()),
-                ("Space".to_owned(), "Screen".to_owned()),
-                ("Anchor".to_owned(), "Bottom right".to_owned()),
-                ("Layer".to_owned(), "100".to_owned()),
-            ]
-        );
-
-        let mesh = serde_json::json!({ "primitive": "cube", "texture": "procedural:checkerboard" });
-        assert_eq!(
-            component_rows("sindri.mesh", &mesh),
-            [
-                ("Mesh".to_owned(), "Cube".to_owned()),
-                ("Texture".to_owned(), "procedural:checkerboard".to_owned()),
-                ("Layer".to_owned(), "0".to_owned()),
-            ]
-        );
-    }
-
-    /// A world-space sprite has no edge to anchor to, so it is offered no
-    /// anchor row to read as though it did.
-    #[test]
-    fn a_world_space_sprite_is_shown_no_anchor() {
-        let sprite = serde_json::json!({
-            "texture": "textures/tree.png",
-            "space": "world",
-            "anchor": "top_left"
-        });
-        let rows = component_rows("sindri.sprite", &sprite);
-        assert_eq!(rows[1], ("Space".to_owned(), "World".to_owned()));
-        assert!(
-            !rows.iter().any(|(label, _)| label == "Anchor"),
-            "a world sprite was offered an anchor: {rows:?}"
-        );
-    }
-
-    /// A component nothing here knows about still says what it is carrying.
-    #[test]
-    fn an_unknown_component_lists_its_fields() {
-        let payload = serde_json::json!({ "speed": 4.0, "facing": "north" });
-        assert_eq!(
-            component_rows("game.walker", &payload),
-            [("Fields".to_owned(), "facing, speed".to_owned())]
-        );
     }
 }

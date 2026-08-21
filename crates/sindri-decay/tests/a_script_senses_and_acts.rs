@@ -274,3 +274,65 @@ fn a_script_can_print() {
         "and each line names the script that said it"
     );
 }
+
+/// The capability that justified a typed language: a panel can find out what a
+/// script wants authored, and what each field starts as, without running it
+/// against an entity.
+#[test]
+fn a_script_declares_what_it_wants_authored() {
+    let (mut world, _, sources) = world(
+        r#"
+        script S {
+            @export let speed: f32 = 6.0;
+            @export let label: String = "player";
+            @export var enabled: bool = true;
+            // Not exported: instance state, which is nobody's business but the
+            // script's, and must not appear in a property panel.
+            var elapsed: f32 = 0.0;
+            fn update(dt: f32) { elapsed += dt; }
+        }
+        "#,
+    );
+    let mut scripts = Scripts::new();
+    // Compiled as a side effect of running, which is also how the editor gets
+    // there: a script is compiled because the scene names it.
+    scripts.advance(
+        &mut world,
+        &registry(),
+        &sources,
+        &InputState::default(),
+        0.5,
+    );
+
+    let exports = scripts
+        .exports("s.decay", "S")
+        .expect("the script compiled");
+    let named: Vec<(&str, Option<&str>)> = exports
+        .iter()
+        .map(|export| (export.name.as_str(), export.type_name.as_deref()))
+        .collect();
+    assert_eq!(
+        named,
+        [
+            ("speed", Some("f32")),
+            ("label", Some("String")),
+            ("enabled", Some("bool")),
+        ],
+        "declaration order, and nothing that is not @export"
+    );
+
+    assert_eq!(exports[0].default, sindri_decay::ScriptValue::Number(6.0));
+    assert_eq!(
+        exports[1].default,
+        sindri_decay::ScriptValue::String("player".to_owned())
+    );
+    assert_eq!(exports[2].default, sindri_decay::ScriptValue::Bool(true));
+}
+
+/// A source that has not compiled has no exports to report, which is different
+/// from having none — a panel must be able to tell those apart.
+#[test]
+fn a_script_that_has_not_compiled_reports_nothing_rather_than_no_properties() {
+    let scripts = Scripts::new();
+    assert_eq!(scripts.exports("never-loaded.decay", "S"), None);
+}

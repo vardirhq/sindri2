@@ -14,6 +14,9 @@ pub mod fixture;
 /// The keyboard, as a running script sees it.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod input;
+/// Editing what an entity's components hold.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod inspector;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod native;
 #[cfg(not(target_arch = "wasm32"))]

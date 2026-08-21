@@ -127,6 +127,12 @@ All notable changes to Sindri Next will be documented here.
 - `print` from a Decay script, reaching the editor console tagged with the entity that said it.
 - Physical key names on `sindri_platform::Key`, with `ALL`, `name`, and a case-insensitive `from_name`.
 - The editor translates its own keyboard into engine input for running scripts, and lets go of every key when play stops or a text field takes focus.
+- Editing any component's fields in the inspector, driven by the stored payload rather than hand-written rows, so a component the engine has never heard of is editable too.
+- Component edits checked against the component's own schema before they become commands, so an edit that would stop it decoding is refused rather than written into a scene that then will not open.
+- Adding and removing components from the inspector, both undoable, with Add Component offering only types the registry can create.
+- Component schema registrations may carry the payload a fresh component starts as, validated when it is registered rather than when someone clicks Add.
+- A script's `@export` properties in the inspector, drawn from what the script declared — name, type, and default — with an unset field showing its default and saying so.
+- Decay sources compile when a scene names them rather than when it is played, so a broken script reports at the scene it was opened with.
 
 ### Changed
 

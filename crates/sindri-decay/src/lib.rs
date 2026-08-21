@@ -25,13 +25,18 @@
 
 mod component;
 mod error;
+mod exports;
 mod host;
 mod report;
 mod scripts;
 mod surface;
 
 pub use component::ScriptComponent;
+/// A value a Decay script holds, re-exported so a host can name one without
+/// depending on the language crates directly.
+pub use decay_runtime::Value as ScriptValue;
 pub use error::ScriptFailure;
+pub use exports::ScriptExport;
 pub use host::{ScriptContext, WorldHost};
 pub use report::{ScriptMessage, ScriptReport};
 pub use scripts::{ScriptSources, Scripts, environment, referenced_sources};

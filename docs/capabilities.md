@@ -220,9 +220,24 @@ frame.
   empty space or Escape
 - Inspector edits of name and the transform, including the Z lock, which takes
   away the Z drag while it is on
-- Inspector rows showing each built-in component's own fields — the camera's
-  projection and clipping, the mesh's primitive and texture, the sprite's
-  texture, space, anchor, and layer
+- **Editing any component's fields in the inspector**, driven by the stored
+  payload rather than by hand-written rows: numbers get drags, booleans get
+  checkboxes, text gets a field, and a short numeric array gets a labelled row.
+  A component the engine has never heard of is editable too, which is what the
+  preserve policy promises. Every edit goes through `SetComponent`, so it
+  undoes; every edit is checked against the component's own schema first, so one
+  that would stop it decoding is refused and said aloud rather than written into
+  a scene that then will not open. A field that decides nothing is not offered —
+  a world-space sprite has no anchor row
+- **Adding and removing components.** Add Component offers what the entity lacks
+  and the registry can create, which excludes a type with no sensible blank
+  rather than offering one the engine would reject. Both are undoable
+- **A script's `@export` properties in the inspector**, drawn from what the
+  script declared: the field's name, its type, and its default, without running
+  anything. A field the scene has not set shows its default and says so, and
+  setting one is what puts it in the scene — so a scene records an author's
+  choices rather than a copy of every default. This is the capability that
+  justified a statically typed language
 - Reparenting through a **Parent** menu that offers only the moves the world
   would accept
 - Undo and redo of every edit, with drag-merging so a slider drag is one step;
@@ -319,16 +334,14 @@ collapsed and overflowed nothing; and the settings gear.
 
 ### Editor
 
-- Cannot create or delete anything — no entity, no component, no asset
+- Cannot create or delete an entity, or an asset. Components can be added and
+  removed
 - Does not read a project directory
 - No gizmos, no viewport selection, no multi-select
-- No component editing beyond names and transforms
 - No prefabs, no play-mode-against-a-copy, no build or export controls
 - No versioned editor protocol; the editor and runtime are one process
-- Cannot open or edit a Decay script — the project browser lists `.decay` files
-  as scripts, and opening one does nothing
-- No inspector for `sindri.script`: an exported property is authored by editing
-  the scene file by hand
+- Cannot open or edit a Decay script's *source* — the project browser lists
+  `.decay` files as scripts, and opening one does nothing
 
 ---
 
