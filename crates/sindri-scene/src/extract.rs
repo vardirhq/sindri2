@@ -216,14 +216,17 @@ impl SceneExtractor {
             let clip = overlay.view_projection * model.w_axis;
             let ndc = clip.truncate() / clip.w;
             let position = [(ndc.x + 1.0) * 0.5 * width, (1.0 - ndc.y) * 0.5 * height];
-            layers.entry(text.layer).or_default().push(TextInstance::new(
-                text.text,
-                text.font,
-                position,
-                text.font_size,
-                text.line_height,
-                text.color,
-            )?);
+            layers
+                .entry(text.layer)
+                .or_default()
+                .push(TextInstance::new(
+                    text.text,
+                    text.font,
+                    position,
+                    text.font_size,
+                    text.line_height,
+                    text.color,
+                )?);
         }
 
         for (layer, instances) in layers {

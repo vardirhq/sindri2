@@ -99,12 +99,8 @@ impl TextRenderer {
         let cache = Cache::new(device);
         let viewport = GlyphonViewport::new(device, &cache);
         let mut atlas = TextAtlas::new(device, queue, &cache, format);
-        let renderer = GlyphonRenderer::new(
-            &mut atlas,
-            device,
-            wgpu::MultisampleState::default(),
-            None,
-        );
+        let renderer =
+            GlyphonRenderer::new(&mut atlas, device, wgpu::MultisampleState::default(), None);
         Self {
             font_system: FontSystem::new(),
             swash_cache: SwashCache::new(),
@@ -282,14 +278,7 @@ mod tests {
             Err(TextError::InvalidFontSize(0.0))
         ));
         assert!(matches!(
-            TextInstance::new(
-                "hello",
-                "font.ttf",
-                [f32::NAN, 0.0],
-                16.0,
-                20.0,
-                [1.0; 4]
-            ),
+            TextInstance::new("hello", "font.ttf", [f32::NAN, 0.0], 16.0, 20.0, [1.0; 4]),
             Err(TextError::NonFinitePosition(_))
         ));
     }

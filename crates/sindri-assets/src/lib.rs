@@ -20,9 +20,9 @@ mod filesystem;
 mod watch;
 
 pub use decode::{
-    AssetCompletionApplyError, AssetDecodeError, AssetDecoder, DecodedAssetCompletion,
-    FontAsset, FontAssetDecoder, SceneAssetDecoder, SpriteSheetAssetDecoder, TextAssetDecoder,
-    TextureAsset, TextureAssetDecoder, decode_completion,
+    AssetCompletionApplyError, AssetDecodeError, AssetDecoder, DecodedAssetCompletion, FontAsset,
+    FontAssetDecoder, SceneAssetDecoder, SpriteSheetAssetDecoder, TextAssetDecoder, TextureAsset,
+    TextureAssetDecoder, decode_completion,
 };
 #[cfg(target_arch = "wasm32")]
 pub use fetch::FetchAssetSource;

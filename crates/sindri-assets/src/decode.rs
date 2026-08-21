@@ -348,7 +348,11 @@ mod tests {
             .unwrap();
         assert_eq!(font.family(), "Inter");
         assert!(!font.bytes().is_empty());
-        assert!(decoder.decode(AssetBytes::new(id, b"not a font".to_vec())).is_err());
+        assert!(
+            decoder
+                .decode(AssetBytes::new(id, b"not a font".to_vec()))
+                .is_err()
+        );
     }
 
     #[test]

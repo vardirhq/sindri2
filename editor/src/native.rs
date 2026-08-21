@@ -2296,9 +2296,9 @@ impl eframe::App for EditorApp {
         // frame is bound by the time this one extracts.
         self.refresh_textures();
         let state = self.render_state.clone();
-        let arrived =
-            self.textures
-                .poll(&state.device, &state.queue, &mut self.renderers.text);
+        let arrived = self
+            .textures
+            .poll(&state.device, &state.queue, &mut self.renderers.text);
         self.record_texture_notes(arrived);
         self.advance_animations(ui.ctx());
         self.advance_scripts(ui.ctx());

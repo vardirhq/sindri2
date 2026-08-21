@@ -374,11 +374,8 @@ impl SceneTextures {
                     let Some(font) = fonts.get(&id) else {
                         continue;
                     };
-                    let again = renderer.bind_font(
-                        id.as_str(),
-                        font.family(),
-                        font.bytes().to_vec(),
-                    );
+                    let again =
+                        renderer.bind_font(id.as_str(), font.family(), font.bytes().to_vec());
                     let message = format!("{id} ({})", font.family());
                     notes.push(if again.is_some() {
                         TextureNote::Reloaded(format!("Reloaded {message}"))
@@ -461,12 +458,12 @@ impl SceneTextures {
         };
         let mut notes = Vec::new();
         for id in watch.changed() {
-            let result = if let Some(fonts) = fonts.as_mut().filter(|fonts| fonts.get(&id).is_some())
-            {
-                fonts.reload(&id)
-            } else {
-                loader.reload(&id)
-            };
+            let result =
+                if let Some(fonts) = fonts.as_mut().filter(|fonts| fonts.get(&id).is_some()) {
+                    fonts.reload(&id)
+                } else {
+                    loader.reload(&id)
+                };
             if let Err(error) = result {
                 notes.push(TextureNote::Failed(format!("{id}: {error}")));
             }

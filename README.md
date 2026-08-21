@@ -8,6 +8,10 @@ Sindri Next is a from-the-foundation evolution of Sindri Engine. It is built aro
 
 > **Status:** pre-alpha and under active development. Public APIs, Decay, and serialized formats may change while the engine is being proven through real editor and gameplay use.
 
+**[Play Gather in your browser](https://vardirhq.github.io/sindri2/)** — the
+companion game runs the same Rust engine, Decay scripts, scene, renderer, and
+project-owned font as its native build. It requires a browser with WebGPU.
+
 ## What Sindri is trying to be
 
 Sindri is deliberately small enough to understand and opinionated enough to build with.
@@ -69,6 +73,7 @@ can reach.
 - extraction/preparation/rendering stages with deterministic pass ordering
 - depth-tested 3D meshes, perspective and orthographic cameras, textured/tinted/layered 2D sprites, sprite sheets, and runtime sprite animation
 - orthogonal and isometric tilemaps extracted into the same sprite batches as loose world sprites
+- anchored, layered screen-space text rendered from project-owned OpenType font assets
 - deterministic offscreen PNG rendering exercised by CI
 - Decay scripts that run against the live world through a typed host surface
 - a browser-playable companion game proving Decay, fixed-step input, entity references, and rendering together
@@ -142,6 +147,10 @@ Components are backed by a schema registry used by both runtime validation and e
 The web remains a first-class runtime target. Native and browser hosts share the same engine concepts, scene extraction, assets, GPU abstraction, renderer, and presentation policy.
 
 The old plan described a separate TypeScript authoring API for browser games. That is no longer the primary gameplay direction: Decay is being developed as the common gameplay scripting layer so a game's authoring model does not depend on where it will run.
+
+Gather is built as a static WebAssembly/WebGPU site and deployed from `main` by
+the `Gather Pages` workflow. Relative module paths keep the bundle valid under
+GitHub Pages' `/sindri2/` project subpath rather than assuming a domain root.
 
 ## What is still missing
 
