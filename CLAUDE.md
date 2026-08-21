@@ -281,6 +281,14 @@ touch render targets, keep that check working.
 interchangeable — reconfiguring on an occluded frame rebuilds the swapchain
 every frame behind a minimised window. See `docs/rendering-surface.md`.
 
+**A component that names a texture must be in `TEXTURE_NAMING_COMPONENTS`.**
+Hosts load what `referenced_textures` reports, so a drawable component missing
+from that list is not a compile error and not a failed frame — its texture is
+simply never requested, and the thing draws as the magenta checker while
+everything else about it works. `sindri.tilemap` did exactly that for the length
+of one commit. A test in `sindri-scene` now holds the list against the schema
+registry.
+
 **Textures bind by reference.** A scene names `textures/badge.png`; the renderer
 knows only `TextureId`. `TextureBindings` in `sindri-scene` is the only place
 that knows both. An unbound reference draws the magenta `TextureRegistry::MISSING`

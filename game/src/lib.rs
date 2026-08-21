@@ -52,8 +52,8 @@ const SCRIPTS: &[(&str, &str)] = &[
 /// The art, embedded so the game is one file that runs anywhere.
 pub const TEXTURES: &[(&str, &[u8])] = &[
     (
-        "textures/tile.png",
-        include_bytes!("../assets/textures/tile.png"),
+        "textures/tiles.png",
+        include_bytes!("../assets/textures/tiles.png"),
     ),
     (
         "textures/orb.png",

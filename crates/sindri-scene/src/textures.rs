@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use sindri_core::{SceneComponent, World};
 use sindri_render::{TextureId, TextureRegistry};
 
-use crate::{MeshComponent, SpriteComponent};
+use crate::{MeshComponent, SpriteComponent, TilemapComponent};
 
 /// Maps the texture references a scene names to the textures a renderer holds.
 ///
@@ -101,11 +101,7 @@ pub fn referenced_textures(world: &World) -> BTreeSet<String> {
     let mut referenced = BTreeSet::new();
     for (_, data) in world.entities() {
         for (type_name, payload) in &data.components {
-            // Both drawable components name their texture the same way.
-            let draws = matches!(
-                type_name.as_str(),
-                MeshComponent::TYPE_NAME | SpriteComponent::TYPE_NAME
-            );
+            let draws = TEXTURE_NAMING_COMPONENTS.contains(&type_name.as_str());
             let reference = draws.then(|| payload.get("texture")).flatten();
             if let Some(reference) = reference.and_then(serde_json::Value::as_str) {
                 referenced.insert(reference.to_owned());
@@ -114,6 +110,21 @@ pub fn referenced_textures(world: &World) -> BTreeSet<String> {
     }
     referenced
 }
+
+/// Every built-in component that names a texture, which is the list hosts
+/// load from.
+///
+/// A drawable component missing from here is not a compile error and not a
+/// failed frame: its texture is simply never requested, so it never binds, and
+/// the thing draws as the magenta checker. `sindri.tilemap` did exactly that
+/// for the length of one commit. The test below is what stops the next one —
+/// it holds this list against the schema registry, so a component whose payload
+/// carries a texture has to be named here or fail the build.
+pub const TEXTURE_NAMING_COMPONENTS: &[&str] = &[
+    MeshComponent::TYPE_NAME,
+    SpriteComponent::TYPE_NAME,
+    TilemapComponent::TYPE_NAME,
+];
 
 /// Every texture a world draws with that nothing has bound.
 ///

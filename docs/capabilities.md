@@ -135,6 +135,17 @@ sheet's grid, the clips cut from it, and which one plays, and
 state, so watching an animation run does not rewrite the scene it came from.
 What is missing is authoring: clips are typed into the scene file by hand,
 because the editor has no sheet slicer or clip list yet.
+A tilemap is a grid of tiles cut from one sheet, drawn from one entity:
+`sindri.tilemap` carries the sheet's grid, the map's grid, and a flat array of
+cells, with `null` where the map is empty. Its cells become instances in the same
+batches loose sprites use, so a prop sorts among the floor rather than behind it.
+Columns and rows lay out orthogonally or isometrically, and placing a tile and
+finding the tile under a point are inverses on every cell of both. What it buys
+is authoring rather than speed — the same floor already batched into one draw —
+and the companion game measures it: 68 entities to 20, 45KB of scene to 12KB.
+What is missing is authoring: a map is typed into the scene file by hand,
+because the editor has no tile palette yet.
+
 An animated sprite that authored no rect of its own draws the first frame of the
 clip it is playing rather than the whole sheet, so a scene shows a pose before
 anything has run it — in a game's opening frame, in an offscreen capture, and in
@@ -444,6 +455,11 @@ it exists and why it is not an example; this says what of it is real.
 
 ### Works
 
+**Its floor is a tilemap.** One entity holding a 7x7 grid of cells, where it was
+49 sprite entities; the picture is the same to within one 8-bit step, which is
+the cost of baking the darker checker square into the sheet rather than tinting
+it at draw time.
+
 **It is a game you can play.** `cargo run -p sindri-gather` opens a window,
 arrow keys move the player, walking into an orb takes it, taking all five wins.
 Escape quits. It runs its gameplay on the fixed step, so gathering happens at
@@ -488,4 +504,5 @@ every sprite batch after the first drew with the last batch's camera. See
   would make it properly isometric is Milestone 9
 - Not built for the browser yet, though it compiles for `wasm32`
 - No restart without relaunching, no menu, no pause
-- The floor is 49 separate sprite entities, because there is no tilemap
+- The floor is one `sindri.tilemap`, but it was painted by a script rather than
+  authored, because the editor has no tile palette

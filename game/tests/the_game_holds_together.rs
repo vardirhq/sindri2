@@ -25,7 +25,7 @@ fn every_texture_the_scene_names_is_shipped() {
     let referenced: BTreeSet<String> = sindri_scene::referenced_textures(&world)
         .into_iter()
         .collect();
-    let shipped: BTreeSet<String> = ["tile", "orb", "player", "pip", "banner"]
+    let shipped: BTreeSet<String> = ["tiles", "orb", "player", "pip", "banner"]
         .into_iter()
         .map(|name| format!("textures/{name}.png"))
         .collect();
@@ -225,3 +225,28 @@ fn _sources_are_used(_: &ScriptSources) {}
 const _: fn() = || {
     let _ = ScriptComponent::TYPE_NAME;
 };
+
+/// The scene ships in canonical form, so editing it in the editor and saving
+/// produces the file that is already committed rather than a whole-file diff.
+///
+/// Regenerate deliberately with
+/// `SINDRI_UPDATE_GATHER_SCENE=1 cargo test --package sindri-gather`.
+#[test]
+fn the_scene_file_is_canonical() {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("assets")
+        .join("gather.scene.json");
+    let stored = std::fs::read_to_string(&path).expect("the scene is readable");
+    let canonical = SceneDocument::from_json(&stored)
+        .expect("the scene parses")
+        .to_canonical_json()
+        .expect("the scene serializes");
+    if std::env::var_os("SINDRI_UPDATE_GATHER_SCENE").is_some() {
+        std::fs::write(&path, &canonical).expect("the scene is writable");
+        return;
+    }
+    assert_eq!(
+        stored, canonical,
+        "gather.scene.json is not canonical; rerun with SINDRI_UPDATE_GATHER_SCENE=1"
+    );
+}

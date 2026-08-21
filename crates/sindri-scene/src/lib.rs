@@ -16,9 +16,10 @@ pub use animation::{
 };
 pub use components::{
     CameraComponent, MeshComponent, MeshPrimitive, SpriteAnchor, SpriteComponent, SpriteSpace,
+    TileProjection, TilemapComponent, TilemapError,
 };
 pub use extract::{CameraView, SceneExtractError, SceneExtractor, ViewCamera, WorldProjection};
 pub use textures::{
-    PROCEDURAL_TEXTURES, ProceduralTexture, TextureBindings, referenced_textures,
-    unresolved_textures,
+    PROCEDURAL_TEXTURES, ProceduralTexture, TEXTURE_NAMING_COMPONENTS, TextureBindings,
+    referenced_textures, unresolved_textures,
 };

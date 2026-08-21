@@ -112,6 +112,58 @@ error. `SpriteComponent::uv_rect()` returns the checked rect, and extraction pro
 The rect rides on the instance, not on the pipeline, so every frame of one sheet stays in a single
 batch: a sprite sheet is one texture, one draw call, and as many rects as there are sprites.
 
+## Tilemaps
+
+`sindri.tilemap` is a grid of tiles cut from one sheet, drawn from one entity.
+
+**The point is not draw calls.** Loose sprites sharing a texture already batch into one draw, so a
+floor of 49 sprites and a tilemap of 49 tiles cost the same to render. What changes is authoring: 49
+entities, each with a transform, a name, a stable ID, and a component, become one component holding
+49 small integers. Gather's floor made the difference concrete — the scene went from 68 entities to
+20 and from 45KB to 12KB, and its hierarchy went from a list you scroll past 49 `Floor r,c` rows to
+find the player, to a list that fits on one screen.
+
+```json
+"sindri.tilemap": {
+  "texture": "textures/tiles.png",
+  "sheet_columns": 2, "sheet_rows": 1,
+  "columns": 7, "rows": 7,
+  "tile_size": [1.1, 0.55],
+  "projection": "isometric",
+  "space": "world",
+  "tiles": [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, ...]
+}
+```
+
+`tiles` holds `columns * rows` cells, row-major from the top-left — the same order and origin the
+sheet's own cells are indexed in, so there is one reading order to remember rather than two. An
+empty cell is `null` and not a sentinel index, because every index is a real tile: reserving `0` or
+`-1` to mean "empty" is how a map ends up with an accidental floor in the corner nobody authored.
+
+**Variation comes from the sheet, not from tinting.** The map has one tint, and a checkerboard is two
+cells of the sheet rather than two tints of one. Gather's floor was 25 sprites tinted `0.82` and 24
+tinted white; it is now a two-cell sheet and a parity test. Per-tile tint would be a second way to
+say what a second tile already says.
+
+**A tilemap is not a second kind of thing to draw.** Its cells become sprite instances in the same
+batches loose sprites use, keyed by the same space, layer, and texture. So a tilemap and a sprite on
+one layer and one texture share a draw and sort against each other, and a prop can sit between two
+rows of floor rather than behind a plane of it.
+
+**The projection is the tilemap's own layout rule**, not Milestone 9's grid module. `orthogonal` runs
+columns +X and rows -Y, so the map reads the way the array does. `isometric` runs them along the two
+diagonals at half steps, which is what makes a square grid look like a diamond floor. Milestone 9
+still owns coordinates, neighbours, and pathfinding for whatever wants them; a renderer needed to
+know where a tile goes before any of that existed.
+
+`tile_to_local` and `local_to_tile` are inverses, and a test holds them to that on every cell of both
+projections. That property is the whole of what painting a map will need from the maths — turning a
+click into a tile — so it is worth more than the two functions look.
+
+A map that is not the shape it claims, or that names a cell outside its sheet, fails extraction with
+the numbers in the message rather than drawing part of a floor. It still *opens*, for the reason a
+bad UV rect does: the editor is where it gets fixed.
+
 ## Sprite animation
 
 `sindri.sprite_animation` sits beside `sindri.sprite` on the same entity and decides which rect the

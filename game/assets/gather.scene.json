@@ -5,1772 +5,98 @@
   },
   "entities": [
     {
-      "id": "world-camera",
-      "name": "World Camera",
+      "id": "banner",
+      "name": "Banner",
       "transform_3d": {
-        "position": [
-          0.0,
-          0.0,
-          9.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
+        "position": [0.0, 0.0, 2.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.3, 0.32, 1.0]
       },
       "components": {
-        "sindri.camera": {
-          "far": 60.0,
-          "near": 0.1,
-          "projection": "perspective",
-          "target": [
-            0.0,
-            0.0,
-            0.0
-          ],
-          "up": [
-            0.0,
-            1.0,
-            0.0
-          ],
-          "vertical_fov_degrees": 45.0
-        }
-      }
-    },
-    {
-      "id": "overlay-camera",
-      "name": "Overlay Camera",
-      "components": {
-        "sindri.camera": {
-          "center": [
-            0.0,
-            0.0
-          ],
-          "far": 10.0,
-          "near": 0.0,
-          "projection": "orthographic",
-          "vertical_size": 2.0
-        }
-      }
-    },
-    {
-      "id": "floor-0-0",
-      "name": "Floor 0,0",
-      "transform_3d": {
-        "position": [
-          0.0,
-          -1.6500000000000001,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
+        "sindri.script": {
+          "properties": {
+            "orbs": 5.0
+          },
+          "script": "Banner",
+          "source": "scripts/banner.decay"
+        },
         "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
+          "anchor": "center",
+          "layer": 120,
+          "texture": "textures/banner.png",
+          "tint": [1.0, 1.0, 1.0, 0.0]
         }
       }
     },
     {
-      "id": "floor-1-0",
-      "name": "Floor 1,0",
+      "id": "floor",
+      "name": "Floor",
       "transform_3d": {
-        "position": [
-          0.55,
-          -1.375,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
+        "position": [0.0, 1.65, -0.6],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
       },
       "components": {
-        "sindri.sprite": {
+        "sindri.tilemap": {
+          "columns": 7,
           "layer": 0,
+          "projection": "isometric",
+          "rows": 7,
+          "sheet_columns": 2,
+          "sheet_rows": 1,
           "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-2-0",
-      "name": "Floor 2,0",
-      "transform_3d": {
-        "position": [
-          1.1,
-          -1.1,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-3-0",
-      "name": "Floor 3,0",
-      "transform_3d": {
-        "position": [
-          1.6500000000000001,
-          -0.8250000000000001,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-4-0",
-      "name": "Floor 4,0",
-      "transform_3d": {
-        "position": [
-          2.2,
-          -0.55,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-5-0",
-      "name": "Floor 5,0",
-      "transform_3d": {
-        "position": [
-          2.75,
-          -0.27500000000000013,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-6-0",
-      "name": "Floor 6,0",
-      "transform_3d": {
-        "position": [
-          3.3000000000000003,
-          0.0,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-0-1",
-      "name": "Floor 0,1",
-      "transform_3d": {
-        "position": [
-          -0.55,
-          -1.375,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-1-1",
-      "name": "Floor 1,1",
-      "transform_3d": {
-        "position": [
-          0.0,
-          -1.1,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-2-1",
-      "name": "Floor 2,1",
-      "transform_3d": {
-        "position": [
-          0.55,
-          -0.8250000000000001,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-3-1",
-      "name": "Floor 3,1",
-      "transform_3d": {
-        "position": [
-          1.1,
-          -0.55,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-4-1",
-      "name": "Floor 4,1",
-      "transform_3d": {
-        "position": [
-          1.6500000000000001,
-          -0.27500000000000013,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-5-1",
-      "name": "Floor 5,1",
-      "transform_3d": {
-        "position": [
-          2.2,
-          0.0,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-6-1",
-      "name": "Floor 6,1",
-      "transform_3d": {
-        "position": [
-          2.75,
-          0.27500000000000013,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-0-2",
-      "name": "Floor 0,2",
-      "transform_3d": {
-        "position": [
-          -1.1,
-          -1.1,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-1-2",
-      "name": "Floor 1,2",
-      "transform_3d": {
-        "position": [
-          -0.55,
-          -0.8250000000000001,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-2-2",
-      "name": "Floor 2,2",
-      "transform_3d": {
-        "position": [
-          0.0,
-          -0.55,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-3-2",
-      "name": "Floor 3,2",
-      "transform_3d": {
-        "position": [
-          0.55,
-          -0.27500000000000013,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-4-2",
-      "name": "Floor 4,2",
-      "transform_3d": {
-        "position": [
-          1.1,
-          0.0,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-5-2",
-      "name": "Floor 5,2",
-      "transform_3d": {
-        "position": [
-          1.6500000000000001,
-          0.27500000000000013,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-6-2",
-      "name": "Floor 6,2",
-      "transform_3d": {
-        "position": [
-          2.2,
-          0.55,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-0-3",
-      "name": "Floor 0,3",
-      "transform_3d": {
-        "position": [
-          -1.6500000000000001,
-          -0.8250000000000001,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-1-3",
-      "name": "Floor 1,3",
-      "transform_3d": {
-        "position": [
-          -1.1,
-          -0.55,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-2-3",
-      "name": "Floor 2,3",
-      "transform_3d": {
-        "position": [
-          -0.55,
-          -0.27500000000000013,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-3-3",
-      "name": "Floor 3,3",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.0,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-4-3",
-      "name": "Floor 4,3",
-      "transform_3d": {
-        "position": [
-          0.55,
-          0.27500000000000013,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-5-3",
-      "name": "Floor 5,3",
-      "transform_3d": {
-        "position": [
-          1.1,
-          0.55,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-6-3",
-      "name": "Floor 6,3",
-      "transform_3d": {
-        "position": [
-          1.6500000000000001,
-          0.825,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-0-4",
-      "name": "Floor 0,4",
-      "transform_3d": {
-        "position": [
-          -2.2,
-          -0.55,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-1-4",
-      "name": "Floor 1,4",
-      "transform_3d": {
-        "position": [
-          -1.6500000000000001,
-          -0.27500000000000013,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-2-4",
-      "name": "Floor 2,4",
-      "transform_3d": {
-        "position": [
-          -1.1,
-          0.0,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-3-4",
-      "name": "Floor 3,4",
-      "transform_3d": {
-        "position": [
-          -0.55,
-          0.27500000000000013,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-4-4",
-      "name": "Floor 4,4",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.55,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-5-4",
-      "name": "Floor 5,4",
-      "transform_3d": {
-        "position": [
-          0.55,
-          0.825,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-6-4",
-      "name": "Floor 6,4",
-      "transform_3d": {
-        "position": [
-          1.1,
-          1.0999999999999999,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-0-5",
-      "name": "Floor 0,5",
-      "transform_3d": {
-        "position": [
-          -2.75,
-          -0.27500000000000013,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-1-5",
-      "name": "Floor 1,5",
-      "transform_3d": {
-        "position": [
-          -2.2,
-          0.0,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-2-5",
-      "name": "Floor 2,5",
-      "transform_3d": {
-        "position": [
-          -1.6500000000000001,
-          0.27500000000000013,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-3-5",
-      "name": "Floor 3,5",
-      "transform_3d": {
-        "position": [
-          -1.1,
-          0.55,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-4-5",
-      "name": "Floor 4,5",
-      "transform_3d": {
-        "position": [
-          -0.55,
-          0.825,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-5-5",
-      "name": "Floor 5,5",
-      "transform_3d": {
-        "position": [
-          0.0,
-          1.0999999999999999,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-6-5",
-      "name": "Floor 6,5",
-      "transform_3d": {
-        "position": [
-          0.55,
-          1.3750000000000002,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-0-6",
-      "name": "Floor 0,6",
-      "transform_3d": {
-        "position": [
-          -3.3000000000000003,
-          0.0,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-1-6",
-      "name": "Floor 1,6",
-      "transform_3d": {
-        "position": [
-          -2.75,
-          0.27500000000000013,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-2-6",
-      "name": "Floor 2,6",
-      "transform_3d": {
-        "position": [
-          -2.2,
-          0.55,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-3-6",
-      "name": "Floor 3,6",
-      "transform_3d": {
-        "position": [
-          -1.6500000000000001,
-          0.825,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-4-6",
-      "name": "Floor 4,6",
-      "transform_3d": {
-        "position": [
-          -1.1,
-          1.0999999999999999,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-5-6",
-      "name": "Floor 5,6",
-      "transform_3d": {
-        "position": [
-          -0.55,
-          1.3750000000000002,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "floor-6-6",
-      "name": "Floor 6,6",
-      "transform_3d": {
-        "position": [
-          0.0,
-          1.6500000000000001,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.1,
-          0.55,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "layer": 0,
-          "space": "world",
-          "texture": "textures/tile.png",
-          "tint": [
-            0.82,
-            0.82,
-            0.82,
-            1.0
+          "texture": "textures/tiles.png",
+          "tile_size": [1.1, 0.55],
+          "tiles": [
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1
           ]
         }
       }
@@ -1779,22 +105,9 @@
       "id": "orb-0",
       "name": "Orb 1",
       "transform_3d": {
-        "position": [
-          -2.05,
-          0.55,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.34,
-          0.34,
-          1.0
-        ]
+        "position": [-2.05, 0.55, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.34, 0.34, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -1809,12 +122,7 @@
           "layer": 10,
           "space": "world",
           "texture": "textures/orb.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 1.0]
         }
       }
     },
@@ -1822,22 +130,9 @@
       "id": "orb-1",
       "name": "Orb 2",
       "transform_3d": {
-        "position": [
-          2.05,
-          0.55,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.34,
-          0.34,
-          1.0
-        ]
+        "position": [2.05, 0.55, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.34, 0.34, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -1852,12 +147,7 @@
           "layer": 10,
           "space": "world",
           "texture": "textures/orb.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 1.0]
         }
       }
     },
@@ -1865,22 +155,9 @@
       "id": "orb-2",
       "name": "Orb 3",
       "transform_3d": {
-        "position": [
-          0.0,
-          1.25,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.34,
-          0.34,
-          1.0
-        ]
+        "position": [0.0, 1.25, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.34, 0.34, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -1895,12 +172,7 @@
           "layer": 10,
           "space": "world",
           "texture": "textures/orb.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 1.0]
         }
       }
     },
@@ -1908,22 +180,9 @@
       "id": "orb-3",
       "name": "Orb 4",
       "transform_3d": {
-        "position": [
-          -1.15,
-          -0.95,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.34,
-          0.34,
-          1.0
-        ]
+        "position": [-1.15, -0.95, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.34, 0.34, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -1938,12 +197,7 @@
           "layer": 10,
           "space": "world",
           "texture": "textures/orb.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 1.0]
         }
       }
     },
@@ -1951,22 +205,9 @@
       "id": "orb-4",
       "name": "Orb 5",
       "transform_3d": {
-        "position": [
-          1.15,
-          -0.95,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.34,
-          0.34,
-          1.0
-        ]
+        "position": [1.15, -0.95, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.34, 0.34, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -1981,12 +222,235 @@
           "layer": 10,
           "space": "world",
           "texture": "textures/orb.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "id": "overlay-camera",
+      "name": "Overlay Camera",
+      "components": {
+        "sindri.camera": {
+          "center": [0.0, 0.0],
+          "far": 10.0,
+          "near": 0.0,
+          "projection": "orthographic",
+          "vertical_size": 2.0
+        }
+      }
+    },
+    {
+      "id": "pip-0",
+      "name": "Pip 1",
+      "transform_3d": {
+        "position": [0.14, -0.14, 1.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.1, 0.1, 1.0]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "lights_at": 1.0
+          },
+          "script": "Pip",
+          "source": "scripts/pip.decay"
+        },
+        "sindri.sprite": {
+          "anchor": "top_left",
+          "layer": 100,
+          "texture": "textures/pip.png",
+          "tint": [1.0, 1.0, 1.0, 0.0],
+          "uv_rect": [0.5, 0.0, 0.5, 1.0]
+        }
+      }
+    },
+    {
+      "id": "pip-1",
+      "name": "Pip 2",
+      "transform_3d": {
+        "position": [0.27, -0.14, 1.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.1, 0.1, 1.0]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "lights_at": 2.0
+          },
+          "script": "Pip",
+          "source": "scripts/pip.decay"
+        },
+        "sindri.sprite": {
+          "anchor": "top_left",
+          "layer": 100,
+          "texture": "textures/pip.png",
+          "tint": [1.0, 1.0, 1.0, 0.0],
+          "uv_rect": [0.5, 0.0, 0.5, 1.0]
+        }
+      }
+    },
+    {
+      "id": "pip-2",
+      "name": "Pip 3",
+      "transform_3d": {
+        "position": [0.4, -0.14, 1.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.1, 0.1, 1.0]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "lights_at": 3.0
+          },
+          "script": "Pip",
+          "source": "scripts/pip.decay"
+        },
+        "sindri.sprite": {
+          "anchor": "top_left",
+          "layer": 100,
+          "texture": "textures/pip.png",
+          "tint": [1.0, 1.0, 1.0, 0.0],
+          "uv_rect": [0.5, 0.0, 0.5, 1.0]
+        }
+      }
+    },
+    {
+      "id": "pip-3",
+      "name": "Pip 4",
+      "transform_3d": {
+        "position": [0.53, -0.14, 1.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.1, 0.1, 1.0]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "lights_at": 4.0
+          },
+          "script": "Pip",
+          "source": "scripts/pip.decay"
+        },
+        "sindri.sprite": {
+          "anchor": "top_left",
+          "layer": 100,
+          "texture": "textures/pip.png",
+          "tint": [1.0, 1.0, 1.0, 0.0],
+          "uv_rect": [0.5, 0.0, 0.5, 1.0]
+        }
+      }
+    },
+    {
+      "id": "pip-4",
+      "name": "Pip 5",
+      "transform_3d": {
+        "position": [0.66, -0.14, 1.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.1, 0.1, 1.0]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "lights_at": 5.0
+          },
+          "script": "Pip",
+          "source": "scripts/pip.decay"
+        },
+        "sindri.sprite": {
+          "anchor": "top_left",
+          "layer": 100,
+          "texture": "textures/pip.png",
+          "tint": [1.0, 1.0, 1.0, 0.0],
+          "uv_rect": [0.5, 0.0, 0.5, 1.0]
+        }
+      }
+    },
+    {
+      "id": "pip-empty-0",
+      "name": "Pip Socket 1",
+      "transform_3d": {
+        "position": [0.14, -0.14, 0.5],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.1, 0.1, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "anchor": "top_left",
+          "layer": 99,
+          "texture": "textures/pip.png",
+          "tint": [1.0, 1.0, 1.0, 1.0],
+          "uv_rect": [0.0, 0.0, 0.5, 1.0]
+        }
+      }
+    },
+    {
+      "id": "pip-empty-1",
+      "name": "Pip Socket 2",
+      "transform_3d": {
+        "position": [0.27, -0.14, 0.5],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.1, 0.1, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "anchor": "top_left",
+          "layer": 99,
+          "texture": "textures/pip.png",
+          "tint": [1.0, 1.0, 1.0, 1.0],
+          "uv_rect": [0.0, 0.0, 0.5, 1.0]
+        }
+      }
+    },
+    {
+      "id": "pip-empty-2",
+      "name": "Pip Socket 3",
+      "transform_3d": {
+        "position": [0.4, -0.14, 0.5],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.1, 0.1, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "anchor": "top_left",
+          "layer": 99,
+          "texture": "textures/pip.png",
+          "tint": [1.0, 1.0, 1.0, 1.0],
+          "uv_rect": [0.0, 0.0, 0.5, 1.0]
+        }
+      }
+    },
+    {
+      "id": "pip-empty-3",
+      "name": "Pip Socket 4",
+      "transform_3d": {
+        "position": [0.53, -0.14, 0.5],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.1, 0.1, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "anchor": "top_left",
+          "layer": 99,
+          "texture": "textures/pip.png",
+          "tint": [1.0, 1.0, 1.0, 1.0],
+          "uv_rect": [0.0, 0.0, 0.5, 1.0]
+        }
+      }
+    },
+    {
+      "id": "pip-empty-4",
+      "name": "Pip Socket 5",
+      "transform_3d": {
+        "position": [0.66, -0.14, 0.5],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.1, 0.1, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "anchor": "top_left",
+          "layer": 99,
+          "texture": "textures/pip.png",
+          "tint": [1.0, 1.0, 1.0, 1.0],
+          "uv_rect": [0.0, 0.0, 0.5, 1.0]
         }
       }
     },
@@ -1994,22 +458,9 @@
       "id": "player",
       "name": "Player",
       "transform_3d": {
-        "position": [
-          0.0,
-          -0.2,
-          0.2
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.62,
-          0.62,
-          1.0
-        ]
+        "position": [0.0, -0.2, 0.2],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.62, 0.62, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -2023,22 +474,12 @@
           "layer": 20,
           "space": "world",
           "texture": "textures/player.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 1.0]
         },
         "sindri.sprite_animation": {
           "clips": {
             "bob": {
-              "frames": [
-                0,
-                1,
-                2,
-                3
-              ],
+              "frames": [0, 1, 2, 3],
               "looping": true,
               "seconds_per_frame": 0.16
             }
@@ -2053,489 +494,21 @@
       }
     },
     {
-      "id": "pip-0",
-      "name": "Pip 1",
+      "id": "world-camera",
+      "name": "World Camera",
       "transform_3d": {
-        "position": [
-          0.14,
-          -0.14,
-          1.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.1,
-          0.1,
-          1.0
-        ]
+        "position": [0.0, 0.0, 9.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
       },
       "components": {
-        "sindri.script": {
-          "properties": {
-            "lights_at": 1.0
-          },
-          "script": "Pip",
-          "source": "scripts/pip.decay"
-        },
-        "sindri.sprite": {
-          "anchor": "top_left",
-          "layer": 100,
-          "texture": "textures/pip.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            0.0
-          ],
-          "uv_rect": [
-            0.5,
-            0.0,
-            0.5,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "pip-1",
-      "name": "Pip 2",
-      "transform_3d": {
-        "position": [
-          0.27,
-          -0.14,
-          1.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.1,
-          0.1,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.script": {
-          "properties": {
-            "lights_at": 2.0
-          },
-          "script": "Pip",
-          "source": "scripts/pip.decay"
-        },
-        "sindri.sprite": {
-          "anchor": "top_left",
-          "layer": 100,
-          "texture": "textures/pip.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            0.0
-          ],
-          "uv_rect": [
-            0.5,
-            0.0,
-            0.5,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "pip-2",
-      "name": "Pip 3",
-      "transform_3d": {
-        "position": [
-          0.4,
-          -0.14,
-          1.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.1,
-          0.1,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.script": {
-          "properties": {
-            "lights_at": 3.0
-          },
-          "script": "Pip",
-          "source": "scripts/pip.decay"
-        },
-        "sindri.sprite": {
-          "anchor": "top_left",
-          "layer": 100,
-          "texture": "textures/pip.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            0.0
-          ],
-          "uv_rect": [
-            0.5,
-            0.0,
-            0.5,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "pip-3",
-      "name": "Pip 4",
-      "transform_3d": {
-        "position": [
-          0.53,
-          -0.14,
-          1.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.1,
-          0.1,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.script": {
-          "properties": {
-            "lights_at": 4.0
-          },
-          "script": "Pip",
-          "source": "scripts/pip.decay"
-        },
-        "sindri.sprite": {
-          "anchor": "top_left",
-          "layer": 100,
-          "texture": "textures/pip.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            0.0
-          ],
-          "uv_rect": [
-            0.5,
-            0.0,
-            0.5,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "pip-4",
-      "name": "Pip 5",
-      "transform_3d": {
-        "position": [
-          0.66,
-          -0.14,
-          1.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.1,
-          0.1,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.script": {
-          "properties": {
-            "lights_at": 5.0
-          },
-          "script": "Pip",
-          "source": "scripts/pip.decay"
-        },
-        "sindri.sprite": {
-          "anchor": "top_left",
-          "layer": 100,
-          "texture": "textures/pip.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            0.0
-          ],
-          "uv_rect": [
-            0.5,
-            0.0,
-            0.5,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "pip-empty-0",
-      "name": "Pip Socket 1",
-      "transform_3d": {
-        "position": [
-          0.14,
-          -0.14,
-          0.5
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.1,
-          0.1,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "anchor": "top_left",
-          "layer": 99,
-          "texture": "textures/pip.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ],
-          "uv_rect": [
-            0.0,
-            0.0,
-            0.5,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "pip-empty-1",
-      "name": "Pip Socket 2",
-      "transform_3d": {
-        "position": [
-          0.27,
-          -0.14,
-          0.5
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.1,
-          0.1,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "anchor": "top_left",
-          "layer": 99,
-          "texture": "textures/pip.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ],
-          "uv_rect": [
-            0.0,
-            0.0,
-            0.5,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "pip-empty-2",
-      "name": "Pip Socket 3",
-      "transform_3d": {
-        "position": [
-          0.4,
-          -0.14,
-          0.5
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.1,
-          0.1,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "anchor": "top_left",
-          "layer": 99,
-          "texture": "textures/pip.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ],
-          "uv_rect": [
-            0.0,
-            0.0,
-            0.5,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "pip-empty-3",
-      "name": "Pip Socket 4",
-      "transform_3d": {
-        "position": [
-          0.53,
-          -0.14,
-          0.5
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.1,
-          0.1,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "anchor": "top_left",
-          "layer": 99,
-          "texture": "textures/pip.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ],
-          "uv_rect": [
-            0.0,
-            0.0,
-            0.5,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "pip-empty-4",
-      "name": "Pip Socket 5",
-      "transform_3d": {
-        "position": [
-          0.66,
-          -0.14,
-          0.5
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.1,
-          0.1,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.sprite": {
-          "anchor": "top_left",
-          "layer": 99,
-          "texture": "textures/pip.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ],
-          "uv_rect": [
-            0.0,
-            0.0,
-            0.5,
-            1.0
-          ]
-        }
-      }
-    },
-    {
-      "id": "banner",
-      "name": "Banner",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.0,
-          2.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.3,
-          0.32,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.script": {
-          "properties": {
-            "orbs": 5.0
-          },
-          "script": "Banner",
-          "source": "scripts/banner.decay"
-        },
-        "sindri.sprite": {
-          "anchor": "center",
-          "layer": 120,
-          "texture": "textures/banner.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            0.0
-          ]
+        "sindri.camera": {
+          "far": 60.0,
+          "near": 0.1,
+          "projection": "perspective",
+          "target": [0.0, 0.0, 0.0],
+          "up": [0.0, 1.0, 0.0],
+          "vertical_fov_degrees": 45.0
         }
       }
     }
