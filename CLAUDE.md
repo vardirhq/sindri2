@@ -42,6 +42,10 @@ why play mode snapshots the world. The language itself is documented in
 `docs/entity-scaling.md` records what the world costs at 1k, 10k, and 100k
 entities, and why an archetype ECS is not warranted.
 
+`docs/editor-meets-the-game.md` is a session note, not a contract: what happened
+when the editor was pointed at the companion game, what held, and what the tool
+could not do. Session notes age and are allowed to.
+
 `docs/capabilities.md` is the inventory of what actually works, what is drawn in
 the editor but does nothing, and what is missing. Read it before claiming the
 engine or the editor can do something, and update it in the same commit as any
@@ -69,7 +73,8 @@ examples/triangle/  shared native + WebGPU triangle proof
 examples/cube/      sindri-cube: scene-driven cube + sprite overlay, and the
                     `capture` binary used as a CI render artifact
 docs/               subsystem contracts
-scripts/            capture-editor.sh (Xvfb editor screenshot)
+scripts/            capture-editor.sh (Xvfb editor screenshot; takes an
+                    optional scene path)
 decay/              a separate Cargo workspace: the Decay gameplay language
 ```
 
@@ -153,6 +158,7 @@ cargo test -p sindri-assets --target wasm32-unknown-unknown --test decode_compat
 
 # editor screenshot (needs imagemagick, xdotool, xvfb)
 xvfb-run --auto-servernum ./scripts/capture-editor.sh target/editor.png
+xvfb-run --auto-servernum ./scripts/capture-editor.sh target/g.png game/assets/gather.scene.json
 
 # regenerate golden scene fixtures, deliberately
 SINDRI_UPDATE_SCENE_FIXTURES=1 cargo test --package sindri-core

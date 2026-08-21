@@ -2,11 +2,20 @@
 
 set -eu
 
-output_path=${1:?"usage: capture-editor.sh OUTPUT.png"}
+output_path=${1:?"usage: capture-editor.sh OUTPUT.png [SCENE.json]"}
 output_dir=$(dirname "$output_path")
 mkdir -p "$output_dir"
 
-cargo run --package sindri-editor &
+# The editor takes a scene on its command line and falls back to the demo one,
+# so passing a second argument here photographs whichever scene is of interest
+# rather than only the fixture.
+scene=${2:-}
+
+if [ -n "$scene" ]; then
+    cargo run --package sindri-editor -- "$scene" &
+else
+    cargo run --package sindri-editor &
+fi
 editor_pid=$!
 window_id=""
 

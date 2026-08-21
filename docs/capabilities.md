@@ -468,6 +468,11 @@ and checking the banner comes up.
 for a fixed number of fixed steps — and photographs where that leaves the game,
 so the picture proves the scripts ran rather than that the scene loads.
 
+**It opens in the editor, and Play runs it there.** All 68 entities load, both
+viewports draw it, and the editor advances the same Decay sources the standalone
+game does. Authoring it there is another matter — `docs/editor-meets-the-game.md`
+records what taking the editor to the game actually found.
+
 **It found a bug the proofs could not.** It is the first thing in the workspace
 that draws a world and a screen overlay in one frame, and doing so revealed that
 every sprite batch after the first drew with the last batch's camera. See

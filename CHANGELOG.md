@@ -145,6 +145,8 @@ All notable changes to Sindri Next will be documented here.
 
 - Gave every sprite batch its own uniform and instance buffers, so each draws with its own camera and its own instances; they shared one set, and because `queue.write_buffer` stages a write until the queue is submitted, every batch in a frame drew with the last one's camera — which no proof noticed, since none of them had both a world and an overlay.
 - Made an animated sprite that authored no rect of its own draw the first frame of the clip it is playing, rather than the whole sheet squeezed into one quad, so a scene shows a pose before anything has run it.
+- Stopped the editor reporting a script that is still loading as a compile error, which put one permanent error per scripted entity in the console on every cold open; a script that will never arrive is still reported.
+- Made `scripts/capture-editor.sh` take a scene path, so the editor can be photographed against a scene other than its fixture.
 
 - Increased the MSRV from Rust 1.85 to 1.87 to use the current `wgpu` 30 release.
 - Replaced the planned Tauri/React editor architecture with native `egui`, `egui-winit`, and `egui-wgpu` integration.

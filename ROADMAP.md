@@ -361,6 +361,8 @@ Done:
 - [x] Show what the engine reports in the console — failures, what each scene turned out to be, and the textures it names that nothing has bound
 - [x] Remember the open scene between launches, and name it and its unsaved state in the window title
 - [x] Widen the viewport's zoom and pitch limits, make the zoom proportional, stop the orbit reaching the pole, and add **Focus selection**
+- [x] Stop reporting a script that is still loading as a compile error — asset loading is asynchronous, so every cold open logged one error per scripted entity for the moment between the scene landing and its scripts arriving, and the console keeps what it is told; opening the companion game showed twelve errors against a game that was working
+- [x] Let `scripts/capture-editor.sh` photograph a named scene rather than only the fixture, which is what taking the editor to the game needed
 
 Wanted, in no particular order. Several of these are small enough to do the
 moment they annoy someone, and are also named in Milestone 11 as part of the
@@ -378,6 +380,8 @@ what the editor cannot yet do.
 - [ ] Asset thumbnails, after which the grid view is worth defaulting to again
 - [ ] Show which entity a hierarchy row is, when its name is empty or repeated
 - [ ] Keep a filtered hierarchy readable: rows keep their indentation, so a match under a filtered-out parent sits indented under nothing
+- [ ] Group a hierarchy of repeated entities, or the tool stops working at the scale a real scene reaches — taking the editor to the companion game put 49 `Floor r,c` rows between the top of the list and every entity a person actually wanted to edit; the tilemap removes this particular 49, and the next scene will find another
+- [ ] Give the console a way to clear or filter what it holds, since a transient error stays in the count long after it stops being true
 
 ## The companion game — continuous, not a milestone
 
@@ -443,7 +447,7 @@ module is for.
 
 - [x] Start the game: one room, one character, one tile floor (started before text existed, which the entry above records)
 - [ ] Grow it with Milestone 6: animation, a tilemap floor, parallax, and a font rendering real text
-- [ ] Take the Milestone 7 editor to it, and record what authoring it in the editor is actually like
+- [x] Take the Milestone 7 editor to it, and record what authoring it in the editor is actually like — `docs/editor-meets-the-game.md`; it opens, renders in both viewports, and Play runs its scripts, which is the parity claim holding. What it cannot do is author it: 49 floor rows drown the hierarchy, and there is no viewport selection to escape the list with
 - [ ] Give it depth with Milestone 8: a 3D prop in the same scene as the sprites
 - [ ] Rebuild its coordinate handling on Milestone 9's grid module rather than its own
 - [ ] Ship it through Milestone 10's export pipeline, natively and to the web, as the pipeline's real test

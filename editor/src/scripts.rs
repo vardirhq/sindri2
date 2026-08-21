@@ -21,7 +21,7 @@ use sindri_assets::{
     AssetLoadOutcome, AssetLoadQueueConfig, AssetLoader, AssetWatch, FileSystemAssetSource,
     TextAssetDecoder,
 };
-use sindri_core::{AssetId, ComponentSchemaRegistry, World};
+use sindri_core::{AssetId, AssetStatus, ComponentSchemaRegistry, World};
 use sindri_decay::{
     ScriptExport, ScriptFailure, ScriptReport, ScriptSources, Scripts, referenced_sources,
 };
@@ -169,12 +169,44 @@ impl SceneScripts {
     /// Called every frame regardless of the transport, so a script that will
     /// not compile says so when the scene opens and the inspector can show what
     /// a script wants authored without anyone pressing Play.
+    ///
+    /// A source that has not arrived yet is not a failure, and saying it is
+    /// puts one permanent error per scripted entity in the console for every
+    /// cold open. Loading is asynchronous by design, so between the scene
+    /// landing and its scripts arriving every scripted entity is briefly
+    /// missing its source; the log keeps what it is told, so the count stayed
+    /// up long after the scripts had compiled and run. Opening the companion
+    /// game showed twelve errors against a game that was working.
+    ///
+    /// A source that will never arrive still reports, twice over: the loader
+    /// says so when the request fails, and this says so once the asset is out
+    /// of flight.
     pub fn compile(
         &mut self,
         world: &World,
         components: &ComponentSchemaRegistry,
     ) -> Vec<ScriptFailure> {
-        self.scripts.compile(world, components, &self.sources)
+        let mut failures = self.scripts.compile(world, components, &self.sources);
+        failures.retain(|failure| match failure {
+            ScriptFailure::MissingSource { asset, .. } => !self.is_in_flight(asset),
+            _ => true,
+        });
+        failures
+    }
+
+    /// Whether the loader is still working on `asset`, so its absence is a
+    /// moment rather than a fault.
+    fn is_in_flight(&self, asset: &str) -> bool {
+        let Some(loader) = self.loader.as_ref() else {
+            return false;
+        };
+        let Ok(id) = AssetId::new(asset.to_owned()) else {
+            return false;
+        };
+        matches!(
+            loader.status(&id),
+            Some(AssetStatus::Queued | AssetStatus::Loading)
+        )
     }
 
     /// Moves every script in the world on by `delta_seconds`.
@@ -234,4 +266,103 @@ impl SceneScripts {
 
 fn root_of(scene: Option<&Path>) -> Option<PathBuf> {
     scene.and_then(Path::parent).map(Path::to_path_buf)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{collections::BTreeMap, fs, thread::sleep, time::Duration};
+
+    use serde_json::json;
+    use sindri_core::{ComponentSchemaRegistry, EntityData, SceneComponent, World};
+    use sindri_decay::ScriptComponent;
+    use tempfile::TempDir;
+
+    use super::{SceneScripts, ScriptFailure};
+
+    /// A world holding one entity that runs `source`, and a registry that knows
+    /// what `sindri.script` is.
+    fn scripted(source: &str) -> (World, ComponentSchemaRegistry) {
+        let mut components = ComponentSchemaRegistry::default();
+        components
+            .register::<ScriptComponent>("Script")
+            .expect("sindri.script registers once");
+        let mut world = World::default();
+        world.spawn(EntityData {
+            name: Some("Thing".to_owned()),
+            components: BTreeMap::from([(
+                ScriptComponent::TYPE_NAME.to_owned(),
+                json!({ "source": source, "script": "Thing" }),
+            )]),
+            ..EntityData::default()
+        });
+        (world, components)
+    }
+
+    /// A scene directory holding one script, and the scene path inside it.
+    fn project(script: &str, text: &str) -> TempDir {
+        let directory = TempDir::new().expect("a temporary directory");
+        let scripts = directory.path().join("scripts");
+        fs::create_dir_all(&scripts).expect("the scripts directory is creatable");
+        fs::write(scripts.join(script), text).expect("the script is writable");
+        directory
+    }
+
+    /// The bug this guards: a cold open reported one error per scripted entity
+    /// for the moment between the scene landing and its scripts arriving, and
+    /// the console keeps what it is told, so twelve phantom errors sat in the
+    /// status bar of a game that was working.
+    #[test]
+    fn a_script_still_loading_is_not_an_error() {
+        let directory = project("thing.decay", "script Thing {\n    fn update() {}\n}\n");
+        let scene = directory.path().join("thing.scene.json");
+        let (world, components) = scripted("scripts/thing.decay");
+
+        let mut scripts = SceneScripts::for_scene(Some(&scene));
+        scripts.request(&world, &components);
+
+        // Before anything is polled the source cannot have arrived, which is
+        // exactly the window the editor used to report.
+        assert!(
+            scripts.compile(&world, &components).is_empty(),
+            "a source still in flight is not a compile failure"
+        );
+
+        // And once it lands it compiles, so the silence above was not the
+        // failure being swallowed for good.
+        for _ in 0..200 {
+            scripts.poll();
+            if scripts.compile(&world, &components).is_empty()
+                && scripts.exports("scripts/thing.decay", "Thing").is_some()
+            {
+                return;
+            }
+            sleep(Duration::from_millis(10));
+        }
+        panic!("the script never arrived");
+    }
+
+    /// The other half: a source that will never arrive is still reported, so
+    /// suppressing the in-flight case did not suppress a real typo.
+    #[test]
+    fn a_script_that_will_never_arrive_is_an_error() {
+        let directory = project("thing.decay", "script Thing {\n    fn update() {}\n}\n");
+        let scene = directory.path().join("thing.scene.json");
+        let (world, components) = scripted("scripts/absent.decay");
+
+        let mut scripts = SceneScripts::for_scene(Some(&scene));
+        scripts.request(&world, &components);
+
+        for _ in 0..200 {
+            scripts.poll();
+            let failures = scripts.compile(&world, &components);
+            if failures
+                .iter()
+                .any(|failure| matches!(failure, ScriptFailure::MissingSource { .. }))
+            {
+                return;
+            }
+            sleep(Duration::from_millis(10));
+        }
+        panic!("a script that does not exist was never reported");
+    }
 }
