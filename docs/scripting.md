@@ -65,13 +65,70 @@ Everything, in one table. Decay knows paths, not engine concepts:
 `this.transform.position.x` arrives at the runtime as four strings the IR never
 interprets, and `WorldHost` is the only place that gives them a meaning.
 
+### The entity a script is on
+
 | Path | Type | Read | Write |
 | --- | --- | --- | --- |
 | `this.transform.position.{x,y,z}` | `f32` | yes | yes |
 | `this.transform.scale.{x,y,z}` | `f32` | yes | yes |
 | `this.transform.rotation_z` | `f32` | yes | yes |
+| `this.sprite.tint.{r,g,b,a}` | `f32` | yes | yes |
+| `this.sprite.layer` | `f32` | yes | yes |
 
-**These paths are typed, so a misspelling is a compile error.** `this.transfrom`
+A sprite path reaches into the entity's stored `sindri.sprite` payload rather
+than through the typed view, because a component is a `Deserialize`-only view
+over a payload and the payload is what gets written back — going through the
+view would mean rebuilding and reserializing it, which is how a field the view
+does not know about gets dropped. A number written where the payload held an
+integer is rounded back to one, so touching a layer does not change a scene byte
+for byte.
+
+An entity with no sprite is not an error at compile time — the surface says a
+script *may* reach one, not that every entity has one — and a write says so
+plainly at runtime.
+
+### The keyboard
+
+| Call | Returns |
+| --- | --- |
+| `Input.axis(negative, positive)` | `f32`, one of -1, 0, 1 |
+| `Input.is_down(key)` | `bool` |
+| `Input.just_pressed(key)` | `bool` |
+| `Input.just_released(key)` | `bool` |
+
+Keys are named physically, by where they are rather than what they type, so a
+binding survives a change of layout: `"W"`, `"ArrowLeft"`, `"Space"`,
+`"Digit1"`, `"ShiftLeft"`. Matching ignores case, because the name is typed by a
+person. `sindri_platform::Key::ALL` is the list.
+
+**A name nothing answers to is refused**, not read as never-held. A control that
+silently does nothing is a bug report nobody can reproduce.
+
+Holding two opposing keys gives an axis of zero, so opposed movement keys cannot
+cancel into whichever the operating system reported last. A press is not a hold:
+`just_pressed` is true for one frame however long the key stays down, and the
+operating system's key repeat is not a second press.
+
+### The frame
+
+| Path | Type |
+| --- | --- |
+| `Time.delta` | `f32` |
+| `Time.elapsed` | `f32` |
+
+`delta` is what `update` receives as its argument, offered again so a function
+that is not `update` can reach it. `elapsed` is per script instance rather than
+per world: a script attached later has not been running as long.
+
+### Saying something
+
+`print(anything)` puts a line in the host's log, tagged with the entity that
+said it. It takes any type because Decay has no conversions and `+` does not
+concatenate, so a `print` that only took text could not report a value.
+
+### Maths
+
+**Every path above is typed, so a misspelling is a compile error.** `this.transfrom`
 and `this.transform.position.w` are both refused with a line number when the
 script compiles, rather than failing on the first frame with a path name and no
 idea where it came from.
@@ -83,15 +140,24 @@ would accept and asserts the host answers it. A path accepted by one and not
 the other is the worst failure available here — a clean compile followed by a
 runtime error — and it cannot be shipped.
 
-Functions: `abs`, `sqrt`, `sin`, `cos`, `min`, `max`. That is the entire
-standard library. Decay has no modules and no imports, so each is a bare global
-name, and every one added is a name a script can no longer use for its own.
+`abs`, `sqrt`, `sin`, `cos`, `min`, `max`. That is the entire standard library.
+Decay has no modules and no imports, so each is a bare global name, and every one
+added is a name a script can no longer use for its own.
 
-Two absences are deliberate. There is **no full 3D rotation**: a gameplay script
-should not be asked to assemble a quaternion by hand, and offering a third of a
-3D rotation API is worse than offering none. There is **no input, no time, no
-spawning, and no other entity** — those are the scripting host's job, and the
-host does not exist yet.
+Three absences are deliberate.
+
+**No full 3D rotation**: a gameplay script should not be asked to assemble a
+quaternion by hand, and offering a third of a 3D rotation API is worse than
+offering none.
+
+**No spawning, despawning, or other entity.** These wait on the language rather
+than on the host: naming another entity means holding one, and Decay has no
+value beyond numbers, booleans, strings, and null. An entity handle is a value
+type, and adding one is a language decision — see `decay/LANGUAGE.md`.
+
+**No mouse, and no `vec2`.** The same reason for `vec2`: it is a value type.
+The mouse is simply not needed yet by anything, and the acceptance list did not
+ask for it.
 
 The **Z lock is honoured**. A script is a write path like any other, and one
 that could ignore the lock would be the hole that makes the lock worthless.
@@ -115,6 +181,19 @@ the frame it has reached is not, so it is not.
 A script's fields drift as it runs. `Scripts` holds the live instances beside
 the world rather than in it, so watching a scene play is never an unsaved change
 to the file it came from.
+
+## Where this surface came from
+
+Not invented. `docs/2d-inventory.md` read the legacy engine's
+`examples/scripted_asteroids/scripts/player.lua` — real gameplay rather than an
+imagined sample — and wrote down the whole surface it needed. That list is the
+acceptance criteria, and it is now met: authored properties, lifecycle,
+transform, sprite, input, and `print`.
+
+Two items on it are met differently. `vec2(x, y)` and
+`sprite:set_tint([f32; 4])` both pass a value around; Decay has no such value,
+so a tint is four typed numbers — `this.sprite.tint.r` — in the same shape as
+`position.x`. That is a better fit for a property panel than an array anyway.
 
 ## Failure is per script
 
@@ -153,8 +232,8 @@ back does not change what undo means.
 
 ## Known gaps
 
-- The surface is small: one entity's transform and six maths functions. No
-  input, no time, no spawning, no other entity, no other component.
+- No spawning, despawning, or access to another entity, which wait on Decay
+  having a value that can hold one.
 - Decay's only numeric type is spelled `f32` and holds an `f64`; `WorldHost` is
   the one place the two meet and the one place that narrows.
 - The script instance is created on first sight and lost when the world is

@@ -1,0 +1,17 @@
+// Breathes a sprite's tint, to show a script reaching a component rather than
+// only its own transform.
+//
+// `this.sprite.tint.a` is a number inside the `sindri.sprite` payload the scene
+// stores. The script does not know that, and does not need to: it names a path,
+// and the host is the only thing that knows what a path means.
+script Fade {
+    @export
+    let cycles_per_second: f32 = 0.5;
+
+    fn update(dt: f32) {
+        // A cosine from 0 to 1 rather than -1 to 1, so the sprite fades out and
+        // back rather than spending half its time inverted.
+        let wave = cos(Time.elapsed * cycles_per_second * 6.2831855);
+        this.sprite.tint.a = 0.5 + wave * 0.5;
+    }
+}

@@ -39,6 +39,7 @@ use sindri_scene::{
 
 use crate::{
     console::{Console, Entry, Level},
+    input::EditorInput,
     // `egui::Layout` is a different thing entirely and is already in scope.
     preferences::{AssetView, BottomTab, CameraProjection, Layout as WorkspaceLayout, Preferences},
     project::{AssetKind, ProjectEntry, ProjectTree},
@@ -424,6 +425,8 @@ struct EditorApp {
     animations: SpriteAnimations,
     /// The scripts the open scene runs, and the sources behind them.
     scripts: SceneScripts,
+    /// The keyboard a running script reads, translated from egui's.
+    input: EditorInput,
     /// The world as it was when Play was pressed.
     ///
     /// Scripts write to the world, which animation never did, so stopping has
@@ -506,6 +509,7 @@ impl EditorApp {
             game_viewport,
             animations: SpriteAnimations::new(),
             scripts: SceneScripts::for_scene(None),
+            input: EditorInput::default(),
             play_snapshot: None,
             notice: open_error.or(load_error),
             render_error: None,
@@ -873,16 +877,49 @@ impl EditorApp {
             self.lifecycle.state(),
             context.input(|input| input.stable_dt),
         );
+        // The keyboard is read only while the scene is actually running, and
+        // never while a text field has it: renaming an entity to "Wall" must
+        // not walk the player left. Read every frame regardless, so that
+        // stopping releases what was held rather than leaving it down.
+        let listening =
+            self.lifecycle.state() == EngineState::Running && !context.egui_wants_keyboard_input();
+        self.input.update(context, listening);
+
         if delta == 0.0 {
             return;
         }
         let components = self.scene.components().clone();
-        for failure in self.scripts.advance(&mut self.world, &components, delta) {
+        let report = self
+            .scripts
+            .advance(&mut self.world, &components, self.input.state(), delta);
+
+        for message in report.printed {
+            // Named by entity, because "moving" is not something an author can
+            // act on when six entities run the same script.
+            self.console.info(format!(
+                "{}: {}",
+                self.entity_label(message.entity),
+                message.message
+            ));
+        }
+        for failure in report.failures {
             // Collapsed by the console the same way a broken clip is: a script
             // that fails does it sixty times a second, and one line with a
             // count says more than sixty that scroll.
             self.console.error(failure.to_string());
         }
+    }
+
+    /// What to call an entity in a console line.
+    fn entity_label(&self, entity: EntityId) -> String {
+        self.world
+            .get(entity)
+            .and_then(|data| {
+                data.name
+                    .clone()
+                    .or_else(|| data.source_id.as_ref().map(|id| id.as_str().to_owned()))
+            })
+            .unwrap_or_else(|| format!("{entity:?}"))
     }
 
     fn record_texture_notes(&mut self, notes: Vec<TextureNote>) {

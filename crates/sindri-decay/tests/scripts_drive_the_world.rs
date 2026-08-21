@@ -10,6 +10,7 @@ use sindri_core::{
     ComponentSchemaRegistry, EntityData, EntityId, SceneComponent, Transform3D, World,
 };
 use sindri_decay::{ScriptComponent, ScriptFailure, ScriptSources, Scripts};
+use sindri_platform::InputState;
 
 const SPIN: &str = r"
 script Spin {
@@ -79,13 +80,25 @@ fn a_script_moves_the_entity_it_is_attached_to() {
     let (mut world, entity) = world_with(component(&json!({})));
     let mut scripts = Scripts::new();
 
-    let failures = scripts.advance(&mut world, &registry(), &sources(), 0.25);
-    assert!(failures.is_empty(), "{failures:?}");
+    let failures = scripts.advance(
+        &mut world,
+        &registry(),
+        &sources(),
+        &InputState::default(),
+        0.25,
+    );
+    assert!(failures.is_quiet(), "{failures:?}");
     assert!((rotation(&world, entity) - 0.25).abs() < 1.0e-5);
 
     // State survives between frames, which is what a script instance is for:
     // `elapsed` accumulates rather than restarting.
-    scripts.advance(&mut world, &registry(), &sources(), 0.25);
+    scripts.advance(
+        &mut world,
+        &registry(),
+        &sources(),
+        &InputState::default(),
+        0.25,
+    );
     assert!((rotation(&world, entity) - 0.5).abs() < 1.0e-5);
 }
 
@@ -96,8 +109,14 @@ fn an_authored_property_reaches_the_script() {
     let (mut world, entity) = world_with(component(&json!({ "turns_per_second": 4.0 })));
     let mut scripts = Scripts::new();
 
-    let failures = scripts.advance(&mut world, &registry(), &sources(), 0.25);
-    assert!(failures.is_empty(), "{failures:?}");
+    let failures = scripts.advance(
+        &mut world,
+        &registry(),
+        &sources(),
+        &InputState::default(),
+        0.25,
+    );
+    assert!(failures.is_quiet(), "{failures:?}");
     assert!(
         (rotation(&world, entity) - 1.0).abs() < 1.0e-5,
         "a quarter second at four turns a second, not the script's default of one"
@@ -113,7 +132,13 @@ fn a_property_that_would_go_nowhere_is_refused() {
         (json!({ "elapsed": 4.0 }), "not @export"),
     ] {
         let (mut world, _) = world_with(component(&properties));
-        let failures = Scripts::new().advance(&mut world, &registry(), &sources(), 0.25);
+        let failures = Scripts::new().advance(
+            &mut world,
+            &registry(),
+            &sources(),
+            &InputState::default(),
+            0.25,
+        );
         let reported = format!("{failures:?}");
         assert!(
             reported.contains(expected),
@@ -139,10 +164,19 @@ fn a_failing_script_does_not_stop_the_rest() {
         ..EntityData::default()
     });
 
-    let failures = Scripts::new().advance(&mut world, &registry(), &sources(), 0.25);
+    let failures = Scripts::new().advance(
+        &mut world,
+        &registry(),
+        &sources(),
+        &InputState::default(),
+        0.25,
+    );
 
-    assert_eq!(failures.len(), 1, "{failures:?}");
-    assert!(matches!(failures[0], ScriptFailure::MissingSource { .. }));
+    assert_eq!(failures.failures.len(), 1, "{failures:?}");
+    assert!(matches!(
+        failures.failures[0],
+        ScriptFailure::MissingSource { .. }
+    ));
     assert!(
         (rotation(&world, working) - 0.25).abs() < 1.0e-5,
         "the working script still ran"
@@ -157,9 +191,15 @@ fn a_broken_source_reports_its_diagnostics() {
     let mut sources = ScriptSources::new();
     sources.insert("scripts/spin.decay", "script Spin { fn update(dt: f32) { ");
 
-    let failures = Scripts::new().advance(&mut world, &registry(), &sources, 0.25);
+    let failures = Scripts::new().advance(
+        &mut world,
+        &registry(),
+        &sources,
+        &InputState::default(),
+        0.25,
+    );
 
-    match failures.as_slice() {
+    match failures.failures.as_slice() {
         [ScriptFailure::Compile { asset, diagnostics }] => {
             assert_eq!(asset, "scripts/spin.decay");
             assert!(!diagnostics.is_empty());
@@ -180,15 +220,27 @@ fn replacing_a_source_recompiles_it() {
     let mut scripts = Scripts::new();
     let mut sources = sources();
 
-    scripts.advance(&mut world, &registry(), &sources, 1.0);
+    scripts.advance(
+        &mut world,
+        &registry(),
+        &sources,
+        &InputState::default(),
+        1.0,
+    );
     assert!((rotation(&world, entity) - 1.0).abs() < 1.0e-5);
 
     sources.insert(
         "scripts/spin.decay",
         r"script Spin { fn update(dt: f32) { this.transform.rotation_z = 0.0; } }",
     );
-    let failures = scripts.advance(&mut world, &registry(), &sources, 1.0);
-    assert!(failures.is_empty(), "{failures:?}");
+    let failures = scripts.advance(
+        &mut world,
+        &registry(),
+        &sources,
+        &InputState::default(),
+        1.0,
+    );
+    assert!(failures.is_quiet(), "{failures:?}");
     assert!(
         rotation(&world, entity).abs() < f32::EPSILON,
         "the new program is running"
@@ -203,9 +255,15 @@ fn a_disabled_script_does_not_run() {
     disabled["enabled"] = json!(false);
     let (mut world, entity) = world_with(disabled);
 
-    let failures = Scripts::new().advance(&mut world, &registry(), &sources(), 0.25);
+    let failures = Scripts::new().advance(
+        &mut world,
+        &registry(),
+        &sources(),
+        &InputState::default(),
+        0.25,
+    );
 
-    assert!(failures.is_empty(), "{failures:?}");
+    assert!(failures.is_quiet(), "{failures:?}");
     assert!(rotation(&world, entity).abs() < f32::EPSILON);
 }
 
@@ -224,9 +282,15 @@ fn a_misspelled_path_is_a_compile_error_rather_than_a_first_frame_failure() {
         "script Spin { fn update(dt: f32) { this.transfrom.rotation_z = dt; } }",
     );
 
-    let failures = Scripts::new().advance(&mut world, &registry(), &sources, 0.25);
+    let failures = Scripts::new().advance(
+        &mut world,
+        &registry(),
+        &sources,
+        &InputState::default(),
+        0.25,
+    );
 
-    match failures.as_slice() {
+    match failures.failures.as_slice() {
         [ScriptFailure::Compile { diagnostics, .. }] => {
             assert!(
                 diagnostics
@@ -266,8 +330,14 @@ fn the_paths_the_surface_describes_still_compile() {
         }",
     );
 
-    let failures = Scripts::new().advance(&mut world, &registry(), &sources, 0.25);
-    assert!(failures.is_empty(), "{failures:?}");
+    let failures = Scripts::new().advance(
+        &mut world,
+        &registry(),
+        &sources,
+        &InputState::default(),
+        0.25,
+    );
+    assert!(failures.is_quiet(), "{failures:?}");
 }
 
 /// Decay has no methods, and reaching for one now says what to write instead
@@ -281,7 +351,13 @@ fn reaching_for_a_method_is_refused_with_advice() {
         "script Spin { fn helper() -> f32 { return 1.0; }          fn update(dt: f32) { this.transform.rotation_z = this.helper(); } }",
     );
 
-    let failures = Scripts::new().advance(&mut world, &registry(), &sources, 0.25);
+    let failures = Scripts::new().advance(
+        &mut world,
+        &registry(),
+        &sources,
+        &InputState::default(),
+        0.25,
+    );
     let reported = format!("{failures:?}");
     assert!(reported.contains("call it as `helper(...)`"), "{reported}");
 }

@@ -12,12 +12,16 @@ publish = false
 
 [dependencies]
 sindri-core = { path = "../sindri-core" }
+sindri-platform = { path = "../sindri-platform" }
 decay-ir = { path = "../../decay/crates/decay-ir" }
 decay-runtime = { path = "../../decay/crates/decay-runtime" }
 decay-semantic = { path = "../../decay/crates/decay-semantic" }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
 
 [lints]
 workspace = true

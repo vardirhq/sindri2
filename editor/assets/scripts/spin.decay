@@ -1,12 +1,16 @@
-// Turns whatever it is attached to, at a speed the scene chooses.
+// Turns whatever it is attached to, and lets the arrow keys push it around.
 //
-// The first Decay script the engine runs. It exists to be watched: open the
-// fixture, press Play, and the cube turns because this said so.
+// The first Decay script the engine ran. It exists to be watched: open the
+// fixture, press Play, and the cube turns because this said so — then hold an
+// arrow key and it moves.
 script Spin {
     // Authored in the scene rather than here. `let` means the script does not
     // reassign it; @export means the author does.
     @export
     let turns_per_second: f32 = 0.25;
+
+    @export
+    let move_speed: f32 = 1.5;
 
     // Instance state. It survives between frames and is deliberately not in the
     // scene, so watching the cube turn is not an unsaved change to the file.
@@ -15,5 +19,19 @@ script Spin {
     fn update(dt: f32) {
         elapsed += dt;
         this.transform.rotation_z = elapsed * turns_per_second * 6.2831855;
+
+        // Two opposing keys as -1, 0, or 1. Holding both is zero, so opposed
+        // keys cannot cancel into whichever the operating system reported last.
+        let sideways = Input.axis("ArrowLeft", "ArrowRight");
+        let upward = Input.axis("ArrowDown", "ArrowUp");
+        this.transform.position.x += sideways * move_speed * dt;
+        this.transform.position.y += upward * move_speed * dt;
+
+        // A press, not a hold: this happens once however long the key is held.
+        if Input.just_pressed("Space") {
+            print("back to the middle");
+            this.transform.position.x = 0.0;
+            this.transform.position.y = 0.0;
+        }
     }
 }

@@ -26,10 +26,12 @@
 mod component;
 mod error;
 mod host;
+mod report;
 mod scripts;
 mod surface;
 
 pub use component::ScriptComponent;
 pub use error::ScriptFailure;
-pub use host::WorldHost;
+pub use host::{ScriptContext, WorldHost};
+pub use report::{ScriptMessage, ScriptReport};
 pub use scripts::{ScriptSources, Scripts, environment, referenced_sources};
