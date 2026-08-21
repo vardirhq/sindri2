@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="220" viewBox="0 0 760 220" role="img" aria-labelledby="title desc">
+  <title id="title">Sindri Next</title>
+  <desc id="desc">Sindri Next dark lockup adapted directly from the supplied logo concept.</desc>
+  <rect width="760" height="220" rx="18" fill="#0d1117"/>
+
+  <g transform="translate(70 57) scale(3.3)" fill="none">
+    <polygon points="16,3 27.26,9.5 27.26,22.5 16,29 4.74,22.5 4.74,9.5" stroke="#e6e1d4" stroke-width="1.6"/>
+    <polygon points="16,9 22.06,12.5 22.06,19.5 16,23 9.94,19.5 9.94,12.5" stroke="#e6e1d4" stroke-width="1.2"/>
+    <polygon points="16,13.2 18.42,14.6 18.42,17.4 16,18.8 13.58,17.4 13.58,14.6" fill="#f0c050" stroke="none"/>
+  </g>
+
+  <g transform="translate(226 0)">
+    <text x="0" y="112" fill="#e6e1d4" font-family="'Pixelify Sans', 'Trebuchet MS', system-ui, sans-serif" font-size="72" font-weight="700" letter-spacing="9">S</text>
+    <text x="59" y="112" fill="#f0c050" font-family="'Pixelify Sans', 'Trebuchet MS', system-ui, sans-serif" font-size="72" font-weight="700">I</text>
+    <text x="91" y="112" fill="#e6e1d4" font-family="'Pixelify Sans', 'Trebuchet MS', system-ui, sans-serif" font-size="72" font-weight="700" letter-spacing="9">NDR</text>
+    <text x="280" y="112" fill="#f0c050" font-family="'Pixelify Sans', 'Trebuchet MS', system-ui, sans-serif" font-size="72" font-weight="700">I</text>
+
+    <line x1="0" y1="145" x2="324" y2="145" stroke="#2a3038" stroke-width="2"/>
+    <rect x="344" y="126" width="102" height="38" rx="2" fill="#e6e1d4"/>
+    <text x="395" y="151" text-anchor="middle" fill="#0d1117" font-family="'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18" font-weight="700" letter-spacing="4">NEXT</text>
+  </g>
+</svg>

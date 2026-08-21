@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 32 32" role="img" aria-labelledby="title desc">
+  <title id="title">Sindri mark</title>
+  <desc id="desc">Hexagonal Sindri mark from the Sindri Next branding concept.</desc>
+  <rect width="32" height="32" rx="4" fill="#0d1117"/>
+  <polygon points="16,3 27.26,9.5 27.26,22.5 16,29 4.74,22.5 4.74,9.5" stroke="#e6e1d4" stroke-width="1.6" fill="none"/>
+  <polygon points="16,9 22.06,12.5 22.06,19.5 16,23 9.94,19.5 9.94,12.5" stroke="#e6e1d4" stroke-width="1.2" fill="none"/>
+  <polygon points="16,13.2 18.42,14.6 18.42,17.4 16,18.8 13.58,17.4 13.58,14.6" fill="#f0c050"/>
+</svg>
