@@ -10,17 +10,19 @@
 //! The fixture file itself is golden. Regenerate it deliberately with
 //! `SINDRI_UPDATE_SCENE_FIXTURES=1 cargo test --package sindri-editor`.
 
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use sindri_core::{
-    CommandBuffer, CommandHistory, EntityId, SceneDocument, SceneEntityId, Transform3D,
-    UnknownComponentPolicy, World, WorldCommand,
+    CommandBuffer, CommandHistory, EntityId, SceneDocument, SceneEntityId, SpriteSheetDocument,
+    Transform3D, UnknownComponentPolicy, World, WorldCommand,
 };
 use sindri_editor::{fixture, scene_file::SceneFile};
-use std::path::Path;
 
 use sindri_render::{FrameCommand, RenderStage, SpriteInstance, TextureId, UvRect, Viewport};
-use sindri_scene::{CameraView, SceneExtractor, SpriteAnimations, SpriteSheet, TextureBindings};
+use sindri_scene::{CameraView, SceneExtractor, SpriteAnimations, TextureBindings};
 
 const UPDATE_ENV: &str = "SINDRI_UPDATE_SCENE_FIXTURES";
 const VIEWPORT: Viewport = Viewport::new(512, 512);
@@ -278,6 +280,20 @@ fn the_fixtures_animation_draws_a_different_frame_as_time_passes() {
         let id = u32::try_from(index).expect("a fixture's textures fit a u32") + 1;
         textures.bind(reference.as_str(), TextureId::new(id));
     }
+    // The spinner's sheet, as the editor loads it from beside the texture.
+    let sheet = std::fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("assets")
+            .join("textures")
+            .join("spin.sheet.json"),
+    )
+    .expect("the fixture ships its sheet");
+    textures
+        .bind_sheet(
+            "textures/spin.png",
+            &SpriteSheetDocument::from_json(&sheet).expect("the fixture's sheet parses"),
+        )
+        .expect("the fixture's sheet slices");
 
     let mut animations = SpriteAnimations::new();
     let mut seen = Vec::new();
@@ -325,12 +341,7 @@ fn the_fixtures_animation_draws_a_different_frame_as_time_passes() {
     );
     assert_eq!(
         seen[3],
-        SpriteSheet {
-            columns: 2,
-            rows: 2
-        }
-        .cell(0)
-        .expect("a cell of the fixture's sheet"),
+        UvRect::cell(0, 0, 2, 2).expect("a cell of the fixture's sheet"),
         "and a looping clip comes back to where it started"
     );
 }

@@ -1,5 +1,5 @@
 {
-  "format_version": 3,
+  "format_version": 4,
   "metadata": {
     "name": "Gather"
   },
@@ -40,10 +40,9 @@
         "sindri.tilemap": {
           "columns": 7,
           "layer": 0,
+          "palette": ["light", "dark"],
           "projection": "isometric",
           "rows": 7,
-          "sheet_columns": 2,
-          "sheet_rows": 1,
           "space": "world",
           "texture": "textures/tiles.png",
           "tile_size": [1.1, 0.55],
@@ -258,9 +257,8 @@
         "sindri.sprite": {
           "anchor": "top_left",
           "layer": 100,
-          "texture": "textures/pip.png",
-          "tint": [1.0, 1.0, 1.0, 0.0],
-          "uv_rect": [0.5, 0.0, 0.5, 1.0]
+          "texture": "textures/pip.png#full",
+          "tint": [1.0, 1.0, 1.0, 0.0]
         }
       }
     },
@@ -283,9 +281,8 @@
         "sindri.sprite": {
           "anchor": "top_left",
           "layer": 100,
-          "texture": "textures/pip.png",
-          "tint": [1.0, 1.0, 1.0, 0.0],
-          "uv_rect": [0.5, 0.0, 0.5, 1.0]
+          "texture": "textures/pip.png#full",
+          "tint": [1.0, 1.0, 1.0, 0.0]
         }
       }
     },
@@ -308,9 +305,8 @@
         "sindri.sprite": {
           "anchor": "top_left",
           "layer": 100,
-          "texture": "textures/pip.png",
-          "tint": [1.0, 1.0, 1.0, 0.0],
-          "uv_rect": [0.5, 0.0, 0.5, 1.0]
+          "texture": "textures/pip.png#full",
+          "tint": [1.0, 1.0, 1.0, 0.0]
         }
       }
     },
@@ -333,9 +329,8 @@
         "sindri.sprite": {
           "anchor": "top_left",
           "layer": 100,
-          "texture": "textures/pip.png",
-          "tint": [1.0, 1.0, 1.0, 0.0],
-          "uv_rect": [0.5, 0.0, 0.5, 1.0]
+          "texture": "textures/pip.png#full",
+          "tint": [1.0, 1.0, 1.0, 0.0]
         }
       }
     },
@@ -358,9 +353,8 @@
         "sindri.sprite": {
           "anchor": "top_left",
           "layer": 100,
-          "texture": "textures/pip.png",
-          "tint": [1.0, 1.0, 1.0, 0.0],
-          "uv_rect": [0.5, 0.0, 0.5, 1.0]
+          "texture": "textures/pip.png#full",
+          "tint": [1.0, 1.0, 1.0, 0.0]
         }
       }
     },
@@ -376,9 +370,8 @@
         "sindri.sprite": {
           "anchor": "top_left",
           "layer": 99,
-          "texture": "textures/pip.png",
-          "tint": [1.0, 1.0, 1.0, 1.0],
-          "uv_rect": [0.0, 0.0, 0.5, 1.0]
+          "texture": "textures/pip.png#empty",
+          "tint": [1.0, 1.0, 1.0, 1.0]
         }
       }
     },
@@ -394,9 +387,8 @@
         "sindri.sprite": {
           "anchor": "top_left",
           "layer": 99,
-          "texture": "textures/pip.png",
-          "tint": [1.0, 1.0, 1.0, 1.0],
-          "uv_rect": [0.0, 0.0, 0.5, 1.0]
+          "texture": "textures/pip.png#empty",
+          "tint": [1.0, 1.0, 1.0, 1.0]
         }
       }
     },
@@ -412,9 +404,8 @@
         "sindri.sprite": {
           "anchor": "top_left",
           "layer": 99,
-          "texture": "textures/pip.png",
-          "tint": [1.0, 1.0, 1.0, 1.0],
-          "uv_rect": [0.0, 0.0, 0.5, 1.0]
+          "texture": "textures/pip.png#empty",
+          "tint": [1.0, 1.0, 1.0, 1.0]
         }
       }
     },
@@ -430,9 +421,8 @@
         "sindri.sprite": {
           "anchor": "top_left",
           "layer": 99,
-          "texture": "textures/pip.png",
-          "tint": [1.0, 1.0, 1.0, 1.0],
-          "uv_rect": [0.0, 0.0, 0.5, 1.0]
+          "texture": "textures/pip.png#empty",
+          "tint": [1.0, 1.0, 1.0, 1.0]
         }
       }
     },
@@ -448,9 +438,8 @@
         "sindri.sprite": {
           "anchor": "top_left",
           "layer": 99,
-          "texture": "textures/pip.png",
-          "tint": [1.0, 1.0, 1.0, 1.0],
-          "uv_rect": [0.0, 0.0, 0.5, 1.0]
+          "texture": "textures/pip.png#empty",
+          "tint": [1.0, 1.0, 1.0, 1.0]
         }
       }
     },
@@ -479,16 +468,12 @@
         "sindri.sprite_animation": {
           "clips": {
             "bob": {
-              "frames": [0, 1, 2, 3],
+              "frames": ["bob-0", "bob-1", "bob-2", "bob-3"],
               "looping": true,
               "seconds_per_frame": 0.16
             }
           },
           "playing": "bob",
-          "sheet": {
-            "columns": 4,
-            "rows": 1
-          },
           "speed": 1.0
         }
       }

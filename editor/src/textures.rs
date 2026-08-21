@@ -15,18 +15,19 @@
 //! one, so the two kinds cannot be confused and no rule has to be remembered.
 
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     path::{Path, PathBuf},
     time::{Duration, Instant},
 };
 
 use sindri_assets::{
     AssetLoadOutcome, AssetLoadQueueConfig, AssetLoader, AssetManifest, AssetWatch,
-    FileSystemAssetSource, MANIFEST_FILE_NAME, TextureAsset, TextureAssetDecoder,
+    FileSystemAssetSource, MANIFEST_FILE_NAME, SpriteSheetAssetDecoder, TextureAsset,
+    TextureAssetDecoder,
 };
-use sindri_core::{AssetId, World};
+use sindri_core::{AssetId, World, sheet_id_for};
 use sindri_render::{Texture2D, TextureError, TextureRegistry};
-use sindri_scene::{PROCEDURAL_TEXTURES, TextureBindings, referenced_textures};
+use sindri_scene::{PROCEDURAL_TEXTURES, TextureBindings, referenced_sheets, referenced_textures};
 
 /// How many texture loads run at once, and how many may be waiting.
 ///
@@ -74,6 +75,15 @@ pub struct SceneTextures {
     /// When the files were last examined, so the frame loop is not stating
     /// paths sixty times a second to learn nothing.
     last_examined: Instant,
+    /// The sidecars saying how each sliced texture is cut.
+    ///
+    /// Its own loader rather than a second decoder on the first, because a
+    /// sheet is a different kind of file with a different failure: a texture
+    /// that will not decode is a picture problem, and a sheet that will not is
+    /// a naming problem.
+    sheets: Option<AssetLoader<SpriteSheetAssetDecoder>>,
+    /// Which texture each sheet cuts, keyed by the sheet's own ID.
+    sliced: BTreeMap<AssetId, String>,
     registry: TextureRegistry,
     bindings: TextureBindings,
 }
@@ -117,6 +127,15 @@ impl SceneTextures {
                     None => loader,
                 })
             }),
+            sheets: root.as_deref().and_then(|root| {
+                AssetLoader::new(
+                    FileSystemAssetSource::new(root),
+                    QUEUE,
+                    SpriteSheetAssetDecoder,
+                )
+                .ok()
+            }),
+            sliced: BTreeMap::new(),
             watch: root.map(AssetWatch::new),
             last_examined: Instant::now(),
             registry,
@@ -178,6 +197,43 @@ impl SceneTextures {
         if let Some(watch) = watch.as_mut() {
             watch.retain(&wanted);
         }
+        // Which texture each sheet cuts, so an arriving sheet knows what to
+        // bind against and a released one knows what to unbind. Derived from
+        // the world rather than remembered, because the world is what says
+        // which textures are sliced at all.
+        self.sliced = referenced
+            .iter()
+            .filter_map(|reference| {
+                let id = AssetId::new(reference.clone()).ok()?;
+                Some((sheet_id_for(&id)?, reference.clone()))
+            })
+            .collect();
+        if let Some(sheets) = &mut self.sheets {
+            let slices: BTreeSet<AssetId> = referenced_sheets(world)
+                .iter()
+                .filter_map(|reference| AssetId::new(reference.clone()).ok())
+                .collect();
+            let released = sheets.retain(&slices);
+            for id in &slices {
+                if let Err(error) = sheets.request(id.clone()) {
+                    notes.push(TextureNote::Failed(format!("{id}: {error}")));
+                }
+            }
+            for id in released {
+                if let Some(texture) = self.sliced.get(&id) {
+                    self.bindings.unbind_sheet(texture);
+                }
+            }
+        }
+        let Self {
+            loader: Some(loader),
+            bindings,
+            ..
+        } = self
+        else {
+            return notes;
+        };
+
         for id in &wanted {
             if bindings.get(id.as_str()).is_some() {
                 continue;
@@ -206,6 +262,7 @@ impl SceneTextures {
     /// not be tested without one.
     pub fn poll(&mut self, device: &wgpu::Device, queue: &wgpu::Queue) -> Vec<TextureNote> {
         let mut notes = self.examine_files();
+        notes.extend(self.poll_sheets());
         let Self {
             loader: Some(loader),
             watch,
@@ -269,6 +326,45 @@ impl SceneTextures {
     /// left pointing at the old texture until the new one arrives, so saving an
     /// image does not blink the scene through the missing checker on its way to
     /// showing the edit.
+    /// Takes delivery of whatever sheets finished, binding each against the
+    /// texture it slices.
+    ///
+    /// A sheet that will not load is reported and its texture stays unsliced,
+    /// so every sprite naming a part of it goes unresolved and says so. That is
+    /// louder than the alternative — quietly drawing the whole image, which is
+    /// every sprite at once and the picture this whole change exists to stop.
+    fn poll_sheets(&mut self) -> Vec<TextureNote> {
+        let mut notes = Vec::new();
+        let Some(sheets) = &mut self.sheets else {
+            return notes;
+        };
+        for outcome in sheets.poll() {
+            match outcome {
+                AssetLoadOutcome::Ready(id) => {
+                    let Some(texture) = self.sliced.get(&id).cloned() else {
+                        continue;
+                    };
+                    let Some(sheet) = sheets.get(&id) else {
+                        continue;
+                    };
+                    match self.bindings.bind_sheet(texture, sheet) {
+                        Ok(()) => notes.push(TextureNote::Loaded(format!(
+                            "{id} ({} sprites)",
+                            sheet.rects().map(|rects| rects.len()).unwrap_or_default()
+                        ))),
+                        Err(error) => notes.push(TextureNote::Failed(error.to_string())),
+                    }
+                }
+                AssetLoadOutcome::Failed(error) => notes.push(TextureNote::Failed(format!(
+                    "{}: {}",
+                    error.id(),
+                    error.message()
+                ))),
+            }
+        }
+        notes
+    }
+
     fn examine_files(&mut self) -> Vec<TextureNote> {
         if self.last_examined.elapsed() < WATCH_INTERVAL {
             return Vec::new();

@@ -5,14 +5,15 @@
 
 use glam::{Vec2, Vec3};
 use sindri_core::{
-    SCENE_FORMAT_VERSION, SceneDocument, Transform3D, UnknownComponentPolicy, World,
+    SCENE_FORMAT_VERSION, SceneDocument, SpriteSheetDocument, Transform3D, UnknownComponentPolicy,
+    World,
 };
 use sindri_render::{
     FrameCommand, RenderStage, SpriteDepth, TextureId, TextureRegistry, UvRect, Viewport,
 };
 use sindri_scene::{
-    CameraView, SceneExtractError, SceneExtractor, SpriteAnimations, SpriteSheet,
-    TEXTURE_NAMING_COMPONENTS, TextureBindings, WorldProjection,
+    CameraView, SceneExtractError, SceneExtractor, SpriteAnimations, TEXTURE_NAMING_COMPONENTS,
+    TextureBindings, WorldProjection,
 };
 
 const VIEWPORT: Viewport = Viewport::new(512, 512);
@@ -1048,17 +1049,13 @@ fn frames_of_one_sheet_share_a_single_batch() {
     let world = world_from(&scene(
         r#",
         { "id": "a", "transform_3d": {},
-          "components": { "sindri.sprite": { "texture": "sheet.png",
-            "uv_rect": [0.0, 0.0, 0.5, 0.5] } } },
+          "components": { "sindri.sprite": { "texture": "sheet.png#0" } } },
         { "id": "b", "transform_3d": {},
-          "components": { "sindri.sprite": { "texture": "sheet.png",
-            "uv_rect": [0.5, 0.0, 0.5, 0.5] } } },
+          "components": { "sindri.sprite": { "texture": "sheet.png#1" } } },
         { "id": "c", "transform_3d": {},
-          "components": { "sindri.sprite": { "texture": "sheet.png",
-            "uv_rect": [0.0, 0.5, 0.5, 0.5] } } }"#,
+          "components": { "sindri.sprite": { "texture": "sheet.png#2" } } }"#,
     ));
-    let mut bindings = TextureBindings::new();
-    bindings.bind("sheet.png", TextureId::new(1));
+    let bindings = animated_bindings();
 
     let frame = SceneExtractor::new()
         .expect("built-in components register")
@@ -1118,27 +1115,28 @@ fn a_sprite_that_names_no_rect_draws_the_whole_texture() {
     assert!(instances[0].uv_rect().is_full());
 }
 
-/// A rect that is not a piece of the image fails the frame with a message
-/// naming what was asked for, rather than sampling whatever the clamp mode
-/// decides and drawing a subtly wrong picture.
+/// A sprite naming a part its sheet does not have is reported by name, and
+/// draws the whole image rather than failing the frame.
+///
+/// The same rule an unbound texture has always followed: the frame still draws,
+/// so the failure has to be *said* — without that the only clue would be a
+/// picture that is subtly the wrong part of an image.
 #[test]
-fn a_rect_outside_the_texture_is_refused() {
+fn a_sprite_naming_nothing_in_its_sheet_is_reported() {
     let world = world_from(&scene(
         r#",
         { "id": "bad", "transform_3d": {},
-          "components": { "sindri.sprite": { "texture": "sheet.png",
-            "uv_rect": [0.75, 0.0, 0.5, 0.5] } } }"#,
+          "components": { "sindri.sprite": { "texture": "sheet.png#nope" } } }"#,
     ));
-    let error = SceneExtractor::new()
+    let bindings = animated_bindings();
+    SceneExtractor::new()
         .expect("built-in components register")
-        .extract(
-            &world,
-            VIEWPORT,
-            CameraView::default(),
-            &TextureBindings::new(),
-        )
-        .expect_err("a rect reaching past the edge is not a frame");
-    assert!(error.to_string().contains("outside"), "{error}");
+        .extract(&world, VIEWPORT, CameraView::default(), &bindings)
+        .expect("an unresolved sprite still draws");
+    assert!(
+        sindri_scene::unresolved_sprites(&world, &bindings).contains("sheet.png#nope"),
+        "the sprite nothing places is reported by name"
+    );
 }
 
 /// A world holding one sprite that reads a two-by-two sheet, with a `walk` clip
@@ -1148,15 +1146,16 @@ fn animated_sheet(playing: &str, looping: bool, speed: f32) -> World {
 }
 
 fn animated_sheet_with_rect(playing: &str, looping: bool, speed: f32, rect: Option<&str>) -> World {
-    let rect = rect.map_or(String::new(), |rect| format!(r#", "uv_rect": {rect}"#));
+    // A sprite that names a part of its own sheet, which is what a scene now
+    // writes instead of carrying a rect.
+    let named = rect.map_or(String::new(), |name| format!("#{name}"));
     world_from(&scene(&format!(
         r#",
         {{ "id": "runner", "transform_3d": {{}},
           "components": {{
-            "sindri.sprite": {{ "texture": "sheet.png"{rect} }},
+            "sindri.sprite": {{ "texture": "sheet.png{named}" }},
             "sindri.sprite_animation": {{
-              "sheet": {{ "columns": 2, "rows": 2 }},
-              "clips": {{ "walk": {{ "frames": [0, 1, 2, 3],
+              "clips": {{ "walk": {{ "frames": ["0", "1", "2", "3"],
                 "seconds_per_frame": 0.1, "looping": {looping} }} }},
               "playing": {playing},
               "speed": {speed}
@@ -1165,9 +1164,13 @@ fn animated_sheet_with_rect(playing: &str, looping: bool, speed: f32, rect: Opti
     )))
 }
 
+/// The two-by-two sheet the animated fixture reads, as a host would load it.
 fn animated_bindings() -> TextureBindings {
     let mut bindings = TextureBindings::new();
     bindings.bind("sheet.png", TextureId::new(1));
+    bindings
+        .bind_sheet("sheet.png", &SpriteSheetDocument::from_grid(2, 2))
+        .expect("a two-by-two grid slices");
     bindings
 }
 
@@ -1214,14 +1217,7 @@ fn advancing_time_moves_a_sprite_through_its_sheet() {
     }
 
     let cells: Vec<UvRect> = (0..4)
-        .map(|cell| {
-            SpriteSheet {
-                columns: 2,
-                rows: 2,
-            }
-            .cell(cell)
-            .expect("a cell of a two by two sheet")
-        })
+        .map(|cell| UvRect::cell(cell % 2, cell / 2, 2, 2).expect("a cell of a two by two sheet"))
         .collect();
     // The first advance is a whole frame, so the run starts on cell one and
     // wraps back to cell zero.
@@ -1257,7 +1253,7 @@ fn playing_an_animation_does_not_change_the_scene() {
 /// which is what makes the authored rect the pose a scene shows at rest.
 #[test]
 fn an_unplayed_animation_leaves_the_sprites_own_rect_alone() {
-    let world = animated_sheet_with_rect(r#""walk""#, true, 1.0, Some("[0.5, 0.0, 0.5, 0.5]"));
+    let world = animated_sheet_with_rect(r#""walk""#, true, 1.0, Some("1"));
     let frame = SceneExtractor::new()
         .expect("built-in components register")
         .extract(
@@ -1353,31 +1349,54 @@ fn a_clip_that_does_not_loop_finishes_and_can_be_restarted() {
     assert!(animations.is_finished(entity));
 
     animations.restart(entity);
-    assert_eq!(animations.frame(entity), Some(0));
+    animations
+        .advance(&world, extractor.components(), 0.0)
+        .expect("a restarted clip advances");
+    assert_eq!(animations.frame(entity), Some(0), "restarting goes back");
     assert!(!animations.is_finished(entity));
 }
 
-/// A clip naming a cell the sheet does not have fails with a message about the
-/// sheet rather than drawing a neighbouring frame's edge texels.
+/// A clip naming a sprite its sheet does not have is reported by name rather
+/// than drawing a neighbouring frame's edge texels.
+///
+/// Advancing succeeds, because where a clip has got to does not depend on where
+/// its sprites are — that is the sheet's business, and the sheet is consulted at
+/// extraction. So the name survives to be reported there.
 #[test]
-fn a_clip_naming_a_cell_outside_the_sheet_is_refused() {
+fn a_clip_naming_a_sprite_the_sheet_lacks_is_reported() {
     let world = world_from(&scene(
         r#",
         { "id": "runner", "transform_3d": {},
           "components": {
             "sindri.sprite": { "texture": "sheet.png" },
             "sindri.sprite_animation": {
-              "sheet": { "columns": 2, "rows": 2 },
-              "clips": { "walk": { "frames": [0, 9], "seconds_per_frame": 0.1 } },
+              "clips": { "walk": { "frames": ["0", "9"], "seconds_per_frame": 0.1 } },
               "playing": "walk"
             }
           } }"#,
     ));
     let extractor = SceneExtractor::new().expect("built-in components register");
-    let error = SpriteAnimations::new()
+    let bindings = animated_bindings();
+    let mut animations = SpriteAnimations::new();
+    animations
         .advance(&world, extractor.components(), 0.1)
-        .expect_err("a cell the sheet does not have is not a frame");
-    assert!(error.to_string().contains("outside"), "{error}");
+        .expect("a clip advances whether or not its sprites resolve");
+
+    // Frame one of the clip is `9`, which a two-by-two sheet does not have, so
+    // the sprite falls back to the whole image rather than to a neighbour.
+    let frame = extractor
+        .extract_animated(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &bindings,
+            &animations,
+        )
+        .expect("an unresolved frame still draws");
+    assert!(
+        only_instance_rect(&frame).is_full(),
+        "a frame nothing places draws the whole image, which is visibly wrong"
+    );
 }
 
 /// A tilemap draws its filled cells and skips its empty ones.
@@ -1387,7 +1406,7 @@ fn a_tilemap_draws_only_the_cells_that_hold_a_tile() {
         r#",
         { "id": "floor", "transform_3d": {},
           "components": { "sindri.tilemap": {
-            "texture": "tiles", "sheet_columns": 2, "sheet_rows": 1,
+            "texture": "tiles", "palette": ["a", "b"],
             "columns": 3, "rows": 2, "space": "world",
             "tiles": [0, 1, null, 1, null, 0] } } }"#,
     ));
@@ -1431,7 +1450,7 @@ fn a_tilemap_places_its_tiles_where_loose_sprites_were() {
         r#",
         { "id": "floor", "transform_3d": {},
           "components": { "sindri.tilemap": {
-            "texture": "tiles", "sheet_columns": 1, "sheet_rows": 1,
+            "texture": "tiles", "palette": ["a"],
             "columns": 2, "rows": 2, "space": "world",
             "tiles": [0, 0, 0, 0] } } }"#,
     ));
@@ -1480,7 +1499,7 @@ fn a_tilemap_of_the_wrong_size_is_reported() {
         r#",
         { "id": "floor", "transform_3d": {},
           "components": { "sindri.tilemap": {
-            "texture": "tiles", "sheet_columns": 1, "sheet_rows": 1,
+            "texture": "tiles", "palette": ["a"],
             "columns": 4, "rows": 4, "space": "world",
             "tiles": [0, 0] } } }"#,
     ));
@@ -1507,7 +1526,7 @@ fn a_tile_outside_the_sheet_is_reported() {
         r#",
         { "id": "floor", "transform_3d": {},
           "components": { "sindri.tilemap": {
-            "texture": "tiles", "sheet_columns": 2, "sheet_rows": 1,
+            "texture": "tiles", "palette": ["a", "b"],
             "columns": 1, "rows": 1, "space": "world",
             "tiles": [7] } } }"#,
     ));
@@ -1534,7 +1553,7 @@ fn a_tilemap_and_a_sprite_share_one_batch() {
         r#",
         { "id": "floor", "transform_3d": {},
           "components": { "sindri.tilemap": {
-            "texture": "tiles", "sheet_columns": 1, "sheet_rows": 1,
+            "texture": "tiles", "palette": ["a"],
             "columns": 2, "rows": 1, "space": "world",
             "tiles": [0, 0] } } },
         { "id": "prop", "transform_3d": { "position": [0.5, -0.5, 0.5] },
@@ -1583,4 +1602,31 @@ fn every_component_that_names_a_texture_is_one_hosts_load_from() {
             metadata.type_name
         );
     }
+}
+
+/// An animated sprite needs its sheet even though its own reference names no
+/// part of one.
+///
+/// The trap this guards: which part an animated sprite draws is its clip's
+/// business, so its `texture` carries no fragment — and a host that asks for
+/// sheets by looking at fragments alone never asks for this one. The sprite
+/// then resolves its whole texture, which is every frame of the sheet at once.
+#[test]
+fn an_animated_sprite_asks_for_the_sheet_its_clips_read() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "runner", "transform_3d": {},
+          "components": {
+            "sindri.sprite": { "texture": "textures/walk.png" },
+            "sindri.sprite_animation": {
+              "clips": { "walk": { "frames": ["0", "1"], "seconds_per_frame": 0.1 } },
+              "playing": "walk"
+            }
+          } }"#,
+    ));
+    assert!(
+        sindri_scene::referenced_sheets(&world).contains("textures/walk.sheet.json"),
+        "a sprite whose clips name parts of a sheet needs that sheet loaded, \
+         even though its own reference names no part of one"
+    );
 }

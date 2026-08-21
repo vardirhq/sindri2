@@ -1,0 +1,8 @@
+{
+  "format_version": 1,
+  "grid": {
+    "columns": 2,
+    "rows": 2,
+    "names": ["north", "east", "south", "west"]
+  }
+}

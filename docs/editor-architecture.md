@@ -162,6 +162,49 @@ again and rebinds, within about a second, without restarting anything — and th
 pointing at the old texture until the new one arrives, so an edit does not blink the scene through
 the missing checker on its way to showing itself.
 
+## An image is sliced where it can be seen
+
+A sprite sheet is a property of a picture, so slicing one happens on the picture.
+Selecting a texture in the browser shows it in the inspector with its grid drawn
+over it; columns and rows are drags; each cell takes a name; saving writes the
+sidecar beside the image.
+
+Drawn on the image because that is the entire job. A grid of numbers in a panel
+says nothing about whether the lines fall between the frames, and a slicer exists
+to answer exactly that. The preview samples nearest rather than linear, because a
+sheet is usually pixel art and a slicer that blurs what it is cutting is showing
+the wrong picture of it.
+
+Cells are outlined individually rather than drawn as lines across the image. A
+cell inset by a margin is not on any dividing line, and drawing one would claim
+the gutters belong to a sprite. The rects outlined are the ones the *document*
+produces — a slicer whose picture and whose output are computed separately is a
+slicer that can lie.
+
+A cell is named by picking it on the image. A text field per cell is fine at four
+and unusable at two hundred and fifty-six, which is the wall a list of forty-nine
+floor tiles already found; so the panel names one cell at a time and lists only
+the cells that were given a name. Everything else already has an answer — its
+index — and a list of two hundred and fifty-six of those is not a review of
+anything. That list doubles as the way back to a cell on a sheet too large to
+scan.
+
+The image is decoded on the CPU and handed to egui, not put through the
+renderer's `TextureRegistry`. That registry exists to draw a scene; a picture of
+an asset nothing in the scene references does not belong in it, and would then
+have to be released when the selection changed.
+
+The parts of a sliced image are listed under the image in the browser, because
+that is where a person looks for them — they belong to the picture, not to the
+directory. Collapsed until asked for: a sheet is as likely to hold sixty-four
+frames as four, and a browser that cannot be scrolled past is the failure the
+hierarchy already demonstrated with forty-nine floor tiles. The sheet *file* is
+not listed beside them, since its whole content is already showing; an orphaned
+sheet, whose texture is missing, still is.
+
+A sprite row is not a `ProjectEntry`. A sprite has no file, and giving it one
+would offer it as something that could be opened, renamed, or deleted on its own.
+
 ## What the editor has to say
 
 Anything the editor reports goes to two places at once, and the split is what makes each of them

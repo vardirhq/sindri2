@@ -21,56 +21,24 @@ use serde::Deserialize;
 use sindri_core::{
     ComponentRegistryError, ComponentSchemaRegistry, EntityId, SceneComponent, World,
 };
-use sindri_render::{UvRect, UvRectError};
+use sindri_render::UvRectError;
 use thiserror::Error;
 
-/// How a sheet is cut up, in cells.
-///
-/// Cells are numbered row by row from the top left, which is how every sheet
-/// exporter lays one out and how a clip refers to its frames.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
-pub struct SpriteSheet {
-    pub columns: u32,
-    pub rows: u32,
-}
-
-impl SpriteSheet {
-    /// The rect of one cell, by its number.
-    pub fn cell(self, index: u32) -> Result<UvRect, AnimationError> {
-        if self.columns == 0 || self.rows == 0 {
-            return Err(AnimationError::Rect(UvRectError::EmptyGrid {
-                columns: self.columns,
-                rows: self.rows,
-            }));
-        }
-        Ok(UvRect::cell(
-            index % self.columns,
-            index / self.columns,
-            self.columns,
-            self.rows,
-        )?)
-    }
-
-    /// How many cells the sheet has.
-    pub const fn len(self) -> u32 {
-        self.columns * self.rows
-    }
-
-    pub const fn is_empty(self) -> bool {
-        self.columns == 0 || self.rows == 0
-    }
-}
-
-/// A named run of cells through the sheet.
+/// A named run of sprites through the sheet.
 ///
 /// Every frame lasts the same time. A pose that should be held longer is written
-/// by repeating its cell — `[0, 0, 0, 1]` holds the first for three frames — which
-/// is how sheet tools express it anyway, and is one way of saying it rather than
-/// two that can disagree.
+/// by repeating its name — `["idle", "idle", "idle", "step"]` holds the first for
+/// three frames — which is how sheet tools express it anyway, and is one way of
+/// saying it rather than two that can disagree.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct AnimationClip {
-    /// Cell numbers, in the order they play.
-    pub frames: Vec<u32>,
+    /// Sprite names from the sheet, in the order they play.
+    ///
+    /// Names and not cell numbers: a name survives a re-slice that moves the
+    /// cell, and a number does not. It is also the reason a clip no longer
+    /// carries a grid — where each sprite is belongs to the sheet beside the
+    /// image, said once.
+    pub frames: Vec<String>,
     pub seconds_per_frame: f32,
     /// Whether the clip starts again at the end, rather than holding its last
     /// frame. Looping is the default because most clips do.
@@ -88,11 +56,10 @@ const fn looping_by_default() -> bool {
 /// texture, this says how to read it.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct SpriteAnimationComponent {
-    pub sheet: SpriteSheet,
     pub clips: BTreeMap<String, AnimationClip>,
-    /// The clip playing, or nothing — in which case the sprite draws its own
-    /// `uv_rect`, which is what an entity with clips authored but none selected
-    /// should look like rather than an arbitrary frame.
+    /// The clip playing, or nothing — in which case the sprite draws whatever
+    /// its own reference names, which is what an entity with clips authored but
+    /// none selected should look like rather than an arbitrary frame.
     #[serde(default)]
     pub playing: Option<String>,
     /// A multiplier on time, so one clip can run at half speed without a second
@@ -134,7 +101,7 @@ impl SpriteAnimationComponent {
         Ok(Some((name, clip)))
     }
 
-    /// The rect this sprite shows before anything has advanced it.
+    /// The sprite this shows before anything has advanced it.
     ///
     /// A sheet is one texture, so a sprite carrying an animation that no
     /// cursor has reached yet — a scene just loaded, an entity sitting in the
@@ -142,20 +109,19 @@ impl SpriteAnimationComponent {
     /// would otherwise draw every cell of the sheet squeezed into one quad.
     /// The playing clip's first frame is the only honest answer, and it is the
     /// one the first tick agrees with.
-    pub fn resting_rect(&self) -> Result<Option<UvRect>, AnimationError> {
+    pub fn resting_sprite(&self) -> Result<Option<&str>, AnimationError> {
         let Some((_, clip)) = self.playing_clip()? else {
             return Ok(None);
         };
-        self.frame_rect(clip, 0).map(Some)
+        Self::frame_sprite(clip, 0).map(Some)
     }
 
-    /// The rect a clip's frame draws, by its position in the clip.
-    pub fn frame_rect(&self, clip: &AnimationClip, frame: usize) -> Result<UvRect, AnimationError> {
-        let cell = *clip
-            .frames
+    /// The sprite a clip's frame draws, by its position in the clip.
+    pub fn frame_sprite(clip: &AnimationClip, frame: usize) -> Result<&str, AnimationError> {
+        clip.frames
             .get(frame)
-            .ok_or(AnimationError::OutsideClip { frame })?;
-        self.sheet.cell(cell)
+            .map(String::as_str)
+            .ok_or(AnimationError::OutsideClip { frame })
     }
 }
 
@@ -180,7 +146,7 @@ struct Playback {
     /// worth once a step has been taken.
     elapsed: f32,
     finished: bool,
-    rect: UvRect,
+    sprite: String,
 }
 
 impl SpriteAnimations {
@@ -220,25 +186,32 @@ impl SpriteAnimations {
                     frame: 0,
                     elapsed: 0.0,
                     finished: false,
-                    rect: animation.frame_rect(clip, 0)?,
+                    sprite: SpriteAnimationComponent::frame_sprite(clip, 0)?.to_owned(),
                 },
             };
             step(&mut playback, clip, delta_seconds * animation.speed);
-            playback.rect = animation.frame_rect(clip, playback.frame)?;
+            SpriteAnimationComponent::frame_sprite(clip, playback.frame)?
+                .clone_into(&mut playback.sprite);
             live.insert(entity, playback);
         }
         self.playback = live;
         Ok(())
     }
 
-    /// The rect an entity's animation is showing, or `None` when it has none —
-    /// in which case the sprite's own rect stands.
-    pub fn rect(&self, entity: EntityId) -> Option<UvRect> {
-        self.playback.get(&entity).map(|playback| playback.rect)
+    /// The sprite an entity's animation is showing, or `None` when it has none
+    /// — in which case whatever the sprite's own reference names stands.
+    ///
+    /// A name rather than a rect, because playback is where in a clip an entity
+    /// has got to and not where that lands on an image. The rect is resolved
+    /// where the sheets are already in hand, during extraction.
+    pub fn sprite(&self, entity: EntityId) -> Option<&str> {
+        self.playback
+            .get(&entity)
+            .map(|playback| playback.sprite.as_str())
     }
 
     /// Which frame of its clip an entity is on, counted within the clip rather
-    /// than as a cell of the sheet.
+    /// than as a sprite of the sheet.
     pub fn frame(&self, entity: EntityId) -> Option<usize> {
         self.playback.get(&entity).map(|playback| playback.frame)
     }
@@ -326,14 +299,15 @@ mod tests {
 
     fn walk() -> SpriteAnimationComponent {
         SpriteAnimationComponent {
-            sheet: SpriteSheet {
-                columns: 4,
-                rows: 2,
-            },
             clips: BTreeMap::from([(
                 "walk".to_owned(),
                 AnimationClip {
-                    frames: vec![0, 1, 2, 3],
+                    frames: vec![
+                        "0".to_owned(),
+                        "1".to_owned(),
+                        "2".to_owned(),
+                        "3".to_owned(),
+                    ],
                     seconds_per_frame: 0.1,
                     looping: true,
                 },
@@ -349,31 +323,8 @@ mod tests {
             frame: 0,
             elapsed: 0.0,
             finished: false,
-            rect: UvRect::FULL,
+            sprite: "0".to_owned(),
         }
-    }
-
-    #[test]
-    fn a_cell_is_addressed_row_by_row_from_the_top_left() {
-        let sheet = SpriteSheet {
-            columns: 4,
-            rows: 2,
-        };
-        assert_eq!(sheet.len(), 8);
-        assert_eq!(
-            sheet.cell(0).unwrap(),
-            UvRect::cell(0, 0, 4, 2).unwrap(),
-            "cell zero is the top left"
-        );
-        assert_eq!(
-            sheet.cell(4).unwrap(),
-            UvRect::cell(0, 1, 4, 2).unwrap(),
-            "and the fifth wraps onto the second row"
-        );
-        assert!(
-            matches!(sheet.cell(8), Err(AnimationError::Rect(_))),
-            "a cell past the end of the sheet is not a rect"
-        );
     }
 
     #[test]
@@ -494,12 +445,12 @@ mod tests {
     }
 
     #[test]
-    fn a_frame_reads_the_cell_its_clip_names() {
+    fn a_frame_names_the_sprite_its_clip_names() {
         let animation = SpriteAnimationComponent {
             clips: BTreeMap::from([(
                 "walk".to_owned(),
                 AnimationClip {
-                    frames: vec![5, 2],
+                    frames: vec!["lift".to_owned(), "plant".to_owned()],
                     seconds_per_frame: 0.1,
                     looping: true,
                 },
@@ -508,16 +459,16 @@ mod tests {
         };
         let (_, clip) = animation.playing_clip().unwrap().expect("walk is playing");
         assert_eq!(
-            animation.frame_rect(clip, 0).unwrap(),
-            animation.sheet.cell(5).unwrap(),
-            "a clip's frames are cells of the sheet, in the order it names them"
+            SpriteAnimationComponent::frame_sprite(clip, 0).unwrap(),
+            "lift",
+            "a clip's frames are sprites of the sheet, in the order it names them"
         );
         assert_eq!(
-            animation.frame_rect(clip, 1).unwrap(),
-            animation.sheet.cell(2).unwrap()
+            SpriteAnimationComponent::frame_sprite(clip, 1).unwrap(),
+            "plant"
         );
         assert!(matches!(
-            animation.frame_rect(clip, 2),
+            SpriteAnimationComponent::frame_sprite(clip, 2),
             Err(AnimationError::OutsideClip { .. })
         ));
     }

@@ -70,6 +70,9 @@ impl SceneMigrator {
             .register(2, 3, sort_sprites_by_where_they_are)
             .expect("built-in steps are registered once and move forward");
         migrator
+            .register(3, 4, name_the_parts_of_a_sheet)
+            .expect("built-in steps are registered once and move forward");
+        migrator
     }
 
     pub fn is_empty(&self) -> bool {
@@ -133,6 +136,8 @@ pub enum SceneMigrationError {
     MissingFormatVersion,
     #[error("scene format {found} is newer than this runtime's format {supported}")]
     FromTheFuture { found: u32, supported: u32 },
+    #[error("{0}")]
+    Unconvertible(String),
     #[error(
         "no registered migration upgrades scene format {from_version} toward format {supported}"
     )]
@@ -279,6 +284,150 @@ fn set_transform_z(fields: &mut serde_json::Map<String, Value>, z: f64) {
         position.push(json!(0.0));
     }
     position[2] = json!(z);
+}
+
+/// Format 3 to 4: a sheet is cut by the image, not by whoever draws it.
+///
+/// Before this, three components each said how a sheet was divided — a sprite
+/// carried a raw rect, an animation carried a grid and cell numbers, a tilemap
+/// carried a second grid and more cell numbers. After it, all three name
+/// sprites and a sheet document beside the image says where those are.
+///
+/// **A migrated scene needs its sheets written.** This step can convert a
+/// document; it cannot create the sidecar files beside the textures, because a
+/// migration is handed JSON and not a project. What it does instead is emit the
+/// names a default slice produces — cell `n` is called `"n"` — so a sheet
+/// declaring the same grid the scene used to carry resolves every reference it
+/// writes. The grid to declare is the one being removed here, which is why the
+/// errors below name it.
+fn name_the_parts_of_a_sheet(document: &mut Value) -> Result<(), SceneMigrationError> {
+    let Some(entities) = document.get_mut("entities").and_then(Value::as_array_mut) else {
+        return Ok(());
+    };
+    for entity in entities {
+        let Some(components) = entity
+            .as_object_mut()
+            .and_then(|fields| fields.get_mut("components"))
+            .and_then(Value::as_object_mut)
+        else {
+            continue;
+        };
+
+        if let Some(sprite) = components
+            .get_mut("sindri.sprite")
+            .and_then(Value::as_object_mut)
+            && let Some(rect) = sprite.remove("uv_rect")
+        {
+            let cell = cell_of(&rect)?;
+            if let Some(index) = cell
+                && let Some(texture) = sprite.get("texture").and_then(Value::as_str)
+            {
+                let named = format!("{texture}#{index}");
+                sprite.insert("texture".to_owned(), Value::String(named));
+            }
+        }
+
+        if let Some(animation) = components
+            .get_mut("sindri.sprite_animation")
+            .and_then(Value::as_object_mut)
+        {
+            animation.remove("sheet");
+            if let Some(clips) = animation.get_mut("clips").and_then(Value::as_object_mut) {
+                for clip in clips.values_mut() {
+                    let Some(frames) = clip.get_mut("frames").and_then(Value::as_array_mut) else {
+                        continue;
+                    };
+                    for frame in frames.iter_mut() {
+                        if let Some(cell) = frame.as_u64() {
+                            *frame = Value::String(cell.to_string());
+                        }
+                    }
+                }
+            }
+        }
+
+        if let Some(tilemap) = components
+            .get_mut("sindri.tilemap")
+            .and_then(Value::as_object_mut)
+        {
+            tilemap.remove("sheet_columns");
+            tilemap.remove("sheet_rows");
+            // A palette naming every cell the map actually uses, in index
+            // order, so the tile numbers already written keep pointing at what
+            // they pointed at.
+            let highest = tilemap
+                .get("tiles")
+                .and_then(Value::as_array)
+                .map(|tiles| {
+                    tiles
+                        .iter()
+                        .filter_map(Value::as_u64)
+                        .max()
+                        .map_or(0, |highest| highest + 1)
+                })
+                .unwrap_or_default();
+            let palette: Vec<Value> = (0..highest)
+                .map(|index| Value::String(index.to_string()))
+                .collect();
+            tilemap.insert("palette".to_owned(), Value::Array(palette));
+        }
+    }
+    Ok(())
+}
+
+/// Which cell of which grid a normalized rect is, when it is one.
+///
+/// Every rect a hand-written scene ever carried was a cell of some uniform
+/// grid — a sprite sheet is what a rect was added for — so this recovers the
+/// index without being told the grid: a rect of width `w` is one of `1/w`
+/// columns, and its `x` says which. A rect that is *not* a whole cell cannot
+/// become a named sprite without a sheet to name it in, so it stops the
+/// migration rather than quietly changing the picture.
+fn cell_of(rect: &Value) -> Result<Option<u64>, SceneMigrationError> {
+    /// How far a hand-typed rect may sit from the cell it means.
+    const TOLERANCE: f64 = 1.0e-4;
+
+    let Some(values) = rect.as_array() else {
+        return Ok(None);
+    };
+    let [x, y, width, height] = <[f64; 4]>::try_from(
+        values
+            .iter()
+            .filter_map(Value::as_f64)
+            .collect::<Vec<f64>>()
+            .as_slice(),
+    )
+    .map_err(|_| {
+        SceneMigrationError::Unconvertible(format!(
+            "a sprite's uv_rect must be four numbers, and this one is {rect}"
+        ))
+    })?;
+    // Near enough rather than exactly, because these are numbers a person
+    // typed into a file: 0.333 is the first of three columns and refusing it
+    // over the last decimal place would help nobody.
+    let close = |value: f64, to: f64| (value - to).abs() < TOLERANCE;
+    // The whole image is not a cell of anything, and needs no name.
+    if close(x, 0.0) && close(y, 0.0) && close(width, 1.0) && close(height, 1.0) {
+        return Ok(None);
+    }
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let whole = |value: f64| -> Option<u64> {
+        let rounded = value.round();
+        (rounded >= 0.0 && close(value, rounded)).then_some(rounded as u64)
+    };
+    let unconvertible = || {
+        SceneMigrationError::Unconvertible(format!(
+            "a sprite's uv_rect {rect} is not a whole cell of a uniform grid, so format 4 has no \
+             name for it — give its texture a sheet naming that rect, and point the sprite at it"
+        ))
+    };
+    if width <= 0.0 || height <= 0.0 {
+        return Err(unconvertible());
+    }
+    let columns = whole(1.0 / width).ok_or_else(unconvertible)?;
+    let column = whole(x / width).ok_or_else(unconvertible)?;
+    let row = whole(y / height).ok_or_else(unconvertible)?;
+    Ok(Some(row * columns + column))
 }
 
 #[cfg(test)]

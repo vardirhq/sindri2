@@ -1,0 +1,8 @@
+{
+  "format_version": 1,
+  "grid": {
+    "columns": 4,
+    "rows": 1,
+    "names": ["bob-0", "bob-1", "bob-2", "bob-3"]
+  }
+}

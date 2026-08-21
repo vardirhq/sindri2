@@ -11,13 +11,14 @@ mod entity;
 mod lifecycle;
 mod migration;
 mod scene;
+mod sheet;
 mod time;
 mod transform;
 mod world;
 
 pub use asset::{
     AssetHandle, AssetId, AssetIdError, AssetLoadError, AssetLoadErrorKind, AssetStatus,
-    AssetStore, AssetStoreError, WeakAssetHandle,
+    AssetStore, AssetStoreError, SpriteRef, SpriteRefError, WeakAssetHandle,
 };
 pub use command::{CommandBuffer, CommandError, CommandHistory, Transaction, WorldCommand};
 pub use component::{
@@ -32,6 +33,7 @@ pub use scene::{
     SCENE_FORMAT_VERSION, SceneDocument, SceneEntity, SceneEntityId, SceneError, SceneJsonError,
     SceneMetadata,
 };
+pub use sheet::{SHEET_FORMAT_VERSION, SheetError, SheetGrid, SpriteSheetDocument, sheet_id_for};
 pub use time::{FixedStepClock, FixedStepConfig, FrameSteps, TimeError, TimeScale};
 pub use transform::Transform3D;
 pub use world::{EntityData, LoadedScene, World, WorldError};

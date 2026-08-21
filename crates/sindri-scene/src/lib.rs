@@ -11,15 +11,14 @@ mod components;
 mod extract;
 mod textures;
 
-pub use animation::{
-    AnimationClip, AnimationError, SpriteAnimationComponent, SpriteAnimations, SpriteSheet,
-};
+pub use animation::{AnimationClip, AnimationError, SpriteAnimationComponent, SpriteAnimations};
 pub use components::{
     CameraComponent, MeshComponent, MeshPrimitive, SpriteAnchor, SpriteComponent, SpriteSpace,
     TileProjection, TilemapComponent, TilemapError,
 };
 pub use extract::{CameraView, SceneExtractError, SceneExtractor, ViewCamera, WorldProjection};
 pub use textures::{
-    PROCEDURAL_TEXTURES, ProceduralTexture, TEXTURE_NAMING_COMPONENTS, TextureBindings,
-    referenced_textures, unresolved_textures,
+    PROCEDURAL_TEXTURES, ProceduralTexture, SheetBindError, TEXTURE_NAMING_COMPONENTS,
+    TextureBindings, referenced_sheets, referenced_textures, unresolved_sprites,
+    unresolved_textures,
 };

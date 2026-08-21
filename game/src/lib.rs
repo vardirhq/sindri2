@@ -18,7 +18,10 @@
 use std::time::Duration;
 
 use sindri_assets::{AssetBytes, AssetDecoder, TextureAssetDecoder};
-use sindri_core::{AssetId, ComponentSchemaRegistry, FixedStepConfig, SceneDocument, World};
+use sindri_core::{
+    AssetId, ComponentSchemaRegistry, FixedStepConfig, SceneDocument, SpriteSheetDocument, World,
+    sheet_id_for,
+};
 use sindri_decay::{ScriptComponent, ScriptSources, Scripts};
 use sindri_desktop::{AppContext, DesktopApp, Flow, WindowConfig};
 use sindri_platform::{EngineHost, FrameContext, Game, HostError, InputEvent, InputState, Key};
@@ -26,7 +29,7 @@ use sindri_render::{
     DepthTarget, FrameRenderers, FrameTarget, SpriteBatchRenderer, Texture2D, TextureError,
     TextureRegistry, TexturedCubeRenderer, Viewport, encode_prepared_frame,
 };
-use sindri_scene::{CameraView, SceneExtractor, SpriteAnimations, TextureBindings};
+use sindri_scene::{CameraView, SceneExtractor, SheetBindError, SpriteAnimations, TextureBindings};
 use thiserror::Error;
 
 /// The scene, and the four scripts that are the game.
@@ -72,6 +75,71 @@ pub const TEXTURES: &[(&str, &[u8])] = &[
         include_bytes!("../assets/textures/banner.png"),
     ),
 ];
+
+/// How each sliced texture is cut, shipped beside it.
+///
+/// A sheet is named after the texture it slices, so nothing here has to say
+/// which goes with which — `sheet_id_for` derives it, the same way the editor
+/// finds one on disk.
+pub const SHEETS: &[(&str, &str)] = &[
+    (
+        "textures/tiles.sheet.json",
+        include_str!("../assets/textures/tiles.sheet.json"),
+    ),
+    (
+        "textures/pip.sheet.json",
+        include_str!("../assets/textures/pip.sheet.json"),
+    ),
+    (
+        "textures/player.sheet.json",
+        include_str!("../assets/textures/player.sheet.json"),
+    ),
+];
+
+/// Every texture on the GPU, and every sheet bound to the texture it cuts.
+///
+/// One function rather than one per binary, because there are two — the window
+/// and the capture — and they were built separately. Adding sheets to one and
+/// not the other made the capture draw every sprite as its whole sheet, which
+/// is the exact duplication this change removed from the scene format, living
+/// one level up. Two callers of one function cannot disagree.
+pub fn bind_textures(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+) -> Result<(TextureRegistry, TextureBindings), GatherError> {
+    let mut textures = TextureRegistry::new(device, queue);
+    let mut bindings = TextureBindings::new();
+    for (id, bytes) in TEXTURES {
+        let asset = TextureAssetDecoder.decode(AssetBytes::new(
+            (*id).parse::<AssetId>()?,
+            (*bytes).to_vec(),
+        ))?;
+        let texture = Texture2D::from_rgba8(
+            device,
+            queue,
+            id,
+            asset.width(),
+            asset.height(),
+            asset.rgba8(),
+        )?;
+        bindings.bind(*id, textures.insert(texture));
+
+        // The sheet that slices it, found by the same derivation the editor
+        // uses to look for one on disk.
+        let Some(sheet) = (*id)
+            .parse::<AssetId>()
+            .ok()
+            .and_then(|id| sheet_id_for(&id))
+        else {
+            continue;
+        };
+        let Some((_, json)) = SHEETS.iter().find(|(name, _)| *name == sheet.as_str()) else {
+            continue;
+        };
+        bindings.bind_sheet(*id, &SpriteSheetDocument::from_json(json)?)?;
+    }
+    Ok((textures, bindings))
+}
 
 /// The scene's component schemas, including the one the engine does not know.
 ///
@@ -194,23 +262,7 @@ impl DesktopApp for GatherApp {
 
     fn create(context: &AppContext<'_>) -> Result<Self, Self::Error> {
         let scene = extractor()?;
-        let mut textures = TextureRegistry::new(context.device(), context.queue());
-        let mut bindings = TextureBindings::new();
-        for (id, bytes) in TEXTURES {
-            let asset = TextureAssetDecoder.decode(AssetBytes::new(
-                (*id).parse::<AssetId>()?,
-                (*bytes).to_vec(),
-            ))?;
-            let texture = Texture2D::from_rgba8(
-                context.device(),
-                context.queue(),
-                id,
-                asset.width(),
-                asset.height(),
-                asset.rgba8(),
-            )?;
-            bindings.bind(*id, textures.insert(texture));
-        }
+        let (textures, bindings) = bind_textures(context.device(), context.queue())?;
 
         let mut engine = EngineHost::new(
             Session::new(scene.components().clone()),
@@ -298,6 +350,10 @@ pub enum GatherError {
     World(#[from] sindri_core::WorldError),
     #[error(transparent)]
     Asset(#[from] sindri_core::AssetIdError),
+    #[error(transparent)]
+    Sheet(#[from] sindri_core::SheetError),
+    #[error(transparent)]
+    SheetBind(#[from] SheetBindError),
     #[error(transparent)]
     Decode(#[from] sindri_assets::AssetDecodeError),
     #[error(transparent)]

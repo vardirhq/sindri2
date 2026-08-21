@@ -79,9 +79,22 @@ Queue capacity includes waiting, active, and completed-but-undrained requests. E
 
 ## Typed decoding
 
-Source completions remain encoded bytes until a runtime selects an `AssetDecoder`. `TextureAssetDecoder` accepts PNG and JPEG data and produces dimensions plus tightly packed RGBA8 pixels suitable for the existing `Texture2D::from_rgba8` GPU upload path. `SceneAssetDecoder` deserializes a `SceneDocument` and runs the normal version, stable-ID, parent, and hierarchy validation before the scene can become ready.
+Source completions remain encoded bytes until a runtime selects an `AssetDecoder`. `TextureAssetDecoder` accepts PNG and JPEG data and produces dimensions plus tightly packed RGBA8 pixels suitable for the existing `Texture2D::from_rgba8` GPU upload path. `SceneAssetDecoder` deserializes a `SceneDocument` and runs the normal version, stable-ID, parent, and hierarchy validation before the scene can become ready. `SpriteSheetAssetDecoder` does the same for the sidecar that slices a texture into named sprites — its own decoder rather than text a caller parses, because a malformed sheet should fail as the asset it is, naming itself, rather than arriving as a string that fails somewhere later with no idea where it came from.
 
 `decode_completion` preserves the request token and turns both source and decode failures into the common `AssetLoadError` model. Its `DecodedAssetCompletion::apply` method checks the retained handle generation before mutating an `AssetStore`, then drives the entry from loading to either ready or failed. A late completion for an expired generation returns a stale-completion error without touching the replacement entry.
+
+## Assets that describe other assets
+
+A sprite sheet is an asset *about* a texture, and its ID says so without anybody declaring it:
+`textures/tiles.png` is sliced by `textures/tiles.sheet.json`. Derived rather than declared, because
+a scene naming its sheets would be a place the pairing could be got wrong. `sheet_id_for` is that one
+rule, and both the editor looking on disk and a game shipping embedded bytes go through it.
+
+A sheet is only requested when something references a part of the texture it slices — a reference to
+a whole image needs no sheet. That is what keeps a *missing* sheet an error worth reporting rather
+than the ordinary case for every unsliced texture in a project. The one exception is an animated
+sprite, whose own reference names no part because its clips do; `referenced_sheets` knows about that
+case explicitly, because nothing in the sprite's reference reveals it.
 
 ## Driving all of it
 

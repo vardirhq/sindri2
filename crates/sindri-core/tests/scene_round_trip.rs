@@ -220,7 +220,7 @@ fn an_edited_transform_survives_a_save_and_reopen() {
 #[test]
 fn a_locked_transform_saves_what_it_declared_and_nothing_else() {
     let json = r#"{
-        "format_version": 3,
+        "format_version": 4,
         "entities": [
             { "id": "background", "transform_3d": {
                 "position": [0.0, 0.0, -50.0], "z_locked": true } },
@@ -284,6 +284,9 @@ mod migration {
             ("hierarchy.v2.json", "hierarchy.scene.json"),
             ("components.v2.json", "components.scene.json"),
             ("minimal.v2.json", "minimal.scene.json"),
+            ("hierarchy.v3.json", "hierarchy.scene.json"),
+            ("components.v3.json", "components.scene.json"),
+            ("minimal.v3.json", "minimal.scene.json"),
         ] {
             let migrated = super::SceneDocument::from_json_migrated(
                 &legacy(before),

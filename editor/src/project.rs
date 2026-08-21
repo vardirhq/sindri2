@@ -12,6 +12,8 @@
 
 use std::path::{Path, PathBuf};
 
+use sindri_core::SpriteSheetDocument;
+
 /// How deep the walk goes before it stops descending.
 ///
 /// An asset directory is shallow; a source tree is not, and the browser sits
@@ -25,6 +27,52 @@ const MAX_DEPTH: usize = 4;
 /// thirty of them.
 const MAX_ENTRIES: usize = 400;
 
+/// What a sheet's file is called, relative to the texture it slices.
+///
+/// The same rule `sheet_id_for` applies to asset IDs, spelled here in terms of
+/// paths on disk. Two spellings of one rule is a thing to watch, but the
+/// browser walks a directory and does not have asset IDs to hand.
+const SHEET_SUFFIX: &str = ".sheet.json";
+
+/// The texture a sheet slices, when one sits beside it.
+///
+/// A sheet names its texture by stem rather than by extension, so this asks the
+/// directory which image is there rather than guessing at `.png`.
+fn sliced_texture_beside(sheet: &Path) -> Option<PathBuf> {
+    let name = sheet.file_name()?.to_str()?;
+    let stem = name.strip_suffix(SHEET_SUFFIX)?;
+    let directory = sheet.parent()?;
+    std::fs::read_dir(directory)
+        .ok()?
+        .flatten()
+        .find_map(|entry| {
+            let path = entry.path();
+            let matches = path.file_stem().and_then(|found| found.to_str()) == Some(stem)
+                && AssetKind::of_file(&path.to_string_lossy()) == AssetKind::Texture;
+            matches.then_some(path)
+        })
+}
+
+/// The sprites the sheet beside `texture` names, or nothing.
+///
+/// A sheet that will not parse yields no sprites rather than an error: the
+/// browser's job is to list a directory, and a broken sidecar is something the
+/// slicer shows and fixes, not something that should empty the panel.
+fn sprites_beside(texture: &Path) -> Vec<String> {
+    let Some(stem) = texture.file_stem().and_then(|stem| stem.to_str()) else {
+        return Vec::new();
+    };
+    let sheet = texture.with_file_name(format!("{stem}{SHEET_SUFFIX}"));
+    let Ok(json) = std::fs::read_to_string(sheet) else {
+        return Vec::new();
+    };
+    SpriteSheetDocument::from_json(&json)
+        .ok()
+        .and_then(|document| document.rects().ok())
+        .map(|rects| rects.into_keys().collect())
+        .unwrap_or_default()
+}
+
 /// What kind of thing an entry is, as far as the browser can tell.
 ///
 /// From the extension, because that is all a file offers before something opens
@@ -36,6 +84,12 @@ pub enum AssetKind {
     Folder,
     Scene,
     Texture,
+    /// One named part of a sliced texture. Not a file of its own: it is a row
+    /// under the image it was cut from, which is where a person looks for it.
+    Sprite,
+    /// The sidecar that slices a texture. Listed as its own kind rather than as
+    /// "File", because it is the thing a slicer edits.
+    Sheet,
     Mesh,
     Script,
     Font,
@@ -49,6 +103,8 @@ impl AssetKind {
             Self::Folder => "Folder",
             Self::Scene => "Scene",
             Self::Texture => "Texture",
+            Self::Sprite => "Sprite",
+            Self::Sheet => "Sheet",
             Self::Mesh => "Mesh",
             Self::Script => "Script",
             Self::Font => "Font",
@@ -65,6 +121,9 @@ impl AssetKind {
         let lower = name.to_lowercase();
         if lower.ends_with(".scene.json") {
             return Self::Scene;
+        }
+        if lower.ends_with(SHEET_SUFFIX) {
+            return Self::Sheet;
         }
         match lower.rsplit_once('.').map(|(_, extension)| extension) {
             Some("png" | "jpg" | "jpeg" | "webp" | "bmp" | "ktx2" | "dds") => Self::Texture,
@@ -90,6 +149,12 @@ pub struct ProjectEntry {
     pub relative: String,
     pub kind: AssetKind,
     pub depth: usize,
+    /// For a texture, the sprites its sheet names. Empty when it has no sheet,
+    /// which is every unsliced image.
+    ///
+    /// Read during the walk rather than on demand, because the browser redraws
+    /// at the viewport's frame rate and a sidecar does not change that often.
+    pub sprites: Vec<String>,
 }
 
 /// The directory the browser is showing, as it was last read.
@@ -165,16 +230,31 @@ impl ProjectTree {
                 .unwrap_or(&path)
                 .to_string_lossy()
                 .into_owned();
+            let kind = if directory_entry {
+                AssetKind::Folder
+            } else {
+                AssetKind::of_file(&path.to_string_lossy())
+            };
+            // A sheet whose texture is right there is shown as that texture's
+            // sprites, so listing the file as well says the same thing twice.
+            // An *orphaned* sheet is still listed, because a sidecar cutting up
+            // an image nobody can find is exactly the sort of thing a browser
+            // that hides files would let you never notice.
+            if kind == AssetKind::Sheet && sliced_texture_beside(&path).is_some() {
+                continue;
+            }
+            let sprites = if kind == AssetKind::Texture {
+                sprites_beside(&path)
+            } else {
+                Vec::new()
+            };
             self.entries.push(ProjectEntry {
                 name,
                 relative,
-                kind: if directory_entry {
-                    AssetKind::Folder
-                } else {
-                    AssetKind::of_file(&path.to_string_lossy())
-                },
+                kind,
                 depth,
                 path: path.clone(),
+                sprites,
             });
             if directory_entry {
                 children.push(path);
@@ -378,5 +458,84 @@ mod tests {
         let tree = ProjectTree::rooted(directory.path());
         assert!(tree.truncated(), "the walk has to admit it stopped");
         assert_eq!(tree.entries().len(), MAX_DEPTH);
+    }
+}
+
+#[cfg(test)]
+mod sheet_tests {
+    use std::fs;
+
+    use super::{AssetKind, ProjectTree};
+
+    /// A sliced image carries its parts, so the browser can show them where a
+    /// person looks for them: under the image, not loose in the directory.
+    #[test]
+    fn a_sliced_texture_carries_the_sprites_its_sheet_names() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        fs::write(directory.path().join("tiles.png"), []).expect("writable");
+        fs::write(
+            directory.path().join("tiles.sheet.json"),
+            r#"{ "format_version": 1,
+                 "grid": { "columns": 2, "rows": 1, "names": ["light", "dark"] } }"#,
+        )
+        .expect("writable");
+
+        fs::write(directory.path().join("a.scene.json"), "{}").expect("writable");
+        let tree = ProjectTree::beside(Some(&directory.path().join("a.scene.json")));
+        let texture = tree
+            .entries()
+            .iter()
+            .find(|entry| entry.name == "tiles.png")
+            .expect("the texture is listed");
+        assert_eq!(texture.sprites, vec!["dark".to_owned(), "light".to_owned()]);
+
+        assert!(
+            tree.entries()
+                .iter()
+                .all(|entry| entry.kind != AssetKind::Sheet),
+            "the sheet is shown as its texture's sprites, so listing the file \
+             as well would say the same thing twice"
+        );
+    }
+
+    /// An orphaned sheet *is* listed, because a sidecar cutting up an image
+    /// nobody can find is exactly what a browser that hides files would let you
+    /// never notice.
+    #[test]
+    fn a_sheet_with_no_texture_is_still_listed() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        fs::write(
+            directory.path().join("gone.sheet.json"),
+            r#"{ "format_version": 1, "grid": { "columns": 1, "rows": 1 } }"#,
+        )
+        .expect("writable");
+
+        fs::write(directory.path().join("a.scene.json"), "{}").expect("writable");
+        let tree = ProjectTree::beside(Some(&directory.path().join("a.scene.json")));
+        assert!(
+            tree.entries()
+                .iter()
+                .any(|entry| entry.kind == AssetKind::Sheet && entry.name == "gone.sheet.json"),
+            "a sheet slicing nothing is worth seeing"
+        );
+    }
+
+    /// A sheet that will not parse leaves its texture unsliced rather than
+    /// emptying the panel: listing a directory is the browser's job, and a
+    /// broken sidecar is the slicer's to show.
+    #[test]
+    fn a_broken_sheet_leaves_its_texture_unsliced() {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        fs::write(directory.path().join("tiles.png"), []).expect("writable");
+        fs::write(directory.path().join("tiles.sheet.json"), "{ not json").expect("writable");
+
+        fs::write(directory.path().join("a.scene.json"), "{}").expect("writable");
+        let tree = ProjectTree::beside(Some(&directory.path().join("a.scene.json")));
+        let texture = tree
+            .entries()
+            .iter()
+            .find(|entry| entry.name == "tiles.png")
+            .expect("the texture is still listed");
+        assert!(texture.sprites.is_empty());
     }
 }

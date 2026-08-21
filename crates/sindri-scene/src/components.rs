@@ -1,6 +1,5 @@
 use serde::Deserialize;
-use sindri_core::SceneComponent;
-use sindri_render::{UvRect, UvRectError};
+use sindri_core::{SceneComponent, SpriteRef, SpriteRefError};
 use thiserror::Error;
 
 /// A camera authored into a scene.
@@ -121,19 +120,6 @@ pub struct SpriteComponent {
     pub anchor: SpriteAnchor,
     #[serde(default = "opaque_white")]
     pub tint: [f32; 4],
-    /// Which part of the texture to draw, as `[x, y, width, height]` in
-    /// normalized coordinates.
-    ///
-    /// The whole texture unless a scene says otherwise, so every scene written
-    /// before sheets existed reads exactly as it did — and saves exactly as it
-    /// did too, since a component is a typed view of a stored payload and the
-    /// payload is what gets written back.
-    ///
-    /// Read through [`SpriteComponent::uv_rect`], which checks it: a rect of no
-    /// area or one reaching past the edge is a picture that is quietly wrong
-    /// rather than an error.
-    #[serde(default = "full_uv_rect")]
-    pub uv_rect: [f32; 4],
     /// The explicit override on draw order. Within a layer sprites sort by how
     /// far from the camera they are; a layer beats that, so a sprite in a
     /// higher one draws in front of something nearer the camera.
@@ -145,19 +131,19 @@ const fn opaque_white() -> [f32; 4] {
     [1.0, 1.0, 1.0, 1.0]
 }
 
-fn full_uv_rect() -> [f32; 4] {
-    UvRect::FULL.to_array()
-}
-
 impl SpriteComponent {
-    /// The part of the texture this sprite draws, checked.
+    /// The texture this sprite draws, and which named part of it.
+    ///
+    /// `textures/tiles.png#floor` draws one sprite of a sliced sheet;
+    /// `textures/badge.png` draws the whole image. Which part is no longer the
+    /// sprite's business to describe — the sheet beside the image says how it
+    /// is cut, and this only picks one of the names it gives.
     ///
     /// Checked here rather than at deserialization because a scene carrying a
-    /// bad rect should still open — the editor exists to fix it, and refusing
-    /// the file would be refusing to let anyone.
-    pub fn uv_rect(&self) -> Result<UvRect, UvRectError> {
-        let [x, y, width, height] = self.uv_rect;
-        UvRect::new(x, y, width, height)
+    /// bad reference should still open — the editor exists to fix it, and
+    /// refusing the file would be refusing to let anyone.
+    pub fn reference(&self) -> Result<SpriteRef, SpriteRefError> {
+        SpriteRef::parse(&self.texture)
     }
 
     /// The anchor this sprite resolves against, or `None` when it is in the
@@ -207,12 +193,16 @@ pub enum TileProjection {
 /// say what a second tile already says.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct TilemapComponent {
-    /// The sheet every tile is cut from.
+    /// The sliced image every tile is drawn from.
     pub texture: String,
-    /// The sheet's grid, which `tiles` indexes into row-major from its
-    /// top-left — the same order and the same origin as the map's own.
-    pub sheet_columns: u32,
-    pub sheet_rows: u32,
+    /// The sprites this map uses, by the names its sheet gives them.
+    ///
+    /// `tiles` indexes into *this*, not into the sheet, which is what keeps a
+    /// 49-cell map 49 small integers instead of 49 repeated strings. It is also
+    /// what makes a re-slice survivable: the sheet can move `floor` to another
+    /// cell and every map using it still draws the right thing, because a map
+    /// names sprites and the sheet places them.
+    pub palette: Vec<String>,
     /// The map's size in tiles.
     pub columns: u32,
     pub rows: u32,
@@ -222,7 +212,7 @@ pub struct TilemapComponent {
     #[serde(default)]
     pub projection: TileProjection,
     /// `columns * rows` cells, row-major from the top-left, `null` where the
-    /// map has no tile.
+    /// map has no tile and otherwise an index into `palette`.
     ///
     /// Null rather than a sentinel index, because every index is a real tile:
     /// reserving 0 or -1 to mean "empty" is how a map ends up with an
@@ -253,17 +243,16 @@ pub enum TilemapError {
         actual: usize,
     },
     #[error(
-        "tile {index} at column {column}, row {row} is not in a {sheet_columns}x{sheet_rows} sheet"
+        "tile {index} at column {column}, row {row} is not one of the {palette} sprites in the map's palette"
     )]
-    TileOutsideSheet {
+    TileOutsidePalette {
         column: u32,
         row: u32,
         index: u32,
-        sheet_columns: u32,
-        sheet_rows: u32,
+        palette: usize,
     },
-    #[error("tilemap cell: {0}")]
-    Cell(#[from] UvRectError),
+    #[error("a tilemap that draws anything needs at least one sprite in its palette")]
+    EmptyPalette,
 }
 
 impl TilemapComponent {
@@ -289,14 +278,15 @@ impl TilemapComponent {
             });
         }
         for (column, row, index) in self.filled() {
-            let cells = self.sheet_columns.saturating_mul(self.sheet_rows);
-            if index >= cells || self.sheet_columns == 0 || self.sheet_rows == 0 {
-                return Err(TilemapError::TileOutsideSheet {
+            if self.palette.is_empty() {
+                return Err(TilemapError::EmptyPalette);
+            }
+            if index as usize >= self.palette.len() {
+                return Err(TilemapError::TileOutsidePalette {
                     column,
                     row,
                     index,
-                    sheet_columns: self.sheet_columns,
-                    sheet_rows: self.sheet_rows,
+                    palette: self.palette.len(),
                 });
             }
         }
@@ -390,25 +380,13 @@ impl TilemapComponent {
             .then_some((column as u32, row as u32))
     }
 
-    /// The part of the sheet tile `index` draws.
-    pub fn cell_rect(&self, index: u32) -> Result<UvRect, TilemapError> {
-        let columns = self.sheet_columns;
-        let rows = self.sheet_rows;
-        if columns == 0 || rows == 0 {
-            return Err(TilemapError::TileOutsideSheet {
-                column: 0,
-                row: 0,
-                index,
-                sheet_columns: columns,
-                sheet_rows: rows,
-            });
-        }
-        Ok(UvRect::cell(
-            index % columns,
-            index / columns,
-            columns,
-            rows,
-        )?)
+    /// What tile `index` is called in the sheet.
+    ///
+    /// A name and not a rect: where the sprite *is* belongs to the sheet, and
+    /// this component's business ends at saying which one it wants.
+    #[must_use]
+    pub fn sprite_of(&self, index: u32) -> Option<&str> {
+        self.palette.get(index as usize).map(String::as_str)
     }
 
     /// The anchor this map resolves against, matching a sprite's rule so the
@@ -430,8 +408,12 @@ mod tilemap_tests {
     fn map(projection: TileProjection, columns: u32, rows: u32) -> TilemapComponent {
         TilemapComponent {
             texture: "tiles".to_owned(),
-            sheet_columns: 2,
-            sheet_rows: 2,
+            palette: vec![
+                "a".to_owned(),
+                "b".to_owned(),
+                "c".to_owned(),
+                "d".to_owned(),
+            ],
             columns,
             rows,
             tile_size: [1.1, 0.55],
@@ -502,28 +484,25 @@ mod tilemap_tests {
     }
 
     #[test]
-    fn a_tile_outside_the_sheet_is_rejected() {
+    fn a_tile_outside_the_palette_is_rejected() {
         let mut map = map(TileProjection::Orthogonal, 1, 1);
         map.tiles = vec![Some(9)];
         assert!(matches!(
             map.validate(),
-            Err(TilemapError::TileOutsideSheet { index: 9, .. })
+            Err(TilemapError::TileOutsidePalette { index: 9, .. })
         ));
     }
 
-    /// Cell indices run row-major across the sheet, the same way the map's own
-    /// cells do, so there is one reading order to remember rather than two.
+    /// A tile names a sprite; where that sprite is belongs to the sheet.
     #[test]
-    fn cell_rects_run_row_major_across_the_sheet() {
+    fn a_tile_names_a_sprite_from_the_palette() {
         let map = map(TileProjection::Orthogonal, 1, 1);
-        let first = map.cell_rect(0).expect("tile 0 is in a 2x2 sheet");
-        let second = map.cell_rect(1).expect("tile 1 is in a 2x2 sheet");
-        let third = map.cell_rect(2).expect("tile 2 is in a 2x2 sheet");
-        assert!(first.x() < second.x(), "tile 1 is to the right of tile 0");
-        assert!(
-            (first.y() - second.y()).abs() < f32::EPSILON,
-            "tiles 0 and 1 share a row"
+        assert_eq!(map.sprite_of(0), Some("a"));
+        assert_eq!(map.sprite_of(3), Some("d"));
+        assert_eq!(
+            map.sprite_of(9),
+            None,
+            "a tile past the palette names nothing"
         );
-        assert!(third.y() > first.y(), "tile 2 is on the next row down");
     }
 }

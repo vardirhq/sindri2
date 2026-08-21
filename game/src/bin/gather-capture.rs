@@ -15,22 +15,18 @@
 use std::{error::Error, fs, io::BufWriter, path::Path};
 
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_assets::{AssetBytes, AssetDecoder, TextureAssetDecoder};
-#[cfg(not(target_arch = "wasm32"))]
-use sindri_core::AssetId;
-#[cfg(not(target_arch = "wasm32"))]
-use sindri_gather::{Session, TEXTURES, extractor, world};
+use sindri_gather::{Session, extractor, world};
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_gpu::{GpuContext, GpuRequestOptions};
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_platform::{InputEvent, InputState, Key};
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_render::{
-    DepthTarget, FrameRenderers, FrameTarget, OffscreenTarget, SpriteBatchRenderer, Texture2D,
-    TextureRegistry, TexturedCubeRenderer, Viewport, encode_prepared_frame,
+    DepthTarget, FrameRenderers, FrameTarget, OffscreenTarget, SpriteBatchRenderer,
+    TexturedCubeRenderer, Viewport, encode_prepared_frame,
 };
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_scene::{CameraView, TextureBindings};
+use sindri_scene::CameraView;
 
 #[cfg(not(target_arch = "wasm32"))]
 const WIDTH: u32 = 960;
@@ -59,21 +55,7 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
     let mut cubes = TexturedCubeRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
     let mut sprites = SpriteBatchRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
 
-    let mut textures = TextureRegistry::new(&gpu.device, &gpu.queue);
-    let mut bindings = TextureBindings::new();
-    for (id, bytes) in TEXTURES {
-        let asset = TextureAssetDecoder
-            .decode(AssetBytes::new((*id).parse::<AssetId>()?, bytes.to_vec()))?;
-        let texture = Texture2D::from_rgba8(
-            &gpu.device,
-            &gpu.queue,
-            id,
-            asset.width(),
-            asset.height(),
-            asset.rgba8(),
-        )?;
-        bindings.bind(*id, textures.insert(texture));
-    }
+    let (textures, bindings) = sindri_gather::bind_textures(&gpu.device, &gpu.queue)?;
 
     let scene = extractor()?;
     let mut world = world()?;
