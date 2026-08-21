@@ -1,9 +1,9 @@
 # Versioning
 
-Sindri versions four separate things, and they do not move together: the Rust
-crates, the scene file format, the editor protocol, and the npm SDK. A single
-version number across all four would force a scene format bump every time a
-crate gained a method.
+Sindri may version four separate things, and they do not move together: the
+Rust crates, the scene file format, the editor protocol, and an optional browser
+embedding SDK. A single version number across all four would force a scene
+format bump every time a crate gained a method.
 
 Two of the four exist today, and their rules are written down here. The other
 two are named so that nobody has to guess whether a policy exists — it does not
@@ -20,8 +20,8 @@ one without the others.
 The project is pre-1.0 and follows Cargo's semver rules for `0.x`: **the minor
 position is the breaking position.** A breaking change goes to `0.2.0`; an
 addition or fix goes to `0.1.1`. Until 1.0, breaking changes are expected rather
-than exceptional, and `PROJECT_OVERVIEW.md` treats API stability as a first
-major release criterion, not a foundation one.
+than exceptional, and `ROADMAP.md` treats API stability as a first-major-release
+criterion, not a foundation one.
 
 `sindri-editor`, `sindri-cube`, and `sindri-triangle` are `publish = false`. They
 carry the workspace version because they live in the workspace, not because
@@ -149,15 +149,17 @@ moves independently, which cannot be answered before knowing whether the editor
 will ever talk to a runtime it was not built alongside. This section gets written
 when the handshake does.
 
-## npm SDK
+## Optional browser embedding SDK
 
-**Not yet decided.** `@sindri/engine` does not exist; it is Milestone 5.
+**Not yet decided.** No browser embedding package exists, and it is not a
+first-release requirement. Decay is the gameplay language on both native and
+browser targets.
 
-The open question is whether its version tracks the Rust crates — the SDK is a
-hand-written wrapper over bindings generated from them, so a crate change can be
-invisible to TypeScript or can break it — and how a WASM artifact built from one
-crate version is prevented from loading under a package built for another. Both
-are decidable once the binding crate exists and neither is decidable now.
+If a concrete web-application use case earns a TypeScript package later, the
+open question is whether its version tracks the Rust crates and how a WASM
+artifact built from one crate version is prevented from loading under a package
+built for another. Both are decidable once the binding exists and neither is
+decidable now.
 
 ## Releases
 

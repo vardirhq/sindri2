@@ -5,17 +5,18 @@ Guidance for AI assistants working in this repository.
 ## What this is
 
 Sindri Next is a pre-alpha Rust game engine targeting native desktop and WebGPU
-browsers, with a planned TypeScript SDK and an integrated native editor that is
-meant to become a full authoring tool rather than a scene viewer. It is a
-Cargo workspace at foundation stage: the engine core, platform boundary, GPU and
-renderer layers, asset pipeline, and an editor shell exist; the web SDK, 2D
-migration, 3D product features, and isometric module do not.
+browsers, with a native editor and the Decay gameplay language. It is a Cargo
+workspace being proven through one companion game: the engine core, platform
+boundary, GPU and renderer layers, asset pipeline, substantial 2D runtime,
+editor authoring surface, native game, and browser game exist. Text, audio,
+physics, mature 3D, grid/isometric gameplay systems, project-level editor
+workflow, and export tooling do not.
 
-Three documents govern the work and are the source of truth over anything
+Four documents govern the work and are the source of truth over anything
 inferred from code:
 
-- `PROJECT_OVERVIEW.md` — the product vision and architectural rules. Read the
-  sections relevant to a change before making architectural decisions.
+- `README.md` — the current product identity, architecture summary, and honest
+  high-level capability statement.
 - `ROADMAP.md` — the checkable engineering plan, ordered by dependency. Milestone
   checkboxes reflect real state; tick one only when its acceptance criteria and
   tests are done. Work that using the editor turned up, rather than the plan
@@ -23,6 +24,12 @@ inferred from code:
   wedged into a milestone.
 - `docs/FEASIBILITY.md` — the non-negotiable decisions (runtime handles vs scene
   IDs, versioned scenes, coarse WASM calls, WebGPU-first, etc.).
+- `docs/decay-direction.md` — the accepted Editor + Decay authoring direction,
+  including the superseded alternative kept as a decision record.
+
+`PROJECT_OVERVIEW.md` is the historical Rust + TypeScript architecture brief.
+It remains useful design input, but its TypeScript-first product model is not a
+current commitment and does not override the four documents above.
 
 Per-subsystem contracts live in `docs/`: `asset-foundation.md`,
 `component-schema-registry.md`, `scene-serialization.md`, `scene-extraction.md`, `2d-model.md`,
@@ -56,7 +63,8 @@ engine or the editor can do something, and update it in the same commit as any
 change that adds, removes, or wires up a capability.
 
 Project policy lives alongside them: `docs/versioning.md` (crate and scene
-format versions; the editor protocol and npm SDK are deliberately undecided) and
+format versions; the editor protocol and any optional browser embedding SDK are
+deliberately undecided) and
 `docs/dependency-policy.md` (what `cargo deny` enforces). `CONTRIBUTING.md`
 states the same conventions this file does, for humans.
 
@@ -356,5 +364,5 @@ overwrite a replacement. Never fake synchronous browser I/O.
   overlay found a renderer bug no proof could have, because no proof had both.
 - Deferred work is deferred deliberately — WebGL2 fallback, PBR, skeletal
   animation, networking, render graphs, and advanced ECS scheduling are listed as
-  non-goals in `ROADMAP.md` and `PROJECT_OVERVIEW.md`. Do not add them
+  deferred in `ROADMAP.md`. Do not add them
   opportunistically.

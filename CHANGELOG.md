@@ -159,6 +159,8 @@ All notable changes to Sindri Next will be documented here.
 
 ### Changed
 
+- Reconciled the README, roadmap, capability inventory, scripting contract, and contributor guidance with the implemented Decay entity references, tilemaps, editor authoring, companion-game browser build, and Editor + Decay product direction.
+
 - Made a surface that offers no sRGB format draw through an sRGB view of one it can hold, instead of refusing to start; a browser canvas offers no sRGB format at all, so the engine had never once started in one.
 - Made a host log the failure it records, since in a browser `run` has already handed the event loop to the page and there is nobody to return an error to — the engine was stopping at the device request in silence.
 

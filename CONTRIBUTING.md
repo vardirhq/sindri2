@@ -6,15 +6,21 @@ rather than ones that add surface area.
 
 ## Before writing code
 
-Three documents govern the work and outrank anything inferred from the code:
+Four documents govern the work and outrank anything inferred from the code:
 
-- [`PROJECT_OVERVIEW.md`](PROJECT_OVERVIEW.md) — the product vision and the
-  architectural rules. Read the sections your change touches.
+- [`README.md`](README.md) — the current product identity, architecture summary,
+  and high-level capability statement.
 - [`ROADMAP.md`](ROADMAP.md) — the checkable plan, ordered by dependency rather
   than by excitement. Work the next item rather than a later, more appealing one.
 - [`docs/FEASIBILITY.md`](docs/FEASIBILITY.md) — the decisions that are settled:
   runtime handles are not scene IDs, scenes are versioned from day one, WASM
   calls are coarse, WebGPU is the first browser target.
+- [`docs/decay-direction.md`](docs/decay-direction.md) — the accepted Editor +
+  Decay authoring direction and its decision record.
+
+[`PROJECT_OVERVIEW.md`](PROJECT_OVERVIEW.md) preserves the original Rust +
+TypeScript architecture proposal. Its TypeScript-first product model is
+historical and does not override the current sources above.
 
 Per-subsystem contracts live in [`docs/`](docs). If your change alters how a
 subsystem behaves, update its document in the same change. A contract that

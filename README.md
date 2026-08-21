@@ -46,7 +46,12 @@ A script can currently read and write its transform and sprite properties, read 
 
 `@export` fields are visible in the editor without running the script. The script declares the property's name, type, and default; the scene stores only the value authored for that particular entity.
 
-Decay is intentionally still small. It does not yet have entity-reference values, spawning/despawning, structured value types such as vectors, or a large standard library. See [`decay/LANGUAGE.md`](decay/LANGUAGE.md) for the language reference and [`docs/scripting.md`](docs/scripting.md) for the exact Sindri surface scripts can reach.
+Decay is intentionally still small. It can hold safe entity references, find and
+inspect other entities, and despawn them, but it does not yet support spawning,
+structured value types such as vectors, collections, loops, or a large standard
+library. See [`decay/LANGUAGE.md`](decay/LANGUAGE.md) for the language reference
+and [`docs/scripting.md`](docs/scripting.md) for the exact Sindri surface scripts
+can reach.
 
 ## What works today
 
@@ -63,8 +68,10 @@ Decay is intentionally still small. It does not yet have entity-reference values
 - shared `wgpu` device/surface policy for native and WebGPU
 - extraction/preparation/rendering stages with deterministic pass ordering
 - depth-tested 3D meshes, perspective and orthographic cameras, textured/tinted/layered 2D sprites, sprite sheets, and runtime sprite animation
+- orthogonal and isometric tilemaps extracted into the same sprite batches as loose world sprites
 - deterministic offscreen PNG rendering exercised by CI
 - Decay scripts that run against the live world through a typed host surface
+- a browser-playable companion game proving Decay, fixed-step input, entity references, and rendering together
 
 ### Editor
 
@@ -142,10 +149,10 @@ Sindri is pre-alpha, and several large pieces are intentionally not pretending t
 
 - physics and collision gameplay
 - audio
-- richer Decay value types, entity references, spawning, and access to other entities
+- richer Decay value types, collections, loops with execution budgets, and spawning
 - broader gameplay stepping beyond scripts and sprite animation in editor play mode
 - transform rotation editing and scene gizmos
-- sprite-sheet and animation authoring tools
+- animation-clip and tilemap authoring tools (sprite-sheet slicing and naming already work)
 - richer asset inspectors and project authoring workflows
 - production build/export/package tooling
 - a mature 3D feature set beyond the current rendering foundation
@@ -202,7 +209,7 @@ The detailed contracts live alongside the code:
 - [`docs/platform-host.md`](docs/platform-host.md) — native/browser host model
 - [`docs/entity-scaling.md`](docs/entity-scaling.md) — measured entity-storage scaling
 - [`docs/versioning.md`](docs/versioning.md) — current versioning rules
-- [`PROJECT_OVERVIEW.md`](PROJECT_OVERVIEW.md) — longer-term project direction
+- [`PROJECT_OVERVIEW.md`](PROJECT_OVERVIEW.md) — historical Rust + TypeScript architecture proposal
 - [`ROADMAP.md`](ROADMAP.md) — checkable development roadmap
 
 ## Why Sindri?

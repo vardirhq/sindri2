@@ -11,7 +11,9 @@ This is the checkable engineering plan. Check an item only when its acceptance c
 - [x] Establish `sindri-core` and the public `sindri` facade
 - [x] Add `CONTRIBUTING.md`, code of conduct, and dual-license files
 - [x] Add dependency policy and automated dependency/security review
-- [ ] Decide versioning policy for Rust crates, scene files, editor protocol, and npm SDK (crates and scene files decided; the editor protocol and npm SDK are deferred until they exist rather than guessed at)
+- [ ] Decide versioning policy for Rust crates, scene files, editor protocol,
+  and any future browser embedding SDK (crates and scene files decided; the
+  protocol and optional SDK are deferred until they exist rather than guessed at)
 - [ ] Add release/changelog validation (deferred until there is a release process to validate)
 
 Exit gate: a clean clone passes format, lint, and test checks on the declared MSRV.
@@ -62,7 +64,10 @@ Exit gate: core runs without GPU/window/browser dependencies and scene fixtures 
 
 - [x] Add `sindri-platform` traits for lifecycle, input source, clock, and asset I/O (asset I/O stays in `sindri-assets`)
 - [x] Add desktop adapter using `winit` — window, event loop, frame timing, and input all live in `sindri-desktop`
-- [x] Add web adapter using `wasm-bindgen`, `web-sys`, and async initialization — the `winit` host serves the browser through the same event loop, canvas attachment, and asynchronous device request; the `sindri-web` binding crate for the TypeScript SDK is Milestone 5 rather than a second host
+- [x] Add web adapter using `wasm-bindgen`, `web-sys`, and async initialization
+  — the `winit` host serves the browser through the same event loop, canvas
+  attachment, and asynchronous device request; applications currently expose
+  their own narrow `wasm_bindgen` entry point
 - [x] Keep target-specific conditionals inside platform hosts — window, canvas, future spawning, and the clock live in `sindri-desktop`; each application still picks its own logger, which is an application choice rather than a host detail
 - [ ] Produce explicit capability errors for unavailable WebGPU/surface features
 
@@ -117,46 +122,42 @@ Exit gate: a serialized scene drives a combined native 2D/3D example without ren
 
 Exit gate: the same logical texture and scene references load from disk and static web hosting.
 
-## Milestone 5 — First-class TypeScript/Web SDK
+## Milestone 5 — Browser runtime and delivery
 
-### WASM contract
+The original milestone specified a first-class TypeScript gameplay SDK. Decay
+is now the common gameplay layer for native and browser builds, so the browser
+work here is about running, loading, diagnosing, and shipping the same project.
+A TypeScript embedding API remains possible if a concrete web-application use
+case justifies a second public authoring surface; it is not a first-release
+requirement.
 
-- [ ] Add a narrow `sindri-web` binding crate
-- [ ] Define versioned command, event, query, and error payloads
-- [ ] Implement command batching and bulk component writes
-- [ ] Implement event/query draining without per-entity frame calls
-- [ ] Benchmark boundary overhead and publish budgets
-- [ ] Make destruction/disposal explicit and leak-tested
+### Runtime
 
-### TypeScript package
+- [x] Run the shared `winit` host, WGPU renderer, and engine lifecycle on a page canvas
+- [x] Run Decay gameplay, fixed-step simulation, keyboard input, entity references, and the shared game board in Chromium
+- [x] Make asynchronous host failures visible in the browser console rather than returning success before startup fails
+- [ ] Exercise `AssetLoader` and `UrlRoot` with real browser fetches rather than embedded bytes
+- [ ] Define page lifecycle semantics for resize, visibility, teardown, and device loss
+- [ ] Add an explicit capability error and user-facing message when WebGPU is unavailable
 
-- [ ] Create `packages/engine` with hand-designed public types
-- [ ] Hide generated bindings as package internals
-- [ ] Implement `Engine.create({ canvas })`
-- [ ] Add start, pause, resume, stop, resize, and destroy semantics
-- [ ] Add typed scene/entity handles with stale-handle errors
-- [ ] Add keyboard and pointer input
-- [ ] Add one safe gameplay update callback per frame
-- [ ] Add batched mutation helpers for high-entity workloads
-- [ ] Generate API docs and source maps
-- [ ] Package ESM JS, TypeScript declarations, and WASM correctly
+### Browser quality and packaging
 
-### Browser quality
-
-- [ ] Add Playwright smoke tests in Chromium
+- [x] Add a Playwright smoke test that proves the engine configured the canvas
 - [ ] Test missing WebGPU messaging
 - [ ] Test canvas selector/element validation
 - [ ] Test resize, device-pixel ratio, visibility pause, and teardown
 - [ ] Test static hosting under a non-root base path
 
-Exit gate: `npm install @sindri/engine` can run a documented sprite-and-cube browser example without Rust code.
+Exit gate: a Sindri project can be exported to static files, load its assets
+through the real pipeline, and run the same Decay gameplay and scene in a
+supported browser as it does natively.
 
 ## Milestone 6 — Focused 2D migration
 
 An item here is finished when the editor understands it, not when the runtime
-does. `PROJECT_OVERVIEW.md` makes that a project rule and Milestone 9 lists its
-editor tools accordingly; this milestone listed only runtime halves, so the
-authoring surfaces are named explicitly below.
+does. The current product direction makes that a project rule and Milestone 9
+lists its editor tools accordingly; this milestone listed only runtime halves,
+so the authoring surfaces are named explicitly below.
 
 They follow their runtime half rather than lead it. A sheet editor edits a
 format, so the format, its serialization, and its renderer come first —
@@ -173,13 +174,17 @@ shaped like the tool.
 - [x] Port sprite animation and sprite sheets — `sindri.sprite_animation` carries the sheet grid, clips of cells, and which one plays, while `SpriteAnimations` holds the cursor beside the world, so a scene saved mid-run is the scene that was opened; the legacy engine's texture-per-frame becomes a rect into one sheet, and authoring is still the next item
 - [x] Give a sliced image somewhere to say how it is cut — a sheet document beside the texture at a derived ID, naming its parts as a grid or as explicit rects, with scenes referring to them as `textures/tiles.png#floor`. Three components each carried their own copy of a sheet's layout and could disagree; none carries one now. Scene format 4, with a migration that recovers a rect's cell without being told the grid
 - [ ] Add a sprite sheet authoring surface: slice a sheet into frames, name clips, set timing, preview playback (partly done: selecting a texture opens a slicer showing the image with its grid drawn over it, columns and rows are drags, every cell can be named, and Save writes the sidecar — the browser then lists the sprites under the image. **Clips are still typed into the scene by hand**: naming a clip, setting its timing and previewing playback are the half that is missing)
-- [ ] Port camera 2D behavior and pixel snapping — pixel snapping is an orthographic-camera feature, since apparent scale under perspective depends on depth; see `docs/2d-model.md`
+- [ ] Port camera 2D behavior and pixel snapping — partly done: orthographic
+  pixel snapping works; follow/dead-zone/smoothing behaviour remains
 - [x] Port tilemap data model and renderer — `sindri.tilemap` holds the sheet grid, the map grid, and a flat array of cells with `null` for empty, and extracts into the same sprite batches loose sprites use, so a prop sorts among the floor rather than behind it; it gained a projection the legacy type did not have, because the first thing to use it was an isometric floor, and placing a tile and finding the tile under a point are inverses on every cell of both
 - [ ] Add tilemap authoring: a tile palette, paint and erase, and layer selection — `local_to_tile` is the maths this needs and it exists; what is missing is the surface
 - [ ] Port text rendering with a web-safe font asset strategy
 - [ ] Add font and text authoring: choose a font asset and edit text content in the inspector
 - [ ] Port particles after the render lifecycle is stable
-- [ ] Port layers, anchors, and sprite bounds — parallax is not ported, because under one world with real depth it is what a perspective camera already does; see `docs/2d-model.md`
+- [ ] Port layers, anchors, and sprite bounds — layers and the nine screen
+  anchors work; bounds remain and will support viewport picking. Parallax is not
+  ported, because under one world with real depth it is what a perspective
+  camera already does; see `docs/2d-model.md`
 - [ ] Port A* pathfinding into a renderer-free grid crate, with the general grid beside it; the legacy platform-jump graph is deferred rather than carried along because it shares a file
 - [ ] Add optional Rapier2D adapter without core dependency, with collision layers from the start — physics ignores Z, so depth cannot keep a parallax background out of the player's way, and collision layers are not render layers
 - [ ] Add 2D pan/zoom viewport controls, which need a 2D scene rather than the screen-anchored overlay the demo uses
@@ -195,11 +200,10 @@ Audio depends on the platform boundary (Milestone 2) and the asset system
 the 2D migration. It can be taken whenever a game needs to make a sound.
 
 It is unnumbered rather than inserted as a milestone because renumbering seven
-milestones to record one omission costs more than the omission does.
-`PROJECT_OVERVIEW.md` already places it — an asset type the asset system must
-support, a device integration behind the platform boundary, and explicitly not a
-dependency of any core crate — but no milestone ever scheduled it, so until now
-the plan described an engine that could not make a sound.
+milestones to record one omission costs more than the omission does. It belongs
+beside the asset system, behind the platform boundary, and explicitly outside
+the core crates; no numbered milestone had scheduled it, so the plan once
+described an engine that could not make a sound.
 
 - [ ] Define an audio asset type and its decoding path alongside textures
 - [ ] Add a platform audio boundary with a silent implementation, so tests and CI need no sound device and a headless run can still assert what was asked to play
@@ -267,10 +271,10 @@ Exit gate: shared grid/gameplay logic supports both sprite isometric and orthogr
 ## Milestone 10 — Tooling, distribution, and 1.0 hardening
 
 - [ ] Implement minimal `sindri new/dev/build/test/editor` CLI
-- [ ] Create `npm create sindri-game`
+- [ ] Add native and web project templates to `sindri new`
 - [ ] Add native and static-web export pipelines
 - [ ] Add curated examples with CI build coverage
-- [ ] Add Rust and TypeScript getting-started guides side by side
+- [ ] Add Editor/Decay and CLI/Decay getting-started guides, plus Rust extension guidance
 - [ ] Document supported browsers, GPUs, OSes, and MSRV
 - [ ] Add CPU, GPU, memory, startup, and WASM-size benchmarks
 - [ ] Add screenshot/render regression suite where stable
@@ -278,7 +282,9 @@ Exit gate: shared grid/gameplay logic supports both sprite isometric and orthogr
 - [ ] Stabilize public API and document deprecations
 - [ ] Complete license, notices, release notes, and publishing dry run
 
-Exit gate: all first-major-release success criteria in `PROJECT_OVERVIEW.md` pass from clean generated projects.
+Exit gate: a clean generated project can be authored through Editor/Decay or
+CLI/Decay, tested, and exported for native and static web targets with documented
+support and stable public contracts.
 
 ## Milestone 11 — The editor as a working tool
 
@@ -293,7 +299,7 @@ in Milestones 6, 8, and 9 rather than here, and what is left below is the work
 that belongs to no single engine feature.
 
 Full-fledged means complete for what Sindri does, not feature-for-feature with
-Unity — `PROJECT_OVERVIEW.md` rules that out, and an editor that grows ahead of
+Unity — the README rules that out, and an editor that grows ahead of
 the engine would be authoring things nothing can run.
 
 ### Authoring the world
@@ -314,18 +320,22 @@ the engine would be authoring things nothing can run.
 - [ ] Open a project rather than a single scene, and manage more than one scene at a time
 - [ ] Import assets from a watched directory, decoding and registering them without a rebuild
 - [ ] Surface project settings, whatever `sindri.toml` turns out to hold
-- [ ] Show real engine logs, errors, and asset failures in the console
+- [x] Show editor, script, render, and asset failures in the console; broader
+  structured engine logging can grow behind the same surface
 - [ ] Search and filter that reaches both the hierarchy and the project browser
 
 ### Running the game
 
-- [ ] Play mode that runs the real game loop against the edited world, with pause and single step
+- [ ] Play mode that runs the complete game loop against the edited world, with
+  pause and single step — scripts and sprite animation already run; other game
+  systems and single-step do not
 - [ ] Native preview, and web preview through the actual WASM build
 - [ ] Frame timing, draw calls, and entity counts where a developer can see them
 
 ### Shape of the tool
 
-- [ ] Named layout presets, and panels that can be rearranged
+- [ ] Named layout presets, and panels that can be rearranged — `2 by 3` and
+  `Wide` presets exist and persist; arbitrary rearrangement does not
 - [ ] Script editing, or a clean handoff to the editor a developer already uses
 - [ ] Expose editor actions as structured commands, which is what AI tooling operates through
 
@@ -375,8 +385,6 @@ would do the most good, which is roughly the order it is listed in here. What
 it found that was drawn and idle is done and has moved above; what is left is
 what the editor cannot yet do.
 
-- [ ] Spawn and despawn as world commands, so creating and deleting an entity is undoable and a new one gets a stable ID before the scene is saved — the hierarchy's add button is out until this exists
-- [ ] Add and remove a component from the inspector, driven by the schema registry rather than a match on three type names
 - [ ] Edit a rotation, which the format stores, the renderer applies, and the inspector prints the word "Quaternion" for
 - [ ] Select by clicking in the viewport rather than only in the hierarchy list
 - [ ] Asset thumbnails, after which the grid view is worth defaulting to again
@@ -434,7 +442,8 @@ pictures — and the substitution is worth keeping in mind when text does arrive
 because it is evidence about how much text a 2D engine really owes its users.
 
 It is `game/`, crate `sindri-gather`: five orbs on a diamond floor, a thing you
-drive with the arrow keys, and a lamp per orb. Its scene is 68 entities and all
+drive with the arrow keys, and a lamp per orb. Its tilemap-based scene is 20
+entities and all
 four of its rules — moving, gathering, counting, winning — are Decay scripts.
 There is no gameplay in its Rust, which is the claim it exists to test.
 
@@ -448,11 +457,19 @@ but the coordinates behind it are a plain grid, which is what Milestone 9's
 module is for.
 
 - [x] Start the game: one room, one character, one tile floor (started before text existed, which the entry above records)
-- [ ] Grow it with Milestone 6: animation, a tilemap floor, parallax, and a font rendering real text
-- [x] Take the Milestone 7 editor to it, and record what authoring it in the editor is actually like — `docs/editor-meets-the-game.md`; it opens, renders in both viewports, and Play runs its scripts, which is the parity claim holding. What it cannot do is author it: 49 floor rows drown the hierarchy, and there is no viewport selection to escape the list with
+- [ ] Grow it with Milestone 6: animation, a tilemap floor, parallax, and a font
+  rendering real text — the tilemap floor and browser build work; text remains
+- [x] Take the Milestone 7 editor to it, and record what authoring it in the
+  editor is actually like — `docs/editor-meets-the-game.md`; it opens, renders
+  in both viewports, and Play runs its scripts, which is the parity claim
+  holding. That first session found 49 floor rows drowning the hierarchy; the
+  tilemap removed those rows, but viewport selection, hierarchy grouping, and
+  in-editor tilemap authoring remain open
 - [ ] Give it depth with Milestone 8: a 3D prop in the same scene as the sprites
 - [ ] Rebuild its coordinate handling on Milestone 9's grid module rather than its own
-- [ ] Ship it through Milestone 10's export pipeline, natively and to the web, as the pipeline's real test
+- [ ] Ship it through Milestone 10's export pipeline, natively and to the web,
+  as the pipeline's real test — it is playable in a hand-built browser host, but
+  no export pipeline produces that host yet
 - [ ] Rebuild it inside the editor for Milestone 11's exit gate
 
 Exit gate: the game is what someone is shown when they ask what Sindri is for,
@@ -478,7 +495,8 @@ The next item is not more language. It is `sindri-decay` — one script driving 
 - [ ] Generate typed component access, diagnostics, and autocomplete from the component schema registry (Decay's `Environment` is where host globals enter, and `IrField` already carries `exported` and `type_name` — this is the capability Rhai structurally could not have offered, and the reason the language has a case)
 - [ ] Specify safe entity and asset handles, coroutine cancellation, deterministic scheduling, and execution budgets (call depth is bounded; an operation budget is required before loops land)
 - [ ] Prove function/module hot reload with preservation or explicit migration of compatible typed state
-- [ ] Document recurring gameplay-authoring pain points from representative Rust and TypeScript games
+- [ ] Document recurring gameplay-authoring pain points from Gather and other
+  representative games, and feed them back into the Decay host and tooling
 - [ ] Define the editor, language-server, formatter, debugger, documentation, and testing commitments before making the language public
 - [ ] Decide whether the prototype provides enough gameplay-specific value to justify a permanent language ecosystem
 
