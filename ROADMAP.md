@@ -183,6 +183,7 @@ shaped like the tool.
 - [ ] Port A* pathfinding into a renderer-free grid crate, with the general grid beside it; the legacy platform-jump graph is deferred rather than carried along because it shares a file
 - [ ] Add optional Rapier2D adapter without core dependency, with collision layers from the start — physics ignores Z, so depth cannot keep a parallax background out of the player's way, and collision layers are not render layers
 - [ ] Add 2D pan/zoom viewport controls, which need a 2D scene rather than the screen-anchored overlay the demo uses
+- [x] Run the engine in a browser at all, which it never had been — two things had been broken since the browser target was added: a failure was recorded and never reported, because `spawn_app` hands the loop to the page before `run` returns, and the surface refused every canvas because a canvas offers no sRGB format. See `docs/browser.md`; `scripts/browser/smoke.mjs` is the check
 - [ ] Start the companion game and grow it through this milestone, verified natively and in browser — see "The companion game" below, which replaces the `hello-2d` and platformer slice this milestone used to schedule (started: `game/` plays natively, with a scripted offscreen capture in CI; still to do here are text and the browser build; its floor is a tilemap on a sliced sheet now)
 
 Exit gate: Sindri Next matches the useful core of legacy 2D without inheriting its desktop/server/Lua coupling, and each ported system can be authored in the editor rather than only by hand in JSON.

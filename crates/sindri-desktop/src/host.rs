@@ -96,7 +96,7 @@ impl<'a> AppContext<'a> {
         &self.gpu.queue
     }
 
-    pub const fn format(&self) -> wgpu::TextureFormat {
+    pub fn format(&self) -> wgpu::TextureFormat {
         self.surface.format()
     }
 
@@ -247,7 +247,16 @@ impl<A: DesktopApp> Host<A> {
 
     /// Records the first failure and stops. A host that kept drawing after
     /// gameplay failed would replace the error with whatever happened next.
+    ///
+    /// It is *logged* as well as recorded, and that is not belt and braces. On
+    /// a desktop the recorded error is returned by [`run`], which prints it. In
+    /// a browser there is nobody to return to — `spawn_app` hands the loop to
+    /// the page and `run` has already returned `Ok` — so a failure recorded and
+    /// not logged is a failure that happens in silence. The first time this
+    /// engine was loaded in a browser it stopped at the device request and said
+    /// nothing at all, which is what this line is for.
     fn fail(&mut self, event_loop: &ActiveEventLoop, error: DesktopError<A::Error>) {
+        log::error!("{error}");
         if self.failure.is_none() {
             self.failure = Some(error);
         }
@@ -319,9 +328,14 @@ impl<A: DesktopApp> Host<A> {
             return Ok(flow);
         };
 
-        let view = frame
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
+        // Made with the surface's view format rather than the texture's own,
+        // which is what lets a canvas that stores non-sRGB bytes still be drawn
+        // through an sRGB view. They are the same format wherever the surface
+        // offered sRGB directly.
+        let view = frame.texture.create_view(&wgpu::TextureViewDescriptor {
+            format: Some(running.surface.format()),
+            ..wgpu::TextureViewDescriptor::default()
+        });
         let context = AppContext {
             gpu: &running.gpu,
             surface: &running.surface,

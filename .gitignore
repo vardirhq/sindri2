@@ -4,3 +4,7 @@
 .DS_Store
 
 Cargo.lock
+
+# The browser smoke test brings its own tooling.
+node_modules/
+scripts/browser/package-lock.json

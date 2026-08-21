@@ -193,6 +193,15 @@ Offscreen rendering produces a deterministic PNG, which CI uploads — two of
 them: the cube proof, and the companion game photographed part-way through a
 scripted run.
 
+**The engine runs in a browser**, which until recently it had never been asked to
+do. The cube example draws the same picture in Chromium as it does natively, in
+the same colours, over WebGPU. `scripts/browser/smoke.mjs` checks it and fails
+when the page does not start the engine. What has *not* run there is asset
+loading — the example embeds its texture, so `AssetLoader` and `UrlRoot` are
+still only exercised by tests — or Decay, or input. `docs/browser.md` records
+what the first run found, which was two bugs that had been true since the browser
+target was added.
+
 ### Scene to frame
 
 Gameplay writes to the world and nothing tells the renderer. `SceneExtractor`
@@ -484,7 +493,8 @@ the README.
 - No LSP, no formatter, no debugger, no syntax highlighting anywhere
 - No script state migration across a reload: a changed file recompiles, and the
   running instance keeps whatever fields it had
-- Nothing has been *executed* on the browser target, only compiled
+- Decay has still not been *executed* on the browser target, only compiled — the
+  one thing that has run there is the cube example, which carries no scripts
 - The only numeric type is spelled `f32` and every value it holds is an `f64`
 
 ---

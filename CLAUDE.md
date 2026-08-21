@@ -42,6 +42,10 @@ why play mode snapshots the world. The language itself is documented in
 `docs/entity-scaling.md` records what the world costs at 1k, 10k, and 100k
 entities, and why an archetype ECS is not warranted.
 
+`docs/browser.md` is a session note too: what happened the first time the engine
+was loaded in a browser, and what still has never run there. `scripts/browser/`
+holds the check that keeps it honest.
+
 `docs/editor-meets-the-game.md` is a session note, not a contract: what happened
 when the editor was pointed at the companion game, what held, and what the tool
 could not do. Session notes age and are allowed to.
@@ -74,7 +78,8 @@ examples/cube/      sindri-cube: scene-driven cube + sprite overlay, and the
                     `capture` binary used as a CI render artifact
 docs/               subsystem contracts
 scripts/            capture-editor.sh (Xvfb editor screenshot; takes an
-                    optional scene path)
+                    optional scene path), browser/ (loads a wasm build in a
+                    real browser and fails if the page does not start it)
 decay/              a separate Cargo workspace: the Decay gameplay language
 ```
 
@@ -155,6 +160,11 @@ wasm-pack build examples/cube --target web --out-dir pkg
 # wasm-bindgen the workspace resolves; .cargo/config.toml names the runner)
 cargo install wasm-bindgen-cli --version 0.2.127 --locked
 cargo test -p sindri-assets --target wasm32-unknown-unknown --test decode_compatibility
+
+# run the engine in a real browser (needs node; brings its own Playwright)
+npm install --prefix scripts/browser
+wasm-pack build examples/cube --target web --out-dir pkg
+node scripts/browser/smoke.mjs examples/cube target/browser.png
 
 # editor screenshot (needs imagemagick, xdotool, xvfb)
 xvfb-run --auto-servernum ./scripts/capture-editor.sh target/editor.png
@@ -267,6 +277,14 @@ holds. Frames go through three stages — extraction, preparation (validates and
 deterministically orders passes by stage, then layer, then insertion), rendering.
 Stage order is `Opaque3d`, `Transparent2d`, `Overlay`. Do not add hand-written
 extraction code to a scene.
+
+**What must be sRGB is the view, not the swapchain.** `SurfaceProfile` takes an
+sRGB format when one is offered and otherwise takes one whose sRGB variant can be
+*viewed*, declaring it in `view_formats`. A browser canvas offers no sRGB format
+at all, and requiring one stopped the engine at startup on every page load for as
+long as the browser target existed. `WindowSurface::format` hands back the view
+format because that is what pipelines are built against; `storage_format` is the
+other one and almost nothing wants it.
 
 **Colour space is load-bearing.** Offscreen and in-editor targets must use
 `sindri_render::COLOR_TARGET_FORMAT`; swapchains must negotiate an sRGB format or

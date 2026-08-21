@@ -153,7 +153,13 @@ All notable changes to Sindri Next will be documented here.
 - Margin and spacing on a sheet grid, so a sheet packed with gutters — which is how sheets are exported, to stop filtering bleeding one frame into the next — can be cut as it actually is.
 - Sprite rows under a sliced image in the project browser, collapsed until asked for, so a sixty-four frame sheet does not flood the listing.
 
+- `scripts/browser/smoke.mjs`, which loads a wasm-pack build in a real browser and fails when the page does not start the engine.
+- `docs/browser.md`, recording what the engine's first run in a browser found.
+
 ### Changed
+
+- Made a surface that offers no sRGB format draw through an sRGB view of one it can hold, instead of refusing to start; a browser canvas offers no sRGB format at all, so the engine had never once started in one.
+- Made a host log the failure it records, since in a browser `run` has already handed the event loop to the page and there is nobody to return an error to — the engine was stopping at the device request in silence.
 
 - Moved `sindri.sprite`, `sindri.sprite_animation` and `sindri.tilemap` onto named sprites as scene format 4: `uv_rect` and both sheet grids are gone, clips list names, and a tilemap's cells index a palette of names. The migration recovers a rect's cell without being told the grid, and stops rather than guessing when a rect is not a whole cell of one.
 - Made a playing clip decide which part of a sheet is drawn on its own, so a frame that resolves to nothing draws the whole image rather than falling back to the clip's first frame, which was a plausible picture of the wrong moment.
