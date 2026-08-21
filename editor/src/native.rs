@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     f32::consts::TAU,
     path::{Path, PathBuf},
     sync::Arc,
@@ -17,8 +17,9 @@ use egui_material_icons::{
     icons::{
         ICON_ACCOUNT_TREE, ICON_ADD, ICON_CAMERA_ALT, ICON_CENTER_FOCUS_STRONG, ICON_CODE,
         ICON_DELETE, ICON_DEPLOYED_CODE, ICON_DESCRIPTION, ICON_FOLDER, ICON_GRID_VIEW, ICON_IMAGE,
-        ICON_OPEN_WITH, ICON_PAUSE, ICON_PLAY_ARROW, ICON_REDO, ICON_REFRESH, ICON_SEARCH,
-        ICON_STOP, ICON_UNDO, ICON_VIEW_IN_AR, ICON_VIEW_LIST,
+        ICON_KEYBOARD_ARROW_DOWN, ICON_KEYBOARD_ARROW_RIGHT, ICON_OPEN_WITH, ICON_PAUSE,
+        ICON_PLAY_ARROW, ICON_REDO, ICON_REFRESH, ICON_SEARCH, ICON_STOP, ICON_UNDO,
+        ICON_VIEW_IN_AR, ICON_VIEW_LIST,
     },
 };
 use glam::{Mat4, Vec2 as GlamVec2, Vec3};
@@ -389,6 +390,12 @@ struct EditorApp {
     history: CommandHistory,
     search: String,
     asset_search: String,
+    /// Which sliced images are showing their sprites.
+    ///
+    /// Collapsed until asked for, and not remembered across launches: which
+    /// sheet you were looking inside is about the minute rather than the
+    /// project, unlike the panel sizes beside it in `Preferences`.
+    expanded_sheets: BTreeSet<PathBuf>,
     /// The directory the open scene lives in, as it was last read.
     ///
     /// Read when a scene is opened rather than every frame: the browser redraws
@@ -492,6 +499,7 @@ impl EditorApp {
             history: CommandHistory::default(),
             search: String::new(),
             asset_search: String::new(),
+            expanded_sheets: BTreeSet::new(),
             project,
             workspace_tab: WorkspaceTab::Scene,
             preferences,
@@ -1594,6 +1602,7 @@ impl EditorApp {
                             ui,
                             &mut self.asset_search,
                             &mut self.preferences.asset_view,
+                            &mut self.expanded_sheets,
                             folders,
                             &self.project,
                             self.file.path(),
@@ -2711,6 +2720,9 @@ const fn asset_icon(kind: AssetKind) -> MaterialIcon {
         AssetKind::Folder => ICON_FOLDER,
         AssetKind::Scene => ICON_DESCRIPTION,
         AssetKind::Texture | AssetKind::Font => ICON_IMAGE,
+        // A sprite and the sheet that cuts it are both about a grid over an
+        // image, and neither is the image.
+        AssetKind::Sprite | AssetKind::Sheet => ICON_GRID_VIEW,
         AssetKind::Mesh => ICON_VIEW_IN_AR,
         AssetKind::Script => ICON_CODE,
         AssetKind::Other => ICON_DEPLOYED_CODE,
@@ -2727,12 +2739,13 @@ fn project_browser(
     ui: &mut egui::Ui,
     search: &mut String,
     view: &mut AssetView,
+    expanded: &mut BTreeSet<PathBuf>,
     folders: bool,
     project: &ProjectTree,
     open: Option<&Path>,
 ) -> BrowserAction {
     if !folders {
-        return asset_column(ui, search, view, project, open);
+        return asset_column(ui, search, view, expanded, project, open);
     }
     let mut action = BrowserAction::None;
     ui.horizontal(|ui| {
@@ -2744,7 +2757,7 @@ fn project_browser(
             }
         });
         ui.separator();
-        ui.vertical(|ui| action = asset_column(ui, search, view, project, open));
+        ui.vertical(|ui| action = asset_column(ui, search, view, expanded, project, open));
     });
     action
 }
@@ -2754,6 +2767,7 @@ fn asset_column(
     ui: &mut egui::Ui,
     search: &mut String,
     view: &mut AssetView,
+    expanded: &mut BTreeSet<PathBuf>,
     project: &ProjectTree,
     open: Option<&Path>,
 ) -> BrowserAction {
@@ -2829,8 +2843,36 @@ fn asset_column(
                         // A search shows a flat list, so an indentation would
                         // point at a parent the search has removed.
                         let depth = if searching { 0 } else { entry.depth };
-                        if asset_row(ui, entry, depth, searching, open).double_clicked() {
+                        // A sliced image's parts sit under it, because that is
+                        // where a person looks for them: they belong to the
+                        // image, not to the directory. Collapsed until asked
+                        // for, because a sheet is as likely to hold sixty-four
+                        // frames as four, and a browser that cannot be scrolled
+                        // past is the failure the hierarchy already taught us.
+                        let sliced = !entry.sprites.is_empty() && !searching;
+                        let mut open_now = expanded.contains(&entry.path);
+                        let row = asset_row(
+                            ui,
+                            entry,
+                            depth,
+                            searching,
+                            open,
+                            sliced.then_some(&mut open_now),
+                        );
+                        if row.double_clicked() {
                             action = BrowserAction::Open(entry.path.clone());
+                        }
+                        if sliced {
+                            if open_now {
+                                expanded.insert(entry.path.clone());
+                            } else {
+                                expanded.remove(&entry.path);
+                            }
+                            if open_now {
+                                for sprite in &entry.sprites {
+                                    sprite_row(ui, sprite, depth + 1);
+                                }
+                            }
                         }
                     }
                 }
@@ -2856,12 +2898,42 @@ fn asset_column(
 /// the editor can do with a file. Every other row is a listing and says so by
 /// not responding — a listing that lists is not the same as a control that
 /// looks like it does something.
+/// One named part of a sliced image, under the image it came from.
+///
+/// Not a `ProjectEntry`: a sprite has no file, and giving it one would put it in
+/// the directory listing as something that could be opened, renamed, or deleted
+/// on its own. It is a row and nothing more.
+fn sprite_row(ui: &mut egui::Ui, sprite: &str, depth: usize) {
+    ui.horizontal(|ui| {
+        ui.add_space(8.0 + hierarchy_indent(depth, 12.0));
+        ui.label(
+            asset_icon(AssetKind::Sprite)
+                .outlined()
+                .rich_text()
+                .size(13.0)
+                .color(TEXT_MUTED),
+        );
+        ui.label(RichText::new(sprite).size(11.0).color(TEXT_MUTED));
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.add_space(7.0);
+            ui.label(
+                RichText::new(AssetKind::Sprite.label())
+                    .size(9.0)
+                    .color(TEXT_MUTED),
+            );
+        });
+    });
+}
+
 fn asset_row(
     ui: &mut egui::Ui,
     entry: &ProjectEntry,
     depth: usize,
     searching: bool,
     open: Option<&Path>,
+    // `Some` for a sliced image, carrying whether its parts are showing. A row
+    // with nothing under it gets no triangle rather than a disabled one.
+    expanded: Option<&mut bool>,
 ) -> Response {
     let openable = entry.kind == AssetKind::Scene;
     let highlighted = open.is_some_and(|path| path == entry.path);
@@ -2873,6 +2945,30 @@ fn asset_row(
     let row = ui.scope_builder(egui::UiBuilder::new().sense(sense), |ui| {
         ui.horizontal(|ui| {
             ui.add_space(4.0 + hierarchy_indent(depth, 12.0));
+            if let Some(expanded) = expanded {
+                let triangle = ui.add(
+                    egui::Label::new(
+                        if *expanded {
+                            ICON_KEYBOARD_ARROW_DOWN
+                        } else {
+                            ICON_KEYBOARD_ARROW_RIGHT
+                        }
+                        .outlined()
+                        .rich_text()
+                        .size(13.0)
+                        .color(TEXT_FAINT),
+                    )
+                    .sense(Sense::click()),
+                );
+                if triangle.clicked() {
+                    *expanded = !*expanded;
+                }
+                ui.add_space(2.0);
+            } else {
+                // The same space a triangle would take, so names in a listing
+                // line up whether or not their image is sliced.
+                ui.add_space(12.0);
+            }
             // Every label in the row is given the row's own sense. A widget
             // inside a scope takes precedence over the scope, and an ordinary
             // label is selectable text, so it answers a double click by
@@ -4119,6 +4215,7 @@ mod tests {
         let context = egui::Context::default();
         egui_material_icons::initialize(&context);
         let entry = ProjectEntry {
+            sprites: Vec::new(),
             path: PathBuf::from("/project/level.scene.json"),
             name: "level.scene.json".to_owned(),
             relative: "level.scene.json".to_owned(),
@@ -4134,7 +4231,7 @@ mod tests {
             };
             context
                 .run_ui(input, |ui| {
-                    let response = asset_row(ui, &entry, 0, false, None);
+                    let response = asset_row(ui, &entry, 0, false, None, None);
                     row.set(response.rect);
                     opened.set(response.double_clicked());
                 })
