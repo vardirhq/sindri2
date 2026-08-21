@@ -133,6 +133,10 @@ All notable changes to Sindri Next will be documented here.
 - Component schema registrations may carry the payload a fresh component starts as, validated when it is registered rather than when someone clicks Add.
 - A script's `@export` properties in the inspector, drawn from what the script declared — name, type, and default — with an unset field showing its default and saying so.
 - Decay sources compile when a scene names them rather than when it is played, so a broken script reports at the scene it was opened with.
+- Creating and deleting entities from the editor's hierarchy, both undoable, with a delete taking the whole subtree.
+- `World::spawn_at`, which creates an entity at an exact handle, so undoing a delete gives back the same `EntityId` rather than a new one that leaves the selection and the rest of the undo history pointing at nothing.
+- `World::next_handle`, so a caller can know an entity's handle before creating it and a spawn command can be redone onto the same one.
+- `WorldCommand::Spawn`, `Despawn`, and `Restore`, each producing its own inverse, with a restored subtree returning to its place among its siblings.
 
 ### Changed
 

@@ -229,6 +229,12 @@ frame.
   that would stop it decoding is refused and said aloud rather than written into
   a scene that then will not open. A field that decides nothing is not offered —
   a world-space sprite has no anchor row
+- **Creating and deleting entities**, from the hierarchy. Deleting takes the
+  whole subtree, and **undo brings it back at the same handle** — so the
+  selection and every earlier edit in the history keep pointing at what they
+  named. That works because the history undoes in order: reaching a delete
+  means everything after it is already undone, so the slot it freed is free
+  again
 - **Adding and removing components.** Add Component offers what the entity lacks
   and the registry can create, which excludes a type with no sensible blank
   rather than offering one the engine would reject. Both are undoable
@@ -334,8 +340,7 @@ collapsed and overflowed nothing; and the settings gear.
 
 ### Editor
 
-- Cannot create or delete an entity, or an asset. Components can be added and
-  removed
+- Cannot create or delete an asset
 - Does not read a project directory
 - No gizmos, no viewport selection, no multi-select
 - No prefabs, no play-mode-against-a-copy, no build or export controls

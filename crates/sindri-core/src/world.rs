@@ -132,6 +132,115 @@ impl World {
         Ok(())
     }
 
+    /// The handle the next [`Self::spawn`] would hand out.
+    ///
+    /// Read-only, and deterministic given the world's state: a caller that
+    /// needs to know an entity's handle *before* creating it — a command that
+    /// must be reversible, an editor that wants to select what it just made —
+    /// asks here and then creates it with [`Self::spawn_at`].
+    #[must_use]
+    pub fn next_handle(&self) -> EntityId {
+        match self.free.last() {
+            Some(index) => EntityId::new(*index, self.slots[*index as usize].generation),
+            None => EntityId::new(u32::try_from(self.slots.len()).unwrap_or(u32::MAX), 0),
+        }
+    }
+
+    /// Creates an entity at an exact handle, rather than at whichever one is
+    /// free.
+    ///
+    /// This is what makes despawning reversible. A generation-checked handle
+    /// normally changes when a slot is reused, so putting an entity back after
+    /// an undo would hand out a *different* handle — and the selection, and
+    /// every earlier command in the history naming the old one, would be left
+    /// pointing at nothing.
+    ///
+    /// Restoring the generation does not weaken the check it exists for. Only
+    /// the one handle being restored becomes valid again; every older handle to
+    /// the same slot stays stale, because their generations are different
+    /// numbers. And a handle to an entity that came back is not a use-after-free
+    /// — the entity is there.
+    ///
+    /// Safe to use for undo because [`crate::CommandHistory`] undoes in strict
+    /// order: reaching a despawn means everything after it has already been
+    /// undone, so the slot it freed is free again. The occupied case is refused
+    /// rather than assumed.
+    pub fn spawn_at(&mut self, entity: EntityId, data: EntityData) -> Result<(), WorldError> {
+        let index = entity.index() as usize;
+        if index >= self.slots.len() {
+            // Only ever reached for a handle `next_handle` invented past the
+            // end, which is one slot at a time.
+            self.slots.resize_with(index + 1, || EntitySlot {
+                generation: 0,
+                data: None,
+            });
+        }
+        if self.slots[index].data.is_some() {
+            return Err(WorldError::SlotOccupied(entity));
+        }
+        self.slots[index].generation = entity.generation();
+        self.slots[index].data = Some(data);
+        self.free.retain(|free| *free != entity.index());
+        self.len += 1;
+        Ok(())
+    }
+
+    /// Every entity in a subtree, parents before their children, with the data
+    /// each holds right now.
+    ///
+    /// Captured before anything is removed, because removing an entity edits
+    /// its parent's child list — so a capture taken during a removal would
+    /// record lists already missing their siblings.
+    pub fn capture_subtree(
+        &self,
+        entity: EntityId,
+    ) -> Result<Vec<(EntityId, EntityData)>, WorldError> {
+        self.require(entity)?;
+        let mut captured = Vec::new();
+        let mut queue = vec![entity];
+        while let Some(current) = queue.pop() {
+            let Some(data) = self.get(current) else {
+                continue;
+            };
+            queue.extend(data.children.iter().copied());
+            captured.push((current, data.clone()));
+        }
+        Ok(captured)
+    }
+
+    /// Where an entity sits among its parent's children, so putting it back
+    /// puts it back in the same place rather than at the end.
+    #[must_use]
+    pub fn sibling_index(&self, entity: EntityId) -> Option<usize> {
+        let parent = self.get(entity)?.parent?;
+        self.get(parent)?
+            .children
+            .iter()
+            .position(|child| *child == entity)
+    }
+
+    /// Puts an entity back into its parent's child list at a known position.
+    pub fn relink_child(
+        &mut self,
+        entity: EntityId,
+        sibling_index: Option<usize>,
+    ) -> Result<(), WorldError> {
+        let Some(parent) = self.get(entity).and_then(|data| data.parent) else {
+            return Ok(());
+        };
+        let Some(data) = self.get_mut(parent) else {
+            return Err(WorldError::InvalidEntity(parent));
+        };
+        if data.children.contains(&entity) {
+            return Ok(());
+        }
+        let at = sibling_index
+            .unwrap_or(data.children.len())
+            .min(data.children.len());
+        data.children.insert(at, entity);
+        Ok(())
+    }
+
     pub fn despawn_recursive(&mut self, entity: EntityId) -> Result<Vec<EntityId>, WorldError> {
         self.require(entity)?;
         let mut stack = vec![entity];
@@ -322,6 +431,8 @@ pub struct LoadedScene {
 pub enum WorldError {
     #[error("invalid or stale entity handle {0:?}")]
     InvalidEntity(EntityId),
+    #[error("entity slot {0:?} is already occupied")]
+    SlotOccupied(EntityId),
     #[error("entity hierarchy cannot contain a cycle")]
     HierarchyCycle,
     #[error("entity {0:?} has no stable scene ID and cannot be saved")]

@@ -15,8 +15,8 @@ use eframe::{
 use egui_material_icons::{
     MaterialIcon,
     icons::{
-        ICON_ACCOUNT_TREE, ICON_CAMERA_ALT, ICON_CENTER_FOCUS_STRONG, ICON_CODE, ICON_DELETE,
-        ICON_DEPLOYED_CODE, ICON_DESCRIPTION, ICON_FOLDER, ICON_GRID_VIEW, ICON_IMAGE,
+        ICON_ACCOUNT_TREE, ICON_ADD, ICON_CAMERA_ALT, ICON_CENTER_FOCUS_STRONG, ICON_CODE,
+        ICON_DELETE, ICON_DEPLOYED_CODE, ICON_DESCRIPTION, ICON_FOLDER, ICON_GRID_VIEW, ICON_IMAGE,
         ICON_OPEN_WITH, ICON_PAUSE, ICON_PLAY_ARROW, ICON_REDO, ICON_REFRESH, ICON_SEARCH,
         ICON_STOP, ICON_UNDO, ICON_VIEW_IN_AR, ICON_VIEW_LIST,
     },
@@ -964,6 +964,58 @@ impl EditorApp {
         }
     }
 
+    /// Creates an entity at the root and selects it.
+    ///
+    /// The handle is taken from the world *before* the command runs, so the
+    /// command can be redone onto the same handle, and so there is something to
+    /// select without asking the world what just appeared.
+    fn create_entity(&mut self) {
+        let entity = self.world.next_handle();
+        let mut buffer = CommandBuffer::new();
+        buffer.push(WorldCommand::Spawn {
+            entity,
+            data: Box::new(EntityData {
+                name: Some("Entity".to_owned()),
+                transform_3d: Some(Transform3D::default()),
+                ..EntityData::default()
+            }),
+        });
+        self.history.break_merge_run();
+        if let Err(error) = self
+            .history
+            .apply(buffer.into_transaction("Create entity"), &mut self.world)
+        {
+            self.report(error.to_string());
+            return;
+        }
+        // Selected, because making something and then having to find it is the
+        // kind of small friction that makes a tool tiring to use.
+        self.select(Some(entity));
+    }
+
+    /// Deletes an entity and everything under it.
+    ///
+    /// The selection is cleared rather than moved to the parent: after a
+    /// delete, nothing is what is selected, and guessing otherwise risks an
+    /// edit meant for the deleted thing landing somewhere else.
+    ///
+    /// Undo brings it back at the same handle, so this is not the one-way door
+    /// a delete usually is — see [`sindri_core::World::spawn_at`].
+    fn delete_entity(&mut self, entity: EntityId) {
+        let mut buffer = CommandBuffer::new();
+        buffer.push(WorldCommand::Despawn { entity });
+        self.history.break_merge_run();
+        if let Err(error) = self
+            .history
+            .apply(buffer.into_transaction("Delete entity"), &mut self.world)
+        {
+            self.report(error.to_string());
+            return;
+        }
+        self.select(None);
+        self.refresh_textures();
+    }
+
     /// The components this entity does not have and the registry can create.
     ///
     /// A type with no default payload is missing from the list rather than
@@ -1368,6 +1420,26 @@ impl EditorApp {
             .show(ui, |ui| {
                 panel_title(ui, "Hierarchy");
                 search_field(ui, &mut self.search, "Search");
+                let mut created = false;
+                let mut deleted = None;
+                ui.horizontal(|ui| {
+                    ui.add_space(10.0);
+                    created = ui
+                        .small_button(ICON_ADD.outlined().rich_text().size(14.0))
+                        .on_hover_text("New entity")
+                        .clicked();
+                    // Offered only with something selected, because "delete"
+                    // with nothing chosen has no answer and a disabled button
+                    // is a question nobody asked.
+                    if let Some(entity) = self.selection
+                        && ui
+                            .small_button(ICON_DELETE.outlined().rich_text().size(14.0))
+                            .on_hover_text("Delete entity")
+                            .clicked()
+                    {
+                        deleted = Some(entity);
+                    }
+                });
                 ui.add_space(6.0);
                 egui::ScrollArea::vertical()
                     .auto_shrink([false; 2])
@@ -1408,6 +1480,12 @@ impl EditorApp {
                             self.select(entity);
                         }
                     });
+                if created {
+                    self.create_entity();
+                }
+                if let Some(entity) = deleted {
+                    self.delete_entity(entity);
+                }
             });
     }
 
