@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use glam::{Mat4, Quat, Vec2, Vec3};
 use sindri_core::{
     ComponentRegistryError, ComponentSchemaRegistry, EntityId, SceneComponent, SceneDocument,
-    Transform3D, UnknownComponentPolicy, World,
+    SpriteRefError, Transform3D, UnknownComponentPolicy, World,
 };
 use sindri_render::{
     ClearOperations, ExtractedFrame, FrameCamera, FrameCommand, FramePass, FramePlanError,
@@ -237,8 +237,20 @@ impl SceneExtractor {
                 .and_then(|data| data.transform_3d)
                 .unwrap_or_default();
             let texture = textures.resolve(&tilemap.texture);
+            // The palette is resolved once and the cells index the answers: a
+            // map of 49 tiles names a handful of sprites, so looking each one
+            // up per cell would be the same lookup forty-nine times.
+            let palette: Vec<UvRect> = tilemap
+                .palette
+                .iter()
+                .map(|sprite| {
+                    textures
+                        .sheet_sprite(&tilemap.texture, sprite)
+                        .unwrap_or(UvRect::FULL)
+                })
+                .collect();
             for (column, row, index) in tilemap.filled() {
-                let rect = tilemap.cell_rect(index)?;
+                let rect = palette.get(index as usize).copied().unwrap_or(UvRect::FULL);
                 let [offset_x, offset_y] = tilemap.tile_to_local(column, row);
                 // One tile is a sprite of the map's tile size, placed by the
                 // map's own maths and then by the entity's transform, so moving
@@ -310,13 +322,14 @@ impl SceneExtractor {
         // A broken clip falls through to the sprite's rect rather than failing
         // the frame, for the reason a broken clip does not fail loading: the
         // editor is where it gets fixed, and it has to draw to be fixed there.
-        let mut resting: BTreeMap<EntityId, UvRect> = BTreeMap::new();
+        let mut resting: BTreeMap<EntityId, String> = BTreeMap::new();
         for (entity, animation) in self.components.query::<SpriteAnimationComponent>(world)? {
-            if let Some(rect) = animation.resting_rect().ok().flatten() {
-                resting.insert(entity, rect);
+            if let Some(sprite) = animation.resting_sprite().ok().flatten() {
+                resting.insert(entity, sprite.to_owned());
             }
         }
         for (entity, sprite) in self.components.query::<SpriteComponent>(world)? {
+            let reference = sprite.reference()?;
             let transform = world
                 .get(entity)
                 .and_then(|data| data.transform_3d)
@@ -352,22 +365,31 @@ impl SceneExtractor {
                 .entry((
                     sprite.space,
                     sprite.layer,
-                    textures.resolve(&sprite.texture),
+                    textures.resolve(reference.texture()),
                 ))
                 .or_default()
                 .push((
                     order,
                     SpriteInstance::new(model, sprite.tint).with_uv_rect(
-                        if let Some(rect) = animations.rect(entity) {
-                            rect
-                        } else {
-                            let authored = sprite.uv_rect()?;
-                            if authored == UvRect::FULL {
-                                resting.get(&entity).copied().unwrap_or(authored)
-                            } else {
-                                authored
-                            }
-                        },
+                        // What the animation says, then what a clip would show
+                        // at rest, then what the sprite itself names. A sheet
+                        // drawn whole is every sprite at once, which is why an
+                        // animated sprite that names no part of its own falls
+                        // back to its clip's first frame rather than to
+                        // everything.
+                        animations
+                            .sprite(entity)
+                            .and_then(|name| textures.sheet_sprite(reference.texture(), name))
+                            .or_else(|| {
+                                resting
+                                    .get(&entity)
+                                    .and_then(|name| {
+                                        textures.sheet_sprite(reference.texture(), name)
+                                    })
+                                    .filter(|_| reference.sprite().is_none())
+                            })
+                            .or_else(|| textures.sprite_rect(&reference))
+                            .unwrap_or(UvRect::FULL),
                     ),
                 ));
         }
@@ -709,4 +731,6 @@ pub enum SceneExtractError {
     Animation(#[from] AnimationError),
     #[error(transparent)]
     Tilemap(#[from] TilemapError),
+    #[error(transparent)]
+    SpriteRef(#[from] SpriteRefError),
 }
