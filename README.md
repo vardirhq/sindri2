@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/branding/sindri-readme-hero.jpg" alt="Sindri Next" width="680">
+  <img src="https://github.com/vardirhq/sindri2/blob/main/docs%2Ffile_000000005bd882118094c913acb7257c.png" alt="Sindri Next" width="680">
 </p>
 
 <p align="center"><strong>A lightweight 2D + 3D game engine built in Rust, with a native visual editor and Decay scripting.</strong></p>
