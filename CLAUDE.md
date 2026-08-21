@@ -8,8 +8,8 @@ Sindri Next is a pre-alpha Rust game engine targeting native desktop and WebGPU
 browsers, with a native editor and the Decay gameplay language. It is a Cargo
 workspace being proven through one companion game: the engine core, platform
 boundary, GPU and renderer layers, asset pipeline, substantial 2D runtime,
-editor authoring surface, native game, and browser game exist. Text, audio,
-physics, mature 3D, grid/isometric gameplay systems, project-level editor
+editor authoring surface, native game, and browser game exist. Screen-space text
+with project font assets exists; audio, physics, mature 3D, grid/isometric gameplay systems, project-level editor
 workflow, and export tooling do not.
 
 Four documents govern the work and are the source of truth over anything
@@ -320,6 +320,13 @@ knows only `TextureId`. `TextureBindings` in `sindri-scene` is the only place
 that knows both. An unbound reference draws the magenta `TextureRegistry::MISSING`
 checker and is reported by `unresolved_textures`, rather than failing the frame
 or reusing the last-bound texture.
+
+**Fonts are assets, never an operating-system lookup.** A `sindri.text`
+component names a logical font reference. Hosts load it through
+`FontAssetDecoder` and bind its bytes to `TextRenderer`; an unbound reference
+draws nothing and is reported by the asset host. Do not add a system fallback:
+it makes a scene silently choose different metrics and outlines on desktop and
+in the browser.
 
 **A sliced image says how it is cut, and nothing else does.** `textures/tiles.png`
 is sliced by `textures/tiles.sheet.json` at a *derived* ID, and scenes name parts

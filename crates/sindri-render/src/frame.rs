@@ -1,7 +1,7 @@
 use glam::Mat4;
 use thiserror::Error;
 
-use crate::{SpriteDepth, SpriteInstance, TextureId};
+use crate::{SpriteDepth, SpriteInstance, TextInstance, TextureId};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Viewport {
@@ -80,6 +80,10 @@ pub enum FrameCommand {
         /// the answer cannot be read off the instances.
         depth: SpriteDepth,
         instances: Vec<SpriteInstance>,
+    },
+    /// Strings sharing one render stage and layer, shaped in one glyph pass.
+    Text {
+        instances: Vec<TextInstance>,
     },
 }
 

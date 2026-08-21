@@ -22,12 +22,14 @@ use std::{
 
 use sindri_assets::{
     AssetLoadOutcome, AssetLoadQueueConfig, AssetLoader, AssetManifest, AssetWatch,
-    FileSystemAssetSource, MANIFEST_FILE_NAME, SpriteSheetAssetDecoder, TextureAsset,
-    TextureAssetDecoder,
+    FileSystemAssetSource, FontAssetDecoder, MANIFEST_FILE_NAME, SpriteSheetAssetDecoder,
+    TextureAsset, TextureAssetDecoder,
 };
 use sindri_core::{AssetId, World, sheet_id_for};
-use sindri_render::{Texture2D, TextureError, TextureRegistry};
-use sindri_scene::{PROCEDURAL_TEXTURES, TextureBindings, referenced_sheets, referenced_textures};
+use sindri_render::{TextRenderer, Texture2D, TextureError, TextureRegistry};
+use sindri_scene::{
+    PROCEDURAL_TEXTURES, TextureBindings, referenced_fonts, referenced_sheets, referenced_textures,
+};
 
 /// How many texture loads run at once, and how many may be waiting.
 ///
@@ -67,6 +69,8 @@ pub struct SceneTextures {
     /// scene that has never been saved, or one that failed to open. Procedural
     /// textures still work, because they do not come from anywhere.
     loader: Option<AssetLoader<TextureAssetDecoder>>,
+    /// Project font bytes used by `sindri.text` components.
+    fonts: Option<AssetLoader<FontAssetDecoder>>,
     /// What the files behind the loaded textures looked like when last examined.
     ///
     /// Hot reload for native development, which is the point at which the
@@ -127,6 +131,15 @@ impl SceneTextures {
                     None => loader,
                 })
             }),
+            fonts: root.as_deref().and_then(|root| {
+                let loader =
+                    AssetLoader::new(FileSystemAssetSource::new(root), QUEUE, FontAssetDecoder)
+                        .ok()?;
+                Some(match manifest_beside(root) {
+                    Some(manifest) => loader.with_manifest(manifest),
+                    None => loader,
+                })
+            }),
             sheets: root.as_deref().and_then(|root| {
                 AssetLoader::new(
                     FileSystemAssetSource::new(root),
@@ -151,6 +164,46 @@ impl SceneTextures {
         &self.bindings
     }
 
+    fn request_fonts(
+        &mut self,
+        world: &World,
+        renderer: &mut TextRenderer,
+    ) -> (BTreeSet<AssetId>, Vec<TextureNote>) {
+        let references = referenced_fonts(world);
+        let wanted: BTreeSet<AssetId> = references
+            .iter()
+            .filter_map(|reference| AssetId::new(reference.clone()).ok())
+            .collect();
+        let mut notes = Vec::new();
+        let Some(fonts) = &mut self.fonts else {
+            for reference in references {
+                notes.push(TextureNote::Failed(format!(
+                    "{reference}: the scene has no directory to load fonts from"
+                )));
+            }
+            return (wanted, notes);
+        };
+        for released in fonts.retain(&wanted) {
+            renderer.unbind_font(released.as_str());
+        }
+        for id in &wanted {
+            if renderer.has_font(id.as_str()) {
+                continue;
+            }
+            if let Err(error) = fonts.request(id.clone()) {
+                notes.push(TextureNote::Failed(format!("{id}: {error}")));
+            }
+        }
+        for reference in references {
+            if AssetId::new(reference.clone()).is_err() {
+                notes.push(TextureNote::Failed(format!(
+                    "{reference}: not a loadable font asset reference"
+                )));
+            }
+        }
+        (wanted, notes)
+    }
+
     /// Asks for every texture the world draws with, and lets go of the rest.
     ///
     /// Called when the scene opens and again whenever an edit could have changed
@@ -158,14 +211,13 @@ impl SceneTextures {
     /// texture rather than waiting for a reload. Asking twice for the same one
     /// costs nothing: the loader coalesces, which is what makes calling this on
     /// a whole world cheap.
-    pub fn request(&mut self, world: &World) -> Vec<TextureNote> {
-        let mut notes = Vec::new();
+    pub fn request(&mut self, world: &World, text: &mut TextRenderer) -> Vec<TextureNote> {
+        let (wanted_fonts, mut notes) = self.request_fonts(world, text);
         let referenced = referenced_textures(world);
         let wanted: BTreeSet<AssetId> = referenced
             .iter()
             .filter_map(|reference| AssetId::new(reference.clone()).ok())
             .collect();
-
         let Self {
             loader: Some(loader),
             watch,
@@ -195,7 +247,8 @@ impl SceneTextures {
             }
         }
         if let Some(watch) = watch.as_mut() {
-            watch.retain(&wanted);
+            let watched = wanted.union(&wanted_fonts).cloned().collect();
+            watch.retain(&watched);
         }
         // Which texture each sheet cuts, so an arriving sheet knows what to
         // bind against and a released one knows what to unbind. Derived from
@@ -260,9 +313,15 @@ impl SceneTextures {
     /// Called once a frame. The upload is here rather than in the loader
     /// because the device belongs to the host, and a loader that owned one could
     /// not be tested without one.
-    pub fn poll(&mut self, device: &wgpu::Device, queue: &wgpu::Queue) -> Vec<TextureNote> {
+    pub fn poll(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        text: &mut TextRenderer,
+    ) -> Vec<TextureNote> {
         let mut notes = self.examine_files();
         notes.extend(self.poll_sheets());
+        notes.extend(self.poll_fonts(text));
         let Self {
             loader: Some(loader),
             watch,
@@ -309,6 +368,39 @@ impl SceneTextures {
                 // The asset's own words, without the error's "while loading
                 // asset" preamble repeating the name the line already starts
                 // with. A console line has one dock's width to spend.
+                AssetLoadOutcome::Failed(error) => notes.push(TextureNote::Failed(format!(
+                    "{}: {}",
+                    error.id(),
+                    error.message()
+                ))),
+            }
+        }
+        notes
+    }
+
+    fn poll_fonts(&mut self, renderer: &mut TextRenderer) -> Vec<TextureNote> {
+        let mut notes = Vec::new();
+        let Some(fonts) = &mut self.fonts else {
+            return notes;
+        };
+        for outcome in fonts.poll() {
+            match outcome {
+                AssetLoadOutcome::Ready(id) => {
+                    let Some(font) = fonts.get(&id) else {
+                        continue;
+                    };
+                    let again =
+                        renderer.bind_font(id.as_str(), font.family(), font.bytes().to_vec());
+                    let message = format!("{id} ({})", font.family());
+                    notes.push(if again.is_some() {
+                        TextureNote::Reloaded(format!("Reloaded {message}"))
+                    } else {
+                        TextureNote::Loaded(format!("Loaded {message}"))
+                    });
+                    if let Some(watch) = self.watch.as_mut() {
+                        watch.watch(&id);
+                    }
+                }
                 AssetLoadOutcome::Failed(error) => notes.push(TextureNote::Failed(format!(
                     "{}: {}",
                     error.id(),
@@ -372,6 +464,7 @@ impl SceneTextures {
         self.last_examined = Instant::now();
         let Self {
             loader: Some(loader),
+            fonts,
             watch: Some(watch),
             ..
         } = self
@@ -380,7 +473,13 @@ impl SceneTextures {
         };
         let mut notes = Vec::new();
         for id in watch.changed() {
-            if let Err(error) = loader.reload(&id) {
+            let result =
+                if let Some(fonts) = fonts.as_mut().filter(|fonts| fonts.get(&id).is_some()) {
+                    fonts.reload(&id)
+                } else {
+                    loader.reload(&id)
+                };
+            if let Err(error) = result {
                 notes.push(TextureNote::Failed(format!("{id}: {error}")));
             }
         }
@@ -392,6 +491,10 @@ impl SceneTextures {
         self.loader
             .as_ref()
             .is_some_and(|loader| loader.outstanding() > 0)
+            || self
+                .fonts
+                .as_ref()
+                .is_some_and(|loader| loader.outstanding() > 0)
     }
 }
 

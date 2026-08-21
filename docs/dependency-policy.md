@@ -5,6 +5,12 @@ infrastructure well — `wgpu`, `winit`, `glam`, `serde` — and builds its own
 differentiation elsewhere. What follows is the part of that stance a machine can
 check, enforced by `deny.toml` and the `Dependencies` workflow.
 
+Text follows the same rule: Glyphon supplies the hard generic work of Unicode
+shaping, glyph caching, and wgpu rendering, while Sindri owns scene components,
+asset references, extraction, ordering, and host integration. `fontdb` is used
+at the asset boundary to validate a project font and discover its declared
+family before the renderer sees it.
+
 ```bash
 cargo deny check          # everything below
 cargo deny check licenses # or one at a time

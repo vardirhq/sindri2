@@ -10,9 +10,9 @@ repository.workspace = true
 [dependencies]
 bytemuck.workspace = true
 glam.workspace = true
+glyphon.workspace = true
 thiserror.workspace = true
 wgpu.workspace = true
 
 [lints]
 workspace = true
-

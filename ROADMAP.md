@@ -178,7 +178,12 @@ shaped like the tool.
   pixel snapping works; follow/dead-zone/smoothing behaviour remains
 - [x] Port tilemap data model and renderer — `sindri.tilemap` holds the sheet grid, the map grid, and a flat array of cells with `null` for empty, and extracts into the same sprite batches loose sprites use, so a prop sorts among the floor rather than behind it; it gained a projection the legacy type did not have, because the first thing to use it was an isometric floor, and placing a tile and finding the tile under a point are inverses on every cell of both
 - [x] Add tilemap authoring: selecting a world-space map shows its sliced texture as a visual palette, primary drag paints or erases through the exact Scene-view camera, grid resizing preserves the overlap, and the stored render layer remains editable; a stroke is one undo step and screen-space maps stay data-only until the Game view has an authoring-input contract
-- [ ] Port text rendering with a web-safe font asset strategy
+- [x] Port text rendering with a web-safe font asset strategy — `sindri.text`
+  extracts anchored overlay strings into ordered frame commands, `glyphon`
+  shapes and rasterises them through wgpu, and fonts are validated project
+  assets bound from bytes rather than operating-system families. Gather embeds
+  Inter and draws real text through this path natively, in browser builds, in
+  the editor, and in its offscreen capture
 - [ ] Add font and text authoring: choose a font asset and edit text content in the inspector
 - [ ] Port particles after the render lifecycle is stable
 - [ ] Port layers, anchors, and sprite bounds — layers and the nine screen
@@ -458,7 +463,8 @@ module is for.
 
 - [x] Start the game: one room, one character, one tile floor (started before text existed, which the entry above records)
 - [ ] Grow it with Milestone 6: animation, a tilemap floor, parallax, and a font
-  rendering real text — the tilemap floor and browser build work; text remains
+  rendering real text — animation, the tilemap floor, the browser build, and a
+  project-owned font rendering the title work; authored parallax remains
 - [x] Take the Milestone 7 editor to it, and record what authoring it in the
   editor is actually like — `docs/editor-meets-the-game.md`; it opens, renders
   in both viewports, and Play runs its scripts, which is the parity claim

@@ -219,7 +219,7 @@ two bugs that had been true since the browser target was added.
 
 Gameplay writes to the world and nothing tells the renderer. `SceneExtractor`
 derives an ordered frame from whatever the world currently holds, using the
-built-in `sindri.camera`, `sindri.mesh`, and `sindri.sprite` schemas. No scene
+built-in camera, mesh, sprite, tilemap, animation, and text schemas. No scene
 needs hand-written extraction code.
 
 Textures bind by reference: a scene names `textures/badge.png`, the renderer
@@ -234,8 +234,8 @@ resolve it against a root: the filesystem source canonicalises to catch symlink
 escapes, and `UrlRoot` percent-encodes and normalises bases with rules exercised
 on every target rather than only in a browser. The load queue is bounded,
 rejects duplicates, and carries a generation token so a late completion cannot
-overwrite a replacement. Textures and scene JSON decode through typed decoders.
-Nothing pretends browser I/O is synchronous.
+overwrite a replacement. Textures, fonts, sheets, scripts, and scene JSON decode
+through typed decoders. Nothing pretends browser I/O is synchronous.
 
 A `TextureId` is a generation-checked slot handle, so the renderer's texture
 registry can release one texture and reuse its slot without a handle nobody
@@ -247,6 +247,10 @@ failure is reported once rather than retried forever, and `retain` releases what
 is no longer wanted and says which IDs went, so a host can drop whatever it
 built from them. GPU upload stays with the host, which is the only thing that
 owns a device.
+
+`FontAssetDecoder` validates OpenType bytes and records their declared family;
+text binds that project-owned face under the scene's logical asset reference,
+so native and browser builds never substitute different installed fonts.
 
 On native, `AssetWatch` notices when the file behind a loaded asset changes and
 `AssetLoader::reload` loads it again, by polling modification time and length
@@ -392,7 +396,8 @@ collapsed and overflowed nothing; and the settings gear.
 - **No reusable tileset asset model.** A tilemap has a component, renderer, and
   palette of named sprites from a sheet, but tile semantics such as terrain,
   collision, and reusable tile metadata do not exist
-- **No text rendering.** No score, menu, or dialogue
+- Text is currently screen-space only; world labels, wrapping/alignment
+  controls, rich spans, and a first-class editor font picker remain
 - **One mesh primitive: `Cube`.** No quad, sphere, or glTF import
 - **No audio.** Now scheduled in `ROADMAP.md`; it previously had no item at all
 - No physics or collision. This one is a deliberate gap rather than a missing
@@ -555,7 +560,7 @@ and checking the banner comes up.
 for a fixed number of fixed steps — and photographs where that leaves the game,
 so the picture proves the scripts ran rather than that the scene loads.
 
-**It opens in the editor, and Play runs it there.** All 20 entities load, both
+**It opens in the editor, and Play runs it there.** All 21 entities load, both
 viewports draw it, and the editor advances the same Decay sources the standalone
 game does. `docs/editor-meets-the-game.md` records the first editor session
 against the older 68-entity scene; the tilemap removed its 49 floor rows, while
@@ -568,16 +573,15 @@ every sprite batch after the first drew with the last batch's camera. See
 
 ### Not yet
 
-- **No text**, so the score is a row of lamps and winning is a banner sprite —
-  the game started before Milestone 6's text item, and says in pictures what it
-  would otherwise say in words
+- Text draws the title from the shipped Inter asset, but the score remains a
+  row of lamps and winning remains a banner sprite until dynamic script-to-text
+  binding exists
 - No sound, because there is no audio
 - Top-down coordinates behind an isometric-looking floor; the grid module that
   would make it properly isometric is Milestone 9
 - Browser asset fetching is not exercised: the playable web build embeds its
-  scene, scripts, sheets, and textures
+  scene, scripts, sheets, textures, and font
 - No restart without relaunching, no menu, no pause
-- The floor is one `sindri.tilemap`, but it was written into the scene file by a
-  script rather than authored, because the editor has no tile palette. Sheet
-  slicing and sprite naming now work in the editor; animation clips are still
-  authored by hand
+- The floor is one `sindri.tilemap`; a visual palette now authors it in the
+  Scene view. Animation clips and the title's font reference are still authored
+  through component data rather than dedicated editor controls

@@ -11,6 +11,7 @@ mod offscreen;
 mod sprite;
 mod sprite_batch;
 mod target;
+mod text;
 mod texture;
 mod textured_cube;
 mod transparency;
@@ -23,7 +24,7 @@ pub use camera::{
 pub use color::{COLOR_TARGET_FORMAT, ColorSpaceError, require_srgb_target};
 pub use cube::CubeRenderer;
 pub use depth::DepthTarget;
-pub use encode::{FrameRenderers, FrameTarget, encode_prepared_frame};
+pub use encode::{FrameEncodeError, FrameRenderers, FrameTarget, encode_prepared_frame};
 pub use frame::{
     ClearOperations, ExtractedFrame, FrameCamera, FrameCommand, FramePass, FramePlanError,
     PreparedFrame, RenderLayer, RenderStage, Viewport,
@@ -35,6 +36,7 @@ pub use sprite_batch::{
     SpriteBatchError, SpriteBatchRenderer, SpriteBatchStats, SpriteDepth, SpriteInstance,
 };
 pub use target::{ViewportTarget, encode_clear, sampled_format};
+pub use text::{TextError, TextInstance, TextRenderer};
 pub use texture::{Texture2D, TextureError, TextureId, TextureRegistry};
 pub use textured_cube::{DrawContext, TexturedCubeRenderer};
 pub use transparency::{TransparentOrder, TransparentOrderError};

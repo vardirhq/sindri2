@@ -17,7 +17,7 @@
 
 use std::time::Duration;
 
-use sindri_assets::{AssetBytes, AssetDecoder, TextureAssetDecoder};
+use sindri_assets::{AssetBytes, AssetDecoder, FontAssetDecoder, TextureAssetDecoder};
 use sindri_core::{
     AssetId, ComponentSchemaRegistry, FixedStepConfig, SceneDocument, SpriteSheetDocument, World,
     sheet_id_for,
@@ -26,8 +26,9 @@ use sindri_decay::{ScriptComponent, ScriptSources, Scripts};
 use sindri_desktop::{AppContext, DesktopApp, Flow, WindowConfig};
 use sindri_platform::{EngineHost, FrameContext, Game, HostError, InputEvent, InputState, Key};
 use sindri_render::{
-    DepthTarget, FrameRenderers, FrameTarget, SpriteBatchRenderer, Texture2D, TextureError,
-    TextureRegistry, TexturedCubeRenderer, Viewport, encode_prepared_frame,
+    DepthTarget, FrameEncodeError, FrameRenderers, FrameTarget, SpriteBatchRenderer, TextRenderer,
+    Texture2D, TextureError, TextureRegistry, TexturedCubeRenderer, Viewport,
+    encode_prepared_frame,
 };
 use sindri_scene::{CameraView, SceneExtractor, SheetBindError, SpriteAnimations, TextureBindings};
 use thiserror::Error;
@@ -75,6 +76,24 @@ pub const TEXTURES: &[(&str, &[u8])] = &[
         include_bytes!("../assets/textures/banner.png"),
     ),
 ];
+
+/// Project-owned typefaces, embedded for the same native/browser parity as art.
+pub const FONTS: &[(&str, &[u8])] = &[(
+    "fonts/Inter.ttf",
+    include_bytes!("../assets/fonts/Inter.ttf"),
+)];
+
+/// Decodes and binds the fonts the shipped scene names.
+pub fn bind_fonts(renderer: &mut TextRenderer) -> Result<(), GatherError> {
+    for (id, bytes) in FONTS {
+        let asset = FontAssetDecoder.decode(AssetBytes::new(
+            (*id).parse::<AssetId>()?,
+            (*bytes).to_vec(),
+        ))?;
+        renderer.bind_font(*id, asset.family(), asset.bytes().to_vec());
+    }
+    Ok(())
+}
 
 /// How each sliced texture is cut, shipped beside it.
 ///
@@ -255,6 +274,7 @@ struct GatherApp {
     depth: DepthTarget,
     cubes: TexturedCubeRenderer,
     sprites: SpriteBatchRenderer,
+    text: TextRenderer,
 }
 
 impl DesktopApp for GatherApp {
@@ -271,6 +291,8 @@ impl DesktopApp for GatherApp {
         *engine.world_mut() = world()?;
         engine.start()?;
 
+        let mut text = TextRenderer::new(context.device(), context.queue(), context.format());
+        bind_fonts(&mut text)?;
         Ok(Self {
             engine,
             scene,
@@ -279,6 +301,7 @@ impl DesktopApp for GatherApp {
             depth: DepthTarget::new(context.device(), context.width(), context.height()),
             cubes: TexturedCubeRenderer::new(context.device(), context.format()),
             sprites: SpriteBatchRenderer::new(context.device(), context.format()),
+            text,
         })
     }
 
@@ -324,6 +347,7 @@ impl DesktopApp for GatherApp {
             FrameRenderers {
                 cube: &mut self.cubes,
                 sprites: &mut self.sprites,
+                text: &mut self.text,
                 textures: &self.textures,
             },
             context.device(),
@@ -363,7 +387,7 @@ pub enum GatherError {
     #[error(transparent)]
     Json(#[from] sindri_core::SceneJsonError),
     #[error(transparent)]
-    Batch(#[from] sindri_render::SpriteBatchError),
+    Frame(#[from] FrameEncodeError),
     // Boxed because a host error carries the game's own error, and a type that
     // contains itself has no size.
     #[error(transparent)]

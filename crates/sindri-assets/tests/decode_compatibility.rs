@@ -17,7 +17,9 @@
 //! where a decoder's feature set can differ between builds, and a two-by-two
 //! image is small enough to write every expected pixel down.
 
-use sindri_assets::{AssetBytes, AssetDecoder, TextureAsset, TextureAssetDecoder};
+use sindri_assets::{
+    AssetBytes, AssetDecoder, FontAssetDecoder, TextureAsset, TextureAssetDecoder,
+};
 use sindri_core::{AssetId, AssetLoadErrorKind};
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -32,6 +34,7 @@ const GRAY8: &[u8] = include_bytes!("fixtures/decode/gray8.png");
 const PALETTE8: &[u8] = include_bytes!("fixtures/decode/palette8.png");
 const RGB16: &[u8] = include_bytes!("fixtures/decode/rgb16.png");
 const JPEG: &[u8] = include_bytes!("fixtures/decode/solid.jpg");
+const INTER: &[u8] = include_bytes!("../../../game/assets/fonts/Inter.ttf");
 
 /// What every two-by-two fixture that carries colour decodes to, in the order
 /// `TextureAsset` packs them: top left, top right, bottom left, bottom right.
@@ -159,4 +162,16 @@ fn bytes_that_are_not_an_image_are_an_error() {
         ),
         "{error}"
     );
+}
+
+/// Font validation is CPU-only too, so the same project face can be discovered
+/// from bytes before either a native or browser renderer binds it.
+#[compatibility_test]
+fn a_project_font_declares_the_same_family_on_every_target() {
+    let id = AssetId::new("fonts/Inter.ttf").expect("a valid asset ID");
+    let font = FontAssetDecoder
+        .decode(AssetBytes::new(id, INTER.to_vec()))
+        .expect("the shipped font decodes");
+    assert_eq!(font.family(), "Inter");
+    assert_eq!(font.bytes(), INTER);
 }

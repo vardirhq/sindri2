@@ -7,8 +7,8 @@ use sindri_core::FixedStepConfig;
 use sindri_desktop::{AppContext, DesktopApp, Flow, WindowConfig};
 use sindri_platform::{EngineHost, FrameContext, Game, HostError, InputEvent, Key};
 use sindri_render::{
-    DepthTarget, FrameRenderers, FrameTarget, SpriteBatchError, SpriteBatchRenderer, Texture2D,
-    TextureRegistry, TexturedCubeRenderer, Viewport, encode_prepared_frame,
+    DepthTarget, FrameEncodeError, FrameRenderers, FrameTarget, SpriteBatchRenderer, TextRenderer,
+    Texture2D, TextureRegistry, TexturedCubeRenderer, Viewport, encode_prepared_frame,
 };
 use thiserror::Error;
 
@@ -60,6 +60,7 @@ struct CubeApp {
     depth: DepthTarget,
     cube_renderer: TexturedCubeRenderer,
     sprite_renderer: SpriteBatchRenderer,
+    text_renderer: TextRenderer,
     textures: TextureRegistry,
     bindings: TextureBindings,
 }
@@ -79,6 +80,7 @@ impl DesktopApp for CubeApp {
             depth: DepthTarget::new(context.device(), context.width(), context.height()),
             cube_renderer: TexturedCubeRenderer::new(context.device(), context.format()),
             sprite_renderer: SpriteBatchRenderer::new(context.device(), context.format()),
+            text_renderer: TextRenderer::new(context.device(), context.queue(), context.format()),
             textures,
             bindings,
         })
@@ -121,6 +123,7 @@ impl DesktopApp for CubeApp {
             FrameRenderers {
                 cube: &mut self.cube_renderer,
                 sprites: &mut self.sprite_renderer,
+                text: &mut self.text_renderer,
                 textures: &self.textures,
             },
             context.device(),
@@ -142,7 +145,7 @@ pub enum CubeError {
     #[error(transparent)]
     Scene(#[from] DemoSceneError),
     #[error(transparent)]
-    Batch(#[from] SpriteBatchError),
+    Frame(#[from] FrameEncodeError),
     #[error(transparent)]
     Host(#[from] HostError<DemoSceneError>),
 }

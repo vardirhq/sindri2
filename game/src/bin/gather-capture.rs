@@ -15,14 +15,14 @@
 use std::{error::Error, fs, io::BufWriter, path::Path};
 
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_gather::{Session, extractor, world};
+use sindri_gather::{Session, bind_fonts, extractor, world};
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_gpu::{GpuContext, GpuRequestOptions};
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_platform::{InputEvent, InputState, Key};
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_render::{
-    DepthTarget, FrameRenderers, FrameTarget, OffscreenTarget, SpriteBatchRenderer,
+    DepthTarget, FrameRenderers, FrameTarget, OffscreenTarget, SpriteBatchRenderer, TextRenderer,
     TexturedCubeRenderer, Viewport, encode_prepared_frame,
 };
 #[cfg(not(target_arch = "wasm32"))]
@@ -54,6 +54,8 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
     let depth = DepthTarget::new(&gpu.device, WIDTH, HEIGHT);
     let mut cubes = TexturedCubeRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
     let mut sprites = SpriteBatchRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
+    let mut text = TextRenderer::new(&gpu.device, &gpu.queue, OffscreenTarget::FORMAT);
+    bind_fonts(&mut text)?;
 
     let (textures, bindings) = sindri_gather::bind_textures(&gpu.device, &gpu.queue)?;
 
@@ -88,6 +90,7 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
         FrameRenderers {
             cube: &mut cubes,
             sprites: &mut sprites,
+            text: &mut text,
             textures: &textures,
         },
         &gpu.device,

@@ -21,7 +21,7 @@ sprites inside a batch continue to use `TransparentOrder` before they enter the 
 
 `Transparent2d` holds world-space sprites, which are drawn through the world camera and tested
 against the depth the opaque stage wrote; `Overlay` holds screen-anchored ones, which nothing in the
-world may hide. See [scene extraction](scene-extraction.md) for which space a sprite is in and
+world may hide, together with screen-space text ordered by the same layers. See [scene extraction](scene-extraction.md) for which space a sprite is in and
 [transparency](rendering-transparency.md) for what each does about depth.
 
 ## Clearing belongs to the frame
@@ -49,6 +49,13 @@ The cube example is the reference integration. A versioned `SceneDocument` is de
 JSON, validated, loaded into `World`, and extracted into an opaque textured-cube pass followed by a
 five-instance overlay pass. Native, WebGPU, the software-Vulkan capture, and the editor's two
 viewports all consume that same prepared frame through that same encoder.
+
+Text is a frame command rather than host UI. `TextInstance` carries a logical
+font reference, pixel position, metrics, colour, and content; `TextRenderer`
+resolves only project fonts a host explicitly bound, shapes them with Glyphon,
+and loads the existing colour attachment so text composes at its ordered overlay
+layer. An absent font skips the string and is diagnosed by asset loading rather
+than silently selecting a system fallback.
 
 ## Every sprite batch owns its buffers
 

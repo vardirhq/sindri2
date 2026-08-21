@@ -31,7 +31,7 @@ use sindri_core::{
 };
 use sindri_decay::{ScriptComponent, ScriptValue};
 use sindri_render::{
-    FrameRenderers, FrameTarget, SpriteBatchRenderer, TexturedCubeRenderer, Viewport,
+    FrameRenderers, FrameTarget, SpriteBatchRenderer, TextRenderer, TexturedCubeRenderer, Viewport,
     ViewportTarget, encode_prepared_frame,
 };
 use sindri_scene::{
@@ -273,6 +273,7 @@ fn camera_for(tab: WorkspaceTab, editor: EditorCamera) -> CameraView {
 struct SceneRenderers {
     cube: TexturedCubeRenderer,
     sprites: SpriteBatchRenderer,
+    text: TextRenderer,
 }
 
 impl SceneRenderers {
@@ -280,6 +281,11 @@ impl SceneRenderers {
         Self {
             cube: TexturedCubeRenderer::new(&render_state.device, ViewportTarget::FORMAT),
             sprites: SpriteBatchRenderer::new(&render_state.device, ViewportTarget::FORMAT),
+            text: TextRenderer::new(
+                &render_state.device,
+                &render_state.queue,
+                ViewportTarget::FORMAT,
+            ),
         }
     }
 }
@@ -352,6 +358,7 @@ impl RuntimeViewport {
             FrameRenderers {
                 cube: &mut renderers.cube,
                 sprites: &mut renderers.sprites,
+                text: &mut renderers.text,
                 textures: source.textures.registry(),
             },
             &self.render_state.device,
@@ -558,7 +565,7 @@ impl EditorApp {
             app.console.error(failure);
         }
         app.announce_scene();
-        let notes = app.textures.request(&app.world);
+        let notes = app.textures.request(&app.world, &mut app.renderers.text);
         app.record_texture_notes(notes);
         app.reload_scripts();
         app.remember_open_scene();
@@ -954,9 +961,10 @@ impl EditorApp {
     /// and a `Texture2D` frees its GPU texture when it goes.
     fn reload_textures(&mut self) {
         let state = self.render_state.clone();
+        self.renderers.text.clear_bindings();
         self.textures = SceneTextures::for_scene(&state.device, &state.queue, self.file.path());
         self.textured_revision = self.history.revision();
-        let notes = self.textures.request(&self.world);
+        let notes = self.textures.request(&self.world, &mut self.renderers.text);
         self.record_texture_notes(notes);
     }
 
@@ -967,7 +975,7 @@ impl EditorApp {
             return;
         }
         self.textured_revision = self.history.revision();
-        let notes = self.textures.request(&self.world);
+        let notes = self.textures.request(&self.world, &mut self.renderers.text);
         self.record_texture_notes(notes);
         self.refresh_scripts();
     }
@@ -2288,7 +2296,9 @@ impl eframe::App for EditorApp {
         // frame is bound by the time this one extracts.
         self.refresh_textures();
         let state = self.render_state.clone();
-        let arrived = self.textures.poll(&state.device, &state.queue);
+        let arrived = self
+            .textures
+            .poll(&state.device, &state.queue, &mut self.renderers.text);
         self.record_texture_notes(arrived);
         self.advance_animations(ui.ctx());
         self.advance_scripts(ui.ctx());
