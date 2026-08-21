@@ -211,3 +211,63 @@ fn the_documented_example_compiles() {
         "#,
     );
 }
+
+/// "Host references". A value of a named host type can be held, compared, and
+/// reached through — the example in the reference, compiled.
+#[test]
+fn a_host_reference_can_be_held_and_compared() {
+    let mut environment = Environment::new();
+    let vector = HostType::new().with_value("x", Type::F32);
+    let transform = HostType::new().with_value("position", Type::Named("Vec3".to_owned()));
+    let thing = HostType::new().with_value("transform", Type::Named("Transform".to_owned()));
+    let world = HostType::new().with_function(
+        "find",
+        FunctionType {
+            params: vec![Type::String],
+            return_type: Type::Named("Thing".to_owned()),
+        },
+    );
+    environment.add_type("Vec3", vector);
+    environment.add_type("Transform", transform);
+    environment.add_type("Thing", thing);
+    environment.add_type("World", world);
+    environment.add_value("World", Type::Named("World".to_owned()));
+    environment.add_this_value("thing", Type::Named("Thing".to_owned()));
+
+    let compiles = |source: &str| {
+        lower_with_environment(source, &environment)
+            .analysis
+            .diagnostics
+            .is_empty()
+    };
+
+    assert!(
+        compiles(
+            r#"script T { fn f() {
+                let target = World.find("Player");
+                if target != null && target != this.thing {
+                    target.transform.position.x = 0.0;
+                }
+            } }"#
+        ),
+        "LANGUAGE.md says a host reference can be held, compared, and reached through"
+    );
+    assert!(
+        !compiles(
+            r#"script T { fn f() {
+                let target = World.find("Player");
+                target.transfrom.position.x = 0.0;
+            } }"#
+        ),
+        "LANGUAGE.md says members of a described type are checked, through a reference too"
+    );
+    assert!(
+        !compiles(
+            r#"script T { fn f() {
+                let target = World.find("Player");
+                let doubled = target * 2.0;
+            } }"#
+        ),
+        "LANGUAGE.md says there is no arithmetic on a reference"
+    );
+}

@@ -1,8 +1,9 @@
 // The thing you drive.
 //
-// It publishes where it is on the shared board every frame, because Decay has
-// no value that can hold an entity — an orb cannot ask the player where it is,
-// so the player says.
+// It moves and it stays on the floor, and that is all. It used to publish its
+// position to the shared board every frame so the orbs could compare against
+// it; the orbs ask it directly now, so the player no longer has to know that
+// anything is watching.
 script Player {
     @export
     let speed: f32 = 3.2;
@@ -22,8 +23,5 @@ script Player {
         // of those looks like standing off the edge.
         this.transform.position.x = min(max(this.transform.position.x, -3.0), 3.0);
         this.transform.position.y = min(max(this.transform.position.y, -1.4), 1.4);
-
-        Game.set("player_x", this.transform.position.x);
-        Game.set("player_y", this.transform.position.y);
     }
 }

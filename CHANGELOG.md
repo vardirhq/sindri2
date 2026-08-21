@@ -142,9 +142,12 @@ All notable changes to Sindri Next will be documented here.
 - A second deterministic capture, of the companion game part-way through a scripted run rather than at rest, uploaded by CI beside the cube proof.
 - `sindri.tilemap`, a grid of tiles cut from one sheet and drawn from one entity, laid out orthogonally or isometrically, whose cells join the same sprite batches loose sprites use so a prop sorts among the floor rather than behind it.
 - A check that every built-in component naming a texture is one hosts actually load, since a component missing from that list draws the magenta checker while everything else about it works.
+- A Decay value that can hold an entity: opaque to the language, holdable and comparable, with `World.find`, `World.exists` and `World.despawn` beside it, so one script can read and write another entity's transform and sprite instead of leaving numbers on a shared board for it.
+- `EntityId::to_bits` and `from_bits`, for handing a runtime handle across a boundary that carries numbers and nothing else — never for writing to a file.
 
 ### Changed
 
+- Rebuilt the companion game's orbs to ask the player where it is rather than compare against two numbers it published, which is what the blackboard was standing in for; the board keeps the score, which is a fact about the game rather than about an entity.
 - Rebuilt the companion game's floor as one tilemap instead of 49 sprite entities, taking the scene from 68 entities to 20 and from 45KB to 12KB, and its hierarchy from a list you scroll past 49 rows of floor to one that fits on a screen.
 
 - Gave every sprite batch its own uniform and instance buffers, so each draws with its own camera and its own instances; they shared one set, and because `queue.write_buffer` stages a write until the queue is submitted, every batch in a frame drew with the last one's camera — which no proof noticed, since none of them had both a world and an overlay.

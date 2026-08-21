@@ -87,6 +87,65 @@ An entity with no sprite is not an error at compile time — the surface says a
 script *may* reach one, not that every entity has one — and a write says so
 plainly at runtime.
 
+### Other entities
+
+A script can hold a reference to an entity, which is the thing that lets it say
+anything about a world beyond itself.
+
+`this.entity` is a script's reference to the entity it runs on. It reads and
+cannot be written — a script gets to name another entity, not to reassign which
+one it is running on — and through it every path below is the same path the
+table above lists, reaching the same numbers.
+
+| Path | Type | Read | Write |
+| --- | --- | --- | --- |
+| `this.entity.transform.position.{x,y,z}` | `f32` | yes | yes |
+| `this.entity.transform.scale.{x,y,z}` | `f32` | yes | yes |
+| `this.entity.transform.rotation_z` | `f32` | yes | yes |
+| `this.entity.sprite.tint.{r,g,b,a}` | `f32` | yes | yes |
+| `this.entity.sprite.layer` | `f32` | yes | yes |
+
+| Call | Returns |
+| --- | --- |
+| `World.find(name)` | `Entity`, or `null` |
+| `World.exists(entity)` | `bool` |
+| `World.despawn(entity)` | nothing |
+
+An `Entity` is opaque. A script can hold one in a `var` or a field, pass it,
+compare it, and reach through it to the same transform and sprite paths it
+reaches on itself; it cannot build one, do arithmetic on one, or read the number
+inside. The engine packs a runtime handle — a slot and a generation — into that
+number, and **it is never serialized**: an `@export` of an entity is not
+authorable, and the inspector shows one as empty rather than as a number nobody
+can act on. See `docs/FEASIBILITY.md` on why runtime handles are not scene IDs.
+
+A script names itself with `this.entity`, so it can pass itself to something
+that takes an entity — or leave itself on the board for another script to pick
+up. Reaching through it is the same as reaching directly, and that redundancy is
+the point: it makes the two forms one rule rather than two.
+
+**A reference outlives what it names**, which is exactly what generation checking
+is for. `World.exists` is how a script holding one across frames asks before
+using it; reaching through a stale reference is an error naming the path, not a
+silent no-op, because a script holding a dead handle is a bug in the script.
+Reaching through `null` is likewise an error. `World.despawn(null)` is not,
+because `World.despawn(World.find("gone"))` is a reasonable thing to write.
+
+`World.find` matches on the name a scene gave an entity — what an author typed
+and can see in the hierarchy — and takes the first match. Two entities with one
+name is an authoring mistake for the editor to catch, not something for this to
+invent a rule about. A runtime-spawned entity has no scene ID, which is the
+other reason the lookup is by name.
+
+**Despawning is not undoable**, and no write a script makes is: a script's
+transform writes produce no undo entry either, and play mode restores the world
+from the snapshot it took when Play was pressed. `ROADMAP.md` keeps routing this
+through `WorldCommand` as an open item rather than pretending it is done.
+
+There is still no spawning. Creating an entity means saying what to create, and
+the engine has no prefab to say it with — that is a real dependency rather than
+an oversight, and it is why this stops at finding and removing.
+
 ### The keyboard
 
 | Call | Returns |
@@ -127,11 +186,16 @@ per world: a script attached later has not been running as long.
 | `Game.get(name, fallback)` | `f32` |
 | `Game.set(name, value)` | nothing |
 
-The smallest thing that lets two scripts cooperate. Decay has no value that can
-hold an entity, so a script cannot name another one — but it can leave a number
-under a name, and another can read it. That is enough for a player to publish
-where it is, a collectible to notice, and a score to be counted by nobody in
-particular.
+The smallest thing that lets two scripts cooperate, and it predates references:
+when a script could not name another entity at all, leaving a number under a
+name was the only way for one to tell another anything.
+
+References do not retire it. A board is still the right shape for a fact that
+belongs to the game rather than to an entity — a score, a countdown, whether the
+game is won — and for those, `World.find` every frame would be a lookup to answer
+a question no entity owns. What references replace is the *workaround*: a
+collectible no longer publishes its position as two numbers for a player to
+compare against, it asks the player where it is.
 
 The fallback on `get` is **not optional**, because a note nobody has left yet is
 the ordinary case on the first frame. A `get` that silently answered zero would

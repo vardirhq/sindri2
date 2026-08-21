@@ -19,8 +19,8 @@ use crate::{
     ScriptReport, WorldHost,
     exports::exports_of,
     surface::{
-        FUNCTIONS, GAME, GAME_CALLS, GameCall, HostFunction, INPUT, INPUT_QUERIES, Node, PRINT,
-        THIS, TIME, TIME_VALUES,
+        ENTITY, FUNCTIONS, GAME, GAME_CALLS, GameCall, HostFunction, INPUT, INPUT_QUERIES, Node,
+        PRINT, THIS, THROUGH_REFERENCE, TIME, TIME_VALUES, WORLD, WORLD_CALLS, WorldCall,
     },
 };
 
@@ -148,6 +148,28 @@ pub fn environment() -> Environment {
     environment.add_type(TIME, time);
     environment.add_value(TIME, Type::Named(TIME.to_owned()));
 
+    let mut world = HostType::new();
+    for (name, call) in WORLD_CALLS {
+        world = world.with_function(
+            *name,
+            FunctionType {
+                params: match call {
+                    WorldCall::Find => vec![Type::String],
+                    WorldCall::Despawn | WorldCall::Exists => {
+                        vec![Type::Named(ENTITY.to_owned())]
+                    }
+                },
+                return_type: match call {
+                    WorldCall::Find => Type::Named(ENTITY.to_owned()),
+                    WorldCall::Despawn => Type::Unit,
+                    WorldCall::Exists => Type::Bool,
+                },
+            },
+        );
+    }
+    environment.add_type(WORLD, world);
+    environment.add_value(WORLD, Type::Named(WORLD.to_owned()));
+
     environment
 }
 
@@ -156,6 +178,7 @@ fn describe_node(node: &Node) -> Type {
     match node {
         Node::Group(name, _) => Type::Named((*name).to_owned()),
         Node::Leaf(_) => Type::F32,
+        Node::Handle(_) => Type::Named(ENTITY.to_owned()),
     }
 }
 
@@ -181,6 +204,14 @@ fn collect_types() -> Vec<(String, HostType)> {
     }
     let mut types = Vec::new();
     walk(THIS, &mut types);
+
+    // What a reference reaches: the same data members as `this`, so one entity
+    // reads another's transform exactly as it reads its own.
+    let mut entity = HostType::new();
+    for (field, node) in THROUGH_REFERENCE {
+        entity = entity.with_value(*field, describe_node(node));
+    }
+    types.push((ENTITY.to_owned(), entity));
     types
 }
 

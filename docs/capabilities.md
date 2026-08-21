@@ -405,9 +405,21 @@ A failing script reports itself and does not stop the others.
 
 **A whole game's rules are written in it.** The companion game's moving,
 gathering, counting and winning are four Decay scripts and no Rust — see "The
-companion game" below. Adding it needed one thing the language could not do:
-an orb cannot hold a reference to the player, so `Game.get`/`Game.set` give
-scripts a shared board of named numbers to leave facts on.
+companion game" below.
+
+**A script can name another entity.** `Value::Reference` is a value Decay can
+hold, pass, compare and store but cannot construct or look inside; the engine
+packs a runtime handle into it. `World.find` looks one up by the name a scene
+gave it, `World.exists` asks whether it still names anything, `World.despawn`
+removes it, and reaching through one gets the same transform and sprite paths a
+script reaches on itself — checked at compile time, so `other.transfrom` is an
+error with a line number. Reaching through a stale or null reference is reported
+rather than silently ignored. Verified in the game: the orbs used to compare
+against a position the player published to the shared board, and now ask the
+player directly, with the picture unchanged.
+
+The board is still there and still earns its place, for facts that belong to the
+game rather than to an entity — the score, whether the game is won.
 
 A script is also text on disk that a test can run. `decay-syntax` lexes and parses
 it, reporting diagnostics with a span, line, and column; the parser recovers
@@ -423,7 +435,10 @@ chains becoming paths such as `this.transform.position.x` rather than anything
 the IR interprets. `decay-runtime` executes it: bindings, arithmetic,
 comparisons, `if`/`else`, returns, calls between Decay functions, and script
 instances whose fields persist across calls. Everything external crosses a
-three-method `Host` trait — load a path, store a path, call a path.
+three-method `Host` trait — load a path, store a path, call a path. Each takes a
+subject as well: `None` for a path a script rooted at something the host owns,
+and the reference for one rooted at a value the script is holding. Three methods
+and not six, because a subject is an argument rather than a mode.
 
 The whole workspace compiles for `wasm32-unknown-unknown`, which its CI checks.
 `decay/examples/player.decay` is executed by a test rather than only shown in
@@ -435,8 +450,11 @@ the README.
   is the only unbounded path today
 - No arrays, maps, closures, or first-class functions
 - No standard library; not even `math`
-- No spawning, despawning, or reaching another entity — blocked on Decay having
-  a value that can hold one
+- **No spawning.** Creating an entity means saying what to create and the engine
+  has no prefab to say it with, so this is blocked on the engine rather than on
+  the language. Finding, reaching, and despawning exist
+- Despawning is not undoable — no script write is, and play mode restores from a
+  snapshot, so routing it through `WorldCommand` stays open
 - No mouse, and no components beyond `sindri.sprite`
 - No LSP, no formatter, no debugger, no syntax highlighting anywhere
 - No script state migration across a reload: a changed file recompiles, and the

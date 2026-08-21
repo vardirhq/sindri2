@@ -228,6 +228,30 @@ is in `docs/scripting.md`.
 
 `null` may be assigned to a named type, and to nothing else.
 
+### Host references
+
+A value of a named host type can be **held**, not only reached through. A host
+may hand one back from a call, and a script can bind it, keep it in a field,
+pass it, and compare it:
+
+```decay
+let target = World.find("Player");
+if target != null && target != this.entity {
+    target.transform.position.x = 0.0;
+}
+```
+
+What a script cannot do is look inside one. There is no literal for a reference,
+no arithmetic on one, and no conversion in either direction; the only references
+a script holds are ones the host gave it. Whether a reference still names
+anything is the host's question to answer — the language has no opinion on
+whether the thing behind one is alive, and against Sindri that is
+`World.exists`.
+
+This is what a reference is *for*: it is the difference between a script that
+can only describe itself and one that can say something about another thing in
+the world. `docs/scripting.md` records what Sindri makes of it.
+
 ---
 
 ## Containers
