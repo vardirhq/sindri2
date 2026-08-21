@@ -23,6 +23,67 @@ pub struct SurfaceProfile {
     config: wgpu::SurfaceConfiguration,
 }
 
+/// What a surface will store, and what it will be drawn through.
+///
+/// The two differ only where a surface cannot offer sRGB directly, which in
+/// practice means a browser canvas.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ChosenFormat {
+    /// What the swapchain holds.
+    pub storage: wgpu::TextureFormat,
+    /// What the renderer draws through, always sRGB.
+    pub view: wgpu::TextureFormat,
+}
+
+impl ChosenFormat {
+    /// The view formats a surface configuration must declare, which is none at
+    /// all when the storage format is already what is drawn through.
+    fn view_formats(self) -> Vec<wgpu::TextureFormat> {
+        if self.view == self.storage {
+            Vec::new()
+        } else {
+            vec![self.view]
+        }
+    }
+}
+
+/// Picks what to store and what to draw through, from what a surface offers.
+///
+/// The renderer works in linear and relies on the target encoding on write, so
+/// what must be sRGB is the *view*. A surface offering an sRGB format gives one
+/// directly and nothing else is needed.
+///
+/// A browser canvas offers `bgra8unorm` and no sRGB format at all, and this
+/// engine used to stop there — `NoSrgbSurfaceFormat`, at startup, on every page
+/// load. That was not wrong to refuse: drawing into a non-sRGB target really
+/// would darken every colour. It was wrong to conclude there was no way to
+/// encode. WebGPU's answer is a view format: the swapchain stores non-sRGB
+/// bytes, and the view the renderer draws through encodes on write exactly as
+/// it always did. The invariant is untouched — every frame is written through
+/// an sRGB view — and only where that view comes from has moved.
+///
+/// A surface offering neither is still refused, because then there is genuinely
+/// nowhere to encode.
+pub fn choose_format(offered: &[wgpu::TextureFormat]) -> Result<ChosenFormat, GpuError> {
+    if let Some(format) = offered.iter().copied().find(wgpu::TextureFormat::is_srgb) {
+        return Ok(ChosenFormat {
+            storage: format,
+            view: format,
+        });
+    }
+    offered
+        .iter()
+        .copied()
+        .find_map(|format| {
+            let view = format.add_srgb_suffix();
+            view.is_srgb().then_some(ChosenFormat {
+                storage: format,
+                view,
+            })
+        })
+        .ok_or(GpuError::NoSrgbSurfaceFormat)
+}
+
 impl SurfaceProfile {
     pub fn new(
         surface: &wgpu::Surface<'_>,
@@ -37,22 +98,32 @@ impl SurfaceProfile {
             .ok_or(GpuError::UnsupportedSurface)?;
         let capabilities = surface.get_capabilities(adapter);
 
-        // The renderer works in linear and relies on the target encoding on
-        // write. A non-sRGB swapchain would silently darken every colour, so it
-        // is refused rather than accepted as a fallback.
-        config.format = capabilities
-            .formats
-            .iter()
-            .copied()
-            .find(wgpu::TextureFormat::is_srgb)
-            .ok_or(GpuError::NoSrgbSurfaceFormat)?;
+        let chosen = choose_format(&capabilities.formats)?;
+        config.format = chosen.storage;
+        config.view_formats = chosen.view_formats();
         config.width = width;
         config.height = height;
         Ok(Self { config })
     }
 
+    /// The format the swapchain stores.
     pub const fn format(&self) -> wgpu::TextureFormat {
         self.config.format
+    }
+
+    /// The format a frame's view must be created with, which is the one the
+    /// renderer's pipelines are built against.
+    ///
+    /// The same as [`Self::format`] whenever the surface offered sRGB directly,
+    /// and its sRGB variant when the surface could only offer the storage
+    /// format. Hosts ask for this rather than reaching for the config, so there
+    /// is one answer to "what am I drawing into" rather than one per host.
+    pub fn view_format(&self) -> wgpu::TextureFormat {
+        self.config
+            .view_formats
+            .first()
+            .copied()
+            .unwrap_or(self.config.format)
     }
 
     pub const fn width(&self) -> u32 {
@@ -189,7 +260,20 @@ impl WindowSurface {
         &self.profile
     }
 
-    pub const fn format(&self) -> wgpu::TextureFormat {
+    /// The format a renderer builds its pipelines against, and the one a
+    /// frame's view is created with.
+    ///
+    /// Deliberately the *view* format and not the swapchain's storage format:
+    /// the only thing a host does with this is describe what it draws into, and
+    /// on a browser canvas those two differ. Handing back the storage format
+    /// would build pipelines that do not match the view they render through,
+    /// which wgpu rejects at draw time with a message about neither.
+    pub fn format(&self) -> wgpu::TextureFormat {
+        self.profile.view_format()
+    }
+
+    /// What the swapchain stores, which only the configuration cares about.
+    pub const fn storage_format(&self) -> wgpu::TextureFormat {
         self.profile.format()
     }
 
@@ -339,5 +423,68 @@ mod tests {
 
         assert_eq!(profile.width(), 1);
         assert_eq!(profile.height(), 1);
+    }
+}
+
+#[cfg(test)]
+mod format_tests {
+    use super::{ChosenFormat, choose_format};
+    use crate::GpuError;
+    use wgpu::TextureFormat;
+
+    /// What a desktop swapchain offers. An sRGB format is taken directly and
+    /// nothing about the old behaviour changes.
+    #[test]
+    fn an_srgb_surface_is_drawn_through_its_own_format() {
+        let chosen = choose_format(&[
+            TextureFormat::Bgra8Unorm,
+            TextureFormat::Bgra8UnormSrgb,
+            TextureFormat::Rgba8Unorm,
+        ])
+        .expect("an sRGB format is offered");
+        assert_eq!(
+            chosen,
+            ChosenFormat {
+                storage: TextureFormat::Bgra8UnormSrgb,
+                view: TextureFormat::Bgra8UnormSrgb,
+            }
+        );
+    }
+
+    /// What a browser canvas offers, which is what stopped this engine at
+    /// startup on every page load: no sRGB format at all.
+    ///
+    /// It is not a reason to draw in the wrong colour space, and it is not a
+    /// reason to refuse. The swapchain stores what the canvas can hold and the
+    /// renderer draws through an sRGB view of it.
+    #[test]
+    fn a_canvas_is_drawn_through_an_srgb_view_of_what_it_can_hold() {
+        let chosen = choose_format(&[TextureFormat::Bgra8Unorm, TextureFormat::Rgba8Unorm])
+            .expect("a canvas can still be encoded to");
+        assert_eq!(
+            chosen,
+            ChosenFormat {
+                storage: TextureFormat::Bgra8Unorm,
+                view: TextureFormat::Bgra8UnormSrgb,
+            }
+        );
+        assert!(
+            chosen.view.is_srgb(),
+            "the view encodes, whatever is stored"
+        );
+    }
+
+    /// A surface that can hold neither is still refused, because then there is
+    /// genuinely nowhere to encode and a frame really would come out dark.
+    #[test]
+    fn a_surface_that_cannot_encode_at_all_is_refused() {
+        assert!(matches!(
+            choose_format(&[TextureFormat::Rgba16Float, TextureFormat::R8Unorm]),
+            Err(GpuError::NoSrgbSurfaceFormat)
+        ));
+        assert!(matches!(
+            choose_format(&[]),
+            Err(GpuError::NoSrgbSurfaceFormat)
+        ));
     }
 }

@@ -26,9 +26,30 @@ Offscreen and in-editor targets share [`sindri_render::COLOR_TARGET_FORMAT`] rat
 choosing. There is nothing left to drift.
 
 Swapchains cannot use a constant, because their format is negotiated with the surface. Rather than
-accepting whatever comes back, `SurfaceProfile` requires an sRGB format and fails with
-`GpuError::NoSrgbSurfaceFormat` if the surface offers none. A host that cannot encode colour is a
-configuration to report, not one to render badly.
+accepting whatever comes back, `SurfaceProfile` insists that what the renderer draws through is
+sRGB. A host that cannot encode colour is a configuration to report, not one to render badly.
+
+**What must be sRGB is the view, not the swapchain.** That distinction was theoretical until the
+engine was first loaded in a browser, where it turned out to be the whole difference between running
+and not. A canvas offers `bgra8unorm` and no sRGB format at all, so `SurfaceProfile` refused it and
+the engine stopped at startup on every page load — see `docs/browser.md`.
+
+Refusing was right about the danger and wrong about the conclusion. Drawing into a non-sRGB *target*
+really would darken every colour; it does not follow that a canvas cannot be encoded to. WebGPU's
+answer is a view format: the swapchain stores `bgra8unorm`, the surface declares
+`view_formats: [bgra8unorm-srgb]`, and the view the renderer draws through encodes on write exactly
+as it always did. Nothing about the pipeline changes and no frame is written to a non-encoding
+target.
+
+So `choose_format` takes an sRGB format directly when one is offered — which is every desktop
+swapchain, unchanged — and otherwise takes a format whose sRGB variant can be viewed. A surface that
+offers neither is still `GpuError::NoSrgbSurfaceFormat`, because then there is genuinely nowhere to
+encode. It is a pure function over the offered list, so all three cases are tested without a GPU.
+
+`WindowSurface::format` hands back the *view* format, and `storage_format` is the other one. That
+way round because the only thing a host does with a format is describe what it draws into: handing
+back the storage format would build pipelines that do not match the view they render through, which
+wgpu rejects at draw time with a message that names neither.
 
 ## The other end: who samples the target
 

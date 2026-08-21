@@ -7,6 +7,11 @@ rust-version.workspace = true
 license.workspace = true
 publish = false
 
+# `cdylib` so the game can be built for the browser, `rlib` so its own tests and
+# its capture binary can still link it.
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 sindri-assets = { path = "../crates/sindri-assets" }
 sindri-core = { path = "../crates/sindri-core" }

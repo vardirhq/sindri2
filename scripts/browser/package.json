@@ -1,0 +1,9 @@
+{
+  "name": "sindri-browser-smoke",
+  "private": true,
+  "type": "module",
+  "description": "Loads a wasm-pack build in a real browser and reports what happened.",
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  }
+}
