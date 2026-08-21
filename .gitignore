@@ -8,3 +8,6 @@ Cargo.lock
 # The browser smoke test brings its own tooling.
 node_modules/
 scripts/browser/package-lock.json
+
+# wasm-pack output, which is a build artifact like target/.
+pkg/
