@@ -149,6 +149,9 @@ All notable changes to Sindri Next will be documented here.
 - `SpriteRef`, which splits `textures/tiles.png#floor` into a path and a sprite name, keeping `AssetId` a pure path — `#` was already reserved so a fragment could not leak into a URL.
 - A check that an animated sprite asks for the sheet its clips read, whose own reference names no part of one and so is invisible to anything looking for fragments.
 
+- A sheet slicer in the editor: selecting a texture shows it with its grid drawn over it, columns and rows are drags, every cell can be named, and saving writes the sidecar beside the image.
+- Sprite rows under a sliced image in the project browser, collapsed until asked for, so a sixty-four frame sheet does not flood the listing.
+
 ### Changed
 
 - Moved `sindri.sprite`, `sindri.sprite_animation` and `sindri.tilemap` onto named sprites as scene format 4: `uv_rect` and both sheet grids are gone, clips list names, and a tilemap's cells index a palette of names. The migration recovers a rect's cell without being told the grid, and stops rather than guessing when a rect is not a whole cell of one.

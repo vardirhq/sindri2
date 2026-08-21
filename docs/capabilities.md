@@ -145,9 +145,14 @@ Animation reads those names: `sindri.sprite_animation` holds clips of sprite
 names and which one plays, `SpriteAnimations` holds where each sprite has got to,
 and the cursor holds a name rather than a rect so playback does not depend on
 where anything sits in an image. Playback is runtime state, so watching an
-animation run does not rewrite the scene it came from. What is missing is
-authoring: sheets and clips are typed into files by hand, because the editor has
-no slicer or clip list yet.
+animation run does not rewrite the scene it came from.
+
+**A sheet is sliced in the editor, on the image.** Selecting a texture shows it
+in the inspector with its grid drawn over it, columns and rows are drags, every
+cell can be named, and saving writes the sidecar; the browser then lists the
+sprites underneath the image, collapsed until asked for. What is still typed by
+hand is *clips* — naming one, setting its timing, and previewing it are not in
+the editor yet.
 
 A tilemap is a grid of tiles drawn from one entity: `sindri.tilemap` carries the
 map's grid, a palette of sprite names, and a flat array of cells indexing that
