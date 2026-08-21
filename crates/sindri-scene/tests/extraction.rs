@@ -1144,11 +1144,16 @@ fn a_rect_outside_the_texture_is_refused() {
 /// A world holding one sprite that reads a two-by-two sheet, with a `walk` clip
 /// running its four cells at a tenth of a second each.
 fn animated_sheet(playing: &str, looping: bool, speed: f32) -> World {
+    animated_sheet_with_rect(playing, looping, speed, None)
+}
+
+fn animated_sheet_with_rect(playing: &str, looping: bool, speed: f32, rect: Option<&str>) -> World {
+    let rect = rect.map_or(String::new(), |rect| format!(r#", "uv_rect": {rect}"#));
     world_from(&scene(&format!(
         r#",
         {{ "id": "runner", "transform_3d": {{}},
           "components": {{
-            "sindri.sprite": {{ "texture": "sheet.png" }},
+            "sindri.sprite": {{ "texture": "sheet.png"{rect} }},
             "sindri.sprite_animation": {{
               "sheet": {{ "columns": 2, "rows": 2 }},
               "clips": {{ "walk": {{ "frames": [0, 1, 2, 3],
@@ -1248,10 +1253,32 @@ fn playing_an_animation_does_not_change_the_scene() {
     assert_eq!(saved(&world), before);
 }
 
-/// A sprite whose animation has never been advanced draws its own authored
-/// rect, which is what makes the authored rect the pose a scene shows at rest.
+/// A sprite whose animation has never been advanced draws its authored rect,
+/// which is what makes the authored rect the pose a scene shows at rest.
 #[test]
 fn an_unplayed_animation_leaves_the_sprites_own_rect_alone() {
+    let world = animated_sheet_with_rect(r#""walk""#, true, 1.0, Some("[0.5, 0.0, 0.5, 0.5]"));
+    let frame = SceneExtractor::new()
+        .expect("built-in components register")
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &animated_bindings(),
+        )
+        .expect("the scene extracts");
+    assert_eq!(
+        only_instance_rect(&frame),
+        UvRect::new(0.5, 0.0, 0.5, 0.5).expect("the authored rect is valid")
+    );
+}
+
+/// And one that authored no rect draws its clip's first frame instead of the
+/// whole sheet. Drawing the sheet whole is every frame at once, which is never
+/// a picture anyone meant — a scene loaded but not yet ticked, or an entity
+/// sitting in the editor outside play mode, would otherwise look like that.
+#[test]
+fn an_unplayed_animation_without_a_rect_shows_its_first_frame() {
     let world = animated_sheet(r#""walk""#, true, 1.0);
     let frame = SceneExtractor::new()
         .expect("built-in components register")
@@ -1262,7 +1289,11 @@ fn an_unplayed_animation_leaves_the_sprites_own_rect_alone() {
             &animated_bindings(),
         )
         .expect("the scene extracts");
-    assert_eq!(only_instance_rect(&frame), UvRect::FULL);
+    // Cell zero of a two by two sheet, which is where advancing would start it.
+    assert_eq!(
+        only_instance_rect(&frame),
+        UvRect::new(0.0, 0.0, 0.5, 0.5).expect("the first cell is valid")
+    );
 }
 
 /// A clip nothing selected leaves the sprite alone too, rather than picking a

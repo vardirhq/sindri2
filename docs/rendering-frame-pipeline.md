@@ -50,6 +50,38 @@ JSON, validated, loaded into `World`, and extracted into an opaque textured-cube
 five-instance overlay pass. Native, WebGPU, the software-Vulkan capture, and the editor's two
 viewports all consume that same prepared frame through that same encoder.
 
+## Every sprite batch owns its buffers
+
+A frame can hold several sprite batches, and each of them draws with its own
+camera and its own instances. That is now true because each batch takes a slot
+of its own — its own uniform buffer, its own instance buffer, its own bind
+groups — rather than sharing one set with the rest of the frame.
+
+It was not true before, and the way it failed is worth keeping written down.
+The renderer held one uniform buffer and one instance buffer, and wrote both
+once per batch on the way to encoding that batch's pass. `queue.write_buffer`
+does not write when it is called: it stages the write, and every staged write
+lands *before* the command buffer that follows executes. So all of a frame's
+batches wrote in turn, the last one won, and every pass drew with the last
+batch's camera and the last batch's instances. A frame with a single sprite
+batch is unaffected, which was every proof, every example, and every test in
+the workspace — while any scene that mixed world sprites with a screen overlay
+drew the world through the overlay's camera. Building the companion game is
+what found it, because the game is the first thing here with both.
+
+`SpriteBatchRenderer::begin_submission` hands the first slot back, and slots are
+reused rather than freed, so a frame costs nothing after the first one of its
+shape. It is a *submission* boundary and not a frame boundary, for the same
+reason the bug existed: a slot may only be reused once the commands that read
+it have been submitted. `encode_prepared_frame` calls it, so one call is one
+submission — a host drawing two frames at once, as the editor does with its
+scene view and its game view, submits between them.
+
+`crates/sindri-gpu/tests/sprite_batches_are_independent.rs` is the check. It
+draws two batches into one frame, at two scales and with two instance counts,
+and reads back the pixels that only come out right when each batch kept its
+own.
+
 ## Current boundary
 
 The frame command enum intentionally contains only the render capabilities that exist today. It is

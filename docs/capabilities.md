@@ -135,10 +135,17 @@ sheet's grid, the clips cut from it, and which one plays, and
 state, so watching an animation run does not rewrite the scene it came from.
 What is missing is authoring: clips are typed into the scene file by hand,
 because the editor has no sheet slicer or clip list yet.
+An animated sprite that authored no rect of its own draws the first frame of the
+clip it is playing rather than the whole sheet, so a scene shows a pose before
+anything has run it — in a game's opening frame, in an offscreen capture, and in
+the editor outside play mode.
 A sprite is either screen-anchored, which is the default and cannot be occluded
 by the world, or in the world, drawn through the world camera by its full
 transform and hidden by opaque geometry in front of it. Sprites batch per space,
-layer, and texture, with a measured five-to-one draw-call reduction. The frame
+layer, and texture, with a measured five-to-one draw-call reduction. Each batch
+draws with its own camera and its own instances, from buffers of its own; a GPU
+test draws two batches at two scales into one frame and reads back the pixels
+that only come out right when they stayed separate. The frame
 clears once before anything draws, so a scene of only sprites has a depth buffer
 to test against. Perspective and orthographic cameras exist with tested projection
 maths, and the zero-to-one depth range and Y-up convention are chosen in one
@@ -417,3 +424,4 @@ the README.
   running instance keeps whatever fields it had
 - Nothing has been *executed* on the browser target, only compiled
 - The only numeric type is spelled `f32` and every value it holds is an `f64`
+

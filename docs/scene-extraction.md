@@ -147,9 +147,16 @@ than resuming at whatever frame number the last clip had reached. Which clip pla
 game switches clips by writing to the world; `restart` is the one thing that is not a change to the
 scene, and it exists because a clip that has finished otherwise has no way back to its start.
 
-`extract` is `extract_animated` with nothing playing, which is why a sprite carrying clips draws its
-own authored rect until something runs it. That makes the authored rect the pose a scene shows at
-rest — worth authoring as the clip's first frame.
+`extract` is `extract_animated` with nothing playing, and a sprite carrying clips that no cursor has
+reached draws its own authored rect. That makes the authored rect the pose a scene shows at rest,
+which is how a scene picks a resting frame other than the clip's first.
+
+A sprite that authored *no* rect is the exception, and it has to be. The default rect is the whole
+texture, and a sheet drawn whole is every frame of the clip at once, squeezed into one quad — which
+is not a pose anybody meant. So an animated sprite whose rect is the full texture falls back to the
+first frame of the clip it is playing, which is where advancing would have started it anyway. This
+matters wherever a scene is drawn before it is run: a game's opening frame, an offscreen capture, and
+every entity sitting in the editor outside play mode.
 
 ## Sprite space
 

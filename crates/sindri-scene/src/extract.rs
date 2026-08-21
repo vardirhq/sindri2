@@ -2,14 +2,14 @@ use std::collections::BTreeMap;
 
 use glam::{Mat4, Quat, Vec2, Vec3};
 use sindri_core::{
-    ComponentRegistryError, ComponentSchemaRegistry, SceneComponent, SceneDocument, Transform3D,
-    UnknownComponentPolicy, World,
+    ComponentRegistryError, ComponentSchemaRegistry, EntityId, SceneComponent, SceneDocument,
+    Transform3D, UnknownComponentPolicy, World,
 };
 use sindri_render::{
     ClearOperations, ExtractedFrame, FrameCamera, FrameCommand, FramePass, FramePlanError,
     OrthographicCamera, PerspectiveCamera, PreparedFrame, RenderLayer, RenderStage, SpriteDepth,
-    SpriteInstance, TextureId, TransparentOrder, TransparentOrderError, UvRectError, Viewport,
-    orthographic_projection, perspective_projection,
+    SpriteInstance, TextureId, TransparentOrder, TransparentOrderError, UvRect, UvRectError,
+    Viewport, orthographic_projection, perspective_projection,
 };
 use thiserror::Error;
 
@@ -216,6 +216,22 @@ impl SceneExtractor {
             (SpriteSpace, i32, TextureId),
             Vec<(TransparentOrder, SpriteInstance)>,
         > = BTreeMap::new();
+        // What an animated sprite shows when `animations` has not reached it —
+        // a scene just loaded, an entity in the editor outside play mode, a
+        // frame captured before the first tick. Only sprites that authored no
+        // rect of their own take it: a sheet drawn whole is every frame at
+        // once, which is a picture nobody meant, while an authored rect is how
+        // a scene picks a rest pose other than the clip's first frame.
+        //
+        // A broken clip falls through to the sprite's rect rather than failing
+        // the frame, for the reason a broken clip does not fail loading: the
+        // editor is where it gets fixed, and it has to draw to be fixed there.
+        let mut resting: BTreeMap<EntityId, UvRect> = BTreeMap::new();
+        for (entity, animation) in self.components.query::<SpriteAnimationComponent>(world)? {
+            if let Some(rect) = animation.resting_rect().ok().flatten() {
+                resting.insert(entity, rect);
+            }
+        }
         for (entity, sprite) in self.components.query::<SpriteComponent>(world)? {
             let transform = world
                 .get(entity)
@@ -258,9 +274,15 @@ impl SceneExtractor {
                 .push((
                     order,
                     SpriteInstance::new(model, sprite.tint).with_uv_rect(
-                        match animations.rect(entity) {
-                            Some(rect) => rect,
-                            None => sprite.uv_rect()?,
+                        if let Some(rect) = animations.rect(entity) {
+                            rect
+                        } else {
+                            let authored = sprite.uv_rect()?;
+                            if authored == UvRect::FULL {
+                                resting.get(&entity).copied().unwrap_or(authored)
+                            } else {
+                                authored
+                            }
                         },
                     ),
                 ));
