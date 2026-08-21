@@ -22,7 +22,9 @@ use sindri_assets::{
     TextAssetDecoder,
 };
 use sindri_core::{AssetId, ComponentSchemaRegistry, World};
-use sindri_decay::{ScriptReport, ScriptSources, Scripts, referenced_sources};
+use sindri_decay::{
+    ScriptExport, ScriptFailure, ScriptReport, ScriptSources, Scripts, referenced_sources,
+};
 use sindri_platform::InputState;
 
 /// Scripts are small and few, so one worker is enough and sixteen waiting is
@@ -162,6 +164,19 @@ impl SceneScripts {
         notes
     }
 
+    /// Compiles what the world names, without running anything.
+    ///
+    /// Called every frame regardless of the transport, so a script that will
+    /// not compile says so when the scene opens and the inspector can show what
+    /// a script wants authored without anyone pressing Play.
+    pub fn compile(
+        &mut self,
+        world: &World,
+        components: &ComponentSchemaRegistry,
+    ) -> Vec<ScriptFailure> {
+        self.scripts.compile(world, components, &self.sources)
+    }
+
     /// Moves every script in the world on by `delta_seconds`.
     pub fn advance(
         &mut self,
@@ -172,6 +187,17 @@ impl SceneScripts {
     ) -> ScriptReport {
         self.scripts
             .advance(world, components, &self.sources, input, delta_seconds)
+    }
+
+    /// What one script declares it wants authored, for the inspector to draw.
+    ///
+    /// `None` when the source has not compiled — still loading, or it will not
+    /// compile at all — which the panel shows as "waiting" rather than as "no
+    /// properties". Those are different, and confusing them would silently hide
+    /// an author's fields.
+    #[must_use]
+    pub fn exports(&self, source: &str, script: &str) -> Option<Vec<ScriptExport>> {
+        self.scripts.exports(source, script)
     }
 
     /// Forgets every running instance, keeping the loaded sources.

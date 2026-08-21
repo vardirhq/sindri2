@@ -31,6 +31,13 @@ type ComponentValidator = fn(&Value) -> Result<(), serde_json::Error>;
 struct ComponentRegistration {
     metadata: ComponentMetadata,
     validate: ComponentValidator,
+    /// The payload a freshly added component of this type starts as.
+    ///
+    /// `None` for a type that has no sensible blank — one naming an asset it
+    /// cannot invent, say. Such a type stays readable and editable and simply
+    /// cannot be *added* by a button, which is honest: a button that adds a
+    /// component the engine will then reject is worse than no button.
+    default_payload: Option<Value>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -39,9 +46,38 @@ pub struct ComponentSchemaRegistry {
 }
 
 impl ComponentSchemaRegistry {
+    /// Registers a component the editor can read and edit but not create.
     pub fn register<T: SceneComponent>(
         &mut self,
         display_name: impl Into<String>,
+    ) -> Result<(), ComponentRegistryError> {
+        self.register_component::<T>(display_name, None)
+    }
+
+    /// Registers a component along with the payload a fresh one starts as.
+    ///
+    /// The default is checked here rather than when someone clicks Add, so a
+    /// default that does not decode fails at startup — where it is a build
+    /// error someone sees immediately — instead of producing an entity the
+    /// scene will not load.
+    pub fn register_with_default<T: SceneComponent>(
+        &mut self,
+        display_name: impl Into<String>,
+        default_payload: Value,
+    ) -> Result<(), ComponentRegistryError> {
+        validate_payload::<T>(&default_payload).map_err(|source| {
+            ComponentRegistryError::InvalidDefault {
+                type_name: T::TYPE_NAME.to_owned(),
+                source,
+            }
+        })?;
+        self.register_component::<T>(display_name, Some(default_payload))
+    }
+
+    fn register_component<T: SceneComponent>(
+        &mut self,
+        display_name: impl Into<String>,
+        default_payload: Option<Value>,
     ) -> Result<(), ComponentRegistryError> {
         validate_type_name(T::TYPE_NAME)?;
         let display_name = display_name.into();
@@ -62,9 +98,39 @@ impl ComponentSchemaRegistry {
                     schema_version: T::SCHEMA_VERSION,
                 },
                 validate: validate_payload::<T>,
+                default_payload,
             },
         );
         Ok(())
+    }
+
+    /// The payload a freshly added component of this type starts as, or `None`
+    /// for one that cannot be created blank.
+    pub fn default_payload(&self, type_name: &str) -> Option<&Value> {
+        self.registrations.get(type_name)?.default_payload.as_ref()
+    }
+
+    /// Whether a payload decodes as this component.
+    ///
+    /// The editor's guard on an edit: a payload is written back exactly as it
+    /// is stored, so an edit that stops it decoding would produce a scene the
+    /// engine refuses to load. Checking here means the refusal happens while
+    /// the author is still looking at the field.
+    pub fn validate_payload(
+        &self,
+        type_name: &str,
+        payload: &Value,
+    ) -> Result<(), ComponentRegistryError> {
+        let Some(registration) = self.registrations.get(type_name) else {
+            // An unregistered type is one the policy preserves rather than
+            // understands. Nothing can be said about its shape, so nothing is.
+            return Ok(());
+        };
+        (registration.validate)(payload).map_err(|source| ComponentRegistryError::InvalidPayload {
+            entity: "<edited>".to_owned(),
+            type_name: type_name.to_owned(),
+            source,
+        })
     }
 
     pub fn metadata(&self, type_name: &str) -> Option<&ComponentMetadata> {
@@ -182,6 +248,12 @@ pub enum ComponentRegistryError {
     AlreadyRegistered(String),
     #[error("component type '{0}' is not registered")]
     NotRegistered(&'static str),
+    #[error("the default payload for component type '{type_name}' is not valid")]
+    InvalidDefault {
+        type_name: String,
+        #[source]
+        source: serde_json::Error,
+    },
     #[error("entity {entity:?} contains unknown component type '{type_name}'")]
     UnknownComponent {
         entity: SceneEntityId,

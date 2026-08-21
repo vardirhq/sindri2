@@ -15,7 +15,9 @@ use sindri_core::{ComponentSchemaRegistry, EntityId, World};
 use sindri_platform::InputState;
 
 use crate::{
-    ScriptComponent, ScriptContext, ScriptFailure, ScriptMessage, ScriptReport, WorldHost,
+    ScriptComponent, ScriptContext, ScriptExport, ScriptFailure, ScriptMessage, ScriptReport,
+    WorldHost,
+    exports::exports_of,
     surface::{
         FUNCTIONS, HostFunction, INPUT, INPUT_QUERIES, Node, PRINT, THIS, TIME, TIME_VALUES,
     },
@@ -223,6 +225,36 @@ impl Scripts {
         self.running.get(&entity)?.instance.field(name)
     }
 
+    /// Compiles every source the world's scripts name, without running any.
+    ///
+    /// Separate from [`Self::advance`] because compiling and ticking answer to
+    /// different things: a script is compiled because a scene names it, and
+    /// ticked because time passed. Tying them together meant a scene at rest
+    /// compiled nothing — so a script that would not compile said nothing until
+    /// someone pressed Play, and an authoring panel had no way to find out what
+    /// a script wanted authored.
+    ///
+    /// Cheap to call every frame: a source whose text has not changed is not
+    /// recompiled.
+    pub fn compile(
+        &mut self,
+        world: &World,
+        components: &ComponentSchemaRegistry,
+        sources: &ScriptSources,
+    ) -> Vec<ScriptFailure> {
+        let scripted = match components.query::<ScriptComponent>(world) {
+            Ok(scripted) => scripted,
+            Err(error) => return vec![ScriptFailure::Registry(error.to_string())],
+        };
+        let mut failures = Vec::new();
+        for (entity, component) in scripted {
+            if let Err(failure) = ensure_compiled(&mut self.programs, sources, entity, &component) {
+                failures.push(failure);
+            }
+        }
+        failures
+    }
+
     /// Moves every enabled script in `world` on by `delta_seconds`.
     ///
     /// Returns what went wrong rather than stopping at the first failure. One
@@ -295,6 +327,17 @@ impl Scripts {
 
         running.retain(|entity, _| live.contains(entity));
         report
+    }
+
+    /// What one script declares it wants authored.
+    ///
+    /// `None` when the source has not compiled yet — it may still be loading,
+    /// or it may not compile at all — which a panel shows as "waiting" rather
+    /// than as "no properties". Those are different, and a panel that confused
+    /// them would silently hide an author's fields.
+    #[must_use]
+    pub fn exports(&self, source: &str, script: &str) -> Option<Vec<ScriptExport>> {
+        exports_of(&self.programs.get(source)?.program, script)
     }
 
     /// Drops every instance and every compiled program.

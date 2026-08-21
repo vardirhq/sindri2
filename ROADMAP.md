@@ -296,8 +296,12 @@ the engine would be authoring things nothing can run.
 
 ### Authoring the world
 
-- [ ] Create, duplicate, and delete entities from the interface
-- [ ] Add and remove components through the inspector, driven by the schema registry rather than a hardcoded list
+- [x] Create and delete entities from the interface — deleting takes the subtree, and undo restores every entity at its own handle, so nothing holding one is left pointing at nothing
+- [ ] Duplicate an entity, and duplicate a subtree
+- [x] Add and remove components through the inspector, driven by the schema registry rather than a hardcoded list — Add Component offers what the entity lacks and the registry can create, and a type with no sensible blank is left out rather than offered and refused
+- [x] Edit any component's fields in the inspector, including one the engine has never heard of — driven by the stored payload, checked against the component's own schema before it becomes a command
+- [x] Edit a script's `@export` properties in the inspector, drawn from what the script declared — the capability that justified a statically typed language
+- [ ] Author a Decay script's **source** from the editor: open one, edit it, create one
 - [ ] Reparent by dragging in the hierarchy, using the command that already exists
 - [ ] Multi-select, and edit what a selection has in common
 - [ ] Copy, paste, and duplicate across scenes
