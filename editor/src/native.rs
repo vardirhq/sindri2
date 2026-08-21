@@ -1332,7 +1332,8 @@ impl EditorApp {
 
     /// Adds a component with the payload its schema says a fresh one starts as.
     fn add_component(&mut self, entity: EntityId, type_name: &str, first_font: Option<&str>) {
-        let Some(payload) = component_default(self.scene.components(), type_name, first_font) else {
+        let Some(payload) = component_default(self.scene.components(), type_name, first_font)
+        else {
             return;
         };
         let mut buffer = CommandBuffer::new();
@@ -4330,9 +4331,7 @@ fn addable_components(
     components
         .registered_components()
         .filter(|metadata| !present.contains_key(&metadata.type_name))
-        .filter(|metadata| {
-            component_default(components, &metadata.type_name, first_font).is_some()
-        })
+        .filter(|metadata| component_default(components, &metadata.type_name, first_font).is_some())
         .cloned()
         .collect()
 }
@@ -4842,9 +4841,9 @@ mod tests {
             .collect();
         let offered: Vec<String> =
             addable_components(extractor.components(), &present, Some("fonts/Inter.ttf"))
-            .into_iter()
-            .map(|metadata| metadata.type_name)
-            .collect();
+                .into_iter()
+                .map(|metadata| metadata.type_name)
+                .collect();
 
         assert!(
             !offered.contains(&"sindri.mesh".to_owned()),
@@ -4864,17 +4863,10 @@ mod tests {
     fn every_offered_default_is_one_the_engine_accepts() {
         let extractor = extractor();
         let components = extractor.components();
-        for metadata in addable_components(
-            components,
-            &BTreeMap::new(),
-            Some("fonts/Inter.ttf"),
-        ) {
-            let payload = component_default(
-                components,
-                &metadata.type_name,
-                Some("fonts/Inter.ttf"),
-            )
-                .expect("it was offered, so it has one");
+        for metadata in addable_components(components, &BTreeMap::new(), Some("fonts/Inter.ttf")) {
+            let payload =
+                component_default(components, &metadata.type_name, Some("fonts/Inter.ttf"))
+                    .expect("it was offered, so it has one");
             components
                 .validate_payload(&metadata.type_name, &payload)
                 .unwrap_or_else(|error| {
@@ -4898,15 +4890,13 @@ mod tests {
                 .any(|metadata| metadata.type_name == TEXT_COMPONENT)
         );
 
-        let payload = component_default(
-            components,
-            TEXT_COMPONENT,
-            Some("fonts/Inter.ttf"),
-        )
-        .expect("a project font completes a valid text component");
+        let payload = component_default(components, TEXT_COMPONENT, Some("fonts/Inter.ttf"))
+            .expect("a project font completes a valid text component");
         assert_eq!(payload["font"], "fonts/Inter.ttf");
         assert_eq!(payload["text"], "Text");
-        components.validate_payload(TEXT_COMPONENT, &payload).unwrap();
+        components
+            .validate_payload(TEXT_COMPONENT, &payload)
+            .unwrap();
     }
 
     #[test]
