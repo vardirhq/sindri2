@@ -1,5 +1,5 @@
 {
-  "format_version": 3,
+  "format_version": 4,
   "metadata": {
     "name": "Editor fixture"
   },
@@ -58,16 +58,12 @@
         "sindri.sprite_animation": {
           "clips": {
             "spin": {
-              "frames": [0, 1, 2, 3],
+              "frames": ["north", "east", "south", "west"],
               "looping": true,
               "seconds_per_frame": 0.15
             }
           },
           "playing": "spin",
-          "sheet": {
-            "columns": 2,
-            "rows": 2
-          },
           "speed": 1.0
         }
       }

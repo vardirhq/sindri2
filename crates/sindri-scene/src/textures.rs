@@ -4,7 +4,7 @@ use sindri_core::{SceneComponent, SpriteRef, SpriteSheetDocument, World};
 use sindri_render::{TextureId, TextureRegistry, UvRect};
 use thiserror::Error;
 
-use crate::{MeshComponent, SpriteComponent, TilemapComponent};
+use crate::{MeshComponent, SpriteAnimationComponent, SpriteComponent, TilemapComponent};
 
 /// Maps the texture references a scene names to the textures a renderer holds.
 ///
@@ -202,11 +202,39 @@ pub fn referenced_textures(world: &World) -> BTreeSet<String> {
 /// not exist. That is what keeps a missing sheet an error worth reporting
 /// rather than the ordinary case.
 pub fn referenced_sheets(world: &World) -> BTreeSet<String> {
-    sprite_references(world)
+    let mut sheets: BTreeSet<String> = sprite_references(world)
         .into_iter()
         .filter_map(|reference| reference.sheet())
         .map(|id| id.as_str().to_owned())
-        .collect()
+        .collect();
+
+    // An animated sprite is the exception, and it has to be: its own reference
+    // carries no fragment, because which part it draws is the clip's business
+    // and changes every few frames. So the *clips* are what need the sheet, and
+    // nothing about the sprite's reference says so.
+    //
+    // Missing this drew every frame of a sheet at once — the sprite resolved
+    // its whole texture, because the sheet that would have named the frame was
+    // never asked for. The game caught it and the editor showed it.
+    for (_, data) in world.entities() {
+        if !data
+            .components
+            .contains_key(SpriteAnimationComponent::TYPE_NAME)
+        {
+            continue;
+        }
+        let sheet = data
+            .components
+            .get(SpriteComponent::TYPE_NAME)
+            .and_then(|payload| payload.get("texture"))
+            .and_then(serde_json::Value::as_str)
+            .and_then(|texture| SpriteRef::parse(texture).ok())
+            .and_then(|reference| sindri_core::sheet_id_for(&reference.asset()?));
+        if let Some(sheet) = sheet {
+            sheets.insert(sheet.as_str().to_owned());
+        }
+    }
+    sheets
 }
 
 /// Every sprite reference a world draws with, parsed.

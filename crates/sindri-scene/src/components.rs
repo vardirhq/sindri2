@@ -1,6 +1,5 @@
 use serde::Deserialize;
 use sindri_core::{SceneComponent, SpriteRef, SpriteRefError};
-use sindri_render::{UvRect, UvRectError};
 use thiserror::Error;
 
 /// A camera authored into a scene.
@@ -409,8 +408,12 @@ mod tilemap_tests {
     fn map(projection: TileProjection, columns: u32, rows: u32) -> TilemapComponent {
         TilemapComponent {
             texture: "tiles".to_owned(),
-            sheet_columns: 2,
-            sheet_rows: 2,
+            palette: vec![
+                "a".to_owned(),
+                "b".to_owned(),
+                "c".to_owned(),
+                "d".to_owned(),
+            ],
             columns,
             rows,
             tile_size: [1.1, 0.55],
@@ -481,28 +484,25 @@ mod tilemap_tests {
     }
 
     #[test]
-    fn a_tile_outside_the_sheet_is_rejected() {
+    fn a_tile_outside_the_palette_is_rejected() {
         let mut map = map(TileProjection::Orthogonal, 1, 1);
         map.tiles = vec![Some(9)];
         assert!(matches!(
             map.validate(),
-            Err(TilemapError::TileOutsideSheet { index: 9, .. })
+            Err(TilemapError::TileOutsidePalette { index: 9, .. })
         ));
     }
 
-    /// Cell indices run row-major across the sheet, the same way the map's own
-    /// cells do, so there is one reading order to remember rather than two.
+    /// A tile names a sprite; where that sprite is belongs to the sheet.
     #[test]
-    fn cell_rects_run_row_major_across_the_sheet() {
+    fn a_tile_names_a_sprite_from_the_palette() {
         let map = map(TileProjection::Orthogonal, 1, 1);
-        let first = map.cell_rect(0).expect("tile 0 is in a 2x2 sheet");
-        let second = map.cell_rect(1).expect("tile 1 is in a 2x2 sheet");
-        let third = map.cell_rect(2).expect("tile 2 is in a 2x2 sheet");
-        assert!(first.x() < second.x(), "tile 1 is to the right of tile 0");
-        assert!(
-            (first.y() - second.y()).abs() < f32::EPSILON,
-            "tiles 0 and 1 share a row"
+        assert_eq!(map.sprite_of(0), Some("a"));
+        assert_eq!(map.sprite_of(3), Some("d"));
+        assert_eq!(
+            map.sprite_of(9),
+            None,
+            "a tile past the palette names nothing"
         );
-        assert!(third.y() > first.y(), "tile 2 is on the next row down");
     }
 }

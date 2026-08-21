@@ -21,7 +21,7 @@ use serde::Deserialize;
 use sindri_core::{
     ComponentRegistryError, ComponentSchemaRegistry, EntityId, SceneComponent, World,
 };
-use sindri_render::{UvRect, UvRectError};
+use sindri_render::UvRectError;
 use thiserror::Error;
 
 /// A named run of sprites through the sheet.
@@ -190,8 +190,8 @@ impl SpriteAnimations {
                 },
             };
             step(&mut playback, clip, delta_seconds * animation.speed);
-            playback.sprite =
-                SpriteAnimationComponent::frame_sprite(clip, playback.frame)?.to_owned();
+            SpriteAnimationComponent::frame_sprite(clip, playback.frame)?
+                .clone_into(&mut playback.sprite);
             live.insert(entity, playback);
         }
         self.playback = live;
@@ -299,14 +299,15 @@ mod tests {
 
     fn walk() -> SpriteAnimationComponent {
         SpriteAnimationComponent {
-            sheet: SpriteSheet {
-                columns: 4,
-                rows: 2,
-            },
             clips: BTreeMap::from([(
                 "walk".to_owned(),
                 AnimationClip {
-                    frames: vec![0, 1, 2, 3],
+                    frames: vec![
+                        "0".to_owned(),
+                        "1".to_owned(),
+                        "2".to_owned(),
+                        "3".to_owned(),
+                    ],
                     seconds_per_frame: 0.1,
                     looping: true,
                 },
@@ -322,31 +323,8 @@ mod tests {
             frame: 0,
             elapsed: 0.0,
             finished: false,
-            rect: UvRect::FULL,
+            sprite: "0".to_owned(),
         }
-    }
-
-    #[test]
-    fn a_cell_is_addressed_row_by_row_from_the_top_left() {
-        let sheet = SpriteSheet {
-            columns: 4,
-            rows: 2,
-        };
-        assert_eq!(sheet.len(), 8);
-        assert_eq!(
-            sheet.cell(0).unwrap(),
-            UvRect::cell(0, 0, 4, 2).unwrap(),
-            "cell zero is the top left"
-        );
-        assert_eq!(
-            sheet.cell(4).unwrap(),
-            UvRect::cell(0, 1, 4, 2).unwrap(),
-            "and the fifth wraps onto the second row"
-        );
-        assert!(
-            matches!(sheet.cell(8), Err(AnimationError::Rect(_))),
-            "a cell past the end of the sheet is not a rect"
-        );
     }
 
     #[test]
@@ -467,12 +445,12 @@ mod tests {
     }
 
     #[test]
-    fn a_frame_reads_the_cell_its_clip_names() {
+    fn a_frame_names_the_sprite_its_clip_names() {
         let animation = SpriteAnimationComponent {
             clips: BTreeMap::from([(
                 "walk".to_owned(),
                 AnimationClip {
-                    frames: vec![5, 2],
+                    frames: vec!["lift".to_owned(), "plant".to_owned()],
                     seconds_per_frame: 0.1,
                     looping: true,
                 },
@@ -481,16 +459,16 @@ mod tests {
         };
         let (_, clip) = animation.playing_clip().unwrap().expect("walk is playing");
         assert_eq!(
-            animation.frame_rect(clip, 0).unwrap(),
-            animation.sheet.cell(5).unwrap(),
-            "a clip's frames are cells of the sheet, in the order it names them"
+            SpriteAnimationComponent::frame_sprite(clip, 0).unwrap(),
+            "lift",
+            "a clip's frames are sprites of the sheet, in the order it names them"
         );
         assert_eq!(
-            animation.frame_rect(clip, 1).unwrap(),
-            animation.sheet.cell(2).unwrap()
+            SpriteAnimationComponent::frame_sprite(clip, 1).unwrap(),
+            "plant"
         );
         assert!(matches!(
-            animation.frame_rect(clip, 2),
+            SpriteAnimationComponent::frame_sprite(clip, 2),
             Err(AnimationError::OutsideClip { .. })
         ));
     }

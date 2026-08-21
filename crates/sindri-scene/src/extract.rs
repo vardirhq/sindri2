@@ -116,8 +116,7 @@ impl SceneExtractor {
             "Tilemap",
             serde_json::json!({
                 "texture": PROCEDURAL_TEXTURES[0].reference,
-                "sheet_columns": 1,
-                "sheet_rows": 1,
+                "palette": [],
                 "columns": 1,
                 "rows": 1,
                 "tiles": [null],
@@ -377,19 +376,31 @@ impl SceneExtractor {
                         // animated sprite that names no part of its own falls
                         // back to its clip's first frame rather than to
                         // everything.
-                        animations
-                            .sprite(entity)
-                            .and_then(|name| textures.sheet_sprite(reference.texture(), name))
-                            .or_else(|| {
-                                resting
-                                    .get(&entity)
-                                    .and_then(|name| {
+                        match animations.sprite(entity) {
+                            // A playing clip decides, and if what it names does
+                            // not resolve the answer is the whole image rather
+                            // than some other frame: falling back to frame zero
+                            // would draw a plausible picture of the wrong
+                            // moment, which is the failure that hides.
+                            Some(name) => textures
+                                .sheet_sprite(reference.texture(), name)
+                                .unwrap_or(UvRect::FULL),
+                            // Nothing has ticked it yet. A sprite that names no
+                            // part of its own shows its clip's first frame,
+                            // because a sheet drawn whole is every frame at once
+                            // and that is a picture nobody meant.
+                            None => reference
+                                .sprite()
+                                .is_none()
+                                .then(|| {
+                                    resting.get(&entity).and_then(|name| {
                                         textures.sheet_sprite(reference.texture(), name)
                                     })
-                                    .filter(|_| reference.sprite().is_none())
-                            })
-                            .or_else(|| textures.sprite_rect(&reference))
-                            .unwrap_or(UvRect::FULL),
+                                })
+                                .flatten()
+                                .or_else(|| textures.sprite_rect(&reference))
+                                .unwrap_or(UvRect::FULL),
+                        },
                     ),
                 ));
         }
