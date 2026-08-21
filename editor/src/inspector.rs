@@ -122,6 +122,11 @@ pub fn applies(type_name: &str, key: &str, payload: &Value) -> bool {
         ("sindri.sprite", "anchor") => {
             payload.get("space").and_then(Value::as_str) != Some("world")
         }
+        // These are edited as one visual grid. Exposing columns and rows as
+        // independent numbers produces an invalid cell count, while drawing
+        // the compact palette and cell array as opaque JSON offers no authoring
+        // at all.
+        ("sindri.tilemap", "columns" | "rows" | "palette" | "tiles") => false,
         _ => true,
     }
 }
@@ -182,6 +187,22 @@ mod tests {
             super::applies("sindri.sprite", "texture", &world),
             "and everything that does decide something still is"
         );
+    }
+
+    #[test]
+    fn tilemap_storage_is_replaced_by_its_visual_editor() {
+        let map = json!({
+            "texture": "tiles.png",
+            "columns": 2,
+            "rows": 2,
+            "palette": ["floor"],
+            "tiles": [0, null, null, 0]
+        });
+        for key in ["columns", "rows", "palette", "tiles"] {
+            assert!(!super::applies("sindri.tilemap", key, &map));
+        }
+        assert!(super::applies("sindri.tilemap", "texture", &map));
+        assert!(super::applies("sindri.tilemap", "layer", &map));
     }
 
     #[test]

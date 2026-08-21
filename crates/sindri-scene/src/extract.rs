@@ -459,13 +459,30 @@ impl SceneExtractor {
         world: &World,
         view: CameraView,
     ) -> Result<Option<ViewCamera>, SceneExtractError> {
-        // Any aspect ratio will do: it shapes a projection, and none is
-        // returned.
+        // Any aspect ratio will do for camera controls and corner chrome. A
+        // tool that maps a viewport point back into the world asks
+        // `world_camera_for_viewport` with the actual one.
+        self.world_camera_for_viewport(world, 1.0, view)
+    }
+
+    /// Where the world camera looks, including the projection for one viewport.
+    ///
+    /// Tile painting is the first editor action that travels from a screen
+    /// point back into the world. It must invert the exact view-projection the
+    /// frame used; rebuilding one in the editor would be a second camera that
+    /// only has to disagree once for every click to land on the wrong tile.
+    pub fn world_camera_for_viewport(
+        &self,
+        world: &World,
+        aspect: f32,
+        view: CameraView,
+    ) -> Result<Option<ViewCamera>, SceneExtractError> {
         Ok(self
-            .resolve_cameras(world, 1.0, view)?
+            .resolve_cameras(world, aspect, view)?
             .world
             .map(|camera| ViewCamera {
                 view: camera.view,
+                view_projection: camera.view_projection,
                 framed_half_height: camera.framed_half_height,
             }))
     }
@@ -603,6 +620,9 @@ struct ResolvedCamera {
 pub struct ViewCamera {
     /// The matrix a frame drawn now would be seen through.
     pub view: Mat4,
+    /// The exact projection and view used for a viewport of the requested
+    /// aspect ratio. Inverting it turns a pointer into a world-space ray.
+    pub view_projection: Mat4,
     /// Half the height the camera frames at its target, in world units.
     ///
     /// This is the unit a pan is measured in — a pan of one moves the picture

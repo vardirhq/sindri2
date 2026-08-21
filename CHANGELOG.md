@@ -6,6 +6,7 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- World-space tilemap authoring in the native editor: a visual palette from the texture's sprite-sheet sidecar, overlap-preserving grid resizing, Scene-view paint and erase with projected cell feedback, editable render layers, and undoable drag strokes.
 - Initial Rust workspace with `sindri-core` and the public `sindri` facade.
 - Engine lifecycle and renderer-independent runtime host.
 - Capped fixed-step clock with pause and spiral-of-death protection.

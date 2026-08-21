@@ -7,8 +7,8 @@ use std::{
 
 use eframe::{
     egui::{
-        self, Align, Color32, FontData, FontFamily, FontId, Layout, Pos2, Rect, Response, RichText,
-        Sense, Stroke, StrokeKind, TextStyle, Vec2,
+        self, Align, Align2, Color32, FontData, FontFamily, FontId, Layout, Pos2, Rect, Response,
+        RichText, Sense, Shape, Stroke, StrokeKind, TextStyle, Vec2,
     },
     wgpu,
 };
@@ -34,7 +34,9 @@ use sindri_render::{
     FrameRenderers, FrameTarget, SpriteBatchRenderer, TexturedCubeRenderer, Viewport,
     ViewportTarget, encode_prepared_frame,
 };
-use sindri_scene::{CameraView, SceneExtractor, SpriteAnimations, ViewCamera, WorldProjection};
+use sindri_scene::{
+    CameraView, SceneExtractor, SpriteAnimations, SpriteSpace, ViewCamera, WorldProjection,
+};
 
 use crate::{
     console::{Console, Entry, Level},
@@ -46,6 +48,9 @@ use crate::{
     scene_file::{DEFAULT_SCENE_PATH, SceneFile},
     scripts::{SceneScripts, ScriptNote},
     slicer::Slicer,
+    tilemap::{
+        self, PaletteSprite, TileBrush, TilemapTool, paint as paint_tile, resize as resize_tilemap,
+    },
     textures::{SceneTextures, TextureNote},
 };
 
@@ -99,6 +104,15 @@ enum Discarding {
     Reload,
     Reset,
     Close,
+}
+
+/// One tile under the Scene-view pointer, already projected back into the
+/// viewport so input and its feedback use the same answer.
+struct TilemapHover {
+    entity: EntityId,
+    column: u32,
+    row: u32,
+    outline: [Pos2; 4],
 }
 
 impl Discarding {
@@ -399,6 +413,10 @@ struct EditorApp {
     /// user's side — "show me this" — so they share the inspector and clear
     /// each other rather than fighting over it.
     slicer: Option<Slicer>,
+    /// The tile brush and palette are editor state, not scene state. A map
+    /// stores what was painted; it does not store which brush the author last
+    /// held or whether the Scene view currently belongs to that brush.
+    tilemap_tool: TilemapTool,
     /// Which sliced images are showing their sprites.
     ///
     /// Collapsed until asked for, and not remembered across launches: which
@@ -509,6 +527,7 @@ impl EditorApp {
             search: String::new(),
             asset_search: String::new(),
             slicer: None,
+            tilemap_tool: TilemapTool::default(),
             expanded_sheets: BTreeSet::new(),
             project,
             workspace_tab: WorkspaceTab::Scene,
@@ -633,6 +652,7 @@ impl EditorApp {
                 self.world = world;
                 self.history.clear();
                 self.selection = None;
+                self.tilemap_tool.reset();
                 self.saved_revision = self.history.revision();
                 self.lifecycle = initialized_lifecycle();
                 // A cursor belongs to the world it was advanced against, and
@@ -667,6 +687,7 @@ impl EditorApp {
     /// what used to be an inert filter icon.
     fn refresh_project(&mut self) {
         self.project = ProjectTree::beside(self.file.path());
+        self.tilemap_tool.palette.invalidate();
     }
 
     /// Turns pointer input over the viewport into camera movement.
@@ -674,7 +695,13 @@ impl EditorApp {
     /// Left drag orbits, middle drag or shift-drag pans, and the wheel zooms.
     /// None of it touches the scene: the authored camera stays where it is and
     /// only the view of it moves.
-    fn move_camera(&mut self, context: &egui::Context, response: &Response, height: f32) {
+    fn move_camera(
+        &mut self,
+        context: &egui::Context,
+        response: &Response,
+        height: f32,
+        painting: bool,
+    ) {
         if response.dragged() {
             let delta = response.drag_motion();
             if response.dragged_by(egui::PointerButton::Middle)
@@ -686,7 +713,9 @@ impl EditorApp {
                 let height = height.max(1.0);
                 self.viewport_pan.x += delta.x * 2.0 / height;
                 self.viewport_pan.y -= delta.y * 2.0 / height;
-            } else if response.dragged_by(egui::PointerButton::Primary) {
+            } else if response.dragged_by(egui::PointerButton::Secondary)
+                || (!painting && response.dragged_by(egui::PointerButton::Primary))
+            {
                 self.viewport_yaw = (self.viewport_yaw + delta.x * 0.008) % TAU;
                 // Most of a right angle either way, from wherever the scene
                 // authored its camera. The extractor stops the orbit short of
@@ -705,6 +734,104 @@ impl EditorApp {
             // proportion of the distance wherever the camera is.
             self.viewport_zoom =
                 (self.viewport_zoom * (delta * 0.002).exp()).clamp(MIN_ZOOM, MAX_ZOOM);
+        }
+    }
+
+    /// Resolves the selected tilemap and pointer through the same camera used
+    /// for this frame. Screen-space maps intentionally do not take the Scene
+    /// view pointer: their cells belong to the Game viewport instead.
+    fn tilemap_hover(
+        &self,
+        rect: Rect,
+        pointer: Option<Pos2>,
+        camera: CameraView,
+    ) -> Option<TilemapHover> {
+        self.tilemap_tool.brush()?;
+        let pointer = pointer.filter(|pointer| rect.contains(*pointer))?;
+        let entity = self.selection?;
+        let data = self.world.get(entity)?;
+        let payload = data.components.get(tilemap::TYPE_NAME)?;
+        let map = tilemap::component(payload).ok()?;
+        if map.space != SpriteSpace::World {
+            return None;
+        }
+        let transform = data.transform_3d.unwrap_or_default();
+        let aspect = rect.width() / rect.height().max(1.0);
+        let camera = self
+            .scene
+            .world_camera_for_viewport(&self.world, aspect, camera)
+            .ok()
+            .flatten()?;
+        let normalized = [
+            (pointer.x - rect.min.x) / rect.width().max(1.0),
+            (pointer.y - rect.min.y) / rect.height().max(1.0),
+        ];
+        let (column, row) =
+            tilemap::tile_at_viewport(&map, transform, camera.view_projection, normalized)?;
+        let projected =
+            tilemap::tile_outline(&map, transform, camera.view_projection, column, row)?;
+        let outline = projected.map(|point| {
+            Pos2::new(
+                rect.min.x + point[0] * rect.width(),
+                rect.min.y + point[1] * rect.height(),
+            )
+        });
+        Some(TilemapHover {
+            entity,
+            column,
+            row,
+            outline,
+        })
+    }
+
+    /// Writes one cell through the command layer. Repeated calls during one
+    /// drag share a merge key, and pointer release closes that merge run.
+    fn apply_tile_brush(&mut self, hover: &TilemapHover) {
+        let Some(original) = self
+            .world
+            .get(hover.entity)
+            .and_then(|data| data.components.get(tilemap::TYPE_NAME))
+            .cloned()
+        else {
+            return;
+        };
+        let chosen = self.tilemap_tool.sprite.clone();
+        let brush = if self.tilemap_tool.erase {
+            TileBrush::Erase
+        } else if let Some(chosen) = chosen.as_deref() {
+            TileBrush::Sprite(chosen)
+        } else {
+            return;
+        };
+        let mut payload = original;
+        match paint_tile(&mut payload, hover.column, hover.row, brush) {
+            Ok(false) => return,
+            Err(error) => {
+                self.console.warning(error);
+                return;
+            }
+            Ok(true) => {}
+        }
+        if let Err(error) = self
+            .scene
+            .components()
+            .validate_payload(tilemap::TYPE_NAME, &payload)
+        {
+            self.console
+                .warning(format!("Tilemap paint was refused: {error}"));
+            return;
+        }
+        let mut buffer = CommandBuffer::new();
+        buffer.push(WorldCommand::SetComponent {
+            entity: hover.entity,
+            type_name: tilemap::TYPE_NAME.to_owned(),
+            payload,
+        });
+        let transaction = buffer
+            .into_transaction("Paint tilemap")
+            .merging(format!("tilemap:{}", hover.entity.index()));
+        if let Err(error) = self.history.apply(transaction, &mut self.world) {
+            self.report(error.to_string());
         }
     }
 
@@ -966,6 +1093,7 @@ impl EditorApp {
         }
         if self.selection != entity {
             self.history.break_merge_run();
+            self.tilemap_tool.reset();
             self.selection = entity;
         }
     }
@@ -977,6 +1105,7 @@ impl EditorApp {
         }
         self.slicer = Some(Slicer::open(path));
         self.selection = None;
+        self.tilemap_tool.reset();
     }
 
     /// The slicer, drawn on the image it is cutting.
@@ -1272,6 +1401,7 @@ impl EditorApp {
                 self.history.clear();
                 self.saved_revision = self.history.revision();
                 self.selection = None;
+                self.tilemap_tool.reset();
                 self.lifecycle = initialized_lifecycle();
                 // A cursor belongs to the world it was advanced against, and
                 // a freshly loaded world reuses entity slots from the start.
@@ -1657,15 +1787,23 @@ impl EditorApp {
                 let mut removed = None;
                 let mut added = None;
                 let addable = self.addable_components(&components);
+                let project_root = self.project.root().map(Path::to_path_buf);
                 {
                     let scripts = &self.scripts;
+                    let tilemap_tool = &mut self.tilemap_tool;
                     egui::ScrollArea::vertical().show(ui, |ui| {
                         inspector_identity(ui, icon, &mut draft);
                         reparented = inspector_parent(ui, entity, parent, &choices);
                         if let Some(transform) = &mut draft.transform_3d {
                             transform_3d_section(ui, transform);
                         }
-                        removed = components_sections(ui, &mut components, scripts);
+                        removed = components_sections(
+                            ui,
+                            &mut components,
+                            scripts,
+                            project_root.as_deref(),
+                            tilemap_tool,
+                        );
                         added = add_component_button(ui, &addable);
                     });
                 }
@@ -1989,8 +2127,9 @@ impl EditorApp {
         let context = ui.ctx().clone();
         let editing = tab == WorkspaceTab::Scene;
         let (rect, response) = ui.allocate_exact_size(ui.available_size(), Sense::drag());
+        let painting = editing && self.tilemap_tool.brush().is_some();
         if editing {
-            self.move_camera(&context, &response, rect.height());
+            self.move_camera(&context, &response, rect.height(), painting);
         }
         let scale = context.pixels_per_point();
         let camera = if editing {
@@ -1998,6 +2137,15 @@ impl EditorApp {
         } else {
             camera_for(tab, EditorCamera::default())
         };
+        let hover = editing
+            .then(|| self.tilemap_hover(rect, response.hover_pos(), camera))
+            .flatten();
+        if let Some(hover) = &hover
+            && (response.clicked_by(egui::PointerButton::Primary)
+                || response.dragged_by(egui::PointerButton::Primary))
+        {
+            self.apply_tile_brush(hover);
+        }
         let viewport = if editing {
             &mut self.scene_viewport
         } else {
@@ -2036,6 +2184,30 @@ impl EditorApp {
             Color32::WHITE,
         );
         if editing {
+            if let Some(hover) = hover {
+                let fill = if self.tilemap_tool.erase {
+                    Color32::from_rgba_unmultiplied(255, 138, 148, 35)
+                } else {
+                    Color32::from_rgba_unmultiplied(246, 169, 35, 35)
+                };
+                let stroke = Stroke::new(
+                    2.0,
+                    if self.tilemap_tool.erase {
+                        PROBLEM
+                    } else {
+                        ACCENT_BRIGHT
+                    },
+                );
+                ui.painter()
+                    .add(Shape::convex_polygon(hover.outline.to_vec(), fill, stroke));
+                ui.painter().text(
+                    hover.outline[0],
+                    Align2::LEFT_BOTTOM,
+                    format!("{}, {}", hover.column, hover.row),
+                    FontId::proportional(10.0),
+                    TEXT,
+                );
+            }
             // The same view the frame under it was drawn through, asked for
             // rather than re-derived, so the axes cannot drift from the picture.
             let axes = self
@@ -2662,6 +2834,8 @@ fn components_sections(
     ui: &mut egui::Ui,
     components: &mut BTreeMap<String, Value>,
     scripts: &SceneScripts,
+    project_root: Option<&Path>,
+    tilemap_tool: &mut TilemapTool,
 ) -> Option<String> {
     let mut removed = None;
     for (name, payload) in components.iter_mut() {
@@ -2704,9 +2878,217 @@ fn components_sections(
         if name == "sindri.script" {
             script_exports_section(ui, payload, scripts);
         }
+        if name == tilemap::TYPE_NAME {
+            tilemap_section(ui, payload, project_root, tilemap_tool);
+        }
         object_rows(ui, name, payload, name == "sindri.script");
     }
     removed
+}
+
+/// The part of a tilemap that cannot be represented as independent JSON rows:
+/// its dimensions, compact palette, and the brush that writes its cell array.
+fn tilemap_section(
+    ui: &mut egui::Ui,
+    payload: &mut Value,
+    project_root: Option<&Path>,
+    tool: &mut TilemapTool,
+) {
+    let Ok(mut map) = tilemap::component(payload) else {
+        ui.horizontal_wrapped(|ui| {
+            ui.add_space(10.0);
+            ui.label(
+                RichText::new("This tilemap cannot be read; repair its stored fields first")
+                    .size(10.0)
+                    .color(PROBLEM),
+            );
+        });
+        return;
+    };
+
+    section_header(ui, ICON_GRID_VIEW, "Map");
+    let mut columns = f64::from(map.columns);
+    let mut rows = f64::from(map.rows);
+    let mut resized = number_row(ui, "Columns", &mut columns, 10.0, true);
+    resized |= number_row(ui, "Rows", &mut rows, 10.0, true);
+    if resized
+        && let Err(error) = resize_tilemap(payload, grid_side(columns), grid_side(rows))
+    {
+        ui.horizontal_wrapped(|ui| {
+            ui.add_space(10.0);
+            ui.label(RichText::new(error).size(10.0).color(PROBLEM));
+        });
+    }
+    // The resize above changes the payload this frame. Read it again so the
+    // palette and the cell count below describe what the command will write.
+    if let Ok(resized) = tilemap::component(payload) {
+        map = resized;
+    }
+
+    let world_space = map.space == SpriteSpace::World;
+    if !world_space {
+        tool.enabled = false;
+    }
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        let label = if tool.enabled {
+            "Painting in Scene view"
+        } else {
+            "Paint in Scene view"
+        };
+        if ui
+            .add_enabled_ui(world_space, |ui| ui.selectable_label(tool.enabled, label))
+            .inner
+            .clicked()
+        {
+            tool.enabled = !tool.enabled;
+        }
+    });
+    ui.horizontal_wrapped(|ui| {
+        ui.add_space(10.0);
+        ui.label(
+            RichText::new(if !world_space {
+                "Scene painting supports world-space tilemaps; switch Space to world first."
+            } else if tool.enabled {
+                "Primary drag paints. Middle or Shift-drag pans; secondary drag orbits."
+            } else {
+                "Enable painting, then choose a sprite or the eraser."
+            })
+            .size(9.0)
+            .color(if world_space { TEXT_MUTED } else { PROBLEM }),
+        );
+    });
+
+    tool.palette.ensure(project_root, &map.texture);
+    let texture = tool.palette.texture_id(ui.ctx());
+    let mut sprites = tool.palette.sprites().to_vec();
+    // A broken or changed sheet must not make a sprite already used by the map
+    // impossible to select and replace. It stays visible as a named fallback,
+    // without a thumbnail that would pretend it still resolves.
+    for name in &map.palette {
+        if !sprites.iter().any(|sprite| sprite.name == *name) {
+            sprites.push(PaletteSprite {
+                name: name.clone(),
+                rect: None,
+            });
+        }
+    }
+    if !tool.erase
+        && tool
+            .sprite
+            .as_ref()
+            .is_none_or(|chosen| !sprites.iter().any(|sprite| sprite.name == *chosen))
+    {
+        tool.sprite = sprites.first().map(|sprite| sprite.name.clone());
+    }
+
+    section_header(ui, ICON_IMAGE, "Palette");
+    tile_palette(ui, texture, &sprites, tool);
+    if let Some(problem) = tool.palette.problem() {
+        ui.horizontal_wrapped(|ui| {
+            ui.add_space(10.0);
+            ui.label(RichText::new(problem).size(9.0).color(PROBLEM));
+        });
+    }
+}
+
+fn tile_palette(
+    ui: &mut egui::Ui,
+    texture: Option<egui::TextureId>,
+    sprites: &[PaletteSprite],
+    tool: &mut TilemapTool,
+) {
+    ui.horizontal_wrapped(|ui| {
+        ui.add_space(8.0);
+        if palette_cell(ui, None, None, tool.erase) {
+            tool.erase = true;
+        }
+        for sprite in sprites {
+            let selected = !tool.erase && tool.sprite.as_deref() == Some(sprite.name.as_str());
+            if palette_cell(ui, Some(sprite), texture, selected) {
+                tool.erase = false;
+                tool.sprite = Some(sprite.name.clone());
+            }
+        }
+    });
+    if sprites.is_empty() {
+        ui.horizontal_wrapped(|ui| {
+            ui.add_space(10.0);
+            ui.label(
+                RichText::new("Slice and name the map's texture to populate this palette.")
+                    .size(9.0)
+                    .color(TEXT_MUTED),
+            );
+        });
+    }
+}
+
+/// One compact palette swatch. Drawn directly so a named slice can preview a
+/// UV rectangle without creating one egui texture per sprite.
+fn palette_cell(
+    ui: &mut egui::Ui,
+    sprite: Option<&PaletteSprite>,
+    texture: Option<egui::TextureId>,
+    selected: bool,
+) -> bool {
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(72.0, 72.0), Sense::click());
+    let painter = ui.painter_at(rect);
+    let border = if selected {
+        ACCENT_BRIGHT
+    } else if response.hovered() {
+        TEXT_MUTED
+    } else {
+        BORDER
+    };
+    painter.rect_filled(rect, 4.0, if selected { ACCENT_SOFT } else { FIELD_BG });
+    painter.rect_stroke(
+        rect,
+        4.0,
+        Stroke::new(if selected { 2.0 } else { 1.0 }, border),
+        StrokeKind::Inside,
+    );
+    let preview = Rect::from_min_max(
+        rect.min + Vec2::new(7.0, 6.0),
+        Pos2::new(rect.max.x - 7.0, rect.max.y - 20.0),
+    );
+    match (sprite, texture) {
+        (Some(sprite), Some(texture)) if sprite.rect.is_some() => {
+            let [x, y, width, height] = sprite.rect.expect("checked above");
+            painter.image(
+                texture,
+                preview,
+                Rect::from_min_size(Pos2::new(x, y), Vec2::new(width, height)),
+                Color32::WHITE,
+            );
+        }
+        (Some(_), _) => {
+            painter.rect_stroke(
+                preview,
+                2.0,
+                Stroke::new(1.0, BORDER_SUBTLE),
+                StrokeKind::Inside,
+            );
+        }
+        (None, _) => {
+            painter.line_segment(
+                [preview.left_top(), preview.right_bottom()],
+                Stroke::new(2.0, PROBLEM),
+            );
+            painter.line_segment(
+                [preview.right_top(), preview.left_bottom()],
+                Stroke::new(2.0, PROBLEM),
+            );
+        }
+    }
+    let label = sprite.map_or("Erase", |sprite| sprite.name.as_str());
+    painter.text(
+        Pos2::new(rect.center().x, rect.max.y - 12.0),
+        Align2::CENTER_CENTER,
+        label,
+        FontId::proportional(9.0),
+        if selected { TEXT } else { TEXT_MUTED },
+    );
+    response.on_hover_text(label).clicked()
 }
 
 /// The rows of one payload, indented under its heading.

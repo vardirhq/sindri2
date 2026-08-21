@@ -32,5 +32,8 @@ pub mod scripts;
 /// Slicing an image into named sprites, on the image.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod slicer;
+/// Painting a tilemap from a sliced image through undoable component edits.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod tilemap;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod textures;

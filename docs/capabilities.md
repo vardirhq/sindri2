@@ -165,8 +165,17 @@ behind it. Columns and rows lay out orthogonally or isometrically, and placing a
 tile and finding the tile under a point are inverses on every cell of both. What
 it buys is authoring rather than speed — the same floor already batched into one
 draw — and the companion game measures it: 68 entities to 20, 45KB of scene to
-12KB. What is missing is authoring: a map is typed into the scene file by hand,
-because the editor has no tile palette yet.
+12KB.
+
+**World-space tilemaps can be authored in the editor.** Selecting one shows the
+slices from its texture's sheet as a visual palette, lets its grid be resized
+while preserving the overlap, and turns primary drag in the Scene view into an
+undoable paint or erase stroke. The hovered cell is found by inverting the exact
+camera matrix used to render that viewport, so an orthographic or isometric map
+does not need separate picking approximations. The ordinary component fields
+still edit projection, tile size, tint, render layer, and space. Screen-space
+tilemaps render and remain editable as data, but direct painting is deliberately
+limited to world space until the Game view has an authoring-input contract.
 
 An animated sprite whose reference names no part of its sheet draws the first
 frame of the clip it is playing rather than the whole sheet, so a scene shows a
