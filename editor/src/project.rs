@@ -287,6 +287,20 @@ impl ProjectTree {
         &self.entries
     }
 
+    /// Project-relative references to every font the browser can see.
+    ///
+    /// A scene stores logical asset IDs rather than absolute paths, so the
+    /// inspector must offer the same spelling the asset loader resolves. The
+    /// browser has already done the bounded directory walk; reusing it keeps a
+    /// font picker from walking the project again every frame.
+    pub fn fonts(&self) -> Vec<String> {
+        self.entries
+            .iter()
+            .filter(|entry| entry.kind == AssetKind::Font)
+            .map(|entry| entry.relative.replace('\\', "/"))
+            .collect()
+    }
+
     /// Whether the walk stopped before it ran out of directory.
     pub const fn truncated(&self) -> bool {
         self.truncated
@@ -344,6 +358,8 @@ mod tests {
         fs::create_dir(root.join("scripts")).unwrap();
         fs::write(root.join("scripts/scene.rs"), "").unwrap();
         fs::write(root.join("scripts/spin.decay"), "").unwrap();
+        fs::create_dir(root.join("fonts")).unwrap();
+        fs::write(root.join("fonts/Inter.ttf"), "").unwrap();
         directory
     }
 
@@ -362,6 +378,8 @@ mod tests {
             names(&tree.matching("")),
             [
                 "demo.scene.json",
+                "fonts",
+                "Inter.ttf",
                 "scripts",
                 "scene.rs",
                 "spin.decay",
@@ -422,7 +440,16 @@ mod tests {
         // The engine's own language, which the browser listed as a plain file
         // until it was named here.
         assert_eq!(kind("spin.decay"), Some(AssetKind::Script));
+        assert_eq!(kind("Inter.ttf"), Some(AssetKind::Font));
         assert_eq!(kind("textures"), Some(AssetKind::Folder));
+    }
+
+    #[test]
+    fn fonts_are_project_relative_asset_references() {
+        let directory = project();
+        let tree = ProjectTree::rooted(directory.path());
+
+        assert_eq!(tree.fonts(), ["fonts/Inter.ttf"]);
     }
 
     /// A detached scene has no directory to show, and says so rather than

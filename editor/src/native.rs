@@ -55,6 +55,7 @@ use crate::{
 };
 
 const INTER_FONT: &[u8] = include_bytes!("../assets/Inter.ttf");
+const TEXT_COMPONENT: &str = "sindri.text";
 const ACCENT: Color32 = Color32::from_rgb(246, 169, 35);
 /// What a panel says something is wrong in, matching the console's errors.
 const PROBLEM: Color32 = Color32::from_rgb(255, 138, 148);
@@ -1291,8 +1292,12 @@ impl EditorApp {
     /// offered and refused: a button that adds a component the engine will
     /// then reject is worse than no button, which is why the old Add Component
     /// was removed instead of left drawn.
-    fn addable_components(&self, present: &BTreeMap<String, Value>) -> Vec<ComponentMetadata> {
-        addable_components(self.scene.components(), present)
+    fn addable_components(
+        &self,
+        present: &BTreeMap<String, Value>,
+        first_font: Option<&str>,
+    ) -> Vec<ComponentMetadata> {
+        addable_components(self.scene.components(), present, first_font)
     }
 
     /// Turns every changed component payload into a command.
@@ -1326,8 +1331,8 @@ impl EditorApp {
     }
 
     /// Adds a component with the payload its schema says a fresh one starts as.
-    fn add_component(&mut self, entity: EntityId, type_name: &str) {
-        let Some(payload) = self.scene.components().default_payload(type_name).cloned() else {
+    fn add_component(&mut self, entity: EntityId, type_name: &str, first_font: Option<&str>) {
+        let Some(payload) = component_default(self.scene.components(), type_name, first_font) else {
             return;
         };
         let mut buffer = CommandBuffer::new();
@@ -1794,7 +1799,9 @@ impl EditorApp {
                 let mut reparented = ParentChoice::Unchanged;
                 let mut removed = None;
                 let mut added = None;
-                let addable = self.addable_components(&components);
+                let fonts = self.project.fonts();
+                let first_font = fonts.first().map(String::as_str);
+                let addable = self.addable_components(&components, first_font);
                 let project_root = self.project.root().map(Path::to_path_buf);
                 {
                     let scripts = &self.scripts;
@@ -1810,6 +1817,7 @@ impl EditorApp {
                             &mut components,
                             scripts,
                             project_root.as_deref(),
+                            &fonts,
                             tilemap_tool,
                         );
                         added = add_component_button(ui, &addable);
@@ -1821,7 +1829,7 @@ impl EditorApp {
                     self.remove_component(entity, &type_name);
                 }
                 if let Some(type_name) = added {
-                    self.add_component(entity, &type_name);
+                    self.add_component(entity, &type_name, first_font);
                 }
                 match reparented {
                     ParentChoice::Unchanged => {}
@@ -2845,6 +2853,7 @@ fn components_sections(
     components: &mut BTreeMap<String, Value>,
     scripts: &SceneScripts,
     project_root: Option<&Path>,
+    fonts: &[String],
     tilemap_tool: &mut TilemapTool,
 ) -> Option<String> {
     let mut removed = None;
@@ -2854,6 +2863,8 @@ fn components_sections(
             "sindri.sprite" => ICON_IMAGE,
             "sindri.mesh" => ICON_VIEW_IN_AR,
             "sindri.script" => ICON_CODE,
+            "sindri.text" => ICON_LABEL,
+            "sindri.tilemap" => ICON_GRID_VIEW,
             _ => ICON_DEPLOYED_CODE,
         };
         ui.add_space(4.0);
@@ -2888,12 +2899,89 @@ fn components_sections(
         if name == "sindri.script" {
             script_exports_section(ui, payload, scripts);
         }
+        if name == TEXT_COMPONENT {
+            text_section(ui, payload, fonts);
+        }
         if name == tilemap::TYPE_NAME {
             tilemap_section(ui, payload, project_root, tilemap_tool);
         }
         object_rows(ui, name, payload, name == "sindri.script");
     }
     removed
+}
+
+/// The two text fields whose meaning is richer than their JSON shape.
+///
+/// Content is multiline gameplay/UI copy, and a font is a project-owned asset
+/// reference. Leaving either as an ordinary one-line string technically edits
+/// the payload but makes the editor less useful than editing JSON by hand.
+fn text_section(ui: &mut egui::Ui, payload: &mut Value, fonts: &[String]) {
+    let mut content = payload
+        .get("text")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned();
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.label(RichText::new("Text").size(11.0).color(TEXT_MUTED));
+    });
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        let width = (ui.available_width() - 7.0).max(120.0);
+        if ui
+            .add_sized(
+                [width, 76.0],
+                egui::TextEdit::multiline(&mut content)
+                    .desired_rows(3)
+                    .hint_text("Text shown in the game"),
+            )
+            .changed()
+        {
+            payload["text"] = Value::String(content);
+        }
+    });
+
+    let current = payload
+        .get("font")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned();
+    let mut chosen = current.clone();
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.label(RichText::new("Font").size(11.0).color(TEXT_MUTED));
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.add_space(7.0);
+            egui::ComboBox::from_id_salt("text-font-asset")
+                .selected_text(if chosen.is_empty() {
+                    "Choose a font"
+                } else {
+                    chosen.as_str()
+                })
+                .width(190.0)
+                .show_ui(ui, |ui| {
+                    for font in fonts {
+                        ui.selectable_value(&mut chosen, font.clone(), font);
+                    }
+                });
+        });
+    });
+    if chosen != current {
+        payload["font"] = Value::String(chosen.clone());
+    }
+
+    let missing = fonts.is_empty() || chosen.is_empty() || !fonts.contains(&chosen);
+    if missing {
+        ui.horizontal_wrapped(|ui| {
+            ui.add_space(10.0);
+            let message = if fonts.is_empty() {
+                "Add an OpenType font to the project before adding text."
+            } else {
+                "The selected font is not present in this project."
+            };
+            ui.label(RichText::new(message).size(9.0).color(PROBLEM));
+        });
+    }
 }
 
 /// The part of a tilemap that cannot be represented as independent JSON rows:
@@ -4237,13 +4325,37 @@ fn component_commands(
 fn addable_components(
     components: &ComponentSchemaRegistry,
     present: &BTreeMap<String, Value>,
+    first_font: Option<&str>,
 ) -> Vec<ComponentMetadata> {
     components
         .registered_components()
         .filter(|metadata| !present.contains_key(&metadata.type_name))
-        .filter(|metadata| components.default_payload(&metadata.type_name).is_some())
+        .filter(|metadata| {
+            component_default(components, &metadata.type_name, first_font).is_some()
+        })
         .cloned()
         .collect()
+}
+
+/// What Add Component writes for a fresh component.
+///
+/// Built-ins normally own a fixed default in the registry. Text cannot: a
+/// reproducible font must come from the project, so its default is completed
+/// at the editor boundary with the first project font the browser found.
+fn component_default(
+    components: &ComponentSchemaRegistry,
+    type_name: &str,
+    first_font: Option<&str>,
+) -> Option<Value> {
+    if type_name == TEXT_COMPONENT {
+        return first_font.map(|font| {
+            serde_json::json!({
+                "text": "Text",
+                "font": font
+            })
+        });
+    }
+    components.default_payload(type_name).cloned()
 }
 
 fn draft_commands(entity: EntityId, original: &EntityDraft, draft: &EntityDraft) -> CommandBuffer {
@@ -4728,7 +4840,8 @@ mod tests {
         let present: BTreeMap<String, Value> = [("sindri.mesh".to_owned(), serde_json::json!({}))]
             .into_iter()
             .collect();
-        let offered: Vec<String> = addable_components(extractor.components(), &present)
+        let offered: Vec<String> =
+            addable_components(extractor.components(), &present, Some("fonts/Inter.ttf"))
             .into_iter()
             .map(|metadata| metadata.type_name)
             .collect();
@@ -4738,6 +4851,7 @@ mod tests {
             "not one it already has"
         );
         assert!(offered.contains(&"sindri.sprite".to_owned()));
+        assert!(offered.contains(&TEXT_COMPONENT.to_owned()));
         assert!(
             !offered.contains(&"sindri.sprite_animation".to_owned()),
             "and not one with no sensible blank, which the engine would refuse"
@@ -4750,12 +4864,19 @@ mod tests {
     fn every_offered_default_is_one_the_engine_accepts() {
         let extractor = extractor();
         let components = extractor.components();
-        for metadata in addable_components(components, &BTreeMap::new()) {
-            let payload = components
-                .default_payload(&metadata.type_name)
+        for metadata in addable_components(
+            components,
+            &BTreeMap::new(),
+            Some("fonts/Inter.ttf"),
+        ) {
+            let payload = component_default(
+                components,
+                &metadata.type_name,
+                Some("fonts/Inter.ttf"),
+            )
                 .expect("it was offered, so it has one");
             components
-                .validate_payload(&metadata.type_name, payload)
+                .validate_payload(&metadata.type_name, &payload)
                 .unwrap_or_else(|error| {
                     panic!(
                         "the default for {} does not decode: {error}",
@@ -4763,6 +4884,29 @@ mod tests {
                     )
                 });
         }
+    }
+
+    #[test]
+    fn text_is_addable_only_when_the_project_has_a_font() {
+        let extractor = extractor();
+        let components = extractor.components();
+        let present = BTreeMap::new();
+
+        assert!(
+            !addable_components(components, &present, None)
+                .iter()
+                .any(|metadata| metadata.type_name == TEXT_COMPONENT)
+        );
+
+        let payload = component_default(
+            components,
+            TEXT_COMPONENT,
+            Some("fonts/Inter.ttf"),
+        )
+        .expect("a project font completes a valid text component");
+        assert_eq!(payload["font"], "fonts/Inter.ttf");
+        assert_eq!(payload["text"], "Text");
+        components.validate_payload(TEXT_COMPONENT, &payload).unwrap();
     }
 
     #[test]

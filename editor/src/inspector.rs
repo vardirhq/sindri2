@@ -127,6 +127,10 @@ pub fn applies(type_name: &str, key: &str, payload: &Value) -> bool {
         // the compact palette and cell array as opaque JSON offers no authoring
         // at all.
         ("sindri.tilemap", "columns" | "rows" | "palette" | "tiles") => false,
+        // Text content needs a multiline field and a font is a project asset,
+        // not an arbitrary string. Both are drawn by the text authoring panel
+        // instead of the generic JSON rows below it.
+        ("sindri.text", "text" | "font") => false,
         _ => true,
     }
 }
@@ -203,6 +207,14 @@ mod tests {
         }
         assert!(super::applies("sindri.tilemap", "texture", &map));
         assert!(super::applies("sindri.tilemap", "layer", &map));
+    }
+
+    #[test]
+    fn text_content_and_font_use_their_authoring_controls() {
+        let text = json!({ "text": "Gather\nthe light", "font": "fonts/Inter.ttf" });
+        assert!(!super::applies("sindri.text", "text", &text));
+        assert!(!super::applies("sindri.text", "font", &text));
+        assert!(super::applies("sindri.text", "font_size", &text));
     }
 
     #[test]

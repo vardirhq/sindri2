@@ -6,6 +6,7 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- Text authoring in the native editor: add `sindri.text` when a project font exists, edit multiline content, and choose among project-owned font assets without hand-editing scene JSON.
 - Screen-space `sindri.text` rendering through Glyphon, with anchored/layered frame extraction, validated project font assets shared by native and browser hosts, editor loading and hot reload, and a real Inter-rendered title in Gather.
 - GitHub Pages delivery for the WebAssembly/WebGPU Gather build from `main`.
 - World-space tilemap authoring in the native editor: a visual palette from the texture's sprite-sheet sidecar, overlap-preserving grid resizing, Scene-view paint and erase with projected cell feedback, editable render layers, and undoable drag strokes.

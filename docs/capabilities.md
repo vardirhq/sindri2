@@ -308,7 +308,12 @@ frame.
   again
 - **Adding and removing components.** Add Component offers what the entity lacks
   and the registry can create, which excludes a type with no sensible blank
-  rather than offering one the engine would reject. Both are undoable
+  rather than offering one the engine would reject. Text is the deliberate
+  exception completed at the editor boundary: when the project contains a font,
+  adding Text uses that asset for a valid visible default. Both are undoable
+- **Text authoring.** A `sindri.text` component gets a multiline content editor
+  and a picker listing project-relative font assets. Existing missing font
+  references remain visible and are called out instead of silently replaced
 - **A script's `@export` properties in the inspector**, drawn from what the
   script declared: the field's name, its type, and its default, without running
   anything. A field the scene has not set shows its default and says so, and
@@ -397,7 +402,7 @@ collapsed and overflowed nothing; and the settings gear.
   palette of named sprites from a sheet, but tile semantics such as terrain,
   collision, and reusable tile metadata do not exist
 - Text is currently screen-space only; world labels, wrapping/alignment
-  controls, rich spans, and a first-class editor font picker remain
+  controls, and rich spans remain
 - **One mesh primitive: `Cube`.** No quad, sphere, or glTF import
 - **No audio.** Now scheduled in `ROADMAP.md`; it previously had no item at all
 - No physics or collision. This one is a deliberate gap rather than a missing
@@ -583,5 +588,5 @@ every sprite batch after the first drew with the last batch's camera. See
   scene, scripts, sheets, textures, and font
 - No restart without relaunching, no menu, no pause
 - The floor is one `sindri.tilemap`; a visual palette now authors it in the
-  Scene view. Animation clips and the title's font reference are still authored
-  through component data rather than dedicated editor controls
+  Scene view. Animation clips are still authored through component data rather
+  than dedicated editor controls
