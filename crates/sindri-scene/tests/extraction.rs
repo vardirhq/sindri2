@@ -824,7 +824,9 @@ fn sprites_batch_per_texture_within_a_layer() {
             FrameCommand::SpriteBatch {
                 texture, instances, ..
             } => (*texture, instances.len()),
-            FrameCommand::TexturedCube { .. } => panic!("expected sprite batches"),
+            FrameCommand::TexturedCube { .. } | FrameCommand::Text { .. } => {
+                panic!("expected sprite batches")
+            }
         })
         .collect();
     assert_eq!(batches, [(TextureId::new(1), 2), (TextureId::new(2), 1)]);

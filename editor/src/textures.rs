@@ -164,6 +164,46 @@ impl SceneTextures {
         &self.bindings
     }
 
+    fn request_fonts(
+        &mut self,
+        world: &World,
+        renderer: &mut TextRenderer,
+    ) -> (BTreeSet<AssetId>, Vec<TextureNote>) {
+        let references = referenced_fonts(world);
+        let wanted: BTreeSet<AssetId> = references
+            .iter()
+            .filter_map(|reference| AssetId::new(reference.clone()).ok())
+            .collect();
+        let mut notes = Vec::new();
+        let Some(fonts) = &mut self.fonts else {
+            for reference in references {
+                notes.push(TextureNote::Failed(format!(
+                    "{reference}: the scene has no directory to load fonts from"
+                )));
+            }
+            return (wanted, notes);
+        };
+        for released in fonts.retain(&wanted) {
+            renderer.unbind_font(released.as_str());
+        }
+        for id in &wanted {
+            if renderer.has_font(id.as_str()) {
+                continue;
+            }
+            if let Err(error) = fonts.request(id.clone()) {
+                notes.push(TextureNote::Failed(format!("{id}: {error}")));
+            }
+        }
+        for reference in references {
+            if AssetId::new(reference.clone()).is_err() {
+                notes.push(TextureNote::Failed(format!(
+                    "{reference}: not a loadable font asset reference"
+                )));
+            }
+        }
+        (wanted, notes)
+    }
+
     /// Asks for every texture the world draws with, and lets go of the rest.
     ///
     /// Called when the scene opens and again whenever an edit could have changed
@@ -172,37 +212,12 @@ impl SceneTextures {
     /// costs nothing: the loader coalesces, which is what makes calling this on
     /// a whole world cheap.
     pub fn request(&mut self, world: &World, text: &mut TextRenderer) -> Vec<TextureNote> {
-        let mut notes = Vec::new();
+        let (wanted_fonts, mut notes) = self.request_fonts(world, text);
         let referenced = referenced_textures(world);
         let wanted: BTreeSet<AssetId> = referenced
             .iter()
             .filter_map(|reference| AssetId::new(reference.clone()).ok())
             .collect();
-        let font_references = referenced_fonts(world);
-        let wanted_fonts: BTreeSet<AssetId> = font_references
-            .iter()
-            .filter_map(|reference| AssetId::new(reference.clone()).ok())
-            .collect();
-        if let Some(fonts) = &mut self.fonts {
-            for released in fonts.retain(&wanted_fonts) {
-                text.unbind_font(released.as_str());
-            }
-            for id in &wanted_fonts {
-                if text.has_font(id.as_str()) {
-                    continue;
-                }
-                if let Err(error) = fonts.request(id.clone()) {
-                    notes.push(TextureNote::Failed(format!("{id}: {error}")));
-                }
-            }
-        } else {
-            for reference in font_references {
-                notes.push(TextureNote::Failed(format!(
-                    "{reference}: the scene has no directory to load fonts from"
-                )));
-            }
-        }
-
         let Self {
             loader: Some(loader),
             watch,
