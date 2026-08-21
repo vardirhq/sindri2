@@ -103,6 +103,28 @@ the format change rather than a loss: a sort key that disagreed with where the
 sprite actually was is what this version stops allowing. Moving a sprite would
 be the one thing a migration must never do quietly, so the migration does not.
 
+### Version 4
+
+How a sheet is cut moves out of the components that draw it and beside the image
+itself. `sindri.sprite` loses `uv_rect` and gains a fragment on its texture
+reference — `textures/tiles.png#floor`; `sindri.sprite_animation` loses `sheet`
+and its clips list sprite names rather than cell numbers; `sindri.tilemap` loses
+`sheet_columns` and `sheet_rows` and gains a `palette` of names its cells index.
+
+The migration recovers a sprite's cell without being told the grid. A rect of
+width `w` is one of `1/w` columns and its `x` says which, so a rect that is a
+whole cell of a uniform grid becomes `#n` mechanically. Every rect any scene here
+carried was such a cell, because a rect was added for sheets in the first place.
+One that is *not* a whole cell has no name in format 4 and cannot be given one
+without a sheet to name it in, so it **stops the migration** with a message
+saying so rather than quietly changing the picture.
+
+What a migration cannot do is write files beside the textures, because it is
+handed a document and not a project. So it emits the names a default slice
+produces — cell `n` is called `"n"` — and a migrated scene needs a sheet
+declaring the grid it used to carry. The grid to declare is the one being
+removed, which is why the removal is where it is written down.
+
 A version increase requires a registered `SceneMigrator` step **before** the new
 version is written anywhere. The migrator enforces the properties that keep a
 chain honest — forward-only, one step per source version, no step targeting an

@@ -90,27 +90,84 @@ without anybody remembering a rule. The table is shared rather than copied per h
 capture verifies these exact colours in a rendered image and the editor draws the same scene; two
 hosts choosing their own navy would be a difference nothing catches until a screenshot looks wrong.
 
-## Texture rects
+## Sliced images
 
-A sprite draws part of a texture rather than all of one. `uv_rect` is `[x, y, width, height]` in
-normalized texture coordinates, defaulting to the whole image, which is what every sprite drew before
-the field existed — so no scene changes meaning by gaining it.
+A sprite draws part of a texture rather than all of one, and **which part is the image's business
+rather than the sprite's**. A scene writes `textures/tiles.png#floor`; a sheet document beside the
+image says where `floor` is.
 
-Normalized rather than pixels, and that is the load-bearing choice. A sheet sliced into a grid has
-cells `1 / columns` wide wherever the sheet's resolution lands, so a normalized rect survives an
-artist doubling the sheet and a pixel rect does not; and nothing between the scene and the shader has
-to know a texture's dimensions. `UvRect::cell(column, row, columns, rows)` is that slice, and divides
-in `f64` before narrowing once, so the last column of a sheet that does not divide evenly in binary
-still ends on the edge rather than a hair past it.
+It was not always so, and the shape it replaced is the argument for it. Three components each said
+how one sheet was divided — a sprite carried a raw rect, an animation carried a grid and cell
+numbers, a tilemap carried a second grid and more cell numbers. Point two of them at one image and
+each declared its layout separately, with nothing making the two agree. That is the duplication
+`CLAUDE.md` warns about: two agreeing choices where one shared answer belongs.
 
-`UvRect` is constructed checked, because the ways to get this wrong are quiet: a zero-width rect
-samples one column of texels down the whole sprite, and one reaching past the edge samples whatever
-the sampler's addressing mode decides — a different picture on a different clamp mode rather than an
-error. `SpriteComponent::uv_rect()` returns the checked rect, and extraction propagates
-`SceneExtractError::UvRect` rather than drawing something plausible.
+```json
+{
+  "format_version": 1,
+  "grid": { "columns": 2, "rows": 1, "names": ["light", "dark"] }
+}
+```
 
-The rect rides on the instance, not on the pipeline, so every frame of one sheet stays in a single
+**The sheet's ID is derived, not declared.** `textures/tiles.png` is sliced by
+`textures/tiles.sheet.json`. A scene naming its sheets would be a fourth place that can disagree, so
+no scene does; `sheet_id_for` is the one rule, and both the editor looking on disk and a game
+shipping bytes use it.
+
+**A grid generates names rather than sitting beside rects it agrees with.** Storing both the grid and
+the cell rects it produces would be the same duplication one level down. A cell nobody named is
+called by its own index — `#3` is a worse name than `#idle` and a much better one than nothing — so a
+sheet that has been sliced but not named is still usable. Parts that are not on the grid are named
+explicitly in `sprites`, and a name used twice is an error rather than a race.
+
+**Names, not numbers**, everywhere a scene refers to a part: a name survives a re-slice that moves
+the cell, and an index does not. That is what the whole arrangement buys.
+
+### The fragment
+
+`textures/tiles.png#floor` splits into a path and a name. `#` is a *rejected* character inside an
+`AssetId`, and that is the argument for using it here rather than against — it is reserved precisely
+so a fragment cannot leak into a path that becomes a URL. Splitting it off at the boundary, exactly
+as a URL does, leaves the asset ID a pure path and nothing that resolves an asset ever sees the
+fragment.
+
+`SpriteRef` holds the raw reference rather than an `AssetId`, because not every texture is a file:
+`procedural:checkerboard` is generated, and the colon that makes it unparseable as an asset ID is
+what marks it as generated. `SpriteRef::asset` produces an ID where one is genuinely needed.
+
+### Rects are still normalized and still checked
+
+`UvRect` is what a sheet's authored numbers become, and it is constructed checked, because the ways
+to get this wrong are quiet: a zero-width rect samples one column of texels down the whole sprite,
+and one reaching past the edge samples whatever the sampler's addressing mode decides — a different
+picture on a different clamp mode rather than an error. Checking happens once, in
+`TextureBindings::bind_sheet`, rather than everywhere a rect is used.
+
+Normalized rather than pixels remains the load-bearing choice. A sheet sliced into a grid has cells
+`1 / columns` wide wherever the sheet's resolution lands, so a normalized rect survives an artist
+doubling the sheet and a pixel rect does not; and nothing between the scene and the shader has to
+know a texture's dimensions. The division happens in `f64` and narrows once, so the last column of a
+sheet that does not divide evenly in binary still ends on the edge rather than a hair past it.
+
+The rect rides on the instance, not on the pipeline, so every part of one sheet stays in a single
 batch: a sprite sheet is one texture, one draw call, and as many rects as there are sprites.
+
+### When a name resolves to nothing
+
+A sprite naming a part no loaded sheet places draws the **whole image** and is reported by
+`unresolved_sprites`. The same rule an unbound texture has always followed: the frame still draws, so
+the failure has to be *said*, or the only clue would be a picture that is subtly the wrong part of an
+image.
+
+A *playing clip* decides outright — what it names, or the whole image. It deliberately does not fall
+back to the clip's first frame, which would draw a plausible picture of the wrong moment, and that is
+the failure that hides rather than the one that shows.
+
+**An animated sprite needs its sheet even though its own reference names no part of one.** Which part
+it draws is its clip's business and changes every few frames, so its `texture` carries no fragment —
+and a host asking for sheets by looking at fragments alone never asks for its sheet. It then resolves
+its whole texture, which is every frame at once. `referenced_sheets` handles this case explicitly and
+a test holds it, because nothing about the sprite's own reference says it is needed.
 
 ## Tilemaps
 
@@ -126,7 +183,7 @@ find the player, to a list that fits on one screen.
 ```json
 "sindri.tilemap": {
   "texture": "textures/tiles.png",
-  "sheet_columns": 2, "sheet_rows": 1,
+  "palette": ["light", "dark"],
   "columns": 7, "rows": 7,
   "tile_size": [1.1, 0.55],
   "projection": "isometric",
@@ -135,15 +192,19 @@ find the player, to a list that fits on one screen.
 }
 ```
 
-`tiles` holds `columns * rows` cells, row-major from the top-left — the same order and origin the
-sheet's own cells are indexed in, so there is one reading order to remember rather than two. An
-empty cell is `null` and not a sentinel index, because every index is a real tile: reserving `0` or
-`-1` to mean "empty" is how a map ends up with an accidental floor in the corner nobody authored.
+`tiles` holds `columns * rows` cells, row-major from the top-left. An empty cell is `null` and not a
+sentinel index, because every index is a real tile: reserving `0` or `-1` to mean "empty" is how a
+map ends up with an accidental floor in the corner nobody authored.
+
+**A cell indexes the map's own palette, not the sheet.** The palette names the sprites this map
+uses; the sheet places them. That keeps a 49-cell map 49 small integers rather than 49 repeated
+strings, and it is what makes a re-slice survivable — the sheet can move `floor` to another cell and
+every map drawing it still draws the right thing.
 
 **Variation comes from the sheet, not from tinting.** The map has one tint, and a checkerboard is two
-cells of the sheet rather than two tints of one. Gather's floor was 25 sprites tinted `0.82` and 24
-tinted white; it is now a two-cell sheet and a parity test. Per-tile tint would be a second way to
-say what a second tile already says.
+named sprites rather than two tints of one. Gather's floor was 25 sprites tinted `0.82` and 24 tinted
+white; it is now a two-cell sheet, a palette of `["light", "dark"]`, and a parity test. Per-tile tint
+would be a second way to say what a second sprite already says.
 
 **A tilemap is not a second kind of thing to draw.** Its cells become sprite instances in the same
 batches loose sprites use, keyed by the same space, layer, and texture. So a tilemap and a sprite on
@@ -160,36 +221,41 @@ know where a tile goes before any of that existed.
 projections. That property is the whole of what painting a map will need from the maths — turning a
 click into a tile — so it is worth more than the two functions look.
 
-A map that is not the shape it claims, or that names a cell outside its sheet, fails extraction with
+A map that is not the shape it claims, or whose cell indexes past its palette, fails extraction with
 the numbers in the message rather than drawing part of a floor. It still *opens*, for the reason a
 bad UV rect does: the editor is where it gets fixed.
 
 ## Sprite animation
 
-`sindri.sprite_animation` sits beside `sindri.sprite` on the same entity and decides which rect the
-sprite draws. The sprite still owns the texture, tint, space, anchor, and layer; the animation owns
-the sheet's grid, the clips cut from it, and which clip is playing. They are two components rather
+`sindri.sprite_animation` sits beside `sindri.sprite` on the same entity and decides which sprite of
+the sheet is drawn. The sprite still owns the texture, tint, space, anchor, and layer; the animation
+owns the clips and which one is playing. Where each named sprite *is* belongs to the sheet beside the
+image, which is why a clip no longer carries a grid. They are two components rather
 than one animated-sprite component on purpose — the legacy engine duplicated every sprite field onto
 its animated variant, and a duplicated field is how a tint set on one of them stops being the tint
 that draws.
 
 ```json
 "sindri.sprite_animation": {
-  "sheet": { "columns": 4, "rows": 2 },
-  "clips": { "walk": { "frames": [0, 1, 2, 3], "seconds_per_frame": 0.1, "looping": true } },
+  "clips": {
+    "walk": { "frames": ["lift", "plant", "lift", "plant"],
+              "seconds_per_frame": 0.1, "looping": true }
+  },
   "playing": "walk",
   "speed": 1.0
 }
 ```
 
-Cells are numbered row by row from the top left, which is how a sheet exporter lays one out. Every
-frame of a clip lasts the same time; a pose held longer is written by repeating its cell, which is
-how sheet tools express it anyway and is one way of saying it rather than two that can disagree.
+A clip's frames are sprite names from the sheet, in the order they play. Every frame lasts the same
+time; a pose held longer is written by repeating its name, which is how sheet tools express it anyway
+and is one way of saying it rather than two that can disagree.
 
 **Where playback lives is the load-bearing decision.** A clip and its timing are authored, so they are
 in the scene. The frame a sprite happens to be on halfway through a run is not, so it is not.
 `SpriteAnimations` holds that cursor beside the world — `advance(world, components, dt)` moves every
-animated sprite on, and `extract_animated` draws each one where the cursor says. Keeping it out of the
+animated sprite on, and `extract_animated` draws each one where the cursor says. The cursor holds a
+*name*, not a rect: where a clip has got to does not depend on where its frames sit in an image, so
+the rect is resolved during extraction, where the sheets are already in hand. Keeping it out of the
 component is what stops watching an animation play from rewriting the file it came from: a scene saved
 mid-run has to be the scene that was opened, and a test asserts exactly that.
 
@@ -200,15 +266,19 @@ game switches clips by writing to the world; `restart` is the one thing that is 
 scene, and it exists because a clip that has finished otherwise has no way back to its start.
 
 `extract` is `extract_animated` with nothing playing, and a sprite carrying clips that no cursor has
-reached draws its own authored rect. That makes the authored rect the pose a scene shows at rest,
-which is how a scene picks a resting frame other than the clip's first.
+reached draws whatever its own reference names. That is how a scene picks a resting pose other than
+the clip's first frame: name it.
 
-A sprite that authored *no* rect is the exception, and it has to be. The default rect is the whole
-texture, and a sheet drawn whole is every frame of the clip at once, squeezed into one quad — which
-is not a pose anybody meant. So an animated sprite whose rect is the full texture falls back to the
-first frame of the clip it is playing, which is where advancing would have started it anyway. This
-matters wherever a scene is drawn before it is run: a game's opening frame, an offscreen capture, and
-every entity sitting in the editor outside play mode.
+A sprite that names *no* part is the exception, and it has to be. Its reference is the whole image,
+and a sheet drawn whole is every frame of the clip at once squeezed into one quad — which is not a
+pose anybody meant. So an animated sprite with a bare texture reference falls back to the first frame
+of the clip it is playing, which is where advancing would have started it anyway. This matters
+wherever a scene is drawn before it is run: a game's opening frame, an offscreen capture, and every
+entity sitting in the editor outside play mode.
+
+Once a cursor *has* reached it, the clip decides alone. A frame that resolves to nothing draws the
+whole image rather than falling back to the resting pose, because a plausible picture of the wrong
+moment is the failure that hides.
 
 ## Sprite space
 

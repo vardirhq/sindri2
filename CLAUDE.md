@@ -295,6 +295,14 @@ that knows both. An unbound reference draws the magenta `TextureRegistry::MISSIN
 checker and is reported by `unresolved_textures`, rather than failing the frame
 or reusing the last-bound texture.
 
+**A sliced image says how it is cut, and nothing else does.** `textures/tiles.png`
+is sliced by `textures/tiles.sheet.json` at a *derived* ID, and scenes name parts
+of it as `textures/tiles.png#floor`. Three components used to carry their own copy
+of a sheet's grid — a sprite's `uv_rect`, an animation's `sheet`, a tilemap's
+`sheet_columns` — and nothing made them agree. Do not add a fourth: if something
+needs to know where a part of an image is, it asks the sheet. Names rather than
+indices, because a name survives a re-slice and an index does not.
+
 **Editor/runtime parity is an explicit priority.** A feature is not complete if
 only the runtime understands it. Adding a component means the engine understands
 it, serialization saves it, the editor edits it, and (later) the web API exposes

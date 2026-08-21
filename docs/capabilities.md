@@ -125,31 +125,48 @@ insertion order; stage order is `Opaque3d`, `Transparent2d`, `Overlay`.
 What can actually be drawn: a triangle, a coloured cube, a textured cube with
 depth testing, and textured sprites with tint, anchor, and layer, sorted back to
 front by how far from the camera they are.
-A sprite addresses part of a texture through a checked `UvRect`, so a sprite
-sheet is expressible: `UvRect::cell` slices a grid, the rect rides on the
-instance so every frame of one sheet stays in one draw call, and a GPU test
-reads the pixels back to prove the shader honours it. That rect animates from
-clips authored in the scene: `sindri.sprite_animation` names the
-sheet's grid, the clips cut from it, and which one plays, and
-`SpriteAnimations` holds where each sprite has got to. Playback is runtime
-state, so watching an animation run does not rewrite the scene it came from.
-What is missing is authoring: clips are typed into the scene file by hand,
-because the editor has no sheet slicer or clip list yet.
-A tilemap is a grid of tiles cut from one sheet, drawn from one entity:
-`sindri.tilemap` carries the sheet's grid, the map's grid, and a flat array of
-cells, with `null` where the map is empty. Its cells become instances in the same
-batches loose sprites use, so a prop sorts among the floor rather than behind it.
-Columns and rows lay out orthogonally or isometrically, and placing a tile and
-finding the tile under a point are inverses on every cell of both. What it buys
-is authoring rather than speed — the same floor already batched into one draw —
-and the companion game measures it: 68 entities to 20, 45KB of scene to 12KB.
-What is missing is authoring: a map is typed into the scene file by hand,
+**A sliced image says how it is cut, once.** A sheet document beside a texture —
+`textures/tiles.png` is sliced by `textures/tiles.sheet.json`, at a derived ID
+nothing has to declare — names the parts of it, either as a grid or as explicit
+rects. A scene then writes `textures/tiles.png#floor`, and the `#` that had
+always been rejected inside an asset ID is what carries the name, because it was
+reserved so a fragment could not leak into a path. Three components used to carry
+their own copy of a sheet's layout and could disagree; none carries one now.
+Names rather than indices, so a re-slice that moves a cell does not silently
+change what a scene draws.
+
+Rects are checked once, where a sheet binds, and ride on the instance so every
+part of one sheet stays in one draw call — a GPU test reads the pixels back to
+prove the shader honours it. A name no loaded sheet places draws the whole image
+and is reported by `unresolved_sprites`, the same rule an unbound texture
+follows.
+
+Animation reads those names: `sindri.sprite_animation` holds clips of sprite
+names and which one plays, `SpriteAnimations` holds where each sprite has got to,
+and the cursor holds a name rather than a rect so playback does not depend on
+where anything sits in an image. Playback is runtime state, so watching an
+animation run does not rewrite the scene it came from. What is missing is
+authoring: sheets and clips are typed into files by hand, because the editor has
+no slicer or clip list yet.
+
+A tilemap is a grid of tiles drawn from one entity: `sindri.tilemap` carries the
+map's grid, a palette of sprite names, and a flat array of cells indexing that
+palette, with `null` where the map is empty. Its cells become instances in the
+same batches loose sprites use, so a prop sorts among the floor rather than
+behind it. Columns and rows lay out orthogonally or isometrically, and placing a
+tile and finding the tile under a point are inverses on every cell of both. What
+it buys is authoring rather than speed — the same floor already batched into one
+draw — and the companion game measures it: 68 entities to 20, 45KB of scene to
+12KB. What is missing is authoring: a map is typed into the scene file by hand,
 because the editor has no tile palette yet.
 
-An animated sprite that authored no rect of its own draws the first frame of the
-clip it is playing rather than the whole sheet, so a scene shows a pose before
-anything has run it — in a game's opening frame, in an offscreen capture, and in
-the editor outside play mode.
+An animated sprite whose reference names no part of its sheet draws the first
+frame of the clip it is playing rather than the whole sheet, so a scene shows a
+pose before anything has run it — in a game's opening frame, in an offscreen
+capture, and in the editor outside play mode. Once a clip is running it decides
+alone: a frame that resolves to nothing draws the whole image rather than the
+resting pose, because a plausible picture of the wrong moment is the failure that
+hides.
 A sprite is either screen-anchored, which is the default and cannot be occluded
 by the world, or in the world, drawn through the world camera by its full
 transform and hidden by opaque geometry in front of it. Sprites batch per space,
@@ -473,9 +490,10 @@ it exists and why it is not an example; this says what of it is real.
 
 ### Works
 
-**Its floor is a tilemap.** One entity holding a 7x7 grid of cells, where it was
-49 sprite entities; the picture is the same to within one 8-bit step, which is
-the cost of baking the darker checker square into the sheet rather than tinting
+**Its floor is a tilemap on a sliced sheet.** One entity holding a 7x7 grid of
+cells indexing a two-name palette, where it was 49 sprite entities; the picture is
+the same to within one 8-bit step, which is the cost of baking the darker checker
+square into the sheet rather than tinting
 it at draw time.
 
 **It is a game you can play.** `cargo run -p sindri-gather` opens a window,
@@ -522,5 +540,6 @@ every sprite batch after the first drew with the last batch's camera. See
   would make it properly isometric is Milestone 9
 - Not built for the browser yet, though it compiles for `wasm32`
 - No restart without relaunching, no menu, no pause
-- The floor is one `sindri.tilemap`, but it was painted by a script rather than
-  authored, because the editor has no tile palette
+- The floor is one `sindri.tilemap`, but it was written into the scene file by a
+  script rather than authored, because the editor has no tile palette — and its
+  sheets were sliced by hand for the same reason

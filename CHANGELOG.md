@@ -145,7 +145,15 @@ All notable changes to Sindri Next will be documented here.
 - A Decay value that can hold an entity: opaque to the language, holdable and comparable, with `World.find`, `World.exists` and `World.despawn` beside it, so one script can read and write another entity's transform and sprite instead of leaving numbers on a shared board for it.
 - `EntityId::to_bits` and `from_bits`, for handing a runtime handle across a boundary that carries numbers and nothing else — never for writing to a file.
 
+- `SpriteSheetDocument`, a sidecar naming the parts of one texture at an ID derived from the texture's own, so a sliced image says how it is cut in one place rather than in each component that draws it.
+- `SpriteRef`, which splits `textures/tiles.png#floor` into a path and a sprite name, keeping `AssetId` a pure path — `#` was already reserved so a fragment could not leak into a URL.
+- A check that an animated sprite asks for the sheet its clips read, whose own reference names no part of one and so is invisible to anything looking for fragments.
+
 ### Changed
+
+- Moved `sindri.sprite`, `sindri.sprite_animation` and `sindri.tilemap` onto named sprites as scene format 4: `uv_rect` and both sheet grids are gone, clips list names, and a tilemap's cells index a palette of names. The migration recovers a rect's cell without being told the grid, and stops rather than guessing when a rect is not a whole cell of one.
+- Made a playing clip decide which part of a sheet is drawn on its own, so a frame that resolves to nothing draws the whole image rather than falling back to the clip's first frame, which was a plausible picture of the wrong moment.
+- Gave the companion game one function that binds its textures and sheets, instead of one copy per binary; the window had sheets and the capture did not, which drew every sprite as its whole sheet.
 
 - Rebuilt the companion game's orbs to ask the player where it is rather than compare against two numbers it published, which is what the blackboard was standing in for; the board keeps the score, which is a fact about the game rather than about an entity.
 - Rebuilt the companion game's floor as one tilemap instead of 49 sprite entities, taking the scene from 68 entities to 20 and from 45KB to 12KB, and its hierarchy from a list you scroll past 49 rows of floor to one that fits on a screen.
