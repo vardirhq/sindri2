@@ -440,14 +440,8 @@ mod tests {
             tile_at_viewport(&map, Transform3D::default(), Mat4::IDENTITY, [0.75, 0.75]),
             Some((0, 0))
         );
-        let outline = tile_outline(
-            &map,
-            Transform3D::default(),
-            Mat4::IDENTITY,
-            0,
-            0,
-        )
-        .expect("the cell projects");
+        let outline = tile_outline(&map, Transform3D::default(), Mat4::IDENTITY, 0, 0)
+            .expect("the cell projects");
         assert_eq!(outline, [[0.5, 0.5], [1.0, 0.5], [1.0, 1.0], [0.5, 1.0]]);
     }
 }

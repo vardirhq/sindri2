@@ -48,10 +48,10 @@ use crate::{
     scene_file::{DEFAULT_SCENE_PATH, SceneFile},
     scripts::{SceneScripts, ScriptNote},
     slicer::Slicer,
+    textures::{SceneTextures, TextureNote},
     tilemap::{
         self, PaletteSprite, TileBrush, TilemapTool, paint as paint_tile, resize as resize_tilemap,
     },
-    textures::{SceneTextures, TextureNote},
 };
 
 const INTER_FONT: &[u8] = include_bytes!("../assets/Inter.ttf");
@@ -2911,9 +2911,7 @@ fn tilemap_section(
     let mut rows = f64::from(map.rows);
     let mut resized = number_row(ui, "Columns", &mut columns, 10.0, true);
     resized |= number_row(ui, "Rows", &mut rows, 10.0, true);
-    if resized
-        && let Err(error) = resize_tilemap(payload, grid_side(columns), grid_side(rows))
-    {
+    if resized && let Err(error) = resize_tilemap(payload, grid_side(columns), grid_side(rows)) {
         ui.horizontal_wrapped(|ui| {
             ui.add_space(10.0);
             ui.label(RichText::new(error).size(10.0).color(PROBLEM));
