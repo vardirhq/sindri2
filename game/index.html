@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Gather</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #12161f; }
+    /* The canvas keeps the game's own aspect and sits in the middle, rather
+       than stretching, because a game stretched to a window is a game whose
+       author's framing was thrown away. */
+    body { display: grid; place-items: center; }
+    canvas { display: block; max-width: 100vw; max-height: 100vh; }
+  </style>
+</head>
+<body>
+  <canvas id="sindri-canvas"></canvas>
+  <script type="module">
+    import init from "./pkg/sindri_gather.js";
+    init();
+  </script>
+</body>
+</html>

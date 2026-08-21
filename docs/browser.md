@@ -43,27 +43,50 @@ same colours: the module instantiates, `run` executes, winit adopts the page's
 canvas, a WebGPU adapter and device open, the surface configures, and the frame
 pipeline renders a textured cube and five alpha-blended sprites.
 
+The companion game runs too, and is playable — see below.
+
 `scripts/browser/smoke.mjs` is how that is checked, and it exits non-zero when
 the page does not start the engine. The tell it uses is the canvas: one the
 engine never configured keeps the HTML default of 300x150, which is exactly the
 difference between "the page loaded" and "the engine started". That is worth
 knowing, because both look like a blank screen.
 
+## The game, which is the more interesting caller
+
+The cube proves a frame can be drawn. The companion game proves the engine can be
+*played*, and it was the second thing pointed at a browser for that reason. It
+needed a `cdylib` crate type and a page, and nothing else: the `wasm_bindgen`
+entry point and the wasm-only dependencies were already there.
+
+Driven through Playwright — click the canvas, hold `ArrowUp` for seven hundred
+milliseconds, let go — the player crosses the floor, an orb disappears, and the
+first lamp lights. That single frame is the whole chain running on the browser
+target:
+
+- the keyboard reaches `player.decay`, which moves the transform and clamps it
+- `orb.decay` calls `World.find("Player")` and reads its transform *through an
+  entity reference*
+- the pickup writes the score to the blackboard with `Game.set`
+- `pip.decay` reads it and lights a lamp
+
+**So Decay executes in a browser**, which it never had. `ROADMAP.md` had said so
+truthfully for as long as the item existed. Entity references, the blackboard,
+the fixed step, and input all came with it.
+
+Two frames seven hundred milliseconds apart also differ by around three thousand
+pixels with nothing touched, because the orbs bob. That is the cheapest available
+proof that scripts are running rather than that a scene loaded.
+
 ## What still has never run in a browser
 
-**Asset loading.** Not one HTTP request for an asset was made. The cube example
-embeds its texture with `include_bytes!`, so the *decoder* ran and the loader did
-not: `AssetLoader`, its queue, and `UrlRoot` — which exists specifically so
-browser URL rules are exercised on every target — are still only exercised by
-tests. Something in the browser has to actually want a file before that path is
-proven.
+**Asset loading.** Not one HTTP request for an asset has been made by either
+caller. The cube embeds its texture with `include_bytes!` and the game embeds its
+scene, scripts, sheets and textures the same way, so the *decoders* run and the
+loader does not: `AssetLoader`, its queue, and `UrlRoot` — which exists
+specifically so browser URL rules are exercised on every target — are still only
+exercised by tests.
 
-**Decay.** The cube runs no scripts, so the language has still only been compiled
-for `wasm32`, never executed there. `ROADMAP.md` has said so all along and still
-should.
-
-**Input.** Nothing was typed at the page.
-
-The obvious way to close all three at once is the companion game, which loads its
-scene, fetches nothing today because it embeds too, and runs four scripts. That
-is a better second caller than another example.
+Embedding is a legitimate way to ship a game, so this is not a fault in the game.
+It does mean the asset pipeline's browser half needs a caller of its own, and the
+honest candidate is the editor rather than another example: an editor opens files
+it was not compiled with, which is exactly what fetching is for.

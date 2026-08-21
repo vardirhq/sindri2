@@ -155,6 +155,7 @@ All notable changes to Sindri Next will be documented here.
 
 - `scripts/browser/smoke.mjs`, which loads a wasm-pack build in a real browser and fails when the page does not start the engine.
 - `docs/browser.md`, recording what the engine's first run in a browser found.
+- A browser build of the companion game, which is playable there: the keyboard drives the player, an orb is collected and a lamp lights, so Decay, entity references, the blackboard and input all run on the browser target for the first time.
 
 ### Changed
 
