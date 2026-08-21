@@ -1,6 +1,8 @@
-# Sindri Next
+<p align="center">
+  <img src="assets/branding/sindri-next.svg" alt="Sindri Next" width="680">
+</p>
 
-**A lightweight 2D + 3D game engine built in Rust, with a native visual editor and Decay scripting.**
+<p align="center"><strong>A lightweight 2D + 3D game engine built in Rust, with a native visual editor and Decay scripting.</strong></p>
 
 Sindri Next is a from-the-foundation evolution of Sindri Engine. It is built around one runtime model, one scene format, one asset pipeline, and one renderer that can target native desktops and WebGPU browsers without turning the web into a separate edition of the engine.
 
