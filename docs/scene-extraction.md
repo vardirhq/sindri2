@@ -52,7 +52,21 @@ A game registers its own component types alongside these with `SceneExtractor::r
 - **Cameras are required only when something needs them.** A scene with no meshes and no
   world-space sprites needs no perspective camera. Drawing either without one reports
   `MissingWorldCamera` rather than silently rendering nothing, and a screen-space sprite with no
-  orthographic camera reports `MissingOverlayCamera`.
+  orthographic camera reports `MissingOverlayCamera`. Anchored text uses that same overlay camera.
+
+## Text
+
+`sindri.text` is screen-space text. Its entity transform offsets one of the nine
+overlay anchors, extraction projects that point into physical viewport pixels,
+and the resulting `TextInstance` carries content, font asset reference, font
+size, line height, colour, and layer. Strings on the same layer share one
+ordered text pass.
+
+`referenced_fonts` is the load list for a world. A host validates those bytes
+with `FontAssetDecoder` and binds each logical reference to `TextRenderer`;
+unbound references draw nothing rather than falling back to an installed face.
+That asymmetry with missing textures is intentional: a checker can reveal a
+missing image, while substitute text can look correct but differ by platform.
 
 ## Textures
 

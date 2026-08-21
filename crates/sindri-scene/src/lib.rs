@@ -14,11 +14,11 @@ mod textures;
 pub use animation::{AnimationClip, AnimationError, SpriteAnimationComponent, SpriteAnimations};
 pub use components::{
     CameraComponent, MeshComponent, MeshPrimitive, SpriteAnchor, SpriteComponent, SpriteSpace,
-    TileProjection, TilemapComponent, TilemapError,
+    TextComponent, TileProjection, TilemapComponent, TilemapError,
 };
 pub use extract::{CameraView, SceneExtractError, SceneExtractor, ViewCamera, WorldProjection};
 pub use textures::{
     PROCEDURAL_TEXTURES, ProceduralTexture, SheetBindError, TEXTURE_NAMING_COMPONENTS,
-    TextureBindings, referenced_sheets, referenced_textures, unresolved_sprites,
+    TextureBindings, referenced_fonts, referenced_sheets, referenced_textures, unresolved_sprites,
     unresolved_textures,
 };

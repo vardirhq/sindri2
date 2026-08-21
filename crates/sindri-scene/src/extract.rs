@@ -8,15 +8,15 @@ use sindri_core::{
 use sindri_render::{
     ClearOperations, ExtractedFrame, FrameCamera, FrameCommand, FramePass, FramePlanError,
     OrthographicCamera, PerspectiveCamera, PreparedFrame, RenderLayer, RenderStage, SpriteDepth,
-    SpriteInstance, TextureId, TransparentOrder, TransparentOrderError, UvRect, UvRectError,
-    Viewport, orthographic_projection, perspective_projection,
+    SpriteInstance, TextError, TextInstance, TextureId, TransparentOrder, TransparentOrderError,
+    UvRect, UvRectError, Viewport, orthographic_projection, perspective_projection,
 };
 use thiserror::Error;
 
 use crate::{
     AnimationError, CameraComponent, MeshComponent, MeshPrimitive, PROCEDURAL_TEXTURES,
     SpriteAnchor, SpriteAnimationComponent, SpriteAnimations, SpriteComponent, SpriteSpace,
-    TextureBindings, TilemapComponent, TilemapError,
+    TextComponent, TextureBindings, TilemapComponent, TilemapError,
 };
 
 /// Which projection the world camera uses.
@@ -109,6 +109,10 @@ impl SceneExtractor {
         // that does nothing, and one with an invented sheet would claim a
         // texture is laid out a way it is not.
         components.register::<SpriteAnimationComponent>("Sprite Animation")?;
+        // No default: unlike a procedural texture, there is no honest font the
+        // engine can invent. The editor's font picker supplies a project asset
+        // when text is added; existing text remains generically editable now.
+        components.register::<TextComponent>("Text")?;
         // A one-by-one map of one empty cell: the smallest tilemap that is
         // still a valid one, so adding the component in the editor gives
         // something to paint into rather than something to repair.
@@ -178,7 +182,61 @@ impl SceneExtractor {
         let mut frame = ExtractedFrame::new(viewport, ClearOperations::default());
         self.push_meshes(world, &cameras, textures, &mut frame)?;
         self.push_sprites(world, &cameras, textures, animations, &mut frame)?;
+        self.push_text(world, viewport, &cameras, &mut frame)?;
         Ok(frame.prepare()?)
+    }
+
+    fn push_text(
+        &self,
+        world: &World,
+        viewport: Viewport,
+        cameras: &ResolvedCameras,
+        frame: &mut ExtractedFrame,
+    ) -> Result<(), SceneExtractError> {
+        let texts = self.components.query::<TextComponent>(world)?;
+        if texts.is_empty() {
+            return Ok(());
+        }
+        let overlay = cameras
+            .overlay
+            .ok_or(SceneExtractError::MissingOverlayCamera)?;
+        let extent = cameras
+            .overlay_extent
+            .ok_or(SceneExtractError::MissingOverlayCamera)?;
+        let width = f32::from(u16::try_from(viewport.width)?);
+        let height = f32::from(u16::try_from(viewport.height)?);
+        let mut layers: BTreeMap<i32, Vec<TextInstance>> = BTreeMap::new();
+
+        for (entity, text) in texts {
+            let transform = world
+                .get(entity)
+                .and_then(|data| data.transform_3d)
+                .unwrap_or_default();
+            let model = screen_sprite_matrix(transform, text.anchor, extent);
+            let clip = overlay.view_projection * model.w_axis;
+            let ndc = clip.truncate() / clip.w;
+            let position = [(ndc.x + 1.0) * 0.5 * width, (1.0 - ndc.y) * 0.5 * height];
+            layers.entry(text.layer).or_default().push(TextInstance::new(
+                text.text,
+                text.font,
+                position,
+                text.font_size,
+                text.line_height,
+                text.color,
+            )?);
+        }
+
+        for (layer, instances) in layers {
+            frame.push(FramePass::new(
+                RenderStage::Overlay,
+                RenderLayer(layer),
+                FrameCamera {
+                    view_projection: overlay.view_projection,
+                },
+                FrameCommand::Text { instances },
+            ));
+        }
+        Ok(())
     }
 
     fn push_meshes(
@@ -764,4 +822,8 @@ pub enum SceneExtractError {
     Tilemap(#[from] TilemapError),
     #[error(transparent)]
     SpriteRef(#[from] SpriteRefError),
+    #[error(transparent)]
+    Text(#[from] TextError),
+    #[error("the viewport is too large for text rendering")]
+    TextViewport(#[from] std::num::TryFromIntError),
 }

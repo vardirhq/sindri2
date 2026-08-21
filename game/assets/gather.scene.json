@@ -479,6 +479,26 @@
       }
     },
     {
+      "id": "title",
+      "name": "Title",
+      "transform_3d": {
+        "position": [-0.42, -0.16, 2.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "components": {
+        "sindri.text": {
+          "anchor": "top",
+          "color": [0.964, 0.663, 0.137, 1.0],
+          "font": "fonts/Inter.ttf",
+          "font_size": 22.0,
+          "layer": 101,
+          "line_height": 28.0,
+          "text": "GATHER"
+        }
+      }
+    },
+    {
       "id": "world-camera",
       "name": "World Camera",
       "transform_3d": {

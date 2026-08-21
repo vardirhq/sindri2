@@ -10,7 +10,7 @@ use std::collections::BTreeSet;
 
 use sindri_core::{SceneComponent, SceneDocument, UnknownComponentPolicy};
 use sindri_decay::{ScriptComponent, ScriptSources, Scripts};
-use sindri_gather::{extractor, sources, world};
+use sindri_gather::{FONTS, extractor, sources, world};
 use sindri_platform::InputState;
 
 const SCENE: &str = include_str!("../assets/gather.scene.json");
@@ -29,6 +29,19 @@ fn every_texture_the_scene_names_is_shipped() {
         .into_iter()
         .map(|name| format!("textures/{name}.png"))
         .collect();
+    assert_eq!(referenced, shipped);
+}
+
+/// Every font is embedded too; an absent font deliberately draws no text
+/// rather than falling back to a machine-dependent face.
+#[test]
+fn every_font_the_scene_names_is_shipped() {
+    let world = world().expect("the scene loads");
+    let referenced = sindri_scene::referenced_fonts(&world);
+    let shipped = FONTS
+        .iter()
+        .map(|(id, _)| (*id).to_owned())
+        .collect::<BTreeSet<_>>();
     assert_eq!(referenced, shipped);
 }
 

@@ -12,8 +12,9 @@
 
 use crate::{
     DepthTarget, DrawContext, FrameCommand, PreparedFrame, SpriteBatchError, SpriteBatchRenderer,
-    SpriteBatchStats, TextureRegistry, TexturedCubeRenderer, encode_clear,
+    SpriteBatchStats, TextError, TextRenderer, TextureRegistry, TexturedCubeRenderer, encode_clear,
 };
+use thiserror::Error;
 
 /// Where a frame is drawn.
 #[derive(Clone, Copy)]
@@ -26,6 +27,7 @@ pub struct FrameTarget<'a> {
 pub struct FrameRenderers<'a> {
     pub cube: &'a mut TexturedCubeRenderer,
     pub sprites: &'a mut SpriteBatchRenderer,
+    pub text: &'a mut TextRenderer,
     pub textures: &'a TextureRegistry,
 }
 
@@ -43,10 +45,11 @@ pub fn encode_prepared_frame(
     encoder: &mut wgpu::CommandEncoder,
     target: FrameTarget<'_>,
     frame: &PreparedFrame,
-) -> Result<SpriteBatchStats, SpriteBatchError> {
+) -> Result<SpriteBatchStats, FrameEncodeError> {
     let FrameRenderers {
         cube: cube_renderer,
         sprites: sprite_renderer,
+        text: text_renderer,
         textures,
     } = renderers;
     // Once, before anything draws. The frame owns what it starts as; a scene
@@ -90,7 +93,25 @@ pub fn encode_prepared_frame(
                     instances,
                 )?;
             }
+            FrameCommand::Text { instances } => {
+                text_renderer.draw(
+                    device,
+                    queue,
+                    encoder,
+                    target.color,
+                    frame.viewport(),
+                    instances,
+                )?;
+            }
         }
     }
     Ok(sprite_renderer.stats())
+}
+
+#[derive(Debug, Error)]
+pub enum FrameEncodeError {
+    #[error(transparent)]
+    Sprites(#[from] SpriteBatchError),
+    #[error(transparent)]
+    Text(#[from] TextError),
 }

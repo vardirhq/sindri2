@@ -4,7 +4,9 @@ use sindri_core::{SceneComponent, SpriteRef, SpriteSheetDocument, World};
 use sindri_render::{TextureId, TextureRegistry, UvRect};
 use thiserror::Error;
 
-use crate::{MeshComponent, SpriteAnimationComponent, SpriteComponent, TilemapComponent};
+use crate::{
+    MeshComponent, SpriteAnimationComponent, SpriteComponent, TextComponent, TilemapComponent,
+};
 
 /// Maps the texture references a scene names to the textures a renderer holds.
 ///
@@ -192,6 +194,21 @@ pub fn referenced_textures(world: &World) -> BTreeSet<String> {
     sprite_references(world)
         .into_iter()
         .map(|reference| reference.texture().to_owned())
+        .collect()
+}
+
+/// Every project font a world uses for text.
+///
+/// Font references are gathered independently of textures because the two are
+/// decoded and bound by different renderers, even though they share the same
+/// project asset loader and manifest.
+pub fn referenced_fonts(world: &World) -> BTreeSet<String> {
+    world
+        .entities()
+        .filter_map(|(_, data)| data.components.get(TextComponent::TYPE_NAME))
+        .filter_map(|payload| payload.get("font"))
+        .filter_map(serde_json::Value::as_str)
+        .map(str::to_owned)
         .collect()
 }
 
