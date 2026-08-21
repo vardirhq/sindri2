@@ -17,8 +17,8 @@ use egui_material_icons::{
     icons::{
         ICON_ACCOUNT_TREE, ICON_ADD, ICON_CAMERA_ALT, ICON_CENTER_FOCUS_STRONG, ICON_CODE,
         ICON_DELETE, ICON_DEPLOYED_CODE, ICON_DESCRIPTION, ICON_FOLDER, ICON_GRID_VIEW, ICON_IMAGE,
-        ICON_KEYBOARD_ARROW_DOWN, ICON_KEYBOARD_ARROW_RIGHT, ICON_OPEN_WITH, ICON_PAUSE,
-        ICON_PLAY_ARROW, ICON_REDO, ICON_REFRESH, ICON_SEARCH, ICON_STOP, ICON_UNDO,
+        ICON_KEYBOARD_ARROW_DOWN, ICON_KEYBOARD_ARROW_RIGHT, ICON_LABEL, ICON_OPEN_WITH,
+        ICON_PAUSE, ICON_PLAY_ARROW, ICON_REDO, ICON_REFRESH, ICON_SEARCH, ICON_STOP, ICON_UNDO,
         ICON_VIEW_IN_AR, ICON_VIEW_LIST,
     },
 };
@@ -45,11 +45,14 @@ use crate::{
     project::{AssetKind, ProjectEntry, ProjectTree},
     scene_file::{DEFAULT_SCENE_PATH, SceneFile},
     scripts::{SceneScripts, ScriptNote},
+    slicer::Slicer,
     textures::{SceneTextures, TextureNote},
 };
 
 const INTER_FONT: &[u8] = include_bytes!("../assets/Inter.ttf");
 const ACCENT: Color32 = Color32::from_rgb(246, 169, 35);
+/// What a panel says something is wrong in, matching the console's errors.
+const PROBLEM: Color32 = Color32::from_rgb(255, 138, 148);
 const ACCENT_BRIGHT: Color32 = Color32::from_rgb(255, 187, 54);
 const ACCENT_SOFT: Color32 = Color32::from_rgb(59, 45, 20);
 const APP_BG: Color32 = Color32::from_rgb(9, 12, 16);
@@ -390,6 +393,12 @@ struct EditorApp {
     history: CommandHistory,
     search: String,
     asset_search: String,
+    /// The image being sliced, when one was selected in the browser.
+    ///
+    /// Selecting an asset and selecting an entity are the same act from the
+    /// user's side — "show me this" — so they share the inspector and clear
+    /// each other rather than fighting over it.
+    slicer: Option<Slicer>,
     /// Which sliced images are showing their sprites.
     ///
     /// Collapsed until asked for, and not remembered across launches: which
@@ -499,6 +508,7 @@ impl EditorApp {
             history: CommandHistory::default(),
             search: String::new(),
             asset_search: String::new(),
+            slicer: None,
             expanded_sheets: BTreeSet::new(),
             project,
             workspace_tab: WorkspaceTab::Scene,
@@ -948,9 +958,109 @@ impl EditorApp {
     }
 
     fn select(&mut self, entity: Option<EntityId>) {
+        if entity.is_some() {
+            // One inspector, one subject. Selecting an entity puts the image
+            // away rather than leaving it behind a panel showing something
+            // else.
+            self.slicer = None;
+        }
         if self.selection != entity {
             self.history.break_merge_run();
             self.selection = entity;
+        }
+    }
+
+    /// Shows an asset in the inspector, which for a texture means its slice.
+    fn select_asset(&mut self, path: &Path) {
+        if self.slicer.as_ref().is_some_and(|open| open.path() == path) {
+            return;
+        }
+        self.slicer = Some(Slicer::open(path));
+        self.selection = None;
+    }
+
+    /// The slicer, drawn on the image it is cutting.
+    fn slicer_panel(&mut self, ui: &mut egui::Ui) {
+        let Some(slicer) = &mut self.slicer else {
+            return;
+        };
+        let mut save = false;
+        let mut close = false;
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.add_space(10.0);
+                ui.label(
+                    ICON_IMAGE
+                        .outlined()
+                        .rich_text()
+                        .size(15.0)
+                        .color(TEXT_FAINT),
+                );
+                ui.label(RichText::new(slicer.name()).size(12.0).color(TEXT));
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    ui.add_space(8.0);
+                    if ui.button("Close").clicked() {
+                        close = true;
+                    }
+                });
+            });
+            let (width, height) = slicer.size();
+            ui.horizontal(|ui| {
+                ui.add_space(10.0);
+                ui.label(
+                    RichText::new(format!("{width} x {height}"))
+                        .size(10.0)
+                        .color(TEXT_MUTED),
+                );
+            });
+            ui.add_space(6.0);
+
+            let columns = slicer.columns;
+            let rows = slicer.rows;
+            slice_preview(ui, slicer);
+            ui.add_space(8.0);
+
+            section_header(ui, ICON_GRID_VIEW, "Slice");
+            let mut columns_now = f64::from(columns);
+            let mut rows_now = f64::from(rows);
+            let mut resized = number_row(ui, "Columns", &mut columns_now, 10.0, true);
+            resized |= number_row(ui, "Rows", &mut rows_now, 10.0, true);
+            if resized {
+                slicer.columns = grid_side(columns_now);
+                slicer.rows = grid_side(rows_now);
+                slicer.fit_names();
+            }
+
+            ui.add_space(6.0);
+            slice_names(ui, slicer);
+            ui.add_space(10.0);
+            ui.horizontal(|ui| {
+                ui.add_space(10.0);
+                if ui.button("Save slice").clicked() {
+                    save = true;
+                }
+            });
+            if let Some(problem) = &slicer.problem {
+                ui.horizontal_wrapped(|ui| {
+                    ui.add_space(10.0);
+                    ui.label(RichText::new(problem).size(10.0).color(PROBLEM));
+                });
+            }
+        });
+
+        if save {
+            let name = slicer.name();
+            if slicer.save() {
+                self.console.info(format!("Sliced {name}"));
+                // The browser lists a texture's sprites from the sidecar, so a
+                // save it did not notice would leave the new names invisible.
+                self.refresh_project();
+            } else if let Some(problem) = self.slicer.as_ref().and_then(|s| s.problem.clone()) {
+                self.console.error(problem);
+            }
+        }
+        if close {
+            self.slicer = None;
         }
     }
 
@@ -1510,6 +1620,10 @@ impl EditorApp {
             )
             .show(ui, |ui| {
                 panel_title(ui, "Inspector");
+                if self.slicer.is_some() {
+                    self.slicer_panel(ui);
+                    return;
+                }
                 let Some(entity) = self.selection else {
                     return;
                 };
@@ -1626,6 +1740,7 @@ impl EditorApp {
             BrowserAction::Open(path) => {
                 self.discard_or_confirm(Discarding::OpenPath(path), &context);
             }
+            BrowserAction::Select(path) => self.select_asset(&path),
         }
     }
 
@@ -2272,6 +2387,124 @@ fn inspector_identity(ui: &mut egui::Ui, icon: MaterialIcon, draft: &mut EntityD
 /// Neither was handled: nothing collapsed and nothing overflowed. Adding and
 /// removing a component is what the menu would hold, and that is a real build
 /// against the schema registry rather than a glyph.
+/// An image dimension as a length to lay out with.
+///
+/// No image this can draw is anywhere near the width an `f32` stops counting
+/// exactly, and one that were would not fit in a panel either.
+#[allow(clippy::cast_precision_loss)]
+fn pixels(value: u32) -> f32 {
+    value as f32
+}
+
+/// One side of a slicing grid, as a drag leaves it.
+///
+/// Clamped rather than validated after the fact: a grid of zero has no cells
+/// and one of ten thousand is a drag that got away, and neither is a slice
+/// anybody meant. The cast cannot lose anything once the value is inside that
+/// range.
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn grid_side(value: f64) -> u32 {
+    value.clamp(1.0, 256.0) as u32
+}
+
+/// One editable name per cell.
+fn slice_names(ui: &mut egui::Ui, slicer: &mut Slicer) {
+    section_header(ui, ICON_LABEL, "Names");
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.label(
+            RichText::new("A cell left blank is called by its index.")
+                .size(9.0)
+                .color(TEXT_MUTED),
+        );
+    });
+    slicer.fit_names();
+    for index in 0..slicer.cells() {
+        let placeholder = index.to_string();
+        let Some(name) = slicer.names.get_mut(index as usize) else {
+            break;
+        };
+        ui.horizontal(|ui| {
+            ui.add_space(14.0);
+            ui.label(
+                RichText::new(format!("{placeholder:>3}"))
+                    .size(10.0)
+                    .color(TEXT_FAINT),
+            );
+            ui.add_space(4.0);
+            ui.add(
+                egui::TextEdit::singleline(name)
+                    .hint_text(&placeholder)
+                    .desired_width(f32::INFINITY),
+            );
+        });
+    }
+}
+
+/// The image, with the slice drawn over it.
+///
+/// The whole point of doing this on the picture: a grid of numbers in a panel
+/// tells you nothing about whether the lines fall between the frames, and the
+/// lines falling between the frames is the entire job.
+fn slice_preview(ui: &mut egui::Ui, slicer: &mut Slicer) {
+    let (width, height) = slicer.size();
+    let (columns, rows) = (slicer.columns, slicer.rows);
+    let Some(texture) = slicer.texture(ui.ctx()) else {
+        ui.horizontal(|ui| {
+            ui.add_space(10.0);
+            ui.label(
+                RichText::new("No preview: this build cannot read the image")
+                    .size(10.0)
+                    .color(TEXT_MUTED),
+            );
+        });
+        return;
+    };
+    if width == 0 || height == 0 {
+        return;
+    }
+
+    // Fitted to the panel and never enlarged past a readable multiple: a 16x16
+    // sheet blown up to panel width is mostly interpolation artefacts, and a
+    // 2048px one has to come down.
+    let available = (ui.available_width() - 20.0).max(64.0);
+    let (wide, tall) = (pixels(width), pixels(height));
+    let scale = (available / wide).min(8.0);
+    let size = Vec2::new(wide * scale, tall * scale);
+
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        let (rect, _) = ui.allocate_exact_size(size, Sense::hover());
+        let painter = ui.painter_at(rect);
+        // A checker behind the image, so a transparent sheet reads as
+        // transparent rather than as the panel's own background.
+        painter.rect_filled(rect, 2.0, Color32::from_rgb(28, 32, 42));
+        painter.image(
+            texture.id(),
+            rect,
+            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+            Color32::WHITE,
+        );
+
+        let line = Stroke::new(1.0, ACCENT.gamma_multiply(0.85));
+        for column in 1..columns {
+            let x = rect.left() + rect.width() * pixels(column) / pixels(columns);
+            painter.line_segment(
+                [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
+                line,
+            );
+        }
+        for row in 1..rows {
+            let y = rect.top() + rect.height() * pixels(row) / pixels(rows);
+            painter.line_segment(
+                [egui::pos2(rect.left(), y), egui::pos2(rect.right(), y)],
+                line,
+            );
+        }
+        painter.rect_stroke(rect, 2.0, line, egui::StrokeKind::Inside);
+    });
+}
+
 fn section_header(ui: &mut egui::Ui, icon: MaterialIcon, title: &str) {
     ui.add_space(4.0);
     ui.separator();
@@ -2712,6 +2945,8 @@ enum BrowserAction {
     Refresh,
     /// Open a scene the browser is showing.
     Open(PathBuf),
+    /// Show an asset in the inspector, which for a texture means its slice.
+    Select(PathBuf),
 }
 
 /// The icon a kind of file is drawn with.
@@ -2849,30 +3084,10 @@ fn asset_column(
                         // for, because a sheet is as likely to hold sixty-four
                         // frames as four, and a browser that cannot be scrolled
                         // past is the failure the hierarchy already taught us.
-                        let sliced = !entry.sprites.is_empty() && !searching;
-                        let mut open_now = expanded.contains(&entry.path);
-                        let row = asset_row(
-                            ui,
-                            entry,
-                            depth,
-                            searching,
-                            open,
-                            sliced.then_some(&mut open_now),
-                        );
-                        if row.double_clicked() {
-                            action = BrowserAction::Open(entry.path.clone());
-                        }
-                        if sliced {
-                            if open_now {
-                                expanded.insert(entry.path.clone());
-                            } else {
-                                expanded.remove(&entry.path);
-                            }
-                            if open_now {
-                                for sprite in &entry.sprites {
-                                    sprite_row(ui, sprite, depth + 1);
-                                }
-                            }
+                        if let Some(chosen) =
+                            sliceable_row(ui, entry, depth, searching, open, expanded)
+                        {
+                            action = chosen;
                         }
                     }
                 }
@@ -2898,6 +3113,51 @@ fn asset_column(
 /// the editor can do with a file. Every other row is a listing and says so by
 /// not responding — a listing that lists is not the same as a control that
 /// looks like it does something.
+/// One asset row, plus the sprites under it when its image is sliced and
+/// showing.
+///
+/// Its own function because the row and its children are one thing to a reader
+/// — an image and its parts — even though the browser draws them as sibling
+/// rows.
+fn sliceable_row(
+    ui: &mut egui::Ui,
+    entry: &ProjectEntry,
+    depth: usize,
+    searching: bool,
+    open: Option<&Path>,
+    expanded: &mut BTreeSet<PathBuf>,
+) -> Option<BrowserAction> {
+    // A search shows a flat list, so parts under an image would be pointing at
+    // a parent the search may have removed.
+    let sliced = !entry.sprites.is_empty() && !searching;
+    let mut showing = expanded.contains(&entry.path);
+    let row = asset_row(
+        ui,
+        entry,
+        depth,
+        searching,
+        open,
+        sliced.then_some(&mut showing),
+    );
+    if sliced {
+        if showing {
+            expanded.insert(entry.path.clone());
+            for sprite in &entry.sprites {
+                sprite_row(ui, sprite, depth + 1);
+            }
+        } else {
+            expanded.remove(&entry.path);
+        }
+    }
+    if row.double_clicked() && entry.kind == AssetKind::Scene {
+        return Some(BrowserAction::Open(entry.path.clone()));
+    }
+    if row.clicked() && entry.kind == AssetKind::Texture {
+        return Some(BrowserAction::Select(entry.path.clone()));
+    }
+    None
+}
+
 /// One named part of a sliced image, under the image it came from.
 ///
 /// Not a `ProjectEntry`: a sprite has no file, and giving it one would put it in
@@ -2935,7 +3195,7 @@ fn asset_row(
     // with nothing under it gets no triangle rather than a disabled one.
     expanded: Option<&mut bool>,
 ) -> Response {
-    let openable = entry.kind == AssetKind::Scene;
+    let openable = matches!(entry.kind, AssetKind::Scene | AssetKind::Texture);
     let highlighted = open.is_some_and(|path| path == entry.path);
     let sense = if openable {
         Sense::click()
@@ -4521,14 +4781,27 @@ mod tests {
         }
     }
 
-    /// Everything else in the browser is a listing. A texture row that
-    /// responded would be offering something the editor cannot do.
+    /// A texture row responds, because there is now something to do with one:
+    /// selecting it opens the slicer. It did not until an image had a slice.
     #[test]
-    fn a_row_that_is_not_a_scene_is_a_listing() {
-        assert!(!asset_row_double_click_at(
+    fn a_texture_row_responds_because_it_can_be_sliced() {
+        assert!(asset_row_double_click_at(
             AssetKind::Texture,
             Vec2::new(40.0, 0.0)
         ));
+    }
+
+    /// A row with nothing behind it is still a listing. A script row that
+    /// responded would be offering something the editor cannot do — it lists
+    /// `.decay` files and cannot open one.
+    #[test]
+    fn a_row_with_nothing_to_open_is_a_listing() {
+        for kind in [AssetKind::Script, AssetKind::Mesh, AssetKind::Other] {
+            assert!(
+                !asset_row_double_click_at(kind, Vec2::new(40.0, 0.0)),
+                "{kind:?} has nothing behind it and should not respond"
+            );
+        }
     }
 
     /// The marker means the file and the world differ, not that something was

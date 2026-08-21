@@ -29,5 +29,8 @@ pub mod scene_file;
 /// The Decay scripts an open scene runs.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod scripts;
+/// Slicing an image into named sprites, on the image.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod slicer;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod textures;
