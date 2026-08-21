@@ -4,7 +4,7 @@
 //! and host types through [`Environment`] rather than being compiled into the
 //! language itself.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use decay_syntax::{
     AssignOp, BinaryOp, Block, Expr, ExprKind, FieldDecl, FunctionDecl, Item, Member, Program,
@@ -34,7 +34,12 @@ impl Type {
         }
     }
 
-    fn display_name(&self) -> &str {
+    /// How this type is written in Decay source, and in a diagnostic about it.
+    ///
+    /// Public because a host describing itself — in an error, or in a manifest
+    /// a tool reads — needs to name a type the same way the compiler does.
+    #[must_use]
+    pub fn display_name(&self) -> &str {
         match self {
             Self::F32 => "f32",
             Self::Bool => "bool",
@@ -59,9 +64,71 @@ pub enum ExternalSymbol {
     Function(FunctionType),
 }
 
+/// A host type, described by what it offers.
+///
+/// The language has no way to declare one: `Transform` is a name Decay carries
+/// and cannot look inside, so the host is the only thing that can say a
+/// transform has a position. Until it did, every member access produced
+/// `Unknown`, `Unknown` is compatible with everything, and
+/// `this.transfrom.position.x` type-checked cleanly and failed at frame one.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct HostType {
+    members: HashMap<String, ExternalSymbol>,
+}
+
+impl HostType {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    #[must_use]
+    pub fn with_value(mut self, name: impl Into<String>, ty: Type) -> Self {
+        self.members.insert(name.into(), ExternalSymbol::Value(ty));
+        self
+    }
+
+    #[must_use]
+    pub fn with_function(mut self, name: impl Into<String>, function: FunctionType) -> Self {
+        self.members
+            .insert(name.into(), ExternalSymbol::Function(function));
+        self
+    }
+
+    #[must_use]
+    pub fn member(&self, name: &str) -> Option<&ExternalSymbol> {
+        self.members.get(name)
+    }
+
+    /// Whether the host said anything about this type at all.
+    ///
+    /// A type with no members is treated as *undescribed* rather than as
+    /// described-and-empty, so that a host which has not started describing
+    /// itself behaves exactly as every host did before types existed. The two
+    /// are indistinguishable and only one of them is useful.
+    #[must_use]
+    pub fn is_described(&self) -> bool {
+        !self.members.is_empty()
+    }
+
+    /// Every member, for a host emitting a description of itself.
+    pub fn members(&self) -> impl Iterator<Item = (&str, &ExternalSymbol)> {
+        self.members
+            .iter()
+            .map(|(name, symbol)| (name.as_str(), symbol))
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct Environment {
     globals: HashMap<String, ExternalSymbol>,
+    types: HashMap<String, HostType>,
+    /// What `this` offers beyond the container's own fields.
+    ///
+    /// `this` is two things at once: the script's own state, and the entity the
+    /// host attached it to. A container field always wins, so a script can
+    /// never be shadowed by the engine growing a name.
+    this: HostType,
 }
 
 impl Environment {
@@ -77,6 +144,49 @@ impl Environment {
     pub fn add_function(&mut self, name: impl Into<String>, function: FunctionType) {
         self.globals
             .insert(name.into(), ExternalSymbol::Function(function));
+    }
+
+    /// Describes a named type's members.
+    ///
+    /// A named type that is *not* described stays permissive: its members are
+    /// `Unknown`, exactly as every member was before this existed. That is
+    /// deliberate — describing the host is gradual, and a host part-way through
+    /// describing itself must not reject scripts that were working.
+    pub fn add_type(&mut self, name: impl Into<String>, ty: HostType) {
+        self.types.insert(name.into(), ty);
+    }
+
+    /// Adds a member to `this`, such as the transform of the entity a script is
+    /// attached to.
+    pub fn add_this_value(&mut self, name: impl Into<String>, ty: Type) {
+        self.this = std::mem::take(&mut self.this).with_value(name, ty);
+    }
+
+    /// Adds a callable member to `this`.
+    pub fn add_this_function(&mut self, name: impl Into<String>, function: FunctionType) {
+        self.this = std::mem::take(&mut self.this).with_function(name, function);
+    }
+
+    #[must_use]
+    pub fn get_type(&self, name: &str) -> Option<&HostType> {
+        self.types.get(name)
+    }
+
+    #[must_use]
+    pub const fn this(&self) -> &HostType {
+        &self.this
+    }
+
+    /// Every described type, for a host emitting a description of itself.
+    pub fn types(&self) -> impl Iterator<Item = (&str, &HostType)> {
+        self.types.iter().map(|(name, ty)| (name.as_str(), ty))
+    }
+
+    /// Every global, for the same reason.
+    pub fn globals(&self) -> impl Iterator<Item = (&str, &ExternalSymbol)> {
+        self.globals
+            .iter()
+            .map(|(name, symbol)| (name.as_str(), symbol))
     }
 }
 
@@ -130,6 +240,18 @@ pub fn analyze_with_environment(source: &str, environment: &Environment) -> Anal
     }
 }
 
+/// What asking a type for a member found.
+///
+/// The distinction that matters is between a type the host described and one it
+/// did not: only the former can say a member is missing.
+enum MemberLookup {
+    Found(ExternalSymbol),
+    Missing,
+    /// A function the container itself declares, reached through `this`, which
+    /// is never what the author meant -- see [`Analyzer::member_symbol`].
+    ContainerFunction,
+}
+
 #[derive(Debug, Clone)]
 struct Symbol {
     ty: Type,
@@ -143,6 +265,9 @@ struct Analyzer<'a, 'd> {
     diagnostics: &'d mut Vec<Diagnostic>,
     scopes: Vec<HashMap<String, Symbol>>,
     current_return: Type,
+    /// Every `script` and `component` in the program, so that `this` can be
+    /// told apart from a host type of the same shape.
+    containers: HashSet<String>,
 }
 
 impl<'a, 'd> Analyzer<'a, 'd> {
@@ -157,11 +282,19 @@ impl<'a, 'd> Analyzer<'a, 'd> {
             diagnostics,
             scopes: Vec::new(),
             current_return: Type::Unit,
+            containers: HashSet::new(),
         }
     }
 
     fn analyze_program(&mut self, program: &Program) {
         let mut containers = HashMap::<String, Span>::new();
+
+        // Collected up front: a function body may name `this`, and `this` can
+        // only be resolved once it is known which names are containers.
+        for item in &program.items {
+            let (Item::Script(container) | Item::Component(container)) = item;
+            self.containers.insert(container.name.clone());
+        }
 
         for item in &program.items {
             let container = match item {
@@ -416,10 +549,7 @@ impl<'a, 'd> Analyzer<'a, 'd> {
             }
             ExprKind::Binary { left, op, right } => self.binary_type(left, *op, right),
             ExprKind::Assign { target, op, value } => self.assignment_type(target, *op, value),
-            ExprKind::Member { object, .. } => {
-                self.expr_type(object);
-                Type::Unknown
-            }
+            ExprKind::Member { object, field } => self.member_type(object, field, expr.span),
             ExprKind::Call { callee, args } => self.call_type(callee, args, expr.span),
         }
     }
@@ -489,10 +619,7 @@ impl<'a, 'd> Analyzer<'a, 'd> {
                     Type::Unknown
                 }
             }
-            ExprKind::Member { object, .. } => {
-                self.expr_type(object);
-                Type::Unknown
-            }
+            ExprKind::Member { object, field } => self.member_type(object, field, target.span),
             _ => {
                 self.error(target.span, "invalid assignment target".to_owned());
                 Type::Unknown
@@ -500,7 +627,128 @@ impl<'a, 'd> Analyzer<'a, 'd> {
         }
     }
 
+    /// The type of `object.field`, when the host has said what `object` is.
+    ///
+    /// Three outcomes, and which one applies is the whole design. A described
+    /// type that has the member gives its type. A described type that does not
+    /// is an error, which is the point of the exercise: a misspelled component
+    /// field stops being a runtime failure at frame one. An *undescribed* type
+    /// stays `Unknown`, so a host that has described half of itself does not
+    /// reject scripts that were working against the other half.
+    fn member_type(&mut self, object: &Expr, field: &str, span: Span) -> Type {
+        let object_type = self.expr_type(object);
+        match self.member_symbol(&object_type, field) {
+            Some(MemberLookup::Found(ExternalSymbol::Value(ty))) => ty,
+            // A function reached without calling it. Decay has no function
+            // values, so there is nothing this could evaluate to.
+            Some(MemberLookup::Found(ExternalSymbol::Function(_))) => {
+                self.error(
+                    span,
+                    format!(
+                        "`{}` is a function on `{}`, and Decay has no function values -- call it",
+                        field,
+                        object_type.display_name()
+                    ),
+                );
+                Type::Unknown
+            }
+            Some(MemberLookup::Missing) => {
+                self.error(
+                    span,
+                    format!("`{}` has no member `{field}`", object_type.display_name()),
+                );
+                Type::Unknown
+            }
+            Some(MemberLookup::ContainerFunction) => {
+                self.error(span, container_function_message(field));
+                Type::Unknown
+            }
+            None => Type::Unknown,
+        }
+    }
+
+    /// Looks a member up on a type the host may or may not have described.
+    ///
+    /// `None` means "nothing is known about this type", which is not the same
+    /// as "this type has no such member" and must not be reported as one.
+    fn member_symbol(&self, object_type: &Type, field: &str) -> Option<MemberLookup> {
+        let described = match object_type {
+            Type::Named(name) if self.is_container(name) => {
+                // `this` is two things: the script's own state, and the entity
+                // the host attached it to. The script's own members are asked
+                // first, so the engine growing a name can never shadow a
+                // field a script already had.
+                if let Some(symbol) = self.scopes.first().and_then(|scope| scope.get(field)) {
+                    return Some(match &symbol.function {
+                        // `this.helper()` lowers to a host path call named
+                        // `this.helper`, which no host implements, so it failed
+                        // at runtime with `FunctionNotFound` and looked like the
+                        // engine's fault. Saying so here costs one diagnostic
+                        // and removes the single most confusing thing about
+                        // writing a Decay script.
+                        Some(_) => MemberLookup::ContainerFunction,
+                        None => MemberLookup::Found(ExternalSymbol::Value(symbol.ty.clone())),
+                    });
+                }
+                let this = self.environment.this();
+                if !this.is_described() {
+                    return None;
+                }
+                this
+            }
+            Type::Named(name) => self.environment.get_type(name)?,
+            _ => return None,
+        };
+        Some(match described.member(field) {
+            Some(symbol) => MemberLookup::Found(symbol.clone()),
+            None => MemberLookup::Missing,
+        })
+    }
+
+    fn is_container(&self, name: &str) -> bool {
+        self.containers.contains(name)
+    }
+
     fn call_type(&mut self, callee: &Expr, args: &[Expr], span: Span) -> Type {
+        // A method on a host type: `this.rigidbody.add_impulse(v)`. Resolved
+        // before the general path so that the arguments are checked against a
+        // real signature rather than accepted because the callee was unknown.
+        if let ExprKind::Member { object, field } = &callee.kind {
+            let object_type = self.expr_type(object);
+            match self.member_symbol(&object_type, field) {
+                Some(MemberLookup::Found(ExternalSymbol::Function(function))) => {
+                    self.check_call(&function, args, span);
+                    return function.return_type;
+                }
+                Some(MemberLookup::Found(ExternalSymbol::Value(_))) => {
+                    self.error(
+                        callee.span,
+                        format!(
+                            "`{field}` on `{}` is a value, not a function",
+                            object_type.display_name()
+                        ),
+                    );
+                }
+                Some(MemberLookup::Missing) => {
+                    self.error(
+                        callee.span,
+                        format!("`{}` has no member `{field}`", object_type.display_name()),
+                    );
+                }
+                Some(MemberLookup::ContainerFunction) => {
+                    self.error(callee.span, container_function_message(field));
+                }
+                None => {}
+            }
+            for arg in args {
+                self.expr_type(arg);
+            }
+            return Type::Unknown;
+        }
+        self.call_named(callee, args, span)
+    }
+
+    fn call_named(&mut self, callee: &Expr, args: &[Expr], span: Span) -> Type {
         if let ExprKind::Identifier(name) = &callee.kind {
             if let Some(symbol) = self.lookup(name).cloned() {
                 if let Some(function) = symbol.function {
@@ -633,6 +881,14 @@ impl<'a, 'd> Analyzer<'a, 'd> {
     }
 }
 
+/// Decay has no methods, and the mistake of reaching for one is worth naming
+/// precisely rather than leaving as a runtime `FunctionNotFound`.
+fn container_function_message(field: &str) -> String {
+    format!(
+        "`{field}` is this script's own function; call it as `{field}(...)` rather than `this.{field}(...)`"
+    )
+}
+
 fn line_column(source: &str, offset: usize) -> (usize, usize) {
     let prefix = &source[..offset.min(source.len())];
     let line = prefix.bytes().filter(|byte| *byte == b'\n').count() + 1;
@@ -645,7 +901,8 @@ fn line_column(source: &str, offset: usize) -> (usize, usize) {
 #[cfg(test)]
 mod tests {
     use super::{
-        DiagnosticPhase, Environment, FunctionType, Type, analyze, analyze_with_environment,
+        DiagnosticPhase, Environment, FunctionType, HostType, Type, analyze,
+        analyze_with_environment,
     };
 
     #[test]
@@ -747,6 +1004,175 @@ mod tests {
             "{:?}",
             analysis.diagnostics
         );
+    }
+
+    /// A host that has described a type gets its members checked, which is the
+    /// whole point: a misspelled component field is a compile error rather than
+    /// a runtime failure at frame one.
+    #[test]
+    fn a_described_type_checks_its_members() {
+        let mut environment = Environment::new();
+        environment.add_type(
+            "Vec3",
+            HostType::new()
+                .with_value("x", Type::F32)
+                .with_value("y", Type::F32)
+                .with_value("z", Type::F32),
+        );
+        environment.add_type(
+            "Transform",
+            HostType::new().with_value("position", Type::Named("Vec3".to_owned())),
+        );
+        environment.add_this_value("transform", Type::Named("Transform".to_owned()));
+
+        let good = analyze_with_environment(
+            r"script Player { fn update(dt: f32) { this.transform.position.x += dt; } }",
+            &environment,
+        );
+        assert!(good.diagnostics.is_empty(), "{:?}", good.diagnostics);
+
+        let typo = analyze_with_environment(
+            r"script Player { fn update(dt: f32) { this.transfrom.position.x += dt; } }",
+            &environment,
+        );
+        assert!(
+            typo.diagnostics
+                .iter()
+                .any(|d| d.message.contains("has no member `transfrom`")),
+            "{:?}",
+            typo.diagnostics
+        );
+
+        let deep_typo = analyze_with_environment(
+            r"script Player { fn update(dt: f32) { this.transform.position.w += dt; } }",
+            &environment,
+        );
+        assert!(
+            deep_typo
+                .diagnostics
+                .iter()
+                .any(|d| d.message.contains("`Vec3` has no member `w`")),
+            "{:?}",
+            deep_typo.diagnostics
+        );
+    }
+
+    /// A member's type is a real type, so what is done with it is checked too.
+    #[test]
+    fn a_members_type_is_enforced_like_any_other() {
+        let mut environment = Environment::new();
+        environment.add_type("Sprite", HostType::new().with_value("visible", Type::Bool));
+        environment.add_this_value("sprite", Type::Named("Sprite".to_owned()));
+
+        let analysis = analyze_with_environment(
+            r"script Player { fn update(dt: f32) { this.sprite.visible = dt; } }",
+            &environment,
+        );
+        assert!(
+            analysis
+                .diagnostics
+                .iter()
+                .any(|d| d.message.contains("cannot assign `f32` to `bool`")),
+            "{:?}",
+            analysis.diagnostics
+        );
+    }
+
+    /// Describing the host is gradual. A named type nobody has described keeps
+    /// behaving exactly as everything did before types existed, so a host
+    /// part-way through describing itself does not reject working scripts.
+    #[test]
+    fn an_undescribed_type_stays_permissive() {
+        let mut environment = Environment::new();
+        environment.add_this_value("rigidbody", Type::Named("RigidBody".to_owned()));
+
+        let analysis = analyze_with_environment(
+            r"script Player { fn update(dt: f32) { this.rigidbody.anything.at.all = dt; } }",
+            &environment,
+        );
+        assert!(
+            analysis.diagnostics.is_empty(),
+            "{:?}",
+            analysis.diagnostics
+        );
+    }
+
+    /// A container's own field wins over anything the host attached, so the
+    /// engine growing a name cannot shadow a script's state.
+    #[test]
+    fn a_container_field_wins_over_a_host_member() {
+        let mut environment = Environment::new();
+        environment.add_this_value("speed", Type::Named("Opaque".to_owned()));
+
+        let analysis = analyze_with_environment(
+            r"script Player { var speed: f32 = 1.0; fn update(dt: f32) { this.speed += dt; } }",
+            &environment,
+        );
+        assert!(
+            analysis.diagnostics.is_empty(),
+            "{:?}",
+            analysis.diagnostics
+        );
+    }
+
+    /// Methods on host types are checked against a real signature rather than
+    /// waved through because the callee was unknown.
+    #[test]
+    fn a_host_method_checks_its_arguments() {
+        let mut environment = Environment::new();
+        environment.add_type(
+            "RigidBody",
+            HostType::new().with_function(
+                "add_impulse",
+                FunctionType {
+                    params: vec![Type::F32, Type::F32],
+                    return_type: Type::Unit,
+                },
+            ),
+        );
+        environment.add_this_value("rigidbody", Type::Named("RigidBody".to_owned()));
+
+        let good = analyze_with_environment(
+            r"script Player { fn update() { this.rigidbody.add_impulse(0.0, 1.0); } }",
+            &environment,
+        );
+        assert!(good.diagnostics.is_empty(), "{:?}", good.diagnostics);
+
+        let wrong = analyze_with_environment(
+            r"script Player { fn update() { this.rigidbody.add_impulse(0.0); } }",
+            &environment,
+        );
+        assert!(
+            wrong
+                .diagnostics
+                .iter()
+                .any(|d| d.message.contains("expected 2 argument(s), found 1")),
+            "{:?}",
+            wrong.diagnostics
+        );
+    }
+
+    /// Decay has no methods. `this.helper()` lowered to a host path call that no
+    /// host implements, so it failed at runtime looking like the engine's fault;
+    /// now it says what to write instead.
+    #[test]
+    fn reaching_for_a_method_says_what_to_write_instead() {
+        let analysis = analyze(
+            r"script Player { fn helper() -> f32 { return 1.0; } fn update() { this.helper(); } }",
+        );
+        assert!(
+            analysis
+                .diagnostics
+                .iter()
+                .any(|d| d.message.contains("call it as `helper(...)`")),
+            "{:?}",
+            analysis.diagnostics
+        );
+
+        let bare = analyze(
+            r"script Player { fn helper() -> f32 { return 1.0; } fn update() { helper(); } }",
+        );
+        assert!(bare.diagnostics.is_empty(), "{:?}", bare.diagnostics);
     }
 
     #[test]

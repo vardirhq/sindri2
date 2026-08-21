@@ -208,3 +208,80 @@ fn a_disabled_script_does_not_run() {
     assert!(failures.is_empty(), "{failures:?}");
     assert!(rotation(&world, entity).abs() < f32::EPSILON);
 }
+
+/// The payoff of typed host members: a misspelled path is refused when the
+/// script compiles, not discovered when the scene runs.
+///
+/// Before this, `this.transfrom.position.x` type-checked cleanly — member
+/// access produced an unknown type, and unknown was compatible with everything
+/// — and then failed on the first frame with a path name and no line number.
+#[test]
+fn a_misspelled_path_is_a_compile_error_rather_than_a_first_frame_failure() {
+    let (mut world, entity) = world_with(component(&json!({})));
+    let mut sources = ScriptSources::new();
+    sources.insert(
+        "scripts/spin.decay",
+        "script Spin { fn update(dt: f32) { this.transfrom.rotation_z = dt; } }",
+    );
+
+    let failures = Scripts::new().advance(&mut world, &registry(), &sources, 0.25);
+
+    match failures.as_slice() {
+        [ScriptFailure::Compile { diagnostics, .. }] => {
+            assert!(
+                diagnostics
+                    .iter()
+                    .any(|d| d.contains("has no member `transfrom`")),
+                "{diagnostics:?}"
+            );
+            assert!(
+                diagnostics.iter().any(|d| d.starts_with("1:")),
+                "and it names the line it is on: {diagnostics:?}"
+            );
+        }
+        other => panic!("expected one compile failure, got {other:?}"),
+    }
+    assert!(
+        rotation(&world, entity).abs() < f32::EPSILON,
+        "nothing ran, so nothing moved"
+    );
+}
+
+/// A path that is spelled right still works, so the check is a check rather
+/// than a wall.
+#[test]
+fn the_paths_the_surface_describes_still_compile() {
+    let (mut world, _) = world_with(component(&json!({})));
+    let mut sources = ScriptSources::new();
+    sources.insert(
+        "scripts/spin.decay",
+        r"script Spin {
+            fn update(dt: f32) {
+                this.transform.position.x += dt;
+                this.transform.position.y += dt;
+                this.transform.position.z += dt;
+                this.transform.scale.x = 1.0;
+                this.transform.rotation_z = sin(dt) + abs(dt) + min(dt, 1.0);
+            }
+        }",
+    );
+
+    let failures = Scripts::new().advance(&mut world, &registry(), &sources, 0.25);
+    assert!(failures.is_empty(), "{failures:?}");
+}
+
+/// Decay has no methods, and reaching for one now says what to write instead
+/// rather than failing at runtime with what looks like an engine fault.
+#[test]
+fn reaching_for_a_method_is_refused_with_advice() {
+    let (mut world, _) = world_with(component(&json!({})));
+    let mut sources = ScriptSources::new();
+    sources.insert(
+        "scripts/spin.decay",
+        "script Spin { fn helper() -> f32 { return 1.0; }          fn update(dt: f32) { this.transform.rotation_z = this.helper(); } }",
+    );
+
+    let failures = Scripts::new().advance(&mut world, &registry(), &sources, 0.25);
+    let reported = format!("{failures:?}");
+    assert!(reported.contains("call it as `helper(...)`"), "{reported}");
+}

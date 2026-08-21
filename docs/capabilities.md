@@ -352,6 +352,12 @@ pixel.
 
 A script reaches its own transform's position, scale, and Z rotation, plus six
 maths functions, and nothing else — the whole table is in `docs/scripting.md`.
+**Those paths are typed**, so `this.transfrom.position.x` is a compile error
+with a line number rather than a first-frame failure, and reaching for a method
+on a container says what to write instead. The analyzer's view and the host's
+accessors are derived from one description, and a test walks every path the
+analyzer accepts to assert the host answers it.
+
 A failing script reports itself and does not stop the others.
 
 A script is also text on disk that a test can run. `decay-syntax` lexes and parses
@@ -380,10 +386,9 @@ the README.
   is the only unbounded path today
 - No arrays, maps, closures, or first-class functions
 - No standard library; not even `math`
-- Member types are unchecked — `this.transform.position.x` is `Unknown` to the
-  analyzer, so nothing catches a misspelled component field
-- Calling a sibling function as `this.helper()` silently becomes a host call and
-  fails; sibling functions must be called by bare name
+- The described surface is one entity's transform and six maths functions. No
+  input, time, spawning, other entities, or other components
+- No script state migration across a source reload
 - No LSP, no formatter, no debugger, no syntax highlighting anywhere
 - No script state migration across a reload: a changed file recompiles, and the
   running instance keeps whatever fields it had

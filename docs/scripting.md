@@ -65,11 +65,23 @@ Everything, in one table. Decay knows paths, not engine concepts:
 `this.transform.position.x` arrives at the runtime as four strings the IR never
 interprets, and `WorldHost` is the only place that gives them a meaning.
 
-| Path | Read | Write |
-| --- | --- | --- |
-| `this.transform.position.{x,y,z}` | yes | yes |
-| `this.transform.scale.{x,y,z}` | yes | yes |
-| `this.transform.rotation_z` | yes | yes |
+| Path | Type | Read | Write |
+| --- | --- | --- | --- |
+| `this.transform.position.{x,y,z}` | `f32` | yes | yes |
+| `this.transform.scale.{x,y,z}` | `f32` | yes | yes |
+| `this.transform.rotation_z` | `f32` | yes | yes |
+
+**These paths are typed, so a misspelling is a compile error.** `this.transfrom`
+and `this.transform.position.w` are both refused with a line number when the
+script compiles, rather than failing on the first frame with a path name and no
+idea where it came from.
+
+That only holds because the table above is not written twice. `surface.rs` is
+the single description; the analyzer's `Environment` and `WorldHost`'s
+accessors are both derived from it, and a test walks every path the analyzer
+would accept and asserts the host answers it. A path accepted by one and not
+the other is the worst failure available here — a clean compile followed by a
+runtime error — and it cannot be shipped.
 
 Functions: `abs`, `sqrt`, `sin`, `cos`, `min`, `max`. That is the entire
 standard library. Decay has no modules and no imports, so each is a bare global
@@ -141,9 +153,8 @@ back does not change what undo means.
 
 ## Known gaps
 
-- Member types are `Unknown` to the analyzer, so a misspelled component field is
-  a runtime `UnknownPath` rather than a compile error. Typed host members are
-  the next thing that would change that.
+- The surface is small: one entity's transform and six maths functions. No
+  input, no time, no spawning, no other entity, no other component.
 - Decay's only numeric type is spelled `f32` and holds an `f64`; `WorldHost` is
   the one place the two meet and the one place that narrows.
 - The script instance is created on first sight and lost when the world is

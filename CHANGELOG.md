@@ -117,6 +117,10 @@ All notable changes to Sindri Next will be documented here.
 - `decay/LANGUAGE.md`, a language reference stating the grammar, what does not exist, and which behaviours will surprise you, with its claims enforced by a test.
 - `docs/scripting.md`, the contract for how a script reaches a world.
 - `.decay` files listed as scripts in the project browser rather than as plain files.
+- Typed host members in Decay: a host describes a named type's members, and a path through a described type is checked when the script compiles rather than failing on its first frame.
+- Decay host types may have methods, checked for arity and argument types like any other call.
+- Reaching for `this.helper()` on a script's own function is refused with the bare-name form to write instead, rather than failing at runtime as an unknown host path.
+- Sindri's script surface is described once and read by both the analyzer and the host, with a test asserting the host answers every path the analyzer accepts.
 
 ### Changed
 

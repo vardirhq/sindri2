@@ -204,11 +204,27 @@ There is no `i32`, no `u32`, no `f64`, and no integer type of any kind. `7` and
 > when it crosses into the engine. This is a known inconsistency and an open
 > decision, recorded in `docs/decay-direction.md`.
 
-A named type such as `Transform` is a name the analyzer carries and cannot look
-inside. Member access on one produces an **unknown** type, and an unknown type is
-compatible with everything — so `this.transform.position.x` type-checks whatever
-you write after the dot, and a misspelling is a runtime error rather than a
-compile error.
+A named type such as `Transform` is opaque to the language: Decay has no way to
+declare one. The **host** may describe it, and whether it has decides what
+happens after a dot:
+
+- **Described** — members are checked. `this.transform.positon.x` is a compile
+  error naming the type and the member, and the member's type is enforced like
+  any other, so assigning a number to a `bool` field is caught.
+- **Not described** — members are `Unknown`, and unknown is compatible with
+  everything, so anything after the dot is accepted and a mistake surfaces at
+  runtime.
+
+The rule is **per type**, which is what makes describing a host gradual: a host
+part-way through describing itself does not reject scripts working against the
+parts it has not reached. Describing `Transform` while leaving `RigidBody`
+undescribed means `this.transform.positon` is caught and
+`this.rigidbody.anything.at.all` is not.
+
+`this` follows the same rule. Once the host describes anything on `this`, a
+member of `this` it did not describe is a compile error — so against Sindri,
+which offers only `transform`, `this.sprite` is refused. What Sindri describes
+is in `docs/scripting.md`.
 
 `null` may be assigned to a named type, and to nothing else.
 
@@ -288,10 +304,16 @@ fn helper() -> f32 { return 1.0; }
 fn go() -> f32 { return helper(); }     // correct
 ```
 
-> **`this.helper()` is not a method call.** It becomes a *host path call* named
-> `this.helper`, which the engine will not recognise, and the script fails with
-> `FunctionNotFound`. There are no methods. Always call sibling functions by
-> bare name.
+> **`this.helper()` is not a method call.** There are no methods on a container.
+> It used to become a *host path call* named `this.helper` and fail at runtime
+> with `FunctionNotFound`, which looked like the engine's fault; it is now a
+> compile error saying to write `helper(...)` instead. Always call sibling
+> functions by bare name.
+
+A **host type** may have methods, and those are checked: if the host describes
+`RigidBody` with an `add_impulse` taking two numbers, then
+`this.rigidbody.add_impulse(0.0, 1.0)` is checked for arity and argument types
+like any other call.
 
 Recursion works, bounded by the call-depth limit.
 
@@ -408,8 +430,14 @@ Everything a script can name beyond its own container comes from the host, which
 registers globals before compilation. The compiler knows their names and
 signatures and nothing else, and the runtime forwards every access as a path.
 
-An unresolved name is a compile error. An unresolved *path* — anything reached
-through a dot, which the analyzer cannot check — is a runtime error.
+An unresolved name is a compile error. An unresolved *path* is a compile error
+too, when the host described the type it goes through, and a runtime error when
+it did not.
+
+A host describes a type by listing its members, and describes what `this` offers
+beyond the script's own fields. A container's own field always wins over a host
+member of the same name, so the engine growing a name can never shadow state a
+script already had.
 
 For what the Sindri engine specifically provides (`this.transform.*`, `sin`,
 `cos`, `abs`, `sqrt`, `min`, `max`, and nothing else), see `docs/scripting.md`.
@@ -434,14 +462,18 @@ Things that are true and that most readers — human or model — will guess wro
 1. **`&&` and `||` do not short-circuit.** Both sides are always evaluated.
    `if ready && expensive()` calls `expensive()` even when `ready` is false, and
    `x != null && x.thing` is not a null guard.
-2. **`this.method()` is not a method call.** It is a host path call and will
-   fail. Call sibling functions by bare name.
+2. **`this.method()` is not a method call.** A container has no methods; it is a
+   compile error telling you to call it by bare name. Host *types* may have
+   methods, and those work.
 3. **There is no `else if`.** Write `else { if ... }`.
 4. **There is no truthiness.** `if x` requires `x` to be `bool`.
 5. **`+` does not join strings.** It is numeric addition only.
 6. **All numbers are floats.** `7 / 2` is `3.5`. There is no integer type and no
    integer division.
-7. **Member types are unchecked.** `this.transfrom.position.x` compiles.
+7. **Member types are checked only where the host described them.**
+   `this.transfrom.position.x` is now a compile error against Sindri, because
+   Sindri describes its transform — but a path into a type nobody described is
+   still accepted and still fails at runtime.
 8. **A field cannot read a field declared below it.** It compiles and fails at
    runtime.
 9. **`let` fields are still settable by the host.** That is what `@export` means.
