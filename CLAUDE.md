@@ -105,6 +105,8 @@ sindri-decay    -> sindri-core + sindri-platform (for input) + the decay/
                    language crates, one way only
 editor          -> assets, core, decay, platform, render, scene (sindri-cube
                    is dev-only)
+sindri-gather   -> assets, core, decay, desktop, platform, render, scene. It is
+                   a consumer of the engine, and nothing depends on it.
 ```
 
 - `sindri-core` depends on no window, GPU, browser, editor, physics, scripting,
@@ -133,8 +135,11 @@ cargo run --package sindri-editor          # native editor shell
 cargo run -p sindri-triangle               # triangle proof
 cargo run -p sindri-cube                   # cube + sprite overlay proof
 
-# deterministic offscreen PNG (same one CI uploads)
+cargo run -p sindri-gather                 # the companion game
+
+# deterministic offscreen PNGs (the same ones CI uploads)
 cargo run -p sindri-cube --bin capture -- target/render-artifacts/scene-frame-pipeline.png
+cargo run -p sindri-gather --bin gather-capture -- target/render-artifacts/gather.png
 
 # browser targets
 rustup target add wasm32-unknown-unknown
@@ -306,8 +311,9 @@ overwrite a replacement. Never fake synchronous browser I/O.
 - Keep examples curated. Two proofs exist because each proves something; do not
   accumulate demos. The companion game in `ROADMAP.md` is the exception that
   makes this affordable: it absorbs the per-milestone demos the plan used to
-  schedule, lives outside `examples/`, and is allowed to be untidy in ways a
-  proof is not.
+  schedule, lives outside `examples/` in `game/`, and is allowed to be untidy in
+  ways a proof is not. It has already earned that: mixing a world with an
+  overlay found a renderer bug no proof could have, because no proof had both.
 - Deferred work is deferred deliberately — WebGL2 fallback, PBR, skeletal
   animation, networking, render graphs, and advanced ECS scheduling are listed as
   non-goals in `ROADMAP.md` and `PROJECT_OVERVIEW.md`. Do not add them

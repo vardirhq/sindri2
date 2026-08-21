@@ -24,6 +24,7 @@ pub(crate) const SPRITE: &str = "Sprite";
 pub(crate) const RGBA: &str = "Rgba";
 pub(crate) const INPUT: &str = "Input";
 pub(crate) const TIME: &str = "Time";
+pub(crate) const GAME: &str = "Game";
 
 /// The component a sprite's fields live in.
 pub(crate) const SPRITE_COMPONENT: &str = "sindri.sprite";
@@ -271,6 +272,33 @@ pub(crate) const INPUT_QUERIES: &[(&str, InputQuery)] = &[
     ("just_released", InputQuery::Released),
 ];
 
+/// A note left on the board shared by every script in the world.
+///
+/// The smallest thing that lets two scripts cooperate. Decay has no value that
+/// can hold an entity, so a script cannot name another one — but it can leave a
+/// number under a name and another can read it. That is enough for a player to
+/// publish where it is, a collectible to notice, and a score to be counted by
+/// nobody in particular.
+///
+/// Deliberately a stopgap with a shape that admits it: names are strings and
+/// nothing checks them, which typed cross-entity access would fix. It is here
+/// because it is small and it unblocks a game, and a game is what tells us
+/// which of the bigger answers is worth building.
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum GameCall {
+    /// `Game.get(name, fallback)`.
+    ///
+    /// The fallback is not optional, because a note nobody has left yet is the
+    /// ordinary case on the first frame — and a `get` that silently answered
+    /// zero would be a typo that reads as a legitimate value.
+    Get,
+    /// `Game.set(name, value)`.
+    Set,
+}
+
+pub(crate) const GAME_CALLS: &[(&str, GameCall)] =
+    &[("get", GameCall::Get), ("set", GameCall::Set)];
+
 /// What a script can ask about the frame it is in.
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum TimeValue {
@@ -292,6 +320,10 @@ mod tests {
     use sindri_platform::InputState;
 
     use crate::{ScriptContext, WorldHost, environment};
+
+    fn blackboard() -> crate::Blackboard {
+        crate::Blackboard::new()
+    }
 
     fn context(input: &InputState) -> ScriptContext<'_> {
         ScriptContext {
@@ -333,6 +365,7 @@ mod tests {
     fn the_host_answers_every_path_the_analyzer_accepts() {
         let (mut world, entity) = world();
         let input = InputState::default();
+        let mut board = blackboard();
         let environment = environment();
         let mut checked = 0;
 
@@ -351,12 +384,12 @@ mod tests {
                     terminal.display_name()
                 );
 
-                let mut host = WorldHost::new(&mut world, entity, context(&input));
+                let mut host = WorldHost::new(&mut world, entity, context(&input), &mut board);
                 assert!(
                     matches!(host.load(&path), Ok(Some(Value::Number(_)))),
                     "the analyzer accepts {dotted} and the host cannot read it"
                 );
-                let mut host = WorldHost::new(&mut world, entity, context(&input));
+                let mut host = WorldHost::new(&mut world, entity, context(&input), &mut board);
                 assert_eq!(
                     host.store(&path, Value::Number(1.0)),
                     Ok(true),
@@ -375,6 +408,7 @@ mod tests {
     fn the_host_answers_every_global_the_analyzer_describes() {
         let (mut world, entity) = world();
         let input = InputState::default();
+        let mut board = blackboard();
         let environment = environment();
         let mut checked = 0;
 
@@ -389,18 +423,25 @@ mod tests {
             for (name, member) in described.members() {
                 let path = Path(vec![namespace.to_owned(), name.to_owned()]);
                 let dotted = path.dotted();
-                let mut host = WorldHost::new(&mut world, entity, context(&input));
+                let mut host = WorldHost::new(&mut world, entity, context(&input), &mut board);
                 match member {
                     ExternalSymbol::Value(_) => assert!(
                         matches!(host.load(&path), Ok(Some(_))),
                         "the analyzer describes {dotted} and the host cannot read it"
                     ),
                     ExternalSymbol::Function(signature) => {
-                        // Key names, because everything callable on a namespace
-                        // currently takes them. A signature that stops being
-                        // strings will fail here, which is the right moment to
-                        // notice.
-                        let args = vec![Value::String("Space".to_owned()); signature.params.len()];
+                        // Built from the declared parameter types rather than
+                        // assumed, so a namespace whose calls take something
+                        // other than key names is still exercised properly.
+                        let args: Vec<Value> = signature
+                            .params
+                            .iter()
+                            .map(|ty| match ty {
+                                Type::String => Value::String("Space".to_owned()),
+                                Type::Bool => Value::Bool(true),
+                                _ => Value::Number(1.0),
+                            })
+                            .collect();
                         assert!(
                             matches!(host.call(&path, &args), Ok(Some(_))),
                             "the analyzer describes {dotted} and the host does not perform it"
@@ -444,6 +485,7 @@ mod tests {
     fn every_described_function_is_one_the_host_performs() {
         let (mut world, entity) = world();
         let input = InputState::default();
+        let mut board = blackboard();
         let environment = environment();
 
         for (name, symbol) in environment.globals() {
@@ -451,7 +493,7 @@ mod tests {
                 continue;
             };
             let args = vec![Value::Number(1.0); signature.params.len()];
-            let mut host = WorldHost::new(&mut world, entity, context(&input));
+            let mut host = WorldHost::new(&mut world, entity, context(&input), &mut board);
             assert!(
                 matches!(host.call(&Path(vec![name.to_owned()]), &args), Ok(Some(_))),
                 "the host does not perform `{name}`, which the environment offers"

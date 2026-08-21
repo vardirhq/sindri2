@@ -15,9 +15,12 @@ use decay_runtime::{Host, RuntimeError, Value};
 use sindri_core::{EntityId, Transform3D, World};
 use sindri_platform::{InputState, Key};
 
-use crate::surface::{
-    FUNCTIONS, HostFunction, INPUT, INPUT_QUERIES, InputQuery, Leaf, PRINT, Seg, TIME, TIME_VALUES,
-    TimeValue, follow_mut, leaf,
+use crate::{
+    Blackboard,
+    surface::{
+        FUNCTIONS, GAME, GAME_CALLS, GameCall, HostFunction, INPUT, INPUT_QUERIES, InputQuery,
+        Leaf, PRINT, Seg, TIME, TIME_VALUES, TimeValue, follow_mut, leaf,
+    },
 };
 
 /// What a script can know about the frame it is running in.
@@ -39,16 +42,24 @@ pub struct WorldHost<'a> {
     world: &'a mut World,
     entity: EntityId,
     context: ScriptContext<'a>,
+    /// The notes every script in the world shares.
+    blackboard: &'a mut Blackboard,
     /// What the script said, in order. Drained by the caller after the call.
     printed: Vec<String>,
 }
 
 impl<'a> WorldHost<'a> {
-    pub fn new(world: &'a mut World, entity: EntityId, context: ScriptContext<'a>) -> Self {
+    pub fn new(
+        world: &'a mut World,
+        entity: EntityId,
+        context: ScriptContext<'a>,
+        blackboard: &'a mut Blackboard,
+    ) -> Self {
         Self {
             world,
             entity,
             context,
+            blackboard,
             printed: Vec::new(),
         }
     }
@@ -253,6 +264,35 @@ impl Host for WorldHost<'_> {
                     HostFunction::Binary(apply) => apply(argument(0)?, argument(1)?),
                 })));
             }
+        }
+
+        if let [namespace, name] = parts.as_slice()
+            && *namespace == GAME
+            && let Some((_, call)) = GAME_CALLS.iter().find(|(known, _)| known == name)
+        {
+            let note = match args.first() {
+                Some(Value::String(note)) => note.clone(),
+                other => {
+                    return Err(RuntimeError::Host(format!(
+                        "{} names its note with text, and the script gave {other:?}",
+                        path.dotted()
+                    )));
+                }
+            };
+            let value = |index: usize| -> Result<f64, RuntimeError> {
+                args.get(index)
+                    .ok_or_else(|| {
+                        RuntimeError::Host(format!("{} wants more arguments", path.dotted()))
+                    })
+                    .and_then(|value| number(path, value))
+            };
+            return Ok(Some(match call {
+                GameCall::Get => Value::Number(self.blackboard.get(&note, value(1)?)),
+                GameCall::Set => {
+                    self.blackboard.set(note, value(1)?);
+                    Value::Unit
+                }
+            }));
         }
 
         if let [namespace, name] = parts.as_slice()

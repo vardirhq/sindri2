@@ -23,6 +23,7 @@
 //! a delta the caller decides — the editor's transport decides what a frame is
 //! worth, the same way it does for sprite animation.
 
+mod blackboard;
 mod component;
 mod error;
 mod exports;
@@ -31,6 +32,7 @@ mod report;
 mod scripts;
 mod surface;
 
+pub use blackboard::Blackboard;
 pub use component::ScriptComponent;
 /// A value a Decay script holds, re-exported so a host can name one without
 /// depending on the language crates directly.

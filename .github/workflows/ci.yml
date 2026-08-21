@@ -84,6 +84,10 @@ jobs:
         env:
           WGPU_BACKEND: vulkan
         run: cargo run --package sindri-cube --bin capture -- target/render-artifacts/scene-frame-pipeline.png
+      - name: Capture the companion game mid-run
+        env:
+          WGPU_BACKEND: vulkan
+        run: cargo run --package sindri-gather --bin gather-capture -- target/render-artifacts/gather.png
       # Both images render the same scene, so both are held to the same colours.
       # The editor screenshot went unexamined for a release while its viewport
       # sampled through a view that decoded a second time: everything else
@@ -99,6 +103,7 @@ jobs:
           path: |
             target/render-artifacts/editor-runtime-viewport.png
             target/render-artifacts/scene-frame-pipeline.png
+            target/render-artifacts/gather.png
           if-no-files-found: error
           retention-days: 14
       - name: Check browser workspace

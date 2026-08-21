@@ -12,7 +12,7 @@
 //!
 //! When this fails, the fix is in the document, not in the assertion.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use decay_semantic::{Environment, ExternalSymbol, Type};
 use sindri_decay::environment;
@@ -55,15 +55,15 @@ fn expand(name: &str) -> Vec<String> {
 /// Everything the document claims, split by what it is.
 struct Documented {
     entity_paths: BTreeSet<String>,
-    input_calls: BTreeSet<String>,
-    time_values: BTreeSet<String>,
+    /// Namespace to the members listed under it, keyed by the namespace's own
+    /// name so that one nobody thought to check is still checked.
+    namespaces: BTreeMap<String, BTreeSet<String>>,
 }
 
 fn documented() -> Documented {
     let mut documented = Documented {
         entity_paths: BTreeSet::new(),
-        input_calls: BTreeSet::new(),
-        time_values: BTreeSet::new(),
+        namespaces: BTreeMap::new(),
     };
     for cell in documented_cells() {
         for name in expand(&cell) {
@@ -72,12 +72,14 @@ fn documented() -> Documented {
             let name = name
                 .split_once('(')
                 .map_or(name.clone(), |(head, _)| head.to_owned());
-            if let Some(rest) = name.strip_prefix("Input.") {
-                documented.input_calls.insert(rest.to_owned());
-            } else if let Some(rest) = name.strip_prefix("Time.") {
-                documented.time_values.insert(rest.to_owned());
-            } else if name.starts_with("this.") {
+            if name.starts_with("this.") {
                 documented.entity_paths.insert(name);
+            } else if let Some((namespace, member)) = name.split_once('.') {
+                documented
+                    .namespaces
+                    .entry(namespace.to_owned())
+                    .or_default()
+                    .insert(member.to_owned());
             }
         }
     }
@@ -136,24 +138,42 @@ fn the_document_lists_exactly_the_paths_a_script_can_reach() {
     );
 }
 
+/// Every namespace the host offers is documented, and every one the document
+/// mentions exists.
+///
+/// Written over whatever namespaces there happen to be rather than over a list
+/// of the ones that existed when this was written — otherwise a new namespace
+/// escapes the check by being new, which is precisely when documentation is
+/// most likely to be missing.
 #[test]
-fn the_document_lists_exactly_the_keyboard_calls_a_script_can_make() {
+fn the_document_lists_exactly_the_namespaces_a_script_can_reach() {
     let environment = environment();
-    assert_eq!(
-        documented().input_calls,
-        described_members(&environment, "Input"),
-        "docs/scripting.md and the host surface disagree about the keyboard"
-    );
-}
+    let documented = documented();
 
-#[test]
-fn the_document_lists_exactly_what_a_script_can_ask_about_the_frame() {
-    let environment = environment();
+    let offered: BTreeSet<String> = environment
+        .globals()
+        .filter_map(|(name, symbol)| match symbol {
+            ExternalSymbol::Value(Type::Named(_)) => Some(name.to_owned()),
+            _ => None,
+        })
+        .collect();
     assert_eq!(
-        documented().time_values,
-        described_members(&environment, "Time"),
-        "docs/scripting.md and the host surface disagree about time"
+        documented
+            .namespaces
+            .keys()
+            .cloned()
+            .collect::<BTreeSet<_>>(),
+        offered,
+        "docs/scripting.md and the host disagree about which namespaces exist"
     );
+
+    for namespace in offered {
+        assert_eq!(
+            documented.namespaces[&namespace],
+            described_members(&environment, &namespace),
+            "docs/scripting.md and the host disagree about `{namespace}`"
+        );
+    }
 }
 
 /// The maths functions are prose rather than a table, so they are read from the

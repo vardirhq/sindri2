@@ -1,0 +1,38 @@
+[package]
+name = "sindri-gather"
+description = "The companion game: a small thing you can actually play"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+sindri-assets = { path = "../crates/sindri-assets" }
+sindri-core = { path = "../crates/sindri-core" }
+sindri-decay = { path = "../crates/sindri-decay" }
+sindri-desktop = { path = "../crates/sindri-desktop" }
+sindri-platform = { path = "../crates/sindri-platform" }
+sindri-render = { path = "../crates/sindri-render" }
+sindri-scene = { path = "../crates/sindri-scene" }
+log.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+wgpu.workspace = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+env_logger = "0.11"
+pollster.workspace = true
+sindri-gpu = { path = "../crates/sindri-gpu" }
+png = "0.18"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0.1"
+console_log = "1"
+wasm-bindgen.workspace = true
+
+[dev-dependencies]
+glam.workspace = true
+
+[lints]
+workspace = true

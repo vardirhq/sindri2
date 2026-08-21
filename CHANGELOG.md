@@ -137,6 +137,9 @@ All notable changes to Sindri Next will be documented here.
 - `World::spawn_at`, which creates an entity at an exact handle, so undoing a delete gives back the same `EntityId` rather than a new one that leaves the selection and the rest of the undo history pointing at nothing.
 - `World::next_handle`, so a caller can know an entity's handle before creating it and a spawn command can be redone onto the same one.
 - `WorldCommand::Spawn`, `Despawn`, and `Restore`, each producing its own inverse, with a restored subtree returning to its place among its siblings.
+- `Game.get` and `Game.set`, a board of named numbers every script on a world shares, because Decay has no value that can hold an entity and a script that needs a fact from another one has nowhere else to leave it.
+- Gather, the companion game, in `game/`: five orbs on a floor, a thing you drive with the arrow keys, and a row of lamps that fills as you collect them, with all four of its rules written as Decay scripts and none of them in Rust.
+- A second deterministic capture, of the companion game part-way through a scripted run rather than at rest, uploaded by CI beside the cube proof.
 
 ### Changed
 

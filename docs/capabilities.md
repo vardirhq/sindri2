@@ -153,7 +153,9 @@ place rather than at each call site. Colour space is enforced by a shared
 constant, and the offscreen capture verifies authored colours actually survive
 to the pixels.
 
-Offscreen rendering produces a deterministic PNG, which CI uploads.
+Offscreen rendering produces a deterministic PNG, which CI uploads — two of
+them: the cube proof, and the companion game photographed part-way through a
+scripted run.
 
 ### Scene to frame
 
@@ -390,6 +392,12 @@ analyzer accepts to assert the host answers it.
 
 A failing script reports itself and does not stop the others.
 
+**A whole game's rules are written in it.** The companion game's moving,
+gathering, counting and winning are four Decay scripts and no Rust — see "The
+companion game" below. Adding it needed one thing the language could not do:
+an orb cannot hold a reference to the player, so `Game.get`/`Game.set` give
+scripts a shared board of named numbers to leave facts on.
+
 A script is also text on disk that a test can run. `decay-syntax` lexes and parses
 it, reporting diagnostics with a span, line, and column; the parser recovers
 rather than stopping at the first error, and survives two hundred thousand
@@ -425,3 +433,54 @@ the README.
 - Nothing has been *executed* on the browser target, only compiled
 - The only numeric type is spelled `f32` and every value it holds is an `f64`
 
+---
+
+## The companion game
+
+`game/`, crate `sindri-gather` — "Gather". Five orbs on a diamond floor, a
+thing you drive with the arrow keys, a row of lamps that fills as you collect
+them, and a banner that fades in when you have them all. `ROADMAP.md` says why
+it exists and why it is not an example; this says what of it is real.
+
+### Works
+
+**It is a game you can play.** `cargo run -p sindri-gather` opens a window,
+arrow keys move the player, walking into an orb takes it, taking all five wins.
+Escape quits. It runs its gameplay on the fixed step, so gathering happens at
+the same rate whatever the frame rate is.
+
+**None of its rules are in Rust.** Moving, gathering, counting and winning are
+four Decay scripts in `game/assets/scripts/`. The Rust is a window, a device, a
+loop, and the embedded bytes of the scene, the scripts, and the art. That split
+is what the game exists to test, and it held: adding the game needed one engine
+feature (`Game.get`/`Game.set`, a shared blackboard, because Decay has no value
+that can hold an entity so the orbs cannot ask the player where it is) and no
+gameplay code.
+
+**It is checked, not just run.** `game/tests/the_game_holds_together.rs` asserts
+every texture and script the scene names is shipped, that the scripts compile,
+that every authored property names a field its script `@export`s, that the scene
+holds no component the game cannot run — and it plays the game through the same
+scripts and the same `InputState` the window feeds, steering to each orb in turn
+and checking the banner comes up.
+
+**It is a CI artifact.** `gather-capture` plays a fixed run — a fixed key held
+for a fixed number of fixed steps — and photographs where that leaves the game,
+so the picture proves the scripts ran rather than that the scene loads.
+
+**It found a bug the proofs could not.** It is the first thing in the workspace
+that draws a world and a screen overlay in one frame, and doing so revealed that
+every sprite batch after the first drew with the last batch's camera. See
+`docs/rendering-frame-pipeline.md`.
+
+### Not yet
+
+- **No text**, so the score is a row of lamps and winning is a banner sprite —
+  the game started before Milestone 6's text item, and says in pictures what it
+  would otherwise say in words
+- No sound, because there is no audio
+- Top-down coordinates behind an isometric-looking floor; the grid module that
+  would make it properly isometric is Milestone 9
+- Not built for the browser yet, though it compiles for `wasm32`
+- No restart without relaunching, no menu, no pause
+- The floor is 49 separate sprite entities, because there is no tilemap

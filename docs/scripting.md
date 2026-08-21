@@ -120,6 +120,33 @@ operating system's key repeat is not a second press.
 that is not `update` can reach it. `elapsed` is per script instance rather than
 per world: a script attached later has not been running as long.
 
+### The board scripts share
+
+| Call | Returns |
+| --- | --- |
+| `Game.get(name, fallback)` | `f32` |
+| `Game.set(name, value)` | nothing |
+
+The smallest thing that lets two scripts cooperate. Decay has no value that can
+hold an entity, so a script cannot name another one — but it can leave a number
+under a name, and another can read it. That is enough for a player to publish
+where it is, a collectible to notice, and a score to be counted by nobody in
+particular.
+
+The fallback on `get` is **not optional**, because a note nobody has left yet is
+the ordinary case on the first frame. A `get` that silently answered zero would
+make a mistyped name read as a legitimate value, which is the failure this whole
+surface is arranged to avoid.
+
+The board is runtime state and goes when a run does — stopping and playing again
+does not begin with the last game's score.
+
+This is deliberately a stopgap, and its shape admits it: names are strings and
+nothing checks them. Typed cross-entity access is the better answer and needs a
+Decay value that can hold an entity. The board is here because it is small and
+it unblocks a game, and a game is what tells us which of the bigger answers is
+worth building.
+
 ### Saying something
 
 `print(anything)` puts a line in the host's log, tagged with the entity that
@@ -161,10 +188,11 @@ Three absences, each for a reason worth stating.
 quaternion by hand, and offering a third of a 3D rotation API is worse than
 offering none.
 
-**No spawning, despawning, or other entity.** These wait on the language rather
-than on the host: naming another entity means holding one, and Decay has no
-value beyond numbers, booleans, strings, and null. An entity handle is a value
-type, and adding one is a language decision — see `decay/LANGUAGE.md`.
+**No spawning, despawning, or naming another entity.** These wait on the
+language rather than on the host: naming another entity means holding one, and
+Decay has no value beyond numbers, booleans, strings, and null. An entity handle
+is a value type, and adding one is a language decision — see
+`decay/LANGUAGE.md`. The board above is what stands in until then.
 
 **No mouse, and no `vec2`.** The same reason for `vec2`: it is a value type.
 The mouse is simply not needed yet by anything, and the acceptance list did not

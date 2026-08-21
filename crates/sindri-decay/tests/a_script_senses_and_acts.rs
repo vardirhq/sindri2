@@ -336,3 +336,96 @@ fn a_script_that_has_not_compiled_reports_nothing_rather_than_no_properties() {
     let scripts = Scripts::new();
     assert_eq!(scripts.exports("never-loaded.decay", "S"), None);
 }
+
+/// Two scripts cooperating, which is the smallest thing a game needs and the
+/// one thing the language cannot do on its own: Decay has no value that holds
+/// an entity, so a script cannot name another. It can leave a number under a
+/// name, and another can read it.
+#[test]
+fn one_script_can_leave_a_number_for_another() {
+    let mut world = World::default();
+    let mut spawn = |script: &str| {
+        world.spawn(EntityData {
+            transform_3d: Some(Transform3D::default()),
+            components: [(
+                ScriptComponent::TYPE_NAME.to_owned(),
+                json!({ "source": "s.decay", "script": script }),
+            )]
+            .into_iter()
+            .collect(),
+            ..EntityData::default()
+        })
+    };
+    // Named so the writer runs first, since a world is queried in handle order
+    // and a reader that ran first would see the fallback.
+    let writer = spawn("Writer");
+    let reader = spawn("Reader");
+
+    let mut sources = ScriptSources::new();
+    sources.insert(
+        "s.decay",
+        r#"
+        script Writer {
+            fn update(dt: f32) {
+                this.transform.position.x = 7.0;
+                Game.set("player_x", this.transform.position.x);
+            }
+        }
+        script Reader {
+            fn update(dt: f32) {
+                this.transform.position.x = Game.get("player_x", -1.0);
+            }
+        }
+        "#,
+    );
+
+    let mut scripts = Scripts::new();
+    let report = scripts.advance(
+        &mut world,
+        &registry(),
+        &sources,
+        &InputState::default(),
+        0.5,
+    );
+    assert!(report.is_quiet(), "{report:?}");
+    assert!((position(&world, writer)[0] - 7.0).abs() < 1.0e-5);
+    assert!(
+        (position(&world, reader)[0] - 7.0).abs() < 1.0e-5,
+        "the reader saw what the writer left"
+    );
+}
+
+/// A note nobody has left reads as the fallback the script named, not as zero.
+/// A `get` that silently answered zero would make a typo look like a value.
+#[test]
+fn an_unwritten_note_reads_as_the_fallback() {
+    let (mut world, entity, sources) = world(
+        r#"script S { fn update(dt: f32) { this.transform.position.x = Game.get("nobody", 42.0); } }"#,
+    );
+    let report = Scripts::new().advance(
+        &mut world,
+        &registry(),
+        &sources,
+        &InputState::default(),
+        0.5,
+    );
+    assert!(report.is_quiet(), "{report:?}");
+    assert!((position(&world, entity)[0] - 42.0).abs() < 1.0e-5);
+}
+
+/// The board is what a run counted, so it belongs to the run. Stopping and
+/// starting again must not begin with the last game's score.
+#[test]
+fn the_board_is_cleared_with_the_instances() {
+    let (mut world, _, sources) = world(
+        r#"script S { fn update(dt: f32) { Game.set("score", Game.get("score", 0.0) + 1.0); } }"#,
+    );
+    let mut scripts = Scripts::new();
+    let input = InputState::default();
+    scripts.advance(&mut world, &registry(), &sources, &input, 0.5);
+    scripts.advance(&mut world, &registry(), &sources, &input, 0.5);
+    assert!((scripts.blackboard().get("score", 0.0) - 2.0).abs() < 1.0e-9);
+
+    scripts.clear();
+    assert!(!scripts.blackboard().has("score"), "a new run starts fresh");
+}

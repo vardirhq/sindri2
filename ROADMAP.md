@@ -182,7 +182,7 @@ shaped like the tool.
 - [ ] Port A* pathfinding into a renderer-free grid crate, with the general grid beside it; the legacy platform-jump graph is deferred rather than carried along because it shares a file
 - [ ] Add optional Rapier2D adapter without core dependency, with collision layers from the start — physics ignores Z, so depth cannot keep a parallax background out of the player's way, and collision layers are not render layers
 - [ ] Add 2D pan/zoom viewport controls, which need a 2D scene rather than the screen-anchored overlay the demo uses
-- [ ] Start the companion game and grow it through this milestone, verified natively and in browser — see "The companion game" below, which replaces the `hello-2d` and platformer slice this milestone used to schedule
+- [ ] Start the companion game and grow it through this milestone, verified natively and in browser — see "The companion game" below, which replaces the `hello-2d` and platformer slice this milestone used to schedule (started: `game/` plays natively, with a scripted offscreen capture in CI; still to do here are text, a tilemap floor, and the browser build)
 
 Exit gate: Sindri Next matches the useful core of legacy 2D without inheriting its desktop/server/Lua coupling, and each ported system can be authored in the editor rather than only by hand in JSON.
 
@@ -398,7 +398,7 @@ improve it, that is information about the feature, not a shortcoming of the
 game. A showcase never has to be fun, never has to ship, and never meets the
 awkward case — so it applies none of the pressure that makes an engine good.
 
-**It is isometric,** because Milestone 9 already is, so the game sits on the
+**It is isometric in the end,** because Milestone 9 already is, so the game sits on the
 path rather than beside it; because isometric is sprites with depth sorting,
 layers, and transparent ordering, which is what the frame pipeline already does
 well; and because its needs are broad enough — grid maths, pathfinding, text,
@@ -416,12 +416,32 @@ tagged snapshot, so the engine's progress is something to look at rather than a
 list of ticks. A milestone that would leave the game broken is a milestone that
 is not finished.
 
-It cannot start yet. It needs sprite sheets with UV rects, world-space 2D
-positioning, and text — the first three items of Milestone 6 — because until
-then there is no way to draw a character, place it in a world, or tell the
-player anything.
+**It has started, one item early.** The plan held it until sprite sheets, world-space
+2D, and text all existed, on the reasoning that without text there is no way to
+tell the player anything. Two of the three arrived; the third did not, and the
+game started anyway, because scripting landed first and a game was the only
+honest way to find out whether authoring gameplay in Decay actually works. What
+text would have said, it says in sprites instead: a row of lamps for the score
+and a banner that fades in when the game is won. That is a real constraint
+rather than a workaround — a great many games say everything they need to in
+pictures — and the substitution is worth keeping in mind when text does arrive,
+because it is evidence about how much text a 2D engine really owes its users.
 
-- [ ] Start the game once sprite sheets, world-space 2D, and text exist: one room, one character, one tile floor
+It is `game/`, crate `sindri-gather`: five orbs on a diamond floor, a thing you
+drive with the arrow keys, and a lamp per orb. Its scene is 68 entities and all
+four of its rules — moving, gathering, counting, winning — are Decay scripts.
+There is no gameplay in its Rust, which is the claim it exists to test.
+
+It has already paid for itself. Mixing a world with an overlay is something no
+proof in the workspace did, and it turned up a renderer bug that made every
+frame with more than one sprite batch draw through the wrong camera — see
+`docs/rendering-frame-pipeline.md`.
+
+It is top-down rather than isometric for now: the floor is drawn as a diamond,
+but the coordinates behind it are a plain grid, which is what Milestone 9's
+module is for.
+
+- [x] Start the game: one room, one character, one tile floor (started before text existed, which the entry above records)
 - [ ] Grow it with Milestone 6: animation, a tilemap floor, parallax, and a font rendering real text
 - [ ] Take the Milestone 7 editor to it, and record what authoring it in the editor is actually like
 - [ ] Give it depth with Milestone 8: a 3D prop in the same scene as the sprites

@@ -1,0 +1,29 @@
+// The thing you drive.
+//
+// It publishes where it is on the shared board every frame, because Decay has
+// no value that can hold an entity — an orb cannot ask the player where it is,
+// so the player says.
+script Player {
+    @export
+    let speed: f32 = 3.2;
+
+    fn update(dt: f32) {
+        let sideways = Input.axis("ArrowLeft", "ArrowRight");
+        let forward = Input.axis("ArrowDown", "ArrowUp");
+        this.transform.position.x += sideways * speed * dt;
+        this.transform.position.y += forward * speed * dt;
+
+        // Kept inside the room. A player who can walk off the floor and keep
+        // going has been given a world with no edges, which reads as a bug
+        // rather than as freedom.
+        //
+        // Short of the outermost tile centres rather than level with them: the
+        // tiles are diamonds, so their far corners taper, and standing on one
+        // of those looks like standing off the edge.
+        this.transform.position.x = min(max(this.transform.position.x, -3.0), 3.0);
+        this.transform.position.y = min(max(this.transform.position.y, -1.4), 1.4);
+
+        Game.set("player_x", this.transform.position.x);
+        Game.set("player_y", this.transform.position.y);
+    }
+}

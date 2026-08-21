@@ -15,11 +15,12 @@ use sindri_core::{ComponentSchemaRegistry, EntityId, World};
 use sindri_platform::InputState;
 
 use crate::{
-    ScriptComponent, ScriptContext, ScriptExport, ScriptFailure, ScriptMessage, ScriptReport,
-    WorldHost,
+    Blackboard, ScriptComponent, ScriptContext, ScriptExport, ScriptFailure, ScriptMessage,
+    ScriptReport, WorldHost,
     exports::exports_of,
     surface::{
-        FUNCTIONS, HostFunction, INPUT, INPUT_QUERIES, Node, PRINT, THIS, TIME, TIME_VALUES,
+        FUNCTIONS, GAME, GAME_CALLS, GameCall, HostFunction, INPUT, INPUT_QUERIES, Node, PRINT,
+        THIS, TIME, TIME_VALUES,
     },
 };
 
@@ -122,6 +123,24 @@ pub fn environment() -> Environment {
     environment.add_type(INPUT, input);
     environment.add_value(INPUT, Type::Named(INPUT.to_owned()));
 
+    let mut game = HostType::new();
+    for (name, call) in GAME_CALLS {
+        game = game.with_function(
+            *name,
+            FunctionType {
+                // Both take a name and a number: the value to leave, or the
+                // fallback for a note nobody has left.
+                params: vec![Type::String, Type::F32],
+                return_type: match call {
+                    GameCall::Get => Type::F32,
+                    GameCall::Set => Type::Unit,
+                },
+            },
+        );
+    }
+    environment.add_type(GAME, game);
+    environment.add_value(GAME, Type::Named(GAME.to_owned()));
+
     let mut time = HostType::new();
     for (name, _) in TIME_VALUES {
         time = time.with_value(*name, Type::F32);
@@ -204,6 +223,7 @@ struct Running {
 pub struct Scripts {
     programs: BTreeMap<String, Compiled>,
     running: BTreeMap<EntityId, Running>,
+    blackboard: Blackboard,
 }
 
 impl Scripts {
@@ -293,7 +313,11 @@ impl Scripts {
 
         // Disjoint field borrows: the programs are read while the instances are
         // written, and a helper taking `&mut self` could not do both.
-        let Self { programs, running } = self;
+        let Self {
+            programs,
+            running,
+            blackboard,
+        } = self;
         let mut live = BTreeSet::new();
 
         for (entity, component) in scripted {
@@ -305,6 +329,7 @@ impl Scripts {
             match tick(
                 programs,
                 running,
+                blackboard,
                 world,
                 sources,
                 input,
@@ -348,6 +373,16 @@ impl Scripts {
     pub fn clear(&mut self) {
         self.programs.clear();
         self.running.clear();
+        // The board goes with them: what a game had counted halfway through a
+        // run belongs to that run.
+        self.blackboard.clear();
+    }
+
+    /// The notes scripts have left each other, for a host that wants to show
+    /// them.
+    #[must_use]
+    pub const fn blackboard(&self) -> &Blackboard {
+        &self.blackboard
     }
 }
 
@@ -355,6 +390,7 @@ impl Scripts {
 fn tick(
     programs: &mut BTreeMap<String, Compiled>,
     running: &mut BTreeMap<EntityId, Running>,
+    blackboard: &mut Blackboard,
     world: &mut World,
     sources: &ScriptSources,
     input: &InputState,
@@ -385,7 +421,10 @@ fn tick(
         delta_seconds,
         elapsed_seconds,
     };
-    let mut runtime = Runtime::new(&compiled.program, WorldHost::new(world, entity, context));
+    let mut runtime = Runtime::new(
+        &compiled.program,
+        WorldHost::new(world, entity, context, blackboard),
+    );
 
     let started = match running.get(&entity) {
         // Repointing the component at another script starts a new instance
