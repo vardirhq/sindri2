@@ -177,7 +177,7 @@ shaped like the tool.
 - [ ] Port camera 2D behavior and pixel snapping — partly done: orthographic
   pixel snapping works; follow/dead-zone/smoothing behaviour remains
 - [x] Port tilemap data model and renderer — `sindri.tilemap` holds the sheet grid, the map grid, and a flat array of cells with `null` for empty, and extracts into the same sprite batches loose sprites use, so a prop sorts among the floor rather than behind it; it gained a projection the legacy type did not have, because the first thing to use it was an isometric floor, and placing a tile and finding the tile under a point are inverses on every cell of both
-- [ ] Add tilemap authoring: a tile palette, paint and erase, and layer selection — `local_to_tile` is the maths this needs and it exists; what is missing is the surface
+- [x] Add tilemap authoring: selecting a world-space map shows its sliced texture as a visual palette, primary drag paints or erases through the exact Scene-view camera, grid resizing preserves the overlap, and the stored render layer remains editable; a stroke is one undo step and screen-space maps stay data-only until the Game view has an authoring-input contract
 - [ ] Port text rendering with a web-safe font asset strategy
 - [ ] Add font and text authoring: choose a font asset and edit text content in the inspector
 - [ ] Port particles after the render lifecycle is stable
@@ -464,7 +464,7 @@ module is for.
   in both viewports, and Play runs its scripts, which is the parity claim
   holding. That first session found 49 floor rows drowning the hierarchy; the
   tilemap removed those rows, but viewport selection, hierarchy grouping, and
-  in-editor tilemap authoring remain open
+  in-editor animation-clip authoring remain open
 - [ ] Give it depth with Milestone 8: a 3D prop in the same scene as the sprites
 - [ ] Rebuild its coordinate handling on Milestone 9's grid module rather than its own
 - [ ] Ship it through Milestone 10's export pipeline, natively and to the web,

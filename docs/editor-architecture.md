@@ -74,6 +74,23 @@ it and only the editor's view of it moves — which is why a save after looking
 around writes nothing. Panning can carry the subject off screen, so there is a
 reset control rather than an expectation that the viewer finds their way back.
 
+When tile painting is enabled, primary drag belongs to the brush and secondary
+drag orbits; middle or Shift-drag still pans. A pointer is not interpreted by a
+second copy of the camera maths. `SceneExtractor::world_camera_for_viewport`
+hands the editor the exact view-projection used for that viewport, which the
+tilemap tool inverts into a local-space ray before asking `local_to_tile`. The
+same answer projects the hover outline back to the screen. Each changed cell is
+a `SetComponent` command, with one merge key for the drag, so release makes the
+whole stroke one undo step.
+
+The tile palette is derived from the selected map's texture and sprite-sheet
+sidecar and cached until either identity changes. It edits the existing compact
+palette and flat cell array rather than replacing the component with a typed
+serialization, preserving fields from newer scene formats. Grid resizing keeps
+the old overlap and fills new cells with `null`. Direct painting is world-space
+only: a screen-space tilemap belongs to the Game view, which intentionally does
+not accept editor input yet.
+
 ## Defaults, and what is remembered
 
 Settings survive a launch through eframe's storage: the project browser's
