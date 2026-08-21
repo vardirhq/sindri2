@@ -122,15 +122,12 @@ pub fn applies(type_name: &str, key: &str, payload: &Value) -> bool {
         ("sindri.sprite", "anchor") => {
             payload.get("space").and_then(Value::as_str) != Some("world")
         }
-        // These are edited as one visual grid. Exposing columns and rows as
-        // independent numbers produces an invalid cell count, while drawing
-        // the compact palette and cell array as opaque JSON offers no authoring
-        // at all.
-        ("sindri.tilemap", "columns" | "rows" | "palette" | "tiles") => false,
-        // Text content needs a multiline field and a font is a project asset,
-        // not an arbitrary string. Both are drawn by the text authoring panel
-        // instead of the generic JSON rows below it.
-        ("sindri.text", "text" | "font") => false,
+        // These are replaced by their component's visual authoring controls.
+        // A tilemap edits its interdependent storage as one grid; text content
+        // needs a multiline field and a font is a project asset rather than an
+        // arbitrary string.
+        ("sindri.tilemap", "columns" | "rows" | "palette" | "tiles")
+        | ("sindri.text", "text" | "font") => false,
         _ => true,
     }
 }
