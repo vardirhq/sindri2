@@ -128,10 +128,17 @@ fn text_extracts_in_pixels_from_an_overlay_anchor() {
     assert_eq!(instances.len(), 1);
     assert_eq!(instances[0].text(), "Gather");
     assert_eq!(instances[0].font(), "fonts/Inter.ttf");
-    assert_eq!(instances[0].position(), [64.0, 128.0]);
-    assert_eq!(instances[0].font_size(), 18.0);
-    assert_eq!(instances[0].line_height(), 24.0);
-    assert_eq!(instances[0].color(), [1.0, 0.5, 0.25, 1.0]);
+    let [x, y] = instances[0].position();
+    assert!(close(x, 64.0) && close(y, 128.0));
+    assert!(close(instances[0].font_size(), 18.0));
+    assert!(close(instances[0].line_height(), 24.0));
+    assert!(
+        instances[0]
+            .color()
+            .into_iter()
+            .zip([1.0, 0.5, 0.25, 1.0])
+            .all(|(actual, expected)| close(actual, expected))
+    );
     assert_eq!(
         referenced_fonts(&world).into_iter().collect::<Vec<_>>(),
         ["fonts/Inter.ttf"]
