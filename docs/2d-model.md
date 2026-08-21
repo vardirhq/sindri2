@@ -154,8 +154,9 @@ that have one, which is the wrong half — the scripts and animations that
 flatten a scene mostly belong to things with no physics at all.
 
 What respects it is `WorldCommand::SetTransform3D`, which is the single write
-path tools use, so the check sits where the editor, the eventual scripting
-boundary, and the web SDK all pass through. A refused command changes nothing
+path tools use, so the check sits where the editor and other command-driven
+authoring paths pass through. The Decay host enforces the same lock at its world
+boundary. A refused command changes nothing
 and never enters the history, so a transaction that contains one rolls back
 whole.
 

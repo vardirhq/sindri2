@@ -1,5 +1,16 @@
 # Sindri Next
 
+> **Historical architecture brief.** This document preserves the original
+> Rust + first-class TypeScript product proposal and is no longer the current
+> product contract. Sindri Editor + Decay is now the primary authoring model,
+> with native and browser builds as targets of the same project. Use
+> [`README.md`](README.md) for the current product overview,
+> [`ROADMAP.md`](ROADMAP.md) for planned work, and
+> [`docs/decay-direction.md`](docs/decay-direction.md) for the decision and its
+> rationale. TypeScript may return as an embedding API if a concrete need earns
+> it; the sections below remain as historical design input rather than current
+> commitments.
+
 ## Project overview
 
 Sindri Next is a **general-purpose 2D and 3D game engine written primarily in Rust**, designed to run both natively and in modern web browsers.

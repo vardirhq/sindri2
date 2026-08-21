@@ -380,18 +380,20 @@ collapsed and overflowed nothing; and the settings gear.
 
 ### Engine
 
-- **No tilesets.** Sprites address part of a texture and animate through a
-  sheet, but a tilemap has no data model, no component, and no renderer
+- **No reusable tileset asset model.** A tilemap has a component, renderer, and
+  palette of named sprites from a sheet, but tile semantics such as terrain,
+  collision, and reusable tile metadata do not exist
 - **No text rendering.** No score, menu, or dialogue
 - **One mesh primitive: `Cube`.** No quad, sphere, or glTF import
 - **No audio.** Now scheduled in `ROADMAP.md`; it previously had no item at all
 - No physics or collision. This one is a deliberate gap rather than a missing
   foundation: collision against transforms is gameplay code, and a Rapier
   adapter is planned as optional rather than built in
-- No tilemaps, particles, parallax, or pathfinding
-- No TypeScript SDK; the WASM binding crate does not exist
-- No spawning or cross-entity access from a script — it reaches its own entity
-  and nothing else; see below
+- No particles, authored parallax system, or pathfinding
+- No optional TypeScript embedding SDK; browser games currently expose narrow
+  application entry points and run their gameplay in Decay
+- No spawning from a script. Cross-entity lookup, access, existence checks, and
+  despawning work through generation-checked entity references; see below
 - Hot reload covers assets, not the scene file: editing a scene on disk while it
   is open is not noticed
 - No deterministic system ordering
@@ -399,7 +401,8 @@ collapsed and overflowed nothing; and the settings gear.
 ### Editor
 
 - Cannot create or delete an asset
-- Does not read a project directory
+- No first-class project model or multi-scene workspace. The Project dock does
+  read and filter the directory containing the open scene
 - No gizmos, no viewport selection, no multi-select
 - No prefabs, no play-mode-against-a-copy, no build or export controls
 - No versioned editor protocol; the editor and runtime are one process
@@ -526,10 +529,11 @@ the same rate whatever the frame rate is.
 **None of its rules are in Rust.** Moving, gathering, counting and winning are
 four Decay scripts in `game/assets/scripts/`. The Rust is a window, a device, a
 loop, and the embedded bytes of the scene, the scripts, and the art. That split
-is what the game exists to test, and it held: adding the game needed one engine
-feature (`Game.get`/`Game.set`, a shared blackboard, because Decay has no value
-that can hold an entity so the orbs cannot ask the player where it is) and no
-gameplay code.
+is what the game exists to test, and it held. The game first earned one engine
+feature, `Game.get`/`Game.set`, as a shared blackboard. Entity references later
+let each orb find the player and read its transform directly; the board remains
+for game-wide facts such as score and victory. Neither change added gameplay to
+Rust.
 
 **It is checked, not just run.** `game/tests/the_game_holds_together.rs` asserts
 every texture and script the scene names is shipped, that the scripts compile,
@@ -542,10 +546,11 @@ and checking the banner comes up.
 for a fixed number of fixed steps — and photographs where that leaves the game,
 so the picture proves the scripts ran rather than that the scene loads.
 
-**It opens in the editor, and Play runs it there.** All 68 entities load, both
+**It opens in the editor, and Play runs it there.** All 20 entities load, both
 viewports draw it, and the editor advances the same Decay sources the standalone
-game does. Authoring it there is another matter — `docs/editor-meets-the-game.md`
-records what taking the editor to the game actually found.
+game does. `docs/editor-meets-the-game.md` records the first editor session
+against the older 68-entity scene; the tilemap removed its 49 floor rows, while
+viewport selection and general hierarchy grouping remain open.
 
 **It found a bug the proofs could not.** It is the first thing in the workspace
 that draws a world and a screen overlay in one frame, and doing so revealed that
@@ -560,8 +565,10 @@ every sprite batch after the first drew with the last batch's camera. See
 - No sound, because there is no audio
 - Top-down coordinates behind an isometric-looking floor; the grid module that
   would make it properly isometric is Milestone 9
-- Not built for the browser yet, though it compiles for `wasm32`
+- Browser asset fetching is not exercised: the playable web build embeds its
+  scene, scripts, sheets, and textures
 - No restart without relaunching, no menu, no pause
 - The floor is one `sindri.tilemap`, but it was written into the scene file by a
-  script rather than authored, because the editor has no tile palette — and its
-  sheets were sliced by hand for the same reason
+  script rather than authored, because the editor has no tile palette. Sheet
+  slicing and sprite naming now work in the editor; animation clips are still
+  authored by hand

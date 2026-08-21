@@ -1,6 +1,11 @@
 # Decay and the editor-first authoring direction
 
-> **Status:** design note / proposed direction. This records the current product discussion; it does not mean the scripting runtime has been implemented or that the existing roadmap has already been replaced.
+> **Status:** accepted direction, with the first playable implementation in the
+> repository. Decay now parses, type-checks, executes against Sindri's typed
+> host, drives the companion game natively and in a browser, and exposes authored
+> properties to the editor. The language and tooling remain pre-alpha. The
+> superseded Rhai recommendation is retained later in this document as a dated
+> decision record.
 
 Sindri Next's existing engine foundation remains a good fit for a simpler authoring model than the original Rust + TypeScript split.
 
@@ -20,21 +25,22 @@ Decay should borrow useful ideas and familiar syntax from Rust without presentin
 
 The language should be designed around Sindri concepts from the start: entities, components, scenes, assets, prefabs, input, events, editor-exposed properties, lifecycle callbacks, and hot reload.
 
-A representative direction might look like:
+A current script looks like:
 
 ```rust
 script Player {
     @export
-    speed: f32 = 6.0
+    var speed: f32 = 6.0;
 
     fn update(dt: f32) {
-        let movement = Input.axis("move_left", "move_right")
-        transform.position.x += movement * speed * dt
+        let movement = Input.axis("ArrowLeft", "ArrowRight");
+        this.transform.position.x += movement * speed * dt;
     }
 }
 ```
 
-This syntax is illustrative, not a committed language specification.
+The complete implemented grammar and type rules live in
+[`decay/LANGUAGE.md`](../decay/LANGUAGE.md).
 
 ## Product model
 

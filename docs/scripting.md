@@ -252,11 +252,11 @@ Three absences, each for a reason worth stating.
 quaternion by hand, and offering a third of a 3D rotation API is worse than
 offering none.
 
-**No spawning, despawning, or naming another entity.** These wait on the
-language rather than on the host: naming another entity means holding one, and
-Decay has no value beyond numbers, booleans, strings, and null. An entity handle
-is a value type, and adding one is a language decision — see
-`decay/LANGUAGE.md`. The board above is what stands in until then.
+**No spawning.** Decay now has opaque entity references: a script can find,
+hold, compare, inspect, modify, check, and despawn another entity. Creating one
+still needs an engine-level description of what to create, and no prefab or
+equivalent authored template exists yet. The shared board remains for facts
+that belong to the game rather than to an entity.
 
 **No mouse, and no `vec2`.** The same reason for `vec2`: it is a value type.
 The mouse is simply not needed yet by anything, and the acceptance list did not
@@ -335,8 +335,12 @@ back does not change what undo means.
 
 ## Known gaps
 
-- No spawning, despawning, or access to another entity, which wait on Decay
-  having a value that can hold one.
+- No spawning. Finding, reaching through, checking, and despawning another
+  entity work through opaque generation-checked references; spawning remains
+  blocked on the engine defining what authored or prefab data should be created.
+- Despawning and other script writes are not routed through `WorldCommand` and
+  therefore do not produce undo entries. Editor play mode restores its snapshot
+  on Stop instead.
 - Decay's only numeric type is spelled `f32` and holds an `f64`; `WorldHost` is
   the one place the two meet and the one place that narrows.
 - The script instance is created on first sight and lost when the world is
