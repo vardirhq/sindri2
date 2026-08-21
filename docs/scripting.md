@@ -128,23 +128,34 @@ concatenate, so a `print` that only took text could not report a value.
 
 ### Maths
 
-**Every path above is typed, so a misspelling is a compile error.** `this.transfrom`
-and `this.transform.position.w` are both refused with a line number when the
-script compiles, rather than failing on the first frame with a path name and no
-idea where it came from.
-
-That only holds because the table above is not written twice. `surface.rs` is
-the single description; the analyzer's `Environment` and `WorldHost`'s
-accessors are both derived from it, and a test walks every path the analyzer
-would accept and asserts the host answers it. A path accepted by one and not
-the other is the worst failure available here — a clean compile followed by a
-runtime error — and it cannot be shipped.
-
 `abs`, `sqrt`, `sin`, `cos`, `min`, `max`. That is the entire standard library.
 Decay has no modules and no imports, so each is a bare global name, and every one
 added is a name a script can no longer use for its own.
 
-Three absences are deliberate.
+### Why this list can be trusted
+
+**Every path above is typed, so a misspelling is a compile error.**
+`this.transfrom` and `this.transform.position.w` are both refused with a line
+number when the script compiles, rather than failing on the first frame with a
+path name and no idea where it came from.
+
+That holds because the tables above are not written twice. `surface.rs` is the
+single description; the analyzer's `Environment` and `WorldHost`'s accessors are
+both derived from it, and a test walks every path the analyzer would accept and
+asserts the host answers it. A path accepted by one and not the other is the
+worst failure available here — a clean compile followed by a runtime error — and
+it cannot be shipped.
+
+**And this document is checked against that description.**
+`crates/sindri-decay/tests/documented_surface.rs` parses the tables above and
+asserts they name exactly what a script can reach — no more, no less. A surface
+that grew without the documentation growing with it fails the build, because a
+list of what a script can do is believed, and one that is quietly wrong is worse
+than none at all.
+
+### What is deliberately absent
+
+Three absences, each for a reason worth stating.
 
 **No full 3D rotation**: a gameplay script should not be asked to assemble a
 quaternion by hand, and offering a third of a 3D rotation API is worse than
