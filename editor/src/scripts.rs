@@ -22,7 +22,8 @@ use sindri_assets::{
     TextAssetDecoder,
 };
 use sindri_core::{AssetId, ComponentSchemaRegistry, World};
-use sindri_decay::{ScriptFailure, ScriptSources, Scripts, referenced_sources};
+use sindri_decay::{ScriptReport, ScriptSources, Scripts, referenced_sources};
+use sindri_platform::InputState;
 
 /// Scripts are small and few, so one worker is enough and sixteen waiting is
 /// more than a scene the editor can open will name.
@@ -166,10 +167,11 @@ impl SceneScripts {
         &mut self,
         world: &mut World,
         components: &ComponentSchemaRegistry,
+        input: &InputState,
         delta_seconds: f32,
-    ) -> Vec<ScriptFailure> {
+    ) -> ScriptReport {
         self.scripts
-            .advance(world, components, &self.sources, delta_seconds)
+            .advance(world, components, &self.sources, input, delta_seconds)
     }
 
     /// Forgets every running instance, keeping the loaded sources.

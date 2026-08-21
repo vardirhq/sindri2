@@ -255,7 +255,8 @@ frame.
   dock
 - Play, pause, and stop, driving the real engine lifecycle rather than a display
   flag, and a separate **Discard changes** that returns the world to the file.
-  Play advances sprite animations — the first thing it actually runs — pause
+  Play advances sprite animations and Decay scripts, and hands scripts the
+  keyboard while it does; pause
   holds the frame, and stop puts every clip back to its start. A scene at rest
   shows its clips' first frames, so a broken clip is reported without anyone
   pressing anything
@@ -280,7 +281,7 @@ under use and what the editor cannot express at all. This is the summary, and
 it is deliberately short now: everything the audit found is either working or
 gone, and what is left here is waiting on a build rather than on a handler.
 
-- **Play and Pause** — the only thing they run is sprite animation. No gameplay
+- **Play and Pause** — they run sprite animation and Decay scripts. No other gameplay
   is stepped, so the demo's own turning cube does not turn
 - **Rotation** in the inspector — the word "Quaternion". The format stores a
   rotation and the renderer applies it; nothing edits it
@@ -350,8 +351,12 @@ the textures use. Verified in the editor: the fixture's cube turns because
 `editor/assets/scripts/spin.decay` says so, and Stop restores the world to the
 pixel.
 
-A script reaches its own transform's position, scale, and Z rotation, plus six
-maths functions, and nothing else — the whole table is in `docs/scripting.md`.
+A script reaches its own transform's position, scale and Z rotation, its
+sprite's tint and layer, the keyboard, the frame's delta and its own elapsed
+time, six maths functions, and `print`. The whole table is in
+`docs/scripting.md`. Verified in the editor: holding an arrow key moves the
+fixture's cube, releasing stops it, Space recentres it and puts a line in the
+console naming the entity that said it.
 **Those paths are typed**, so `this.transfrom.position.x` is a compile error
 with a line number rather than a first-frame failure, and reaching for a method
 on a container says what to write instead. The analyzer's view and the host's
@@ -386,8 +391,9 @@ the README.
   is the only unbounded path today
 - No arrays, maps, closures, or first-class functions
 - No standard library; not even `math`
-- The described surface is one entity's transform and six maths functions. No
-  input, time, spawning, other entities, or other components
+- No spawning, despawning, or reaching another entity — blocked on Decay having
+  a value that can hold one
+- No mouse, and no components beyond `sindri.sprite`
 - No script state migration across a source reload
 - No LSP, no formatter, no debugger, no syntax highlighting anywhere
 - No script state migration across a reload: a changed file recompiles, and the

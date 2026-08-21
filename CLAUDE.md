@@ -101,8 +101,10 @@ sindri-gpu      -> wgpu only (sindri-render is a dev-dependency, for tests)
 sindri-render   -> wgpu, glam, bytemuck only
 sindri-scene    -> sindri-core + sindri-render
 sindri          -> assets, core, and (feature `render`) gpu, render, scene
-sindri-decay    -> sindri-core + the decay/ language crates, one way only
-editor          -> assets, core, decay, render, scene (sindri-cube is dev-only)
+sindri-decay    -> sindri-core + sindri-platform (for input) + the decay/
+                   language crates, one way only
+editor          -> assets, core, decay, platform, render, scene (sindri-cube
+                   is dev-only)
 ```
 
 - `sindri-core` depends on no window, GPU, browser, editor, physics, scripting,

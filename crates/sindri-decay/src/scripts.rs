@@ -12,10 +12,13 @@ use decay_ir::{IrContainer, IrProgram, lower_with_environment};
 use decay_runtime::{Runtime, ScriptInstance, Value};
 use decay_semantic::{Environment, FunctionType, HostType, Type};
 use sindri_core::{ComponentSchemaRegistry, EntityId, World};
+use sindri_platform::InputState;
 
 use crate::{
-    ScriptComponent, ScriptFailure, WorldHost,
-    surface::{AXES, FUNCTIONS, HostFunction, SCALARS, TRANSFORM, TRANSFORM_MEMBER, VEC3, VECTORS},
+    ScriptComponent, ScriptContext, ScriptFailure, ScriptMessage, ScriptReport, WorldHost,
+    surface::{
+        FUNCTIONS, HostFunction, INPUT, INPUT_QUERIES, Node, PRINT, THIS, TIME, TIME_VALUES,
+    },
 };
 
 /// The lifecycle function called once, before the first update.
@@ -61,7 +64,7 @@ impl ScriptSources {
 /// boundary Decay is built around: `decay-semantic` knows that `sin` exists
 /// only because this said so, and knows nothing about what it does.
 ///
-/// Every entry is derived from [`crate::surface`], the same tables
+/// Every entry is derived from [`crate::surface`], the same description
 /// [`crate::WorldHost`] reaches the world through. A path the analyzer accepts
 /// and the host cannot answer is a clean compile followed by a runtime failure,
 /// so the two are not allowed to be written separately.
@@ -69,22 +72,12 @@ impl ScriptSources {
 pub fn environment() -> Environment {
     let mut environment = Environment::new();
 
-    let mut vec3 = HostType::new();
-    for (axis, _) in AXES {
-        vec3 = vec3.with_value(*axis, Type::F32);
+    for (name, node) in THIS {
+        environment.add_this_value(*name, describe_node(node));
     }
-    environment.add_type(VEC3, vec3);
-
-    let mut transform = HostType::new();
-    for (name, _) in VECTORS {
-        transform = transform.with_value(*name, Type::Named(VEC3.to_owned()));
+    for (name, ty) in collect_types() {
+        environment.add_type(name, ty);
     }
-    for (name, _) in SCALARS {
-        transform = transform.with_value(*name, Type::F32);
-    }
-    environment.add_type(TRANSFORM, transform);
-
-    environment.add_this_value(TRANSFORM_MEMBER, Type::Named(TRANSFORM.to_owned()));
 
     for (name, function) in FUNCTIONS {
         environment.add_function(
@@ -99,7 +92,75 @@ pub fn environment() -> Environment {
         );
     }
 
+    // `print` takes anything, because a script has no way to turn a number into
+    // a string -- Decay has no conversions and `+` does not concatenate -- so a
+    // print that only took text could not report a value.
+    environment.add_function(
+        PRINT,
+        FunctionType {
+            params: vec![Type::Unknown],
+            return_type: Type::Unit,
+        },
+    );
+
+    let mut input = HostType::new();
+    for (name, query) in INPUT_QUERIES {
+        input = input.with_function(
+            *name,
+            FunctionType {
+                params: vec![Type::String; query.keys()],
+                return_type: if query.is_number() {
+                    Type::F32
+                } else {
+                    Type::Bool
+                },
+            },
+        );
+    }
+    environment.add_type(INPUT, input);
+    environment.add_value(INPUT, Type::Named(INPUT.to_owned()));
+
+    let mut time = HostType::new();
+    for (name, _) in TIME_VALUES {
+        time = time.with_value(*name, Type::F32);
+    }
+    environment.add_type(TIME, time);
+    environment.add_value(TIME, Type::Named(TIME.to_owned()));
+
     environment
+}
+
+/// The type a node has: a group is its name, a leaf is a number.
+fn describe_node(node: &Node) -> Type {
+    match node {
+        Node::Group(name, _) => Type::Named((*name).to_owned()),
+        Node::Leaf(_) => Type::F32,
+    }
+}
+
+/// Every named type the surface tree mentions, with its members.
+///
+/// A type may appear more than once with different accessors -- `position` and
+/// `scale` are both a `Vec3` -- and that is fine, because a type is a shape and
+/// the accessors are the host's business. Collected rather than listed so a new
+/// group in the tree is described without a second edit.
+fn collect_types() -> Vec<(String, HostType)> {
+    fn walk(members: &'static [(&'static str, Node)], into: &mut Vec<(String, HostType)>) {
+        for (_, node) in members {
+            let Node::Group(name, nested) = node else {
+                continue;
+            };
+            let mut ty = HostType::new();
+            for (field, child) in *nested {
+                ty = ty.with_value(*field, describe_node(child));
+            }
+            into.push(((*name).to_owned(), ty));
+            walk(nested, into);
+        }
+    }
+    let mut types = Vec::new();
+    walk(THIS, &mut types);
+    types
 }
 
 /// Every `.decay` source the world's scripts name.
@@ -125,6 +186,9 @@ struct Compiled {
 }
 
 struct Running {
+    /// How long this instance has been running, which is per instance rather
+    /// than per world: a script spawned later has not been going as long.
+    elapsed_seconds: f32,
     /// Which source and container this instance came from, so that repointing
     /// the component at another script starts a new instance rather than
     /// feeding the old one someone else's fields.
@@ -176,19 +240,22 @@ impl Scripts {
         world: &mut World,
         components: &ComponentSchemaRegistry,
         sources: &ScriptSources,
+        input: &InputState,
         delta_seconds: f32,
-    ) -> Vec<ScriptFailure> {
-        let mut failures = Vec::new();
+    ) -> ScriptReport {
+        let mut report = ScriptReport::default();
         if !delta_seconds.is_finite() || delta_seconds < 0.0 {
-            failures.push(ScriptFailure::BadDelta(delta_seconds));
-            return failures;
+            report.failures.push(ScriptFailure::BadDelta(delta_seconds));
+            return report;
         }
 
         let scripted = match components.query::<ScriptComponent>(world) {
             Ok(scripted) => scripted,
             Err(error) => {
-                failures.push(ScriptFailure::Registry(error.to_string()));
-                return failures;
+                report
+                    .failures
+                    .push(ScriptFailure::Registry(error.to_string()));
+                return report;
             }
         };
 
@@ -203,25 +270,31 @@ impl Scripts {
             }
             live.insert(entity);
 
-            if let Err(failure) = tick(
+            match tick(
                 programs,
                 running,
                 world,
                 sources,
+                input,
                 entity,
                 &component,
                 delta_seconds,
             ) {
+                Ok(printed) => report.printed.extend(
+                    printed
+                        .into_iter()
+                        .map(|message| ScriptMessage { entity, message }),
+                ),
                 // A script that failed this frame keeps its instance: a runtime
                 // error is not a reason to throw away the state the author is
                 // trying to inspect, and restarting it would hide the failure
                 // behind a fresh `start` every frame.
-                failures.push(failure);
+                Err(failure) => report.failures.push(failure),
             }
         }
 
         running.retain(|entity, _| live.contains(entity));
-        failures
+        report
     }
 
     /// Drops every instance and every compiled program.
@@ -235,15 +308,17 @@ impl Scripts {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn tick(
     programs: &mut BTreeMap<String, Compiled>,
     running: &mut BTreeMap<EntityId, Running>,
     world: &mut World,
     sources: &ScriptSources,
+    input: &InputState,
     entity: EntityId,
     component: &ScriptComponent,
     delta_seconds: f32,
-) -> Result<(), ScriptFailure> {
+) -> Result<Vec<String>, ScriptFailure> {
     ensure_compiled(programs, sources, entity, component)?;
     let compiled = &programs[&component.source];
 
@@ -258,7 +333,16 @@ fn tick(
             script: component.script.clone(),
         })?;
 
-    let mut runtime = Runtime::new(&compiled.program, WorldHost::new(world, entity));
+    let elapsed_seconds = running
+        .get(&entity)
+        .map_or(0.0, |current| current.elapsed_seconds)
+        + delta_seconds;
+    let context = ScriptContext {
+        input,
+        delta_seconds,
+        elapsed_seconds,
+    };
+    let mut runtime = Runtime::new(&compiled.program, WorldHost::new(world, entity, context));
 
     let started = match running.get(&entity) {
         // Repointing the component at another script starts a new instance
@@ -276,6 +360,7 @@ fn tick(
             running.insert(
                 entity,
                 Running {
+                    elapsed_seconds,
                     source: component.source.clone(),
                     script: component.script.clone(),
                     instance,
@@ -286,8 +371,9 @@ fn tick(
     };
 
     let Some(current) = running.get_mut(&entity) else {
-        return Ok(());
+        return Ok(Vec::new());
     };
+    current.elapsed_seconds = elapsed_seconds;
 
     if started && container.functions.iter().any(|f| f.name == START) {
         runtime
@@ -305,7 +391,7 @@ fn tick(
             .map_err(|error| ScriptFailure::runtime(entity, &component.script, UPDATE, &error))?;
     }
 
-    Ok(())
+    Ok(runtime.into_host().take_printed())
 }
 
 /// Lowers a source if it is new or has changed, and leaves it otherwise.

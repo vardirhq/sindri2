@@ -121,6 +121,12 @@ All notable changes to Sindri Next will be documented here.
 - Decay host types may have methods, checked for arity and argument types like any other call.
 - Reaching for `this.helper()` on a script's own function is refused with the bare-name form to write instead, rather than failing at runtime as an unknown host path.
 - Sindri's script surface is described once and read by both the analyzer and the host, with a test asserting the host answers every path the analyzer accepts.
+- Decay scripts can read the keyboard: `Input.axis`, `is_down`, `just_pressed`, and `just_released`, with physical key names that ignore case and a name nothing answers to refused rather than read as never-held.
+- Decay scripts can ask the frame its `Time.delta` and their own `Time.elapsed`.
+- Decay scripts can read and write their entity's sprite tint and layer, reaching the stored payload so a scene still round-trips byte for byte.
+- `print` from a Decay script, reaching the editor console tagged with the entity that said it.
+- Physical key names on `sindri_platform::Key`, with `ALL`, `name`, and a case-insensitive `from_name`.
+- The editor translates its own keyboard into engine input for running scripts, and lets go of every key when play stops or a text field takes focus.
 
 ### Changed
 

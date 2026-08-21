@@ -424,7 +424,8 @@ Container fields are visible in every function of that container.
 
 ## The host boundary
 
-Decay has **no built-in functions and no standard library**. Not even `print`.
+Decay has **no built-in functions and no standard library**. Not even `print` —
+where one exists, the host registered it.
 
 Everything a script can name beyond its own container comes from the host, which
 registers globals before compilation. The compiler knows their names and
@@ -439,8 +440,10 @@ beyond the script's own fields. A container's own field always wins over a host
 member of the same name, so the engine growing a name can never shadow state a
 script already had.
 
-For what the Sindri engine specifically provides (`this.transform.*`, `sin`,
-`cos`, `abs`, `sqrt`, `min`, `max`, and nothing else), see `docs/scripting.md`.
+For what the Sindri engine specifically provides — the entity's transform and
+sprite, the keyboard, the frame's time, `print`, and six maths functions — see
+`docs/scripting.md`. That document is the whole list; this one never grows a
+Sindri-specific name, because the language does not have one.
 
 ---
 

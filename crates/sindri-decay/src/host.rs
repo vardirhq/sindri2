@@ -13,47 +13,59 @@
 use decay_ir::Path;
 use decay_runtime::{Host, RuntimeError, Value};
 use sindri_core::{EntityId, Transform3D, World};
+use sindri_platform::{InputState, Key};
 
-use crate::surface::{AXES, FUNCTIONS, HostFunction, SCALARS, TRANSFORM_MEMBER, VECTORS, Vector};
+use crate::surface::{
+    FUNCTIONS, HostFunction, INPUT, INPUT_QUERIES, InputQuery, Leaf, PRINT, Seg, TIME, TIME_VALUES,
+    TimeValue, follow_mut, leaf,
+};
+
+/// What a script can know about the frame it is running in.
+///
+/// Passed per call rather than held, because none of it belongs to the script:
+/// the input is the host's, and the clock is the host's.
+#[derive(Clone, Copy)]
+pub struct ScriptContext<'a> {
+    pub input: &'a InputState,
+    pub delta_seconds: f32,
+    pub elapsed_seconds: f32,
+}
 
 /// The world, seen through one entity's script.
 ///
 /// Borrowed for the length of a single script call rather than held, because a
-/// script may write to the transform and the world cannot be lent out twice.
+/// script may write to the world and the world cannot be lent out twice.
 pub struct WorldHost<'a> {
     world: &'a mut World,
     entity: EntityId,
+    context: ScriptContext<'a>,
+    /// What the script said, in order. Drained by the caller after the call.
+    printed: Vec<String>,
 }
 
 impl<'a> WorldHost<'a> {
-    pub fn new(world: &'a mut World, entity: EntityId) -> Self {
-        Self { world, entity }
+    pub fn new(world: &'a mut World, entity: EntityId, context: ScriptContext<'a>) -> Self {
+        Self {
+            world,
+            entity,
+            context,
+            printed: Vec::new(),
+        }
+    }
+
+    /// Everything the script printed during the call.
+    pub fn take_printed(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.printed)
     }
 
     fn transform(&self) -> Option<Transform3D> {
         self.world.get(self.entity)?.transform_3d
     }
-}
 
-/// Which part of a transform a path names, or `None` if it names none.
-enum Target {
-    Axis(Vector, usize),
-    Scalar(crate::surface::Scalar),
-}
-
-fn target(path: &Path) -> Option<Target> {
-    let parts: Vec<&str> = path.0.iter().map(String::as_str).collect();
-    match parts.as_slice() {
-        ["this", member, name, axis] if *member == TRANSFORM_MEMBER => {
-            let vector = VECTORS.iter().find(|(known, _)| known == name)?.1;
-            let index = AXES.iter().find(|(known, _)| known == axis)?.1;
-            Some(Target::Axis(vector, index))
-        }
-        ["this", member, name] if *member == TRANSFORM_MEMBER => SCALARS
-            .iter()
-            .find(|(known, _)| known == name)
-            .map(|(_, scalar)| Target::Scalar(*scalar)),
-        _ => None,
+    /// The parts of a path after `this`, when it starts with `this`.
+    fn under_this(path: &Path) -> Option<Vec<&str>> {
+        let mut parts = path.0.iter().map(String::as_str);
+        (parts.next()? == "this").then(|| parts.collect())
     }
 }
 
@@ -63,9 +75,13 @@ fn target(path: &Path) -> Option<Target> {
 /// `docs/decay-direction.md` records that the numeric type is a decision still
 /// owed an answer.
 #[allow(clippy::cast_possible_truncation)]
-fn number(path: &Path, value: &Value) -> Result<f32, RuntimeError> {
+fn as_f32(number: f64) -> f32 {
+    number as f32
+}
+
+fn number(path: &Path, value: &Value) -> Result<f64, RuntimeError> {
     match value {
-        Value::Number(number) => Ok(*number as f32),
+        Value::Number(number) => Ok(*number),
         other => Err(RuntimeError::Host(format!(
             "{} takes a number, and the script gave {other:?}",
             path.dotted()
@@ -73,73 +89,198 @@ fn number(path: &Path, value: &Value) -> Result<f32, RuntimeError> {
     }
 }
 
+/// A key name from a script, resolved to the key it names.
+fn key(path: &Path, value: Option<&Value>) -> Result<Key, RuntimeError> {
+    let Some(Value::String(name)) = value else {
+        return Err(RuntimeError::Host(format!(
+            "{} takes key names, and the script gave {value:?}",
+            path.dotted()
+        )));
+    };
+    // Refused rather than treated as never-held. A mistyped key name that
+    // silently reads as "not pressed" is a control that does nothing for a
+    // reason nobody can see.
+    Key::from_name(name)
+        .ok_or_else(|| RuntimeError::Host(format!("there is no key called `{name}`")))
+}
+
 impl Host for WorldHost<'_> {
     fn load(&mut self, path: &Path) -> Result<Option<Value>, RuntimeError> {
-        // Not an error when there is no transform: a script on an entity
-        // without one simply cannot see it, and `None` is how the runtime says
-        // "unknown path" with the name attached.
-        let Some(transform) = self.transform() else {
+        let parts: Vec<&str> = path.0.iter().map(String::as_str).collect();
+
+        // `Time.delta` and the like: the frame, not the world.
+        if let [namespace, name] = parts.as_slice()
+            && *namespace == TIME
+        {
+            return Ok(TIME_VALUES
+                .iter()
+                .find(|(known, _)| known == name)
+                .map(|(_, value)| {
+                    Value::Number(f64::from(match value {
+                        TimeValue::Delta => self.context.delta_seconds,
+                        TimeValue::Elapsed => self.context.elapsed_seconds,
+                    }))
+                }));
+        }
+
+        let Some(under) = Self::under_this(path) else {
             return Ok(None);
         };
-        Ok(target(path).map(|target| {
-            Value::Number(f64::from(match target {
-                Target::Axis(vector, index) => vector.get(&transform)[index],
-                Target::Scalar(scalar) => scalar.get(&transform),
-            }))
-        }))
+        let Some(leaf) = leaf(&under) else {
+            return Ok(None);
+        };
+        let transform = self.transform();
+        let components = self
+            .world
+            .get(self.entity)
+            .map_or(serde_json::Value::Null, |data| {
+                serde_json::to_value(&data.components).unwrap_or(serde_json::Value::Null)
+            });
+
+        // `None` is how the runtime says "unknown path" with the name attached,
+        // and it is the right answer for an entity that has no sprite: the
+        // surface says a script *may* reach one, not that every entity has one.
+        Ok(leaf
+            .read(transform.as_ref(), &components)
+            .map(Value::Number))
     }
 
     fn store(&mut self, path: &Path, value: Value) -> Result<bool, RuntimeError> {
-        let (Some(mut transform), Some(target)) = (self.transform(), target(path)) else {
+        let Some(under) = Self::under_this(path) else {
+            return Ok(false);
+        };
+        let Some(leaf) = leaf(&under) else {
             return Ok(false);
         };
         let number = number(path, &value)?;
-        match target {
-            Target::Axis(vector, index) => {
-                let mut values = vector.get(&transform);
-                values[index] = number;
-                vector.set(&mut transform, values);
+
+        match leaf {
+            Leaf::TransformAxis(..) | Leaf::TransformScalar(_) => {
+                let Some(mut transform) = self.transform() else {
+                    return Ok(false);
+                };
+                match leaf {
+                    Leaf::TransformAxis(vector, index) => {
+                        let mut values = vector.get(&transform);
+                        values[index] = as_f32(number);
+                        vector.set(&mut transform, values);
+                    }
+                    Leaf::TransformScalar(scalar) => {
+                        scalar.set(&mut transform, as_f32(number));
+                    }
+                    Leaf::Component { .. } => unreachable!("matched above"),
+                }
+
+                // The Z lock is an invariant of the transform, not a rule the
+                // editor enforces on the way in. A script is a write path like
+                // any other, and one that could ignore the lock would be the
+                // hole that makes the lock worthless.
+                if self
+                    .transform()
+                    .is_some_and(|current| current.z_lock_rejects(Some(transform)))
+                {
+                    return Err(RuntimeError::Host(format!(
+                        "{} would move a Z-locked transform off its layer",
+                        path.dotted()
+                    )));
+                }
+                let Some(data) = self.world.get_mut(self.entity) else {
+                    return Ok(false);
+                };
+                data.transform_3d = Some(transform);
+                Ok(true)
             }
-            Target::Scalar(scalar) => scalar.set(&mut transform, number),
+            Leaf::Component { component, pointer } => {
+                let Some(data) = self.world.get_mut(self.entity) else {
+                    return Ok(false);
+                };
+                let Some(payload) = data.components.get_mut(component) else {
+                    return Err(RuntimeError::Host(format!(
+                        "{} needs a {component} on this entity, and it has none",
+                        path.dotted()
+                    )));
+                };
+                let Some(slot) = follow_mut(payload, pointer) else {
+                    return Err(RuntimeError::Host(format!(
+                        "{}'s {component} has nothing at {}",
+                        path.dotted(),
+                        describe(pointer)
+                    )));
+                };
+                // Written as the number the payload already held it as, so a
+                // layer stays an integer and a tint channel stays a float --
+                // the scene round-trips byte for byte either way.
+                *slot = if slot.is_i64() || slot.is_u64() {
+                    // Rounded and narrowed on purpose: the payload held an
+                    // integer, and a layer that came back as `7.0` would change
+                    // a scene byte for byte because a script touched it. A
+                    // number too large for an i64 saturates, which is a wrong
+                    // layer rather than a wrong file.
+                    #[allow(clippy::cast_possible_truncation)]
+                    serde_json::Value::from(number.round() as i64)
+                } else {
+                    serde_json::Value::from(number)
+                };
+                Ok(true)
+            }
         }
-
-        // The Z lock is an invariant of the transform, not a rule the editor
-        // enforces on the way in. A script is a write path like any other, and
-        // one that could ignore the lock would be the hole that makes the lock
-        // worthless.
-        if self
-            .transform()
-            .is_some_and(|current| current.z_lock_rejects(Some(transform)))
-        {
-            return Err(RuntimeError::Host(format!(
-                "{} would move a Z-locked transform off its layer",
-                path.dotted()
-            )));
-        }
-
-        let Some(data) = self.world.get_mut(self.entity) else {
-            return Ok(false);
-        };
-        data.transform_3d = Some(transform);
-        Ok(true)
     }
 
     fn call(&mut self, path: &Path, args: &[Value]) -> Result<Option<Value>, RuntimeError> {
-        let Some((_, function)) = FUNCTIONS.iter().find(|(name, _)| *name == path.dotted()) else {
-            return Ok(None);
-        };
-        let argument = |index: usize| -> Result<f64, RuntimeError> {
-            match args.get(index) {
-                Some(Value::Number(number)) => Ok(*number),
-                other => Err(RuntimeError::Host(format!(
-                    "{} takes numbers, and argument {index} was {other:?}",
-                    path.dotted()
-                ))),
+        let parts: Vec<&str> = path.0.iter().map(String::as_str).collect();
+
+        if let [name] = parts.as_slice() {
+            if *name == PRINT {
+                self.printed.push(match args.first() {
+                    Some(Value::String(text)) => text.clone(),
+                    Some(Value::Number(number)) => format!("{number}"),
+                    Some(Value::Bool(value)) => format!("{value}"),
+                    Some(Value::Null) | None => "null".to_owned(),
+                    Some(Value::Unit) => "unit".to_owned(),
+                });
+                return Ok(Some(Value::Unit));
             }
-        };
-        Ok(Some(Value::Number(match function {
-            HostFunction::Unary(apply) => apply(argument(0)?),
-            HostFunction::Binary(apply) => apply(argument(0)?, argument(1)?),
-        })))
+            if let Some((_, function)) = FUNCTIONS.iter().find(|(known, _)| known == name) {
+                let argument = |index: usize| -> Result<f64, RuntimeError> {
+                    args.get(index)
+                        .ok_or_else(|| {
+                            RuntimeError::Host(format!("{} wants more arguments", path.dotted()))
+                        })
+                        .and_then(|value| number(path, value))
+                };
+                return Ok(Some(Value::Number(match function {
+                    HostFunction::Unary(apply) => apply(argument(0)?),
+                    HostFunction::Binary(apply) => apply(argument(0)?, argument(1)?),
+                })));
+            }
+        }
+
+        if let [namespace, name] = parts.as_slice()
+            && *namespace == INPUT
+            && let Some((_, query)) = INPUT_QUERIES.iter().find(|(known, _)| known == name)
+        {
+            let input = self.context.input;
+            return Ok(Some(match query {
+                InputQuery::Axis => Value::Number(f64::from(
+                    input.axis(key(path, args.first())?, key(path, args.get(1))?),
+                )),
+                InputQuery::Down => Value::Bool(input.key_down(key(path, args.first())?)),
+                InputQuery::Pressed => Value::Bool(input.key_pressed(key(path, args.first())?)),
+                InputQuery::Released => Value::Bool(input.key_released(key(path, args.first())?)),
+            }));
+        }
+
+        Ok(None)
     }
+}
+
+fn describe(pointer: &[Seg]) -> String {
+    pointer
+        .iter()
+        .map(|step| match step {
+            Seg::Field(name) => (*name).to_owned(),
+            Seg::Index(index) => index.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join(".")
 }
