@@ -149,7 +149,8 @@ All notable changes to Sindri Next will be documented here.
 - `SpriteRef`, which splits `textures/tiles.png#floor` into a path and a sprite name, keeping `AssetId` a pure path — `#` was already reserved so a fragment could not leak into a URL.
 - A check that an animated sprite asks for the sheet its clips read, whose own reference names no part of one and so is invisible to anything looking for fragments.
 
-- A sheet slicer in the editor: selecting a texture shows it with its grid drawn over it, columns and rows are drags, every cell can be named, and saving writes the sidecar beside the image.
+- A sheet slicer in the editor: selecting a texture outlines every cell on the picture, columns, rows, margin and spacing are drags, a cell is named by clicking it, and saving writes the sidecar beside the image.
+- Margin and spacing on a sheet grid, so a sheet packed with gutters — which is how sheets are exported, to stop filtering bleeding one frame into the next — can be cut as it actually is.
 - Sprite rows under a sliced image in the project browser, collapsed until asked for, so a sixty-four frame sheet does not flood the listing.
 
 ### Changed

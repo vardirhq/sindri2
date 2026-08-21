@@ -29,6 +29,16 @@ pub struct Slicer {
     size: (u32, u32),
     pub columns: u32,
     pub rows: u32,
+    /// Pixels of border around the whole grid.
+    pub margin: [u32; 2],
+    /// Pixels between neighbouring cells, belonging to no sprite.
+    pub spacing: [u32; 2],
+    /// The cell being named, picked on the image.
+    ///
+    /// One at a time, and that is what makes a large sheet workable: a field
+    /// per cell is fine at four and unusable at two hundred and fifty-six,
+    /// which is the same wall a list of forty-nine floor tiles hit.
+    pub selected: u32,
     /// One name per cell, row-major. Empty means "call it by its index", which
     /// is what an unnamed cell resolves to anyway.
     pub names: Vec<String>,
@@ -52,6 +62,9 @@ impl Slicer {
             size: (0, 0),
             columns: 1,
             rows: 1,
+            margin: [0, 0],
+            spacing: [0, 0],
+            selected: 0,
             names: Vec::new(),
             problem: None,
         };
@@ -106,6 +119,45 @@ impl Slicer {
             .unwrap_or_else(|| index.to_string())
     }
 
+    /// Where each cell sits in the image, as fractions.
+    ///
+    /// Asked of the document rather than worked out again here, so the preview
+    /// draws exactly what a scene will read — a slicer whose picture and whose
+    /// output are computed separately is a slicer that can lie.
+    pub fn cell_rects(&self) -> Vec<[f32; 4]> {
+        let document = self.document();
+        let Some(grid) = document.grid.as_ref() else {
+            return Vec::new();
+        };
+        (0..grid.cells())
+            .map(|index| grid.rect_of(index).unwrap_or([0.0, 0.0, 0.0, 0.0]))
+            .collect()
+    }
+
+    /// Keeps the selection on a cell that exists.
+    pub const fn clamp_selection(&mut self) {
+        let cells = self.cells();
+        if cells == 0 {
+            self.selected = 0;
+        } else if self.selected >= cells {
+            self.selected = cells - 1;
+        }
+    }
+
+    /// The cells that were given a name, as `(index, name)`.
+    ///
+    /// What the panel lists instead of every cell: a sheet of two hundred and
+    /// fifty-six is mostly cells nobody needed to name, and those already have
+    /// an answer.
+    pub fn named(&self) -> Vec<(u32, &str)> {
+        self.names
+            .iter()
+            .enumerate()
+            .filter(|(_, name)| !name.is_empty())
+            .filter_map(|(index, name)| Some((u32::try_from(index).ok()?, name.as_str())))
+            .collect()
+    }
+
     /// Resizes the name list to the grid, keeping what was already typed.
     ///
     /// Changing the grid is how a slice is found, so names survive it: dropping
@@ -124,11 +176,18 @@ impl Slicer {
         while names.last().is_some_and(String::is_empty) {
             names.pop();
         }
+        let measured = self.margin != [0, 0] || self.spacing != [0, 0];
         SpriteSheetDocument {
             format_version: SHEET_FORMAT_VERSION,
             grid: Some(SheetGrid {
                 columns: self.columns,
                 rows: self.rows,
+                // Recorded only when the grid is measured in pixels, so an
+                // edge-to-edge slice stays the same file it was before margins
+                // existed.
+                size: measured.then_some([self.size.0, self.size.1]),
+                margin: self.margin,
+                spacing: self.spacing,
                 names,
             }),
             ..SpriteSheetDocument::default()
@@ -199,6 +258,8 @@ impl Slicer {
                 if let Some(grid) = document.grid {
                     self.columns = grid.columns;
                     self.rows = grid.rows;
+                    self.margin = grid.margin;
+                    self.spacing = grid.spacing;
                     self.names = grid.names;
                 }
                 self.fit_names();
@@ -330,6 +391,99 @@ mod tests {
         assert!(
             !directory.path().join("tiles.sheet.json").exists(),
             "and nothing was written"
+        );
+    }
+}
+
+#[cfg(test)]
+mod packing_tests {
+    use super::Slicer;
+    use std::fs;
+
+    fn slicer() -> (tempfile::TempDir, Slicer) {
+        let directory = tempfile::tempdir().expect("a temporary directory");
+        let texture = directory.path().join("atlas.png");
+        fs::write(&texture, []).expect("writable");
+        let slicer = Slicer::open(&texture);
+        (directory, slicer)
+    }
+
+    /// A margin and a gutter are pixels, so the sheet has to record the image
+    /// they were measured against — and an edge-to-edge slice must not start
+    /// recording one, or every existing sheet would gain a field.
+    #[test]
+    fn a_measured_slice_records_the_image_it_was_cut_against() {
+        let (_directory, mut slicer) = slicer();
+        assert!(
+            slicer.document().grid.expect("a grid").size.is_none(),
+            "an edge-to-edge slice is the same file it always was"
+        );
+
+        slicer.margin = [2, 2];
+        assert!(
+            slicer.document().grid.expect("a grid").size.is_some(),
+            "a measured slice cannot be read without the size"
+        );
+    }
+
+    /// The selection is a cell, so it cannot survive a grid that no longer has
+    /// it.
+    #[test]
+    fn the_selection_stays_on_a_cell_that_exists() {
+        let (_directory, mut slicer) = slicer();
+        slicer.columns = 8;
+        slicer.rows = 8;
+        slicer.fit_names();
+        slicer.selected = 63;
+
+        slicer.columns = 2;
+        slicer.rows = 2;
+        slicer.fit_names();
+        slicer.clamp_selection();
+        assert_eq!(slicer.selected, 3, "the last cell of the smaller grid");
+    }
+
+    /// The panel lists what was named rather than every cell, which is what
+    /// makes a sheet of two hundred and fifty-six workable.
+    #[test]
+    fn only_named_cells_are_listed() {
+        let (_directory, mut slicer) = slicer();
+        slicer.columns = 16;
+        slicer.rows = 16;
+        slicer.fit_names();
+        assert_eq!(slicer.cells(), 256);
+        assert!(slicer.named().is_empty(), "nothing is named yet");
+
+        slicer.names[7] = "coin".to_owned();
+        slicer.names[200] = "door".to_owned();
+        assert_eq!(slicer.named(), vec![(7, "coin"), (200, "door")]);
+    }
+
+    /// The preview draws the rects the document produces, so what is shown and
+    /// what a scene reads cannot drift apart.
+    #[test]
+    fn the_preview_draws_what_the_document_produces() {
+        let (_directory, mut slicer) = slicer();
+        slicer.columns = 4;
+        slicer.rows = 1;
+        slicer.fit_names();
+
+        let rects = slicer.cell_rects();
+        assert_eq!(rects.len(), 4);
+        let document = slicer.document();
+        let produced = document
+            .grid
+            .as_ref()
+            .expect("a grid")
+            .rect_of(2)
+            .expect("cell two is on the grid");
+        assert!(
+            rects[2]
+                .iter()
+                .zip(produced.iter())
+                .all(|(drawn, read)| (drawn - read).abs() < f32::EPSILON),
+            "the preview drew {:?} where a scene reads {produced:?}",
+            rects[2]
         );
     }
 }

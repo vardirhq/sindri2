@@ -109,6 +109,31 @@ each declared its layout separately, with nothing making the two agree. That is 
 }
 ```
 
+A packed sheet says so in pixels:
+
+```json
+{
+  "format_version": 1,
+  "grid": {
+    "columns": 16, "rows": 16,
+    "size": [512, 512], "margin": [2, 2], "spacing": [4, 4]
+  }
+}
+```
+
+`margin` is the border around the whole grid and `spacing` is the gutter between
+neighbouring cells — the same two words a tileset has used for decades, meaning
+the same two things. Sheets are exported with gutters so filtering cannot bleed
+one frame into the next, and a slicer that cannot say so can only cut sheets that
+were exported without them.
+
+`size` records the image the grid was measured against, and is written **only**
+when there is a margin or a spacing to measure. A grid that divides an image edge
+to edge produces the same fractions whatever the image turns out to be, so it
+does not carry a size and every sheet written before margins existed is unchanged.
+A measured grid without one is an error rather than a sheet whose every cell
+comes out as nothing.
+
 **The sheet's ID is derived, not declared.** `textures/tiles.png` is sliced by
 `textures/tiles.sheet.json`. A scene naming its sheets would be a fourth place that can disagree, so
 no scene does; `sheet_id_for` is the one rule, and both the editor looking on disk and a game

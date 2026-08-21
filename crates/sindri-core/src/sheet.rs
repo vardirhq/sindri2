@@ -55,6 +55,28 @@ pub struct SpriteSheetDocument {
 pub struct SheetGrid {
     pub columns: u32,
     pub rows: u32,
+    /// The image this grid was cut against, in pixels.
+    ///
+    /// Needed only when the grid has a margin or spacing, because those are
+    /// pixel measurements and a rect is a fraction. A grid that divides an image
+    /// edge to edge does not need it, and does not carry it.
+    ///
+    /// Recorded rather than read from the texture so a sheet stays a document
+    /// that can be understood on its own — the same reason a scene carries its
+    /// own format version. A sheet whose size disagrees with its image is a
+    /// thing worth reporting, and reporting it needs the claim written down.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size: Option<[u32; 2]>,
+    /// Pixels of border around the whole grid, before the first cell.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub margin: [u32; 2],
+    /// Pixels between neighbouring cells, belonging to no sprite.
+    ///
+    /// Sheets are packed with gutters so that filtering cannot bleed one frame
+    /// into the next, and a slicer that cannot say so can only cut sheets that
+    /// were exported without them.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub spacing: [u32; 2],
     /// What to call each cell, row-major from the top-left.
     ///
     /// A cell no name is given for is called by its own index, so a sheet that
@@ -64,7 +86,26 @@ pub struct SheetGrid {
     pub names: Vec<String>,
 }
 
+/// Serde hands `skip_serializing_if` a reference, which is why this takes one.
+#[allow(clippy::trivially_copy_pass_by_ref)]
+const fn is_zero(value: &[u32; 2]) -> bool {
+    value[0] == 0 && value[1] == 0
+}
+
 impl SheetGrid {
+    /// A grid that divides an image edge to edge, with no border or gutters.
+    #[must_use]
+    pub const fn edge_to_edge(columns: u32, rows: u32) -> Self {
+        Self {
+            columns,
+            rows,
+            size: None,
+            margin: [0, 0],
+            spacing: [0, 0],
+            names: Vec::new(),
+        }
+    }
+
     /// How many cells the grid holds.
     #[must_use]
     pub const fn cells(&self) -> u32 {
@@ -92,16 +133,54 @@ impl SheetGrid {
         if self.columns == 0 || self.rows == 0 || index >= self.cells() {
             return None;
         }
-        let width = 1.0 / f64::from(self.columns);
-        let height = 1.0 / f64::from(self.rows);
         let column = f64::from(index % self.columns);
         let row = f64::from(index / self.columns);
-        Some([
-            (column * width) as f32,
-            (row * height) as f32,
-            width as f32,
-            height as f32,
-        ])
+
+        // The plain case needs no image size, and does not ask for one: a grid
+        // that divides an image edge to edge is the same fractions whatever the
+        // image turns out to be.
+        if is_zero(&self.margin) && is_zero(&self.spacing) {
+            let width = 1.0 / f64::from(self.columns);
+            let height = 1.0 / f64::from(self.rows);
+            return Some([
+                (column * width) as f32,
+                (row * height) as f32,
+                width as f32,
+                height as f32,
+            ]);
+        }
+
+        let [image_width, image_height] = self.size?;
+        let axis =
+            |image: u32, count: u32, margin: u32, spacing: u32, at: f64| -> Option<(f64, f64)> {
+                let image = f64::from(image);
+                if image <= 0.0 {
+                    return None;
+                }
+                let gaps = f64::from(count.saturating_sub(1)) * f64::from(spacing);
+                let usable = image - 2.0 * f64::from(margin) - gaps;
+                if usable <= 0.0 {
+                    return None;
+                }
+                let cell = usable / f64::from(count);
+                let start = f64::from(margin) + at * (cell + f64::from(spacing));
+                Some((start / image, cell / image))
+            };
+        let (x, width) = axis(
+            image_width,
+            self.columns,
+            self.margin[0],
+            self.spacing[0],
+            column,
+        )?;
+        let (y, height) = axis(
+            image_height,
+            self.rows,
+            self.margin[1],
+            self.spacing[1],
+            row,
+        )?;
+        Some([x as f32, y as f32, width as f32, height as f32])
     }
 }
 
@@ -111,11 +190,7 @@ impl SpriteSheetDocument {
     pub fn from_grid(columns: u32, rows: u32) -> Self {
         Self {
             format_version: SHEET_FORMAT_VERSION,
-            grid: Some(SheetGrid {
-                columns,
-                rows,
-                names: Vec::new(),
-            }),
+            grid: Some(SheetGrid::edge_to_edge(columns, rows)),
             sprites: BTreeMap::new(),
             editor: BTreeMap::new(),
         }
@@ -150,11 +225,17 @@ impl SpriteSheetDocument {
                     cells: grid.cells() as usize,
                 });
             }
+            // A grid measured in pixels cannot be turned into fractions without
+            // knowing the image, and saying so beats every cell coming out as
+            // nothing.
+            if (!is_zero(&grid.margin) || !is_zero(&grid.spacing)) && grid.size.is_none() {
+                return Err(SheetError::MeasuredWithoutSize);
+            }
             for index in 0..grid.cells() {
                 let name = grid.name_of(index);
                 let rect = grid
                     .rect_of(index)
-                    .expect("an index below the grid's own cell count is on the grid");
+                    .ok_or(SheetError::CellDoesNotFit { index })?;
                 if rects.insert(name.clone(), rect).is_some() {
                     return Err(SheetError::DuplicateName(name));
                 }
@@ -210,6 +291,12 @@ pub enum SheetError {
     TooManyNames { names: usize, cells: usize },
     #[error("two sprites in one sheet are both called `{0}`")]
     DuplicateName(String),
+    #[error(
+        "a grid with a margin or spacing measures in pixels, so it must record the size of the image it was cut against"
+    )]
+    MeasuredWithoutSize,
+    #[error("cell {index} does not fit the grid it was cut from")]
+    CellDoesNotFit { index: u32 },
     #[error("sheet is not valid json: {message}")]
     Json { message: String },
 }
@@ -226,6 +313,7 @@ mod tests {
                 columns,
                 rows,
                 names: names.iter().map(|name| (*name).to_owned()).collect(),
+                ..SheetGrid::edge_to_edge(columns, rows)
             }),
             ..SpriteSheetDocument::default()
         }
@@ -367,5 +455,85 @@ mod tests {
     fn a_reference_with_nothing_after_the_hash_is_refused() {
         assert!(SpriteRef::parse("textures/tiles.png#").is_err());
         assert!(SpriteRef::parse("textures/tiles.png#a#b").is_err());
+    }
+}
+
+#[cfg(test)]
+mod margin_tests {
+    use super::{SHEET_FORMAT_VERSION, SheetError, SheetGrid, SpriteSheetDocument};
+
+    fn packed() -> SpriteSheetDocument {
+        // A 512-pixel sheet of sixteen columns with a two-pixel border and
+        // four-pixel gutters: 512 - 4 - 15*4 = 448, so cells are 28 wide.
+        SpriteSheetDocument {
+            format_version: SHEET_FORMAT_VERSION,
+            grid: Some(SheetGrid {
+                columns: 16,
+                rows: 16,
+                size: Some([512, 512]),
+                margin: [2, 2],
+                spacing: [4, 4],
+                names: Vec::new(),
+            }),
+            ..SpriteSheetDocument::default()
+        }
+    }
+
+    /// The case a slicer without gutters cannot cut: sheets are packed with
+    /// gaps so filtering cannot bleed one frame into the next.
+    #[test]
+    fn a_gutter_is_left_out_of_every_cell() {
+        let sheet = packed();
+        let rects = sheet.rects().expect("a packed grid slices");
+        let close = |left: f32, right: f32| (left - right).abs() < 1.0e-5;
+
+        let first = rects["0"];
+        assert!(close(first[0], 2.0 / 512.0), "the border is skipped");
+        assert!(close(first[2], 28.0 / 512.0), "the gutters are not drawn");
+
+        let second = rects["1"];
+        assert!(
+            close(second[0], (2.0 + 28.0 + 4.0) / 512.0),
+            "the next cell starts a gutter past the last, and is at {}",
+            second[0]
+        );
+
+        // The last cell ends exactly on the far border, which is the property
+        // that says the arithmetic closed rather than drifted.
+        let last = rects["255"];
+        assert!(
+            close(last[0] + last[2], (512.0 - 2.0) / 512.0),
+            "the last column ends on the border, and ends at {}",
+            last[0] + last[2]
+        );
+    }
+
+    /// A grid with no margin and no spacing needs no image size, because the
+    /// fractions do not depend on one.
+    #[test]
+    fn an_edge_to_edge_grid_needs_no_size() {
+        let sheet = SpriteSheetDocument::from_grid(4, 1);
+        assert!(sheet.grid.as_ref().expect("a grid").size.is_none());
+        assert!(sheet.rects().is_ok());
+    }
+
+    /// One measured in pixels does, and says so rather than yielding nothing.
+    #[test]
+    fn a_measured_grid_without_a_size_is_refused() {
+        let mut sheet = packed();
+        sheet.grid.as_mut().expect("a grid").size = None;
+        assert_eq!(sheet.rects(), Err(SheetError::MeasuredWithoutSize));
+    }
+
+    /// Gutters wider than the image leave no cells, which is a mistake worth a
+    /// message rather than an empty sheet.
+    #[test]
+    fn spacing_that_leaves_no_room_is_refused() {
+        let mut sheet = packed();
+        sheet.grid.as_mut().expect("a grid").spacing = [64, 64];
+        assert!(matches!(
+            sheet.rects(),
+            Err(SheetError::CellDoesNotFit { .. })
+        ));
     }
 }

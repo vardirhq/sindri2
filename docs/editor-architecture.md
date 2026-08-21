@@ -175,6 +175,20 @@ to answer exactly that. The preview samples nearest rather than linear, because 
 sheet is usually pixel art and a slicer that blurs what it is cutting is showing
 the wrong picture of it.
 
+Cells are outlined individually rather than drawn as lines across the image. A
+cell inset by a margin is not on any dividing line, and drawing one would claim
+the gutters belong to a sprite. The rects outlined are the ones the *document*
+produces — a slicer whose picture and whose output are computed separately is a
+slicer that can lie.
+
+A cell is named by picking it on the image. A text field per cell is fine at four
+and unusable at two hundred and fifty-six, which is the wall a list of forty-nine
+floor tiles already found; so the panel names one cell at a time and lists only
+the cells that were given a name. Everything else already has an answer — its
+index — and a list of two hundred and fifty-six of those is not a review of
+anything. That list doubles as the way back to a cell on a sheet too large to
+scan.
+
 The image is decoded on the CPU and handed to egui, not put through the
 renderer's `TextureRegistry`. That registry exists to draw a scene; a picture of
 an asset nothing in the scene references does not belong in it, and would then

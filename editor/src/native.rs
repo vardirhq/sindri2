@@ -1029,6 +1029,20 @@ impl EditorApp {
                 slicer.columns = grid_side(columns_now);
                 slicer.rows = grid_side(rows_now);
                 slicer.fit_names();
+                slicer.clamp_selection();
+            }
+
+            let mut margin_x = f64::from(slicer.margin[0]);
+            let mut margin_y = f64::from(slicer.margin[1]);
+            let mut spacing_x = f64::from(slicer.spacing[0]);
+            let mut spacing_y = f64::from(slicer.spacing[1]);
+            let mut measured = number_row(ui, "Margin X", &mut margin_x, 10.0, true);
+            measured |= number_row(ui, "Margin Y", &mut margin_y, 10.0, true);
+            measured |= number_row(ui, "Spacing X", &mut spacing_x, 10.0, true);
+            measured |= number_row(ui, "Spacing Y", &mut spacing_y, 10.0, true);
+            if measured {
+                slicer.margin = [pixel_count(margin_x), pixel_count(margin_y)];
+                slicer.spacing = [pixel_count(spacing_x), pixel_count(spacing_y)];
             }
 
             ui.add_space(6.0);
@@ -2396,6 +2410,15 @@ fn pixels(value: u32) -> f32 {
     value as f32
 }
 
+/// A pixel measurement, as a drag leaves it.
+///
+/// Clamped to something an image could plausibly carry, for the reason a grid
+/// side is: a drag that got away should not become a slice with no cells.
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn pixel_count(value: f64) -> u32 {
+    value.clamp(0.0, 4096.0) as u32
+}
+
 /// One side of a slicing grid, as a drag leaves it.
 ///
 /// Clamped rather than validated after the fact: a grid of zero has no cells
@@ -2407,31 +2430,30 @@ fn grid_side(value: f64) -> u32 {
     value.clamp(1.0, 256.0) as u32
 }
 
-/// One editable name per cell.
+/// Naming the chosen cell, and a list of the ones already named.
+///
+/// A field per cell is fine at four and unusable at two hundred and fifty-six,
+/// so the sheet is named the way it is looked at: pick a cell on the image, give
+/// it a name. Everything unnamed already has an answer — its index — so a list
+/// of the named ones is the whole of what there is to review.
 fn slice_names(ui: &mut egui::Ui, slicer: &mut Slicer) {
     section_header(ui, ICON_LABEL, "Names");
+    slicer.fit_names();
+    slicer.clamp_selection();
+
+    let selected = slicer.selected;
+    let placeholder = selected.to_string();
     ui.horizontal(|ui| {
         ui.add_space(10.0);
         ui.label(
-            RichText::new("A cell left blank is called by its index.")
-                .size(9.0)
-                .color(TEXT_MUTED),
+            RichText::new(format!("Cell {selected}"))
+                .size(11.0)
+                .color(TEXT),
         );
     });
-    slicer.fit_names();
-    for index in 0..slicer.cells() {
-        let placeholder = index.to_string();
-        let Some(name) = slicer.names.get_mut(index as usize) else {
-            break;
-        };
+    if let Some(name) = slicer.names.get_mut(selected as usize) {
         ui.horizontal(|ui| {
             ui.add_space(14.0);
-            ui.label(
-                RichText::new(format!("{placeholder:>3}"))
-                    .size(10.0)
-                    .color(TEXT_FAINT),
-            );
-            ui.add_space(4.0);
             ui.add(
                 egui::TextEdit::singleline(name)
                     .hint_text(&placeholder)
@@ -2439,16 +2461,68 @@ fn slice_names(ui: &mut egui::Ui, slicer: &mut Slicer) {
             );
         });
     }
+    ui.horizontal(|ui| {
+        ui.add_space(14.0);
+        ui.label(
+            RichText::new(
+                "Click a cell on the image to name it. A cell left blank is called by its index.",
+            )
+            .size(9.0)
+            .color(TEXT_MUTED),
+        );
+    });
+
+    let named = slicer.named();
+    if named.is_empty() {
+        return;
+    }
+    ui.add_space(6.0);
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.label(
+            RichText::new(format!("{} named", named.len()))
+                .size(9.0)
+                .color(TEXT_FAINT),
+        );
+    });
+    let mut jump = None;
+    for (index, name) in named {
+        ui.horizontal(|ui| {
+            ui.add_space(14.0);
+            let row = ui.add(
+                egui::Label::new(
+                    RichText::new(format!("{index:>4}  {name}"))
+                        .size(10.0)
+                        .color(if index == selected {
+                            ACCENT
+                        } else {
+                            TEXT_MUTED
+                        }),
+                )
+                .selectable(false)
+                .sense(Sense::click()),
+            );
+            if row.clicked() {
+                jump = Some(index);
+            }
+        });
+    }
+    // The list is also how a cell is found again on a sheet too large to scan.
+    if let Some(jump) = jump {
+        slicer.selected = jump;
+    }
 }
 
-/// The image, with the slice drawn over it.
+/// The image, with the slice drawn over it, and a click choosing a cell.
 ///
 /// The whole point of doing this on the picture: a grid of numbers in a panel
-/// tells you nothing about whether the lines fall between the frames, and the
-/// lines falling between the frames is the entire job.
+/// tells you nothing about whether the cells fall on the frames, and the cells
+/// falling on the frames is the entire job. The rects drawn are the ones the
+/// document produces, not a second calculation that could disagree with it.
 fn slice_preview(ui: &mut egui::Ui, slicer: &mut Slicer) {
     let (width, height) = slicer.size();
-    let (columns, rows) = (slicer.columns, slicer.rows);
+    let rects = slicer.cell_rects();
+    let selected = slicer.selected;
     let Some(texture) = slicer.texture(ui.ctx()) else {
         ui.horizontal(|ui| {
             ui.add_space(10.0);
@@ -2471,38 +2545,62 @@ fn slice_preview(ui: &mut egui::Ui, slicer: &mut Slicer) {
     let (wide, tall) = (pixels(width), pixels(height));
     let scale = (available / wide).min(8.0);
     let size = Vec2::new(wide * scale, tall * scale);
+    let texture = texture.id();
 
+    let mut picked = None;
     ui.horizontal(|ui| {
         ui.add_space(10.0);
-        let (rect, _) = ui.allocate_exact_size(size, Sense::hover());
+        let (rect, response) = ui.allocate_exact_size(size, Sense::click());
         let painter = ui.painter_at(rect);
-        // A checker behind the image, so a transparent sheet reads as
+        // A flat ground behind the image, so a transparent sheet reads as
         // transparent rather than as the panel's own background.
         painter.rect_filled(rect, 2.0, Color32::from_rgb(28, 32, 42));
         painter.image(
-            texture.id(),
+            texture,
             rect,
             egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
             Color32::WHITE,
         );
 
-        let line = Stroke::new(1.0, ACCENT.gamma_multiply(0.85));
-        for column in 1..columns {
-            let x = rect.left() + rect.width() * pixels(column) / pixels(columns);
-            painter.line_segment(
-                [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
-                line,
-            );
+        // Each cell as its own outline rather than lines across the image,
+        // because a cell inset by a margin is not on any dividing line and
+        // drawing one would say the gutters belong to a sprite.
+        let cell_rect = |[x, y, w, h]: [f32; 4]| {
+            egui::Rect::from_min_size(
+                egui::pos2(
+                    rect.left() + x * rect.width(),
+                    rect.top() + y * rect.height(),
+                ),
+                Vec2::new(w * rect.width(), h * rect.height()),
+            )
+        };
+        let faint = Stroke::new(1.0, ACCENT.gamma_multiply(0.55));
+        for (index, cell) in rects.iter().enumerate() {
+            if u32::try_from(index).is_ok_and(|index| index == selected) {
+                continue;
+            }
+            painter.rect_stroke(cell_rect(*cell), 0.0, faint, egui::StrokeKind::Inside);
         }
-        for row in 1..rows {
-            let y = rect.top() + rect.height() * pixels(row) / pixels(rows);
-            painter.line_segment(
-                [egui::pos2(rect.left(), y), egui::pos2(rect.right(), y)],
-                line,
-            );
+        if let Some(cell) = rects.get(selected as usize) {
+            let bright = Stroke::new(2.0, ACCENT_BRIGHT);
+            painter.rect_stroke(cell_rect(*cell), 0.0, bright, egui::StrokeKind::Inside);
         }
-        painter.rect_stroke(rect, 2.0, line, egui::StrokeKind::Inside);
+
+        // Picked by hit-testing the drawn rects rather than by dividing the
+        // pointer's position, so a click lands on the cell it looks like it
+        // landed on even when gutters mean the cells do not tile.
+        if let Some(pointer) = response.interact_pointer_pos()
+            && response.clicked()
+        {
+            picked = rects
+                .iter()
+                .position(|cell| cell_rect(*cell).contains(pointer))
+                .and_then(|index| u32::try_from(index).ok());
+        }
     });
+    if let Some(picked) = picked {
+        slicer.selected = picked;
+    }
 }
 
 fn section_header(ui: &mut egui::Ui, icon: MaterialIcon, title: &str) {

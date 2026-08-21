@@ -148,11 +148,14 @@ where anything sits in an image. Playback is runtime state, so watching an
 animation run does not rewrite the scene it came from.
 
 **A sheet is sliced in the editor, on the image.** Selecting a texture shows it
-in the inspector with its grid drawn over it, columns and rows are drags, every
-cell can be named, and saving writes the sidecar; the browser then lists the
-sprites underneath the image, collapsed until asked for. What is still typed by
-hand is *clips* — naming one, setting its timing, and previewing it are not in
-the editor yet.
+in the inspector with each cell outlined on the picture; columns, rows, margin
+and spacing are drags, so a packed sheet with gutters can be cut and not only one
+that divides edge to edge. A cell is named by clicking it, and the panel lists
+the cells that have names rather than a field per cell, so a 16x16 atlas is as
+workable as a four-frame strip. Saving writes the sidecar, and the browser then
+lists the sprites underneath the image, collapsed until asked for. What is still
+typed by hand is *clips* — naming one, setting its timing, and previewing it are
+not in the editor yet.
 
 A tilemap is a grid of tiles drawn from one entity: `sindri.tilemap` carries the
 map's grid, a palette of sprite names, and a flat array of cells indexing that
