@@ -2,21 +2,21 @@ use std::collections::BTreeMap;
 
 use glam::{Mat4, Quat, Vec2, Vec3};
 use sindri_core::{
-    ComponentRegistryError, ComponentSchemaRegistry, SceneComponent, SceneDocument, Transform3D,
-    UnknownComponentPolicy, World,
+    ComponentRegistryError, ComponentSchemaRegistry, EntityId, SceneComponent, SceneDocument,
+    Transform3D, UnknownComponentPolicy, World,
 };
 use sindri_render::{
     ClearOperations, ExtractedFrame, FrameCamera, FrameCommand, FramePass, FramePlanError,
     OrthographicCamera, PerspectiveCamera, PreparedFrame, RenderLayer, RenderStage, SpriteDepth,
-    SpriteInstance, TextureId, TransparentOrder, TransparentOrderError, UvRectError, Viewport,
-    orthographic_projection, perspective_projection,
+    SpriteInstance, TextureId, TransparentOrder, TransparentOrderError, UvRect, UvRectError,
+    Viewport, orthographic_projection, perspective_projection,
 };
 use thiserror::Error;
 
 use crate::{
     AnimationError, CameraComponent, MeshComponent, MeshPrimitive, PROCEDURAL_TEXTURES,
     SpriteAnchor, SpriteAnimationComponent, SpriteAnimations, SpriteComponent, SpriteSpace,
-    TextureBindings,
+    TextureBindings, TilemapComponent, TilemapError,
 };
 
 /// Which projection the world camera uses.
@@ -109,6 +109,21 @@ impl SceneExtractor {
         // that does nothing, and one with an invented sheet would claim a
         // texture is laid out a way it is not.
         components.register::<SpriteAnimationComponent>("Sprite Animation")?;
+        // A one-by-one map of one empty cell: the smallest tilemap that is
+        // still a valid one, so adding the component in the editor gives
+        // something to paint into rather than something to repair.
+        components.register_with_default::<TilemapComponent>(
+            "Tilemap",
+            serde_json::json!({
+                "texture": PROCEDURAL_TEXTURES[0].reference,
+                "sheet_columns": 1,
+                "sheet_rows": 1,
+                "columns": 1,
+                "rows": 1,
+                "tiles": [null],
+                "space": "world"
+            }),
+        )?;
         Ok(Self { components })
     }
 
@@ -200,6 +215,78 @@ impl SceneExtractor {
         Ok(())
     }
 
+    /// Turns every tilemap's filled cells into sprite instances, into the same
+    /// batches loose sprites use.
+    ///
+    /// The same batches deliberately: a tilemap is not a second kind of thing
+    /// to draw, it is a compact way to author many of the first kind. Sharing
+    /// the map means a tilemap and a loose sprite on one layer and one texture
+    /// share a draw and sort against each other, so a prop can sit between two
+    /// rows of floor without the tilemap being a plane that swallows it.
+    fn push_tilemaps(
+        &self,
+        world: &World,
+        cameras: &ResolvedCameras,
+        textures: &TextureBindings,
+        batches: &mut SpriteBatches,
+    ) -> Result<(), SceneExtractError> {
+        for (entity, tilemap) in self.components.query::<TilemapComponent>(world)? {
+            tilemap.validate()?;
+            let transform = world
+                .get(entity)
+                .and_then(|data| data.transform_3d)
+                .unwrap_or_default();
+            let texture = textures.resolve(&tilemap.texture);
+            for (column, row, index) in tilemap.filled() {
+                let rect = tilemap.cell_rect(index)?;
+                let [offset_x, offset_y] = tilemap.tile_to_local(column, row);
+                // One tile is a sprite of the map's tile size, placed by the
+                // map's own maths and then by the entity's transform, so moving
+                // the entity moves the floor.
+                let mut tile = transform;
+                tile.position[0] += offset_x;
+                tile.position[1] += offset_y;
+                tile.scale[0] *= tilemap.tile_size[0];
+                tile.scale[1] *= tilemap.tile_size[1];
+
+                let (model, camera) = if tilemap.is_screen_space() {
+                    let extent = cameras
+                        .overlay_extent
+                        .ok_or(SceneExtractError::MissingOverlayCamera)?;
+                    (
+                        screen_sprite_matrix(tile, SpriteAnchor::default(), extent),
+                        cameras
+                            .overlay
+                            .ok_or(SceneExtractError::MissingOverlayCamera)?,
+                    )
+                } else {
+                    (
+                        transform_matrix(tile),
+                        cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?,
+                    )
+                };
+                let position = model.w_axis.truncate().with_z(tile.position[2]);
+                // Row and column break the tie rather than the entity index,
+                // because every tile of one map shares an entity. Reading order
+                // is the map's order, so the same map extracts the same way
+                // every time.
+                let order = TransparentOrder::new(
+                    tilemap.layer,
+                    camera_distance(camera.view, position),
+                    row.saturating_mul(tilemap.columns).saturating_add(column),
+                )?;
+                batches
+                    .entry((tilemap.space, tilemap.layer, texture))
+                    .or_default()
+                    .push((
+                        order,
+                        SpriteInstance::new(model, tilemap.tint).with_uv_rect(rect),
+                    ));
+            }
+        }
+        Ok(())
+    }
+
     fn push_sprites(
         &self,
         world: &World,
@@ -212,10 +299,23 @@ impl SceneExtractor {
         // batch, with a stable tie-break. A batch is one draw, so instances
         // share one only when they share the texture it binds — and the space,
         // which decides both the camera and the pipeline.
-        let mut batches: BTreeMap<
-            (SpriteSpace, i32, TextureId),
-            Vec<(TransparentOrder, SpriteInstance)>,
-        > = BTreeMap::new();
+        let mut batches: SpriteBatches = BTreeMap::new();
+        // What an animated sprite shows when `animations` has not reached it —
+        // a scene just loaded, an entity in the editor outside play mode, a
+        // frame captured before the first tick. Only sprites that authored no
+        // rect of their own take it: a sheet drawn whole is every frame at
+        // once, which is a picture nobody meant, while an authored rect is how
+        // a scene picks a rest pose other than the clip's first frame.
+        //
+        // A broken clip falls through to the sprite's rect rather than failing
+        // the frame, for the reason a broken clip does not fail loading: the
+        // editor is where it gets fixed, and it has to draw to be fixed there.
+        let mut resting: BTreeMap<EntityId, UvRect> = BTreeMap::new();
+        for (entity, animation) in self.components.query::<SpriteAnimationComponent>(world)? {
+            if let Some(rect) = animation.resting_rect().ok().flatten() {
+                resting.insert(entity, rect);
+            }
+        }
         for (entity, sprite) in self.components.query::<SpriteComponent>(world)? {
             let transform = world
                 .get(entity)
@@ -258,13 +358,21 @@ impl SceneExtractor {
                 .push((
                     order,
                     SpriteInstance::new(model, sprite.tint).with_uv_rect(
-                        match animations.rect(entity) {
-                            Some(rect) => rect,
-                            None => sprite.uv_rect()?,
+                        if let Some(rect) = animations.rect(entity) {
+                            rect
+                        } else {
+                            let authored = sprite.uv_rect()?;
+                            if authored == UvRect::FULL {
+                                resting.get(&entity).copied().unwrap_or(authored)
+                            } else {
+                                authored
+                            }
                         },
                     ),
                 ));
         }
+
+        self.push_tilemaps(world, cameras, textures, &mut batches)?;
 
         for ((space, layer, texture), mut sprites) in batches {
             sprites.sort_by_key(|(order, _)| *order);
@@ -569,6 +677,16 @@ fn screen_sprite_matrix(
         * Mat4::from_scale(Vec2::from_array(transform.scale_2d()).extend(1.0))
 }
 
+/// Everything that will become a sprite draw, gathered before any of it is
+/// ordered.
+///
+/// Keyed by what decides a batch — the space, which picks the camera and the
+/// pipeline; the layer, which overrides distance; and the texture, which is what
+/// a draw binds. Tilemaps and loose sprites fill the same map, so they share a
+/// batch when they share all three.
+type SpriteBatches =
+    BTreeMap<(SpriteSpace, i32, TextureId), Vec<(TransparentOrder, SpriteInstance)>>;
+
 #[derive(Debug, Error)]
 pub enum SceneExtractError {
     #[error(transparent)]
@@ -589,4 +707,6 @@ pub enum SceneExtractError {
     UvRect(#[from] UvRectError),
     #[error(transparent)]
     Animation(#[from] AnimationError),
+    #[error(transparent)]
+    Tilemap(#[from] TilemapError),
 }

@@ -13,8 +13,8 @@ use glam::{Mat4, Vec3};
 use sindri_gpu::{GpuContext, GpuRequestOptions};
 use sindri_render::{
     ClearOperations, DepthTarget, DrawContext, OffscreenTarget, PerspectiveCamera,
-    SpriteBatchError, SpriteBatchRenderer, SpriteDepth, SpriteInstance, Texture2D, TextureId,
-    TextureRegistry, TexturedCubeRenderer, encode_clear,
+    SpriteBatchRenderer, SpriteDepth, SpriteInstance, Texture2D, TextureRegistry,
+    TexturedCubeRenderer, encode_clear,
 };
 
 /// Set wherever a software adapter is installed on purpose. A GPU test that
@@ -98,16 +98,24 @@ fn center_pixel(mesh: bool, sprite_z: f32, depth: SpriteDepth) -> Option<[u8; 4]
             view_projection,
         );
     }
-    prepare_sprite(&gpu, &mut sprites, &textures, sprite_texture, sprite_z)
+    sprites.begin_submission();
+    sprites
+        .draw(
+            &gpu.device,
+            &gpu.queue,
+            &mut encoder,
+            target.view(),
+            &depth_target,
+            &textures,
+            sprite_texture,
+            view_projection,
+            depth,
+            &[SpriteInstance::new(
+                Mat4::from_translation(Vec3::new(0.0, 0.0, sprite_z)),
+                [1.0, 1.0, 1.0, 1.0],
+            )],
+        )
         .expect("one sprite fits the batch");
-    sprites.encode(
-        &gpu.queue,
-        &mut encoder,
-        target.view(),
-        &depth_target,
-        view_projection,
-        depth,
-    );
     let readback = target
         .copy_to_buffer(&gpu.device, &mut encoder)
         .expect("the target copies back");
@@ -123,26 +131,6 @@ fn center_pixel(mesh: bool, sprite_z: f32, depth: SpriteDepth) -> Option<[u8; 4]
         pixels[middle + 2],
         pixels[middle + 3],
     ])
-}
-
-fn prepare_sprite(
-    gpu: &GpuContext,
-    sprites: &mut SpriteBatchRenderer,
-    textures: &TextureRegistry,
-    texture: TextureId,
-    z: f32,
-) -> Result<(), SpriteBatchError> {
-    sprites.prepare(
-        &gpu.device,
-        &gpu.queue,
-        textures,
-        texture,
-        &[SpriteInstance::new(
-            Mat4::from_translation(Vec3::new(0.0, 0.0, z)),
-            [1.0, 1.0, 1.0, 1.0],
-        )],
-    )?;
-    Ok(())
 }
 
 fn solid(gpu: &GpuContext, label: &str, color: [u8; 4]) -> Texture2D {

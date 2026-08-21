@@ -15,9 +15,13 @@ use decay_runtime::{Host, RuntimeError, Value};
 use sindri_core::{EntityId, Transform3D, World};
 use sindri_platform::{InputState, Key};
 
-use crate::surface::{
-    FUNCTIONS, HostFunction, INPUT, INPUT_QUERIES, InputQuery, Leaf, PRINT, Seg, TIME, TIME_VALUES,
-    TimeValue, follow_mut, leaf,
+use crate::{
+    Blackboard,
+    surface::{
+        FUNCTIONS, GAME, GAME_CALLS, GameCall, Handle, HostFunction, INPUT, INPUT_QUERIES,
+        InputQuery, Leaf, PRINT, Seg, TIME, TIME_VALUES, TimeValue, WORLD, WORLD_CALLS, WorldCall,
+        follow_mut, handle, leaf, leaf_through_reference,
+    },
 };
 
 /// What a script can know about the frame it is running in.
@@ -39,16 +43,24 @@ pub struct WorldHost<'a> {
     world: &'a mut World,
     entity: EntityId,
     context: ScriptContext<'a>,
+    /// The notes every script in the world shares.
+    blackboard: &'a mut Blackboard,
     /// What the script said, in order. Drained by the caller after the call.
     printed: Vec<String>,
 }
 
 impl<'a> WorldHost<'a> {
-    pub fn new(world: &'a mut World, entity: EntityId, context: ScriptContext<'a>) -> Self {
+    pub fn new(
+        world: &'a mut World,
+        entity: EntityId,
+        context: ScriptContext<'a>,
+        blackboard: &'a mut Blackboard,
+    ) -> Self {
         Self {
             world,
             entity,
             context,
+            blackboard,
             printed: Vec::new(),
         }
     }
@@ -58,14 +70,131 @@ impl<'a> WorldHost<'a> {
         std::mem::take(&mut self.printed)
     }
 
-    fn transform(&self) -> Option<Transform3D> {
-        self.world.get(self.entity)?.transform_3d
+    fn transform_of(&self, entity: EntityId) -> Option<Transform3D> {
+        self.world.get(entity)?.transform_3d
+    }
+
+    /// Which entity a call is about: the one the script runs on, or the one a
+    /// reference names.
+    ///
+    /// A reference that no longer resolves is an error naming the path rather
+    /// than a silent no-op, because a script holding a stale handle is a bug in
+    /// the script and the whole point of generation checking is to say so.
+    fn subject(&self, subject: Option<u64>, path: &Path) -> Result<EntityId, RuntimeError> {
+        let Some(bits) = subject else {
+            return Ok(self.entity);
+        };
+        let entity = EntityId::from_bits(bits);
+        if self.world.get(entity).is_some() {
+            Ok(entity)
+        } else {
+            Err(RuntimeError::Host(format!(
+                "{} is about an entity that no longer exists",
+                path.dotted()
+            )))
+        }
+    }
+
+    /// The parts of a path that address an entity's members.
+    ///
+    /// With a subject the path is already rooted at it, so every part counts.
+    /// Without one the path is the script's own and starts with `this`.
+    fn addressed(subject: Option<u64>, path: &Path) -> Option<Vec<&str>> {
+        if subject.is_some() {
+            return Some(path.0.iter().map(String::as_str).collect());
+        }
+        Self::under_this(path)
     }
 
     /// The parts of a path after `this`, when it starts with `this`.
     fn under_this(path: &Path) -> Option<Vec<&str>> {
         let mut parts = path.0.iter().map(String::as_str);
         (parts.next()? == "this").then(|| parts.collect())
+    }
+
+    /// Performs one of the `World.*` calls.
+    ///
+    /// Its own method rather than another arm of [`Host::call`], because it is
+    /// the only namespace whose arguments are references and so the only one
+    /// with anything to say about them.
+    fn world_call(
+        &mut self,
+        call: WorldCall,
+        path: &Path,
+        args: &[Value],
+    ) -> Result<Value, RuntimeError> {
+        match call {
+            WorldCall::Find => {
+                let Some(Value::String(name)) = args.first() else {
+                    return Err(RuntimeError::Host(format!(
+                        "{} looks an entity up by name, as text",
+                        path.dotted()
+                    )));
+                };
+                Ok(self
+                    .find_named(name)
+                    .map_or(Value::Null, |entity| Value::Reference(entity.to_bits())))
+            }
+            WorldCall::Exists => Ok(Value::Bool(match args.first() {
+                Some(Value::Reference(bits)) => {
+                    self.world.get(EntityId::from_bits(*bits)).is_some()
+                }
+                // `null` names nothing, and asking whether nothing exists is a
+                // fair question with a plain answer.
+                Some(Value::Null) | None => false,
+                Some(other) => {
+                    return Err(RuntimeError::Host(format!(
+                        "{} asks about an entity, and the script gave {other:?}",
+                        path.dotted()
+                    )));
+                }
+            })),
+            WorldCall::Despawn => {
+                let entity = match args.first() {
+                    Some(Value::Reference(bits)) => EntityId::from_bits(*bits),
+                    // Despawning nothing is a no-op rather than an error:
+                    // `World.despawn(World.find("gone"))` is a reasonable thing
+                    // to write.
+                    Some(Value::Null) | None => return Ok(Value::Unit),
+                    Some(other) => {
+                        return Err(RuntimeError::Host(format!(
+                            "{} removes an entity, and the script gave {other:?}",
+                            path.dotted()
+                        )));
+                    }
+                };
+                self.despawn(entity, path)?;
+                Ok(Value::Unit)
+            }
+        }
+    }
+
+    /// Removes `entity` and everything under it.
+    ///
+    /// Not through `WorldCommand`, and deliberately not: no write a script
+    /// makes goes through one. A script's transform writes do not produce undo
+    /// entries either, and play mode restores the world from the snapshot it
+    /// took when Play was pressed, so a despawn that alone was undoable would
+    /// be an inconsistency rather than a feature. `World::despawn_recursive` is
+    /// the same removal the command performs; what is missing is the captured
+    /// inverse, which nothing would consume. `ROADMAP.md` keeps the item open.
+    fn despawn(&mut self, entity: EntityId, path: &Path) -> Result<(), RuntimeError> {
+        self.world.despawn_recursive(entity).map_err(|error| {
+            RuntimeError::Host(format!("{} could not remove it: {error}", path.dotted()))
+        })?;
+        Ok(())
+    }
+
+    /// The entity a scene named `name`, or `None`.
+    ///
+    /// First match in world order, and the surface says so: two entities with
+    /// one name is an authoring mistake the editor should catch, not something
+    /// to invent a rule for here.
+    fn find_named(&self, name: &str) -> Option<EntityId> {
+        self.world
+            .entities()
+            .find(|(_, data)| data.name.as_deref() == Some(name))
+            .map(|(entity, _)| entity)
     }
 }
 
@@ -105,11 +234,13 @@ fn key(path: &Path, value: Option<&Value>) -> Result<Key, RuntimeError> {
 }
 
 impl Host for WorldHost<'_> {
-    fn load(&mut self, path: &Path) -> Result<Option<Value>, RuntimeError> {
+    fn load(&mut self, subject: Option<u64>, path: &Path) -> Result<Option<Value>, RuntimeError> {
         let parts: Vec<&str> = path.0.iter().map(String::as_str).collect();
 
-        // `Time.delta` and the like: the frame, not the world.
-        if let [namespace, name] = parts.as_slice()
+        // `Time.delta` and the like: the frame, not the world. Never about a
+        // subject, so a reference cannot be asked for the time.
+        if subject.is_none()
+            && let [namespace, name] = parts.as_slice()
             && *namespace == TIME
         {
             return Ok(TIME_VALUES
@@ -123,16 +254,33 @@ impl Host for WorldHost<'_> {
                 }));
         }
 
-        let Some(under) = Self::under_this(path) else {
+        let Some(under) = Self::addressed(subject, path) else {
             return Ok(None);
         };
-        let Some(leaf) = leaf(&under) else {
+
+        // A reference is fetched rather than read into, so it is answered
+        // before any leaf lookup: `this.entity` is not a number.
+        if subject.is_none()
+            && let Some(handle) = handle(&under)
+        {
+            return Ok(Some(match handle {
+                Handle::Own => Value::Reference(self.entity.to_bits()),
+            }));
+        }
+
+        let found = if subject.is_some() {
+            leaf_through_reference(&under)
+        } else {
+            leaf(&under)
+        };
+        let Some(leaf) = found else {
             return Ok(None);
         };
-        let transform = self.transform();
+        let entity = self.subject(subject, path)?;
+        let transform = self.transform_of(entity);
         let components = self
             .world
-            .get(self.entity)
+            .get(entity)
             .map_or(serde_json::Value::Null, |data| {
                 serde_json::to_value(&data.components).unwrap_or(serde_json::Value::Null)
             });
@@ -145,18 +293,29 @@ impl Host for WorldHost<'_> {
             .map(Value::Number))
     }
 
-    fn store(&mut self, path: &Path, value: Value) -> Result<bool, RuntimeError> {
-        let Some(under) = Self::under_this(path) else {
+    fn store(
+        &mut self,
+        subject: Option<u64>,
+        path: &Path,
+        value: Value,
+    ) -> Result<bool, RuntimeError> {
+        let Some(under) = Self::addressed(subject, path) else {
             return Ok(false);
         };
-        let Some(leaf) = leaf(&under) else {
+        let found = if subject.is_some() {
+            leaf_through_reference(&under)
+        } else {
+            leaf(&under)
+        };
+        let Some(leaf) = found else {
             return Ok(false);
         };
+        let entity = self.subject(subject, path)?;
         let number = number(path, &value)?;
 
         match leaf {
             Leaf::TransformAxis(..) | Leaf::TransformScalar(_) => {
-                let Some(mut transform) = self.transform() else {
+                let Some(mut transform) = self.transform_of(entity) else {
                     return Ok(false);
                 };
                 match leaf {
@@ -176,7 +335,7 @@ impl Host for WorldHost<'_> {
                 // any other, and one that could ignore the lock would be the
                 // hole that makes the lock worthless.
                 if self
-                    .transform()
+                    .transform_of(entity)
                     .is_some_and(|current| current.z_lock_rejects(Some(transform)))
                 {
                     return Err(RuntimeError::Host(format!(
@@ -184,14 +343,14 @@ impl Host for WorldHost<'_> {
                         path.dotted()
                     )));
                 }
-                let Some(data) = self.world.get_mut(self.entity) else {
+                let Some(data) = self.world.get_mut(entity) else {
                     return Ok(false);
                 };
                 data.transform_3d = Some(transform);
                 Ok(true)
             }
             Leaf::Component { component, pointer } => {
-                let Some(data) = self.world.get_mut(self.entity) else {
+                let Some(data) = self.world.get_mut(entity) else {
                     return Ok(false);
                 };
                 let Some(payload) = data.components.get_mut(component) else {
@@ -226,7 +385,18 @@ impl Host for WorldHost<'_> {
         }
     }
 
-    fn call(&mut self, path: &Path, args: &[Value]) -> Result<Option<Value>, RuntimeError> {
+    fn call(
+        &mut self,
+        subject: Option<u64>,
+        path: &Path,
+        args: &[Value],
+    ) -> Result<Option<Value>, RuntimeError> {
+        // Nothing on the surface is called *through* a reference: an entity is
+        // a thing to read and write, not a thing with methods. Refusing here
+        // keeps `target.axis("a", "b")` from reaching `Input`.
+        if subject.is_some() {
+            return Ok(None);
+        }
         let parts: Vec<&str> = path.0.iter().map(String::as_str).collect();
 
         if let [name] = parts.as_slice() {
@@ -237,6 +407,10 @@ impl Host for WorldHost<'_> {
                     Some(Value::Bool(value)) => format!("{value}"),
                     Some(Value::Null) | None => "null".to_owned(),
                     Some(Value::Unit) => "unit".to_owned(),
+                    // Named by what it is rather than by the number inside:
+                    // the packing is the host's business, and printing it
+                    // would invite a script to depend on it.
+                    Some(Value::Reference(_)) => "entity".to_owned(),
                 });
                 return Ok(Some(Value::Unit));
             }
@@ -253,6 +427,42 @@ impl Host for WorldHost<'_> {
                     HostFunction::Binary(apply) => apply(argument(0)?, argument(1)?),
                 })));
             }
+        }
+
+        if let [namespace, name] = parts.as_slice()
+            && *namespace == GAME
+            && let Some((_, call)) = GAME_CALLS.iter().find(|(known, _)| known == name)
+        {
+            let note = match args.first() {
+                Some(Value::String(note)) => note.clone(),
+                other => {
+                    return Err(RuntimeError::Host(format!(
+                        "{} names its note with text, and the script gave {other:?}",
+                        path.dotted()
+                    )));
+                }
+            };
+            let value = |index: usize| -> Result<f64, RuntimeError> {
+                args.get(index)
+                    .ok_or_else(|| {
+                        RuntimeError::Host(format!("{} wants more arguments", path.dotted()))
+                    })
+                    .and_then(|value| number(path, value))
+            };
+            return Ok(Some(match call {
+                GameCall::Get => Value::Number(self.blackboard.get(&note, value(1)?)),
+                GameCall::Set => {
+                    self.blackboard.set(note, value(1)?);
+                    Value::Unit
+                }
+            }));
+        }
+
+        if let [namespace, name] = parts.as_slice()
+            && *namespace == WORLD
+            && let Some((_, call)) = WORLD_CALLS.iter().find(|(known, _)| known == name)
+        {
+            return self.world_call(*call, path, args).map(Some);
         }
 
         if let [namespace, name] = parts.as_slice()

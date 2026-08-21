@@ -137,6 +137,32 @@ impl SpriteBatchStats {
     pub const fn draw_calls_saved(self) -> u32 {
         self.sprite_count.saturating_sub(self.draw_calls)
     }
+
+    /// One frame's running total, batch by batch.
+    const fn and(self, other: Self) -> Self {
+        Self {
+            sprite_count: self.sprite_count.saturating_add(other.sprite_count),
+            draw_calls: self.draw_calls.saturating_add(other.draw_calls),
+        }
+    }
+}
+
+/// One batch's own GPU resources.
+///
+/// Per batch rather than per renderer, and that is the whole point.
+/// `queue.write_buffer` stages a write that lands *before* the command buffer
+/// executes, so a renderer that wrote one uniform buffer once per batch gave
+/// every pass in the frame whatever the last batch had put there. A frame with
+/// a single sprite batch never notices; a scene with a world and an overlay
+/// draws the world through the overlay's camera.
+#[derive(Debug)]
+struct Batch {
+    uniform: wgpu::Buffer,
+    instances: wgpu::Buffer,
+    capacity: u32,
+    /// One bind group per texture used in this slot. Keyed per slot because a
+    /// bind group names the uniform buffer it reads, and each slot has its own.
+    bind_groups: std::collections::HashMap<TextureId, wgpu::BindGroup>,
 }
 
 #[derive(Debug)]
@@ -146,14 +172,11 @@ pub struct SpriteBatchRenderer {
     over_the_world: wgpu::RenderPipeline,
     within_the_world: wgpu::RenderPipeline,
     bind_group_layout: wgpu::BindGroupLayout,
-    /// One bind group per texture, built on first use and kept for reuse.
-    bind_groups: std::collections::HashMap<TextureId, wgpu::BindGroup>,
-    current: TextureId,
-    uniform: wgpu::Buffer,
     mesh: MeshBuffers,
-    instances: wgpu::Buffer,
-    instance_capacity: u32,
-    instance_count: u32,
+    /// Grown as a frame needs them and reused every frame after.
+    batches: Vec<Batch>,
+    /// Which slot the next batch of this frame takes.
+    next: usize,
     blend_mode: SpriteBlendMode,
     stats: SpriteBatchStats,
 }
@@ -168,15 +191,6 @@ impl SpriteBatchRenderer {
         target_format: wgpu::TextureFormat,
         blend_mode: SpriteBlendMode,
     ) -> Self {
-        let uniform = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Sindri sprite batch uniform"),
-            contents: bytemuck::bytes_of(&BatchUniform {
-                view_projection: Mat4::IDENTITY.to_cols_array_2d(),
-            }),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
-        let instances = create_instance_buffer(device, DEFAULT_CAPACITY)
-            .expect("default sprite batch capacity fits a GPU buffer");
         let bind_group_layout = create_bind_group_layout(device);
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Sindri sprite batch shader"),
@@ -228,100 +242,89 @@ impl SpriteBatchRenderer {
             over_the_world: pipeline(SpriteDepth::Ignore),
             within_the_world: pipeline(SpriteDepth::Test),
             bind_group_layout,
-            bind_groups: std::collections::HashMap::new(),
-            current: TextureRegistry::MISSING,
-            uniform,
             mesh: MeshBuffers::new(device, "Sindri sprite batch quad", &VERTICES, &INDICES),
-            instances,
-            instance_capacity: DEFAULT_CAPACITY,
-            instance_count: 0,
+            batches: Vec::new(),
+            next: 0,
             blend_mode,
             stats: SpriteBatchStats::default(),
         }
     }
 
-    /// Returns the bind group for `texture`, creating it on first use.
-    fn bind_texture(
-        &mut self,
-        device: &wgpu::Device,
-        registry: &TextureRegistry,
-        texture: TextureId,
-    ) {
-        self.current = texture;
-        if self.bind_groups.contains_key(&texture) {
-            return;
-        }
-        let resolved = registry.get(texture);
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Sindri sprite batch bind group"),
-            layout: &self.bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: self.uniform.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(resolved.view()),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Sampler(resolved.sampler()),
-                },
-            ],
-        });
-        self.bind_groups.insert(texture, bind_group);
-    }
-
-    pub fn prepare(
-        &mut self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        registry: &TextureRegistry,
-        texture: TextureId,
-        instances: &[SpriteInstance],
-    ) -> Result<SpriteBatchStats, SpriteBatchError> {
-        self.bind_texture(device, registry, texture);
-        let instance_count =
-            u32::try_from(instances.len()).map_err(|_| SpriteBatchError::TooManyInstances)?;
-        if instance_count > self.instance_capacity {
-            let new_capacity = instance_count
-                .checked_next_power_of_two()
-                .ok_or(SpriteBatchError::TooManyInstances)?;
-            self.instances = create_instance_buffer(device, new_capacity)?;
-            self.instance_capacity = new_capacity;
-        }
-        if !instances.is_empty() {
-            queue.write_buffer(&self.instances, 0, bytemuck::cast_slice(instances));
-        }
-        self.instance_count = instance_count;
-        self.stats = SpriteBatchStats::for_sprite_count(instance_count);
-        Ok(self.stats)
-    }
-
-    /// Draws the prepared batch into an already-cleared frame.
+    /// Starts a submission, so the next batch takes the first slot again.
     ///
-    /// The depth buffer is attached read-only whichever behaviour is asked for,
-    /// so the two differ in what they are hidden by and in nothing else.
-    pub fn encode(
-        &self,
+    /// Without this a long-running host would allocate a slot per batch per
+    /// frame forever. Slots are reused rather than freed, so a frame costs
+    /// nothing after the first one of its shape.
+    ///
+    /// A *submission* and not a frame, and the difference is the whole reason
+    /// the slots exist: `queue.write_buffer` stages a write that lands when
+    /// the queue is next submitted, so reusing a slot is only safe once the
+    /// commands that read it have been submitted. Two frames encoded into one
+    /// submission — an editor drawing a scene view and a game view, say — must
+    /// either submit between them or keep drawing into fresh slots. The editor
+    /// submits between them.
+    pub fn begin_submission(&mut self) {
+        self.next = 0;
+        self.stats = SpriteBatchStats::default();
+    }
+
+    /// How many batch slots the renderer is holding.
+    ///
+    /// The high-water mark of one frame's batches, which is what a host would
+    /// look at to find out whether a scene is asking for a great many.
+    #[must_use]
+    pub fn batch_slots(&self) -> usize {
+        self.batches.len()
+    }
+
+    /// Draws one batch, with its own camera and its own instances.
+    ///
+    /// The batch's data goes in the slot [`Self::begin_submission`] handed
+    /// out, so nothing another batch in the same submission writes can reach
+    /// it.
+    ///
+    /// Preparing and encoding are one call because they were never separable:
+    /// a batch's uniform and instance data are only correct for the pass drawn
+    /// immediately after they are written, and splitting them left an API whose
+    /// only safe use was to call the two in a pair. Now the pair is the call,
+    /// and the slot it writes belongs to it.
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw(
+        &mut self,
+        device: &wgpu::Device,
         queue: &wgpu::Queue,
         encoder: &mut wgpu::CommandEncoder,
         target: &wgpu::TextureView,
         depth_target: &DepthTarget,
+        registry: &TextureRegistry,
+        texture: TextureId,
         view_projection: Mat4,
         depth: SpriteDepth,
-    ) {
-        if self.instance_count == 0 {
-            return;
+        instances: &[SpriteInstance],
+    ) -> Result<SpriteBatchStats, SpriteBatchError> {
+        let instance_count =
+            u32::try_from(instances.len()).map_err(|_| SpriteBatchError::TooManyInstances)?;
+        let stats = SpriteBatchStats::for_sprite_count(instance_count);
+        if instance_count == 0 {
+            return Ok(stats);
         }
-        queue.write_buffer(
-            &self.uniform,
-            0,
-            bytemuck::bytes_of(&BatchUniform {
-                view_projection: view_projection.to_cols_array_2d(),
-            }),
-        );
+
+        let slot = self.reserve(device, instance_count)?;
+        {
+            let batch = &self.batches[slot];
+            queue.write_buffer(
+                &batch.uniform,
+                0,
+                bytemuck::bytes_of(&BatchUniform {
+                    view_projection: view_projection.to_cols_array_2d(),
+                }),
+            );
+            queue.write_buffer(&batch.instances, 0, bytemuck::cast_slice(instances));
+        }
+        self.bind_texture(device, registry, slot, texture);
+        self.stats = self.stats.and(stats);
+
+        let batch = &self.batches[slot];
         let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Sindri sprite batch pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -349,30 +352,95 @@ impl SpriteBatchRenderer {
             SpriteDepth::Ignore => &self.over_the_world,
             SpriteDepth::Test => &self.within_the_world,
         });
-        let bind_group = self
-            .bind_groups
-            .get(&self.current)
-            .expect("prepare binds the texture before encoding");
-        pass.set_bind_group(0, bind_group, &[]);
-        pass.set_vertex_buffer(1, self.instances.slice(..));
-        self.mesh.draw_instances(&mut pass, 0..self.instance_count);
+        pass.set_bind_group(
+            0,
+            batch
+                .bind_groups
+                .get(&texture)
+                .expect("the bind group was just created"),
+            &[],
+        );
+        pass.set_vertex_buffer(1, batch.instances.slice(..));
+        self.mesh.draw_instances(&mut pass, 0..instance_count);
+        Ok(stats)
     }
 
+    /// The slot this frame's next batch draws from, grown to hold `capacity`.
+    fn reserve(&mut self, device: &wgpu::Device, capacity: u32) -> Result<usize, SpriteBatchError> {
+        let slot = self.next;
+        self.next += 1;
+        if slot == self.batches.len() {
+            let wanted = DEFAULT_CAPACITY.max(capacity);
+            self.batches.push(Batch {
+                uniform: device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Sindri sprite batch uniform"),
+                    contents: bytemuck::bytes_of(&BatchUniform {
+                        view_projection: Mat4::IDENTITY.to_cols_array_2d(),
+                    }),
+                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                }),
+                instances: create_instance_buffer(device, wanted)?,
+                capacity: wanted,
+                bind_groups: std::collections::HashMap::new(),
+            });
+        }
+        let batch = &mut self.batches[slot];
+        if capacity > batch.capacity {
+            let grown = capacity
+                .checked_next_power_of_two()
+                .ok_or(SpriteBatchError::TooManyInstances)?;
+            batch.instances = create_instance_buffer(device, grown)?;
+            batch.capacity = grown;
+            // The bind groups name the uniform, not the instances, so they
+            // survive the instance buffer being replaced.
+        }
+        Ok(slot)
+    }
+
+    /// Builds this slot's bind group for `texture` on first use.
+    ///
+    /// Keyed per slot rather than per renderer because a bind group names the
+    /// uniform buffer it reads, and each slot has its own.
+    fn bind_texture(
+        &mut self,
+        device: &wgpu::Device,
+        registry: &TextureRegistry,
+        slot: usize,
+        texture: TextureId,
+    ) {
+        if self.batches[slot].bind_groups.contains_key(&texture) {
+            return;
+        }
+        let resolved = registry.get(texture);
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Sindri sprite batch bind group"),
+            layout: &self.bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: self.batches[slot].uniform.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(resolved.view()),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(resolved.sampler()),
+                },
+            ],
+        });
+        self.batches[slot].bind_groups.insert(texture, bind_group);
+    }
+
+    /// What this frame has drawn since [`Self::begin_submission`], across every
+    /// batch. [`Self::draw`] hands back one batch's share of it.
     pub const fn stats(&self) -> SpriteBatchStats {
         self.stats
     }
 
-    /// The texture the next encode will draw with.
-    pub const fn texture(&self) -> TextureId {
-        self.current
-    }
-
     pub const fn blend_mode(&self) -> SpriteBlendMode {
         self.blend_mode
-    }
-
-    pub const fn instance_capacity(&self) -> u32 {
-        self.instance_capacity
     }
 }
 

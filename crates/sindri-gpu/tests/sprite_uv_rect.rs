@@ -92,12 +92,18 @@ fn sample(gpu: &GpuContext, rect: UvRect) -> ([u8; 4], [[u8; 4]; 4]) {
         &depth,
         ClearOperations::default(),
     );
+    sprites.begin_submission();
     sprites
-        .prepare(
+        .draw(
             &gpu.device,
             &gpu.queue,
+            &mut encoder,
+            target.view(),
+            &depth,
             &textures,
             sheet,
+            view_projection,
+            SpriteDepth::Ignore,
             &[SpriteInstance::new(
                 Mat4::from_scale(Vec3::new(2.0, 2.0, 1.0)),
                 [1.0, 1.0, 1.0, 1.0],
@@ -105,14 +111,6 @@ fn sample(gpu: &GpuContext, rect: UvRect) -> ([u8; 4], [[u8; 4]; 4]) {
             .with_uv_rect(rect)],
         )
         .expect("one sprite fits the batch");
-    sprites.encode(
-        &gpu.queue,
-        &mut encoder,
-        target.view(),
-        &depth,
-        view_projection,
-        SpriteDepth::Ignore,
-    );
     let readback = target
         .copy_to_buffer(&gpu.device, &mut encoder)
         .expect("the target copies back");

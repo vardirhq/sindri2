@@ -1,0 +1,19 @@
+// The end of the game.
+//
+// Shown once every orb is gathered, and it fades in rather than appearing, so
+// winning reads as something that happened rather than as a frame that changed.
+script Banner {
+    @export
+    let orbs: f32 = 5.0;
+
+    var shown: f32 = 0.0;
+
+    fn update(dt: f32) {
+        if Game.get("score", 0.0) >= orbs {
+            shown = min(shown + dt * 2.0, 1.0);
+        } else {
+            shown = 0.0;
+        }
+        this.sprite.tint.a = shown;
+    }
+}

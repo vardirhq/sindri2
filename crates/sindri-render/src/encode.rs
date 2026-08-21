@@ -30,6 +30,12 @@ pub struct FrameRenderers<'a> {
 }
 
 /// Draws every pass of `frame`, in the order preparation put them in.
+///
+/// One call is one submission. Each sprite batch writes its own buffers, and
+/// `queue.write_buffer` stages those writes until the queue is next submitted,
+/// so `encoder` must be submitted before this is called again with the same
+/// renderers. A host drawing two frames at once — the editor's scene view and
+/// game view — submits between them.
 pub fn encode_prepared_frame(
     renderers: FrameRenderers<'_>,
     device: &wgpu::Device,
@@ -43,12 +49,15 @@ pub fn encode_prepared_frame(
         sprites: sprite_renderer,
         textures,
     } = renderers;
-    let mut sprite_stats = SpriteBatchStats::default();
     // Once, before anything draws. The frame owns what it starts as; a scene
     // with two meshes would otherwise have the second clear away the first, and
     // a scene with none would leave its sprites drawing against a depth buffer
     // nothing had filled.
     encode_clear(encoder, target.color, target.depth, frame.clear());
+    // Each batch draws from its own slot, and this is what hands the first one
+    // back at the start of every submission. Without it a host would allocate a
+    // slot per batch per frame for as long as it ran.
+    sprite_renderer.begin_submission();
     for pass in frame.passes() {
         match &pass.command {
             FrameCommand::TexturedCube { model, texture } => cube_renderer.encode(
@@ -68,18 +77,20 @@ pub fn encode_prepared_frame(
                 depth,
                 instances,
             } => {
-                sprite_stats =
-                    sprite_renderer.prepare(device, queue, textures, *texture, instances)?;
-                sprite_renderer.encode(
+                sprite_renderer.draw(
+                    device,
                     queue,
                     encoder,
                     target.color,
                     target.depth,
+                    textures,
+                    *texture,
                     pass.camera.view_projection,
                     *depth,
-                );
+                    instances,
+                )?;
             }
         }
     }
-    Ok(sprite_stats)
+    Ok(sprite_renderer.stats())
 }

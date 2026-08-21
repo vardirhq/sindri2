@@ -23,16 +23,26 @@ struct Recorder {
 }
 
 impl Host for Recorder {
-    fn load(&mut self, path: &Path) -> Result<Option<Value>, RuntimeError> {
+    fn load(&mut self, _subject: Option<u64>, path: &Path) -> Result<Option<Value>, RuntimeError> {
         Ok(self.values.get(&path.dotted()).cloned())
     }
 
-    fn store(&mut self, path: &Path, value: Value) -> Result<bool, RuntimeError> {
+    fn store(
+        &mut self,
+        _subject: Option<u64>,
+        path: &Path,
+        value: Value,
+    ) -> Result<bool, RuntimeError> {
         self.values.insert(path.dotted(), value);
         Ok(true)
     }
 
-    fn call(&mut self, path: &Path, args: &[Value]) -> Result<Option<Value>, RuntimeError> {
+    fn call(
+        &mut self,
+        _subject: Option<u64>,
+        path: &Path,
+        args: &[Value],
+    ) -> Result<Option<Value>, RuntimeError> {
         let name = path.dotted();
         self.calls.push((name.clone(), args.to_vec()));
         Ok(Some(match name.as_str() {

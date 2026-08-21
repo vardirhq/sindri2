@@ -30,9 +30,10 @@ cargo check --workspace --all-features --target wasm32-unknown-unknown
 ```
 
 CI runs these with `RUSTFLAGS: -D warnings`, so a warning is a failure. It also
-renders two images — a headless scene capture and a screenshot of the editor —
-and uploads both, because several classes of rendering mistake compile, lint,
-test, and run while producing the wrong picture.
+renders three images — a headless scene capture, a screenshot of the editor, and
+the companion game part-way through a scripted run — and uploads all of them,
+because several classes of rendering mistake compile, lint, test, and run while
+producing the wrong picture.
 
 Dependency changes additionally run `cargo deny`; see
 [`docs/dependency-policy.md`](docs/dependency-policy.md).

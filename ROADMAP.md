@@ -173,8 +173,8 @@ shaped like the tool.
 - [x] Port sprite animation and sprite sheets — `sindri.sprite_animation` carries the sheet grid, clips of cells, and which one plays, while `SpriteAnimations` holds the cursor beside the world, so a scene saved mid-run is the scene that was opened; the legacy engine's texture-per-frame becomes a rect into one sheet, and authoring is still the next item
 - [ ] Add a sprite sheet authoring surface: slice a sheet into frames, name clips, set timing, preview playback
 - [ ] Port camera 2D behavior and pixel snapping — pixel snapping is an orthographic-camera feature, since apparent scale under perspective depends on depth; see `docs/2d-model.md`
-- [ ] Port tilemap data model and renderer
-- [ ] Add tilemap authoring: a tile palette, paint and erase, and layer selection
+- [x] Port tilemap data model and renderer — `sindri.tilemap` holds the sheet grid, the map grid, and a flat array of cells with `null` for empty, and extracts into the same sprite batches loose sprites use, so a prop sorts among the floor rather than behind it; it gained a projection the legacy type did not have, because the first thing to use it was an isometric floor, and placing a tile and finding the tile under a point are inverses on every cell of both
+- [ ] Add tilemap authoring: a tile palette, paint and erase, and layer selection — `local_to_tile` is the maths this needs and it exists; what is missing is the surface
 - [ ] Port text rendering with a web-safe font asset strategy
 - [ ] Add font and text authoring: choose a font asset and edit text content in the inspector
 - [ ] Port particles after the render lifecycle is stable
@@ -182,7 +182,7 @@ shaped like the tool.
 - [ ] Port A* pathfinding into a renderer-free grid crate, with the general grid beside it; the legacy platform-jump graph is deferred rather than carried along because it shares a file
 - [ ] Add optional Rapier2D adapter without core dependency, with collision layers from the start — physics ignores Z, so depth cannot keep a parallax background out of the player's way, and collision layers are not render layers
 - [ ] Add 2D pan/zoom viewport controls, which need a 2D scene rather than the screen-anchored overlay the demo uses
-- [ ] Start the companion game and grow it through this milestone, verified natively and in browser — see "The companion game" below, which replaces the `hello-2d` and platformer slice this milestone used to schedule
+- [ ] Start the companion game and grow it through this milestone, verified natively and in browser — see "The companion game" below, which replaces the `hello-2d` and platformer slice this milestone used to schedule (started: `game/` plays natively, with a scripted offscreen capture in CI; still to do here are text and the browser build; its floor is a tilemap now)
 
 Exit gate: Sindri Next matches the useful core of legacy 2D without inheriting its desktop/server/Lua coupling, and each ported system can be authored in the editor rather than only by hand in JSON.
 
@@ -361,6 +361,8 @@ Done:
 - [x] Show what the engine reports in the console — failures, what each scene turned out to be, and the textures it names that nothing has bound
 - [x] Remember the open scene between launches, and name it and its unsaved state in the window title
 - [x] Widen the viewport's zoom and pitch limits, make the zoom proportional, stop the orbit reaching the pole, and add **Focus selection**
+- [x] Stop reporting a script that is still loading as a compile error — asset loading is asynchronous, so every cold open logged one error per scripted entity for the moment between the scene landing and its scripts arriving, and the console keeps what it is told; opening the companion game showed twelve errors against a game that was working
+- [x] Let `scripts/capture-editor.sh` photograph a named scene rather than only the fixture, which is what taking the editor to the game needed
 
 Wanted, in no particular order. Several of these are small enough to do the
 moment they annoy someone, and are also named in Milestone 11 as part of the
@@ -378,6 +380,8 @@ what the editor cannot yet do.
 - [ ] Asset thumbnails, after which the grid view is worth defaulting to again
 - [ ] Show which entity a hierarchy row is, when its name is empty or repeated
 - [ ] Keep a filtered hierarchy readable: rows keep their indentation, so a match under a filtered-out parent sits indented under nothing
+- [ ] Group a hierarchy of repeated entities, or the tool stops working at the scale a real scene reaches — taking the editor to the companion game put 49 `Floor r,c` rows between the top of the list and every entity a person actually wanted to edit; the tilemap removes this particular 49, and the next scene will find another
+- [ ] Give the console a way to clear or filter what it holds, since a transient error stays in the count long after it stops being true
 
 ## The companion game — continuous, not a milestone
 
@@ -398,7 +402,7 @@ improve it, that is information about the feature, not a shortcoming of the
 game. A showcase never has to be fun, never has to ship, and never meets the
 awkward case — so it applies none of the pressure that makes an engine good.
 
-**It is isometric,** because Milestone 9 already is, so the game sits on the
+**It is isometric in the end,** because Milestone 9 already is, so the game sits on the
 path rather than beside it; because isometric is sprites with depth sorting,
 layers, and transparent ordering, which is what the frame pipeline already does
 well; and because its needs are broad enough — grid maths, pathfinding, text,
@@ -416,14 +420,34 @@ tagged snapshot, so the engine's progress is something to look at rather than a
 list of ticks. A milestone that would leave the game broken is a milestone that
 is not finished.
 
-It cannot start yet. It needs sprite sheets with UV rects, world-space 2D
-positioning, and text — the first three items of Milestone 6 — because until
-then there is no way to draw a character, place it in a world, or tell the
-player anything.
+**It has started, one item early.** The plan held it until sprite sheets, world-space
+2D, and text all existed, on the reasoning that without text there is no way to
+tell the player anything. Two of the three arrived; the third did not, and the
+game started anyway, because scripting landed first and a game was the only
+honest way to find out whether authoring gameplay in Decay actually works. What
+text would have said, it says in sprites instead: a row of lamps for the score
+and a banner that fades in when the game is won. That is a real constraint
+rather than a workaround — a great many games say everything they need to in
+pictures — and the substitution is worth keeping in mind when text does arrive,
+because it is evidence about how much text a 2D engine really owes its users.
 
-- [ ] Start the game once sprite sheets, world-space 2D, and text exist: one room, one character, one tile floor
+It is `game/`, crate `sindri-gather`: five orbs on a diamond floor, a thing you
+drive with the arrow keys, and a lamp per orb. Its scene is 68 entities and all
+four of its rules — moving, gathering, counting, winning — are Decay scripts.
+There is no gameplay in its Rust, which is the claim it exists to test.
+
+It has already paid for itself. Mixing a world with an overlay is something no
+proof in the workspace did, and it turned up a renderer bug that made every
+frame with more than one sprite batch draw through the wrong camera — see
+`docs/rendering-frame-pipeline.md`.
+
+It is top-down rather than isometric for now: the floor is drawn as a diamond,
+but the coordinates behind it are a plain grid, which is what Milestone 9's
+module is for.
+
+- [x] Start the game: one room, one character, one tile floor (started before text existed, which the entry above records)
 - [ ] Grow it with Milestone 6: animation, a tilemap floor, parallax, and a font rendering real text
-- [ ] Take the Milestone 7 editor to it, and record what authoring it in the editor is actually like
+- [x] Take the Milestone 7 editor to it, and record what authoring it in the editor is actually like — `docs/editor-meets-the-game.md`; it opens, renders in both viewports, and Play runs its scripts, which is the parity claim holding. What it cannot do is author it: 49 floor rows drown the hierarchy, and there is no viewport selection to escape the list with
 - [ ] Give it depth with Milestone 8: a 3D prop in the same scene as the sprites
 - [ ] Rebuild its coordinate handling on Milestone 9's grid module rather than its own
 - [ ] Ship it through Milestone 10's export pipeline, natively and to the web, as the pipeline's real test
@@ -447,7 +471,8 @@ The next item is not more language. It is `sindri-decay` — one script driving 
 - [x] Define typed host members so `this.transform.position` is checked instead of remaining an unknown path (`HostType`, `Environment::add_type`/`add_this_value`, and member resolution on reads, writes, and method calls — a misspelled path is now a compile error with a line number). Describing a host is gradual and per type: an undescribed type stays permissive, so a host part-way through describing itself rejects nothing that worked
 - [ ] **Emit a host manifest**, now unblocked: `Environment` carries types and can enumerate them, so the description can be written out and read back. This is the first item of the external-editor track below, and the thing a language server has to agree with
 - [x] Define a language-neutral scripting host: a script reaches its transform, its sprite, the keyboard, the frame's time, and a log, all through the `Host` trait's three methods and all typed. The surface is the one `docs/2d-inventory.md` read off the legacy engine's `player.lua` rather than an invented one — see `docs/scripting.md`
-- [ ] Extend the host to other entities, spawning, and despawning, routed through `WorldCommand`. Blocked on the language rather than the host: naming another entity means holding one, and Decay has no value that can
+- [x] Give Decay a value that can hold an entity — `Value::Reference` is opaque to the language: holdable, passable, comparable, with no literal, no arithmetic and no way inside. The engine packs a slot and a generation into it, and the `Host` trait's three methods each take a subject, so a path rooted at a value a script holds resolves against what it names
+- [ ] Extend the host to other entities, spawning, and despawning, routed through `WorldCommand` (partly done: `World.find`, `World.exists`, `World.despawn` and reaching through a reference all work and are typed — **spawning** is blocked on the engine having a prefab to say what to create, and despawn is not yet routed through `WorldCommand`, because no script write is and play mode restores from a snapshot)
 - [ ] Generate typed component access, diagnostics, and autocomplete from the component schema registry (Decay's `Environment` is where host globals enter, and `IrField` already carries `exported` and `type_name` — this is the capability Rhai structurally could not have offered, and the reason the language has a case)
 - [ ] Specify safe entity and asset handles, coroutine cancellation, deterministic scheduling, and execution budgets (call depth is bounded; an operation budget is required before loops land)
 - [ ] Prove function/module hot reload with preservation or explicit migration of compatible typed state

@@ -13,6 +13,19 @@ pub enum Value {
     Number(f64),
     String(String),
     Bool(bool),
+    /// Something the host owns, which a script may hold, compare, pass and
+    /// store, but cannot construct, read into, or do arithmetic on.
+    ///
+    /// The number inside is the host's, and Decay attaches no meaning to it.
+    /// That is the whole design: a script needs to be able to *name* another
+    /// thing in the world in order to say anything about it, and it can do
+    /// that without the language knowing what a world is. The engine packs an
+    /// entity's slot and generation into it; a different host could pack
+    /// something else, and nothing here would change.
+    ///
+    /// An absent reference is [`Value::Null`], not a reserved number, for the
+    /// same reason an empty tile is null: every number is a real reference.
+    Reference(u64),
     Null,
     Unit,
 }
@@ -30,6 +43,12 @@ impl From<&Constant> for Value {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RuntimeError {
+    /// A path was rooted at something the script holds that is not a reference,
+    /// so there is nothing for the rest of the path to be about.
+    NotAReference(String),
+    /// A path was rooted at a reference that is empty. Reaching through nothing
+    /// is a mistake worth naming, rather than silently doing nothing.
+    NullReference(String),
     ContainerNotFound(String),
     FunctionNotFound(String),
     Arity {
@@ -57,23 +76,55 @@ pub enum RuntimeError {
     Host(String),
 }
 
+/// Everything outside the language, across three methods.
+///
+/// Each takes a `subject`: `None` for a path the script wrote from a root the
+/// host owns (`this.transform.position.x`, `Input.axis(...)`), and `Some(id)`
+/// for one rooted at a value a script is holding — `target.transform.position.x`
+/// where `target` came from the host earlier. The path passed alongside a
+/// subject is the part *after* the root, so a host answers
+/// `transform.position.x` for whichever thing the subject names.
+///
+/// Three methods and not six because the subject is an argument rather than a
+/// mode: a host that ignores it simply refuses every subject, which is what
+/// [`EmptyHost`] does and what a host without references should do.
 pub trait Host {
-    fn load(&mut self, path: &Path) -> Result<Option<Value>, RuntimeError>;
-    fn store(&mut self, path: &Path, value: Value) -> Result<bool, RuntimeError>;
-    fn call(&mut self, path: &Path, args: &[Value]) -> Result<Option<Value>, RuntimeError>;
+    fn load(&mut self, subject: Option<u64>, path: &Path) -> Result<Option<Value>, RuntimeError>;
+    fn store(
+        &mut self,
+        subject: Option<u64>,
+        path: &Path,
+        value: Value,
+    ) -> Result<bool, RuntimeError>;
+    fn call(
+        &mut self,
+        subject: Option<u64>,
+        path: &Path,
+        args: &[Value],
+    ) -> Result<Option<Value>, RuntimeError>;
 }
 
 #[derive(Debug, Default)]
 pub struct EmptyHost;
 
 impl Host for EmptyHost {
-    fn load(&mut self, _path: &Path) -> Result<Option<Value>, RuntimeError> {
+    fn load(&mut self, _subject: Option<u64>, _path: &Path) -> Result<Option<Value>, RuntimeError> {
         Ok(None)
     }
-    fn store(&mut self, _path: &Path, _value: Value) -> Result<bool, RuntimeError> {
+    fn store(
+        &mut self,
+        _subject: Option<u64>,
+        _path: &Path,
+        _value: Value,
+    ) -> Result<bool, RuntimeError> {
         Ok(false)
     }
-    fn call(&mut self, _path: &Path, _args: &[Value]) -> Result<Option<Value>, RuntimeError> {
+    fn call(
+        &mut self,
+        _subject: Option<u64>,
+        _path: &Path,
+        _args: &[Value],
+    ) -> Result<Option<Value>, RuntimeError> {
         Ok(None)
     }
 }
@@ -352,7 +403,12 @@ impl<'a, H: Host> Runtime<'a, H> {
                             .any(|function| function.name == callee.0[0])
                     {
                         self.call_in_container(container, fields, &callee.0[0], args)?
-                    } else if let Some(value) = self.host.call(callee, &args)? {
+                    } else if let Some((subject, rest)) = Self::subject_path(fields, frame, callee)?
+                    {
+                        self.host
+                            .call(Some(subject), &rest, &args)?
+                            .ok_or_else(|| RuntimeError::FunctionNotFound(rest.dotted()))?
+                    } else if let Some(value) = self.host.call(None, callee, &args)? {
                         value
                     } else {
                         return Err(RuntimeError::FunctionNotFound(callee.dotted()));
@@ -398,6 +454,38 @@ impl<'a, H: Host> Runtime<'a, H> {
         Ok(frame.stack.pop().unwrap_or(Value::Unit))
     }
 
+    /// Splits a path rooted at a value the script is holding into that value's
+    /// reference and the rest of the path.
+    ///
+    /// `target.transform.position.x` where `target` holds a reference becomes
+    /// `(target's id, transform.position.x)`, which is what lets one script say
+    /// anything about another entity. A path rooted at anything else — a host
+    /// global like `Input`, or `this` — is not a subject path and goes to the
+    /// host whole.
+    ///
+    /// A root that names a local holding something *other* than a reference is
+    /// an error rather than a fall-through to the host: `speed.transform` where
+    /// `speed` is a number should say so, not report an unknown host path that
+    /// mentions a local the host has never heard of.
+    fn subject_path(
+        fields: &HashMap<String, Slot>,
+        frame: &Frame,
+        path: &Path,
+    ) -> Result<Option<(u64, Path)>, RuntimeError> {
+        if path.0.len() < 2 {
+            return Ok(None);
+        }
+        let root = &path.0[0];
+        let Some(slot) = frame.lookup(root).or_else(|| fields.get(root)) else {
+            return Ok(None);
+        };
+        match slot.value {
+            Value::Reference(id) => Ok(Some((id, Path(path.0[1..].to_vec())))),
+            Value::Null => Err(RuntimeError::NullReference(path.dotted())),
+            _ => Err(RuntimeError::NotAReference(root.clone())),
+        }
+    }
+
     fn load_path(
         &mut self,
         fields: &HashMap<String, Slot>,
@@ -416,8 +504,14 @@ impl<'a, H: Host> Runtime<'a, H> {
         {
             return Ok(slot.value.clone());
         }
+        if let Some((subject, rest)) = Self::subject_path(fields, frame, path)? {
+            return self
+                .host
+                .load(Some(subject), &rest)?
+                .ok_or_else(|| RuntimeError::UnknownPath(rest.dotted()));
+        }
         self.host
-            .load(path)?
+            .load(None, path)?
             .ok_or_else(|| RuntimeError::UnknownPath(path.dotted()))
     }
 
@@ -455,7 +549,14 @@ impl<'a, H: Host> Runtime<'a, H> {
             slot.value = value;
             return Ok(());
         }
-        if self.host.store(path, value)? {
+        if let Some((subject, rest)) = Self::subject_path(fields, frame, path)? {
+            return if self.host.store(Some(subject), &rest, value)? {
+                Ok(())
+            } else {
+                Err(RuntimeError::UnknownPath(rest.dotted()))
+            };
+        }
+        if self.host.store(None, path, value)? {
             Ok(())
         } else {
             Err(RuntimeError::UnknownPath(path.dotted()))
@@ -738,14 +839,28 @@ mod tests {
         values: HashMap<String, Value>,
     }
     impl Host for TestHost {
-        fn load(&mut self, path: &Path) -> Result<Option<Value>, RuntimeError> {
+        fn load(
+            &mut self,
+            _subject: Option<u64>,
+            path: &Path,
+        ) -> Result<Option<Value>, RuntimeError> {
             Ok(self.values.get(&path.dotted()).cloned())
         }
-        fn store(&mut self, path: &Path, value: Value) -> Result<bool, RuntimeError> {
+        fn store(
+            &mut self,
+            _subject: Option<u64>,
+            path: &Path,
+            value: Value,
+        ) -> Result<bool, RuntimeError> {
             self.values.insert(path.dotted(), value);
             Ok(true)
         }
-        fn call(&mut self, path: &Path, args: &[Value]) -> Result<Option<Value>, RuntimeError> {
+        fn call(
+            &mut self,
+            _subject: Option<u64>,
+            path: &Path,
+            args: &[Value],
+        ) -> Result<Option<Value>, RuntimeError> {
             if path.dotted() == "Input.axis" {
                 assert_eq!(args.len(), 2);
                 return Ok(Some(Value::Number(0.5)));

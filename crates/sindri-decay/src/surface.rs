@@ -24,6 +24,10 @@ pub(crate) const SPRITE: &str = "Sprite";
 pub(crate) const RGBA: &str = "Rgba";
 pub(crate) const INPUT: &str = "Input";
 pub(crate) const TIME: &str = "Time";
+pub(crate) const GAME: &str = "Game";
+pub(crate) const WORLD: &str = "World";
+/// The type of a value that names another entity.
+pub(crate) const ENTITY: &str = "Entity";
 
 /// The component a sprite's fields live in.
 pub(crate) const SPRITE_COMPONENT: &str = "sindri.sprite";
@@ -34,6 +38,21 @@ pub(crate) enum Node {
     Group(&'static str, &'static [(&'static str, Node)]),
     /// A number a script can read and write.
     Leaf(Leaf),
+    /// A reference to something the host owns.
+    ///
+    /// Read-only, and deliberately: a script gets to *name* another entity, not
+    /// to reassign which entity it is running on. There is no arithmetic on one
+    /// and no way to build one, so the only references a script can hold are
+    /// ones the host handed it.
+    Handle(Handle),
+}
+
+/// The references the surface offers.
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum Handle {
+    /// The entity this script is running on, so it can be passed to something
+    /// that takes an entity — or left on the blackboard for another script.
+    Own,
 }
 
 /// How the host reaches one number.
@@ -166,11 +185,43 @@ const SPRITE_MEMBERS: &[(&str, Node)] = &[
 pub(crate) const THIS: &[(&str, Node)] = &[
     ("transform", Node::Group(TRANSFORM, TRANSFORM_MEMBERS)),
     ("sprite", Node::Group(SPRITE, SPRITE_MEMBERS)),
+    ("entity", Node::Handle(Handle::Own)),
+];
+
+/// What a script reaches *through* a reference.
+///
+/// The same data members as `this`, and not `entity` itself: `a.entity` would
+/// be `a`, which is a path that says nothing. So one entity reaches another's
+/// transform and sprite exactly as it reaches its own, which is the property
+/// that makes a reference worth having.
+pub(crate) const THROUGH_REFERENCE: &[(&str, Node)] = &[
+    ("transform", Node::Group(TRANSFORM, TRANSFORM_MEMBERS)),
+    ("sprite", Node::Group(SPRITE, SPRITE_MEMBERS)),
 ];
 
 /// Finds the leaf a path names, given the path's parts after `this`.
 pub(crate) fn leaf(parts: &[&str]) -> Option<Leaf> {
-    let mut members = THIS;
+    leaf_in(THIS, parts)
+}
+
+/// The same, for a path rooted at a reference rather than at `this`.
+pub(crate) fn leaf_through_reference(parts: &[&str]) -> Option<Leaf> {
+    leaf_in(THROUGH_REFERENCE, parts)
+}
+
+/// Finds the handle a path names, when it names one rather than a number.
+pub(crate) fn handle(parts: &[&str]) -> Option<Handle> {
+    let [name] = parts else {
+        return None;
+    };
+    THIS.iter().find_map(|(known, node)| match node {
+        Node::Handle(handle) if known == name => Some(*handle),
+        _ => None,
+    })
+}
+
+fn leaf_in(root: &'static [(&'static str, Node)], parts: &[&str]) -> Option<Leaf> {
+    let mut members = root;
     let mut steps = parts.iter();
     loop {
         let step = steps.next()?;
@@ -182,6 +233,19 @@ pub(crate) fn leaf(parts: &[&str]) -> Option<Leaf> {
                 return steps.next().is_none().then_some(*leaf);
             }
             Node::Group(_, nested) => members = nested,
+            Node::Handle(handle) => {
+                // A handle with path left over pivots to what it names, so
+                // `this.entity.transform.position.x` resolves — the analyzer
+                // accepts it, so the host has to answer it.
+                //
+                // `Own` names the same entity this call is already about, so
+                // the members change and the entity does not. A handle naming
+                // something else would need the host to switch entity too, and
+                // this match is where whoever adds one will be made to notice.
+                match handle {
+                    Handle::Own => members = THROUGH_REFERENCE,
+                }
+            }
         }
     }
 }
@@ -271,6 +335,57 @@ pub(crate) const INPUT_QUERIES: &[(&str, InputQuery)] = &[
     ("just_released", InputQuery::Released),
 ];
 
+/// A note left on the board shared by every script in the world.
+///
+/// The smallest thing that lets two scripts cooperate. Decay has no value that
+/// can hold an entity, so a script cannot name another one — but it can leave a
+/// number under a name and another can read it. That is enough for a player to
+/// publish where it is, a collectible to notice, and a score to be counted by
+/// nobody in particular.
+///
+/// Deliberately a stopgap with a shape that admits it: names are strings and
+/// nothing checks them, which typed cross-entity access would fix. It is here
+/// because it is small and it unblocks a game, and a game is what tells us
+/// which of the bigger answers is worth building.
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum GameCall {
+    /// `Game.get(name, fallback)`.
+    ///
+    /// The fallback is not optional, because a note nobody has left yet is the
+    /// ordinary case on the first frame — and a `get` that silently answered
+    /// zero would be a typo that reads as a legitimate value.
+    Get,
+    /// `Game.set(name, value)`.
+    Set,
+}
+
+pub(crate) const GAME_CALLS: &[(&str, GameCall)] =
+    &[("get", GameCall::Get), ("set", GameCall::Set)];
+
+/// What a script can ask of the world it is in, as opposed to of one entity.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum WorldCall {
+    /// Finds an entity by the name the scene gave it, or `null`.
+    ///
+    /// By name rather than by scene ID because a name is what an author typed
+    /// and can see in the hierarchy, and because a runtime-spawned entity has
+    /// no scene ID at all.
+    Find,
+    /// Removes an entity and everything under it, through `WorldCommand` so it
+    /// can be undone.
+    Despawn,
+    /// Whether a reference still names something. A reference outlives what it
+    /// names — that is what generation checking is for — so a script that holds
+    /// one across frames needs to be able to ask.
+    Exists,
+}
+
+pub(crate) const WORLD_CALLS: &[(&str, WorldCall)] = &[
+    ("find", WorldCall::Find),
+    ("despawn", WorldCall::Despawn),
+    ("exists", WorldCall::Exists),
+];
+
 /// What a script can ask about the frame it is in.
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum TimeValue {
@@ -291,7 +406,11 @@ mod tests {
     use sindri_core::{EntityData, Transform3D, World};
     use sindri_platform::InputState;
 
-    use crate::{ScriptContext, WorldHost, environment};
+    use crate::{ScriptContext, WorldHost, environment, surface::ENTITY};
+
+    fn blackboard() -> crate::Blackboard {
+        crate::Blackboard::new()
+    }
 
     fn context(input: &InputState) -> ScriptContext<'_> {
         ScriptContext {
@@ -333,6 +452,7 @@ mod tests {
     fn the_host_answers_every_path_the_analyzer_accepts() {
         let (mut world, entity) = world();
         let input = InputState::default();
+        let mut board = blackboard();
         let environment = environment();
         let mut checked = 0;
 
@@ -351,14 +471,14 @@ mod tests {
                     terminal.display_name()
                 );
 
-                let mut host = WorldHost::new(&mut world, entity, context(&input));
+                let mut host = WorldHost::new(&mut world, entity, context(&input), &mut board);
                 assert!(
-                    matches!(host.load(&path), Ok(Some(Value::Number(_)))),
+                    matches!(host.load(None, &path), Ok(Some(Value::Number(_)))),
                     "the analyzer accepts {dotted} and the host cannot read it"
                 );
-                let mut host = WorldHost::new(&mut world, entity, context(&input));
+                let mut host = WorldHost::new(&mut world, entity, context(&input), &mut board);
                 assert_eq!(
-                    host.store(&path, Value::Number(1.0)),
+                    host.store(None, &path, Value::Number(1.0)),
                     Ok(true),
                     "the analyzer accepts {dotted} and the host cannot write it"
                 );
@@ -375,6 +495,7 @@ mod tests {
     fn the_host_answers_every_global_the_analyzer_describes() {
         let (mut world, entity) = world();
         let input = InputState::default();
+        let mut board = blackboard();
         let environment = environment();
         let mut checked = 0;
 
@@ -389,20 +510,36 @@ mod tests {
             for (name, member) in described.members() {
                 let path = Path(vec![namespace.to_owned(), name.to_owned()]);
                 let dotted = path.dotted();
-                let mut host = WorldHost::new(&mut world, entity, context(&input));
+                // A spare entity per call, because one of these calls removes
+                // whatever it is given and the rest still need a world.
+                let spare = world.spawn(EntityData::default());
+                let mut host = WorldHost::new(&mut world, entity, context(&input), &mut board);
                 match member {
                     ExternalSymbol::Value(_) => assert!(
-                        matches!(host.load(&path), Ok(Some(_))),
+                        matches!(host.load(None, &path), Ok(Some(_))),
                         "the analyzer describes {dotted} and the host cannot read it"
                     ),
                     ExternalSymbol::Function(signature) => {
-                        // Key names, because everything callable on a namespace
-                        // currently takes them. A signature that stops being
-                        // strings will fail here, which is the right moment to
-                        // notice.
-                        let args = vec![Value::String("Space".to_owned()); signature.params.len()];
+                        // Built from the declared parameter types rather than
+                        // assumed, so a namespace whose calls take something
+                        // other than key names is still exercised properly.
+                        let args: Vec<Value> = signature
+                            .params
+                            .iter()
+                            .map(|ty| match ty {
+                                Type::String => Value::String("Space".to_owned()),
+                                Type::Bool => Value::Bool(true),
+                                // A call declared to take an entity is given a
+                                // real one. Passing a number would exercise the
+                                // error path and call it success.
+                                Type::Named(named) if named == ENTITY => {
+                                    Value::Reference(spare.to_bits())
+                                }
+                                _ => Value::Number(1.0),
+                            })
+                            .collect();
                         assert!(
-                            matches!(host.call(&path, &args), Ok(Some(_))),
+                            matches!(host.call(None, &path, &args), Ok(Some(_))),
                             "the analyzer describes {dotted} and the host does not perform it"
                         );
                     }
@@ -444,6 +581,7 @@ mod tests {
     fn every_described_function_is_one_the_host_performs() {
         let (mut world, entity) = world();
         let input = InputState::default();
+        let mut board = blackboard();
         let environment = environment();
 
         for (name, symbol) in environment.globals() {
@@ -451,9 +589,12 @@ mod tests {
                 continue;
             };
             let args = vec![Value::Number(1.0); signature.params.len()];
-            let mut host = WorldHost::new(&mut world, entity, context(&input));
+            let mut host = WorldHost::new(&mut world, entity, context(&input), &mut board);
             assert!(
-                matches!(host.call(&Path(vec![name.to_owned()]), &args), Ok(Some(_))),
+                matches!(
+                    host.call(None, &Path(vec![name.to_owned()]), &args),
+                    Ok(Some(_))
+                ),
                 "the host does not perform `{name}`, which the environment offers"
             );
         }

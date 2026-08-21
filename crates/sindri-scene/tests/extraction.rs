@@ -11,8 +11,8 @@ use sindri_render::{
     FrameCommand, RenderStage, SpriteDepth, TextureId, TextureRegistry, UvRect, Viewport,
 };
 use sindri_scene::{
-    CameraView, SceneExtractError, SceneExtractor, SpriteAnimations, SpriteSheet, TextureBindings,
-    WorldProjection,
+    CameraView, SceneExtractError, SceneExtractor, SpriteAnimations, SpriteSheet,
+    TEXTURE_NAMING_COMPONENTS, TextureBindings, WorldProjection,
 };
 
 const VIEWPORT: Viewport = Viewport::new(512, 512);
@@ -1144,11 +1144,16 @@ fn a_rect_outside_the_texture_is_refused() {
 /// A world holding one sprite that reads a two-by-two sheet, with a `walk` clip
 /// running its four cells at a tenth of a second each.
 fn animated_sheet(playing: &str, looping: bool, speed: f32) -> World {
+    animated_sheet_with_rect(playing, looping, speed, None)
+}
+
+fn animated_sheet_with_rect(playing: &str, looping: bool, speed: f32, rect: Option<&str>) -> World {
+    let rect = rect.map_or(String::new(), |rect| format!(r#", "uv_rect": {rect}"#));
     world_from(&scene(&format!(
         r#",
         {{ "id": "runner", "transform_3d": {{}},
           "components": {{
-            "sindri.sprite": {{ "texture": "sheet.png" }},
+            "sindri.sprite": {{ "texture": "sheet.png"{rect} }},
             "sindri.sprite_animation": {{
               "sheet": {{ "columns": 2, "rows": 2 }},
               "clips": {{ "walk": {{ "frames": [0, 1, 2, 3],
@@ -1248,10 +1253,32 @@ fn playing_an_animation_does_not_change_the_scene() {
     assert_eq!(saved(&world), before);
 }
 
-/// A sprite whose animation has never been advanced draws its own authored
-/// rect, which is what makes the authored rect the pose a scene shows at rest.
+/// A sprite whose animation has never been advanced draws its authored rect,
+/// which is what makes the authored rect the pose a scene shows at rest.
 #[test]
 fn an_unplayed_animation_leaves_the_sprites_own_rect_alone() {
+    let world = animated_sheet_with_rect(r#""walk""#, true, 1.0, Some("[0.5, 0.0, 0.5, 0.5]"));
+    let frame = SceneExtractor::new()
+        .expect("built-in components register")
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &animated_bindings(),
+        )
+        .expect("the scene extracts");
+    assert_eq!(
+        only_instance_rect(&frame),
+        UvRect::new(0.5, 0.0, 0.5, 0.5).expect("the authored rect is valid")
+    );
+}
+
+/// And one that authored no rect draws its clip's first frame instead of the
+/// whole sheet. Drawing the sheet whole is every frame at once, which is never
+/// a picture anyone meant — a scene loaded but not yet ticked, or an entity
+/// sitting in the editor outside play mode, would otherwise look like that.
+#[test]
+fn an_unplayed_animation_without_a_rect_shows_its_first_frame() {
     let world = animated_sheet(r#""walk""#, true, 1.0);
     let frame = SceneExtractor::new()
         .expect("built-in components register")
@@ -1262,7 +1289,11 @@ fn an_unplayed_animation_leaves_the_sprites_own_rect_alone() {
             &animated_bindings(),
         )
         .expect("the scene extracts");
-    assert_eq!(only_instance_rect(&frame), UvRect::FULL);
+    // Cell zero of a two by two sheet, which is where advancing would start it.
+    assert_eq!(
+        only_instance_rect(&frame),
+        UvRect::new(0.0, 0.0, 0.5, 0.5).expect("the first cell is valid")
+    );
 }
 
 /// A clip nothing selected leaves the sprite alone too, rather than picking a
@@ -1347,4 +1378,209 @@ fn a_clip_naming_a_cell_outside_the_sheet_is_refused() {
         .advance(&world, extractor.components(), 0.1)
         .expect_err("a cell the sheet does not have is not a frame");
     assert!(error.to_string().contains("outside"), "{error}");
+}
+
+/// A tilemap draws its filled cells and skips its empty ones.
+#[test]
+fn a_tilemap_draws_only_the_cells_that_hold_a_tile() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "floor", "transform_3d": {},
+          "components": { "sindri.tilemap": {
+            "texture": "tiles", "sheet_columns": 2, "sheet_rows": 1,
+            "columns": 3, "rows": 2, "space": "world",
+            "tiles": [0, 1, null, 1, null, 0] } } }"#,
+    ));
+    let frame = SceneExtractor::new()
+        .unwrap()
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
+        .expect("the tilemap extracts");
+
+    assert_eq!(frame.passes().len(), 1);
+    let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[0].command else {
+        panic!("expected a sprite batch");
+    };
+    assert_eq!(
+        instances.len(),
+        4,
+        "four of the six cells hold a tile, and the two nulls draw nothing"
+    );
+}
+
+/// The tilemap's whole reason for existing: the same floor, authored as one
+/// entity instead of one per tile, is the same picture.
+#[test]
+fn a_tilemap_places_its_tiles_where_loose_sprites_were() {
+    let loose = world_from(&scene(
+        r#",
+        { "id": "a", "transform_3d": { "position": [0.5, -0.5, 0.0] },
+          "components": { "sindri.sprite": { "texture": "tiles", "space": "world" } } },
+        { "id": "b", "transform_3d": { "position": [1.5, -0.5, 0.0] },
+          "components": { "sindri.sprite": { "texture": "tiles", "space": "world" } } },
+        { "id": "c", "transform_3d": { "position": [0.5, -1.5, 0.0] },
+          "components": { "sindri.sprite": { "texture": "tiles", "space": "world" } } },
+        { "id": "d", "transform_3d": { "position": [1.5, -1.5, 0.0] },
+          "components": { "sindri.sprite": { "texture": "tiles", "space": "world" } } }"#,
+    ));
+    let mapped = world_from(&scene(
+        r#",
+        { "id": "floor", "transform_3d": {},
+          "components": { "sindri.tilemap": {
+            "texture": "tiles", "sheet_columns": 1, "sheet_rows": 1,
+            "columns": 2, "rows": 2, "space": "world",
+            "tiles": [0, 0, 0, 0] } } }"#,
+    ));
+
+    let extractor = SceneExtractor::new().unwrap();
+    let positions = |world: &World| -> Vec<Vec3> {
+        let frame = extractor
+            .extract(
+                world,
+                VIEWPORT,
+                CameraView::default(),
+                &TextureBindings::new(),
+            )
+            .expect("the scene extracts");
+        let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[0].command else {
+            panic!("expected a sprite batch");
+        };
+        let mut found: Vec<Vec3> = instances
+            .iter()
+            .map(|instance| instance.model().w_axis.truncate())
+            .collect();
+        found.sort_by(|left, right| {
+            (left.x, left.y, left.z)
+                .partial_cmp(&(right.x, right.y, right.z))
+                .expect("no NaN in a placed tile")
+        });
+        found
+    };
+
+    let from_sprites = positions(&loose);
+    let from_tilemap = positions(&mapped);
+    assert_eq!(from_sprites.len(), 4);
+    for (sprite, tile) in from_sprites.iter().zip(&from_tilemap) {
+        assert!(
+            close(sprite.x, tile.x) && close(sprite.y, tile.y) && close(sprite.z, tile.z),
+            "one tilemap put a tile at {tile:?} where a sprite was at {sprite:?}"
+        );
+    }
+}
+
+/// A map whose array does not match the size it claims is reported by name
+/// rather than drawing part of a floor.
+#[test]
+fn a_tilemap_of_the_wrong_size_is_reported() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "floor", "transform_3d": {},
+          "components": { "sindri.tilemap": {
+            "texture": "tiles", "sheet_columns": 1, "sheet_rows": 1,
+            "columns": 4, "rows": 4, "space": "world",
+            "tiles": [0, 0] } } }"#,
+    ));
+    let error = SceneExtractor::new()
+        .unwrap()
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
+        .expect_err("a map that is not the shape it claims does not extract");
+    assert!(
+        error.to_string().contains("16 cells"),
+        "the error says how many cells the size calls for, got: {error}"
+    );
+}
+
+/// A tile naming a cell the sheet does not have is reported rather than drawn
+/// as whatever the maths happened to produce.
+#[test]
+fn a_tile_outside_the_sheet_is_reported() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "floor", "transform_3d": {},
+          "components": { "sindri.tilemap": {
+            "texture": "tiles", "sheet_columns": 2, "sheet_rows": 1,
+            "columns": 1, "rows": 1, "space": "world",
+            "tiles": [7] } } }"#,
+    ));
+    let error = SceneExtractor::new()
+        .unwrap()
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
+        .expect_err("a tile outside the sheet does not extract");
+    assert!(
+        error.to_string().contains("tile 7"),
+        "the error names the tile, got: {error}"
+    );
+}
+
+/// A tilemap and a loose sprite sharing a texture and a layer share a batch, so
+/// a prop can sit among the floor rather than behind a plane of it.
+#[test]
+fn a_tilemap_and_a_sprite_share_one_batch() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "floor", "transform_3d": {},
+          "components": { "sindri.tilemap": {
+            "texture": "tiles", "sheet_columns": 1, "sheet_rows": 1,
+            "columns": 2, "rows": 1, "space": "world",
+            "tiles": [0, 0] } } },
+        { "id": "prop", "transform_3d": { "position": [0.5, -0.5, 0.5] },
+          "components": { "sindri.sprite": { "texture": "tiles", "space": "world" } } }"#,
+    ));
+    let frame = SceneExtractor::new()
+        .unwrap()
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
+        .expect("the scene extracts");
+
+    assert_eq!(
+        frame.passes().len(),
+        1,
+        "one texture and one layer is one batch"
+    );
+    let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[0].command else {
+        panic!("expected a sprite batch");
+    };
+    assert_eq!(instances.len(), 3, "two tiles and the prop");
+}
+
+/// A component that names a texture and is not in `TEXTURE_NAMING_COMPONENTS`
+/// never has that texture requested, so it draws as the magenta checker while
+/// everything else about it works. `sindri.tilemap` did exactly that.
+///
+/// This holds the list against the registry rather than against a second list,
+/// so the way to pass it is to add the component, not to update the test.
+#[test]
+fn every_component_that_names_a_texture_is_one_hosts_load_from() {
+    let extractor = SceneExtractor::new().expect("built-in components register");
+    for metadata in extractor.components().registered_components() {
+        let Some(default) = extractor.components().default_payload(&metadata.type_name) else {
+            continue;
+        };
+        if default.get("texture").is_none() {
+            continue;
+        }
+        assert!(
+            TEXTURE_NAMING_COMPONENTS.contains(&metadata.type_name.as_str()),
+            "{} names a texture but hosts never load it, so it draws magenta",
+            metadata.type_name
+        );
+    }
 }

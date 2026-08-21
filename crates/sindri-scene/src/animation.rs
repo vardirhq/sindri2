@@ -134,6 +134,21 @@ impl SpriteAnimationComponent {
         Ok(Some((name, clip)))
     }
 
+    /// The rect this sprite shows before anything has advanced it.
+    ///
+    /// A sheet is one texture, so a sprite carrying an animation that no
+    /// cursor has reached yet — a scene just loaded, an entity sitting in the
+    /// editor outside play mode, a frame captured before the first tick —
+    /// would otherwise draw every cell of the sheet squeezed into one quad.
+    /// The playing clip's first frame is the only honest answer, and it is the
+    /// one the first tick agrees with.
+    pub fn resting_rect(&self) -> Result<Option<UvRect>, AnimationError> {
+        let Some((_, clip)) = self.playing_clip()? else {
+            return Ok(None);
+        };
+        self.frame_rect(clip, 0).map(Some)
+    }
+
     /// The rect a clip's frame draws, by its position in the clip.
     pub fn frame_rect(&self, clip: &AnimationClip, frame: usize) -> Result<UvRect, AnimationError> {
         let cell = *clip

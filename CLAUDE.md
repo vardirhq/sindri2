@@ -42,6 +42,10 @@ why play mode snapshots the world. The language itself is documented in
 `docs/entity-scaling.md` records what the world costs at 1k, 10k, and 100k
 entities, and why an archetype ECS is not warranted.
 
+`docs/editor-meets-the-game.md` is a session note, not a contract: what happened
+when the editor was pointed at the companion game, what held, and what the tool
+could not do. Session notes age and are allowed to.
+
 `docs/capabilities.md` is the inventory of what actually works, what is drawn in
 the editor but does nothing, and what is missing. Read it before claiming the
 engine or the editor can do something, and update it in the same commit as any
@@ -69,7 +73,8 @@ examples/triangle/  shared native + WebGPU triangle proof
 examples/cube/      sindri-cube: scene-driven cube + sprite overlay, and the
                     `capture` binary used as a CI render artifact
 docs/               subsystem contracts
-scripts/            capture-editor.sh (Xvfb editor screenshot)
+scripts/            capture-editor.sh (Xvfb editor screenshot; takes an
+                    optional scene path)
 decay/              a separate Cargo workspace: the Decay gameplay language
 ```
 
@@ -105,6 +110,8 @@ sindri-decay    -> sindri-core + sindri-platform (for input) + the decay/
                    language crates, one way only
 editor          -> assets, core, decay, platform, render, scene (sindri-cube
                    is dev-only)
+sindri-gather   -> assets, core, decay, desktop, platform, render, scene. It is
+                   a consumer of the engine, and nothing depends on it.
 ```
 
 - `sindri-core` depends on no window, GPU, browser, editor, physics, scripting,
@@ -133,8 +140,11 @@ cargo run --package sindri-editor          # native editor shell
 cargo run -p sindri-triangle               # triangle proof
 cargo run -p sindri-cube                   # cube + sprite overlay proof
 
-# deterministic offscreen PNG (same one CI uploads)
+cargo run -p sindri-gather                 # the companion game
+
+# deterministic offscreen PNGs (the same ones CI uploads)
 cargo run -p sindri-cube --bin capture -- target/render-artifacts/scene-frame-pipeline.png
+cargo run -p sindri-gather --bin gather-capture -- target/render-artifacts/gather.png
 
 # browser targets
 rustup target add wasm32-unknown-unknown
@@ -148,6 +158,7 @@ cargo test -p sindri-assets --target wasm32-unknown-unknown --test decode_compat
 
 # editor screenshot (needs imagemagick, xdotool, xvfb)
 xvfb-run --auto-servernum ./scripts/capture-editor.sh target/editor.png
+xvfb-run --auto-servernum ./scripts/capture-editor.sh target/g.png game/assets/gather.scene.json
 
 # regenerate golden scene fixtures, deliberately
 SINDRI_UPDATE_SCENE_FIXTURES=1 cargo test --package sindri-core
@@ -270,6 +281,14 @@ touch render targets, keep that check working.
 interchangeable — reconfiguring on an occluded frame rebuilds the swapchain
 every frame behind a minimised window. See `docs/rendering-surface.md`.
 
+**A component that names a texture must be in `TEXTURE_NAMING_COMPONENTS`.**
+Hosts load what `referenced_textures` reports, so a drawable component missing
+from that list is not a compile error and not a failed frame — its texture is
+simply never requested, and the thing draws as the magenta checker while
+everything else about it works. `sindri.tilemap` did exactly that for the length
+of one commit. A test in `sindri-scene` now holds the list against the schema
+registry.
+
 **Textures bind by reference.** A scene names `textures/badge.png`; the renderer
 knows only `TextureId`. `TextureBindings` in `sindri-scene` is the only place
 that knows both. An unbound reference draws the magenta `TextureRegistry::MISSING`
@@ -306,8 +325,9 @@ overwrite a replacement. Never fake synchronous browser I/O.
 - Keep examples curated. Two proofs exist because each proves something; do not
   accumulate demos. The companion game in `ROADMAP.md` is the exception that
   makes this affordable: it absorbs the per-milestone demos the plan used to
-  schedule, lives outside `examples/`, and is allowed to be untidy in ways a
-  proof is not.
+  schedule, lives outside `examples/` in `game/`, and is allowed to be untidy in
+  ways a proof is not. It has already earned that: mixing a world with an
+  overlay found a renderer bug no proof could have, because no proof had both.
 - Deferred work is deferred deliberately — WebGL2 fallback, PBR, skeletal
   animation, networking, render graphs, and advanced ECS scheduling are listed as
   non-goals in `ROADMAP.md` and `PROJECT_OVERVIEW.md`. Do not add them

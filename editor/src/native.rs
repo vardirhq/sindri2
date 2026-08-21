@@ -2529,12 +2529,18 @@ fn script_exports_section(ui: &mut egui::Ui, payload: &mut Value, scripts: &Scen
 }
 
 /// A Decay value as the JSON a scene stores.
+///
+/// A reference stores as null, because it names a runtime handle and runtime
+/// handles are never serialized: writing one to a scene would produce a file
+/// that means something different the next time it is opened. An `@export` of
+/// an entity is not authorable for that reason, and the inspector shows it as
+/// empty rather than as a number nobody can act on.
 fn script_value_json(value: &ScriptValue) -> Value {
     match value {
         ScriptValue::Number(number) => Value::from(*number),
         ScriptValue::Bool(flag) => Value::Bool(*flag),
         ScriptValue::String(text) => Value::String(text.clone()),
-        ScriptValue::Null | ScriptValue::Unit => Value::Null,
+        ScriptValue::Reference(_) | ScriptValue::Null | ScriptValue::Unit => Value::Null,
     }
 }
 

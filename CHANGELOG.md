@@ -137,8 +137,23 @@ All notable changes to Sindri Next will be documented here.
 - `World::spawn_at`, which creates an entity at an exact handle, so undoing a delete gives back the same `EntityId` rather than a new one that leaves the selection and the rest of the undo history pointing at nothing.
 - `World::next_handle`, so a caller can know an entity's handle before creating it and a spawn command can be redone onto the same one.
 - `WorldCommand::Spawn`, `Despawn`, and `Restore`, each producing its own inverse, with a restored subtree returning to its place among its siblings.
+- `Game.get` and `Game.set`, a board of named numbers every script on a world shares, because Decay has no value that can hold an entity and a script that needs a fact from another one has nowhere else to leave it.
+- Gather, the companion game, in `game/`: five orbs on a floor, a thing you drive with the arrow keys, and a row of lamps that fills as you collect them, with all four of its rules written as Decay scripts and none of them in Rust.
+- A second deterministic capture, of the companion game part-way through a scripted run rather than at rest, uploaded by CI beside the cube proof.
+- `sindri.tilemap`, a grid of tiles cut from one sheet and drawn from one entity, laid out orthogonally or isometrically, whose cells join the same sprite batches loose sprites use so a prop sorts among the floor rather than behind it.
+- A check that every built-in component naming a texture is one hosts actually load, since a component missing from that list draws the magenta checker while everything else about it works.
+- A Decay value that can hold an entity: opaque to the language, holdable and comparable, with `World.find`, `World.exists` and `World.despawn` beside it, so one script can read and write another entity's transform and sprite instead of leaving numbers on a shared board for it.
+- `EntityId::to_bits` and `from_bits`, for handing a runtime handle across a boundary that carries numbers and nothing else — never for writing to a file.
 
 ### Changed
+
+- Rebuilt the companion game's orbs to ask the player where it is rather than compare against two numbers it published, which is what the blackboard was standing in for; the board keeps the score, which is a fact about the game rather than about an entity.
+- Rebuilt the companion game's floor as one tilemap instead of 49 sprite entities, taking the scene from 68 entities to 20 and from 45KB to 12KB, and its hierarchy from a list you scroll past 49 rows of floor to one that fits on a screen.
+
+- Gave every sprite batch its own uniform and instance buffers, so each draws with its own camera and its own instances; they shared one set, and because `queue.write_buffer` stages a write until the queue is submitted, every batch in a frame drew with the last one's camera — which no proof noticed, since none of them had both a world and an overlay.
+- Made an animated sprite that authored no rect of its own draw the first frame of the clip it is playing, rather than the whole sheet squeezed into one quad, so a scene shows a pose before anything has run it.
+- Stopped the editor reporting a script that is still loading as a compile error, which put one permanent error per scripted entity in the console on every cold open; a script that will never arrive is still reported.
+- Made `scripts/capture-editor.sh` take a scene path, so the editor can be photographed against a scene other than its fixture.
 
 - Increased the MSRV from Rust 1.85 to 1.87 to use the current `wgpu` 30 release.
 - Replaced the planned Tauri/React editor architecture with native `egui`, `egui-winit`, and `egui-wgpu` integration.

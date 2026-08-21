@@ -1,0 +1,53 @@
+// One of the things you gather.
+//
+// Each orb asks the player where it is and takes itself off the board when the
+// player is near enough. Nothing coordinates them: the score is counted by
+// whoever arrives, which is all a count needs.
+//
+// It used to read two numbers the player published to the shared board, because
+// there was no way for one script to name another entity. There is now, and the
+// difference is not brevity: the orb now depends on *the player* rather than on
+// the player and it agreeing about a pair of string keys.
+script Orb {
+    @export
+    let reach: f32 = 0.55;
+
+    // Bobbing so an orb reads as a thing to collect rather than as scenery.
+    @export
+    let bob: f32 = 0.14;
+
+    var resting_y: f32 = 0.0;
+    var taken: bool = false;
+    var started: bool = false;
+
+    fn update(dt: f32) {
+        if !started {
+            resting_y = this.transform.position.y;
+            started = true;
+        }
+
+        if taken {
+            return;
+        }
+
+        let player = World.find("Player");
+        if player == null {
+            return;
+        }
+
+        let dx = player.transform.position.x - this.transform.position.x;
+        let dy = player.transform.position.y - resting_y;
+        // Squared, because comparing distances does not need the square root
+        // and Decay's `sqrt` would only lose precision on the way.
+        if dx * dx + dy * dy < reach * reach {
+            taken = true;
+            Game.set("score", Game.get("score", 0.0) + 1.0);
+            // Gone rather than moved: an orb that flew off screen would still
+            // be somewhere, and the floor is small.
+            this.sprite.tint.a = 0.0;
+            return;
+        }
+
+        this.transform.position.y = resting_y + sin(Time.elapsed * 2.4) * bob;
+    }
+}

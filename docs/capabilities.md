@@ -135,10 +135,28 @@ sheet's grid, the clips cut from it, and which one plays, and
 state, so watching an animation run does not rewrite the scene it came from.
 What is missing is authoring: clips are typed into the scene file by hand,
 because the editor has no sheet slicer or clip list yet.
+A tilemap is a grid of tiles cut from one sheet, drawn from one entity:
+`sindri.tilemap` carries the sheet's grid, the map's grid, and a flat array of
+cells, with `null` where the map is empty. Its cells become instances in the same
+batches loose sprites use, so a prop sorts among the floor rather than behind it.
+Columns and rows lay out orthogonally or isometrically, and placing a tile and
+finding the tile under a point are inverses on every cell of both. What it buys
+is authoring rather than speed — the same floor already batched into one draw —
+and the companion game measures it: 68 entities to 20, 45KB of scene to 12KB.
+What is missing is authoring: a map is typed into the scene file by hand,
+because the editor has no tile palette yet.
+
+An animated sprite that authored no rect of its own draws the first frame of the
+clip it is playing rather than the whole sheet, so a scene shows a pose before
+anything has run it — in a game's opening frame, in an offscreen capture, and in
+the editor outside play mode.
 A sprite is either screen-anchored, which is the default and cannot be occluded
 by the world, or in the world, drawn through the world camera by its full
 transform and hidden by opaque geometry in front of it. Sprites batch per space,
-layer, and texture, with a measured five-to-one draw-call reduction. The frame
+layer, and texture, with a measured five-to-one draw-call reduction. Each batch
+draws with its own camera and its own instances, from buffers of its own; a GPU
+test draws two batches at two scales into one frame and reads back the pixels
+that only come out right when they stayed separate. The frame
 clears once before anything draws, so a scene of only sprites has a depth buffer
 to test against. Perspective and orthographic cameras exist with tested projection
 maths, and the zero-to-one depth range and Y-up convention are chosen in one
@@ -146,7 +164,9 @@ place rather than at each call site. Colour space is enforced by a shared
 constant, and the offscreen capture verifies authored colours actually survive
 to the pixels.
 
-Offscreen rendering produces a deterministic PNG, which CI uploads.
+Offscreen rendering produces a deterministic PNG, which CI uploads — two of
+them: the cube proof, and the companion game photographed part-way through a
+scripted run.
 
 ### Scene to frame
 
@@ -332,8 +352,8 @@ collapsed and overflowed nothing; and the settings gear.
   adapter is planned as optional rather than built in
 - No tilemaps, particles, parallax, or pathfinding
 - No TypeScript SDK; the WASM binding crate does not exist
-- No spawning, input, timing, or cross-entity access from a script — a script
-  reaches its own transform and nothing else; see below
+- No spawning or cross-entity access from a script — it reaches its own entity
+  and nothing else; see below
 - Hot reload covers assets, not the scene file: editing a scene on disk while it
   is open is not noticed
 - No deterministic system ordering
@@ -383,6 +403,24 @@ analyzer accepts to assert the host answers it.
 
 A failing script reports itself and does not stop the others.
 
+**A whole game's rules are written in it.** The companion game's moving,
+gathering, counting and winning are four Decay scripts and no Rust — see "The
+companion game" below.
+
+**A script can name another entity.** `Value::Reference` is a value Decay can
+hold, pass, compare and store but cannot construct or look inside; the engine
+packs a runtime handle into it. `World.find` looks one up by the name a scene
+gave it, `World.exists` asks whether it still names anything, `World.despawn`
+removes it, and reaching through one gets the same transform and sprite paths a
+script reaches on itself — checked at compile time, so `other.transfrom` is an
+error with a line number. Reaching through a stale or null reference is reported
+rather than silently ignored. Verified in the game: the orbs used to compare
+against a position the player published to the shared board, and now ask the
+player directly, with the picture unchanged.
+
+The board is still there and still earns its place, for facts that belong to the
+game rather than to an entity — the score, whether the game is won.
+
 A script is also text on disk that a test can run. `decay-syntax` lexes and parses
 it, reporting diagnostics with a span, line, and column; the parser recovers
 rather than stopping at the first error, and survives two hundred thousand
@@ -397,7 +435,10 @@ chains becoming paths such as `this.transform.position.x` rather than anything
 the IR interprets. `decay-runtime` executes it: bindings, arithmetic,
 comparisons, `if`/`else`, returns, calls between Decay functions, and script
 instances whose fields persist across calls. Everything external crosses a
-three-method `Host` trait — load a path, store a path, call a path.
+three-method `Host` trait — load a path, store a path, call a path. Each takes a
+subject as well: `None` for a path a script rooted at something the host owns,
+and the reference for one rooted at a value the script is holding. Three methods
+and not six, because a subject is an argument rather than a mode.
 
 The whole workspace compiles for `wasm32-unknown-unknown`, which its CI checks.
 `decay/examples/player.decay` is executed by a test rather than only shown in
@@ -409,12 +450,77 @@ the README.
   is the only unbounded path today
 - No arrays, maps, closures, or first-class functions
 - No standard library; not even `math`
-- No spawning, despawning, or reaching another entity — blocked on Decay having
-  a value that can hold one
+- **No spawning.** Creating an entity means saying what to create and the engine
+  has no prefab to say it with, so this is blocked on the engine rather than on
+  the language. Finding, reaching, and despawning exist
+- Despawning is not undoable — no script write is, and play mode restores from a
+  snapshot, so routing it through `WorldCommand` stays open
 - No mouse, and no components beyond `sindri.sprite`
-- No script state migration across a source reload
 - No LSP, no formatter, no debugger, no syntax highlighting anywhere
 - No script state migration across a reload: a changed file recompiles, and the
   running instance keeps whatever fields it had
 - Nothing has been *executed* on the browser target, only compiled
 - The only numeric type is spelled `f32` and every value it holds is an `f64`
+
+---
+
+## The companion game
+
+`game/`, crate `sindri-gather` — "Gather". Five orbs on a diamond floor, a
+thing you drive with the arrow keys, a row of lamps that fills as you collect
+them, and a banner that fades in when you have them all. `ROADMAP.md` says why
+it exists and why it is not an example; this says what of it is real.
+
+### Works
+
+**Its floor is a tilemap.** One entity holding a 7x7 grid of cells, where it was
+49 sprite entities; the picture is the same to within one 8-bit step, which is
+the cost of baking the darker checker square into the sheet rather than tinting
+it at draw time.
+
+**It is a game you can play.** `cargo run -p sindri-gather` opens a window,
+arrow keys move the player, walking into an orb takes it, taking all five wins.
+Escape quits. It runs its gameplay on the fixed step, so gathering happens at
+the same rate whatever the frame rate is.
+
+**None of its rules are in Rust.** Moving, gathering, counting and winning are
+four Decay scripts in `game/assets/scripts/`. The Rust is a window, a device, a
+loop, and the embedded bytes of the scene, the scripts, and the art. That split
+is what the game exists to test, and it held: adding the game needed one engine
+feature (`Game.get`/`Game.set`, a shared blackboard, because Decay has no value
+that can hold an entity so the orbs cannot ask the player where it is) and no
+gameplay code.
+
+**It is checked, not just run.** `game/tests/the_game_holds_together.rs` asserts
+every texture and script the scene names is shipped, that the scripts compile,
+that every authored property names a field its script `@export`s, that the scene
+holds no component the game cannot run — and it plays the game through the same
+scripts and the same `InputState` the window feeds, steering to each orb in turn
+and checking the banner comes up.
+
+**It is a CI artifact.** `gather-capture` plays a fixed run — a fixed key held
+for a fixed number of fixed steps — and photographs where that leaves the game,
+so the picture proves the scripts ran rather than that the scene loads.
+
+**It opens in the editor, and Play runs it there.** All 68 entities load, both
+viewports draw it, and the editor advances the same Decay sources the standalone
+game does. Authoring it there is another matter — `docs/editor-meets-the-game.md`
+records what taking the editor to the game actually found.
+
+**It found a bug the proofs could not.** It is the first thing in the workspace
+that draws a world and a screen overlay in one frame, and doing so revealed that
+every sprite batch after the first drew with the last batch's camera. See
+`docs/rendering-frame-pipeline.md`.
+
+### Not yet
+
+- **No text**, so the score is a row of lamps and winning is a banner sprite —
+  the game started before Milestone 6's text item, and says in pictures what it
+  would otherwise say in words
+- No sound, because there is no audio
+- Top-down coordinates behind an isometric-looking floor; the grid module that
+  would make it properly isometric is Milestone 9
+- Not built for the browser yet, though it compiles for `wasm32`
+- No restart without relaunching, no menu, no pause
+- The floor is one `sindri.tilemap`, but it was painted by a script rather than
+  authored, because the editor has no tile palette
