@@ -332,8 +332,8 @@ collapsed and overflowed nothing; and the settings gear.
   adapter is planned as optional rather than built in
 - No tilemaps, particles, parallax, or pathfinding
 - No TypeScript SDK; the WASM binding crate does not exist
-- No spawning, input, timing, or cross-entity access from a script — a script
-  reaches its own transform and nothing else; see below
+- No spawning or cross-entity access from a script — it reaches its own entity
+  and nothing else; see below
 - Hot reload covers assets, not the scene file: editing a scene on disk while it
   is open is not noticed
 - No deterministic system ordering
@@ -412,7 +412,6 @@ the README.
 - No spawning, despawning, or reaching another entity — blocked on Decay having
   a value that can hold one
 - No mouse, and no components beyond `sindri.sprite`
-- No script state migration across a source reload
 - No LSP, no formatter, no debugger, no syntax highlighting anywhere
 - No script state migration across a reload: a changed file recompiles, and the
   running instance keeps whatever fields it had
