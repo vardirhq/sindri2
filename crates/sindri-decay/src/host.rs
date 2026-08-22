@@ -20,9 +20,8 @@ use crate::{
     Blackboard,
     surface::{
         FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, GridCall, Handle, HostFunction,
-        INPUT, INPUT_QUERIES, InputQuery, Leaf, PRINT, Seg, TIME, TIME_VALUES, TimeValue, WORLD,
-        TILEMAP_COMPONENT, WORLD_CALLS, WorldCall, follow_mut, handle, leaf,
-        leaf_through_reference,
+        INPUT, INPUT_QUERIES, InputQuery, Leaf, PRINT, Seg, TILEMAP_COMPONENT, TIME, TIME_VALUES,
+        TimeValue, WORLD, WORLD_CALLS, WorldCall, follow_mut, handle, leaf, leaf_through_reference,
     },
 };
 
@@ -391,8 +390,8 @@ fn validate_planar_map(path: &Path, transform: Transform3D) -> Result<(), Runtim
     let finite = transform.position[0].is_finite()
         && transform.position[1].is_finite()
         && transform.rotation.into_iter().all(f32::is_finite);
-    let flat = transform.rotation[0].abs() <= f32::EPSILON
-        && transform.rotation[1].abs() <= f32::EPSILON;
+    let flat =
+        transform.rotation[0].abs() <= f32::EPSILON && transform.rotation[1].abs() <= f32::EPSILON;
     let usable_scale = transform.scale[0].is_finite()
         && transform.scale[1].is_finite()
         && transform.scale[0].abs() > f32::EPSILON

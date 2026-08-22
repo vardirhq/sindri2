@@ -106,8 +106,7 @@ fn isometric_grid_position_uses_the_maps_full_transform_and_round_trips() {
         "placing preserves the layer"
     );
     assert!(
-        (transform.scale[0] - 2.0).abs() < 1.0e-5
-            && (transform.scale[1] - 1.0).abs() < 1.0e-5,
+        (transform.scale[0] - 2.0).abs() < 1.0e-5 && (transform.scale[1] - 1.0).abs() < 1.0e-5,
         "reading the placed point should recover its logical coordinate"
     );
 }

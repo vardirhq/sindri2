@@ -25,7 +25,8 @@ fn logical_position(grid: GridSpace, map: Transform3D, world: [f32; 3]) -> GridP
         f64::from((cos * x + sin * y) / map.scale[0]),
         f64::from((-sin * x + cos * y) / map.scale[1]),
     );
-    grid.unproject(local).expect("the authored point unprojects")
+    grid.unproject(local)
+        .expect("the authored point unprojects")
 }
 
 /// Every texture the scene names is one the binary carries.
@@ -154,7 +155,9 @@ fn walking_into_the_orbs_wins_the_game() {
                 .as_ref()
                 .is_some_and(|id| id.as_str().starts_with("orb-"))
         })
-        .map(|(_, data)| logical_position(grid, map, data.transform_3d.unwrap_or_default().position))
+        .map(|(_, data)| {
+            logical_position(grid, map, data.transform_3d.unwrap_or_default().position)
+        })
         .collect();
     assert_eq!(orbs.len(), 5, "the game has five orbs");
 
@@ -178,10 +181,10 @@ fn walking_into_the_orbs_wins_the_game() {
                 grid,
                 map,
                 world
-                .get(player)
-                .and_then(|data| data.transform_3d)
-                .expect("the player kept its transform")
-                .position,
+                    .get(player)
+                    .and_then(|data| data.transform_3d)
+                    .expect("the player kept its transform")
+                    .position,
             );
             let mut held = InputState::default();
             if orb.x - at.x > 0.02 {
