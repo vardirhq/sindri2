@@ -126,7 +126,9 @@ new = '''                        let args: Vec<Value> = signature
                                 Type::Bool => Value::Bool(true),
                                 // Grid calls need distinct semantic roles. A
                                 // generic entity is still enough everywhere else.
-                                Type::Named(named) if named == ENTITY && namespace == GRID => {
+                                Type::Named(named)
+                                    if named == ENTITY && namespace == super::GRID =>
+                                {
                                     let entity = match index {
                                         0 => mover,
                                         1 => grid,
