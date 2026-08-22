@@ -1,0 +1,30 @@
+name: Refresh audio lockfile
+
+on:
+  push:
+    branches: [codex/audio-end-to-end]
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.event.head_commit.message != 'Update Cargo.lock for audio'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: codex/audio-end-to-end
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Refresh lockfile
+        run: cargo update --workspace
+      - name: Commit lockfile
+        run: |
+          if git diff --quiet -- Cargo.lock; then
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add Cargo.lock
+          git commit -m 'Update Cargo.lock for audio'
+          git push origin HEAD:codex/audio-end-to-end
