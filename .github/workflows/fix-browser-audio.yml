@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   fix:
+    # One-shot branch repair: the final step removes this workflow again.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
