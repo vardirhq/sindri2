@@ -349,7 +349,7 @@ impl AudioBackend for BrowserAudioBackend {
         })?;
         element.set_loop(settings.mode == PlaybackMode::Loop);
         element.set_volume(f64::from(settings.volume.clamp(0.0, 1.0)));
-        element
+        let _playback = element
             .play()
             .map_err(|error| AudioError::Browser(format!("playback was rejected: {error:?}")))?;
         let voice = AudioVoiceId(self.next_voice);
