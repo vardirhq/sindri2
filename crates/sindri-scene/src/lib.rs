@@ -7,12 +7,14 @@
 //! render frames and validated navigation snapshots.
 
 mod animation;
+mod audio;
 mod components;
 mod extract;
 mod navigation;
 mod textures;
 
 pub use animation::{AnimationClip, AnimationError, SpriteAnimationComponent, SpriteAnimations};
+pub use audio::AudioSourceComponent;
 pub use components::{
     CameraComponent, GridNavigationComponent, GridOccupantComponent, GridWallDocument,
     MeshComponent, MeshPrimitive, SpriteAnchor, SpriteComponent, SpriteSpace, TextComponent,
