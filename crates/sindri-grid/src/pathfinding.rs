@@ -303,12 +303,30 @@ impl<Owner: Eq> GridOccupancy<Owner> {
         start: GridCoord,
         goal: GridCoord,
     ) -> Result<Option<GridPath>, GridPathError> {
-        pathfinder.find_path_with_walls(
+        if walls.bounds() != self.bounds() {
+            return Err(GridPathError::WallBoundsMismatch {
+                path: self.bounds(),
+                walls: walls.bounds(),
+            });
+        }
+        pathfinder.find_path_with_transitions(
             self.bounds(),
-            walls,
             start,
             goal,
             |anchor| self.validate(owner, anchor, footprint).is_ok(),
+            |first, second| {
+                footprint.offsets().iter().all(|offset| {
+                    let first = first
+                        .checked_offset(offset.x, offset.y)
+                        .expect("a traversable footprint cell cannot overflow");
+                    let second = second
+                        .checked_offset(offset.x, offset.y)
+                        .expect("a traversable footprint cell cannot overflow");
+                    !walls
+                        .is_blocked(first, second)
+                        .expect("a traversable footprint stays inside wall bounds")
+                })
+            },
         )
     }
 }
@@ -687,9 +705,9 @@ mod tests {
 
     #[test]
     fn occupancy_paths_can_respect_footprints_and_walls_together() {
-        let bounds = GridBounds::new(4, 2).unwrap();
+        let bounds = GridBounds::new(5, 2).unwrap();
         let mut occupancy = GridOccupancy::new(bounds);
-        let footprint = GridFootprint::single();
+        let footprint = GridFootprint::rectangle(2, 1).unwrap();
         occupancy
             .place(1, GridCoord::new(0, 0), &footprint)
             .unwrap();
@@ -711,7 +729,8 @@ mod tests {
             .unwrap();
 
         assert_eq!(path.cost(), 50);
-        assert!(path.nodes().contains(&GridCoord::new(1, 1)));
+        assert!(path.nodes().contains(&GridCoord::new(0, 1)));
+        assert!(!path.nodes().contains(&GridCoord::new(1, 0)));
     }
 
     #[test]
