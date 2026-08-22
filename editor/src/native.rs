@@ -2221,6 +2221,32 @@ impl EditorApp {
         });
     }
 
+    /// Draws the cell a tilemap stroke would edit without changing the scene.
+    fn paint_tilemap_hover(&self, ui: &egui::Ui, hover: &TilemapHover) {
+        let fill = if self.tilemap_tool.erase {
+            Color32::from_rgba_unmultiplied(255, 138, 148, 35)
+        } else {
+            Color32::from_rgba_unmultiplied(246, 169, 35, 35)
+        };
+        let stroke = Stroke::new(
+            2.0,
+            if self.tilemap_tool.erase {
+                PROBLEM
+            } else {
+                ACCENT_BRIGHT
+            },
+        );
+        ui.painter()
+            .add(Shape::convex_polygon(hover.outline.to_vec(), fill, stroke));
+        ui.painter().text(
+            hover.outline[0],
+            Align2::LEFT_BOTTOM,
+            format!("{}, {}", hover.column, hover.row),
+            FontId::proportional(10.0),
+            TEXT,
+        );
+    }
+
     /// Draws one view of the world into whatever space `ui` has left.
     ///
     /// The Scene view takes camera input and wears editor chrome; the Game view
@@ -2291,29 +2317,8 @@ impl EditorApp {
             Color32::WHITE,
         );
         if editing {
-            if let Some(hover) = hover {
-                let fill = if self.tilemap_tool.erase {
-                    Color32::from_rgba_unmultiplied(255, 138, 148, 35)
-                } else {
-                    Color32::from_rgba_unmultiplied(246, 169, 35, 35)
-                };
-                let stroke = Stroke::new(
-                    2.0,
-                    if self.tilemap_tool.erase {
-                        PROBLEM
-                    } else {
-                        ACCENT_BRIGHT
-                    },
-                );
-                ui.painter()
-                    .add(Shape::convex_polygon(hover.outline.to_vec(), fill, stroke));
-                ui.painter().text(
-                    hover.outline[0],
-                    Align2::LEFT_BOTTOM,
-                    format!("{}, {}", hover.column, hover.row),
-                    FontId::proportional(10.0),
-                    TEXT,
-                );
+            if let Some(hover) = &hover {
+                self.paint_tilemap_hover(ui, hover);
             }
             // The same view the frame under it was drawn through, asked for
             // rather than re-derived, so the axes cannot drift from the picture.
