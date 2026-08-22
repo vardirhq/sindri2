@@ -175,9 +175,13 @@ impl<Owner: Clone + Eq> GridOccupancy<Owner> {
     ) -> Result<(), GridPlacementError> {
         let cells = self.placement_cells(&owner, anchor, footprint)?;
         self.remove(&owner);
-        for cell in cells {
-            self.cells.insert(cell, owner.clone());
+        let (last, preceding) = cells
+            .split_last()
+            .expect("a validated footprint always contains a cell");
+        for cell in preceding {
+            self.cells.insert(*cell, owner.clone());
         }
+        self.cells.insert(*last, owner);
         Ok(())
     }
 }
