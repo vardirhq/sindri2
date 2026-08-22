@@ -43,6 +43,7 @@ use crate::{
     console::{Console, Entry, Level},
     input::EditorInput,
     inspector,
+    picking,
     // `egui::Layout` is a different thing entirely and is already in scope.
     preferences::{AssetView, BottomTab, CameraProjection, Layout as WorkspaceLayout, Preferences},
     project::{AssetKind, ProjectEntry, ProjectTree},
@@ -797,6 +798,59 @@ impl EditorApp {
             row,
             outline,
         })
+    }
+
+    /// Resolves a Scene-view point through the exact camera that drew it.
+    fn pick_viewport(
+        &self,
+        rect: Rect,
+        pointer: Pos2,
+        camera: CameraView,
+    ) -> Result<Option<EntityId>, String> {
+        if !rect.contains(pointer) {
+            return Ok(None);
+        }
+        let aspect = rect.width() / rect.height().max(1.0);
+        let Some(camera) = self
+            .scene
+            .world_camera_for_viewport(&self.world, aspect, camera)
+            .map_err(|error| error.to_string())?
+        else {
+            return Ok(None);
+        };
+        let point = [
+            (pointer.x - rect.min.x) / rect.width().max(1.0),
+            (pointer.y - rect.min.y) / rect.height().max(1.0),
+        ];
+        picking::pick_world(
+            &self.world,
+            self.scene.components(),
+            camera.view_projection,
+            point,
+        )
+        .map_err(|error| error.to_string())
+    }
+
+    /// Applies a primary Scene-view click without taking drags or paint strokes.
+    fn select_viewport_click(
+        &mut self,
+        rect: Rect,
+        response: &Response,
+        camera: CameraView,
+        painting: bool,
+    ) {
+        if painting || !response.clicked_by(egui::PointerButton::Primary) {
+            return;
+        }
+        let Some(pointer) = response.interact_pointer_pos() else {
+            return;
+        };
+        match self.pick_viewport(rect, pointer, camera) {
+            Ok(entity) => self.select(entity),
+            Err(error) => self
+                .console
+                .warning(format!("Viewport selection failed: {error}")),
+        }
     }
 
     /// Writes one cell through the command layer. Repeated calls during one
@@ -2167,6 +2221,32 @@ impl EditorApp {
         });
     }
 
+    /// Draws the cell a tilemap stroke would edit without changing the scene.
+    fn paint_tilemap_hover(&self, ui: &egui::Ui, hover: &TilemapHover) {
+        let fill = if self.tilemap_tool.erase {
+            Color32::from_rgba_unmultiplied(255, 138, 148, 35)
+        } else {
+            Color32::from_rgba_unmultiplied(246, 169, 35, 35)
+        };
+        let stroke = Stroke::new(
+            2.0,
+            if self.tilemap_tool.erase {
+                PROBLEM
+            } else {
+                ACCENT_BRIGHT
+            },
+        );
+        ui.painter()
+            .add(Shape::convex_polygon(hover.outline.to_vec(), fill, stroke));
+        ui.painter().text(
+            hover.outline[0],
+            Align2::LEFT_BOTTOM,
+            format!("{}, {}", hover.column, hover.row),
+            FontId::proportional(10.0),
+            TEXT,
+        );
+    }
+
     /// Draws one view of the world into whatever space `ui` has left.
     ///
     /// The Scene view takes camera input and wears editor chrome; the Game view
@@ -2195,6 +2275,9 @@ impl EditorApp {
                 || response.dragged_by(egui::PointerButton::Primary))
         {
             self.apply_tile_brush(hover);
+        }
+        if editing {
+            self.select_viewport_click(rect, &response, camera, painting);
         }
         let viewport = if editing {
             &mut self.scene_viewport
@@ -2234,29 +2317,8 @@ impl EditorApp {
             Color32::WHITE,
         );
         if editing {
-            if let Some(hover) = hover {
-                let fill = if self.tilemap_tool.erase {
-                    Color32::from_rgba_unmultiplied(255, 138, 148, 35)
-                } else {
-                    Color32::from_rgba_unmultiplied(246, 169, 35, 35)
-                };
-                let stroke = Stroke::new(
-                    2.0,
-                    if self.tilemap_tool.erase {
-                        PROBLEM
-                    } else {
-                        ACCENT_BRIGHT
-                    },
-                );
-                ui.painter()
-                    .add(Shape::convex_polygon(hover.outline.to_vec(), fill, stroke));
-                ui.painter().text(
-                    hover.outline[0],
-                    Align2::LEFT_BOTTOM,
-                    format!("{}, {}", hover.column, hover.row),
-                    FontId::proportional(10.0),
-                    TEXT,
-                );
+            if let Some(hover) = &hover {
+                self.paint_tilemap_hover(ui, hover);
             }
             // The same view the frame under it was drawn through, asked for
             // rather than re-derived, so the axes cannot drift from the picture.

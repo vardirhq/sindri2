@@ -94,7 +94,7 @@ It currently supports:
 - editing unknown preserved components instead of silently throwing their data away
 - editing Decay `@export` properties directly in the inspector
 - undo/redo with drag merging and saved-state tracking
-- Scene and Game views with perspective/orthographic viewing, orbit, pan, zoom, and focus-selection
+- Scene and Game views with perspective/orthographic viewing, orbit, pan, zoom, click selection, and focus-selection
 - Play, Pause, and Stop using the real engine lifecycle
 - Decay execution and sprite animation during play, with the world restored to its pre-play state on Stop
 - keyboard input routed to scripts only while the game owns it

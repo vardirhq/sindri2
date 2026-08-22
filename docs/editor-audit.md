@@ -173,7 +173,7 @@ the pointer highlight: the control is drawn and does nothing when pressed.
 | Perspective / Ortho | 111,798 px | works, persists |
 | Orbit, pan, zoom | 129,835 px | works; zoom clamped to 0.65–1.8, pitch to ±1.1 rad. **Widened**: zoom 0.05–20 and proportional, pitch ±1.5 with the pole guarded in the extractor |
 | **Axis gizmo** | **0 px while the scene moved 116,782 px** | **static** — three hardcoded pixel offsets; it cannot turn. **Fixed**: 259 px under the same orbit |
-| Viewport click to select | 0 px | no picking |
+| Viewport click to select | 0 px | no picking — **fixed** with camera-accurate world sprite, filled tilemap, and mesh intersections |
 | Project / Console tabs | 122,990 px | work |
 | Grid / List | 154,079 / 384,933 px | work |
 | Asset filter icon | hover only | **inert** — **replaced** by a working refresh |
@@ -190,9 +190,8 @@ the pointer highlight: the control is drawn and does nothing when pressed.
 **Nineteen inert controls, four tool modes wired to nothing, two that lie, one
 broken, one crash.**
 
-Since fixed: everything above is either working or gone, except the four that
-are their own builds — Play and Pause advancing no frame, the console, viewport
-picking, and rotation editing — which §7 keeps.
+Since fixed: everything above is either working or gone, except rotation
+editing, which §7 keeps.
 
 ## 4. What else breaks
 

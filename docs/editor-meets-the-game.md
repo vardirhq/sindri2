@@ -58,10 +58,11 @@ The tilemap removes this particular 49. It will not remove the next one: any
 scene with a repeated element hits the same wall, and the honest reading is that
 the hierarchy needs grouping, not that scenes should have fewer entities.
 
-**There is no way to select anything in the viewport.** Known and already on the
-list, but it is worth recording how much worse it is at 68 entities than at 8.
-With eight, scrolling the list is a fine way to select the cube. With
-sixty-eight, the list is the only way in and the list is full of floor.
+**There was no way to select anything in the viewport.** That was much worse at
+68 entities than at 8: the hierarchy was the only way in and it was full of
+floor. It is fixed for world sprites, filled tilemap cells, and meshes; clicking
+the Scene view now drives the same selection as the hierarchy and inspector.
+Screen-space overlays remain hierarchy-selected.
 
 **The screenshot script could not photograph anything but the fixture.**
 `scripts/capture-editor.sh` hard-coded `cargo run --package sindri-editor` with

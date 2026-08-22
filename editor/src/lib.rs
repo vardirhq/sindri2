@@ -21,6 +21,9 @@ pub mod input;
 pub mod inspector;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod native;
+/// Selecting rendered entities through the Scene viewport.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod picking;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod preferences;
 #[cfg(not(target_arch = "wasm32"))]

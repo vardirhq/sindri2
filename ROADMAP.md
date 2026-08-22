@@ -189,7 +189,8 @@ shaped like the tool.
   Text only when a project font can complete its otherwise dishonest blank
 - [ ] Port particles after the render lifecycle is stable
 - [ ] Port layers, anchors, and sprite bounds — layers and the nine screen
-  anchors work; bounds remain and will support viewport picking. Parallax is not
+  anchors work; editor picking uses the renderer's unit-quad geometry directly,
+  while reusable component bounds remain. Parallax is not
   ported, because under one world with real depth it is what a perspective
   camera already does; see `docs/2d-model.md`
 - [ ] Port A* pathfinding into a renderer-free grid crate, with the general grid beside it; the legacy platform-jump graph is deferred rather than carried along because it shares a file
@@ -393,7 +394,7 @@ it found that was drawn and idle is done and has moved above; what is left is
 what the editor cannot yet do.
 
 - [ ] Edit a rotation, which the format stores, the renderer applies, and the inspector prints the word "Quaternion" for
-- [ ] Select by clicking in the viewport rather than only in the hierarchy list
+- [x] Select world sprites, filled tilemap cells, and meshes by clicking in the Scene viewport; picking inverts the exact camera used to draw the frame, respects the renderer's local geometry, transparent layers and depth, and opaque occlusion, while an empty click clears the selection
 - [ ] Asset thumbnails, after which the grid view is worth defaulting to again
 - [ ] Show which entity a hierarchy row is, when its name is empty or repeated
 - [ ] Keep a filtered hierarchy readable: rows keep their indentation, so a match under a filtered-out parent sits indented under nothing
@@ -469,8 +470,9 @@ module is for.
   editor is actually like — `docs/editor-meets-the-game.md`; it opens, renders
   in both viewports, and Play runs its scripts, which is the parity claim
   holding. That first session found 49 floor rows drowning the hierarchy; the
-  tilemap removed those rows and animation clips now have dedicated inspector
-  authoring; viewport selection and hierarchy grouping remain open
+  tilemap removed those rows, animation clips now have dedicated inspector
+  authoring, and world renderables can be selected in the viewport; hierarchy
+  grouping remains open
 - [ ] Give it depth with Milestone 8: a 3D prop in the same scene as the sprites
 - [ ] Rebuild its coordinate handling on Milestone 9's grid module rather than its own
 - [ ] Ship it through Milestone 10's export pipeline, natively and to the web,
