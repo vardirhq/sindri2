@@ -400,15 +400,12 @@ impl TilemapComponent {
             .ok()?
             .plane_to_grid(PlanePoint::new(f64::from(x), f64::from(y)))
             .ok()?;
-        self.grid_bounds()
-            .ok()?
-            .contains(coord)
-            .then(|| {
-                (
-                    u32::try_from(coord.x).expect("bounds rejected negative columns"),
-                    u32::try_from(coord.y).expect("bounds rejected negative rows"),
-                )
-            })
+        self.grid_bounds().ok()?.contains(coord).then(|| {
+            (
+                u32::try_from(coord.x).expect("bounds rejected negative columns"),
+                u32::try_from(coord.y).expect("bounds rejected negative rows"),
+            )
+        })
     }
 
     /// The logical bounds shared by rendering, picking, and future gameplay.
@@ -427,13 +424,7 @@ impl TilemapComponent {
             ),
             TileProjection::Isometric => (Projection::Isometric, PlanePoint::default()),
         };
-        GridSpace::with_origin_and_y_axis(
-            projection,
-            width,
-            height,
-            origin,
-            PlaneYAxis::Up,
-        )
+        GridSpace::with_origin_and_y_axis(projection, width, height, origin, PlaneYAxis::Up)
     }
 
     /// What tile `index` is called in the sheet.

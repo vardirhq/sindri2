@@ -316,11 +316,7 @@ impl SceneExtractor {
                 // map's own maths and then by the entity's transform, so moving
                 // the entity moves the floor.
                 let local = Mat4::from_translation(Vec3::new(offset_x, offset_y, 0.0))
-                    * Mat4::from_scale(Vec3::new(
-                        tilemap.tile_size[0],
-                        tilemap.tile_size[1],
-                        1.0,
-                    ));
+                    * Mat4::from_scale(Vec3::new(tilemap.tile_size[0], tilemap.tile_size[1], 1.0));
 
                 let (model, camera) = if tilemap.is_screen_space() {
                     let extent = cameras

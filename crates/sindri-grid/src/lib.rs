@@ -249,9 +249,7 @@ impl GridSpace {
             return Err(GridError::NonFiniteGridPoint(point));
         }
         let (x, y) = match self.projection {
-            Projection::Orthogonal => {
-                (point.x * self.cell_size.x, point.y * self.cell_size.y)
-            }
+            Projection::Orthogonal => (point.x * self.cell_size.x, point.y * self.cell_size.y),
             Projection::Isometric => (
                 (point.x - point.y) * self.cell_size.x * 0.5,
                 (point.x + point.y) * self.cell_size.y * 0.5,
