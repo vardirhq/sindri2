@@ -446,8 +446,9 @@ settings gear.
 - No physics or collision. This one is a deliberate gap rather than a missing
   foundation: collision against transforms is gameplay code, and a Rapier
   adapter is planned as optional rather than built in
-- No particles, authored parallax system, occupancy, or pathfinding; the
-  renderer-free coordinate/projection foundation now exists
+- No particles, authored parallax system, or pathfinding. Renderer-free
+  footprints, bounded occupancy, and placement validation now exist, but have
+  no engine component, editor, Decay, or Gather adapter yet
 - No optional TypeScript embedding SDK; browser games currently expose narrow
   application entry points and run their gameplay in Decay
 - No spawning from a script. Cross-entity lookup, access, existence checks, and

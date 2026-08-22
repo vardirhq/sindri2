@@ -6,6 +6,9 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- Renderer-independent multi-cell footprints and bounded occupancy in
+  `sindri-grid`, with deterministic cells, atomic moves, and explicit placement
+  errors for conflicts, bounds, and coordinate overflow.
 - Typed Decay grid positioning through `Grid.position_x`, `position_y`, and
   `place`, with Gather gameplay migrated from top-down world coordinates to the
   exact logical space of its transformed isometric tilemap.

@@ -73,6 +73,11 @@ This first slice provides:
 - a tilemap adapter shared by frame extraction and editor picking
 - explicit errors for invalid sizes, non-finite points, overflow, and values
   outside the integer coordinate domain
+- normalized arbitrary and rectangular `GridFootprint` values
+- bounded `GridOccupancy<Owner>` with queries, removal, dry-run validation, and
+  atomic placement or movement
+- explicit placement failures for conflicting occupants, out-of-bounds cells,
+  and coordinate overflow
 
 Decay now exposes continuous logical position through an explicit tilemap
 entity: `Grid.position_x`, `Grid.position_y`, and `Grid.place` invert and apply
@@ -80,5 +85,11 @@ the same projection plus the tilemap's full world-XY transform. Gather uses that
 surface for movement, floor bounds, and collection distance without moving any
 game rule into Rust.
 
-Footprints and occupancy should follow before A*, because pathfinding needs a
-truthful definition of passability.
+Occupancy deliberately stores application-owned identifiers rather than engine
+entities. The core can therefore back a headless simulation, an editor preview,
+or a world adapter without acquiring an ECS dependency. A move may overlap the
+owner's previous cells, but the entire destination is validated before those
+old cells are released, so a failed move cannot leave a partial placement.
+
+Wall edges should follow next. After that, engine components, editor authoring,
+and a typed Decay surface can adapt this core before A* asks it for passability.

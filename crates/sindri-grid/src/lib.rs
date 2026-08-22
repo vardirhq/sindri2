@@ -4,7 +4,11 @@
 //! editors. [`GridSpace`] maps a logical grid onto a two-dimensional plane; a
 //! consumer decides whether that plane is world XY, world XZ, or screen space.
 
+mod occupancy;
+
 use std::fmt;
+
+pub use occupancy::{FootprintError, GridFootprint, GridOccupancy, GridPlacementError};
 
 /// An integer cell in logical grid space.
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]

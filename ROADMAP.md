@@ -266,7 +266,10 @@ Exit gate: imported glTF content, camera, lighting, and collision work in native
 - [x] Extract coordinate/projection lessons from IsoGame without app-specific behavior — `docs/grid.md` keeps the reversible diamond projection and separates it from IsoGame's canvas centring, pan, zoom, room state, and actor-aware pathfinding
 - [x] Add tested orthogonal/isometric grid coordinate types — `sindri-grid` is dependency-free and owns signed cells, continuous grid/plane points, finite bounds, stable neighbour order, and validated projection spaces
 - [ ] Add world/grid/screen conversion with round-trip property tests — partly done: both projections round-trip logical coordinates and arbitrary plane points across negative and positive space, upward/downward plane Y adapts world and screen conventions, and tilemaps now expose the exact grid space used by rendering and picking; camera/viewport transforms remain
-- [ ] Add footprints, occupancy, placement validation, and wall edges
+- [ ] Add footprints, occupancy, placement validation, and wall edges — partly
+  done: `sindri-grid` has arbitrary/rectangular footprints and atomic bounded
+  occupancy with conflict validation; wall edges and engine/editor/Decay
+  adapters remain
 - [ ] Add pathfinding overlays and interaction points
 - [ ] Define deterministic sprite-isometric depth keys
 - [ ] Add integer zoom and generated-anchor metadata
