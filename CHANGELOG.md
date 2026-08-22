@@ -6,6 +6,9 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- Normalized renderer-independent wall edges in `sindri-grid`, with bounded
+  symmetric block/unblock queries and A* integration for cardinal, diagonal,
+  occupancy, and multi-cell footprint paths.
 - Deterministic renderer-independent A* pathfinding in `sindri-grid`, with
   cardinal/eight-way movement, explicit corner-cutting policy, integer costs,
   memoized passability, and whole-footprint occupancy paths.
