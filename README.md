@@ -85,8 +85,8 @@ The native editor is already an authoring tool rather than a mock shell. It work
 It currently supports:
 
 - opening, saving, reloading, and discarding canonical scene files
-- a searchable live hierarchy with selection and parenting
-- creating and deleting entities, including undo that restores deleted entities at their original handles
+- a searchable, collapsible GameObject hierarchy in which every entity can own children and filtered results retain their ancestor paths
+- creating empty root or child GameObjects and deleting subtrees, including undo that restores deleted entities at their original handles
 - editing names and transforms
 - adding, removing, and editing component payloads through the component schema registry
 - slicing sprite sheets, arranging named frames into timed clips, and previewing them in the inspector

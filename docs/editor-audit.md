@@ -164,9 +164,9 @@ the pointer highlight: the control is drawn and does nothing when pressed.
 | Stop | 364 px | resets the scene; see §4 — **fixed**, it now only stops |
 | Play / Pause | 364 px | button state only — no frame is advanced |
 | Project name "isogame ⌄" | 0 px | **inert** — **removed**; the browser names the real directory |
-| Hierarchy `+` | hover only | **inert** — **removed** until spawning is a command |
+| Hierarchy `+` | menu | **working** — creates an empty root or a child through an undoable spawn command |
 | **Hierarchy row** | **0 px** | **broken — §1** |
-| Hierarchy search | 112,072 px | works; filtered rows keep their indentation, so a match under a hidden parent sits indented under nothing |
+| Hierarchy search | 112,072 px | works; matches retain and temporarily open their ancestor path |
 | Hierarchy empty space | — | clears a selection that cannot be made |
 | Select / Move / Rotate / Scale | 1,848 px each | **worse than inert** — the icon highlights, and `EditorMode` is written and never read. **Removed**, with the enum |
 | Reset view | 129,795 px | works |
@@ -182,7 +182,7 @@ the pointer highlight: the control is drawn and does nothing when pressed.
 | Console | — | three synthesized lines; nothing the engine reports reaches it. **Fixed**: a real log, feeding the status bar's counts |
 | Inspector: name, transform, parent, Z lock | — | **unreachable** (§1); they work when a selection is forced |
 | Inspector: Tag, Layer | — | **inert** fixed text — **removed**; a Sindri entity has neither |
-| Inspector: section chevron and ⋮ | — | **inert** ×2 — **removed**, along with the hierarchy root's chevron |
+| Inspector: section chevron and ⋮ | — | **inert** ×2 — **removed**, along with the hierarchy root's chevron; child-bearing hierarchy rows now have working fold controls |
 | Inspector: Rotation | — | the word "Quaternion"; no rotation editing exists |
 | Inspector: Add Component | — | **inert** — **removed** until it can write through the schema registry |
 | Settings gear | 0 px | **inert** — **removed** |
@@ -284,8 +284,9 @@ need to bind textures the demo has never heard of.
    modes, and the two that lie.~~ Done. The two that lied were implemented —
    the axis indicator is drawn from the camera's own view, and the asset search
    filters a browser that reads a real directory. The rest were removed, which
-   for the tool modes took `EditorMode` with them and for "Add Component" and
-   the hierarchy's `+` means waiting on builds items 8 and 9 name.
+   for the tool modes took `EditorMode` with them. Add Component and the
+   hierarchy's `+` later returned only after command-backed implementations
+   existed.
 6. ~~**Give the console something real**: notices, render failures, unresolved
    textures.~~ Done, and bounded, with a repeated message collapsed into a count
    so a per-frame render failure cannot bury what explains it.

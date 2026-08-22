@@ -5,6 +5,8 @@
 //! the stakes of every default in here: a default only has to be a reasonable
 //! first guess, because disagreeing with it costs one click ever.
 
+use std::collections::BTreeSet;
+
 use serde::{Deserialize, Serialize};
 
 /// The storage key. Changing it silently discards everyone's settings, so it
@@ -99,6 +101,12 @@ pub struct Preferences {
     /// editor that refuses to start because a remembered file is gone is worse
     /// than one that opens on the default and says why.
     pub last_scene: Option<String>,
+    /// Scene-qualified stable IDs of hierarchy rows the user folded closed.
+    ///
+    /// Open is the default, so an older preferences file and a newly created
+    /// `GameObject` both reveal their children. Keeping this outside the scene
+    /// means navigating the hierarchy never makes authored content unsaved.
+    pub collapsed_hierarchy: BTreeSet<String>,
 }
 
 impl Preferences {
@@ -146,6 +154,7 @@ mod tests {
             projection: CameraProjection::Orthographic,
             bottom_tab: BottomTab::Console,
             last_scene: Some("projects/level.scene.json".to_owned()),
+            collapsed_hierarchy: BTreeSet::from(["projects/level.scene.json::player".to_owned()]),
         };
         let text = serde_json::to_string(&chosen).unwrap();
         assert_eq!(serde_json::from_str::<Preferences>(&text).unwrap(), chosen);
@@ -158,6 +167,7 @@ mod tests {
         let partial: Preferences = serde_json::from_str(r#"{"asset_view":"grid"}"#).unwrap();
         assert_eq!(partial.asset_view, AssetView::Grid);
         assert_eq!(partial.projection, CameraProjection::Perspective);
+        assert!(partial.collapsed_hierarchy.is_empty());
         assert_eq!(
             partial.last_scene, None,
             "settings from before the editor remembered a scene open the default one"
@@ -194,6 +204,7 @@ mod tests {
             projection: CameraProjection::Orthographic,
             bottom_tab: BottomTab::Console,
             last_scene: Some("projects/level.scene.json".to_owned()),
+            collapsed_hierarchy: BTreeSet::new(),
         };
 
         chosen.save(&mut storage);
