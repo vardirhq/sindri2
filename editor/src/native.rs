@@ -1297,7 +1297,7 @@ impl EditorApp {
         }
     }
 
-    /// Creates an empty GameObject, optionally under another, and selects it.
+    /// Creates an empty `GameObject`, optionally under another, and selects it.
     ///
     /// The handle is taken from the world *before* the command runs, so the
     /// command can be redone onto the same handle, and so there is something to
@@ -1780,102 +1780,9 @@ impl EditorApp {
             .show(ui, |ui| {
                 panel_title(ui, "Hierarchy");
                 search_field(ui, &mut self.search, "Search");
-                let mut create = None;
-                let mut deleted = None;
-                ui.horizontal(|ui| {
-                    ui.add_space(10.0);
-                    ui.menu_button(ICON_ADD.outlined().rich_text().size(14.0), |ui| {
-                        if ui.button("Create Empty").clicked() {
-                            create = Some(CreateGameObject::Root);
-                            ui.close();
-                        }
-                        if ui
-                            .add_enabled(
-                                self.selection.is_some(),
-                                egui::Button::new("Create Child"),
-                            )
-                            .clicked()
-                        {
-                            create = self.selection.map(CreateGameObject::Child);
-                            ui.close();
-                        }
-                    })
-                    .response
-                    .on_hover_text("Create GameObject");
-                    // Offered only with something selected, because "delete"
-                    // with nothing chosen has no answer and a disabled button
-                    // is a question nobody asked.
-                    if let Some(entity) = self.selection
-                        && ui
-                            .small_button(ICON_DELETE.outlined().rich_text().size(14.0))
-                            .on_hover_text("Delete entity")
-                            .clicked()
-                    {
-                        deleted = Some(entity);
-                    }
-                });
+                let (create, deleted) = self.hierarchy_toolbar(ui);
                 ui.add_space(6.0);
-                egui::ScrollArea::vertical()
-                    .auto_shrink([false; 2])
-                    .show(ui, |ui| {
-                        hierarchy_group(ui, "World", ICON_ACCOUNT_TREE);
-                        let needle = self.search.trim().to_lowercase();
-                        let collapsed: BTreeSet<EntityId> = self
-                            .world
-                            .entities()
-                            .filter_map(|(entity, _)| {
-                                hierarchy_preference_key(self.file.path(), &self.world, entity)
-                                    .filter(|key| {
-                                        self.preferences.collapsed_hierarchy.contains(key)
-                                    })
-                                    .map(|_| entity)
-                            })
-                            .collect();
-                        let mut clicked: Option<Option<EntityId>> = None;
-                        let mut toggled = None;
-                        for (entity, depth) in
-                            visible_hierarchy_rows(&self.world, &collapsed, &needle)
-                        {
-                            let Some(data) = self.world.get(entity) else {
-                                continue;
-                            };
-                            let name = entity_name(data);
-                            let row = hierarchy_row(
-                                ui,
-                                entity_icon(data),
-                                &name,
-                                self.selection == Some(entity),
-                                depth + 1,
-                                !data.children.is_empty(),
-                                !collapsed.contains(&entity) || !needle.is_empty(),
-                            );
-                            if row.toggle.is_some_and(|response| response.clicked()) {
-                                toggled = Some(entity);
-                            } else if row.select.clicked() {
-                                clicked = Some(Some(entity));
-                            }
-                        }
-                        if let Some(entity) = toggled
-                            && let Some(key) =
-                                hierarchy_preference_key(self.file.path(), &self.world, entity)
-                        {
-                            if !self.preferences.collapsed_hierarchy.remove(&key) {
-                                self.preferences.collapsed_hierarchy.insert(key);
-                            }
-                        }
-                        // Clicking past the last row clears the selection.
-                        // Without somewhere to click that means "nothing", a
-                        // selection made by accident can only be replaced.
-                        if ui
-                            .allocate_response(ui.available_size(), egui::Sense::click())
-                            .clicked()
-                        {
-                            clicked = Some(None);
-                        }
-                        if let Some(entity) = clicked {
-                            self.select(entity);
-                        }
-                    });
+                self.hierarchy_contents(ui);
                 if let Some(create) = create {
                     self.create_entity(match create {
                         CreateGameObject::Root => None,
@@ -1884,6 +1791,103 @@ impl EditorApp {
                 }
                 if let Some(entity) = deleted {
                     self.delete_entity(entity);
+                }
+            });
+    }
+
+    fn hierarchy_toolbar(&self, ui: &mut egui::Ui) -> (Option<CreateGameObject>, Option<EntityId>) {
+        let mut create = None;
+        let mut deleted = None;
+        ui.horizontal(|ui| {
+            ui.add_space(10.0);
+            ui.menu_button(ICON_ADD.outlined().rich_text().size(14.0), |ui| {
+                if ui.button("Create Empty").clicked() {
+                    create = Some(CreateGameObject::Root);
+                    ui.close();
+                }
+                if ui
+                    .add_enabled(
+                        self.selection.is_some(),
+                        egui::Button::new("Create Child"),
+                    )
+                    .clicked()
+                {
+                    create = self.selection.map(CreateGameObject::Child);
+                    ui.close();
+                }
+            })
+            .response
+            .on_hover_text("Create GameObject");
+            // Offered only with something selected, because "delete" with
+            // nothing chosen has no answer and a disabled button is a question
+            // nobody asked.
+            if let Some(entity) = self.selection
+                && ui
+                    .small_button(ICON_DELETE.outlined().rich_text().size(14.0))
+                    .on_hover_text("Delete entity")
+                    .clicked()
+            {
+                deleted = Some(entity);
+            }
+        });
+        (create, deleted)
+    }
+
+    fn hierarchy_contents(&mut self, ui: &mut egui::Ui) {
+        egui::ScrollArea::vertical()
+            .auto_shrink([false; 2])
+            .show(ui, |ui| {
+                hierarchy_group(ui, "World", ICON_ACCOUNT_TREE);
+                let needle = self.search.trim().to_lowercase();
+                let collapsed: BTreeSet<EntityId> = self
+                    .world
+                    .entities()
+                    .filter_map(|(entity, _)| {
+                        hierarchy_preference_key(self.file.path(), &self.world, entity)
+                            .filter(|key| self.preferences.collapsed_hierarchy.contains(key))
+                            .map(|_| entity)
+                    })
+                    .collect();
+                let mut clicked: Option<Option<EntityId>> = None;
+                let mut toggled = None;
+                for (entity, depth) in visible_hierarchy_rows(&self.world, &collapsed, &needle) {
+                    let Some(data) = self.world.get(entity) else {
+                        continue;
+                    };
+                    let name = entity_name(data);
+                    let row = hierarchy_row(
+                        ui,
+                        entity_icon(data),
+                        &name,
+                        self.selection == Some(entity),
+                        depth + 1,
+                        !data.children.is_empty(),
+                        !collapsed.contains(&entity) || !needle.is_empty(),
+                    );
+                    if row.toggle.is_some_and(|response| response.clicked()) {
+                        toggled = Some(entity);
+                    } else if row.select.clicked() {
+                        clicked = Some(Some(entity));
+                    }
+                }
+                if let Some(entity) = toggled
+                    && let Some(key) =
+                        hierarchy_preference_key(self.file.path(), &self.world, entity)
+                    && !self.preferences.collapsed_hierarchy.remove(&key)
+                {
+                    self.preferences.collapsed_hierarchy.insert(key);
+                }
+                // Clicking past the last row clears the selection. Without
+                // somewhere to click that means "nothing", a selection made by
+                // accident can only be replaced.
+                if ui
+                    .allocate_response(ui.available_size(), egui::Sense::click())
+                    .clicked()
+                {
+                    clicked = Some(None);
+                }
+                if let Some(entity) = clicked {
+                    self.select(entity);
                 }
             });
     }
@@ -5082,7 +5086,7 @@ fn hierarchy_preference_key(
 }
 
 /// A stable ID is assigned before the spawn enters history so save, undo, and
-/// redo all agree on the identity of a newly authored GameObject.
+/// redo all agree on the identity of a newly authored `GameObject`.
 fn next_game_object_id(world: &World) -> SceneEntityId {
     let mut suffix = 1_u32;
     loop {

@@ -104,7 +104,7 @@ pub struct Preferences {
     /// Scene-qualified stable IDs of hierarchy rows the user folded closed.
     ///
     /// Open is the default, so an older preferences file and a newly created
-    /// GameObject both reveal their children. Keeping this outside the scene
+    /// `GameObject` both reveal their children. Keeping this outside the scene
     /// means navigating the hierarchy never makes authored content unsaved.
     pub collapsed_hierarchy: BTreeSet<String>,
 }
@@ -204,6 +204,7 @@ mod tests {
             projection: CameraProjection::Orthographic,
             bottom_tab: BottomTab::Console,
             last_scene: Some("projects/level.scene.json".to_owned()),
+            collapsed_hierarchy: BTreeSet::new(),
         };
 
         chosen.save(&mut storage);
