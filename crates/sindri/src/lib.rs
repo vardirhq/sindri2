@@ -23,8 +23,9 @@ pub mod prelude {
     #[cfg(feature = "render")]
     pub use sindri_gpu::{GpuContext, GpuRequestOptions, SurfaceProfile};
     pub use sindri_grid::{
-        FootprintError, GridBounds, GridCoord, GridFootprint, GridOccupancy, GridPlacementError,
-        GridPoint, GridSpace, PlanePoint, PlaneYAxis, Projection,
+        FootprintError, GridBounds, GridCoord, GridFootprint, GridMovement, GridOccupancy,
+        GridPath, GridPathCosts, GridPathError, GridPathfinder, GridPlacementError, GridPoint,
+        GridSpace, PlanePoint, PlaneYAxis, Projection,
     };
     #[cfg(feature = "render")]
     pub use sindri_scene::{CameraView, SceneExtractor, SpriteAnimations, WorldProjection};

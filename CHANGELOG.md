@@ -6,6 +6,9 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- Deterministic renderer-independent A* pathfinding in `sindri-grid`, with
+  cardinal/eight-way movement, explicit corner-cutting policy, integer costs,
+  memoized passability, and whole-footprint occupancy paths.
 - Renderer-independent multi-cell footprints and bounded occupancy in
   `sindri-grid`, with deterministic cells, atomic moves, and explicit placement
   errors for conflicts, bounds, and coordinate overflow.

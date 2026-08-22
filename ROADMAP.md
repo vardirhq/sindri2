@@ -193,7 +193,7 @@ shaped like the tool.
   while reusable component bounds remain. Parallax is not
   ported, because under one world with real depth it is what a perspective
   camera already does; see `docs/2d-model.md`
-- [ ] Port A* pathfinding into a renderer-free grid crate, with the general grid beside it; the legacy platform-jump graph is deferred rather than carried along because it shares a file
+- [x] Port A* pathfinding into a renderer-free grid crate, with the general grid beside it — `sindri-grid` now has deterministic cardinal/eight-way A*, explicit corner policy and costs, memoized passability, and whole-footprint occupancy paths; the legacy platform-jump graph remains deferred
 - [ ] Add optional Rapier2D adapter without core dependency, with collision layers from the start — physics ignores Z, so depth cannot keep a parallax background out of the player's way, and collision layers are not render layers
 - [ ] Add 2D pan/zoom viewport controls, which need a 2D scene rather than the screen-anchored overlay the demo uses
 - [x] Run the engine in a browser at all, which it never had been — two things had been broken since the browser target was added: a failure was recorded and never reported, because `spawn_app` hands the loop to the page before `run` returns, and the surface refused every canvas because a canvas offers no sRGB format. See `docs/browser.md`; `scripts/browser/smoke.mjs` is the check
@@ -270,7 +270,7 @@ Exit gate: imported glTF content, camera, lighting, and collision work in native
   done: `sindri-grid` has arbitrary/rectangular footprints and atomic bounded
   occupancy with conflict validation; wall edges and engine/editor/Decay
   adapters remain
-- [ ] Add pathfinding overlays and interaction points
+- [ ] Add pathfinding overlays and interaction points — partly done: renderer-free A* and footprint-aware occupancy paths exist; overlays, authored interaction points, wall edges, and cross-layer adapters remain
 - [ ] Define deterministic sprite-isometric depth keys
 - [ ] Add integer zoom and generated-anchor metadata
 - [ ] Add orthographic 3D isometric camera helpers
