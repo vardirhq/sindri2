@@ -94,6 +94,28 @@ impl Host for WorldHost<'_> {
     }
 }
 
+fn normalized_volume(path: &Path, value: Option<&Value>) -> Result<f32, RuntimeError> {
+    let Some(Value::Number(volume)) = value else {
+        return Err(RuntimeError::Host(format!(
+            "{} takes a volume number between 0 and 1, and the script gave {value:?}",
+            path.dotted()
+        )));
+    };
+    if !volume.is_finite() || !(0.0..=1.0).contains(volume) {
+        return Err(RuntimeError::Host(format!(
+            "{} takes a finite volume number between 0 and 1, and the script gave {volume}",
+            path.dotted()
+        )));
+    }
+
+    // Decay numbers are f64 while the platform audio boundary intentionally
+    // uses f32, matching Rodio and the rest of the real-time audio path. The
+    // normalized range above guarantees this conversion cannot overflow.
+    #[allow(clippy::cast_possible_truncation)]
+    let volume = *volume as f32;
+    Ok(volume)
+}
+
 fn audio_call(name: &str, path: &Path, args: &[Value]) -> Result<Value, RuntimeError> {
     match name {
         "play" | "loop" => {
@@ -103,15 +125,7 @@ fn audio_call(name: &str, path: &Path, args: &[Value]) -> Result<Value, RuntimeE
                     path.dotted()
                 )));
             };
-            let volume = match args.get(1) {
-                Some(Value::Number(volume)) if volume.is_finite() => *volume as f32,
-                other => {
-                    return Err(RuntimeError::Host(format!(
-                        "{} takes a finite volume number, and the script gave {other:?}",
-                        path.dotted()
-                    )));
-                }
-            };
+            let volume = normalized_volume(path, args.get(1))?;
             let command = if name == "play" {
                 AudioCommand::Play {
                     clip: clip.clone(),
@@ -185,5 +199,36 @@ mod tests {
                 volume: 0.8,
             }]
         );
+    }
+
+    #[test]
+    fn audio_call_rejects_volume_outside_normalized_range() {
+        let _ = drain_audio_commands();
+        let mut world = World::default();
+        let entity = world.spawn(EntityData::default());
+        let input = InputState::default();
+        let mut board = Blackboard::new();
+        let mut host = WorldHost::new(
+            &mut world,
+            entity,
+            ScriptContext {
+                input: &input,
+                delta_seconds: 0.0,
+                elapsed_seconds: 0.0,
+            },
+            &mut board,
+        );
+        let error = host
+            .call(
+                None,
+                &Path(vec!["Audio".to_owned(), "play".to_owned()]),
+                &[
+                    Value::String("audio/pickup.wav".to_owned()),
+                    Value::Number(1.5),
+                ],
+            )
+            .expect_err("volume outside 0..=1 must fail");
+        assert!(error.to_string().contains("between 0 and 1"));
+        assert!(drain_audio_commands().is_empty());
     }
 }
