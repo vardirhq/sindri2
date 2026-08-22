@@ -38,12 +38,11 @@ impl GridFootprint {
         }
         let width = i32::try_from(width)
             .map_err(|_| FootprintError::DimensionsOutsideIntegerRange { width, height })?;
-        let height = i32::try_from(height).map_err(|_| {
-            FootprintError::DimensionsOutsideIntegerRange {
+        let height =
+            i32::try_from(height).map_err(|_| FootprintError::DimensionsOutsideIntegerRange {
                 width: u32::try_from(width).expect("the width was checked above"),
                 height,
-            }
-        })?;
+            })?;
         Ok(Self {
             offsets: (0..height)
                 .flat_map(|y| (0..width).map(move |x| GridCoord::new(x, y)))
@@ -147,9 +146,9 @@ impl<Owner: Eq> GridOccupancy<Owner> {
             .iter()
             .copied()
             .map(|offset| {
-                let cell = anchor.checked_offset(offset.x, offset.y).ok_or(
-                    GridPlacementError::CoordinateOverflow { anchor, offset },
-                )?;
+                let cell = anchor
+                    .checked_offset(offset.x, offset.y)
+                    .ok_or(GridPlacementError::CoordinateOverflow { anchor, offset })?;
                 if !self.bounds.contains(cell) {
                     return Err(GridPlacementError::OutsideBounds { cell });
                 }
@@ -363,7 +362,11 @@ mod tests {
         let bounds = GridBounds::new(2, 2).unwrap();
         let mut occupancy = GridOccupancy::new(bounds);
         occupancy
-            .place(3, GridCoord::new(0, 0), &GridFootprint::rectangle(2, 1).unwrap())
+            .place(
+                3,
+                GridCoord::new(0, 0),
+                &GridFootprint::rectangle(2, 1).unwrap(),
+            )
             .unwrap();
         assert_eq!(occupancy.remove(&3), 2);
         assert!(occupancy.is_empty());
