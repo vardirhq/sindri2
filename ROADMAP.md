@@ -234,7 +234,7 @@ device existing.
 - [x] Load/save the real scene format
 - [x] Render the actual Sindri runtime in the viewport through the editor's shared WGPU device
 - [x] Display hierarchy from runtime scene state
-- [x] Inspect/edit names, hierarchy, Transform2D, and Transform3D — reparenting is a `Parent` menu in the inspector, offering only the moves `World::check_set_parent` allows; drag-reparenting in the hierarchy remains Milestone 11's item
+- [x] Inspect/edit names, hierarchy, Transform2D, and Transform3D — reparent through the inspector's `Parent` menu or by dragging onto a GameObject or the World root; both offer only moves `World::check_set_parent` allows
 - [x] Add selection and transform change commands
 - [x] Add command-based undo/redo with transaction grouping
 - [x] Add 3D orbit, pan, and zoom camera controls, with a reset to the authored camera
@@ -318,7 +318,7 @@ the engine would be authoring things nothing can run.
 - [x] Edit any component's fields in the inspector, including one the engine has never heard of — driven by the stored payload, checked against the component's own schema before it becomes a command
 - [x] Edit a script's `@export` properties in the inspector, drawn from what the script declared — the capability that justified a statically typed language
 - [ ] Author a Decay script's **source** from the editor: open one, edit it, create one
-- [ ] Reparent by dragging in the hierarchy, using the command that already exists
+- [x] Reparent by dragging in the hierarchy, with legal/illegal target feedback, cycle prevention, root drops, automatic target expansion, selection of the moved entity, and one-step undo through the existing command
 - [ ] Multi-select, and edit what a selection has in common
 - [ ] Copy, paste, and duplicate across scenes
 - [ ] Decide whether Sindri has prefabs, and if so what a prefab override is
