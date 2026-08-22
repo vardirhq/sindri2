@@ -15,7 +15,9 @@ jobs:
         with:
           ref: codex/pathfinding-vertical
       - name: Apply implementation
-        run: python3 .github/pathfinding_impl.py
+        run: |
+          python3 .github/pathfinding_impl.py
+          python3 .github/pathfinding_fix.py
       - uses: dtolnay/rust-toolchain@1.95.0
         with:
           components: clippy,rustfmt
@@ -33,7 +35,7 @@ jobs:
       - name: Commit implementation and remove helpers
         if: github.event_name == 'push'
         run: |
-          rm .github/workflows/pathfinding-dev.yml .github/pathfinding_impl.py
+          rm .github/workflows/pathfinding-dev.yml .github/pathfinding_impl.py .github/pathfinding_fix.py
           git config user.name 'OpenAI Codex'
           git config user.email 'noreply@openai.com'
           git add -A
