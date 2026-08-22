@@ -351,6 +351,11 @@ frame.
   the frame under it was drawn through, foreshortening and reordering its arms
   as the camera turns
 - Perspective and orthographic toggle
+- Scene-view click selection for world sprites, filled tilemap cells, and
+  meshes. It inverts the exact camera used to draw the frame, uses the
+  renderer's unit quad and cube dimensions, resolves transparent overlaps by
+  layer and depth, honours opaque occlusion, and clears selection on empty
+  space. Camera drags and tile painting retain the pointer when active
 - Scene and Game views, the latter rendering through the authored camera with no
   editor chrome painted over it — both live at once in the `2 by 3` layout
 - Two workspace layouts chosen from **View → Layout** and remembered between
@@ -429,7 +434,8 @@ collapsed and overflowed nothing; and the settings gear.
 - Cannot create or delete an asset
 - No first-class project model or multi-scene workspace. The Project dock does
   read and filter the directory containing the open scene
-- No gizmos, no viewport selection, no multi-select
+- No gizmos or multi-select; viewport selection currently covers world-space
+  sprites, filled tilemap cells, and meshes rather than screen-space overlays
 - No prefabs, no play-mode-against-a-copy, no build or export controls
 - No versioned editor protocol; the editor and runtime are one process
 - Cannot open or edit a Decay script's *source* — the project browser lists
@@ -575,8 +581,9 @@ so the picture proves the scripts ran rather than that the scene loads.
 **It opens in the editor, and Play runs it there.** All 21 entities load, both
 viewports draw it, and the editor advances the same Decay sources the standalone
 game does. `docs/editor-meets-the-game.md` records the first editor session
-against the older 68-entity scene; the tilemap removed its 49 floor rows, while
-viewport selection and general hierarchy grouping remain open.
+against the older 68-entity scene; the tilemap removed its 49 floor rows and
+world renderables can now be selected in the Scene view, while general
+hierarchy grouping remains open.
 
 **It found a bug the proofs could not.** It is the first thing in the workspace
 that draws a world and a screen overlay in one frame, and doing so revealed that

@@ -43,6 +43,7 @@ use crate::{
     console::{Console, Entry, Level},
     input::EditorInput,
     inspector,
+    picking,
     // `egui::Layout` is a different thing entirely and is already in scope.
     preferences::{AssetView, BottomTab, CameraProjection, Layout as WorkspaceLayout, Preferences},
     project::{AssetKind, ProjectEntry, ProjectTree},
@@ -797,6 +798,37 @@ impl EditorApp {
             row,
             outline,
         })
+    }
+
+    /// Resolves a Scene-view point through the exact camera that drew it.
+    fn pick_viewport(
+        &self,
+        rect: Rect,
+        pointer: Pos2,
+        camera: CameraView,
+    ) -> Result<Option<EntityId>, String> {
+        if !rect.contains(pointer) {
+            return Ok(None);
+        }
+        let aspect = rect.width() / rect.height().max(1.0);
+        let Some(camera) = self
+            .scene
+            .world_camera_for_viewport(&self.world, aspect, camera)
+            .map_err(|error| error.to_string())?
+        else {
+            return Ok(None);
+        };
+        let point = [
+            (pointer.x - rect.min.x) / rect.width().max(1.0),
+            (pointer.y - rect.min.y) / rect.height().max(1.0),
+        ];
+        picking::pick_world(
+            &self.world,
+            self.scene.components(),
+            camera.view_projection,
+            point,
+        )
+        .map_err(|error| error.to_string())
     }
 
     /// Writes one cell through the command layer. Repeated calls during one
@@ -2195,6 +2227,18 @@ impl EditorApp {
                 || response.dragged_by(egui::PointerButton::Primary))
         {
             self.apply_tile_brush(hover);
+        }
+        if editing
+            && !painting
+            && response.clicked_by(egui::PointerButton::Primary)
+            && let Some(pointer) = response.interact_pointer_pos()
+        {
+            match self.pick_viewport(rect, pointer, camera) {
+                Ok(entity) => self.select(entity),
+                Err(error) => self
+                    .console
+                    .warning(format!("Viewport selection failed: {error}")),
+            }
         }
         let viewport = if editing {
             &mut self.scene_viewport

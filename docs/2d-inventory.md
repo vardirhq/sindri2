@@ -49,7 +49,7 @@ That list is the acceptance criteria for Sindri Next's scripting host, and it sh
 | **Audio** | `audio.rs` (234) | **Refactor** | `rodio` is a defensible native backend, but the unnumbered Audio track's own first move is a platform boundary with a silent implementation, and the browser needs a different backend behind it. The decoding path belongs with textures in `sindri-assets`, which is where the milestone that just closed put every other asset type. |
 | **HUD** | `hud.rs` (382) | **Defer** | Screen-space text and sprites with alignment. Once text rendering and screen-anchored sprites exist, a HUD is composition rather than a subsystem, and it is not clear it needs engine support at all. Revisit when the companion game wants one. |
 | **2D lighting** | `render/light.rs` (107) | **Defer** | Point lights are in neither Milestone 6 nor `PROJECT_OVERVIEW.md`'s 2D scope. Not scheduled, so not ported. |
-| **Layers, anchors, sprite bounds** | `component.rs`, `render/sprite.rs` | **Refactor** | Sindri Next already has layers and the nine anchors. What is missing is bounds, which the milestone names and which viewport picking will want anyway. Parallax is not ported, for the reason `docs/2d-model.md` gives. |
+| **Layers, anchors, sprite bounds** | `component.rs`, `render/sprite.rs` | **Refactor** | Sindri Next already has layers and the nine anchors. Editor picking now intersects the renderer's unit quad directly, but reusable component bounds remain missing. Parallax is not ported, for the reason `docs/2d-model.md` gives. |
 
 ## What should not travel
 
