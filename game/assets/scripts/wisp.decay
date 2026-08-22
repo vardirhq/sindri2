@@ -1,0 +1,22 @@
+// A visible proof that authored walls reach gameplay through Decay.
+script Wisp {
+    @export
+    let step_seconds: f32 = 0.32;
+
+    var elapsed: f32 = 0.0;
+
+    fn update(dt: f32) {
+        elapsed += dt;
+        if elapsed < step_seconds {
+            return;
+        }
+        elapsed = 0.0;
+
+        let floor = World.find("Floor");
+        let player = World.find("Player");
+        if floor == null || player == null {
+            return;
+        }
+        Grid.step_toward(this.entity, floor, player);
+    }
+}

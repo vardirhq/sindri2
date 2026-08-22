@@ -193,10 +193,16 @@ fn add_grid_surface(environment: &mut Environment) {
                         Type::F32,
                         Type::F32,
                     ],
+                    GridCall::CanReach | GridCall::StepToward => vec![
+                        Type::Named(ENTITY.to_owned()),
+                        Type::Named(ENTITY.to_owned()),
+                        Type::Named(ENTITY.to_owned()),
+                    ],
                 },
                 return_type: match call {
                     GridCall::PositionX | GridCall::PositionY => Type::F32,
                     GridCall::Place => Type::Unit,
+                    GridCall::CanReach | GridCall::StepToward => Type::Bool,
                 },
             },
         );

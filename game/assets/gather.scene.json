@@ -37,6 +37,22 @@
         "scale": [1.0, 1.0, 1.0]
       },
       "components": {
+        "sindri.grid_navigation": {
+          "walls": [
+            {
+              "first": [0, 0],
+              "second": [1, 0]
+            },
+            {
+              "first": [1, 1],
+              "second": [2, 1]
+            },
+            {
+              "first": [1, 2],
+              "second": [2, 2]
+            }
+          ]
+        },
         "sindri.tilemap": {
           "columns": 7,
           "layer": 0,
@@ -512,6 +528,36 @@
           "layer": 101,
           "line_height": 28.0,
           "text": "GATHER"
+        }
+      }
+    },
+    {
+      "id": "wisp",
+      "name": "Wisp",
+      "transform_3d": {
+        "position": [0.0, 1.65, 0.1],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.24, 0.24, 1.0]
+      },
+      "components": {
+        "sindri.grid_occupant": {
+          "footprint": [
+            [0, 0]
+          ],
+          "grid": "floor"
+        },
+        "sindri.script": {
+          "properties": {
+            "step_seconds": 0.32
+          },
+          "script": "Wisp",
+          "source": "scripts/wisp.decay"
+        },
+        "sindri.sprite": {
+          "layer": 15,
+          "space": "world",
+          "texture": "textures/orb.png",
+          "tint": [0.45, 0.82, 1.0, 0.72]
         }
       }
     },

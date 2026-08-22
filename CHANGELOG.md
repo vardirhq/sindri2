@@ -4,6 +4,8 @@ All notable changes to Sindri Next will be documented here.
 
 ## [Unreleased]
 
+- Add editor wall/footprint authoring, typed Decay pathfinding, and a Gather Wisp that proves authored A* navigation end to end.
+
 ### Added
 
 - End-to-end audio across assets, scene authoring, native/browser platform backends, typed Decay calls, editor discovery/component authoring, and Gather background/pickup/victory playback, with a silent backend for device-free tests.

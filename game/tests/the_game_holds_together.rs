@@ -10,10 +10,10 @@ use std::collections::BTreeSet;
 
 use sindri_core::{SceneComponent, SceneDocument, Transform3D, UnknownComponentPolicy, World};
 use sindri_decay::{AudioCommand, ScriptComponent, ScriptSources, Scripts};
-use sindri_gather::{AUDIO, FONTS, extractor, sources, world};
-use sindri_grid::{GridPoint, GridSpace, PlanePoint};
+use sindri_gather::{AUDIO, FONTS, Session, extractor, sources, world};
+use sindri_grid::{GridCoord, GridPoint, GridSpace, PlanePoint};
 use sindri_platform::InputState;
-use sindri_scene::{SceneExtractor, TilemapComponent};
+use sindri_scene::{SceneExtractor, TilemapComponent, WorldGridNavigation};
 
 const SCENE: &str = include_str!("../assets/gather.scene.json");
 
@@ -136,6 +136,57 @@ fn every_authored_property_names_a_field_its_script_exports() {
             );
         }
     }
+}
+
+/// The Wisp is real gameplay pathfinding: its first direct east edge is authored
+/// as a wall, so deterministic cardinal A* must route south before approaching
+/// the player. This catches a script that merely moves toward the target while
+/// ignoring the scene navigation components.
+#[test]
+fn the_wisp_routes_around_the_authored_wall() {
+    let mut world = world().expect("the scene loads");
+    let extractor = extractor().expect("the schemas register");
+    let floor = world
+        .entities()
+        .find(|(_, data)| {
+            data.source_id
+                .as_ref()
+                .is_some_and(|id| id.as_str() == "floor")
+        })
+        .map(|(entity, _)| entity)
+        .expect("the game has a floor");
+    let wisp = world
+        .entities()
+        .find(|(_, data)| {
+            data.source_id
+                .as_ref()
+                .is_some_and(|id| id.as_str() == "wisp")
+        })
+        .map(|(entity, _)| entity)
+        .expect("the game has a wisp");
+
+    let before = WorldGridNavigation::from_world(&world, floor)
+        .expect("the authored navigation is valid")
+        .placement(wisp)
+        .expect("the wisp is an occupant")
+        .anchor;
+    assert_eq!(before, GridCoord::new(0, 0));
+
+    let mut session = Session::new(extractor.components().clone());
+    session
+        .step(&mut world, &InputState::default(), 0.33)
+        .expect("the pathfinding script steps");
+
+    let after = WorldGridNavigation::from_world(&world, floor)
+        .expect("navigation remains valid")
+        .placement(wisp)
+        .expect("the wisp remains an occupant")
+        .anchor;
+    assert_eq!(
+        after,
+        GridCoord::new(0, 1),
+        "the wall from (0,0) to (1,0) forces the first A* step south"
+    );
 }
 
 /// The game is playable: walking into an orb collects it, and collecting them

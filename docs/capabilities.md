@@ -680,3 +680,7 @@ every sprite batch after the first drew with the last batch's camera. See
 - Browser asset fetching is not exercised: the playable web build embeds its
   scene, scripts, sheets, textures, and font
 - No restart without relaunching, no menu, no pause
+
+### Scripted pathfinding
+
+Decay can query and advance authored grid occupants through deterministic A* with `Grid.can_reach` and `Grid.step_toward`. The host delegates to the same `WorldGridNavigation` adapter used by engine tests, so walls, occupancy, and whole footprints retain one meaning. Gather's Wisp exercises that path at runtime.

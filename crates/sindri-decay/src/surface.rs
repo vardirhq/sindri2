@@ -401,12 +401,18 @@ pub(crate) enum GridCall {
     PositionX,
     PositionY,
     Place,
+    /// Whether an authored occupant has a route to another entity's cell.
+    CanReach,
+    /// Move an authored occupant one deterministic A* node toward a target.
+    StepToward,
 }
 
 pub(crate) const GRID_CALLS: &[(&str, GridCall)] = &[
     ("position_x", GridCall::PositionX),
     ("position_y", GridCall::PositionY),
     ("place", GridCall::Place),
+    ("can_reach", GridCall::CanReach),
+    ("step_toward", GridCall::StepToward),
 ];
 
 /// What a script can ask about the frame it is in.
@@ -541,19 +547,56 @@ mod tests {
                 // whatever it is given and the rest still need a world.
                 let spare = world.spawn(EntityData {
                     transform_3d: Some(Transform3D::default()),
+                    ..EntityData::default()
+                });
+                let grid_name = format!("surface-grid-{checked}");
+                let grid = world.spawn(EntityData {
+                    source_id: Some(
+                        sindri_core::SceneEntityId::new(grid_name.clone()).expect("stable test id"),
+                    ),
+                    transform_3d: Some(Transform3D::default()),
+                    components: [
+                        (
+                            super::TILEMAP_COMPONENT.to_owned(),
+                            serde_json::json!({
+                                "columns": 2,
+                                "rows": 1,
+                                "space": "world",
+                                "texture": "tiles.png",
+                                "palette": ["tile"],
+                                "tiles": [0, 0]
+                            }),
+                        ),
+                        (
+                            "sindri.grid_navigation".to_owned(),
+                            serde_json::json!({ "walls": [] }),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                    ..EntityData::default()
+                });
+                let mover = world.spawn(EntityData {
+                    transform_3d: Some(Transform3D {
+                        position: [0.5, -0.5, 0.0],
+                        ..Transform3D::default()
+                    }),
                     components: [(
-                        super::TILEMAP_COMPONENT.to_owned(),
+                        "sindri.grid_occupant".to_owned(),
                         serde_json::json!({
-                            "columns": 1,
-                            "rows": 1,
-                            "space": "world",
-                            "texture": "tiles.png",
-                            "palette": ["tile"],
-                            "tiles": [0]
+                            "grid": grid_name,
+                            "footprint": [[0, 0]]
                         }),
                     )]
                     .into_iter()
                     .collect(),
+                    ..EntityData::default()
+                });
+                let target = world.spawn(EntityData {
+                    transform_3d: Some(Transform3D {
+                        position: [1.5, -0.5, 0.0],
+                        ..Transform3D::default()
+                    }),
                     ..EntityData::default()
                 });
                 let mut host =
@@ -564,24 +607,12 @@ mod tests {
                         "the analyzer describes {dotted} and the host cannot read it"
                     ),
                     ExternalSymbol::Function(signature) => {
-                        // Built from the declared parameter types rather than
-                        // assumed, so a namespace whose calls take something
-                        // other than key names is still exercised properly.
-                        let args: Vec<Value> = signature
-                            .params
-                            .iter()
-                            .map(|ty| match ty {
-                                Type::String => Value::String("Space".to_owned()),
-                                Type::Bool => Value::Bool(true),
-                                // A call declared to take an entity is given a
-                                // real one. Passing a number would exercise the
-                                // error path and call it success.
-                                Type::Named(named) if named == ENTITY => {
-                                    Value::Reference(spare.to_bits())
-                                }
-                                _ => Value::Number(1.0),
-                            })
-                            .collect();
+                        let args = arguments_for(
+                            &signature.params,
+                            namespace,
+                            [mover, grid, target],
+                            spare,
+                        );
                         assert!(
                             matches!(host.call(None, &path, &args), Ok(Some(_))),
                             "the analyzer describes {dotted} and the host does not perform it"
@@ -592,6 +623,33 @@ mod tests {
             }
         }
         assert!(checked > 0, "no namespaced globals are described");
+    }
+
+    /// One call's arguments, built from its declared parameter types.
+    ///
+    /// Built rather than assumed, so a namespace whose calls take something
+    /// other than key names is still exercised properly. Grid calls need three
+    /// distinct semantic roles — who moves, which grid, where to — while a
+    /// generic entity is enough everywhere else.
+    fn arguments_for(
+        params: &[Type],
+        namespace: &str,
+        grid_roles: [sindri_core::EntityId; 3],
+        spare: sindri_core::EntityId,
+    ) -> Vec<Value> {
+        params
+            .iter()
+            .enumerate()
+            .map(|(index, ty)| match ty {
+                Type::String => Value::String("Space".to_owned()),
+                Type::Bool => Value::Bool(true),
+                Type::Named(named) if named == ENTITY && namespace == super::GRID => {
+                    Value::Reference(grid_roles[index.min(2)].to_bits())
+                }
+                Type::Named(named) if named == ENTITY => Value::Reference(spare.to_bits()),
+                _ => Value::Number(1.0),
+            })
+            .collect()
     }
 
     /// Expands a described member into every complete path under it, with the

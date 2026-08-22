@@ -58,6 +58,10 @@ const SCRIPTS: &[(&str, &str)] = &[
         include_str!("../assets/scripts/player.decay"),
     ),
     (
+        "scripts/wisp.decay",
+        include_str!("../assets/scripts/wisp.decay"),
+    ),
+    (
         "scripts/orb.decay",
         include_str!("../assets/scripts/orb.decay"),
     ),
