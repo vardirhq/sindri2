@@ -397,8 +397,8 @@ what the editor cannot yet do.
 - [x] Select world sprites, filled tilemap cells, and meshes by clicking in the Scene viewport; picking inverts the exact camera used to draw the frame, respects the renderer's local geometry, transparent layers and depth, and opaque occlusion, while an empty click clears the selection
 - [ ] Asset thumbnails, after which the grid view is worth defaulting to again
 - [ ] Show which entity a hierarchy row is, when its name is empty or repeated
-- [ ] Keep a filtered hierarchy readable: rows keep their indentation, so a match under a filtered-out parent sits indented under nothing
-- [ ] Group a hierarchy of repeated entities, or the tool stops working at the scale a real scene reaches — taking the editor to the companion game put 49 `Floor r,c` rows between the top of the list and every entity a person actually wanted to edit; the tilemap removes this particular 49, and the next scene will find another
+- [x] Keep a filtered hierarchy readable: matches retain their full ancestor path, temporarily opened without changing the user's stored folds
+- [x] Group a hierarchy of repeated entities with Unity-style GameObjects: every entity can own children, child-bearing rows collapse, fold state survives a restart, and the create menu adds either an empty root or a child
 - [ ] Give the console a way to clear or filter what it holds, since a transient error stays in the count long after it stops being true
 
 ## The companion game — continuous, not a milestone
@@ -471,8 +471,9 @@ module is for.
   in both viewports, and Play runs its scripts, which is the parity claim
   holding. That first session found 49 floor rows drowning the hierarchy; the
   tilemap removed those rows, animation clips now have dedicated inspector
-  authoring, and world renderables can be selected in the viewport; hierarchy
-  grouping remains open
+  authoring, world renderables can be selected in the viewport, and the
+  hierarchy now folds any child-bearing GameObject while preserving readable
+  search paths
 - [ ] Give it depth with Milestone 8: a 3D prop in the same scene as the sprites
 - [ ] Rebuild its coordinate handling on Milestone 9's grid module rather than its own
 - [ ] Ship it through Milestone 10's export pipeline, natively and to the web,

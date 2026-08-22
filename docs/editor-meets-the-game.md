@@ -46,7 +46,7 @@ exactly when somebody opens a project for the first time. Fixed, with the test
 that catches it in `editor/src/scripts.rs`. A source that will never arrive
 still reports, so the fix did not trade a phantom error for a silent one.
 
-**The hierarchy stops working somewhere below 68 entities.** Forty-nine of
+**The hierarchy stopped working somewhere below 68 entities.** Forty-nine of
 Gather's entities are floor tiles named `Floor 0,0` through `Floor 6,6`, and
 they are sorted into the middle of the list. Every entity a person would
 actually want to select — the player, the five orbs, the banner — is below all
@@ -54,9 +54,11 @@ of them. There is a search box and it works, but needing to search for the
 player in a scene with one player is the tool failing rather than the author
 being helped.
 
-The tilemap removes this particular 49. It will not remove the next one: any
-scene with a repeated element hits the same wall, and the honest reading is that
-the hierarchy needs grouping, not that scenes should have fewer entities.
+The tilemap removes this particular 49, and the editor now handles the general
+case too. Every entity is a Unity-style GameObject that can own children;
+child-bearing rows fold, those folds survive a restart, and search keeps the
+ancestor path to each match visible. An empty parent can therefore organize a
+repeated part of a scene without becoming a separate runtime concept.
 
 **There was no way to select anything in the viewport.** That was much worse at
 68 entities than at 8: the hierarchy was the only way in and it was full of

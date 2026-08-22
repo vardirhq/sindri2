@@ -153,9 +153,10 @@ and spacing are drags, so a packed sheet with gutters can be cut and not only on
 that divides edge to edge. A cell is named by clicking it, and the panel lists
 the cells that have names rather than a field per cell, so a 16x16 atlas is as
 workable as a four-frame strip. Saving writes the sidecar, and the browser then
-lists the sprites underneath the image, collapsed until asked for. What is still
-typed by hand is *clips* — naming one, setting its timing, and previewing it are
-not in the editor yet.
+lists the sprites underneath the image, collapsed until asked for. A sprite's
+animation inspector creates, renames, and removes clips from those named cells,
+orders frames, edits timing and looping, chooses the runtime clip, and previews
+it without changing scene state.
 
 A tilemap is a grid of tiles drawn from one entity: `sindri.tilemap` carries the
 map's grid, a palette of sprite names, and a flat array of cells indexing that
@@ -286,9 +287,10 @@ frame.
   back canonically, reloads from disk, and discards changes — including a scene
   carrying components it has never heard of, which it keeps through a save and
   lists in the inspector
-- Shows the hierarchy from live runtime state, nested, searchable, with
-  selection anywhere on a row — and with clearing the selection by clicking
-  empty space or Escape
+- Shows the hierarchy from live runtime state as a Unity-style GameObject tree:
+  every entity may own children, child-bearing rows fold with state remembered
+  across launches, search retains and temporarily opens each match's ancestor
+  path, selection works anywhere on a row, and empty space or Escape clears it
 - Inspector edits of name and the transform, including the Z lock, which takes
   away the Z drag while it is on
 - **Editing any component's fields in the inspector**, driven by the stored
@@ -300,8 +302,10 @@ frame.
   that would stop it decoding is refused and said aloud rather than written into
   a scene that then will not open. A field that decides nothing is not offered —
   a world-space sprite has no anchor row
-- **Creating and deleting entities**, from the hierarchy. Deleting takes the
-  whole subtree, and **undo brings it back at the same handle** — so the
+- **Creating empty root or child GameObjects and deleting entities**, from the
+  hierarchy. Creation assigns a stable scene ID immediately, and creating a
+  child opens its parent. Deleting takes the whole subtree, and **undo brings
+  it back at the same handle** — so the
   selection and every earlier edit in the history keep pointing at what they
   named. That works because the history undoes in order: reaching a delete
   means everything after it is already undone, so the slot it freed is free
@@ -399,10 +403,11 @@ Removed rather than left drawn, because each was a promise about a feature that
 does not exist: the Select, Move, Rotate, and Scale tool modes, which set a mode
 nothing read and had no gizmos to drive; "Scene", "Build", "Tools", and "Help",
 which were labels shaped like menus; the top bar's project name; the hierarchy's
-add-entity button and the inspector's Add Component, which need spawn and
-component commands behind them; the inspector's Tag and Layer, which are not
-things a Sindri entity has; the collapse chevrons and overflow menus that
-collapsed and overflowed nothing; and the settings gear.
+old inert add-entity button and the inspector's old inert Add Component button,
+both since replaced by working command-backed controls; the inspector's Tag and
+Layer, which are not things a Sindri entity has; the inert section chevrons and
+overflow menus, superseded in the hierarchy by real child-row folding; and the
+settings gear.
 
 ---
 
@@ -582,8 +587,9 @@ so the picture proves the scripts ran rather than that the scene loads.
 viewports draw it, and the editor advances the same Decay sources the standalone
 game does. `docs/editor-meets-the-game.md` records the first editor session
 against the older 68-entity scene; the tilemap removed its 49 floor rows and
-world renderables can now be selected in the Scene view, while general
-hierarchy grouping remains open.
+world renderables can now be selected in the Scene view. The general hierarchy
+case is covered too: every GameObject may contain children, folded rows retain
+their state, and search shows the path to each match.
 
 **It found a bug the proofs could not.** It is the first thing in the workspace
 that draws a world and a screen overlay in one frame, and doing so revealed that
