@@ -1835,8 +1835,10 @@ impl EditorApp {
                 let project_root = self.project.root().map(Path::to_path_buf);
                 {
                     let scripts = &self.scripts;
-                    let tilemap_tool = &mut self.tilemap_tool;
-                    let animation_tool = &mut self.animation_tool;
+                    let mut tools = InspectorTools {
+                        animation: &mut self.animation_tool,
+                        tilemap: &mut self.tilemap_tool,
+                    };
                     egui::ScrollArea::vertical().show(ui, |ui| {
                         inspector_identity(ui, icon, &mut draft);
                         reparented = inspector_parent(ui, entity, parent, &choices);
@@ -1850,8 +1852,7 @@ impl EditorApp {
                             project_root.as_deref(),
                             &fonts,
                             animation_texture.as_deref(),
-                            animation_tool,
-                            tilemap_tool,
+                            &mut tools,
                         );
                         added = add_component_button(ui, &addable);
                     });
@@ -2870,13 +2871,12 @@ fn property_toggle(ui: &mut egui::Ui, label: &str, value: &mut bool, on: &str, o
     });
 }
 
-/// The components an entity carries, read from the entity's own payloads.
-///
-/// The rows here used to be fixed text that described the demo scene whatever
-/// was open, which is worse than showing nothing: a sprite anchored bottom
-/// right read as an overlay badge. Each built-in component is deserialized
-/// through the same schema the runtime uses, so a row is either the value the
-/// scene holds or an admission that the payload could not be read.
+/// Stateful authoring surfaces shared across component sections.
+struct InspectorTools<'a> {
+    animation: &'a mut AnimationTool,
+    tilemap: &'a mut TilemapTool,
+}
+
 /// Draws every component on an entity, editable, and reports what changed.
 ///
 /// The payload is edited in place on a draft; the caller diffs it and turns
@@ -2888,8 +2888,7 @@ fn components_sections(
     project_root: Option<&Path>,
     fonts: &[String],
     animation_texture: Option<&str>,
-    animation_tool: &mut AnimationTool,
-    tilemap_tool: &mut TilemapTool,
+    tools: &mut InspectorTools<'_>,
 ) -> Option<String> {
     let mut removed = None;
     for (name, payload) in components.iter_mut() {
@@ -2939,10 +2938,10 @@ fn components_sections(
             text_section(ui, payload, fonts);
         }
         if name == animation::TYPE_NAME {
-            animation_section(ui, payload, project_root, animation_texture, animation_tool);
+            animation_section(ui, payload, project_root, animation_texture, tools.animation);
         }
         if name == tilemap::TYPE_NAME {
-            tilemap_section(ui, payload, project_root, tilemap_tool);
+            tilemap_section(ui, payload, project_root, tools.tilemap);
         }
         object_rows(ui, name, payload, name == "sindri.script");
     }
@@ -3028,6 +3027,7 @@ fn text_section(ui: &mut egui::Ui, payload: &mut Value, fonts: &[String]) {
 /// The sheet owns sprite names; the animation only arranges those names into
 /// timed clips. Every edit stays in the stored payload so unknown future fields
 /// survive, while the typed component is used to interpret and preview it.
+#[allow(clippy::too_many_lines)]
 fn animation_section(
     ui: &mut egui::Ui,
     payload: &mut Value,
@@ -3155,7 +3155,7 @@ fn animation_section(
             ui.add_sized([128.0, 23.0], egui::TextEdit::singleline(&mut rename_to));
         });
     });
-    *tool.rename() = rename_to.clone();
+    tool.rename().clone_from(&rename_to);
     let mut problem = None;
     let selected = if rename {
         match animation::rename_clip(payload, &selected, &rename_to) {
