@@ -2,6 +2,8 @@ name: Pathfinding development probe
 on:
   push:
     branches: [codex/pathfinding-vertical]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
