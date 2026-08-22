@@ -91,5 +91,22 @@ or a world adapter without acquiring an ECS dependency. A move may overlap the
 owner's previous cells, but the entire destination is validated before those
 old cells are released, so a failed move cannot leave a partial placement.
 
-Wall edges should follow next. After that, engine components, editor authoring,
-and a typed Decay surface can adapt this core before A* asks it for passability.
+The renderer-free A* layer now builds directly on that definition of
+passability. `GridPathfinder` supports cardinal or eight-way movement, explicit
+integer cardinal/diagonal costs, and an explicit corner-cutting policy. Its
+Manhattan or octile heuristic remains admissible even when a configured
+diagonal costs more than two cardinal steps, and stable neighbour/insertion
+ordering makes equal-cost results deterministic.
+
+A caller may supply any cell-passability function; each answer is memoized for
+the duration of the search. `GridOccupancy::find_path` supplies the standard
+adapter by validating the moving owner's complete footprint at every candidate
+anchor while allowing overlap with that owner's current cells. A returned
+`GridPath` includes both endpoints and its total cost; an impassable or
+disconnected goal is `None`, while invalid endpoints and arithmetic exhaustion
+are explicit errors.
+
+Wall edges still follow as a separate primitive rather than being hidden in the
+pathfinder. Engine components, editor authoring, typed Decay access, overlays,
+and a Gather use case remain cross-layer adapters tracked in the integration
+matrix.
