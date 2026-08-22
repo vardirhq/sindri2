@@ -24,7 +24,7 @@ jobs:
       run:
         working-directory: decay
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # The repository root pins 1.95.0 in rust-toolchain.toml, and rustup
       # honours it from any subdirectory -- so `stable` here was never what
       # ran. Naming the same version says what happens, and keeps saying it if
