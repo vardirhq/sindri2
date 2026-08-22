@@ -23,10 +23,9 @@ jobs:
           components: clippy,rustfmt
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all --check
-      - run: cargo clippy --workspace --all-targets --all-features
-      # Before the tests, not only before the captures: the workspace has GPU
-      # tests now, and SINDRI_REQUIRE_GPU makes a missing adapter fail them
-      # rather than skip them on the one machine installed to run them.
+      # Native audio goes through Rodio/CPAL, whose Linux backend links ALSA.
+      # Install that build dependency before clippy: clippy compiles the native
+      # dependency graph too, so doing this only before tests is already too late.
       #
       # The image does not name a mirror in its sources at all: it points them
       # at a mirrorlist, and Azure's mirror is the first entry in it. When that
@@ -42,7 +41,7 @@ jobs:
       # timeouts give up instead, and the step timeout turns whatever is left
       # into a failure someone can read in two lines rather than a job nobody
       # can tell apart from a slow one.
-      - name: Install software Vulkan
+      - name: Install native build and software Vulkan dependencies
         env:
           DEBIAN_FRONTEND: noninteractive
         timeout-minutes: 5
@@ -70,7 +69,11 @@ jobs:
               -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 "$@"
           }
           apt_get update
-          apt_get install --yes imagemagick libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
+          apt_get install --yes imagemagick libasound2-dev libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
+      - run: cargo clippy --workspace --all-targets --all-features
+      # Before the tests, not only before the captures: the workspace has GPU
+      # tests now, and SINDRI_REQUIRE_GPU makes a missing adapter fail them
+      # rather than skip them on the one machine installed to run them.
       - name: Test
         env:
           WGPU_BACKEND: vulkan
