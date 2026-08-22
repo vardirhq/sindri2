@@ -153,6 +153,8 @@ an oversight, and it is why this stops at finding and removing.
 | `Grid.position_x(entity, grid)` | `f32` |
 | `Grid.position_y(entity, grid)` | `f32` |
 | `Grid.place(entity, grid, x, y)` | nothing |
+| `Grid.can_reach(mover, grid, target)` | `bool` |
+| `Grid.step_toward(mover, grid, target)` | `bool` |
 
 The second entity must carry a world-space `sindri.tilemap`. Its projection,
 cell size, and complete world-XY transform define the coordinate space; there is no implicit
@@ -389,3 +391,4 @@ back does not change what undo means.
 - The script instance is created on first sight and lost when the world is
   reloaded. There is no state migration across a hot reload of the source: a
   changed file recompiles, and the running instance keeps its fields.
+

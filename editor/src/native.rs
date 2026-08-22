@@ -60,6 +60,8 @@ use crate::{
 
 const INTER_FONT: &[u8] = include_bytes!("../assets/Inter.ttf");
 const TEXT_COMPONENT: &str = "sindri.text";
+const GRID_NAVIGATION_COMPONENT: &str = "sindri.grid_navigation";
+const GRID_OCCUPANT_COMPONENT: &str = "sindri.grid_occupant";
 const ACCENT: Color32 = Color32::from_rgb(246, 169, 35);
 /// What a panel says something is wrong in, matching the console's errors.
 const PROBLEM: Color32 = Color32::from_rgb(255, 138, 148);
@@ -1488,8 +1490,15 @@ impl EditorApp {
         present: &BTreeMap<String, Value>,
         first_font: Option<&str>,
         first_sprite: Option<&str>,
+        first_grid: Option<&str>,
     ) -> Vec<ComponentMetadata> {
-        addable_components(self.scene.components(), present, first_font, first_sprite)
+        addable_components(
+            self.scene.components(),
+            present,
+            first_font,
+            first_sprite,
+            first_grid,
+        )
     }
 
     /// Turns every changed component payload into a command.
@@ -1529,10 +1538,15 @@ impl EditorApp {
         type_name: &str,
         first_font: Option<&str>,
         first_sprite: Option<&str>,
+        first_grid: Option<&str>,
     ) {
-        let Some(payload) =
-            component_default(self.scene.components(), type_name, first_font, first_sprite)
-        else {
+        let Some(payload) = component_default(
+            self.scene.components(),
+            type_name,
+            first_font,
+            first_sprite,
+            first_grid,
+        ) else {
             return;
         };
         let mut buffer = CommandBuffer::new();
@@ -2075,7 +2089,10 @@ impl EditorApp {
                     .map(|texture| self.project.sprites_for_texture(texture))
                     .unwrap_or_default();
                 let first_sprite = animation_sprites.first().map(String::as_str);
-                let addable = self.addable_components(&components, first_font, first_sprite);
+                let grids = grid_choices(&self.world);
+                let first_grid = grids.first().map(|(_, id)| id.as_str());
+                let addable =
+                    self.addable_components(&components, first_font, first_sprite, first_grid);
                 let project_root = self.project.root().map(Path::to_path_buf);
                 {
                     let scripts = &self.scripts;
@@ -2096,6 +2113,7 @@ impl EditorApp {
                             project_root.as_deref(),
                             &fonts,
                             animation_texture.as_deref(),
+                            &grids,
                             &mut tools,
                         );
                         added = add_component_button(ui, &addable);
@@ -2107,7 +2125,7 @@ impl EditorApp {
                     self.remove_component(entity, &type_name);
                 }
                 if let Some(type_name) = added {
-                    self.add_component(entity, &type_name, first_font, first_sprite);
+                    self.add_component(entity, &type_name, first_font, first_sprite, first_grid);
                 }
                 match reparented {
                     ParentChoice::Unchanged => {}
@@ -3345,8 +3363,13 @@ fn components_sections(
     project_root: Option<&Path>,
     fonts: &[String],
     animation_texture: Option<&str>,
+    grids: &[(String, String)],
     tools: &mut InspectorTools<'_>,
 ) -> Option<String> {
+    let grid_size = components
+        .get(tilemap::TYPE_NAME)
+        .and_then(|payload| tilemap::component(payload).ok())
+        .map(|map| (map.columns, map.rows));
     let mut removed = None;
     for (name, payload) in components.iter_mut() {
         let icon = match name.as_str() {
@@ -3405,6 +3428,12 @@ fn components_sections(
         }
         if name == tilemap::TYPE_NAME {
             tilemap_section(ui, payload, project_root, tools.tilemap);
+        }
+        if name == GRID_NAVIGATION_COMPONENT {
+            grid_navigation_section(ui, payload, grid_size);
+        }
+        if name == GRID_OCCUPANT_COMPONENT {
+            grid_occupant_section(ui, payload, grids);
         }
         object_rows(ui, name, payload, name == "sindri.script");
     }
@@ -4051,6 +4080,226 @@ fn palette_cell(
         if selected { TEXT } else { TEXT_MUTED },
     );
     response.on_hover_text(label).clicked()
+}
+
+fn grid_choices(world: &World) -> Vec<(String, String)> {
+    world
+        .entities()
+        .filter_map(|(_, data)| {
+            data.components
+                .contains_key(tilemap::TYPE_NAME)
+                .then_some(())?;
+            let id = data.source_id.as_ref()?.as_str().to_owned();
+            let label = data.name.clone().unwrap_or_else(|| id.clone());
+            Some((label, id))
+        })
+        .collect()
+}
+
+#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+fn grid_coord_row(ui: &mut egui::Ui, label: &str, value: &mut Value) -> bool {
+    let Some(items) = value.as_array() else {
+        return false;
+    };
+    if items.len() != 2 {
+        return false;
+    }
+    let mut numbers = [
+        items[0].as_i64().unwrap_or_default() as f64,
+        items[1].as_i64().unwrap_or_default() as f64,
+    ];
+    let labels = ["X".to_owned(), "Y".to_owned()];
+    if !numbers_row(ui, label, &labels, &mut numbers, 18.0) {
+        return false;
+    }
+    *value = serde_json::json!([numbers[0].round() as i64, numbers[1].round() as i64]);
+    true
+}
+
+fn grid_navigation_section(ui: &mut egui::Ui, payload: &mut Value, grid_size: Option<(u32, u32)>) {
+    section_header(ui, ICON_GRID_4X4, "Walls");
+    let Some(walls) = payload.get_mut("walls").and_then(Value::as_array_mut) else {
+        property_label(ui, "Walls", "stored value is not a wall list");
+        return;
+    };
+    let mut remove = None;
+    for (index, wall) in walls.iter_mut().enumerate() {
+        ui.horizontal(|ui| {
+            ui.add_space(10.0);
+            ui.label(
+                RichText::new(format!("Wall {}", index + 1))
+                    .size(10.0)
+                    .color(TEXT_MUTED),
+            );
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                ui.add_space(7.0);
+                if ui.small_button("Remove").clicked() {
+                    remove = Some(index);
+                }
+            });
+        });
+        if let Some(coord) = wall.get_mut("first") {
+            grid_coord_row(ui, "First", coord);
+        }
+        if let Some(coord) = wall.get_mut("second") {
+            grid_coord_row(ui, "Second", coord);
+        }
+        let first = wall.get("first").and_then(Value::as_array);
+        let second = wall.get("second").and_then(Value::as_array);
+        let valid = first.zip(second).is_some_and(|(first, second)| {
+            if first.len() != 2 || second.len() != 2 {
+                return false;
+            }
+            let (Some(ax), Some(ay), Some(bx), Some(by)) = (
+                first[0].as_i64(),
+                first[1].as_i64(),
+                second[0].as_i64(),
+                second[1].as_i64(),
+            ) else {
+                return false;
+            };
+            let adjacent = (ax - bx).abs() + (ay - by).abs() == 1;
+            let inside = grid_size.is_none_or(|(columns, rows)| {
+                let inside = |x: i64, y: i64| {
+                    x >= 0 && y >= 0 && x < i64::from(columns) && y < i64::from(rows)
+                };
+                inside(ax, ay) && inside(bx, by)
+            });
+            adjacent && inside
+        });
+        if !valid {
+            ui.horizontal_wrapped(|ui| {
+                ui.add_space(18.0);
+                ui.label(
+                    RichText::new("Wall endpoints must be adjacent cells inside the tilemap.")
+                        .size(9.0)
+                        .color(PROBLEM),
+                );
+            });
+        }
+    }
+    if let Some(index) = remove {
+        walls.remove(index);
+    }
+    let can_add = grid_size.is_some_and(|(columns, rows)| columns > 1 || rows > 1);
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        if ui
+            .add_enabled(can_add, egui::Button::new("Add wall"))
+            .clicked()
+        {
+            let second = if grid_size.is_some_and(|(columns, _)| columns > 1) {
+                [1, 0]
+            } else {
+                [0, 1]
+            };
+            walls.push(serde_json::json!({ "first": [0, 0], "second": second }));
+        }
+    });
+}
+
+fn grid_occupant_section(ui: &mut egui::Ui, payload: &mut Value, grids: &[(String, String)]) {
+    section_header(ui, ICON_GRID_4X4, "Occupancy");
+    let current = payload
+        .get("grid")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned();
+    let mut chosen = current.clone();
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.label(RichText::new("Grid").size(11.0).color(TEXT_MUTED));
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.add_space(7.0);
+            egui::ComboBox::from_id_salt("grid-occupant-grid")
+                .selected_text(
+                    grids
+                        .iter()
+                        .find(|(_, id)| *id == chosen)
+                        .map_or(chosen.as_str(), |(label, _)| label.as_str()),
+                )
+                .width(170.0)
+                .show_ui(ui, |ui| {
+                    for (label, id) in grids {
+                        ui.selectable_value(&mut chosen, id.clone(), label);
+                    }
+                });
+        });
+    });
+    if chosen != current && !chosen.is_empty() {
+        payload["grid"] = Value::String(chosen);
+    }
+    if grids.is_empty() {
+        ui.horizontal_wrapped(|ui| {
+            ui.add_space(10.0);
+            ui.label(
+                RichText::new("Add a tilemap before authoring an occupant.")
+                    .size(9.0)
+                    .color(PROBLEM),
+            );
+        });
+    }
+
+    let Some(footprint) = payload.get_mut("footprint").and_then(Value::as_array_mut) else {
+        property_label(ui, "Footprint", "stored value is not a cell list");
+        return;
+    };
+    let may_remove = footprint.len() > 1;
+    let mut remove = None;
+    for (index, cell) in footprint.iter_mut().enumerate() {
+        ui.horizontal(|ui| {
+            ui.add_space(10.0);
+            ui.label(
+                RichText::new(format!("Cell {}", index + 1))
+                    .size(10.0)
+                    .color(TEXT_MUTED),
+            );
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                ui.add_space(7.0);
+                if ui
+                    .add_enabled(may_remove, egui::Button::new("Remove"))
+                    .clicked()
+                {
+                    remove = Some(index);
+                }
+            });
+        });
+        grid_coord_row(ui, "Offset", cell);
+    }
+    if let Some(index) = remove {
+        footprint.remove(index);
+    }
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        if ui.button("Add cell").clicked() {
+            let next_x = footprint
+                .iter()
+                .filter_map(Value::as_array)
+                .filter_map(|cell| cell.first()?.as_i64())
+                .max()
+                .unwrap_or(-1)
+                + 1;
+            footprint.push(serde_json::json!([next_x, 0]));
+        }
+    });
+    let mut seen = BTreeSet::new();
+    let duplicate = footprint.iter().filter_map(Value::as_array).any(|cell| {
+        let key = (
+            cell.first().and_then(Value::as_i64),
+            cell.get(1).and_then(Value::as_i64),
+        );
+        !seen.insert(key)
+    });
+    if duplicate {
+        ui.horizontal_wrapped(|ui| {
+            ui.add_space(10.0);
+            ui.label(
+                RichText::new("Footprint cells must be unique offsets.")
+                    .size(9.0)
+                    .color(PROBLEM),
+            );
+        });
+    }
 }
 
 /// The rows of one payload, indented under its heading.
@@ -5233,12 +5482,24 @@ fn addable_components(
     present: &BTreeMap<String, Value>,
     first_font: Option<&str>,
     first_sprite: Option<&str>,
+    first_grid: Option<&str>,
 ) -> Vec<ComponentMetadata> {
     components
         .registered_components()
         .filter(|metadata| !present.contains_key(&metadata.type_name))
         .filter(|metadata| {
-            component_default(components, &metadata.type_name, first_font, first_sprite).is_some()
+            metadata.type_name != GRID_NAVIGATION_COMPONENT
+                || present.contains_key(tilemap::TYPE_NAME)
+        })
+        .filter(|metadata| {
+            component_default(
+                components,
+                &metadata.type_name,
+                first_font,
+                first_sprite,
+                first_grid,
+            )
+            .is_some()
         })
         .cloned()
         .collect()
@@ -5254,7 +5515,16 @@ fn component_default(
     type_name: &str,
     first_font: Option<&str>,
     first_sprite: Option<&str>,
+    first_grid: Option<&str>,
 ) -> Option<Value> {
+    if type_name == GRID_OCCUPANT_COMPONENT {
+        return first_grid.map(|grid| {
+            serde_json::json!({
+                "grid": grid,
+                "footprint": [[0, 0]]
+            })
+        });
+    }
     if type_name == TEXT_COMPONENT {
         return first_font.map(|font| {
             serde_json::json!({
@@ -5912,6 +6182,7 @@ mod tests {
             &present,
             Some("fonts/Inter.ttf"),
             None,
+            None,
         )
         .into_iter()
         .map(|metadata| metadata.type_name)
@@ -5940,12 +6211,14 @@ mod tests {
             &BTreeMap::new(),
             Some("fonts/Inter.ttf"),
             Some("idle"),
+            Some("floor"),
         ) {
             let payload = component_default(
                 components,
                 &metadata.type_name,
                 Some("fonts/Inter.ttf"),
                 Some("idle"),
+                Some("floor"),
             )
             .expect("it was offered, so it has one");
             components
@@ -5966,13 +6239,19 @@ mod tests {
         let present = BTreeMap::new();
 
         assert!(
-            !addable_components(components, &present, None, None)
+            !addable_components(components, &present, None, None, None)
                 .iter()
                 .any(|metadata| metadata.type_name == TEXT_COMPONENT)
         );
 
-        let payload = component_default(components, TEXT_COMPONENT, Some("fonts/Inter.ttf"), None)
-            .expect("a project font completes a valid text component");
+        let payload = component_default(
+            components,
+            TEXT_COMPONENT,
+            Some("fonts/Inter.ttf"),
+            None,
+            None,
+        )
+        .expect("a project font completes a valid text component");
         assert_eq!(payload["font"], "fonts/Inter.ttf");
         assert_eq!(payload["text"], "Text");
         components
@@ -5987,12 +6266,12 @@ mod tests {
         let present = BTreeMap::new();
 
         assert!(
-            !addable_components(components, &present, None, None)
+            !addable_components(components, &present, None, None, None)
                 .iter()
                 .any(|metadata| metadata.type_name == animation::TYPE_NAME)
         );
 
-        let payload = component_default(components, animation::TYPE_NAME, None, Some("idle"))
+        let payload = component_default(components, animation::TYPE_NAME, None, Some("idle"), None)
             .expect("a named sheet sprite completes a valid animation component");
         assert_eq!(
             payload["clips"]["clip"]["frames"],

@@ -127,6 +127,8 @@ pub fn applies(type_name: &str, key: &str, payload: &Value) -> bool {
         // needs a multiline field and a font is a project asset rather than an
         // arbitrary string.
         ("sindri.tilemap", "columns" | "rows" | "palette" | "tiles")
+        | ("sindri.grid_navigation", "walls")
+        | ("sindri.grid_occupant", "grid" | "footprint")
         | ("sindri.text", "text" | "font")
         | ("sindri.sprite_animation", "clips" | "playing") => false,
         _ => true,

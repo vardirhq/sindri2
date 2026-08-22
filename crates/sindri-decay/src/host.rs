@@ -13,8 +13,11 @@
 use decay_ir::Path;
 use decay_runtime::{Host, RuntimeError, Value};
 use sindri_core::{EntityId, Transform3D, World};
-use sindri_grid::{GridPoint, GridSpace, PlanePoint, PlaneYAxis, Projection};
+use sindri_grid::{
+    GridCoord, GridPathfinder, GridPoint, GridSpace, PlanePoint, PlaneYAxis, Projection,
+};
 use sindri_platform::{InputState, Key};
+use sindri_scene::WorldGridNavigation;
 
 use crate::{
     Blackboard,
@@ -316,6 +319,36 @@ impl<'a> WorldHost<'a> {
         Ok(MapGrid { space, transform })
     }
 
+    fn path_to_target(
+        &self,
+        path: &Path,
+        entity: EntityId,
+        map: EntityId,
+        target: EntityId,
+        grid: MapGrid,
+    ) -> Result<Option<Vec<GridCoord>>, RuntimeError> {
+        let navigation = WorldGridNavigation::from_world(self.world, map)
+            .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
+        let target_world = self
+            .transform_of(target)
+            .ok_or_else(|| {
+                RuntimeError::Host(format!(
+                    "{} needs the target to have a transform",
+                    path.dotted()
+                ))
+            })?
+            .position_2d();
+        let local = world_to_map(grid.transform, target_world);
+        let goal = navigation
+            .space()
+            .plane_to_grid(local)
+            .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
+        navigation
+            .find_path(GridPathfinder::default(), entity, goal)
+            .map(|route| route.map(|route| route.into_nodes()))
+            .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))
+    }
+
     fn grid_call(
         &mut self,
         call: GridCall,
@@ -345,7 +378,9 @@ impl<'a> WorldHost<'a> {
                 Ok(Value::Number(match call {
                     GridCall::PositionX => point.x,
                     GridCall::PositionY => point.y,
-                    GridCall::Place => unreachable!("matched above"),
+                    GridCall::Place | GridCall::CanReach | GridCall::StepToward => {
+                        unreachable!("matched above")
+                    }
                 }))
             }
             GridCall::Place => {
@@ -381,6 +416,33 @@ impl<'a> WorldHost<'a> {
                 };
                 data.transform_3d = Some(transform);
                 Ok(Value::Unit)
+            }
+            GridCall::CanReach | GridCall::StepToward => {
+                let target = self.entity_argument(path, args, 2, "the path target")?;
+                let route = self.path_to_target(path, entity, map, target, grid)?;
+                if call == GridCall::CanReach {
+                    return Ok(Value::Bool(route.is_some()));
+                }
+                let Some(next) = route.as_deref().and_then(|nodes| nodes.get(1)).copied() else {
+                    return Ok(Value::Bool(false));
+                };
+                let local = grid
+                    .space
+                    .grid_to_plane(next)
+                    .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
+                let world = map_to_world(grid.transform, local);
+                let Some(mut transform) = self.transform_of(entity) else {
+                    return Err(RuntimeError::Host(format!(
+                        "{} needs the moving occupant to have a transform",
+                        path.dotted()
+                    )));
+                };
+                transform.set_position_2d(world);
+                self.world
+                    .get_mut(entity)
+                    .expect("entity argument was validated above")
+                    .transform_3d = Some(transform);
+                Ok(Value::Bool(true))
             }
         }
     }
