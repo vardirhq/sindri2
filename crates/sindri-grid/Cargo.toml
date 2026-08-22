@@ -1,0 +1,11 @@
+[package]
+name = "sindri-grid"
+description = "Renderer-independent grid coordinates and projection math for Sindri"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true

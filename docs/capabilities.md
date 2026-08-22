@@ -95,6 +95,18 @@ released-this-frame for keys and mouse buttons, plus pointer position, pointer
 delta, scroll delta, and window focus. `axis(negative, positive)` returns -1, 0, or 1 and gives zero
 when both are held, so opposed movement keys cannot resolve by event order.
 
+### Grid geometry
+
+`sindri-grid` provides renderer-independent signed cell coordinates, continuous
+grid and plane points, finite rectangular bounds, deterministic cardinal and
+eight-way neighbour queries, and validated orthogonal/isometric projection.
+Cell centres and arbitrary fractional points round-trip through both projections
+across negative and positive space. The crate has no engine, renderer, editor,
+or Decay dependency; world-axis and camera/screen adapters remain to be built.
+
+`docs/feature-integration-matrix.md` tracks those counterparts explicitly rather
+than allowing the runtime type to make the broader feature look complete.
+
 ### Hosts and platforms
 
 `Game` receives `start`, `fixed_update`, `update`, and `stop`, each with a
@@ -427,7 +439,8 @@ settings gear.
 - No physics or collision. This one is a deliberate gap rather than a missing
   foundation: collision against transforms is gameplay code, and a Rapier
   adapter is planned as optional rather than built in
-- No particles, authored parallax system, or pathfinding
+- No particles, authored parallax system, occupancy, or pathfinding; the
+  renderer-free coordinate/projection foundation now exists
 - No optional TypeScript embedding SDK; browser games currently expose narrow
   application entry points and run their gameplay in Decay
 - No spawning from a script. Cross-entity lookup, access, existence checks, and

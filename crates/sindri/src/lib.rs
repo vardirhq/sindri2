@@ -5,6 +5,7 @@
 
 pub use sindri_assets as assets;
 pub use sindri_core as core;
+pub use sindri_grid as grid;
 
 #[cfg(feature = "render")]
 pub use sindri_gpu as gpu;
@@ -21,6 +22,7 @@ pub mod prelude {
     pub use sindri_core::prelude::*;
     #[cfg(feature = "render")]
     pub use sindri_gpu::{GpuContext, GpuRequestOptions, SurfaceProfile};
+    pub use sindri_grid::{GridBounds, GridCoord, GridPoint, GridSpace, PlanePoint, Projection};
     #[cfg(feature = "render")]
     pub use sindri_scene::{CameraView, SceneExtractor, SpriteAnimations, WorldProjection};
 }

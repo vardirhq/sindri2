@@ -73,6 +73,7 @@ can reach.
 - extraction/preparation/rendering stages with deterministic pass ordering
 - depth-tested 3D meshes, perspective and orthographic cameras, textured/tinted/layered 2D sprites, sprite sheets, and runtime sprite animation
 - orthogonal and isometric tilemaps extracted into the same sprite batches as loose world sprites
+- renderer-independent typed grid coordinates, bounds, neighbours, and reversible orthogonal/isometric projection math
 - anchored, layered screen-space text rendered from project-owned OpenType font assets
 - deterministic offscreen PNG rendering exercised by CI
 - Decay scripts that run against the live world through a typed host surface
@@ -102,7 +103,7 @@ It currently supports:
 - texture and Decay source hot reload through the real asset pipeline
 - deterministic editor screenshot capture in CI
 
-For the deliberately exhaustive and evidence-based inventory, including controls that are still incomplete, see [`docs/capabilities.md`](docs/capabilities.md).
+For the deliberately exhaustive and evidence-based inventory, including controls that are still incomplete, see [`docs/capabilities.md`](docs/capabilities.md). The counterparts still needed across runtime, editor, Decay, and Gather are kept together in the [`feature integration matrix`](docs/feature-integration-matrix.md).
 
 ## Architecture
 

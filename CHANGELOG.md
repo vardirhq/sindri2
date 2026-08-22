@@ -6,6 +6,13 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- A dependency-free `sindri-grid` foundation with typed logical coordinates,
+  finite bounds, stable neighbour queries, validated orthogonal/isometric
+  projection, and exhaustive round-trip coverage across negative and positive
+  space.
+- A feature integration matrix tracking runtime, editor, Decay, and Gather
+  counterparts together so a feature added on one surface leaves its remaining
+  integrations visible.
 - Drag-and-drop hierarchy reparenting onto another GameObject or the World root, with legal-target feedback, cycle prevention through the world's existing checks, and one-step undo.
 - Unity-style editor hierarchy authoring: every GameObject can contain children, child-bearing rows collapse with restart-persistent state, filtered results retain their ancestor paths, and the create menu can add an empty root or child with a stable scene ID.
 - Scene-viewport entity selection for world sprites, filled tilemap cells, and meshes, using the rendered camera and geometry with layer-, depth-, and occlusion-aware overlap resolution.

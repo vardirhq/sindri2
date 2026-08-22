@@ -7,6 +7,7 @@ members = [
     "crates/sindri-decay",
     "crates/sindri-desktop",
     "crates/sindri-gpu",
+    "crates/sindri-grid",
     "crates/sindri-platform",
     "crates/sindri-render",
     "crates/sindri-scene",

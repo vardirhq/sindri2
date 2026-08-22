@@ -62,6 +62,11 @@ the editor but does nothing, and what is missing. Read it before claiming the
 engine or the editor can do something, and update it in the same commit as any
 change that adds, removes, or wires up a capability.
 
+`docs/feature-integration-matrix.md` is the cross-surface index for engine,
+editor, Decay, and Gather counterparts. Update the affected row whenever a
+feature moves on one surface, so integrations still missing elsewhere do not
+disappear into separate roadmap sections.
+
 Project policy lives alongside them: `docs/versioning.md` (crate and scene
 format versions; the editor protocol and any optional browser embedding SDK are
 deliberately undecided) and
@@ -76,6 +81,7 @@ crates/
   sindri-platform/  host boundary: Clock, Game, EngineHost, input
   sindri-desktop/   winit window, event loop, and input translation (browser too)
   sindri-gpu/       wgpu adapter/device/queue and surface negotiation
+  sindri-grid/      renderer-free grid coordinates, bounds, and projection math
   sindri-render/    target-independent renderers, frame stages, textures, cameras
   sindri-scene/     built-in sindri.* components; world -> frame extraction
   sindri-assets/    asset sources, load queue, decoding, URL resolution
@@ -111,6 +117,7 @@ a language at all.
 
 ```text
 sindri-core   -> (nothing in-workspace)
+sindri-grid   -> (nothing in-workspace)
 sindri-platform -> sindri-core
 sindri-desktop  -> sindri-platform + sindri-gpu (it owns the window, so it
                    creates the surface)
@@ -118,7 +125,7 @@ sindri-assets   -> sindri-core
 sindri-gpu      -> wgpu only (sindri-render is a dev-dependency, for tests)
 sindri-render   -> wgpu, glam, bytemuck only
 sindri-scene    -> sindri-core + sindri-render
-sindri          -> assets, core, and (feature `render`) gpu, render, scene
+sindri          -> assets, core, grid, and (feature `render`) gpu, render, scene
 sindri-decay    -> sindri-core + sindri-platform (for input) + the decay/
                    language crates, one way only
 editor          -> assets, core, decay, platform, render, scene (sindri-cube
