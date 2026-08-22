@@ -5,8 +5,6 @@
 //! command between the language and the platform is what preserves Decay's
 //! no-I/O boundary and still lets a silent backend assert sound in tests.
 
-use std::cell::RefCell;
-
 use decay_ir::Path;
 use decay_runtime::{Host, RuntimeError, Value};
 
@@ -23,26 +21,16 @@ pub enum AudioCommand {
     ResumeAll,
 }
 
-thread_local! {
-    static COMMANDS: RefCell<Vec<AudioCommand>> = const { RefCell::new(Vec::new()) };
-}
-
-/// Takes every audio request scripts have emitted since the previous drain.
-///
-/// Script execution is currently single-threaded. A thread-local queue keeps
-/// separate worlds on separate runners from sharing commands without teaching
-/// `World` about a platform service.
-pub fn drain_audio_commands() -> Vec<AudioCommand> {
-    COMMANDS.with(|commands| std::mem::take(&mut *commands.borrow_mut()))
-}
-
-fn push(command: AudioCommand) {
-    COMMANDS.with(|commands| commands.borrow_mut().push(command));
-}
-
 /// The ordinary world host plus the `Audio.*` namespace.
+///
+/// The queue is borrowed rather than global. It was a thread-local, which meant
+/// every caller of `Scripts::advance` shared one queue and only the game ever
+/// emptied it: the editor pushed a command per `Audio.play` per frame of play
+/// mode and nothing ever drained them. Whoever runs the scripts owns the
+/// requests they produce.
 pub struct WorldHost<'a> {
     inner: crate::host::WorldHost<'a>,
+    audio: &'a mut Vec<AudioCommand>,
 }
 
 impl<'a> WorldHost<'a> {
@@ -51,9 +39,11 @@ impl<'a> WorldHost<'a> {
         entity: sindri_core::EntityId,
         context: ScriptContext<'a>,
         blackboard: &'a mut Blackboard,
+        audio: &'a mut Vec<AudioCommand>,
     ) -> Self {
         Self {
             inner: crate::host::WorldHost::new(world, entity, context, blackboard),
+            audio,
         }
     }
 
@@ -87,7 +77,7 @@ impl Host for WorldHost<'_> {
             if let [namespace, name] = parts.as_slice()
                 && *namespace == AUDIO
             {
-                return audio_call(name, path, args).map(Some);
+                return audio_call(self.audio, name, path, args).map(Some);
             }
         }
         self.inner.call(subject, path, args)
@@ -116,7 +106,12 @@ fn normalized_volume(path: &Path, value: Option<&Value>) -> Result<f32, RuntimeE
     Ok(volume)
 }
 
-fn audio_call(name: &str, path: &Path, args: &[Value]) -> Result<Value, RuntimeError> {
+fn audio_call(
+    queue: &mut Vec<AudioCommand>,
+    name: &str,
+    path: &Path,
+    args: &[Value],
+) -> Result<Value, RuntimeError> {
     match name {
         "play" | "loop" => {
             let Some(Value::String(clip)) = args.first() else {
@@ -137,19 +132,19 @@ fn audio_call(name: &str, path: &Path, args: &[Value]) -> Result<Value, RuntimeE
                     volume,
                 }
             };
-            push(command);
+            queue.push(command);
             Ok(Value::Unit)
         }
         "stop_all" => {
-            push(AudioCommand::StopAll);
+            queue.push(AudioCommand::StopAll);
             Ok(Value::Unit)
         }
         "pause_all" => {
-            push(AudioCommand::PauseAll);
+            queue.push(AudioCommand::PauseAll);
             Ok(Value::Unit)
         }
         "resume_all" => {
-            push(AudioCommand::ResumeAll);
+            queue.push(AudioCommand::ResumeAll);
             Ok(Value::Unit)
         }
         _ => Ok(Value::Null),
@@ -163,16 +158,16 @@ mod tests {
     use sindri_core::{EntityData, World};
     use sindri_platform::InputState;
 
-    use super::{AudioCommand, WorldHost, drain_audio_commands};
+    use super::{AudioCommand, WorldHost};
     use crate::{Blackboard, ScriptContext};
 
     #[test]
     fn audio_call_emits_intent_without_a_device() {
-        let _ = drain_audio_commands();
         let mut world = World::default();
         let entity = world.spawn(EntityData::default());
         let input = InputState::default();
         let mut board = Blackboard::new();
+        let mut queue = Vec::new();
         let mut host = WorldHost::new(
             &mut world,
             entity,
@@ -182,6 +177,7 @@ mod tests {
                 elapsed_seconds: 0.0,
             },
             &mut board,
+            &mut queue,
         );
         host.call(
             None,
@@ -193,7 +189,7 @@ mod tests {
         )
         .expect("audio call");
         assert_eq!(
-            drain_audio_commands(),
+            queue,
             [AudioCommand::Play {
                 clip: "audio/pickup.wav".to_owned(),
                 volume: 0.8,
@@ -203,11 +199,11 @@ mod tests {
 
     #[test]
     fn audio_call_rejects_volume_outside_normalized_range() {
-        let _ = drain_audio_commands();
         let mut world = World::default();
         let entity = world.spawn(EntityData::default());
         let input = InputState::default();
         let mut board = Blackboard::new();
+        let mut queue = Vec::new();
         let mut host = WorldHost::new(
             &mut world,
             entity,
@@ -217,6 +213,7 @@ mod tests {
                 elapsed_seconds: 0.0,
             },
             &mut board,
+            &mut queue,
         );
         let error = host
             .call(
@@ -232,6 +229,6 @@ mod tests {
             error,
             RuntimeError::Host(message) if message.contains("between 0 and 1")
         ));
-        assert!(drain_audio_commands().is_empty());
+        assert!(queue.is_empty());
     }
 }

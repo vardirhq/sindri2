@@ -27,13 +27,26 @@ support, because flagging a platform Sindri never compiles is noise.
 
 ## Licences
 
-Permissive licences only. A copyleft dependency would change what shipping a
-Sindri game requires, and that is a product decision rather than a build one.
+Permissive licences by default, with crate-scoped exceptions. A broadly copyleft
+dependency would change what shipping a Sindri game requires, and that is a
+product decision rather than a build one.
 
 The allowlist is kept to licences actually present in the tree, so adding a
 dependency under a new licence fails the check and a human decides. Font licences
 are on it: `egui` bundles typefaces under OFL-1.1 and Ubuntu-font-1.0, and Sindri
 ships Inter under OFL-1.1 itself.
+
+One exception exists, and it is named crate by crate rather than added to the
+allowlist: Symphonia's MP3 decoder is MPL-2.0. It is there because Rodio's
+permissive MP3 alternative pulls `slice-ring-buffer` 0.3.4, which has
+RUSTSEC-2025-0044 — double frees reachable through safe APIs — and no patched
+release, so the choice was a weak-copyleft file-level licence or a known
+memory-safety advisory. `exceptions` in `deny.toml` keeps the allowance to those
+four crates, so MPL-2.0 arriving anywhere else still fails the check.
+
+Worth revisiting: no Sindri project ships an MP3 today, and dropping the
+`symphonia-mp3` feature would remove the exception outright. It is easier to
+decide that now than once games depend on the format.
 
 ## Sources
 

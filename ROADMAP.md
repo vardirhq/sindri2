@@ -213,16 +213,18 @@ beside the asset system, behind the platform boundary, and explicitly outside
 the core crates; no numbered milestone had scheduled it, so the plan once
 described an engine that could not make a sound.
 
-- [ ] Define an audio asset type and its decoding path alongside textures
-- [ ] Add a platform audio boundary with a silent implementation, so tests and CI need no sound device and a headless run can still assert what was asked to play
-- [ ] Play one-shot sounds from gameplay through that boundary
-- [ ] Add looping music with volume, and tie stop and resume to the engine lifecycle so pausing the game pauses the sound
-- [ ] Add a browser backend behind the same boundary, including the user-gesture requirement browsers impose before any audio may start
-- [ ] Let a scene reference an audio asset through a component, and surface audio in the editor's project browser
+- [x] Define an audio asset type and its decoding path alongside textures
+- [x] Add a platform audio boundary with a silent implementation, so tests and CI need no sound device and a headless run can still assert what was asked to play
+- [x] Play one-shot sounds from gameplay through that boundary
+- [x] Add looping music with volume, and tie stop and resume to the engine lifecycle so pausing the game pauses the sound
+- [x] Add a browser backend behind the same boundary, including the user-gesture requirement browsers impose before any audio may start
+- [x] Let a scene reference an audio asset through a component, and surface audio in the editor's project browser (the browser lists audio; the editor cannot play a clip, and nothing gathers the audio a scene names the way `referenced_textures` does)
 
 Exit gate: the companion game plays a sound when something happens, natively and
 in a browser, and a headless test can assert it was asked to without a sound
-device existing.
+device existing. Met: `scripts/browser/smoke.mjs` watches what each `play()`
+promise settles to, so a clip a browser refuses is a failed check rather than a
+console line nobody reads.
 
 ## Milestone 7 — Editor/runtime protocol and minimal editor
 

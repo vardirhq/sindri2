@@ -23,9 +23,12 @@ jobs:
           components: clippy,rustfmt
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all --check
-      # Native audio goes through Rodio/CPAL, whose Linux backend links ALSA.
-      # Install that build dependency before clippy: clippy compiles the native
-      # dependency graph too, so doing this only before tests is already too late.
+      # Everything the rest of the job needs from the system, installed before
+      # clippy rather than before the tests. Clippy compiles the native
+      # dependency graph, so ALSA — which Rodio's CPAL backend links on Linux —
+      # has to be here already; and SINDRI_REQUIRE_GPU makes a missing adapter
+      # fail the GPU tests rather than skip them on the one machine installed to
+      # run them.
       #
       # The image does not name a mirror in its sources at all: it points them
       # at a mirrorlist, and Azure's mirror is the first entry in it. When that
@@ -71,9 +74,6 @@ jobs:
           apt_get update
           apt_get install --yes imagemagick libasound2-dev libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
       - run: cargo clippy --workspace --all-targets --all-features
-      # Before the tests, not only before the captures: the workspace has GPU
-      # tests now, and SINDRI_REQUIRE_GPU makes a missing adapter fail them
-      # rather than skip them on the one machine installed to run them.
       - name: Test
         env:
           WGPU_BACKEND: vulkan

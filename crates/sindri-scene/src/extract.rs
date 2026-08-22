@@ -136,15 +136,11 @@ impl SceneExtractor {
         // belongs to. Inventing one would create a valid-looking component
         // that cannot ever resolve.
         components.register::<GridOccupantComponent>("Grid Occupant")?;
-        components.register_with_default::<AudioSourceComponent>(
-            "Audio Source",
-            serde_json::json!({
-                "clip": "",
-                "autoplay": false,
-                "looping": false,
-                "volume": 1.0
-            }),
-        )?;
+        // No default payload, for the reason the registry states: a blank one
+        // would name the empty clip, and a button that adds a component the
+        // engine then rejects is worse than no button. `sindri.text` and
+        // `sindri.sprite_animation` are registered the same way.
+        components.register::<AudioSourceComponent>("Audio Source")?;
         Ok(Self { components })
     }
 

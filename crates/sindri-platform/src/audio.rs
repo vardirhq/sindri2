@@ -276,10 +276,20 @@ impl AudioBackend for NativeAudioBackend {
     }
 }
 
+/// One playing element and the handler watching it fail.
+///
+/// The rejection handler has to outlive the promise it is attached to, and
+/// nothing else here would keep it alive, so the voice owns it and drops it.
+#[cfg(target_arch = "wasm32")]
+struct BrowserVoice {
+    element: web_sys::HtmlAudioElement,
+    _on_rejected: wasm_bindgen::closure::Closure<dyn FnMut(wasm_bindgen::JsValue)>,
+}
+
 #[cfg(target_arch = "wasm32")]
 pub struct BrowserAudioBackend {
     clips: BTreeMap<String, String>,
-    voices: BTreeMap<AudioVoiceId, web_sys::HtmlAudioElement>,
+    voices: BTreeMap<AudioVoiceId, BrowserVoice>,
     next_voice: u64,
     unlocked: bool,
 }
@@ -337,6 +347,8 @@ impl AudioBackend for BrowserAudioBackend {
     }
 
     fn play(&mut self, clip: &str, settings: PlaybackSettings) -> Result<AudioVoiceId, AudioError> {
+        use wasm_bindgen::{JsValue, closure::Closure};
+
         if !self.unlocked {
             return Err(AudioError::Locked);
         }
@@ -349,25 +361,45 @@ impl AudioBackend for BrowserAudioBackend {
         })?;
         element.set_loop(settings.mode == PlaybackMode::Loop);
         element.set_volume(f64::from(settings.volume.clamp(0.0, 1.0)));
-        let _playback = element
+        // `play()` hands back a Promise, and a browser refusing to play rejects
+        // it rather than throwing: an unsupported sample rate, an unreadable
+        // container, or a missing gesture all arrive later. Dropping it means
+        // the failure surfaces only as an unhandled rejection in the console
+        // while this returns a voice the caller believes is playing, which is
+        // exactly how three unplayable clips shipped. There is nowhere
+        // synchronous to report it to, so it is logged where a browser failure
+        // is looked for, and the voice is dropped so nothing pauses or stops a
+        // sound that never started.
+        let playback = element
             .play()
-            .map_err(|error| AudioError::Browser(format!("playback was rejected: {error:?}")))?;
+            .map_err(|error| AudioError::Browser(format!("playback was refused: {error:?}")))?;
+        let failed = clip.to_owned();
+        let on_rejected = Closure::<dyn FnMut(JsValue)>::new(move |error: JsValue| {
+            log::error!("audio clip '{failed}' did not play: {error:?}");
+        });
+        let _ = playback.catch(&on_rejected);
         let voice = AudioVoiceId(self.next_voice);
         self.next_voice = self.next_voice.wrapping_add(1);
-        self.voices.insert(voice, element);
+        self.voices.insert(
+            voice,
+            BrowserVoice {
+                element,
+                _on_rejected: on_rejected,
+            },
+        );
         Ok(voice)
     }
 
     fn stop(&mut self, voice: AudioVoiceId) {
-        if let Some(element) = self.voices.remove(&voice) {
-            let _ = element.pause();
-            element.set_current_time(0.0);
+        if let Some(voice) = self.voices.remove(&voice) {
+            let _ = voice.element.pause();
+            voice.element.set_current_time(0.0);
         }
     }
 
     fn pause_all(&mut self) {
         for voice in self.voices.values() {
-            let _ = voice.pause();
+            let _ = voice.element.pause();
         }
     }
 
@@ -376,14 +408,14 @@ impl AudioBackend for BrowserAudioBackend {
             return;
         }
         for voice in self.voices.values() {
-            let _ = voice.play();
+            let _ = voice.element.play();
         }
     }
 
     fn stop_all(&mut self) {
         for (_, voice) in std::mem::take(&mut self.voices) {
-            let _ = voice.pause();
-            voice.set_current_time(0.0);
+            let _ = voice.element.pause();
+            voice.element.set_current_time(0.0);
         }
     }
 

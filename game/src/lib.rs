@@ -24,7 +24,7 @@ use sindri_core::{
     AssetId, ComponentSchemaRegistry, FixedStepConfig, SceneDocument, SpriteSheetDocument, World,
     sheet_id_for,
 };
-use sindri_decay::{AudioCommand, ScriptComponent, ScriptSources, Scripts, drain_audio_commands};
+use sindri_decay::{AudioCommand, ScriptComponent, ScriptSources, Scripts};
 use sindri_desktop::{AppContext, DesktopApp, Flow, WindowConfig};
 #[cfg(target_arch = "wasm32")]
 use sindri_platform::BrowserAudioBackend;
@@ -292,7 +292,8 @@ impl Session {
         let report =
             self.scripts
                 .advance(world, &self.components, &self.sources, input, delta_seconds);
-        self.pending_audio.extend(drain_audio_commands());
+        self.pending_audio
+            .extend(self.scripts.take_audio_commands());
         // A failing script says so once rather than being swallowed. Nothing
         // here stops the game: the others keep running, which is the same
         // arrangement the editor uses.
@@ -337,14 +338,32 @@ impl Session {
         Ok(())
     }
 
+    /// Performs what the scripts asked for, and keeps playing if a sound cannot.
+    ///
+    /// A clip nobody shipped, or a browser that has not seen a gesture yet, is
+    /// reported rather than fatal — the same posture the renderer takes when a
+    /// texture will not bind, where the frame still draws and the missing
+    /// reference is named. A typo in a sound should not end the game.
     fn flush_audio(&mut self, audio: &mut dyn AudioBackend) -> Result<(), GatherError> {
+        fn survivable(error: &AudioError) -> bool {
+            matches!(error, AudioError::MissingClip(_) | AudioError::Locked)
+        }
+
         for command in std::mem::take(&mut self.pending_audio) {
             match command {
                 AudioCommand::Play { clip, volume } => {
-                    audio.play(&clip, PlaybackSettings::once(volume))?;
+                    match audio.play(&clip, PlaybackSettings::once(volume)) {
+                        Ok(_) => {}
+                        Err(error) if survivable(&error) => log::warn!("{error}"),
+                        Err(error) => return Err(error.into()),
+                    }
                 }
                 AudioCommand::Loop { clip, volume } => {
-                    audio.play(&clip, PlaybackSettings::looping(volume))?;
+                    match audio.play(&clip, PlaybackSettings::looping(volume)) {
+                        Ok(_) => {}
+                        Err(error) if survivable(&error) => log::warn!("{error}"),
+                        Err(error) => return Err(error.into()),
+                    }
                 }
                 AudioCommand::StopAll => audio.stop_all(),
                 AudioCommand::PauseAll => audio.pause_all(),

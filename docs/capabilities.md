@@ -110,8 +110,14 @@ normalized volume. The generic component inspector can add and edit it, and the
 project browser recognises WAV/Ogg/MP3 files as audio assets. Decay exposes typed
 `Audio.play`, `loop`, `stop_all`, `pause_all`, and `resume_all` calls while only
 emitting intent, so the language itself retains its no-I/O boundary. Gather
-exercises the path end to end with background, pickup, and victory sounds on
-native and browser hosts.
+exercises the path end to end with background, pickup, and victory sounds. The
+looping background music has been observed playing in a real browser through
+`scripts/browser/smoke.mjs`, which fails if a clip a page asked for did not play.
+
+What audio does not do yet: nothing gathers the clips a scene names, the way
+`referenced_textures` and `referenced_fonts` do, so a host loads audio from its
+own list and the editor cannot load a scene's audio at all. The editor lists
+audio files and edits `sindri.audio`; it cannot play one.
 
 ### Grid geometry
 

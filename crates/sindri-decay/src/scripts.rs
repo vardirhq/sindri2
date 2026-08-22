@@ -17,7 +17,7 @@ use sindri_platform::InputState;
 use crate::{
     Blackboard, ScriptComponent, ScriptContext, ScriptExport, ScriptFailure, ScriptMessage,
     ScriptReport, WorldHost,
-    audio_host::AUDIO,
+    audio_host::{AUDIO, AudioCommand},
     exports::exports_of,
     surface::{
         ENTITY, FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, GridCall, HostFunction,
@@ -307,6 +307,8 @@ pub struct Scripts {
     programs: BTreeMap<String, Compiled>,
     running: BTreeMap<EntityId, Running>,
     blackboard: Blackboard,
+    /// What scripts asked to play, for whoever owns an audio device to perform.
+    audio: Vec<AudioCommand>,
 }
 
 impl Scripts {
@@ -318,6 +320,15 @@ impl Scripts {
     #[must_use]
     pub fn is_running(&self, entity: EntityId) -> bool {
         self.running.contains_key(&entity)
+    }
+
+    /// Takes what scripts asked to play since the last call.
+    ///
+    /// A caller with no audio device — the editor, a headless test — simply
+    /// never calls this, and the requests are dropped with the runner rather
+    /// than accumulating somewhere global.
+    pub fn take_audio_commands(&mut self) -> Vec<AudioCommand> {
+        std::mem::take(&mut self.audio)
     }
 
     #[must_use]
@@ -372,6 +383,7 @@ impl Scripts {
             programs,
             running,
             blackboard,
+            audio,
         } = self;
         let mut live = BTreeSet::new();
 
@@ -385,6 +397,7 @@ impl Scripts {
                 programs,
                 running,
                 blackboard,
+                audio,
                 world,
                 sources,
                 input,
@@ -427,6 +440,7 @@ fn tick(
     programs: &mut BTreeMap<String, Compiled>,
     running: &mut BTreeMap<EntityId, Running>,
     blackboard: &mut Blackboard,
+    audio: &mut Vec<AudioCommand>,
     world: &mut World,
     sources: &ScriptSources,
     input: &InputState,
@@ -459,7 +473,7 @@ fn tick(
     };
     let mut runtime = Runtime::new(
         &compiled.program,
-        WorldHost::new(world, entity, context, blackboard),
+        WorldHost::new(world, entity, context, blackboard, audio),
     );
 
     let started = match running.get(&entity) {
