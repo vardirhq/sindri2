@@ -476,6 +476,7 @@ mod tests {
         let (mut world, entity) = world();
         let input = InputState::default();
         let mut board = blackboard();
+        let mut audio = Vec::new();
         let environment = environment();
         let mut checked = 0;
 
@@ -494,12 +495,14 @@ mod tests {
                     terminal.display_name()
                 );
 
-                let mut host = WorldHost::new(&mut world, entity, context(&input), &mut board);
+                let mut host =
+                    WorldHost::new(&mut world, entity, context(&input), &mut board, &mut audio);
                 assert!(
                     matches!(host.load(None, &path), Ok(Some(Value::Number(_)))),
                     "the analyzer accepts {dotted} and the host cannot read it"
                 );
-                let mut host = WorldHost::new(&mut world, entity, context(&input), &mut board);
+                let mut host =
+                    WorldHost::new(&mut world, entity, context(&input), &mut board, &mut audio);
                 assert_eq!(
                     host.store(None, &path, Value::Number(1.0)),
                     Ok(true),
@@ -519,6 +522,7 @@ mod tests {
         let (mut world, entity) = world();
         let input = InputState::default();
         let mut board = blackboard();
+        let mut audio = Vec::new();
         let environment = environment();
         let mut checked = 0;
 
@@ -552,7 +556,8 @@ mod tests {
                     .collect(),
                     ..EntityData::default()
                 });
-                let mut host = WorldHost::new(&mut world, entity, context(&input), &mut board);
+                let mut host =
+                    WorldHost::new(&mut world, entity, context(&input), &mut board, &mut audio);
                 match member {
                     ExternalSymbol::Value(_) => assert!(
                         matches!(host.load(None, &path), Ok(Some(_))),
@@ -621,6 +626,7 @@ mod tests {
         let (mut world, entity) = world();
         let input = InputState::default();
         let mut board = blackboard();
+        let mut audio = Vec::new();
         let environment = environment();
 
         for (name, symbol) in environment.globals() {
@@ -628,7 +634,8 @@ mod tests {
                 continue;
             };
             let args = vec![Value::Number(1.0); signature.params.len()];
-            let mut host = WorldHost::new(&mut world, entity, context(&input), &mut board);
+            let mut host =
+                WorldHost::new(&mut world, entity, context(&input), &mut board, &mut audio);
             assert!(
                 matches!(
                     host.call(None, &Path(vec![name.to_owned()]), &args),

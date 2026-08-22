@@ -64,6 +64,31 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
 
+// Audio the engine plays is an element created with `new Audio()` and never
+// appended, so nothing in the DOM shows whether it worked. `play()` hands back
+// a promise, and a browser refusing a clip rejects it rather than throwing —
+// which is how three clips at a sample rate no browser decodes shipped while
+// every test passed. Recording how each promise settles is the only way this
+// check can tell "it played" from "it was asked to".
+await page.addInitScript(() => {
+  window.__plays = [];
+  const play = HTMLMediaElement.prototype.play;
+  HTMLMediaElement.prototype.play = function () {
+    const record = { settled: 'pending' };
+    window.__plays.push(record);
+    const element = this;
+    return play.call(this).then(
+      () => {
+        record.settled = 'played';
+        record.element = element;
+      },
+      (error) => {
+        record.settled = `refused: ${error.message}`;
+      },
+    );
+  };
+});
+
 const problems = [];
 page.on('console', (message) => {
   if (message.type() === 'error') problems.push(message.text());
@@ -76,6 +101,19 @@ const webgpu = await page.evaluate(() => Boolean(navigator.gpu));
 // startup, and for a few frames after it.
 await page.waitForTimeout(6000);
 
+// Browsers refuse audio until a real user gesture, and the engine unlocks on
+// the first key or pointer press. Without one, a page that plays sound looks
+// exactly like a page that has none.
+await page.mouse.click(480, 270);
+await page.keyboard.press('KeyD');
+await page.waitForTimeout(2000);
+const audio = await page.evaluate(() =>
+  window.__plays.map((record) => ({
+    settled: record.settled,
+    playedTo: record.element ? Number(record.element.currentTime.toFixed(2)) : 0,
+  })),
+);
+
 // A canvas the engine never configured keeps the HTML default of 300x150, which
 // is the difference between "the page loaded" and "the engine started".
 const canvas = await page.evaluate(() => {
@@ -87,11 +125,22 @@ await browser.close();
 server.close();
 
 const started = Boolean(canvas) && canvas.width > 300;
+// A page with no sound is not a failure; a page that asked for sound and did
+// not get it is. Playing to zero counts as refused: the promise resolves for a
+// clip that never advances, so the time is what separates the two.
+const refused = audio.filter(
+  (record) => record.settled !== 'played' || record.playedTo === 0,
+);
 console.log(`webgpu: ${webgpu ? 'yes' : 'no'}`);
 console.log(`canvas: ${canvas ? `${canvas.width}x${canvas.height}` : 'none'}`);
+console.log(
+  audio.length === 0
+    ? 'audio: none requested'
+    : `audio: ${audio.length - refused.length}/${audio.length} playing`,
+);
+for (const record of refused) console.log(`problem: audio ${record.settled}`);
 for (const problem of problems) console.log(`problem: ${problem}`);
-const real = problems;
-if (!webgpu || !started || real.length > 0) {
+if (!webgpu || !started || problems.length > 0 || refused.length > 0) {
   console.log('the page did not start the engine');
   process.exit(1);
 }

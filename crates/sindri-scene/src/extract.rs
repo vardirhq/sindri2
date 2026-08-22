@@ -14,9 +14,10 @@ use sindri_render::{
 use thiserror::Error;
 
 use crate::{
-    AnimationError, CameraComponent, GridNavigationComponent, GridOccupantComponent, MeshComponent,
-    MeshPrimitive, PROCEDURAL_TEXTURES, SpriteAnchor, SpriteAnimationComponent, SpriteAnimations,
-    SpriteComponent, SpriteSpace, TextComponent, TextureBindings, TilemapComponent, TilemapError,
+    AnimationError, AudioSourceComponent, CameraComponent, GridNavigationComponent,
+    GridOccupantComponent, MeshComponent, MeshPrimitive, PROCEDURAL_TEXTURES, SpriteAnchor,
+    SpriteAnimationComponent, SpriteAnimations, SpriteComponent, SpriteSpace, TextComponent,
+    TextureBindings, TilemapComponent, TilemapError,
 };
 
 /// Which projection the world camera uses.
@@ -135,6 +136,11 @@ impl SceneExtractor {
         // belongs to. Inventing one would create a valid-looking component
         // that cannot ever resolve.
         components.register::<GridOccupantComponent>("Grid Occupant")?;
+        // No default payload, for the reason the registry states: a blank one
+        // would name the empty clip, and a button that adds a component the
+        // engine then rejects is worse than no button. `sindri.text` and
+        // `sindri.sprite_animation` are registered the same way.
+        components.register::<AudioSourceComponent>("Audio Source")?;
         Ok(Self { components })
     }
 

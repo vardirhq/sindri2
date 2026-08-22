@@ -17,6 +17,7 @@ use sindri_platform::InputState;
 use crate::{
     Blackboard, ScriptComponent, ScriptContext, ScriptExport, ScriptFailure, ScriptMessage,
     ScriptReport, WorldHost,
+    audio_host::{AUDIO, AudioCommand},
     exports::exports_of,
     surface::{
         ENTITY, FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, GridCall, HostFunction,
@@ -68,10 +69,10 @@ impl ScriptSources {
 /// boundary Decay is built around: `decay-semantic` knows that `sin` exists
 /// only because this said so, and knows nothing about what it does.
 ///
-/// Every entry is derived from [`crate::surface`], the same description
-/// [`crate::WorldHost`] reaches the world through. A path the analyzer accepts
-/// and the host cannot answer is a clean compile followed by a runtime failure,
-/// so the two are not allowed to be written separately.
+/// Every entry is derived from the same host surface the runtime implements. A
+/// path the analyzer accepts and the host cannot answer is a clean compile
+/// followed by a runtime failure, so namespaces are described and implemented
+/// as one feature change.
 #[must_use]
 pub fn environment() -> Environment {
     let mut environment = Environment::new();
@@ -129,8 +130,6 @@ pub fn environment() -> Environment {
         game = game.with_function(
             *name,
             FunctionType {
-                // Both take a name and a number: the value to leave, or the
-                // fallback for a note nobody has left.
                 params: vec![Type::String, Type::F32],
                 return_type: match call {
                     GameCall::Get => Type::F32,
@@ -172,6 +171,7 @@ pub fn environment() -> Environment {
     environment.add_value(WORLD, Type::Named(WORLD.to_owned()));
 
     add_grid_surface(&mut environment);
+    add_audio_surface(&mut environment);
 
     environment
 }
@@ -205,6 +205,47 @@ fn add_grid_surface(environment: &mut Environment) {
     environment.add_value(GRID, Type::Named(GRID.to_owned()));
 }
 
+fn add_audio_surface(environment: &mut Environment) {
+    let audio = HostType::new()
+        .with_function(
+            "play",
+            FunctionType {
+                params: vec![Type::String, Type::F32],
+                return_type: Type::Unit,
+            },
+        )
+        .with_function(
+            "loop",
+            FunctionType {
+                params: vec![Type::String, Type::F32],
+                return_type: Type::Unit,
+            },
+        )
+        .with_function(
+            "stop_all",
+            FunctionType {
+                params: Vec::new(),
+                return_type: Type::Unit,
+            },
+        )
+        .with_function(
+            "pause_all",
+            FunctionType {
+                params: Vec::new(),
+                return_type: Type::Unit,
+            },
+        )
+        .with_function(
+            "resume_all",
+            FunctionType {
+                params: Vec::new(),
+                return_type: Type::Unit,
+            },
+        );
+    environment.add_type(AUDIO, audio);
+    environment.add_value(AUDIO, Type::Named(AUDIO.to_owned()));
+}
+
 /// The type a node has: a group is its name, a leaf is a number.
 fn describe_node(node: &Node) -> Type {
     match node {
@@ -215,11 +256,6 @@ fn describe_node(node: &Node) -> Type {
 }
 
 /// Every named type the surface tree mentions, with its members.
-///
-/// A type may appear more than once with different accessors -- `position` and
-/// `scale` are both a `Vec3` -- and that is fine, because a type is a shape and
-/// the accessors are the host's business. Collected rather than listed so a new
-/// group in the tree is described without a second edit.
 fn collect_types() -> Vec<(String, HostType)> {
     fn walk(members: &'static [(&'static str, Node)], into: &mut Vec<(String, HostType)>) {
         for (_, node) in members {
@@ -237,8 +273,6 @@ fn collect_types() -> Vec<(String, HostType)> {
     let mut types = Vec::new();
     walk(THIS, &mut types);
 
-    // What a reference reaches: the same data members as `this`, so one entity
-    // reads another's transform exactly as it reads its own.
     let mut entity = HostType::new();
     for (field, node) in THROUGH_REFERENCE {
         entity = entity.with_value(*field, describe_node(node));
@@ -247,12 +281,6 @@ fn collect_types() -> Vec<(String, HostType)> {
     types
 }
 
-/// Every `.decay` source the world's scripts name.
-///
-/// The mirror of `sindri_scene::referenced_textures`: a world's references are
-/// the statement of what it needs, and whoever owns the asset pipeline asks
-/// this what to fetch. Disabled scripts are included — an author toggling one
-/// back on should not then wait for a load.
 pub fn referenced_sources(world: &World, components: &ComponentSchemaRegistry) -> BTreeSet<String> {
     components
         .query::<ScriptComponent>(world)
@@ -262,31 +290,25 @@ pub fn referenced_sources(world: &World, components: &ComponentSchemaRegistry) -
         .collect()
 }
 
-/// A lowered source, kept with the text it came from so a changed file
-/// recompiles and an unchanged one does not.
 struct Compiled {
     source: String,
     program: IrProgram,
 }
 
 struct Running {
-    /// How long this instance has been running, which is per instance rather
-    /// than per world: a script spawned later has not been going as long.
     elapsed_seconds: f32,
-    /// Which source and container this instance came from, so that repointing
-    /// the component at another script starts a new instance rather than
-    /// feeding the old one someone else's fields.
     source: String,
     script: String,
     instance: ScriptInstance,
 }
 
-/// Every script instance in a world, and the programs behind them.
 #[derive(Default)]
 pub struct Scripts {
     programs: BTreeMap<String, Compiled>,
     running: BTreeMap<EntityId, Running>,
     blackboard: Blackboard,
+    /// What scripts asked to play, for whoever owns an audio device to perform.
+    audio: Vec<AudioCommand>,
 }
 
 impl Scripts {
@@ -295,30 +317,25 @@ impl Scripts {
         Self::default()
     }
 
-    /// Whether an entity currently has a live script instance.
     #[must_use]
     pub fn is_running(&self, entity: EntityId) -> bool {
         self.running.contains_key(&entity)
     }
 
-    /// A field of an entity's live instance, which is how a debugger or an
-    /// inspector would watch a script's state without stopping it.
+    /// Takes what scripts asked to play since the last call.
+    ///
+    /// A caller with no audio device — the editor, a headless test — simply
+    /// never calls this, and the requests are dropped with the runner rather
+    /// than accumulating somewhere global.
+    pub fn take_audio_commands(&mut self) -> Vec<AudioCommand> {
+        std::mem::take(&mut self.audio)
+    }
+
     #[must_use]
     pub fn field(&self, entity: EntityId, name: &str) -> Option<&Value> {
         self.running.get(&entity)?.instance.field(name)
     }
 
-    /// Compiles every source the world's scripts name, without running any.
-    ///
-    /// Separate from [`Self::advance`] because compiling and ticking answer to
-    /// different things: a script is compiled because a scene names it, and
-    /// ticked because time passed. Tying them together meant a scene at rest
-    /// compiled nothing — so a script that would not compile said nothing until
-    /// someone pressed Play, and an authoring panel had no way to find out what
-    /// a script wanted authored.
-    ///
-    /// Cheap to call every frame: a source whose text has not changed is not
-    /// recompiled.
     pub fn compile(
         &mut self,
         world: &World,
@@ -338,18 +355,6 @@ impl Scripts {
         failures
     }
 
-    /// Moves every enabled script in `world` on by `delta_seconds`.
-    ///
-    /// Returns what went wrong rather than stopping at the first failure. One
-    /// script must not be able to silence the others: in the editor that would
-    /// mean a typo in one object freezing every other, and the author would be
-    /// looking for the wrong bug.
-    ///
-    /// Instances are created here, on first sight of a scripted entity, and
-    /// their `start` runs before their first `update`. An entity that stops
-    /// being scripted — despawned, component removed, script disabled — loses
-    /// its instance, so what survives a call is exactly what the world still
-    /// justifies.
     pub fn advance(
         &mut self,
         world: &mut World,
@@ -374,12 +379,11 @@ impl Scripts {
             }
         };
 
-        // Disjoint field borrows: the programs are read while the instances are
-        // written, and a helper taking `&mut self` could not do both.
         let Self {
             programs,
             running,
             blackboard,
+            audio,
         } = self;
         let mut live = BTreeSet::new();
 
@@ -393,6 +397,7 @@ impl Scripts {
                 programs,
                 running,
                 blackboard,
+                audio,
                 world,
                 sources,
                 input,
@@ -405,10 +410,6 @@ impl Scripts {
                         .into_iter()
                         .map(|message| ScriptMessage { entity, message }),
                 ),
-                // A script that failed this frame keeps its instance: a runtime
-                // error is not a reason to throw away the state the author is
-                // trying to inspect, and restarting it would hide the failure
-                // behind a fresh `start` every frame.
                 Err(failure) => report.failures.push(failure),
             }
         }
@@ -417,32 +418,20 @@ impl Scripts {
         report
     }
 
-    /// What one script declares it wants authored.
-    ///
-    /// `None` when the source has not compiled yet — it may still be loading,
-    /// or it may not compile at all — which a panel shows as "waiting" rather
-    /// than as "no properties". Those are different, and a panel that confused
-    /// them would silently hide an author's fields.
     #[must_use]
     pub fn exports(&self, source: &str, script: &str) -> Option<Vec<ScriptExport>> {
         exports_of(&self.programs.get(source)?.program, script)
     }
 
-    /// Drops every instance and every compiled program.
-    ///
-    /// A script instance belongs to the world it was started against, and a
-    /// freshly loaded world reuses entity slots from the beginning — so keeping
-    /// them would attach one entity's running state to another.
     pub fn clear(&mut self) {
         self.programs.clear();
         self.running.clear();
-        // The board goes with them: what a game had counted halfway through a
-        // run belongs to that run.
         self.blackboard.clear();
+        // Requests from the run being cleared belong to it. Carrying them over
+        // would play the previous session's sounds into the next one.
+        self.audio.clear();
     }
 
-    /// The notes scripts have left each other, for a host that wants to show
-    /// them.
     #[must_use]
     pub const fn blackboard(&self) -> &Blackboard {
         &self.blackboard
@@ -454,6 +443,7 @@ fn tick(
     programs: &mut BTreeMap<String, Compiled>,
     running: &mut BTreeMap<EntityId, Running>,
     blackboard: &mut Blackboard,
+    audio: &mut Vec<AudioCommand>,
     world: &mut World,
     sources: &ScriptSources,
     input: &InputState,
@@ -486,12 +476,10 @@ fn tick(
     };
     let mut runtime = Runtime::new(
         &compiled.program,
-        WorldHost::new(world, entity, context, blackboard),
+        WorldHost::new(world, entity, context, blackboard, audio),
     );
 
     let started = match running.get(&entity) {
-        // Repointing the component at another script starts a new instance
-        // rather than feeding the old one someone else's fields.
         Some(current)
             if current.source == component.source && current.script == component.script =>
         {
@@ -539,10 +527,6 @@ fn tick(
     Ok(runtime.into_host().take_printed())
 }
 
-/// Lowers a source if it is new or has changed, and leaves it otherwise.
-///
-/// Comparing the text is all hot reload needs from this side: the editor
-/// replaces the source, and the next frame is running the new program.
 fn ensure_compiled(
     programs: &mut BTreeMap<String, Compiled>,
     sources: &ScriptSources,
@@ -587,13 +571,6 @@ fn ensure_compiled(
     Ok(())
 }
 
-/// Puts the scene's authored values into the instance, before `start` runs, so
-/// a script's first line sees what the scene gave it rather than its default.
-///
-/// A property is refused rather than ignored in every failing case -- not
-/// declared, not `@export`, or not a value Decay has. An authored number that
-/// silently goes nowhere is the exact shape of bug this whole component exists
-/// to make visible.
 fn apply_properties(
     instance: &mut ScriptInstance,
     container: &IrContainer,
@@ -627,11 +604,6 @@ fn apply_properties(
     Ok(())
 }
 
-/// A JSON property as a Decay value.
-///
-/// Arrays and objects are absent because Decay has no such values yet. Adding
-/// them here before the language has them would be authoring something no
-/// script can read.
 fn to_value(value: &serde_json::Value) -> Option<Value> {
     Some(match value {
         serde_json::Value::Number(number) => Value::Number(number.as_f64()?),
@@ -640,4 +612,32 @@ fn to_value(value: &serde_json::Value) -> Option<Value> {
         serde_json::Value::Null => Value::Null,
         _ => return None,
     })
+}
+
+#[cfg(test)]
+mod audio_surface_tests {
+    use decay_ir::lower_with_environment;
+
+    use super::environment;
+
+    #[test]
+    fn audio_calls_are_type_checked() {
+        let source = r#"
+            script Sound {
+                fn start() {
+                    Audio.play("audio/pickup.wav", 0.8);
+                    Audio.loop("audio/music.ogg", 0.4);
+                    Audio.pause_all();
+                    Audio.resume_all();
+                    Audio.stop_all();
+                }
+            }
+        "#;
+        let lowered = lower_with_environment(source, &environment());
+        assert!(
+            lowered.program.is_some(),
+            "{:?}",
+            lowered.analysis.diagnostics
+        );
+    }
 }

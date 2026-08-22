@@ -9,8 +9,8 @@
 use std::collections::BTreeSet;
 
 use sindri_core::{SceneComponent, SceneDocument, Transform3D, UnknownComponentPolicy, World};
-use sindri_decay::{ScriptComponent, ScriptSources, Scripts};
-use sindri_gather::{FONTS, extractor, sources, world};
+use sindri_decay::{AudioCommand, ScriptComponent, ScriptSources, Scripts};
+use sindri_gather::{AUDIO, FONTS, extractor, sources, world};
 use sindri_grid::{GridPoint, GridSpace, PlanePoint};
 use sindri_platform::InputState;
 use sindri_scene::{SceneExtractor, TilemapComponent};
@@ -255,6 +255,74 @@ fn walking_into_the_orbs_wins_the_game() {
         (banner - 1.0).abs() < 1.0e-6,
         "the banner shows once the game is won, and it is at {banner}"
     );
+
+    // The exit gate for audio: a headless run with no sound device can still
+    // prove what the game asked to play.
+    assert_the_sounds_a_won_game_asked_for(&mut scripts, orbs.len());
+}
+
+/// Five orbs make five pickups, and winning plays the fanfare once rather than
+/// every frame the banner shows.
+fn assert_the_sounds_a_won_game_asked_for(scripts: &mut Scripts, orbs: usize) {
+    let asked = scripts.take_audio_commands();
+    let played = |wanted: &str| {
+        asked
+            .iter()
+            .filter(|command| matches!(command, AudioCommand::Play { clip, .. } if clip == wanted))
+            .count()
+    };
+    assert_eq!(
+        played("audio/pickup.wav"),
+        orbs,
+        "one sound per orb: {asked:?}"
+    );
+    assert_eq!(
+        played("audio/victory.wav"),
+        1,
+        "the fanfare plays once: {asked:?}"
+    );
+    assert!(
+        scripts.take_audio_commands().is_empty(),
+        "draining takes the requests, so a host cannot play them twice"
+    );
+}
+
+/// Every sound the game can play is one it ships, and one that will decode.
+///
+/// The decode half is what a silent backend cannot tell you: it records the
+/// name of a clip without ever looking at its bytes, so three clips at a sample
+/// rate no browser accepts passed every test in the workspace and failed only
+/// in a real browser, from a promise nothing was watching.
+#[test]
+fn every_sound_the_game_plays_is_shipped_and_decodes() {
+    use sindri_assets::{AssetBytes, AssetDecoder, AudioAssetDecoder};
+    use sindri_core::AssetId;
+    use sindri_scene::AudioSourceComponent;
+
+    let world = world().expect("the scene loads");
+    let extractor = extractor().expect("the schemas register");
+    let shipped: BTreeSet<&str> = AUDIO.iter().map(|(id, _)| *id).collect();
+
+    for (_, source) in extractor
+        .components()
+        .query::<AudioSourceComponent>(&world)
+        .expect("the audio schema reads")
+    {
+        assert!(
+            shipped.contains(source.clip.as_str()),
+            "the scene plays '{}', which the binary does not carry",
+            source.clip
+        );
+    }
+
+    for (id, bytes) in AUDIO {
+        AudioAssetDecoder
+            .decode(AssetBytes::new(
+                (*id).parse::<AssetId>().expect("asset id"),
+                (*bytes).to_vec(),
+            ))
+            .unwrap_or_else(|error| panic!("{id} does not decode: {error}"));
+    }
 }
 
 /// A fresh game starts at nothing, so playing again is playing again.

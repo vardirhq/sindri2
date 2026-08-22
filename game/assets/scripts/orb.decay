@@ -51,6 +51,7 @@ script Orb {
         if dx * dx + dy * dy < reach * reach {
             taken = true;
             Game.set("score", Game.get("score", 0.0) + 1.0);
+            Audio.play("audio/pickup.wav", 0.75);
             // Gone rather than moved: an orb that flew off screen would still
             // be somewhere, and the floor is small.
             this.sprite.tint.a = 0.0;

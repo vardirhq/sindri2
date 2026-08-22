@@ -11,5 +11,18 @@ repository.workspace = true
 sindri-core = { path = "../sindri-core", version = "0.1.0" }
 thiserror.workspace = true
 
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# WAV and Vorbis stay on permissive alternate decoders. MP3 uses Symphonia:
+# Rodio's minimp3 alternative pulls slice-ring-buffer 0.3.4, which has
+# RUSTSEC-2025-0044 (safe-API double frees) and no fixed release. The resulting
+# MPL-2.0 exception is scoped to Symphonia's MP3 dependency tree in deny.toml.
+rodio = { version = "0.22.2", default-features = false, features = ["playback", "symphonia-mp3", "lewton", "hound"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+js-sys.workspace = true
+log.workspace = true
+wasm-bindgen.workspace = true
+web-sys = { workspace = true, features = ["Blob", "BlobPropertyBag", "HtmlAudioElement", "HtmlMediaElement", "MediaError", "Url"] }
+
 [lints]
 workspace = true

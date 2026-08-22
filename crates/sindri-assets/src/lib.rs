@@ -4,6 +4,7 @@
 //! GPU upload and caching remain separate stages so native and browser hosts can
 //! use the same pipeline without pretending browser fetches are synchronous.
 
+mod audio;
 mod decode;
 mod loader;
 mod manifest;
@@ -19,6 +20,7 @@ mod filesystem;
 #[cfg(not(target_arch = "wasm32"))]
 mod watch;
 
+pub use audio::{AudioAsset, AudioAssetDecoder, AudioFormat};
 pub use decode::{
     AssetCompletionApplyError, AssetDecodeError, AssetDecoder, DecodedAssetCompletion, FontAsset,
     FontAssetDecoder, SceneAssetDecoder, SpriteSheetAssetDecoder, TextAssetDecoder, TextureAsset,

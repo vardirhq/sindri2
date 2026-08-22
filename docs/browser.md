@@ -84,6 +84,32 @@ Two frames seven hundred milliseconds apart also differ by around three thousand
 pixels with nothing touched, because the orbs bob. That is the cheapest available
 proof that scripts are running rather than that a scene loaded.
 
+## Audio, the second time something ran there
+
+Audio was written for the browser and shipped without being loaded in one, and
+two faults compounded. `HtmlAudioElement::play()` hands back a promise, and the
+backend kept only the synchronous result — so a browser refusing a clip rejected
+that promise into the console while the backend reported a playing voice. What it
+was refusing was the sample rate: the three clips Gather shipped were 2 kHz, and
+Web Audio decodes 3 kHz upward. Every test in the workspace passed, because the
+silent backend records the *name* of a clip and never looks at its bytes.
+
+Both halves are now checked rather than remembered. `AudioAssetDecoder` rejects a
+WAV outside the rate browsers decode, so the bad clips fail at load on every
+target instead of only in a browser; the rejection handler is owned by the voice
+and logs what a browser refused; and `scripts/browser/smoke.mjs` presses a key to
+satisfy the gesture requirement, then watches how each `play()` promise settles.
+The looping background music has been observed playing to 1.75 s in headless
+Chromium over software Vulkan.
+
+CI runs both pages now — the cube and the game — rather than only compiling
+them, so the next thing that works on wasm32 and not in a browser fails a check
+instead of waiting for someone to look.
+
+The pickup and victory one-shots have not been observed in a browser — they need
+gameplay to reach an orb, which the smoke check does not drive. They take the
+same path as the loop, and the headless test asserts the game asks for them.
+
 ## What still has never run in a browser
 
 **Asset loading.** Not one HTTP request for an asset has been made by either

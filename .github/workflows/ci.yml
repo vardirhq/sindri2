@@ -23,10 +23,12 @@ jobs:
           components: clippy,rustfmt
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all --check
-      - run: cargo clippy --workspace --all-targets --all-features
-      # Before the tests, not only before the captures: the workspace has GPU
-      # tests now, and SINDRI_REQUIRE_GPU makes a missing adapter fail them
-      # rather than skip them on the one machine installed to run them.
+      # Everything the rest of the job needs from the system, installed before
+      # clippy rather than before the tests. Clippy compiles the native
+      # dependency graph, so ALSA — which Rodio's CPAL backend links on Linux —
+      # has to be here already; and SINDRI_REQUIRE_GPU makes a missing adapter
+      # fail the GPU tests rather than skip them on the one machine installed to
+      # run them.
       #
       # The image does not name a mirror in its sources at all: it points them
       # at a mirrorlist, and Azure's mirror is the first entry in it. When that
@@ -42,7 +44,7 @@ jobs:
       # timeouts give up instead, and the step timeout turns whatever is left
       # into a failure someone can read in two lines rather than a job nobody
       # can tell apart from a slow one.
-      - name: Install software Vulkan
+      - name: Install native build and software Vulkan dependencies
         env:
           DEBIAN_FRONTEND: noninteractive
         timeout-minutes: 5
@@ -70,7 +72,8 @@ jobs:
               -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 "$@"
           }
           apt_get update
-          apt_get install --yes imagemagick libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
+          apt_get install --yes imagemagick libasound2-dev libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
+      - run: cargo clippy --workspace --all-targets --all-features
       - name: Test
         env:
           WGPU_BACKEND: vulkan
@@ -119,3 +122,29 @@ jobs:
           cargo install wasm-bindgen-cli --version 0.2.127 --locked
           cargo test --package sindri-assets --target wasm32-unknown-unknown \
             --test decode_compatibility
+      # Compiling for wasm32 says nothing about whether the engine runs. It
+      # compiled for several releases while two faults made every page load fail,
+      # and later while audio could not play a single clip — the surface refused
+      # every canvas, a browser failure was recorded and never reported, and
+      # three clips at a rate no browser decodes were reported as playing. Each
+      # was found by loading the page, so loading the page is a check.
+      - name: Run the engine in a browser
+        timeout-minutes: 12
+        run: |
+          curl -fsSL https://rustwasm.github.io/wasm-pack/installer/init.sh | sh
+          npm install --prefix scripts/browser
+          npx --prefix scripts/browser playwright install --with-deps chromium
+          wasm-pack build examples/cube --target web --out-dir pkg
+          wasm-pack build game --target web --out-dir pkg
+          node scripts/browser/smoke.mjs examples/cube target/render-artifacts/browser-cube.png
+          node scripts/browser/smoke.mjs game target/render-artifacts/browser-gather.png
+      - name: Upload browser captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-captures
+          path: |
+            target/render-artifacts/browser-cube.png
+            target/render-artifacts/browser-gather.png
+          if-no-files-found: warn
+          retention-days: 14

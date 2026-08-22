@@ -4406,6 +4406,7 @@ const fn asset_icon(kind: AssetKind) -> MaterialIcon {
         AssetKind::Sprite | AssetKind::Sheet => ICON_GRID_VIEW,
         AssetKind::Mesh => ICON_VIEW_IN_AR,
         AssetKind::Script => ICON_CODE,
+        AssetKind::Audio => ICON_PLAY_ARROW,
         AssetKind::Other => ICON_DEPLOYED_CODE,
     }
 }

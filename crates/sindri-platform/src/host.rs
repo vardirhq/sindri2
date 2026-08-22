@@ -3,7 +3,7 @@ use std::{fmt, time::Duration};
 use sindri_core::{EngineCore, EngineError, EngineState, FixedStepConfig, FrameSteps, World};
 use thiserror::Error;
 
-use crate::{InputEvent, InputState};
+use crate::{AudioBackend, InputEvent, InputState, SilentAudioBackend};
 
 /// The point in a frame at which gameplay code ran.
 ///
@@ -49,6 +49,9 @@ pub struct FrameContext<'a> {
     pub world: &'a mut World,
     pub input: &'a InputState,
     pub time: FrameTime,
+    /// Audio is a platform service rather than simulation state. A headless host
+    /// supplies a silent recorder; desktop and browser hosts supply real output.
+    pub audio: &'a mut dyn AudioBackend,
 }
 
 /// Gameplay logic driven by a host.
@@ -86,26 +89,39 @@ pub trait Game {
     }
 }
 
-/// Drives an [`EngineCore`], input, and a [`Game`] as one loop.
+/// Drives an [`EngineCore`], input, audio, and a [`Game`] as one loop.
 ///
 /// The host owns no window, surface, or clock. A platform adapter feeds it
 /// input events and frame deltas, which is what lets the same loop run on a
-/// desktop, in a browser, and in a test with no windowing at all.
-#[derive(Clone, Debug)]
-pub struct EngineHost<G: Game> {
+/// desktop, in a browser, and in a test with no windowing or sound device.
+pub struct EngineHost<G: Game, A: AudioBackend = SilentAudioBackend> {
     engine: EngineCore,
     input: InputState,
+    audio: A,
     game: G,
 }
 
-impl<G: Game> EngineHost<G> {
-    /// Creates a host with an initialized engine, ready to start.
+impl<G: Game> EngineHost<G, SilentAudioBackend> {
+    /// Creates a headless-safe host. Audio requests are recorded by the silent
+    /// backend instead of touching a device.
     pub fn new(game: G, time: FixedStepConfig) -> Result<Self, HostError<G::Error>> {
+        Self::new_with_audio(game, time, SilentAudioBackend::default())
+    }
+}
+
+impl<G: Game, A: AudioBackend> EngineHost<G, A> {
+    /// Creates a host with an explicit platform audio backend.
+    pub fn new_with_audio(
+        game: G,
+        time: FixedStepConfig,
+        audio: A,
+    ) -> Result<Self, HostError<G::Error>> {
         let mut engine = EngineCore::new(time)?;
         engine.initialize()?;
         Ok(Self {
             engine,
             input: InputState::default(),
+            audio,
             game,
         })
     }
@@ -138,12 +154,30 @@ impl<G: Game> EngineHost<G> {
         &self.input
     }
 
+    pub const fn audio(&self) -> &A {
+        &self.audio
+    }
+
+    pub const fn audio_mut(&mut self) -> &mut A {
+        &mut self.audio
+    }
+
     pub const fn state(&self) -> EngineState {
         self.engine.state()
     }
 
     /// Records a host input event for the next frame.
+    ///
+    /// A keyboard or pointer press is also the browser's required user gesture
+    /// for audio. Unlocking here means games do not need a web-only "click to
+    /// enable sound" branch; the first real interaction opens the device.
     pub fn queue_input(&mut self, event: InputEvent) {
+        if matches!(
+            event,
+            InputEvent::KeyPressed(_) | InputEvent::ButtonPressed(_)
+        ) {
+            let _ = self.audio.unlock();
+        }
         self.input.apply(event);
     }
 
@@ -154,17 +188,21 @@ impl<G: Game> EngineHost<G> {
 
     pub fn pause(&mut self) -> Result<(), HostError<G::Error>> {
         self.engine.pause()?;
+        self.audio.pause_all();
         Ok(())
     }
 
     pub fn resume(&mut self) -> Result<(), HostError<G::Error>> {
         self.engine.resume()?;
+        self.audio.resume_all();
         Ok(())
     }
 
-    /// Stops the engine, giving gameplay a final call first.
+    /// Stops the engine, giving gameplay a final call first, then silencing
+    /// every voice so a host can tear down without an orphaned music stream.
     pub fn stop(&mut self) -> Result<(), HostError<G::Error>> {
         self.call(FramePhase::Stop, Duration::ZERO, Duration::ZERO, 0.0)?;
+        self.audio.stop_all();
         self.engine.stop()?;
         Ok(())
     }
@@ -214,6 +252,7 @@ impl<G: Game> EngineHost<G> {
             world: self.engine.world_mut(),
             input: &self.input,
             time,
+            audio: &mut self.audio,
         };
         let outcome = match phase {
             FramePhase::Start => self.game.start(&mut context),

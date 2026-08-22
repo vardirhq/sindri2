@@ -6,6 +6,7 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- End-to-end audio across assets, scene authoring, native/browser platform backends, typed Decay calls, editor discovery/component authoring, and Gather background/pickup/victory playback, with a silent backend for device-free tests.
 - Command-backed Scene-view translate, rotate, and scale gizmos with local/world
   orientation, optional movement/angle/scale snapping, Z-lock-safe movement,
   Q/W/E/R tool shortcuts, and one undo step per drag; transform rotation is now

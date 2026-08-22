@@ -172,6 +172,23 @@ The split X/Y reads are a consequence of Decay not having a structured vector
 or grid-coordinate value yet. They are kept behind one namespace so that value
 can replace the pair later without exposing tilemap storage to gameplay code.
 
+### Audio
+
+| Call | Returns |
+| --- | --- |
+| `Audio.play(clip, volume)` | nothing |
+| `Audio.loop(clip, volume)` | nothing |
+| `Audio.stop_all()` | nothing |
+| `Audio.pause_all()` | nothing |
+| `Audio.resume_all()` | nothing |
+
+`clip` is a logical audio asset ID and `volume` is a finite normalized number
+from 0 through 1. `play` is one-shot and `loop` repeats until stopped. Decay
+only emits typed playback intent; it never owns or talks to an audio device.
+The host drains those requests through the platform audio boundary, which keeps
+headless tests silent and lets browser playback obey its user-interaction unlock
+without teaching the language about either platform.
+
 ### The keyboard
 
 | Call | Returns |

@@ -1,15 +1,23 @@
 //! The boundary between Sindri and whatever is hosting it.
 //!
 //! A host owns the window, the surface, and the event loop. This crate defines
-//! what it must supply — a clock, input events, and frame deltas — and the loop
-//! that turns those into gameplay calls. Nothing here knows about `winit`, the
-//! DOM, or a GPU, which is what lets the same game run on a desktop, in a
-//! browser, and in a headless test.
+//! what it must supply — a clock, input events, frame deltas, and audio output —
+//! and the loop that turns those into gameplay calls. Nothing here knows about
+//! a GPU, and platform-specific audio stays behind the same boundary as input.
 
+mod audio;
 mod clock;
 mod host;
 mod input;
 
+#[cfg(target_arch = "wasm32")]
+pub use audio::BrowserAudioBackend;
+#[cfg(not(target_arch = "wasm32"))]
+pub use audio::NativeAudioBackend;
+pub use audio::{
+    AudioBackend, AudioClip, AudioError, AudioEvent, AudioVoiceId, PlaybackMode, PlaybackSettings,
+    SilentAudioBackend,
+};
 #[cfg(not(target_arch = "wasm32"))]
 pub use clock::SystemClock;
 pub use clock::{Clock, FrameTimer, ManualClock};
@@ -18,7 +26,8 @@ pub use input::{InputEvent, InputState, Key, MouseButton};
 
 pub mod prelude {
     pub use crate::{
-        Clock, EngineHost, FrameContext, FrameTime, FrameTimer, Game, InputEvent, InputState, Key,
-        ManualClock, MouseButton,
+        AudioBackend, AudioClip, AudioError, AudioVoiceId, Clock, EngineHost, FrameContext,
+        FrameTime, FrameTimer, Game, InputEvent, InputState, Key, ManualClock, MouseButton,
+        PlaybackMode, PlaybackSettings, SilentAudioBackend,
     };
 }
