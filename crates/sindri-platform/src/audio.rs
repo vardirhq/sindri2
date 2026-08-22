@@ -419,7 +419,7 @@ mod tests {
                 if *found == voice
                     && clip == "audio/pickup.wav"
                     && settings.mode == PlaybackMode::Once
-                    && settings.volume == 0.75
+                    && (settings.volume - 0.75).abs() < f32::EPSILON
         )));
     }
 
