@@ -184,7 +184,9 @@ shaped like the tool.
   assets bound from bytes rather than operating-system families. Gather embeds
   Inter and draws real text through this path natively, in browser builds, in
   the editor, and in its offscreen capture
-- [ ] Add font and text authoring: choose a font asset and edit text content in the inspector
+- [x] Add font and text authoring: the inspector edits multiline content and
+  chooses from the project browser's OpenType font assets; Add Component offers
+  Text only when a project font can complete its otherwise dishonest blank
 - [ ] Port particles after the render lifecycle is stable
 - [ ] Port layers, anchors, and sprite bounds — layers and the nine screen
   anchors work; bounds remain and will support viewport picking. Parallax is not
@@ -194,7 +196,7 @@ shaped like the tool.
 - [ ] Add optional Rapier2D adapter without core dependency, with collision layers from the start — physics ignores Z, so depth cannot keep a parallax background out of the player's way, and collision layers are not render layers
 - [ ] Add 2D pan/zoom viewport controls, which need a 2D scene rather than the screen-anchored overlay the demo uses
 - [x] Run the engine in a browser at all, which it never had been — two things had been broken since the browser target was added: a failure was recorded and never reported, because `spawn_app` hands the loop to the page before `run` returns, and the surface refused every canvas because a canvas offers no sRGB format. See `docs/browser.md`; `scripts/browser/smoke.mjs` is the check
-- [ ] Start the companion game and grow it through this milestone, verified natively and in browser — see "The companion game" below, which replaces the `hello-2d` and platformer slice this milestone used to schedule (started: `game/` plays natively, with a scripted offscreen capture in CI; still to do here is text; its floor is a tilemap on a sliced sheet, and it is playable in a browser)
+- [ ] Start the companion game and grow it through this milestone, verified natively and in browser — see "The companion game" below, which replaces the `hello-2d` and platformer slice this milestone used to schedule (started: `game/` plays natively and in a browser, with a scripted offscreen capture in CI; animation, its tilemap floor, and project-font title work, while authored parallax remains)
 
 Exit gate: Sindri Next matches the useful core of legacy 2D without inheriting its desktop/server/Lua coupling, and each ported system can be authored in the editor rather than only by hand in JSON.
 

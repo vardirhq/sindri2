@@ -89,6 +89,7 @@ It currently supports:
 - creating and deleting entities, including undo that restores deleted entities at their original handles
 - editing names and transforms
 - adding, removing, and editing component payloads through the component schema registry
+- adding text when the project has a font, editing multiline content, and choosing project font assets
 - editing unknown preserved components instead of silently throwing their data away
 - editing Decay `@export` properties directly in the inspector
 - undo/redo with drag merging and saved-state tracking
