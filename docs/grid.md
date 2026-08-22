@@ -118,7 +118,8 @@ shared edge. A diagonal is allowed only when all four cardinal edges around its
 corner are open; the separate corner-cutting policy still decides whether the
 two side cells themselves must be passable. Occupancy can combine both rules
 through `GridOccupancy::find_path_with_walls`, validating the complete moving
-footprint at each anchor while walls constrain transitions between anchors.
+footprint at each anchor and checking the wall crossed by every constituent
+footprint cell during each transition.
 Mismatched wall/path bounds are rejected explicitly.
 
 Engine components, editor authoring, typed Decay access, overlays, and a Gather
