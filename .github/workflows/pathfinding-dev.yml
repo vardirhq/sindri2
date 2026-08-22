@@ -41,3 +41,5 @@ jobs:
           git add -A
           git commit -m 'Complete pathfinding vertical slice'
           git push origin HEAD:codex/pathfinding-vertical
+
+# Re-trigger implementation after connector handoff.
