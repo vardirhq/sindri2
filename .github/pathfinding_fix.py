@@ -22,10 +22,9 @@ if old not in text:
 text = text.replace(old, new, 1)
 p.write_text(text)
 
-# The generic surface contract gives every Entity argument the same spare
-# entity. Make that spare a self-contained one-cell grid occupant as well as a
-# tilemap, so Grid.can_reach/step_toward exercise a valid navigation call rather
-# than failing because the test fixture omitted the components they require.
+# The generic surface contract used to give every Entity parameter one spare
+# object. Pathfinding has semantic roles, so give Grid calls an actual map,
+# mover, and target while preserving the generic spare for other namespaces.
 p = Path('crates/sindri-decay/src/surface.rs')
 text = p.read_text()
 old = '''                let spare = world.spawn(EntityData {
@@ -46,8 +45,13 @@ old = '''                let spare = world.spawn(EntityData {
                     ..EntityData::default()
                 });'''
 new = '''                let spare = world.spawn(EntityData {
+                    transform_3d: Some(Transform3D::default()),
+                    ..EntityData::default()
+                });
+                let grid_name = format!("surface-grid-{checked}");
+                let grid = world.spawn(EntityData {
                     source_id: Some(
-                        sindri_core::SceneEntityId::new("surface-grid")
+                        sindri_core::SceneEntityId::new(grid_name.clone())
                             .expect("stable test id"),
                     ),
                     transform_3d: Some(Transform3D::default()),
@@ -55,32 +59,89 @@ new = '''                let spare = world.spawn(EntityData {
                         (
                             super::TILEMAP_COMPONENT.to_owned(),
                             serde_json::json!({
-                                "columns": 1,
+                                "columns": 2,
                                 "rows": 1,
                                 "space": "world",
                                 "texture": "tiles.png",
                                 "palette": ["tile"],
-                                "tiles": [0]
+                                "tiles": [0, 0]
                             }),
                         ),
                         (
                             "sindri.grid_navigation".to_owned(),
                             serde_json::json!({ "walls": [] }),
                         ),
-                        (
-                            "sindri.grid_occupant".to_owned(),
-                            serde_json::json!({
-                                "grid": "surface-grid",
-                                "footprint": [[0, 0]]
-                            }),
-                        ),
                     ]
                     .into_iter()
                     .collect(),
                     ..EntityData::default()
+                });
+                let mover = world.spawn(EntityData {
+                    transform_3d: Some(Transform3D {
+                        position: [0.5, -0.5, 0.0],
+                        ..Transform3D::default()
+                    }),
+                    components: [(
+                        "sindri.grid_occupant".to_owned(),
+                        serde_json::json!({
+                            "grid": grid_name,
+                            "footprint": [[0, 0]]
+                        }),
+                    )]
+                    .into_iter()
+                    .collect(),
+                    ..EntityData::default()
+                });
+                let target = world.spawn(EntityData {
+                    transform_3d: Some(Transform3D {
+                        position: [1.5, -0.5, 0.0],
+                        ..Transform3D::default()
+                    }),
+                    ..EntityData::default()
                 });'''
 if old not in text:
     raise SystemExit('missing Decay surface spare fixture')
+text = text.replace(old, new, 1)
+old = '''                        let args: Vec<Value> = signature
+                            .params
+                            .iter()
+                            .map(|ty| match ty {
+                                Type::String => Value::String("Space".to_owned()),
+                                Type::Bool => Value::Bool(true),
+                                // A call declared to take an entity is given a
+                                // real one. Passing a number would exercise the
+                                // error path and call it success.
+                                Type::Named(named) if named == ENTITY => {
+                                    Value::Reference(spare.to_bits())
+                                }
+                                _ => Value::Number(1.0),
+                            })
+                            .collect();'''
+new = '''                        let args: Vec<Value> = signature
+                            .params
+                            .iter()
+                            .enumerate()
+                            .map(|(index, ty)| match ty {
+                                Type::String => Value::String("Space".to_owned()),
+                                Type::Bool => Value::Bool(true),
+                                // Grid calls need distinct semantic roles. A
+                                // generic entity is still enough everywhere else.
+                                Type::Named(named) if named == ENTITY && namespace == GRID => {
+                                    let entity = match index {
+                                        0 => mover,
+                                        1 => grid,
+                                        _ => target,
+                                    };
+                                    Value::Reference(entity.to_bits())
+                                }
+                                Type::Named(named) if named == ENTITY => {
+                                    Value::Reference(spare.to_bits())
+                                }
+                                _ => Value::Number(1.0),
+                            })
+                            .collect();'''
+if old not in text:
+    raise SystemExit('missing Decay surface argument builder')
 text = text.replace(old, new, 1)
 p.write_text(text)
 
