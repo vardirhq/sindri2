@@ -17,21 +17,40 @@
 
 use std::time::Duration;
 
-use sindri_assets::{AssetBytes, AssetDecoder, FontAssetDecoder, TextureAssetDecoder};
+use sindri_assets::{
+    AssetBytes, AssetDecoder, AudioAssetDecoder, FontAssetDecoder, TextureAssetDecoder,
+};
 use sindri_core::{
     AssetId, ComponentSchemaRegistry, FixedStepConfig, SceneDocument, SpriteSheetDocument, World,
     sheet_id_for,
 };
-use sindri_decay::{ScriptComponent, ScriptSources, Scripts};
+use sindri_decay::{
+    AudioCommand, ScriptComponent, ScriptSources, Scripts, drain_audio_commands,
+};
 use sindri_desktop::{AppContext, DesktopApp, Flow, WindowConfig};
-use sindri_platform::{EngineHost, FrameContext, Game, HostError, InputEvent, InputState, Key};
+use sindri_platform::{
+    AudioBackend, AudioClip, AudioError, EngineHost, FrameContext, Game, HostError, InputEvent,
+    InputState, Key, PlaybackSettings,
+};
+#[cfg(target_arch = "wasm32")]
+use sindri_platform::BrowserAudioBackend;
+#[cfg(not(target_arch = "wasm32"))]
+use sindri_platform::NativeAudioBackend;
 use sindri_render::{
     DepthTarget, FrameEncodeError, FrameRenderers, FrameTarget, SpriteBatchRenderer, TextRenderer,
     Texture2D, TextureError, TextureRegistry, TexturedCubeRenderer, Viewport,
     encode_prepared_frame,
 };
-use sindri_scene::{CameraView, SceneExtractor, SheetBindError, SpriteAnimations, TextureBindings};
+use sindri_scene::{
+    AudioSourceComponent, CameraView, SceneExtractor, SheetBindError, SpriteAnimations,
+    TextureBindings,
+};
 use thiserror::Error;
+
+#[cfg(target_arch = "wasm32")]
+type GatherAudio = BrowserAudioBackend;
+#[cfg(not(target_arch = "wasm32"))]
+type GatherAudio = NativeAudioBackend;
 
 /// The scene, and the four scripts that are the game.
 const SCENE: &str = include_str!("../assets/gather.scene.json");
@@ -83,6 +102,22 @@ pub const FONTS: &[(&str, &[u8])] = &[(
     include_bytes!("../assets/fonts/Inter.ttf"),
 )];
 
+/// The sounds proving the same asset -> platform path on desktop and web.
+pub const AUDIO: &[(&str, &[u8])] = &[
+    (
+        "audio/background.wav",
+        include_bytes!("../assets/audio/background.wav"),
+    ),
+    (
+        "audio/pickup.wav",
+        include_bytes!("../assets/audio/pickup.wav"),
+    ),
+    (
+        "audio/victory.wav",
+        include_bytes!("../assets/audio/victory.wav"),
+    ),
+];
+
 /// Decodes and binds the fonts the shipped scene names.
 pub fn bind_fonts(renderer: &mut TextRenderer) -> Result<(), GatherError> {
     for (id, bytes) in FONTS {
@@ -93,6 +128,29 @@ pub fn bind_fonts(renderer: &mut TextRenderer) -> Result<(), GatherError> {
         renderer.bind_font(*id, asset.family(), asset.bytes().to_vec());
     }
     Ok(())
+}
+
+/// Registers embedded audio through the same decoder the asset pipeline exposes.
+pub fn bind_audio(audio: &mut dyn AudioBackend) -> Result<(), GatherError> {
+    for (id, bytes) in AUDIO {
+        let asset = AudioAssetDecoder.decode(AssetBytes::new(
+            (*id).parse::<AssetId>()?,
+            (*bytes).to_vec(),
+        ))?;
+        let mime = asset.format().mime_type();
+        audio.register(AudioClip::new(*id, asset.into_bytes(), mime))?;
+    }
+    Ok(())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn gather_audio_backend() -> Result<GatherAudio, GatherError> {
+    Ok(NativeAudioBackend::new()?)
+}
+
+#[cfg(target_arch = "wasm32")]
+fn gather_audio_backend() -> Result<GatherAudio, GatherError> {
+    Ok(BrowserAudioBackend::new())
 }
 
 /// How each sliced texture is cut, shipped beside it.
@@ -202,6 +260,8 @@ pub struct Session {
     sources: ScriptSources,
     components: ComponentSchemaRegistry,
     animations: SpriteAnimations,
+    pending_audio: Vec<AudioCommand>,
+    autoplay_started: bool,
 }
 
 impl Session {
@@ -214,6 +274,8 @@ impl Session {
             sources: sources(),
             components,
             animations: SpriteAnimations::new(),
+            pending_audio: Vec::new(),
+            autoplay_started: false,
         }
     }
 
@@ -221,7 +283,8 @@ impl Session {
     ///
     /// Animations last because they read the world the scripts just wrote —
     /// a script that switches clip should be showing the new one this frame,
-    /// not next.
+    /// not next. Audio intent is drained after the scripts so a headless caller
+    /// can still run gameplay without owning a device.
     pub fn step(
         &mut self,
         world: &mut World,
@@ -231,6 +294,7 @@ impl Session {
         let report =
             self.scripts
                 .advance(world, &self.components, &self.sources, input, delta_seconds);
+        self.pending_audio.extend(drain_audio_commands());
         // A failing script says so once rather than being swallowed. Nothing
         // here stops the game: the others keep running, which is the same
         // arrangement the editor uses.
@@ -242,6 +306,53 @@ impl Session {
         }
         self.animations
             .advance(world, &self.components, delta_seconds)?;
+        Ok(())
+    }
+
+    fn start_autoplay(
+        &mut self,
+        world: &World,
+        audio: &mut dyn AudioBackend,
+    ) -> Result<(), GatherError> {
+        if self.autoplay_started {
+            return Ok(());
+        }
+        for (_, source) in self.components.query::<AudioSourceComponent>(world)? {
+            if !source.autoplay {
+                continue;
+            }
+            let settings = if source.looping {
+                PlaybackSettings::looping(source.normalized_volume())
+            } else {
+                PlaybackSettings::once(source.normalized_volume())
+            };
+            match audio.play(&source.clip, settings) {
+                Ok(_) => {}
+                // Browsers require a real key/pointer gesture. Keeping this
+                // false makes the next fixed step retry after queue_input has
+                // unlocked the backend, instead of silently losing music.
+                Err(AudioError::Locked) => return Ok(()),
+                Err(error) => return Err(error.into()),
+            }
+        }
+        self.autoplay_started = true;
+        Ok(())
+    }
+
+    fn flush_audio(&mut self, audio: &mut dyn AudioBackend) -> Result<(), GatherError> {
+        for command in std::mem::take(&mut self.pending_audio) {
+            match command {
+                AudioCommand::Play { clip, volume } => {
+                    audio.play(&clip, PlaybackSettings::once(volume))?;
+                }
+                AudioCommand::Loop { clip, volume } => {
+                    audio.play(&clip, PlaybackSettings::looping(volume))?;
+                }
+                AudioCommand::StopAll => audio.stop_all(),
+                AudioCommand::PauseAll => audio.pause_all(),
+                AudioCommand::ResumeAll => audio.resume_all(),
+            }
+        }
         Ok(())
     }
 
@@ -257,17 +368,19 @@ impl Game for Session {
     type Error = GatherError;
 
     fn fixed_update(&mut self, context: &mut FrameContext<'_>) -> Result<(), Self::Error> {
+        self.start_autoplay(context.world, context.audio)?;
         self.step(
             context.world,
             context.input,
             context.time.delta.as_secs_f32(),
-        )
+        )?;
+        self.flush_audio(context.audio)
     }
 }
 
 /// The game as the windowed host runs it.
 struct GatherApp {
-    engine: EngineHost<Session>,
+    engine: EngineHost<Session, GatherAudio>,
     scene: SceneExtractor,
     bindings: TextureBindings,
     textures: TextureRegistry,
@@ -283,10 +396,13 @@ impl DesktopApp for GatherApp {
     fn create(context: &AppContext<'_>) -> Result<Self, Self::Error> {
         let scene = extractor()?;
         let (textures, bindings) = bind_textures(context.device(), context.queue())?;
+        let mut audio = gather_audio_backend()?;
+        bind_audio(&mut audio)?;
 
-        let mut engine = EngineHost::new(
+        let mut engine = EngineHost::new_with_audio(
             Session::new(scene.components().clone()),
             FixedStepConfig::default(),
+            audio,
         )?;
         *engine.world_mut() = world()?;
         engine.start()?;
@@ -373,6 +489,8 @@ pub enum GatherError {
     #[error(transparent)]
     World(#[from] sindri_core::WorldError),
     #[error(transparent)]
+    Component(#[from] sindri_core::ComponentRegistryError),
+    #[error(transparent)]
     Asset(#[from] sindri_core::AssetIdError),
     #[error(transparent)]
     Sheet(#[from] sindri_core::SheetError),
@@ -380,6 +498,8 @@ pub enum GatherError {
     SheetBind(#[from] SheetBindError),
     #[error(transparent)]
     Decode(#[from] sindri_assets::AssetDecodeError),
+    #[error(transparent)]
+    Audio(#[from] AudioError),
     #[error(transparent)]
     Texture(#[from] TextureError),
     #[error(transparent)]
