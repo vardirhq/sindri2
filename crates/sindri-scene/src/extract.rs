@@ -14,9 +14,9 @@ use sindri_render::{
 use thiserror::Error;
 
 use crate::{
-    AnimationError, CameraComponent, MeshComponent, MeshPrimitive, PROCEDURAL_TEXTURES,
-    SpriteAnchor, SpriteAnimationComponent, SpriteAnimations, SpriteComponent, SpriteSpace,
-    TextComponent, TextureBindings, TilemapComponent, TilemapError,
+    AnimationError, CameraComponent, GridNavigationComponent, GridOccupantComponent, MeshComponent,
+    MeshPrimitive, PROCEDURAL_TEXTURES, SpriteAnchor, SpriteAnimationComponent, SpriteAnimations,
+    SpriteComponent, SpriteSpace, TextComponent, TextureBindings, TilemapComponent, TilemapError,
 };
 
 /// Which projection the world camera uses.
@@ -127,6 +127,14 @@ impl SceneExtractor {
                 "space": "world"
             }),
         )?;
+        components.register_with_default::<GridNavigationComponent>(
+            "Grid Navigation",
+            serde_json::json!({ "walls": [] }),
+        )?;
+        // No default: an occupant must name the stable ID of the grid it
+        // belongs to. Inventing one would create a valid-looking component
+        // that cannot ever resolve.
+        components.register::<GridOccupantComponent>("Grid Occupant")?;
         Ok(Self { components })
     }
 

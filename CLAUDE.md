@@ -9,9 +9,9 @@ browsers, with a native editor and the Decay gameplay language. It is a Cargo
 workspace being proven through one companion game: the engine core, platform
 boundary, GPU and renderer layers, asset pipeline, substantial 2D runtime,
 editor authoring surface, native game, and browser game exist. Screen-space text
-with project font assets and typed isometric gameplay coordinates exists;
-audio, physics, mature 3D, grid occupancy/pathfinding, project-level editor
-workflow, and export tooling do not.
+with project font assets, typed isometric gameplay coordinates, and authored
+world occupancy/pathfinding exist; audio, physics, mature 3D, grid authoring and
+Decay path access, project-level editor workflow, and export tooling do not.
 
 Four documents govern the work and are the source of truth over anything
 inferred from code:
@@ -84,7 +84,7 @@ crates/
   sindri-gpu/       wgpu adapter/device/queue and surface negotiation
   sindri-grid/      renderer-free grid coordinates, bounds, and projection math
   sindri-render/    target-independent renderers, frame stages, textures, cameras
-  sindri-scene/     built-in sindri.* components; world -> frame extraction
+  sindri-scene/     built-in sindri.* components; world -> frame/navigation adapters
   sindri-assets/    asset sources, load queue, decoding, URL resolution
   sindri/           public facade re-exporting the above (feature `render`)
 editor/             sindri-editor: native eframe/egui editor (publish = false)

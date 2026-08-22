@@ -74,6 +74,7 @@ can reach.
 - depth-tested 3D meshes, perspective and orthographic cameras, textured/tinted/layered 2D sprites, sprite sheets, and runtime sprite animation
 - orthogonal and isometric tilemaps extracted into the same sprite batches as loose world sprites
 - renderer-independent typed grid coordinates, bounds, neighbours, and reversible orthogonal/isometric projection math
+- authored grid walls and multi-cell occupants, with world-derived occupancy, placement validation, and deterministic A* paths
 - anchored, layered screen-space text rendered from project-owned OpenType font assets
 - deterministic offscreen PNG rendering exercised by CI
 - Decay scripts that run against the live world through a typed host surface
@@ -213,6 +214,7 @@ The detailed contracts live alongside the code:
 - [`docs/component-schema-registry.md`](docs/component-schema-registry.md) — component validation and authoring metadata
 - [`docs/scene-serialization.md`](docs/scene-serialization.md) — scene format and canonical round-tripping
 - [`docs/scene-extraction.md`](docs/scene-extraction.md) — world-to-frame extraction
+- [`docs/grid.md`](docs/grid.md) — grid geometry, occupancy, pathfinding, and world adapters
 - [`docs/asset-foundation.md`](docs/asset-foundation.md) — portable asset model
 - [`docs/rendering-transparency.md`](docs/rendering-transparency.md) — transparent rendering
 - [`docs/rendering-color.md`](docs/rendering-color.md) — colour handling

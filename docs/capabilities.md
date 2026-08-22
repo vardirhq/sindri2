@@ -107,9 +107,17 @@ screen coordinate conventions without introducing a renderer dependency.
 `sindri.tilemap` exposes the exact `GridSpace` and `GridBounds` its rendering and
 editor picking use. A map's complete transform is composed around that local
 grid, so moving, rotating, or scaling a map keeps drawn and picked cells in
-agreement. Decay can read an entity's continuous logical X/Y relative to that
-tilemap and place it back through the same projection and map transform. General
-camera/viewport conversion remains missing.
+agreement. `sindri.grid_navigation` adds authored internal wall edges without
+duplicating those bounds or projection settings, while `sindri.grid_occupant`
+names its grid by stable scene ID and carries a relative multi-cell footprint.
+`WorldGridNavigation` resolves those references, derives anchors from current
+world transforms, rejects conflicting or invalid placements as one incomplete
+snapshot, and exposes validated placement and wall-aware path queries.
+
+Decay can read an entity's continuous logical X/Y relative to a tilemap and
+place it back through the same projection and map transform. General
+camera/viewport conversion and typed Decay access to occupancy and paths remain
+missing.
 
 `docs/feature-integration-matrix.md` tracks those counterparts explicitly rather
 than allowing the runtime type to make the broader feature look complete.
@@ -448,8 +456,8 @@ settings gear.
   adapter is planned as optional rather than built in
 - No particles or authored parallax system. Renderer-free footprints,
   bounded occupancy, placement validation, symmetric wall edges, and
-  deterministic A* now exist, but have no engine, editor, Decay, or Gather
-  adapter yet
+  deterministic A* now have authored engine components and a world adapter,
+  but no editor, Decay, or Gather pathfinding integration yet
 - No optional TypeScript embedding SDK; browser games currently expose narrow
   application entry points and run their gameplay in Decay
 - No spawning from a script. Cross-entity lookup, access, existence checks, and

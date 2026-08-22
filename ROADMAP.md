@@ -268,9 +268,10 @@ Exit gate: imported glTF content, camera, lighting, and collision work in native
 - [ ] Add world/grid/screen conversion with round-trip property tests — partly done: both projections round-trip logical coordinates and arbitrary plane points across negative and positive space, upward/downward plane Y adapts world and screen conventions, and tilemaps now expose the exact grid space used by rendering and picking; camera/viewport transforms remain
 - [x] Add footprints, occupancy, placement validation, and wall edges —
   `sindri-grid` now owns normalized footprints, atomic bounded occupancy, and
-  symmetric internal wall edges consumed by A*; engine/editor/Decay adapters
-  remain tracked in the integration matrix
-- [ ] Add pathfinding overlays and interaction points — partly done: renderer-free walls, A*, and footprint-aware occupancy paths exist; overlays, authored interaction points, and cross-layer adapters remain
+  symmetric internal wall edges consumed by A*; authored engine components and
+  a validated world adapter now derive them from scene state, while editor and
+  Decay adapters remain tracked in the integration matrix
+- [ ] Add pathfinding overlays and interaction points — partly done: renderer-free walls, A*, footprint-aware occupancy paths, and the engine world adapter exist; overlays, authored interaction points, editor tooling, and typed Decay access remain
 - [ ] Define deterministic sprite-isometric depth keys
 - [ ] Add integer zoom and generated-anchor metadata
 - [ ] Add orthographic 3D isometric camera helpers
