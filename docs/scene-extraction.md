@@ -250,15 +250,21 @@ batches loose sprites use, keyed by the same space, layer, and texture. So a til
 one layer and one texture share a draw and sort against each other, and a prop can sit between two
 rows of floor rather than behind a plane of it.
 
-**The projection is the tilemap's own layout rule**, not Milestone 9's grid module. `orthogonal` runs
+**The projection is authored on the tilemap and calculated by `sindri-grid`.** `orthogonal` runs
 columns +X and rows -Y, so the map reads the way the array does. `isometric` runs them along the two
-diagonals at half steps, which is what makes a square grid look like a diamond floor. Milestone 9
-still owns coordinates, neighbours, and pathfinding for whatever wants them; a renderer needed to
-know where a tile goes before any of that existed.
+diagonals at half steps, which is what makes a square grid look like a diamond floor. The component
+adapts the grid's neutral plane to Sindri's upward world Y and exposes the exact `GridSpace` and
+`GridBounds` it uses, so rendering, editor picking, and later gameplay do not carry three versions
+of the formula.
 
 `tile_to_local` and `local_to_tile` are inverses, and a test holds them to that on every cell of both
 projections. That property is the whole of what painting a map will need from the maths — turning a
 click into a tile — so it is worth more than the two functions look.
+
+The entity transform applies to the whole projected grid. Extraction composes the map model with
+each cell's local translation and size, so rotating or scaling a map also rotates or scales the
+cell centres. Editor picking already inverts that same model; keeping the composition identical is
+what makes a painted cell be the one under the visible pointer.
 
 A map that is not the shape it claims, or whose cell indexes past its palette, fails extraction with
 the numbers in the message rather than drawing part of a floor. It still *opens*, for the reason a

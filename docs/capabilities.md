@@ -101,8 +101,13 @@ when both are held, so opposed movement keys cannot resolve by event order.
 grid and plane points, finite rectangular bounds, deterministic cardinal and
 eight-way neighbour queries, and validated orthogonal/isometric projection.
 Cell centres and arbitrary fractional points round-trip through both projections
-across negative and positive space. The crate has no engine, renderer, editor,
-or Decay dependency; world-axis and camera/screen adapters remain to be built.
+across negative and positive space. Upward/downward plane Y adapts world and
+screen coordinate conventions without introducing a renderer dependency.
+
+`sindri.tilemap` exposes the exact `GridSpace` and `GridBounds` its rendering and
+editor picking use. A map's complete transform is composed around that local
+grid, so moving, rotating, or scaling a map keeps drawn and picked cells in
+agreement. Camera/viewport conversion and a Decay grid surface remain missing.
 
 `docs/feature-integration-matrix.md` tracks those counterparts explicitly rather
 than allowing the runtime type to make the broader feature look complete.

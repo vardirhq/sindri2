@@ -21,17 +21,19 @@ continuous position in the same axes.
 - orthogonal: `plane = (x * width, y * height)`
 - isometric: `plane = ((x - y) * width / 2, (x + y) * height / 2)`
 
-Both include a configurable plane origin. `unproject` is the algebraic inverse,
-and `plane_to_grid` rounds the continuous result to the containing cell. Exact
-half-cell ties follow Rust's `f64::round`: away from zero. Tests cover every
+Both include a configurable plane origin and an explicit plane-Y direction:
+screen-like planes grow down, while Sindri world XY grows up. `unproject` is the algebraic inverse,
+and `plane_to_grid` assigns the continuous result to a half-open cell: a shared
+boundary belongs to the cell in the positive grid direction. Tests cover every
 cell in a 257×257 region on both projections, negative coordinates, fractional
 positions, non-square cells, and a non-zero origin.
 
 The projected plane is intentionally not named world or screen space. A 2D
 sprite game may map it to world XY, an orthographic 3D game may map it to world
-XZ, and a UI may map it to pixels. Those adapters own axis direction, camera,
-pan, zoom, and viewport centring. Keeping them outside this crate is what lets
-the gameplay grid be shared.
+XZ, and a UI may map it to pixels. `PlaneYAxis` handles the first distinction;
+camera projection, pan, zoom, and viewport centring remain presentation
+adapters. Keeping those outside this crate is what lets the gameplay grid be
+shared.
 
 ## What came from the earlier projects
 
@@ -54,11 +56,11 @@ The new A* layer should instead accept an explicit movement topology and cost
 policy, use an admissible heuristic for that policy, and know nothing about
 players.
 
-The existing `sindri.tilemap` projection remains separate for now. It answers
-where a render component draws its rows in local XY (including the engine's
-upward world-Y convention); `sindri-grid` answers gameplay geometry on a neutral
-plane. An adapter should replace duplicated formulae only after Gather proves
-the orientation and centre conventions together.
+`sindri.tilemap` is the first engine adapter. It keeps projection and tile size
+in the serialized component, then exposes the `GridSpace` and `GridBounds` that
+rendering and editor picking use. The adapter flips the neutral grid into
+Sindri's upward world Y, and extraction composes every cell with the map's full
+transform so a rotated or scaled map draws where picking says it is.
 
 ## Current and next
 
@@ -66,11 +68,13 @@ This first slice provides:
 
 - `GridCoord`, continuous `GridPoint`, and `PlanePoint`
 - finite `GridBounds` and stable bounded/unbounded neighbour iteration
-- validated orthogonal and isometric `GridSpace`
+- validated orthogonal and isometric `GridSpace`, with upward/downward plane Y
 - reversible continuous projection and cell lookup
+- a tilemap adapter shared by frame extraction and editor picking
 - explicit errors for invalid sizes, non-finite points, overflow, and values
   outside the integer coordinate domain
 
-The next slice should add the engine world/screen adapters and move Gather's
-logical coordinates onto this crate. Footprints and occupancy should follow
-before A*, because pathfinding needs a truthful definition of passability.
+The next slice should give Decay a typed grid-position surface and move Gather's
+logical coordinates onto this crate without putting gameplay rules into Rust.
+Footprints and occupancy should follow before A*, because pathfinding needs a
+truthful definition of passability.
