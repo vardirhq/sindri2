@@ -46,7 +46,10 @@ old = '''                let spare = world.spawn(EntityData {
                     ..EntityData::default()
                 });'''
 new = '''                let spare = world.spawn(EntityData {
-                    source_id: Some("surface-grid".parse().expect("stable test id")),
+                    source_id: Some(
+                        sindri_core::SceneEntityId::new("surface-grid")
+                            .expect("stable test id"),
+                    ),
                     transform_3d: Some(Transform3D::default()),
                     components: [
                         (
