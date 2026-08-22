@@ -68,11 +68,22 @@ with no explanation is worse than a view with a message on it.
 
 ## Moving the view without moving the scene
 
-Left drag orbits, middle drag or shift-drag pans, and the wheel zooms. All three
-go through `CameraView`, so the authored camera stays exactly where the scene put
-it and only the editor's view of it moves — which is why a save after looking
-around writes nothing. Panning can carry the subject off screen, so there is a
-reset control rather than an expectation that the viewer finds their way back.
+Primary drag orbits when no editing handle owns it, secondary drag always
+orbits, middle drag or shift-drag pans, and the wheel zooms. All four go through
+`CameraView`, so the authored camera stays exactly where the scene put it and
+only the editor's view of it moves — which is why a save after looking around
+writes nothing. Panning can carry the subject off screen, so there is a reset
+control rather than an expectation that the viewer finds their way back.
+
+Q/W/E/R choose Select, Move, Rotate, and Scale. A selected transform's handles
+are projected and hit-tested from the same `ViewCamera` that drew the world.
+When a handle is hovered or dragging it takes primary input before camera orbit
+or viewport selection. Local/world orientation changes move and rotation axes;
+scale remains local because `Transform3D::scale` is local. Optional snapping
+quantizes translation, rotation, and scale, and a locked transform's movement
+axes are constrained to its XY layer. Every frame of a drag is a
+`SetTransform3D` transaction with one merge key, so release leaves one undo
+step rather than a trail of intermediate transforms.
 
 When tile painting is enabled, primary drag belongs to the brush and secondary
 drag orbits; middle or Shift-drag still pans. A pointer is not interpreted by a

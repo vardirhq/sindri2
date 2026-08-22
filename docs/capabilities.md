@@ -318,8 +318,9 @@ frame.
   every entity may own children, child-bearing rows fold with state remembered
   across launches, search retains and temporarily opens each match's ancestor
   path, selection works anywhere on a row, and empty space or Escape clears it
-- Inspector edits of name and the transform, including the Z lock, which takes
-  away the Z drag while it is on
+- Inspector edits of name and the complete transform: position, Euler-degree
+  rotation backed by the stored quaternion, scale, and the Z lock, which takes
+  away movement off the current layer
 - **Editing any component's fields in the inspector**, driven by the stored
   payload rather than by hand-written rows: numbers get drags, booleans get
   checkboxes, text gets a field, and a short numeric array gets a labelled row.
@@ -389,6 +390,10 @@ frame.
   renderer's unit quad and cube dimensions, resolves transparent overlaps by
   layer and depth, honours opaque occlusion, and clears selection on empty
   space. Camera drags and tile painting retain the pointer when active
+- Scene-view Select, Move, Rotate, and Scale tools on Q/W/E/R. Handles use the
+  exact rendered camera, support local/world orientation and optional
+  translation/angle/scale snapping, respect Z lock, and merge a whole drag into
+  one undoable command-history step
 - Scene and Game views, the latter rendering through the authored camera with no
   editor chrome painted over it — both live at once in the `2 by 3` layout
 - Two workspace layouts chosen from **View → Layout** and remembered between
@@ -425,12 +430,8 @@ gone, and what is left here is waiting on a build rather than on a handler.
 
 - **Play and Pause** — they run sprite animation and Decay scripts. No other gameplay
   is stepped, so the demo's own turning cube does not turn
-- **Rotation** in the inspector — the word "Quaternion". The format stores a
-  rotation and the renderer applies it; nothing edits it
-
 Removed rather than left drawn, because each was a promise about a feature that
-does not exist: the Select, Move, Rotate, and Scale tool modes, which set a mode
-nothing read and had no gizmos to drive; "Scene", "Build", "Tools", and "Help",
+does not exist: "Scene", "Build", "Tools", and "Help",
 which were labels shaped like menus; the top bar's project name; the hierarchy's
 old inert add-entity button and the inspector's old inert Add Component button,
 both since replaced by working command-backed controls; the inspector's Tag and
@@ -471,8 +472,9 @@ settings gear.
 - Cannot create or delete an asset
 - No first-class project model or multi-scene workspace. The Project dock does
   read and filter the directory containing the open scene
-- No gizmos or multi-select; viewport selection currently covers world-space
-  sprites, filled tilemap cells, and meshes rather than screen-space overlays
+- No multi-select; viewport selection and transform gizmos currently cover
+  world-space sprites, filled tilemap cells, and meshes rather than screen-space
+  overlays
 - No prefabs, no play-mode-against-a-copy, no build or export controls
 - No versioned editor protocol; the editor and runtime are one process
 - Cannot open or edit a Decay script's *source* — the project browser lists

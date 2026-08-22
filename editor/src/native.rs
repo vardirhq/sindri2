@@ -16,13 +16,14 @@ use egui_material_icons::{
     MaterialIcon,
     icons::{
         ICON_ACCOUNT_TREE, ICON_ADD, ICON_CAMERA_ALT, ICON_CENTER_FOCUS_STRONG, ICON_CODE,
-        ICON_DELETE, ICON_DEPLOYED_CODE, ICON_DESCRIPTION, ICON_FOLDER, ICON_GRID_VIEW, ICON_IMAGE,
-        ICON_KEYBOARD_ARROW_DOWN, ICON_KEYBOARD_ARROW_RIGHT, ICON_LABEL, ICON_OPEN_WITH,
-        ICON_PAUSE, ICON_PLAY_ARROW, ICON_REDO, ICON_REFRESH, ICON_SEARCH, ICON_STOP, ICON_UNDO,
-        ICON_VIEW_IN_AR, ICON_VIEW_LIST,
+        ICON_DELETE, ICON_DEPLOYED_CODE, ICON_DESCRIPTION, ICON_FOLDER, ICON_GRID_4X4,
+        ICON_GRID_VIEW, ICON_IMAGE, ICON_KEYBOARD_ARROW_DOWN, ICON_KEYBOARD_ARROW_RIGHT,
+        ICON_LABEL, ICON_MOVE, ICON_OPEN_WITH, ICON_PAUSE, ICON_PLAY_ARROW, ICON_REDO,
+        ICON_REFRESH, ICON_ROTATE_RIGHT, ICON_SCALE, ICON_SEARCH, ICON_SELECT, ICON_STOP,
+        ICON_UNDO, ICON_VIEW_IN_AR, ICON_VIEW_LIST,
     },
 };
-use glam::{Mat4, Vec2 as GlamVec2, Vec3};
+use glam::{EulerRot, Mat4, Quat, Vec2 as GlamVec2, Vec3};
 use serde_json::Value;
 use sindri_core::{
     CommandBuffer, CommandHistory, ComponentMetadata, ComponentSchemaRegistry, EngineLifecycle,
@@ -41,6 +42,7 @@ use sindri_scene::{
 use crate::{
     animation::{self, AnimationTool},
     console::{Console, Entry, Level},
+    gizmo::{self, Axis, GizmoDrag, GizmoMode, GizmoSpace, Snapping},
     input::EditorInput,
     inspector,
     picking,
@@ -449,6 +451,10 @@ struct EditorApp {
     viewport_pitch: f32,
     viewport_zoom: f32,
     viewport_pan: GlamVec2,
+    gizmo_mode: GizmoMode,
+    gizmo_space: GizmoSpace,
+    gizmo_snapping: Snapping,
+    gizmo_drag: Option<GizmoDrag>,
     renderers: SceneRenderers,
     /// eframe's device and queue, kept because textures are uploaded whenever a
     /// load completes rather than only while a viewport is being drawn.
@@ -551,6 +557,10 @@ impl EditorApp {
             viewport_pitch: 0.0,
             viewport_zoom: 1.0,
             viewport_pan: GlamVec2::ZERO,
+            gizmo_mode: GizmoMode::Select,
+            gizmo_space: GizmoSpace::Local,
+            gizmo_snapping: Snapping::default(),
+            gizmo_drag: None,
             renderers,
             render_state: state_for_textures,
             textures,
@@ -904,6 +914,111 @@ impl EditorApp {
         }
     }
 
+    /// Resolves the selected transform into the paths used by both drawing and
+    /// hit-testing. The visible handle is therefore the handle the pointer can
+    /// actually take.
+    fn gizmo_visual(
+        &self,
+        rect: Rect,
+        camera: CameraView,
+    ) -> Option<(ViewCamera, gizmo::GizmoVisual)> {
+        let entity = self.selection?;
+        let transform = self.world.get(entity)?.transform_3d?;
+        let aspect = rect.width() / rect.height().max(1.0);
+        let camera = self
+            .scene
+            .world_camera_for_viewport(&self.world, aspect, camera)
+            .ok()
+            .flatten()?;
+        let visual = gizmo::visual(
+            self.gizmo_mode,
+            transform,
+            self.gizmo_space,
+            camera.view_projection,
+            GlamVec2::new(rect.width(), rect.height()),
+            camera.framed_half_height,
+        )?;
+        Some((camera, visual))
+    }
+
+    /// Gives a transform handle first claim on primary drag and writes every
+    /// intermediate answer through command history.
+    fn interact_gizmo(
+        &mut self,
+        rect: Rect,
+        response: &Response,
+        camera: ViewCamera,
+        visual: &gizmo::GizmoVisual,
+    ) -> bool {
+        let pointer = response
+            .interact_pointer_pos()
+            .map(|pointer| GlamVec2::new(pointer.x - rect.min.x, pointer.y - rect.min.y));
+        let hovered = pointer.and_then(|pointer| gizmo::hit_test(visual, pointer));
+        let owns_primary = self.gizmo_drag.is_some() || hovered.is_some();
+
+        if response.drag_started_by(egui::PointerButton::Primary)
+            && let (Some(entity), Some(axis), Some(pointer)) = (self.selection, hovered, pointer)
+            && let Some(transform) = self.world.get(entity).and_then(|data| data.transform_3d)
+        {
+            self.gizmo_drag = gizmo::begin_drag(
+                entity,
+                self.gizmo_mode,
+                axis,
+                transform,
+                self.gizmo_space,
+                camera.view_projection,
+                pointer,
+                GlamVec2::new(rect.width(), rect.height()),
+            );
+        }
+
+        if response.dragged_by(egui::PointerButton::Primary)
+            && let (Some(drag), Some(pointer)) = (self.gizmo_drag, pointer)
+            && let Some(next) = gizmo::update_drag(
+                drag,
+                camera.view_projection,
+                pointer,
+                GlamVec2::new(rect.width(), rect.height()),
+                self.gizmo_snapping,
+            )
+        {
+            self.apply_gizmo_transform(drag, next);
+        }
+        if response.drag_stopped_by(egui::PointerButton::Primary) {
+            self.gizmo_drag = None;
+        }
+        owns_primary
+    }
+
+    /// A whole drag is one undo step even though its current answer is applied
+    /// every frame, because all of its transactions share this merge key.
+    fn apply_gizmo_transform(&mut self, drag: GizmoDrag, transform: Transform3D) {
+        if self
+            .world
+            .get(drag.entity)
+            .and_then(|data| data.transform_3d)
+            == Some(transform)
+        {
+            return;
+        }
+        let mut buffer = CommandBuffer::new();
+        buffer.push(WorldCommand::SetTransform3D {
+            entity: drag.entity,
+            transform: Some(transform),
+        });
+        let transaction = buffer
+            .into_transaction(format!("{} entity", drag.mode.label()))
+            .merging(format!(
+                "gizmo:{}:{}",
+                drag.entity.index(),
+                drag.mode.label()
+            ));
+        if let Err(error) = self.history.apply(transaction, &mut self.world) {
+            self.report(error.to_string());
+            self.gizmo_drag = None;
+        }
+    }
+
     /// Puts the selected entity in the middle of the scene view.
     ///
     /// Centres rather than fits: fitting needs the bounds of what is selected,
@@ -1163,6 +1278,7 @@ impl EditorApp {
         }
         if self.selection != entity {
             self.history.break_merge_run();
+            self.gizmo_drag = None;
             self.tilemap_tool.reset();
             self.animation_tool.reset();
             self.selection = entity;
@@ -2231,6 +2347,79 @@ impl EditorApp {
             });
     }
 
+    fn transform_tools(&mut self, ui: &mut egui::Ui) {
+        let shortcut_mode = ui.input_mut(|input| {
+            [
+                (egui::Key::Q, GizmoMode::Select),
+                (egui::Key::W, GizmoMode::Translate),
+                (egui::Key::E, GizmoMode::Rotate),
+                (egui::Key::R, GizmoMode::Scale),
+            ]
+            .into_iter()
+            .find_map(|(key, mode)| {
+                input
+                    .consume_key(egui::Modifiers::NONE, key)
+                    .then_some(mode)
+            })
+        });
+        if let Some(mode) = shortcut_mode {
+            self.gizmo_mode = mode;
+            self.gizmo_drag = None;
+            self.history.break_merge_run();
+        }
+        for (mode, icon, key) in [
+            (GizmoMode::Select, ICON_SELECT, "Q"),
+            (GizmoMode::Translate, ICON_MOVE, "W"),
+            (GizmoMode::Rotate, ICON_ROTATE_RIGHT, "E"),
+            (GizmoMode::Scale, ICON_SCALE, "R"),
+        ] {
+            if icon_button(
+                ui,
+                icon,
+                self.gizmo_mode == mode,
+                &format!("{} ({key})", mode.label()),
+            )
+            .clicked()
+            {
+                self.gizmo_mode = mode;
+                self.gizmo_drag = None;
+                self.history.break_merge_run();
+            }
+        }
+        if ui
+            .add_sized(
+                [48.0, 28.0],
+                egui::Button::new(
+                    RichText::new(match self.gizmo_space {
+                        GizmoSpace::World => "World",
+                        GizmoSpace::Local => "Local",
+                    })
+                    .size(10.0)
+                    .color(TEXT_MUTED),
+                )
+                .fill(PANEL_RAISED)
+                .stroke(Stroke::new(1.0, BORDER_SUBTLE)),
+            )
+            .on_hover_text("Toggle world/local movement and rotation axes")
+            .clicked()
+        {
+            self.gizmo_space = match self.gizmo_space {
+                GizmoSpace::World => GizmoSpace::Local,
+                GizmoSpace::Local => GizmoSpace::World,
+            };
+            self.gizmo_drag = None;
+        }
+        let snap_tip = format!(
+            "Snap: {} units · {}° · {} scale",
+            self.gizmo_snapping.translation,
+            self.gizmo_snapping.rotation_degrees,
+            self.gizmo_snapping.scale
+        );
+        if icon_button(ui, ICON_GRID_4X4, self.gizmo_snapping.enabled, &snap_tip).clicked() {
+            self.gizmo_snapping.enabled = !self.gizmo_snapping.enabled;
+        }
+    }
+
     /// The row of tools above the viewport.
     ///
     /// The game view has none of them: they change what the editor is looking
@@ -2267,14 +2456,7 @@ impl EditorApp {
                 );
                 ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
                     ui.add_space(8.0);
-                    // Select, Move, Rotate, and Scale used to sit here. They
-                    // highlighted, wrote an `EditorMode` nothing read, and
-                    // there are no gizmos for them to drive — four buttons
-                    // promising direct manipulation the editor cannot do.
-                    // "Local coordinates" and "Lit shading" went the same way
-                    // earlier. A button that cannot be pressed usefully costs
-                    // more than the space it takes.
-                    //
+                    self.transform_tools(ui);
                     // Panning can carry the subject off screen entirely, so
                     // the way back is a control rather than a remembered
                     // number.
@@ -2332,8 +2514,17 @@ impl EditorApp {
         let editing = tab == WorkspaceTab::Scene;
         let (rect, response) = ui.allocate_exact_size(ui.available_size(), Sense::drag());
         let painting = editing && self.tilemap_tool.brush().is_some();
+        let camera_before_input = self.scene_camera();
+        let gizmo_owned = if editing && !painting {
+            self.gizmo_visual(rect, camera_before_input)
+                .is_some_and(|(camera, visual)| {
+                    self.interact_gizmo(rect, &response, camera, &visual)
+                })
+        } else {
+            false
+        };
         if editing {
-            self.move_camera(&context, &response, rect.height(), painting);
+            self.move_camera(&context, &response, rect.height(), painting || gizmo_owned);
         }
         let scale = context.pixels_per_point();
         let camera = if editing {
@@ -2351,7 +2542,7 @@ impl EditorApp {
             self.apply_tile_brush(hover);
         }
         if editing {
-            self.select_viewport_click(rect, &response, camera, painting);
+            self.select_viewport_click(rect, &response, camera, painting || gizmo_owned);
         }
         let viewport = if editing {
             &mut self.scene_viewport
@@ -2393,6 +2584,14 @@ impl EditorApp {
         if editing {
             if let Some(hover) = &hover {
                 self.paint_tilemap_hover(ui, hover);
+            }
+            if !painting && let Some((_, visual)) = self.gizmo_visual(rect, camera) {
+                paint_transform_gizmo(
+                    ui.painter(),
+                    rect,
+                    &visual,
+                    self.gizmo_drag.map(|drag| drag.axis),
+                );
             }
             // The same view the frame under it was drawn through, asked for
             // rather than re-derived, so the axes cannot drift from the picture.
@@ -3085,8 +3284,24 @@ fn transform_3d_section(ui: &mut egui::Ui, transform: &mut Transform3D) {
     // would refuse the edit anyway, and a control that cannot do what it looks
     // like it does is the thing this editor is trying not to grow.
     vector_row(ui, "Position", &mut transform.position, transform.z_locked);
+    let rotation = Quat::from_array(transform.rotation);
+    let rotation = if rotation.is_finite() && rotation.length_squared() > f32::EPSILON {
+        rotation.normalize()
+    } else {
+        Quat::IDENTITY
+    };
+    let (x, y, z) = rotation.to_euler(EulerRot::XYZ);
+    let mut degrees = [x.to_degrees(), y.to_degrees(), z.to_degrees()];
+    if vector_row(ui, "Rotation", &mut degrees, false) {
+        transform.rotation = Quat::from_euler(
+            EulerRot::XYZ,
+            degrees[0].to_radians(),
+            degrees[1].to_radians(),
+            degrees[2].to_radians(),
+        )
+        .to_array();
+    }
     vector_row(ui, "Scale", &mut transform.scale, false);
-    property_label(ui, "Rotation", "Quaternion");
     property_toggle(ui, "Z lock", &mut transform.z_locked, "Locked", "Free");
 }
 
@@ -4134,7 +4349,8 @@ fn property_label(ui: &mut egui::Ui, label: &str, value: &str) {
 /// `lock_z` is what a transform that declares its Z locked looks like here: the
 /// number is still shown, because what layer a thing is on is worth reading
 /// even when it is not yours to change.
-fn vector_row(ui: &mut egui::Ui, label: &str, values: &mut [f32; 3], lock_z: bool) {
+fn vector_row(ui: &mut egui::Ui, label: &str, values: &mut [f32; 3], lock_z: bool) -> bool {
+    let mut changed = false;
     ui.horizontal(|ui| {
         ui.add_space(10.0);
         ui.add_sized(
@@ -4150,13 +4366,16 @@ fn vector_row(ui: &mut egui::Ui, label: &str, values: &mut [f32; 3], lock_z: boo
                     .color(TEXT_FAINT),
             );
             ui.add_enabled_ui(!locked, |ui| {
-                ui.add_sized(
-                    [48.0, 23.0],
-                    egui::DragValue::new(value).speed(0.05).max_decimals(3),
-                );
+                changed |= ui
+                    .add_sized(
+                        [48.0, 23.0],
+                        egui::DragValue::new(value).speed(0.05).max_decimals(3),
+                    )
+                    .changed();
             });
         }
     });
+    changed
 }
 
 /// What the project browser shows, until it reads a real asset directory.
@@ -4800,6 +5019,41 @@ fn play_button(ui: &mut egui::Ui, playing: bool) -> Response {
     )
 }
 
+fn paint_transform_gizmo(
+    painter: &egui::Painter,
+    rect: Rect,
+    visual: &gizmo::GizmoVisual,
+    active: Option<Axis>,
+) {
+    for handle in &visual.handles {
+        let color = if active == Some(handle.axis) {
+            Color32::WHITE
+        } else {
+            match handle.axis {
+                Axis::X => Color32::from_rgb(239, 92, 101),
+                Axis::Y => Color32::from_rgb(89, 201, 135),
+                Axis::Z => Color32::from_rgb(91, 151, 239),
+            }
+        };
+        let points: Vec<Pos2> = handle
+            .points
+            .iter()
+            .map(|point| rect.min + Vec2::new(point.x, point.y))
+            .collect();
+        painter.add(Shape::line(points.clone(), Stroke::new(2.5, color)));
+        if let Some(end) = points.last().copied()
+            && handle.points.len() == 2
+        {
+            painter.circle_filled(end, 4.0, color);
+        }
+    }
+    painter.circle_filled(
+        rect.min + Vec2::new(visual.origin.x, visual.origin.y),
+        3.5,
+        Color32::WHITE,
+    );
+}
+
 fn paint_runtime_overlay(
     painter: &egui::Painter,
     rect: Rect,
@@ -4820,7 +5074,7 @@ fn paint_runtime_overlay(
     painter.text(
         label_rect.min + Vec2::new(9.0, 24.0),
         egui::Align2::LEFT_TOP,
-        "Live WGPU viewport  ·  Drag to orbit  ·  Shift-drag to pan",
+        "Primary: orbit or tool  ·  Secondary: orbit  ·  Shift-drag: pan",
         FontId::proportional(10.0),
         TEXT_FAINT,
     );

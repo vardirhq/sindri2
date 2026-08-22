@@ -164,7 +164,7 @@ Sindri is pre-alpha, and several large pieces are intentionally not pretending t
 - audio
 - richer Decay value types, collections, loops with execution budgets, and spawning
 - broader gameplay stepping beyond scripts and sprite animation in editor play mode
-- transform rotation editing and scene gizmos
+- multi-selection and editing common properties
 - richer asset inspectors and project authoring workflows
 - production build/export/package tooling
 - a mature 3D feature set beyond the current rendering foundation
