@@ -76,30 +76,18 @@ impl GridWalls {
     }
 
     /// Adds a wall, returning whether the set changed.
-    pub fn block(
-        &mut self,
-        first: GridCoord,
-        second: GridCoord,
-    ) -> Result<bool, GridWallError> {
+    pub fn block(&mut self, first: GridCoord, second: GridCoord) -> Result<bool, GridWallError> {
         let edge = self.checked_edge(first, second)?;
         Ok(self.edges.insert(edge))
     }
 
     /// Removes a wall, returning whether the set changed.
-    pub fn unblock(
-        &mut self,
-        first: GridCoord,
-        second: GridCoord,
-    ) -> Result<bool, GridWallError> {
+    pub fn unblock(&mut self, first: GridCoord, second: GridCoord) -> Result<bool, GridWallError> {
         let edge = self.checked_edge(first, second)?;
         Ok(self.edges.remove(&edge))
     }
 
-    pub fn is_blocked(
-        &self,
-        first: GridCoord,
-        second: GridCoord,
-    ) -> Result<bool, GridWallError> {
+    pub fn is_blocked(&self, first: GridCoord, second: GridCoord) -> Result<bool, GridWallError> {
         let edge = self.checked_edge(first, second)?;
         Ok(self.edges.contains(&edge))
     }
@@ -125,13 +113,8 @@ impl GridWalls {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum GridWallError {
-    CellOutsideBounds {
-        cell: GridCoord,
-    },
-    CellsDoNotShareEdge {
-        first: GridCoord,
-        second: GridCoord,
-    },
+    CellOutsideBounds { cell: GridCoord },
+    CellsDoNotShareEdge { first: GridCoord, second: GridCoord },
 }
 
 impl fmt::Display for GridWallError {
