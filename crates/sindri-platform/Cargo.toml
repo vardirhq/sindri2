@@ -12,7 +12,10 @@ sindri-core = { path = "../sindri-core", version = "0.1.0" }
 thiserror.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-rodio = { version = "0.22.2", default-features = false, features = ["playback", "mp3", "vorbis", "wav"] }
+# Keep the engine's permissive-only dependency policy intact. Rodio's shorthand
+# mp3/vorbis/wav features route through Symphonia (MPL-2.0); these alternate
+# decoders cover the same three formats without adding a copyleft dependency.
+rodio = { version = "0.22.2", default-features = false, features = ["playback", "minimp3", "lewton", "hound"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 js-sys.workspace = true
