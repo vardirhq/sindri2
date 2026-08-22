@@ -6,6 +6,10 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- Authored `sindri.grid_navigation` walls and `sindri.grid_occupant`
+  footprints, with a world adapter that resolves stable grid references,
+  derives occupancy from transforms, validates complete placement, and runs
+  wall-aware whole-footprint paths.
 - Normalized renderer-independent wall edges in `sindri-grid`, with bounded
   symmetric block/unblock queries and A* integration for cardinal, diagonal,
   occupancy, and multi-cell footprint paths.

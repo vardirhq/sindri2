@@ -49,12 +49,12 @@ zoom, and centring. Those are presentation transforms and become editor/camera
 adapters later; putting them in the grid would make headless pathfinding depend
 on a viewport that may not exist.
 
-IsoGame's pathfinder is not ported in this slice. It allows diagonal movement
-with an approximate `1.4` cost while using a Manhattan heuristic, scans a set
-for the lowest score, and mixes actor exclusion into its passability callback.
-The new A* layer should instead accept an explicit movement topology and cost
-policy, use an admissible heuristic for that policy, and know nothing about
-players.
+IsoGame's pathfinder allowed diagonal movement with an approximate `1.4` cost
+while using a Manhattan heuristic, scanned a set for the lowest score, and
+mixed actor exclusion into its passability callback. Sindri's port keeps the
+useful A* behaviour but replaces those details with explicit topology and
+integer costs, an admissible policy-specific heuristic, and application-owned
+passability.
 
 `sindri.tilemap` is the first engine adapter. It keeps projection and tile size
 in the serialized component, then exposes the `GridSpace` and `GridBounds` that
@@ -78,6 +78,10 @@ This first slice provides:
   atomic placement or movement
 - explicit placement failures for conflicting occupants, out-of-bounds cells,
   and coordinate overflow
+- authored `sindri.grid_navigation` wall edges and `sindri.grid_occupant`
+  stable grid references plus relative footprints
+- `WorldGridNavigation`, which derives runtime occupancy from world transforms
+  and exposes complete-footprint placement and path queries
 
 Decay now exposes continuous logical position through an explicit tilemap
 entity: `Grid.position_x`, `Grid.position_y`, and `Grid.place` invert and apply
@@ -122,5 +126,20 @@ footprint at each anchor and checking the wall crossed by every constituent
 footprint cell during each transition.
 Mismatched wall/path bounds are rejected explicitly.
 
-Engine components, editor authoring, typed Decay access, overlays, and a Gather
-use case remain cross-layer adapters tracked in the integration matrix.
+The engine adapter deliberately does not serialize occupancy. A
+`sindri.grid_occupant` names an authored tilemap by `SceneEntityId`, carries
+only its relative footprint, and takes its anchor from the entity's current
+world position. `WorldGridNavigation` resolves those stable references into
+runtime `EntityId` owners, inverts the tilemap's planar transform and exact
+`GridSpace`, builds all walls and placements, and rejects the whole snapshot if
+any wall, footprint, or placement is invalid. Rebuilding after a world change
+keeps the world authoritative and avoids stale duplicated cell state.
+
+The tilemap remains the sole owner of bounds and projection. The optional
+`sindri.grid_navigation` component stores only internal wall endpoints, so a
+scene cannot configure one shape for rendering and another for pathfinding.
+The adapter targets one explicit tilemap entity, preserving the same
+multi-grid rule as Decay's coordinate surface.
+
+Editor authoring, typed Decay access, overlays, and a Gather pathfinding use
+case remain cross-layer adapters tracked in the integration matrix.

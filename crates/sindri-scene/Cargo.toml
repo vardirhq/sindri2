@@ -1,6 +1,6 @@
 [package]
 name = "sindri-scene"
-description = "Built-in Sindri scene components and world-to-frame extraction"
+description = "Built-in Sindri scene components and world adapters"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
