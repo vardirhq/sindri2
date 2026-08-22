@@ -450,18 +450,22 @@ mod tests {
         let bounds = GridBounds::new(3, 1).unwrap();
         let pathfinder = GridPathfinder::default();
 
-        assert!(pathfinder
-            .find_path(bounds, GridCoord::new(0, 0), GridCoord::new(2, 0), |cell| {
-                cell != GridCoord::new(2, 0)
-            })
-            .unwrap()
-            .is_none());
-        assert!(pathfinder
-            .find_path(bounds, GridCoord::new(0, 0), GridCoord::new(2, 0), |cell| {
-                cell != GridCoord::new(1, 0)
-            })
-            .unwrap()
-            .is_none());
+        assert!(
+            pathfinder
+                .find_path(bounds, GridCoord::new(0, 0), GridCoord::new(2, 0), |cell| {
+                    cell != GridCoord::new(2, 0)
+                })
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            pathfinder
+                .find_path(bounds, GridCoord::new(0, 0), GridCoord::new(2, 0), |cell| {
+                    cell != GridCoord::new(1, 0)
+                })
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[test]
@@ -470,7 +474,9 @@ mod tests {
         let pathfinder = GridPathfinder::default();
 
         assert_eq!(
-            pathfinder.find_path(bounds, GridCoord::new(-1, 0), GridCoord::new(1, 1), |_| true),
+            pathfinder.find_path(bounds, GridCoord::new(-1, 0), GridCoord::new(1, 1), |_| {
+                true
+            }),
             Err(GridPathError::StartOutsideBounds {
                 start: GridCoord::new(-1, 0)
             })
@@ -500,9 +506,7 @@ mod tests {
         let bounds = GridBounds::new(5, 3).unwrap();
         let mut occupancy = GridOccupancy::new(bounds);
         let mover = GridFootprint::rectangle(2, 1).unwrap();
-        occupancy
-            .place(1, GridCoord::new(0, 0), &mover)
-            .unwrap();
+        occupancy.place(1, GridCoord::new(0, 0), &mover).unwrap();
         occupancy
             .place(2, GridCoord::new(2, 0), &GridFootprint::single())
             .unwrap();
