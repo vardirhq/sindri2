@@ -67,10 +67,12 @@ be minted directly, frames can be prepared and inspected without a device, and
 the game loop runs on a manual clock with no window and no sleeping. If a change
 cannot be caught by any existing check, add the check that would catch it.
 
-**Platform conditionals stay at the edges.** `#[cfg(target_arch = "wasm32")]`
-belongs in `sindri-assets`, the examples, and the editor's entry point. Logic
-compiled only for `wasm32` is logic nothing tests, which is why browser URL rules
-live in a module every target compiles.
+**Platform conditionals stay at the edges.** A browser implementation behind
+`#[cfg(target_arch = "wasm32")]` belongs in `sindri-assets` and `sindri-desktop`
+and nowhere else, bar each entry point's panic hook and logger; elsewhere the
+conditional gates native-only code away — the system clock, the editor shell,
+the capture binaries. Logic compiled only for `wasm32` is logic nothing tests,
+which is why browser URL rules live in a module every target compiles.
 
 **Crate boundaries are load-bearing.** `sindri-core` knows nothing about windows,
 GPUs, browsers, or executors. `sindri-render` knows nothing about worlds,

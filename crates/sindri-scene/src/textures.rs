@@ -205,7 +205,11 @@ pub fn referenced_textures(world: &World) -> BTreeSet<String> {
 pub fn referenced_fonts(world: &World) -> BTreeSet<String> {
     world
         .entities()
-        .filter_map(|(_, data)| data.components.get(TextComponent::TYPE_NAME))
+        .flat_map(|(_, data)| {
+            FONT_NAMING_COMPONENTS
+                .iter()
+                .filter_map(|type_name| data.components.get(*type_name))
+        })
         .filter_map(|payload| payload.get("font"))
         .filter_map(serde_json::Value::as_str)
         .map(str::to_owned)
@@ -305,6 +309,19 @@ pub const TEXTURE_NAMING_COMPONENTS: &[&str] = &[
     SpriteComponent::TYPE_NAME,
     TilemapComponent::TYPE_NAME,
 ];
+
+/// Every built-in component that names a project font, which is the list hosts
+/// load from.
+///
+/// The same trap as `TEXTURE_NAMING_COMPONENTS`, one renderer along: a
+/// component missing from here never has its font requested, so nothing binds
+/// it and the text simply does not draw — a blank where a label should be, with
+/// no failed frame to point at it. The test beside the one above holds this
+/// list against the registry too, though it has to ask differently: a
+/// font-naming component has no default payload to be read — it cannot invent a
+/// font — so the test probes each validator instead, and a component that
+/// deserializes a `font` has to be named here or fail the build.
+pub const FONT_NAMING_COMPONENTS: &[&str] = &[TextComponent::TYPE_NAME];
 
 /// Every texture a world draws with that nothing has bound.
 ///

@@ -231,10 +231,16 @@ type, the asset ID, the unresolved reference. Do not panic in library code;
 `expect` is used only where an invariant was just validated, with a message
 saying which.
 
-**Platform conditionals.** `#[cfg(target_arch = "wasm32")]` is confined to
-`sindri-assets` (fetch vs filesystem), `sindri-desktop` (canvas attachment,
-future spawning), `editor/src/main.rs`, and each example's logger setup.
-Keep it there. Logic that is compiled only for wasm32 is logic nothing tests —
+**Platform conditionals.** A *positive* `#[cfg(target_arch = "wasm32")]` — a
+second implementation, written for the browser — is confined to two crates:
+`sindri-assets` (fetch vs filesystem) and `sindri-desktop` (canvas attachment,
+future spawning). Each entry point also picks its panic hook and logger that way
+(`examples/*/src/lib.rs`, `game/src/lib.rs`, `editor/src/main.rs`). Everywhere
+else the conditional is the *negative* one, gating away what the browser has no
+version of rather than writing a second one: `SystemClock` in `sindri-platform`
+(browser hosts supply their own over `performance.now()`), the editor shell in
+`editor/src/lib.rs`, and the `capture`, `verify`, and `gather-capture` binaries.
+Keep it to those. Logic that is compiled only for wasm32 is logic nothing tests —
 see `UrlRoot`, which exists specifically so browser URL rules are exercised on
 every target. Where a browser-target difference cannot be designed away, run the
 test on both: `decode_compatibility.rs` is one body with `#[test]` natively and
