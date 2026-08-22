@@ -1904,8 +1904,7 @@ impl EditorApp {
             self.reparent(entity, parent);
             self.select(Some(entity));
             if let Some(parent) = parent
-                && let Some(key) =
-                    hierarchy_preference_key(self.file.path(), &self.world, parent)
+                && let Some(key) = hierarchy_preference_key(self.file.path(), &self.world, parent)
             {
                 self.preferences.collapsed_hierarchy.remove(&key);
             }
@@ -2621,8 +2620,7 @@ fn hierarchy_group(ui: &mut egui::Ui, label: &str, icon: MaterialIcon) -> Respon
                     .sense(Sense::hover()),
             );
             let label = ui.add(
-                egui::Label::new(RichText::new(label).size(12.0).color(TEXT))
-                    .sense(Sense::hover()),
+                egui::Label::new(RichText::new(label).size(12.0).color(TEXT)).sense(Sense::hover()),
             );
             icon | label
         })
@@ -2671,7 +2669,8 @@ fn hierarchy_row(
     expanded: bool,
 ) -> HierarchyRowResponse {
     let width = ui.available_width();
-    let row = ui.scope_builder(egui::UiBuilder::new().sense(Sense::click_and_drag()), |ui| {
+    let builder = egui::UiBuilder::new().sense(Sense::click_and_drag());
+    let row = ui.scope_builder(builder, |ui| {
         ui.set_min_width(width);
         ui.horizontal(|ui| {
             ui.add_space(9.0 + hierarchy_indent(depth, 14.0));
@@ -2773,9 +2772,7 @@ fn hierarchy_drop_target(
 }
 
 fn hierarchy_drop_allowed(world: &World, entity: EntityId, parent: Option<EntityId>) -> bool {
-    world
-        .get(entity)
-        .is_some_and(|data| data.parent != parent)
+    world.get(entity).is_some_and(|data| data.parent != parent)
         && world.check_set_parent(entity, parent).is_ok()
 }
 
@@ -5973,13 +5970,11 @@ mod tests {
                         ..Default::default()
                     },
                     |ui| {
-                        let source =
-                            hierarchy_row(ui, ICON_LABEL, "Arm", false, 0, false, false);
+                        let source = hierarchy_row(ui, ICON_LABEL, "Arm", false, 0, false, false);
                         source.select.dnd_set_drag_payload(HierarchyDrag(arm));
                         source_rect.set(source.select.rect);
 
-                        let target =
-                            hierarchy_row(ui, ICON_LABEL, "Leg", false, 0, false, false);
+                        let target = hierarchy_row(ui, ICON_LABEL, "Leg", false, 0, false, false);
                         target_rect.set(target.select.rect);
                         if let Some(entity) =
                             hierarchy_drop_target(ui, &target.drop, &world, Some(leg))
@@ -6000,7 +5995,10 @@ mod tests {
             pressed,
             modifiers: egui::Modifiers::default(),
         };
-        draw(vec![egui::Event::PointerMoved(source), button(source, true)]);
+        draw(vec![
+            egui::Event::PointerMoved(source),
+            button(source, true),
+        ]);
         draw(vec![egui::Event::PointerMoved(target)]);
         draw(vec![button(target, false)]);
 
