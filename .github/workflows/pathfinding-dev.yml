@@ -33,7 +33,6 @@ jobs:
           cargo test --package sindri-decay --package sindri-editor --package sindri-gather --all-features
           cargo clippy --workspace --all-targets --all-features
       - name: Commit implementation and remove helpers
-        if: github.event_name == 'push'
         run: |
           rm .github/workflows/pathfinding-dev.yml .github/pathfinding_impl.py .github/pathfinding_fix.py
           git config user.name 'OpenAI Codex'
@@ -41,5 +40,3 @@ jobs:
           git add -A
           git commit -m 'Complete pathfinding vertical slice'
           git push origin HEAD:codex/pathfinding-vertical
-
-# Re-trigger implementation after connector handoff.
