@@ -17,6 +17,7 @@ jobs:
       - name: Apply dependency-safe navigation boundary
         run: |
           python3 .github/navigation_boundary_fix.py
+          python3 .github/navigation_boundary_refactor.py
           python3 .github/navigation_boundary_cleanup.py
       - uses: dtolnay/rust-toolchain@1.95.0
         with:
@@ -32,7 +33,7 @@ jobs:
           cargo check --workspace --all-features --target wasm32-unknown-unknown
       - name: Commit and remove helper
         run: |
-          rm .github/navigation_boundary_fix.py .github/navigation_boundary_cleanup.py .github/workflows/navigation-boundary-fix.yml
+          rm .github/navigation_boundary_fix.py .github/navigation_boundary_refactor.py .github/navigation_boundary_cleanup.py .github/workflows/navigation-boundary-fix.yml
           git config user.name 'OpenAI Codex'
           git config user.email 'noreply@openai.com'
           git add -A
