@@ -1,0 +1,120 @@
+name: Finalize audio integration
+
+on:
+  push:
+    branches: [codex/audio-end-to-end]
+    paths: [.github/workflows/audio-finalize.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: codex/audio-end-to-end
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Add scene and editor integration
+        shell: python
+        run: |
+          from pathlib import Path
+          import json
+
+          path = Path('crates/sindri-scene/src/extract.rs')
+          text = path.read_text()
+          text = text.replace(
+              '    AnimationError, CameraComponent, GridNavigationComponent, GridOccupantComponent, MeshComponent,\n',
+              '    AnimationError, AudioSourceComponent, CameraComponent, GridNavigationComponent,\n    GridOccupantComponent, MeshComponent,\n',
+          )
+          marker = '        components.register::<GridOccupantComponent>("Grid Occupant")?;\n        Ok(Self { components })'
+          replacement = '''        components.register::<GridOccupantComponent>("Grid Occupant")?;
+          components.register_with_default::<AudioSourceComponent>(
+              "Audio Source",
+              serde_json::json!({
+                  "clip": "",
+                  "autoplay": false,
+                  "looping": false,
+                  "volume": 1.0
+              }),
+          )?;
+          Ok(Self { components })'''
+          if marker not in text:
+              raise SystemExit('SceneExtractor registration marker changed')
+          path.write_text(text.replace(marker, replacement))
+
+          path = Path('editor/src/project.rs')
+          text = path.read_text()
+          text = text.replace('    Font,\n    Other,', '    Font,\n    Audio,\n    Other,')
+          text = text.replace('            Self::Font => "Font",\n            Self::Other => "File",', '            Self::Font => "Font",\n            Self::Audio => "Audio",\n            Self::Other => "File",')
+          text = text.replace('            Some("ttf" | "otf" | "woff" | "woff2") => Self::Font,\n            _ => Self::Other,', '            Some("ttf" | "otf" | "woff" | "woff2") => Self::Font,\n            Some("wav" | "ogg" | "mp3") => Self::Audio,\n            _ => Self::Other,')
+          path.write_text(text)
+
+          path = Path('game/assets/gather.scene.json')
+          scene = json.loads(path.read_text())
+          if not any(entity.get('id') == 'music' for entity in scene['entities']):
+              scene['entities'].append({
+                  'id': 'music',
+                  'name': 'Music',
+                  'transform_3d': {
+                      'position': [0.0, 0.0, 0.0],
+                      'rotation': [0.0, 0.0, 0.0, 1.0],
+                      'scale': [1.0, 1.0, 1.0],
+                  },
+                  'components': {
+                      'sindri.audio': {
+                          'clip': 'audio/background.wav',
+                          'autoplay': True,
+                          'looping': True,
+                          'volume': 0.22,
+                      }
+                  },
+              })
+          path.write_text(json.dumps(scene, indent=2) + '\n')
+      - name: Generate original Gather sounds
+        shell: python
+        run: |
+          from pathlib import Path
+          import io, math, struct, wave
+
+          root = Path('game/assets/audio')
+          root.mkdir(parents=True, exist_ok=True)
+
+          def make(path, frequencies, duration, amplitude, sweep=False, rate=16000):
+              count = int(duration * rate)
+              out = io.BytesIO()
+              with wave.open(out, 'wb') as wav:
+                  wav.setnchannels(1)
+                  wav.setsampwidth(2)
+                  wav.setframerate(rate)
+                  frames = []
+                  for index in range(count):
+                      t = index / rate
+                      attack = min(1.0, t / 0.02)
+                      release = min(1.0, max(0.0, (duration - t) / 0.05))
+                      envelope = min(attack, release)
+                      if sweep:
+                          frequency = frequencies[0] + (frequencies[-1] - frequencies[0]) * (t / duration)
+                          value = math.sin(2.0 * math.pi * frequency * t)
+                      else:
+                          value = sum(math.sin(2.0 * math.pi * frequency * t) for frequency in frequencies) / len(frequencies)
+                      sample = int(max(-1.0, min(1.0, value * amplitude * envelope)) * 32767)
+                      frames.append(struct.pack('<h', sample))
+                  wav.writeframes(b''.join(frames))
+              path.write_bytes(out.getvalue())
+
+          make(root / 'pickup.wav', [660.0, 990.0], 0.14, 0.35, sweep=True)
+          make(root / 'victory.wav', [523.25, 659.25, 783.99], 0.55, 0.25)
+          make(root / 'background.wav', [130.81, 196.0, 261.63], 2.0, 0.12)
+      - name: Refresh dependency lockfile
+        run: cargo update --workspace
+      - name: Format Rust
+        run: cargo fmt --all
+      - name: Commit generated integration
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add Cargo.lock crates/sindri-scene/src/extract.rs editor/src/project.rs game/assets/gather.scene.json game/assets/audio
+          git commit -m 'Complete scene editor and Gather audio integration'
+          git push origin HEAD:codex/audio-end-to-end
