@@ -1,5 +1,27 @@
 from pathlib import Path
 
+# One editor test asks which components are offered when a font exists but no
+# sprite/grid exists. The pathfinding-aware helper now needs that grid context.
+p = Path('editor/src/native.rs')
+text = p.read_text()
+old = '''        let offered: Vec<String> = addable_components(
+            extractor.components(),
+            &present,
+            Some("fonts/Inter.ttf"),
+            None,
+        )'''
+new = '''        let offered: Vec<String> = addable_components(
+            extractor.components(),
+            &present,
+            Some("fonts/Inter.ttf"),
+            None,
+            None,
+        )'''
+if old not in text:
+    raise SystemExit('missing editor addable-components test call')
+text = text.replace(old, new, 1)
+p.write_text(text)
+
 # Put new Grid calls in the checked API table, not in prose the contract test ignores.
 p = Path('docs/scripting.md')
 text = p.read_text()
@@ -37,6 +59,49 @@ text = text.replace(
 marker = '/// The game is playable: walking into an orb collects it, and collecting them\n'
 if marker not in text:
     raise SystemExit('missing Gather test insertion marker')
-test = '''/// The Wisp is real gameplay pathfinding: its first direct east edge is authored\n/// as a wall, so deterministic cardinal A* must route south before approaching\n/// the player. This catches a script that merely moves toward the target while\n/// ignoring the scene navigation components.\n#[test]\nfn the_wisp_routes_around_the_authored_wall() {\n    let mut world = world().expect("the scene loads");\n    let extractor = extractor().expect("the schemas register");\n    let floor = world\n        .entities()\n        .find(|(_, data)| data.source_id.as_ref().is_some_and(|id| id.as_str() == "floor"))\n        .map(|(entity, _)| entity)\n        .expect("the game has a floor");\n    let wisp = world\n        .entities()\n        .find(|(_, data)| data.source_id.as_ref().is_some_and(|id| id.as_str() == "wisp"))\n        .map(|(entity, _)| entity)\n        .expect("the game has a wisp");\n\n    let before = WorldGridNavigation::from_world(&world, floor)\n        .expect("the authored navigation is valid")\n        .placement(wisp)\n        .expect("the wisp is an occupant")\n        .anchor;\n    assert_eq!(before, GridCoord::new(0, 0));\n\n    let mut session = Session::new(extractor.components().clone());\n    session\n        .step(&mut world, &InputState::default(), 0.33)\n        .expect("the pathfinding script steps");\n\n    let after = WorldGridNavigation::from_world(&world, floor)\n        .expect("navigation remains valid")\n        .placement(wisp)\n        .expect("the wisp remains an occupant")\n        .anchor;\n    assert_eq!(\n        after,\n        GridCoord::new(0, 1),\n        "the wall from (0,0) to (1,0) forces the first A* step south"\n    );\n}\n\n'''
+test = '''/// The Wisp is real gameplay pathfinding: its first direct east edge is authored
+/// as a wall, so deterministic cardinal A* must route south before approaching
+/// the player. This catches a script that merely moves toward the target while
+/// ignoring the scene navigation components.
+#[test]
+fn the_wisp_routes_around_the_authored_wall() {
+    let mut world = world().expect("the scene loads");
+    let extractor = extractor().expect("the schemas register");
+    let floor = world
+        .entities()
+        .find(|(_, data)| data.source_id.as_ref().is_some_and(|id| id.as_str() == "floor"))
+        .map(|(entity, _)| entity)
+        .expect("the game has a floor");
+    let wisp = world
+        .entities()
+        .find(|(_, data)| data.source_id.as_ref().is_some_and(|id| id.as_str() == "wisp"))
+        .map(|(entity, _)| entity)
+        .expect("the game has a wisp");
+
+    let before = WorldGridNavigation::from_world(&world, floor)
+        .expect("the authored navigation is valid")
+        .placement(wisp)
+        .expect("the wisp is an occupant")
+        .anchor;
+    assert_eq!(before, GridCoord::new(0, 0));
+
+    let mut session = Session::new(extractor.components().clone());
+    session
+        .step(&mut world, &InputState::default(), 0.33)
+        .expect("the pathfinding script steps");
+
+    let after = WorldGridNavigation::from_world(&world, floor)
+        .expect("navigation remains valid")
+        .placement(wisp)
+        .expect("the wisp remains an occupant")
+        .anchor;
+    assert_eq!(
+        after,
+        GridCoord::new(0, 1),
+        "the wall from (0,0) to (1,0) forces the first A* step south"
+    );
+}
+
+'''
 text = text.replace(marker, test + marker, 1)
 p.write_text(text)
