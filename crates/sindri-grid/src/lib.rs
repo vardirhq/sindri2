@@ -5,10 +5,14 @@
 //! consumer decides whether that plane is world XY, world XZ, or screen space.
 
 mod occupancy;
+mod pathfinding;
 
 use std::fmt;
 
 pub use occupancy::{FootprintError, GridFootprint, GridOccupancy, GridPlacementError};
+pub use pathfinding::{
+    GridMovement, GridPath, GridPathCosts, GridPathError, GridPathfinder,
+};
 
 /// An integer cell in logical grid space.
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
