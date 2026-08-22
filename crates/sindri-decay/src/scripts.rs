@@ -171,6 +171,12 @@ pub fn environment() -> Environment {
     environment.add_type(WORLD, world);
     environment.add_value(WORLD, Type::Named(WORLD.to_owned()));
 
+    add_grid_surface(&mut environment);
+
+    environment
+}
+
+fn add_grid_surface(environment: &mut Environment) {
     let mut grid = HostType::new();
     for (name, call) in GRID_CALLS {
         grid = grid.with_function(
@@ -197,8 +203,6 @@ pub fn environment() -> Environment {
     }
     environment.add_type(GRID, grid);
     environment.add_value(GRID, Type::Named(GRID.to_owned()));
-
-    environment
 }
 
 /// The type a node has: a group is its name, a leaf is a number.
