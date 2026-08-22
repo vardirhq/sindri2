@@ -66,3 +66,79 @@ for path in ("game/src/lib.rs", "editor/src/scripts.rs"):
     if old not in text:
         raise SystemExit(f"missing route conversion in {path}")
     p.write_text(text.replace(old, '.map(|path| path.map(sindri_grid::GridPath::into_nodes))', 1))
+
+# Gather's broad playthrough test predates the Wisp and drove Scripts directly.
+# It must provide the same navigation service as Session now that every scene
+# script, including the Wisp, is deliberately part of that end-to-end run.
+p = Path("game/tests/the_game_holds_together.rs")
+text = p.read_text()
+text = text.replace(
+    'use sindri_decay::{AudioCommand, ScriptComponent, ScriptSources, Scripts};\n',
+    'use sindri_decay::{\n    AudioCommand, GridNavigationHost, ScriptComponent, ScriptSources, Scripts,\n};\n',
+    1,
+)
+text = text.replace(
+    'use sindri_grid::{GridCoord, GridPoint, GridSpace, PlanePoint};\n',
+    'use sindri_grid::{GridCoord, GridPathfinder, GridPoint, GridSpace, PlanePoint};\n',
+    1,
+)
+anchor = 'const SCENE: &str = include_str!("../assets/gather.scene.json");\n'
+provider = anchor + '''
+struct TestNavigation;
+
+impl GridNavigationHost for TestNavigation {
+    fn find_path(
+        &self,
+        world: &World,
+        mover: sindri_core::EntityId,
+        grid: sindri_core::EntityId,
+        goal: GridCoord,
+    ) -> Result<Option<Vec<GridCoord>>, String> {
+        WorldGridNavigation::from_world(world, grid)
+            .map_err(|error| error.to_string())?
+            .find_path(GridPathfinder::default(), mover, goal)
+            .map(|path| path.map(sindri_grid::GridPath::into_nodes))
+            .map_err(|error| error.to_string())
+    }
+}
+'''
+if anchor not in text:
+    raise SystemExit("missing Gather integration-test scene anchor")
+text = text.replace(anchor, provider, 1)
+old = '''            let report = scripts.advance(
+                &mut world,
+                extractor.components(),
+                &sources,
+                &held,
+                1.0 / 60.0,
+            );'''
+new = '''            let report = scripts.advance_with_navigation(
+                &mut world,
+                extractor.components(),
+                &sources,
+                &held,
+                1.0 / 60.0,
+                Some(&TestNavigation),
+            );'''
+if old not in text:
+    raise SystemExit("missing Gather walking harness advance")
+text = text.replace(old, new, 1)
+old = '''        scripts.advance(
+            &mut world,
+            extractor.components(),
+            &sources,
+            &InputState::default(),
+            1.0 / 60.0,
+        );'''
+new = '''        scripts.advance_with_navigation(
+            &mut world,
+            extractor.components(),
+            &sources,
+            &InputState::default(),
+            1.0 / 60.0,
+            Some(&TestNavigation),
+        );'''
+if old not in text:
+    raise SystemExit("missing Gather banner harness advance")
+text = text.replace(old, new, 1)
+p.write_text(text)
