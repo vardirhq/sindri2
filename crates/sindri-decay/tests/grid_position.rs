@@ -150,13 +150,13 @@ fn orthogonal_grid_position_uses_the_tilemap_center_convention() {
 #[test]
 fn the_grid_argument_is_statically_an_entity() {
     let (mut world, _actor, sources) = scripted_world(
-        r#"
+        r"
         script Mover {
             fn update(dt: f32) {
                 Grid.place(this.entity, 1.0, 2.0, 1.0);
             }
         }
-        "#,
+        ",
         json!({}),
     );
     let failures = run(&mut world, &sources);
