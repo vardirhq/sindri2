@@ -37,6 +37,26 @@ if old not in text:
 text = text.replace(old, "", 1)
 p.write_text(text)
 
+# The surface contract intentionally executes every analyzer-visible host call.
+# After navigation becomes injected, every WorldHost created by this contract
+# needs the fixture provider too. The first boundary script rewrites one host;
+# rewrite any remaining constructors here rather than depending on source order.
+p = Path("crates/sindri-decay/src/surface.rs")
+text = p.read_text()
+old = 'WorldHost::new(&mut world, entity, context(&input), &mut board, &mut audio);'
+new = '''WorldHost::with_navigation(
+                    &mut world,
+                    entity,
+                    context(&input),
+                    &mut board,
+                    &mut audio,
+                    Some(&OpenNavigation),
+                );'''
+if old not in text:
+    raise SystemExit("missing remaining surface contract WorldHost::new")
+text = text.replace(old, new)
+p.write_text(text)
+
 # Rust 1.95's pedantic Clippy quite reasonably dislikes closures whose entire
 # career is calling one method. Keep the strict CI clean in both host bridges.
 for path in ("game/src/lib.rs", "editor/src/scripts.rs"):
