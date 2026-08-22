@@ -301,6 +301,17 @@ impl ProjectTree {
             .collect()
     }
 
+    /// Named sprites belonging to one project-relative texture reference.
+    pub fn sprites_for_texture(&self, texture: &str) -> Vec<String> {
+        self.entries
+            .iter()
+            .find(|entry| {
+                entry.kind == AssetKind::Texture && entry.relative.replace('\\', "/") == texture
+            })
+            .map(|entry| entry.sprites.clone())
+            .unwrap_or_default()
+    }
+
     /// Whether the walk stopped before it ran out of directory.
     pub const fn truncated(&self) -> bool {
         self.truncated
@@ -450,6 +461,25 @@ mod tests {
         let tree = ProjectTree::rooted(directory.path());
 
         assert_eq!(tree.fonts(), ["fonts/Inter.ttf"]);
+    }
+
+    #[test]
+    fn a_texture_exposes_the_sprites_named_by_its_sheet() {
+        let directory = project();
+        fs::write(
+            directory.path().join("textures/tiles.sheet.json"),
+            r#"{
+              "format_version": 1,
+              "grid": { "columns": 2, "rows": 1, "names": ["idle", "walk"] }
+            }"#,
+        )
+        .unwrap();
+        let tree = ProjectTree::rooted(directory.path());
+
+        assert_eq!(
+            tree.sprites_for_texture("textures/tiles.png"),
+            ["idle", "walk"]
+        );
     }
 
     /// A detached scene has no directory to show, and says so rather than

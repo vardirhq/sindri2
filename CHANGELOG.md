@@ -6,6 +6,7 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- Sprite-animation clip authoring in the native editor: add a valid animation from a sprite sheet, create, rename, and remove clips, arrange named frames, edit timing and looping, choose the runtime clip, and preview playback against the project texture without changing scene state.
 - Text authoring in the native editor: add `sindri.text` when a project font exists, edit multiline content, and choose among project-owned font assets without hand-editing scene JSON.
 - Screen-space `sindri.text` rendering through Glyphon, with anchored/layered frame extraction, validated project font assets shared by native and browser hosts, editor loading and hot reload, and a real Inter-rendered title in Gather.
 - GitHub Pages delivery for the WebAssembly/WebGPU Gather build from `main`.

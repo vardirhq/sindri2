@@ -127,7 +127,8 @@ pub fn applies(type_name: &str, key: &str, payload: &Value) -> bool {
         // needs a multiline field and a font is a project asset rather than an
         // arbitrary string.
         ("sindri.tilemap", "columns" | "rows" | "palette" | "tiles")
-        | ("sindri.text", "text" | "font") => false,
+        | ("sindri.text", "text" | "font")
+        | ("sindri.sprite_animation", "clips" | "playing") => false,
         _ => true,
     }
 }
@@ -212,6 +213,30 @@ mod tests {
         assert!(!super::applies("sindri.text", "text", &text));
         assert!(!super::applies("sindri.text", "font", &text));
         assert!(super::applies("sindri.text", "font_size", &text));
+    }
+
+    #[test]
+    fn animation_clips_use_their_ordering_and_preview_controls() {
+        let animation = json!({
+            "clips": { "idle": { "frames": ["idle"], "seconds_per_frame": 0.2 } },
+            "playing": "idle",
+            "speed": 1.0
+        });
+        assert!(!super::applies(
+            "sindri.sprite_animation",
+            "clips",
+            &animation
+        ));
+        assert!(!super::applies(
+            "sindri.sprite_animation",
+            "playing",
+            &animation
+        ));
+        assert!(super::applies(
+            "sindri.sprite_animation",
+            "speed",
+            &animation
+        ));
     }
 
     #[test]
