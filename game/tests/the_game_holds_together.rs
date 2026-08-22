@@ -8,12 +8,12 @@
 
 use std::collections::BTreeSet;
 
-use sindri_core::{SceneComponent, SceneDocument, Transform3D, UnknownComponentPolicy};
+use sindri_core::{SceneComponent, SceneDocument, Transform3D, UnknownComponentPolicy, World};
 use sindri_decay::{ScriptComponent, ScriptSources, Scripts};
 use sindri_gather::{FONTS, extractor, sources, world};
 use sindri_grid::{GridPoint, GridSpace, PlanePoint};
 use sindri_platform::InputState;
-use sindri_scene::TilemapComponent;
+use sindri_scene::{SceneExtractor, TilemapComponent};
 
 const SCENE: &str = include_str!("../assets/gather.scene.json");
 
@@ -27,6 +27,21 @@ fn logical_position(grid: GridSpace, map: Transform3D, world: [f32; 3]) -> GridP
     );
     grid.unproject(local)
         .expect("the authored point unprojects")
+}
+
+fn floor_grid(world: &World, extractor: &SceneExtractor) -> (Transform3D, GridSpace) {
+    let (floor, tilemap) = extractor
+        .components()
+        .query::<TilemapComponent>(world)
+        .expect("the tilemap schema reads")
+        .into_iter()
+        .next()
+        .expect("Gather has a floor");
+    let map = world
+        .get(floor)
+        .and_then(|data| data.transform_3d)
+        .unwrap_or_default();
+    (map, tilemap.grid_space().expect("the floor has a valid grid"))
 }
 
 /// Every texture the scene names is one the binary carries.
@@ -135,18 +150,7 @@ fn walking_into_the_orbs_wins_the_game() {
     let sources = sources();
     let mut scripts = Scripts::new();
 
-    let (floor, tilemap) = extractor
-        .components()
-        .query::<TilemapComponent>(&world)
-        .expect("the tilemap schema reads")
-        .into_iter()
-        .next()
-        .expect("Gather has a floor");
-    let map = world
-        .get(floor)
-        .and_then(|data| data.transform_3d)
-        .unwrap_or_default();
-    let grid = tilemap.grid_space().expect("the floor has a valid grid");
+    let (map, grid) = floor_grid(&world, &extractor);
 
     let orbs: Vec<GridPoint> = world
         .entities()
