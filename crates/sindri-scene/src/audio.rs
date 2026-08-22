@@ -48,7 +48,7 @@ mod tests {
         .expect("audio component");
         assert!(!source.autoplay);
         assert!(!source.looping);
-        assert_eq!(source.volume, 1.0);
+        assert!((source.volume - 1.0).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -59,6 +59,6 @@ mod tests {
             looping: true,
             volume: 4.0,
         };
-        assert_eq!(source.normalized_volume(), 1.0);
+        assert!((source.normalized_volume() - 1.0).abs() < f32::EPSILON);
     }
 }
