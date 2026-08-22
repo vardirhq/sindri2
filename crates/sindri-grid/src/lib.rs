@@ -111,10 +111,8 @@ pub struct GridBounds {
 
 impl GridBounds {
     pub fn new(width: u32, height: u32) -> Result<Self, GridError> {
-        let width = i32::try_from(width).map_err(|_| GridError::BoundsOutsideIntegerRange {
-            width,
-            height,
-        })?;
+        let width = i32::try_from(width)
+            .map_err(|_| GridError::BoundsOutsideIntegerRange { width, height })?;
         let height = i32::try_from(height).map_err(|_| GridError::BoundsOutsideIntegerRange {
             width: u32::try_from(width).expect("the width was checked above"),
             height,
@@ -134,16 +132,12 @@ impl GridBounds {
 
     #[must_use]
     pub fn contains(self, coord: GridCoord) -> bool {
-        coord.x >= 0
-            && coord.y >= 0
-            && coord.x < self.width
-            && coord.y < self.height
+        coord.x >= 0 && coord.y >= 0 && coord.x < self.width && coord.y < self.height
     }
 
     /// Coordinates in deterministic row-major order.
     pub fn iter(self) -> impl Iterator<Item = GridCoord> {
-        (0..self.height)
-            .flat_map(move |y| (0..self.width).map(move |x| GridCoord::new(x, y)))
+        (0..self.height).flat_map(move |y| (0..self.width).map(move |x| GridCoord::new(x, y)))
     }
 
     pub fn cardinal_neighbours(self, coord: GridCoord) -> impl Iterator<Item = GridCoord> {
@@ -174,12 +168,7 @@ impl GridSpace {
         cell_width: f64,
         cell_height: f64,
     ) -> Result<Self, GridError> {
-        Self::with_origin(
-            projection,
-            cell_width,
-            cell_height,
-            PlanePoint::default(),
-        )
+        Self::with_origin(projection, cell_width, cell_height, PlanePoint::default())
     }
 
     /// Creates a grid whose `(0, 0)` cell is centred on `origin`.
@@ -254,10 +243,7 @@ impl GridSpace {
             Projection::Isometric => {
                 let horizontal = x / (self.cell_size.x * 0.5);
                 let vertical = y / (self.cell_size.y * 0.5);
-                GridPoint::new(
-                    (horizontal + vertical) * 0.5,
-                    (vertical - horizontal) * 0.5,
-                )
+                GridPoint::new((horizontal + vertical) * 0.5, (vertical - horizontal) * 0.5)
             }
         };
         if unprojected.x.is_finite() && unprojected.y.is_finite() {
@@ -332,7 +318,10 @@ impl fmt::Display for GridError {
                 point.x, point.y
             ),
             Self::CoordinateOutsideIntegerRange(value) => {
-                write!(formatter, "grid coordinate {value} is outside the i32 range")
+                write!(
+                    formatter,
+                    "grid coordinate {value} is outside the i32 range"
+                )
             }
             Self::BoundsOutsideIntegerRange { width, height } => write!(
                 formatter,
@@ -392,13 +381,9 @@ mod tests {
     #[test]
     fn both_projections_round_trip_cells_across_negative_and_positive_space() {
         for projection in [Projection::Orthogonal, Projection::Isometric] {
-            let grid = GridSpace::with_origin(
-                projection,
-                63.5,
-                29.25,
-                PlanePoint::new(173.0, -91.0),
-            )
-            .unwrap();
+            let grid =
+                GridSpace::with_origin(projection, 63.5, 29.25, PlanePoint::new(173.0, -91.0))
+                    .unwrap();
             for y in -128..=128 {
                 for x in -128..=128 {
                     let coord = GridCoord::new(x, y);
@@ -440,10 +425,8 @@ mod tests {
                         GridPoint::new(-0.49, 0.49),
                         GridPoint::new(0.49, 0.49),
                     ] {
-                        let sample = GridPoint::new(
-                            f64::from(x) + offset.x,
-                            f64::from(y) + offset.y,
-                        );
+                        let sample =
+                            GridPoint::new(f64::from(x) + offset.x, f64::from(y) + offset.y);
                         assert_eq!(
                             grid.plane_to_grid(grid.project(sample).unwrap()).unwrap(),
                             expected
@@ -490,12 +473,7 @@ mod tests {
 
     #[test]
     fn coordinate_neighbours_do_not_overflow() {
-        assert_eq!(
-            GridCoord::new(i32::MAX, 0)
-                .cardinal_neighbours()
-                .count(),
-            3
-        );
+        assert_eq!(GridCoord::new(i32::MAX, 0).cardinal_neighbours().count(), 3);
         assert_eq!(
             GridCoord::new(i32::MIN, i32::MIN)
                 .surrounding_neighbours()

@@ -20,11 +20,9 @@ pub mod prelude {
         AssetSource, SceneAssetDecoder, TextureAsset, TextureAssetDecoder, decode_completion,
     };
     pub use sindri_core::prelude::*;
-    pub use sindri_grid::{
-        GridBounds, GridCoord, GridPoint, GridSpace, PlanePoint, Projection,
-    };
     #[cfg(feature = "render")]
     pub use sindri_gpu::{GpuContext, GpuRequestOptions, SurfaceProfile};
+    pub use sindri_grid::{GridBounds, GridCoord, GridPoint, GridSpace, PlanePoint, Projection};
     #[cfg(feature = "render")]
     pub use sindri_scene::{CameraView, SceneExtractor, SpriteAnimations, WorldProjection};
 }
