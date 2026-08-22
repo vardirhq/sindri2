@@ -222,9 +222,21 @@ mod tests {
             "playing": "idle",
             "speed": 1.0
         });
-        assert!(!super::applies("sindri.sprite_animation", "clips", &animation));
-        assert!(!super::applies("sindri.sprite_animation", "playing", &animation));
-        assert!(super::applies("sindri.sprite_animation", "speed", &animation));
+        assert!(!super::applies(
+            "sindri.sprite_animation",
+            "clips",
+            &animation
+        ));
+        assert!(!super::applies(
+            "sindri.sprite_animation",
+            "playing",
+            &animation
+        ));
+        assert!(super::applies(
+            "sindri.sprite_animation",
+            "speed",
+            &animation
+        ));
     }
 
     #[test]

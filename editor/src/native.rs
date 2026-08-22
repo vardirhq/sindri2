@@ -1307,12 +1307,7 @@ impl EditorApp {
         first_font: Option<&str>,
         first_sprite: Option<&str>,
     ) -> Vec<ComponentMetadata> {
-        addable_components(
-            self.scene.components(),
-            present,
-            first_font,
-            first_sprite,
-        )
+        addable_components(self.scene.components(), present, first_font, first_sprite)
     }
 
     /// Turns every changed component payload into a command.
@@ -1353,12 +1348,9 @@ impl EditorApp {
         first_font: Option<&str>,
         first_sprite: Option<&str>,
     ) {
-        let Some(payload) = component_default(
-            self.scene.components(),
-            type_name,
-            first_font,
-            first_sprite,
-        ) else {
+        let Some(payload) =
+            component_default(self.scene.components(), type_name, first_font, first_sprite)
+        else {
             return;
         };
         let mut buffer = CommandBuffer::new();
@@ -2947,13 +2939,7 @@ fn components_sections(
             text_section(ui, payload, fonts);
         }
         if name == animation::TYPE_NAME {
-            animation_section(
-                ui,
-                payload,
-                project_root,
-                animation_texture,
-                animation_tool,
-            );
+            animation_section(ui, payload, project_root, animation_texture, animation_tool);
         }
         if name == tilemap::TYPE_NAME {
             tilemap_section(ui, payload, project_root, tilemap_tool);
@@ -3166,10 +3152,7 @@ fn animation_section(
             rename = ui
                 .add_enabled(rename_to.trim() != selected, egui::Button::new("Rename"))
                 .clicked();
-            ui.add_sized(
-                [128.0, 23.0],
-                egui::TextEdit::singleline(&mut rename_to),
-            );
+            ui.add_sized([128.0, 23.0], egui::TextEdit::singleline(&mut rename_to));
         });
     });
     *tool.rename() = rename_to.clone();
@@ -3228,8 +3211,7 @@ fn animation_section(
     };
     let mut seconds = f64::from(clip.seconds_per_frame);
     if number_row(ui, "Frame time", &mut seconds, 10.0, false) {
-        payload["clips"][selected.as_str()]["seconds_per_frame"] =
-            Value::from(seconds.max(0.001));
+        payload["clips"][selected.as_str()]["seconds_per_frame"] = Value::from(seconds.max(0.001));
     }
     let mut looping = clip.looping;
     if bool_row(ui, "Loop", &mut looping, 10.0) {
@@ -3273,7 +3255,10 @@ fn animation_section(
             replace = Some((index, sprite));
         }
         if !sprite_names.contains(frame) {
-            animation_problem(ui, &format!("Frame {} names missing sprite {frame:?}.", index + 1));
+            animation_problem(
+                ui,
+                &format!("Frame {} names missing sprite {frame:?}.", index + 1),
+            );
         }
     }
     if let Some((index, sprite)) = replace {
@@ -3334,9 +3319,13 @@ fn animation_preview(
             tool.set_previewing(previewing);
         }
         ui.label(
-            RichText::new(format!("{} frames · {:.3}s", clip.frames.len(), clip.seconds_per_frame))
-                .size(10.0)
-                .color(TEXT_MUTED),
+            RichText::new(format!(
+                "{} frames · {:.3}s",
+                clip.frames.len(),
+                clip.seconds_per_frame
+            ))
+            .size(10.0)
+            .color(TEXT_MUTED),
         );
     });
     if previewing {
@@ -3359,7 +3348,10 @@ fn animation_preview(
         Stroke::new(1.0, BORDER_SUBTLE),
         StrokeKind::Inside,
     );
-    let image = Rect::from_min_max(rect.min + Vec2::splat(10.0), rect.max - Vec2::new(10.0, 28.0));
+    let image = Rect::from_min_max(
+        rect.min + Vec2::splat(10.0),
+        rect.max - Vec2::new(10.0, 28.0),
+    );
     if let (Some(texture), Some(sprite_rect)) = (texture, sprite_rect) {
         let [x, y, width, height] = sprite_rect;
         painter.image(
@@ -4743,13 +4735,7 @@ fn addable_components(
         .registered_components()
         .filter(|metadata| !present.contains_key(&metadata.type_name))
         .filter(|metadata| {
-            component_default(
-                components,
-                &metadata.type_name,
-                first_font,
-                first_sprite,
-            )
-            .is_some()
+            component_default(components, &metadata.type_name, first_font, first_sprite).is_some()
         })
         .cloned()
         .collect()
@@ -5338,13 +5324,8 @@ mod tests {
                 .any(|metadata| metadata.type_name == TEXT_COMPONENT)
         );
 
-        let payload = component_default(
-            components,
-            TEXT_COMPONENT,
-            Some("fonts/Inter.ttf"),
-            None,
-        )
-        .expect("a project font completes a valid text component");
+        let payload = component_default(components, TEXT_COMPONENT, Some("fonts/Inter.ttf"), None)
+            .expect("a project font completes a valid text component");
         assert_eq!(payload["font"], "fonts/Inter.ttf");
         assert_eq!(payload["text"], "Text");
         components
@@ -5364,14 +5345,12 @@ mod tests {
                 .any(|metadata| metadata.type_name == animation::TYPE_NAME)
         );
 
-        let payload = component_default(
-            components,
-            animation::TYPE_NAME,
-            None,
-            Some("idle"),
-        )
-        .expect("a named sheet sprite completes a valid animation component");
-        assert_eq!(payload["clips"]["clip"]["frames"], serde_json::json!(["idle"]));
+        let payload = component_default(components, animation::TYPE_NAME, None, Some("idle"))
+            .expect("a named sheet sprite completes a valid animation component");
+        assert_eq!(
+            payload["clips"]["clip"]["frames"],
+            serde_json::json!(["idle"])
+        );
         assert_eq!(payload["playing"], "clip");
         components
             .validate_payload(animation::TYPE_NAME, &payload)

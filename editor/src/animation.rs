@@ -252,10 +252,7 @@ fn clips_mut(payload: &mut Value) -> Result<&mut Map<String, Value>, String> {
         .ok_or_else(|| "animation clips are not an object".to_owned())
 }
 
-fn frames_mut<'a>(
-    payload: &'a mut Value,
-    clip: &str,
-) -> Result<&'a mut Vec<Value>, String> {
+fn frames_mut<'a>(payload: &'a mut Value, clip: &str) -> Result<&'a mut Vec<Value>, String> {
     clips_mut(payload)?
         .get_mut(clip)
         .and_then(|clip| clip.get_mut("frames"))

@@ -306,8 +306,7 @@ impl ProjectTree {
         self.entries
             .iter()
             .find(|entry| {
-                entry.kind == AssetKind::Texture
-                    && entry.relative.replace('\\', "/") == texture
+                entry.kind == AssetKind::Texture && entry.relative.replace('\\', "/") == texture
             })
             .map(|entry| entry.sprites.clone())
             .unwrap_or_default()

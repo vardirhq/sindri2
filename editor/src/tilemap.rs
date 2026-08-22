@@ -119,10 +119,10 @@ impl SpritePalette {
         if self.texture.is_none()
             && let Some(image) = self.image.take()
         {
-            let label = self
-                .key
-                .as_ref()
-                .map_or_else(|| "sprite palette".to_owned(), |(_, texture)| texture.clone());
+            let label = self.key.as_ref().map_or_else(
+                || "sprite palette".to_owned(),
+                |(_, texture)| texture.clone(),
+            );
             self.texture = Some(context.load_texture(label, image, egui::TextureOptions::NEAREST));
         }
         self.texture.as_ref().map(egui::TextureHandle::id)
