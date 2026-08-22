@@ -98,11 +98,7 @@ pub enum AudioError {
 /// browser APIs.
 pub trait AudioBackend {
     fn register(&mut self, clip: AudioClip) -> Result<(), AudioError>;
-    fn play(
-        &mut self,
-        clip: &str,
-        settings: PlaybackSettings,
-    ) -> Result<AudioVoiceId, AudioError>;
+    fn play(&mut self, clip: &str, settings: PlaybackSettings) -> Result<AudioVoiceId, AudioError>;
     fn stop(&mut self, voice: AudioVoiceId);
     fn pause_all(&mut self);
     fn resume_all(&mut self);
@@ -159,11 +155,7 @@ impl AudioBackend for SilentAudioBackend {
         Ok(())
     }
 
-    fn play(
-        &mut self,
-        clip: &str,
-        settings: PlaybackSettings,
-    ) -> Result<AudioVoiceId, AudioError> {
+    fn play(&mut self, clip: &str, settings: PlaybackSettings) -> Result<AudioVoiceId, AudioError> {
         if !self.clips.contains(clip) {
             return Err(AudioError::MissingClip(clip.to_owned()));
         }
@@ -232,11 +224,7 @@ impl AudioBackend for NativeAudioBackend {
         Ok(())
     }
 
-    fn play(
-        &mut self,
-        clip: &str,
-        settings: PlaybackSettings,
-    ) -> Result<AudioVoiceId, AudioError> {
+    fn play(&mut self, clip: &str, settings: PlaybackSettings) -> Result<AudioVoiceId, AudioError> {
         use rodio::Source as _;
         use std::io::Cursor;
 
@@ -246,12 +234,11 @@ impl AudioBackend for NativeAudioBackend {
             .get(clip)
             .cloned()
             .ok_or_else(|| AudioError::MissingClip(clip.to_owned()))?;
-        let source = rodio::Decoder::try_from(Cursor::new(bytes)).map_err(|error| {
-            AudioError::Decode {
+        let source =
+            rodio::Decoder::try_from(Cursor::new(bytes)).map_err(|error| AudioError::Decode {
                 id: clip.to_owned(),
                 message: error.to_string(),
-            }
-        })?;
+            })?;
         let player = rodio::Player::connect_new(self.device.mixer());
         player.set_volume(settings.volume.clamp(0.0, 1.0));
         match settings.mode {
@@ -337,20 +324,19 @@ impl AudioBackend for BrowserAudioBackend {
         let options = web_sys::BlobPropertyBag::new();
         options.set_type(clip.mime_type);
         let blob = web_sys::Blob::new_with_u8_array_sequence_and_options(&parts, &options)
-            .map_err(|error| AudioError::Browser(format!("could not create audio blob: {error:?}")))?;
-        let url = web_sys::Url::create_object_url_with_blob(&blob)
-            .map_err(|error| AudioError::Browser(format!("could not create audio URL: {error:?}")))?;
+            .map_err(|error| {
+                AudioError::Browser(format!("could not create audio blob: {error:?}"))
+            })?;
+        let url = web_sys::Url::create_object_url_with_blob(&blob).map_err(|error| {
+            AudioError::Browser(format!("could not create audio URL: {error:?}"))
+        })?;
         if let Some(previous) = self.clips.insert(clip.id, url) {
             let _ = web_sys::Url::revoke_object_url(&previous);
         }
         Ok(())
     }
 
-    fn play(
-        &mut self,
-        clip: &str,
-        settings: PlaybackSettings,
-    ) -> Result<AudioVoiceId, AudioError> {
+    fn play(&mut self, clip: &str, settings: PlaybackSettings) -> Result<AudioVoiceId, AudioError> {
         if !self.unlocked {
             return Err(AudioError::Locked);
         }
@@ -358,8 +344,9 @@ impl AudioBackend for BrowserAudioBackend {
             .clips
             .get(clip)
             .ok_or_else(|| AudioError::MissingClip(clip.to_owned()))?;
-        let element = web_sys::HtmlAudioElement::new_with_src(url)
-            .map_err(|error| AudioError::Browser(format!("could not create audio element: {error:?}")))?;
+        let element = web_sys::HtmlAudioElement::new_with_src(url).map_err(|error| {
+            AudioError::Browser(format!("could not create audio element: {error:?}"))
+        })?;
         element.set_loop(settings.mode == PlaybackMode::Loop);
         element.set_volume(f64::from(settings.volume.clamp(0.0, 1.0)));
         element
@@ -416,7 +403,11 @@ mod tests {
     fn silent_backend_records_playback_without_a_device() {
         let mut audio = SilentAudioBackend::default();
         audio
-            .register(AudioClip::new("audio/pickup.wav", vec![1, 2, 3], "audio/wav"))
+            .register(AudioClip::new(
+                "audio/pickup.wav",
+                vec![1, 2, 3],
+                "audio/wav",
+            ))
             .expect("register");
         let voice = audio
             .play("audio/pickup.wav", PlaybackSettings::once(0.75))

@@ -617,6 +617,10 @@ mod audio_surface_tests {
             }
         "#;
         let lowered = lower_with_environment(source, &environment());
-        assert!(lowered.program.is_some(), "{:?}", lowered.analysis.diagnostics);
+        assert!(
+            lowered.program.is_some(),
+            "{:?}",
+            lowered.analysis.diagnostics
+        );
     }
 }

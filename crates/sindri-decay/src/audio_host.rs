@@ -172,7 +172,10 @@ mod tests {
         host.call(
             None,
             &Path(vec!["Audio".to_owned(), "play".to_owned()]),
-            &[Value::String("audio/pickup.wav".to_owned()), Value::Number(0.8)],
+            &[
+                Value::String("audio/pickup.wav".to_owned()),
+                Value::Number(0.8),
+            ],
         )
         .expect("audio call");
         assert_eq!(

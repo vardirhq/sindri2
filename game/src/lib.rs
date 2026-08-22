@@ -24,18 +24,16 @@ use sindri_core::{
     AssetId, ComponentSchemaRegistry, FixedStepConfig, SceneDocument, SpriteSheetDocument, World,
     sheet_id_for,
 };
-use sindri_decay::{
-    AudioCommand, ScriptComponent, ScriptSources, Scripts, drain_audio_commands,
-};
+use sindri_decay::{AudioCommand, ScriptComponent, ScriptSources, Scripts, drain_audio_commands};
 use sindri_desktop::{AppContext, DesktopApp, Flow, WindowConfig};
-use sindri_platform::{
-    AudioBackend, AudioClip, AudioError, EngineHost, FrameContext, Game, HostError, InputEvent,
-    InputState, Key, PlaybackSettings,
-};
 #[cfg(target_arch = "wasm32")]
 use sindri_platform::BrowserAudioBackend;
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_platform::NativeAudioBackend;
+use sindri_platform::{
+    AudioBackend, AudioClip, AudioError, EngineHost, FrameContext, Game, HostError, InputEvent,
+    InputState, Key, PlaybackSettings,
+};
 use sindri_render::{
     DepthTarget, FrameEncodeError, FrameRenderers, FrameTarget, SpriteBatchRenderer, TextRenderer,
     Texture2D, TextureError, TextureRegistry, TexturedCubeRenderer, Viewport,

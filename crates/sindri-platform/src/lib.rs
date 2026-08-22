@@ -10,14 +10,14 @@ mod clock;
 mod host;
 mod input;
 
-pub use audio::{
-    AudioBackend, AudioClip, AudioError, AudioEvent, AudioVoiceId, PlaybackMode, PlaybackSettings,
-    SilentAudioBackend,
-};
 #[cfg(target_arch = "wasm32")]
 pub use audio::BrowserAudioBackend;
 #[cfg(not(target_arch = "wasm32"))]
 pub use audio::NativeAudioBackend;
+pub use audio::{
+    AudioBackend, AudioClip, AudioError, AudioEvent, AudioVoiceId, PlaybackMode, PlaybackSettings,
+    SilentAudioBackend,
+};
 #[cfg(not(target_arch = "wasm32"))]
 pub use clock::SystemClock;
 pub use clock::{Clock, FrameTimer, ManualClock};

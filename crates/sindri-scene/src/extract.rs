@@ -14,9 +14,10 @@ use sindri_render::{
 use thiserror::Error;
 
 use crate::{
-    AnimationError, CameraComponent, GridNavigationComponent, GridOccupantComponent, MeshComponent,
-    MeshPrimitive, PROCEDURAL_TEXTURES, SpriteAnchor, SpriteAnimationComponent, SpriteAnimations,
-    SpriteComponent, SpriteSpace, TextComponent, TextureBindings, TilemapComponent, TilemapError,
+    AnimationError, AudioSourceComponent, CameraComponent, GridNavigationComponent,
+    GridOccupantComponent, MeshComponent, MeshPrimitive, PROCEDURAL_TEXTURES, SpriteAnchor,
+    SpriteAnimationComponent, SpriteAnimations, SpriteComponent, SpriteSpace, TextComponent,
+    TextureBindings, TilemapComponent, TilemapError,
 };
 
 /// Which projection the world camera uses.
@@ -135,6 +136,15 @@ impl SceneExtractor {
         // belongs to. Inventing one would create a valid-looking component
         // that cannot ever resolve.
         components.register::<GridOccupantComponent>("Grid Occupant")?;
+        components.register_with_default::<AudioSourceComponent>(
+            "Audio Source",
+            serde_json::json!({
+                "clip": "",
+                "autoplay": false,
+                "looping": false,
+                "volume": 1.0
+            }),
+        )?;
         Ok(Self { components })
     }
 
