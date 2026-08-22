@@ -831,6 +831,28 @@ impl EditorApp {
         .map_err(|error| error.to_string())
     }
 
+    /// Applies a primary Scene-view click without taking drags or paint strokes.
+    fn select_viewport_click(
+        &mut self,
+        rect: Rect,
+        response: &Response,
+        camera: CameraView,
+        painting: bool,
+    ) {
+        if painting || !response.clicked_by(egui::PointerButton::Primary) {
+            return;
+        }
+        let Some(pointer) = response.interact_pointer_pos() else {
+            return;
+        };
+        match self.pick_viewport(rect, pointer, camera) {
+            Ok(entity) => self.select(entity),
+            Err(error) => self
+                .console
+                .warning(format!("Viewport selection failed: {error}")),
+        }
+    }
+
     /// Writes one cell through the command layer. Repeated calls during one
     /// drag share a merge key, and pointer release closes that merge run.
     fn apply_tile_brush(&mut self, hover: &TilemapHover) {
@@ -2228,17 +2250,8 @@ impl EditorApp {
         {
             self.apply_tile_brush(hover);
         }
-        if editing
-            && !painting
-            && response.clicked_by(egui::PointerButton::Primary)
-            && let Some(pointer) = response.interact_pointer_pos()
-        {
-            match self.pick_viewport(rect, pointer, camera) {
-                Ok(entity) => self.select(entity),
-                Err(error) => self
-                    .console
-                    .warning(format!("Viewport selection failed: {error}")),
-            }
+        if editing {
+            self.select_viewport_click(rect, &response, camera, painting);
         }
         let viewport = if editing {
             &mut self.scene_viewport
