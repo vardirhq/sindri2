@@ -18,7 +18,7 @@ pub use components::{
 };
 pub use extract::{CameraView, SceneExtractError, SceneExtractor, ViewCamera, WorldProjection};
 pub use textures::{
-    PROCEDURAL_TEXTURES, ProceduralTexture, SheetBindError, TEXTURE_NAMING_COMPONENTS,
-    TextureBindings, referenced_fonts, referenced_sheets, referenced_textures, unresolved_sprites,
-    unresolved_textures,
+    FONT_NAMING_COMPONENTS, PROCEDURAL_TEXTURES, ProceduralTexture, SheetBindError,
+    TEXTURE_NAMING_COMPONENTS, TextureBindings, referenced_fonts, referenced_sheets,
+    referenced_textures, unresolved_sprites, unresolved_textures,
 };

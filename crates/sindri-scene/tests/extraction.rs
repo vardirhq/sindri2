@@ -3,6 +3,8 @@
 //! Everything here runs without a GPU: a scene is loaded into a world, the
 //! world is extracted, and the resulting passes are inspected directly.
 
+use std::error::Error;
+
 use glam::{Vec2, Vec3};
 use sindri_core::{
     SCENE_FORMAT_VERSION, SceneDocument, SpriteSheetDocument, Transform3D, UnknownComponentPolicy,
@@ -12,8 +14,8 @@ use sindri_render::{
     FrameCommand, RenderStage, SpriteDepth, TextureId, TextureRegistry, UvRect, Viewport,
 };
 use sindri_scene::{
-    CameraView, SceneExtractError, SceneExtractor, SpriteAnimations, TEXTURE_NAMING_COMPONENTS,
-    TextureBindings, WorldProjection, referenced_fonts,
+    CameraView, FONT_NAMING_COMPONENTS, SceneExtractError, SceneExtractor, SpriteAnimations,
+    TEXTURE_NAMING_COMPONENTS, TextureBindings, WorldProjection, referenced_fonts,
 };
 
 const VIEWPORT: Viewport = Viewport::new(512, 512);
@@ -1682,6 +1684,48 @@ fn every_component_that_names_a_texture_is_one_hosts_load_from() {
         assert!(
             TEXTURE_NAMING_COMPONENTS.contains(&metadata.type_name.as_str()),
             "{} names a texture but hosts never load it, so it draws magenta",
+            metadata.type_name
+        );
+    }
+}
+
+/// The same guard for fonts, where the symptom is quieter still: a component
+/// that names a font and is not in `FONT_NAMING_COMPONENTS` never has it
+/// requested, so nothing binds it and the text draws as nothing at all — a
+/// blank where a label should be, with no failed frame to point at it.
+///
+/// This cannot be held against default payloads the way the list above is: a
+/// component that names a font has no sensible blank, because it cannot invent
+/// a font, so it is registered without a default and would never reach the
+/// assert. It is held against the *validator* instead. A component reads a
+/// `font` field exactly when handing it a wrongly-typed one changes what
+/// validation says, so the probe below finds every such component whether or
+/// not it can be created from nothing.
+///
+/// Both directions are checked, so the list cannot go stale in either: a
+/// component that reads a font has to be named, and a name that no longer reads
+/// one has to go.
+#[test]
+fn every_component_that_names_a_font_is_one_hosts_load_from() {
+    let extractor = SceneExtractor::new().expect("built-in components register");
+    let reads_a_font = |type_name: &str| {
+        let complaint = |payload: &serde_json::Value| {
+            extractor
+                .components()
+                .validate_payload(type_name, payload)
+                .err()
+                .and_then(|error| error.source().map(ToString::to_string))
+        };
+        complaint(&serde_json::json!({})) != complaint(&serde_json::json!({ "font": 0 }))
+    };
+
+    for metadata in extractor.components().registered_components() {
+        assert_eq!(
+            reads_a_font(&metadata.type_name),
+            FONT_NAMING_COMPONENTS.contains(&metadata.type_name.as_str()),
+            "{} reads a font field without being listed, or is listed without \
+             reading one. The first draws no text at all, because hosts never \
+             load a font for it; the second is a name that loads nothing.",
             metadata.type_name
         );
     }
