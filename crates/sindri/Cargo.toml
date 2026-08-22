@@ -10,6 +10,7 @@ repository.workspace = true
 [dependencies]
 sindri-assets = { path = "../sindri-assets", version = "0.1.0" }
 sindri-core = { path = "../sindri-core", version = "0.1.0" }
+sindri-grid = { path = "../sindri-grid", version = "0.1.0" }
 sindri-gpu = { path = "../sindri-gpu", version = "0.1.0", optional = true }
 sindri-render = { path = "../sindri-render", version = "0.1.0", optional = true }
 sindri-scene = { path = "../sindri-scene", version = "0.1.0", optional = true }
