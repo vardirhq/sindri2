@@ -1,0 +1,18 @@
+name: Pathfinding development probe
+on:
+  push:
+    branches: [codex/pathfinding-vertical]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Show editor integration points
+        run: |
+          grep -n -C 8 'inspector::applies' editor/src/native.rs || true
+          grep -n -C 10 'component_default\|default_payload\|register_with_default' editor/src/native.rs || true
+          grep -n -C 12 'ValueKind::' editor/src/native.rs | head -n 240 || true
+          grep -n -C 8 'tilemap' editor/src/native.rs | grep -E '^[0-9]+[-:]|Grid|grid|tilemap|component' | head -n 260 || true
