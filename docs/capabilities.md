@@ -95,6 +95,24 @@ released-this-frame for keys and mouse buttons, plus pointer position, pointer
 delta, scroll delta, and window focus. `axis(negative, positive)` returns -1, 0, or 1 and gives zero
 when both are held, so opposed movement keys cannot resolve by event order.
 
+### Audio
+
+Audio is a platform service rather than simulation state. Encoded WAV, Ogg, and
+MP3 assets are identified and validated by the asset layer, then registered with
+an `AudioBackend`. Native hosts use Rodio/CPAL, browser hosts use media elements
+with an explicit user-interaction unlock, and headless tests use a silent backend
+that records every request without needing a sound device. The shared boundary
+supports one-shot and looping playback plus per-voice stop and global pause,
+resume, and stop.
+
+Scenes can author `sindri.audio` with a logical clip ID, autoplay, looping, and a
+normalized volume. The generic component inspector can add and edit it, and the
+project browser recognises WAV/Ogg/MP3 files as audio assets. Decay exposes typed
+`Audio.play`, `loop`, `stop_all`, `pause_all`, and `resume_all` calls while only
+emitting intent, so the language itself retains its no-I/O boundary. Gather
+exercises the path end to end with background, pickup, and victory sounds on
+native and browser hosts.
+
 ### Grid geometry
 
 `sindri-grid` provides renderer-independent signed cell coordinates, continuous
