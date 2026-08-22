@@ -22,6 +22,65 @@ if old not in text:
 text = text.replace(old, new, 1)
 p.write_text(text)
 
+# The generic surface contract gives every Entity argument the same spare
+# entity. Make that spare a self-contained one-cell grid occupant as well as a
+# tilemap, so Grid.can_reach/step_toward exercise a valid navigation call rather
+# than failing because the test fixture omitted the components they require.
+p = Path('crates/sindri-decay/src/surface.rs')
+text = p.read_text()
+old = '''                let spare = world.spawn(EntityData {
+                    transform_3d: Some(Transform3D::default()),
+                    components: [(
+                        super::TILEMAP_COMPONENT.to_owned(),
+                        serde_json::json!({
+                            "columns": 1,
+                            "rows": 1,
+                            "space": "world",
+                            "texture": "tiles.png",
+                            "palette": ["tile"],
+                            "tiles": [0]
+                        }),
+                    )]
+                    .into_iter()
+                    .collect(),
+                    ..EntityData::default()
+                });'''
+new = '''                let spare = world.spawn(EntityData {
+                    source_id: Some("surface-grid".parse().expect("stable test id")),
+                    transform_3d: Some(Transform3D::default()),
+                    components: [
+                        (
+                            super::TILEMAP_COMPONENT.to_owned(),
+                            serde_json::json!({
+                                "columns": 1,
+                                "rows": 1,
+                                "space": "world",
+                                "texture": "tiles.png",
+                                "palette": ["tile"],
+                                "tiles": [0]
+                            }),
+                        ),
+                        (
+                            "sindri.grid_navigation".to_owned(),
+                            serde_json::json!({ "walls": [] }),
+                        ),
+                        (
+                            "sindri.grid_occupant".to_owned(),
+                            serde_json::json!({
+                                "grid": "surface-grid",
+                                "footprint": [[0, 0]]
+                            }),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                    ..EntityData::default()
+                });'''
+if old not in text:
+    raise SystemExit('missing Decay surface spare fixture')
+text = text.replace(old, new, 1)
+p.write_text(text)
+
 # Put new Grid calls in the checked API table, not in prose the contract test ignores.
 p = Path('docs/scripting.md')
 text = p.read_text()
