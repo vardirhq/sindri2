@@ -1,6 +1,9 @@
 name: Fix browser audio Promise
 
 on:
+  push:
+    branches:
+      - codex/audio-end-to-end
   pull_request:
     branches:
       - main
