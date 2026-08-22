@@ -1317,17 +1317,14 @@ impl EditorApp {
             }),
         });
         self.history.break_merge_run();
-        if let Err(error) = self
-            .history
-            .apply(
-                buffer.into_transaction(if parent.is_some() {
-                    "Create child"
-                } else {
-                    "Create GameObject"
-                }),
-                &mut self.world,
-            )
-        {
+        if let Err(error) = self.history.apply(
+            buffer.into_transaction(if parent.is_some() {
+                "Create child"
+            } else {
+                "Create GameObject"
+            }),
+            &mut self.world,
+        ) {
             self.report(error.to_string());
             return;
         }
