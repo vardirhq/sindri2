@@ -1806,10 +1806,7 @@ impl EditorApp {
                     ui.close();
                 }
                 if ui
-                    .add_enabled(
-                        self.selection.is_some(),
-                        egui::Button::new("Create Child"),
-                    )
+                    .add_enabled(self.selection.is_some(), egui::Button::new("Create Child"))
                     .clicked()
                 {
                     create = self.selection.map(CreateGameObject::Child);
