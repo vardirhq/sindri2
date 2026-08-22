@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 63141)
-Total output lines: 6663
-
 use std::{
     collections::{BTreeMap, BTreeSet},
     f32::consts::TAU,
@@ -2497,7 +2494,1452 @@ impl EditorApp {
         );
         ui.painter()
             .add(Shape::convex_polygon(hover.outline.to_vec(), fill, stroke));
-        ui.painter().text(…13141 tokens truncated… == *chosen))
+        ui.painter().text(
+            hover.outline[0],
+            Align2::LEFT_BOTTOM,
+            format!("{}, {}", hover.column, hover.row),
+            FontId::proportional(10.0),
+            TEXT,
+        );
+    }
+
+    /// Draws one view of the world into whatever space `ui` has left.
+    ///
+    /// The Scene view takes camera input and wears editor chrome; the Game view
+    /// takes neither, because chrome painted across what the player would see
+    /// makes it something else. Both go through here so the two views cannot
+    /// drift into being two renderers.
+    fn render_view(&mut self, ui: &mut egui::Ui, tab: WorkspaceTab) {
+        let context = ui.ctx().clone();
+        let editing = tab == WorkspaceTab::Scene;
+        let (rect, response) = ui.allocate_exact_size(ui.available_size(), Sense::drag());
+        let painting = editing && self.tilemap_tool.brush().is_some();
+        let camera_before_input = self.scene_camera();
+        let gizmo_owned = if editing && !painting {
+            self.gizmo_visual(rect, camera_before_input)
+                .is_some_and(|(camera, visual)| {
+                    self.interact_gizmo(rect, &response, camera, &visual)
+                })
+        } else {
+            false
+        };
+        if editing {
+            self.move_camera(&context, &response, rect.height(), painting || gizmo_owned);
+        }
+        let scale = context.pixels_per_point();
+        let camera = if editing {
+            self.scene_camera()
+        } else {
+            camera_for(tab, EditorCamera::default())
+        };
+        let hover = editing
+            .then(|| self.tilemap_hover(rect, response.hover_pos(), camera))
+            .flatten();
+        if let Some(hover) = &hover
+            && (response.clicked_by(egui::PointerButton::Primary)
+                || response.dragged_by(egui::PointerButton::Primary))
+        {
+            self.apply_tile_brush(hover);
+        }
+        if editing {
+            self.select_viewport_click(rect, &response, camera, painting || gizmo_owned);
+        }
+        let viewport = if editing {
+            &mut self.scene_viewport
+        } else {
+            &mut self.game_viewport
+        };
+        let failure = viewport
+            .render(
+                &mut self.renderers,
+                SceneSource {
+                    scene: &self.scene,
+                    world: &self.world,
+                    animations: &self.animations,
+                    textures: &self.textures,
+                },
+                (
+                    physical_viewport_dimension(rect.width(), scale),
+                    physical_viewport_dimension(rect.height(), scale),
+                ),
+                camera,
+            )
+            .err();
+        // Two views can be live at once, and the first thing to go wrong is the
+        // thing worth reading, so a later success does not erase it.
+        if let Some(failure) = failure {
+            // The console collapses this: a render failure recurs every frame,
+            // and one entry with a count says more than sixty a second.
+            self.console.error(&failure);
+            if self.render_error.is_none() {
+                self.render_error = Some(failure);
+            }
+        }
+        ui.painter().image(
+            viewport.texture_id,
+            rect,
+            Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+            Color32::WHITE,
+        );
+        if editing {
+            if let Some(hover) = &hover {
+                self.paint_tilemap_hover(ui, hover);
+            }
+            if !painting && let Some((_, visual)) = self.gizmo_visual(rect, camera) {
+                paint_transform_gizmo(
+                    ui.painter(),
+                    rect,
+                    &visual,
+                    self.gizmo_drag.map(|drag| drag.axis),
+                );
+            }
+            // The same view the frame under it was drawn through, asked for
+            // rather than re-derived, so the axes cannot drift from the picture.
+            let axes = self
+                .scene
+                .world_camera(&self.world, camera)
+                .ok()
+                .flatten()
+                .map(|camera| camera.view);
+            paint_runtime_overlay(
+                ui.painter(),
+                rect,
+                &self
+                    .selection
+                    .and_then(|entity| self.world.get(entity))
+                    .map_or_else(|| "No selection".to_owned(), entity_name),
+                self.problem(),
+                axes,
+            );
+        } else {
+            paint_viewport_border(ui.painter(), rect, self.problem());
+        }
+        context.request_repaint();
+    }
+
+    /// The 2 by 3 workspace: Scene above Game, with the panels beside them.
+    fn two_by_three_views(&mut self, ui: &mut egui::Ui) {
+        egui::CentralPanel::default()
+            .frame(egui::Frame::new().fill(APP_BG).inner_margin(0))
+            .show(ui, |ui| {
+                // The Game view is a bottom panel so it keeps its height while
+                // the Scene view takes whatever is left.
+                egui::Panel::bottom("game-view")
+                    .default_size(300.0)
+                    .min_size(120.0)
+                    .resizable(true)
+                    .frame(egui::Frame::new().fill(APP_BG).inner_margin(0))
+                    .show(ui, |ui| {
+                        view_title(ui, "Game");
+                        ui.separator();
+                        self.render_view(ui, WorkspaceTab::Game);
+                    });
+                view_title(ui, "Scene");
+                ui.separator();
+                self.scene_tools(ui, true);
+                ui.separator();
+                self.render_view(ui, WorkspaceTab::Scene);
+            });
+    }
+
+    /// The wide workspace: one view at a time, chosen by a tab.
+    fn tabbed_view(&mut self, ui: &mut egui::Ui) {
+        egui::CentralPanel::default()
+            .frame(egui::Frame::new().fill(APP_BG).inner_margin(0))
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    workspace_tab(ui, &mut self.workspace_tab, WorkspaceTab::Scene, "Scene");
+                    workspace_tab(ui, &mut self.workspace_tab, WorkspaceTab::Game, "Game");
+                });
+                ui.separator();
+                let tab = self.workspace_tab;
+                self.scene_tools(ui, tab == WorkspaceTab::Scene);
+                ui.separator();
+                // Only the visible view is drawn: rendering the hidden one would
+                // spend a frame's GPU work on something nobody is looking at.
+                self.render_view(ui, tab);
+            });
+    }
+}
+
+impl eframe::App for EditorApp {
+    /// Settings are written when eframe decides to, which includes shutdown.
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        self.preferences.save(storage);
+    }
+
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        // Before anything is drawn, so a texture that arrived since the last
+        // frame is bound by the time this one extracts.
+        self.refresh_textures();
+        let state = self.render_state.clone();
+        let arrived = self
+            .textures
+            .poll(&state.device, &state.queue, &mut self.renderers.text);
+        self.record_texture_notes(arrived);
+        self.advance_animations(ui.ctx());
+        self.advance_scripts(ui.ctx());
+        self.update_title(ui.ctx());
+        self.handle_close_request(ui.ctx());
+        self.handle_shortcuts(ui.ctx());
+        self.top_bar(ui);
+        self.status_bar(ui);
+        // Panels claim space in the order they are shown, so this order is the
+        // arrangement: each right panel sits to the left of the one before it.
+        match self.preferences.layout {
+            WorkspaceLayout::TwoByThree => {
+                self.inspector_panel(ui);
+                self.asset_panel(ui);
+                self.hierarchy_panel(ui);
+                self.render_error = None;
+                self.two_by_three_views(ui);
+            }
+            WorkspaceLayout::Wide => {
+                self.hierarchy_panel(ui);
+                self.inspector_panel(ui);
+                self.asset_panel(ui);
+                self.render_error = None;
+                self.tabbed_view(ui);
+            }
+        }
+        // Releasing the pointer ends a drag, so the next one is its own step.
+        if ui.ctx().input(|input| input.pointer.any_released()) {
+            self.history.break_merge_run();
+        }
+        // Drawn last so it sits over everything, and asked before Escape is
+        // read as clearing the selection.
+        if self.confirm_dialog(ui.ctx()) {
+            return;
+        }
+        // Escape clears the selection wherever the pointer happens to be. The
+        // hierarchy's empty space does the same, but only while it has empty
+        // space to click.
+        if ui.ctx().input(|input| input.key_pressed(egui::Key::Escape)) {
+            self.select(None);
+        }
+    }
+}
+
+fn configure_theme(context: &egui::Context) {
+    let mut fonts = egui::FontDefinitions::default();
+    fonts.font_data.insert(
+        "inter".to_owned(),
+        Arc::new(FontData::from_static(INTER_FONT)),
+    );
+    fonts
+        .families
+        .entry(FontFamily::Proportional)
+        .or_default()
+        .insert(0, "inter".to_owned());
+    context.set_fonts(fonts);
+    egui_material_icons::initialize(context);
+    context.set_theme(egui::Theme::Dark);
+    context.all_styles_mut(|style| {
+        style.spacing.item_spacing = Vec2::new(7.0, 6.0);
+        style.spacing.button_padding = Vec2::new(8.0, 4.0);
+        style.spacing.interact_size.y = 26.0;
+        style
+            .text_styles
+            .insert(TextStyle::Body, FontId::new(13.0, FontFamily::Proportional));
+        style.text_styles.insert(
+            TextStyle::Button,
+            FontId::new(12.0, FontFamily::Proportional),
+        );
+        style.visuals.panel_fill = PANEL_BG;
+        style.visuals.window_fill = PANEL_RAISED;
+        style.visuals.extreme_bg_color = FIELD_BG;
+        style.visuals.faint_bg_color = PANEL_RAISED;
+        style.visuals.selection.bg_fill = ACCENT_SOFT;
+        style.visuals.selection.stroke = Stroke::new(1.0, ACCENT);
+        style.visuals.widgets.inactive.bg_fill = PANEL_RAISED;
+        style.visuals.widgets.inactive.bg_stroke = Stroke::new(1.0, BORDER);
+        style.visuals.widgets.inactive.fg_stroke = Stroke::new(1.0, TEXT_MUTED);
+        style.visuals.widgets.hovered.bg_fill = Color32::from_rgb(25, 31, 37);
+        style.visuals.widgets.hovered.bg_stroke = Stroke::new(1.0, Color32::from_rgb(55, 65, 74));
+        style.visuals.widgets.active.bg_fill = ACCENT_SOFT;
+        style.visuals.widgets.active.bg_stroke = Stroke::new(1.0, ACCENT);
+    });
+}
+
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss
+)]
+fn physical_viewport_dimension(points: f32, scale: f32) -> u32 {
+    (points * scale).round().clamp(1.0, u32::MAX as f32) as u32
+}
+
+/// A panel's heading.
+///
+/// Actions live beneath the heading rather than being smuggled into this
+/// shared decoration. The hierarchy's create menu, for example, now has both
+/// an undoable spawn command and stable authored IDs behind it.
+fn panel_title(ui: &mut egui::Ui, title: &str) {
+    ui.add_space(4.0);
+    ui.horizontal(|ui| {
+        ui.add_space(8.0);
+        ui.label(RichText::new(title).strong().size(12.0).color(TEXT));
+    });
+    ui.add_space(3.0);
+    ui.separator();
+}
+
+fn search_field(ui: &mut egui::Ui, value: &mut String, hint: &str) {
+    ui.add_space(6.0);
+    ui.horizontal(|ui| {
+        ui.add_space(8.0);
+        ui.label(
+            ICON_SEARCH
+                .outlined()
+                .rich_text()
+                .size(15.0)
+                .color(TEXT_FAINT),
+        );
+        ui.add_sized(
+            [ui.available_width() - 10.0, 28.0],
+            egui::TextEdit::singleline(value)
+                .hint_text(hint)
+                .frame(egui::Frame::NONE),
+        );
+    });
+}
+
+/// The root the hierarchy hangs from.
+///
+/// A collapse chevron used to sit in front of it, and nothing collapsed.
+fn hierarchy_group(ui: &mut egui::Ui, label: &str, icon: MaterialIcon) -> Response {
+    let width = ui.available_width();
+    let row = ui.scope_builder(egui::UiBuilder::new().sense(Sense::hover()), |ui| {
+        ui.set_min_width(width);
+        ui.horizontal(|ui| {
+            ui.add_space(10.0);
+            let icon = ui.add(
+                egui::Label::new(icon.outlined().rich_text().size(15.0).color(TEXT_MUTED))
+                    .sense(Sense::hover()),
+            );
+            let label = ui.add(
+                egui::Label::new(RichText::new(label).size(12.0).color(TEXT)).sense(Sense::hover()),
+            );
+            icon | label
+        })
+        .inner
+    });
+    row.response | row.inner
+}
+
+/// The two independent actions a hierarchy row can report.
+struct HierarchyRowResponse {
+    select: Response,
+    drop: Response,
+    toggle: Option<Response>,
+}
+
+#[derive(Clone, Copy)]
+enum CreateGameObject {
+    Root,
+    Child(EntityId),
+}
+
+/// The hierarchy owns its payload type so future drag-and-drop tools cannot be
+/// mistaken for an entity move merely because they also carry an `EntityId`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct HierarchyDrag(EntityId);
+
+/// One row of the hierarchy, reporting selection separately from folding.
+///
+/// The response has to be the button's, not the layout's. `ui.horizontal`
+/// allocates its region with `Sense::hover`, so asking that value whether it was
+/// clicked answers no forever — which is what it did from the first editor
+/// commit until this was found by driving the editor rather than reading it. The
+/// whole of selection, and therefore every edit the editor can make, hung on
+/// this one word.
+///
+/// The row's rect is re-sensed as well, so the icon and the padding beside the
+/// name select too. A row that answers only on its text is the same complaint in
+/// miniature.
+fn hierarchy_row(
+    ui: &mut egui::Ui,
+    icon: MaterialIcon,
+    name: &str,
+    selected: bool,
+    depth: usize,
+    has_children: bool,
+    expanded: bool,
+) -> HierarchyRowResponse {
+    let width = ui.available_width();
+    let builder = egui::UiBuilder::new().sense(Sense::click_and_drag());
+    let row = ui.scope_builder(builder, |ui| {
+        ui.set_min_width(width);
+        ui.horizontal(|ui| {
+            ui.add_space(9.0 + hierarchy_indent(depth, 14.0));
+            let toggle = if has_children {
+                Some(
+                    ui.add(
+                        egui::Button::new(
+                            if expanded {
+                                ICON_KEYBOARD_ARROW_DOWN
+                            } else {
+                                ICON_KEYBOARD_ARROW_RIGHT
+                            }
+                            .outlined()
+                            .rich_text()
+                            .size(15.0)
+                            .color(TEXT_MUTED),
+                        )
+                        .frame(false)
+                        .min_size(Vec2::new(16.0, 18.0)),
+                    )
+                    .on_hover_text(if expanded {
+                        "Collapse children"
+                    } else {
+                        "Expand children"
+                    }),
+                )
+            } else {
+                ui.add_space(16.0);
+                None
+            };
+            // The icon senses clicks so that it does not swallow them: a
+            // widget inside the scope takes precedence over the scope's own
+            // sense, so a hover-only label would be a dead patch in the middle
+            // of the row.
+            let icon = ui.add(
+                egui::Label::new(icon.outlined().rich_text().size(15.0).color(if selected {
+                    ACCENT_BRIGHT
+                } else {
+                    TEXT_MUTED
+                }))
+                .sense(Sense::click_and_drag()),
+            );
+            let label = ui.add(
+                egui::Button::new(RichText::new(name).size(12.0).color(if selected {
+                    TEXT
+                } else {
+                    TEXT_MUTED
+                }))
+                .selected(selected)
+                .sense(Sense::click_and_drag())
+                .frame(false),
+            );
+            (icon | label, toggle)
+        })
+        .inner
+    });
+    // A scope's sense sits below the widgets inside it, so the name still
+    // answers for itself and the rest of the row answers for the scope.
+    let select = row.response | row.inner.0;
+    let toggle = row.inner.1;
+    let drop = toggle
+        .clone()
+        .map_or_else(|| select.clone(), |toggle| select.clone() | toggle);
+    HierarchyRowResponse {
+        select,
+        drop,
+        toggle,
+    }
+}
+
+/// Draws feedback for a hierarchy drop and returns a legal released payload.
+fn hierarchy_drop_target(
+    ui: &egui::Ui,
+    response: &Response,
+    world: &World,
+    parent: Option<EntityId>,
+) -> Option<EntityId> {
+    let dragged = response.dnd_hover_payload::<HierarchyDrag>()?;
+    let allowed = hierarchy_drop_allowed(world, dragged.0, parent);
+    let colour = if allowed { ACCENT } else { PROBLEM };
+    ui.painter().rect_stroke(
+        response.rect,
+        2.0,
+        Stroke::new(1.5, colour),
+        StrokeKind::Inside,
+    );
+    ui.ctx().set_cursor_icon(if allowed {
+        egui::CursorIcon::Grabbing
+    } else {
+        egui::CursorIcon::NotAllowed
+    });
+    if allowed {
+        response
+            .dnd_release_payload::<HierarchyDrag>()
+            .map(|dragged| dragged.0)
+    } else {
+        None
+    }
+}
+
+fn hierarchy_drop_allowed(world: &World, entity: EntityId, parent: Option<EntityId>) -> bool {
+    world.get(entity).is_some_and(|data| data.parent != parent)
+        && world.check_set_parent(entity, parent).is_ok()
+}
+
+/// What the root is called wherever a parent is named.
+const ROOT_LABEL: &str = "World";
+
+/// The parents `entity` may legally be moved under, in the order the hierarchy
+/// lists them.
+///
+/// Legality is asked of the world rather than decided here, so the menu cannot
+/// offer a move the command layer would then refuse. The root is not in this
+/// list because it is not an entity; it is the separate "World" choice.
+fn reparent_choices(world: &World, entity: EntityId) -> Vec<(EntityId, String)> {
+    hierarchy_rows(world)
+        .into_iter()
+        .filter(|(candidate, _)| world.check_set_parent(entity, Some(*candidate)).is_ok())
+        .filter_map(|(candidate, _)| {
+            world
+                .get(candidate)
+                .map(|data| (candidate, entity_name(data)))
+        })
+        .collect()
+}
+
+/// What the parent menu came back with.
+///
+/// "Move to the root" and "nothing was chosen" are both an absence of a parent
+/// and are not the same answer, so they are separate variants rather than two
+/// layers of `Option` the caller has to remember the order of.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ParentChoice {
+    /// The menu offered no change: it is closed, or the current parent was
+    /// picked again.
+    Unchanged,
+    /// Move out to the root.
+    Root,
+    /// Move under this entity.
+    Under(EntityId),
+}
+
+/// The parent row, reporting a choice only when it is a change.
+fn inspector_parent(
+    ui: &mut egui::Ui,
+    entity: EntityId,
+    parent: Option<EntityId>,
+    choices: &[(EntityId, String)],
+) -> ParentChoice {
+    let mut chosen = parent;
+    let current = parent
+        .and_then(|parent| {
+            choices
+                .iter()
+                .find(|(candidate, _)| *candidate == parent)
+                .map(|(_, name)| name.clone())
+        })
+        .unwrap_or_else(|| ROOT_LABEL.to_owned());
+    ui.horizontal(|ui| {
+        ui.add_space(27.0);
+        ui.label(RichText::new("Parent").size(11.0).color(TEXT_FAINT));
+        egui::ComboBox::from_id_salt(("parent", entity.index()))
+            .selected_text(RichText::new(current).size(11.0).color(TEXT_MUTED))
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut chosen, None, ROOT_LABEL);
+                for (candidate, name) in choices {
+                    ui.selectable_value(&mut chosen, Some(*candidate), name);
+                }
+            });
+    });
+    if chosen == parent {
+        return ParentChoice::Unchanged;
+    }
+    chosen.map_or(ParentChoice::Root, ParentChoice::Under)
+}
+
+fn inspector_identity(ui: &mut egui::Ui, icon: MaterialIcon, draft: &mut EntityDraft) {
+    ui.add_space(8.0);
+    ui.horizontal(|ui| {
+        ui.label(icon.outlined().rich_text().size(19.0).color(TEXT_MUTED));
+        ui.add_sized(
+            [ui.available_width() - 18.0, 29.0],
+            egui::TextEdit::singleline(&mut draft.name).font(FontId::proportional(13.0)),
+        );
+    });
+    // "Tag  Untagged" and "Layer  Default" used to sit under the name. Neither
+    // is a thing a Sindri entity has, so they were two lines of a different
+    // engine's inspector printed over this one's.
+}
+
+/// The heading above one section of the inspector.
+///
+/// A collapse chevron and an overflow menu used to sit at either end of it.
+/// Neither was handled: nothing collapsed and nothing overflowed. Adding and
+/// removing a component is what the menu would hold, and that is a real build
+/// against the schema registry rather than a glyph.
+/// An image dimension as a length to lay out with.
+///
+/// No image this can draw is anywhere near the width an `f32` stops counting
+/// exactly, and one that were would not fit in a panel either.
+#[allow(clippy::cast_precision_loss)]
+fn pixels(value: u32) -> f32 {
+    value as f32
+}
+
+/// A pixel measurement, as a drag leaves it.
+///
+/// Clamped to something an image could plausibly carry, for the reason a grid
+/// side is: a drag that got away should not become a slice with no cells.
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn pixel_count(value: f64) -> u32 {
+    value.clamp(0.0, 4096.0) as u32
+}
+
+/// One side of a slicing grid, as a drag leaves it.
+///
+/// Clamped rather than validated after the fact: a grid of zero has no cells
+/// and one of ten thousand is a drag that got away, and neither is a slice
+/// anybody meant. The cast cannot lose anything once the value is inside that
+/// range.
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn grid_side(value: f64) -> u32 {
+    value.clamp(1.0, 256.0) as u32
+}
+
+/// Naming the chosen cell, and a list of the ones already named.
+///
+/// A field per cell is fine at four and unusable at two hundred and fifty-six,
+/// so the sheet is named the way it is looked at: pick a cell on the image, give
+/// it a name. Everything unnamed already has an answer — its index — so a list
+/// of the named ones is the whole of what there is to review.
+fn slice_names(ui: &mut egui::Ui, slicer: &mut Slicer) {
+    section_header(ui, ICON_LABEL, "Names");
+    slicer.fit_names();
+    slicer.clamp_selection();
+
+    let selected = slicer.selected;
+    let placeholder = selected.to_string();
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.label(
+            RichText::new(format!("Cell {selected}"))
+                .size(11.0)
+                .color(TEXT),
+        );
+    });
+    if let Some(name) = slicer.names.get_mut(selected as usize) {
+        ui.horizontal(|ui| {
+            ui.add_space(14.0);
+            ui.add(
+                egui::TextEdit::singleline(name)
+                    .hint_text(&placeholder)
+                    .desired_width(f32::INFINITY),
+            );
+        });
+    }
+    ui.horizontal(|ui| {
+        ui.add_space(14.0);
+        ui.label(
+            RichText::new(
+                "Click a cell on the image to name it. A cell left blank is called by its index.",
+            )
+            .size(9.0)
+            .color(TEXT_MUTED),
+        );
+    });
+
+    let named = slicer.named();
+    if named.is_empty() {
+        return;
+    }
+    ui.add_space(6.0);
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.label(
+            RichText::new(format!("{} named", named.len()))
+                .size(9.0)
+                .color(TEXT_FAINT),
+        );
+    });
+    let mut jump = None;
+    for (index, name) in named {
+        ui.horizontal(|ui| {
+            ui.add_space(14.0);
+            let row = ui.add(
+                egui::Label::new(
+                    RichText::new(format!("{index:>4}  {name}"))
+                        .size(10.0)
+                        .color(if index == selected {
+                            ACCENT
+                        } else {
+                            TEXT_MUTED
+                        }),
+                )
+                .selectable(false)
+                .sense(Sense::click()),
+            );
+            if row.clicked() {
+                jump = Some(index);
+            }
+        });
+    }
+    // The list is also how a cell is found again on a sheet too large to scan.
+    if let Some(jump) = jump {
+        slicer.selected = jump;
+    }
+}
+
+/// The image, with the slice drawn over it, and a click choosing a cell.
+///
+/// The whole point of doing this on the picture: a grid of numbers in a panel
+/// tells you nothing about whether the cells fall on the frames, and the cells
+/// falling on the frames is the entire job. The rects drawn are the ones the
+/// document produces, not a second calculation that could disagree with it.
+fn slice_preview(ui: &mut egui::Ui, slicer: &mut Slicer) {
+    let (width, height) = slicer.size();
+    let rects = slicer.cell_rects();
+    let selected = slicer.selected;
+    let Some(texture) = slicer.texture(ui.ctx()) else {
+        ui.horizontal(|ui| {
+            ui.add_space(10.0);
+            ui.label(
+                RichText::new("No preview: this build cannot read the image")
+                    .size(10.0)
+                    .color(TEXT_MUTED),
+            );
+        });
+        return;
+    };
+    if width == 0 || height == 0 {
+        return;
+    }
+
+    // Fitted to the panel and never enlarged past a readable multiple: a 16x16
+    // sheet blown up to panel width is mostly interpolation artefacts, and a
+    // 2048px one has to come down.
+    let available = (ui.available_width() - 20.0).max(64.0);
+    let (wide, tall) = (pixels(width), pixels(height));
+    let scale = (available / wide).min(8.0);
+    let size = Vec2::new(wide * scale, tall * scale);
+    let texture = texture.id();
+
+    let mut picked = None;
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        let (rect, response) = ui.allocate_exact_size(size, Sense::click());
+        let painter = ui.painter_at(rect);
+        // A flat ground behind the image, so a transparent sheet reads as
+        // transparent rather than as the panel's own background.
+        painter.rect_filled(rect, 2.0, Color32::from_rgb(28, 32, 42));
+        painter.image(
+            texture,
+            rect,
+            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+            Color32::WHITE,
+        );
+
+        // Each cell as its own outline rather than lines across the image,
+        // because a cell inset by a margin is not on any dividing line and
+        // drawing one would say the gutters belong to a sprite.
+        let cell_rect = |[x, y, w, h]: [f32; 4]| {
+            egui::Rect::from_min_size(
+                egui::pos2(
+                    rect.left() + x * rect.width(),
+                    rect.top() + y * rect.height(),
+                ),
+                Vec2::new(w * rect.width(), h * rect.height()),
+            )
+        };
+        let faint = Stroke::new(1.0, ACCENT.gamma_multiply(0.55));
+        for (index, cell) in rects.iter().enumerate() {
+            if u32::try_from(index).is_ok_and(|index| index == selected) {
+                continue;
+            }
+            painter.rect_stroke(cell_rect(*cell), 0.0, faint, egui::StrokeKind::Inside);
+        }
+        if let Some(cell) = rects.get(selected as usize) {
+            let bright = Stroke::new(2.0, ACCENT_BRIGHT);
+            painter.rect_stroke(cell_rect(*cell), 0.0, bright, egui::StrokeKind::Inside);
+        }
+
+        // Picked by hit-testing the drawn rects rather than by dividing the
+        // pointer's position, so a click lands on the cell it looks like it
+        // landed on even when gutters mean the cells do not tile.
+        if let Some(pointer) = response.interact_pointer_pos()
+            && response.clicked()
+        {
+            picked = rects
+                .iter()
+                .position(|cell| cell_rect(*cell).contains(pointer))
+                .and_then(|index| u32::try_from(index).ok());
+        }
+    });
+    if let Some(picked) = picked {
+        slicer.selected = picked;
+    }
+}
+
+fn section_header(ui: &mut egui::Ui, icon: MaterialIcon, title: &str) {
+    ui.add_space(4.0);
+    ui.separator();
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.label(icon.outlined().rich_text().size(16.0).color(ACCENT));
+        ui.label(RichText::new(title).strong().size(12.0).color(TEXT));
+    });
+}
+
+fn transform_3d_section(ui: &mut egui::Ui, transform: &mut Transform3D) {
+    section_header(ui, ICON_OPEN_WITH, "Transform");
+    // The Z drag is taken away rather than left to fail: the command layer
+    // would refuse the edit anyway, and a control that cannot do what it looks
+    // like it does is the thing this editor is trying not to grow.
+    vector_row(ui, "Position", &mut transform.position, transform.z_locked);
+    let rotation = Quat::from_array(transform.rotation);
+    let rotation = if rotation.is_finite() && rotation.length_squared() > f32::EPSILON {
+        rotation.normalize()
+    } else {
+        Quat::IDENTITY
+    };
+    let (x, y, z) = rotation.to_euler(EulerRot::XYZ);
+    let mut degrees = [x.to_degrees(), y.to_degrees(), z.to_degrees()];
+    if vector_row(ui, "Rotation", &mut degrees, false) {
+        transform.rotation = Quat::from_euler(
+            EulerRot::XYZ,
+            degrees[0].to_radians(),
+            degrees[1].to_radians(),
+            degrees[2].to_radians(),
+        )
+        .to_array();
+    }
+    vector_row(ui, "Scale", &mut transform.scale, false);
+    property_toggle(ui, "Z lock", &mut transform.z_locked, "Locked", "Free");
+}
+
+/// A property row whose value is a choice rather than a readout.
+///
+/// Shaped like [`property_label`] because it sits among those rows, and reading
+/// as a label until you notice it responds is the point: what it says is the
+/// state, and pressing it is how the state changes.
+fn property_toggle(ui: &mut egui::Ui, label: &str, value: &mut bool, on: &str, off: &str) {
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.label(RichText::new(label).size(11.0).color(TEXT_MUTED));
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.add_space(7.0);
+            let text = if *value { on } else { off };
+            let color = if *value { ACCENT } else { TEXT_MUTED };
+            if ui
+                .selectable_label(*value, RichText::new(text).size(11.0).color(color))
+                .clicked()
+            {
+                *value = !*value;
+            }
+        });
+    });
+}
+
+/// Stateful authoring surfaces shared across component sections.
+struct InspectorTools<'a> {
+    animation: &'a mut AnimationTool,
+    tilemap: &'a mut TilemapTool,
+}
+
+/// Draws every component on an entity, editable, and reports what changed.
+///
+/// The payload is edited in place on a draft; the caller diffs it and turns
+/// each difference into a `SetComponent`. Nothing here writes to the world.
+fn components_sections(
+    ui: &mut egui::Ui,
+    components: &mut BTreeMap<String, Value>,
+    scripts: &SceneScripts,
+    project_root: Option<&Path>,
+    fonts: &[String],
+    animation_texture: Option<&str>,
+    tools: &mut InspectorTools<'_>,
+) -> Option<String> {
+    let mut removed = None;
+    for (name, payload) in components.iter_mut() {
+        let icon = match name.as_str() {
+            "sindri.camera" => ICON_CAMERA_ALT,
+            "sindri.sprite" => ICON_IMAGE,
+            "sindri.mesh" => ICON_VIEW_IN_AR,
+            "sindri.script" => ICON_CODE,
+            "sindri.text" => ICON_LABEL,
+            "sindri.sprite_animation" => ICON_PLAY_ARROW,
+            "sindri.tilemap" => ICON_GRID_VIEW,
+            _ => ICON_DEPLOYED_CODE,
+        };
+        ui.add_space(4.0);
+        ui.separator();
+        ui.horizontal(|ui| {
+            ui.add_space(10.0);
+            ui.label(icon.outlined().rich_text().size(16.0).color(ACCENT));
+            ui.label(
+                RichText::new(component_label(name))
+                    .strong()
+                    .size(12.0)
+                    .color(TEXT),
+            );
+            if inspector::is_removable(name) {
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    ui.add_space(7.0);
+                    if ui
+                        .small_button(ICON_DELETE.outlined().rich_text().size(13.0))
+                        .on_hover_text(format!("Remove {}", component_label(name)))
+                        .clicked()
+                    {
+                        removed = Some(name.clone());
+                    }
+                });
+            }
+        });
+
+        // A script's @export fields come first and are drawn from what the
+        // script declared, which is the whole reason the language is typed.
+        // The rest of the payload -- the source, the container -- follows as
+        // ordinary rows.
+        if name == "sindri.script" {
+            script_exports_section(ui, payload, scripts);
+        }
+        if name == TEXT_COMPONENT {
+            text_section(ui, payload, fonts);
+        }
+        if name == animation::TYPE_NAME {
+            animation_section(
+                ui,
+                payload,
+                project_root,
+                animation_texture,
+                tools.animation,
+            );
+        }
+        if name == tilemap::TYPE_NAME {
+            tilemap_section(ui, payload, project_root, tools.tilemap);
+        }
+        object_rows(ui, name, payload, name == "sindri.script");
+    }
+    removed
+}
+
+/// The two text fields whose meaning is richer than their JSON shape.
+///
+/// Content is multiline gameplay/UI copy, and a font is a project-owned asset
+/// reference. Leaving either as an ordinary one-line string technically edits
+/// the payload but makes the editor less useful than editing JSON by hand.
+fn text_section(ui: &mut egui::Ui, payload: &mut Value, fonts: &[String]) {
+    let mut content = payload
+        .get("text")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned();
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.label(RichText::new("Text").size(11.0).color(TEXT_MUTED));
+    });
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        let width = (ui.available_width() - 7.0).max(120.0);
+        if ui
+            .add_sized(
+                [width, 76.0],
+                egui::TextEdit::multiline(&mut content)
+                    .desired_rows(3)
+                    .hint_text("Text shown in the game"),
+            )
+            .changed()
+        {
+            payload["text"] = Value::String(content);
+        }
+    });
+
+    let current = payload
+        .get("font")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned();
+    let mut chosen = current.clone();
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.label(RichText::new("Font").size(11.0).color(TEXT_MUTED));
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.add_space(7.0);
+            egui::ComboBox::from_id_salt("text-font-asset")
+                .selected_text(if chosen.is_empty() {
+                    "Choose a font"
+                } else {
+                    chosen.as_str()
+                })
+                .width(190.0)
+                .show_ui(ui, |ui| {
+                    for font in fonts {
+                        ui.selectable_value(&mut chosen, font.clone(), font);
+                    }
+                });
+        });
+    });
+    if chosen != current {
+        payload["font"] = Value::String(chosen.clone());
+    }
+
+    let missing = fonts.is_empty() || chosen.is_empty() || !fonts.contains(&chosen);
+    if missing {
+        ui.horizontal_wrapped(|ui| {
+            ui.add_space(10.0);
+            let message = if fonts.is_empty() {
+                "Add an OpenType font to the project before adding text."
+            } else {
+                "The selected font is not present in this project."
+            };
+            ui.label(RichText::new(message).size(9.0).color(PROBLEM));
+        });
+    }
+}
+
+/// Clip authoring for the selected entity's sprite sheet.
+///
+/// The sheet owns sprite names; the animation only arranges those names into
+/// timed clips. Every edit stays in the stored payload so unknown future fields
+/// survive, while the typed component is used to interpret and preview it.
+#[allow(clippy::too_many_lines)]
+fn animation_section(
+    ui: &mut egui::Ui,
+    payload: &mut Value,
+    project_root: Option<&Path>,
+    texture: Option<&str>,
+    tool: &mut AnimationTool,
+) {
+    let Some(texture) = texture else {
+        ui.horizontal_wrapped(|ui| {
+            ui.add_space(10.0);
+            ui.label(
+                RichText::new("Add a Sprite component before authoring animation clips.")
+                    .size(9.0)
+                    .color(PROBLEM),
+            );
+        });
+        return;
+    };
+    tool.palette.ensure(project_root, texture);
+    let sprite_names: Vec<String> = tool
+        .palette
+        .sprites()
+        .iter()
+        .map(|sprite| sprite.name.clone())
+        .collect();
+
+    let Ok(mut authored) = animation::component(payload) else {
+        ui.horizontal_wrapped(|ui| {
+            ui.add_space(10.0);
+            ui.label(
+                RichText::new("This animation cannot be read; repair its stored fields first.")
+                    .size(9.0)
+                    .color(PROBLEM),
+            );
+        });
+        return;
+    };
+
+    section_header(ui, ICON_PLAY_ARROW, "Clips");
+    let mut selected = tool.selected(&authored).map(str::to_owned);
+    let clip_names: Vec<String> = authored.clips.keys().cloned().collect();
+    let mut chosen = selected.clone().unwrap_or_default();
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.label(RichText::new("Clip").size(11.0).color(TEXT_MUTED));
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.add_space(7.0);
+            egui::ComboBox::from_id_salt("animation-clip")
+                .selected_text(if chosen.is_empty() {
+                    "No clips"
+                } else {
+                    chosen.as_str()
+                })
+                .width(170.0)
+                .show_ui(ui, |ui| {
+                    for name in &clip_names {
+                        ui.selectable_value(&mut chosen, name.clone(), name);
+                    }
+                });
+        });
+    });
+    if selected.as_deref() != Some(chosen.as_str()) && !chosen.is_empty() {
+        tool.select(chosen.clone());
+        selected = Some(chosen);
+    }
+
+    let mut add = false;
+    let mut remove = false;
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        add = ui
+            .add_enabled(!sprite_names.is_empty(), egui::Button::new("Add clip"))
+            .clicked();
+        remove = ui
+            .add_enabled(selected.is_some(), egui::Button::new("Remove"))
+            .clicked();
+    });
+    if add
+        && let Some(first) = sprite_names.first()
+        && let Ok(name) = animation::add_clip(payload, first)
+    {
+        tool.select(name.clone());
+        selected = Some(name);
+        authored = animation::component(payload).unwrap_or(authored);
+    }
+    if remove
+        && let Some(name) = selected.as_deref()
+        && animation::remove_clip(payload, name).unwrap_or(false)
+    {
+        tool.reset();
+        tool.palette.ensure(project_root, texture);
+        authored = animation::component(payload).unwrap_or(authored);
+        selected = tool.selected(&authored).map(str::to_owned);
+    }
+
+    let Some(selected) = selected else {
+        ui.horizontal_wrapped(|ui| {
+            ui.add_space(10.0);
+            ui.label(
+                RichText::new(if sprite_names.is_empty() {
+                    "Slice and name the sprite texture before adding a clip."
+                } else {
+                    "Add a clip to arrange the sheet's sprites into playback."
+                })
+                .size(9.0)
+                .color(TEXT_MUTED),
+            );
+        });
+        if let Some(problem) = tool.palette.problem() {
+            animation_problem(ui, problem);
+        }
+        return;
+    };
+
+    let mut rename_to = tool.rename().clone();
+    let mut rename = false;
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.label(RichText::new("Name").size(11.0).color(TEXT_MUTED));
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.add_space(7.0);
+            rename = ui
+                .add_enabled(rename_to.trim() != selected, egui::Button::new("Rename"))
+                .clicked();
+            ui.add_sized([128.0, 23.0], egui::TextEdit::singleline(&mut rename_to));
+        });
+    });
+    tool.rename().clone_from(&rename_to);
+    let mut problem = None;
+    let selected = if rename {
+        match animation::rename_clip(payload, &selected, &rename_to) {
+            Ok(true) => {
+                let renamed = rename_to.trim().to_owned();
+                tool.renamed(renamed.clone());
+                authored = animation::component(payload).unwrap_or(authored);
+                renamed
+            }
+            Ok(false) => selected,
+            Err(error) => {
+                problem = Some(error);
+                selected
+            }
+        }
+    } else {
+        selected
+    };
+
+    let mut playing = authored.playing.clone().unwrap_or_default();
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.label(RichText::new("Playing").size(11.0).color(TEXT_MUTED));
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.add_space(7.0);
+            egui::ComboBox::from_id_salt("animation-playing")
+                .selected_text(if playing.is_empty() {
+                    "None"
+                } else {
+                    playing.as_str()
+                })
+                .width(170.0)
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut playing, String::new(), "None");
+                    for name in authored.clips.keys() {
+                        ui.selectable_value(&mut playing, name.clone(), name);
+                    }
+                });
+        });
+    });
+    let stored_playing = payload.get("playing").and_then(Value::as_str).unwrap_or("");
+    if playing != stored_playing {
+        payload["playing"] = if playing.is_empty() {
+            Value::Null
+        } else {
+            Value::String(playing)
+        };
+    }
+
+    let Some(clip) = authored.clips.get(&selected).cloned() else {
+        animation_problem(ui, "The selected clip no longer exists.");
+        return;
+    };
+    let mut seconds = f64::from(clip.seconds_per_frame);
+    if number_row(ui, "Frame time", &mut seconds, 10.0, false) {
+        payload["clips"][selected.as_str()]["seconds_per_frame"] = Value::from(seconds.max(0.001));
+    }
+    let mut looping = clip.looping;
+    if bool_row(ui, "Loop", &mut looping, 10.0) {
+        payload["clips"][selected.as_str()]["looping"] = Value::Bool(looping);
+    }
+
+    section_header(ui, ICON_IMAGE, "Frames");
+    let mut replace = None;
+    let mut frame_action = None;
+    for (index, frame) in clip.frames.iter().enumerate() {
+        let mut sprite = frame.clone();
+        ui.horizontal(|ui| {
+            ui.add_space(10.0);
+            ui.label(
+                RichText::new(format!("{}", index + 1))
+                    .size(10.0)
+                    .color(TEXT_FAINT),
+            );
+            egui::ComboBox::from_id_salt(("animation-frame", index))
+                .selected_text(&sprite)
+                .width(132.0)
+                .show_ui(ui, |ui| {
+                    for name in &sprite_names {
+                        ui.selectable_value(&mut sprite, name.clone(), name);
+                    }
+                });
+            if ui.small_button("Up").clicked() {
+                frame_action = Some((index, -1));
+            }
+            if ui.small_button("Down").clicked() {
+                frame_action = Some((index, 1));
+            }
+            if ui
+                .add_enabled(clip.frames.len() > 1, egui::Button::new("Remove"))
+                .clicked()
+            {
+                frame_action = Some((index, 0));
+            }
+        });
+        if sprite != *frame {
+            replace = Some((index, sprite));
+        }
+        if !sprite_names.contains(frame) {
+            animation_problem(
+                ui,
+                &format!("Frame {} names missing sprite {frame:?}.", index + 1),
+            );
+        }
+    }
+    if let Some((index, sprite)) = replace {
+        let _ = animation::set_frame(payload, &selected, index, &sprite);
+    }
+    if let Some((index, direction)) = frame_action {
+        if direction == 0 {
+            let _ = animation::remove_frame(payload, &selected, index);
+        } else {
+            let _ = animation::move_frame(payload, &selected, index, direction);
+        }
+    }
+    let mut appended = None;
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.menu_button("Add frame", |ui| {
+            for sprite in &sprite_names {
+                if ui.button(sprite).clicked() {
+                    appended = Some(sprite.clone());
+                    ui.close();
+                }
+            }
+            if sprite_names.is_empty() {
+                ui.label("No named sprites");
+            }
+        });
+    });
+    if let Some(sprite) = appended {
+        let _ = animation::push_frame(payload, &selected, &sprite);
+    }
+
+    if let Ok(updated) = animation::component(payload)
+        && let Some(clip) = updated.clips.get(&selected)
+    {
+        animation_preview(ui, texture, &selected, clip, tool);
+    }
+    if let Some(message) = problem.as_deref().or_else(|| tool.palette.problem()) {
+        animation_problem(ui, message);
+    }
+}
+
+fn animation_preview(
+    ui: &mut egui::Ui,
+    texture_name: &str,
+    clip_name: &str,
+    clip: &sindri_scene::AnimationClip,
+    tool: &mut AnimationTool,
+) {
+    section_header(ui, ICON_PLAY_ARROW, "Preview");
+    let mut previewing = tool.previewing();
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        if ui
+            .button(if previewing { "Stop" } else { "Play" })
+            .clicked()
+        {
+            previewing = !previewing;
+            tool.set_previewing(previewing);
+        }
+        ui.label(
+            RichText::new(format!(
+                "{} frames · {:.3}s",
+                clip.frames.len(),
+                clip.seconds_per_frame
+            ))
+            .size(10.0)
+            .color(TEXT_MUTED),
+        );
+    });
+    if previewing {
+        ui.ctx().request_repaint();
+    }
+    let delta = ui.ctx().input(|input| input.stable_dt);
+    let frame = tool.advance(clip_name, clip, delta);
+    let sprite_name = clip.frames.get(frame).cloned();
+    let sprite_rect = sprite_name
+        .as_deref()
+        .and_then(|name| tool.palette.sprite(name))
+        .and_then(|sprite| sprite.rect);
+    let texture = tool.palette.texture_id(ui.ctx());
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(176.0, 150.0), Sense::hover());
+    let painter = ui.painter_at(rect);
+    painter.rect_filled(rect, 4.0, FIELD_BG);
+    painter.rect_stroke(
+        rect,
+        4.0,
+        Stroke::new(1.0, BORDER_SUBTLE),
+        StrokeKind::Inside,
+    );
+    let image = Rect::from_min_max(
+        rect.min + Vec2::splat(10.0),
+        rect.max - Vec2::new(10.0, 28.0),
+    );
+    if let (Some(texture), Some(sprite_rect)) = (texture, sprite_rect) {
+        let [x, y, width, height] = sprite_rect;
+        painter.image(
+            texture,
+            image,
+            Rect::from_min_size(Pos2::new(x, y), Vec2::new(width, height)),
+            Color32::WHITE,
+        );
+    } else {
+        painter.line_segment(
+            [image.left_top(), image.right_bottom()],
+            Stroke::new(1.5, PROBLEM),
+        );
+        painter.line_segment(
+            [image.right_top(), image.left_bottom()],
+            Stroke::new(1.5, PROBLEM),
+        );
+    }
+    painter.text(
+        Pos2::new(rect.center().x, rect.max.y - 13.0),
+        Align2::CENTER_CENTER,
+        sprite_name.unwrap_or_else(|| format!("{texture_name}: no frame")),
+        FontId::proportional(10.0),
+        TEXT_MUTED,
+    );
+    let _ = response.on_hover_text("Animation preview uses the project texture and sheet");
+}
+
+fn animation_problem(ui: &mut egui::Ui, problem: &str) {
+    ui.horizontal_wrapped(|ui| {
+        ui.add_space(10.0);
+        ui.label(RichText::new(problem).size(9.0).color(PROBLEM));
+    });
+}
+
+/// The part of a tilemap that cannot be represented as independent JSON rows:
+/// its dimensions, compact palette, and the brush that writes its cell array.
+fn tilemap_section(
+    ui: &mut egui::Ui,
+    payload: &mut Value,
+    project_root: Option<&Path>,
+    tool: &mut TilemapTool,
+) {
+    let Ok(mut map) = tilemap::component(payload) else {
+        ui.horizontal_wrapped(|ui| {
+            ui.add_space(10.0);
+            ui.label(
+                RichText::new("This tilemap cannot be read; repair its stored fields first")
+                    .size(10.0)
+                    .color(PROBLEM),
+            );
+        });
+        return;
+    };
+
+    section_header(ui, ICON_GRID_VIEW, "Map");
+    let mut columns = f64::from(map.columns);
+    let mut rows = f64::from(map.rows);
+    let mut resized = number_row(ui, "Columns", &mut columns, 10.0, true);
+    resized |= number_row(ui, "Rows", &mut rows, 10.0, true);
+    if resized && let Err(error) = resize_tilemap(payload, grid_side(columns), grid_side(rows)) {
+        ui.horizontal_wrapped(|ui| {
+            ui.add_space(10.0);
+            ui.label(RichText::new(error).size(10.0).color(PROBLEM));
+        });
+    }
+    // The resize above changes the payload this frame. Read it again so the
+    // palette and the cell count below describe what the command will write.
+    if let Ok(resized) = tilemap::component(payload) {
+        map = resized;
+    }
+
+    let world_space = map.space == SpriteSpace::World;
+    if !world_space {
+        tool.enabled = false;
+    }
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        let label = if tool.enabled {
+            "Painting in Scene view"
+        } else {
+            "Paint in Scene view"
+        };
+        if ui
+            .add_enabled_ui(world_space, |ui| ui.selectable_label(tool.enabled, label))
+            .inner
+            .clicked()
+        {
+            tool.enabled = !tool.enabled;
+        }
+    });
+    ui.horizontal_wrapped(|ui| {
+        ui.add_space(10.0);
+        ui.label(
+            RichText::new(if !world_space {
+                "Scene painting supports world-space tilemaps; switch Space to world first."
+            } else if tool.enabled {
+                "Primary drag paints. Middle or Shift-drag pans; secondary drag orbits."
+            } else {
+                "Enable painting, then choose a sprite or the eraser."
+            })
+            .size(9.0)
+            .color(if world_space { TEXT_MUTED } else { PROBLEM }),
+        );
+    });
+
+    tool.palette.ensure(project_root, &map.texture);
+    let texture = tool.palette.texture_id(ui.ctx());
+    let mut sprites = tool.palette.sprites().to_vec();
+    // A broken or changed sheet must not make a sprite already used by the map
+    // impossible to select and replace. It stays visible as a named fallback,
+    // without a thumbnail that would pretend it still resolves.
+    for name in &map.palette {
+        if !sprites.iter().any(|sprite| sprite.name == *name) {
+            sprites.push(PaletteSprite {
+                name: name.clone(),
+                rect: None,
+            });
+        }
+    }
+    if !tool.erase
+        && tool
+            .sprite
+            .as_ref()
+            .is_none_or(|chosen| !sprites.iter().any(|sprite| sprite.name == *chosen))
     {
         tool.sprite = sprites.first().map(|sprite| sprite.name.clone());
     }
