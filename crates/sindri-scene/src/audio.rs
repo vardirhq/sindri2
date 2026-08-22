@@ -53,12 +53,15 @@ mod tests {
 
     #[test]
     fn runtime_volume_is_bounded() {
-        let source = AudioSourceComponent {
+        let mut source = AudioSourceComponent {
             clip: "audio/music.ogg".to_owned(),
             autoplay: true,
             looping: true,
             volume: 4.0,
         };
         assert!((source.normalized_volume() - 1.0).abs() < f32::EPSILON);
+
+        source.volume = -2.0;
+        assert!(source.normalized_volume().abs() < f32::EPSILON);
     }
 }
