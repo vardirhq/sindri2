@@ -55,6 +55,132 @@ new = '''WorldHost::with_navigation(
 if old not in text:
     raise SystemExit("missing remaining surface contract WorldHost::new")
 text = text.replace(old, new)
+
+# Keep the exhaustive analyzer/runtime contract readable enough for strict
+# pedantic Clippy by moving its navigation-specific world setup out of the test
+# body. This helper still creates real entities and the test still executes the
+# actual host calls; it merely stops one test function doing all the plumbing.
+anchor = '''    impl GridNavigationHost for OpenNavigation {
+        fn find_path(
+            &self,
+            _world: &World,
+            _mover: EntityId,
+            _grid: EntityId,
+            goal: GridCoord,
+        ) -> Result<Option<Vec<GridCoord>>, String> {
+            Ok(Some(vec![GridCoord::new(0, 0), goal]))
+        }
+    }
+'''
+helper = anchor + '''
+    fn grid_call_entities(world: &mut World) -> (EntityId, EntityId, EntityId) {
+        let grid_name = sindri_core::SceneEntityId::new("surface-grid").expect("stable test id");
+        let grid = world.spawn(EntityData {
+            source_id: Some(grid_name.clone()),
+            transform_3d: Some(Transform3D::default()),
+            components: [
+                (
+                    super::TILEMAP_COMPONENT.to_owned(),
+                    serde_json::json!({
+                        "columns": 2,
+                        "rows": 1,
+                        "space": "world",
+                        "texture": "tiles.png",
+                        "palette": ["tile"],
+                        "tiles": [0, 0]
+                    }),
+                ),
+                (
+                    "sindri.grid_navigation".to_owned(),
+                    serde_json::json!({ "walls": [] }),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+            ..EntityData::default()
+        });
+        let mover = world.spawn(EntityData {
+            transform_3d: Some(Transform3D {
+                position: [0.5, -0.5, 0.0],
+                ..Transform3D::default()
+            }),
+            components: [(
+                "sindri.grid_occupant".to_owned(),
+                serde_json::json!({
+                    "grid": grid_name.as_str(),
+                    "footprint": [[0, 0]]
+                }),
+            )]
+            .into_iter()
+            .collect(),
+            ..EntityData::default()
+        });
+        let target = world.spawn(EntityData {
+            transform_3d: Some(Transform3D {
+                position: [1.5, -0.5, 0.0],
+                ..Transform3D::default()
+            }),
+            ..EntityData::default()
+        });
+        (mover, grid, target)
+    }
+'''
+if anchor not in text:
+    raise SystemExit("missing OpenNavigation fixture anchor")
+text = text.replace(anchor, helper, 1)
+
+old_fixture = '''                let grid_name =
+                    sindri_core::SceneEntityId::new("surface-grid").expect("stable test id");
+                let grid = world.spawn(EntityData {
+                    source_id: Some(grid_name.clone()),
+                    transform_3d: Some(Transform3D::default()),
+                    components: [
+                        (
+                            super::TILEMAP_COMPONENT.to_owned(),
+                            serde_json::json!({
+                                "columns": 2,
+                                "rows": 1,
+                                "space": "world",
+                                "texture": "tiles.png",
+                                "palette": ["tile"],
+                                "tiles": [0, 0]
+                            }),
+                        ),
+                        (
+                            "sindri.grid_navigation".to_owned(),
+                            serde_json::json!({ "walls": [] }),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                    ..EntityData::default()
+                });
+                let mover = world.spawn(EntityData {
+                    transform_3d: Some(Transform3D {
+                        position: [0.5, -0.5, 0.0],
+                        ..Transform3D::default()
+                    }),
+                    components: [(
+                        "sindri.grid_occupant".to_owned(),
+                        serde_json::json!({
+                            "grid": grid_name,
+                            "footprint": [[0, 0]]
+                        }),
+                    )]
+                    .into_iter()
+                    .collect(),
+                    ..EntityData::default()
+                });
+                let target = world.spawn(EntityData {
+                    transform_3d: Some(Transform3D {
+                        position: [1.5, -0.5, 0.0],
+                        ..Transform3D::default()
+                    }),
+                    ..EntityData::default()
+                });'''
+if old_fixture not in text:
+    raise SystemExit("missing inline grid contract fixture")
+text = text.replace(old_fixture, '                let (mover, grid, target) = grid_call_entities(&mut world);', 1)
 p.write_text(text)
 
 # Rust 1.95's pedantic Clippy quite reasonably dislikes closures whose entire
