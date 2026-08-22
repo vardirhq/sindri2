@@ -1,5 +1,8 @@
 use serde::Deserialize;
 use sindri_core::{SceneComponent, SpriteRef, SpriteRefError};
+use sindri_grid::{
+    GridBounds, GridCoord, GridError, GridSpace, PlanePoint, PlaneYAxis, Projection,
+};
 use thiserror::Error;
 
 /// A camera authored into a scene.
@@ -195,10 +198,9 @@ impl SceneComponent for TextComponent {
 
 /// How a tilemap's grid coordinates become world positions.
 ///
-/// This is the tilemap's own layout rule and not the grid module Milestone 9
-/// schedules. That module owns coordinates, neighbours, and pathfinding for
-/// whatever wants them; this owns only where a tile is drawn, which a renderer
-/// needs before any of that exists.
+/// The serialized choice is owned by the tilemap; its coordinate maths is
+/// supplied by `sindri-grid`, so rendering, picking, and gameplay can share one
+/// meaning of a cell.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum TileProjection {
@@ -266,6 +268,8 @@ const fn unit_tile() -> [f32; 2] {
 /// What is wrong with a tilemap, named specifically enough to fix.
 #[derive(Clone, Debug, Error, PartialEq)]
 pub enum TilemapError {
+    #[error(transparent)]
+    Grid(#[from] GridError),
     #[error(
         "tilemap is {columns}x{rows} tiles, which needs {expected} cells, but {actual} were given"
     )]
@@ -302,6 +306,8 @@ impl TilemapComponent {
     /// is: a scene carrying a broken tilemap has to open, because the editor is
     /// where it gets fixed.
     pub fn validate(&self) -> Result<(), TilemapError> {
+        self.grid_bounds()?;
+        self.grid_space()?;
         if self.tiles.len() != self.expected_cells() {
             return Err(TilemapError::WrongCellCount {
                 columns: self.columns,
@@ -366,19 +372,19 @@ impl TilemapComponent {
     #[allow(clippy::cast_possible_truncation)]
     #[must_use]
     pub fn tile_to_local(&self, column: u32, row: u32) -> [f32; 2] {
-        let width = f64::from(self.tile_size[0]);
-        let height = f64::from(self.tile_size[1]);
-        let column = f64::from(column);
-        let row = f64::from(row);
-        let [x, y] = match self.projection {
-            TileProjection::Orthogonal => [(column + 0.5) * width, -(row + 0.5) * height],
-            // Half steps, so the diamonds tile edge to edge rather than leaving
-            // a gap of their own size between them.
-            TileProjection::Isometric => {
-                [(column - row) * width * 0.5, -(column + row) * height * 0.5]
-            }
+        let Ok(column) = i32::try_from(column) else {
+            return [0.0, 0.0];
         };
-        [x as f32, y as f32]
+        let Ok(row) = i32::try_from(row) else {
+            return [0.0, 0.0];
+        };
+        let Ok(point) = self
+            .grid_space()
+            .and_then(|grid| grid.grid_to_plane(GridCoord::new(column, row)))
+        else {
+            return [0.0, 0.0];
+        };
+        [point.x as f32, point.y as f32]
     }
 
     /// Which tile covers a point in the map's own space, or `None` when the
@@ -387,30 +393,38 @@ impl TilemapComponent {
     /// The inverse of [`Self::tile_to_local`], and a test holds it to that on
     /// every cell of both projections. It is what turns a click into a tile,
     /// which is the whole of what painting a map needs from the maths.
-    // Both coordinates are bounds-checked against the map's own size as f64
-    // just below, so by the time either is narrowed it is known to sit in
-    // `0..columns` or `0..rows` and cannot truncate to something else.
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     #[must_use]
     pub fn local_to_tile(&self, x: f32, y: f32) -> Option<(u32, u32)> {
+        let coord = self
+            .grid_space()
+            .ok()?
+            .plane_to_grid(PlanePoint::new(f64::from(x), f64::from(y)))
+            .ok()?;
+        self.grid_bounds().ok()?.contains(coord).then(|| {
+            (
+                u32::try_from(coord.x).expect("bounds rejected negative columns"),
+                u32::try_from(coord.y).expect("bounds rejected negative rows"),
+            )
+        })
+    }
+
+    /// The logical bounds shared by rendering, picking, and future gameplay.
+    pub fn grid_bounds(&self) -> Result<GridBounds, GridError> {
+        GridBounds::new(self.columns, self.rows)
+    }
+
+    /// The exact mapping the tilemap uses from cells into entity-local XY.
+    pub fn grid_space(&self) -> Result<GridSpace, GridError> {
         let width = f64::from(self.tile_size[0]);
         let height = f64::from(self.tile_size[1]);
-        if width <= 0.0 || height <= 0.0 {
-            return None;
-        }
-        let x = f64::from(x);
-        let y = f64::from(y);
-        let (column, row) = match self.projection {
-            TileProjection::Orthogonal => ((x / width).floor(), (-y / height).floor()),
-            TileProjection::Isometric => {
-                let across = x / width;
-                let down = -y / height;
-                ((down + across).round(), (down - across).round())
-            }
+        let (projection, origin) = match self.projection {
+            TileProjection::Orthogonal => (
+                Projection::Orthogonal,
+                PlanePoint::new(width * 0.5, -height * 0.5),
+            ),
+            TileProjection::Isometric => (Projection::Isometric, PlanePoint::default()),
         };
-        let holds = |value: f64, limit: u32| value >= 0.0 && value < f64::from(limit);
-        (holds(column, self.columns) && holds(row, self.rows))
-            .then_some((column as u32, row as u32))
+        GridSpace::with_origin_and_y_axis(projection, width, height, origin, PlaneYAxis::Up)
     }
 
     /// What tile `index` is called in the sheet.
@@ -485,6 +499,16 @@ mod tilemap_tests {
         assert_eq!(map.local_to_tile(-1.0, -0.5), None, "left of the origin");
         assert_eq!(map.local_to_tile(0.5, 1.0), None, "above the origin");
         assert_eq!(map.local_to_tile(99.0, -0.5), None, "past the last column");
+        assert_eq!(
+            map.local_to_tile(0.0, -0.5),
+            Some((0, 0)),
+            "the map includes its left edge"
+        );
+        assert_eq!(
+            map.local_to_tile(1.1, -0.5),
+            Some((1, 0)),
+            "a shared edge belongs to the cell on its right"
+        );
     }
 
     /// Empty cells are `null` and every index is a real tile, so a map of
@@ -514,6 +538,13 @@ mod tilemap_tests {
                 ..
             })
         ));
+    }
+
+    #[test]
+    fn a_map_with_no_real_cell_size_is_rejected() {
+        let mut map = map(TileProjection::Isometric, 1, 1);
+        map.tile_size = [0.0, 1.0];
+        assert!(matches!(map.validate(), Err(TilemapError::Grid(_))));
     }
 
     #[test]

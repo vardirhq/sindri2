@@ -1539,6 +1539,41 @@ fn a_tilemap_places_its_tiles_where_loose_sprites_were() {
     }
 }
 
+/// A map's transform applies to the grid itself, not only to the quads in it.
+/// Picking has always inverted the full model matrix, so rendering must compose
+/// the same matrix or a rotated floor is painted somewhere other than it draws.
+#[test]
+fn a_tilemap_transform_moves_rotates_and_scales_its_grid() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "floor", "transform_3d": {
+            "position": [5.0, -2.0, 0.0],
+            "rotation": [0.0, 0.0, 0.70710677, 0.70710677],
+            "scale": [2.0, 3.0, 1.0] },
+          "components": { "sindri.tilemap": {
+            "texture": "tiles", "palette": ["a"],
+            "columns": 1, "rows": 1, "space": "world",
+            "tiles": [0] } } }"#,
+    ));
+    let frame = SceneExtractor::new()
+        .unwrap()
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
+        .expect("the transformed map extracts");
+    let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[0].command else {
+        panic!("expected a sprite batch");
+    };
+    let position = instances[0].model().w_axis.truncate();
+    assert!(
+        close(position.x, 6.5) && close(position.y, -1.0),
+        "the map-local centre is scaled and rotated before translation, got {position:?}"
+    );
+}
+
 /// A map whose array does not match the size it claims is reported by name
 /// rather than drawing part of a floor.
 #[test]

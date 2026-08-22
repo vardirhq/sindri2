@@ -124,7 +124,7 @@ sindri-desktop  -> sindri-platform + sindri-gpu (it owns the window, so it
 sindri-assets   -> sindri-core
 sindri-gpu      -> wgpu only (sindri-render is a dev-dependency, for tests)
 sindri-render   -> wgpu, glam, bytemuck only
-sindri-scene    -> sindri-core + sindri-render
+sindri-scene    -> sindri-core + sindri-grid + sindri-render
 sindri          -> assets, core, grid, and (feature `render`) gpu, render, scene
 sindri-decay    -> sindri-core + sindri-platform (for input) + the decay/
                    language crates, one way only

@@ -315,29 +315,26 @@ impl SceneExtractor {
                 // One tile is a sprite of the map's tile size, placed by the
                 // map's own maths and then by the entity's transform, so moving
                 // the entity moves the floor.
-                let mut tile = transform;
-                tile.position[0] += offset_x;
-                tile.position[1] += offset_y;
-                tile.scale[0] *= tilemap.tile_size[0];
-                tile.scale[1] *= tilemap.tile_size[1];
+                let local = Mat4::from_translation(Vec3::new(offset_x, offset_y, 0.0))
+                    * Mat4::from_scale(Vec3::new(tilemap.tile_size[0], tilemap.tile_size[1], 1.0));
 
                 let (model, camera) = if tilemap.is_screen_space() {
                     let extent = cameras
                         .overlay_extent
                         .ok_or(SceneExtractError::MissingOverlayCamera)?;
                     (
-                        screen_sprite_matrix(tile, SpriteAnchor::default(), extent),
+                        screen_sprite_matrix(transform, SpriteAnchor::default(), extent) * local,
                         cameras
                             .overlay
                             .ok_or(SceneExtractError::MissingOverlayCamera)?,
                     )
                 } else {
                     (
-                        transform_matrix(tile),
+                        transform_matrix(transform) * local,
                         cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?,
                     )
                 };
-                let position = model.w_axis.truncate().with_z(tile.position[2]);
+                let position = model.w_axis.truncate().with_z(transform.position[2]);
                 // Row and column break the tie rather than the entity index,
                 // because every tile of one map shares an entity. Reading order
                 // is the map's order, so the same map extracts the same way

@@ -6,6 +6,9 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- Shared tilemap/grid coordinates: `sindri.tilemap` now adapts `sindri-grid`
+  into upward world Y for both rendering and editor picking, while full map
+  transforms rotate and scale the grid itself instead of only its tile quads.
 - A dependency-free `sindri-grid` foundation with typed logical coordinates,
   finite bounds, stable neighbour queries, validated orthogonal/isometric
   projection, and exhaustive round-trip coverage across negative and positive

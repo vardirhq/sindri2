@@ -102,6 +102,16 @@ pub enum Projection {
     Isometric,
 }
 
+/// Which way increasing logical Y travels on the projected plane.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum PlaneYAxis {
+    /// Positive grid Y is positive plane Y, as in pixel coordinates.
+    #[default]
+    Down,
+    /// Positive grid Y is negative plane Y, as in Sindri's world XY plane.
+    Up,
+}
+
 /// A finite rectangular region beginning at `(0, 0)`.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct GridBounds {
@@ -159,6 +169,7 @@ pub struct GridSpace {
     projection: Projection,
     cell_size: PlanePoint,
     origin: PlanePoint,
+    y_axis: PlaneYAxis,
 }
 
 impl GridSpace {
@@ -178,6 +189,23 @@ impl GridSpace {
         cell_height: f64,
         origin: PlanePoint,
     ) -> Result<Self, GridError> {
+        Self::with_origin_and_y_axis(
+            projection,
+            cell_width,
+            cell_height,
+            origin,
+            PlaneYAxis::Down,
+        )
+    }
+
+    /// Creates a grid with an explicit plane-Y direction.
+    pub fn with_origin_and_y_axis(
+        projection: Projection,
+        cell_width: f64,
+        cell_height: f64,
+        origin: PlanePoint,
+        y_axis: PlaneYAxis,
+    ) -> Result<Self, GridError> {
         if !cell_width.is_finite() || cell_width <= 0.0 {
             return Err(GridError::InvalidCellWidth(cell_width));
         }
@@ -191,6 +219,7 @@ impl GridSpace {
             projection,
             cell_size: PlanePoint::new(cell_width, cell_height),
             origin,
+            y_axis,
         })
     }
 
@@ -209,21 +238,28 @@ impl GridSpace {
         self.origin
     }
 
+    #[must_use]
+    pub const fn y_axis(self) -> PlaneYAxis {
+        self.y_axis
+    }
+
     /// Projects a continuous grid position onto the configured plane.
     pub fn project(self, point: GridPoint) -> Result<PlanePoint, GridError> {
         if !point.x.is_finite() || !point.y.is_finite() {
             return Err(GridError::NonFiniteGridPoint(point));
         }
-        let projected = match self.projection {
-            Projection::Orthogonal => PlanePoint::new(
-                point.x * self.cell_size.x + self.origin.x,
-                point.y * self.cell_size.y + self.origin.y,
-            ),
-            Projection::Isometric => PlanePoint::new(
-                (point.x - point.y) * self.cell_size.x * 0.5 + self.origin.x,
-                (point.x + point.y) * self.cell_size.y * 0.5 + self.origin.y,
+        let (x, y) = match self.projection {
+            Projection::Orthogonal => (point.x * self.cell_size.x, point.y * self.cell_size.y),
+            Projection::Isometric => (
+                (point.x - point.y) * self.cell_size.x * 0.5,
+                (point.x + point.y) * self.cell_size.y * 0.5,
             ),
         };
+        let y = match self.y_axis {
+            PlaneYAxis::Down => y,
+            PlaneYAxis::Up => -y,
+        };
+        let projected = PlanePoint::new(x + self.origin.x, y + self.origin.y);
         if projected.x.is_finite() && projected.y.is_finite() {
             Ok(projected)
         } else {
@@ -237,7 +273,10 @@ impl GridSpace {
             return Err(GridError::NonFinitePoint(point));
         }
         let x = point.x - self.origin.x;
-        let y = point.y - self.origin.y;
+        let y = match self.y_axis {
+            PlaneYAxis::Down => point.y - self.origin.y,
+            PlaneYAxis::Up => self.origin.y - point.y,
+        };
         let unprojected = match self.projection {
             Projection::Orthogonal => GridPoint::new(x / self.cell_size.x, y / self.cell_size.y),
             Projection::Isometric => {
@@ -260,24 +299,25 @@ impl GridSpace {
 
     /// Returns the cell containing a point on the configured plane.
     ///
-    /// The boundary rule is deterministic: exact half-cell ties round away
-    /// from zero, matching [`f64::round`].
+    /// Cells are half-open on both axes: a boundary belongs to the cell in the
+    /// positive direction. That keeps the rule identical on either side of
+    /// zero and matches an array's left/top-inclusive cell bounds.
     pub fn plane_to_grid(self, point: PlanePoint) -> Result<GridCoord, GridError> {
         let point = self.unproject(point)?;
-        let x = rounded_i32(point.x)?;
-        let y = rounded_i32(point.y)?;
+        let x = containing_cell_i32(point.x)?;
+        let y = containing_cell_i32(point.y)?;
         Ok(GridCoord::new(x, y))
     }
 }
 
-fn rounded_i32(value: f64) -> Result<i32, GridError> {
-    let rounded = value.round();
-    if rounded < f64::from(i32::MIN) || rounded > f64::from(i32::MAX) {
+fn containing_cell_i32(value: f64) -> Result<i32, GridError> {
+    let cell = (value + 0.5).floor();
+    if cell < f64::from(i32::MIN) || cell > f64::from(i32::MAX) {
         return Err(GridError::CoordinateOutsideIntegerRange(value));
     }
     // The bounds check above makes this narrowing exact.
     #[allow(clippy::cast_possible_truncation)]
-    Ok(rounded as i32)
+    Ok(cell as i32)
 }
 
 /// A projection input that cannot be represented safely.
@@ -379,6 +419,34 @@ mod tests {
     }
 
     #[test]
+    fn upward_plane_y_flips_both_projections_without_changing_the_inverse() {
+        for projection in [Projection::Orthogonal, Projection::Isometric] {
+            let down = GridSpace::with_origin_and_y_axis(
+                projection,
+                64.0,
+                32.0,
+                PlanePoint::new(10.0, 20.0),
+                PlaneYAxis::Down,
+            )
+            .unwrap();
+            let up = GridSpace::with_origin_and_y_axis(
+                projection,
+                64.0,
+                32.0,
+                PlanePoint::new(10.0, 20.0),
+                PlaneYAxis::Up,
+            )
+            .unwrap();
+            let coord = GridCoord::new(3, 2);
+            let down_point = down.grid_to_plane(coord).unwrap();
+            let up_point = up.grid_to_plane(coord).unwrap();
+            assert!((down_point.x - up_point.x).abs() < EPSILON);
+            assert!((down_point.y + up_point.y - 40.0).abs() < EPSILON);
+            assert_eq!(up.plane_to_grid(up_point).unwrap(), coord);
+        }
+    }
+
+    #[test]
     fn both_projections_round_trip_cells_across_negative_and_positive_space() {
         for projection in [Projection::Orthogonal, Projection::Isometric] {
             let grid =
@@ -434,6 +502,23 @@ mod tests {
                     }
                 }
             }
+        }
+    }
+
+    #[test]
+    fn a_half_cell_boundary_belongs_to_the_positive_neighbour() {
+        for projection in [Projection::Orthogonal, Projection::Isometric] {
+            let grid = GridSpace::new(projection, 64.0, 32.0).unwrap();
+            assert_eq!(
+                grid.plane_to_grid(grid.project(GridPoint::new(-0.5, -0.5)).unwrap())
+                    .unwrap(),
+                GridCoord::new(0, 0)
+            );
+            assert_eq!(
+                grid.plane_to_grid(grid.project(GridPoint::new(0.5, 0.5)).unwrap())
+                    .unwrap(),
+                GridCoord::new(1, 1)
+            );
         }
     }
 

@@ -12,6 +12,7 @@ glam.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sindri-core = { path = "../sindri-core", version = "0.1.0" }
+sindri-grid = { path = "../sindri-grid", version = "0.1.0" }
 sindri-render = { path = "../sindri-render", version = "0.1.0" }
 thiserror.workspace = true
 
