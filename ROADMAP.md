@@ -255,7 +255,10 @@ editor is pleasant to use for an afternoon is tracked separately, below.
 - [ ] Add directional light and ambient/environment term
 - [ ] Add frustum culling and mesh instancing after profiling
 - [ ] Add optional Rapier3D adapter
-- [ ] Add camera/editor gizmos and collider visualization
+- [x] Add editor transform gizmos — translate, rotate, and scale use the exact
+  Scene-view camera, local/world orientation, optional snapping, checked Z
+  locks, and command-history drag merging
+- [ ] Add camera gizmos and collider visualization
 - [ ] Put a 3D prop into the companion game's sprite scene, which is what `hello-3d` and a navigable scene were for
 - [ ] Validate representative integrated and discrete GPUs
 

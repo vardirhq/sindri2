@@ -6,6 +6,10 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- Command-backed Scene-view translate, rotate, and scale gizmos with local/world
+  orientation, optional movement/angle/scale snapping, Z-lock-safe movement,
+  Q/W/E/R tool shortcuts, and one undo step per drag; transform rotation is now
+  editable as Euler degrees in the inspector while remaining quaternion-backed.
 - Authored `sindri.grid_navigation` walls and `sindri.grid_occupant`
   footprints, with a world adapter that resolves stable grid references,
   derives occupancy from transforms, validates complete placement, and runs

@@ -183,7 +183,7 @@ the pointer highlight: the control is drawn and does nothing when pressed.
 | Inspector: name, transform, parent, Z lock | — | **unreachable** (§1); they work when a selection is forced |
 | Inspector: Tag, Layer | — | **inert** fixed text — **removed**; a Sindri entity has neither |
 | Inspector: section chevron and ⋮ | — | **inert** ×2 — **removed**, along with the hierarchy root's chevron; child-bearing hierarchy rows now have working fold controls |
-| Inspector: Rotation | — | the word "Quaternion"; no rotation editing exists |
+| Inspector: Rotation | — | the word "Quaternion"; no rotation editing exists — **fixed** with Euler-degree fields backed by the stored quaternion, plus Scene-view rotation rings |
 | Inspector: Add Component | — | **inert** — **removed** until it can write through the schema registry |
 | Settings gear | 0 px | **inert** — **removed** |
 

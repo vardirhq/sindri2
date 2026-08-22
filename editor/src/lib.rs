@@ -13,6 +13,9 @@ pub mod animation;
 pub mod console;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod fixture;
+/// Direct manipulation handles for Scene-view transforms.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod gizmo;
 /// The keyboard, as a running script sees it.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod input;
