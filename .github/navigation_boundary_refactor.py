@@ -93,18 +93,29 @@ text = (
 )
 p.write_text(text)
 
-# The older cleanup script still contains the superseded exact-text refactor.
-# Make that block harmless before it runs; the structural refactor above has
-# already done the work and the remaining cleanup edits are still needed.
+# The older cleanup script still contains the superseded exact-text refactor
+# and its own fixture helper. Make both harmless before it runs; the structural
+# refactor above has already done that work, while its unrelated cleanup edits
+# are still needed.
 cleanup = Path(".github/navigation_boundary_cleanup.py")
 cleanup_text = cleanup.read_text()
-needle = '''if old_fixture not in text:
+helper_needle = '''if anchor not in text:
+    raise SystemExit("missing OpenNavigation fixture anchor")
+text = text.replace(anchor, helper, 1)
+'''
+helper_replacement = '''# The structural refactor already inserted the navigation fixture helper.
+'''
+if helper_needle not in cleanup_text:
+    raise SystemExit("missing obsolete cleanup helper insertion")
+cleanup_text = cleanup_text.replace(helper_needle, helper_replacement, 1)
+
+fixture_needle = '''if old_fixture not in text:
     raise SystemExit("missing inline grid contract fixture")
 text = text.replace(old_fixture, '                let (mover, grid, target) = grid_call_entities(&mut world);', 1)
 '''
-replacement = '''if old_fixture in text:
+fixture_replacement = '''if old_fixture in text:
     text = text.replace(old_fixture, '                let (mover, grid, target) = grid_call_entities(&mut world);', 1)
 '''
-if needle not in cleanup_text:
+if fixture_needle not in cleanup_text:
     raise SystemExit("missing obsolete cleanup refactor block")
-cleanup.write_text(cleanup_text.replace(needle, replacement, 1))
+cleanup.write_text(cleanup_text.replace(fixture_needle, fixture_replacement, 1))
