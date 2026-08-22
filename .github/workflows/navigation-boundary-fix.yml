@@ -34,3 +34,5 @@ jobs:
           git add -A
           git commit -m 'Keep Decay navigation scene-independent'
           git push origin HEAD:codex/pathfinding-vertical
+
+# Trigger the branch workflow after it exists on the branch.
