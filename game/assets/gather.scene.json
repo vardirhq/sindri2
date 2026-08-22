@@ -8,22 +8,9 @@
       "id": "banner",
       "name": "Banner",
       "transform_3d": {
-        "position": [
-          0.0,
-          0.0,
-          2.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.3,
-          0.32,
-          1.0
-        ]
+        "position": [0.0, 0.0, 2.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.3, 0.32, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -37,12 +24,7 @@
           "anchor": "center",
           "layer": 120,
           "texture": "textures/banner.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            0.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 0.0]
         }
       }
     },
@@ -50,39 +32,20 @@
       "id": "floor",
       "name": "Floor",
       "transform_3d": {
-        "position": [
-          0.0,
-          1.65,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
+        "position": [0.0, 1.65, -0.6],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
       },
       "components": {
         "sindri.tilemap": {
           "columns": 7,
           "layer": 0,
-          "palette": [
-            "light",
-            "dark"
-          ],
+          "palette": ["light", "dark"],
           "projection": "isometric",
           "rows": 7,
           "space": "world",
           "texture": "textures/tiles.png",
-          "tile_size": [
-            1.1,
-            0.55
-          ],
+          "tile_size": [1.1, 0.55],
           "tiles": [
             1,
             0,
@@ -138,25 +101,29 @@
       }
     },
     {
+      "id": "music",
+      "name": "Music",
+      "transform_3d": {
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "components": {
+        "sindri.audio": {
+          "autoplay": true,
+          "clip": "audio/background.wav",
+          "looping": true,
+          "volume": 0.22
+        }
+      }
+    },
+    {
       "id": "orb-0",
       "name": "Orb 1",
       "transform_3d": {
-        "position": [
-          -2.05,
-          0.55,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.34,
-          0.34,
-          1.0
-        ]
+        "position": [-2.05, 0.55, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.34, 0.34, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -171,12 +138,7 @@
           "layer": 10,
           "space": "world",
           "texture": "textures/orb.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 1.0]
         }
       }
     },
@@ -184,22 +146,9 @@
       "id": "orb-1",
       "name": "Orb 2",
       "transform_3d": {
-        "position": [
-          2.05,
-          0.55,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.34,
-          0.34,
-          1.0
-        ]
+        "position": [2.05, 0.55, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.34, 0.34, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -214,12 +163,7 @@
           "layer": 10,
           "space": "world",
           "texture": "textures/orb.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 1.0]
         }
       }
     },
@@ -227,22 +171,9 @@
       "id": "orb-2",
       "name": "Orb 3",
       "transform_3d": {
-        "position": [
-          0.0,
-          1.25,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.34,
-          0.34,
-          1.0
-        ]
+        "position": [0.0, 1.25, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.34, 0.34, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -257,12 +188,7 @@
           "layer": 10,
           "space": "world",
           "texture": "textures/orb.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 1.0]
         }
       }
     },
@@ -270,22 +196,9 @@
       "id": "orb-3",
       "name": "Orb 4",
       "transform_3d": {
-        "position": [
-          -1.15,
-          -0.95,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.34,
-          0.34,
-          1.0
-        ]
+        "position": [-1.15, -0.95, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.34, 0.34, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -300,12 +213,7 @@
           "layer": 10,
           "space": "world",
           "texture": "textures/orb.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 1.0]
         }
       }
     },
@@ -313,22 +221,9 @@
       "id": "orb-4",
       "name": "Orb 5",
       "transform_3d": {
-        "position": [
-          1.15,
-          -0.95,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.34,
-          0.34,
-          1.0
-        ]
+        "position": [1.15, -0.95, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.34, 0.34, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -343,12 +238,7 @@
           "layer": 10,
           "space": "world",
           "texture": "textures/orb.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 1.0]
         }
       }
     },
@@ -357,10 +247,7 @@
       "name": "Overlay Camera",
       "components": {
         "sindri.camera": {
-          "center": [
-            0.0,
-            0.0
-          ],
+          "center": [0.0, 0.0],
           "far": 10.0,
           "near": 0.0,
           "projection": "orthographic",
@@ -372,22 +259,9 @@
       "id": "pip-0",
       "name": "Pip 1",
       "transform_3d": {
-        "position": [
-          0.14,
-          -0.14,
-          1.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.1,
-          0.1,
-          1.0
-        ]
+        "position": [0.14, -0.14, 1.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.1, 0.1, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -401,12 +275,7 @@
           "anchor": "top_left",
           "layer": 100,
           "texture": "textures/pip.png#full",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            0.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 0.0]
         }
       }
     },
@@ -414,22 +283,9 @@
       "id": "pip-1",
       "name": "Pip 2",
       "transform_3d": {
-        "position": [
-          0.27,
-          -0.14,
-          1.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.1,
-          0.1,
-          1.0
-        ]
+        "position": [0.27, -0.14, 1.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.1, 0.1, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -443,12 +299,7 @@
           "anchor": "top_left",
           "layer": 100,
           "texture": "textures/pip.png#full",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            0.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 0.0]
         }
       }
     },
@@ -456,22 +307,9 @@
       "id": "pip-2",
       "name": "Pip 3",
       "transform_3d": {
-        "position": [
-          0.4,
-          -0.14,
-          1.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.1,
-          0.1,
-          1.0
-        ]
+        "position": [0.4, -0.14, 1.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.1, 0.1, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -485,12 +323,7 @@
           "anchor": "top_left",
           "layer": 100,
           "texture": "textures/pip.png#full",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            0.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 0.0]
         }
       }
     },
@@ -498,22 +331,9 @@
       "id": "pip-3",
       "name": "Pip 4",
       "transform_3d": {
-        "position": [
-          0.53,
-          -0.14,
-          1.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.1,
-          0.1,
-          1.0
-        ]
+        "position": [0.53, -0.14, 1.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.1, 0.1, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -527,12 +347,7 @@
           "anchor": "top_left",
           "layer": 100,
           "texture": "textures/pip.png#full",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            0.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 0.0]
         }
       }
     },
@@ -540,22 +355,9 @@
       "id": "pip-4",
       "name": "Pip 5",
       "transform_3d": {
-        "position": [
-          0.66,
-          -0.14,
-          1.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.1,
-          0.1,
-          1.0
-        ]
+        "position": [0.66, -0.14, 1.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.1, 0.1, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -569,12 +371,7 @@
           "anchor": "top_left",
           "layer": 100,
           "texture": "textures/pip.png#full",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            0.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 0.0]
         }
       }
     },
@@ -582,34 +379,16 @@
       "id": "pip-empty-0",
       "name": "Pip Socket 1",
       "transform_3d": {
-        "position": [
-          0.14,
-          -0.14,
-          0.5
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.1,
-          0.1,
-          1.0
-        ]
+        "position": [0.14, -0.14, 0.5],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.1, 0.1, 1.0]
       },
       "components": {
         "sindri.sprite": {
           "anchor": "top_left",
           "layer": 99,
           "texture": "textures/pip.png#empty",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 1.0]
         }
       }
     },
@@ -617,34 +396,16 @@
       "id": "pip-empty-1",
       "name": "Pip Socket 2",
       "transform_3d": {
-        "position": [
-          0.27,
-          -0.14,
-          0.5
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.1,
-          0.1,
-          1.0
-        ]
+        "position": [0.27, -0.14, 0.5],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.1, 0.1, 1.0]
       },
       "components": {
         "sindri.sprite": {
           "anchor": "top_left",
           "layer": 99,
           "texture": "textures/pip.png#empty",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 1.0]
         }
       }
     },
@@ -652,34 +413,16 @@
       "id": "pip-empty-2",
       "name": "Pip Socket 3",
       "transform_3d": {
-        "position": [
-          0.4,
-          -0.14,
-          0.5
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.1,
-          0.1,
-          1.0
-        ]
+        "position": [0.4, -0.14, 0.5],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.1, 0.1, 1.0]
       },
       "components": {
         "sindri.sprite": {
           "anchor": "top_left",
           "layer": 99,
           "texture": "textures/pip.png#empty",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 1.0]
         }
       }
     },
@@ -687,34 +430,16 @@
       "id": "pip-empty-3",
       "name": "Pip Socket 4",
       "transform_3d": {
-        "position": [
-          0.53,
-          -0.14,
-          0.5
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.1,
-          0.1,
-          1.0
-        ]
+        "position": [0.53, -0.14, 0.5],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.1, 0.1, 1.0]
       },
       "components": {
         "sindri.sprite": {
           "anchor": "top_left",
           "layer": 99,
           "texture": "textures/pip.png#empty",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 1.0]
         }
       }
     },
@@ -722,34 +447,16 @@
       "id": "pip-empty-4",
       "name": "Pip Socket 5",
       "transform_3d": {
-        "position": [
-          0.66,
-          -0.14,
-          0.5
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.1,
-          0.1,
-          1.0
-        ]
+        "position": [0.66, -0.14, 0.5],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.1, 0.1, 1.0]
       },
       "components": {
         "sindri.sprite": {
           "anchor": "top_left",
           "layer": 99,
           "texture": "textures/pip.png#empty",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 1.0]
         }
       }
     },
@@ -757,22 +464,9 @@
       "id": "player",
       "name": "Player",
       "transform_3d": {
-        "position": [
-          0.0,
-          -0.2,
-          0.2
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.62,
-          0.62,
-          1.0
-        ]
+        "position": [0.0, -0.2, 0.2],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.62, 0.62, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -786,22 +480,12 @@
           "layer": 20,
           "space": "world",
           "texture": "textures/player.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
+          "tint": [1.0, 1.0, 1.0, 1.0]
         },
         "sindri.sprite_animation": {
           "clips": {
             "bob": {
-              "frames": [
-                "bob-0",
-                "bob-1",
-                "bob-2",
-                "bob-3"
-              ],
+              "frames": ["bob-0", "bob-1", "bob-2", "bob-3"],
               "looping": true,
               "seconds_per_frame": 0.16
             }
@@ -815,32 +499,14 @@
       "id": "title",
       "name": "Title",
       "transform_3d": {
-        "position": [
-          -0.42,
-          -0.16,
-          2.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
+        "position": [-0.42, -0.16, 2.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
       },
       "components": {
         "sindri.text": {
           "anchor": "top",
-          "color": [
-            0.964,
-            0.663,
-            0.137,
-            1.0
-          ],
+          "color": [0.964, 0.663, 0.137, 1.0],
           "font": "fonts/Inter.ttf",
           "font_size": 22.0,
           "layer": 101,
@@ -853,69 +519,18 @@
       "id": "world-camera",
       "name": "World Camera",
       "transform_3d": {
-        "position": [
-          0.0,
-          0.0,
-          9.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
+        "position": [0.0, 0.0, 9.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
       },
       "components": {
         "sindri.camera": {
           "far": 60.0,
           "near": 0.1,
           "projection": "perspective",
-          "target": [
-            0.0,
-            0.0,
-            0.0
-          ],
-          "up": [
-            0.0,
-            1.0,
-            0.0
-          ],
+          "target": [0.0, 0.0, 0.0],
+          "up": [0.0, 1.0, 0.0],
           "vertical_fov_degrees": 45.0
-        }
-      }
-    },
-    {
-      "id": "music",
-      "name": "Music",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.audio": {
-          "clip": "audio/background.wav",
-          "autoplay": true,
-          "looping": true,
-          "volume": 0.22
         }
       }
     }
