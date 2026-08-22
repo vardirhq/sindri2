@@ -172,12 +172,7 @@ impl GridPathfinder {
 
             for (next, diagonal) in self.neighbours(bounds, current.coord) {
                 if !cached_passability(next, &mut passability, &mut is_passable)
-                    || !transition_is_open(
-                        current.coord,
-                        next,
-                        diagonal,
-                        &mut can_traverse,
-                    )
+                    || !transition_is_open(current.coord, next, diagonal, &mut can_traverse)
                 {
                     continue;
                 }
@@ -444,10 +439,7 @@ pub enum GridPathError {
     ZeroDiagonalCost,
     StartOutsideBounds { start: GridCoord },
     GoalOutsideBounds { goal: GridCoord },
-    WallBoundsMismatch {
-        path: GridBounds,
-        walls: GridBounds,
-    },
+    WallBoundsMismatch { path: GridBounds, walls: GridBounds },
     CostOverflow,
     SearchOverflow,
 }
