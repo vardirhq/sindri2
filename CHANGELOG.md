@@ -6,6 +6,9 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- Typed Decay grid positioning through `Grid.position_x`, `position_y`, and
+  `place`, with Gather gameplay migrated from top-down world coordinates to the
+  exact logical space of its transformed isometric tilemap.
 - Shared tilemap/grid coordinates: `sindri.tilemap` now adapts `sindri-grid`
   into upward world Y for both rendering and editor picking, while full map
   transforms rotate and scale the grid itself instead of only its tile quads.

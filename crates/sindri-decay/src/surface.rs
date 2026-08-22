@@ -26,11 +26,14 @@ pub(crate) const INPUT: &str = "Input";
 pub(crate) const TIME: &str = "Time";
 pub(crate) const GAME: &str = "Game";
 pub(crate) const WORLD: &str = "World";
+pub(crate) const GRID: &str = "Grid";
 /// The type of a value that names another entity.
 pub(crate) const ENTITY: &str = "Entity";
 
 /// The component a sprite's fields live in.
 pub(crate) const SPRITE_COMPONENT: &str = "sindri.sprite";
+/// The component whose layout and entity transform define a gameplay grid.
+pub(crate) const TILEMAP_COMPONENT: &str = "sindri.tilemap";
 
 /// A node in the surface: either a nested type, or a value a script reaches.
 pub(crate) enum Node {
@@ -386,6 +389,26 @@ pub(crate) const WORLD_CALLS: &[(&str, WorldCall)] = &[
     ("exists", WorldCall::Exists),
 ];
 
+/// A conversion between an entity's world position and a tilemap's logical
+/// coordinate space.
+///
+/// Decay has no structured vector or grid-coordinate value yet, so continuous
+/// X and Y are read separately and written together. Both entity arguments are
+/// typed references: the first is what moves, and the second is the tilemap
+/// whose projection and transform define the grid.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum GridCall {
+    PositionX,
+    PositionY,
+    Place,
+}
+
+pub(crate) const GRID_CALLS: &[(&str, GridCall)] = &[
+    ("position_x", GridCall::PositionX),
+    ("position_y", GridCall::PositionY),
+    ("place", GridCall::Place),
+];
+
 /// What a script can ask about the frame it is in.
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum TimeValue {
@@ -512,7 +535,23 @@ mod tests {
                 let dotted = path.dotted();
                 // A spare entity per call, because one of these calls removes
                 // whatever it is given and the rest still need a world.
-                let spare = world.spawn(EntityData::default());
+                let spare = world.spawn(EntityData {
+                    transform_3d: Some(Transform3D::default()),
+                    components: [(
+                        super::TILEMAP_COMPONENT.to_owned(),
+                        serde_json::json!({
+                            "columns": 1,
+                            "rows": 1,
+                            "space": "world",
+                            "texture": "tiles.png",
+                            "palette": ["tile"],
+                            "tiles": [0]
+                        }),
+                    )]
+                    .into_iter()
+                    .collect(),
+                    ..EntityData::default()
+                });
                 let mut host = WorldHost::new(&mut world, entity, context(&input), &mut board);
                 match member {
                     ExternalSymbol::Value(_) => assert!(

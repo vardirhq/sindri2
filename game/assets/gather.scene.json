@@ -112,7 +112,7 @@
         "sindri.script": {
           "properties": {
             "bob": 0.09,
-            "reach": 0.42
+            "reach": 0.7
           },
           "script": "Orb",
           "source": "scripts/orb.decay"
@@ -137,7 +137,7 @@
         "sindri.script": {
           "properties": {
             "bob": 0.09,
-            "reach": 0.42
+            "reach": 0.7
           },
           "script": "Orb",
           "source": "scripts/orb.decay"
@@ -162,7 +162,7 @@
         "sindri.script": {
           "properties": {
             "bob": 0.09,
-            "reach": 0.42
+            "reach": 0.7
           },
           "script": "Orb",
           "source": "scripts/orb.decay"
@@ -187,7 +187,7 @@
         "sindri.script": {
           "properties": {
             "bob": 0.09,
-            "reach": 0.42
+            "reach": 0.7
           },
           "script": "Orb",
           "source": "scripts/orb.decay"
@@ -212,7 +212,7 @@
         "sindri.script": {
           "properties": {
             "bob": 0.09,
-            "reach": 0.42
+            "reach": 0.7
           },
           "script": "Orb",
           "source": "scripts/orb.decay"

@@ -9,7 +9,8 @@ browsers, with a native editor and the Decay gameplay language. It is a Cargo
 workspace being proven through one companion game: the engine core, platform
 boundary, GPU and renderer layers, asset pipeline, substantial 2D runtime,
 editor authoring surface, native game, and browser game exist. Screen-space text
-with project font assets exists; audio, physics, mature 3D, grid/isometric gameplay systems, project-level editor
+with project font assets and typed isometric gameplay coordinates exists;
+audio, physics, mature 3D, grid occupancy/pathfinding, project-level editor
 workflow, and export tooling do not.
 
 Four documents govern the work and are the source of truth over anything
@@ -126,11 +127,11 @@ sindri-gpu      -> wgpu only (sindri-render is a dev-dependency, for tests)
 sindri-render   -> wgpu, glam, bytemuck only
 sindri-scene    -> sindri-core + sindri-grid + sindri-render
 sindri          -> assets, core, grid, and (feature `render`) gpu, render, scene
-sindri-decay    -> sindri-core + sindri-platform (for input) + the decay/
+sindri-decay    -> sindri-core + sindri-grid + sindri-platform (for input) + the decay/
                    language crates, one way only
 editor          -> assets, core, decay, platform, render, scene (sindri-cube
                    is dev-only)
-sindri-gather   -> assets, core, decay, desktop, platform, render, scene. It is
+sindri-gather   -> assets, core, decay, desktop, grid, platform, render, scene. It is
                    a consumer of the engine, and nothing depends on it.
 ```
 

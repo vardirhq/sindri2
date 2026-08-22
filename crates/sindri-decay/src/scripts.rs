@@ -19,8 +19,9 @@ use crate::{
     ScriptReport, WorldHost,
     exports::exports_of,
     surface::{
-        ENTITY, FUNCTIONS, GAME, GAME_CALLS, GameCall, HostFunction, INPUT, INPUT_QUERIES, Node,
-        PRINT, THIS, THROUGH_REFERENCE, TIME, TIME_VALUES, WORLD, WORLD_CALLS, WorldCall,
+        ENTITY, FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, GridCall, HostFunction,
+        INPUT, INPUT_QUERIES, Node, PRINT, THIS, THROUGH_REFERENCE, TIME, TIME_VALUES, WORLD,
+        WORLD_CALLS, WorldCall,
     },
 };
 
@@ -169,6 +170,33 @@ pub fn environment() -> Environment {
     }
     environment.add_type(WORLD, world);
     environment.add_value(WORLD, Type::Named(WORLD.to_owned()));
+
+    let mut grid = HostType::new();
+    for (name, call) in GRID_CALLS {
+        grid = grid.with_function(
+            *name,
+            FunctionType {
+                params: match call {
+                    GridCall::PositionX | GridCall::PositionY => vec![
+                        Type::Named(ENTITY.to_owned()),
+                        Type::Named(ENTITY.to_owned()),
+                    ],
+                    GridCall::Place => vec![
+                        Type::Named(ENTITY.to_owned()),
+                        Type::Named(ENTITY.to_owned()),
+                        Type::F32,
+                        Type::F32,
+                    ],
+                },
+                return_type: match call {
+                    GridCall::PositionX | GridCall::PositionY => Type::F32,
+                    GridCall::Place => Type::Unit,
+                },
+            },
+        );
+    }
+    environment.add_type(GRID, grid);
+    environment.add_value(GRID, Type::Named(GRID.to_owned()));
 
     environment
 }

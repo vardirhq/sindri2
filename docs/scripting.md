@@ -146,6 +146,32 @@ There is still no spawning. Creating an entity means saying what to create, and
 the engine has no prefab to say it with — that is a real dependency rather than
 an oversight, and it is why this stops at finding and removing.
 
+### Grid position
+
+| Call | Returns |
+| --- | --- |
+| `Grid.position_x(entity, grid)` | `f32` |
+| `Grid.position_y(entity, grid)` | `f32` |
+| `Grid.place(entity, grid, x, y)` | nothing |
+
+The second entity must carry a world-space `sindri.tilemap`. Its projection,
+cell size, and complete world-XY transform define the coordinate space; there is no implicit
+"first grid" and no second set of projection settings for scripts to disagree
+with. The coordinates are continuous logical positions, not rounded cell
+indices, so a character can move smoothly between cells while gameplay still
+speaks in grid axes.
+
+`Grid.place` writes X and Y together and preserves the positioned entity's Z.
+Moving, rotating, or scaling the tilemap changes the world position produced by
+the same logical coordinate. `position_x` and `position_y` perform the inverse,
+including that map transform, so placing and reading round-trip. A tilted map
+or one with zero XY scale is refused: this surface describes a grid on Sindri's
+world XY plane, not an arbitrary plane in 3D.
+
+The split X/Y reads are a consequence of Decay not having a structured vector
+or grid-coordinate value yet. They are kept behind one namespace so that value
+can replace the pair later without exposing tilemap storage to gameplay code.
+
 ### The keyboard
 
 | Call | Returns |

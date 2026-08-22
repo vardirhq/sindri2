@@ -35,14 +35,11 @@ const HEIGHT: u32 = 600;
 /// The run the picture is of: hold these keys for that many fixed steps.
 ///
 /// Written as keys rather than as positions because that is what a player
-/// gives the game. It walks up onto the row an orb sits on and then along it,
-/// which gathers one — enough for a lamp to light in the corner, and for the
-/// picture to be of a game being played rather than of a scene.
+/// gives the game. It walks along both isometric grid axes toward an orb, which
+/// gathers one — enough for a lamp to light in the corner, and for the picture
+/// to be of a game being played rather than of a scene.
 #[cfg(not(target_arch = "wasm32"))]
-const RUN: &[(&[Key], u32)] = &[
-    (&[Key::ArrowRight, Key::ArrowUp], 18),
-    (&[Key::ArrowRight], 40),
-];
+const RUN: &[(&[Key], u32)] = &[(&[Key::ArrowLeft, Key::ArrowUp], 55)];
 #[cfg(not(target_arch = "wasm32"))]
 const STEP_SECONDS: f32 = 1.0 / 60.0;
 

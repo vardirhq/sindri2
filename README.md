@@ -46,7 +46,7 @@ script Player {
 }
 ```
 
-A script can currently read and write its transform and sprite properties, read keyboard input and frame time, call a small maths standard library, and print to the host log. Host members are typed: a misspelling such as `this.transfrom.position.x` is a compile error with a source location rather than a runtime surprise.
+A script can currently read and write its transform and sprite properties, read keyboard input and frame time, place entities in a tilemap's logical grid, call a small maths standard library, and print to the host log. Host members are typed: a misspelling such as `this.transfrom.position.x` is a compile error with a source location rather than a runtime surprise.
 
 `@export` fields are visible in the editor without running the script. The script declares the property's name, type, and default; the scene stores only the value authored for that particular entity.
 

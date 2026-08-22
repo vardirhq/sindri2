@@ -13,16 +13,27 @@
 use decay_ir::Path;
 use decay_runtime::{Host, RuntimeError, Value};
 use sindri_core::{EntityId, Transform3D, World};
+use sindri_grid::{GridPoint, GridSpace, PlanePoint, PlaneYAxis, Projection};
 use sindri_platform::{InputState, Key};
 
 use crate::{
     Blackboard,
     surface::{
-        FUNCTIONS, GAME, GAME_CALLS, GameCall, Handle, HostFunction, INPUT, INPUT_QUERIES,
-        InputQuery, Leaf, PRINT, Seg, TIME, TIME_VALUES, TimeValue, WORLD, WORLD_CALLS, WorldCall,
-        follow_mut, handle, leaf, leaf_through_reference,
+        FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, GridCall, Handle, HostFunction,
+        INPUT, INPUT_QUERIES, InputQuery, Leaf, PRINT, Seg, TIME, TIME_VALUES, TimeValue, WORLD,
+        TILEMAP_COMPONENT, WORLD_CALLS, WorldCall, follow_mut, handle, leaf,
+        leaf_through_reference,
     },
 };
+
+/// The renderer-independent grid and the entity transform placing it in world
+/// XY. Kept together because a logical coordinate only means a world position
+/// relative to both.
+#[derive(Clone, Copy)]
+struct MapGrid {
+    space: GridSpace,
+    transform: Transform3D,
+}
 
 /// What a script can know about the frame it is running in.
 ///
@@ -196,6 +207,223 @@ impl<'a> WorldHost<'a> {
             .find(|(_, data)| data.name.as_deref() == Some(name))
             .map(|(entity, _)| entity)
     }
+
+    fn entity_argument(
+        &self,
+        path: &Path,
+        args: &[Value],
+        index: usize,
+        role: &str,
+    ) -> Result<EntityId, RuntimeError> {
+        let Some(value) = args.get(index) else {
+            return Err(RuntimeError::Host(format!(
+                "{} needs an entity for {role}",
+                path.dotted()
+            )));
+        };
+        let Value::Reference(bits) = value else {
+            return Err(RuntimeError::Host(format!(
+                "{} needs an entity for {role}, and the script gave {value:?}",
+                path.dotted()
+            )));
+        };
+        let entity = EntityId::from_bits(*bits);
+        self.world.get(entity).ok_or_else(|| {
+            RuntimeError::Host(format!(
+                "{} was given a {role} entity that no longer exists",
+                path.dotted()
+            ))
+        })?;
+        Ok(entity)
+    }
+
+    /// Reads the same tilemap layout convention `sindri-scene` exposes as its
+    /// `GridSpace`, without taking a dependency on that render-facing crate.
+    /// An integration test in the companion game holds the two adapters to the
+    /// same answer.
+    fn map_grid(&self, path: &Path, map: EntityId) -> Result<MapGrid, RuntimeError> {
+        let data = self.world.get(map).ok_or_else(|| {
+            RuntimeError::Host(format!("{}'s grid no longer exists", path.dotted()))
+        })?;
+        let payload = data.components.get(TILEMAP_COMPONENT).ok_or_else(|| {
+            RuntimeError::Host(format!(
+                "{} needs its grid entity to carry {TILEMAP_COMPONENT}",
+                path.dotted()
+            ))
+        })?;
+        if payload
+            .get("space")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("screen")
+            != "world"
+        {
+            return Err(RuntimeError::Host(format!(
+                "{} needs a world-space tilemap; screen-space maps depend on a viewport",
+                path.dotted()
+            )));
+        }
+        let tile_size = payload
+            .get("tile_size")
+            .and_then(serde_json::Value::as_array)
+            .map_or(Ok([1.0, 1.0]), |size| {
+                let [width, height] = size.as_slice() else {
+                    return Err(RuntimeError::Host(format!(
+                        "{} found a tile_size that is not two numbers",
+                        path.dotted()
+                    )));
+                };
+                let Some(width) = width.as_f64() else {
+                    return Err(RuntimeError::Host(format!(
+                        "{} found a tile width that is not a number",
+                        path.dotted()
+                    )));
+                };
+                let Some(height) = height.as_f64() else {
+                    return Err(RuntimeError::Host(format!(
+                        "{} found a tile height that is not a number",
+                        path.dotted()
+                    )));
+                };
+                Ok([width, height])
+            })?;
+        let projection = match payload
+            .get("projection")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("orthogonal")
+        {
+            "orthogonal" => Projection::Orthogonal,
+            "isometric" => Projection::Isometric,
+            other => {
+                return Err(RuntimeError::Host(format!(
+                    "{} found an unknown tile projection `{other}`",
+                    path.dotted()
+                )));
+            }
+        };
+        let origin = match projection {
+            Projection::Orthogonal => PlanePoint::new(tile_size[0] * 0.5, -tile_size[1] * 0.5),
+            Projection::Isometric => PlanePoint::default(),
+        };
+        let space = GridSpace::with_origin_and_y_axis(
+            projection,
+            tile_size[0],
+            tile_size[1],
+            origin,
+            PlaneYAxis::Up,
+        )
+        .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
+        let transform = data.transform_3d.unwrap_or_default();
+        validate_planar_map(path, transform)?;
+        Ok(MapGrid { space, transform })
+    }
+
+    fn grid_call(
+        &mut self,
+        call: GridCall,
+        path: &Path,
+        args: &[Value],
+    ) -> Result<Value, RuntimeError> {
+        let entity = self.entity_argument(path, args, 0, "the positioned object")?;
+        let map = self.entity_argument(path, args, 1, "the grid")?;
+        let grid = self.map_grid(path, map)?;
+
+        match call {
+            GridCall::PositionX | GridCall::PositionY => {
+                let world = self
+                    .transform_of(entity)
+                    .ok_or_else(|| {
+                        RuntimeError::Host(format!(
+                            "{} needs the positioned object to have a transform",
+                            path.dotted()
+                        ))
+                    })?
+                    .position_2d();
+                let local = world_to_map(grid.transform, world);
+                let point = grid
+                    .space
+                    .unproject(local)
+                    .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
+                Ok(Value::Number(match call {
+                    GridCall::PositionX => point.x,
+                    GridCall::PositionY => point.y,
+                    GridCall::Place => unreachable!("matched above"),
+                }))
+            }
+            GridCall::Place => {
+                let x = number(
+                    path,
+                    args.get(2).ok_or_else(|| {
+                        RuntimeError::Host(format!("{} needs a grid X", path.dotted()))
+                    })?,
+                )?;
+                let y = number(
+                    path,
+                    args.get(3).ok_or_else(|| {
+                        RuntimeError::Host(format!("{} needs a grid Y", path.dotted()))
+                    })?,
+                )?;
+                let local = grid
+                    .space
+                    .project(GridPoint::new(x, y))
+                    .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
+                let world = map_to_world(grid.transform, local);
+                let Some(mut transform) = self.transform_of(entity) else {
+                    return Err(RuntimeError::Host(format!(
+                        "{} needs the positioned object to have a transform",
+                        path.dotted()
+                    )));
+                };
+                transform.set_position_2d(world);
+                let Some(data) = self.world.get_mut(entity) else {
+                    return Err(RuntimeError::Host(format!(
+                        "{}'s positioned object no longer exists",
+                        path.dotted()
+                    )));
+                };
+                data.transform_3d = Some(transform);
+                Ok(Value::Unit)
+            }
+        }
+    }
+}
+
+fn validate_planar_map(path: &Path, transform: Transform3D) -> Result<(), RuntimeError> {
+    let finite = transform.position[0].is_finite()
+        && transform.position[1].is_finite()
+        && transform.rotation.into_iter().all(f32::is_finite);
+    let flat = transform.rotation[0].abs() <= f32::EPSILON
+        && transform.rotation[1].abs() <= f32::EPSILON;
+    let usable_scale = transform.scale[0].is_finite()
+        && transform.scale[1].is_finite()
+        && transform.scale[0].abs() > f32::EPSILON
+        && transform.scale[1].abs() > f32::EPSILON;
+    if !finite || !flat || !usable_scale {
+        return Err(RuntimeError::Host(format!(
+            "{} needs a grid transform that stays in world XY and has non-zero XY scale",
+            path.dotted()
+        )));
+    }
+    Ok(())
+}
+
+fn map_to_world(transform: Transform3D, point: PlanePoint) -> [f32; 2] {
+    let (sin, cos) = transform.rotation_z_radians().sin_cos();
+    let x = as_f32(point.x) * transform.scale[0];
+    let y = as_f32(point.y) * transform.scale[1];
+    [
+        transform.position[0] + cos * x - sin * y,
+        transform.position[1] + sin * x + cos * y,
+    ]
+}
+
+fn world_to_map(transform: Transform3D, point: [f32; 2]) -> PlanePoint {
+    let (sin, cos) = transform.rotation_z_radians().sin_cos();
+    let x = point[0] - transform.position[0];
+    let y = point[1] - transform.position[1];
+    PlanePoint::new(
+        f64::from((cos * x + sin * y) / transform.scale[0]),
+        f64::from((-sin * x + cos * y) / transform.scale[1]),
+    )
 }
 
 /// Decay's only numeric type is spelled `f32` and holds an `f64`; every engine
@@ -463,6 +691,13 @@ impl Host for WorldHost<'_> {
             && let Some((_, call)) = WORLD_CALLS.iter().find(|(known, _)| known == name)
         {
             return self.world_call(*call, path, args).map(Some);
+        }
+
+        if let [namespace, name] = parts.as_slice()
+            && *namespace == GRID
+            && let Some((_, call)) = GRID_CALLS.iter().find(|(known, _)| known == name)
+        {
+            return self.grid_call(*call, path, args).map(Some);
         }
 
         if let [namespace, name] = parts.as_slice()
