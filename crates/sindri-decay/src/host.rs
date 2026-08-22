@@ -345,7 +345,7 @@ impl<'a> WorldHost<'a> {
             .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
         navigation
             .find_path(GridPathfinder::default(), entity, goal)
-            .map(|route| route.map(|route| route.into_nodes()))
+            .map(|route| route.map(sindri_grid::GridPath::into_nodes))
             .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))
     }
 

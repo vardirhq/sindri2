@@ -2109,11 +2109,13 @@ impl EditorApp {
                         removed = components_sections(
                             ui,
                             &mut components,
-                            scripts,
-                            project_root.as_deref(),
-                            &fonts,
-                            animation_texture.as_deref(),
-                            &grids,
+                            &InspectorProject {
+                                scripts,
+                                root: project_root.as_deref(),
+                                fonts: &fonts,
+                                animation_texture: animation_texture.as_deref(),
+                                grids: &grids,
+                            },
                             &mut tools,
                         );
                         added = add_component_button(ui, &addable);
@@ -3352,6 +3354,19 @@ struct InspectorTools<'a> {
     tilemap: &'a mut TilemapTool,
 }
 
+/// What the inspector reads about the project it is editing inside.
+///
+/// Grouped rather than passed one by one because every component section wants
+/// some subset of it, and the list only grows: each new component that names a
+/// project asset would otherwise add another parameter to one signature.
+struct InspectorProject<'a> {
+    scripts: &'a SceneScripts,
+    root: Option<&'a Path>,
+    fonts: &'a [String],
+    animation_texture: Option<&'a str>,
+    grids: &'a [(String, String)],
+}
+
 /// Draws every component on an entity, editable, and reports what changed.
 ///
 /// The payload is edited in place on a draft; the caller diffs it and turns
@@ -3359,13 +3374,16 @@ struct InspectorTools<'a> {
 fn components_sections(
     ui: &mut egui::Ui,
     components: &mut BTreeMap<String, Value>,
-    scripts: &SceneScripts,
-    project_root: Option<&Path>,
-    fonts: &[String],
-    animation_texture: Option<&str>,
-    grids: &[(String, String)],
+    project: &InspectorProject<'_>,
     tools: &mut InspectorTools<'_>,
 ) -> Option<String> {
+    let InspectorProject {
+        scripts,
+        root: project_root,
+        fonts,
+        animation_texture,
+        grids,
+    } = *project;
     let grid_size = components
         .get(tilemap::TYPE_NAME)
         .and_then(|payload| tilemap::component(payload).ok())

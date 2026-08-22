@@ -607,34 +607,12 @@ mod tests {
                         "the analyzer describes {dotted} and the host cannot read it"
                     ),
                     ExternalSymbol::Function(signature) => {
-                        // Built from the declared parameter types rather than
-                        // assumed, so a namespace whose calls take something
-                        // other than key names is still exercised properly.
-                        let args: Vec<Value> = signature
-                            .params
-                            .iter()
-                            .enumerate()
-                            .map(|(index, ty)| match ty {
-                                Type::String => Value::String("Space".to_owned()),
-                                Type::Bool => Value::Bool(true),
-                                // Grid calls need distinct semantic roles. A
-                                // generic entity is still enough everywhere else.
-                                Type::Named(named)
-                                    if named == ENTITY && namespace == super::GRID =>
-                                {
-                                    let entity = match index {
-                                        0 => mover,
-                                        1 => grid,
-                                        _ => target,
-                                    };
-                                    Value::Reference(entity.to_bits())
-                                }
-                                Type::Named(named) if named == ENTITY => {
-                                    Value::Reference(spare.to_bits())
-                                }
-                                _ => Value::Number(1.0),
-                            })
-                            .collect();
+                        let args = arguments_for(
+                            &signature.params,
+                            namespace,
+                            [mover, grid, target],
+                            spare,
+                        );
                         assert!(
                             matches!(host.call(None, &path, &args), Ok(Some(_))),
                             "the analyzer describes {dotted} and the host does not perform it"
@@ -645,6 +623,33 @@ mod tests {
             }
         }
         assert!(checked > 0, "no namespaced globals are described");
+    }
+
+    /// One call's arguments, built from its declared parameter types.
+    ///
+    /// Built rather than assumed, so a namespace whose calls take something
+    /// other than key names is still exercised properly. Grid calls need three
+    /// distinct semantic roles — who moves, which grid, where to — while a
+    /// generic entity is enough everywhere else.
+    fn arguments_for(
+        params: &[Type],
+        namespace: &str,
+        grid_roles: [sindri_core::EntityId; 3],
+        spare: sindri_core::EntityId,
+    ) -> Vec<Value> {
+        params
+            .iter()
+            .enumerate()
+            .map(|(index, ty)| match ty {
+                Type::String => Value::String("Space".to_owned()),
+                Type::Bool => Value::Bool(true),
+                Type::Named(named) if named == ENTITY && namespace == super::GRID => {
+                    Value::Reference(grid_roles[index.min(2)].to_bits())
+                }
+                Type::Named(named) if named == ENTITY => Value::Reference(spare.to_bits()),
+                _ => Value::Number(1.0),
+            })
+            .collect()
     }
 
     /// Expands a described member into every complete path under it, with the
