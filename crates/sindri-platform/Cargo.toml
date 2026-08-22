@@ -11,5 +11,13 @@ repository.workspace = true
 sindri-core = { path = "../sindri-core", version = "0.1.0" }
 thiserror.workspace = true
 
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+rodio = { version = "0.22.2", default-features = false, features = ["playback", "mp3", "vorbis", "wav"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+js-sys.workspace = true
+wasm-bindgen.workspace = true
+web-sys = { workspace = true, features = ["Blob", "BlobPropertyBag", "HtmlAudioElement", "HtmlMediaElement", "Url"] }
+
 [lints]
 workspace = true
