@@ -74,7 +74,11 @@ This first slice provides:
 - explicit errors for invalid sizes, non-finite points, overflow, and values
   outside the integer coordinate domain
 
-The next slice should give Decay a typed grid-position surface and move Gather's
-logical coordinates onto this crate without putting gameplay rules into Rust.
+Decay now exposes continuous logical position through an explicit tilemap
+entity: `Grid.position_x`, `Grid.position_y`, and `Grid.place` invert and apply
+the same projection plus the tilemap's full world-XY transform. Gather uses that
+surface for movement, floor bounds, and collection distance without moving any
+game rule into Rust.
+
 Footprints and occupancy should follow before A*, because pathfinding needs a
 truthful definition of passability.

@@ -16,12 +16,21 @@ script Orb {
     @export
     let bob: f32 = 0.14;
 
+    var resting_grid_x: f32 = 0.0;
+    var resting_grid_y: f32 = 0.0;
     var resting_y: f32 = 0.0;
     var taken: bool = false;
     var started: bool = false;
 
     fn update(dt: f32) {
+        let floor = World.find("Floor");
+        if floor == null {
+            return;
+        }
+
         if !started {
+            resting_grid_x = Grid.position_x(this.entity, floor);
+            resting_grid_y = Grid.position_y(this.entity, floor);
             resting_y = this.transform.position.y;
             started = true;
         }
@@ -35,8 +44,8 @@ script Orb {
             return;
         }
 
-        let dx = player.transform.position.x - this.transform.position.x;
-        let dy = player.transform.position.y - resting_y;
+        let dx = Grid.position_x(player, floor) - resting_grid_x;
+        let dy = Grid.position_y(player, floor) - resting_grid_y;
         // Squared, because comparing distances does not need the square root
         // and Decay's `sqrt` would only lose precision on the way.
         if dx * dx + dy * dy < reach * reach {
@@ -48,6 +57,9 @@ script Orb {
             return;
         }
 
+        // Reset to the logical resting point before adding presentation-only
+        // bobbing, so the visual offset never drifts into gameplay coordinates.
+        Grid.place(this.entity, floor, resting_grid_x, resting_grid_y);
         this.transform.position.y = resting_y + sin(Time.elapsed * 2.4) * bob;
     }
 }

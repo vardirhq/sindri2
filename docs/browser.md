@@ -65,14 +65,14 @@ The cube proves a frame can be drawn. The companion game proves the engine can b
 needed a `cdylib` crate type and a page, and nothing else: the `wasm_bindgen`
 entry point and the wasm-only dependencies were already there.
 
-Driven through Playwright — click the canvas, hold `ArrowUp` for seven hundred
-milliseconds, let go — the player crosses the floor, an orb disappears, and the
-first lamp lights. That single frame is the whole chain running on the browser
-target:
+Driven through the same browser host and fixed-step gameplay as native, the
+player crosses the floor, an orb disappears, and the first lamp lights. That
+single frame is the whole chain running on the browser target:
 
-- the keyboard reaches `player.decay`, which moves the transform and clamps it
-- `orb.decay` calls `World.find("Player")` and reads its transform *through an
-  entity reference*
+- the keyboard reaches `player.decay`, which moves and clamps a logical
+  coordinate before `Grid.place` projects it through the floor tilemap
+- `orb.decay` calls `World.find("Player")` and compares both entities in that
+  same grid through typed references
 - the pickup writes the score to the blackboard with `Game.set`
 - `pip.decay` reads it and lights a lamp
 

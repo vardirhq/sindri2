@@ -107,7 +107,9 @@ screen coordinate conventions without introducing a renderer dependency.
 `sindri.tilemap` exposes the exact `GridSpace` and `GridBounds` its rendering and
 editor picking use. A map's complete transform is composed around that local
 grid, so moving, rotating, or scaling a map keeps drawn and picked cells in
-agreement. Camera/viewport conversion and a Decay grid surface remain missing.
+agreement. Decay can read an entity's continuous logical X/Y relative to that
+tilemap and place it back through the same projection and map transform. General
+camera/viewport conversion remains missing.
 
 `docs/feature-integration-matrix.md` tracks those counterparts explicitly rather
 than allowing the runtime type to make the broader feature look complete.
@@ -489,7 +491,8 @@ pixel.
 
 A script reaches its own transform's position, scale and Z rotation, its
 sprite's tint and layer, the keyboard, the frame's delta and its own elapsed
-time, six maths functions, and `print`. The whole table is in
+time, logical grid position through an explicit tilemap entity, six maths
+functions, and `print`. The whole table is in
 `docs/scripting.md`. Verified in the editor: holding an arrow key moves the
 fixture's cube, releasing stops it, Space recentres it and puts a line in the
 console naming the entity that said it.
@@ -518,6 +521,14 @@ player directly, with the picture unchanged.
 
 The board is still there and still earns its place, for facts that belong to the
 game rather than to an entity — the score, whether the game is won.
+
+**A script can speak in the tilemap's coordinates.** `Grid.position_x` and
+`Grid.position_y` invert a tilemap's projection and full world-XY transform;
+`Grid.place` projects a continuous logical position back while preserving the
+actor's Z. Both arguments are typed entity references, and the grid must
+explicitly be the entity carrying `sindri.tilemap`, so a world with two maps is
+not governed by an accidental first match. Gather uses this surface for player
+movement, floor bounds, and orb distance checks.
 
 A script is also text on disk that a test can run. `decay-syntax` lexes and parses
 it, reporting diagnostics with a span, line, and column; the parser recovers
@@ -553,7 +564,8 @@ the README.
   the language. Finding, reaching, and despawning exist
 - Despawning is not undoable — no script write is, and play mode restores from a
   snapshot, so routing it through `WorldCommand` stays open
-- No mouse, and no components beyond `sindri.sprite`
+- No mouse, and no general component surface beyond `sindri.sprite`; tilemaps
+  are available only through the deliberately narrow `Grid` coordinate API
 - No LSP, no formatter, no debugger, no syntax highlighting anywhere
 - No script state migration across a reload: a changed file recompiles, and the
   running instance keeps whatever fields it had
@@ -592,6 +604,13 @@ let each orb find the player and read its transform directly; the board remains
 for game-wide facts such as score and victory. Neither change added gameplay to
 Rust.
 
+**Its gameplay now uses the diamond's logical grid.** The player and orbs read
+continuous coordinates through the floor tilemap, movement clamps to the 7x7
+logical bounds, and placement projects back through the same isometric mapping
+that draws and picks the floor. Arrow keys follow the two diagonal grid axes;
+holding two walks along a screen axis. Orb bobbing remains a presentation offset
+and is reset from the logical resting point every frame.
+
 **It is checked, not just run.** `game/tests/the_game_holds_together.rs` asserts
 every texture and script the scene names is shipped, that the scripts compile,
 that every authored property names a field its script `@export`s, that the scene
@@ -622,8 +641,6 @@ every sprite batch after the first drew with the last batch's camera. See
   row of lamps and winning remains a banner sprite until dynamic script-to-text
   binding exists
 - No sound, because there is no audio
-- Top-down coordinates behind an isometric-looking floor; the grid module that
-  would make it properly isometric is Milestone 9
 - Browser asset fetching is not exercised: the playable web build embeds its
   scene, scripts, sheets, textures, and font
 - No restart without relaunching, no menu, no pause

@@ -12,6 +12,7 @@ publish = false
 
 [dependencies]
 sindri-core = { path = "../sindri-core" }
+sindri-grid = { path = "../sindri-grid" }
 sindri-platform = { path = "../sindri-platform" }
 decay-ir = { path = "../../decay/crates/decay-ir" }
 decay-runtime = { path = "../../decay/crates/decay-runtime" }

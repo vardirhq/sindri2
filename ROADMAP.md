@@ -272,7 +272,7 @@ Exit gate: imported glTF content, camera, lighting, and collision work in native
 - [ ] Add integer zoom and generated-anchor metadata
 - [ ] Add orthographic 3D isometric camera helpers
 - [ ] Add editor grid, tile, footprint, and height-layer tools
-- [ ] Move the companion game onto this module, replacing the coordinate handling it grew of its own — it is the `iso-room` this milestone used to schedule
+- [x] Move the companion game onto this module, replacing the coordinate handling it grew of its own — Decay's typed `Grid` surface reads and places continuous coordinates through the floor tilemap, and Gather now moves, clamps, and gathers in that logical space without adding game rules to Rust
 
 Exit gate: shared grid/gameplay logic supports both sprite isometric and orthographic 3D presentation.
 
@@ -458,9 +458,9 @@ proof in the workspace did, and it turned up a renderer bug that made every
 frame with more than one sprite batch draw through the wrong camera — see
 `docs/rendering-frame-pipeline.md`.
 
-It is top-down rather than isometric for now: the floor is drawn as a diamond,
-but the coordinates behind it are a plain grid, which is what Milestone 9's
-module is for.
+Its diamond is now gameplay rather than presentation alone: Decay reads and
+places entities through the floor tilemap's logical isometric coordinates, and
+the same shared projection drives rendering and editor picking.
 
 - [x] Start the game: one room, one character, one tile floor (started before text existed, which the entry above records)
 - [ ] Grow it with Milestone 6: animation, a tilemap floor, parallax, and a font
@@ -475,7 +475,7 @@ module is for.
   hierarchy now folds any child-bearing GameObject while preserving readable
   search paths
 - [ ] Give it depth with Milestone 8: a 3D prop in the same scene as the sprites
-- [ ] Rebuild its coordinate handling on Milestone 9's grid module rather than its own
+- [x] Rebuild its coordinate handling on Milestone 9's grid module rather than its own — player movement, floor bounds, and orb distance checks use the typed Decay grid surface backed by the floor tilemap
 - [ ] Ship it through Milestone 10's export pipeline, natively and to the web,
   as the pipeline's real test — it is playable in a hand-built browser host, but
   no export pipeline produces that host yet

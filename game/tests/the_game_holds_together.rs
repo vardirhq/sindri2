@@ -8,12 +8,44 @@
 
 use std::collections::BTreeSet;
 
-use sindri_core::{SceneComponent, SceneDocument, UnknownComponentPolicy};
+use sindri_core::{SceneComponent, SceneDocument, Transform3D, UnknownComponentPolicy, World};
 use sindri_decay::{ScriptComponent, ScriptSources, Scripts};
 use sindri_gather::{FONTS, extractor, sources, world};
+use sindri_grid::{GridPoint, GridSpace, PlanePoint};
 use sindri_platform::InputState;
+use sindri_scene::{SceneExtractor, TilemapComponent};
 
 const SCENE: &str = include_str!("../assets/gather.scene.json");
+
+fn logical_position(grid: GridSpace, map: Transform3D, world: [f32; 3]) -> GridPoint {
+    let (sin, cos) = map.rotation_z_radians().sin_cos();
+    let x = world[0] - map.position[0];
+    let y = world[1] - map.position[1];
+    let local = PlanePoint::new(
+        f64::from((cos * x + sin * y) / map.scale[0]),
+        f64::from((-sin * x + cos * y) / map.scale[1]),
+    );
+    grid.unproject(local)
+        .expect("the authored point unprojects")
+}
+
+fn floor_grid(world: &World, extractor: &SceneExtractor) -> (Transform3D, GridSpace) {
+    let (floor, tilemap) = extractor
+        .components()
+        .query::<TilemapComponent>(world)
+        .expect("the tilemap schema reads")
+        .into_iter()
+        .next()
+        .expect("Gather has a floor");
+    let map = world
+        .get(floor)
+        .and_then(|data| data.transform_3d)
+        .unwrap_or_default();
+    (
+        map,
+        tilemap.grid_space().expect("the floor has a valid grid"),
+    )
+}
 
 /// Every texture the scene names is one the binary carries.
 ///
@@ -121,14 +153,18 @@ fn walking_into_the_orbs_wins_the_game() {
     let sources = sources();
     let mut scripts = Scripts::new();
 
-    let orbs: Vec<[f32; 3]> = world
+    let (map, grid) = floor_grid(&world, &extractor);
+
+    let orbs: Vec<GridPoint> = world
         .entities()
         .filter(|(_, data)| {
             data.source_id
                 .as_ref()
                 .is_some_and(|id| id.as_str().starts_with("orb-"))
         })
-        .map(|(_, data)| data.transform_3d.unwrap_or_default().position)
+        .map(|(_, data)| {
+            logical_position(grid, map, data.transform_3d.unwrap_or_default().position)
+        })
         .collect();
     assert_eq!(orbs.len(), 5, "the game has five orbs");
 
@@ -148,21 +184,25 @@ fn walking_into_the_orbs_wins_the_game() {
         // point that way — the same two axes the window reports.
         let target_score = scripts.blackboard().get("score", 0.0) + 1.0;
         while scripts.blackboard().get("score", 0.0) < target_score {
-            let at = world
-                .get(player)
-                .and_then(|data| data.transform_3d)
-                .expect("the player kept its transform")
-                .position;
+            let at = logical_position(
+                grid,
+                map,
+                world
+                    .get(player)
+                    .and_then(|data| data.transform_3d)
+                    .expect("the player kept its transform")
+                    .position,
+            );
             let mut held = InputState::default();
-            if orb[0] - at[0] > 0.02 {
+            if orb.x - at.x > 0.02 {
                 held.apply(InputEvent::KeyPressed(Key::ArrowRight));
-            } else if at[0] - orb[0] > 0.02 {
+            } else if at.x - orb.x > 0.02 {
                 held.apply(InputEvent::KeyPressed(Key::ArrowLeft));
             }
-            if orb[1] - at[1] > 0.02 {
-                held.apply(InputEvent::KeyPressed(Key::ArrowUp));
-            } else if at[1] - orb[1] > 0.02 {
+            if orb.y - at.y > 0.02 {
                 held.apply(InputEvent::KeyPressed(Key::ArrowDown));
+            } else if at.y - orb.y > 0.02 {
+                held.apply(InputEvent::KeyPressed(Key::ArrowUp));
             }
 
             let report = scripts.advance(
