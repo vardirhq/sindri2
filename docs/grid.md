@@ -106,7 +106,21 @@ anchor while allowing overlap with that owner's current cells. A returned
 disconnected goal is `None`, while invalid endpoints and arithmetic exhaustion
 are explicit errors.
 
-Wall edges still follow as a separate primitive rather than being hidden in the
-pathfinder. Engine components, editor authoring, typed Decay access, overlays,
-and a Gather use case remain cross-layer adapters tracked in the integration
-matrix.
+Wall edges are a separate primitive rather than hidden in passability.
+`GridWallEdge` accepts only cardinal neighbours and normalizes their order, so a
+wall has one symmetric identity regardless of which cell asks. `GridWalls`
+bounds those edges, makes block/unblock idempotent, and iterates them in stable
+coordinate order. Grid bounds already prevent leaving the map, so this set
+represents internal walls rather than duplicating the perimeter.
+
+`GridPathfinder::find_path_with_walls` checks a cardinal move against its one
+shared edge. A diagonal is allowed only when all four cardinal edges around its
+corner are open; the separate corner-cutting policy still decides whether the
+two side cells themselves must be passable. Occupancy can combine both rules
+through `GridOccupancy::find_path_with_walls`, validating the complete moving
+footprint at each anchor and checking the wall crossed by every constituent
+footprint cell during each transition.
+Mismatched wall/path bounds are rejected explicitly.
+
+Engine components, editor authoring, typed Decay access, overlays, and a Gather
+use case remain cross-layer adapters tracked in the integration matrix.

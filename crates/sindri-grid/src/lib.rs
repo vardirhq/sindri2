@@ -6,11 +6,13 @@
 
 mod occupancy;
 mod pathfinding;
+mod walls;
 
 use std::fmt;
 
 pub use occupancy::{FootprintError, GridFootprint, GridOccupancy, GridPlacementError};
 pub use pathfinding::{GridMovement, GridPath, GridPathCosts, GridPathError, GridPathfinder};
+pub use walls::{GridWallEdge, GridWallError, GridWalls};
 
 /// An integer cell in logical grid space.
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]

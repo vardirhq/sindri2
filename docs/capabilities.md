@@ -447,8 +447,9 @@ settings gear.
   foundation: collision against transforms is gameplay code, and a Rapier
   adapter is planned as optional rather than built in
 - No particles or authored parallax system. Renderer-free footprints,
-  bounded occupancy, placement validation, and deterministic A* now exist, but
-  have no wall edges or engine, editor, Decay, or Gather adapter yet
+  bounded occupancy, placement validation, symmetric wall edges, and
+  deterministic A* now exist, but have no engine, editor, Decay, or Gather
+  adapter yet
 - No optional TypeScript embedding SDK; browser games currently expose narrow
   application entry points and run their gameplay in Decay
 - No spawning from a script. Cross-entity lookup, access, existence checks, and

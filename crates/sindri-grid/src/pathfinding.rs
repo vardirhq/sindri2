@@ -4,7 +4,7 @@ use std::{
     fmt,
 };
 
-use crate::{GridBounds, GridCoord, GridFootprint, GridOccupancy};
+use crate::{GridBounds, GridCoord, GridFootprint, GridOccupancy, GridWalls};
 
 /// The neighbours A* may traverse.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -91,7 +91,40 @@ impl GridPathfinder {
         bounds: GridBounds,
         start: GridCoord,
         goal: GridCoord,
+        is_passable: impl FnMut(GridCoord) -> bool,
+    ) -> Result<Option<GridPath>, GridPathError> {
+        self.find_path_with_transitions(bounds, start, goal, is_passable, |_, _| true)
+    }
+
+    /// Finds a path that also respects symmetric walls between cells.
+    pub fn find_path_with_walls(
+        self,
+        bounds: GridBounds,
+        walls: &GridWalls,
+        start: GridCoord,
+        goal: GridCoord,
+        is_passable: impl FnMut(GridCoord) -> bool,
+    ) -> Result<Option<GridPath>, GridPathError> {
+        if walls.bounds() != bounds {
+            return Err(GridPathError::WallBoundsMismatch {
+                path: bounds,
+                walls: walls.bounds(),
+            });
+        }
+        self.find_path_with_transitions(bounds, start, goal, is_passable, |first, second| {
+            !walls
+                .is_blocked(first, second)
+                .expect("pathfinder only checks in-bounds cardinal wall edges")
+        })
+    }
+
+    fn find_path_with_transitions(
+        self,
+        bounds: GridBounds,
+        start: GridCoord,
+        goal: GridCoord,
         mut is_passable: impl FnMut(GridCoord) -> bool,
+        mut can_traverse: impl FnMut(GridCoord, GridCoord) -> bool,
     ) -> Result<Option<GridPath>, GridPathError> {
         if !bounds.contains(start) {
             return Err(GridPathError::StartOutsideBounds { start });
@@ -138,7 +171,9 @@ impl GridPathfinder {
             }
 
             for (next, diagonal) in self.neighbours(bounds, current.coord) {
-                if !cached_passability(next, &mut passability, &mut is_passable) {
+                if !cached_passability(next, &mut passability, &mut is_passable)
+                    || !transition_is_open(current.coord, next, diagonal, &mut can_traverse)
+                {
                     continue;
                 }
                 if diagonal
@@ -252,6 +287,60 @@ impl<Owner: Eq> GridOccupancy<Owner> {
             self.validate(owner, anchor, footprint).is_ok()
         })
     }
+
+    /// Finds a whole-footprint anchor path that also respects wall edges.
+    pub fn find_path_with_walls(
+        &self,
+        pathfinder: GridPathfinder,
+        walls: &GridWalls,
+        owner: &Owner,
+        footprint: &GridFootprint,
+        start: GridCoord,
+        goal: GridCoord,
+    ) -> Result<Option<GridPath>, GridPathError> {
+        if walls.bounds() != self.bounds() {
+            return Err(GridPathError::WallBoundsMismatch {
+                path: self.bounds(),
+                walls: walls.bounds(),
+            });
+        }
+        pathfinder.find_path_with_transitions(
+            self.bounds(),
+            start,
+            goal,
+            |anchor| self.validate(owner, anchor, footprint).is_ok(),
+            |first, second| {
+                footprint.offsets().iter().all(|offset| {
+                    let first = first
+                        .checked_offset(offset.x, offset.y)
+                        .expect("a traversable footprint cell cannot overflow");
+                    let second = second
+                        .checked_offset(offset.x, offset.y)
+                        .expect("a traversable footprint cell cannot overflow");
+                    !walls
+                        .is_blocked(first, second)
+                        .expect("a traversable footprint stays inside wall bounds")
+                })
+            },
+        )
+    }
+}
+
+fn transition_is_open(
+    current: GridCoord,
+    next: GridCoord,
+    diagonal: bool,
+    can_traverse: &mut impl FnMut(GridCoord, GridCoord) -> bool,
+) -> bool {
+    if !diagonal {
+        return can_traverse(current, next);
+    }
+    let x_step = GridCoord::new(next.x, current.y);
+    let y_step = GridCoord::new(current.x, next.y);
+    can_traverse(current, x_step)
+        && can_traverse(current, y_step)
+        && can_traverse(x_step, next)
+        && can_traverse(y_step, next)
 }
 
 fn cached_passability(
@@ -350,6 +439,7 @@ pub enum GridPathError {
     ZeroDiagonalCost,
     StartOutsideBounds { start: GridCoord },
     GoalOutsideBounds { goal: GridCoord },
+    WallBoundsMismatch { path: GridBounds, walls: GridBounds },
     CostOverflow,
     SearchOverflow,
 }
@@ -368,6 +458,14 @@ impl fmt::Display for GridPathError {
                 formatter,
                 "path goal ({}, {}) is outside grid bounds",
                 goal.x, goal.y
+            ),
+            Self::WallBoundsMismatch { path, walls } => write!(
+                formatter,
+                "path bounds {}x{} do not match wall bounds {}x{}",
+                path.width(),
+                path.height(),
+                walls.width(),
+                walls.height()
             ),
             Self::CostOverflow => formatter.write_str("path cost exceeded the u64 range"),
             Self::SearchOverflow => formatter.write_str("path search exceeded the u64 node range"),
@@ -524,6 +622,106 @@ mod tests {
 
         assert_eq!(path.cost(), 50);
         assert!(path.nodes().contains(&GridCoord::new(2, 1)));
+        assert!(!path.nodes().contains(&GridCoord::new(1, 0)));
+    }
+
+    #[test]
+    fn cardinal_paths_detour_around_walls() {
+        let bounds = GridBounds::new(3, 2).unwrap();
+        let mut walls = GridWalls::new(bounds);
+        walls
+            .block(GridCoord::new(0, 0), GridCoord::new(1, 0))
+            .unwrap();
+
+        let path = GridPathfinder::default()
+            .find_path_with_walls(
+                bounds,
+                &walls,
+                GridCoord::new(0, 0),
+                GridCoord::new(2, 0),
+                |_| true,
+            )
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(path.cost(), 40);
+        assert!(path.nodes().contains(&GridCoord::new(0, 1)));
+    }
+
+    #[test]
+    fn diagonals_cannot_cross_a_wall_corner() {
+        let bounds = GridBounds::new(2, 2).unwrap();
+        let mut walls = GridWalls::new(bounds);
+        walls
+            .block(GridCoord::new(0, 0), GridCoord::new(1, 0))
+            .unwrap();
+        let pathfinder = GridPathfinder::new(
+            GridMovement::EightWay {
+                allow_corner_cutting: true,
+            },
+            GridPathCosts::default(),
+        );
+
+        let path = pathfinder
+            .find_path_with_walls(
+                bounds,
+                &walls,
+                GridCoord::new(0, 0),
+                GridCoord::new(1, 1),
+                |_| true,
+            )
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(path.cost(), 20);
+    }
+
+    #[test]
+    fn wall_and_path_bounds_must_match() {
+        let path_bounds = GridBounds::new(2, 2).unwrap();
+        let wall_bounds = GridBounds::new(3, 2).unwrap();
+        assert_eq!(
+            GridPathfinder::default().find_path_with_walls(
+                path_bounds,
+                &GridWalls::new(wall_bounds),
+                GridCoord::new(0, 0),
+                GridCoord::new(1, 1),
+                |_| true,
+            ),
+            Err(GridPathError::WallBoundsMismatch {
+                path: path_bounds,
+                walls: wall_bounds
+            })
+        );
+    }
+
+    #[test]
+    fn occupancy_paths_can_respect_footprints_and_walls_together() {
+        let bounds = GridBounds::new(5, 2).unwrap();
+        let mut occupancy = GridOccupancy::new(bounds);
+        let footprint = GridFootprint::rectangle(2, 1).unwrap();
+        occupancy
+            .place(1, GridCoord::new(0, 0), &footprint)
+            .unwrap();
+        let mut walls = GridWalls::new(bounds);
+        walls
+            .block(GridCoord::new(1, 0), GridCoord::new(2, 0))
+            .unwrap();
+
+        let path = occupancy
+            .find_path_with_walls(
+                GridPathfinder::default(),
+                &walls,
+                &1,
+                &footprint,
+                GridCoord::new(0, 0),
+                GridCoord::new(3, 0),
+            )
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(path.cost(), 50);
+        assert!(path.nodes().contains(&GridCoord::new(0, 1)));
         assert!(!path.nodes().contains(&GridCoord::new(1, 0)));
     }
 
