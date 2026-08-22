@@ -43,7 +43,7 @@ web-time = "1"
 wgpu = "30"
 winit = "0.30.13"
 eframe = { version = "0.36.1", default-features = false, features = ["default_fonts", "persistence", "wayland", "wgpu", "x11"] }
-fontdb = { version = "0.23", default-features = false, features = ["std"] }
+fontdb = { version = "0.24", default-features = false, features = ["std"] }
 glyphon = "0.12"
 js-sys = "0.3"
 sha2 = "0.10"
