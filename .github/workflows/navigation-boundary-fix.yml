@@ -2,11 +2,13 @@ name: Navigation boundary fix
 on:
   push:
     branches: [codex/pathfinding-vertical]
+  pull_request:
+    branches: [main]
 permissions:
   contents: write
 jobs:
   fix:
-    if: github.event.head_commit.message != 'Keep Decay navigation scene-independent'
+    if: github.event_name == 'pull_request' || github.event.head_commit.message != 'Keep Decay navigation scene-independent'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -34,5 +36,3 @@ jobs:
           git add -A
           git commit -m 'Keep Decay navigation scene-independent'
           git push origin HEAD:codex/pathfinding-vertical
-
-# Trigger the branch workflow after it exists on the branch.
