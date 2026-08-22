@@ -427,6 +427,9 @@ impl Scripts {
         self.programs.clear();
         self.running.clear();
         self.blackboard.clear();
+        // Requests from the run being cleared belong to it. Carrying them over
+        // would play the previous session's sounds into the next one.
+        self.audio.clear();
     }
 
     #[must_use]

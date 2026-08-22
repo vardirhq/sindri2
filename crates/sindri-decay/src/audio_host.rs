@@ -12,6 +12,22 @@ use crate::{Blackboard, ScriptContext};
 
 pub(crate) const AUDIO: &str = "Audio";
 
+/// How many unperformed requests a runner keeps.
+///
+/// A caller with no audio device never drains, so without a bound a script
+/// calling `Audio.play` every frame grows the queue for as long as the runner
+/// lives — which is what the editor's play mode does. Audio intent goes stale
+/// in milliseconds, so the newest requests are the ones worth keeping and the
+/// oldest are dropped to make room.
+const PENDING_LIMIT: usize = 256;
+
+fn enqueue(queue: &mut Vec<AudioCommand>, command: AudioCommand) {
+    if queue.len() >= PENDING_LIMIT {
+        queue.remove(0);
+    }
+    queue.push(command);
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum AudioCommand {
     Play { clip: String, volume: f32 },
@@ -132,19 +148,19 @@ fn audio_call(
                     volume,
                 }
             };
-            queue.push(command);
+            enqueue(queue, command);
             Ok(Value::Unit)
         }
         "stop_all" => {
-            queue.push(AudioCommand::StopAll);
+            enqueue(queue, AudioCommand::StopAll);
             Ok(Value::Unit)
         }
         "pause_all" => {
-            queue.push(AudioCommand::PauseAll);
+            enqueue(queue, AudioCommand::PauseAll);
             Ok(Value::Unit)
         }
         "resume_all" => {
-            queue.push(AudioCommand::ResumeAll);
+            enqueue(queue, AudioCommand::ResumeAll);
             Ok(Value::Unit)
         }
         _ => Ok(Value::Null),
@@ -194,6 +210,30 @@ mod tests {
                 clip: "audio/pickup.wav".to_owned(),
                 volume: 0.8,
             }]
+        );
+    }
+
+    /// A runner nobody drains does not grow without end.
+    #[test]
+    fn an_undrained_queue_keeps_only_the_newest_requests() {
+        let mut queue = Vec::new();
+        for index in 0..(super::PENDING_LIMIT + 10) {
+            super::enqueue(
+                &mut queue,
+                AudioCommand::Play {
+                    clip: format!("audio/{index}.wav"),
+                    volume: 1.0,
+                },
+            );
+        }
+        assert_eq!(queue.len(), super::PENDING_LIMIT);
+        assert_eq!(
+            queue.first(),
+            Some(&AudioCommand::Play {
+                clip: "audio/10.wav".to_owned(),
+                volume: 1.0,
+            }),
+            "the oldest requests are the ones dropped"
         );
     }
 

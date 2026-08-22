@@ -283,7 +283,9 @@ impl AudioBackend for NativeAudioBackend {
 #[cfg(target_arch = "wasm32")]
 struct BrowserVoice {
     element: web_sys::HtmlAudioElement,
-    _on_rejected: wasm_bindgen::closure::Closure<dyn FnMut(wasm_bindgen::JsValue)>,
+    /// Reused rather than rebuilt when a voice resumes, so one handler covers
+    /// every promise this element hands back and none is left dangling.
+    on_rejected: wasm_bindgen::closure::Closure<dyn FnMut(wasm_bindgen::JsValue)>,
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -304,6 +306,21 @@ impl BrowserAudioBackend {
             next_voice: 0,
             unlocked: false,
         }
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl BrowserAudioBackend {
+    /// Forgets voices that have finished or failed.
+    ///
+    /// The native backend does the same, and for the same reason: without it a
+    /// game playing a footstep every few frames accumulates an element and a
+    /// rejection handler per sound for as long as it runs. A refused clip
+    /// leaves an element that is paused with an error set and will never play,
+    /// so it goes the same way a finished one does.
+    fn reap(&mut self) {
+        self.voices
+            .retain(|_, voice| !voice.element.ended() && voice.element.error().is_none());
     }
 }
 
@@ -352,6 +369,7 @@ impl AudioBackend for BrowserAudioBackend {
         if !self.unlocked {
             return Err(AudioError::Locked);
         }
+        self.reap();
         let url = self
             .clips
             .get(clip)
@@ -368,8 +386,8 @@ impl AudioBackend for BrowserAudioBackend {
         // while this returns a voice the caller believes is playing, which is
         // exactly how three unplayable clips shipped. There is nowhere
         // synchronous to report it to, so it is logged where a browser failure
-        // is looked for, and the voice is dropped so nothing pauses or stops a
-        // sound that never started.
+        // is looked for, and the element it failed on is left carrying the
+        // error that `reap` collects it by.
         let playback = element
             .play()
             .map_err(|error| AudioError::Browser(format!("playback was refused: {error:?}")))?;
@@ -384,7 +402,7 @@ impl AudioBackend for BrowserAudioBackend {
             voice,
             BrowserVoice {
                 element,
-                _on_rejected: on_rejected,
+                on_rejected,
             },
         );
         Ok(voice)
@@ -408,7 +426,14 @@ impl AudioBackend for BrowserAudioBackend {
             return;
         }
         for voice in self.voices.values() {
-            let _ = voice.element.play();
+            // Resuming hands back a promise exactly as starting does, and a
+            // browser can refuse it exactly as readily. Dropping this one would
+            // reopen the silent failure through a second door, so the voice's
+            // own handler — which outlives every promise its element makes —
+            // watches this one too.
+            if let Ok(playback) = voice.element.play() {
+                let _ = playback.catch(&voice.on_rejected);
+            }
         }
     }
 

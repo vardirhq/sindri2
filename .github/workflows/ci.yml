@@ -122,3 +122,29 @@ jobs:
           cargo install wasm-bindgen-cli --version 0.2.127 --locked
           cargo test --package sindri-assets --target wasm32-unknown-unknown \
             --test decode_compatibility
+      # Compiling for wasm32 says nothing about whether the engine runs. It
+      # compiled for several releases while two faults made every page load fail,
+      # and later while audio could not play a single clip — the surface refused
+      # every canvas, a browser failure was recorded and never reported, and
+      # three clips at a rate no browser decodes were reported as playing. Each
+      # was found by loading the page, so loading the page is a check.
+      - name: Run the engine in a browser
+        timeout-minutes: 12
+        run: |
+          curl -fsSL https://rustwasm.github.io/wasm-pack/installer/init.sh | sh
+          npm install --prefix scripts/browser
+          npx --prefix scripts/browser playwright install --with-deps chromium
+          wasm-pack build examples/cube --target web --out-dir pkg
+          wasm-pack build game --target web --out-dir pkg
+          node scripts/browser/smoke.mjs examples/cube target/render-artifacts/browser-cube.png
+          node scripts/browser/smoke.mjs game target/render-artifacts/browser-gather.png
+      - name: Upload browser captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-captures
+          path: |
+            target/render-artifacts/browser-cube.png
+            target/render-artifacts/browser-gather.png
+          if-no-files-found: warn
+          retention-days: 14

@@ -22,7 +22,7 @@ rodio = { version = "0.22.2", default-features = false, features = ["playback", 
 js-sys.workspace = true
 log.workspace = true
 wasm-bindgen.workspace = true
-web-sys = { workspace = true, features = ["Blob", "BlobPropertyBag", "HtmlAudioElement", "HtmlMediaElement", "Url"] }
+web-sys = { workspace = true, features = ["Blob", "BlobPropertyBag", "HtmlAudioElement", "HtmlMediaElement", "MediaError", "Url"] }
 
 [lints]
 workspace = true

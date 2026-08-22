@@ -102,6 +102,10 @@ satisfy the gesture requirement, then watches how each `play()` promise settles.
 The looping background music has been observed playing to 1.75 s in headless
 Chromium over software Vulkan.
 
+CI runs both pages now — the cube and the game — rather than only compiling
+them, so the next thing that works on wasm32 and not in a browser fails a check
+instead of waiting for someone to look.
+
 The pickup and victory one-shots have not been observed in a browser — they need
 gameplay to reach an orb, which the smoke check does not drive. They take the
 same path as the loop, and the headless test asserts the game asks for them.
