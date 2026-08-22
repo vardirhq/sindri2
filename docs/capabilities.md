@@ -331,8 +331,10 @@ frame.
   setting one is what puts it in the scene — so a scene records an author's
   choices rather than a copy of every default. This is the capability that
   justified a statically typed language
-- Reparenting through a **Parent** menu that offers only the moves the world
-  would accept
+- Reparenting through a **Parent** menu or by dragging onto another GameObject
+  or the World root. Both ask the world's cycle check before offering or
+  accepting a move; drag targets show whether they are legal, successful drops
+  select the moved entity and open its new parent, and the move is one undo step
 - Undo and redo of every edit, with drag-merging so a slider drag is one step;
   Ctrl+Z, Ctrl+Shift+Z, and Ctrl+Y
 - An unsaved marker that means the world and the file differ, so undoing back to

@@ -1831,10 +1831,14 @@ impl EditorApp {
     }
 
     fn hierarchy_contents(&mut self, ui: &mut egui::Ui) {
+        let mut reparenting = None;
         egui::ScrollArea::vertical()
             .auto_shrink([false; 2])
             .show(ui, |ui| {
-                hierarchy_group(ui, "World", ICON_ACCOUNT_TREE);
+                let root = hierarchy_group(ui, "World", ICON_ACCOUNT_TREE);
+                if let Some(entity) = hierarchy_drop_target(ui, &root, &self.world, None) {
+                    reparenting = Some((entity, None));
+                }
                 let needle = self.search.trim().to_lowercase();
                 let collapsed: BTreeSet<EntityId> = self
                     .world
@@ -1861,6 +1865,15 @@ impl EditorApp {
                         !data.children.is_empty(),
                         !collapsed.contains(&entity) || !needle.is_empty(),
                     );
+                    row.select.dnd_set_drag_payload(HierarchyDrag(entity));
+                    if row.select.dragged() {
+                        ui.ctx().set_cursor_icon(egui::CursorIcon::Grabbing);
+                    }
+                    if let Some(dragged) =
+                        hierarchy_drop_target(ui, &row.drop, &self.world, Some(entity))
+                    {
+                        reparenting = Some((dragged, Some(entity)));
+                    }
                     if row.toggle.is_some_and(|response| response.clicked()) {
                         toggled = Some(entity);
                     } else if row.select.clicked() {
@@ -1887,6 +1900,16 @@ impl EditorApp {
                     self.select(entity);
                 }
             });
+        if let Some((entity, parent)) = reparenting {
+            self.reparent(entity, parent);
+            self.select(Some(entity));
+            if let Some(parent) = parent
+                && let Some(key) =
+                    hierarchy_preference_key(self.file.path(), &self.world, parent)
+            {
+                self.preferences.collapsed_hierarchy.remove(&key);
+            }
+        }
     }
 
     fn inspector_panel(&mut self, ui: &mut egui::Ui) {
@@ -2587,17 +2610,31 @@ fn search_field(ui: &mut egui::Ui, value: &mut String, hint: &str) {
 /// The root the hierarchy hangs from.
 ///
 /// A collapse chevron used to sit in front of it, and nothing collapsed.
-fn hierarchy_group(ui: &mut egui::Ui, label: &str, icon: MaterialIcon) {
-    ui.horizontal(|ui| {
-        ui.add_space(10.0);
-        ui.label(icon.outlined().rich_text().size(15.0).color(TEXT_MUTED));
-        ui.label(RichText::new(label).size(12.0).color(TEXT));
+fn hierarchy_group(ui: &mut egui::Ui, label: &str, icon: MaterialIcon) -> Response {
+    let width = ui.available_width();
+    let row = ui.scope_builder(egui::UiBuilder::new().sense(Sense::hover()), |ui| {
+        ui.set_min_width(width);
+        ui.horizontal(|ui| {
+            ui.add_space(10.0);
+            let icon = ui.add(
+                egui::Label::new(icon.outlined().rich_text().size(15.0).color(TEXT_MUTED))
+                    .sense(Sense::hover()),
+            );
+            let label = ui.add(
+                egui::Label::new(RichText::new(label).size(12.0).color(TEXT))
+                    .sense(Sense::hover()),
+            );
+            icon | label
+        })
+        .inner
     });
+    row.response | row.inner
 }
 
 /// The two independent actions a hierarchy row can report.
 struct HierarchyRowResponse {
     select: Response,
+    drop: Response,
     toggle: Option<Response>,
 }
 
@@ -2606,6 +2643,11 @@ enum CreateGameObject {
     Root,
     Child(EntityId),
 }
+
+/// The hierarchy owns its payload type so future drag-and-drop tools cannot be
+/// mistaken for an entity move merely because they also carry an `EntityId`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct HierarchyDrag(EntityId);
 
 /// One row of the hierarchy, reporting selection separately from folding.
 ///
@@ -2628,7 +2670,9 @@ fn hierarchy_row(
     has_children: bool,
     expanded: bool,
 ) -> HierarchyRowResponse {
-    let row = ui.scope_builder(egui::UiBuilder::new().sense(Sense::click()), |ui| {
+    let width = ui.available_width();
+    let row = ui.scope_builder(egui::UiBuilder::new().sense(Sense::click_and_drag()), |ui| {
+        ui.set_min_width(width);
         ui.horizontal(|ui| {
             ui.add_space(9.0 + hierarchy_indent(depth, 14.0));
             let toggle = if has_children {
@@ -2668,7 +2712,7 @@ fn hierarchy_row(
                 } else {
                     TEXT_MUTED
                 }))
-                .sense(Sense::click()),
+                .sense(Sense::click_and_drag()),
             );
             let label = ui.add(
                 egui::Button::new(RichText::new(name).size(12.0).color(if selected {
@@ -2677,6 +2721,7 @@ fn hierarchy_row(
                     TEXT_MUTED
                 }))
                 .selected(selected)
+                .sense(Sense::click_and_drag())
                 .frame(false),
             );
             (icon | label, toggle)
@@ -2685,10 +2730,53 @@ fn hierarchy_row(
     });
     // A scope's sense sits below the widgets inside it, so the name still
     // answers for itself and the rest of the row answers for the scope.
+    let select = row.response | row.inner.0;
+    let toggle = row.inner.1;
+    let drop = toggle
+        .clone()
+        .map_or_else(|| select.clone(), |toggle| select.clone() | toggle);
     HierarchyRowResponse {
-        select: row.response | row.inner.0,
-        toggle: row.inner.1,
+        select,
+        drop,
+        toggle,
     }
+}
+
+/// Draws feedback for a hierarchy drop and returns a legal released payload.
+fn hierarchy_drop_target(
+    ui: &egui::Ui,
+    response: &Response,
+    world: &World,
+    parent: Option<EntityId>,
+) -> Option<EntityId> {
+    let dragged = response.dnd_hover_payload::<HierarchyDrag>()?;
+    let allowed = hierarchy_drop_allowed(world, dragged.0, parent);
+    let colour = if allowed { ACCENT } else { PROBLEM };
+    ui.painter().rect_stroke(
+        response.rect,
+        2.0,
+        Stroke::new(1.5, colour),
+        StrokeKind::Inside,
+    );
+    ui.ctx().set_cursor_icon(if allowed {
+        egui::CursorIcon::Grabbing
+    } else {
+        egui::CursorIcon::NotAllowed
+    });
+    if allowed {
+        response
+            .dnd_release_payload::<HierarchyDrag>()
+            .map(|dragged| dragged.0)
+    } else {
+        None
+    }
+}
+
+fn hierarchy_drop_allowed(world: &World, entity: EntityId, parent: Option<EntityId>) -> bool {
+    world
+        .get(entity)
+        .is_some_and(|data| data.parent != parent)
+        && world.check_set_parent(entity, parent).is_ok()
 }
 
 /// What the root is called wherever a parent is named.
@@ -5425,6 +5513,23 @@ mod tests {
     }
 
     #[test]
+    fn hierarchy_drop_rules_allow_moves_but_reject_noops_and_cycles() {
+        let world = World::from_scene(&nested_scene()).unwrap().world;
+        let named = |id: &str| find_by_source_id(&world, id).unwrap();
+        let root = named("root");
+        let torso = named("torso");
+        let arm = named("arm");
+        let leg = named("leg");
+
+        assert!(hierarchy_drop_allowed(&world, arm, Some(leg)));
+        assert!(hierarchy_drop_allowed(&world, arm, None));
+        assert!(!hierarchy_drop_allowed(&world, arm, Some(torso)));
+        assert!(!hierarchy_drop_allowed(&world, arm, Some(arm)));
+        assert!(!hierarchy_drop_allowed(&world, root, Some(arm)));
+        assert!(!hierarchy_drop_allowed(&world, root, None));
+    }
+
+    #[test]
     fn an_untouched_draft_produces_no_commands() {
         let world = demo_world();
         let entity = find_by_source_id(&world, "checker-cube").unwrap();
@@ -5848,6 +5953,58 @@ mod tests {
 
     fn row_click_at(offset: Vec2) -> bool {
         hierarchy_row_click_at(offset, false).0
+    }
+
+    #[test]
+    fn a_hierarchy_drag_releases_onto_another_row() {
+        let world = World::from_scene(&nested_scene()).unwrap().world;
+        let arm = find_by_source_id(&world, "arm").unwrap();
+        let leg = find_by_source_id(&world, "leg").unwrap();
+        let context = egui::Context::default();
+        egui_material_icons::initialize(&context);
+        let source_rect = std::cell::Cell::new(Rect::NOTHING);
+        let target_rect = std::cell::Cell::new(Rect::NOTHING);
+        let dropped = std::cell::Cell::new(None);
+        let draw = |events: Vec<egui::Event>| {
+            context
+                .run_ui(
+                    egui::RawInput {
+                        events,
+                        ..Default::default()
+                    },
+                    |ui| {
+                        let source =
+                            hierarchy_row(ui, ICON_LABEL, "Arm", false, 0, false, false);
+                        source.select.dnd_set_drag_payload(HierarchyDrag(arm));
+                        source_rect.set(source.select.rect);
+
+                        let target =
+                            hierarchy_row(ui, ICON_LABEL, "Leg", false, 0, false, false);
+                        target_rect.set(target.select.rect);
+                        if let Some(entity) =
+                            hierarchy_drop_target(ui, &target.drop, &world, Some(leg))
+                        {
+                            dropped.set(Some(entity));
+                        }
+                    },
+                )
+                .drop_without_applying_deltas();
+        };
+
+        draw(Vec::new());
+        let source = source_rect.get().center();
+        let target = target_rect.get().center();
+        let button = |pos, pressed| egui::Event::PointerButton {
+            pos,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: egui::Modifiers::default(),
+        };
+        draw(vec![egui::Event::PointerMoved(source), button(source, true)]);
+        draw(vec![egui::Event::PointerMoved(target)]);
+        draw(vec![button(target, false)]);
+
+        assert_eq!(dropped.get(), Some(arm));
     }
 
     /// Whether an asset row reports a double click `offset` points into it.

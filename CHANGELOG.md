@@ -6,6 +6,7 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- Drag-and-drop hierarchy reparenting onto another GameObject or the World root, with legal-target feedback, cycle prevention through the world's existing checks, and one-step undo.
 - Unity-style editor hierarchy authoring: every GameObject can contain children, child-bearing rows collapse with restart-persistent state, filtered results retain their ancestor paths, and the create menu can add an empty root or child with a stable scene ID.
 - Scene-viewport entity selection for world sprites, filled tilemap cells, and meshes, using the rendered camera and geometry with layer-, depth-, and occlusion-aware overlap resolution.
 - Sprite-animation clip authoring in the native editor: add a valid animation from a sprite sheet, create, rename, and remove clips, arrange named frames, edit timing and looping, choose the runtime clip, and preview playback against the project texture without changing scene state.
