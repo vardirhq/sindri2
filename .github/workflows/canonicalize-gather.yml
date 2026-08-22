@@ -1,16 +1,15 @@
 name: Canonicalize Gather scene
 
 on:
-  push:
+  pull_request:
     branches:
-      - codex/audio-end-to-end
+      - main
 
 permissions:
   contents: write
 
 jobs:
   canonicalize:
-    if: "!contains(github.event.head_commit.message, 'Canonicalize Gather scene')"
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
