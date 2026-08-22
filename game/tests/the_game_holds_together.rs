@@ -41,7 +41,10 @@ fn floor_grid(world: &World, extractor: &SceneExtractor) -> (Transform3D, GridSp
         .get(floor)
         .and_then(|data| data.transform_3d)
         .unwrap_or_default();
-    (map, tilemap.grid_space().expect("the floor has a valid grid"))
+    (
+        map,
+        tilemap.grid_space().expect("the floor has a valid grid"),
+    )
 }
 
 /// Every texture the scene names is one the binary carries.
