@@ -2938,7 +2938,13 @@ fn components_sections(
             text_section(ui, payload, fonts);
         }
         if name == animation::TYPE_NAME {
-            animation_section(ui, payload, project_root, animation_texture, tools.animation);
+            animation_section(
+                ui,
+                payload,
+                project_root,
+                animation_texture,
+                tools.animation,
+            );
         }
         if name == tilemap::TYPE_NAME {
             tilemap_section(ui, payload, project_root, tools.tilemap);
