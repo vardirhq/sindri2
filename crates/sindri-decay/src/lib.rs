@@ -13,16 +13,15 @@
 //! why that reversibility is what makes committing to it affordable.
 //!
 //! What this crate deliberately does not do: **any I/O**. It never opens a
-//! `.decay` file. Sources arrive through [`ScriptSources`], filled by whoever
-//! owns the asset pipeline, exactly as textures arrive at `sindri-scene`
-//! through `TextureBindings` rather than being loaded there. That keeps every
-//! test here filesystem-free and browser-free, and keeps one answer to how an
-//! asset is fetched instead of two.
+//! `.decay` file or an audio device. Sources arrive through [`ScriptSources`],
+//! and audio calls become [`AudioCommand`] values for the platform host to
+//! perform. That keeps every test here filesystem-free and browser-free.
 //!
 //! It also does not know what a frame is, or when to run. It moves scripts on by
 //! a delta the caller decides — the editor's transport decides what a frame is
 //! worth, the same way it does for sprite animation.
 
+mod audio_host;
 mod blackboard;
 mod component;
 mod error;
@@ -32,6 +31,7 @@ mod report;
 mod scripts;
 mod surface;
 
+pub use audio_host::{AudioCommand, WorldHost, drain_audio_commands};
 pub use blackboard::Blackboard;
 pub use component::ScriptComponent;
 /// A value a Decay script holds, re-exported so a host can name one without
@@ -39,6 +39,6 @@ pub use component::ScriptComponent;
 pub use decay_runtime::Value as ScriptValue;
 pub use error::ScriptFailure;
 pub use exports::ScriptExport;
-pub use host::{ScriptContext, WorldHost};
+pub use host::ScriptContext;
 pub use report::{ScriptMessage, ScriptReport};
 pub use scripts::{ScriptSources, Scripts, environment, referenced_sources};
