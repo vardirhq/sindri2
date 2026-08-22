@@ -308,12 +308,19 @@ frame.
   again
 - **Adding and removing components.** Add Component offers what the entity lacks
   and the registry can create, which excludes a type with no sensible blank
-  rather than offering one the engine would reject. Text is the deliberate
-  exception completed at the editor boundary: when the project contains a font,
-  adding Text uses that asset for a valid visible default. Both are undoable
+  rather than offering one the engine would reject. Text and sprite animation
+  are completed at the editor boundary: a project font gives Text a valid
+  visible default, while a Sprite component whose texture has named sheet
+  sprites gives Sprite Animation its first one-frame clip. Both are undoable
 - **Text authoring.** A `sindri.text` component gets a multiline content editor
   and a picker listing project-relative font assets. Existing missing font
   references remain visible and are called out instead of silently replaced
+- **Sprite-sheet and animation authoring.** Selecting a texture opens its image
+  slicer for grid dimensions and cell names. A `sindri.sprite_animation`
+  component then creates, renames, and removes clips from those names, orders
+  frames, edits frame time and looping, chooses what plays at runtime, and
+  previews the selected clip against the real texture. Preview position is
+  editor state and never dirties the scene
 - **A script's `@export` properties in the inspector**, drawn from what the
   script declared: the field's name, its type, and its default, without running
   anything. A field the scene has not set shows its default and says so, and
@@ -587,6 +594,3 @@ every sprite batch after the first drew with the last batch's camera. See
 - Browser asset fetching is not exercised: the playable web build embeds its
   scene, scripts, sheets, textures, and font
 - No restart without relaunching, no menu, no pause
-- The floor is one `sindri.tilemap`; a visual palette now authors it in the
-  Scene view. Animation clips are still authored through component data rather
-  than dedicated editor controls

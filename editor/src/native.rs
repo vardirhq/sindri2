@@ -26,7 +26,7 @@ use glam::{Mat4, Vec2 as GlamVec2, Vec3};
 use serde_json::Value;
 use sindri_core::{
     CommandBuffer, CommandHistory, ComponentMetadata, ComponentSchemaRegistry, EngineLifecycle,
-    EngineState, EntityData, EntityId, FixedStepConfig, SceneDocument, Transform3D,
+    EngineState, EntityData, EntityId, FixedStepConfig, SceneDocument, SpriteRef, Transform3D,
     UnknownComponentPolicy, World, WorldCommand,
 };
 use sindri_decay::{ScriptComponent, ScriptValue};
@@ -39,6 +39,7 @@ use sindri_scene::{
 };
 
 use crate::{
+    animation::{self, AnimationTool},
     console::{Console, Entry, Level},
     input::EditorInput,
     inspector,
@@ -425,6 +426,9 @@ struct EditorApp {
     /// stores what was painted; it does not store which brush the author last
     /// held or whether the Scene view currently belongs to that brush.
     tilemap_tool: TilemapTool,
+    /// Clip selection and playback cursor for the inspector's animation
+    /// preview. Like runtime animation state, none of this is scene data.
+    animation_tool: AnimationTool,
     /// Which sliced images are showing their sprites.
     ///
     /// Collapsed until asked for, and not remembered across launches: which
@@ -536,6 +540,7 @@ impl EditorApp {
             asset_search: String::new(),
             slicer: None,
             tilemap_tool: TilemapTool::default(),
+            animation_tool: AnimationTool::default(),
             expanded_sheets: BTreeSet::new(),
             project,
             workspace_tab: WorkspaceTab::Scene,
@@ -661,6 +666,7 @@ impl EditorApp {
                 self.history.clear();
                 self.selection = None;
                 self.tilemap_tool.reset();
+                self.animation_tool.reset();
                 self.saved_revision = self.history.revision();
                 self.lifecycle = initialized_lifecycle();
                 // A cursor belongs to the world it was advanced against, and
@@ -696,6 +702,7 @@ impl EditorApp {
     fn refresh_project(&mut self) {
         self.project = ProjectTree::beside(self.file.path());
         self.tilemap_tool.palette.invalidate();
+        self.animation_tool.palette.invalidate();
     }
 
     /// Turns pointer input over the viewport into camera movement.
@@ -1103,6 +1110,7 @@ impl EditorApp {
         if self.selection != entity {
             self.history.break_merge_run();
             self.tilemap_tool.reset();
+            self.animation_tool.reset();
             self.selection = entity;
         }
     }
@@ -1115,6 +1123,7 @@ impl EditorApp {
         self.slicer = Some(Slicer::open(path));
         self.selection = None;
         self.tilemap_tool.reset();
+        self.animation_tool.reset();
     }
 
     /// The slicer, drawn on the image it is cutting.
@@ -1296,8 +1305,14 @@ impl EditorApp {
         &self,
         present: &BTreeMap<String, Value>,
         first_font: Option<&str>,
+        first_sprite: Option<&str>,
     ) -> Vec<ComponentMetadata> {
-        addable_components(self.scene.components(), present, first_font)
+        addable_components(
+            self.scene.components(),
+            present,
+            first_font,
+            first_sprite,
+        )
     }
 
     /// Turns every changed component payload into a command.
@@ -1331,9 +1346,19 @@ impl EditorApp {
     }
 
     /// Adds a component with the payload its schema says a fresh one starts as.
-    fn add_component(&mut self, entity: EntityId, type_name: &str, first_font: Option<&str>) {
-        let Some(payload) = component_default(self.scene.components(), type_name, first_font)
-        else {
+    fn add_component(
+        &mut self,
+        entity: EntityId,
+        type_name: &str,
+        first_font: Option<&str>,
+        first_sprite: Option<&str>,
+    ) {
+        let Some(payload) = component_default(
+            self.scene.components(),
+            type_name,
+            first_font,
+            first_sprite,
+        ) else {
             return;
         };
         let mut buffer = CommandBuffer::new();
@@ -1416,6 +1441,7 @@ impl EditorApp {
                 self.saved_revision = self.history.revision();
                 self.selection = None;
                 self.tilemap_tool.reset();
+                self.animation_tool.reset();
                 self.lifecycle = initialized_lifecycle();
                 // A cursor belongs to the world it was advanced against, and
                 // a freshly loaded world reuses entity slots from the start.
@@ -1802,11 +1828,23 @@ impl EditorApp {
                 let mut added = None;
                 let fonts = self.project.fonts();
                 let first_font = fonts.first().map(String::as_str);
-                let addable = self.addable_components(&components, first_font);
+                let animation_texture = components
+                    .get("sindri.sprite")
+                    .and_then(|sprite| sprite.get("texture"))
+                    .and_then(Value::as_str)
+                    .and_then(|reference| SpriteRef::parse(reference).ok())
+                    .map(|reference| reference.texture().to_owned());
+                let animation_sprites = animation_texture
+                    .as_deref()
+                    .map(|texture| self.project.sprites_for_texture(texture))
+                    .unwrap_or_default();
+                let first_sprite = animation_sprites.first().map(String::as_str);
+                let addable = self.addable_components(&components, first_font, first_sprite);
                 let project_root = self.project.root().map(Path::to_path_buf);
                 {
                     let scripts = &self.scripts;
                     let tilemap_tool = &mut self.tilemap_tool;
+                    let animation_tool = &mut self.animation_tool;
                     egui::ScrollArea::vertical().show(ui, |ui| {
                         inspector_identity(ui, icon, &mut draft);
                         reparented = inspector_parent(ui, entity, parent, &choices);
@@ -1819,6 +1857,8 @@ impl EditorApp {
                             scripts,
                             project_root.as_deref(),
                             &fonts,
+                            animation_texture.as_deref(),
+                            animation_tool,
                             tilemap_tool,
                         );
                         added = add_component_button(ui, &addable);
@@ -1830,7 +1870,7 @@ impl EditorApp {
                     self.remove_component(entity, &type_name);
                 }
                 if let Some(type_name) = added {
-                    self.add_component(entity, &type_name, first_font);
+                    self.add_component(entity, &type_name, first_font, first_sprite);
                 }
                 match reparented {
                     ParentChoice::Unchanged => {}
@@ -2855,6 +2895,8 @@ fn components_sections(
     scripts: &SceneScripts,
     project_root: Option<&Path>,
     fonts: &[String],
+    animation_texture: Option<&str>,
+    animation_tool: &mut AnimationTool,
     tilemap_tool: &mut TilemapTool,
 ) -> Option<String> {
     let mut removed = None;
@@ -2865,6 +2907,7 @@ fn components_sections(
             "sindri.mesh" => ICON_VIEW_IN_AR,
             "sindri.script" => ICON_CODE,
             "sindri.text" => ICON_LABEL,
+            "sindri.sprite_animation" => ICON_PLAY_ARROW,
             "sindri.tilemap" => ICON_GRID_VIEW,
             _ => ICON_DEPLOYED_CODE,
         };
@@ -2902,6 +2945,15 @@ fn components_sections(
         }
         if name == TEXT_COMPONENT {
             text_section(ui, payload, fonts);
+        }
+        if name == animation::TYPE_NAME {
+            animation_section(
+                ui,
+                payload,
+                project_root,
+                animation_texture,
+                animation_tool,
+            );
         }
         if name == tilemap::TYPE_NAME {
             tilemap_section(ui, payload, project_root, tilemap_tool);
@@ -2983,6 +3035,364 @@ fn text_section(ui: &mut egui::Ui, payload: &mut Value, fonts: &[String]) {
             ui.label(RichText::new(message).size(9.0).color(PROBLEM));
         });
     }
+}
+
+/// Clip authoring for the selected entity's sprite sheet.
+///
+/// The sheet owns sprite names; the animation only arranges those names into
+/// timed clips. Every edit stays in the stored payload so unknown future fields
+/// survive, while the typed component is used to interpret and preview it.
+fn animation_section(
+    ui: &mut egui::Ui,
+    payload: &mut Value,
+    project_root: Option<&Path>,
+    texture: Option<&str>,
+    tool: &mut AnimationTool,
+) {
+    let Some(texture) = texture else {
+        ui.horizontal_wrapped(|ui| {
+            ui.add_space(10.0);
+            ui.label(
+                RichText::new("Add a Sprite component before authoring animation clips.")
+                    .size(9.0)
+                    .color(PROBLEM),
+            );
+        });
+        return;
+    };
+    tool.palette.ensure(project_root, texture);
+    let sprite_names: Vec<String> = tool
+        .palette
+        .sprites()
+        .iter()
+        .map(|sprite| sprite.name.clone())
+        .collect();
+
+    let Ok(mut authored) = animation::component(payload) else {
+        ui.horizontal_wrapped(|ui| {
+            ui.add_space(10.0);
+            ui.label(
+                RichText::new("This animation cannot be read; repair its stored fields first.")
+                    .size(9.0)
+                    .color(PROBLEM),
+            );
+        });
+        return;
+    };
+
+    section_header(ui, ICON_PLAY_ARROW, "Clips");
+    let mut selected = tool.selected(&authored).map(str::to_owned);
+    let clip_names: Vec<String> = authored.clips.keys().cloned().collect();
+    let mut chosen = selected.clone().unwrap_or_default();
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.label(RichText::new("Clip").size(11.0).color(TEXT_MUTED));
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.add_space(7.0);
+            egui::ComboBox::from_id_salt("animation-clip")
+                .selected_text(if chosen.is_empty() {
+                    "No clips"
+                } else {
+                    chosen.as_str()
+                })
+                .width(170.0)
+                .show_ui(ui, |ui| {
+                    for name in &clip_names {
+                        ui.selectable_value(&mut chosen, name.clone(), name);
+                    }
+                });
+        });
+    });
+    if selected.as_deref() != Some(chosen.as_str()) && !chosen.is_empty() {
+        tool.select(chosen.clone());
+        selected = Some(chosen);
+    }
+
+    let mut add = false;
+    let mut remove = false;
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        add = ui
+            .add_enabled(!sprite_names.is_empty(), egui::Button::new("Add clip"))
+            .clicked();
+        remove = ui
+            .add_enabled(selected.is_some(), egui::Button::new("Remove"))
+            .clicked();
+    });
+    if add
+        && let Some(first) = sprite_names.first()
+        && let Ok(name) = animation::add_clip(payload, first)
+    {
+        tool.select(name.clone());
+        selected = Some(name);
+        authored = animation::component(payload).unwrap_or(authored);
+    }
+    if remove
+        && let Some(name) = selected.as_deref()
+        && animation::remove_clip(payload, name).unwrap_or(false)
+    {
+        tool.reset();
+        tool.palette.ensure(project_root, texture);
+        authored = animation::component(payload).unwrap_or(authored);
+        selected = tool.selected(&authored).map(str::to_owned);
+    }
+
+    let Some(selected) = selected else {
+        ui.horizontal_wrapped(|ui| {
+            ui.add_space(10.0);
+            ui.label(
+                RichText::new(if sprite_names.is_empty() {
+                    "Slice and name the sprite texture before adding a clip."
+                } else {
+                    "Add a clip to arrange the sheet's sprites into playback."
+                })
+                .size(9.0)
+                .color(TEXT_MUTED),
+            );
+        });
+        if let Some(problem) = tool.palette.problem() {
+            animation_problem(ui, problem);
+        }
+        return;
+    };
+
+    let mut rename_to = tool.rename().clone();
+    let mut rename = false;
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.label(RichText::new("Name").size(11.0).color(TEXT_MUTED));
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.add_space(7.0);
+            rename = ui
+                .add_enabled(rename_to.trim() != selected, egui::Button::new("Rename"))
+                .clicked();
+            ui.add_sized(
+                [128.0, 23.0],
+                egui::TextEdit::singleline(&mut rename_to),
+            );
+        });
+    });
+    *tool.rename() = rename_to.clone();
+    let mut problem = None;
+    let selected = if rename {
+        match animation::rename_clip(payload, &selected, &rename_to) {
+            Ok(true) => {
+                let renamed = rename_to.trim().to_owned();
+                tool.renamed(renamed.clone());
+                authored = animation::component(payload).unwrap_or(authored);
+                renamed
+            }
+            Ok(false) => selected,
+            Err(error) => {
+                problem = Some(error);
+                selected
+            }
+        }
+    } else {
+        selected
+    };
+
+    let mut playing = authored.playing.clone().unwrap_or_default();
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.label(RichText::new("Playing").size(11.0).color(TEXT_MUTED));
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.add_space(7.0);
+            egui::ComboBox::from_id_salt("animation-playing")
+                .selected_text(if playing.is_empty() {
+                    "None"
+                } else {
+                    playing.as_str()
+                })
+                .width(170.0)
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut playing, String::new(), "None");
+                    for name in authored.clips.keys() {
+                        ui.selectable_value(&mut playing, name.clone(), name);
+                    }
+                });
+        });
+    });
+    let stored_playing = payload.get("playing").and_then(Value::as_str).unwrap_or("");
+    if playing != stored_playing {
+        payload["playing"] = if playing.is_empty() {
+            Value::Null
+        } else {
+            Value::String(playing)
+        };
+    }
+
+    let Some(clip) = authored.clips.get(&selected).cloned() else {
+        animation_problem(ui, "The selected clip no longer exists.");
+        return;
+    };
+    let mut seconds = f64::from(clip.seconds_per_frame);
+    if number_row(ui, "Frame time", &mut seconds, 10.0, false) {
+        payload["clips"][selected.as_str()]["seconds_per_frame"] =
+            Value::from(seconds.max(0.001));
+    }
+    let mut looping = clip.looping;
+    if bool_row(ui, "Loop", &mut looping, 10.0) {
+        payload["clips"][selected.as_str()]["looping"] = Value::Bool(looping);
+    }
+
+    section_header(ui, ICON_IMAGE, "Frames");
+    let mut replace = None;
+    let mut frame_action = None;
+    for (index, frame) in clip.frames.iter().enumerate() {
+        let mut sprite = frame.clone();
+        ui.horizontal(|ui| {
+            ui.add_space(10.0);
+            ui.label(
+                RichText::new(format!("{}", index + 1))
+                    .size(10.0)
+                    .color(TEXT_FAINT),
+            );
+            egui::ComboBox::from_id_salt(("animation-frame", index))
+                .selected_text(&sprite)
+                .width(132.0)
+                .show_ui(ui, |ui| {
+                    for name in &sprite_names {
+                        ui.selectable_value(&mut sprite, name.clone(), name);
+                    }
+                });
+            if ui.small_button("Up").clicked() {
+                frame_action = Some((index, -1));
+            }
+            if ui.small_button("Down").clicked() {
+                frame_action = Some((index, 1));
+            }
+            if ui
+                .add_enabled(clip.frames.len() > 1, egui::Button::new("Remove"))
+                .clicked()
+            {
+                frame_action = Some((index, 0));
+            }
+        });
+        if sprite != *frame {
+            replace = Some((index, sprite));
+        }
+        if !sprite_names.contains(frame) {
+            animation_problem(ui, &format!("Frame {} names missing sprite {frame:?}.", index + 1));
+        }
+    }
+    if let Some((index, sprite)) = replace {
+        let _ = animation::set_frame(payload, &selected, index, &sprite);
+    }
+    if let Some((index, direction)) = frame_action {
+        if direction == 0 {
+            let _ = animation::remove_frame(payload, &selected, index);
+        } else {
+            let _ = animation::move_frame(payload, &selected, index, direction);
+        }
+    }
+    let mut appended = None;
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.menu_button("Add frame", |ui| {
+            for sprite in &sprite_names {
+                if ui.button(sprite).clicked() {
+                    appended = Some(sprite.clone());
+                    ui.close();
+                }
+            }
+            if sprite_names.is_empty() {
+                ui.label("No named sprites");
+            }
+        });
+    });
+    if let Some(sprite) = appended {
+        let _ = animation::push_frame(payload, &selected, &sprite);
+    }
+
+    if let Ok(updated) = animation::component(payload)
+        && let Some(clip) = updated.clips.get(&selected)
+    {
+        animation_preview(ui, texture, &selected, clip, tool);
+    }
+    if let Some(message) = problem.as_deref().or_else(|| tool.palette.problem()) {
+        animation_problem(ui, message);
+    }
+}
+
+fn animation_preview(
+    ui: &mut egui::Ui,
+    texture_name: &str,
+    clip_name: &str,
+    clip: &sindri_scene::AnimationClip,
+    tool: &mut AnimationTool,
+) {
+    section_header(ui, ICON_PLAY_ARROW, "Preview");
+    let mut previewing = tool.previewing();
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        if ui
+            .button(if previewing { "Stop" } else { "Play" })
+            .clicked()
+        {
+            previewing = !previewing;
+            tool.set_previewing(previewing);
+        }
+        ui.label(
+            RichText::new(format!("{} frames · {:.3}s", clip.frames.len(), clip.seconds_per_frame))
+                .size(10.0)
+                .color(TEXT_MUTED),
+        );
+    });
+    if previewing {
+        ui.ctx().request_repaint();
+    }
+    let delta = ui.ctx().input(|input| input.stable_dt);
+    let frame = tool.advance(clip_name, clip, delta);
+    let sprite_name = clip.frames.get(frame).cloned();
+    let sprite_rect = sprite_name
+        .as_deref()
+        .and_then(|name| tool.palette.sprite(name))
+        .and_then(|sprite| sprite.rect);
+    let texture = tool.palette.texture_id(ui.ctx());
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(176.0, 150.0), Sense::hover());
+    let painter = ui.painter_at(rect);
+    painter.rect_filled(rect, 4.0, FIELD_BG);
+    painter.rect_stroke(
+        rect,
+        4.0,
+        Stroke::new(1.0, BORDER_SUBTLE),
+        StrokeKind::Inside,
+    );
+    let image = Rect::from_min_max(rect.min + Vec2::splat(10.0), rect.max - Vec2::new(10.0, 28.0));
+    if let (Some(texture), Some(sprite_rect)) = (texture, sprite_rect) {
+        let [x, y, width, height] = sprite_rect;
+        painter.image(
+            texture,
+            image,
+            Rect::from_min_size(Pos2::new(x, y), Vec2::new(width, height)),
+            Color32::WHITE,
+        );
+    } else {
+        painter.line_segment(
+            [image.left_top(), image.right_bottom()],
+            Stroke::new(1.5, PROBLEM),
+        );
+        painter.line_segment(
+            [image.right_top(), image.left_bottom()],
+            Stroke::new(1.5, PROBLEM),
+        );
+    }
+    painter.text(
+        Pos2::new(rect.center().x, rect.max.y - 13.0),
+        Align2::CENTER_CENTER,
+        sprite_name.unwrap_or_else(|| format!("{texture_name}: no frame")),
+        FontId::proportional(10.0),
+        TEXT_MUTED,
+    );
+    let _ = response.on_hover_text("Animation preview uses the project texture and sheet");
+}
+
+fn animation_problem(ui: &mut egui::Ui, problem: &str) {
+    ui.horizontal_wrapped(|ui| {
+        ui.add_space(10.0);
+        ui.label(RichText::new(problem).size(9.0).color(PROBLEM));
+    });
 }
 
 /// The part of a tilemap that cannot be represented as independent JSON rows:
@@ -4327,30 +4737,55 @@ fn addable_components(
     components: &ComponentSchemaRegistry,
     present: &BTreeMap<String, Value>,
     first_font: Option<&str>,
+    first_sprite: Option<&str>,
 ) -> Vec<ComponentMetadata> {
     components
         .registered_components()
         .filter(|metadata| !present.contains_key(&metadata.type_name))
-        .filter(|metadata| component_default(components, &metadata.type_name, first_font).is_some())
+        .filter(|metadata| {
+            component_default(
+                components,
+                &metadata.type_name,
+                first_font,
+                first_sprite,
+            )
+            .is_some()
+        })
         .cloned()
         .collect()
 }
 
 /// What Add Component writes for a fresh component.
 ///
-/// Built-ins normally own a fixed default in the registry. Text cannot: a
-/// reproducible font must come from the project, so its default is completed
-/// at the editor boundary with the first project font the browser found.
+/// Built-ins normally own a fixed default in the registry. Text and sprite
+/// animation cannot: their reproducible asset references must come from the
+/// project, so their defaults are completed at the editor boundary.
 fn component_default(
     components: &ComponentSchemaRegistry,
     type_name: &str,
     first_font: Option<&str>,
+    first_sprite: Option<&str>,
 ) -> Option<Value> {
     if type_name == TEXT_COMPONENT {
         return first_font.map(|font| {
             serde_json::json!({
                 "text": "Text",
                 "font": font
+            })
+        });
+    }
+    if type_name == animation::TYPE_NAME {
+        return first_sprite.map(|sprite| {
+            serde_json::json!({
+                "clips": {
+                    "clip": {
+                        "frames": [sprite],
+                        "seconds_per_frame": 0.1,
+                        "looping": true
+                    }
+                },
+                "playing": "clip",
+                "speed": 1.0
             })
         });
     }
@@ -4839,11 +5274,15 @@ mod tests {
         let present: BTreeMap<String, Value> = [("sindri.mesh".to_owned(), serde_json::json!({}))]
             .into_iter()
             .collect();
-        let offered: Vec<String> =
-            addable_components(extractor.components(), &present, Some("fonts/Inter.ttf"))
-                .into_iter()
-                .map(|metadata| metadata.type_name)
-                .collect();
+        let offered: Vec<String> = addable_components(
+            extractor.components(),
+            &present,
+            Some("fonts/Inter.ttf"),
+            None,
+        )
+        .into_iter()
+        .map(|metadata| metadata.type_name)
+        .collect();
 
         assert!(
             !offered.contains(&"sindri.mesh".to_owned()),
@@ -4863,10 +5302,19 @@ mod tests {
     fn every_offered_default_is_one_the_engine_accepts() {
         let extractor = extractor();
         let components = extractor.components();
-        for metadata in addable_components(components, &BTreeMap::new(), Some("fonts/Inter.ttf")) {
-            let payload =
-                component_default(components, &metadata.type_name, Some("fonts/Inter.ttf"))
-                    .expect("it was offered, so it has one");
+        for metadata in addable_components(
+            components,
+            &BTreeMap::new(),
+            Some("fonts/Inter.ttf"),
+            Some("idle"),
+        ) {
+            let payload = component_default(
+                components,
+                &metadata.type_name,
+                Some("fonts/Inter.ttf"),
+                Some("idle"),
+            )
+            .expect("it was offered, so it has one");
             components
                 .validate_payload(&metadata.type_name, &payload)
                 .unwrap_or_else(|error| {
@@ -4885,17 +5333,48 @@ mod tests {
         let present = BTreeMap::new();
 
         assert!(
-            !addable_components(components, &present, None)
+            !addable_components(components, &present, None, None)
                 .iter()
                 .any(|metadata| metadata.type_name == TEXT_COMPONENT)
         );
 
-        let payload = component_default(components, TEXT_COMPONENT, Some("fonts/Inter.ttf"))
-            .expect("a project font completes a valid text component");
+        let payload = component_default(
+            components,
+            TEXT_COMPONENT,
+            Some("fonts/Inter.ttf"),
+            None,
+        )
+        .expect("a project font completes a valid text component");
         assert_eq!(payload["font"], "fonts/Inter.ttf");
         assert_eq!(payload["text"], "Text");
         components
             .validate_payload(TEXT_COMPONENT, &payload)
+            .unwrap();
+    }
+
+    #[test]
+    fn sprite_animation_is_addable_only_with_a_named_sheet_sprite() {
+        let extractor = extractor();
+        let components = extractor.components();
+        let present = BTreeMap::new();
+
+        assert!(
+            !addable_components(components, &present, None, None)
+                .iter()
+                .any(|metadata| metadata.type_name == animation::TYPE_NAME)
+        );
+
+        let payload = component_default(
+            components,
+            animation::TYPE_NAME,
+            None,
+            Some("idle"),
+        )
+        .expect("a named sheet sprite completes a valid animation component");
+        assert_eq!(payload["clips"]["clip"]["frames"], serde_json::json!(["idle"]));
+        assert_eq!(payload["playing"], "clip");
+        components
+            .validate_payload(animation::TYPE_NAME, &payload)
             .unwrap();
     }
 

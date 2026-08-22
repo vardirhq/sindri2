@@ -25,13 +25,14 @@ pub struct PaletteSprite {
     pub rect: Option<[f32; 4]>,
 }
 
-/// The image and sheet behind the selected map's palette.
+/// A project texture and the named sprites from the sheet beside it.
 ///
-/// Read once per texture rather than once per frame. The project browser uses
-/// the same rule for the same reason: a sidecar changes occasionally and an
-/// editor panel redraws continuously.
+/// Shared by tile painting and animation authoring: both need the same image,
+/// the same sheet naming rule, and the same UV rectangles. Read once per
+/// texture rather than once per frame because an editor panel redraws
+/// continuously and a sidecar changes occasionally.
 #[derive(Default)]
-pub struct TilePalette {
+pub struct SpritePalette {
     key: Option<(PathBuf, String)>,
     image: Option<egui::ColorImage>,
     texture: Option<egui::TextureHandle>,
@@ -39,7 +40,7 @@ pub struct TilePalette {
     problem: Option<String>,
 }
 
-impl TilePalette {
+impl SpritePalette {
     pub fn invalidate(&mut self) {
         self.key = None;
         self.image = None;
@@ -52,7 +53,7 @@ impl TilePalette {
     pub fn ensure(&mut self, root: Option<&Path>, texture: &str) {
         let Some(root) = root else {
             self.invalidate();
-            self.problem = Some("Save the scene before loading a tile palette".to_owned());
+            self.problem = Some("Save the scene before loading project sprites".to_owned());
             return;
         };
         let key = (root.to_path_buf(), texture.to_owned());
@@ -121,7 +122,7 @@ impl TilePalette {
             let label = self
                 .key
                 .as_ref()
-                .map_or_else(|| "tile palette".to_owned(), |(_, texture)| texture.clone());
+                .map_or_else(|| "sprite palette".to_owned(), |(_, texture)| texture.clone());
             self.texture = Some(context.load_texture(label, image, egui::TextureOptions::NEAREST));
         }
         self.texture.as_ref().map(egui::TextureHandle::id)
@@ -129,6 +130,10 @@ impl TilePalette {
 
     pub fn sprites(&self) -> &[PaletteSprite] {
         &self.sprites
+    }
+
+    pub fn sprite(&self, name: &str) -> Option<&PaletteSprite> {
+        self.sprites.iter().find(|sprite| sprite.name == name)
     }
 
     pub fn problem(&self) -> Option<&str> {
@@ -143,7 +148,7 @@ pub struct TilemapTool {
     pub enabled: bool,
     pub erase: bool,
     pub sprite: Option<String>,
-    pub palette: TilePalette,
+    pub palette: SpritePalette,
 }
 
 impl TilemapTool {

@@ -89,6 +89,7 @@ It currently supports:
 - creating and deleting entities, including undo that restores deleted entities at their original handles
 - editing names and transforms
 - adding, removing, and editing component payloads through the component schema registry
+- slicing sprite sheets, arranging named frames into timed clips, and previewing them in the inspector
 - adding text when the project has a font, editing multiline content, and choosing project font assets
 - editing unknown preserved components instead of silently throwing their data away
 - editing Decay `@export` properties directly in the inspector
@@ -162,7 +163,6 @@ Sindri is pre-alpha, and several large pieces are intentionally not pretending t
 - richer Decay value types, collections, loops with execution budgets, and spawning
 - broader gameplay stepping beyond scripts and sprite animation in editor play mode
 - transform rotation editing and scene gizmos
-- animation-clip authoring tools (sprite-sheet slicing and naming, plus world-space tilemap painting, already work)
 - richer asset inspectors and project authoring workflows
 - production build/export/package tooling
 - a mature 3D feature set beyond the current rendering foundation

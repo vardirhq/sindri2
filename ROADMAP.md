@@ -171,12 +171,12 @@ shaped like the tool.
 - [x] Add a Z lock a transform can declare, respected by checked write paths and visible in the inspector — `Transform3D::z_locked`, refused by `WorldCommand::SetTransform3D`, and shown in the inspector as a toggle that takes the Z drag away
 - [x] Inventory each legacy 2D subsystem as port, refactor, replace, or defer — `docs/2d-inventory.md`, read from the legacy code at `77e0489` rather than from memory of it
 - [x] Give a sprite a UV rect, so it can address part of a texture — the inventory found that sprite animation and tilemaps both block on this; `UvRect` is checked at construction and normalized so a grid slice does not depend on the sheet's resolution, it rides on the instance so a sheet stays one draw call, and a GPU test reads the pixels back to prove the shader honours it
-- [x] Port sprite animation and sprite sheets — `sindri.sprite_animation` carries the sheet grid, clips of cells, and which one plays, while `SpriteAnimations` holds the cursor beside the world, so a scene saved mid-run is the scene that was opened; the legacy engine's texture-per-frame becomes a rect into one sheet, and authoring is still the next item
+- [x] Port sprite animation and sprite sheets — `sindri.sprite_animation` carries clips of named sprites and which one plays, while `SpriteAnimations` holds the cursor beside the world, so a scene saved mid-run is the scene that was opened; the legacy engine's texture-per-frame becomes a rect into one sheet
 - [x] Give a sliced image somewhere to say how it is cut — a sheet document beside the texture at a derived ID, naming its parts as a grid or as explicit rects, with scenes referring to them as `textures/tiles.png#floor`. Three components each carried their own copy of a sheet's layout and could disagree; none carries one now. Scene format 4, with a migration that recovers a rect's cell without being told the grid
-- [ ] Add a sprite sheet authoring surface: slice a sheet into frames, name clips, set timing, preview playback (partly done: selecting a texture opens a slicer showing the image with its grid drawn over it, columns and rows are drags, every cell can be named, and Save writes the sidecar — the browser then lists the sprites under the image. **Clips are still typed into the scene by hand**: naming a clip, setting its timing and previewing playback are the half that is missing)
+- [x] Add a sprite sheet authoring surface: selecting a texture opens a slicer showing the image with its grid drawn over it; columns and rows are drags, every cell can be named, and Save writes the sidecar so the browser and component editors share the same sprite names. The Sprite Animation inspector creates, renames, and removes clips, arranges their named frames, edits timing and looping, chooses the runtime clip, and previews playback against the real project texture without advancing scene state
 - [ ] Port camera 2D behavior and pixel snapping — partly done: orthographic
   pixel snapping works; follow/dead-zone/smoothing behaviour remains
-- [x] Port tilemap data model and renderer — `sindri.tilemap` holds the sheet grid, the map grid, and a flat array of cells with `null` for empty, and extracts into the same sprite batches loose sprites use, so a prop sorts among the floor rather than behind it; it gained a projection the legacy type did not have, because the first thing to use it was an isometric floor, and placing a tile and finding the tile under a point are inverses on every cell of both
+- [x] Port tilemap data model and renderer — `sindri.tilemap` holds a palette of sheet sprite names, the map grid, and a flat array of cells with `null` for empty, and extracts into the same sprite batches loose sprites use, so a prop sorts among the floor rather than behind it; it gained a projection the legacy type did not have, because the first thing to use it was an isometric floor, and placing a tile and finding the tile under a point are inverses on every cell of both
 - [x] Add tilemap authoring: selecting a world-space map shows its sliced texture as a visual palette, primary drag paints or erases through the exact Scene-view camera, grid resizing preserves the overlap, and the stored render layer remains editable; a stroke is one undo step and screen-space maps stay data-only until the Game view has an authoring-input contract
 - [x] Port text rendering with a web-safe font asset strategy — `sindri.text`
   extracts anchored overlay strings into ordered frame commands, `glyphon`
@@ -437,16 +437,14 @@ tagged snapshot, so the engine's progress is something to look at rather than a
 list of ticks. A milestone that would leave the game broken is a milestone that
 is not finished.
 
-**It has started, one item early.** The plan held it until sprite sheets, world-space
+**It started one item early.** The plan held it until sprite sheets, world-space
 2D, and text all existed, on the reasoning that without text there is no way to
-tell the player anything. Two of the three arrived; the third did not, and the
-game started anyway, because scripting landed first and a game was the only
-honest way to find out whether authoring gameplay in Decay actually works. What
-text would have said, it says in sprites instead: a row of lamps for the score
-and a banner that fades in when the game is won. That is a real constraint
-rather than a workaround — a great many games say everything they need to in
-pictures — and the substitution is worth keeping in mind when text does arrive,
-because it is evidence about how much text a 2D engine really owes its users.
+tell the player anything. The game began before text arrived because scripting
+landed first and a game was the only honest way to find out whether authoring
+gameplay in Decay actually works. Its score and win state still communicate in
+sprites even though its title now uses real project-font text: a row of lamps
+for the score and a banner that fades in when the game is won. That remains
+useful evidence about how much text a 2D engine really owes its users.
 
 It is `game/`, crate `sindri-gather`: five orbs on a diamond floor, a thing you
 drive with the arrow keys, and a lamp per orb. Its tilemap-based scene is 20
@@ -471,8 +469,8 @@ module is for.
   editor is actually like — `docs/editor-meets-the-game.md`; it opens, renders
   in both viewports, and Play runs its scripts, which is the parity claim
   holding. That first session found 49 floor rows drowning the hierarchy; the
-  tilemap removed those rows, but viewport selection, hierarchy grouping, and
-  in-editor animation-clip authoring remain open
+  tilemap removed those rows and animation clips now have dedicated inspector
+  authoring; viewport selection and hierarchy grouping remain open
 - [ ] Give it depth with Milestone 8: a 3D prop in the same scene as the sprites
 - [ ] Rebuild its coordinate handling on Milestone 9's grid module rather than its own
 - [ ] Ship it through Milestone 10's export pipeline, natively and to the web,
