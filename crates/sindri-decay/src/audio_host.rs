@@ -159,7 +159,7 @@ fn audio_call(name: &str, path: &Path, args: &[Value]) -> Result<Value, RuntimeE
 #[cfg(test)]
 mod tests {
     use decay_ir::Path;
-    use decay_runtime::{Host, Value};
+    use decay_runtime::{Host, RuntimeError, Value};
     use sindri_core::{EntityData, World};
     use sindri_platform::InputState;
 
@@ -228,7 +228,10 @@ mod tests {
                 ],
             )
             .expect_err("volume outside 0..=1 must fail");
-        assert!(error.to_string().contains("between 0 and 1"));
+        assert!(matches!(
+            error,
+            RuntimeError::Host(message) if message.contains("between 0 and 1")
+        ));
         assert!(drain_audio_commands().is_empty());
     }
 }
