@@ -115,10 +115,7 @@ impl BrowserGatherApp {
         if should_pause && !self.paused_for_page && engine.state() == EngineState::Running {
             engine.pause()?;
             self.paused_for_page = true;
-        } else if !should_pause
-            && self.paused_for_page
-            && engine.state() == EngineState::Paused
-        {
+        } else if !should_pause && self.paused_for_page && engine.state() == EngineState::Paused {
             engine.resume()?;
             self.paused_for_page = false;
         }
