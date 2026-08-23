@@ -78,7 +78,7 @@ This first slice provides:
   atomic placement or movement
 - explicit placement failures for conflicting occupants, out-of-bounds cells,
   and coordinate overflow
-- authored `sindri.grid_navigation` wall edges and `sindri.grid_occupant`
+- authored `sindri.grid.navigation` wall edges and `sindri.grid.occupant`
   stable grid references plus relative footprints
 - `WorldGridNavigation`, which derives runtime occupancy from world transforms
   and exposes complete-footprint placement and path queries
@@ -127,7 +127,7 @@ footprint cell during each transition.
 Mismatched wall/path bounds are rejected explicitly.
 
 The engine adapter deliberately does not serialize occupancy. A
-`sindri.grid_occupant` names an authored tilemap by `SceneEntityId`, carries
+`sindri.grid.occupant` names an authored tilemap by `SceneEntityId`, carries
 only its relative footprint, and takes its anchor from the entity's current
 world position. `WorldGridNavigation` resolves those stable references into
 runtime `EntityId` owners, inverts the tilemap's planar transform and exact
@@ -136,7 +136,7 @@ any wall, footprint, or placement is invalid. Rebuilding after a world change
 keeps the world authoritative and avoids stale duplicated cell state.
 
 The tilemap remains the sole owner of bounds and projection. The optional
-`sindri.grid_navigation` component stores only internal wall endpoints, so a
+`sindri.grid.navigation` component stores only internal wall endpoints, so a
 scene cannot configure one shape for rendering and another for pathfinding.
 The adapter targets one explicit tilemap entity, preserving the same
 multi-grid rule as Decay's coordinate surface.

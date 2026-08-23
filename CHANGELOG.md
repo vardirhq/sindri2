@@ -206,6 +206,15 @@ All notable changes to Sindri Next will be documented here.
 
 ### Changed
 
+- Renamed the components a subsystem owns to hierarchical, subsystem-owned IDs
+  as scene format 5: `sindri.grid.navigation`, `sindri.grid.occupant`,
+  `sindri.animation.sprite`, and `sindri.audio.source`, matching the
+  `sindri.physics2d.*` names 2D physics arrived with. Format-4 scenes migrate
+  their keys on load with their payloads untouched, and a scene carrying both
+  spellings of one component stops the migration by name rather than having one
+  of them silently overwritten. Root-level singletons — camera, mesh, sprite,
+  text, tilemap, and script — keep their flat names.
+
 - Reconciled the README, roadmap, capability inventory, scripting contract, and contributor guidance with the implemented Decay entity references, tilemaps, editor authoring, companion-game browser build, and Editor + Decay product direction.
 
 - Made a surface that offers no sRGB format draw through an sRGB view of one it can hold, instead of refusing to start; a browser canvas offers no sRGB format at all, so the engine had never once started in one.
