@@ -471,7 +471,7 @@ pub struct GridNavigationComponent {
 }
 
 impl SceneComponent for GridNavigationComponent {
-    const TYPE_NAME: &'static str = "sindri.grid_navigation";
+    const TYPE_NAME: &'static str = "sindri.grid.navigation";
 }
 
 /// Marks an entity as occupying cells on one authored grid.
@@ -493,7 +493,7 @@ fn single_cell_footprint() -> Vec<[i32; 2]> {
 }
 
 impl SceneComponent for GridOccupantComponent {
-    const TYPE_NAME: &'static str = "sindri.grid_occupant";
+    const TYPE_NAME: &'static str = "sindri.grid.occupant";
 }
 
 #[cfg(test)]

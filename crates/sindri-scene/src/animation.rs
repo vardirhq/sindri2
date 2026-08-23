@@ -126,7 +126,7 @@ impl SpriteAnimationComponent {
 }
 
 impl SceneComponent for SpriteAnimationComponent {
-    const TYPE_NAME: &'static str = "sindri.sprite_animation";
+    const TYPE_NAME: &'static str = "sindri.animation.sprite";
 }
 
 /// Where every animated sprite in a world currently is.
