@@ -8,6 +8,12 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- Browser startup failures now reach the player: the engine announces them on
+  `window` and the page shows them, instead of a blank canvas and a console line
+  nobody opens.
+- The browser page asks for a real WebGPU adapter before starting, rather than
+  trusting that `navigator.gpu` existing means WebGPU works.
+
 - End-to-end audio across assets, scene authoring, native/browser platform backends, typed Decay calls, editor discovery/component authoring, and Gather background/pickup/victory playback, with a silent backend for device-free tests.
 - Command-backed Scene-view translate, rotate, and scale gizmos with local/world
   orientation, optional movement/angle/scale snapping, Z-lock-safe movement,

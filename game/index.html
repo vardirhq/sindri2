@@ -40,13 +40,35 @@
       errorBox.innerHTML = `<strong>${title}</strong>${detail}`;
     };
 
+    // Startup does not finish when `init()` resolves: winit hands the loop to
+    // the page and returns, so an adapter, device, surface, or asset failure
+    // happens afterwards with nobody to return it to. The engine announces
+    // those on `window`, and this is what turns them into something a player
+    // can read instead of a blank canvas and a console line nobody opens.
+    addEventListener("sindri:failed", (event) => {
+      const detail = String(event.detail ?? "The engine reported a failure.");
+      // The whole thing goes to the console for whoever is debugging. A wgpu
+      // error carries the JavaScript error it wrapped, stack and all, and a
+      // player handed a wasm backtrace has been told nothing — so the page
+      // shows the first line, which is the part written for a human.
+      console.error(detail);
+      const summary = detail.split("\n")[0].trim();
+      fail("Gather stopped", summary.length > 200 ? `${summary.slice(0, 200)}…` : summary);
+    });
+
+    const WEBGPU_MISSING =
+      "Gather requires a browser and device with WebGPU enabled. Update your browser or check its graphics/WebGPU settings.";
+
     if (!(canvas instanceof HTMLCanvasElement)) {
       fail("Gather could not start", "The page is missing the #sindri-canvas canvas Sindri was configured to use.");
     } else if (!navigator.gpu) {
-      fail(
-        "WebGPU is unavailable",
-        "Gather requires a browser and device with WebGPU enabled. Update your browser or check its graphics/WebGPU settings."
-      );
+      fail("WebGPU is unavailable", WEBGPU_MISSING);
+    } else if (!(await navigator.gpu.requestAdapter().catch(() => null))) {
+      // `navigator.gpu` existing is not the same as WebGPU working. Chrome on
+      // Android exposes the interface more widely than its drivers can serve,
+      // so asking for an actual adapter is the difference between telling a
+      // player their device cannot run this and showing them nothing at all.
+      fail("WebGPU is unavailable", WEBGPU_MISSING);
     } else {
       try {
         await init();

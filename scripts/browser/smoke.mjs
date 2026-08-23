@@ -80,6 +80,28 @@ if (EXPECT_FAILURE === 'webgpu') {
   });
 }
 
+// The interface existing is not the same as WebGPU working. Chrome on Android
+// exposes `navigator.gpu` more widely than its drivers can serve, and a page
+// that only checks for the interface starts anyway and fails where nobody can
+// see it — which is what a blank canvas on a phone turned out to be.
+if (EXPECT_FAILURE === 'adapter') {
+  await page.addInitScript(() => {
+    GPU.prototype.requestAdapter = () => Promise.resolve(null);
+  });
+}
+
+// The one failure the page cannot catch for itself. An adapter exists, so the
+// checks pass and `init()` resolves — and then the device request fails inside
+// the event loop winit has already handed to the page, with nobody to return
+// it to. This is the case that proves the engine's failure event reaches the
+// page, rather than the failure living in a console no player opens.
+if (EXPECT_FAILURE === 'device') {
+  await page.addInitScript(() => {
+    GPUAdapter.prototype.requestDevice = () =>
+      Promise.reject(new Error('the device request was refused for this test'));
+  });
+}
+
 await page.addInitScript(() => {
   window.__plays = [];
   const play = HTMLMediaElement.prototype.play;
@@ -116,7 +138,14 @@ await page.goto(`http://127.0.0.1:${port}${BASE}`, { waitUntil: 'load' });
 if (EXPECT_FAILURE) {
   await page.waitForSelector('#sindri-error[data-visible="true"]');
   const message = await page.locator('#sindri-error').innerText();
-  const expected = EXPECT_FAILURE === 'webgpu' ? 'WebGPU is unavailable' : 'missing the #sindri-canvas';
+  const expected = {
+    canvas: 'missing the #sindri-canvas',
+    webgpu: 'WebGPU is unavailable',
+    adapter: 'WebGPU is unavailable',
+    // Not the message's wording, which belongs to wgpu: what matters is that a
+    // failure raised after startup finished arrived on the page at all.
+    device: 'Gather stopped',
+  }[EXPECT_FAILURE];
   if (SHOT) await page.screenshot({ path: SHOT });
   await browser.close();
   server.close();

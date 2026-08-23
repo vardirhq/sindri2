@@ -110,6 +110,28 @@ The pickup and victory one-shots have not been observed in a browser — they ne
 gameplay to reach an orb, which the smoke check does not drive. They take the
 same path as the loop, and the headless test asserts the game asks for them.
 
+## A failure a player can read
+
+The blank canvas on a phone was not a rendering fault. `run` returns `Ok` as
+soon as `spawn_app` hands the loop to the page, so everything after that —
+adapter, device, surface, assets — fails with nobody to return an error to, and
+`Host::fail` could only write it to a console no player opens. The page's own
+guard checked `navigator.gpu` for existence, which is not the same question as
+whether an adapter can be had: Chrome on Android exposes the interface more
+widely than its drivers serve it, so the check passed and the engine started and
+stopped in silence.
+
+The engine now announces a failure on `window` as a `sindri:failed` event, and
+the page shows it. The engine still knows nothing about that page's markup — it
+names the failure, and the page decides what to do with it, the same way it is
+handed a canvas rather than creating one. The page also asks for a real adapter
+before starting rather than trusting the interface's presence.
+
+`scripts/browser/smoke.mjs` takes away the canvas, WebGPU, an adapter, and a
+device in turn. The last is the one that matters most: it is the only failure
+the page cannot check for itself, because it happens after `init()` has already
+resolved, and it is the shape the phone was hitting.
+
 ## What still has never run in a browser
 
 **Asset loading.** Not one HTTP request for an asset has been made by either
