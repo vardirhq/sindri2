@@ -6,7 +6,7 @@ use thiserror::Error;
 
 use crate::{SceneMigrationError, SceneMigrator, Transform3D};
 
-pub const SCENE_FORMAT_VERSION: u32 = 4;
+pub const SCENE_FORMAT_VERSION: u32 = 5;
 
 /// A stable, project-authored entity identifier used only in serialized data.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
