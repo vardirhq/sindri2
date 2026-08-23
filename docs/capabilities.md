@@ -119,6 +119,30 @@ What audio does not do yet: nothing gathers the clips a scene names, the way
 own list and the editor cannot load a scene's audio at all. The editor lists
 audio files and edits `sindri.audio`; it cannot play one.
 
+### Physics
+
+`sindri-physics` is the masked physics boundary. Rapier2D and Rapier3D are
+private implementation dependencies; public code speaks only in Sindri body,
+collider, shape, layer, pose, error, and event types. Runtime entities remain the
+identity exposed by the subsystem, so no Rapier handle can leak into a scene,
+script, editor, or game contract.
+
+The exercised runtime is currently 2D. `PhysicsWorld2d` owns fixed, dynamic,
+position-kinematic, and velocity-kinematic bodies; box, circle, and capsule
+colliders; independent membership/filter masks; sensors; friction and
+restitution; checked velocity/impulse/kinematic operations; and normalized
+collision/sensor start/stop events. Values are validated before they reach the
+backend, and stepping takes an explicit engine fixed-step duration rather than a
+render delta. Tests cover gravity, masks, sensor events, body operations, and
+removal/reuse through generation-checked `EntityId`s, and the crate passes the
+workspace's native and WASM checks.
+
+A parallel Sindri-owned 3D body/collider data model already fixes the public
+shape of the later 3D slice, but no 3D runtime behavior is claimed yet. Scene
+components, editor authoring, Decay access, and Gather use are also still
+missing; those are separate feature-track slices in `docs/physics.md` rather
+than things this foundation pretends to have completed.
+
 ### Grid geometry
 
 `sindri-grid` provides renderer-independent signed cell coordinates, continuous
@@ -157,7 +181,6 @@ event loop and canvas attachment, and headless in a test.
 `DesktopApp` supplies the window, event loop, and input translation once, so an
 application does not rewrite them. Target-specific code is confined to the
 crates that must have it.
-
 ### GPU
 
 Adapter, device, and queue negotiation is shared, with conservative
@@ -476,9 +499,9 @@ settings gear.
   controls, and rich spans remain
 - **One mesh primitive: `Cube`.** No quad, sphere, or glTF import
 - **No audio.** Now scheduled in `ROADMAP.md`; it previously had no item at all
-- No physics or collision. This one is a deliberate gap rather than a missing
-  foundation: collision against transforms is gameplay code, and a Rapier
-  adapter is planned as optional rather than built in
+- Physics exists only as the masked 2D runtime foundation. No scene components,
+  editor authoring, Decay access, Gather integration, or exercised 3D runtime
+  exists yet
 - No particles or authored parallax system. Renderer-free footprints,
   bounded occupancy, placement validation, symmetric wall edges, and
   deterministic A* now have authored engine components and a world adapter,

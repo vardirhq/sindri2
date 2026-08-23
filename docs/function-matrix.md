@@ -47,8 +47,10 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Materials | ❌ | ❌ | ❌ |
 | Lighting | ❌ | ❌ | ❌ |
 | glTF import | ❌ | ❌ | ❌ |
-| Physics | ❌ | ❌ | ❌ |
-| Collision | ❌ | ❌ | ❌ |
+| 2D physics | ✅ | ❌ | ❌ |
+| 2D collision | ✅ | ❌ | ❌ |
+| 3D physics | ❌ | ❌ | ❌ |
+| 3D collision | ❌ | ❌ | ❌ |
 | Project management | 🟡 | ❌ | — |
 | Game export | 🟡 | ❌ | — |
 
