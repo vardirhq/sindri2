@@ -220,6 +220,7 @@ async fn open_surface(
     let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::new_with_display_handle_from_env(
         Box::new(display),
     ));
+    // How to build the surface, so a lost one can be built again the same way.
     let target = Arc::clone(&window);
     let source = move |instance: &wgpu::Instance| instance.create_surface(Arc::clone(&target));
     let surface = source(&instance)?;
@@ -325,6 +326,16 @@ impl<A: DesktopApp> Host<A> {
         }
     }
 
+    /// Records the first failure and stops. A host that kept drawing after
+    /// gameplay failed would replace the error with whatever happened next.
+    ///
+    /// It is *logged* as well as recorded, and that is not belt and braces. On
+    /// a desktop the recorded error is returned by [`run`], which prints it. In
+    /// a browser there is nobody to return to — `spawn_app` hands the loop to
+    /// the page and `run` has already returned `Ok` — so a failure recorded and
+    /// not logged is a failure that happens in silence. The first time this
+    /// engine was loaded in a browser it stopped at the device request and said
+    /// nothing at all, which is what this line is for.
     fn fail(&mut self, event_loop: &ActiveEventLoop, error: DesktopError<A::Error>) {
         log::error!("{error}");
         if self.failure.is_none() {
@@ -400,6 +411,7 @@ impl<A: DesktopApp> Host<A> {
         }
     }
 
+    /// One frame: advance by real elapsed time, then draw if a texture arrives.
     fn frame(&mut self) -> Result<Flow, DesktopError<A::Error>> {
         let State::Running(running) = &mut self.state else {
             return Ok(Flow::Continue);
@@ -412,9 +424,14 @@ impl<A: DesktopApp> Host<A> {
         }
 
         let Some(frame) = running.surface.acquire(&running.gpu.device)? else {
+            // Skipped. The surface has already recovered if it needed to.
             return Ok(flow);
         };
 
+        // Made with the surface's view format rather than the texture's own,
+        // which is what lets a canvas that stores non-sRGB bytes still be drawn
+        // through an sRGB view. They are the same format wherever the surface
+        // offered sRGB directly.
         let view = frame.texture.create_view(&wgpu::TextureViewDescriptor {
             format: Some(running.surface.format()),
             ..wgpu::TextureViewDescriptor::default()
@@ -531,6 +548,7 @@ impl<A: DesktopApp> ApplicationHandler<Startup> for Host<A> {
             timer: FrameTimer::new(),
         }));
 
+        // The window may have been resized while the device was being requested.
         if let Some(window) = &self.window {
             let size = window.inner_size();
             if let Err(error) = self.resize(size.width, size.height) {
