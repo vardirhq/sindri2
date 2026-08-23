@@ -485,6 +485,17 @@
         "scale": [0.62, 0.62, 1.0]
       },
       "components": {
+        "sindri.animation.sprite": {
+          "clips": {
+            "bob": {
+              "frames": ["bob-0", "bob-1", "bob-2", "bob-3"],
+              "looping": true,
+              "seconds_per_frame": 0.16
+            }
+          },
+          "playing": "bob",
+          "speed": 1.0
+        },
         "sindri.script": {
           "properties": {
             "speed": 2.6
@@ -497,17 +508,6 @@
           "space": "world",
           "texture": "textures/player.png",
           "tint": [1.0, 1.0, 1.0, 1.0]
-        },
-        "sindri.animation.sprite": {
-          "clips": {
-            "bob": {
-              "frames": ["bob-0", "bob-1", "bob-2", "bob-3"],
-              "looping": true,
-              "seconds_per_frame": 0.16
-            }
-          },
-          "playing": "bob",
-          "speed": 1.0
         }
       }
     },
