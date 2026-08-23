@@ -3,7 +3,8 @@ use std::{collections::BTreeMap, time::Duration};
 use sindri_assets::{
     AssetDecoder, AssetLoadOutcome, AssetLoadQueueConfig, AssetLoader, AssetManifest, AudioAsset,
     AudioAssetDecoder, FetchAssetSource, FontAsset, FontAssetDecoder, MANIFEST_FILE_NAME,
-    SceneAssetDecoder, SpriteSheetAssetDecoder, TextAssetDecoder, TextureAsset, TextureAssetDecoder,
+    SceneAssetDecoder, SpriteSheetAssetDecoder, TextAssetDecoder, TextureAsset,
+    TextureAssetDecoder,
 };
 use sindri_core::{AssetId, SceneDocument, SpriteSheetDocument, World, sheet_id_for};
 use sindri_decay::ScriptSources;
@@ -30,6 +31,7 @@ use crate::{
 pub(super) struct BrowserGatherApp {
     loader: Option<BrowserProjectLoader>,
     pending: Option<BrowserProjectAssets>,
+    audio: Option<BrowserAudioBackend>,
     engine: Option<EngineHost<Session, BrowserAudioBackend>>,
     scene: SceneExtractor,
     bindings: TextureBindings,
@@ -74,7 +76,10 @@ impl BrowserGatherApp {
                 .bind_font(id.as_str(), asset.family(), asset.bytes().to_vec());
         }
 
-        let mut audio = BrowserAudioBackend::new();
+        let mut audio = self
+            .audio
+            .take()
+            .ok_or_else(|| GatherError::BrowserAsset("browser audio backend was already moved".into()))?;
         for (id, asset) in project.audio {
             audio.register(AudioClip::new(
                 id.as_str(),
@@ -91,7 +96,10 @@ impl BrowserGatherApp {
         *engine.world_mut() = World::from_scene(&project.scene)?.world;
         engine.start()?;
         self.engine = Some(engine);
-        log::info!("Gather loaded {} project assets through browser fetch", project.asset_count);
+        log::info!(
+            "Gather loaded {} project assets through browser fetch",
+            project.asset_count
+        );
         Ok(())
     }
 
@@ -136,6 +144,7 @@ impl DesktopApp for BrowserGatherApp {
         Ok(Self {
             loader: Some(BrowserProjectLoader::new()?),
             pending: None,
+            audio: Some(BrowserAudioBackend::new()),
             engine: None,
             scene: extractor()?,
             bindings: TextureBindings::new(),
@@ -150,6 +159,14 @@ impl DesktopApp for BrowserGatherApp {
     fn input(&mut self, event: InputEvent) {
         if let Some(engine) = &mut self.engine {
             engine.queue_input(event);
+            return;
+        }
+        if matches!(
+            event,
+            InputEvent::KeyPressed(_) | InputEvent::ButtonPressed(_)
+        ) && let Some(audio) = &mut self.audio
+        {
+            let _ = audio.unlock();
         }
     }
 
@@ -251,11 +268,8 @@ enum LoadPhase {
 impl BrowserProjectLoader {
     fn new() -> Result<Self, GatherError> {
         let source = FetchAssetSource::new("assets")?;
-        let mut manifest = AssetLoader::new(
-            source,
-            AssetLoadQueueConfig::default(),
-            TextAssetDecoder,
-        )?;
+        let mut manifest =
+            AssetLoader::new(source, AssetLoadQueueConfig::default(), TextAssetDecoder)?;
         manifest.request(AssetId::new(MANIFEST_FILE_NAME)?)?;
         Ok(Self {
             phase: Some(LoadPhase::Manifest(manifest)),
@@ -313,8 +327,8 @@ impl ProjectLoaders {
             .with_manifest(manifest.clone());
         let mut audio = AssetLoader::new(source.clone(), config, AudioAssetDecoder)?
             .with_manifest(manifest.clone());
-        let mut sheets = AssetLoader::new(source, config, SpriteSheetAssetDecoder)?
-            .with_manifest(manifest);
+        let mut sheets =
+            AssetLoader::new(source, config, SpriteSheetAssetDecoder)?.with_manifest(manifest);
 
         request(&mut scene, &[SCENE_ID])?;
         request(&mut scripts, SCRIPT_IDS)?;
