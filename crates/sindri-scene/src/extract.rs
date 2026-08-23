@@ -14,10 +14,11 @@ use sindri_render::{
 use thiserror::Error;
 
 use crate::{
-    AnimationError, AudioSourceComponent, CameraComponent, GridNavigationComponent,
-    GridOccupantComponent, MeshComponent, MeshPrimitive, PROCEDURAL_TEXTURES, SpriteAnchor,
-    SpriteAnimationComponent, SpriteAnimations, SpriteComponent, SpriteSpace, TextComponent,
-    TextureBindings, TilemapComponent, TilemapError,
+    AnimationError, AudioSourceComponent, CameraComponent, Collider2dComponent,
+    GridNavigationComponent, GridOccupantComponent, MeshComponent, MeshPrimitive,
+    PROCEDURAL_TEXTURES, RigidBody2dComponent, SpriteAnchor, SpriteAnimationComponent,
+    SpriteAnimations, SpriteComponent, SpriteSpace, TextComponent, TextureBindings,
+    TilemapComponent, TilemapError,
 };
 
 /// Which projection the world camera uses.
@@ -44,7 +45,7 @@ pub struct CameraView {
     /// framed half-height.
     ///
     /// Measured against what the camera currently frames rather than in world
-    /// units, so dragging moves the picture by the same amount whether the
+    /// units, so dragging moves the picture the same distance whether the
     /// subject is a metre away or a kilometre, and the two projections agree.
     pub pan: Vec2,
     pub projection: WorldProjection,
@@ -136,6 +137,35 @@ impl SceneExtractor {
         // belongs to. Inventing one would create a valid-looking component
         // that cannot ever resolve.
         components.register::<GridOccupantComponent>("Grid Occupant")?;
+        // Physics defaults are ordinary Sindri values rather than backend
+        // values. A newly added body starts dynamic and a collider starts as a
+        // one-unit box, so both are immediately valid and visible in the
+        // generic command-backed inspector.
+        components.register_with_default::<RigidBody2dComponent>(
+            "Rigid Body 2D",
+            serde_json::json!({
+                "kind": "dynamic",
+                "pose": { "position": [0.0, 0.0], "rotation": 0.0 },
+                "linear_velocity": [0.0, 0.0],
+                "angular_velocity": 0.0,
+                "gravity_scale": 1.0,
+                "linear_damping": 0.0,
+                "angular_damping": 0.0,
+                "lock_rotation": false
+            }),
+        )?;
+        components.register_with_default::<Collider2dComponent>(
+            "Collider 2D",
+            serde_json::json!({
+                "shape": { "shape": "box", "half_extents": [0.5, 0.5] },
+                "offset": [0.0, 0.0],
+                "rotation": 0.0,
+                "sensor": false,
+                "layers": { "memberships": 4294967295_u32, "filter": 4294967295_u32 },
+                "friction": 0.5,
+                "restitution": 0.0
+            }),
+        )?;
         // No default payload, for the reason the registry states: a blank one
         // would name the empty clip, and a button that adds a component the
         // engine then rejects is worse than no button. `sindri.text` and
