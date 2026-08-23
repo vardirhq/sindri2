@@ -44,6 +44,11 @@ producing the wrong picture.
 Dependency changes additionally run `cargo deny`; see
 [`docs/dependency-policy.md`](docs/dependency-policy.md).
 
+`scripts/carve.py` moves whole Rust items between files by name, for splitting a
+module too large to move by hand. It is a developer aid rather than build
+machinery: nothing runs it automatically, and what it produces is reviewed like
+any other change. It needs Python 3, which the checks above do not.
+
 ## What the code is expected to look like
 
 **No unsafe.** `unsafe_code = "forbid"` applies to the whole workspace and there
