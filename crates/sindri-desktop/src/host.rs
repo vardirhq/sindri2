@@ -391,6 +391,7 @@ impl<A: DesktopApp> Host<A> {
         Ok(())
     }
 
+    #[cfg(target_arch = "wasm32")]
     fn set_visibility(&mut self, event_loop: &ActiveEventLoop, visible: bool) {
         self.page_visible = visible;
         let result = match &mut self.state {
@@ -507,14 +508,17 @@ impl<A: DesktopApp> ApplicationHandler<Startup> for Host<A> {
 
     fn user_event(&mut self, event_loop: &ActiveEventLoop, event: Startup) {
         #[cfg(target_arch = "wasm32")]
-        if let Startup::VisibilityChanged(visible) = event {
-            self.set_visibility(event_loop, visible);
-            return;
-        }
-
-        let Startup::Opened(opened) = event else {
-            return;
+        let opened = match event {
+            Startup::VisibilityChanged(visible) => {
+                self.set_visibility(event_loop, visible);
+                return;
+            }
+            Startup::Opened(opened) => opened,
         };
+
+        #[cfg(not(target_arch = "wasm32"))]
+        let Startup::Opened(opened) = event;
+
         let (gpu, surface) = match opened {
             Ok(parts) => parts,
             Err(error) => return self.fail(event_loop, DesktopError::Gpu(error)),
