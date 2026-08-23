@@ -6,7 +6,7 @@ use sindri_assets::{
     SceneAssetDecoder, SpriteSheetAssetDecoder, TextAssetDecoder, TextureAsset,
     TextureAssetDecoder,
 };
-use sindri_core::{AssetId, SceneDocument, SpriteSheetDocument, World, sheet_id_for};
+use sindri_core::{AssetId, EngineState, SceneDocument, SpriteSheetDocument, World, sheet_id_for};
 use sindri_decay::ScriptSources;
 use sindri_desktop::{AppContext, DesktopApp, Flow};
 use sindri_platform::{AudioBackend, AudioClip, BrowserAudioBackend, EngineHost, InputEvent, Key};
@@ -40,6 +40,9 @@ pub(super) struct BrowserGatherApp {
     cubes: TexturedCubeRenderer,
     sprites: SpriteBatchRenderer,
     text: TextRenderer,
+    page_visible: bool,
+    platform_suspended: bool,
+    paused_for_page: bool,
 }
 
 impl BrowserGatherApp {
@@ -95,10 +98,30 @@ impl BrowserGatherApp {
         *engine.world_mut() = World::from_scene(&project.scene)?.world;
         engine.start()?;
         self.engine = Some(engine);
+        self.sync_page_lifecycle()?;
         log::info!(
             "Gather loaded {} project assets through browser fetch",
             project.asset_count
         );
+        Ok(())
+    }
+
+    fn sync_page_lifecycle(&mut self) -> Result<(), GatherError> {
+        let should_pause = !self.page_visible || self.platform_suspended;
+        let Some(engine) = &mut self.engine else {
+            return Ok(());
+        };
+
+        if should_pause && !self.paused_for_page && engine.state() == EngineState::Running {
+            engine.pause()?;
+            self.paused_for_page = true;
+        } else if !should_pause
+            && self.paused_for_page
+            && engine.state() == EngineState::Paused
+        {
+            engine.resume()?;
+            self.paused_for_page = false;
+        }
         Ok(())
     }
 
@@ -152,6 +175,9 @@ impl DesktopApp for BrowserGatherApp {
             cubes: TexturedCubeRenderer::new(context.device(), context.format()),
             sprites: SpriteBatchRenderer::new(context.device(), context.format()),
             text: TextRenderer::new(context.device(), context.queue(), context.format()),
+            page_visible: true,
+            platform_suspended: false,
+            paused_for_page: false,
         })
     }
 
@@ -193,6 +219,21 @@ impl DesktopApp for BrowserGatherApp {
         self.depth
             .resize(context.device(), context.width(), context.height());
         Ok(())
+    }
+
+    fn suspend(&mut self) -> Result<(), Self::Error> {
+        self.platform_suspended = true;
+        self.sync_page_lifecycle()
+    }
+
+    fn resume(&mut self) -> Result<(), Self::Error> {
+        self.platform_suspended = false;
+        self.sync_page_lifecycle()
+    }
+
+    fn visibility_changed(&mut self, visible: bool) -> Result<(), Self::Error> {
+        self.page_visible = visible;
+        self.sync_page_lifecycle()
     }
 
     fn render(
