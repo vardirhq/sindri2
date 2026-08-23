@@ -126,7 +126,10 @@ jobs:
       # now makes this gate stricter still: its static site includes the actual
       # project asset tree plus a manifest generated from those exact bytes,
       # and the browser must request every asset category over HTTP under a
-      # non-root base path before the test accepts the rendered game.
+      # non-root base path before the test accepts the rendered game. The same
+      # harness then removes WebGPU and the configured canvas in turn so those
+      # startup failures must be shown to a player instead of living only in a
+      # developer console.
       - name: Run the engine in a browser
         timeout-minutes: 12
         run: |
@@ -140,6 +143,10 @@ jobs:
           node scripts/browser/smoke.mjs examples/cube target/render-artifacts/browser-cube.png
           SINDRI_EXPECT_ASSETS=1 SINDRI_BASE_PATH=/sindri2/ \
             node scripts/browser/smoke.mjs game target/render-artifacts/browser-gather.png
+          SINDRI_EXPECT_FAILURE=webgpu \
+            node scripts/browser/smoke.mjs game target/render-artifacts/browser-no-webgpu.png
+          SINDRI_EXPECT_FAILURE=canvas \
+            node scripts/browser/smoke.mjs game target/render-artifacts/browser-no-canvas.png
       - name: Upload browser captures
         if: always()
         uses: actions/upload-artifact@v4
@@ -148,5 +155,7 @@ jobs:
           path: |
             target/render-artifacts/browser-cube.png
             target/render-artifacts/browser-gather.png
+            target/render-artifacts/browser-no-webgpu.png
+            target/render-artifacts/browser-no-canvas.png
           if-no-files-found: warn
           retention-days: 14
