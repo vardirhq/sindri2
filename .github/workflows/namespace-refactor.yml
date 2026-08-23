@@ -1,0 +1,156 @@
+name: Namespace refactor
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    if: github.head_ref == 'component/namespaces' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: component/namespaces
+          fetch-depth: 0
+
+      - name: Apply namespace migration
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              'sindri.grid_navigation': 'sindri.grid.navigation',
+              'sindri.grid_occupant': 'sindri.grid.occupant',
+              'sindri.sprite_animation': 'sindri.animation.sprite',
+              'sindri.audio': 'sindri.audio.source',
+              'sindri.script': 'sindri.decay.script',
+          }
+
+          roots = [
+              Path('crates/sindri-scene'), Path('crates/sindri-decay'), Path('editor'),
+              Path('game'), Path('examples'), Path('docs'),
+          ]
+          files = {Path('README.md'), Path('ROADMAP.md'), Path('PROJECT_OVERVIEW.md')}
+          for root in roots:
+              if root.exists():
+                  files.update(p for p in root.rglob('*') if p.is_file() and p.suffix in {'.rs', '.md', '.json'})
+
+          migration = Path('crates/sindri-core/src/migration.rs')
+          legacy = Path('crates/sindri-core/tests/fixtures/legacy')
+          for path in sorted(files):
+              if path == migration or legacy in path.parents:
+                  continue
+              text = path.read_text()
+              changed = text
+              for old, new in replacements.items():
+                  changed = changed.replace(old, new)
+              if path.name.endswith('.scene.json'):
+                  changed = changed.replace('"format_version": 4', '"format_version": 5', 1)
+              if changed != text:
+                  path.write_text(changed)
+
+          scene = Path('crates/sindri-core/src/scene.rs')
+          text = scene.read_text().replace(
+              'pub const SCENE_FORMAT_VERSION: u32 = 4;',
+              'pub const SCENE_FORMAT_VERSION: u32 = 5;',
+          )
+          scene.write_text(text)
+
+          text = migration.read_text()
+          registration = '''        migrator\n            .register(3, 4, name_the_parts_of_a_sheet)\n            .expect("built-in steps are registered once and move forward");\n'''
+          if '.register(4, 5, namespace_components)' not in text:
+              if registration not in text:
+                  raise SystemExit('migration registration anchor not found')
+              text = text.replace(
+                  registration,
+                  registration + '''        migrator\n            .register(4, 5, namespace_components)\n            .expect("built-in steps are registered once and move forward");\n''',
+                  1,
+              )
+
+          error_anchor = '    ConflictingTransforms { entity: String },\n'
+          error_variant = '''    #[error(\n        "entity '{entity}' carries both legacy component '{old}' and canonical component '{new}'; remove one before upgrading the scene"\n    )]\n    ConflictingComponentNames {\n        entity: String,\n        old: &'static str,\n        new: &'static str,\n    },\n'''
+          if 'ConflictingComponentNames' not in text:
+              if error_anchor not in text:
+                  raise SystemExit('migration error anchor not found')
+              text = text.replace(error_anchor, error_anchor + error_variant, 1)
+
+          function = r'''/// Format 5 gives subsystem-owned components stable hierarchical names.
+///
+/// The payloads themselves do not change. Only the keys naming them do, so the
+/// migration is lossless. A document carrying both spellings is ambiguous and
+/// is refused rather than silently overwriting either payload.
+fn namespace_components(document: &mut Value) -> Result<(), SceneMigrationError> {
+    const RENAMES: [(&str, &str); 5] = [
+        ("sindri.grid_navigation", "sindri.grid.navigation"),
+        ("sindri.grid_occupant", "sindri.grid.occupant"),
+        ("sindri.sprite_animation", "sindri.animation.sprite"),
+        ("sindri.audio", "sindri.audio.source"),
+        ("sindri.script", "sindri.decay.script"),
+    ];
+
+    let Some(entities) = document.get_mut("entities").and_then(Value::as_array_mut) else {
+        return Ok(());
+    };
+    for entity in entities {
+        let Some(fields) = entity.as_object_mut() else {
+            continue;
+        };
+        let entity_id = fields
+            .get("id")
+            .and_then(Value::as_str)
+            .unwrap_or("<an entity with no id>")
+            .to_owned();
+        let Some(components) = fields
+            .get_mut("components")
+            .and_then(Value::as_object_mut)
+        else {
+            continue;
+        };
+        for (old, new) in RENAMES {
+            if components.contains_key(old) && components.contains_key(new) {
+                return Err(SceneMigrationError::ConflictingComponentNames {
+                    entity: entity_id,
+                    old,
+                    new,
+                });
+            }
+            if let Some(payload) = components.remove(old) {
+                components.insert(new.to_owned(), payload);
+            }
+        }
+    }
+    Ok(())
+}
+
+'''
+          marker = '/// Which cell of which grid a normalized rect is, when it is one.\n'
+          if 'fn namespace_components(' not in text:
+              if marker not in text:
+                  raise SystemExit('migration function anchor not found')
+              text = text.replace(marker, function + marker, 1)
+          migration.write_text(text)
+
+          changelog = Path('CHANGELOG.md')
+          if changelog.exists():
+              text = changelog.read_text()
+              marker = '## [Unreleased]\n'
+              entry = '- Namespace subsystem-owned scene components and add lossless scene format 4 → 5 migration for existing projects.\n'
+              if marker in text and entry not in text:
+                  changelog.write_text(text.replace(marker, marker + '\n' + entry, 1))
+
+          Path('.github/workflows/namespace-refactor.yml').unlink()
+          PY
+
+          cargo fmt --all
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Namespace built-in scene components"
+          git push origin HEAD:component/namespaces
+
+      - name: Verify refactor
+        run: cargo test --workspace --all-targets
