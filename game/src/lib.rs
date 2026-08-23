@@ -27,9 +27,9 @@ use std::time::Duration;
 use sindri_assets::{
     AssetBytes, AssetDecoder, AudioAssetDecoder, FontAssetDecoder, TextureAssetDecoder,
 };
-use sindri_core::{ComponentSchemaRegistry, World};
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_core::{AssetId, FixedStepConfig, SceneDocument, SpriteSheetDocument, sheet_id_for};
+use sindri_core::{ComponentSchemaRegistry, World};
 use sindri_decay::{AudioCommand, ScriptComponent, ScriptSources, Scripts};
 use sindri_desktop::WindowConfig;
 #[cfg(not(target_arch = "wasm32"))]
@@ -41,12 +41,12 @@ use sindri_platform::{
 };
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_platform::{AudioClip, EngineHost, InputEvent, Key};
-use sindri_render::{FrameEncodeError, TextureError};
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_render::{
     DepthTarget, FrameRenderers, FrameTarget, SpriteBatchRenderer, TextRenderer, Texture2D,
     TextureRegistry, TexturedCubeRenderer, Viewport, encode_prepared_frame,
 };
+use sindri_render::{FrameEncodeError, TextureError};
 use sindri_scene::{AudioSourceComponent, SceneExtractor, SheetBindError, SpriteAnimations};
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_scene::{CameraView, TextureBindings};
