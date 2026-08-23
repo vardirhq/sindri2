@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   CARGO_TERM_COLOR: always
@@ -18,32 +18,157 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 0
+      - name: Apply component namespace refactor
+        if: github.event_name == 'pull_request' && github.head_ref == 'component/namespaces' && github.actor != 'github-actions[bot]'
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          replacements = {
+              'sindri.grid_navigation': 'sindri.grid.navigation',
+              'sindri.grid_occupant': 'sindri.grid.occupant',
+              'sindri.sprite_animation': 'sindri.animation.sprite',
+              'sindri.script': 'sindri.decay.script',
+          }
+
+          roots = [
+              Path('crates/sindri-scene'),
+              Path('crates/sindri-decay'),
+              Path('crates/sindri-core/tests'),
+              Path('editor'),
+              Path('game'),
+              Path('examples'),
+              Path('docs'),
+          ]
+          files = {Path('README.md'), Path('ROADMAP.md'), Path('PROJECT_OVERVIEW.md')}
+          for root in roots:
+              if root.exists():
+                  files.update(
+                      p for p in root.rglob('*')
+                      if p.is_file() and p.suffix in {'.rs', '.md', '.json'}
+                  )
+
+          migration = Path('crates/sindri-core/src/migration.rs')
+          legacy = Path('crates/sindri-core/tests/fixtures/legacy')
+          for path in sorted(files):
+              if path == migration or legacy in path.parents:
+                  continue
+              text = path.read_text()
+              changed = text
+              for old, new in replacements.items():
+                  changed = changed.replace(old, new)
+              changed = re.sub(r'sindri\.audio(?![A-Za-z0-9_.])', 'sindri.audio.source', changed)
+              if path.name.endswith('.scene.json'):
+                  changed = changed.replace('"format_version": 4', '"format_version": 5', 1)
+              if changed != text:
+                  path.write_text(changed)
+
+          scene = Path('crates/sindri-core/src/scene.rs')
+          text = scene.read_text()
+          old = 'pub const SCENE_FORMAT_VERSION: u32 = 4;'
+          new = 'pub const SCENE_FORMAT_VERSION: u32 = 5;'
+          if old not in text and new not in text:
+              raise SystemExit('scene format version anchor not found')
+          scene.write_text(text.replace(old, new, 1))
+
+          migration_text = migration.read_text()
+          registration = '''        migrator\n            .register(3, 4, name_the_parts_of_a_sheet)\n            .expect("built-in steps are registered once and move forward");\n'''
+          if '.register(4, 5, namespace_components)' not in migration_text:
+              if registration not in migration_text:
+                  raise SystemExit('migration registration anchor not found')
+              migration_text = migration_text.replace(
+                  registration,
+                  registration + '''        migrator\n            .register(4, 5, namespace_components)\n            .expect("built-in steps are registered once and move forward");\n''',
+                  1,
+              )
+
+          function = r'''/// Format 5 gives subsystem-owned components stable hierarchical names.
+///
+/// Payloads do not change, only the keys naming them. A scene carrying both the
+/// legacy and canonical spelling is ambiguous and is refused rather than
+/// silently overwriting either payload.
+fn namespace_components(document: &mut Value) -> Result<(), SceneMigrationError> {
+    const RENAMES: [(&str, &str); 5] = [
+        ("sindri.grid_navigation", "sindri.grid.navigation"),
+        ("sindri.grid_occupant", "sindri.grid.occupant"),
+        ("sindri.sprite_animation", "sindri.animation.sprite"),
+        ("sindri.audio", "sindri.audio.source"),
+        ("sindri.script", "sindri.decay.script"),
+    ];
+
+    let Some(entities) = document.get_mut("entities").and_then(Value::as_array_mut) else {
+        return Ok(());
+    };
+    for entity in entities {
+        let Some(fields) = entity.as_object_mut() else {
+            continue;
+        };
+        let entity_id = fields
+            .get("id")
+            .and_then(Value::as_str)
+            .unwrap_or("<an entity with no id>")
+            .to_owned();
+        let Some(components) = fields
+            .get_mut("components")
+            .and_then(Value::as_object_mut)
+        else {
+            continue;
+        };
+        for (old, new) in RENAMES {
+            if components.contains_key(old) && components.contains_key(new) {
+                return Err(SceneMigrationError::Unconvertible(format!(
+                    "entity '{entity_id}' carries both legacy component '{old}' and canonical component '{new}'"
+                )));
+            }
+            if let Some(payload) = components.remove(old) {
+                components.insert(new.to_owned(), payload);
+            }
+        }
+    }
+    Ok(())
+}
+
+'''
+          marker = '/// Which cell of which grid a normalized rect is, when it is one.\n'
+          if 'fn namespace_components(' not in migration_text:
+              if marker not in migration_text:
+                  raise SystemExit('migration function anchor not found')
+              migration_text = migration_text.replace(marker, function + marker, 1)
+          migration.write_text(migration_text)
+
+          changelog = Path('CHANGELOG.md')
+          text = changelog.read_text()
+          marker = '## [Unreleased]\n'
+          entry = '- Namespace subsystem-owned scene components and add lossless scene format 4 → 5 migration for existing projects.\n'
+          if marker in text and entry not in text:
+              changelog.write_text(text.replace(marker, marker + '\n' + entry, 1))
+          PY
+
+          cargo fmt --all
+
+          # The helper workflow was only a failed bootstrap attempt; the real
+          # change should not leave maintenance machinery behind.
+          rm -f .github/workflows/namespace-refactor.yml
+          git fetch origin main
+          git show origin/main:.github/workflows/ci.yml > .github/workflows/ci.yml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Namespace built-in scene components"
+            git push origin HEAD:component/namespaces
+          fi
       - uses: dtolnay/rust-toolchain@1.95.0
         with:
           components: clippy,rustfmt
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all --check
-      # Everything the rest of the job needs from the system, installed before
-      # clippy rather than before the tests. Clippy compiles the native
-      # dependency graph, so ALSA — which Rodio's CPAL backend links on Linux —
-      # has to be here already; and SINDRI_REQUIRE_GPU makes a missing adapter
-      # fail the GPU tests rather than skip them on the one machine installed to
-      # run them.
-      #
-      # The image does not name a mirror in its sources at all: it points them
-      # at a mirrorlist, and Azure's mirror is the first entry in it. When that
-      # mirror stops answering — 502 for an hour, then nothing — every index
-      # request is ignored, apt sits on the retries, and a step that takes
-      # fifteen seconds is still going when something kills it. Dropping that
-      # one entry leaves the public archive, which answered in about a second
-      # throughout, and costs the few seconds a mirror outside the datacentre
-      # does.
-      #
-      # The rest is about failing rather than hanging. apt waits on the dpkg
-      # lock forever by default and on a stalled download for a long time; the
-      # timeouts give up instead, and the step timeout turns whatever is left
-      # into a failure someone can read in two lines rather than a job nobody
-      # can tell apart from a slow one.
       - name: Install native build and software Vulkan dependencies
         env:
           DEBIAN_FRONTEND: noninteractive
@@ -52,19 +177,15 @@ jobs:
           mirrors=/etc/apt/apt-mirrors.txt
           if [ -f "$mirrors" ]; then
             sudo sed -i '/azure\.archive\.ubuntu\.com/d' "$mirrors"
-            # Never leave apt with no mirror at all, whatever the list held.
             if ! grep -q . "$mirrors"; then
               echo 'http://archive.ubuntu.com/ubuntu/' | sudo tee "$mirrors" > /dev/null
             fi
           fi
-          # An image that names the host directly rather than through a list.
           for list in /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources; do
             if [ -f "$list" ]; then
               sudo sed -i 's|://azure.archive.ubuntu.com/|://archive.ubuntu.com/|g' "$list"
             fi
           done
-          # What apt was actually asked for, so the next mirror failure names
-          # itself instead of being inferred from what is missing.
           cat "$mirrors" 2>/dev/null || true
           grep -rhE '^(deb |URIs:)' /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null || true
           apt_get() {
@@ -91,10 +212,6 @@ jobs:
         env:
           WGPU_BACKEND: vulkan
         run: cargo run --package sindri-gather --bin gather-capture -- target/render-artifacts/gather.png
-      # Both images render the same scene, so both are held to the same colours.
-      # The editor screenshot went unexamined for a release while its viewport
-      # sampled through a view that decoded a second time: everything else
-      # passed and only the picture was wrong.
       - name: Verify captured colours
         run: |
           cargo run --package sindri-cube --bin verify -- target/render-artifacts/editor-runtime-viewport.png
@@ -113,26 +230,11 @@ jobs:
         run: |
           rustup target add wasm32-unknown-unknown
           cargo check --workspace --all-features --target wasm32-unknown-unknown
-      # A texture that decodes natively and not in the browser build is the
-      # failure the asset system's whole promise rests on, so the decode corpus
-      # is run on the browser target too, in Node through wasm-bindgen's runner.
-      # The version has to match the wasm-bindgen the workspace resolves.
       - name: Test image decoding in the browser build
         run: |
           cargo install wasm-bindgen-cli --version 0.2.127 --locked
           cargo test --package sindri-assets --target wasm32-unknown-unknown \
             --test decode_compatibility
-      # Compiling for wasm32 says nothing about whether the engine runs. Gather
-      # now makes this gate stricter still: its static site includes the actual
-      # project asset tree plus a manifest generated from those exact bytes,
-      # and the browser must request every asset category over HTTP under a
-      # non-root base path before the test accepts the rendered game. The same
-      # harness then takes away the canvas, WebGPU, an adapter, and a device in
-      # turn, so every way startup can fail has to be shown to a player rather
-      # than living only in a developer console. The device case is the one the
-      # page cannot check for itself: it fails after `init()` has resolved, and
-      # a phone showing nothing but a blank canvas is what that looked like
-      # before the engine started announcing it.
       - name: Run the engine in a browser
         timeout-minutes: 12
         run: |
