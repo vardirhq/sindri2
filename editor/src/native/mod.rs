@@ -2,13 +2,12 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     f32::consts::TAU,
     path::{Path, PathBuf},
-    sync::Arc,
 };
 
 use eframe::{
     egui::{
-        self, Align, Align2, Color32, FontData, FontFamily, FontId, Layout, Pos2, Rect, Response,
-        RichText, Sense, Shape, Stroke, StrokeKind, TextStyle, Vec2,
+        self, Align, Align2, Color32, FontId, Layout, Pos2, Rect, Response, RichText, Sense, Shape,
+        Stroke, StrokeKind, Vec2,
     },
     wgpu,
 };
@@ -19,8 +18,8 @@ use egui_material_icons::{
         ICON_DELETE, ICON_DEPLOYED_CODE, ICON_DESCRIPTION, ICON_FOLDER, ICON_GRID_4X4,
         ICON_GRID_VIEW, ICON_IMAGE, ICON_KEYBOARD_ARROW_DOWN, ICON_KEYBOARD_ARROW_RIGHT,
         ICON_LABEL, ICON_MOVE, ICON_OPEN_WITH, ICON_PAUSE, ICON_PLAY_ARROW, ICON_REDO,
-        ICON_REFRESH, ICON_ROTATE_RIGHT, ICON_SCALE, ICON_SEARCH, ICON_SELECT, ICON_STOP,
-        ICON_UNDO, ICON_VIEW_IN_AR, ICON_VIEW_LIST,
+        ICON_REFRESH, ICON_ROTATE_RIGHT, ICON_SCALE, ICON_SELECT, ICON_STOP, ICON_UNDO,
+        ICON_VIEW_IN_AR, ICON_VIEW_LIST,
     },
 };
 use glam::{EulerRot, Mat4, Quat, Vec2 as GlamVec2, Vec3};
@@ -59,26 +58,18 @@ use crate::{
     },
 };
 
-const INTER_FONT: &[u8] = include_bytes!("../assets/Inter.ttf");
+mod theme;
+
+use theme::{
+    ACCENT, ACCENT_BRIGHT, ACCENT_SOFT, APP_BG, BORDER, BORDER_SUBTLE, FIELD_BG, PANEL_BG,
+    PANEL_RAISED, PROBLEM, SUCCESS, TEXT, TEXT_FAINT, TEXT_MUTED, TOP_BG, configure_theme,
+    icon_button, panel_title, property_label, property_toggle, search_field, section_header,
+    status_dot, view_title,
+};
+
 const TEXT_COMPONENT: &str = "sindri.text";
 const GRID_NAVIGATION_COMPONENT: &str = GridNavigationComponent::TYPE_NAME;
 const GRID_OCCUPANT_COMPONENT: &str = GridOccupantComponent::TYPE_NAME;
-const ACCENT: Color32 = Color32::from_rgb(246, 169, 35);
-/// What a panel says something is wrong in, matching the console's errors.
-const PROBLEM: Color32 = Color32::from_rgb(255, 138, 148);
-const ACCENT_BRIGHT: Color32 = Color32::from_rgb(255, 187, 54);
-const ACCENT_SOFT: Color32 = Color32::from_rgb(59, 45, 20);
-const APP_BG: Color32 = Color32::from_rgb(9, 12, 16);
-const TOP_BG: Color32 = Color32::from_rgb(12, 15, 19);
-const PANEL_BG: Color32 = Color32::from_rgb(15, 19, 23);
-const PANEL_RAISED: Color32 = Color32::from_rgb(19, 24, 29);
-const FIELD_BG: Color32 = Color32::from_rgb(12, 16, 20);
-const BORDER: Color32 = Color32::from_rgb(39, 46, 53);
-const BORDER_SUBTLE: Color32 = Color32::from_rgb(29, 35, 41);
-const TEXT: Color32 = Color32::from_rgb(224, 228, 231);
-const TEXT_MUTED: Color32 = Color32::from_rgb(143, 151, 159);
-const TEXT_FAINT: Color32 = Color32::from_rgb(92, 101, 110);
-const SUCCESS: Color32 = Color32::from_rgb(98, 202, 122);
 const INITIAL_VIEWPORT_WIDTH: u32 = 960;
 const INITIAL_VIEWPORT_HEIGHT: u32 = 540;
 
@@ -2741,47 +2732,6 @@ impl eframe::App for EditorApp {
     }
 }
 
-fn configure_theme(context: &egui::Context) {
-    let mut fonts = egui::FontDefinitions::default();
-    fonts.font_data.insert(
-        "inter".to_owned(),
-        Arc::new(FontData::from_static(INTER_FONT)),
-    );
-    fonts
-        .families
-        .entry(FontFamily::Proportional)
-        .or_default()
-        .insert(0, "inter".to_owned());
-    context.set_fonts(fonts);
-    egui_material_icons::initialize(context);
-    context.set_theme(egui::Theme::Dark);
-    context.all_styles_mut(|style| {
-        style.spacing.item_spacing = Vec2::new(7.0, 6.0);
-        style.spacing.button_padding = Vec2::new(8.0, 4.0);
-        style.spacing.interact_size.y = 26.0;
-        style
-            .text_styles
-            .insert(TextStyle::Body, FontId::new(13.0, FontFamily::Proportional));
-        style.text_styles.insert(
-            TextStyle::Button,
-            FontId::new(12.0, FontFamily::Proportional),
-        );
-        style.visuals.panel_fill = PANEL_BG;
-        style.visuals.window_fill = PANEL_RAISED;
-        style.visuals.extreme_bg_color = FIELD_BG;
-        style.visuals.faint_bg_color = PANEL_RAISED;
-        style.visuals.selection.bg_fill = ACCENT_SOFT;
-        style.visuals.selection.stroke = Stroke::new(1.0, ACCENT);
-        style.visuals.widgets.inactive.bg_fill = PANEL_RAISED;
-        style.visuals.widgets.inactive.bg_stroke = Stroke::new(1.0, BORDER);
-        style.visuals.widgets.inactive.fg_stroke = Stroke::new(1.0, TEXT_MUTED);
-        style.visuals.widgets.hovered.bg_fill = Color32::from_rgb(25, 31, 37);
-        style.visuals.widgets.hovered.bg_stroke = Stroke::new(1.0, Color32::from_rgb(55, 65, 74));
-        style.visuals.widgets.active.bg_fill = ACCENT_SOFT;
-        style.visuals.widgets.active.bg_stroke = Stroke::new(1.0, ACCENT);
-    });
-}
-
 #[allow(
     clippy::cast_possible_truncation,
     clippy::cast_precision_loss,
@@ -2789,41 +2739,6 @@ fn configure_theme(context: &egui::Context) {
 )]
 fn physical_viewport_dimension(points: f32, scale: f32) -> u32 {
     (points * scale).round().clamp(1.0, u32::MAX as f32) as u32
-}
-
-/// A panel's heading.
-///
-/// Actions live beneath the heading rather than being smuggled into this
-/// shared decoration. The hierarchy's create menu, for example, now has both
-/// an undoable spawn command and stable authored IDs behind it.
-fn panel_title(ui: &mut egui::Ui, title: &str) {
-    ui.add_space(4.0);
-    ui.horizontal(|ui| {
-        ui.add_space(8.0);
-        ui.label(RichText::new(title).strong().size(12.0).color(TEXT));
-    });
-    ui.add_space(3.0);
-    ui.separator();
-}
-
-fn search_field(ui: &mut egui::Ui, value: &mut String, hint: &str) {
-    ui.add_space(6.0);
-    ui.horizontal(|ui| {
-        ui.add_space(8.0);
-        ui.label(
-            ICON_SEARCH
-                .outlined()
-                .rich_text()
-                .size(15.0)
-                .color(TEXT_FAINT),
-        );
-        ui.add_sized(
-            [ui.available_width() - 10.0, 28.0],
-            egui::TextEdit::singleline(value)
-                .hint_text(hint)
-                .frame(egui::Frame::NONE),
-        );
-    });
 }
 
 /// The root the hierarchy hangs from.
@@ -3289,16 +3204,6 @@ fn slice_preview(ui: &mut egui::Ui, slicer: &mut Slicer) {
     }
 }
 
-fn section_header(ui: &mut egui::Ui, icon: MaterialIcon, title: &str) {
-    ui.add_space(4.0);
-    ui.separator();
-    ui.horizontal(|ui| {
-        ui.add_space(10.0);
-        ui.label(icon.outlined().rich_text().size(16.0).color(ACCENT));
-        ui.label(RichText::new(title).strong().size(12.0).color(TEXT));
-    });
-}
-
 fn transform_3d_section(ui: &mut egui::Ui, transform: &mut Transform3D) {
     section_header(ui, ICON_OPEN_WITH, "Transform");
     // The Z drag is taken away rather than left to fail: the command layer
@@ -3324,29 +3229,6 @@ fn transform_3d_section(ui: &mut egui::Ui, transform: &mut Transform3D) {
     }
     vector_row(ui, "Scale", &mut transform.scale, false);
     property_toggle(ui, "Z lock", &mut transform.z_locked, "Locked", "Free");
-}
-
-/// A property row whose value is a choice rather than a readout.
-///
-/// Shaped like [`property_label`] because it sits among those rows, and reading
-/// as a label until you notice it responds is the point: what it says is the
-/// state, and pressing it is how the state changes.
-fn property_toggle(ui: &mut egui::Ui, label: &str, value: &mut bool, on: &str, off: &str) {
-    ui.horizontal(|ui| {
-        ui.add_space(10.0);
-        ui.label(RichText::new(label).size(11.0).color(TEXT_MUTED));
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.add_space(7.0);
-            let text = if *value { on } else { off };
-            let color = if *value { ACCENT } else { TEXT_MUTED };
-            if ui
-                .selectable_label(*value, RichText::new(text).size(11.0).color(color))
-                .clicked()
-            {
-                *value = !*value;
-            }
-        });
-    });
 }
 
 /// Stateful authoring surfaces shared across component sections.
@@ -4601,17 +4483,6 @@ fn add_component_button(ui: &mut egui::Ui, addable: &[ComponentMetadata]) -> Opt
     chosen
 }
 
-fn property_label(ui: &mut egui::Ui, label: &str, value: &str) {
-    ui.horizontal(|ui| {
-        ui.add_space(10.0);
-        ui.label(RichText::new(label).size(11.0).color(TEXT_MUTED));
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.add_space(7.0);
-            ui.label(RichText::new(value).size(11.0).color(TEXT));
-        });
-    });
-}
-
 /// Three drags for a vector, with the last one optionally taken away.
 ///
 /// `lock_z` is what a transform that declares its Z locked looks like here: the
@@ -5130,17 +5001,6 @@ fn lifecycle_label(state: EngineState) -> &'static str {
     }
 }
 
-/// The name above a view when both are on screen at once.
-///
-/// A label rather than a tab: in this layout the view is already visible, so a
-/// control that selects it would do nothing.
-fn view_title(ui: &mut egui::Ui, label: &str) {
-    ui.horizontal(|ui| {
-        ui.add_space(10.0);
-        ui.label(RichText::new(label).size(12.0).color(TEXT));
-    });
-}
-
 fn workspace_tab(ui: &mut egui::Ui, current: &mut WorkspaceTab, value: WorkspaceTab, label: &str) {
     if ui
         .add(
@@ -5197,34 +5057,6 @@ fn projection_button(
     {
         *current = value;
     }
-}
-
-fn icon_button(ui: &mut egui::Ui, icon: MaterialIcon, selected: bool, tip: &str) -> Response {
-    ui.add_sized(
-        [28.0, 28.0],
-        egui::Button::new(icon.outlined().rich_text().size(17.0).color(if selected {
-            ACCENT_BRIGHT
-        } else {
-            TEXT_MUTED
-        }))
-        .selected(selected)
-        .fill(if selected { ACCENT_SOFT } else { PANEL_RAISED })
-        .stroke(Stroke::new(
-            1.0,
-            if selected { ACCENT } else { BORDER_SUBTLE },
-        )),
-    )
-    .on_hover_text(tip)
-}
-
-/// Draws a small status dot.
-///
-/// The bundled Inter subset carries 192 glyphs and has no `U+25CF`, so a text
-/// bullet renders as a missing-glyph box rather than a dot. Painting it keeps
-/// the indicator independent of font coverage.
-fn status_dot(ui: &mut egui::Ui, color: Color32) {
-    let (response, painter) = ui.allocate_painter(Vec2::splat(9.0), Sense::hover());
-    painter.circle_filled(response.rect.center(), 3.0, color);
 }
 
 fn transport_icon(
