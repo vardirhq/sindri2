@@ -27,8 +27,8 @@ use glam::{EulerRot, Mat4, Quat, Vec2 as GlamVec2, Vec3};
 use serde_json::Value;
 use sindri_core::{
     CommandBuffer, CommandHistory, ComponentMetadata, ComponentSchemaRegistry, EngineLifecycle,
-    EngineState, EntityData, EntityId, FixedStepConfig, SceneDocument, SceneEntityId, SpriteRef,
-    Transform3D, UnknownComponentPolicy, World, WorldCommand,
+    EngineState, EntityData, EntityId, FixedStepConfig, SceneComponent, SceneDocument,
+    SceneEntityId, SpriteRef, Transform3D, UnknownComponentPolicy, World, WorldCommand,
 };
 use sindri_decay::{ScriptComponent, ScriptValue};
 use sindri_render::{
@@ -36,7 +36,8 @@ use sindri_render::{
     ViewportTarget, encode_prepared_frame,
 };
 use sindri_scene::{
-    CameraView, SceneExtractor, SpriteAnimations, SpriteSpace, ViewCamera, WorldProjection,
+    CameraView, GridNavigationComponent, GridOccupantComponent, SceneExtractor, SpriteAnimations,
+    SpriteSpace, ViewCamera, WorldProjection,
 };
 
 use crate::{
@@ -60,8 +61,8 @@ use crate::{
 
 const INTER_FONT: &[u8] = include_bytes!("../assets/Inter.ttf");
 const TEXT_COMPONENT: &str = "sindri.text";
-const GRID_NAVIGATION_COMPONENT: &str = "sindri.grid_navigation";
-const GRID_OCCUPANT_COMPONENT: &str = "sindri.grid_occupant";
+const GRID_NAVIGATION_COMPONENT: &str = GridNavigationComponent::TYPE_NAME;
+const GRID_OCCUPANT_COMPONENT: &str = GridOccupantComponent::TYPE_NAME;
 const ACCENT: Color32 = Color32::from_rgb(246, 169, 35);
 /// What a panel says something is wrong in, matching the console's errors.
 const PROBLEM: Color32 = Color32::from_rgb(255, 138, 148);
@@ -3396,7 +3397,7 @@ fn components_sections(
             "sindri.mesh" => ICON_VIEW_IN_AR,
             "sindri.script" => ICON_CODE,
             "sindri.text" => ICON_LABEL,
-            "sindri.sprite_animation" => ICON_PLAY_ARROW,
+            "sindri.animation.sprite" => ICON_PLAY_ARROW,
             "sindri.tilemap" => ICON_GRID_VIEW,
             _ => ICON_DEPLOYED_CODE,
         };
@@ -6213,7 +6214,7 @@ mod tests {
         assert!(offered.contains(&"sindri.sprite".to_owned()));
         assert!(offered.contains(&TEXT_COMPONENT.to_owned()));
         assert!(
-            !offered.contains(&"sindri.sprite_animation".to_owned()),
+            !offered.contains(&animation::TYPE_NAME.to_owned()),
             "and not one with no sensible blank, which the engine would refuse"
         );
     }

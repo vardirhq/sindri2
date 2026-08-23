@@ -160,7 +160,7 @@ mod tests {
     }
 
     /// Everything without a safe editor is shown and left alone, rather than
-    /// offered a text field that could turn a scene into something that will not load.
+    /// offered a text field that could turn a scene into one that will not load.
     #[test]
     fn what_cannot_be_edited_safely_is_opaque() {
         assert_eq!(value_kind(&json!(null)), ValueKind::Opaque);
