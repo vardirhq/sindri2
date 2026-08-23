@@ -138,10 +138,17 @@ removal/reuse through generation-checked `EntityId`s, and the crate passes the
 workspace's native and WASM checks.
 
 A parallel Sindri-owned 3D body/collider data model already fixes the public
-shape of the later 3D slice, but no 3D runtime behavior is claimed yet. Scene
-components, editor authoring, Decay access, and Gather use are also still
-missing; those are separate feature-track slices in `docs/physics.md` rather
-than things this foundation pretends to have completed.
+shape of the later 3D slice, but no 3D runtime behavior is claimed yet.
+
+`sindri.physics2d.rigid_body` and `sindri.physics2d.collider` are registered
+scene components with defaults the engine accepts, so a scene authors bodies and
+colliders and the editor's generic component inspector adds and edits them. What
+the editor does not have is physics-specific authoring: no collider outline in
+the viewport, no handles for a shape, and nothing that shows a body's kind
+without reading the payload. Decay access and Gather use are still missing
+entirely, so nothing yet plays a scene whose bodies move. Those remain separate
+feature-track slices in `docs/physics.md` rather than things this foundation
+pretends to have completed.
 
 ### Grid geometry
 
