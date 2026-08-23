@@ -568,7 +568,7 @@ mod tests {
                             }),
                         ),
                         (
-                            "sindri.grid_navigation".to_owned(),
+                            "sindri.grid.navigation".to_owned(),
                             serde_json::json!({ "walls": [] }),
                         ),
                     ]
@@ -582,7 +582,7 @@ mod tests {
                         ..Transform3D::default()
                     }),
                     components: [(
-                        "sindri.grid_occupant".to_owned(),
+                        "sindri.grid.occupant".to_owned(),
                         serde_json::json!({
                             "grid": grid_name,
                             "footprint": [[0, 0]]
