@@ -78,7 +78,7 @@ fn a_snapshot_derives_footprints_and_walls_from_authored_components() {
         [
             ("sindri.tilemap", tilemap(4, 3)),
             (
-                "sindri.grid_navigation",
+                "sindri.grid.navigation",
                 json!({ "walls": [{ "first": [1, 1], "second": [1, 2] }] }),
             ),
         ],
@@ -94,7 +94,7 @@ fn a_snapshot_derives_footprints_and_walls_from_authored_components() {
         "actor",
         Some([14.5, 23.0, 7.0]),
         [(
-            "sindri.grid_occupant",
+            "sindri.grid.occupant",
             json!({
                 "grid": "floor",
                 "footprint": [[0, 0], [1, 0]]
@@ -136,12 +136,12 @@ fn path_queries_apply_occupancy_and_walls_together() {
     let actor = entity(
         "actor",
         Some([0.5, -0.5, 0.0]),
-        [("sindri.grid_occupant", json!({ "grid": "floor" }))],
+        [("sindri.grid.occupant", json!({ "grid": "floor" }))],
     );
     let blocker = entity(
         "blocker",
         Some([1.5, -0.5, 0.0]),
-        [("sindri.grid_occupant", json!({ "grid": "floor" }))],
+        [("sindri.grid.occupant", json!({ "grid": "floor" }))],
     );
     let open = world(vec![open_floor, actor.clone(), blocker.clone()]);
     let open_navigation =
@@ -165,7 +165,7 @@ fn path_queries_apply_occupancy_and_walls_together() {
         [
             ("sindri.tilemap", tilemap(4, 2)),
             (
-                "sindri.grid_navigation",
+                "sindri.grid.navigation",
                 json!({ "walls": [{ "first": [0, 0], "second": [0, 1] }] }),
             ),
         ],
@@ -203,12 +203,12 @@ fn one_explicit_grid_does_not_collect_another_grids_occupants() {
     let first_actor = entity(
         "first_actor",
         Some([0.5, -0.5, 0.0]),
-        [("sindri.grid_occupant", json!({ "grid": "first_grid" }))],
+        [("sindri.grid.occupant", json!({ "grid": "first_grid" }))],
     );
     let second_actor = entity(
         "second_actor",
         Some([10.5, -0.5, 0.0]),
-        [("sindri.grid_occupant", json!({ "grid": "second_grid" }))],
+        [("sindri.grid.occupant", json!({ "grid": "second_grid" }))],
     );
     let loaded = world(vec![first_grid, second_grid, first_actor, second_actor]);
     let navigation =
@@ -238,12 +238,12 @@ fn conflicting_authored_placements_are_rejected_as_one_invalid_snapshot() {
     let first = entity(
         "first",
         Some([0.5, -0.5, 0.0]),
-        [("sindri.grid_occupant", json!({ "grid": "floor" }))],
+        [("sindri.grid.occupant", json!({ "grid": "floor" }))],
     );
     let second = entity(
         "second",
         Some([0.5, -0.5, 0.0]),
-        [("sindri.grid_occupant", json!({ "grid": "floor" }))],
+        [("sindri.grid.occupant", json!({ "grid": "floor" }))],
     );
     let loaded = world(vec![floor, first, second]);
 
@@ -264,7 +264,7 @@ fn invalid_authored_wall_endpoints_name_the_wall_and_grid() {
         [
             ("sindri.tilemap", tilemap(2, 2)),
             (
-                "sindri.grid_navigation",
+                "sindri.grid.navigation",
                 json!({ "walls": [{ "first": [0, 0], "second": [1, 1] }] }),
             ),
         ],
