@@ -69,8 +69,8 @@ ordinary explicit types.
 
 The scene components are distinct:
 
-- `sindri.rigid_body_2d`
-- `sindri.rigid_body_3d`
+- `sindri.physics2d.rigid_body`
+- `sindri.physics3d.rigid_body`
 
 They carry Sindri-owned configuration such as body kind, gravity scale, damping,
 and whether rotation is locked. They never serialize Rapier handles, activation
@@ -80,8 +80,8 @@ state, solver state, or backend-specific flags.
 
 The scene components are distinct:
 
-- `sindri.collider_2d`
-- `sindri.collider_3d`
+- `sindri.physics2d.collider`
+- `sindri.physics3d.collider`
 
 The first 2D shapes are box, circle, and capsule. The first 3D shapes are box,
 sphere, and capsule. Shape enums are Sindri types. Dimensions are expressed in
