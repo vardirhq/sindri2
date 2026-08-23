@@ -2,6 +2,12 @@
 
 What the editor actually does, control by control, as of `5661ea6`.
 
+The paths below are that commit's: `editor/src/native.rs` has since become
+`editor/src/native/`, so its line numbers point into a file that no longer
+exists. They are left as they were, because a citation into the code as it was
+is the evidence, and renaming it to a line that means something else would not
+be.
+
 **The finding that mattered: the editor could not edit anything.** Every path
 that writes to the world is behind a selection, and a selection could not be
 made, because the hierarchy row handed back the wrong response object. It was a
