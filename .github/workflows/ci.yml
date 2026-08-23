@@ -122,12 +122,14 @@ jobs:
           cargo install wasm-bindgen-cli --version 0.2.127 --locked
           cargo test --package sindri-assets --target wasm32-unknown-unknown \
             --test decode_compatibility
-      # Compiling for wasm32 says nothing about whether the engine runs. It
-      # compiled for several releases while two faults made every page load fail,
-      # and later while audio could not play a single clip — the surface refused
-      # every canvas, a browser failure was recorded and never reported, and
-      # three clips at a rate no browser decodes were reported as playing. Each
-      # was found by loading the page, so loading the page is a check.
+      # Compiling for wasm32 says nothing about whether the engine runs. Gather
+      # now makes this gate stricter still: its static site includes the actual
+      # project asset tree plus a manifest generated from those exact bytes,
+      # and the browser must request every asset category over HTTP under a
+      # non-root base path before the test accepts the rendered game. The same
+      # harness then removes WebGPU and the configured canvas in turn so those
+      # startup failures must be shown to a player instead of living only in a
+      # developer console.
       - name: Run the engine in a browser
         timeout-minutes: 12
         run: |
@@ -136,8 +138,15 @@ jobs:
           npx --prefix scripts/browser playwright install --with-deps chromium
           wasm-pack build examples/cube --target web --out-dir pkg
           wasm-pack build game --target web --out-dir pkg
+          cargo run --quiet --package sindri-assets --example manifest -- game/assets \
+            > game/assets/sindri.manifest.json
           node scripts/browser/smoke.mjs examples/cube target/render-artifacts/browser-cube.png
-          node scripts/browser/smoke.mjs game target/render-artifacts/browser-gather.png
+          SINDRI_EXPECT_ASSETS=1 SINDRI_BASE_PATH=/sindri2/ \
+            node scripts/browser/smoke.mjs game target/render-artifacts/browser-gather.png
+          SINDRI_EXPECT_FAILURE=webgpu \
+            node scripts/browser/smoke.mjs game target/render-artifacts/browser-no-webgpu.png
+          SINDRI_EXPECT_FAILURE=canvas \
+            node scripts/browser/smoke.mjs game target/render-artifacts/browser-no-canvas.png
       - name: Upload browser captures
         if: always()
         uses: actions/upload-artifact@v4
@@ -146,5 +155,7 @@ jobs:
           path: |
             target/render-artifacts/browser-cube.png
             target/render-artifacts/browser-gather.png
+            target/render-artifacts/browser-no-webgpu.png
+            target/render-artifacts/browser-no-canvas.png
           if-no-files-found: warn
           retention-days: 14

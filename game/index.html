@@ -5,19 +5,56 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Gather</title>
   <style>
-    html, body { margin: 0; height: 100%; background: #12161f; }
+    html, body { margin: 0; height: 100%; background: #12161f; color: #f2f5fb; }
     /* The canvas keeps the game's own aspect and sits in the middle, rather
        than stretching, because a game stretched to a window is a game whose
        author's framing was thrown away. */
-    body { display: grid; place-items: center; }
+    body { display: grid; place-items: center; font-family: system-ui, sans-serif; }
     canvas { display: block; max-width: 100vw; max-height: 100vh; }
+    #sindri-error {
+      display: none;
+      box-sizing: border-box;
+      max-width: 42rem;
+      margin: 2rem;
+      padding: 1.25rem 1.5rem;
+      border: 1px solid #505b72;
+      border-radius: .75rem;
+      background: #1b2230;
+      line-height: 1.5;
+    }
+    #sindri-error[data-visible="true"] { display: block; }
+    #sindri-error strong { display: block; margin-bottom: .35rem; }
   </style>
 </head>
 <body>
   <canvas id="sindri-canvas"></canvas>
+  <div id="sindri-error" role="alert" aria-live="assertive"></div>
   <script type="module">
     import init from "./pkg/sindri_gather.js";
-    init();
+
+    const canvas = document.querySelector("#sindri-canvas");
+    const errorBox = document.querySelector("#sindri-error");
+    const fail = (title, detail) => {
+      canvas?.remove();
+      errorBox.dataset.visible = "true";
+      errorBox.innerHTML = `<strong>${title}</strong>${detail}`;
+    };
+
+    if (!(canvas instanceof HTMLCanvasElement)) {
+      fail("Gather could not start", "The page is missing the #sindri-canvas canvas Sindri was configured to use.");
+    } else if (!navigator.gpu) {
+      fail(
+        "WebGPU is unavailable",
+        "Gather requires a browser and device with WebGPU enabled. Update your browser or check its graphics/WebGPU settings."
+      );
+    } else {
+      try {
+        await init();
+      } catch (error) {
+        console.error(error);
+        fail("Gather could not start", String(error?.message ?? error));
+      }
+    }
   </script>
 </body>
 </html>

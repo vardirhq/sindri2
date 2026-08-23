@@ -28,9 +28,13 @@ jobs:
         run: cargo install wasm-pack --version 0.13.1 --locked
       - name: Build Gather
         run: wasm-pack build game --target web --release --out-dir ../target/pages/pkg
-      - name: Assemble static site
+      - name: Assemble static site and project assets
         run: |
           cp game/index.html target/pages/index.html
+          mkdir -p target/pages/assets
+          cp -R game/assets/. target/pages/assets/
+          cargo run --quiet --package sindri-assets --example manifest -- game/assets \
+            > target/pages/assets/sindri.manifest.json
           touch target/pages/.nojekyll
       - uses: actions/configure-pages@v6
         with:
