@@ -19,6 +19,9 @@ use winit::{
     window::{Window, WindowId},
 };
 
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::{JsCast, closure::Closure};
+
 use crate::{WindowClock, input_event};
 
 /// How the host should open its window.
@@ -145,6 +148,27 @@ pub trait DesktopApp: Sized + 'static {
         Ok(())
     }
 
+    /// Called when the platform suspends the application, such as a browser
+    /// page entering the back-forward cache. Ordinary tab visibility is a
+    /// separate signal because browsers distinguish the two lifecycles.
+    fn suspend(&mut self) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    /// Called after a platform suspension. The host resets its frame timer
+    /// before invoking this hook, so time spent suspended is not delivered as
+    /// one catch-up frame.
+    fn resume(&mut self) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    /// Reports whether the browser document is visible. Native hosts leave this
+    /// at `true`; browser hosts update it from `document.visibilitychange`.
+    fn visibility_changed(&mut self, visible: bool) -> Result<(), Self::Error> {
+        let _ = visible;
+        Ok(())
+    }
+
     /// Encodes and submits one frame. The host presents what this drew into.
     fn render(
         &mut self,
@@ -206,9 +230,50 @@ async fn open_surface(
     Ok((gpu, surface))
 }
 
-/// What the asynchronous startup sends back into the event loop.
+/// What asynchronous platform work sends back into the event loop.
 enum Startup {
     Opened(Result<(GpuContext, WindowSurface), GpuError>),
+    #[cfg(target_arch = "wasm32")]
+    VisibilityChanged(bool),
+}
+
+#[cfg(target_arch = "wasm32")]
+struct VisibilityListener {
+    document: web_sys::Document,
+    _callback: Closure<dyn FnMut()>,
+}
+
+#[cfg(target_arch = "wasm32")]
+impl VisibilityListener {
+    fn new(proxy: EventLoopProxy<Startup>) -> Option<Self> {
+        let document = web_sys::window()?.document()?;
+        let observed = document.clone();
+        let callback = Closure::wrap(Box::new(move || {
+            let visible = !observed.hidden();
+            if proxy
+                .send_event(Startup::VisibilityChanged(visible))
+                .is_err()
+            {
+                log::debug!("visibility changed after the event loop closed");
+            }
+        }) as Box<dyn FnMut()>);
+        document.set_onvisibilitychange(Some(callback.as_ref().unchecked_ref()));
+        Some(Self {
+            document,
+            _callback: callback,
+        })
+    }
+
+    fn visible(&self) -> bool {
+        !self.document.hidden()
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+impl Drop for VisibilityListener {
+    fn drop(&mut self) {
+        self.document.set_onvisibilitychange(None);
+    }
 }
 
 struct Running<A> {
@@ -232,16 +297,32 @@ struct Host<A: DesktopApp> {
     window: Option<Arc<Window>>,
     state: State<A>,
     failure: Option<DesktopError<A::Error>>,
+    page_visible: bool,
+    #[cfg(target_arch = "wasm32")]
+    _visibility_listener: Option<VisibilityListener>,
 }
 
 impl<A: DesktopApp> Host<A> {
     fn new(event_loop: &EventLoop<Startup>, config: WindowConfig) -> Self {
+        let proxy = event_loop.create_proxy();
+        #[cfg(target_arch = "wasm32")]
+        let visibility_listener = VisibilityListener::new(proxy.clone());
+        #[cfg(target_arch = "wasm32")]
+        let page_visible = visibility_listener
+            .as_ref()
+            .is_none_or(VisibilityListener::visible);
+        #[cfg(not(target_arch = "wasm32"))]
+        let page_visible = true;
+
         Self {
             config,
-            proxy: event_loop.create_proxy(),
+            proxy,
             window: None,
             state: State::Waiting,
             failure: None,
+            page_visible,
+            #[cfg(target_arch = "wasm32")]
+            _visibility_listener: visibility_listener,
         }
     }
 
@@ -282,7 +363,6 @@ impl<A: DesktopApp> Host<A> {
 
         #[cfg(target_arch = "wasm32")]
         if let Some(id) = &self.config.canvas_id {
-            use wasm_bindgen::JsCast;
             use winit::platform::web::WindowAttributesExtWebSys;
 
             let canvas = web_sys::window()
@@ -309,6 +389,28 @@ impl<A: DesktopApp> Host<A> {
             window.request_redraw();
         }
         Ok(())
+    }
+
+    fn set_visibility(&mut self, event_loop: &ActiveEventLoop, visible: bool) {
+        self.page_visible = visible;
+        let result = match &mut self.state {
+            State::Running(running) => {
+                if visible {
+                    running.timer.reset();
+                }
+                running.app.visibility_changed(visible)
+            }
+            _ => Ok(()),
+        };
+        if let Err(error) = result {
+            self.fail(event_loop, DesktopError::App(error));
+            return;
+        }
+        if visible
+            && let Some(window) = &self.window
+        {
+            window.request_redraw();
+        }
     }
 
     /// One frame: advance by real elapsed time, then draw if a texture arrives.
@@ -355,6 +457,22 @@ impl<A: DesktopApp> Host<A> {
 
 impl<A: DesktopApp> ApplicationHandler<Startup> for Host<A> {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        if matches!(self.state, State::Running(_)) {
+            let result = match &mut self.state {
+                State::Running(running) => {
+                    running.timer.reset();
+                    running.app.resume()
+                }
+                _ => unreachable!(),
+            };
+            if let Err(error) = result {
+                self.fail(event_loop, DesktopError::App(error));
+            } else if let Some(window) = &self.window {
+                window.request_redraw();
+            }
+            return;
+        }
+
         if !matches!(self.state, State::Waiting) {
             return;
         }
@@ -376,8 +494,29 @@ impl<A: DesktopApp> ApplicationHandler<Startup> for Host<A> {
         });
     }
 
+    fn suspended(&mut self, event_loop: &ActiveEventLoop) {
+        let result = match &mut self.state {
+            State::Running(running) => {
+                running.timer.reset();
+                running.app.suspend()
+            }
+            _ => Ok(()),
+        };
+        if let Err(error) = result {
+            self.fail(event_loop, DesktopError::App(error));
+        }
+    }
+
     fn user_event(&mut self, event_loop: &ActiveEventLoop, event: Startup) {
-        let Startup::Opened(opened) = event;
+        #[cfg(target_arch = "wasm32")]
+        if let Startup::VisibilityChanged(visible) = event {
+            self.set_visibility(event_loop, visible);
+            return;
+        }
+
+        let Startup::Opened(opened) = event else {
+            return;
+        };
         let (gpu, surface) = match opened {
             Ok(parts) => parts,
             Err(error) => return self.fail(event_loop, DesktopError::Gpu(error)),
@@ -389,7 +528,7 @@ impl<A: DesktopApp> ApplicationHandler<Startup> for Host<A> {
             gpu.capabilities.backend
         );
 
-        let app = {
+        let mut app = {
             let context = AppContext {
                 gpu: &gpu,
                 surface: &surface,
@@ -399,6 +538,9 @@ impl<A: DesktopApp> ApplicationHandler<Startup> for Host<A> {
                 Err(error) => return self.fail(event_loop, DesktopError::App(error)),
             }
         };
+        if let Err(error) = app.visibility_changed(self.page_visible) {
+            return self.fail(event_loop, DesktopError::App(error));
+        }
 
         self.state = State::Running(Box::new(Running {
             gpu,
