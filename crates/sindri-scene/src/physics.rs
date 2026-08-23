@@ -12,7 +12,7 @@ use sindri_physics::{Collider2d, RigidBody2d};
 pub struct RigidBody2dComponent(pub RigidBody2d);
 
 impl SceneComponent for RigidBody2dComponent {
-    const TYPE_NAME: &'static str = "sindri.rigid_body_2d";
+    const TYPE_NAME: &'static str = "sindri.physics2d.rigid_body";
 }
 
 /// An authored 2D collider.
@@ -24,7 +24,7 @@ impl SceneComponent for RigidBody2dComponent {
 pub struct Collider2dComponent(pub Collider2d);
 
 impl SceneComponent for Collider2dComponent {
-    const TYPE_NAME: &'static str = "sindri.collider_2d";
+    const TYPE_NAME: &'static str = "sindri.physics2d.collider";
 }
 
 #[cfg(test)]
@@ -49,7 +49,10 @@ mod tests {
         }))
         .unwrap();
 
-        assert_eq!(RigidBody2dComponent::TYPE_NAME, "sindri.rigid_body_2d");
+        assert_eq!(
+            RigidBody2dComponent::TYPE_NAME,
+            "sindri.physics2d.rigid_body"
+        );
         assert_eq!(body.0.kind, RigidBodyKind::Dynamic);
         assert!((body.0.pose.position[0] - 2.0).abs() < f32::EPSILON);
         assert!((body.0.pose.position[1] - 3.0).abs() < f32::EPSILON);
@@ -70,7 +73,7 @@ mod tests {
         }))
         .unwrap();
 
-        assert_eq!(Collider2dComponent::TYPE_NAME, "sindri.collider_2d");
+        assert_eq!(Collider2dComponent::TYPE_NAME, "sindri.physics2d.collider");
         assert!(collider.0.sensor);
         assert_eq!(collider.0.layers.memberships, 2);
         assert_eq!(collider.0.layers.filter, 5);
