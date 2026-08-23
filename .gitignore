@@ -11,3 +11,8 @@ scripts/browser/package-lock.json
 
 # wasm-pack output, which is a build artifact like target/.
 pkg/
+
+# Generated from the asset bytes themselves, by the same step that serves them.
+# Committing it would be a second source of truth that goes stale the moment an
+# asset changes.
+game/assets/sindri.manifest.json
