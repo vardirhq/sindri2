@@ -1,17 +1,8 @@
 // Loads a wasm-pack build in a real browser and reports what happened.
 //
-// The engine compiled for `wasm32` for several releases and CI checked it every
-// time, and nobody had ever loaded the page. Two things were broken the whole
-// while: a failure in a browser was recorded and never reported, because
-// `spawn_app` hands the loop to the page and `run` has already returned; and
-// the surface refused every canvas, because a canvas offers no sRGB format and
-// the engine took that to mean it could not encode. Neither is the kind of
-// thing a compile check finds.
-//
-//   node scripts/browser/smoke.mjs examples/cube out.png
-//
-// Exits non-zero when the page fails to draw, so it can be a check rather than
-// a thing somebody remembers to look at.
+// Compiling wasm proves almost nothing about delivery. This check insists on a
+// configured canvas, settled audio promises, and — when SINDRI_EXPECT_ASSETS is
+// set — real HTTP requests for every kind of project asset Gather needs.
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -19,6 +10,11 @@ import { extname, join, normalize, resolve } from 'node:path';
 
 const ROOT = resolve(process.argv[2] ?? 'examples/cube');
 const SHOT = process.argv[3];
+const EXPECT_ASSETS = process.env.SINDRI_EXPECT_ASSETS === '1';
+let BASE = process.env.SINDRI_BASE_PATH || '/';
+if (!BASE.startsWith('/')) BASE = `/${BASE}`;
+if (!BASE.endsWith('/')) BASE += '/';
+
 const TYPES = {
   '.html': 'text/html',
   '.js': 'text/javascript',
@@ -26,17 +22,24 @@ const TYPES = {
   '.json': 'application/json',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
+  '.ttf': 'font/ttf',
+  '.wav': 'audio/wav',
+  '.ogg': 'audio/ogg',
+  '.mp3': 'audio/mpeg',
 };
 
 const server = createServer(async (request, response) => {
   const path = normalize(decodeURIComponent(new URL(request.url, 'http://x').pathname));
-  // Browsers ask for this whether or not a page mentions one, and a 404 for it
-  // would be reported as a problem with the engine.
-  if (path === '/favicon.ico') {
+  if (path === '/favicon.ico' || path === `${BASE}favicon.ico`) {
     response.writeHead(204).end();
     return;
   }
-  const file = join(ROOT, path === '/' ? 'index.html' : path);
+  if (!path.startsWith(BASE)) {
+    response.writeHead(404).end('outside base path');
+    return;
+  }
+  const relative = path.slice(BASE.length);
+  const file = join(ROOT, relative === '' ? 'index.html' : relative);
   try {
     const body = await readFile(file);
     response.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' });
@@ -48,8 +51,6 @@ const server = createServer(async (request, response) => {
 await new Promise((done) => server.listen(0, done));
 const port = server.address().port;
 
-// WebGPU in a headless browser needs asking for, and over software Vulkan needs
-// asking for twice. `CHROME_PATH` is for environments that ship their own.
 const browser = await chromium.launch({
   executablePath: process.env.CHROME_PATH || undefined,
   args: [
@@ -64,12 +65,6 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
 
-// Audio the engine plays is an element created with `new Audio()` and never
-// appended, so nothing in the DOM shows whether it worked. `play()` hands back
-// a promise, and a browser refusing a clip rejects it rather than throwing —
-// which is how three clips at a sample rate no browser decodes shipped while
-// every test passed. Recording how each promise settles is the only way this
-// check can tell "it played" from "it was asked to".
 await page.addInitScript(() => {
   window.__plays = [];
   const play = HTMLMediaElement.prototype.play;
@@ -90,20 +85,21 @@ await page.addInitScript(() => {
 });
 
 const problems = [];
+const fetchedAssets = new Set();
 page.on('console', (message) => {
   if (message.type() === 'error') problems.push(message.text());
 });
 page.on('pageerror', (error) => problems.push(String(error.message)));
+page.on('request', (request) => {
+  const path = new URL(request.url()).pathname;
+  const marker = `${BASE}assets/`;
+  if (path.startsWith(marker)) fetchedAssets.add(path.slice(marker.length));
+});
 
-await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'load' });
+await page.goto(`http://127.0.0.1:${port}${BASE}`, { waitUntil: 'load' });
 const webgpu = await page.evaluate(() => Boolean(navigator.gpu));
-// Long enough for the device request, which is the only asynchronous part of
-// startup, and for a few frames after it.
 await page.waitForTimeout(6000);
 
-// Browsers refuse audio until a real user gesture, and the engine unlocks on
-// the first key or pointer press. Without one, a page that plays sound looks
-// exactly like a page that has none.
 await page.mouse.click(480, 270);
 await page.keyboard.press('KeyD');
 await page.waitForTimeout(2000);
@@ -114,8 +110,6 @@ const audio = await page.evaluate(() =>
   })),
 );
 
-// A canvas the engine never configured keeps the HTML default of 300x150, which
-// is the difference between "the page loaded" and "the engine started".
 const canvas = await page.evaluate(() => {
   const element = document.querySelector('canvas');
   return element ? { width: element.width, height: element.height } : null;
@@ -125,22 +119,38 @@ await browser.close();
 server.close();
 
 const started = Boolean(canvas) && canvas.width > 300;
-// A page with no sound is not a failure; a page that asked for sound and did
-// not get it is. Playing to zero counts as refused: the promise resolves for a
-// clip that never advances, so the time is what separates the two.
 const refused = audio.filter(
   (record) => record.settled !== 'played' || record.playedTo === 0,
 );
+
+const requiredAssetKinds = [
+  ['manifest', 'sindri.manifest.json'],
+  ['scene', 'gather.scene.json'],
+  ['script', 'scripts/player.decay'],
+  ['texture', 'textures/player.png'],
+  ['sheet', 'textures/player.sheet.json'],
+  ['font', 'fonts/Inter.ttf'],
+  ['audio', 'audio/background.wav'],
+];
+const missingAssets = EXPECT_ASSETS
+  ? requiredAssetKinds.filter(([, asset]) => !fetchedAssets.has(asset))
+  : [];
+
 console.log(`webgpu: ${webgpu ? 'yes' : 'no'}`);
 console.log(`canvas: ${canvas ? `${canvas.width}x${canvas.height}` : 'none'}`);
+console.log(`base path: ${BASE}`);
 console.log(
   audio.length === 0
     ? 'audio: none requested'
     : `audio: ${audio.length - refused.length}/${audio.length} playing`,
 );
+if (EXPECT_ASSETS) console.log(`assets fetched: ${fetchedAssets.size}`);
+for (const [kind, asset] of missingAssets) {
+  console.log(`problem: no HTTP ${kind} request for assets/${asset}`);
+}
 for (const record of refused) console.log(`problem: audio ${record.settled}`);
 for (const problem of problems) console.log(`problem: ${problem}`);
-if (!webgpu || !started || problems.length > 0 || refused.length > 0) {
+if (!webgpu || !started || problems.length > 0 || refused.length > 0 || missingAssets.length > 0) {
   console.log('the page did not start the engine');
   process.exit(1);
 }
