@@ -2,7 +2,9 @@
 //
 // Compiling wasm proves almost nothing about delivery. This check insists on a
 // configured canvas, settled audio promises, and — when SINDRI_EXPECT_ASSETS is
-// set — real HTTP requests for every kind of project asset Gather needs.
+// set — real HTTP requests for every kind of project asset Gather needs. It can
+// also deliberately remove a browser capability to prove the page fails in a
+// way a player can actually read.
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -11,6 +13,7 @@ import { extname, join, normalize, resolve } from 'node:path';
 const ROOT = resolve(process.argv[2] ?? 'examples/cube');
 const SHOT = process.argv[3];
 const EXPECT_ASSETS = process.env.SINDRI_EXPECT_ASSETS === '1';
+const EXPECT_FAILURE = process.env.SINDRI_EXPECT_FAILURE || '';
 let BASE = process.env.SINDRI_BASE_PATH || '/';
 if (!BASE.startsWith('/')) BASE = `/${BASE}`;
 if (!BASE.endsWith('/')) BASE += '/';
@@ -41,7 +44,10 @@ const server = createServer(async (request, response) => {
   const relative = path.slice(BASE.length);
   const file = join(ROOT, relative === '' ? 'index.html' : relative);
   try {
-    const body = await readFile(file);
+    let body = await readFile(file);
+    if (EXPECT_FAILURE === 'canvas' && relative === '') {
+      body = Buffer.from(body.toString().replace('id="sindri-canvas"', 'id="wrong-canvas"'));
+    }
     response.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' });
     response.end(body);
   } catch {
@@ -64,6 +70,15 @@ const browser = await chromium.launch({
   ],
 });
 const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
+
+if (EXPECT_FAILURE === 'webgpu') {
+  await page.addInitScript(() => {
+    Object.defineProperty(Navigator.prototype, 'gpu', {
+      configurable: true,
+      get: () => undefined,
+    });
+  });
+}
 
 await page.addInitScript(() => {
   window.__plays = [];
@@ -97,6 +112,23 @@ page.on('request', (request) => {
 });
 
 await page.goto(`http://127.0.0.1:${port}${BASE}`, { waitUntil: 'load' });
+
+if (EXPECT_FAILURE) {
+  await page.waitForSelector('#sindri-error[data-visible="true"]');
+  const message = await page.locator('#sindri-error').innerText();
+  const expected = EXPECT_FAILURE === 'webgpu' ? 'WebGPU is unavailable' : 'missing the #sindri-canvas';
+  if (SHOT) await page.screenshot({ path: SHOT });
+  await browser.close();
+  server.close();
+  console.log(`expected startup failure: ${message.replaceAll('\n', ' ')}`);
+  if (!message.includes(expected)) {
+    console.log(`problem: expected the failure UI to mention '${expected}'`);
+    process.exit(1);
+  }
+  console.log('the page surfaced the expected startup failure');
+  process.exit(0);
+}
+
 const webgpu = await page.evaluate(() => Boolean(navigator.gpu));
 await page.waitForTimeout(6000);
 
