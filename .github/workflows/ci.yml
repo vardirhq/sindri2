@@ -127,9 +127,12 @@ jobs:
       # project asset tree plus a manifest generated from those exact bytes,
       # and the browser must request every asset category over HTTP under a
       # non-root base path before the test accepts the rendered game. The same
-      # harness then removes WebGPU and the configured canvas in turn so those
-      # startup failures must be shown to a player instead of living only in a
-      # developer console.
+      # harness then takes away the canvas, WebGPU, an adapter, and a device in
+      # turn, so every way startup can fail has to be shown to a player rather
+      # than living only in a developer console. The device case is the one the
+      # page cannot check for itself: it fails after `init()` has resolved, and
+      # a phone showing nothing but a blank canvas is what that looked like
+      # before the engine started announcing it.
       - name: Run the engine in a browser
         timeout-minutes: 12
         run: |
@@ -147,6 +150,10 @@ jobs:
             node scripts/browser/smoke.mjs game target/render-artifacts/browser-no-webgpu.png
           SINDRI_EXPECT_FAILURE=canvas \
             node scripts/browser/smoke.mjs game target/render-artifacts/browser-no-canvas.png
+          SINDRI_EXPECT_FAILURE=adapter \
+            node scripts/browser/smoke.mjs game target/render-artifacts/browser-no-adapter.png
+          SINDRI_EXPECT_FAILURE=device \
+            node scripts/browser/smoke.mjs game target/render-artifacts/browser-no-device.png
       - name: Upload browser captures
         if: always()
         uses: actions/upload-artifact@v4
@@ -157,5 +164,7 @@ jobs:
             target/render-artifacts/browser-gather.png
             target/render-artifacts/browser-no-webgpu.png
             target/render-artifacts/browser-no-canvas.png
+            target/render-artifacts/browser-no-adapter.png
+            target/render-artifacts/browser-no-device.png
           if-no-files-found: warn
           retention-days: 14

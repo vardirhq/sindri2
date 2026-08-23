@@ -182,6 +182,32 @@ pub trait DesktopApp: Sized + 'static {
 /// Returns on native targets once the event loop exits. In a browser the event
 /// loop is handed to the page and this returns immediately, which is the one
 /// place the two targets genuinely differ.
+/// The event name a browser host dispatches on `window` when startup or
+/// gameplay fails.
+///
+/// Public because a page has to listen for something, and a name a page has to
+/// guess is a name that goes stale silently.
+#[cfg(target_arch = "wasm32")]
+pub const FAILURE_EVENT: &str = "sindri:failed";
+
+/// Tells the page a failure happened, with the message that describes it.
+///
+/// Best effort by design. Every step here can fail in a document that is being
+/// torn down, and a failure to report a failure must not become the failure
+/// anyone sees — the log line above has already recorded it either way.
+#[cfg(target_arch = "wasm32")]
+fn announce_failure(message: &str) {
+    let Some(window) = web_sys::window() else {
+        return;
+    };
+    let detail = web_sys::CustomEventInit::new();
+    detail.set_detail(&wasm_bindgen::JsValue::from_str(message));
+    detail.set_bubbles(true);
+    if let Ok(event) = web_sys::CustomEvent::new_with_event_init_dict(FAILURE_EVENT, &detail) {
+        let _ = window.dispatch_event(&event);
+    }
+}
+
 pub fn run<A: DesktopApp>(config: WindowConfig) -> Result<(), DesktopError<A::Error>> {
     let event_loop = EventLoop::with_user_event().build()?;
     let host = Host::<A>::new(&event_loop, config);
@@ -336,8 +362,17 @@ impl<A: DesktopApp> Host<A> {
     /// not logged is a failure that happens in silence. The first time this
     /// engine was loaded in a browser it stopped at the device request and said
     /// nothing at all, which is what this line is for.
+    ///
+    /// A log line is still only half of it, because a player has no console. In
+    /// a browser the failure is also announced as a DOM event, so the page can
+    /// show it. The engine deliberately does not know what that page looks
+    /// like: it names the failure and the page decides what to do with it,
+    /// which is the same arrangement as the canvas it is handed rather than
+    /// creates.
     fn fail(&mut self, event_loop: &ActiveEventLoop, error: DesktopError<A::Error>) {
         log::error!("{error}");
+        #[cfg(target_arch = "wasm32")]
+        announce_failure(&error.to_string());
         if self.failure.is_none() {
             self.failure = Some(error);
         }
