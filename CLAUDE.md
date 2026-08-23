@@ -58,6 +58,11 @@ holds the check that keeps it honest.
 when the editor was pointed at the companion game, what held, and what the tool
 could not do. Session notes age and are allowed to.
 
+`docs/function-matrix.md` is the 30-second Engine / Editor / Script checklist.
+Keep it deliberately terse: a checkmark means the function is implemented and
+exercised on that surface, not merely represented by a type, API, schema, or
+editor control.
+
 `docs/capabilities.md` is the inventory of what actually works, what is drawn in
 the editor but does nothing, and what is missing. Read it before claiming the
 engine or the editor can do something, and update it in the same commit as any
@@ -67,6 +72,12 @@ change that adds, removes, or wires up a capability.
 editor, Decay, and Gather counterparts. Update the affected row whenever a
 feature moves on one surface, so integrations still missing elsewhere do not
 disappear into separate roadmap sections.
+
+When a capability changes, update the relevant documentation in the same commit:
+`docs/function-matrix.md` for the terse status, `docs/capabilities.md` for the
+detailed evidence, `docs/feature-integration-matrix.md` when cross-surface status
+moves, and `CHANGELOG.md` when the behaviour is user-visible. Do not mark a
+surface ✅ until the behaviour is implemented and exercised there.
 
 Project policy lives alongside them: `docs/versioning.md` (crate and scene
 format versions; the editor protocol and any optional browser embedding SDK are
