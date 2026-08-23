@@ -76,10 +76,9 @@ impl BrowserGatherApp {
                 .bind_font(id.as_str(), asset.family(), asset.bytes().to_vec());
         }
 
-        let mut audio = self
-            .audio
-            .take()
-            .ok_or_else(|| GatherError::BrowserAsset("browser audio backend was already moved".into()))?;
+        let mut audio = self.audio.take().ok_or_else(|| {
+            GatherError::BrowserAsset("browser audio backend was already moved".into())
+        })?;
         for (id, asset) in project.audio {
             audio.register(AudioClip::new(
                 id.as_str(),
