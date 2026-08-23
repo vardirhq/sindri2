@@ -161,7 +161,7 @@ impl SceneExtractor {
                 "offset": [0.0, 0.0],
                 "rotation": 0.0,
                 "sensor": false,
-                "layers": { "memberships": 4294967295_u32, "filter": 4294967295_u32 },
+                "layers": { "memberships": 4_294_967_295_u32, "filter": 4_294_967_295_u32 },
                 "friction": 0.5,
                 "restitution": 0.0
             }),
