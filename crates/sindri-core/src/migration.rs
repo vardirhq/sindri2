@@ -403,10 +403,7 @@ fn namespace_components(document: &mut Value) -> Result<(), SceneMigrationError>
             .and_then(Value::as_str)
             .unwrap_or("<an entity with no id>")
             .to_owned();
-        let Some(components) = fields
-            .get_mut("components")
-            .and_then(Value::as_object_mut)
-        else {
+        let Some(components) = fields.get_mut("components").and_then(Value::as_object_mut) else {
             continue;
         };
 
