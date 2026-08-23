@@ -4,7 +4,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use sindri_core::SceneComponent;
 
-/// A Decay script attached to an entity.
+/// A Decay script attached to an entity as `sindri.decay.script`.
 ///
 /// ```json
 /// "sindri.decay.script": {
