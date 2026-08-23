@@ -1,5 +1,5 @@
 {
-  "format_version": 4,
+  "format_version": 5,
   "metadata": {
     "name": "Editor fixture"
   },
@@ -55,7 +55,7 @@
           "texture": "textures/spin.png",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
-        "sindri.sprite_animation": {
+        "sindri.animation.sprite": {
           "clips": {
             "spin": {
               "frames": ["north", "east", "south", "west"],
