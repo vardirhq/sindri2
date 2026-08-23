@@ -773,7 +773,7 @@ fn drawing_without_a_camera_reports_which_one_is_missing() {
     let sprite_only = document(
         r#"
         { "id": "badge", "transform_3d": {},
-          "components": { "sindri.sprite": { "texture": "b" } }"#,
+          "components": { "sindri.sprite": { "texture": "b" } } }"#,
     );
     let world = world_from(&sprite_only);
     assert!(matches!(
@@ -794,7 +794,10 @@ fn an_invalid_camera_distance_is_rejected() {
         SceneExtractor::new().unwrap().extract(
             &world,
             VIEWPORT,
-            CameraView::default(),
+            CameraView {
+                distance_scale: 0.0,
+                ..CameraView::default()
+            },
             &TextureBindings::new(),
         ),
         Err(SceneExtractError::InvalidCameraDistanceScale)
