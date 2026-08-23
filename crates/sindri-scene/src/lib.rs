@@ -11,6 +11,7 @@ mod audio;
 mod components;
 mod extract;
 mod navigation;
+mod physics;
 mod textures;
 
 pub use animation::{AnimationClip, AnimationError, SpriteAnimationComponent, SpriteAnimations};
@@ -22,6 +23,7 @@ pub use components::{
 };
 pub use extract::{CameraView, SceneExtractError, SceneExtractor, ViewCamera, WorldProjection};
 pub use navigation::{GridNavigationError, GridPlacement, WorldGridNavigation};
+pub use physics::{Collider2dComponent, RigidBody2dComponent};
 pub use textures::{
     FONT_NAMING_COMPONENTS, PROCEDURAL_TEXTURES, ProceduralTexture, SheetBindError,
     TEXTURE_NAMING_COMPONENTS, TextureBindings, referenced_fonts, referenced_sheets,
