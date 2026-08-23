@@ -46,3 +46,15 @@ const fn enabled_by_default() -> bool {
 impl SceneComponent for ScriptComponent {
     const TYPE_NAME: &'static str = "sindri.decay.script";
 }
+
+#[cfg(test)]
+mod tests {
+    use sindri_core::SceneComponent;
+
+    use super::ScriptComponent;
+
+    #[test]
+    fn script_has_the_decay_namespace() {
+        assert_eq!(ScriptComponent::TYPE_NAME, "sindri.decay.script");
+    }
+}
