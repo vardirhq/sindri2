@@ -4,10 +4,10 @@ use serde::Deserialize;
 use serde_json::Value;
 use sindri_core::SceneComponent;
 
-/// A Decay script attached to an entity as `sindri.decay.script`.
+/// A Decay script attached to an entity.
 ///
 /// ```json
-/// "sindri.decay.script": {
+/// "sindri.script": {
 ///   "source": "scripts/spin.decay",
 ///   "script": "Spin",
 ///   "properties": { "turns_per_second": 0.5 }
@@ -44,17 +44,5 @@ const fn enabled_by_default() -> bool {
 }
 
 impl SceneComponent for ScriptComponent {
-    const TYPE_NAME: &'static str = "sindri.decay.script";
-}
-
-#[cfg(test)]
-mod tests {
-    use sindri_core::SceneComponent;
-
-    use super::ScriptComponent;
-
-    #[test]
-    fn script_has_the_decay_namespace() {
-        assert_eq!(ScriptComponent::TYPE_NAME, "sindri.decay.script");
-    }
+    const TYPE_NAME: &'static str = "sindri.script";
 }
