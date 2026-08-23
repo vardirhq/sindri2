@@ -347,10 +347,8 @@ impl PhysicsWorld2d {
                 record.kind,
             ));
         }
-        self.backend.bodies[record.body].set_linvel(
-            r2::Vector::new(velocity[0], velocity[1]),
-            true,
-        );
+        self.backend.bodies[record.body]
+            .set_linvel(r2::Vector::new(velocity[0], velocity[1]), true);
         Ok(())
     }
 
@@ -447,7 +445,10 @@ fn body_builder(body: RigidBody2d) -> r2::RigidBodyBuilder {
         RigidBodyKind::KinematicPosition => r2::RigidBodyBuilder::kinematic_position_based(),
         RigidBodyKind::KinematicVelocity => r2::RigidBodyBuilder::kinematic_velocity_based(),
     }
-    .translation(r2::Vector::new(body.pose.position[0], body.pose.position[1]))
+    .translation(r2::Vector::new(
+        body.pose.position[0],
+        body.pose.position[1],
+    ))
     .rotation(body.pose.rotation)
     .linvel(r2::Vector::new(
         body.linear_velocity[0],
@@ -604,11 +605,7 @@ mod tests {
         let player = entity(1);
         let pickup = entity(2);
         world
-            .insert_body(
-                player,
-                RigidBody2d::default(),
-                Collider2d::circle(0.5),
-            )
+            .insert_body(player, RigidBody2d::default(), Collider2d::circle(0.5))
             .unwrap();
         let mut sensor = Collider2d::circle(1.0);
         sensor.sensor = true;
