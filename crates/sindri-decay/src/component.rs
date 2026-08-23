@@ -7,7 +7,7 @@ use sindri_core::SceneComponent;
 /// A Decay script attached to an entity.
 ///
 /// ```json
-/// "sindri.script": {
+/// "sindri.decay.script": {
 ///   "source": "scripts/spin.decay",
 ///   "script": "Spin",
 ///   "properties": { "turns_per_second": 0.5 }
@@ -44,5 +44,5 @@ const fn enabled_by_default() -> bool {
 }
 
 impl SceneComponent for ScriptComponent {
-    const TYPE_NAME: &'static str = "sindri.script";
+    const TYPE_NAME: &'static str = "sindri.decay.script";
 }
