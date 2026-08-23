@@ -1,0 +1,63 @@
+name: Repair PR 111 source
+
+on:
+  push:
+    branches:
+      - component/namespaces
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: component/namespaces
+      - name: Restore extraction tests and remove temporary transport files
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("crates/sindri-scene/tests/extraction.rs")
+          text = path.read_text()
+
+          broken_fixture = '''        { "id": "badge", "transform_3d": {},
+          "components": { "sindri.sprite": { "texture": "b" } }"#,'''
+          fixed_fixture = '''        { "id": "badge", "transform_3d": {},
+          "components": { "sindri.sprite": { "texture": "b" } } }"#,'''
+          if text.count(broken_fixture) != 1:
+              raise SystemExit("expected exactly one malformed sprite-only fixture")
+          text = text.replace(broken_fixture, fixed_fixture, 1)
+
+          broken_distance = '''            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        ),
+        Err(SceneExtractError::InvalidCameraDistanceScale)'''
+          fixed_distance = '''            VIEWPORT,
+            CameraView {
+                distance_scale: 0.0,
+                ..CameraView::default()
+            },
+            &TextureBindings::new(),
+        ),
+        Err(SceneExtractError::InvalidCameraDistanceScale)'''
+          if text.count(broken_distance) != 1:
+              raise SystemExit("expected exactly one damaged invalid-distance test")
+          text = text.replace(broken_distance, fixed_distance, 1)
+          path.write_text(text)
+
+          Path("editor/tests/export_refactor_sources.rs").unlink(missing_ok=True)
+          PY
+
+          git rm .github/workflows/repair-pr111.yml
+          cargo fmt --all
+
+          git config user.name "Sindri CI repair"
+          git config user.email "actions@users.noreply.github.com"
+          git add crates/sindri-scene/tests/extraction.rs editor/tests/export_refactor_sources.rs
+          git commit -m "Restore extraction test intent"
+          git push origin HEAD:component/namespaces
