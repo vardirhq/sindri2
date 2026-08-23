@@ -51,8 +51,10 @@ mod tests {
 
         assert_eq!(RigidBody2dComponent::TYPE_NAME, "sindri.rigid_body_2d");
         assert_eq!(body.0.kind, RigidBodyKind::Dynamic);
-        assert_eq!(body.0.pose.position, [2.0, 3.0]);
-        assert_eq!(body.0.linear_velocity, [4.0, 5.0]);
+        assert!((body.0.pose.position[0] - 2.0).abs() < f32::EPSILON);
+        assert!((body.0.pose.position[1] - 3.0).abs() < f32::EPSILON);
+        assert!((body.0.linear_velocity[0] - 4.0).abs() < f32::EPSILON);
+        assert!((body.0.linear_velocity[1] - 5.0).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -72,11 +74,10 @@ mod tests {
         assert!(collider.0.sensor);
         assert_eq!(collider.0.layers.memberships, 2);
         assert_eq!(collider.0.layers.filter, 5);
-        assert_eq!(
-            collider.0.shape,
-            ColliderShape2d::Box {
-                half_extents: [0.5, 1.0]
-            }
-        );
+        let ColliderShape2d::Box { half_extents } = collider.0.shape else {
+            panic!("expected a box collider");
+        };
+        assert!((half_extents[0] - 0.5).abs() < f32::EPSILON);
+        assert!((half_extents[1] - 1.0).abs() < f32::EPSILON);
     }
 }
