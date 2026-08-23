@@ -125,6 +125,27 @@ produces — cell `n` is called `"n"` — and a migrated scene needs a sheet
 declaring the grid it used to carry. The grid to declare is the one being
 removed, which is why the removal is where it is written down.
 
+### Version 5
+
+Components a subsystem owns are named for that subsystem. `sindri.grid.navigation`
+and `sindri.grid.occupant` replace `sindri.grid_navigation` and
+`sindri.grid_occupant`, `sindri.animation.sprite` replaces
+`sindri.sprite_animation`, and `sindri.audio.source` replaces `sindri.audio`,
+matching the `sindri.physics2d.rigid_body` and `sindri.physics2d.collider` names
+2D physics was introduced with. A key is the only thing that moves: the payload
+under it is carried across untouched, so a format-4 scene holds exactly the
+authored data it held before.
+
+Root-level singletons keep their flat names — `sindri.camera`, `sindri.mesh`,
+`sindri.sprite`, `sindri.text`, `sindri.tilemap`, and `sindri.script` are not
+owned by a subsystem in the same way, and renaming them would churn every scene
+for nothing.
+
+A scene carrying both spellings of one component is the case that is not
+mechanical. The two payloads are different authored data and no choice between
+them is reliably the same scene, so the migration **stops** and names the entity
+and both keys rather than overwriting one of them.
+
 A version increase requires a registered `SceneMigrator` step **before** the new
 version is written anywhere. The migrator enforces the properties that keep a
 chain honest — forward-only, one step per source version, no step targeting an

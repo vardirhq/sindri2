@@ -105,7 +105,7 @@ that records every request without needing a sound device. The shared boundary
 supports one-shot and looping playback plus per-voice stop and global pause,
 resume, and stop.
 
-Scenes can author `sindri.audio` with a logical clip ID, autoplay, looping, and a
+Scenes can author `sindri.audio.source` with a logical clip ID, autoplay, looping, and a
 normalized volume. The generic component inspector can add and edit it, and the
 project browser recognises WAV/Ogg/MP3 files as audio assets. Decay exposes typed
 `Audio.play`, `loop`, `stop_all`, `pause_all`, and `resume_all` calls while only
@@ -117,7 +117,7 @@ looping background music has been observed playing in a real browser through
 What audio does not do yet: nothing gathers the clips a scene names, the way
 `referenced_textures` and `referenced_fonts` do, so a host loads audio from its
 own list and the editor cannot load a scene's audio at all. The editor lists
-audio files and edits `sindri.audio`; it cannot play one.
+audio files and edits `sindri.audio.source`; it cannot play one.
 
 ### Physics
 
@@ -155,8 +155,8 @@ screen coordinate conventions without introducing a renderer dependency.
 `sindri.tilemap` exposes the exact `GridSpace` and `GridBounds` its rendering and
 editor picking use. A map's complete transform is composed around that local
 grid, so moving, rotating, or scaling a map keeps drawn and picked cells in
-agreement. `sindri.grid_navigation` adds authored internal wall edges without
-duplicating those bounds or projection settings, while `sindri.grid_occupant`
+agreement. `sindri.grid.navigation` adds authored internal wall edges without
+duplicating those bounds or projection settings, while `sindri.grid.occupant`
 names its grid by stable scene ID and carries a relative multi-cell footprint.
 `WorldGridNavigation` resolves those references, derives anchors from current
 world transforms, rejects conflicting or invalid placements as one incomplete
@@ -215,7 +215,7 @@ prove the shader honours it. A name no loaded sheet places draws the whole image
 and is reported by `unresolved_sprites`, the same rule an unbound texture
 follows.
 
-Animation reads those names: `sindri.sprite_animation` holds clips of sprite
+Animation reads those names: `sindri.animation.sprite` holds clips of sprite
 names and which one plays, `SpriteAnimations` holds where each sprite has got to,
 and the cursor holds a name rather than a rect so playback does not depend on
 where anything sits in an image. Playback is runtime state, so watching an
@@ -395,7 +395,7 @@ frame.
   and a picker listing project-relative font assets. Existing missing font
   references remain visible and are called out instead of silently replaced
 - **Sprite-sheet and animation authoring.** Selecting a texture opens its image
-  slicer for grid dimensions and cell names. A `sindri.sprite_animation`
+  slicer for grid dimensions and cell names. A `sindri.animation.sprite`
   component then creates, renames, and removes clips from those names, orders
   frames, edits frame time and looping, chooses what plays at runtime, and
   previews the selected clip against the real texture. Preview position is

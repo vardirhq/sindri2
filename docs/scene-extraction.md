@@ -38,7 +38,7 @@ let prepared = scene.extract_frame(engine.world(), viewport, &bindings)?;
 | `sindri.camera` | The world camera (`perspective`) or the overlay camera (`orthographic`) |
 | `sindri.mesh` | One opaque pass per mesh, at the mesh's render layer |
 | `sindri.sprite` | One batched pass per space, sprite layer, and texture |
-| `sindri.sprite_animation` | Nothing of its own — it decides which part of the sheet the entity's sprite draws |
+| `sindri.animation.sprite` | Nothing of its own — it decides which part of the sheet the entity's sprite draws |
 
 A game registers its own component types alongside these with `SceneExtractor::register`.
 
@@ -272,7 +272,7 @@ bad UV rect does: the editor is where it gets fixed.
 
 ## Sprite animation
 
-`sindri.sprite_animation` sits beside `sindri.sprite` on the same entity and decides which sprite of
+`sindri.animation.sprite` sits beside `sindri.sprite` on the same entity and decides which sprite of
 the sheet is drawn. The sprite still owns the texture, tint, space, anchor, and layer; the animation
 owns the clips and which one is playing. Where each named sprite *is* belongs to the sheet beside the
 image, which is why a clip no longer carries a grid. They are two components rather
@@ -281,7 +281,7 @@ its animated variant, and a duplicated field is how a tint set on one of them st
 that draws.
 
 ```json
-"sindri.sprite_animation": {
+"sindri.animation.sprite": {
   "clips": {
     "walk": { "frames": ["lift", "plant", "lift", "plant"],
               "seconds_per_frame": 0.1, "looping": true }

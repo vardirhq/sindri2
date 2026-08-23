@@ -1204,7 +1204,7 @@ fn animated_sheet_with_rect(playing: &str, looping: bool, speed: f32, rect: Opti
         {{ "id": "runner", "transform_3d": {{}},
           "components": {{
             "sindri.sprite": {{ "texture": "sheet.png{named}" }},
-            "sindri.sprite_animation": {{
+            "sindri.animation.sprite": {{
               "clips": {{ "walk": {{ "frames": ["0", "1", "2", "3"],
                 "seconds_per_frame": 0.1, "looping": {looping} }} }},
               "playing": {playing},
@@ -1235,7 +1235,7 @@ fn only_instance_rect(frame: &sindri_render::PreparedFrame) -> UvRect {
 fn runner(world: &World) -> sindri_core::EntityId {
     world
         .entities()
-        .find(|(_, data)| data.components.contains_key("sindri.sprite_animation"))
+        .find(|(_, data)| data.components.contains_key("sindri.animation.sprite"))
         .map(|(entity, _)| entity)
         .expect("the world holds the animated sprite")
 }
@@ -1419,7 +1419,7 @@ fn a_clip_naming_a_sprite_the_sheet_lacks_is_reported() {
         { "id": "runner", "transform_3d": {},
           "components": {
             "sindri.sprite": { "texture": "sheet.png" },
-            "sindri.sprite_animation": {
+            "sindri.animation.sprite": {
               "clips": { "walk": { "frames": ["0", "9"], "seconds_per_frame": 0.1 } },
               "playing": "walk"
             }
@@ -1745,7 +1745,7 @@ fn an_animated_sprite_asks_for_the_sheet_its_clips_read() {
         { "id": "runner", "transform_3d": {},
           "components": {
             "sindri.sprite": { "texture": "textures/walk.png" },
-            "sindri.sprite_animation": {
+            "sindri.animation.sprite": {
               "clips": { "walk": { "frames": ["0", "1"], "seconds_per_frame": 0.1 } },
               "playing": "walk"
             }

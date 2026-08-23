@@ -73,6 +73,9 @@ impl SceneMigrator {
             .register(3, 4, name_the_parts_of_a_sheet)
             .expect("built-in steps are registered once and move forward");
         migrator
+            .register(4, 5, namespace_components)
+            .expect("built-in steps are registered once and move forward");
+        migrator
     }
 
     pub fn is_empty(&self) -> bool {
@@ -375,6 +378,49 @@ fn name_the_parts_of_a_sheet(document: &mut Value) -> Result<(), SceneMigrationE
     Ok(())
 }
 
+/// Format 5 gives subsystem-owned components stable hierarchical names.
+///
+/// Payloads are not changed. Only their keys move, so a format-4 scene carries
+/// exactly the same authored data forward. A scene that somehow contains both
+/// spellings is ambiguous and is rejected rather than silently overwriting one.
+fn namespace_components(document: &mut Value) -> Result<(), SceneMigrationError> {
+    const RENAMES: [(&str, &str); 4] = [
+        ("sindri.grid_navigation", "sindri.grid.navigation"),
+        ("sindri.grid_occupant", "sindri.grid.occupant"),
+        ("sindri.sprite_animation", "sindri.animation.sprite"),
+        ("sindri.audio", "sindri.audio.source"),
+    ];
+
+    let Some(entities) = document.get_mut("entities").and_then(Value::as_array_mut) else {
+        return Ok(());
+    };
+    for entity in entities {
+        let Some(fields) = entity.as_object_mut() else {
+            continue;
+        };
+        let entity_id = fields
+            .get("id")
+            .and_then(Value::as_str)
+            .unwrap_or("<an entity with no id>")
+            .to_owned();
+        let Some(components) = fields.get_mut("components").and_then(Value::as_object_mut) else {
+            continue;
+        };
+
+        for (old, new) in RENAMES {
+            if components.contains_key(old) && components.contains_key(new) {
+                return Err(SceneMigrationError::Unconvertible(format!(
+                    "entity '{entity_id}' carries both legacy component '{old}' and canonical component '{new}'"
+                )));
+            }
+            if let Some(payload) = components.remove(old) {
+                components.insert(new.to_owned(), payload);
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Which cell of which grid a normalized rect is, when it is one.
 ///
 /// Every rect a hand-written scene ever carried was a cell of some uniform
@@ -485,6 +531,68 @@ mod tests {
         let document = SceneDocument::from_json_migrated(&legacy_document(), &migrator).unwrap();
         assert_eq!(document.format_version, SCENE_FORMAT_VERSION);
         assert_eq!(document.entities[0].name.as_deref(), Some("Player"));
+    }
+
+    #[test]
+    fn format_four_component_names_migrate_without_touching_payloads() {
+        let old = json!({
+            "format_version": 4,
+            "entities": [{
+                "id": "player",
+                "components": {
+                    "sindri.grid_navigation": { "walls": [[[0, 0], [1, 0]]] },
+                    "sindri.grid_occupant": { "grid": "floor", "footprint": [[0, 0]] },
+                    "sindri.sprite_animation": { "clips": { "idle": { "frames": ["idle"] } } },
+                    "sindri.audio": { "clip": "audio/pickup.wav", "volume": 0.75 }
+                }
+            }]
+        });
+        let migrated = SceneMigrator::builtin().migrate(old).unwrap();
+        assert_eq!(migrated["format_version"], json!(5));
+        let components = &migrated["entities"][0]["components"];
+        assert_eq!(
+            components["sindri.grid.navigation"],
+            json!({ "walls": [[[0, 0], [1, 0]]] })
+        );
+        assert_eq!(
+            components["sindri.grid.occupant"],
+            json!({ "grid": "floor", "footprint": [[0, 0]] })
+        );
+        assert_eq!(
+            components["sindri.animation.sprite"],
+            json!({ "clips": { "idle": { "frames": ["idle"] } } })
+        );
+        assert_eq!(
+            components["sindri.audio.source"],
+            json!({ "clip": "audio/pickup.wav", "volume": 0.75 })
+        );
+        for old in [
+            "sindri.grid_navigation",
+            "sindri.grid_occupant",
+            "sindri.sprite_animation",
+            "sindri.audio",
+        ] {
+            assert!(components.get(old).is_none(), "legacy key {old} survived");
+        }
+    }
+
+    #[test]
+    fn namespace_migration_refuses_ambiguous_duplicate_spellings() {
+        let error = SceneMigrator::builtin()
+            .migrate(json!({
+                "format_version": 4,
+                "entities": [{
+                    "id": "player",
+                    "components": {
+                        "sindri.audio": { "clip": "old.wav" },
+                        "sindri.audio.source": { "clip": "new.wav" }
+                    }
+                }]
+            }))
+            .unwrap_err();
+        assert!(
+            matches!(error, SceneMigrationError::Unconvertible(message) if message.contains("player") && message.contains("sindri.audio") && message.contains("sindri.audio.source"))
+        );
     }
 
     #[test]

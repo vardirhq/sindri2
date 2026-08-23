@@ -127,10 +127,10 @@ pub fn applies(type_name: &str, key: &str, payload: &Value) -> bool {
         // needs a multiline field and a font is a project asset rather than an
         // arbitrary string.
         ("sindri.tilemap", "columns" | "rows" | "palette" | "tiles")
-        | ("sindri.grid_navigation", "walls")
-        | ("sindri.grid_occupant", "grid" | "footprint")
+        | ("sindri.grid.navigation", "walls")
+        | ("sindri.grid.occupant", "grid" | "footprint")
         | ("sindri.text", "text" | "font")
-        | ("sindri.sprite_animation", "clips" | "playing") => false,
+        | ("sindri.animation.sprite", "clips" | "playing") => false,
         _ => true,
     }
 }
@@ -225,17 +225,17 @@ mod tests {
             "speed": 1.0
         });
         assert!(!super::applies(
-            "sindri.sprite_animation",
+            "sindri.animation.sprite",
             "clips",
             &animation
         ));
         assert!(!super::applies(
-            "sindri.sprite_animation",
+            "sindri.animation.sprite",
             "playing",
             &animation
         ));
         assert!(super::applies(
-            "sindri.sprite_animation",
+            "sindri.animation.sprite",
             "speed",
             &animation
         ));

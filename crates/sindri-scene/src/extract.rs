@@ -169,7 +169,7 @@ impl SceneExtractor {
         // No default payload, for the reason the registry states: a blank one
         // would name the empty clip, and a button that adds a component the
         // engine then rejects is worse than no button. `sindri.text` and
-        // `sindri.sprite_animation` are registered the same way.
+        // `sindri.animation.sprite` are registered the same way.
         components.register::<AudioSourceComponent>("Audio Source")?;
         Ok(Self { components })
     }

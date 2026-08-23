@@ -33,12 +33,19 @@ impl AudioSourceComponent {
 }
 
 impl SceneComponent for AudioSourceComponent {
-    const TYPE_NAME: &'static str = "sindri.audio";
+    const TYPE_NAME: &'static str = "sindri.audio.source";
 }
 
 #[cfg(test)]
 mod tests {
+    use sindri_core::SceneComponent;
+
     use super::AudioSourceComponent;
+
+    #[test]
+    fn audio_source_has_the_canonical_component_name() {
+        assert_eq!(AudioSourceComponent::TYPE_NAME, "sindri.audio.source");
+    }
 
     #[test]
     fn missing_optional_fields_have_safe_defaults() {
