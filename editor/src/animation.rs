@@ -9,7 +9,7 @@ use sindri_scene::{AnimationClip, SpriteAnimationComponent};
 
 use crate::tilemap::SpritePalette;
 
-pub const TYPE_NAME: &str = "sindri.sprite_animation";
+pub const TYPE_NAME: &str = "sindri.animation.sprite";
 
 pub fn component(payload: &Value) -> Result<SpriteAnimationComponent, String> {
     serde_json::from_value(payload.clone()).map_err(|error| error.to_string())
