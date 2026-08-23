@@ -210,7 +210,7 @@ fn the_fixture_is_one_of_each_drawable_and_the_cameras_they_need() {
         "one still sprite and one that animates, because an animation decides \
          which part of its sprite's texture is drawn rather than drawing itself"
     );
-    assert_eq!(count("sindri.sprite_animation"), 1);
+    assert_eq!(count("sindri.animation.sprite"), 1);
     assert_eq!(
         count("sindri.camera"),
         2,
