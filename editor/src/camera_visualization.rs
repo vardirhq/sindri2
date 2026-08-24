@@ -86,7 +86,10 @@ mod tests {
         assert!(endpoints(&lines).all(Vec3::is_finite));
         let near_width = (lines[0].end - lines[0].start).length();
         let far_width = (lines[4].end - lines[4].start).length();
-        assert!(far_width > near_width, "a perspective frustum widens with distance");
+        assert!(
+            far_width > near_width,
+            "a perspective frustum widens with distance"
+        );
     }
 
     #[test]
