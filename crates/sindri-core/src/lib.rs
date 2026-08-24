@@ -4,7 +4,6 @@
 //! physics engine, scripting runtime, or async executor.
 
 mod asset;
-mod camera_migration;
 mod command;
 mod component;
 mod engine;
