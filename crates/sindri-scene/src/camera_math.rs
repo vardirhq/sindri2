@@ -15,7 +15,9 @@ pub fn camera_rotation_from_look_at(eye: Vec3, target: Vec3, authored_up: Vec3) 
     }
 
     let mut up = authored_up.normalize_or_zero();
-    if up.length_squared() <= DIRECTION_EPSILON || up.cross(forward).length_squared() <= DIRECTION_EPSILON {
+    if up.length_squared() <= DIRECTION_EPSILON
+        || up.cross(forward).length_squared() <= DIRECTION_EPSILON
+    {
         up = fallback_up(forward);
     }
 
