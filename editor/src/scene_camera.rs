@@ -295,7 +295,9 @@ mod tests {
         let orthographic =
             SceneCamera::from_view_adjustment(orbit, 1.7, pan, SceneProjection::Orthographic);
 
-        assert!((perspective.framed_half_height() - orthographic.framed_half_height()).abs() < 1.0e-6);
+        assert!(
+            (perspective.framed_half_height() - orthographic.framed_half_height()).abs() < 1.0e-6
+        );
         assert!((perspective.forward() - orthographic.forward()).length() < 1.0e-6);
         assert!((perspective.focus_point() - orthographic.focus_point()).length() < 1.0e-5);
     }
@@ -325,7 +327,9 @@ mod tests {
             Vec2::ZERO,
             SceneProjection::Perspective,
         );
-        assert!((camera.focus_distance - SceneCamera::default().focus_distance).abs() < f32::EPSILON);
+        assert!(
+            (camera.focus_distance - SceneCamera::default().focus_distance).abs() < f32::EPSILON
+        );
     }
 
     #[test]
