@@ -1,5 +1,5 @@
 use glam::{Mat4, Vec2, Vec3};
-use sindri_render::{orthographic_projection, perspective_projection};
+use sindri_render::{look_at, orthographic_projection, perspective_projection};
 
 const DEFAULT_POSITION: Vec3 = Vec3::new(3.0, 2.0, 4.0);
 const DEFAULT_VERTICAL_FOV_RADIANS: f32 = 45.0_f32.to_radians();
@@ -75,7 +75,7 @@ impl SceneCamera {
 
     #[must_use]
     pub fn view(self) -> Mat4 {
-        Mat4::look_at_rh(self.position, self.position + self.forward(), self.up())
+        look_at(self.position, self.position + self.forward(), self.up())
     }
 
     #[must_use]
