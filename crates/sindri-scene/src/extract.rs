@@ -88,8 +88,6 @@ impl SceneExtractor {
             "Camera",
             serde_json::json!({
                 "projection": "perspective",
-                "target": [0.0, 0.0, 0.0],
-                "up": [0.0, 1.0, 0.0],
                 "vertical_fov_degrees": 60.0,
                 "near": 0.1,
                 "far": 100.0
@@ -607,7 +605,7 @@ impl SceneExtractor {
         }
 
         match view.projection {
-            WorldProjection::Authored => self.resolve_authored_cameras(world, aspect, view),
+            WorldProjection::Authored => self.resolve_authored_cameras(world, aspect),
             WorldProjection::Perspective | WorldProjection::Orthographic => {
                 self.resolve_viewer_cameras(world, aspect, view)
             }
@@ -668,41 +666,30 @@ impl SceneExtractor {
         &self,
         world: &World,
         aspect: f32,
-        view: CameraView,
     ) -> Result<ResolvedCameras, SceneExtractError> {
         let mut resolved = ResolvedCameras::default();
         for (entity, camera) in self.components.query::<CameraComponent>(world)? {
             match camera {
                 CameraComponent::Perspective {
-                    target,
-                    up,
                     vertical_fov_degrees,
                     near,
                     far,
                 } => {
-                    let authored_eye = Vec3::from_array(
-                        world
-                            .get(entity)
-                            .and_then(|data| data.transform_3d)
-                            .unwrap_or_default()
-                            .position,
-                    );
-                    let target = Vec3::from_array(target);
-                    let up = Vec3::from_array(up);
-                    let offset = orbited_offset(authored_eye - target, up, view);
+                    let transform = world
+                        .get(entity)
+                        .and_then(|data| data.transform_3d)
+                        .unwrap_or_default();
+                    let eye = Vec3::from_array(transform.position);
+                    let rotation = Quat::from_array(transform.rotation);
+                    let rotation =
+                        if rotation.is_finite() && rotation.length_squared() > f32::EPSILON {
+                            rotation.normalize()
+                        } else {
+                            Quat::IDENTITY
+                        };
+                    let target = eye + rotation * -Vec3::Z;
+                    let up = rotation * Vec3::Y;
                     let vertical_fov_radians = vertical_fov_degrees.to_radians();
-                    // Half the height the camera frames at the target, which is
-                    // what both projections size themselves by, so a pan of one
-                    // moves the picture by half a screen either way.
-                    let half_height = offset.length() * (vertical_fov_radians * 0.5).tan();
-                    let shift = panned_shift(offset, up, view.pan * half_height);
-                    let target = target + shift;
-                    let eye = target + offset;
-
-                    // One view for both projections: where the camera is and
-                    // what it looks at does not depend on how it flattens the
-                    // world, and a sprite must not change places when the
-                    // editor toggles between them.
                     let camera = PerspectiveCamera {
                         eye,
                         target,
@@ -717,7 +704,10 @@ impl SceneExtractor {
                     resolved.world = Some(ResolvedCamera {
                         view,
                         view_projection: projection * view,
-                        framed_half_height: half_height,
+                        // Without an authored target there is no privileged
+                        // focus distance. One world unit is the neutral measure
+                        // for callers that only need a scale with this view.
+                        framed_half_height: (vertical_fov_radians * 0.5).tan(),
                     });
                 }
                 CameraComponent::Orthographic {
