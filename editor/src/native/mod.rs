@@ -4375,19 +4375,17 @@ mod tests {
     }
 
     #[test]
-    fn an_unmoved_scene_view_matches_the_authored_camera() {
-        // Opening the editor and drawing nothing must not move the camera, or
-        // the scene and game views would disagree before anyone touched them.
-        let resting = EditorCamera {
-            orbit: GlamVec2::ZERO,
-            zoom: 1.0,
-            pan: GlamVec2::ZERO,
-            projection: CameraProjection::Perspective,
-        };
-        assert_eq!(
-            camera_for(WorkspaceTab::Scene, resting),
-            camera_for(WorkspaceTab::Game, resting)
-        );
+    fn an_unmoved_scene_view_starts_on_its_independent_camera() {
+        let scene = camera_for(WorkspaceTab::Scene, EditorCamera::default());
+        let game = camera_for(WorkspaceTab::Game, EditorCamera::default());
+
+        assert_eq!(scene.orbit, GlamVec2::ZERO);
+        assert_eq!(scene.pan, GlamVec2::ZERO);
+        assert_eq!(scene.distance_scale.to_bits(), 1.0_f32.to_bits());
+        assert_eq!(scene.projection, WorldProjection::Perspective);
+        assert_eq!(game, CameraView::default());
+        assert_eq!(game.projection, WorldProjection::Authored);
+        assert_ne!(scene.projection, game.projection);
     }
 
     /// The transport decides whether an animation moves, and nothing else does.
