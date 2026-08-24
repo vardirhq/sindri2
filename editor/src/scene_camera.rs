@@ -63,6 +63,48 @@ impl Default for SceneCamera {
 }
 
 impl SceneCamera {
+    /// Rebuilds the Scene camera from the editor's persisted viewport controls.
+    ///
+    /// The old editor stored orbit, zoom, and pan as adjustments rather than an
+    /// actual camera. Keeping the conversion here lets the native viewport switch
+    /// to an independent camera without duplicating signs or projection maths in
+    /// rendering, picking, gizmos, and tile painting.
+    #[must_use]
+    pub fn from_view_adjustment(
+        orbit: Vec2,
+        zoom: f32,
+        pan: Vec2,
+        projection: SceneProjection,
+    ) -> Self {
+        let mut camera = Self::default();
+        camera.orbit_delta(orbit);
+
+        // The existing editor value grows when zooming in, while `zoom` takes a
+        // distance multiplier: larger editor zoom therefore means a smaller
+        // eye-to-focus distance.
+        let zoom = if zoom.is_finite() && zoom > 0.0 {
+            zoom
+        } else {
+            1.0
+        };
+        camera.zoom(1.0 / zoom);
+
+        // Pan is stored in framed-half-height units and describes moving the
+        // picture, while `SceneCamera::pan` moves the camera. The signs are
+        // therefore opposite. Resolve this once here rather than at every
+        // screen-to-world call site.
+        let half_height = camera.framed_half_height();
+        camera.pan(-pan, half_height);
+
+        if projection == SceneProjection::Orthographic {
+            // Projection toggles should not resize the subject. Match the
+            // perspective camera's current framed height before switching.
+            camera.orthographic_size = half_height * 2.0;
+            camera.projection = SceneProjection::Orthographic;
+        }
+        camera
+    }
+
     #[must_use]
     pub fn forward(self) -> Vec3 {
         let pitch = self.pitch.clamp(-PITCH_LIMIT, PITCH_LIMIT);
@@ -242,6 +284,48 @@ mod tests {
         let focus_shift = camera.focus_point() - before_focus;
         assert!((eye_shift - focus_shift).length() < 1.0e-5);
         assert!(eye_shift.length() > 0.0);
+    }
+
+    #[test]
+    fn view_adjustment_keeps_projection_toggle_at_the_same_scale() {
+        let orbit = Vec2::new(0.4, -0.2);
+        let pan = Vec2::new(0.25, -0.5);
+        let perspective =
+            SceneCamera::from_view_adjustment(orbit, 1.7, pan, SceneProjection::Perspective);
+        let orthographic =
+            SceneCamera::from_view_adjustment(orbit, 1.7, pan, SceneProjection::Orthographic);
+
+        assert!((perspective.framed_half_height() - orthographic.framed_half_height()).abs() < 1.0e-6);
+        assert!((perspective.forward() - orthographic.forward()).length() < 1.0e-6);
+        assert!((perspective.focus_point() - orthographic.focus_point()).length() < 1.0e-5);
+    }
+
+    #[test]
+    fn view_adjustment_uses_editor_zoom_and_pan_conventions() {
+        let base = SceneCamera::default();
+        let adjusted = SceneCamera::from_view_adjustment(
+            Vec2::ZERO,
+            2.0,
+            Vec2::new(0.5, -0.25),
+            SceneProjection::Perspective,
+        );
+
+        assert!((adjusted.focus_distance - base.focus_distance * 0.5).abs() < 1.0e-6);
+        let shift = adjusted.focus_point() - base.focus_point();
+        let expected = base.right() * -0.5 * adjusted.framed_half_height()
+            + base.up() * 0.25 * adjusted.framed_half_height();
+        assert!((shift - expected).length() < 1.0e-5);
+    }
+
+    #[test]
+    fn invalid_editor_zoom_falls_back_to_the_default_distance() {
+        let camera = SceneCamera::from_view_adjustment(
+            Vec2::ZERO,
+            f32::NAN,
+            Vec2::ZERO,
+            SceneProjection::Perspective,
+        );
+        assert!((camera.focus_distance - SceneCamera::default().focus_distance).abs() < f32::EPSILON);
     }
 
     #[test]
