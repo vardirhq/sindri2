@@ -27,10 +27,10 @@ pub(crate) fn orient_perspective_cameras(document: &mut Value) -> Result<(), Sce
             .to_owned();
 
         let Some(camera) = fields
-            .get_mut("components")
-            .and_then(Value::as_object_mut)
-            .and_then(|components| components.get_mut(CAMERA_COMPONENT))
-            .and_then(Value::as_object_mut)
+            .get("components")
+            .and_then(Value::as_object)
+            .and_then(|components| components.get(CAMERA_COMPONENT))
+            .and_then(Value::as_object)
         else {
             continue;
         };
@@ -58,6 +58,12 @@ pub(crate) fn orient_perspective_cameras(document: &mut Value) -> Result<(), Sce
         };
         transform.insert("rotation".to_owned(), json!(rotation));
 
+        let camera = fields
+            .get_mut("components")
+            .and_then(Value::as_object_mut)
+            .and_then(|components| components.get_mut(CAMERA_COMPONENT))
+            .and_then(Value::as_object_mut)
+            .expect("camera payload was validated before mutating the entity");
         camera.remove("target");
         camera.remove("up");
     }
