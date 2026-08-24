@@ -3,8 +3,8 @@ use serde_json::json;
 use sindri_core::{EntityData, SceneComponent, Transform3D, World};
 use sindri_render::{RenderStage, Viewport};
 use sindri_scene::{
-    CameraView, MeshComponent, SceneExtractError, SceneExtractor, SpriteAnimations, TextureBindings,
-    ViewCamera,
+    CameraView, MeshComponent, SceneExtractError, SceneExtractor, SpriteAnimations,
+    TextureBindings, ViewCamera,
 };
 
 fn world_with_mesh_and_no_camera() -> World {
