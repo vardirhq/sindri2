@@ -11,9 +11,7 @@ const EPSILON: f64 = 1.0e-12;
 /// camera schema and extractor consume transform rotation. Registering it before
 /// that switch would create a scene format that this same runtime could migrate
 /// to but not load.
-pub(crate) fn orient_perspective_cameras(
-    document: &mut Value,
-) -> Result<(), SceneMigrationError> {
+pub(crate) fn orient_perspective_cameras(document: &mut Value) -> Result<(), SceneMigrationError> {
     let Some(entities) = document.get_mut("entities").and_then(Value::as_array_mut) else {
         return Ok(());
     };
