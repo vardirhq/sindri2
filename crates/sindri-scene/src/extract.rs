@@ -177,6 +177,7 @@ impl SceneExtractor {
         components.register::<AudioSourceComponent>("Audio Source")?;
         Ok(Self { components })
     }
+
     pub const fn components(&self) -> &ComponentSchemaRegistry {
         &self.components
     }
