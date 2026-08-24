@@ -8,6 +8,7 @@
 
 mod animation;
 mod audio;
+mod camera_math;
 mod components;
 mod extract;
 mod navigation;
@@ -16,6 +17,7 @@ mod textures;
 
 pub use animation::{AnimationClip, AnimationError, SpriteAnimationComponent, SpriteAnimations};
 pub use audio::AudioSourceComponent;
+pub use camera_math::camera_rotation_from_look_at;
 pub use components::{
     CameraComponent, GridNavigationComponent, GridOccupantComponent, GridWallDocument,
     MeshComponent, MeshPrimitive, SpriteAnchor, SpriteComponent, SpriteSpace, TextComponent,
