@@ -871,3 +871,74 @@ pub enum SceneExtractError {
     #[error("the viewport is too large for text rendering")]
     TextViewport(#[from] std::num::TryFromIntError),
 }
+
+impl SceneExtractor {
+    /// Extracts a Scene-view frame through an editor-owned world camera.
+    ///
+    /// The authored world camera is deliberately not consulted. Screen-space
+    /// content still uses the authored overlay camera for now, so this changes
+    /// only the world-view side of extraction and leaves gameplay extraction
+    /// untouched.
+    pub fn extract_animated_with_world_camera(
+        &self,
+        world: &World,
+        viewport: Viewport,
+        world_camera: ViewCamera,
+        textures: &TextureBindings,
+        animations: &SpriteAnimations,
+    ) -> Result<PreparedFrame, SceneExtractError> {
+        let aspect = viewport.aspect_ratio()?;
+        let mut cameras = self.resolve_overlay_camera(world, aspect)?;
+        cameras.world = Some(ResolvedCamera {
+            view: world_camera.view,
+            view_projection: world_camera.view_projection,
+            framed_half_height: world_camera.framed_half_height,
+        });
+
+        let mut frame = ExtractedFrame::new(viewport, ClearOperations::default());
+        self.push_meshes(world, &cameras, textures, &mut frame)?;
+        self.push_sprites(world, &cameras, textures, animations, &mut frame)?;
+        self.push_text(world, viewport, &cameras, &mut frame)?;
+        Ok(frame.prepare()?)
+    }
+
+    /// Resolves only the screen-space camera data needed alongside an
+    /// editor-owned world camera. Perspective cameras are intentionally ignored
+    /// here: moving, removing, or replacing a gameplay camera must not move or
+    /// disable the Scene view.
+    fn resolve_overlay_camera(
+        &self,
+        world: &World,
+        aspect: f32,
+    ) -> Result<ResolvedCameras, SceneExtractError> {
+        let mut resolved = ResolvedCameras::default();
+        for (_, camera) in self.components.query::<CameraComponent>(world)? {
+            if let CameraComponent::Orthographic {
+                center,
+                vertical_size,
+                near,
+                far,
+            } = camera
+            {
+                let center = Vec2::from_array(center);
+                let camera = OrthographicCamera {
+                    center,
+                    vertical_size,
+                    near,
+                    far,
+                };
+                let half_height = vertical_size * 0.5;
+                resolved.overlay = Some(ResolvedCamera {
+                    view: camera.view(),
+                    view_projection: camera.view_projection(aspect),
+                    framed_half_height: half_height,
+                });
+                resolved.overlay_extent = Some(OverlayExtent {
+                    center,
+                    half_extent: Vec2::new(half_height * aspect, half_height),
+                });
+            }
+        }
+        Ok(resolved)
+    }
+}
