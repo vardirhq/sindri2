@@ -1,5 +1,6 @@
 use glam::{Mat4, Vec2, Vec3};
 use sindri_render::{look_at, orthographic_projection, perspective_projection};
+use sindri_scene::ViewCamera;
 
 const DEFAULT_POSITION: Vec3 = Vec3::new(3.0, 2.0, 4.0);
 const DEFAULT_VERTICAL_FOV_RADIANS: f32 = 45.0_f32.to_radians();
@@ -135,6 +136,18 @@ impl SceneCamera {
         }
     }
 
+    /// The fully resolved camera shared by Scene-view drawing, picking, gizmos,
+    /// tile painting, and editor chrome.
+    #[must_use]
+    pub fn resolved(self, aspect: f32) -> ViewCamera {
+        let view = self.view();
+        ViewCamera {
+            view,
+            view_projection: self.projection_matrix(aspect) * view,
+            framed_half_height: self.framed_half_height(),
+        }
+    }
+
     /// Orbits around the current focus point without changing the distance to it.
     pub fn orbit_delta(&mut self, delta: Vec2) {
         let focus = self.focus_point();
@@ -236,6 +249,9 @@ mod tests {
         let camera = SceneCamera::default();
         let matrix = camera.view_projection(16.0 / 9.0);
         assert!(matrix.to_cols_array().into_iter().all(f32::is_finite));
+        let resolved = camera.resolved(16.0 / 9.0);
+        assert_eq!(resolved.view_projection, matrix);
+        assert_eq!(resolved.view, camera.view());
     }
 
     #[test]
