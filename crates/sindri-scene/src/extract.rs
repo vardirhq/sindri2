@@ -606,51 +606,70 @@ impl SceneExtractor {
             return Err(SceneExtractError::InvalidCameraPan);
         }
 
-        if view.projection != WorldProjection::Authored {
-            let mut resolved = self.resolve_overlay_camera(world, aspect)?;
-            let up = Vec3::Y;
-            let offset = orbited_offset(Vec3::new(3.0, 2.0, 4.0), up, view);
-            let vertical_fov_radians = 45.0_f32.to_radians();
-            let near = 0.1;
-            let far = 1_000.0;
-            let half_height = offset.length() * (vertical_fov_radians * 0.5).tan();
-            let shift = panned_shift(offset, up, view.pan * half_height);
-            let target = shift;
-            let eye = target + offset;
-            let camera = PerspectiveCamera {
-                eye,
-                target,
-                up,
-                vertical_fov_radians,
-                near,
-                far,
-            };
-            let projection = match view.projection {
-                WorldProjection::Perspective => {
-                    perspective_projection(vertical_fov_radians, aspect, near, far)
-                }
-                WorldProjection::Orthographic => {
-                    let half_width = half_height * aspect;
-                    orthographic_projection(
-                        -half_width,
-                        half_width,
-                        -half_height,
-                        half_height,
-                        near,
-                        far,
-                    )
-                }
-                WorldProjection::Authored => unreachable!("handled above"),
-            };
-            let view = camera.view();
-            resolved.world = Some(ResolvedCamera {
-                view,
-                view_projection: projection * view,
-                framed_half_height: half_height,
-            });
-            return Ok(resolved);
+        match view.projection {
+            WorldProjection::Authored => self.resolve_authored_cameras(world, aspect, view),
+            WorldProjection::Perspective | WorldProjection::Orthographic => {
+                self.resolve_viewer_cameras(world, aspect, view)
+            }
         }
+    }
 
+    fn resolve_viewer_cameras(
+        &self,
+        world: &World,
+        aspect: f32,
+        view: CameraView,
+    ) -> Result<ResolvedCameras, SceneExtractError> {
+        let mut resolved = self.resolve_overlay_camera(world, aspect)?;
+        let up = Vec3::Y;
+        let offset = orbited_offset(Vec3::new(3.0, 2.0, 4.0), up, view);
+        let vertical_fov_radians = 45.0_f32.to_radians();
+        let near = 0.1;
+        let far = 1_000.0;
+        let half_height = offset.length() * (vertical_fov_radians * 0.5).tan();
+        let shift = panned_shift(offset, up, view.pan * half_height);
+        let target = shift;
+        let eye = target + offset;
+        let camera = PerspectiveCamera {
+            eye,
+            target,
+            up,
+            vertical_fov_radians,
+            near,
+            far,
+        };
+        let projection = match view.projection {
+            WorldProjection::Perspective => {
+                perspective_projection(vertical_fov_radians, aspect, near, far)
+            }
+            WorldProjection::Orthographic => {
+                let half_width = half_height * aspect;
+                orthographic_projection(
+                    -half_width,
+                    half_width,
+                    -half_height,
+                    half_height,
+                    near,
+                    far,
+                )
+            }
+            WorldProjection::Authored => unreachable!("viewer cameras are never authored"),
+        };
+        let view = camera.view();
+        resolved.world = Some(ResolvedCamera {
+            view,
+            view_projection: projection * view,
+            framed_half_height: half_height,
+        });
+        Ok(resolved)
+    }
+
+    fn resolve_authored_cameras(
+        &self,
+        world: &World,
+        aspect: f32,
+        view: CameraView,
+    ) -> Result<ResolvedCameras, SceneExtractError> {
         let mut resolved = ResolvedCameras::default();
         for (entity, camera) in self.components.query::<CameraComponent>(world)? {
             match camera {
