@@ -177,7 +177,6 @@ impl SceneExtractor {
         components.register::<AudioSourceComponent>("Audio Source")?;
         Ok(Self { components })
     }
-
     pub const fn components(&self) -> &ComponentSchemaRegistry {
         &self.components
     }
@@ -692,12 +691,8 @@ impl SceneExtractor {
                         near,
                         far,
                     };
-                    let projection = perspective_projection(
-                        vertical_fov_radians,
-                        aspect,
-                        near,
-                        far,
-                    );
+                    let projection =
+                        perspective_projection(vertical_fov_radians, aspect, near, far);
                     let view = camera.view();
                     resolved.world = Some(ResolvedCamera {
                         view,
