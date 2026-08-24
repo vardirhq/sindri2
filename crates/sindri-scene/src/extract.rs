@@ -21,25 +21,29 @@ use crate::{
     TilemapComponent, TilemapError,
 };
 
-/// Which projection the world camera uses.
+/// Which projection a world view uses.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum WorldProjection {
+    /// Render through the authored gameplay camera exactly as the scene defines it.
     #[default]
+    Authored,
+    /// Use the independent viewer camera with a perspective projection.
     Perspective,
-    /// An orthographic projection framed to match the perspective camera, so
-    /// toggling between them keeps the subject the same size.
+    /// Use the independent viewer camera with an orthographic projection framed
+    /// to match perspective, so toggling keeps the subject the same size.
     Orthographic,
 }
 
-/// A viewer's adjustment to the authored world camera.
+/// A viewer's camera adjustment.
 ///
-/// Gameplay renders through the authored camera. An editor moves around it
-/// without touching the scene, which is what this describes.
+/// The default view is the authored gameplay camera. Explicit perspective or
+/// orthographic projections describe the independent editor/viewer camera, so
+/// Scene navigation never mutates or depends on a gameplay camera.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CameraView {
-    /// Yaw and pitch in radians, orbited around the camera's target.
+    /// Yaw and pitch in radians.
     pub orbit: Vec2,
-    /// Multiplier on the authored eye-to-target distance.
+    /// Multiplier on the eye-to-focus distance.
     pub distance_scale: f32,
     /// Sideways and upward shift across the view plane, in fractions of the
     /// framed half-height.
@@ -57,7 +61,7 @@ impl Default for CameraView {
             orbit: Vec2::ZERO,
             distance_scale: 1.0,
             pan: Vec2::ZERO,
-            projection: WorldProjection::Perspective,
+            projection: WorldProjection::Authored,
         }
     }
 }
@@ -601,8 +605,72 @@ impl SceneExtractor {
         if !view.pan.is_finite() {
             return Err(SceneExtractError::InvalidCameraPan);
         }
-        let mut resolved = ResolvedCameras::default();
 
+        match view.projection {
+            WorldProjection::Authored => self.resolve_authored_cameras(world, aspect, view),
+            WorldProjection::Perspective | WorldProjection::Orthographic => {
+                self.resolve_viewer_cameras(world, aspect, view)
+            }
+        }
+    }
+
+    fn resolve_viewer_cameras(
+        &self,
+        world: &World,
+        aspect: f32,
+        view: CameraView,
+    ) -> Result<ResolvedCameras, SceneExtractError> {
+        let mut resolved = self.resolve_overlay_camera(world, aspect)?;
+        let up = Vec3::Y;
+        let offset = orbited_offset(Vec3::new(3.0, 2.0, 4.0), up, view);
+        let vertical_fov_radians = 45.0_f32.to_radians();
+        let near = 0.1;
+        let far = 1_000.0;
+        let half_height = offset.length() * (vertical_fov_radians * 0.5).tan();
+        let shift = panned_shift(offset, up, view.pan * half_height);
+        let target = shift;
+        let eye = target + offset;
+        let camera = PerspectiveCamera {
+            eye,
+            target,
+            up,
+            vertical_fov_radians,
+            near,
+            far,
+        };
+        let projection = match view.projection {
+            WorldProjection::Perspective => {
+                perspective_projection(vertical_fov_radians, aspect, near, far)
+            }
+            WorldProjection::Orthographic => {
+                let half_width = half_height * aspect;
+                orthographic_projection(
+                    -half_width,
+                    half_width,
+                    -half_height,
+                    half_height,
+                    near,
+                    far,
+                )
+            }
+            WorldProjection::Authored => unreachable!("viewer cameras are never authored"),
+        };
+        let view = camera.view();
+        resolved.world = Some(ResolvedCamera {
+            view,
+            view_projection: projection * view,
+            framed_half_height: half_height,
+        });
+        Ok(resolved)
+    }
+
+    fn resolve_authored_cameras(
+        &self,
+        world: &World,
+        aspect: f32,
+        view: CameraView,
+    ) -> Result<ResolvedCameras, SceneExtractError> {
+        let mut resolved = ResolvedCameras::default();
         for (entity, camera) in self.components.query::<CameraComponent>(world)? {
             match camera {
                 CameraComponent::Perspective {
@@ -643,22 +711,8 @@ impl SceneExtractor {
                         near,
                         far,
                     };
-                    let projection = match view.projection {
-                        WorldProjection::Perspective => {
-                            perspective_projection(vertical_fov_radians, aspect, near, far)
-                        }
-                        WorldProjection::Orthographic => {
-                            let half_width = half_height * aspect;
-                            orthographic_projection(
-                                -half_width,
-                                half_width,
-                                -half_height,
-                                half_height,
-                                near,
-                                far,
-                            )
-                        }
-                    };
+                    let projection =
+                        perspective_projection(vertical_fov_radians, aspect, near, far);
                     let view = camera.view();
                     resolved.world = Some(ResolvedCamera {
                         view,
@@ -870,4 +924,75 @@ pub enum SceneExtractError {
     Text(#[from] TextError),
     #[error("the viewport is too large for text rendering")]
     TextViewport(#[from] std::num::TryFromIntError),
+}
+
+impl SceneExtractor {
+    /// Extracts a Scene-view frame through an editor-owned world camera.
+    ///
+    /// The authored world camera is deliberately not consulted. Screen-space
+    /// content still uses the authored overlay camera for now, so this changes
+    /// only the world-view side of extraction and leaves gameplay extraction
+    /// untouched.
+    pub fn extract_animated_with_world_camera(
+        &self,
+        world: &World,
+        viewport: Viewport,
+        world_camera: ViewCamera,
+        textures: &TextureBindings,
+        animations: &SpriteAnimations,
+    ) -> Result<PreparedFrame, SceneExtractError> {
+        let aspect = viewport.aspect_ratio()?;
+        let mut cameras = self.resolve_overlay_camera(world, aspect)?;
+        cameras.world = Some(ResolvedCamera {
+            view: world_camera.view,
+            view_projection: world_camera.view_projection,
+            framed_half_height: world_camera.framed_half_height,
+        });
+
+        let mut frame = ExtractedFrame::new(viewport, ClearOperations::default());
+        self.push_meshes(world, &cameras, textures, &mut frame)?;
+        self.push_sprites(world, &cameras, textures, animations, &mut frame)?;
+        self.push_text(world, viewport, &cameras, &mut frame)?;
+        Ok(frame.prepare()?)
+    }
+
+    /// Resolves only the screen-space camera data needed alongside an
+    /// editor-owned world camera. Perspective cameras are intentionally ignored
+    /// here: moving, removing, or replacing a gameplay camera must not move or
+    /// disable the Scene view.
+    fn resolve_overlay_camera(
+        &self,
+        world: &World,
+        aspect: f32,
+    ) -> Result<ResolvedCameras, SceneExtractError> {
+        let mut resolved = ResolvedCameras::default();
+        for (_, camera) in self.components.query::<CameraComponent>(world)? {
+            if let CameraComponent::Orthographic {
+                center,
+                vertical_size,
+                near,
+                far,
+            } = camera
+            {
+                let center = Vec2::from_array(center);
+                let camera = OrthographicCamera {
+                    center,
+                    vertical_size,
+                    near,
+                    far,
+                };
+                let half_height = vertical_size * 0.5;
+                resolved.overlay = Some(ResolvedCamera {
+                    view: camera.view(),
+                    view_projection: camera.view_projection(aspect),
+                    framed_half_height: half_height,
+                });
+                resolved.overlay_extent = Some(OverlayExtent {
+                    center,
+                    half_extent: Vec2::new(half_height * aspect, half_height),
+                });
+            }
+        }
+        Ok(resolved)
+    }
 }

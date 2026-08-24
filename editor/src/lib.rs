@@ -9,6 +9,9 @@
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod animation;
+/// Scene-view geometry for authored camera frustums.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod camera_visualization;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod console;
 #[cfg(not(target_arch = "wasm32"))]
@@ -31,6 +34,9 @@ pub mod picking;
 pub mod preferences;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod project;
+/// The editor-only camera used by the Scene view.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod scene_camera;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod scene_file;
 
