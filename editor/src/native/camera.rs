@@ -1,28 +1,24 @@
 //! How the editor looks at a scene, as opposed to what the scene says.
 //!
-//! Scene navigation is editor state. Authored-camera geometry lives here as
-//! tested groundwork until the Scene-view paint/pick hooks consume it.
+//! Scene navigation belongs to the editor. Authored cameras remain ordinary
+//! scene entities; this module only reconstructs editor-only markers and
+//! projection volumes for the Scene view.
 
 use std::f32::consts::TAU;
 
-use eframe::egui::{self, Response};
-use glam::{Vec2 as GlamVec2, Vec3};
-use sindri_scene::{CameraView, ViewCamera, WorldProjection};
-
-#[cfg(test)]
-use eframe::egui::{Color32, Painter, Pos2, Rect, Shape, Stroke};
-#[cfg(test)]
-use glam::{Mat4, Quat};
-#[cfg(test)]
+use eframe::egui::{
+    self, Color32, LayerId, Order, Painter, Pos2, Rect, Response, Shape, Stroke,
+};
+use glam::{Mat4, Quat, Vec2 as GlamVec2, Vec3};
 use sindri_core::{EntityId, SceneComponent, Transform3D};
-#[cfg(test)]
-use sindri_scene::CameraComponent;
+use sindri_scene::{CameraComponent, CameraView, ViewCamera, WorldProjection};
 
 use crate::preferences::CameraProjection;
 
-use super::{EditorApp, WorkspaceTab};
-#[cfg(test)]
-use super::{ACCENT_BRIGHT, TEXT_MUTED};
+use super::{ACCENT_BRIGHT, EditorApp, TEXT_MUTED, WorkspaceTab};
+
+const CAMERA_PICK_STATE: &str = "sindri-authored-camera-pick";
+const CAMERA_OVERLAY_LAYER: &str = "sindri-authored-camera-overlay";
 
 #[derive(Clone, Copy)]
 pub(super) struct EditorCamera {
@@ -40,6 +36,24 @@ impl Default for EditorCamera {
             pan: GlamVec2::ZERO,
             projection: CameraProjection::Perspective,
         }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct AuthoredCameraVisual {
+    entity: EntityId,
+    body: Vec<Pos2>,
+    lines: Vec<[Pos2; 2]>,
+    hit_lines: Vec<[Pos2; 2]>,
+}
+
+impl AuthoredCameraVisual {
+    fn hit_test(&self, pointer: Pos2) -> bool {
+        polygon_contains(&self.body, pointer)
+            || self
+                .hit_lines
+                .iter()
+                .any(|line| distance_to_segment(pointer, line[0], line[1]) <= 6.0)
     }
 }
 
@@ -70,27 +84,6 @@ pub(super) fn camera_for(tab: WorkspaceTab, editor: EditorCamera) -> CameraView 
     }
 }
 
-#[cfg(test)]
-#[derive(Clone, Debug)]
-struct AuthoredCameraVisual {
-    entity: EntityId,
-    body: Vec<Pos2>,
-    lines: Vec<[Pos2; 2]>,
-    hit_lines: Vec<[Pos2; 2]>,
-}
-
-#[cfg(test)]
-impl AuthoredCameraVisual {
-    fn hit_test(&self, pointer: Pos2) -> bool {
-        polygon_contains(&self.body, pointer)
-            || self
-                .hit_lines
-                .iter()
-                .any(|line| distance_to_segment(pointer, line[0], line[1]) <= 6.0)
-    }
-}
-
-#[cfg(test)]
 fn safe_rotation(transform: Transform3D) -> Quat {
     let rotation = Quat::from_array(transform.rotation);
     if rotation.is_finite() && rotation.length_squared() > f32::EPSILON {
@@ -100,15 +93,6 @@ fn safe_rotation(transform: Transform3D) -> Quat {
     }
 }
 
-#[cfg(test)]
-fn camera_transform(transform: Transform3D) -> Mat4 {
-    Mat4::from_rotation_translation(
-        safe_rotation(transform),
-        Vec3::from_array(transform.position),
-    )
-}
-
-#[cfg(test)]
 fn perspective_corners(
     vertical_fov_degrees: f32,
     near: f32,
@@ -129,7 +113,6 @@ fn perspective_corners(
     [plane(near), plane(far)]
 }
 
-#[cfg(test)]
 fn orthographic_corners(vertical_size: f32, near: f32, far: f32, aspect: f32) -> [[Vec3; 4]; 2] {
     let half_height = vertical_size * 0.5;
     let half_width = half_height * aspect;
@@ -144,7 +127,6 @@ fn orthographic_corners(vertical_size: f32, near: f32, far: f32, aspect: f32) ->
     [plane(near), plane(far)]
 }
 
-#[cfg(test)]
 fn project_point(rect: Rect, view_projection: Mat4, point: Vec3) -> Option<Pos2> {
     let clip = view_projection * point.extend(1.0);
     if !clip.is_finite() || clip.w.abs() <= f32::EPSILON {
@@ -160,7 +142,6 @@ fn project_point(rect: Rect, view_projection: Mat4, point: Vec3) -> Option<Pos2>
     ))
 }
 
-#[cfg(test)]
 fn projected_plane(
     rect: Rect,
     view_projection: Mat4,
@@ -175,7 +156,6 @@ fn projected_plane(
     ])
 }
 
-#[cfg(test)]
 fn camera_visual(
     entity: EntityId,
     transform: Transform3D,
@@ -184,12 +164,39 @@ fn camera_visual(
     view_projection: Mat4,
     aspect: f32,
 ) -> Option<AuthoredCameraVisual> {
-    let model = camera_transform(transform);
-    let position = Vec3::from_array(transform.position);
-    let forward = safe_rotation(transform) * -Vec3::Z;
+    let (model, position, forward, corners) = match camera {
+        CameraComponent::Perspective {
+            vertical_fov_degrees,
+            near,
+            far,
+        } => {
+            let rotation = safe_rotation(transform);
+            let position = Vec3::from_array(transform.position);
+            (
+                Mat4::from_rotation_translation(rotation, position),
+                position,
+                rotation * -Vec3::Z,
+                perspective_corners(vertical_fov_degrees, near, far, aspect),
+            )
+        }
+        CameraComponent::Orthographic {
+            center,
+            vertical_size,
+            near,
+            far,
+        } => {
+            let position = Vec3::new(center[0], center[1], 0.0);
+            (
+                Mat4::from_translation(position),
+                position,
+                -Vec3::Z,
+                orthographic_corners(vertical_size, near, far, aspect),
+            )
+        }
+    };
+
     let centre = project_point(rect, view_projection, position)?;
     let forward_tip = project_point(rect, view_projection, position + forward * 0.8)?;
-
     let body_radius = 7.0;
     let body = vec![
         Pos2::new(centre.x - body_radius, centre.y - body_radius * 0.65),
@@ -199,19 +206,6 @@ fn camera_visual(
         Pos2::new(centre.x - body_radius, centre.y + body_radius * 0.65),
     ];
 
-    let corners = match camera {
-        CameraComponent::Perspective {
-            vertical_fov_degrees,
-            near,
-            far,
-        } => perspective_corners(vertical_fov_degrees, near, far, aspect),
-        CameraComponent::Orthographic {
-            vertical_size,
-            near,
-            far,
-            ..
-        } => orthographic_corners(vertical_size, near, far, aspect),
-    };
     let near = projected_plane(rect, view_projection, model, corners[0])?;
     let far = projected_plane(rect, view_projection, model, corners[1])?;
     let mut lines = Vec::with_capacity(13);
@@ -230,7 +224,6 @@ fn camera_visual(
     })
 }
 
-#[cfg(test)]
 fn distance_to_segment(point: Pos2, a: Pos2, b: Pos2) -> f32 {
     let ab = b - a;
     let length_squared = ab.length_sq();
@@ -241,7 +234,6 @@ fn distance_to_segment(point: Pos2, a: Pos2, b: Pos2) -> f32 {
     point.distance(a + ab * t)
 }
 
-#[cfg(test)]
 fn polygon_contains(points: &[Pos2], point: Pos2) -> bool {
     if points.len() < 3 {
         return false;
@@ -261,7 +253,14 @@ fn polygon_contains(points: &[Pos2], point: Pos2) -> bool {
     inside
 }
 
-#[cfg(test)]
+fn pick_authored_camera(visuals: &[AuthoredCameraVisual], pointer: Pos2) -> Option<EntityId> {
+    visuals
+        .iter()
+        .rev()
+        .find(|visual| visual.hit_test(pointer))
+        .map(|visual| visual.entity)
+}
+
 fn paint_authored_cameras(
     painter: &Painter,
     visuals: &[AuthoredCameraVisual],
@@ -288,13 +287,8 @@ fn paint_authored_cameras(
     }
 }
 
-#[cfg(test)]
 impl EditorApp {
-    fn authored_camera_visuals(
-        &self,
-        rect: Rect,
-        camera: CameraView,
-    ) -> Vec<AuthoredCameraVisual> {
+    fn authored_camera_visuals(&self, rect: Rect, camera: CameraView) -> Vec<AuthoredCameraVisual> {
         let aspect = rect.width() / rect.height().max(1.0);
         let Some(scene_camera) = self
             .scene
@@ -322,21 +316,38 @@ impl EditorApp {
             .collect()
     }
 
-    fn pick_authored_camera(
-        &self,
-        rect: Rect,
-        pointer: Pos2,
-        camera: CameraView,
-    ) -> Option<EntityId> {
-        self.authored_camera_visuals(rect, camera)
-            .into_iter()
-            .rev()
-            .find(|visual| visual.hit_test(pointer))
-            .map(|visual| visual.entity)
-    }
-}
+    fn authored_camera_overlay(
+        &mut self,
+        context: &egui::Context,
+        response: &Response,
+        tool_owns_primary: bool,
+    ) {
+        let pick_state = egui::Id::new(CAMERA_PICK_STATE);
+        if let Some(Some(entity)) =
+            context.data_mut(|data| data.remove_temp::<Option<EntityId>>(pick_state))
+        {
+            self.select(Some(entity));
+        }
 
-impl EditorApp {
+        let camera = self.scene_camera();
+        let visuals = self.authored_camera_visuals(response.rect, camera);
+        if !tool_owns_primary
+            && response.clicked_by(egui::PointerButton::Primary)
+            && let Some(pointer) = response.interact_pointer_pos()
+            && let Some(entity) = pick_authored_camera(&visuals, pointer)
+        {
+            context.data_mut(|data| data.insert_temp(pick_state, Some(entity)));
+        }
+
+        let painter = context
+            .layer_painter(LayerId::new(
+                Order::Foreground,
+                egui::Id::new(CAMERA_OVERLAY_LAYER),
+            ))
+            .with_clip_rect(response.rect);
+        paint_authored_cameras(&painter, &visuals, self.selection);
+    }
+
     pub(super) fn move_camera(
         &mut self,
         context: &egui::Context,
@@ -365,6 +376,7 @@ impl EditorApp {
             self.viewport_zoom =
                 (self.viewport_zoom * (delta * 0.002).exp()).clamp(MIN_ZOOM, MAX_ZOOM);
         }
+        self.authored_camera_overlay(context, response, painting);
     }
 
     pub(super) fn focus_selection(&mut self) {
@@ -441,6 +453,29 @@ mod tests {
     }
 
     #[test]
+    fn an_unmoved_scene_view_starts_on_its_independent_camera() {
+        let scene = camera_for(WorkspaceTab::Scene, EditorCamera::default());
+        let game = camera_for(WorkspaceTab::Game, EditorCamera::default());
+        assert_eq!(scene.orbit, GlamVec2::ZERO);
+        assert_eq!(scene.pan, GlamVec2::ZERO);
+        assert_eq!(scene.distance_scale.to_bits(), 1.0_f32.to_bits());
+        assert_eq!(scene.projection, WorldProjection::Perspective);
+        assert_eq!(game, CameraView::default());
+        assert_eq!(game.projection, WorldProjection::Authored);
+        assert_ne!(scene.projection, game.projection);
+    }
+
+    #[test]
+    fn zooming_is_proportional_rather_than_a_fixed_step() {
+        let step = |zoom: f32| (zoom * (50.0_f32 * 0.002).exp()).clamp(MIN_ZOOM, MAX_ZOOM);
+        let near = MIN_ZOOM * 2.0;
+        let far = MAX_ZOOM * 0.5;
+        let ratio = |zoom: f32| step(zoom) / zoom;
+        assert!((ratio(near) - ratio(far)).abs() < 1.0e-5);
+        assert_eq!(step(MAX_ZOOM).to_bits(), MAX_ZOOM.to_bits());
+    }
+
+    #[test]
     fn perspective_frustum_changes_with_fov() {
         let narrow = perspective_corners(30.0, 0.1, 10.0, 16.0 / 9.0);
         let wide = perspective_corners(90.0, 0.1, 10.0, 16.0 / 9.0);
@@ -459,7 +494,16 @@ mod tests {
     }
 
     #[test]
-    fn moving_camera_moves_projected_body() {
+    fn malformed_camera_rotation_falls_back_to_identity() {
+        let transform = Transform3D {
+            rotation: [0.0; 4],
+            ..Transform3D::default()
+        };
+        assert_eq!(safe_rotation(transform), Quat::IDENTITY);
+    }
+
+    #[test]
+    fn moving_perspective_camera_moves_projected_body() {
         let rect = Rect::from_min_size(Pos2::ZERO, egui::Vec2::splat(400.0));
         let camera = CameraComponent::Perspective {
             vertical_fov_degrees: 60.0,
@@ -492,56 +536,46 @@ mod tests {
     }
 
     #[test]
-    fn camera_visual_hit_testing_selects_the_marker() {
+    fn orthographic_visual_uses_the_overlay_center() {
         let rect = Rect::from_min_size(Pos2::ZERO, egui::Vec2::splat(400.0));
-        let camera = CameraComponent::Perspective {
-            vertical_fov_degrees: 60.0,
-            near: 0.1,
-            far: 10.0,
-        };
         let entity = sindri_core::World::default().next_handle();
+        let camera = CameraComponent::Orthographic {
+            center: [0.4, 0.0],
+            vertical_size: 2.0,
+            near: -1.0,
+            far: 1.0,
+        };
         let visual = camera_visual(
             entity,
-            Transform3D::default(),
+            Transform3D {
+                position: [-0.7, 0.0, 0.0],
+                ..Transform3D::default()
+            },
             camera,
             rect,
             Mat4::IDENTITY,
             1.0,
         )
         .unwrap();
-        assert!(visual.hit_test(visual.body[0].lerp(visual.body[2], 0.5)));
+        assert!(visual.body[0].x > rect.center().x);
     }
 
     #[test]
-    fn orthographic_volume_keeps_parallel_sides() {
-        let corners = orthographic_corners(8.0, 0.1, 100.0, 16.0 / 9.0);
-        assert_eq!(corners[0][0].x.to_bits(), corners[1][0].x.to_bits());
-        assert_eq!(corners[0][2].y.to_bits(), corners[1][2].y.to_bits());
-    }
-
-    #[test]
-    fn camera_paint_path_is_exercised() {
-        let context = egui::Context::default();
+    fn camera_marker_is_pickable() {
         let entity = sindri_core::World::default().next_handle();
         let visual = AuthoredCameraVisual {
             entity,
-            body: vec![Pos2::new(0.0, 0.0), Pos2::new(4.0, 0.0), Pos2::new(2.0, 4.0)],
-            lines: vec![[Pos2::new(0.0, 0.0), Pos2::new(4.0, 0.0)]],
+            body: vec![
+                Pos2::new(0.0, 0.0),
+                Pos2::new(4.0, 0.0),
+                Pos2::new(2.0, 4.0),
+            ],
+            lines: Vec::new(),
             hit_lines: Vec::new(),
         };
-        context
-            .run_ui(egui::RawInput::default(), |ui| {
-                paint_authored_cameras(ui.painter(), &[visual], Some(entity));
-            })
-            .drop_without_applying_deltas();
-    }
-
-    #[test]
-    fn an_unmoved_scene_view_starts_on_its_independent_camera() {
-        let scene = camera_for(WorkspaceTab::Scene, EditorCamera::default());
-        let game = camera_for(WorkspaceTab::Game, EditorCamera::default());
-        assert_eq!(scene.projection, WorldProjection::Perspective);
-        assert_eq!(game.projection, WorldProjection::Authored);
-        assert_ne!(scene.projection, game.projection);
+        assert_eq!(
+            pick_authored_camera(&[visual], Pos2::new(2.0, 1.0)),
+            Some(entity)
+        );
     }
 }
