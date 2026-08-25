@@ -115,12 +115,7 @@ fn perspective_corners(
     [plane(near), plane(far)]
 }
 
-fn orthographic_corners(
-    vertical_size: f32,
-    near: f32,
-    far: f32,
-    aspect: f32,
-) -> [[Vec3; 4]; 2] {
+fn orthographic_corners(vertical_size: f32, near: f32, far: f32, aspect: f32) -> [[Vec3; 4]; 2] {
     let half_height = vertical_size * 0.5;
     let half_width = half_height * aspect;
     let plane = |distance: f32| {
@@ -180,15 +175,9 @@ fn camera_visual(
     let body_radius = 7.0;
     let body = vec![
         Pos2::new(centre.x - body_radius, centre.y - body_radius * 0.65),
-        Pos2::new(
-            centre.x + body_radius * 0.45,
-            centre.y - body_radius * 0.65,
-        ),
+        Pos2::new(centre.x + body_radius * 0.45, centre.y - body_radius * 0.65),
         Pos2::new(centre.x + body_radius, centre.y),
-        Pos2::new(
-            centre.x + body_radius * 0.45,
-            centre.y + body_radius * 0.65,
-        ),
+        Pos2::new(centre.x + body_radius * 0.45, centre.y + body_radius * 0.65),
         Pos2::new(centre.x - body_radius, centre.y + body_radius * 0.65),
     ];
 
