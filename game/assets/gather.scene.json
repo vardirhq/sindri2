@@ -1,5 +1,5 @@
 {
-  "format_version": 6,
+  "format_version": 7,
   "metadata": {
     "name": "Gather"
   },
@@ -14,9 +14,7 @@
       },
       "components": {
         "sindri.script": {
-          "properties": {
-            "orbs": 5.0
-          },
+          "properties": { "orbs": 5.0 },
           "script": "Banner",
           "source": "scripts/banner.decay"
         },
@@ -39,18 +37,9 @@
       "components": {
         "sindri.grid.navigation": {
           "walls": [
-            {
-              "first": [0, 0],
-              "second": [1, 0]
-            },
-            {
-              "first": [1, 1],
-              "second": [2, 1]
-            },
-            {
-              "first": [1, 2],
-              "second": [2, 2]
-            }
+            { "first": [0, 0], "second": [1, 0] },
+            { "first": [1, 1], "second": [2, 1] },
+            { "first": [1, 2], "second": [2, 2] }
           ]
         },
         "sindri.tilemap": {
@@ -63,55 +52,13 @@
           "texture": "textures/tiles.png",
           "tile_size": [1.1, 0.55],
           "tiles": [
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1,
-            0,
-            1
+            1, 0, 1, 0, 1, 0, 1,
+            0, 1, 0, 1, 0, 1, 0,
+            1, 0, 1, 0, 1, 0, 1,
+            0, 1, 0, 1, 0, 1, 0,
+            1, 0, 1, 0, 1, 0, 1,
+            0, 1, 0, 1, 0, 1, 0,
+            1, 0, 1, 0, 1, 0, 1
           ]
         }
       }
@@ -136,389 +83,141 @@
     {
       "id": "orb-0",
       "name": "Orb 1",
-      "transform_3d": {
-        "position": [-2.05, 0.55, 0.0],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.34, 0.34, 1.0]
-      },
+      "transform_3d": { "position": [-2.05, 0.55, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.34, 0.34, 1.0] },
       "components": {
-        "sindri.script": {
-          "properties": {
-            "bob": 0.09,
-            "reach": 0.7
-          },
-          "script": "Orb",
-          "source": "scripts/orb.decay"
-        },
-        "sindri.sprite": {
-          "layer": 10,
-          "space": "world",
-          "texture": "textures/orb.png",
-          "tint": [1.0, 1.0, 1.0, 1.0]
-        }
+        "sindri.script": { "properties": { "bob": 0.09, "reach": 0.7 }, "script": "Orb", "source": "scripts/orb.decay" },
+        "sindri.sprite": { "layer": 10, "space": "world", "texture": "textures/orb.png", "tint": [1.0, 1.0, 1.0, 1.0] }
       }
     },
     {
       "id": "orb-1",
       "name": "Orb 2",
-      "transform_3d": {
-        "position": [2.05, 0.55, 0.0],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.34, 0.34, 1.0]
-      },
+      "transform_3d": { "position": [2.05, 0.55, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.34, 0.34, 1.0] },
       "components": {
-        "sindri.script": {
-          "properties": {
-            "bob": 0.09,
-            "reach": 0.7
-          },
-          "script": "Orb",
-          "source": "scripts/orb.decay"
-        },
-        "sindri.sprite": {
-          "layer": 10,
-          "space": "world",
-          "texture": "textures/orb.png",
-          "tint": [1.0, 1.0, 1.0, 1.0]
-        }
+        "sindri.script": { "properties": { "bob": 0.09, "reach": 0.7 }, "script": "Orb", "source": "scripts/orb.decay" },
+        "sindri.sprite": { "layer": 10, "space": "world", "texture": "textures/orb.png", "tint": [1.0, 1.0, 1.0, 1.0] }
       }
     },
     {
       "id": "orb-2",
       "name": "Orb 3",
-      "transform_3d": {
-        "position": [0.0, 1.25, 0.0],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.34, 0.34, 1.0]
-      },
+      "transform_3d": { "position": [0.0, 1.25, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.34, 0.34, 1.0] },
       "components": {
-        "sindri.script": {
-          "properties": {
-            "bob": 0.09,
-            "reach": 0.7
-          },
-          "script": "Orb",
-          "source": "scripts/orb.decay"
-        },
-        "sindri.sprite": {
-          "layer": 10,
-          "space": "world",
-          "texture": "textures/orb.png",
-          "tint": [1.0, 1.0, 1.0, 1.0]
-        }
+        "sindri.script": { "properties": { "bob": 0.09, "reach": 0.7 }, "script": "Orb", "source": "scripts/orb.decay" },
+        "sindri.sprite": { "layer": 10, "space": "world", "texture": "textures/orb.png", "tint": [1.0, 1.0, 1.0, 1.0] }
       }
     },
     {
       "id": "orb-3",
       "name": "Orb 4",
-      "transform_3d": {
-        "position": [-1.15, -0.95, 0.0],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.34, 0.34, 1.0]
-      },
+      "transform_3d": { "position": [-1.15, -0.95, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.34, 0.34, 1.0] },
       "components": {
-        "sindri.script": {
-          "properties": {
-            "bob": 0.09,
-            "reach": 0.7
-          },
-          "script": "Orb",
-          "source": "scripts/orb.decay"
-        },
-        "sindri.sprite": {
-          "layer": 10,
-          "space": "world",
-          "texture": "textures/orb.png",
-          "tint": [1.0, 1.0, 1.0, 1.0]
-        }
+        "sindri.script": { "properties": { "bob": 0.09, "reach": 0.7 }, "script": "Orb", "source": "scripts/orb.decay" },
+        "sindri.sprite": { "layer": 10, "space": "world", "texture": "textures/orb.png", "tint": [1.0, 1.0, 1.0, 1.0] }
       }
     },
     {
       "id": "orb-4",
       "name": "Orb 5",
-      "transform_3d": {
-        "position": [1.15, -0.95, 0.0],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.34, 0.34, 1.0]
-      },
+      "transform_3d": { "position": [1.15, -0.95, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.34, 0.34, 1.0] },
       "components": {
-        "sindri.script": {
-          "properties": {
-            "bob": 0.09,
-            "reach": 0.7
-          },
-          "script": "Orb",
-          "source": "scripts/orb.decay"
-        },
-        "sindri.sprite": {
-          "layer": 10,
-          "space": "world",
-          "texture": "textures/orb.png",
-          "tint": [1.0, 1.0, 1.0, 1.0]
-        }
-      }
-    },
-    {
-      "id": "overlay-camera",
-      "name": "Overlay Camera",
-      "components": {
-        "sindri.camera": {
-          "center": [0.0, 0.0],
-          "far": 10.0,
-          "near": 0.0,
-          "projection": "orthographic",
-          "vertical_size": 2.0
-        }
+        "sindri.script": { "properties": { "bob": 0.09, "reach": 0.7 }, "script": "Orb", "source": "scripts/orb.decay" },
+        "sindri.sprite": { "layer": 10, "space": "world", "texture": "textures/orb.png", "tint": [1.0, 1.0, 1.0, 1.0] }
       }
     },
     {
       "id": "pip-0",
       "name": "Pip 1",
-      "transform_3d": {
-        "position": [0.14, -0.14, 1.0],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.1, 0.1, 1.0]
-      },
+      "transform_3d": { "position": [0.14, -0.14, 1.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.1, 0.1, 1.0] },
       "components": {
-        "sindri.script": {
-          "properties": {
-            "lights_at": 1.0
-          },
-          "script": "Pip",
-          "source": "scripts/pip.decay"
-        },
-        "sindri.sprite": {
-          "anchor": "top_left",
-          "layer": 100,
-          "texture": "textures/pip.png#full",
-          "tint": [1.0, 1.0, 1.0, 0.0]
-        }
+        "sindri.script": { "properties": { "lights_at": 1.0 }, "script": "Pip", "source": "scripts/pip.decay" },
+        "sindri.sprite": { "anchor": "top_left", "layer": 100, "texture": "textures/pip.png#full", "tint": [1.0, 1.0, 1.0, 0.0] }
       }
     },
     {
       "id": "pip-1",
       "name": "Pip 2",
-      "transform_3d": {
-        "position": [0.27, -0.14, 1.0],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.1, 0.1, 1.0]
-      },
+      "transform_3d": { "position": [0.27, -0.14, 1.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.1, 0.1, 1.0] },
       "components": {
-        "sindri.script": {
-          "properties": {
-            "lights_at": 2.0
-          },
-          "script": "Pip",
-          "source": "scripts/pip.decay"
-        },
-        "sindri.sprite": {
-          "anchor": "top_left",
-          "layer": 100,
-          "texture": "textures/pip.png#full",
-          "tint": [1.0, 1.0, 1.0, 0.0]
-        }
+        "sindri.script": { "properties": { "lights_at": 2.0 }, "script": "Pip", "source": "scripts/pip.decay" },
+        "sindri.sprite": { "anchor": "top_left", "layer": 100, "texture": "textures/pip.png#full", "tint": [1.0, 1.0, 1.0, 0.0] }
       }
     },
     {
       "id": "pip-2",
       "name": "Pip 3",
-      "transform_3d": {
-        "position": [0.4, -0.14, 1.0],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.1, 0.1, 1.0]
-      },
+      "transform_3d": { "position": [0.4, -0.14, 1.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.1, 0.1, 1.0] },
       "components": {
-        "sindri.script": {
-          "properties": {
-            "lights_at": 3.0
-          },
-          "script": "Pip",
-          "source": "scripts/pip.decay"
-        },
-        "sindri.sprite": {
-          "anchor": "top_left",
-          "layer": 100,
-          "texture": "textures/pip.png#full",
-          "tint": [1.0, 1.0, 1.0, 0.0]
-        }
+        "sindri.script": { "properties": { "lights_at": 3.0 }, "script": "Pip", "source": "scripts/pip.decay" },
+        "sindri.sprite": { "anchor": "top_left", "layer": 100, "texture": "textures/pip.png#full", "tint": [1.0, 1.0, 1.0, 0.0] }
       }
     },
     {
       "id": "pip-3",
       "name": "Pip 4",
-      "transform_3d": {
-        "position": [0.53, -0.14, 1.0],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.1, 0.1, 1.0]
-      },
+      "transform_3d": { "position": [0.53, -0.14, 1.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.1, 0.1, 1.0] },
       "components": {
-        "sindri.script": {
-          "properties": {
-            "lights_at": 4.0
-          },
-          "script": "Pip",
-          "source": "scripts/pip.decay"
-        },
-        "sindri.sprite": {
-          "anchor": "top_left",
-          "layer": 100,
-          "texture": "textures/pip.png#full",
-          "tint": [1.0, 1.0, 1.0, 0.0]
-        }
+        "sindri.script": { "properties": { "lights_at": 4.0 }, "script": "Pip", "source": "scripts/pip.decay" },
+        "sindri.sprite": { "anchor": "top_left", "layer": 100, "texture": "textures/pip.png#full", "tint": [1.0, 1.0, 1.0, 0.0] }
       }
     },
     {
       "id": "pip-4",
       "name": "Pip 5",
-      "transform_3d": {
-        "position": [0.66, -0.14, 1.0],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.1, 0.1, 1.0]
-      },
+      "transform_3d": { "position": [0.66, -0.14, 1.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.1, 0.1, 1.0] },
       "components": {
-        "sindri.script": {
-          "properties": {
-            "lights_at": 5.0
-          },
-          "script": "Pip",
-          "source": "scripts/pip.decay"
-        },
-        "sindri.sprite": {
-          "anchor": "top_left",
-          "layer": 100,
-          "texture": "textures/pip.png#full",
-          "tint": [1.0, 1.0, 1.0, 0.0]
-        }
+        "sindri.script": { "properties": { "lights_at": 5.0 }, "script": "Pip", "source": "scripts/pip.decay" },
+        "sindri.sprite": { "anchor": "top_left", "layer": 100, "texture": "textures/pip.png#full", "tint": [1.0, 1.0, 1.0, 0.0] }
       }
     },
     {
       "id": "pip-empty-0",
       "name": "Pip Socket 1",
-      "transform_3d": {
-        "position": [0.14, -0.14, 0.5],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.1, 0.1, 1.0]
-      },
-      "components": {
-        "sindri.sprite": {
-          "anchor": "top_left",
-          "layer": 99,
-          "texture": "textures/pip.png#empty",
-          "tint": [1.0, 1.0, 1.0, 1.0]
-        }
-      }
+      "transform_3d": { "position": [0.14, -0.14, 0.5], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.1, 0.1, 1.0] },
+      "components": { "sindri.sprite": { "anchor": "top_left", "layer": 99, "texture": "textures/pip.png#empty", "tint": [1.0, 1.0, 1.0, 1.0] } }
     },
     {
       "id": "pip-empty-1",
       "name": "Pip Socket 2",
-      "transform_3d": {
-        "position": [0.27, -0.14, 0.5],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.1, 0.1, 1.0]
-      },
-      "components": {
-        "sindri.sprite": {
-          "anchor": "top_left",
-          "layer": 99,
-          "texture": "textures/pip.png#empty",
-          "tint": [1.0, 1.0, 1.0, 1.0]
-        }
-      }
+      "transform_3d": { "position": [0.27, -0.14, 0.5], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.1, 0.1, 1.0] },
+      "components": { "sindri.sprite": { "anchor": "top_left", "layer": 99, "texture": "textures/pip.png#empty", "tint": [1.0, 1.0, 1.0, 1.0] } }
     },
     {
       "id": "pip-empty-2",
       "name": "Pip Socket 3",
-      "transform_3d": {
-        "position": [0.4, -0.14, 0.5],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.1, 0.1, 1.0]
-      },
-      "components": {
-        "sindri.sprite": {
-          "anchor": "top_left",
-          "layer": 99,
-          "texture": "textures/pip.png#empty",
-          "tint": [1.0, 1.0, 1.0, 1.0]
-        }
-      }
+      "transform_3d": { "position": [0.4, -0.14, 0.5], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.1, 0.1, 1.0] },
+      "components": { "sindri.sprite": { "anchor": "top_left", "layer": 99, "texture": "textures/pip.png#empty", "tint": [1.0, 1.0, 1.0, 1.0] } }
     },
     {
       "id": "pip-empty-3",
       "name": "Pip Socket 4",
-      "transform_3d": {
-        "position": [0.53, -0.14, 0.5],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.1, 0.1, 1.0]
-      },
-      "components": {
-        "sindri.sprite": {
-          "anchor": "top_left",
-          "layer": 99,
-          "texture": "textures/pip.png#empty",
-          "tint": [1.0, 1.0, 1.0, 1.0]
-        }
-      }
+      "transform_3d": { "position": [0.53, -0.14, 0.5], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.1, 0.1, 1.0] },
+      "components": { "sindri.sprite": { "anchor": "top_left", "layer": 99, "texture": "textures/pip.png#empty", "tint": [1.0, 1.0, 1.0, 1.0] } }
     },
     {
       "id": "pip-empty-4",
       "name": "Pip Socket 5",
-      "transform_3d": {
-        "position": [0.66, -0.14, 0.5],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.1, 0.1, 1.0]
-      },
-      "components": {
-        "sindri.sprite": {
-          "anchor": "top_left",
-          "layer": 99,
-          "texture": "textures/pip.png#empty",
-          "tint": [1.0, 1.0, 1.0, 1.0]
-        }
-      }
+      "transform_3d": { "position": [0.66, -0.14, 0.5], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.1, 0.1, 1.0] },
+      "components": { "sindri.sprite": { "anchor": "top_left", "layer": 99, "texture": "textures/pip.png#empty", "tint": [1.0, 1.0, 1.0, 1.0] } }
     },
     {
       "id": "player",
       "name": "Player",
-      "transform_3d": {
-        "position": [0.0, -0.2, 0.2],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.62, 0.62, 1.0]
-      },
+      "transform_3d": { "position": [0.0, -0.2, 0.2], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.62, 0.62, 1.0] },
       "components": {
         "sindri.animation.sprite": {
-          "clips": {
-            "bob": {
-              "frames": ["bob-0", "bob-1", "bob-2", "bob-3"],
-              "looping": true,
-              "seconds_per_frame": 0.16
-            }
-          },
+          "clips": { "bob": { "frames": ["bob-0", "bob-1", "bob-2", "bob-3"], "looping": true, "seconds_per_frame": 0.16 } },
           "playing": "bob",
           "speed": 1.0
         },
-        "sindri.script": {
-          "properties": {
-            "speed": 2.6
-          },
-          "script": "Player",
-          "source": "scripts/player.decay"
-        },
-        "sindri.sprite": {
-          "layer": 20,
-          "space": "world",
-          "texture": "textures/player.png",
-          "tint": [1.0, 1.0, 1.0, 1.0]
-        }
+        "sindri.script": { "properties": { "speed": 2.6 }, "script": "Player", "source": "scripts/player.decay" },
+        "sindri.sprite": { "layer": 20, "space": "world", "texture": "textures/player.png", "tint": [1.0, 1.0, 1.0, 1.0] }
       }
     },
     {
       "id": "title",
       "name": "Title",
-      "transform_3d": {
-        "position": [-0.42, -0.16, 2.0],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [1.0, 1.0, 1.0]
-      },
+      "transform_3d": { "position": [-0.42, -0.16, 2.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
       "components": {
         "sindri.text": {
           "anchor": "top",
@@ -534,48 +233,19 @@
     {
       "id": "wisp",
       "name": "Wisp",
-      "transform_3d": {
-        "position": [0.0, 1.65, 0.1],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.24, 0.24, 1.0]
-      },
+      "transform_3d": { "position": [0.0, 1.65, 0.1], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.24, 0.24, 1.0] },
       "components": {
-        "sindri.grid.occupant": {
-          "footprint": [
-            [0, 0]
-          ],
-          "grid": "floor"
-        },
-        "sindri.script": {
-          "properties": {
-            "step_seconds": 0.32
-          },
-          "script": "Wisp",
-          "source": "scripts/wisp.decay"
-        },
-        "sindri.sprite": {
-          "layer": 15,
-          "space": "world",
-          "texture": "textures/orb.png",
-          "tint": [0.45, 0.82, 1.0, 0.72]
-        }
+        "sindri.grid.occupant": { "footprint": [[0, 0]], "grid": "floor" },
+        "sindri.script": { "properties": { "step_seconds": 0.32 }, "script": "Wisp", "source": "scripts/wisp.decay" },
+        "sindri.sprite": { "layer": 15, "space": "world", "texture": "textures/orb.png", "tint": [0.45, 0.82, 1.0, 0.72] }
       }
     },
     {
       "id": "world-camera",
       "name": "World Camera",
-      "transform_3d": {
-        "position": [0.0, 0.0, 9.0],
-        "rotation": [0.0, -0.0, -0.0, 1.0],
-        "scale": [1.0, 1.0, 1.0]
-      },
+      "transform_3d": { "position": [0.0, 0.0, 9.0], "rotation": [0.0, -0.0, -0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
       "components": {
-        "sindri.camera": {
-          "far": 60.0,
-          "near": 0.1,
-          "projection": "perspective",
-          "vertical_fov_degrees": 45.0
-        }
+        "sindri.camera": { "far": 60.0, "near": 0.1, "projection": "perspective", "vertical_fov_degrees": 45.0 }
       }
     }
   ]
