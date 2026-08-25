@@ -512,12 +512,165 @@ The next item is not more language. It is `sindri-decay` — one script driving 
 - [x] Give Decay a value that can hold an entity — `Value::Reference` is opaque to the language: holdable, passable, comparable, with no literal, no arithmetic and no way inside. The engine packs a slot and a generation into it, and the `Host` trait's three methods each take a subject, so a path rooted at a value a script holds resolves against what it names
 - [ ] Extend the host to other entities, spawning, and despawning, routed through `WorldCommand` (partly done: `World.find`, `World.exists`, `World.despawn` and reaching through a reference all work and are typed — **spawning** is blocked on the engine having a prefab to say what to create, and despawn is not yet routed through `WorldCommand`, because no script write is and play mode restores from a snapshot)
 - [ ] Generate typed component access, diagnostics, and autocomplete from the component schema registry (Decay's `Environment` is where host globals enter, and `IrField` already carries `exported` and `type_name` — this is the capability Rhai structurally could not have offered, and the reason the language has a case)
-- [ ] Specify safe entity and asset handles, coroutine cancellation, deterministic scheduling, and execution budgets (call depth is bounded; an operation budget is required before loops land)
+- [ ] Specify safe entity and asset handles, coroutine cancellation, deterministic scheduling, and execution budgets (call depth is bounded; the operation budget is slice 1 of the language track below, where it lands with the loops that make it necessary)
 - [ ] Prove function/module hot reload with preservation or explicit migration of compatible typed state
 - [ ] Document recurring gameplay-authoring pain points from Gather and other
   representative games, and feed them back into the Decay host and tooling
 - [ ] Define the editor, language-server, formatter, debugger, documentation, and testing commitments before making the language public
 - [ ] Decide whether the prototype provides enough gameplay-specific value to justify a permanent language ecosystem
+
+### The language basics, ordered by what a script cannot say
+
+An external audit of the language produced a twenty-item list of missing
+fundamentals. Its inventory was almost exactly the "What does not exist" section
+of `decay/LANGUAGE.md` — which is what that section is for, and the first
+evidence it is doing its job. What follows is the **ordering**, because that is
+the part worth arguing about: a twenty-item list of language fundamentals is a
+feature checklist, and this repository's rule is that a capability is not
+complete until Gather uses it in a real gameplay context. So each slice below
+names what a script cannot currently say, and the script that proves it can.
+
+Two consequences of ordering it that way rather than by familiarity. Collections
+are pulled forward by Milestone 9's outstanding "typed Decay access" for
+pathfinding rather than by a general appeal to inventories and waypoints — the
+argument is below and it is concrete. Strings and formatting go to the back,
+because the engine cannot display text: Gather's score is a row of sprite lamps
+for exactly that reason, and a script that formats a string today can `print` it
+and nothing else.
+
+#### Slice 1 — loops, and everything that shares their machinery
+
+One slice, not five. `decay-ir` already emits patched `Jump` and `JumpIfFalse`,
+so all of this is the same work in the same place, and splitting it would pay
+the cost of opening `decay-syntax`, `decay-semantic`, `decay-ir`, and
+`decay-runtime` four times.
+
+- [ ] `while`, with `break` and `continue`
+- [ ] An operation budget in `decay-runtime`, reported as a value like every
+  other runtime error. The call-depth limit is the precedent for its shape, and
+  both `decay/README.md` and `LANGUAGE.md` already state that a loop without a
+  budget cannot ship in an editor — an infinite loop takes the editor and any
+  unsaved work with it, which is what `CallDepthExceeded` exists to prevent for
+  recursion
+- [ ] **Short-circuit `&&` and `||`.** Both operands are evaluated today
+  (`decay-runtime`'s `booleans`), which stopped being a curiosity when entity
+  references landed: `target != null && target.transform.position.x > 0.0` reads
+  as a null guard, type-checks, and then faults, because `docs/scripting.md`
+  makes reaching through `null` an error deliberately. The idiomatic guard
+  against the language's own error is currently wrong. It belongs here because
+  it is branch lowering — the same machinery, on the same visit
+- [ ] `else if`, as a desugar in the parser rather than a new statement form
+- [ ] `%`
+- [ ] Reject a field initializer that reads a field declared below it
+  (`LANGUAGE.md` Surprising Behaviour #8). It compiles and fails at runtime
+  today; it is a `decay-semantic` fix and this slice is already there
+- [ ] Gather proof: `orb.decay` and `wisp.decay` replace their sequential
+  `== null` guard blocks with single short-circuiting conditions, and
+  `wisp.decay`'s step timer becomes `elapsed %= step_seconds` rather than
+  `elapsed = 0.0`, which discards the overshoot and makes the wisp's cadence
+  depend on the frame rate
+
+`while` itself has no Gather caller in this slice, and that is deliberate rather
+than overlooked: its first real caller arrives in slice 3, and a loop must not
+be reachable before the budget that bounds it exists.
+
+#### Slice 2 — stop spelling an `f64` as `f32`
+
+No Gather change. This is an honesty fix, and it is cheap in exactly the way the
+next paragraph is not.
+
+- [ ] Decide it: either the only numeric type stops being called `f32`, or Decay
+  values are actually stored narrowed and `WorldHost` stops being the one place
+  the two meet
+- [ ] Whichever is chosen, `decay/LANGUAGE.md`, `decay/README.md`,
+  `docs/scripting.md`'s known gaps, and `docs/decay-direction.md` agree
+  afterwards
+- [ ] `i32` is deliberately **not** in this slice. A second numeric type in a
+  language with no casts, no inference past a binding's own initializer, and
+  where `7` and `7.0` are the same value means deciding literal defaulting,
+  mixed arithmetic, explicit conversion, and narrowing in both directions at the
+  host boundary — and it rewrites every signature in `surface.rs`. Its forcing
+  function is `items[index]`, so the decision belongs to slice 3
+
+#### Slice 3 — one collection, because a path already is one
+
+The argument is not that gameplay uses collections. It is that
+`Grid.step_toward` computes a whole footprint-aware A\* route in
+`crates/sindri-decay/src/host.rs` and then keeps `nodes[1]` and throws the rest
+away, once per mover per tick, for the single reason that Decay has no value
+that can hold it. The engine computes the path; the language cannot name it.
+
+- [ ] `Array<T>` as a value the host returns. No array literals in this slice
+- [ ] Indexing and `len`
+- [ ] `for … in`
+- [ ] Decide `i32` here — or decide that indices stay the one numeric type, and
+  record why
+- [ ] `Grid.path(mover, grid, target)` on the Sindri surface, returning the
+  route `sindri-grid` already computes, closing Milestone 9's outstanding
+  "typed Decay access" for pathfinding
+- [ ] Gather proof: the wisp holds a path and follows it, instead of paying for
+  a full route every tick to take one step of it
+
+#### Slice 4 — a value for a position
+
+- [ ] `Vec2` and `Vec3` as built-in, non-extensible value types with fixed
+  operator support. Not user-defined structs, and explicitly **not** operator
+  overloading: the arithmetic belongs to the language and nothing else receives
+  it
+- [ ] `Grid.position(entity, grid)` replaces the `position_x`/`position_y` pair,
+  which `docs/scripting.md` already records as a consequence of the missing
+  value rather than as a design choice
+- [ ] Sprite tint stays four typed numbers. `docs/scripting.md` argues that
+  shape suits a property panel better than a packed value, and a vector type
+  existing does not change that argument
+- [ ] Gather proof: `orb.decay`'s four `resting_*` fields become two, and
+  `player.decay` clamps a position rather than two coordinates
+
+#### Slice 5 — held until something hurts
+
+Each item names the trigger that promotes it. None starts before its trigger
+fires, and an item without a trigger is not ready to be planned.
+
+- [ ] `fixed_update` — host-side rather than language: `scripts.rs` names only
+  `start` and `update`, and the engine already runs fixed-step simulation.
+  Trigger: the first Gather behaviour that drives a physics body
+- [ ] Enums and simple structs — trigger: a Gather script encoding a state
+  machine in numbers or strings
+- [ ] `match` — after enums, and not before
+- [ ] Maps — after arrays have proven the collection model, as
+  `decay/README.md` already says
+- [ ] Modules and multiple files — trigger: the second script that wants a
+  function the first one has. "Reusable types across files" is the same item,
+  not a second one
+- [ ] More maths — `floor`, `ceil`, `round`, `clamp`, `lerp`, `sign`, `tan`,
+  `atan2`. Cheap individually, but Decay has no modules, so each is a bare
+  global name a script can no longer use for its own. Added on demand, never as
+  a batch
+- [ ] Randomness as a seeded, host-owned stream, never a language builtin.
+  `docs/decay-direction.md` recorded `getrandom` refusing to build for
+  `wasm32-unknown-unknown` without an opt-in; the browser target and
+  deterministic tests both want the host holding the seed
+- [ ] `assert(condition, message)` — trigger: a script where a wrong number is
+  harder to find than a wrong path
+- [ ] Strings — concatenation, conversion, formatting, interpolation. Trigger:
+  **the engine can display text.** Until then a formatted string can only be
+  printed, and `print` already takes any type for that reason
+
+#### Explicitly not on this list
+
+Closures, lambdas, function values, generics beyond what a collection needs
+internally, traits, classes, inheritance, `async`, coroutines, operator
+overloading, exceptions, macros, reflection, and ownership. They are restated
+here rather than left to `LANGUAGE.md` because they are the items most likely to
+be proposed again, and the answer does not change: they are language-project
+work, and Decay's case rests on staying small, typed, and gameplay-shaped. A
+sophisticated closure-capture model in an engine that still cannot spawn a
+prefab is the trade this section exists to refuse.
+
+Exit gate: Gather is authored in a Decay that has loops, a bounded runtime, one
+collection, iteration, and a position value — and `decay/LANGUAGE.md` still
+describes the language exactly, with its "What does not exist" section shorter
+by precisely what shipped and its test still passing.
 
 ### Editing a script somewhere other than the editor
 

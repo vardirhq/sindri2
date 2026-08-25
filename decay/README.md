@@ -141,16 +141,20 @@ documentation claims Decay can do belongs in that test.
 1. ~~**Bind Decay to the engine.**~~ Done: `crates/sindri-decay` drives a script
    on an entity's transform, and the editor's fixture spins its cube because a
    `.decay` file says so. See `docs/scripting.md`.
-2. **Define typed host members** so `Input.axis` and `this.transform.position`
-   are checked instead of remaining unknown host paths. This is now the item
-   that unblocks the most: it is what turns a misspelled component field from a
-   runtime `UnknownPath` into a compile error, and it is the prerequisite for
-   any editor tooling that wants to complete a path.
-3. Add lifecycle-oriented runtime helpers for `start`, `update`, and
-   `fixed_update` without coupling them to Sindri.
-4. Add loops, the control-flow IR they require, and the operation budget that
-   becomes necessary once a script can loop.
-5. Add arrays and maps only when a representative gameplay script needs them.
+2. ~~**Define typed host members.**~~ Done: `HostType` and `Environment` check
+   `Input.axis` and `this.transform.position`, so a misspelled component field
+   is a compile error with a line number rather than a runtime `UnknownPath`,
+   and completion after a `.` becomes possible. See `docs/scripting.md`.
+3. **Everything after that is ordered in the engine repository's `ROADMAP.md`**,
+   under *The language basics, ordered by what a script cannot say*: loops with
+   the operation budget and the branch lowering that shares their machinery,
+   then the numeric spelling this file ends by complaining about, then one
+   collection, then a value for a position. `fixed_update` is there too, as a
+   host-side item rather than a language one.
+
+   That plan lives there rather than here because that is where checkboxes are
+   audited, and a second plan in a second file is a second thing to go stale.
+   This section says what has happened; that one says what is next.
 
 Binding first was the right call, and it is the one thing this phase has already
 learned. The foundation reached three thousand lines with no engine caller, and
