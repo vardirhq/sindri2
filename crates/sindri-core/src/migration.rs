@@ -847,7 +847,11 @@ mod tests {
             migrated["entities"][0]["transform_3d"]["rotation"],
             json!([0.1, 0.2, 0.3, 0.9])
         );
-        assert!(migrated["entities"][0]["components"].get(CAMERA_COMPONENT).is_none());
+        assert!(
+            migrated["entities"][0]["components"]
+                .get(CAMERA_COMPONENT)
+                .is_none()
+        );
     }
 
     #[test]
@@ -872,8 +876,15 @@ mod tests {
         let migrated = SceneMigrator::builtin().migrate(old).unwrap();
         assert_eq!(migrated["format_version"], json!(SCENE_FORMAT_VERSION));
         assert_eq!(migrated["entities"][0]["name"], json!("Overlay Camera"));
-        assert!(migrated["entities"][0]["components"].get(CAMERA_COMPONENT).is_none());
-        assert_eq!(migrated["entities"][0]["components"]["game.keep"], json!({ "value": 1 }));
+        assert!(
+            migrated["entities"][0]["components"]
+                .get(CAMERA_COMPONENT)
+                .is_none()
+        );
+        assert_eq!(
+            migrated["entities"][0]["components"]["game.keep"],
+            json!({ "value": 1 })
+        );
     }
 
     #[test]
