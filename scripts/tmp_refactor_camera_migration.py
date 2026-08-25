@@ -170,4 +170,50 @@ fn move_camera_look_at_into_transform(document: &mut Value) -> Result<(), SceneM
 }
 
 '''
-p.write_text(s[:start] + replacement + s[end:])
+s = s[:start] + replacement + s[end:]
+old_test = r'''        let q = [
+            rotation[0].as_f64().unwrap(),
+            rotation[1].as_f64().unwrap(),
+            rotation[2].as_f64().unwrap(),
+            rotation[3].as_f64().unwrap(),
+        ];
+        let cross = |a: [f64; 3], b: [f64; 3]| {
+            [
+                a[1] * b[2] - a[2] * b[1],
+                a[2] * b[0] - a[0] * b[2],
+                a[0] * b[1] - a[1] * b[0],
+            ]
+        };
+        let rotate = |v: [f64; 3]| {
+            let [x, y, z, w] = q;
+            let u = [x, y, z];
+            let uv = cross(u, v);
+            let uuv = cross(u, uv);
+            [
+                v[0] + 2.0 * (w * uv[0] + uuv[0]),
+                v[1] + 2.0 * (w * uv[1] + uuv[1]),
+                v[2] + 2.0 * (w * uv[2] + uuv[2]),
+            ]
+        };
+'''
+new_test = r'''        let quaternion = [
+            rotation[0].as_f64().unwrap(),
+            rotation[1].as_f64().unwrap(),
+            rotation[2].as_f64().unwrap(),
+            rotation[3].as_f64().unwrap(),
+        ];
+        let rotate = |vector: [f64; 3]| {
+            let [axis_x, axis_y, axis_z, scalar] = quaternion;
+            let axis = [axis_x, axis_y, axis_z];
+            let axis_cross_vector = migration_cross(axis, vector);
+            let axis_cross_twice = migration_cross(axis, axis_cross_vector);
+            [
+                vector[0] + 2.0 * (scalar * axis_cross_vector[0] + axis_cross_twice[0]),
+                vector[1] + 2.0 * (scalar * axis_cross_vector[1] + axis_cross_twice[1]),
+                vector[2] + 2.0 * (scalar * axis_cross_vector[2] + axis_cross_twice[2]),
+            ]
+        };
+'''
+if old_test not in s:
+    raise SystemExit('camera migration test block not found')
+p.write_text(s.replace(old_test, new_test))
