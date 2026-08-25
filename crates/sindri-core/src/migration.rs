@@ -431,98 +431,112 @@ fn namespace_components(document: &mut Value) -> Result<(), SceneMigrationError>
 /// transform convention instead: local -Z faces forward and local +Y is up.
 /// Migrating therefore turns that look-at basis into a quaternion and removes
 /// the two camera-only direction fields. Existing transform scale is untouched.
-fn move_camera_look_at_into_transform(document: &mut Value) -> Result<(), SceneMigrationError> {
-    const EPSILON: f64 = 1.0e-12;
-    const CAMERA_COMPONENT: &str = "sindri.camera";
+const CAMERA_MIGRATION_EPSILON: f64 = 1.0e-12;
+const CAMERA_COMPONENT: &str = "sindri.camera";
 
-    fn vec3(
-        value: Option<&Value>,
-        fallback: [f64; 3],
-        what: &str,
-    ) -> Result<[f64; 3], SceneMigrationError> {
-        let Some(value) = value else {
-            return Ok(fallback);
-        };
-        let values = value.as_array().ok_or_else(|| {
-            SceneMigrationError::Unconvertible(format!("{what} must be an array of three numbers"))
+fn migration_vec3(
+    value: Option<&Value>,
+    fallback: [f64; 3],
+    what: &str,
+) -> Result<[f64; 3], SceneMigrationError> {
+    let Some(value) = value else {
+        return Ok(fallback);
+    };
+    let values = value.as_array().ok_or_else(|| {
+        SceneMigrationError::Unconvertible(format!("{what} must be an array of three numbers"))
+    })?;
+    if values.len() != 3 {
+        return Err(SceneMigrationError::Unconvertible(format!(
+            "{what} must contain exactly three numbers"
+        )));
+    }
+    let mut out = [0.0; 3];
+    for (index, item) in values.iter().enumerate() {
+        out[index] = item.as_f64().filter(|v| v.is_finite()).ok_or_else(|| {
+            SceneMigrationError::Unconvertible(format!("{what} must contain only finite numbers"))
         })?;
-        if values.len() != 3 {
-            return Err(SceneMigrationError::Unconvertible(format!(
-                "{what} must contain exactly three numbers"
-            )));
-        }
-        let mut out = [0.0; 3];
-        for (index, item) in values.iter().enumerate() {
-            out[index] = item.as_f64().filter(|v| v.is_finite()).ok_or_else(|| {
-                SceneMigrationError::Unconvertible(format!(
-                    "{what} must contain only finite numbers"
-                ))
-            })?;
-        }
-        Ok(out)
     }
-    fn sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-        [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-    }
-    fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
-        a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
-    }
-    fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
-        [
-            a[1] * b[2] - a[2] * b[1],
-            a[2] * b[0] - a[0] * b[2],
-            a[0] * b[1] - a[1] * b[0],
-        ]
-    }
-    fn normalize(v: [f64; 3]) -> Option<[f64; 3]> {
-        let length2 = dot(v, v);
-        if !length2.is_finite() || length2 <= EPSILON {
-            return None;
-        }
-        let inv = length2.sqrt().recip();
-        Some([v[0] * inv, v[1] * inv, v[2] * inv])
-    }
-    fn rotation(eye: [f64; 3], target: [f64; 3], authored_up: [f64; 3]) -> [f64; 4] {
-        let Some(forward) = normalize(sub(target, eye)) else {
-            return [0.0, 0.0, 0.0, 1.0];
-        };
-        let mut up = normalize(authored_up).unwrap_or([0.0, 1.0, 0.0]);
-        if normalize(cross(up, forward)).is_none() {
-            up = if forward[1].abs() < 0.999 {
-                [0.0, 1.0, 0.0]
-            } else {
-                [0.0, 0.0, 1.0]
-            };
-        }
-        let right = normalize(cross(forward, up)).unwrap_or([1.0, 0.0, 0.0]);
-        let corrected_up = normalize(cross(right, forward)).unwrap_or([0.0, 1.0, 0.0]);
-        let back = [-forward[0], -forward[1], -forward[2]];
+    Ok(out)
+}
 
-        let (m00, m01, m02) = (right[0], corrected_up[0], back[0]);
-        let (m10, m11, m12) = (right[1], corrected_up[1], back[1]);
-        let (m20, m21, m22) = (right[2], corrected_up[2], back[2]);
-        let trace = m00 + m11 + m22;
-        let (x, y, z, w) = if trace > 0.0 {
-            let s = (trace + 1.0).sqrt() * 2.0;
-            ((m21 - m12) / s, (m02 - m20) / s, (m10 - m01) / s, 0.25 * s)
-        } else if m00 > m11 && m00 > m22 {
-            let s = (1.0 + m00 - m11 - m22).sqrt() * 2.0;
-            (0.25 * s, (m01 + m10) / s, (m02 + m20) / s, (m21 - m12) / s)
-        } else if m11 > m22 {
-            let s = (1.0 + m11 - m00 - m22).sqrt() * 2.0;
-            ((m01 + m10) / s, 0.25 * s, (m12 + m21) / s, (m02 - m20) / s)
-        } else {
-            let s = (1.0 + m22 - m00 - m11).sqrt() * 2.0;
-            ((m02 + m20) / s, (m12 + m21) / s, 0.25 * s, (m10 - m01) / s)
-        };
-        let length = (x * x + y * y + z * z + w * w).sqrt();
-        if !length.is_finite() || length <= EPSILON {
-            [0.0, 0.0, 0.0, 1.0]
-        } else {
-            [x / length, y / length, z / length, w / length]
-        }
-    }
+fn migration_sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+}
 
+fn migration_dot(a: [f64; 3], b: [f64; 3]) -> f64 {
+    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+}
+
+fn migration_cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
+}
+
+fn migration_normalize(v: [f64; 3]) -> Option<[f64; 3]> {
+    let length2 = migration_dot(v, v);
+    if !length2.is_finite() || length2 <= CAMERA_MIGRATION_EPSILON {
+        return None;
+    }
+    let inv = length2.sqrt().recip();
+    Some([v[0] * inv, v[1] * inv, v[2] * inv])
+}
+
+fn camera_rotation_from_legacy_look_at(
+    eye: [f64; 3],
+    target: [f64; 3],
+    authored_up: [f64; 3],
+) -> [f64; 4] {
+    let Some(forward) = migration_normalize(migration_sub(target, eye)) else {
+        return [0.0, 0.0, 0.0, 1.0];
+    };
+    let mut up = migration_normalize(authored_up).unwrap_or([0.0, 1.0, 0.0]);
+    if migration_normalize(migration_cross(up, forward)).is_none() {
+        up = if forward[1].abs() < 0.999 {
+            [0.0, 1.0, 0.0]
+        } else {
+            [0.0, 0.0, 1.0]
+        };
+    }
+    let right = migration_normalize(migration_cross(forward, up)).unwrap_or([1.0, 0.0, 0.0]);
+    let corrected_up =
+        migration_normalize(migration_cross(right, forward)).unwrap_or([0.0, 1.0, 0.0]);
+    quaternion_from_basis(right, corrected_up, [-forward[0], -forward[1], -forward[2]])
+}
+
+fn quaternion_from_basis(right: [f64; 3], up: [f64; 3], back: [f64; 3]) -> [f64; 4] {
+    let (m00, m01, m02) = (right[0], up[0], back[0]);
+    let (m10, m11, m12) = (right[1], up[1], back[1]);
+    let (m20, m21, m22) = (right[2], up[2], back[2]);
+    let trace = m00 + m11 + m22;
+    let (x, y, z, w) = if trace > 0.0 {
+        let s = (trace + 1.0).sqrt() * 2.0;
+        ((m21 - m12) / s, (m02 - m20) / s, (m10 - m01) / s, 0.25 * s)
+    } else if m00 > m11 && m00 > m22 {
+        let s = (1.0 + m00 - m11 - m22).sqrt() * 2.0;
+        (0.25 * s, (m01 + m10) / s, (m02 + m20) / s, (m21 - m12) / s)
+    } else if m11 > m22 {
+        let s = (1.0 + m11 - m00 - m22).sqrt() * 2.0;
+        ((m01 + m10) / s, 0.25 * s, (m12 + m21) / s, (m02 - m20) / s)
+    } else {
+        let s = (1.0 + m22 - m00 - m11).sqrt() * 2.0;
+        ((m02 + m20) / s, (m12 + m21) / s, 0.25 * s, (m10 - m01) / s)
+    };
+    normalize_quaternion([x, y, z, w])
+}
+
+fn normalize_quaternion([x, y, z, w]: [f64; 4]) -> [f64; 4] {
+    let length = (x * x + y * y + z * z + w * w).sqrt();
+    if !length.is_finite() || length <= CAMERA_MIGRATION_EPSILON {
+        [0.0, 0.0, 0.0, 1.0]
+    } else {
+        [x / length, y / length, z / length, w / length]
+    }
+}
+
+fn move_camera_look_at_into_transform(document: &mut Value) -> Result<(), SceneMigrationError> {
     let Some(entities) = document.get_mut("entities").and_then(Value::as_array_mut) else {
         return Ok(());
     };
@@ -538,7 +552,7 @@ fn move_camera_look_at_into_transform(document: &mut Value) -> Result<(), SceneM
         let Some(camera) = fields
             .get_mut("components")
             .and_then(Value::as_object_mut)
-            .and_then(|c| c.get_mut(CAMERA_COMPONENT))
+            .and_then(|components| components.get_mut(CAMERA_COMPONENT))
             .and_then(Value::as_object_mut)
         else {
             continue;
@@ -546,12 +560,12 @@ fn move_camera_look_at_into_transform(document: &mut Value) -> Result<(), SceneM
         if camera.get("projection").and_then(Value::as_str) != Some("perspective") {
             continue;
         }
-        let target = vec3(
+        let target = migration_vec3(
             camera.get("target"),
             [0.0, 0.0, 0.0],
             &format!("camera target on entity '{entity_id}'"),
         )?;
-        let up = vec3(
+        let up = migration_vec3(
             camera.get("up"),
             [0.0, 1.0, 0.0],
             &format!("camera up on entity '{entity_id}'"),
@@ -567,12 +581,15 @@ fn move_camera_look_at_into_transform(document: &mut Value) -> Result<(), SceneM
                 "transform_3d on camera entity '{entity_id}' must be an object"
             ))
         })?;
-        let eye = vec3(
+        let eye = migration_vec3(
             transform.get("position"),
             [0.0, 0.0, 0.0],
             &format!("transform position on camera entity '{entity_id}'"),
         )?;
-        transform.insert("rotation".to_owned(), json!(rotation(eye, target, up)));
+        transform.insert(
+            "rotation".to_owned(),
+            json!(camera_rotation_from_legacy_look_at(eye, target, up)),
+        );
     }
     Ok(())
 }
@@ -768,28 +785,21 @@ mod tests {
         let rotation = migrated["entities"][0]["transform_3d"]["rotation"]
             .as_array()
             .unwrap();
-        let q = [
+        let quaternion = [
             rotation[0].as_f64().unwrap(),
             rotation[1].as_f64().unwrap(),
             rotation[2].as_f64().unwrap(),
             rotation[3].as_f64().unwrap(),
         ];
-        let cross = |a: [f64; 3], b: [f64; 3]| {
+        let rotate = |vector: [f64; 3]| {
+            let [axis_x, axis_y, axis_z, scalar] = quaternion;
+            let axis = [axis_x, axis_y, axis_z];
+            let axis_cross_vector = migration_cross(axis, vector);
+            let axis_cross_twice = migration_cross(axis, axis_cross_vector);
             [
-                a[1] * b[2] - a[2] * b[1],
-                a[2] * b[0] - a[0] * b[2],
-                a[0] * b[1] - a[1] * b[0],
-            ]
-        };
-        let rotate = |v: [f64; 3]| {
-            let [x, y, z, w] = q;
-            let u = [x, y, z];
-            let uv = cross(u, v);
-            let uuv = cross(u, uv);
-            [
-                v[0] + 2.0 * (w * uv[0] + uuv[0]),
-                v[1] + 2.0 * (w * uv[1] + uuv[1]),
-                v[2] + 2.0 * (w * uv[2] + uuv[2]),
+                vector[0] + 2.0 * (scalar * axis_cross_vector[0] + axis_cross_twice[0]),
+                vector[1] + 2.0 * (scalar * axis_cross_vector[1] + axis_cross_twice[1]),
+                vector[2] + 2.0 * (scalar * axis_cross_vector[2] + axis_cross_twice[2]),
             ]
         };
         let length = 29.0_f64.sqrt();
