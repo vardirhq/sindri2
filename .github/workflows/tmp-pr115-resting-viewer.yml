@@ -1,0 +1,26 @@
+name: Temporary PR 115 resting viewer patch
+
+on:
+  push:
+    branches:
+      - tmp-camera-test-115
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: rustfmt
+      - run: python scripts/tmp_pr115_resting_viewer_tests.py
+      - run: cargo fmt --all
+      - run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add crates/sindri-scene/tests/extraction.rs
+          git commit -m "Align viewer camera test baselines"
+          git push
