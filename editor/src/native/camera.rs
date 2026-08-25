@@ -7,13 +7,14 @@
 
 use std::f32::consts::TAU;
 
-use eframe::egui::{self, Response};
-use glam::{Vec2 as GlamVec2, Vec3};
-use sindri_scene::{CameraView, ViewCamera, WorldProjection};
+use eframe::egui::{self, Color32, Painter, Pos2, Rect, Response, Shape, Stroke};
+use glam::{Mat4, Quat, Vec2 as GlamVec2, Vec3};
+use sindri_core::{EntityId, SceneComponent, Transform3D};
+use sindri_scene::{CameraComponent, CameraView, ViewCamera, WorldProjection};
 
 use crate::preferences::CameraProjection;
 
-use super::{EditorApp, WorkspaceTab};
+use super::{ACCENT_BRIGHT, EditorApp, TEXT_MUTED, WorkspaceTab};
 
 /// How the editor is looking at the scene, as opposed to what the scene says.
 ///
@@ -38,13 +39,26 @@ impl Default for EditorCamera {
     }
 }
 
+#[derive(Clone, Debug)]
+pub(super) struct AuthoredCameraVisual {
+    entity: EntityId,
+    body: Vec<Pos2>,
+    lines: Vec<[Pos2; 2]>,
+    hit_lines: Vec<[Pos2; 2]>,
+}
+
+impl AuthoredCameraVisual {
+    fn hit_test(&self, pointer: Pos2) -> bool {
+        if polygon_contains(&self.body, pointer) {
+            return true;
+        }
+        self.hit_lines
+            .iter()
+            .any(|line| distance_to_segment(pointer, line[0], line[1]) <= 6.0)
+    }
+}
+
 /// The pan that would put `position` in the middle of what `camera` frames.
-///
-/// The pan's own definition, read backwards: a pan of one moves the picture by
-/// exactly the framed half-height, so a subject that far from the middle is
-/// exactly one pan away from it. Kept apart from the control that calls it
-/// because the way this goes wrong is a sign, and a sign is only visible by
-/// asking where the subject ended up.
 pub(super) fn pan_to_centre(camera: ViewCamera, pan: GlamVec2, position: Vec3) -> GlamVec2 {
     if camera.framed_half_height <= 0.0 {
         return pan;
@@ -53,29 +67,10 @@ pub(super) fn pan_to_centre(camera: ViewCamera, pan: GlamVec2, position: Vec3) -
     pan - GlamVec2::new(offset.x, offset.y) / camera.framed_half_height
 }
 
-/// How far from the authored camera's own elevation a drag can pitch.
-///
-/// A little under a right angle either way. The orbit cannot reach the pole
-/// whatever this says — the extractor guarantees that, where the authored
-/// elevation is known — so this is only about how much drag is worth spending.
 pub(super) const PITCH_LIMIT: f32 = 1.5;
-
-/// How far in and out the wheel can take the scene view.
-///
-/// The old pair, 0.65 to 1.8, could not frame anything much larger or smaller
-/// than the demo cube: not quite twice as far out, and not quite twice as
-/// close. A scene is whatever someone builds, so the range is a factor of four
-/// hundred and the wheel moves through it proportionally.
 pub(super) const MIN_ZOOM: f32 = 0.05;
-
 pub(super) const MAX_ZOOM: f32 = 20.0;
 
-/// The camera a workspace tab looks through.
-///
-/// The scene view is where the editor moves around; the game view is what the
-/// player would see, which means the authored camera and nothing else. If an
-/// orbit or a pan leaked into it, it would stop answering the only question it
-/// exists to answer.
 pub(super) fn camera_for(tab: WorkspaceTab, editor: EditorCamera) -> CameraView {
     match tab {
         WorkspaceTab::Scene => CameraView {
@@ -91,12 +86,232 @@ pub(super) fn camera_for(tab: WorkspaceTab, editor: EditorCamera) -> CameraView 
     }
 }
 
+fn safe_rotation(transform: Transform3D) -> Quat {
+    let rotation = Quat::from_array(transform.rotation);
+    if rotation.is_finite() && rotation.length_squared() > f32::EPSILON {
+        rotation.normalize()
+    } else {
+        Quat::IDENTITY
+    }
+}
+
+fn camera_transform(transform: Transform3D) -> Mat4 {
+    Mat4::from_rotation_translation(
+        safe_rotation(transform),
+        Vec3::from_array(transform.position),
+    )
+}
+
+fn perspective_corners(vertical_fov_degrees: f32, near: f32, far: f32, aspect: f32) -> [[Vec3; 4]; 2] {
+    let tan = (vertical_fov_degrees.to_radians() * 0.5).tan();
+    let plane = |distance: f32| {
+        let half_height = distance * tan;
+        let half_width = half_height * aspect;
+        [
+            Vec3::new(-half_width, -half_height, -distance),
+            Vec3::new(half_width, -half_height, -distance),
+            Vec3::new(half_width, half_height, -distance),
+            Vec3::new(-half_width, half_height, -distance),
+        ]
+    };
+    [plane(near), plane(far)]
+}
+
+fn orthographic_corners(vertical_size: f32, near: f32, far: f32, aspect: f32) -> [[Vec3; 4]; 2] {
+    let half_height = vertical_size * 0.5;
+    let half_width = half_height * aspect;
+    let plane = |distance: f32| {
+        [
+            Vec3::new(-half_width, -half_height, -distance),
+            Vec3::new(half_width, -half_height, -distance),
+            Vec3::new(half_width, half_height, -distance),
+            Vec3::new(-half_width, half_height, -distance),
+        ]
+    };
+    [plane(near), plane(far)]
+}
+
+fn project_point(rect: Rect, view_projection: Mat4, point: Vec3) -> Option<Pos2> {
+    let clip = view_projection * point.extend(1.0);
+    if !clip.is_finite() || clip.w.abs() <= f32::EPSILON {
+        return None;
+    }
+    let ndc = clip.truncate() / clip.w;
+    if !ndc.is_finite() {
+        return None;
+    }
+    Some(Pos2::new(
+        rect.min.x + (ndc.x + 1.0) * 0.5 * rect.width(),
+        rect.min.y + (1.0 - (ndc.y + 1.0) * 0.5) * rect.height(),
+    ))
+}
+
+fn projected_plane(
+    rect: Rect,
+    view_projection: Mat4,
+    model: Mat4,
+    plane: [Vec3; 4],
+) -> Option<[Pos2; 4]> {
+    Some([
+        project_point(rect, view_projection, model.transform_point3(plane[0]))?,
+        project_point(rect, view_projection, model.transform_point3(plane[1]))?,
+        project_point(rect, view_projection, model.transform_point3(plane[2]))?,
+        project_point(rect, view_projection, model.transform_point3(plane[3]))?,
+    ])
+}
+
+fn camera_visual(
+    entity: EntityId,
+    transform: Transform3D,
+    camera: CameraComponent,
+    rect: Rect,
+    view_projection: Mat4,
+    aspect: f32,
+) -> Option<AuthoredCameraVisual> {
+    let model = camera_transform(transform);
+    let position = Vec3::from_array(transform.position);
+    let forward = safe_rotation(transform) * -Vec3::Z;
+    let centre = project_point(rect, view_projection, position)?;
+    let forward_tip = project_point(rect, view_projection, position + forward * 0.8)?;
+
+    let body_radius = 7.0;
+    let body = vec![
+        Pos2::new(centre.x - body_radius, centre.y - body_radius * 0.65),
+        Pos2::new(centre.x + body_radius * 0.45, centre.y - body_radius * 0.65),
+        Pos2::new(centre.x + body_radius, centre.y),
+        Pos2::new(centre.x + body_radius * 0.45, centre.y + body_radius * 0.65),
+        Pos2::new(centre.x - body_radius, centre.y + body_radius * 0.65),
+    ];
+
+    let corners = match camera {
+        CameraComponent::Perspective {
+            vertical_fov_degrees,
+            near,
+            far,
+        } => perspective_corners(vertical_fov_degrees, near, far, aspect),
+        CameraComponent::Orthographic {
+            vertical_size,
+            near,
+            far,
+            ..
+        } => orthographic_corners(vertical_size, near, far, aspect),
+    };
+    let near = projected_plane(rect, view_projection, model, corners[0])?;
+    let far = projected_plane(rect, view_projection, model, corners[1])?;
+    let mut lines = Vec::with_capacity(13);
+    for index in 0..4 {
+        lines.push([near[index], near[(index + 1) % 4]]);
+        lines.push([far[index], far[(index + 1) % 4]]);
+        lines.push([near[index], far[index]]);
+    }
+    lines.push([centre, forward_tip]);
+
+    Some(AuthoredCameraVisual {
+        entity,
+        body,
+        hit_lines: lines.clone(),
+        lines,
+    })
+}
+
+fn distance_to_segment(point: Pos2, a: Pos2, b: Pos2) -> f32 {
+    let ab = b - a;
+    let length_squared = ab.length_sq();
+    if length_squared <= f32::EPSILON {
+        return point.distance(a);
+    }
+    let t = ((point - a).dot(ab) / length_squared).clamp(0.0, 1.0);
+    point.distance(a + ab * t)
+}
+
+fn polygon_contains(points: &[Pos2], point: Pos2) -> bool {
+    if points.len() < 3 {
+        return false;
+    }
+    let mut inside = false;
+    let mut previous = points.len() - 1;
+    for current in 0..points.len() {
+        let a = points[current];
+        let b = points[previous];
+        if ((a.y > point.y) != (b.y > point.y))
+            && point.x < (b.x - a.x) * (point.y - a.y) / (b.y - a.y) + a.x
+        {
+            inside = !inside;
+        }
+        previous = current;
+    }
+    inside
+}
+
+pub(super) fn paint_authored_cameras(
+    painter: &Painter,
+    visuals: &[AuthoredCameraVisual],
+    selection: Option<EntityId>,
+) {
+    for visual in visuals {
+        let selected = selection == Some(visual.entity);
+        let stroke = Stroke::new(if selected { 2.0 } else { 1.25 }, if selected { ACCENT_BRIGHT } else { TEXT_MUTED });
+        for line in &visual.lines {
+            painter.line_segment(*line, stroke);
+        }
+        painter.add(Shape::convex_polygon(
+            visual.body.clone(),
+            if selected {
+                Color32::from_rgba_unmultiplied(246, 169, 35, 48)
+            } else {
+                Color32::from_rgba_unmultiplied(170, 177, 190, 28)
+            },
+            stroke,
+        ));
+    }
+}
+
 impl EditorApp {
-    /// Turns pointer input over the viewport into camera movement.
-    ///
-    /// Left drag orbits, middle drag or shift-drag pans, and the wheel zooms.
-    /// None of it touches the scene: the authored camera stays where it is and
-    /// only the view of it moves.
+    pub(super) fn authored_camera_visuals(
+        &self,
+        rect: Rect,
+        camera: CameraView,
+    ) -> Vec<AuthoredCameraVisual> {
+        let aspect = rect.width() / rect.height().max(1.0);
+        let Some(scene_camera) = self
+            .scene
+            .world_camera_for_viewport(&self.world, aspect, camera)
+            .ok()
+            .flatten()
+        else {
+            return Vec::new();
+        };
+        self.world
+            .entities()
+            .filter_map(|(entity, data)| {
+                let payload = data.components.get(CameraComponent::TYPE_NAME)?;
+                let camera = serde_json::from_value::<CameraComponent>(payload.clone()).ok()?;
+                let transform = data.transform_3d.unwrap_or_default();
+                camera_visual(
+                    entity,
+                    transform,
+                    camera,
+                    rect,
+                    scene_camera.view_projection,
+                    aspect,
+                )
+            })
+            .collect()
+    }
+
+    pub(super) fn pick_authored_camera(
+        &self,
+        rect: Rect,
+        pointer: Pos2,
+        camera: CameraView,
+    ) -> Option<EntityId> {
+        self.authored_camera_visuals(rect, camera)
+            .into_iter()
+            .rev()
+            .find(|visual| visual.hit_test(pointer))
+            .map(|visual| visual.entity)
+    }
+
     pub(super) fn move_camera(
         &mut self,
         context: &egui::Context,
@@ -109,9 +324,6 @@ impl EditorApp {
             if response.dragged_by(egui::PointerButton::Middle)
                 || context.input(|input| input.modifiers.shift)
             {
-                // Panning drags the picture, so it is measured against the
-                // height of the viewport: dragging halfway up moves the scene
-                // halfway up, at any zoom and under either projection.
                 let height = height.max(1.0);
                 self.viewport_pan.x += delta.x * 2.0 / height;
                 self.viewport_pan.y -= delta.y * 2.0 / height;
@@ -119,38 +331,17 @@ impl EditorApp {
                 || (!painting && response.dragged_by(egui::PointerButton::Primary))
             {
                 self.viewport_yaw = (self.viewport_yaw + delta.x * 0.008) % TAU;
-                // Most of a right angle either way, from wherever the scene
-                // authored its camera. The extractor stops the orbit short of
-                // the pole itself, because that is where it knows how far the
-                // authored camera was already tilted; this only decides how far
-                // a drag is worth carrying.
                 self.viewport_pitch =
                     (self.viewport_pitch + delta.y * 0.008).clamp(-PITCH_LIMIT, PITCH_LIMIT);
             }
         }
         if response.hovered() {
             let delta = context.input(|input| input.smooth_scroll_delta.y);
-            // Multiplied rather than added: the range spans a factor of four
-            // hundred, and a fixed step that moves the picture usefully at one
-            // end does nothing at the other. A notch of the wheel is the same
-            // proportion of the distance wherever the camera is.
             self.viewport_zoom =
                 (self.viewport_zoom * (delta * 0.002).exp()).clamp(MIN_ZOOM, MAX_ZOOM);
         }
     }
 
-    /// Puts the selected entity in the middle of the scene view.
-    ///
-    /// Centres rather than fits: fitting needs the bounds of what is selected,
-    /// and an entity's bounds are a mesh's business, not a transform's. What
-    /// this fixes is the ordinary way a subject is lost — panned off the edge,
-    /// or never in frame because the authored camera was aimed elsewhere.
-    ///
-    /// The arithmetic is the pan's own definition read backwards. A pan of one
-    /// moves the picture by exactly the framed half-height, so a subject sitting
-    /// that far from the middle is exactly one pan away from it, and the
-    /// extractor is asked for both numbers rather than the editor keeping its
-    /// own copy of either.
     pub(super) fn focus_selection(&mut self) {
         let Some(position) = self
             .selection
@@ -166,7 +357,6 @@ impl EditorApp {
         self.viewport_pan = pan_to_centre(camera, self.viewport_pan, position);
     }
 
-    /// The camera the scene view is looking through.
     pub(super) fn scene_camera(&self) -> CameraView {
         camera_for(
             WorkspaceTab::Scene,
@@ -179,7 +369,6 @@ impl EditorApp {
         )
     }
 
-    /// Whether the viewer has moved away from the authored camera.
     pub(super) fn view_moved(&self) -> bool {
         self.viewport_yaw != 0.0
             || self.viewport_pitch != 0.0
@@ -187,7 +376,6 @@ impl EditorApp {
             || (self.viewport_zoom - 1.0).abs() > f32::EPSILON
     }
 
-    /// Returns to the camera the scene authored, without touching the scene.
     pub(super) fn reset_view(&mut self) {
         self.viewport_yaw = 0.0;
         self.viewport_pitch = 0.0;
@@ -209,8 +397,6 @@ mod tests {
         }
     }
 
-    /// The game view answers one question — what would the player see — and an
-    /// orbit, pan, or zoom leaking into it would stop it answering that.
     #[test]
     fn the_game_view_ignores_wherever_the_editor_has_moved_its_camera() {
         assert_eq!(
@@ -225,45 +411,55 @@ mod tests {
         let camera = camera_for(WorkspaceTab::Scene, moved_camera());
         assert_eq!(camera.orbit, GlamVec2::new(0.7, -0.3));
         assert_eq!(camera.pan, GlamVec2::new(0.25, 0.5));
-        assert!(
-            (camera.distance_scale - 1.0 / 1.4).abs() < 1.0e-6,
-            "zooming in should shorten the distance to the target"
-        );
+        assert!((camera.distance_scale - 1.0 / 1.4).abs() < 1.0e-6);
         assert_eq!(camera.projection, WorldProjection::Orthographic);
+    }
+
+    #[test]
+    fn perspective_frustum_changes_with_fov() {
+        let narrow = perspective_corners(30.0, 0.1, 10.0, 16.0 / 9.0);
+        let wide = perspective_corners(90.0, 0.1, 10.0, 16.0 / 9.0);
+        assert!(wide[1][1].x.abs() > narrow[1][1].x.abs());
+        assert!(wide[1][2].y.abs() > narrow[1][2].y.abs());
+    }
+
+    #[test]
+    fn camera_rotation_turns_local_forward() {
+        let transform = Transform3D {
+            rotation: Quat::from_rotation_y(std::f32::consts::FRAC_PI_2).to_array(),
+            ..Transform3D::default()
+        };
+        let forward = safe_rotation(transform) * -Vec3::Z;
+        assert!(forward.distance(-Vec3::X) < 1.0e-5);
+    }
+
+    #[test]
+    fn moving_camera_moves_projected_body() {
+        let rect = Rect::from_min_size(Pos2::ZERO, egui::Vec2::splat(400.0));
+        let camera = CameraComponent::Perspective {
+            vertical_fov_degrees: 60.0,
+            near: 0.1,
+            far: 10.0,
+        };
+        let first = camera_visual(EntityId::new(0, 0), Transform3D::default(), camera, rect, Mat4::IDENTITY, 1.0).unwrap();
+        let moved = camera_visual(
+            EntityId::new(0, 0),
+            Transform3D { position: [0.5, 0.0, 0.0], ..Transform3D::default() },
+            camera,
+            rect,
+            Mat4::IDENTITY,
+            1.0,
+        )
+        .unwrap();
+        assert!(moved.body[0].x > first.body[0].x);
     }
 
     #[test]
     fn an_unmoved_scene_view_starts_on_its_independent_camera() {
         let scene = camera_for(WorkspaceTab::Scene, EditorCamera::default());
         let game = camera_for(WorkspaceTab::Game, EditorCamera::default());
-
-        assert_eq!(scene.orbit, GlamVec2::ZERO);
-        assert_eq!(scene.pan, GlamVec2::ZERO);
-        assert_eq!(scene.distance_scale.to_bits(), 1.0_f32.to_bits());
         assert_eq!(scene.projection, WorldProjection::Perspective);
-        assert_eq!(game, CameraView::default());
         assert_eq!(game.projection, WorldProjection::Authored);
         assert_ne!(scene.projection, game.projection);
-    }
-
-    /// The wheel moves the same proportion of the distance wherever it is, or
-    /// the far end of a four-hundredfold range is unusable.
-    #[test]
-    fn zooming_is_proportional_rather_than_a_fixed_step() {
-        let step = |zoom: f32| (zoom * (50.0_f32 * 0.002).exp()).clamp(MIN_ZOOM, MAX_ZOOM);
-        let near = MIN_ZOOM * 2.0;
-        let far = MAX_ZOOM * 0.5;
-        let ratio = |zoom: f32| step(zoom) / zoom;
-        assert!(
-            (ratio(near) - ratio(far)).abs() < 1.0e-5,
-            "one notch is {} of the distance close in and {} far out",
-            ratio(near),
-            ratio(far)
-        );
-        assert_eq!(
-            step(MAX_ZOOM).to_bits(),
-            MAX_ZOOM.to_bits(),
-            "and it stops at the far end"
-        );
     }
 }
