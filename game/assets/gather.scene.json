@@ -1,5 +1,5 @@
 {
-  "format_version": 5,
+  "format_version": 6,
   "metadata": {
     "name": "Gather"
   },
@@ -566,7 +566,7 @@
       "name": "World Camera",
       "transform_3d": {
         "position": [0.0, 0.0, 9.0],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "rotation": [0.0, -0.0, -0.0, 1.0],
         "scale": [1.0, 1.0, 1.0]
       },
       "components": {
@@ -574,8 +574,6 @@
           "far": 60.0,
           "near": 0.1,
           "projection": "perspective",
-          "target": [0.0, 0.0, 0.0],
-          "up": [0.0, 1.0, 0.0],
           "vertical_fov_degrees": 45.0
         }
       }
