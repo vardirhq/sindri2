@@ -6,9 +6,7 @@
 
 use std::f32::consts::TAU;
 
-use eframe::egui::{
-    self, Color32, LayerId, Order, Painter, Pos2, Rect, Response, Shape, Stroke,
-};
+use eframe::egui::{self, Color32, LayerId, Order, Painter, Pos2, Rect, Response, Shape, Stroke};
 use glam::{Mat4, Quat, Vec2 as GlamVec2, Vec3};
 use sindri_core::{EntityId, SceneComponent, Transform3D};
 use sindri_scene::{CameraComponent, CameraView, ViewCamera, WorldProjection};
