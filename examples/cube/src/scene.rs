@@ -227,10 +227,10 @@ mod tests {
     }
 
     #[test]
-    fn an_editor_view_moves_the_camera_without_moving_the_model() {
+    fn an_authored_camera_ignores_editor_view_adjustments() {
         let (scene, world) = DemoScene::load().unwrap();
         let authored = scene.extract_frame(&world, VIEWPORT, &bindings()).unwrap();
-        let orbited = scene
+        let adjusted = scene
             .extract(
                 &world,
                 VIEWPORT,
@@ -242,14 +242,14 @@ mod tests {
             )
             .unwrap();
 
-        assert_ne!(
+        assert_eq!(
             authored.passes()[0].camera.view_projection,
-            orbited.passes()[0].camera.view_projection
+            adjusted.passes()[0].camera.view_projection
         );
         let (
             FrameCommand::TexturedCube { model: before, .. },
             FrameCommand::TexturedCube { model: after, .. },
-        ) = (&authored.passes()[0].command, &orbited.passes()[0].command)
+        ) = (&authored.passes()[0].command, &adjusted.passes()[0].command)
         else {
             panic!("the opaque pass should draw the cube");
         };

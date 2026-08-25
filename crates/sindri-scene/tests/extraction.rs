@@ -260,14 +260,18 @@ fn world_sprites_sort_by_distance_from_the_camera_that_draws_them() {
             .collect::<Vec<f32>>()
     };
 
-    // The authored camera is at (3, 2, 4), so the western sprite is further.
-    let authored = alphas(CameraView::default());
-    assert!(close(authored[0], 0.75) && close(authored[1], 0.25));
+    // The resting viewer camera is at (3, 2, 4), so the western sprite is further.
+    let resting = alphas(CameraView {
+        projection: WorldProjection::Perspective,
+        ..CameraView::default()
+    });
+    assert!(close(resting[0], 0.75) && close(resting[1], 0.25));
 
     // Half a turn around the target puts the camera on the other side, and the
     // pair must swap without the scene changing at all.
     let orbited = alphas(CameraView {
         orbit: Vec2::new(std::f32::consts::PI, 0.0),
+        projection: WorldProjection::Perspective,
         ..CameraView::default()
     });
     assert!(
@@ -321,6 +325,7 @@ fn world_space_sprites_draw_through_the_world_camera_with_their_full_transform()
             VIEWPORT,
             CameraView {
                 orbit: Vec2::new(0.4, 0.0),
+                projection: WorldProjection::Perspective,
                 ..CameraView::default()
             },
             &TextureBindings::new(),
@@ -570,6 +575,7 @@ fn a_camera_view_moves_the_camera_without_moving_the_model() {
             VIEWPORT,
             CameraView {
                 orbit: glam::Vec2::new(0.5, 0.25),
+                projection: WorldProjection::Perspective,
                 ..CameraView::default()
             },
             &TextureBindings::new(),
@@ -674,6 +680,7 @@ fn panning_moves_the_camera_without_moving_the_model() {
             VIEWPORT,
             CameraView {
                 pan: glam::Vec2::new(0.3, -0.2),
+                projection: WorldProjection::Perspective,
                 ..CameraView::default()
             },
             &TextureBindings::new(),
@@ -929,11 +936,17 @@ fn the_world_camera_view_answers_the_orbit_the_frame_was_drawn_with() {
     let extractor = SceneExtractor::new().expect("built-in components register");
 
     let resting = extractor
-        .world_camera(&world, CameraView::default())
-        .expect("the world holds a perspective camera")
+        .world_camera(
+            &world,
+            CameraView {
+                projection: WorldProjection::Perspective,
+                ..CameraView::default()
+            },
+        )
+        .expect("the viewer has a perspective camera")
         .expect("a perspective camera resolves")
         .view;
-    // The authored camera sits at (3, 2, 4) looking at the origin, so world X
+    // The resting viewer sits at (3, 2, 4) looking at the origin, so world X
     // is already partly towards the viewer rather than straight across.
     let across = resting.transform_vector3(Vec3::X);
     assert!(across.x > 0.0, "world X points right of the picture");
@@ -944,6 +957,7 @@ fn the_world_camera_view_answers_the_orbit_the_frame_was_drawn_with() {
             &world,
             CameraView {
                 orbit: Vec2::new(std::f32::consts::FRAC_PI_2, 0.0),
+                projection: WorldProjection::Perspective,
                 ..CameraView::default()
             },
         )
@@ -986,6 +1000,7 @@ fn a_pan_of_one_moves_the_picture_by_the_framed_half_height() {
                 &world,
                 CameraView {
                     pan,
+                    projection: WorldProjection::Perspective,
                     ..CameraView::default()
                 },
             )

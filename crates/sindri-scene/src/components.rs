@@ -12,10 +12,9 @@ use thiserror::Error;
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
 #[serde(tag = "projection", rename_all = "snake_case")]
 pub enum CameraComponent {
-    /// Renders the 3D world. Its eye comes from the entity's `Transform3D`.
+    /// Renders the 3D world. Position and orientation both come from the
+    /// entity's `Transform3D`: local -Z is forward and local +Y is up.
     Perspective {
-        target: [f32; 3],
-        up: [f32; 3],
         vertical_fov_degrees: f32,
         near: f32,
         far: f32,
