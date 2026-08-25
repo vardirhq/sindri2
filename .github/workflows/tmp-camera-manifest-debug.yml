@@ -5,43 +5,31 @@ on:
     branches:
       - tmp-camera-manifest-debug
 
+permissions:
+  contents: write
+
 jobs:
   debug:
     runs-on: ubuntu-24.04
-    env:
-      CARGO_TERM_COLOR: always
-      RUSTFLAGS: -D warnings
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.95.0
-        with:
-          components: clippy,rustfmt
-      - name: Before cache
-        run: |
-          echo 'SINDRI env:'
-          env | sort | grep '^SINDRI_' || true
-          wc -c examples/cube/assets/demo.scene.json
-          sha256sum examples/cube/assets/demo.scene.json
-          git status --short
-      - uses: Swatinem/rust-cache@v2
-      - name: After cache
+      - name: Migrate cube scene with Sindri
+        run: cargo run -p sindri-core --example tmp_migrate_cube_scene
+      - name: Regenerate cube manifest
+        run: cargo run -p sindri-assets --example manifest -- examples/cube/assets > /tmp/sindri.manifest.json && mv /tmp/sindri.manifest.json examples/cube/assets/sindri.manifest.json
+      - name: Remove temporary helper
+        run: rm crates/sindri-core/examples/tmp_migrate_cube_scene.rs
+      - name: Verify repaired asset pair
         run: |
           wc -c examples/cube/assets/demo.scene.json
           sha256sum examples/cube/assets/demo.scene.json
-          git status --short
-      - name: Clippy cube
-        run: cargo clippy -p sindri-cube --all-targets --all-features
-      - name: After clippy
+          cat examples/cube/assets/sindri.manifest.json
+          grep -q '"format_version": 6' examples/cube/assets/demo.scene.json
+      - name: Commit repaired assets
         run: |
-          wc -c examples/cube/assets/demo.scene.json
-          sha256sum examples/cube/assets/demo.scene.json
-          git status --short
-      - name: Cube lib tests
-        run: cargo test -p sindri-cube --lib --all-features -- --nocapture
-      - name: After cube lib tests
-        run: |
-          wc -c examples/cube/assets/demo.scene.json
-          sha256sum examples/cube/assets/demo.scene.json
-          git status --short
-      - name: Manifest tests
-        run: cargo test -p sindri-cube --test manifest --all-features -- --nocapture
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add examples/cube/assets/demo.scene.json examples/cube/assets/sindri.manifest.json
+          git commit -m "Repair migrated cube scene asset"
+          git push
