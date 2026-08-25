@@ -268,6 +268,7 @@ fn world_sprites_sort_by_distance_from_the_camera_that_draws_them() {
     // pair must swap without the scene changing at all.
     let orbited = alphas(CameraView {
         orbit: Vec2::new(std::f32::consts::PI, 0.0),
+        projection: WorldProjection::Perspective,
         ..CameraView::default()
     });
     assert!(
@@ -321,6 +322,7 @@ fn world_space_sprites_draw_through_the_world_camera_with_their_full_transform()
             VIEWPORT,
             CameraView {
                 orbit: Vec2::new(0.4, 0.0),
+                projection: WorldProjection::Perspective,
                 ..CameraView::default()
             },
             &TextureBindings::new(),
@@ -570,6 +572,7 @@ fn a_camera_view_moves_the_camera_without_moving_the_model() {
             VIEWPORT,
             CameraView {
                 orbit: glam::Vec2::new(0.5, 0.25),
+                projection: WorldProjection::Perspective,
                 ..CameraView::default()
             },
             &TextureBindings::new(),
@@ -674,6 +677,7 @@ fn panning_moves_the_camera_without_moving_the_model() {
             VIEWPORT,
             CameraView {
                 pan: glam::Vec2::new(0.3, -0.2),
+                projection: WorldProjection::Perspective,
                 ..CameraView::default()
             },
             &TextureBindings::new(),
@@ -944,6 +948,7 @@ fn the_world_camera_view_answers_the_orbit_the_frame_was_drawn_with() {
             &world,
             CameraView {
                 orbit: Vec2::new(std::f32::consts::FRAC_PI_2, 0.0),
+                projection: WorldProjection::Perspective,
                 ..CameraView::default()
             },
         )
@@ -986,6 +991,7 @@ fn a_pan_of_one_moves_the_picture_by_the_framed_half_height() {
                 &world,
                 CameraView {
                     pan,
+                    projection: WorldProjection::Perspective,
                     ..CameraView::default()
                 },
             )
