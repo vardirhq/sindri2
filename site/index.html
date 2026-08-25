@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b0d10"><title>Sindri — Rust game engine</title><meta name="description" content="Sindri is a lightweight 2D + 3D Rust game engine with a native visual editor, Decay scripting, and native/WebGPU rendering."><link rel="stylesheet" href="./assets/site.css"></head>
+<body>
+<header class="nav"><a class="brand" href="./"><span class="brandmark">S</span><span>Sindri</span><small>pre-alpha</small></a><nav><a href="./docs/getting-started/">Docs</a><a href="./docs/scripting/">Decay</a><a href="./examples/gather/">Gather</a><a href="https://github.com/vardirhq/sindri2">GitHub ↗</a></nav></header>
+<main>
+<section class="hero"><div class="hero-copy"><div class="eyebrow"><span></span> BUILT IN RUST · NATIVE + WEBGPU</div><h1>Build worlds.<br><em>Understand the engine.</em></h1><p>Sindri is a deliberately coherent 2D + 3D game engine with a native visual editor, typed Decay gameplay scripting, one scene model, and one renderer from desktop to browser.</p><div class="actions"><a class="button primary" href="./docs/getting-started/">Start building →</a><a class="button" href="./examples/gather/">Play Gather</a></div><div class="status"><span>● PRE-ALPHA</span> APIs and formats are evolving while the engine is proven through real games.</div></div>
+<div class="engine-window"><div class="windowbar"><i></i><i></i><i></i><span>scene.sindri — Sindri Editor</span></div><div class="editor"><aside><b>WORLD</b><div>▾ Game</div><div class="indent active">◈ Player</div><div class="indent">◈ Camera</div><div class="indent">▸ Environment</div><div class="indent">▸ UI</div></aside><div class="viewport"><div class="grid"></div><div class="cube"><span></span></div><div class="axis">Y<br>└─ X</div><div class="play">▶</div></div><aside class="inspector"><b>INSPECTOR</b><h3>Player</h3><label>TRANSFORM</label><div class="field">Position <code>0  1  0</code></div><div class="field">Rotation <code>0  0  0</code></div><label>DECAY SCRIPT</label><div class="field"><code>player.decay</code></div><div class="field accent">speed <code>6.0</code></div></aside></div></div></section>
+<section class="proof"><span>ONE RUNTIME MODEL</span><span>VERSIONED SCENES</span><span>TYPED SCRIPTING</span><span>WEBGPU</span><span>NATIVE EDITOR</span></section>
+<section class="section"><div class="section-head"><div><div class="eyebrow">ENGINE, EDITOR, LANGUAGE</div><h2>Small enough to understand.<br>Serious enough to build with.</h2></div><p>Sindri avoids parallel systems that drift apart. The editor authors the runtime world. Decay crosses one typed host boundary. Browser and native builds share the same engine.</p></div><div class="cards"><article><div class="num">01</div><h3>One scene model</h3><p>2D and 3D entities, components, hierarchies and transforms live in versioned, canonical scene documents designed to survive source control.</p><a href="./docs/scenes/">Explore scenes →</a></article><article><div class="num">02</div><h3>A real editor</h3><p>Hierarchy, inspector, Scene and Game views, gizmos, animation, tilemaps, assets and Play mode operate on the same world the runtime uses.</p><a href="./docs/editor/">Editor guide →</a></article><article class="decay-card"><div class="num">03</div><h3>Decay scripting</h3><pre><code>script Player {
+  @export var speed: f32 = 6.0;
+
+  fn update(dt: f32) {
+    let x = Input.axis(
+      "ArrowLeft", "ArrowRight"
+    );
+    this.transform.position.x +=
+      x * speed * dt;
+  }
+}</code></pre><a href="./docs/scripting/">Read the deep scripting guide →</a></article></div></section>
+<section class="section split"><div><div class="eyebrow">DECAY</div><h2>A gameplay language that refuses to guess.</h2><p>Host members are typed. Exported properties are inspectable without executing code. Misspell a component path and compilation fails at the source location instead of exploding three frames later.</p><div class="actions"><a class="button primary" href="./docs/scripting/">Scripting guide →</a><a class="button" href="./docs/language/">Language reference</a></div></div><div class="terminal"><div class="term-head">player.decay</div><pre><code><span>@export</span>
+var speed: f32 = 6.0;
+
+fn update(dt: f32) {
+  let movement = Input.axis(
+    "A", "D"
+  );
+
+  this.transform.position.x +=
+    movement * speed * dt;
+
+  if Input.just_pressed("Space") {
+    Audio.play("jump.ogg", 0.8);
+  }
+}</code></pre></div></section>
+<section class="gather"><div><div class="eyebrow">RUNNING ON SINDRI</div><h2>Gather is the proof, not the homepage.</h2><p>The companion game runs the same Rust engine, Decay scripts, scene format, renderer and asset pipeline in your browser through WebGPU. It now lives where a demo belongs: under Examples.</p><a class="button light" href="./examples/gather/">Launch Gather ↗</a></div><div class="gather-art"><div class="tile t1"></div><div class="tile t2"></div><div class="tile t3"></div><div class="player">◆</div><div class="gem">✦</div></div></section>
+<section class="docs-cta"><div class="eyebrow">DOCUMENTATION</div><h2>Learn the model, not just the API.</h2><p>The docs explain why systems are shaped the way they are, what is stable, what is deliberately absent, and where the boundaries live. Decay gets especially deep treatment because a scripting language with shallow docs is just a bug generator with punctuation.</p><div class="doclinks"><a href="./docs/getting-started/"><b>Getting started</b><span>Build and run Sindri →</span></a><a href="./docs/scripting/"><b>Decay scripting</b><span>Language, lifecycle, host surface →</span></a><a href="./docs/cameras/"><b>Cameras</b><span>World, Scene and screen-space semantics →</span></a><a href="./docs/architecture/"><b>Architecture</b><span>Crates, boundaries and design →</span></a></div></section>
+</main><footer><span>SINDRI</span><p>MIT OR Apache-2.0 · Built in Rust by Vardir</p><a href="https://github.com/vardirhq/sindri2">GitHub ↗</a></footer></body></html>
