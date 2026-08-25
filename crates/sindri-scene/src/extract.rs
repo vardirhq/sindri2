@@ -416,7 +416,7 @@ impl SceneExtractor {
         // Sprites batch per space, layer, and texture, back to front within a
         // batch, with a stable tie-break. A batch is one draw, so instances
         // share one only when they share the texture it binds — and the space,
-        // which decides both the camera and the pipeline.
+        // which decides both the projection and the pipeline.
         let mut batches: SpriteBatches = BTreeMap::new();
         // What an animated sprite shows when `animations` has not reached it —
         // a scene just loaded, an entity in the editor outside play mode, a
@@ -610,12 +610,12 @@ impl SceneExtractor {
         match view.projection {
             WorldProjection::Authored => self.resolve_authored_cameras(world, aspect),
             WorldProjection::Perspective | WorldProjection::Orthographic => {
-                Ok(self.resolve_viewer_cameras(aspect, view))
+                Ok(Self::resolve_viewer_cameras(aspect, view))
             }
         }
     }
 
-    fn resolve_viewer_cameras(&self, aspect: f32, view: CameraView) -> ResolvedCameras {
+    fn resolve_viewer_cameras(aspect: f32, view: CameraView) -> ResolvedCameras {
         // Scene/editor world viewing is independent of authored cameras. Screen
         // overlay projection is viewport-owned too, so nothing in this path
         // resolves a camera entity at all.
@@ -684,9 +684,10 @@ impl SceneExtractor {
                 .unwrap_or_default();
             let eye = Vec3::from_array(transform.position);
             let rotation = safe_rotation(transform);
-            let target = eye + rotation * -Vec3::Z;
-            let up = rotation * Vec3::Y;
-            let view = Mat4::look_at_rh(eye, target, up);
+            // Authored cameras are ordinary transformed entities. Scale has no
+            // projection meaning, so the camera pose is exactly rotation plus
+            // translation and the view is its inverse.
+            let view = Mat4::from_rotation_translation(rotation, eye).inverse();
 
             resolved.world = Some(match camera {
                 CameraComponent::Perspective {
