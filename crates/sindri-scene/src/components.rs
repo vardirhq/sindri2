@@ -338,6 +338,8 @@ impl TilemapComponent {
     /// Reading order is the map's order, so a frame extracted from a tilemap is
     /// the same frame every time without anything having to sort it.
     pub fn filled(&self) -> impl Iterator<Item = (u32, u32, u32)> + '_ {
+        // Bounded by the size the map claims, so a `tiles` array longer than
+        // the map draws what the map says rather than trailing off its edge.
         self.tiles
             .iter()
             .take(self.expected_cells())
@@ -361,6 +363,12 @@ impl TilemapComponent {
         self.tiles.get(cell).copied().flatten()
     }
 
+    /// Where the centre of `column`, `row` sits, relative to the map's own
+    /// origin — the entity's transform puts that origin in the world.
+    // The grid arithmetic happens in f64 and is narrowed exactly once, here,
+    // so a map wider than an f32 mantissa still places its last column where
+    // the integers say rather than a hair off it. Same reasoning as
+    // `UvRect::cell`.
     #[allow(clippy::cast_possible_truncation)]
     #[must_use]
     pub fn tile_to_local(&self, column: u32, row: u32) -> [f32; 2] {
@@ -379,6 +387,12 @@ impl TilemapComponent {
         [point.x as f32, point.y as f32]
     }
 
+    /// Which tile covers a point in the map's own space, or `None` when the
+    /// point is off the map.
+    ///
+    /// The inverse of [`Self::tile_to_local`], and a test holds it to that on
+    /// every cell of both projections. It is what turns a click into a tile,
+    /// which is the whole of what painting a map needs from the maths.
     #[must_use]
     pub fn local_to_tile(&self, x: f32, y: f32) -> Option<(u32, u32)> {
         let coord = self
@@ -394,10 +408,12 @@ impl TilemapComponent {
         })
     }
 
+    /// The logical bounds shared by rendering, picking, and future gameplay.
     pub fn grid_bounds(&self) -> Result<GridBounds, GridError> {
         GridBounds::new(self.columns, self.rows)
     }
 
+    /// The exact mapping the tilemap uses from cells into entity-local XY.
     pub fn grid_space(&self) -> Result<GridSpace, GridError> {
         let width = f64::from(self.tile_size[0]);
         let height = f64::from(self.tile_size[1]);
@@ -411,11 +427,17 @@ impl TilemapComponent {
         GridSpace::with_origin_and_y_axis(projection, width, height, origin, PlaneYAxis::Up)
     }
 
+    /// What tile `index` is called in the sheet.
+    ///
+    /// A name and not a rect: where the sprite *is* belongs to the sheet, and
+    /// this component's business ends at saying which one it wants.
     #[must_use]
     pub fn sprite_of(&self, index: u32) -> Option<&str> {
         self.palette.get(index as usize).map(String::as_str)
     }
 
+    /// The anchor this map resolves against, matching a sprite's rule so the
+    /// two spaces cannot mean different things.
     #[must_use]
     pub const fn is_screen_space(&self) -> bool {
         matches!(self.space, SpriteSpace::Screen)
@@ -426,12 +448,22 @@ impl SceneComponent for TilemapComponent {
     const TYPE_NAME: &'static str = "sindri.tilemap";
 }
 
+/// One authored wall between two edge-sharing cells.
+///
+/// The renderer-free grid normalizes the direction and validates the bounds;
+/// the document keeps the two endpoints because they are the smallest honest
+/// representation an editor can paint and save.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
 pub struct GridWallDocument {
     pub first: [i32; 2],
     pub second: [i32; 2],
 }
 
+/// Navigation data authored on the same entity as a tilemap.
+///
+/// Bounds and projection deliberately remain the tilemap's authority. Keeping
+/// a second copy here would let rendering and gameplay describe different
+/// grids while both payloads remained individually valid.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
 pub struct GridNavigationComponent {
     #[serde(default)]
@@ -442,6 +474,13 @@ impl SceneComponent for GridNavigationComponent {
     const TYPE_NAME: &'static str = "sindri.grid.navigation";
 }
 
+/// Marks an entity as occupying cells on one authored grid.
+///
+/// `grid` is a stable scene ID rather than a runtime handle. The runtime
+/// navigation adapter resolves it every time it derives occupancy, so saving a
+/// scene never persists allocation details. The entity's world transform says
+/// which cell is its anchor; `footprint` only says which cells it covers
+/// relative to that anchor.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct GridOccupantComponent {
     pub grid: SceneEntityId,
@@ -481,6 +520,9 @@ mod tilemap_tests {
         }
     }
 
+    /// Turning a click into a tile is the whole of what painting a map needs
+    /// from the maths, and it is only ever right if it undoes placement
+    /// exactly. Both projections, every cell.
     #[test]
     fn a_tile_centre_maps_back_to_its_own_tile() {
         for projection in [TileProjection::Orthogonal, TileProjection::Isometric] {
@@ -488,29 +530,48 @@ mod tilemap_tests {
             for row in 0..map.rows {
                 for column in 0..map.columns {
                     let [x, y] = map.tile_to_local(column, row);
-                    assert_eq!(map.local_to_tile(x, y), Some((column, row)));
+                    assert_eq!(
+                        map.local_to_tile(x, y),
+                        Some((column, row)),
+                        "{projection:?} lost tile {column},{row} at {x},{y}"
+                    );
                 }
             }
         }
     }
 
+    /// A point off the map is off the map, rather than the nearest edge tile.
     #[test]
     fn a_point_outside_the_map_belongs_to_no_tile() {
         let map = map(TileProjection::Orthogonal, 3, 3);
-        assert_eq!(map.local_to_tile(-1.0, -0.5), None);
-        assert_eq!(map.local_to_tile(0.5, 1.0), None);
-        assert_eq!(map.local_to_tile(99.0, -0.5), None);
-        assert_eq!(map.local_to_tile(0.0, -0.5), Some((0, 0)));
-        assert_eq!(map.local_to_tile(1.1, -0.5), Some((1, 0)));
+        assert_eq!(map.local_to_tile(-1.0, -0.5), None, "left of the origin");
+        assert_eq!(map.local_to_tile(0.5, 1.0), None, "above the origin");
+        assert_eq!(map.local_to_tile(99.0, -0.5), None, "past the last column");
+        assert_eq!(
+            map.local_to_tile(0.0, -0.5),
+            Some((0, 0)),
+            "the map includes its left edge"
+        );
+        assert_eq!(
+            map.local_to_tile(1.1, -0.5),
+            Some((1, 0)),
+            "a shared edge belongs to the cell on its right"
+        );
     }
 
+    /// Empty cells are `null` and every index is a real tile, so a map of
+    /// nothing is not a map of tile zero.
     #[test]
     fn an_empty_cell_is_not_tile_zero() {
         let mut map = map(TileProjection::Orthogonal, 2, 1);
         map.tiles = vec![None, Some(0)];
         assert_eq!(map.tile(0, 0), None);
         assert_eq!(map.tile(1, 0), Some(0));
-        assert_eq!(map.filled().collect::<Vec<_>>(), vec![(1, 0, 0)]);
+        assert_eq!(
+            map.filled().collect::<Vec<_>>(),
+            vec![(1, 0, 0)],
+            "only the cell holding a tile is drawn"
+        );
     }
 
     #[test]
@@ -544,11 +605,16 @@ mod tilemap_tests {
         ));
     }
 
+    /// A tile names a sprite; where that sprite is belongs to the sheet.
     #[test]
     fn a_tile_names_a_sprite_from_the_palette() {
         let map = map(TileProjection::Orthogonal, 1, 1);
         assert_eq!(map.sprite_of(0), Some("a"));
         assert_eq!(map.sprite_of(3), Some("d"));
-        assert_eq!(map.sprite_of(9), None);
+        assert_eq!(
+            map.sprite_of(9),
+            None,
+            "a tile past the palette names nothing"
+        );
     }
 }
