@@ -1,4 +1,4 @@
-name: Gather Pages
+name: Sindri Pages
 
 on:
   push:
@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build Gather for WebGPU
+    name: Build Sindri site
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -24,18 +24,30 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
-      - name: Install wasm-pack
-        run: cargo install wasm-pack --version 0.13.1 --locked
-      - name: Build Gather
-        run: wasm-pack build game --target web --release --out-dir ../target/pages/pkg
-      - name: Assemble static site and project assets
+      - name: Install site tools
         run: |
-          cp game/index.html target/pages/index.html
-          mkdir -p target/pages/assets
-          cp -R game/assets/. target/pages/assets/
+          cargo install wasm-pack --version 0.13.1 --locked
+          python -m pip install --disable-pip-version-check 'Markdown==3.8.2'
+      - name: Build Gather for WebGPU
+        run: wasm-pack build game --target web --release --out-dir ../target/pages/examples/gather/pkg
+      - name: Assemble Sindri site
+        run: |
+          mkdir -p target/pages/assets target/pages/examples/gather/assets
+          cp site/index.html target/pages/index.html
+          cp site/site.css target/pages/assets/site.css
+          cp game/index.html target/pages/examples/gather/index.html
+          cp -R game/assets/. target/pages/examples/gather/assets/
           cargo run --quiet --package sindri-assets --example manifest -- game/assets \
-            > target/pages/assets/sindri.manifest.json
+            > target/pages/examples/gather/assets/sindri.manifest.json
+          python site/build_docs.py target/pages
           touch target/pages/.nojekyll
+      - name: Verify assembled routes
+        run: |
+          test -f target/pages/index.html
+          test -f target/pages/docs/scripting/index.html
+          test -f target/pages/docs/language/index.html
+          test -f target/pages/examples/gather/index.html
+          test -f target/pages/examples/gather/pkg/sindri_game.js
       - uses: actions/configure-pages@v6
         with:
           enablement: true
@@ -44,7 +56,7 @@ jobs:
           path: target/pages
 
   deploy:
-    name: Deploy Gather
+    name: Deploy Sindri site
     needs: build
     runs-on: ubuntu-latest
     environment:
