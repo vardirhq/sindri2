@@ -7,9 +7,12 @@ use thiserror::Error;
 
 /// A camera authored into a scene.
 ///
-/// Every authored camera is a world camera. Its position and orientation come
-/// from the entity's `Transform3D`: local -Z is forward and local +Y is up.
-/// Screen-space overlay rendering is viewport-owned and does not use a camera
+/// Every authored camera renders the world. The projection tag chooses which
+/// fields apply, so a scene cannot describe a perspective camera with an
+/// orthographic size. Position and orientation come from the entity's
+/// `Transform3D`: local -Z is forward and local +Y is up.
+///
+/// Screen-space sprites and text are viewport-owned and do not require a camera
 /// entity.
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
 #[serde(tag = "projection", rename_all = "snake_case")]
@@ -56,9 +59,11 @@ impl SceneComponent for MeshComponent {
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Ord, PartialEq, PartialOrd)]
 #[serde(rename_all = "snake_case")]
 pub enum SpriteSpace {
-    /// Drawn in viewport-owned screen space. A HUD is not in the world, so no
-    /// world camera moves it and nothing in the world can hide it. Its Z says
-    /// how far back in the overlay stack it sits and nothing else.
+    /// Drawn directly in viewport-owned overlay space. A HUD is not in the
+    /// world, so no world camera moves it and nothing in the world can hide it.
+    /// Its Z says how far back in the stack it sits and nothing else: it orders
+    /// the sprite without moving it, so no HUD can be lost off a camera far
+    /// plane by typing a big number.
     #[default]
     Screen,
     /// Placed in the world by its transform and drawn through the world camera,
@@ -192,24 +197,61 @@ impl SceneComponent for TextComponent {
 }
 
 /// How a tilemap's grid coordinates become world positions.
+///
+/// The serialized choice is owned by the tilemap; its coordinate maths is
+/// supplied by `sindri-grid`, so rendering, picking, and gameplay can share one
+/// meaning of a cell.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum TileProjection {
+    /// Columns run +X and rows run -Y, so the map reads like the array does.
     #[default]
     Orthogonal,
+    /// Columns and rows run along the two diagonals, which is what makes a
+    /// square grid look like a diamond floor. A tile's world size stays its
+    /// full width and height; it is the *step* between tiles that halves, so
+    /// neighbours overlap the way isometric art expects.
     Isometric,
 }
 
+/// A grid of tiles drawn from one sheet, as one batch, from one entity.
+///
+/// The point is not draw calls — loose sprites sharing a texture already batch
+/// into one. It is that a floor stops being one entity per tile: 49 entities,
+/// each with a transform, a name, a stable ID, and a sprite component, become
+/// one component holding 49 small integers. That is the difference between a
+/// scene file a person can read and one they cannot, and between a hierarchy
+/// they can find the player in and one they cannot.
+///
+/// Variation comes from picking different cells of the sheet, not from tinting
+/// each tile: the tint is the map's, because a per-tile tint is a second way to
+/// say what a second tile already says.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct TilemapComponent {
+    /// The sliced image every tile is drawn from.
     pub texture: String,
+    /// The sprites this map uses, by the names its sheet gives them.
+    ///
+    /// `tiles` indexes into *this*, not into the sheet, which is what keeps a
+    /// 49-cell map 49 small integers instead of 49 repeated strings. It is also
+    /// what makes a re-slice survivable: the sheet can move `floor` to another
+    /// cell and every map using it still draws the right thing, because a map
+    /// names sprites and the sheet places them.
     pub palette: Vec<String>,
+    /// The map's size in tiles.
     pub columns: u32,
     pub rows: u32,
+    /// One tile's size in world units.
     #[serde(default = "unit_tile")]
     pub tile_size: [f32; 2],
     #[serde(default)]
     pub projection: TileProjection,
+    /// `columns * rows` cells, row-major from the top-left, `null` where the
+    /// map has no tile and otherwise an index into `palette`.
+    ///
+    /// Null rather than a sentinel index, because every index is a real tile:
+    /// reserving 0 or -1 to mean "empty" is how a map ends up with an
+    /// accidental floor in the corner nobody authored.
     pub tiles: Vec<Option<u32>>,
     #[serde(default = "opaque_white")]
     pub tint: [f32; 4],
@@ -223,6 +265,7 @@ const fn unit_tile() -> [f32; 2] {
     [1.0, 1.0]
 }
 
+/// What is wrong with a tilemap, named specifically enough to fix.
 #[derive(Clone, Debug, Error, PartialEq)]
 pub enum TilemapError {
     #[error(transparent)]
@@ -250,11 +293,18 @@ pub enum TilemapError {
 }
 
 impl TilemapComponent {
+    /// How many cells the map's size calls for.
     #[must_use]
     pub const fn expected_cells(&self) -> usize {
         self.columns as usize * self.rows as usize
     }
 
+    /// Checks that the map is the shape it claims and every tile exists in the
+    /// sheet.
+    ///
+    /// Checked here rather than at deserialization for the reason a bad UV rect
+    /// is: a scene carrying a broken tilemap has to open, because the editor is
+    /// where it gets fixed.
     pub fn validate(&self) -> Result<(), TilemapError> {
         self.grid_bounds()?;
         self.grid_space()?;
@@ -282,6 +332,11 @@ impl TilemapComponent {
         Ok(())
     }
 
+    /// Every cell that holds a tile, as `(column, row, index)`, in the order the
+    /// array stores them.
+    ///
+    /// Reading order is the map's order, so a frame extracted from a tilemap is
+    /// the same frame every time without anything having to sort it.
     pub fn filled(&self) -> impl Iterator<Item = (u32, u32, u32)> + '_ {
         self.tiles
             .iter()
@@ -295,6 +350,8 @@ impl TilemapComponent {
             })
     }
 
+    /// The tile at `column`, `row`, or `None` where the map is empty or the
+    /// coordinates are off it.
     #[must_use]
     pub fn tile(&self, column: u32, row: u32) -> Option<u32> {
         if column >= self.columns || row >= self.rows {
