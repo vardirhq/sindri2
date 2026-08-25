@@ -17,7 +17,9 @@ jobs:
         with:
           components: rustfmt,clippy
       - name: Apply format 6 changes
-        run: python scripts/tmp_camera_format6.py
+        run: |
+          python scripts/tmp_camera_format6.py
+          python scripts/tmp_camera_format6_fix.py
       - name: Rewrite current scene files canonically
         run: cargo run -p sindri-core --example tmp_migrate_format6
       - name: Remove temporary helper
