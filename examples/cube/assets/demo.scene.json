@@ -1,5 +1,5 @@
 {
-  "format_version": 6,
+  "format_version": 7,
   "metadata": {
     "name": "Shared 2D and 3D frame pipeline proof"
   },
@@ -114,19 +114,6 @@
           "near": 0.1,
           "projection": "perspective",
           "vertical_fov_degrees": 45.0
-        }
-      }
-    },
-    {
-      "id": "overlay-camera",
-      "name": "Overlay Camera",
-      "components": {
-        "sindri.camera": {
-          "center": [0.0, 0.0],
-          "far": 10.0,
-          "near": 0.0,
-          "projection": "orthographic",
-          "vertical_size": 2.0
         }
       }
     }
