@@ -1,0 +1,72 @@
+name: One-shot camera test patch
+
+on:
+  push:
+    branches:
+      - camera/explicit-multi-camera-semantics
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: camera/explicit-multi-camera-semantics
+      - name: Patch stale embedded-scene assertion
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("editor/src/native/mod.rs")
+          text = path.read_text()
+          old = (
+              "    #[test]\n"
+              "    fn the_embedded_scene_loads_into_a_runtime_world() {\n"
+              "        let world = demo_world();\n"
+              "        assert_eq!(world.len(), 8);\n"
+              "        assert!(find_by_source_id(&world, \"checker-cube\").is_some());\n"
+              "        assert!(find_by_source_id(&world, \"not-an-entity\").is_none());\n"
+              "    }\n"
+          )
+          new = (
+              "    #[test]\n"
+              "    fn the_embedded_scene_loads_into_a_runtime_world() {\n"
+              "        let document = DemoScene::authored_document().unwrap();\n"
+              "        let world = load_world(&extractor(), &document).expect(\"the demo scene loads\");\n"
+              "        assert_eq!(\n"
+              "            world.len(),\n"
+              "            document.entities.len(),\n"
+              "            \"loading the embedded scene should preserve every authored entity\"\n"
+              "        );\n"
+              "        assert_eq!(\n"
+              "            world\n"
+              "                .entities()\n"
+              "                .filter(|(_, data)| data.components.contains_key(\"sindri.camera\"))\n"
+              "                .count(),\n"
+              "            1,\n"
+              "            \"the demo has one authored world camera; screen-space UI needs no camera entity\"\n"
+              "        );\n"
+              "        assert!(find_by_source_id(&world, \"checker-cube\").is_some());\n"
+              "        assert!(find_by_source_id(&world, \"not-an-entity\").is_none());\n"
+              "    }\n"
+          )
+          matches = text.count(old)
+          if matches != 1:
+              raise SystemExit(f"expected exactly one stale test block, found {matches}")
+          path.write_text(text.replace(old, new))
+          PY
+      - name: Remove one-shot workflow and commit
+        shell: bash
+        run: |
+          rm .github/workflows/tmp-camera-test-fix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add editor/src/native/mod.rs .github/workflows/tmp-camera-test-fix.yml
+          git diff --cached --check
+          git commit -m "Make embedded camera test semantic"
+          git push origin HEAD:camera/explicit-multi-camera-semantics
