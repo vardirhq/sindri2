@@ -552,23 +552,36 @@ the cost of opening `decay-syntax`, `decay-semantic`, `decay-ir`, and
   budget cannot ship in an editor — an infinite loop takes the editor and any
   unsaved work with it, which is what `CallDepthExceeded` exists to prevent for
   recursion
-- [ ] **Short-circuit `&&` and `||`.** Both operands are evaluated today
-  (`decay-runtime`'s `booleans`), which stopped being a curiosity when entity
-  references landed: `target != null && target.transform.position.x > 0.0` reads
-  as a null guard, type-checks, and then faults, because `docs/scripting.md`
-  makes reaching through `null` an error deliberately. The idiomatic guard
-  against the language's own error is currently wrong. It belongs here because
-  it is branch lowering — the same machinery, on the same visit
+- [x] **Short-circuit `&&` and `||`.** Both operands used to be evaluated,
+  which stopped being a curiosity when entity references landed:
+  `target != null && target.transform.position.x > 0.0` read as a null guard,
+  type-checked, and then faulted, because `docs/scripting.md` makes reaching
+  through `null` an error deliberately. `decay-ir` now lowers both operators to
+  branches, so the right operand is skipped when the left decides; the answer is
+  still pushed as a `bool`, so the operators' type has not changed. Done ahead of
+  the rest of this slice because it is branch lowering with no dependency on
+  loops
 - [ ] `else if`, as a desugar in the parser rather than a new statement form
 - [ ] `%`
 - [ ] Reject a field initializer that reads a field declared below it
   (`LANGUAGE.md` Surprising Behaviour #8). It compiles and fails at runtime
   today; it is a `decay-semantic` fix and this slice is already there
-- [ ] Gather proof: `orb.decay` and `wisp.decay` replace their sequential
-  `== null` guard blocks with single short-circuiting conditions, and
-  `wisp.decay`'s step timer becomes `elapsed %= step_seconds` rather than
-  `elapsed = 0.0`, which discards the overshoot and makes the wisp's cadence
-  depend on the frame rate
+- [x] Gather proof, partial and worth being exact about: `wisp.decay` now holds
+  its floor and player references across frames instead of looking both up by
+  name every step, guarded and refreshed through `World.exists`, and guards its
+  move with `floor != null && player != null`. What that does **not** show is a
+  behaviour difference, because Sindri's surface was shaped around the missing
+  short-circuit: `World.exists(null)` answers false and `World.despawn(null)` is
+  a no-op precisely so that a guard did not have to protect them. The guard that
+  short-circuiting actually rescues — one reaching *through* a reference, as in
+  `player != null && Grid.position_x(player, floor) > 0.0` — has no Gather caller
+  yet, and inventing one to have a proof would be worse than saying so. The
+  runtime tests hold that behaviour instead, by counting a host call that must
+  not happen
+- [ ] Gather proof for `%`: `wisp.decay`'s step timer keeps its remainder by
+  subtracting `step_seconds` rather than resetting to zero, which stopped its
+  cadence depending on the frame rate. `%` makes that correct for a frame longer
+  than a step as well, which subtraction alone is not
 
 `while` itself has no Gather caller in this slice, and that is deliberate rather
 than overlooked: its first real caller arrives in slice 3, and a loop must not

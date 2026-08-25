@@ -402,7 +402,10 @@ Loosest to tightest:
   concatenate strings.**
 - `< <= > >=` require `f32` and produce `bool`.
 - `== !=` require the two sides to be compatible types, and produce `bool`.
-- `&& ||` require `bool` on both sides and produce `bool`.
+- `&& ||` require `bool` on both sides and produce `bool`, and **short-circuit**:
+  the right side is evaluated only when the left does not already decide the
+  answer. So `held != null && World.exists(held)` guards the call to its right,
+  and `ready || expensive()` does not ask when it is already ready.
 - unary `-` requires `f32`; unary `!` requires `bool`.
 
 ### Assignment
@@ -486,26 +489,23 @@ becomes necessary the moment loops exist.
 
 Things that are true and that most readers — human or model — will guess wrong.
 
-1. **`&&` and `||` do not short-circuit.** Both sides are always evaluated.
-   `if ready && expensive()` calls `expensive()` even when `ready` is false, and
-   `x != null && x.thing` is not a null guard.
-2. **`this.method()` is not a method call.** A container has no methods; it is a
+1. **`this.method()` is not a method call.** A container has no methods; it is a
    compile error telling you to call it by bare name. Host *types* may have
    methods, and those work.
-3. **There is no `else if`.** Write `else { if ... }`.
-4. **There is no truthiness.** `if x` requires `x` to be `bool`.
-5. **`+` does not join strings.** It is numeric addition only.
-6. **All numbers are floats.** `7 / 2` is `3.5`. There is no integer type and no
+2. **There is no `else if`.** Write `else { if ... }`.
+3. **There is no truthiness.** `if x` requires `x` to be `bool`.
+4. **`+` does not join strings.** It is numeric addition only.
+5. **All numbers are floats.** `7 / 2` is `3.5`. There is no integer type and no
    integer division.
-7. **Member types are checked only where the host described them.**
+6. **Member types are checked only where the host described them.**
    `this.transfrom.position.x` is now a compile error against Sindri, because
    Sindri describes its transform — but a path into a type nobody described is
    still accepted and still fails at runtime.
-8. **A field cannot read a field declared below it.** It compiles and fails at
+7. **A field cannot read a field declared below it.** It compiles and fails at
    runtime.
-9. **`let` fields are still settable by the host.** That is what `@export` means.
-10. **A parameter shadows nothing** — parameters and body bindings share one
-    scope, so reusing a parameter's name is a duplicate, not a shadow.
+8. **`let` fields are still settable by the host.** That is what `@export` means.
+9. **A parameter shadows nothing** — parameters and body bindings share one
+   scope, so reusing a parameter's name is a duplicate, not a shadow.
 
 ## What does not exist
 

@@ -6,6 +6,13 @@ All notable changes to Sindri Next will be documented here.
 
 - Add editor wall/footprint authoring, typed Decay pathfinding, and a Gather Wisp that proves authored A* navigation end to end.
 
+### Changed
+
+- Decay's `&&` and `||` now short-circuit: the right operand is evaluated only
+  when the left does not already decide the answer. A guard such as
+  `held != null && World.exists(held)` protects the call to its right, which it
+  did not before. Both operators still require and produce `bool`.
+
 ### Added
 
 - Browser startup failures now reach the player: the engine announces them on

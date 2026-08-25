@@ -617,6 +617,11 @@ fn apply_binary(op: BinaryOp, left: Value, right: Value) -> Result<Value, Runtim
         BinaryOp::LessEqual => compare(left, right, |a, b| a <= b),
         BinaryOp::Greater => compare(left, right, |a, b| a > b),
         BinaryOp::GreaterEqual => compare(left, right, |a, b| a >= b),
+        // Lowering does not emit these any more: `&&` and `||` became branches
+        // so that a left operand which already decides the answer skips the
+        // right one. They stay because `Instruction` is public and an IR built
+        // by hand may still ask for the operation over two values it has
+        // already evaluated, which is the one thing this can still mean.
         BinaryOp::And => booleans(left, right, |a, b| a && b),
         BinaryOp::Or => booleans(left, right, |a, b| a || b),
         BinaryOp::Equal => Ok(Value::Bool(left == right)),
@@ -867,6 +872,183 @@ mod tests {
             }
             Ok(None)
         }
+    }
+
+    /// Counts what reaches the host, so a call that should not happen can be
+    /// asserted absent rather than merely unobserved.
+    #[derive(Default)]
+    struct CountingHost {
+        probes: usize,
+    }
+    impl Host for CountingHost {
+        fn load(
+            &mut self,
+            _subject: Option<u64>,
+            _path: &Path,
+        ) -> Result<Option<Value>, RuntimeError> {
+            Ok(None)
+        }
+        fn store(
+            &mut self,
+            _subject: Option<u64>,
+            _path: &Path,
+            _value: Value,
+        ) -> Result<bool, RuntimeError> {
+            Ok(false)
+        }
+        fn call(
+            &mut self,
+            _subject: Option<u64>,
+            path: &Path,
+            _args: &[Value],
+        ) -> Result<Option<Value>, RuntimeError> {
+            if path.dotted() == "Probe.ready" {
+                self.probes += 1;
+                return Ok(Some(Value::Bool(true)));
+            }
+            Ok(None)
+        }
+    }
+
+    fn probing_environment() -> Environment {
+        let mut environment = Environment::new();
+        environment.add_value("Probe", Type::Named("Probe".to_owned()));
+        environment
+    }
+
+    /// `&&` and `||` decide from the left operand whether to evaluate the
+    /// right, which is only observable through what the right one does. The
+    /// guard this exists for is `held != null && World.exists(held)`: it reads
+    /// as protecting the call to its right, and before this it did not.
+    #[test]
+    fn boolean_operators_skip_the_right_operand_the_left_decides() {
+        let lowered = lower_with_environment(
+            r"script Guard {
+                fn both(flag: bool) -> bool { return flag && Probe.ready(); }
+                fn either(flag: bool) -> bool { return flag || Probe.ready(); }
+            }",
+            &probing_environment(),
+        );
+        let program = lowered.program.expect("valid program");
+
+        let mut runtime = Runtime::new(&program, CountingHost::default());
+        assert_eq!(
+            runtime.call("Guard", "both", vec![Value::Bool(false)]),
+            Ok(Value::Bool(false))
+        );
+        assert_eq!(
+            runtime.into_host().probes,
+            0,
+            "a false left operand answers `&&` on its own"
+        );
+
+        let mut runtime = Runtime::new(&program, CountingHost::default());
+        assert_eq!(
+            runtime.call("Guard", "either", vec![Value::Bool(true)]),
+            Ok(Value::Bool(true))
+        );
+        assert_eq!(
+            runtime.into_host().probes,
+            0,
+            "a true left operand answers `||` on its own"
+        );
+    }
+
+    /// The other half: an operand that is *not* skipped is still evaluated,
+    /// and still decides the answer.
+    #[test]
+    fn boolean_operators_evaluate_the_right_operand_the_left_does_not_decide() {
+        let lowered = lower_with_environment(
+            r"script Guard {
+                fn both(flag: bool) -> bool { return flag && Probe.ready(); }
+                fn either(flag: bool) -> bool { return flag || Probe.ready(); }
+            }",
+            &probing_environment(),
+        );
+        let program = lowered.program.expect("valid program");
+
+        let mut runtime = Runtime::new(&program, CountingHost::default());
+        assert_eq!(
+            runtime.call("Guard", "both", vec![Value::Bool(true)]),
+            Ok(Value::Bool(true))
+        );
+        assert_eq!(runtime.into_host().probes, 1);
+
+        let mut runtime = Runtime::new(&program, CountingHost::default());
+        assert_eq!(
+            runtime.call("Guard", "either", vec![Value::Bool(false)]),
+            Ok(Value::Bool(true))
+        );
+        assert_eq!(runtime.into_host().probes, 1);
+    }
+
+    /// Chained and nested operators, which is where lowering that patches jump
+    /// sites tends to go wrong: an inner operator's tail must not be mistaken
+    /// for an outer one's.
+    #[test]
+    fn short_circuiting_survives_chaining_and_nesting() {
+        let lowered = lower_with_environment(
+            r"script Guard {
+                fn chain(a: bool, b: bool) -> bool { return a && b && Probe.ready(); }
+                fn mixed(a: bool, b: bool) -> bool { return a || b && Probe.ready(); }
+                fn guarded(a: bool) -> f32 { if a && Probe.ready() { return 1.0; } return 0.0; }
+            }",
+            &probing_environment(),
+        );
+        let program = lowered.program.expect("valid program");
+
+        let mut runtime = Runtime::new(&program, CountingHost::default());
+        assert_eq!(
+            runtime.call(
+                "Guard",
+                "chain",
+                vec![Value::Bool(true), Value::Bool(false)]
+            ),
+            Ok(Value::Bool(false))
+        );
+        assert_eq!(runtime.into_host().probes, 0, "`b` decides the chain");
+
+        let mut runtime = Runtime::new(&program, CountingHost::default());
+        assert_eq!(
+            runtime.call("Guard", "chain", vec![Value::Bool(true), Value::Bool(true)]),
+            Ok(Value::Bool(true))
+        );
+        assert_eq!(runtime.into_host().probes, 1);
+
+        // `&&` binds tighter than `||`, so this is `a || (b && ready())`.
+        let mut runtime = Runtime::new(&program, CountingHost::default());
+        assert_eq!(
+            runtime.call("Guard", "mixed", vec![Value::Bool(true), Value::Bool(true)]),
+            Ok(Value::Bool(true))
+        );
+        assert_eq!(runtime.into_host().probes, 0, "`a` decides the whole of it");
+
+        let mut runtime = Runtime::new(&program, CountingHost::default());
+        assert_eq!(
+            runtime.call(
+                "Guard",
+                "mixed",
+                vec![Value::Bool(false), Value::Bool(false)]
+            ),
+            Ok(Value::Bool(false))
+        );
+        assert_eq!(runtime.into_host().probes, 0, "`b` decides the right half");
+
+        // The value a short-circuit leaves behind is what `if` then tests, so
+        // the two sets of jumps have to agree about where the answer is.
+        let mut runtime = Runtime::new(&program, CountingHost::default());
+        assert_eq!(
+            runtime.call("Guard", "guarded", vec![Value::Bool(false)]),
+            Ok(Value::Number(0.0))
+        );
+        assert_eq!(runtime.into_host().probes, 0);
+
+        let mut runtime = Runtime::new(&program, CountingHost::default());
+        assert_eq!(
+            runtime.call("Guard", "guarded", vec![Value::Bool(true)]),
+            Ok(Value::Number(1.0))
+        );
+        assert_eq!(runtime.into_host().probes, 1);
     }
 
     #[test]
