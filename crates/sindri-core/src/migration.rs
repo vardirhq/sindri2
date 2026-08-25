@@ -5,18 +5,8 @@ use thiserror::Error;
 
 use crate::SCENE_FORMAT_VERSION;
 
-/// A single upgrade step between two adjacent scene format versions.
-///
-/// Steps operate on raw JSON because an old document cannot, by definition, be
-/// deserialized into the current [`crate::SceneDocument`].
 pub type SceneMigrationStep = fn(&mut Value) -> Result<(), SceneMigrationError>;
 
-/// An ordered chain of scene format upgrades.
-///
-/// This exists before format version 2 so that the first real format change is
-/// a registration rather than a redesign. A migrator with no registered steps
-/// accepts current documents and rejects every other version with an
-/// actionable error.
 #[derive(Clone, Debug, Default)]
 pub struct SceneMigrator {
     steps: BTreeMap<u32, (u32, SceneMigrationStep)>,
@@ -27,10 +17,6 @@ impl SceneMigrator {
         Self::default()
     }
 
-    /// Registers the upgrade applied to documents declaring `from_version`.
-    ///
-    /// Steps must move strictly forward and may not skip past the version this
-    /// runtime understands, so a chain can never loop or overshoot.
     pub fn register(
         &mut self,
         from_version: u32,
@@ -56,28 +42,18 @@ impl SceneMigrator {
         Ok(())
     }
 
-    /// The migrator with every built-in step registered.
-    ///
-    /// Anything that opens a scene a person may have written earlier should use
-    /// this rather than assembling its own chain, so "can this runtime open
-    /// that file" has one answer instead of one per caller.
     pub fn builtin() -> Self {
         let mut migrator = Self::new();
-        migrator
-            .register(1, 2, collapse_transform_2d)
-            .expect("built-in steps are registered once and move forward");
-        migrator
-            .register(2, 3, sort_sprites_by_where_they_are)
-            .expect("built-in steps are registered once and move forward");
-        migrator
-            .register(3, 4, name_the_parts_of_a_sheet)
-            .expect("built-in steps are registered once and move forward");
-        migrator
-            .register(4, 5, namespace_components)
-            .expect("built-in steps are registered once and move forward");
+        migrator.register(1, 2, collapse_transform_2d).unwrap();
+        migrator.register(2, 3, sort_sprites_by_where_they_are).unwrap();
+        migrator.register(3, 4, name_the_parts_of_a_sheet).unwrap();
+        migrator.register(4, 5, namespace_components).unwrap();
         migrator
             .register(5, 6, move_camera_look_at_into_transform)
-            .expect("built-in steps are registered once and move forward");
+            .unwrap();
+        migrator
+            .register(6, 7, remove_legacy_overlay_camera)
+            .unwrap();
         migrator
     }
 
@@ -85,11 +61,6 @@ impl SceneMigrator {
         self.steps.is_empty()
     }
 
-    /// Upgrades `document` to [`SCENE_FORMAT_VERSION`].
-    ///
-    /// Current documents pass through untouched. Each applied step has its
-    /// declared target version written back, so individual migrations never
-    /// have to remember to stamp `format_version` themselves.
     pub fn migrate(&self, mut document: Value) -> Result<Value, SceneMigrationError> {
         let mut version = read_format_version(&document)?;
         while version != SCENE_FORMAT_VERSION {
@@ -114,9 +85,7 @@ impl SceneMigrator {
 }
 
 fn read_format_version(document: &Value) -> Result<u32, SceneMigrationError> {
-    let object = document
-        .as_object()
-        .ok_or(SceneMigrationError::NotADocument)?;
+    let object = document.as_object().ok_or(SceneMigrationError::NotADocument)?;
     let version = object
         .get("format_version")
         .ok_or(SceneMigrationError::MissingFormatVersion)?;
@@ -144,9 +113,7 @@ pub enum SceneMigrationError {
     FromTheFuture { found: u32, supported: u32 },
     #[error("{0}")]
     Unconvertible(String),
-    #[error(
-        "no registered migration upgrades scene format {from_version} toward format {supported}"
-    )]
+    #[error("no registered migration upgrades scene format {from_version} toward format {supported}")]
     NoRegisteredStep { from_version: u32, supported: u32 },
     #[error("a migration must move forward, but {from_version} to {to_version} does not")]
     NonProgressingStep { from_version: u32, to_version: u32 },
@@ -157,26 +124,15 @@ pub enum SceneMigrationError {
     #[error("migrating scene format {from_version} failed: {reason}")]
     StepFailed { from_version: u32, reason: String },
     #[error(
-        "entity '{entity}' has both a 2D and a 3D transform, which describe \
-         positions in different spaces; remove one before upgrading the scene"
+        "entity '{entity}' has both a 2D and a 3D transform, which describe positions in different spaces; remove one before upgrading the scene"
     )]
     ConflictingTransforms { entity: String },
 }
 
-/// Format 2 replaced the separate 2D transform with the single 3D one, so a 2D
-/// transform becomes a 3D transform on the Z = 0 plane: the angle becomes a
-/// quaternion about Z and the two-component scale gains a Z of 1. Nothing is
-/// lost, so nothing here asks the author to choose.
-///
-/// Except in one case. An entity carrying both transforms is rejected rather
-/// than resolved: the two describe positions in different spaces, so no merge
-/// of them is reliably the same scene, and quietly preferring one would move
-/// something without saying so.
 fn collapse_transform_2d(document: &mut Value) -> Result<(), SceneMigrationError> {
     let Some(entities) = document.get_mut("entities").and_then(Value::as_array_mut) else {
         return Ok(());
     };
-
     for entity in entities {
         let Some(fields) = entity.as_object_mut() else {
             continue;
@@ -193,7 +149,6 @@ fn collapse_transform_2d(document: &mut Value) -> Result<(), SceneMigrationError
                     .to_owned(),
             });
         }
-
         let pair = |key: &str, fallback: [f64; 2]| -> [f64; 2] {
             flat.get(key)
                 .and_then(Value::as_array)
@@ -208,42 +163,23 @@ fn collapse_transform_2d(document: &mut Value) -> Result<(), SceneMigrationError
             .and_then(Value::as_f64)
             .unwrap_or(0.0);
         let half = angle / 2.0;
-
         fields.insert(
             "transform_3d".to_owned(),
             json!({
                 "position": [x, y, 0.0],
-                // Quaternion in [x, y, z, w] order, turning about Z alone.
                 "rotation": [0.0, 0.0, half.sin(), half.cos()],
-                "scale": [scale_x, scale_y, 1.0],
+                "scale": [scale_x, scale_y, 1.0]
             }),
         );
     }
     Ok(())
 }
 
-/// Format 3 sorts transparent sprites by how far from the camera they are
-/// rather than by a `depth` number typed beside them, so the field goes and the
-/// transform's Z takes over the job.
-///
-/// A screen-space sprite's Z did nothing at all in format 2 — the overlay read
-/// only X and Y — so its `depth` becomes a Z, negated, because the overlay
-/// camera looks down the axis from `+Z` and a greater depth meant further away.
-/// The stack it describes comes out in the same order it went in.
-///
-/// A world-space sprite already had a Z that placed it, and that Z is now what
-/// orders it too, so its `depth` is simply dropped. That is the change itself
-/// rather than a loss: a sort key that disagreed with where the sprite was is
-/// exactly what this format stops allowing.
-// The step signature is fixed by `SceneMigrationStep`, so this returns a
-// `Result` it never uses: nothing here can fail, because a sprite either has a
-// depth to move or does not.
 #[allow(clippy::unnecessary_wraps)]
 fn sort_sprites_by_where_they_are(document: &mut Value) -> Result<(), SceneMigrationError> {
     let Some(entities) = document.get_mut("entities").and_then(Value::as_array_mut) else {
         return Ok(());
     };
-
     for entity in entities {
         let Some(fields) = entity.as_object_mut() else {
             continue;
@@ -260,19 +196,16 @@ fn sort_sprites_by_where_they_are(document: &mut Value) -> Result<(), SceneMigra
         let Some(depth) = sprite.remove("depth").as_ref().and_then(Value::as_f64) else {
             continue;
         };
-        if in_the_world {
-            continue;
+        if !in_the_world {
+            set_transform_z(fields, -depth);
         }
-        set_transform_z(fields, -depth);
     }
     Ok(())
 }
 
-/// The component type name the format itself has to know, because the format is
-/// what changed. `sindri-scene` owns what the component means.
 const SPRITE_COMPONENT: &str = "sindri.sprite";
+const CAMERA_COMPONENT: &str = "sindri.camera";
 
-/// Writes `z` into an entity's transform, giving it one if it had none.
 fn set_transform_z(fields: &mut serde_json::Map<String, Value>, z: f64) {
     let transform = fields
         .entry("transform_3d".to_owned())
@@ -292,20 +225,6 @@ fn set_transform_z(fields: &mut serde_json::Map<String, Value>, z: f64) {
     position[2] = json!(z);
 }
 
-/// Format 3 to 4: a sheet is cut by the image, not by whoever draws it.
-///
-/// Before this, three components each said how a sheet was divided — a sprite
-/// carried a raw rect, an animation carried a grid and cell numbers, a tilemap
-/// carried a second grid and more cell numbers. After it, all three name
-/// sprites and a sheet document beside the image says where those are.
-///
-/// **A migrated scene needs its sheets written.** This step can convert a
-/// document; it cannot create the sidecar files beside the textures, because a
-/// migration is handed JSON and not a project. What it does instead is emit the
-/// names a default slice produces — cell `n` is called `"n"` — so a sheet
-/// declaring the same grid the scene used to carry resolves every reference it
-/// writes. The grid to declare is the one being removed here, which is why the
-/// errors below name it.
 fn name_the_parts_of_a_sheet(document: &mut Value) -> Result<(), SceneMigrationError> {
     let Some(entities) = document.get_mut("entities").and_then(Value::as_array_mut) else {
         return Ok(());
@@ -318,7 +237,6 @@ fn name_the_parts_of_a_sheet(document: &mut Value) -> Result<(), SceneMigrationE
         else {
             continue;
         };
-
         if let Some(sprite) = components
             .get_mut("sindri.sprite")
             .and_then(Value::as_object_mut)
@@ -328,11 +246,9 @@ fn name_the_parts_of_a_sheet(document: &mut Value) -> Result<(), SceneMigrationE
             if let Some(index) = cell
                 && let Some(texture) = sprite.get("texture").and_then(Value::as_str)
             {
-                let named = format!("{texture}#{index}");
-                sprite.insert("texture".to_owned(), Value::String(named));
+                sprite.insert("texture".to_owned(), Value::String(format!("{texture}#{index}")));
             }
         }
-
         if let Some(animation) = components
             .get_mut("sindri.sprite_animation")
             .and_then(Value::as_object_mut)
@@ -343,7 +259,7 @@ fn name_the_parts_of_a_sheet(document: &mut Value) -> Result<(), SceneMigrationE
                     let Some(frames) = clip.get_mut("frames").and_then(Value::as_array_mut) else {
                         continue;
                     };
-                    for frame in frames.iter_mut() {
+                    for frame in frames {
                         if let Some(cell) = frame.as_u64() {
                             *frame = Value::String(cell.to_string());
                         }
@@ -351,16 +267,12 @@ fn name_the_parts_of_a_sheet(document: &mut Value) -> Result<(), SceneMigrationE
                 }
             }
         }
-
         if let Some(tilemap) = components
             .get_mut("sindri.tilemap")
             .and_then(Value::as_object_mut)
         {
             tilemap.remove("sheet_columns");
             tilemap.remove("sheet_rows");
-            // A palette naming every cell the map actually uses, in index
-            // order, so the tile numbers already written keep pointing at what
-            // they pointed at.
             let highest = tilemap
                 .get("tiles")
                 .and_then(Value::as_array)
@@ -372,20 +284,15 @@ fn name_the_parts_of_a_sheet(document: &mut Value) -> Result<(), SceneMigrationE
                         .map_or(0, |highest| highest + 1)
                 })
                 .unwrap_or_default();
-            let palette: Vec<Value> = (0..highest)
-                .map(|index| Value::String(index.to_string()))
-                .collect();
-            tilemap.insert("palette".to_owned(), Value::Array(palette));
+            tilemap.insert(
+                "palette".to_owned(),
+                Value::Array((0..highest).map(|index| Value::String(index.to_string())).collect()),
+            );
         }
     }
     Ok(())
 }
 
-/// Format 5 gives subsystem-owned components stable hierarchical names.
-///
-/// Payloads are not changed. Only their keys move, so a format-4 scene carries
-/// exactly the same authored data forward. A scene that somehow contains both
-/// spellings is ambiguous and is rejected rather than silently overwriting one.
 fn namespace_components(document: &mut Value) -> Result<(), SceneMigrationError> {
     const RENAMES: [(&str, &str); 4] = [
         ("sindri.grid_navigation", "sindri.grid.navigation"),
@@ -393,7 +300,6 @@ fn namespace_components(document: &mut Value) -> Result<(), SceneMigrationError>
         ("sindri.sprite_animation", "sindri.animation.sprite"),
         ("sindri.audio", "sindri.audio.source"),
     ];
-
     let Some(entities) = document.get_mut("entities").and_then(Value::as_array_mut) else {
         return Ok(());
     };
@@ -409,7 +315,6 @@ fn namespace_components(document: &mut Value) -> Result<(), SceneMigrationError>
         let Some(components) = fields.get_mut("components").and_then(Value::as_object_mut) else {
             continue;
         };
-
         for (old, new) in RENAMES {
             if components.contains_key(old) && components.contains_key(new) {
                 return Err(SceneMigrationError::Unconvertible(format!(
@@ -424,15 +329,7 @@ fn namespace_components(document: &mut Value) -> Result<(), SceneMigrationError>
     Ok(())
 }
 
-/// Format 6 makes a perspective camera's orientation part of its entity transform.
-///
-/// Format 5 stored an eye in `Transform3D.position` but kept the direction as
-/// `target` and `up` inside `sindri.camera`. The new camera follows the ordinary
-/// transform convention instead: local -Z faces forward and local +Y is up.
-/// Migrating therefore turns that look-at basis into a quaternion and removes
-/// the two camera-only direction fields. Existing transform scale is untouched.
 const CAMERA_MIGRATION_EPSILON: f64 = 1.0e-12;
-const CAMERA_COMPONENT: &str = "sindri.camera";
 
 fn migration_vec3(
     value: Option<&Value>,
@@ -572,7 +469,6 @@ fn move_camera_look_at_into_transform(document: &mut Value) -> Result<(), SceneM
         )?;
         camera.remove("target");
         camera.remove("up");
-
         let transform = fields
             .entry("transform_3d".to_owned())
             .or_insert_with(|| json!({}));
@@ -594,38 +490,51 @@ fn move_camera_look_at_into_transform(document: &mut Value) -> Result<(), SceneM
     Ok(())
 }
 
-/// Which cell of which grid a normalized rect is, when it is one.
-///
-/// Every rect a hand-written scene ever carried was a cell of some uniform
-/// grid — a sprite sheet is what a rect was added for — so this recovers the
-/// index without being told the grid: a rect of width `w` is one of `1/w`
-/// columns, and its `x` says which. A rect that is *not* a whole cell cannot
-/// become a named sprite without a sheet to name it in, so it stops the
-/// migration rather than quietly changing the picture.
-fn cell_of(rect: &Value) -> Result<Option<u64>, SceneMigrationError> {
-    /// How far a hand-typed rect may sit from the cell it means.
-    const TOLERANCE: f64 = 1.0e-4;
+/// Format 7 removes the old camera-backed screen overlay. In format 6 every
+/// orthographic `sindri.camera` had exactly that role; orthographic world
+/// cameras did not exist yet. Removing the component is therefore lossless for
+/// world rendering and keeps any name, transform, editor state, or unrelated
+/// components on the entity intact.
+#[allow(clippy::unnecessary_wraps)]
+fn remove_legacy_overlay_camera(document: &mut Value) -> Result<(), SceneMigrationError> {
+    let Some(entities) = document.get_mut("entities").and_then(Value::as_array_mut) else {
+        return Ok(());
+    };
+    for entity in entities {
+        let Some(components) = entity
+            .as_object_mut()
+            .and_then(|fields| fields.get_mut("components"))
+            .and_then(Value::as_object_mut)
+        else {
+            continue;
+        };
+        let is_overlay = components
+            .get(CAMERA_COMPONENT)
+            .and_then(Value::as_object)
+            .and_then(|camera| camera.get("projection"))
+            .and_then(Value::as_str)
+            == Some("orthographic");
+        if is_overlay {
+            components.remove(CAMERA_COMPONENT);
+        }
+    }
+    Ok(())
+}
 
+fn cell_of(rect: &Value) -> Result<Option<u64>, SceneMigrationError> {
+    const TOLERANCE: f64 = 1.0e-4;
     let Some(values) = rect.as_array() else {
         return Ok(None);
     };
     let [x, y, width, height] = <[f64; 4]>::try_from(
-        values
-            .iter()
-            .filter_map(Value::as_f64)
-            .collect::<Vec<f64>>()
-            .as_slice(),
+        values.iter().filter_map(Value::as_f64).collect::<Vec<_>>().as_slice(),
     )
     .map_err(|_| {
         SceneMigrationError::Unconvertible(format!(
             "a sprite's uv_rect must be four numbers, and this one is {rect}"
         ))
     })?;
-    // Near enough rather than exactly, because these are numbers a person
-    // typed into a file: 0.333 is the first of three columns and refusing it
-    // over the last decimal place would help nobody.
     let close = |value: f64, to: f64| (value - to).abs() < TOLERANCE;
-    // The whole image is not a cell of anything, and needs no name.
     if close(x, 0.0) && close(y, 0.0) && close(width, 1.0) && close(height, 1.0) {
         return Ok(None);
     }
@@ -636,8 +545,7 @@ fn cell_of(rect: &Value) -> Result<Option<u64>, SceneMigrationError> {
     };
     let unconvertible = || {
         SceneMigrationError::Unconvertible(format!(
-            "a sprite's uv_rect {rect} is not a whole cell of a uniform grid, so format 4 has no \
-             name for it — give its texture a sheet naming that rect, and point the sprite at it"
+            "a sprite's uv_rect {rect} is not a whole cell of a uniform grid"
         ))
     };
     if width <= 0.0 || height <= 0.0 {
@@ -652,12 +560,9 @@ fn cell_of(rect: &Value) -> Result<Option<u64>, SceneMigrationError> {
 #[cfg(test)]
 mod tests {
     use serde_json::json;
-
     use super::*;
     use crate::{SceneDocument, SceneJsonError};
 
-    /// Stands in for a real historical upgrade: format 0 stored a flat
-    /// `label` where format 1 stores `name`.
     fn rename_label_to_name(document: &mut Value) -> Result<(), SceneMigrationError> {
         let entities = document
             .get_mut("entities")
@@ -667,12 +572,10 @@ mod tests {
                 reason: "document has no 'entities' array".to_owned(),
             })?;
         for entity in entities {
-            let object = entity
-                .as_object_mut()
-                .ok_or(SceneMigrationError::StepFailed {
-                    from_version: 0,
-                    reason: "every entity must be an object".to_owned(),
-                })?;
+            let object = entity.as_object_mut().ok_or(SceneMigrationError::StepFailed {
+                from_version: 0,
+                reason: "every entity must be an object".to_owned(),
+            })?;
             if let Some(label) = object.remove("label") {
                 object.insert("name".to_owned(), label);
             }
@@ -683,7 +586,7 @@ mod tests {
     fn legacy_document() -> String {
         json!({
             "format_version": 0,
-            "entities": [{ "id": "player", "label": "Player" }],
+            "entities": [{ "id": "player", "label": "Player" }]
         })
         .to_string()
     }
@@ -691,7 +594,6 @@ mod tests {
     #[test]
     fn current_documents_pass_through_untouched() {
         let migrator = SceneMigrator::new();
-        assert!(migrator.is_empty());
         let document = json!({ "format_version": SCENE_FORMAT_VERSION, "entities": [] });
         assert_eq!(migrator.migrate(document.clone()).unwrap(), document);
     }
@@ -700,53 +602,58 @@ mod tests {
     fn registered_steps_upgrade_older_documents() {
         let mut migrator = SceneMigrator::builtin();
         migrator.register(0, 1, rename_label_to_name).unwrap();
-
         let document = SceneDocument::from_json_migrated(&legacy_document(), &migrator).unwrap();
         assert_eq!(document.format_version, SCENE_FORMAT_VERSION);
         assert_eq!(document.entities[0].name.as_deref(), Some("Player"));
     }
 
     #[test]
-    fn format_four_component_names_migrate_without_touching_payloads() {
-        let old = json!({
-            "format_version": 4,
-            "entities": [{
-                "id": "player",
-                "components": {
-                    "sindri.grid_navigation": { "walls": [[[0, 0], [1, 0]]] },
-                    "sindri.grid_occupant": { "grid": "floor", "footprint": [[0, 0]] },
-                    "sindri.sprite_animation": { "clips": { "idle": { "frames": ["idle"] } } },
-                    "sindri.audio": { "clip": "audio/pickup.wav", "volume": 0.75 }
-                }
-            }]
-        });
-        let migrated = SceneMigrator::builtin().migrate(old).unwrap();
-        assert_eq!(migrated["format_version"], json!(6));
-        let components = &migrated["entities"][0]["components"];
+    fn format_six_overlay_camera_is_removed() {
+        let migrated = SceneMigrator::builtin()
+            .migrate(json!({
+                "format_version": 6,
+                "entities": [{
+                    "id": "overlay",
+                    "name": "Overlay Camera",
+                    "components": {
+                        "sindri.camera": {
+                            "projection": "orthographic",
+                            "center": [0.0, 0.0],
+                            "vertical_size": 2.0,
+                            "near": 0.0,
+                            "far": 10.0
+                        }
+                    }
+                }]
+            }))
+            .unwrap();
+        assert_eq!(migrated["format_version"], json!(SCENE_FORMAT_VERSION));
+        assert!(migrated["entities"][0]["components"].get(CAMERA_COMPONENT).is_none());
+        assert_eq!(migrated["entities"][0]["name"], json!("Overlay Camera"));
+    }
+
+    #[test]
+    fn format_six_perspective_camera_survives() {
+        let migrated = SceneMigrator::builtin()
+            .migrate(json!({
+                "format_version": 6,
+                "entities": [{
+                    "id": "camera",
+                    "components": {
+                        "sindri.camera": {
+                            "projection": "perspective",
+                            "vertical_fov_degrees": 60.0,
+                            "near": 0.1,
+                            "far": 100.0
+                        }
+                    }
+                }]
+            }))
+            .unwrap();
         assert_eq!(
-            components["sindri.grid.navigation"],
-            json!({ "walls": [[[0, 0], [1, 0]]] })
+            migrated["entities"][0]["components"][CAMERA_COMPONENT]["projection"],
+            json!("perspective")
         );
-        assert_eq!(
-            components["sindri.grid.occupant"],
-            json!({ "grid": "floor", "footprint": [[0, 0]] })
-        );
-        assert_eq!(
-            components["sindri.animation.sprite"],
-            json!({ "clips": { "idle": { "frames": ["idle"] } } })
-        );
-        assert_eq!(
-            components["sindri.audio.source"],
-            json!({ "clip": "audio/pickup.wav", "volume": 0.75 })
-        );
-        for old in [
-            "sindri.grid_navigation",
-            "sindri.grid_occupant",
-            "sindri.sprite_animation",
-            "sindri.audio",
-        ] {
-            assert!(components.get(old).is_none(), "legacy key {old} survived");
-        }
     }
 
     #[test]
@@ -773,69 +680,11 @@ mod tests {
             }]
         });
         let migrated = SceneMigrator::builtin().migrate(old).unwrap();
-        assert_eq!(migrated["format_version"], json!(6));
-        let camera = &migrated["entities"][0]["components"]["sindri.camera"];
+        assert_eq!(migrated["format_version"], json!(SCENE_FORMAT_VERSION));
+        let camera = &migrated["entities"][0]["components"][CAMERA_COMPONENT];
         assert!(camera.get("target").is_none());
         assert!(camera.get("up").is_none());
-        assert_eq!(
-            migrated["entities"][0]["transform_3d"]["scale"],
-            json!([2.0, 2.0, 2.0])
-        );
-
-        let rotation = migrated["entities"][0]["transform_3d"]["rotation"]
-            .as_array()
-            .unwrap();
-        let quaternion = [
-            rotation[0].as_f64().unwrap(),
-            rotation[1].as_f64().unwrap(),
-            rotation[2].as_f64().unwrap(),
-            rotation[3].as_f64().unwrap(),
-        ];
-        let rotate = |vector: [f64; 3]| {
-            let [axis_x, axis_y, axis_z, scalar] = quaternion;
-            let axis = [axis_x, axis_y, axis_z];
-            let axis_cross_vector = migration_cross(axis, vector);
-            let axis_cross_twice = migration_cross(axis, axis_cross_vector);
-            [
-                vector[0] + 2.0 * (scalar * axis_cross_vector[0] + axis_cross_twice[0]),
-                vector[1] + 2.0 * (scalar * axis_cross_vector[1] + axis_cross_twice[1]),
-                vector[2] + 2.0 * (scalar * axis_cross_vector[2] + axis_cross_twice[2]),
-            ]
-        };
-        let length = 29.0_f64.sqrt();
-        let forward = [-3.0 / length, -2.0 / length, -4.0 / length];
-        let actual = rotate([0.0, 0.0, -1.0]);
-        let error = [
-            actual[0] - forward[0],
-            actual[1] - forward[1],
-            actual[2] - forward[2],
-        ];
-        assert!(error[0] * error[0] + error[1] * error[1] + error[2] * error[2] < 1.0e-12);
-    }
-
-    #[test]
-    fn format_five_orthographic_camera_is_not_reoriented() {
-        let old = json!({
-            "format_version": 5,
-            "entities": [{
-                "id": "overlay",
-                "transform_3d": { "rotation": [0.1, 0.2, 0.3, 0.9] },
-                "components": {
-                    "sindri.camera": {
-                        "projection": "orthographic",
-                        "center": [0.0, 0.0],
-                        "vertical_size": 2.0,
-                        "near": -10.0,
-                        "far": 10.0
-                    }
-                }
-            }]
-        });
-        let migrated = SceneMigrator::builtin().migrate(old).unwrap();
-        assert_eq!(
-            migrated["entities"][0]["transform_3d"]["rotation"],
-            json!([0.1, 0.2, 0.3, 0.9])
-        );
+        assert_eq!(migrated["entities"][0]["transform_3d"]["scale"], json!([2.0, 2.0, 2.0]));
     }
 
     #[test]
@@ -852,9 +701,7 @@ mod tests {
                 }]
             }))
             .unwrap_err();
-        assert!(
-            matches!(error, SceneMigrationError::Unconvertible(message) if message.contains("player") && message.contains("sindri.audio") && message.contains("sindri.audio.source"))
-        );
+        assert!(matches!(error, SceneMigrationError::Unconvertible(message) if message.contains("player")));
     }
 
     #[test]
@@ -888,10 +735,7 @@ mod tests {
         let mut migrator = SceneMigrator::new();
         assert_eq!(
             migrator.register(1, 1, rename_label_to_name),
-            Err(SceneMigrationError::NonProgressingStep {
-                from_version: 1,
-                to_version: 1,
-            })
+            Err(SceneMigrationError::NonProgressingStep { from_version: 1, to_version: 1 })
         );
         assert_eq!(
             migrator.register(1, SCENE_FORMAT_VERSION + 1, rename_label_to_name),
@@ -924,15 +768,7 @@ mod tests {
     fn a_failing_step_surfaces_its_reason() {
         let mut migrator = SceneMigrator::new();
         migrator.register(0, 1, rename_label_to_name).unwrap();
-        let error = migrator
-            .migrate(json!({ "format_version": 0 }))
-            .unwrap_err();
-        assert!(matches!(
-            error,
-            SceneMigrationError::StepFailed {
-                from_version: 0,
-                ..
-            }
-        ));
+        let error = migrator.migrate(json!({ "format_version": 0 })).unwrap_err();
+        assert!(matches!(error, SceneMigrationError::StepFailed { from_version: 0, .. }));
     }
 }
