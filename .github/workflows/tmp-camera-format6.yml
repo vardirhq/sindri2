@@ -34,6 +34,6 @@ jobs:
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add crates/sindri-core/src/migration.rs crates/sindri-core/src/scene.rs docs/versioning.md docs/scene-serialization.md '**/*.scene.json'
+          git add crates/sindri-core/src/migration.rs crates/sindri-core/src/scene.rs crates/sindri-core/tests/scene_round_trip.rs docs/versioning.md docs/scene-serialization.md '**/*.scene.json'
           git commit -m "Migrate authored cameras to scene format 6"
           git push
