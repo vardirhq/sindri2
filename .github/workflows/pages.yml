@@ -47,7 +47,8 @@ jobs:
           test -f target/pages/docs/scripting/index.html
           test -f target/pages/docs/language/index.html
           test -f target/pages/examples/gather/index.html
-          test -f target/pages/examples/gather/pkg/sindri_game.js
+          test -f target/pages/examples/gather/pkg/sindri_gather.js
+          test -f target/pages/examples/gather/pkg/sindri_gather_bg.wasm
       - uses: actions/configure-pages@v6
         with:
           enablement: true
