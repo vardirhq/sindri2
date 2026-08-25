@@ -260,9 +260,12 @@ fn world_sprites_sort_by_distance_from_the_camera_that_draws_them() {
             .collect::<Vec<f32>>()
     };
 
-    // The authored camera is at (3, 2, 4), so the western sprite is further.
-    let authored = alphas(CameraView::default());
-    assert!(close(authored[0], 0.75) && close(authored[1], 0.25));
+    // The resting viewer camera is at (3, 2, 4), so the western sprite is further.
+    let resting = alphas(CameraView {
+        projection: WorldProjection::Perspective,
+        ..CameraView::default()
+    });
+    assert!(close(resting[0], 0.75) && close(resting[1], 0.25));
 
     // Half a turn around the target puts the camera on the other side, and the
     // pair must swap without the scene changing at all.
@@ -933,11 +936,17 @@ fn the_world_camera_view_answers_the_orbit_the_frame_was_drawn_with() {
     let extractor = SceneExtractor::new().expect("built-in components register");
 
     let resting = extractor
-        .world_camera(&world, CameraView::default())
-        .expect("the world holds a perspective camera")
+        .world_camera(
+            &world,
+            CameraView {
+                projection: WorldProjection::Perspective,
+                ..CameraView::default()
+            },
+        )
+        .expect("the viewer has a perspective camera")
         .expect("a perspective camera resolves")
         .view;
-    // The authored camera sits at (3, 2, 4) looking at the origin, so world X
+    // The resting viewer sits at (3, 2, 4) looking at the origin, so world X
     // is already partly towards the viewer rather than straight across.
     let across = resting.transform_vector3(Vec3::X);
     assert!(across.x > 0.0, "world X points right of the picture");
