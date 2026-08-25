@@ -35,25 +35,22 @@ fn world_from(json: &str) -> World {
         .world
 }
 
-fn cameras() -> &'static str {
+fn world_camera() -> &'static str {
     r#"
     {
       "id": "main-camera",
-      "transform_3d": { "position": [3.0, 2.0, 4.0] },
+      "transform_3d": {
+        "position": [3.0, 2.0, 4.0],
+        "rotation": [-0.17940314, 0.31052187, 0.05980105, 0.93156564]
+      },
       "components": { "sindri.camera": {
-        "projection": "perspective", "target": [0.0, 0.0, 0.0], "up": [0.0, 1.0, 0.0],
+        "projection": "perspective",
         "vertical_fov_degrees": 45.0, "near": 0.1, "far": 100.0 } }
-    },
-    {
-      "id": "overlay-camera",
-      "components": { "sindri.camera": {
-        "projection": "orthographic", "center": [0.0, 0.0],
-        "vertical_size": 2.0, "near": 0.0, "far": 10.0 } }
     }"#
 }
 
 fn scene(entities: &str) -> String {
-    document(&format!("{}{entities}", cameras()))
+    document(&format!("{}{entities}", world_camera()))
 }
 
 /// A document holding exactly the entities given, at whatever the current
@@ -63,7 +60,7 @@ fn document(entities: &str) -> String {
 }
 
 #[test]
-fn a_world_with_only_cameras_draws_nothing() {
+fn a_world_with_only_a_camera_draws_nothing() {
     let world = world_from(&scene(""));
     let frame = SceneExtractor::new()
         .unwrap()
@@ -102,9 +99,9 @@ fn meshes_and_sprites_extract_into_ordered_passes() {
 }
 
 #[test]
-fn text_extracts_in_pixels_from_an_overlay_anchor() {
-    let world = world_from(&scene(
-        r#",
+fn text_extracts_in_pixels_from_a_screen_anchor_without_a_camera() {
+    let world = world_from(&document(
+        r#"
         { "id": "label", "transform_3d": { "position": [0.25, -0.5, 0.0] },
           "components": { "sindri.text": {
             "text": "Gather", "font": "fonts/Inter.ttf", "font_size": 18.0,
@@ -119,7 +116,7 @@ fn text_extracts_in_pixels_from_an_overlay_anchor() {
             CameraView::default(),
             &TextureBindings::new(),
         )
-        .expect("text extracts");
+        .expect("screen text needs no authored camera");
 
     assert_eq!(frame.passes().len(), 1);
     assert_eq!(frame.passes()[0].stage, RenderStage::Overlay);
@@ -147,13 +144,12 @@ fn text_extracts_in_pixels_from_an_overlay_anchor() {
     );
 }
 
-/// Sprites sort by where they are rather than by a number typed beside them:
-/// the overlay camera looks along the axis from `+Z`, so the lower Z is further
-/// away and is drawn first.
+/// Screen sprites sort by their authored Z within the viewport-owned screen
+/// projection, so the lower Z is further back in the stack and is drawn first.
 #[test]
 fn sprites_batch_per_layer_and_sort_back_to_front() {
-    let world = world_from(&scene(
-        r#",
+    let world = world_from(&document(
+        r#"
         { "id": "near", "transform_3d": { "position": [0.0, 0.0, -1.0] },
           "components": { "sindri.sprite": {
             "texture": "b", "layer": 100, "tint": [1.0, 1.0, 1.0, 0.25] } } },
@@ -171,14 +167,14 @@ fn sprites_batch_per_layer_and_sort_back_to_front() {
             CameraView::default(),
             &TextureBindings::new(),
         )
-        .expect("the scene extracts");
+        .expect("screen sprites need no authored camera");
 
     assert_eq!(frame.passes().len(), 2, "one batch per layer");
     assert_eq!(frame.passes()[0].layer.0, 100);
     assert_eq!(frame.passes()[1].layer.0, 200);
 
     let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[0].command else {
-        panic!("the first overlay pass should be a sprite batch");
+        panic!("the first screen pass should be a sprite batch");
     };
     assert_eq!(instances.len(), 2);
     let alphas: Vec<f32> = instances.iter().map(|sprite| sprite.tint()[3]).collect();
@@ -229,7 +225,7 @@ fn a_screen_sprite_is_sorted_by_its_z_but_not_moved_by_it() {
     );
     assert!(
         close(placements[0].z, 0.0),
-        "screen sprites draw flat against the overlay, at {placements:?}"
+        "screen sprites draw flat in screen space, at {placements:?}"
     );
 }
 
@@ -281,8 +277,9 @@ fn world_sprites_sort_by_distance_from_the_camera_that_draws_them() {
 }
 
 /// A world-space sprite is in the world: it is drawn through the world camera,
-/// in the transparent stage rather than the overlay, and its transform reaches
-/// it whole — Z included, which a screen-anchored sprite has nowhere to put.
+/// in the transparent stage rather than the screen overlay, and its transform
+/// reaches it whole — Z included, which a screen-anchored sprite uses only for
+/// ordering.
 #[test]
 fn world_space_sprites_draw_through_the_world_camera_with_their_full_transform() {
     let world = world_from(&scene(
@@ -315,9 +312,8 @@ fn world_space_sprites_draw_through_the_world_camera_with_their_full_transform()
         "the world sprite landed at {translation:?} rather than where it was authored"
     );
 
-    // The world camera moved, so the sprite's picture must move with it. This
-    // is what a screen-anchored sprite cannot do: the overlay camera cancels
-    // its own centre.
+    // The viewer camera moved, so the sprite's picture must move with it. A
+    // screen-space sprite is instead resolved directly against the viewport.
     let orbited = SceneExtractor::new()
         .unwrap()
         .extract(
@@ -385,8 +381,8 @@ fn a_sprite_that_names_no_space_is_still_screen_anchored() {
     );
 }
 
-/// Two spaces are two cameras and two pipelines, so they cannot share a draw
-/// call however much else they have in common.
+/// The two spaces use different projections and pipelines, so they cannot share
+/// a draw call however much else they have in common.
 #[test]
 fn sprites_in_different_spaces_do_not_share_a_batch() {
     let world = world_from(&scene(
@@ -407,26 +403,20 @@ fn sprites_in_different_spaces_do_not_share_a_batch() {
         .expect("the scene extracts");
 
     // Same layer, same texture, and still two passes — and the world one is
-    // drawn first, because the overlay is over everything.
+    // drawn first, because screen-space content is over the world.
     assert_eq!(frame.passes().len(), 2);
     assert_eq!(frame.passes()[0].stage, RenderStage::Transparent2d);
     assert_eq!(frame.passes()[1].stage, RenderStage::Overlay);
 }
 
-/// A camera is required only when something needs it, and which camera a sprite
-/// needs is now something the sprite says.
 #[test]
-fn each_sprite_space_asks_for_the_camera_it_uses() {
-    let world_sprite_without_a_world_camera = document(
+fn screen_space_needs_no_authored_camera_but_world_space_does() {
+    let world_sprite_without_a_camera = document(
         r#"
-        { "id": "overlay-camera",
-          "components": { "sindri.camera": {
-            "projection": "orthographic", "center": [0.0, 0.0],
-            "vertical_size": 2.0, "near": 0.0, "far": 10.0 } } },
         { "id": "prop", "transform_3d": {},
           "components": { "sindri.sprite": { "texture": "b", "space": "world" } } }"#,
     );
-    let world = world_from(&world_sprite_without_a_world_camera);
+    let world = world_from(&world_sprite_without_a_camera);
     assert!(matches!(
         SceneExtractor::new().unwrap().extract(
             &world,
@@ -437,16 +427,63 @@ fn each_sprite_space_asks_for_the_camera_it_uses() {
         Err(SceneExtractError::MissingWorldCamera)
     ));
 
-    let screen_sprite_without_an_overlay_camera = document(
+    let screen_sprite_without_a_camera = document(
         r#"
-        { "id": "main-camera", "transform_3d": { "position": [3.0, 2.0, 4.0] },
-          "components": { "sindri.camera": {
-            "projection": "perspective", "target": [0.0, 0.0, 0.0], "up": [0.0, 1.0, 0.0],
-            "vertical_fov_degrees": 45.0, "near": 0.1, "far": 100.0 } } },
         { "id": "badge", "transform_3d": {},
           "components": { "sindri.sprite": { "texture": "b" } } }"#,
     );
-    let world = world_from(&screen_sprite_without_an_overlay_camera);
+    let world = world_from(&screen_sprite_without_a_camera);
+    let frame = SceneExtractor::new()
+        .unwrap()
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
+        .expect("screen-space rendering is viewport-owned");
+    assert_eq!(frame.passes().len(), 1);
+    assert_eq!(frame.passes()[0].stage, RenderStage::Overlay);
+}
+
+#[test]
+fn an_authored_orthographic_camera_is_a_world_camera() {
+    let world = world_from(&document(
+        r#"
+        { "id": "ortho", "transform_3d": { "position": [0.0, 0.0, 5.0] },
+          "components": { "sindri.camera": {
+            "projection": "orthographic", "vertical_size": 4.0,
+            "near": 0.1, "far": 100.0 } } },
+        { "id": "cube", "transform_3d": {},
+          "components": { "sindri.mesh": { "primitive": "cube", "texture": "t" } } }"#,
+    ));
+    let frame = SceneExtractor::new()
+        .unwrap()
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
+        .expect("an orthographic authored camera draws the world");
+    assert_eq!(frame.passes().len(), 1);
+    assert_eq!(frame.passes()[0].stage, RenderStage::Opaque3d);
+    assert!(frame.passes()[0].camera.view_projection.is_finite());
+}
+
+#[test]
+fn multiple_authored_world_cameras_are_rejected_explicitly() {
+    let world = world_from(&document(
+        r#"
+        { "id": "perspective", "transform_3d": {},
+          "components": { "sindri.camera": {
+            "projection": "perspective", "vertical_fov_degrees": 45.0,
+            "near": 0.1, "far": 100.0 } } },
+        { "id": "orthographic", "transform_3d": {},
+          "components": { "sindri.camera": {
+            "projection": "orthographic", "vertical_size": 4.0,
+            "near": 0.1, "far": 100.0 } } }"#,
+    ));
     assert!(matches!(
         SceneExtractor::new().unwrap().extract(
             &world,
@@ -454,7 +491,7 @@ fn each_sprite_space_asks_for_the_camera_it_uses() {
             CameraView::default(),
             &TextureBindings::new()
         ),
-        Err(SceneExtractError::MissingOverlayCamera)
+        Err(SceneExtractError::MultipleWorldCameras)
     ));
 }
 
@@ -482,12 +519,11 @@ fn meshes_keep_one_pass_per_layer_in_layer_order() {
     assert_eq!(frame.passes()[1].layer.0, 5);
 }
 
-/// Anchors resolve against the overlay camera's extent rather than a constant.
-///
-/// The values here are the world positions the previous hand-written extraction
-/// produced, so the generalised anchor cannot silently move the demo overlay.
+/// Anchors resolve against the viewport-owned screen extent rather than a
+/// constant. The values here are the world positions the previous extraction
+/// produced, so removing the authored overlay camera cannot silently move HUD.
 #[test]
-fn sprite_anchors_resolve_against_the_overlay_extent() {
+fn sprite_anchors_resolve_against_the_screen_extent() {
     let world = world_from(&scene(
         r#",
         { "id": "badge", "transform_3d": { "position": [-0.78, 0.44, 0.0] },
@@ -507,7 +543,7 @@ fn sprite_anchors_resolve_against_the_overlay_extent() {
         panic!("expected a sprite batch");
     };
     let translation = instances[0].model().w_axis.truncate();
-    // Overlay half-extent is (1.0, 1.0) at this aspect, so bottom right is
+    // Screen half-extent is (1.0, 1.0) at this aspect, so bottom right is
     // (1.0, -1.0) and the sprite offsets from there.
     assert!(
         close(translation.x, 0.22) && close(translation.y, -0.56),
@@ -596,7 +632,7 @@ fn a_camera_view_moves_the_camera_without_moving_the_model() {
     assert_eq!(before, after);
 }
 
-/// Where the authored target lands on screen once the view is panned.
+/// Where the viewer target lands on screen once the view is panned.
 ///
 /// The target sits at the centre of an unpanned frame, so its projected
 /// position is exactly the pan, which is what makes the convention checkable.
@@ -733,7 +769,10 @@ fn switching_the_world_projection_changes_only_the_world_camera() {
         .extract(
             &world,
             VIEWPORT,
-            CameraView::default(),
+            CameraView {
+                projection: WorldProjection::Perspective,
+                ..CameraView::default()
+            },
             &TextureBindings::new(),
         )
         .unwrap();
@@ -760,7 +799,7 @@ fn switching_the_world_projection_changes_only_the_world_camera() {
 }
 
 #[test]
-fn drawing_without_a_camera_reports_which_one_is_missing() {
+fn world_content_without_a_camera_reports_missing_world_camera_but_screen_content_draws() {
     let mesh_only = document(
         r#"
         { "id": "cube", "transform_3d": {},
@@ -783,15 +822,17 @@ fn drawing_without_a_camera_reports_which_one_is_missing() {
           "components": { "sindri.sprite": { "texture": "b" } } }"#,
     );
     let world = world_from(&sprite_only);
-    assert!(matches!(
-        SceneExtractor::new().unwrap().extract(
+    let frame = SceneExtractor::new()
+        .unwrap()
+        .extract(
             &world,
             VIEWPORT,
             CameraView::default(),
-            &TextureBindings::new()
-        ),
-        Err(SceneExtractError::MissingOverlayCamera)
-    ));
+            &TextureBindings::new(),
+        )
+        .expect("screen-only content needs no authored camera");
+    assert_eq!(frame.passes().len(), 1);
+    assert_eq!(frame.passes()[0].stage, RenderStage::Overlay);
 }
 
 #[test]
@@ -943,8 +984,8 @@ fn the_world_camera_view_answers_the_orbit_the_frame_was_drawn_with() {
                 ..CameraView::default()
             },
         )
-        .expect("the viewer has a perspective camera")
-        .expect("a perspective camera resolves")
+        .expect("asking for the viewer camera succeeds")
+        .expect("a perspective viewer camera resolves")
         .view;
     // The resting viewer sits at (3, 2, 4) looking at the origin, so world X
     // is already partly towards the viewer rather than straight across.
@@ -961,8 +1002,8 @@ fn the_world_camera_view_answers_the_orbit_the_frame_was_drawn_with() {
                 ..CameraView::default()
             },
         )
-        .expect("the world holds a perspective camera")
-        .expect("a perspective camera resolves")
+        .expect("asking for the viewer camera succeeds")
+        .expect("a perspective viewer camera resolves")
         .view;
     let turned = quarter_turn.transform_vector3(Vec3::X);
     assert!(
@@ -971,9 +1012,10 @@ fn the_world_camera_view_answers_the_orbit_the_frame_was_drawn_with() {
     );
 }
 
-/// A world with nothing to look through says so rather than inventing a view.
+/// A world with nothing to look through says so rather than inventing an
+/// authored view.
 #[test]
-fn a_world_with_no_perspective_camera_has_no_view_to_offer() {
+fn a_world_with_no_authored_camera_has_no_authored_view_to_offer() {
     let world = world_from(&document(
         r#"{ "id": "cube", "transform_3d": {},
           "components": { "sindri.mesh": { "primitive": "cube", "texture": "t.png" } } }"#,
@@ -1004,8 +1046,8 @@ fn a_pan_of_one_moves_the_picture_by_the_framed_half_height() {
                     ..CameraView::default()
                 },
             )
-            .expect("the world holds a perspective camera")
-            .expect("a perspective camera resolves")
+            .expect("asking for the viewer camera succeeds")
+            .expect("a perspective viewer camera resolves")
     };
 
     let resting = camera(Vec2::ZERO);
@@ -1030,17 +1072,15 @@ fn a_pan_of_one_moves_the_picture_by_the_framed_half_height() {
 ///
 /// There the offset is parallel to `up` and nothing says which way round the
 /// picture goes, so dragging through straight down whips the scene round to
-/// face the other way. `look_at` returns a matrix rather than failing, which is
-/// why this has to be checked on the angle rather than on a NaN. The guard
-/// lives in the orbit maths because that is where the authored elevation is
-/// known: a caller clamping its own pitch would be guessing at how far the
-/// scene had already tilted.
+/// face the other way. The guard lives in the orbit maths because that is where
+/// the authored elevation is known: a caller clamping its own pitch would be
+/// guessing at how far the scene had already tilted.
 #[test]
 fn an_orbit_stops_short_of_the_pole_however_far_it_is_driven() {
     let world = world_from(&scene(""));
     let extractor = SceneExtractor::new().expect("built-in components register");
     let up = Vec3::Y;
-    // The authored camera sits at (3, 2, 4), which is 1.19 radians off the up
+    // The resting viewer sits at (3, 2, 4), which is 1.19 radians off the up
     // axis, so this is the pitch that lands exactly on the pole.
     let onto_the_pole = -up.angle_between(Vec3::new(3.0, 2.0, 4.0));
 
@@ -1051,11 +1091,12 @@ fn an_orbit_stops_short_of_the_pole_however_far_it_is_driven() {
                     &world,
                     CameraView {
                         orbit: Vec2::new(yaw, pitch),
+                        projection: WorldProjection::Perspective,
                         ..CameraView::default()
                     },
                 )
-                .expect("the world holds a perspective camera")
-                .expect("a perspective camera resolves");
+                .expect("asking for the viewer camera succeeds")
+                .expect("a perspective viewer camera resolves");
             assert!(
                 camera.view.is_finite(),
                 "yaw {yaw} pitch {pitch} produced {:?}",
@@ -1747,11 +1788,9 @@ fn every_component_that_names_a_font_is_one_hosts_load_from() {
 }
 
 /// An animated sprite needs its sheet even though its own reference names no
-/// part of one.
-///
-/// The trap this guards: which part an animated sprite draws is its clip's
-/// business, so its `texture` carries no fragment — and a host that asks for
-/// sheets by looking at fragments alone never asks for this one. The sprite
+/// part of one. The trap this guards: which part an animated sprite draws is its
+/// clip's business, so its `texture` carries no fragment — and a host that asks
+/// for sheets by looking at fragments alone never asks for this one. The sprite
 /// then resolves its whole texture, which is every frame of the sheet at once.
 #[test]
 fn an_animated_sprite_asks_for_the_sheet_its_clips_read() {
