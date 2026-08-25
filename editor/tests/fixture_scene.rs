@@ -193,7 +193,7 @@ fn a_locked_transform_refuses_a_move_and_keeps_its_lock_through_a_save() {
 /// The fixture's whole reason to exist. If it stops holding one of each, every
 /// assertion below still passes while testing something narrower.
 #[test]
-fn the_fixture_is_one_of_each_drawable_and_the_cameras_they_need() {
+fn the_fixture_is_one_of_each_drawable_and_one_authored_world_camera() {
     let document = document();
     let count = |type_name: &str| {
         document
@@ -213,11 +213,10 @@ fn the_fixture_is_one_of_each_drawable_and_the_cameras_they_need() {
     assert_eq!(count("sindri.animation.sprite"), 1);
     assert_eq!(
         count("sindri.camera"),
-        2,
-        "a mesh needs a world camera and a sprite resolves its anchor against \
-         an overlay camera, so the minimum is two rather than one"
+        1,
+        "the cube needs one authored world camera; screen-space sprites use the viewport directly"
     );
-    assert_eq!(document.entities.len(), 5, "and nothing else");
+    assert_eq!(document.entities.len(), 4, "and nothing else");
 }
 
 /// `Reject` is the strong claim: every component in the fixture is one the
