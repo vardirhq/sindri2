@@ -33,3 +33,15 @@ new = '''        let cross = |a: [f64;3], b: [f64;3]| [
 if old not in s:
     raise SystemExit('test block not found')
 p.write_text(s.replace(old, new))
+
+round_trip = Path('crates/sindri-core/tests/scene_round_trip.rs')
+r = round_trip.read_text()
+needle = '''fn a_locked_transform_saves_what_it_declared_and_nothing_else() {
+    let json = r#"{
+        "format_version": 5,'''
+replacement = '''fn a_locked_transform_saves_what_it_declared_and_nothing_else() {
+    let json = r#"{
+        "format_version": 6,'''
+if needle not in r:
+    raise SystemExit('locked transform current-format fixture not found')
+round_trip.write_text(r.replace(needle, replacement, 1))
