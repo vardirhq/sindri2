@@ -1,0 +1,37 @@
+name: Temporary camera format 6 migration
+
+on:
+  push:
+    branches:
+      - tmp-camera-test-115
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: rustfmt,clippy
+      - name: Apply format 6 changes
+        run: python scripts/tmp_camera_format6.py
+      - name: Rewrite current scene files canonically
+        run: cargo run -p sindri-core --example tmp_migrate_format6
+      - name: Remove temporary helper
+        run: rm crates/sindri-core/examples/tmp_migrate_format6.rs
+      - name: Format
+        run: cargo fmt --all
+      - name: Test core and scene
+        run: |
+          cargo test -p sindri-core --all-features
+          cargo test -p sindri-scene --all-features
+      - name: Commit result
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add crates/sindri-core/src/migration.rs crates/sindri-core/src/scene.rs docs/versioning.md docs/scene-serialization.md '**/*.scene.json'
+          git commit -m "Migrate authored cameras to scene format 6"
+          git push
