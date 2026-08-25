@@ -1,0 +1,47 @@
+name: Temporary camera manifest debug
+
+on:
+  push:
+    branches:
+      - tmp-camera-manifest-debug
+
+jobs:
+  debug:
+    runs-on: ubuntu-24.04
+    env:
+      CARGO_TERM_COLOR: always
+      RUSTFLAGS: -D warnings
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: clippy,rustfmt
+      - name: Before cache
+        run: |
+          echo 'SINDRI env:'
+          env | sort | grep '^SINDRI_' || true
+          wc -c examples/cube/assets/demo.scene.json
+          sha256sum examples/cube/assets/demo.scene.json
+          git status --short
+      - uses: Swatinem/rust-cache@v2
+      - name: After cache
+        run: |
+          wc -c examples/cube/assets/demo.scene.json
+          sha256sum examples/cube/assets/demo.scene.json
+          git status --short
+      - name: Clippy cube
+        run: cargo clippy -p sindri-cube --all-targets --all-features
+      - name: After clippy
+        run: |
+          wc -c examples/cube/assets/demo.scene.json
+          sha256sum examples/cube/assets/demo.scene.json
+          git status --short
+      - name: Cube lib tests
+        run: cargo test -p sindri-cube --lib --all-features -- --nocapture
+      - name: After cube lib tests
+        run: |
+          wc -c examples/cube/assets/demo.scene.json
+          sha256sum examples/cube/assets/demo.scene.json
+          git status --short
+      - name: Manifest tests
+        run: cargo test -p sindri-cube --test manifest --all-features -- --nocapture
