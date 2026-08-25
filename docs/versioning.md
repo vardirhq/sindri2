@@ -146,6 +146,45 @@ mechanical. The two payloads are different authored data and no choice between
 them is reliably the same scene, so the migration **stops** and names the entity
 and both keys rather than overwriting one of them.
 
+### Version 6
+
+Perspective camera orientation moved into the entity's ordinary `Transform3D`.
+Format 5 stored camera direction separately as `target` and `up` fields inside
+`sindri.camera`; format 6 removes both. The camera position is
+`Transform3D.position`, its rotation is `Transform3D.rotation`, local `-Z` is
+forward, and local `+Y` is up.
+
+The migration reconstructs the old look-at basis and writes the equivalent
+quaternion onto the transform. Existing transform scale is preserved. A
+malformed or degenerate legacy look-at falls back safely rather than producing a
+non-finite camera matrix.
+
+Orthographic cameras were intentionally left unchanged by 5 → 6. At that point
+in the format they still meant the old authored screen-overlay camera, so
+reinterpreting them as transform-driven world cameras would have changed the
+picture rather than migrated it.
+
+### Version 7
+
+Screen-space rendering stops being owned by a scene camera. Sprites in `screen`
+space and `sindri.text` use a stable projection derived directly from the
+viewport, so UI needs no authored `sindri.camera` entity. This is an ownership
+change, not a coordinate change: the screen extent remains the same, which keeps
+existing HUD placement intact.
+
+Every format-7 `sindri.camera` is therefore a **world/game camera**. Perspective
+and orthographic are projection choices of that same role, and both derive
+position and orientation from ordinary `Transform3D`. The current runtime
+supports one authored world camera and rejects duplicates explicitly rather than
+letting entity iteration order choose the winner.
+
+A format-6 orthographic `sindri.camera` is unambiguous historical data: in format
+6 orthographic world cameras did not exist, so that component meant the old
+screen overlay. The 6 → 7 migration removes that camera component while
+preserving the entity itself and every unrelated field/component it carries.
+Format-6 perspective cameras survive unchanged. A new orthographic camera
+authored in format 7 is a world camera and is never treated as UI.
+
 A version increase requires a registered `SceneMigrator` step **before** the new
 version is written anywhere. The migrator enforces the properties that keep a
 chain honest — forward-only, one step per source version, no step targeting an

@@ -162,35 +162,21 @@ fn camera_visual(
     view_projection: Mat4,
     aspect: f32,
 ) -> Option<AuthoredCameraVisual> {
-    let (model, position, forward, corners) = match camera {
+    let rotation = safe_rotation(transform);
+    let position = Vec3::from_array(transform.position);
+    let model = Mat4::from_rotation_translation(rotation, position);
+    let forward = rotation * -Vec3::Z;
+    let corners = match camera {
         CameraComponent::Perspective {
             vertical_fov_degrees,
             near,
             far,
-        } => {
-            let rotation = safe_rotation(transform);
-            let position = Vec3::from_array(transform.position);
-            (
-                Mat4::from_rotation_translation(rotation, position),
-                position,
-                rotation * -Vec3::Z,
-                perspective_corners(vertical_fov_degrees, near, far, aspect),
-            )
-        }
+        } => perspective_corners(vertical_fov_degrees, near, far, aspect),
         CameraComponent::Orthographic {
-            center,
             vertical_size,
             near,
             far,
-        } => {
-            let position = Vec3::new(center[0], center[1], 0.0);
-            (
-                Mat4::from_translation(position),
-                position,
-                -Vec3::Z,
-                orthographic_corners(vertical_size, near, far, aspect),
-            )
-        }
+        } => orthographic_corners(vertical_size, near, far, aspect),
     };
 
     let centre = project_point(rect, view_projection, position)?;
@@ -534,19 +520,18 @@ mod tests {
     }
 
     #[test]
-    fn orthographic_visual_uses_the_overlay_center() {
+    fn orthographic_visual_uses_transform_position() {
         let rect = Rect::from_min_size(Pos2::ZERO, egui::Vec2::splat(400.0));
         let entity = sindri_core::World::default().next_handle();
         let camera = CameraComponent::Orthographic {
-            center: [0.4, 0.0],
             vertical_size: 2.0,
-            near: -1.0,
-            far: 1.0,
+            near: 0.1,
+            far: 10.0,
         };
         let visual = camera_visual(
             entity,
             Transform3D {
-                position: [-0.7, 0.0, 0.0],
+                position: [0.4, 0.0, 0.0],
                 ..Transform3D::default()
             },
             camera,

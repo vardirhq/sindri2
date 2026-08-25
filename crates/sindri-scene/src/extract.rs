@@ -243,12 +243,15 @@ impl SceneExtractor {
         if texts.is_empty() {
             return Ok(());
         }
+        // Screen-space projection is viewport-owned. The Option shape remains
+        // shared with world-camera resolution, but every resolver constructs
+        // this value rather than looking for a scene camera entity.
         let overlay = cameras
             .overlay
-            .ok_or(SceneExtractError::MissingOverlayCamera)?;
+            .expect("every resolved view includes screen-space projection");
         let extent = cameras
             .overlay_extent
-            .ok_or(SceneExtractError::MissingOverlayCamera)?;
+            .expect("every resolved view includes screen-space extent");
         let width = f32::from(u16::try_from(viewport.width)?);
         let height = f32::from(u16::try_from(viewport.height)?);
         let mut layers: BTreeMap<i32, Vec<TextInstance>> = BTreeMap::new();
@@ -367,12 +370,12 @@ impl SceneExtractor {
                 let (model, camera) = if tilemap.is_screen_space() {
                     let extent = cameras
                         .overlay_extent
-                        .ok_or(SceneExtractError::MissingOverlayCamera)?;
+                        .expect("every resolved view includes screen-space extent");
                     (
                         screen_sprite_matrix(transform, SpriteAnchor::default(), extent) * local,
                         cameras
                             .overlay
-                            .ok_or(SceneExtractError::MissingOverlayCamera)?,
+                            .expect("every resolved view includes screen-space projection"),
                     )
                 } else {
                     (
@@ -413,7 +416,7 @@ impl SceneExtractor {
         // Sprites batch per space, layer, and texture, back to front within a
         // batch, with a stable tie-break. A batch is one draw, so instances
         // share one only when they share the texture it binds — and the space,
-        // which decides both the camera and the pipeline.
+        // which decides both the projection and the pipeline.
         let mut batches: SpriteBatches = BTreeMap::new();
         // What an animated sprite shows when `animations` has not reached it —
         // a scene just loaded, an entity in the editor outside play mode, a
@@ -441,12 +444,12 @@ impl SceneExtractor {
                 Some(anchor) => {
                     let extent = cameras
                         .overlay_extent
-                        .ok_or(SceneExtractError::MissingOverlayCamera)?;
+                        .expect("every resolved view includes screen-space extent");
                     (
                         screen_sprite_matrix(transform, anchor, extent),
                         cameras
                             .overlay
-                            .ok_or(SceneExtractError::MissingOverlayCamera)?,
+                            .expect("every resolved view includes screen-space projection"),
                     )
                 }
                 None => (
@@ -518,7 +521,7 @@ impl SceneExtractor {
                     RenderStage::Overlay,
                     cameras
                         .overlay
-                        .ok_or(SceneExtractError::MissingOverlayCamera)?,
+                        .expect("every resolved view includes screen-space projection"),
                     SpriteDepth::Ignore,
                 ),
                 SpriteSpace::World => (
@@ -556,8 +559,8 @@ impl SceneExtractor {
     /// No projection: chrome sits in the corner of a viewport rather than in
     /// the world, and where a thing is on screen relative to the middle does
     /// not depend on how the world is flattened. `None` means the world holds
-    /// no perspective camera, which is what extraction reports as
-    /// [`SceneExtractError::MissingWorldCamera`].
+    /// no authored camera, which is what extraction reports as
+    /// [`SceneExtractError::MissingWorldCamera`] when world content needs one.
     pub fn world_camera(
         &self,
         world: &World,
@@ -607,18 +610,16 @@ impl SceneExtractor {
         match view.projection {
             WorldProjection::Authored => self.resolve_authored_cameras(world, aspect),
             WorldProjection::Perspective | WorldProjection::Orthographic => {
-                self.resolve_viewer_cameras(world, aspect, view)
+                Ok(Self::resolve_viewer_cameras(aspect, view))
             }
         }
     }
 
-    fn resolve_viewer_cameras(
-        &self,
-        world: &World,
-        aspect: f32,
-        view: CameraView,
-    ) -> Result<ResolvedCameras, SceneExtractError> {
-        let mut resolved = self.resolve_overlay_camera(world, aspect)?;
+    fn resolve_viewer_cameras(aspect: f32, view: CameraView) -> ResolvedCameras {
+        // Scene/editor world viewing is independent of authored cameras. Screen
+        // overlay projection is viewport-owned too, so nothing in this path
+        // resolves a camera entity at all.
+        let mut resolved = resolved_screen_overlay(aspect);
         let up = Vec3::Y;
         let offset = orbited_offset(Vec3::new(3.0, 2.0, 4.0), up, view);
         let vertical_fov_radians = 45.0_f32.to_radians();
@@ -659,90 +660,114 @@ impl SceneExtractor {
             view_projection: projection * view,
             framed_half_height: half_height,
         });
-        Ok(resolved)
+        resolved
     }
 
+    /// Resolves the one authored world camera.
+    ///
+    /// Perspective and orthographic are projection choices of the same role;
+    /// both use `Transform3D` for position and orientation. Multiple authored
+    /// cameras are rejected rather than relying on entity iteration order.
     fn resolve_authored_cameras(
         &self,
         world: &World,
         aspect: f32,
     ) -> Result<ResolvedCameras, SceneExtractError> {
-        let mut resolved = ResolvedCameras::default();
+        let mut resolved = resolved_screen_overlay(aspect);
         for (entity, camera) in self.components.query::<CameraComponent>(world)? {
-            match camera {
+            if resolved.world.is_some() {
+                return Err(SceneExtractError::MultipleWorldCameras);
+            }
+            let transform = world
+                .get(entity)
+                .and_then(|data| data.transform_3d)
+                .unwrap_or_default();
+            let eye = Vec3::from_array(transform.position);
+            let rotation = safe_rotation(transform);
+            // Authored cameras are ordinary transformed entities. Scale has no
+            // projection meaning, so the camera pose is exactly rotation plus
+            // translation and the view is its inverse.
+            let view = Mat4::from_rotation_translation(rotation, eye).inverse();
+
+            resolved.world = Some(match camera {
                 CameraComponent::Perspective {
                     vertical_fov_degrees,
                     near,
                     far,
                 } => {
-                    let transform = world
-                        .get(entity)
-                        .and_then(|data| data.transform_3d)
-                        .unwrap_or_default();
-                    let eye = Vec3::from_array(transform.position);
-                    let rotation = Quat::from_array(transform.rotation);
-                    let rotation =
-                        if rotation.is_finite() && rotation.length_squared() > f32::EPSILON {
-                            rotation.normalize()
-                        } else {
-                            Quat::IDENTITY
-                        };
-                    let target = eye + rotation * -Vec3::Z;
-                    let up = rotation * Vec3::Y;
                     let vertical_fov_radians = vertical_fov_degrees.to_radians();
-                    let camera = PerspectiveCamera {
-                        eye,
-                        target,
-                        up,
-                        vertical_fov_radians,
-                        near,
-                        far,
-                    };
-                    let projection =
-                        perspective_projection(vertical_fov_radians, aspect, near, far);
-                    let view = camera.view();
-                    resolved.world = Some(ResolvedCamera {
+                    ResolvedCamera {
                         view,
-                        view_projection: projection * view,
+                        view_projection: perspective_projection(
+                            vertical_fov_radians,
+                            aspect,
+                            near,
+                            far,
+                        ) * view,
                         // Without an authored target there is no privileged
                         // focus distance. One world unit is the neutral measure
                         // for callers that only need a scale with this view.
                         framed_half_height: (vertical_fov_radians * 0.5).tan(),
-                    });
+                    }
                 }
                 CameraComponent::Orthographic {
-                    center,
                     vertical_size,
                     near,
                     far,
                 } => {
-                    let center = Vec2::from_array(center);
-                    let camera = OrthographicCamera {
-                        center,
-                        vertical_size,
-                        near,
-                        far,
-                    };
                     let half_height = vertical_size * 0.5;
-                    resolved.overlay = Some(ResolvedCamera {
-                        view: camera.view(),
-                        view_projection: camera.view_projection(aspect),
+                    let half_width = half_height * aspect;
+                    ResolvedCamera {
+                        view,
+                        view_projection: orthographic_projection(
+                            -half_width,
+                            half_width,
+                            -half_height,
+                            half_height,
+                            near,
+                            far,
+                        ) * view,
                         framed_half_height: half_height,
-                    });
-                    resolved.overlay_extent = Some(OverlayExtent {
-                        center,
-                        half_extent: Vec2::new(half_height * aspect, half_height),
-                    });
+                    }
                 }
-            }
+            });
         }
         Ok(resolved)
+    }
+
+    /// Extracts a Scene-view frame through an editor-owned world camera.
+    ///
+    /// The authored world camera is deliberately not consulted. Screen-space
+    /// content is viewport-owned as well, so moving, removing, or replacing a
+    /// gameplay camera cannot move or disable either half of the Scene view.
+    pub fn extract_animated_with_world_camera(
+        &self,
+        world: &World,
+        viewport: Viewport,
+        world_camera: ViewCamera,
+        textures: &TextureBindings,
+        animations: &SpriteAnimations,
+    ) -> Result<PreparedFrame, SceneExtractError> {
+        let aspect = viewport.aspect_ratio()?;
+        let mut cameras = resolved_screen_overlay(aspect);
+        cameras.world = Some(ResolvedCamera {
+            view: world_camera.view,
+            view_projection: world_camera.view_projection,
+            framed_half_height: world_camera.framed_half_height,
+        });
+
+        let mut frame = ExtractedFrame::new(viewport, ClearOperations::default());
+        self.push_meshes(world, &cameras, textures, &mut frame)?;
+        self.push_sprites(world, &cameras, textures, animations, &mut frame)?;
+        self.push_text(world, viewport, &cameras, &mut frame)?;
+        Ok(frame.prepare()?)
     }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 struct ResolvedCameras {
     world: Option<ResolvedCamera>,
+    /// Viewport-owned screen projection. This is not an authored camera.
     overlay: Option<ResolvedCamera>,
     overlay_extent: Option<OverlayExtent>,
 }
@@ -777,11 +802,51 @@ pub struct ViewCamera {
     pub framed_half_height: f32,
 }
 
-/// The overlay camera's visible half-size, which sprite anchors resolve against.
+/// The screen overlay's visible half-size, which sprite anchors resolve against.
 #[derive(Clone, Copy, Debug)]
 struct OverlayExtent {
     center: Vec2,
     half_extent: Vec2,
+}
+
+/// The stable screen-space coordinate system used by HUD sprites and text.
+///
+/// It deliberately preserves the old overlay extent: vertical size 2, centered
+/// at the viewport origin. The difference in format 7 is ownership, not the
+/// authored coordinates — the viewport derives this projection itself, so no
+/// camera entity is required to make UI exist.
+fn resolved_screen_overlay(aspect: f32) -> ResolvedCameras {
+    let vertical_size = 2.0;
+    let near = 0.0;
+    let far = 10.0;
+    let camera = OrthographicCamera {
+        center: Vec2::ZERO,
+        vertical_size,
+        near,
+        far,
+    };
+    let half_height = vertical_size * 0.5;
+    ResolvedCameras {
+        world: None,
+        overlay: Some(ResolvedCamera {
+            view: camera.view(),
+            view_projection: camera.view_projection(aspect),
+            framed_half_height: half_height,
+        }),
+        overlay_extent: Some(OverlayExtent {
+            center: Vec2::ZERO,
+            half_extent: Vec2::new(half_height * aspect, half_height),
+        }),
+    }
+}
+
+fn safe_rotation(transform: Transform3D) -> Quat {
+    let rotation = Quat::from_array(transform.rotation);
+    if rotation.is_finite() && rotation.length_squared() > f32::EPSILON {
+        rotation.normalize()
+    } else {
+        Quat::IDENTITY
+    }
 }
 
 /// Turns a pan measured in framed units into a world-space shift.
@@ -844,7 +909,7 @@ fn camera_distance(view: Mat4, position: Vec3) -> f32 {
 fn transform_matrix(transform: Transform3D) -> Mat4 {
     Mat4::from_scale_rotation_translation(
         Vec3::from_array(transform.scale),
-        Quat::from_array(transform.rotation),
+        safe_rotation(transform),
         Vec3::from_array(transform.position),
     )
 }
@@ -852,16 +917,16 @@ fn transform_matrix(transform: Transform3D) -> Mat4 {
 /// Where a screen-anchored sprite lands, given the one transform.
 ///
 /// Only X and Y of the transform reach the overlay: a screen-space sprite is
-/// positioned against the camera's extent, and its Z orders it rather than
+/// positioned against the viewport extent, and its Z orders it rather than
 /// placing it, so the matrix is flat. A world-space sprite has no such split —
 /// it goes through `transform_matrix`, the same one a mesh does, because it is
 /// in the same world a mesh is.
 ///
 /// The whole rotation still reaches the overlay: a quad turned about X or Y
-/// foreshortens under the orthographic camera, which is a card flip rather than
-/// a mistake. Only the position and the scale are read two-dimensionally, and
-/// they are read through the transform's own 2D accessors so that this agrees
-/// with every other piece of code that means "in the plane".
+/// foreshortens under the orthographic projection, which is a card flip rather
+/// than a mistake. Only the position and the scale are read two-dimensionally,
+/// and they are read through the transform's own 2D accessors so that this
+/// agrees with every other piece of code that means "in the plane".
 fn screen_sprite_matrix(
     transform: Transform3D,
     anchor: SpriteAnchor,
@@ -870,7 +935,7 @@ fn screen_sprite_matrix(
     let unit = Vec2::from_array(anchor.unit_offset());
     let origin = extent.center + unit * extent.half_extent;
     let position = origin + Vec2::from_array(transform.position_2d());
-    let rotation = Quat::from_array(transform.rotation);
+    let rotation = safe_rotation(transform);
     Mat4::from_translation(position.extend(0.0))
         * Mat4::from_quat(rotation)
         * Mat4::from_scale(Vec2::from_array(transform.scale_2d()).extend(1.0))
@@ -879,7 +944,7 @@ fn screen_sprite_matrix(
 /// Everything that will become a sprite draw, gathered before any of it is
 /// ordered.
 ///
-/// Keyed by what decides a batch — the space, which picks the camera and the
+/// Keyed by what decides a batch — the space, which picks the projection and
 /// pipeline; the layer, which overrides distance; and the texture, which is what
 /// a draw binds. Tilemaps and loose sprites fill the same map, so they share a
 /// batch when they share all three.
@@ -894,10 +959,10 @@ pub enum SceneExtractError {
     Frame(#[from] FramePlanError),
     #[error(transparent)]
     TransparentOrder(#[from] TransparentOrderError),
-    #[error("the scene draws in the world but has no perspective camera")]
+    #[error("the scene draws in the world but has no authored camera")]
     MissingWorldCamera,
-    #[error("the scene draws screen-space sprites but has no orthographic camera")]
-    MissingOverlayCamera,
+    #[error("the scene contains more than one authored world camera")]
+    MultipleWorldCameras,
     #[error("camera distance scale must be finite and greater than zero")]
     InvalidCameraDistanceScale,
     #[error("camera pan must be finite")]
@@ -914,75 +979,4 @@ pub enum SceneExtractError {
     Text(#[from] TextError),
     #[error("the viewport is too large for text rendering")]
     TextViewport(#[from] std::num::TryFromIntError),
-}
-
-impl SceneExtractor {
-    /// Extracts a Scene-view frame through an editor-owned world camera.
-    ///
-    /// The authored world camera is deliberately not consulted. Screen-space
-    /// content still uses the authored overlay camera for now, so this changes
-    /// only the world-view side of extraction and leaves gameplay extraction
-    /// untouched.
-    pub fn extract_animated_with_world_camera(
-        &self,
-        world: &World,
-        viewport: Viewport,
-        world_camera: ViewCamera,
-        textures: &TextureBindings,
-        animations: &SpriteAnimations,
-    ) -> Result<PreparedFrame, SceneExtractError> {
-        let aspect = viewport.aspect_ratio()?;
-        let mut cameras = self.resolve_overlay_camera(world, aspect)?;
-        cameras.world = Some(ResolvedCamera {
-            view: world_camera.view,
-            view_projection: world_camera.view_projection,
-            framed_half_height: world_camera.framed_half_height,
-        });
-
-        let mut frame = ExtractedFrame::new(viewport, ClearOperations::default());
-        self.push_meshes(world, &cameras, textures, &mut frame)?;
-        self.push_sprites(world, &cameras, textures, animations, &mut frame)?;
-        self.push_text(world, viewport, &cameras, &mut frame)?;
-        Ok(frame.prepare()?)
-    }
-
-    /// Resolves only the screen-space camera data needed alongside an
-    /// editor-owned world camera. Perspective cameras are intentionally ignored
-    /// here: moving, removing, or replacing a gameplay camera must not move or
-    /// disable the Scene view.
-    fn resolve_overlay_camera(
-        &self,
-        world: &World,
-        aspect: f32,
-    ) -> Result<ResolvedCameras, SceneExtractError> {
-        let mut resolved = ResolvedCameras::default();
-        for (_, camera) in self.components.query::<CameraComponent>(world)? {
-            if let CameraComponent::Orthographic {
-                center,
-                vertical_size,
-                near,
-                far,
-            } = camera
-            {
-                let center = Vec2::from_array(center);
-                let camera = OrthographicCamera {
-                    center,
-                    vertical_size,
-                    near,
-                    far,
-                };
-                let half_height = vertical_size * 0.5;
-                resolved.overlay = Some(ResolvedCamera {
-                    view: camera.view(),
-                    view_projection: camera.view_projection(aspect),
-                    framed_half_height: half_height,
-                });
-                resolved.overlay_extent = Some(OverlayExtent {
-                    center,
-                    half_extent: Vec2::new(half_height * aspect, half_height),
-                });
-            }
-        }
-        Ok(resolved)
-    }
 }

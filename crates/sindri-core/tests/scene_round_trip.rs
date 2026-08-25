@@ -219,15 +219,18 @@ fn an_edited_transform_survives_a_save_and_reopen() {
 /// left every stored fixture byte for byte what it was.
 #[test]
 fn a_locked_transform_saves_what_it_declared_and_nothing_else() {
-    let json = r#"{
-        "format_version": 6,
+    let json = format!(
+        r#"{{
+        "format_version": {},
         "entities": [
-            { "id": "background", "transform_3d": {
-                "position": [0.0, 0.0, -50.0], "z_locked": true } },
-            { "id": "player", "transform_3d": { "position": [1.0, 0.0, 0.0] } }
+            {{ "id": "background", "transform_3d": {{
+                "position": [0.0, 0.0, -50.0], "z_locked": true }} }},
+            {{ "id": "player", "transform_3d": {{ "position": [1.0, 0.0, 0.0] }} }}
         ]
-    }"#;
-    let document = SceneDocument::from_json(json).expect("the scene parses");
+    }}"#,
+        sindri_core::SCENE_FORMAT_VERSION
+    );
+    let document = SceneDocument::from_json(&json).expect("the scene parses");
     let loaded = World::from_scene(&document).expect("it loads");
     let saved = loaded.world.to_scene().expect("it saves");
 

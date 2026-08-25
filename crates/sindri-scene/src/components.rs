@@ -7,21 +7,22 @@ use thiserror::Error;
 
 /// A camera authored into a scene.
 ///
-/// The projection tag chooses which fields apply, so a scene cannot describe a
-/// perspective camera with an orthographic size.
+/// Every authored camera renders the world. The projection tag chooses which
+/// fields apply, so a scene cannot describe a perspective camera with an
+/// orthographic size. Position and orientation come from the entity's
+/// `Transform3D`: local -Z is forward and local +Y is up.
+///
+/// Screen-space sprites and text are viewport-owned and do not require a camera
+/// entity.
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
 #[serde(tag = "projection", rename_all = "snake_case")]
 pub enum CameraComponent {
-    /// Renders the 3D world. Position and orientation both come from the
-    /// entity's `Transform3D`: local -Z is forward and local +Y is up.
     Perspective {
         vertical_fov_degrees: f32,
         near: f32,
         far: f32,
     },
-    /// Renders the 2D overlay, and defines the space sprite anchors resolve in.
     Orthographic {
-        center: [f32; 2],
         vertical_size: f32,
         near: f32,
         far: f32,
@@ -58,11 +59,11 @@ impl SceneComponent for MeshComponent {
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Ord, PartialEq, PartialOrd)]
 #[serde(rename_all = "snake_case")]
 pub enum SpriteSpace {
-    /// Drawn through the overlay camera, anchored to its extent. A HUD is not
-    /// in the world, so no world camera moves it and nothing in the world can
-    /// hide it. Its Z says how far back in the stack it sits and nothing else:
-    /// it orders the sprite without moving it, so no HUD can be lost off the
-    /// far plane by typing a big number.
+    /// Drawn directly in viewport-owned overlay space. A HUD is not in the
+    /// world, so no world camera moves it and nothing in the world can hide it.
+    /// Its Z says how far back in the stack it sits and nothing else: it orders
+    /// the sprite without moving it, so no HUD can be lost off a camera far
+    /// plane by typing a big number.
     #[default]
     Screen,
     /// Placed in the world by its transform and drawn through the world camera,
@@ -71,11 +72,11 @@ pub enum SpriteSpace {
     World,
 }
 
-/// Where a screen-space sprite's origin sits inside the overlay camera's view.
+/// Where a screen-space sprite's origin sits inside the viewport.
 ///
-/// Anchoring is resolved against the overlay camera's extent, so a sprite keeps
-/// its relationship to an edge as the window changes shape. A world-space
-/// sprite has no edge to hold on to, which is what [`SpriteComponent::screen_anchor`]
+/// Anchoring is resolved against the viewport extent, so a sprite keeps its
+/// relationship to an edge as the window changes shape. A world-space sprite
+/// has no edge to hold on to, which is what [`SpriteComponent::screen_anchor`]
 /// says in the type.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -162,7 +163,7 @@ impl SceneComponent for SpriteComponent {
     const TYPE_NAME: &'static str = "sindri.sprite";
 }
 
-/// Screen-space text drawn through the overlay camera.
+/// Screen-space text drawn directly in viewport-owned overlay space.
 ///
 /// The font is a project asset reference rather than a family installed on the
 /// machine. That keeps a scene reproducible across the editor, captures, and

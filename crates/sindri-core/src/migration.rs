@@ -79,6 +79,9 @@ impl SceneMigrator {
             .register(5, 6, move_camera_look_at_into_transform)
             .expect("built-in steps are registered once and move forward");
         migrator
+            .register(6, 7, remove_legacy_overlay_camera)
+            .expect("built-in steps are registered once and move forward");
+        migrator
     }
 
     pub fn is_empty(&self) -> bool {
@@ -227,17 +230,14 @@ fn collapse_transform_2d(document: &mut Value) -> Result<(), SceneMigrationError
 /// transform's Z takes over the job.
 ///
 /// A screen-space sprite's Z did nothing at all in format 2 — the overlay read
-/// only X and Y — so its `depth` becomes a Z, negated, because the overlay
-/// camera looks down the axis from `+Z` and a greater depth meant further away.
+/// only X and Y — so its `depth` becomes a Z, negated, because screen overlay
+/// space looks down the axis from `+Z` and a greater depth meant further away.
 /// The stack it describes comes out in the same order it went in.
 ///
 /// A world-space sprite already had a Z that placed it, and that Z is now what
 /// orders it too, so its `depth` is simply dropped. That is the change itself
 /// rather than a loss: a sort key that disagreed with where the sprite was is
 /// exactly what this format stops allowing.
-// The step signature is fixed by `SceneMigrationStep`, so this returns a
-// `Result` it never uses: nothing here can fail, because a sprite either has a
-// depth to move or does not.
 #[allow(clippy::unnecessary_wraps)]
 fn sort_sprites_by_where_they_are(document: &mut Value) -> Result<(), SceneMigrationError> {
     let Some(entities) = document.get_mut("entities").and_then(Value::as_array_mut) else {
@@ -358,9 +358,6 @@ fn name_the_parts_of_a_sheet(document: &mut Value) -> Result<(), SceneMigrationE
         {
             tilemap.remove("sheet_columns");
             tilemap.remove("sheet_rows");
-            // A palette naming every cell the map actually uses, in index
-            // order, so the tile numbers already written keep pointing at what
-            // they pointed at.
             let highest = tilemap
                 .get("tiles")
                 .and_then(Value::as_array)
@@ -381,11 +378,6 @@ fn name_the_parts_of_a_sheet(document: &mut Value) -> Result<(), SceneMigrationE
     Ok(())
 }
 
-/// Format 5 gives subsystem-owned components stable hierarchical names.
-///
-/// Payloads are not changed. Only their keys move, so a format-4 scene carries
-/// exactly the same authored data forward. A scene that somehow contains both
-/// spellings is ambiguous and is rejected rather than silently overwriting one.
 fn namespace_components(document: &mut Value) -> Result<(), SceneMigrationError> {
     const RENAMES: [(&str, &str); 4] = [
         ("sindri.grid_navigation", "sindri.grid.navigation"),
@@ -594,16 +586,41 @@ fn move_camera_look_at_into_transform(document: &mut Value) -> Result<(), SceneM
     Ok(())
 }
 
-/// Which cell of which grid a normalized rect is, when it is one.
+/// Format 7 removes the camera-backed screen overlay.
 ///
-/// Every rect a hand-written scene ever carried was a cell of some uniform
-/// grid — a sprite sheet is what a rect was added for — so this recovers the
-/// index without being told the grid: a rect of width `w` is one of `1/w`
-/// columns, and its `x` says which. A rect that is *not* a whole cell cannot
-/// become a named sprite without a sheet to name it in, so it stops the
-/// migration rather than quietly changing the picture.
+/// In format 6 every orthographic `sindri.camera` was the screen overlay;
+/// orthographic world cameras did not exist yet. Format 7 makes both camera
+/// projections world cameras and moves screen-space rendering to viewport-owned
+/// projection state, so an old orthographic camera component has no runtime
+/// responsibility left. The entity itself is preserved because its name,
+/// editor state, transform, or unrelated components may still matter.
+#[allow(clippy::unnecessary_wraps)]
+fn remove_legacy_overlay_camera(document: &mut Value) -> Result<(), SceneMigrationError> {
+    let Some(entities) = document.get_mut("entities").and_then(Value::as_array_mut) else {
+        return Ok(());
+    };
+    for entity in entities {
+        let Some(components) = entity
+            .as_object_mut()
+            .and_then(|fields| fields.get_mut("components"))
+            .and_then(Value::as_object_mut)
+        else {
+            continue;
+        };
+        let is_overlay = components
+            .get(CAMERA_COMPONENT)
+            .and_then(Value::as_object)
+            .and_then(|camera| camera.get("projection"))
+            .and_then(Value::as_str)
+            == Some("orthographic");
+        if is_overlay {
+            components.remove(CAMERA_COMPONENT);
+        }
+    }
+    Ok(())
+}
+
 fn cell_of(rect: &Value) -> Result<Option<u64>, SceneMigrationError> {
-    /// How far a hand-typed rect may sit from the cell it means.
     const TOLERANCE: f64 = 1.0e-4;
 
     let Some(values) = rect.as_array() else {
@@ -621,11 +638,7 @@ fn cell_of(rect: &Value) -> Result<Option<u64>, SceneMigrationError> {
             "a sprite's uv_rect must be four numbers, and this one is {rect}"
         ))
     })?;
-    // Near enough rather than exactly, because these are numbers a person
-    // typed into a file: 0.333 is the first of three columns and refusing it
-    // over the last decimal place would help nobody.
     let close = |value: f64, to: f64| (value - to).abs() < TOLERANCE;
-    // The whole image is not a cell of anything, and needs no name.
     if close(x, 0.0) && close(y, 0.0) && close(width, 1.0) && close(height, 1.0) {
         return Ok(None);
     }
@@ -656,8 +669,6 @@ mod tests {
     use super::*;
     use crate::{SceneDocument, SceneJsonError};
 
-    /// Stands in for a real historical upgrade: format 0 stored a flat
-    /// `label` where format 1 stores `name`.
     fn rename_label_to_name(document: &mut Value) -> Result<(), SceneMigrationError> {
         let entities = document
             .get_mut("entities")
@@ -721,7 +732,7 @@ mod tests {
             }]
         });
         let migrated = SceneMigrator::builtin().migrate(old).unwrap();
-        assert_eq!(migrated["format_version"], json!(6));
+        assert_eq!(migrated["format_version"], json!(SCENE_FORMAT_VERSION));
         let components = &migrated["entities"][0]["components"];
         assert_eq!(
             components["sindri.grid.navigation"],
@@ -773,7 +784,7 @@ mod tests {
             }]
         });
         let migrated = SceneMigrator::builtin().migrate(old).unwrap();
-        assert_eq!(migrated["format_version"], json!(6));
+        assert_eq!(migrated["format_version"], json!(SCENE_FORMAT_VERSION));
         let camera = &migrated["entities"][0]["components"]["sindri.camera"];
         assert!(camera.get("target").is_none());
         assert!(camera.get("up").is_none());
@@ -814,7 +825,7 @@ mod tests {
     }
 
     #[test]
-    fn format_five_orthographic_camera_is_not_reoriented() {
+    fn format_five_overlay_camera_is_removed_without_reorienting_its_entity() {
         let old = json!({
             "format_version": 5,
             "entities": [{
@@ -835,6 +846,67 @@ mod tests {
         assert_eq!(
             migrated["entities"][0]["transform_3d"]["rotation"],
             json!([0.1, 0.2, 0.3, 0.9])
+        );
+        assert!(
+            migrated["entities"][0]["components"]
+                .get(CAMERA_COMPONENT)
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn format_six_overlay_camera_component_is_removed_but_entity_survives() {
+        let old = json!({
+            "format_version": 6,
+            "entities": [{
+                "id": "overlay",
+                "name": "Overlay Camera",
+                "components": {
+                    "sindri.camera": {
+                        "projection": "orthographic",
+                        "center": [0.0, 0.0],
+                        "vertical_size": 2.0,
+                        "near": 0.0,
+                        "far": 10.0
+                    },
+                    "game.keep": { "value": 1 }
+                }
+            }]
+        });
+        let migrated = SceneMigrator::builtin().migrate(old).unwrap();
+        assert_eq!(migrated["format_version"], json!(SCENE_FORMAT_VERSION));
+        assert_eq!(migrated["entities"][0]["name"], json!("Overlay Camera"));
+        assert!(
+            migrated["entities"][0]["components"]
+                .get(CAMERA_COMPONENT)
+                .is_none()
+        );
+        assert_eq!(
+            migrated["entities"][0]["components"]["game.keep"],
+            json!({ "value": 1 })
+        );
+    }
+
+    #[test]
+    fn format_six_perspective_camera_survives() {
+        let old = json!({
+            "format_version": 6,
+            "entities": [{
+                "id": "camera",
+                "components": {
+                    "sindri.camera": {
+                        "projection": "perspective",
+                        "vertical_fov_degrees": 60.0,
+                        "near": 0.1,
+                        "far": 100.0
+                    }
+                }
+            }]
+        });
+        let migrated = SceneMigrator::builtin().migrate(old).unwrap();
+        assert_eq!(
+            migrated["entities"][0]["components"][CAMERA_COMPONENT]["projection"],
+            json!("perspective")
         );
     }
 

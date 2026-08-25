@@ -1,5 +1,5 @@
 {
-  "format_version": 6,
+  "format_version": 7,
   "metadata": {
     "name": "Editor fixture"
   },
@@ -24,19 +24,6 @@
           },
           "script": "Spin",
           "source": "scripts/spin.decay"
-        }
-      }
-    },
-    {
-      "id": "overlay-camera",
-      "name": "Overlay Camera",
-      "components": {
-        "sindri.camera": {
-          "center": [0.0, 0.0],
-          "far": 10.0,
-          "near": 0.0,
-          "projection": "orthographic",
-          "vertical_size": 2.0
         }
       }
     },

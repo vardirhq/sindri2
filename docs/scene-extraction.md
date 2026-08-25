@@ -35,7 +35,7 @@ let prepared = scene.extract_frame(engine.world(), viewport, &bindings)?;
 
 | Type name | Draws |
 | --- | --- |
-| `sindri.camera` | The world camera (`perspective`) or the overlay camera (`orthographic`) |
+| `sindri.camera` | The authored world/game view, with either `perspective` or `orthographic` projection |
 | `sindri.mesh` | One opaque pass per mesh, at the mesh's render layer |
 | `sindri.sprite` | One batched pass per space, sprite layer, and texture |
 | `sindri.animation.sprite` | Nothing of its own — it decides which part of the sheet the entity's sprite draws |
@@ -49,18 +49,21 @@ A game registers its own component types alongside these with `SceneExtractor::r
 - **Batching by layer.** Sprites group into one batch per render layer rather than requiring every
   sprite in a scene to share one, and sort back to front within a layer using the
   [transparent draw key](rendering-transparency.md).
-- **Cameras are required only when something needs them.** A scene with no meshes and no
-  world-space sprites needs no perspective camera. Drawing either without one reports
-  `MissingWorldCamera` rather than silently rendering nothing, and a screen-space sprite with no
-  orthographic camera reports `MissingOverlayCamera`. Anchored text uses that same overlay camera.
+- **One explicit authored world camera.** World meshes, world-space sprites, and world tilemaps need
+  an authored `sindri.camera`; drawing world content without one reports `MissingWorldCamera`, and
+  more than one authored camera reports `MultipleWorldCameras` rather than relying on entity
+  iteration order. Perspective and orthographic are projection choices of that same role.
+- **Screen space belongs to the viewport.** Screen-space sprites and text need no camera entity at
+  all. Extraction derives their stable screen projection and anchor extent from the viewport, so UI
+  cannot disappear because somebody deleted, moved, or rotated a scene camera.
 
 ## Text
 
 `sindri.text` is screen-space text. Its entity transform offsets one of the nine
-overlay anchors, extraction projects that point into physical viewport pixels,
+screen anchors, extraction projects that point into physical viewport pixels,
 and the resulting `TextInstance` carries content, font asset reference, font
 size, line height, colour, and layer. Strings on the same layer share one
-ordered text pass.
+ordered text pass. No authored camera participates in that projection.
 
 `referenced_fonts` is the load list for a world. A host validates those bytes
 with `FontAssetDecoder` and binds each logical reference to `TextRenderer`;
@@ -327,32 +330,32 @@ moment is the failure that hides.
 
 ## Sprite space
 
-A sprite says which space it is in, and the answer decides three things at once: which camera draws
-it, which stage it lands in, and what its transform means.
+A sprite says which space it is in, and the answer decides three things at once: which projection
+draws it, which stage it lands in, and what its transform means.
 
-| `space` | Camera | Stage | Depth | Transform |
+| `space` | Projection | Stage | Depth | Transform |
 | --- | --- | --- | --- | --- |
-| `screen` (default) | Orthographic overlay | `Overlay` | Ignored — nothing in the world may hide a HUD | X and Y offset an anchor; Z orders it without moving it |
-| `world` | Perspective world camera | `Transparent2d` | Tested, never written | The whole transform, exactly as a mesh reads it |
+| `screen` (default) | Viewport-owned screen projection | `Overlay` | Ignored — nothing in the world may hide a HUD | X and Y offset an anchor; Z orders it without moving it |
+| `world` | Authored world camera, perspective or orthographic | `Transparent2d` | Tested, never written | The whole transform, exactly as a mesh reads it |
 
 The default is what every sprite already was, so a scene written before the choice existed draws
 where it always did. Two sprites in different spaces never share a batch however much else they have
-in common, because a batch is one draw call and these differ in both the camera and the pipeline.
+in common, because a batch is one draw call and these differ in both projection and pipeline.
 
-Within a batch, sprites sort back to front by how far they are from the camera that draws them,
-measured along its forward axis. A world sprite's order therefore changes when the camera moves,
-without the scene changing at all. A screen sprite's does not: the overlay camera does not move, and
-its Z orders it without placing it — the one deliberate disagreement between where a sprite sorts
-and where it is drawn, and what keeps a HUD from vanishing when it is pushed a long way back.
+Within a batch, sprites sort back to front by depth along the projection that draws them. A world
+sprite's order therefore changes when the world/viewer camera moves, without the scene changing at
+all. A screen sprite's order does not depend on any authored camera: its Z is a stable screen-space
+stack value and does not move the sprite itself.
 
 `layer` is the explicit override and beats both. A sprite in a higher layer draws in front of
 something nearer the camera, which is the rule people are surprised by once and then rely on.
 
 ## Anchors
 
-Sprite anchors resolve against the overlay camera's extent — half its `vertical_size`, widened by
+Sprite anchors resolve against the viewport-owned screen extent — a vertical size of 2 widened by
 the viewport aspect — so a sprite keeps its relationship to an edge as the window changes shape. An
 anchor is a corner, edge, or centre; the sprite's transform position offsets from there in X and Y.
+No scene camera owns this extent.
 
 Anchoring is a screen-space idea: a world-space sprite has no edge to hold on to. That is a shape in
 the type rather than a rule to remember — `SpriteComponent::screen_anchor` returns an `Option`, so
@@ -360,35 +363,36 @@ extraction cannot read an anchor for a sprite that has no business having one.
 
 ## Viewing without editing
 
-Gameplay renders through the authored camera. An editor moves around it without touching the scene,
-which is what `CameraView` describes: an orbit around the camera's target, a distance multiplier, a
-pan across the view plane, and a projection choice. It changes the camera matrix only — models are
-never moved, so an orbiting editor camera cannot be confused with a rotating object.
+Gameplay uses the authored world camera exactly as the scene defines it. Its position and rotation
+come from ordinary `Transform3D`; local `-Z` is forward and local `+Y` is up. Perspective and
+orthographic are projection choices on that same authored-camera role. The current runtime accepts
+one authored camera and rejects duplicates explicitly rather than choosing whichever entity happened
+to be visited last.
+
+The editor Scene viewport is separate. Explicit `CameraView::Perspective` or
+`CameraView::Orthographic` selects the independent viewer camera used for Scene navigation; it does
+not mutate, borrow, or switch into the authored camera. `CameraView::Authored` means the actual game
+camera and is what runtime extraction uses.
 
 Pan is measured in fractions of the framed half-height rather than in world units, so dragging moves
-the picture by the same amount whether the subject is a metre or a kilometre away, and the
+the picture by the same amount whether the subject is a metre or a kilometre away, and the viewer's
 perspective and orthographic projections agree about what a pan of one half means. A test holds them
 to within a ten-thousandth of each other.
 
 A viewport that paints its own chrome — an axis indicator, a grid, a gizmo — has to know which way
-the world is facing to draw any of it truthfully, and one that moves the camera on the user's behalf
-has to know how much of the world is framed. `SceneExtractor::world_camera` answers both under the
-same `CameraView` a frame would be extracted with, returning a `ViewCamera` — the view matrix and
-the framed half-height — or `None` when the world holds no perspective camera. The alternative is a
-second copy of the orbit maths beside the first, which is how an indicator ends up disagreeing with
-the picture it is drawn on top of; the editor's axis gizmo was painted at three fixed offsets and
-claimed the same orientation from every angle.
+the world is facing to draw any of it truthfully, and one that moves the viewer camera on the user's
+behalf has to know how much of the world is framed. `SceneExtractor::world_camera` answers both under
+the same `CameraView` a frame would be extracted with, returning a `ViewCamera` — the view matrix and
+the framed half-height. Under `Authored` it returns `None` if the world has no authored camera;
+explicit viewer projections still resolve independently of scene cameras.
 
 The framed half-height is the pan's own unit: a pan of one moves the picture by exactly that much.
 That makes it what turns a distance on screen back into a pan, which is how the editor's **Focus
-selection** centres the view on something without knowing anything about how the camera got where it
-is.
+selection** centres the view on something without coupling Scene navigation to a gameplay camera.
 
-The orbit cannot be driven onto the pole. There the offset is parallel to the camera's up axis and
-nothing says which way round the picture goes; `look_at` returns a matrix rather than failing, and
-the roll it picks is decided by leftover rounding error, so dragging through straight down whips the
-whole scene round to face the other way. Pitch turns the offset in the plane that holds it and `up`,
-so it adds directly to the angle between them, and `orbited_offset` clamps it there — a hundredth of
-a radian short of either pole. The clamp lives in the orbit maths rather than in the caller because
-this is where the authored elevation is known: a viewport clamping its own pitch would be guessing
-how far the scene had already tilted.
+The viewer orbit cannot be driven onto the pole. There the offset is parallel to its up axis and
+nothing says which way round the picture goes; a look-at construction can return a matrix rather
+than failing, with roll then decided by leftover rounding error, so dragging through straight down
+can whip the whole scene round. Pitch turns the offset in the plane that holds it and `up`, so it
+adds directly to the angle between them, and `orbited_offset` clamps it there — a hundredth of a
+radian short of either pole.

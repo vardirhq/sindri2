@@ -1,23 +1,22 @@
 //! The smallest scene that exercises the editor.
 //!
-//! The demo scene is a rendering proof: eight entities, five of them the same
-//! sprite five times, tuned so transparency ordering is visible. Testing the
-//! editor against it means every assertion carries the demo's choices, and
-//! retuning the demo breaks the editor's tests for no reason.
+//! The demo scene is a rendering proof: several entities tuned so transparency
+//! ordering is visible. Testing the editor against it means every assertion
+//! carries the demo's choices, and retuning the demo breaks the editor's tests
+//! for no reason.
 //!
 //! This is the other thing: one cube, one still sprite, one sprite that plays a
-//! sheet, and the cameras they need. It exists to be asserted about, so it holds
-//! one of each rather than a composition. Open it by hand with
-//! `cargo run -p sindri-editor -- editor/assets/fixture.scene.json`.
+//! sheet, and the one authored world camera the cube needs. It exists to be
+//! asserted about, so it holds one of each rather than a composition. Open it
+//! by hand with `cargo run -p sindri-editor -- editor/assets/fixture.scene.json`.
 //!
-//! ## Why two cameras
+//! ## Camera semantics
 //!
-//! "One camera" is not enough and cannot be. A mesh needs a world camera or
-//! extraction fails with `MissingWorldCamera`; a sprite resolves its anchor
-//! against the overlay camera's extent and fails with `MissingOverlayCamera`
-//! without one. A scene holding both a cube and a sprite therefore holds a
-//! perspective camera and an orthographic one. Two is the minimum, not a
-//! convenience.
+//! The cube needs an authored world camera or extraction fails with
+//! `MissingWorldCamera`. The sprites do not need a second camera: screen-space
+//! sprites and text resolve directly against the viewport-owned screen
+//! projection, matching the runtime UI model. An authored orthographic camera
+//! is therefore another world-camera projection, not an overlay/UI camera.
 //!
 //! ## Textures
 //!

@@ -3709,8 +3709,21 @@ mod tests {
 
     #[test]
     fn the_embedded_scene_loads_into_a_runtime_world() {
-        let world = demo_world();
-        assert_eq!(world.len(), 8);
+        let document = DemoScene::authored_document().unwrap();
+        let world = load_world(&extractor(), &document).expect("the demo scene loads");
+        assert_eq!(
+            world.len(),
+            document.entities.len(),
+            "loading the embedded scene should preserve every authored entity"
+        );
+        assert_eq!(
+            world
+                .entities()
+                .filter(|(_, data)| data.components.contains_key("sindri.camera"))
+                .count(),
+            1,
+            "the demo has one authored world camera; screen-space UI needs no camera entity"
+        );
         assert!(find_by_source_id(&world, "checker-cube").is_some());
         assert!(find_by_source_id(&world, "not-an-entity").is_none());
     }

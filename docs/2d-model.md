@@ -49,9 +49,10 @@ plane is 10, even though Z does not affect its size. So the orthographic
 camera's depth range must contain the Z range the scene actually uses, or
 switching cameras silently loses the background.
 
-Today `OrthographicCamera` defaults to `near: 0.0, far: 10.0`, which is a
-sensible overlay range and a useless world range. A world camera needs its own
-defaults.
+The renderer's low-level `OrthographicCamera` still has generic projection
+defaults, but an authored orthographic `sindri.camera` is a world camera and its
+near/far range belongs to the scene. Screen-space UI does not borrow those
+planes because it does not use an authored camera at all.
 
 ## Sorting is not the depth buffer
 
@@ -66,9 +67,10 @@ camera, measured along the camera's forward axis so that two sprites side by
 side at the same depth sort as equally far away.
 
 A screen-space sprite is the one place where that distance is not where the
-sprite is drawn. The overlay reads only X and Y, so a HUD sprite's Z orders it
-without moving it — which also means no HUD can be lost off a far plane by
-being pushed a long way back.
+sprite is drawn. The viewport-owned screen projection reads X and Y for
+placement, so a HUD sprite's Z orders it without moving it — which also means no
+HUD can be lost off an authored camera's far plane by being pushed a long way
+back.
 
 **Precedence, decided once:** layer first, then camera distance, then insertion
 order. A layer is an explicit authored override, so it wins over geometry; two
@@ -180,8 +182,8 @@ and should say so rather than being attempted generally.
 ## Screen space is a different question
 
 A HUD is not in the world at all, so it is not on the 2D/3D axis and it is not a
-property of the transform. It is a property of the sprite: this one draws in
-screen space, anchored to an edge, ignoring the world camera.
+property of the world camera. It is a property of the sprite: this one draws in
+screen space, anchored to an edge, ignoring authored cameras entirely.
 
 That is what the current sprite behaviour already is, and it stays. What changes
 is that it stops being the *only* behaviour.
@@ -194,10 +196,9 @@ changes meaning by gaining the field. `docs/scene-extraction.md` holds the table
 of what each space decides.
 
 The two are separated at the batch, not at the draw: a screen sprite and a world
-sprite never share a draw call, because they differ in the camera and in the
-pipeline. Each sorts within its batch by its distance from the camera that
-draws it, so a world sprite's order changes when the camera moves and a HUD's
-does not.
+sprite never share a draw call, because they differ in projection and pipeline.
+Each sorts within its batch by its own depth rule, so a world sprite's order
+changes when its camera moves while a HUD's remains tied to screen-space Z.
 
 ## Scene format
 
