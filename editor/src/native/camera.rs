@@ -1,9 +1,8 @@
 //! How the editor looks at a scene, as opposed to what the scene says.
 //!
-//! The Scene view's orbit, pan, and zoom live here and belong to the editor
-//! rather than the world: moving them touches no entity and dirties no scene.
-//! The Game view deliberately gets none of them, which is what `camera_for`
-//! decides.
+//! Scene navigation is editor state. Authored cameras are scene entities and
+//! are only visualized here as editor chrome; they continue to drive Game view
+//! through the normal scene extractor.
 
 use std::f32::consts::TAU;
 
@@ -16,10 +15,6 @@ use crate::preferences::CameraProjection;
 
 use super::{ACCENT_BRIGHT, EditorApp, TEXT_MUTED, WorkspaceTab};
 
-/// How the editor is looking at the scene, as opposed to what the scene says.
-///
-/// The authored camera lives in the world; this moves around it without
-/// touching a single entity.
 #[derive(Clone, Copy)]
 pub(super) struct EditorCamera {
     orbit: GlamVec2,
@@ -49,16 +44,14 @@ pub(super) struct AuthoredCameraVisual {
 
 impl AuthoredCameraVisual {
     fn hit_test(&self, pointer: Pos2) -> bool {
-        if polygon_contains(&self.body, pointer) {
-            return true;
-        }
-        self.hit_lines
-            .iter()
-            .any(|line| distance_to_segment(pointer, line[0], line[1]) <= 6.0)
+        polygon_contains(&self.body, pointer)
+            || self
+                .hit_lines
+                .iter()
+                .any(|line| distance_to_segment(pointer, line[0], line[1]) <= 6.0)
     }
 }
 
-/// The pan that would put `position` in the middle of what `camera` frames.
 pub(super) fn pan_to_centre(camera: ViewCamera, pan: GlamVec2, position: Vec3) -> GlamVec2 {
     if camera.framed_half_height <= 0.0 {
         return pan;
@@ -102,7 +95,12 @@ fn camera_transform(transform: Transform3D) -> Mat4 {
     )
 }
 
-fn perspective_corners(vertical_fov_degrees: f32, near: f32, far: f32, aspect: f32) -> [[Vec3; 4]; 2] {
+fn perspective_corners(
+    vertical_fov_degrees: f32,
+    near: f32,
+    far: f32,
+    aspect: f32,
+) -> [[Vec3; 4]; 2] {
     let tan = (vertical_fov_degrees.to_radians() * 0.5).tan();
     let plane = |distance: f32| {
         let half_height = distance * tan;
@@ -117,7 +115,12 @@ fn perspective_corners(vertical_fov_degrees: f32, near: f32, far: f32, aspect: f
     [plane(near), plane(far)]
 }
 
-fn orthographic_corners(vertical_size: f32, near: f32, far: f32, aspect: f32) -> [[Vec3; 4]; 2] {
+fn orthographic_corners(
+    vertical_size: f32,
+    near: f32,
+    far: f32,
+    aspect: f32,
+) -> [[Vec3; 4]; 2] {
     let half_height = vertical_size * 0.5;
     let half_width = half_height * aspect;
     let plane = |distance: f32| {
@@ -177,9 +180,15 @@ fn camera_visual(
     let body_radius = 7.0;
     let body = vec![
         Pos2::new(centre.x - body_radius, centre.y - body_radius * 0.65),
-        Pos2::new(centre.x + body_radius * 0.45, centre.y - body_radius * 0.65),
+        Pos2::new(
+            centre.x + body_radius * 0.45,
+            centre.y - body_radius * 0.65,
+        ),
         Pos2::new(centre.x + body_radius, centre.y),
-        Pos2::new(centre.x + body_radius * 0.45, centre.y + body_radius * 0.65),
+        Pos2::new(
+            centre.x + body_radius * 0.45,
+            centre.y + body_radius * 0.65,
+        ),
         Pos2::new(centre.x - body_radius, centre.y + body_radius * 0.65),
     ];
 
@@ -250,7 +259,10 @@ pub(super) fn paint_authored_cameras(
 ) {
     for visual in visuals {
         let selected = selection == Some(visual.entity);
-        let stroke = Stroke::new(if selected { 2.0 } else { 1.25 }, if selected { ACCENT_BRIGHT } else { TEXT_MUTED });
+        let stroke = Stroke::new(
+            if selected { 2.0 } else { 1.25 },
+            if selected { ACCENT_BRIGHT } else { TEXT_MUTED },
+        );
         for line in &visual.lines {
             painter.line_segment(*line, stroke);
         }
@@ -441,10 +453,21 @@ mod tests {
             near: 0.1,
             far: 10.0,
         };
-        let first = camera_visual(EntityId::new(0, 0), Transform3D::default(), camera, rect, Mat4::IDENTITY, 1.0).unwrap();
+        let first = camera_visual(
+            EntityId::new(0, 0),
+            Transform3D::default(),
+            camera,
+            rect,
+            Mat4::IDENTITY,
+            1.0,
+        )
+        .unwrap();
         let moved = camera_visual(
             EntityId::new(0, 0),
-            Transform3D { position: [0.5, 0.0, 0.0], ..Transform3D::default() },
+            Transform3D {
+                position: [0.5, 0.0, 0.0],
+                ..Transform3D::default()
+            },
             camera,
             rect,
             Mat4::IDENTITY,
