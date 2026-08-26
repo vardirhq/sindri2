@@ -8,12 +8,10 @@ use sindri_core::{CommandHistory, Transform3D};
 use crate::animation;
 
 use super::super::editing::find_by_source_id;
-use super::super::{
-    inspector_panel::{
-        EntityDraft, addable_components, component_commands, component_default, draft_commands,
-    },
-    *,
+use super::super::inspector_panel::draft::{
+    EntityDraft, addable_components, component_commands, component_default, draft_commands,
 };
+use super::super::*;
 use super::support::*;
 
 #[test]

@@ -5,12 +5,12 @@ pub(super) mod rows;
 
 use std::collections::BTreeSet;
 
-use self::row::{HierarchyDrag, entity_icon, entity_name, hierarchy_drop_target, hierarchy_row};
-use self::rows::{hierarchy_group, hierarchy_preference_key, visible_hierarchy_rows};
 use eframe::egui::{self, Stroke};
 use egui_material_icons::icons::{ICON_ACCOUNT_TREE, ICON_ADD, ICON_DELETE};
 use sindri_core::EntityId;
 
+use self::row::{HierarchyDrag, entity_icon, entity_name, hierarchy_drop_target, hierarchy_row};
+use self::rows::{hierarchy_group, hierarchy_preference_key, visible_hierarchy_rows};
 use crate::preferences::Layout as WorkspaceLayout;
 
 use super::EditorApp;

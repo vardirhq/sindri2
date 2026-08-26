@@ -7,7 +7,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use self::row::{asset_tile, folder_row, sliceable_row};
 use eframe::egui::{self, Align, Layout, RichText, Stroke};
 use egui_material_icons::{
     MaterialIcon,
@@ -17,6 +16,7 @@ use egui_material_icons::{
     },
 };
 
+use self::row::{asset_tile, folder_row, sliceable_row};
 use crate::{
     preferences::{AssetView, BottomTab, Layout as WorkspaceLayout},
     project::{AssetKind, ProjectTree},

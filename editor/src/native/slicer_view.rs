@@ -6,10 +6,8 @@ use egui_material_icons::icons::{ICON_GRID_VIEW, ICON_IMAGE, ICON_LABEL};
 use crate::slicer::Slicer;
 
 use super::EditorApp;
-use super::{
-    inspector_panel::number_row,
-    theme::{ACCENT, ACCENT_BRIGHT, PROBLEM, TEXT, TEXT_FAINT, TEXT_MUTED, section_header},
-};
+use super::inspector_panel::rows::number_row;
+use super::theme::{ACCENT, ACCENT_BRIGHT, PROBLEM, TEXT, TEXT_FAINT, TEXT_MUTED, section_header};
 
 /// The heading above one section of the inspector.
 ///
