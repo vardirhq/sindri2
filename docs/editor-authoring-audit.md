@@ -165,6 +165,14 @@ world underneath them is temporary.
 
 **Missing basics.** Four separate gaps, three of which you named.
 
+**Three of the four fixed.** Folders fold, the folder pane navigates, and the
+browser has a selection of its own — marked with the band a selected row wears,
+while the open scene keeps a quieter rule in the margin, because "the scene I
+have open" and "the thing I am pointing at" are different facts. Every row
+answers a click now, including the ones the editor can do nothing else with,
+because a row that cannot be selected cannot carry a right-click menu either.
+The fourth gap — opening, previewing, and file operations — is still open.
+
 **Folders do not open or close.** `ProjectTree` produces one flat, sorted, fully
 expanded list with a `depth` per row (`editor/src/project/mod.rs`). There is no
 fold state for directories anywhere — `expanded_sheets` exists, but only for a
@@ -337,9 +345,9 @@ The ordering is by what unblocks the most authoring, not by effort.
    a fresh one", and a template that drifts from its struct is a startup error.
 2. ~~**Stop play mode from writing to the file.**~~ Done. A running scene is not
    the document, and one rule says so for every control that writes.
-3. **Give the Project browser selection and folding**, and make the folder pane
-   filter the list. These are three small changes to one panel and they are the
-   difference between a listing and a browser.
+3. ~~**Give the Project browser selection and folding**, and make the folder
+   pane filter the list.~~ Done. What is left in §4 is opening and previewing
+   what it lists, and file operations.
 4. **Duplicate, rename in place, and Delete**, reached from a right-click menu
    on the thing they act on. The three verbs whose absence is felt on every
    entity after the first, and the surface they have been missing. Context

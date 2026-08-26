@@ -21,6 +21,19 @@ All notable changes to Sindri Next will be documented here.
 
 ### Changed
 
+- **The Project dock is a browser rather than a listing.** Its folders fold, so
+  a project with four asset directories is no longer a wall of every file in all
+  of them. Its folder pane navigates: choosing one lists that folder and nothing
+  else, and it used to be labels with no sense that selected nothing and
+  filtered nothing. And it has a selection of its own, marked with the band a
+  selected row wears — it used to mark only the open scene, so the scene file
+  was permanently lit and clicking anything else changed nothing visible. The
+  open scene keeps a quieter rule in the margin, because which scene is open and
+  which asset is selected are different facts. Every row answers a click now,
+  including the ones the editor can do nothing else with: what a row can do is
+  said on hover instead of by refusing to respond.
+
+
 - **A component added in the editor is the component the game uses.** The
   registry recorded one payload per type and asked it two questions — what does
   this component have, and what is a fresh one — so a type with no honest blank

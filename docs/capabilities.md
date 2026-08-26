@@ -564,9 +564,10 @@ settings gear.
   available while a scene is running, because Stop restores the world as it was
   when Play was pressed. Editing a running scene and keeping the changes is not
   supported
-- No first-class project model or multi-scene workspace. The Project dock does
-  read and filter the directory containing the open scene; its folders neither
-  fold nor filter, and it marks the open scene rather than what is selected
+- No first-class project model or multi-scene workspace. The Project dock reads
+  the directory containing the open scene, folds its folders, scopes the listing
+  to one of them, and marks both its own selection and the open scene — but it
+  cannot open, preview, create, rename, or delete anything it lists
 - No multi-select; viewport selection and transform gizmos currently cover
   world sprites, filled tilemap cells, and meshes rather than UI elements
 - No context menus anywhere. Nothing in the editor answers a right-click, so

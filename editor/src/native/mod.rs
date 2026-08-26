@@ -5,8 +5,6 @@
 //! submodules hold the work, this file holds what they all share: the state
 //! itself, the constants they agree on, and how the window is opened.
 
-use std::{collections::BTreeSet, path::PathBuf};
-
 use eframe::egui;
 use glam::Vec2 as GlamVec2;
 use sindri_core::{CommandHistory, EngineLifecycle, EntityId, SceneComponent, World};
@@ -55,6 +53,7 @@ mod tests;
 // outside the editor reaches them here, not at the file they happen to live in.
 pub use scene_io::{load_world, scene_extractor};
 
+use project_panel::state::BrowserState;
 use runtime::initialized_lifecycle;
 use scene_io::open_requested_scene;
 use unsaved::Discarding;
@@ -126,12 +125,13 @@ struct EditorApp {
     /// Clip selection and playback cursor for the inspector's animation
     /// preview. Like runtime animation state, none of this is scene data.
     animation_tool: AnimationTool,
-    /// Which sliced images are showing their sprites.
+    /// Where the project browser is looking: its selection, the folder it is
+    /// scoped to, and what it has folded away.
     ///
-    /// Collapsed until asked for, and not remembered across launches: which
-    /// sheet you were looking inside is about the minute rather than the
-    /// project, unlike the panel sizes beside it in `Preferences`.
-    expanded_sheets: BTreeSet<PathBuf>,
+    /// Not remembered across launches: which folder you were looking inside is
+    /// about the minute rather than the project, unlike the panel sizes beside
+    /// it in `Preferences`.
+    browser: BrowserState,
     /// The directory the open scene lives in, as it was last read.
     ///
     /// Read when a scene is opened rather than every frame: the browser redraws
@@ -242,7 +242,7 @@ impl EditorApp {
             slicer: None,
             tilemap_tool: TilemapTool::default(),
             animation_tool: AnimationTool::default(),
-            expanded_sheets: BTreeSet::new(),
+            browser: BrowserState::default(),
             project,
             workspace_tab: WorkspaceTab::Scene,
             preferences,

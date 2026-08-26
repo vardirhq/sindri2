@@ -11,6 +11,7 @@ use sindri_core::{
 };
 use sindri_scene::SpriteAnimations;
 
+use crate::project::AssetKind;
 use crate::slicer::Slicer;
 
 use super::hierarchy::row::entity_name;
@@ -47,6 +48,11 @@ pub(super) fn reparent_choices(world: &World, entity: EntityId) -> Vec<(EntityId
                 .map(|data| (candidate, entity_name(data)))
         })
         .collect()
+}
+
+/// Whether the editor opens the slicer for this file.
+fn is_sliceable(path: &Path) -> bool {
+    AssetKind::of_path(path) == AssetKind::Texture
 }
 
 /// A stable ID is assigned before the spawn enters history so save, undo, and
@@ -109,8 +115,19 @@ impl EditorApp {
         }
     }
 
-    /// Shows an asset in the inspector, which for a texture means its slice.
+    /// Marks an asset in the browser, and shows it if there is anything to
+    /// show.
+    ///
+    /// Marking is the whole of it for most kinds. The browser used to mark only
+    /// the open scene, so selecting a file changed nothing visible and there
+    /// was no such thing as "the asset I am pointing at" for anything else to
+    /// act on. A texture also opens the slicer, which is the one asset the
+    /// editor can currently do something with.
     pub(super) fn select_asset(&mut self, path: &Path) {
+        self.browser.selected = Some(path.to_owned());
+        if !path.is_file() || !is_sliceable(path) {
+            return;
+        }
         if self.slicer.as_ref().is_some_and(|open| open.path() == path) {
             return;
         }
