@@ -124,8 +124,10 @@ pub fn applies(type_name: &str, key: &str) -> bool {
         // These are replaced by their component's visual authoring controls.
         // A tilemap edits its interdependent storage as one grid; text content
         // needs a multiline field and a font is a project asset rather than an
-        // arbitrary string.
-        ("sindri.tilemap", "columns" | "rows" | "palette" | "tiles")
+        // arbitrary string; and which script of a source an entity runs is a
+        // choice among the ones that source declares.
+        ("sindri.script", "script")
+        | ("sindri.tilemap", "columns" | "rows" | "palette" | "tiles")
         | ("sindri.grid.navigation", "walls")
         | ("sindri.grid.occupant", "grid" | "footprint")
         | ("sindri.ui.text", "text" | "font")

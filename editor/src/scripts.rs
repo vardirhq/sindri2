@@ -232,6 +232,12 @@ impl SceneScripts {
         self.scripts.exports(source, script)
     }
 
+    /// The scripts one loaded source declares, for the panel that offers them.
+    #[must_use]
+    pub fn declared(&self, source: &str) -> Vec<String> {
+        self.scripts.declared(source)
+    }
+
     /// Forgets every running instance, keeping the loaded sources.
     ///
     /// An instance belongs to the world it was started against, so a world that

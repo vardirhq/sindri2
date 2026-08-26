@@ -56,6 +56,7 @@ struct PanelContext {
     fonts: Vec<String>,
     textures: Vec<String>,
     scripts: Vec<String>,
+    audio: Vec<String>,
     /// The sheet an animation on this entity reads, from whichever image
     /// component the entity carries.
     animation_texture: Option<String>,
@@ -83,6 +84,7 @@ impl PanelContext {
             textures: &self.textures,
             fonts: &self.fonts,
             scripts: &self.scripts,
+            audio: &self.audio,
         }
     }
 }
@@ -241,6 +243,7 @@ impl EditorApp {
             fonts: self.project.fonts(),
             textures: self.project.textures(),
             scripts: self.project.scripts(),
+            audio: self.project.audio(),
             animation_sprites: animation_texture
                 .as_deref()
                 .map(|texture| self.project.sprites_for_texture(texture))

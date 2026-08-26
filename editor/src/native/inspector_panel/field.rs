@@ -28,6 +28,7 @@ pub(crate) struct FieldAssets<'a> {
     pub(crate) textures: &'a [String],
     pub(crate) fonts: &'a [String],
     pub(crate) scripts: &'a [String],
+    pub(crate) audio: &'a [String],
 }
 
 /// The rows of one payload, indented under its heading.
@@ -87,6 +88,7 @@ fn asset_list<'a>(type_name: &str, key: &str, assets: FieldAssets<'a>) -> Option
     match (type_name, key) {
         (_, "texture") => Some(assets.textures),
         (_, "font") => Some(assets.fonts),
+        (_, "clip") => Some(assets.audio),
         ("sindri.script", "source") => Some(assets.scripts),
         _ => None,
     }

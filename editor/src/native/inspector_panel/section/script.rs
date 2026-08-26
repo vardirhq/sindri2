@@ -1,13 +1,62 @@
 //! `sindri.script`: the exports a script declares, typed.
 
-use eframe::egui::{self, RichText};
+use eframe::egui::{self, Align, Layout, RichText};
 use serde_json::Value;
 use sindri_decay::ScriptValue;
 
 use crate::{inspector, scripts::SceneScripts};
 
 use super::super::super::{TEXT_MUTED, theme::property_label};
-use super::super::rows::value_row;
+use super::super::rows::{text_row, value_row};
+
+/// Which script of the chosen source this entity runs.
+///
+/// A name typed by hand is a name that compiles to nothing: the source
+/// declares the scripts it has, and anything else is a component that loads and
+/// then does not run, reported once a frame to a console. So the names come
+/// from the compiled source, and the field falls back to a text box only while
+/// there is nothing to offer — a source still loading, or one that will not
+/// compile, where refusing to show the stored name would hide the thing that
+/// needs fixing.
+pub(super) fn script_choice_row(ui: &mut egui::Ui, payload: &mut Value, scripts: &SceneScripts) {
+    let source = payload
+        .get("source")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned();
+    let declared = scripts.declared(&source);
+    let current = payload
+        .get("script")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned();
+    if declared.is_empty() {
+        let mut typed = current.clone();
+        if text_row(ui, "Script", &mut typed, 10.0) {
+            payload["script"] = Value::String(typed);
+        }
+        return;
+    }
+    let mut chosen = current.clone();
+    ui.horizontal(|ui| {
+        ui.add_space(10.0);
+        ui.label(RichText::new("Script").size(11.0).color(TEXT_MUTED));
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.add_space(7.0);
+            egui::ComboBox::from_id_salt("script-container")
+                .selected_text(RichText::new(&chosen).size(11.0).color(TEXT_MUTED))
+                .width(160.0)
+                .show_ui(ui, |ui| {
+                    for name in &declared {
+                        ui.selectable_value(&mut chosen, name.clone(), name);
+                    }
+                });
+        });
+    });
+    if chosen != current {
+        payload["script"] = Value::String(chosen);
+    }
+}
 
 /// A script's `@export` fields, drawn from what the script declared.
 ///

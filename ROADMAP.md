@@ -165,7 +165,7 @@ designing a data model through the tool that paints it is how the model ends up
 shaped like the tool.
 
 - [x] Collapse `Transform2D` into `Transform3D` as scene format version 2, so sprites and meshes share one world — the model is in `docs/2d-model.md`; the render is pixel-identical across the change, and a version 1 fixture migrates to exactly the version 2 one stored beside it
-- [x] Give sprites a world-space option, keeping screen-anchored as the default so overlays and both proofs are unchanged — a sprite carries a `space`, and the two never share a batch because they differ in camera and pipeline; the offscreen capture is byte for byte what it was
+- [x] Give sprites a world-space option, keeping screen-anchored as the default so overlays and both proofs are unchanged — a sprite carried a `space`, and the two never share a batch because they differ in camera and pipeline; the offscreen capture is byte for byte what it was. Format 8 split that field into two components: `sindri.sprite` is the world one and `sindri.ui.image` is the screen one, because the anchor a screen sprite is positioned by decided nothing on a world one and a component that hides half of itself is two components
 - [x] Sort transparent sprites by camera distance rather than an authored depth field, with layer as the explicit override — scene format version 3, whose migration turns a screen sprite's depth into the Z that now orders it; a world sprite reorders when the camera moves, a screen sprite's Z orders it without moving it
 - [x] Add 2D-shaped transform accessors that take and return X and Y only, so the common way a layered scene gets flattened is not expressible — position, translation, scale, and the turn about Z, on `Transform3D` itself
 - [x] Add a Z lock a transform can declare, respected by checked write paths and visible in the inspector — `Transform3D::z_locked`, refused by `WorldCommand::SetTransform3D`, and shown in the inspector as a toggle that takes the Z drag away
@@ -177,8 +177,8 @@ shaped like the tool.
 - [ ] Port camera 2D behavior and pixel snapping — partly done: orthographic
   pixel snapping works; follow/dead-zone/smoothing behaviour remains
 - [x] Port tilemap data model and renderer — `sindri.tilemap` holds a palette of sheet sprite names, the map grid, and a flat array of cells with `null` for empty, and extracts into the same sprite batches loose sprites use, so a prop sorts among the floor rather than behind it; it gained a projection the legacy type did not have, because the first thing to use it was an isometric floor, and placing a tile and finding the tile under a point are inverses on every cell of both
-- [x] Add tilemap authoring: selecting a world-space map shows its sliced texture as a visual palette, primary drag paints or erases through the exact Scene-view camera, grid resizing preserves the overlap, and the stored render layer remains editable; a stroke is one undo step and screen-space maps stay data-only until the Game view has an authoring-input contract
-- [x] Port text rendering with a web-safe font asset strategy — `sindri.text`
+- [x] Add tilemap authoring: selecting a map shows its sliced texture as a visual palette, primary drag paints or erases through the exact Scene-view camera, grid resizing preserves the overlap, and the stored render layer remains editable; a stroke is one undo step. A map is now always in the world, so the screen-space case that stayed data-only is gone rather than waiting
+- [x] Port text rendering with a web-safe font asset strategy — `sindri.ui.text`
   extracts anchored overlay strings into ordered frame commands, `glyphon`
   shapes and rasterises them through wgpu, and fonts are validated project
   assets bound from bytes rather than operating-system families. Gather embeds
@@ -186,10 +186,10 @@ shaped like the tool.
   the editor, and in its offscreen capture
 - [x] Add font and text authoring: the inspector edits multiline content and
   chooses from the project browser's OpenType font assets; Add Component offers
-  Text only when a project font can complete its otherwise dishonest blank
+  UI Text only when a project font can complete its otherwise dishonest blank
 - [ ] Port particles after the render lifecycle is stable
-- [ ] Port layers, anchors, and sprite bounds — layers and the nine screen
-  anchors work; editor picking uses the renderer's unit-quad geometry directly,
+- [ ] Port layers, anchors, and sprite bounds — layers work, and the nine
+  anchors are a field of the UI family rather than of every sprite; editor picking uses the renderer's unit-quad geometry directly,
   while reusable component bounds remain. Parallax is not
   ported, because under one world with real depth it is what a perspective
   camera already does; see `docs/2d-model.md`

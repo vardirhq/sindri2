@@ -221,6 +221,15 @@ impl ProjectTree {
             .collect()
     }
 
+    /// Project-relative references to every audio clip the browser can see.
+    pub fn audio(&self) -> Vec<String> {
+        self.entries
+            .iter()
+            .filter(|entry| entry.kind == AssetKind::Audio)
+            .map(|entry| entry.relative.replace('\\', "/"))
+            .collect()
+    }
+
     /// Project-relative references to every Decay script the browser can see.
     ///
     /// Decay only: `.rs` and `.wgsl` are listed as scripts by the browser

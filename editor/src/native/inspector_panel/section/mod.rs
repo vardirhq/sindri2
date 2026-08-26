@@ -23,7 +23,7 @@ use sindri_core::ComponentSchemaRegistry;
 
 use self::animation::animation_section;
 use self::grid::{grid_navigation_section, grid_occupant_section};
-use self::script::script_exports_section;
+use self::script::{script_choice_row, script_exports_section};
 use self::text::text_section;
 use self::tilemap::tilemap_section;
 use crate::inspector;
@@ -99,6 +99,7 @@ pub(super) fn components_sections(
         // The rest of the payload -- the source, the container -- follows as
         // ordinary rows.
         if name == "sindri.script" {
+            script_choice_row(ui, payload, scripts);
             script_exports_section(ui, payload, scripts);
         }
         if name == UI_TEXT_COMPONENT {
