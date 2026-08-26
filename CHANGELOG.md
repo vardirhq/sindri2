@@ -8,6 +8,12 @@ All notable changes to Sindri Next will be documented here.
 
 ### Changed
 
+- Rust source files are now capped at 600 lines, with 400 as the target, and
+  `scripts/check-file-size.py` enforces it in CI. Twenty-one files were over the
+  cap — the largest was the 4,714-line native editor — and each is now a
+  directory module named for what its parts do. No public API changed; every
+  `use sindri_core::…`, `sindri_scene::…`, and `decay_*::…` path is what it was.
+  `docs/module-layout.md` states the rule and how to satisfy it.
 - Decay's `&&` and `||` now short-circuit: the right operand is evaluated only
   when the left does not already decide the answer. A guard such as
   `held != null && World.exists(held)` protects the call to its right, which it

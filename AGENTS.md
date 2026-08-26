@@ -31,6 +31,7 @@ These documents govern the work:
 - `docs/scripting.md` and `decay/LANGUAGE.md` — scripting contracts.
 - `docs/capabilities.md` — detailed evidence for what actually works.
 - `docs/function-matrix.md` — 30-second Engine / Editor / Script checklist.
+- `docs/module-layout.md` — how a source file is sized and split.
 - `docs/feature-integration-matrix.md` — cross-surface integration status.
 
 Subsystem contracts live in `docs/`. If a subsystem's behaviour changes, update
@@ -120,6 +121,7 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets --all-features
 cargo test --workspace --all-features
 cargo check --workspace --all-features --target wasm32-unknown-unknown
+scripts/check-file-size.py
 ```
 
 CI sets `RUSTFLAGS=-D warnings`; warnings are failures. Changes affecting render
@@ -159,6 +161,8 @@ compiled.
   deferred unless the roadmap changes.
 - Editor mutations go through checked commands and undo/redo, not direct world
   writes.
+- Rust source files stay under 600 lines and aim for 400. Split by
+  responsibility, not by line count; see `docs/module-layout.md`.
 
 ## Commits
 

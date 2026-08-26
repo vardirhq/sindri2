@@ -1,0 +1,279 @@
+//! The rendered views: their targets, their renderers, and drawing one.
+
+use eframe::{
+    egui::{self, Align2, Color32, FontId, Pos2, Rect, Sense, Shape, Stroke},
+    wgpu,
+};
+use sindri_render::{
+    FrameRenderers, FrameTarget, SpriteBatchRenderer, TextRenderer, TexturedCubeRenderer, Viewport,
+    ViewportTarget, encode_prepared_frame,
+};
+use sindri_scene::CameraView;
+
+use super::frame::physical_viewport_dimension;
+use super::hierarchy::row::entity_name;
+use super::overlay::{paint_runtime_overlay, paint_transform_gizmo, paint_viewport_border};
+use super::pointer::TilemapHover;
+use super::scene_io::SceneSource;
+use super::{EditorApp, INITIAL_VIEWPORT_HEIGHT, INITIAL_VIEWPORT_WIDTH, WorkspaceTab};
+use super::{
+    camera::{EditorCamera, camera_for},
+    theme::{ACCENT_BRIGHT, PROBLEM, TEXT},
+};
+
+/// The GPU pipelines every viewport draws with.
+///
+/// Held once rather than per viewport: a pipeline does not depend on which
+/// camera is looking, and two viewports that each built their own would pay
+/// twice for the same thing. The textures used to live here too, handed over by
+/// the cube example; they belong to the open scene, which is where they are now.
+pub(super) struct SceneRenderers {
+    pub(super) cube: TexturedCubeRenderer,
+    pub(super) sprites: SpriteBatchRenderer,
+    pub(super) text: TextRenderer,
+}
+
+impl SceneRenderers {
+    pub(super) fn new(render_state: &eframe::egui_wgpu::RenderState) -> Self {
+        Self {
+            cube: TexturedCubeRenderer::new(&render_state.device, ViewportTarget::FORMAT),
+            sprites: SpriteBatchRenderer::new(&render_state.device, ViewportTarget::FORMAT),
+            text: TextRenderer::new(
+                &render_state.device,
+                &render_state.queue,
+                ViewportTarget::FORMAT,
+            ),
+        }
+    }
+}
+
+pub(super) struct RuntimeViewport {
+    render_state: eframe::egui_wgpu::RenderState,
+    target: ViewportTarget,
+    texture_id: egui::TextureId,
+}
+
+impl RuntimeViewport {
+    pub(super) fn new(render_state: eframe::egui_wgpu::RenderState, label: &str) -> Self {
+        let target = ViewportTarget::new(
+            &render_state.device,
+            label,
+            INITIAL_VIEWPORT_WIDTH,
+            INITIAL_VIEWPORT_HEIGHT,
+        );
+        let texture_id = render_state.renderer.write().register_native_texture(
+            &render_state.device,
+            target.sampled(),
+            wgpu::FilterMode::Linear,
+        );
+        Self {
+            render_state,
+            target,
+            texture_id,
+        }
+    }
+
+    fn render(
+        &mut self,
+        renderers: &mut SceneRenderers,
+        source: SceneSource<'_>,
+        size: (u32, u32),
+        camera: CameraView,
+    ) -> Result<(), String> {
+        self.resize(size.0, size.1);
+        let prepared = source
+            .scene
+            .extract_animated(
+                source.world,
+                Viewport::new(self.target.width(), self.target.height()),
+                camera,
+                source.textures.bindings(),
+                source.animations,
+            )
+            .map_err(|error| error.to_string())?;
+        let mut encoder =
+            self.render_state
+                .device
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Sindri editor runtime viewport encoder"),
+                });
+        encode_prepared_frame(
+            FrameRenderers {
+                cube: &mut renderers.cube,
+                sprites: &mut renderers.sprites,
+                text: &mut renderers.text,
+                textures: source.textures.registry(),
+            },
+            &self.render_state.device,
+            &self.render_state.queue,
+            &mut encoder,
+            FrameTarget {
+                color: self.target.attachment(),
+                depth: self.target.depth(),
+            },
+            &prepared,
+        )
+        .map_err(|error| error.to_string())?;
+        self.render_state.queue.submit([encoder.finish()]);
+        Ok(())
+    }
+
+    /// Resizes the target and, when it actually changed, points egui at the
+    /// new texture. The target answers whether that happened.
+    fn resize(&mut self, width: u32, height: u32) {
+        if !self.target.resize(&self.render_state.device, width, height) {
+            return;
+        }
+        self.render_state
+            .renderer
+            .write()
+            .update_egui_texture_from_wgpu_texture(
+                &self.render_state.device,
+                self.target.sampled(),
+                wgpu::FilterMode::Linear,
+                self.texture_id,
+            );
+    }
+}
+
+impl EditorApp {
+    /// Draws the cell a tilemap stroke would edit without changing the scene.
+    fn paint_tilemap_hover(&self, ui: &egui::Ui, hover: &TilemapHover) {
+        let fill = if self.tilemap_tool.erase {
+            Color32::from_rgba_unmultiplied(255, 138, 148, 35)
+        } else {
+            Color32::from_rgba_unmultiplied(246, 169, 35, 35)
+        };
+        let stroke = Stroke::new(
+            2.0,
+            if self.tilemap_tool.erase {
+                PROBLEM
+            } else {
+                ACCENT_BRIGHT
+            },
+        );
+        ui.painter()
+            .add(Shape::convex_polygon(hover.outline.to_vec(), fill, stroke));
+        ui.painter().text(
+            hover.outline[0],
+            Align2::LEFT_BOTTOM,
+            format!("{}, {}", hover.column, hover.row),
+            FontId::proportional(10.0),
+            TEXT,
+        );
+    }
+
+    /// Draws one view of the world into whatever space `ui` has left.
+    ///
+    /// The Scene view takes camera input and wears editor chrome; the Game view
+    /// takes neither, because chrome painted across what the player would see
+    /// makes it something else. Both go through here so the two views cannot
+    /// drift into being two renderers.
+    pub(super) fn render_view(&mut self, ui: &mut egui::Ui, tab: WorkspaceTab) {
+        let context = ui.ctx().clone();
+        let editing = tab == WorkspaceTab::Scene;
+        let (rect, response) = ui.allocate_exact_size(ui.available_size(), Sense::drag());
+        let painting = editing && self.tilemap_tool.brush().is_some();
+        let camera_before_input = self.scene_camera();
+        let gizmo_owned = if editing && !painting {
+            self.gizmo_visual(rect, camera_before_input)
+                .is_some_and(|(camera, visual)| {
+                    self.interact_gizmo(rect, &response, camera, &visual)
+                })
+        } else {
+            false
+        };
+        if editing {
+            self.move_camera(&context, &response, rect.height(), painting || gizmo_owned);
+        }
+        let scale = context.pixels_per_point();
+        let camera = if editing {
+            self.scene_camera()
+        } else {
+            camera_for(tab, EditorCamera::default())
+        };
+        let hover = editing
+            .then(|| self.tilemap_hover(rect, response.hover_pos(), camera))
+            .flatten();
+        if let Some(hover) = &hover
+            && (response.clicked_by(egui::PointerButton::Primary)
+                || response.dragged_by(egui::PointerButton::Primary))
+        {
+            self.apply_tile_brush(hover);
+        }
+        if editing {
+            self.select_viewport_click(rect, &response, camera, painting || gizmo_owned);
+        }
+        let viewport = if editing {
+            &mut self.scene_viewport
+        } else {
+            &mut self.game_viewport
+        };
+        let failure = viewport
+            .render(
+                &mut self.renderers,
+                SceneSource {
+                    scene: &self.scene,
+                    world: &self.world,
+                    animations: &self.animations,
+                    textures: &self.textures,
+                },
+                (
+                    physical_viewport_dimension(rect.width(), scale),
+                    physical_viewport_dimension(rect.height(), scale),
+                ),
+                camera,
+            )
+            .err();
+        // Two views can be live at once, and the first thing to go wrong is the
+        // thing worth reading, so a later success does not erase it.
+        if let Some(failure) = failure {
+            // The console collapses this: a render failure recurs every frame,
+            // and one entry with a count says more than sixty a second.
+            self.console.error(&failure);
+            if self.render_error.is_none() {
+                self.render_error = Some(failure);
+            }
+        }
+        ui.painter().image(
+            viewport.texture_id,
+            rect,
+            Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+            Color32::WHITE,
+        );
+        if editing {
+            if let Some(hover) = &hover {
+                self.paint_tilemap_hover(ui, hover);
+            }
+            if !painting && let Some((_, visual)) = self.gizmo_visual(rect, camera) {
+                paint_transform_gizmo(
+                    ui.painter(),
+                    rect,
+                    &visual,
+                    self.gizmo_drag.map(|drag| drag.axis),
+                );
+            }
+            // The same view the frame under it was drawn through, asked for
+            // rather than re-derived, so the axes cannot drift from the picture.
+            let axes = self
+                .scene
+                .world_camera(&self.world, camera)
+                .ok()
+                .flatten()
+                .map(|camera| camera.view);
+            paint_runtime_overlay(
+                ui.painter(),
+                rect,
+                &self
+                    .selection
+                    .and_then(|entity| self.world.get(entity))
+                    .map_or_else(|| "No selection".to_owned(), entity_name),
+                self.problem(),
+                axes,
+            );
+        } else {
+            paint_viewport_border(ui.painter(), rect, self.problem());
+        }
+        context.request_repaint();
+    }
+}
