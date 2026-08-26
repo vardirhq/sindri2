@@ -12,9 +12,14 @@ use eframe::egui::{self, Align, Layout, RichText, Sense, Stroke, UiBuilder, Vec2
 use crate::ui::theme::{color, hairline, metric, radius, text};
 
 /// A full-width strip with the editor's toolbar ground and a rule beneath it.
+///
+/// The contents scroll sideways when they do not fit. A viewport squeezed to a
+/// column by the two-by-three arrangement has room for about half of the scene
+/// tools, and a toolbar that clips is a toolbar whose last two controls have
+/// quietly stopped existing.
 pub fn strip<R>(ui: &mut egui::Ui, height: f32, add: impl FnOnce(&mut egui::Ui) -> R) -> R {
     let width = ui.available_width();
-    let (rect, _) = ui.allocate_exact_size(Vec2::new(width, height), Sense::hover());
+    let (rect, strip) = ui.allocate_exact_size(Vec2::new(width, height), Sense::hover());
     let painter = ui.painter_at(rect);
     painter.rect_filled(rect, 0.0, color::HEADER);
     painter.hline(rect.x_range(), rect.bottom() - 0.5, hairline());
@@ -24,7 +29,19 @@ pub fn strip<R>(ui: &mut egui::Ui, height: f32, add: impl FnOnce(&mut egui::Ui) 
             .layout(Layout::left_to_right(Align::Center)),
     );
     content.spacing_mut().item_spacing.x = 4.0;
-    add(&mut content)
+    // A visible rail rather than the editor's usual floating one: a floating
+    // bar appears on hover, and a toolbar that is only discoverably scrollable
+    // once the pointer is already over it has not told anyone anything.
+    let scroll = &mut content.spacing_mut().scroll;
+    scroll.floating = false;
+    scroll.bar_width = 3.0;
+    scroll.bar_inner_margin = 0.0;
+    scroll.bar_outer_margin = 0.0;
+    egui::ScrollArea::horizontal()
+        .id_salt(strip.id)
+        .auto_shrink([false, true])
+        .show(&mut content, add)
+        .inner
 }
 
 /// A set of controls that belong together, in one well.

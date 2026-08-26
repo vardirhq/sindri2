@@ -7,7 +7,7 @@
 //! the whole design — a reader should be able to find the rotate tool without
 //! reading a tooltip.
 
-use eframe::egui::{self, Align, Layout};
+use eframe::egui;
 
 use crate::gizmo::{GizmoMode, GizmoSpace};
 use crate::ui::icons;
@@ -138,29 +138,25 @@ impl EditorApp {
         toolbar::strip(ui, metric::TOOLBAR_HEIGHT, |ui| {
             if !editing {
                 toolbar::readout(ui, "camera", "Authored", true);
-                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    ui.label(
-                        egui::RichText::new("Scene tools do not apply to the game view")
-                            .size(crate::ui::theme::text::NOTE)
-                            .color(color::TEXT_FAINT),
-                    );
-                });
+                ui.add_space(metric::GROUP_GAP);
+                ui.label(
+                    egui::RichText::new("Scene tools do not apply to the game view")
+                        .size(crate::ui::theme::text::NOTE)
+                        .color(color::TEXT_FAINT),
+                );
                 return;
             }
-            // The projection pair claims its width first so the tool groups
-            // shrink beside it. Laid out the other way round, a narrow viewport
-            // drew the tools straight over the buttons.
-            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                projection_choice(ui, &mut self.preferences.projection);
-                toolbar::divider(ui);
-                ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                    ui.spacing_mut().item_spacing.x = 4.0;
-                    self.manipulators(ui);
-                    self.manipulator_options(ui);
-                    toolbar::divider(ui);
-                    self.camera_controls(ui);
-                });
-            });
+            // One ordered strip, left to right: what the pointer does, then
+            // which axes it does it in, then where the scene camera is looking.
+            // The projection pair used to claim its width from the right, which
+            // meant a narrow viewport clipped the tools rather than the choice
+            // nobody was reaching for.
+            self.manipulators(ui);
+            self.manipulator_options(ui);
+            toolbar::divider(ui);
+            self.camera_controls(ui);
+            toolbar::divider(ui);
+            projection_choice(ui, &mut self.preferences.projection);
         });
     }
 }
