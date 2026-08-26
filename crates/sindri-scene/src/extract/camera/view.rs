@@ -52,7 +52,7 @@ impl Default for CameraView {
 }
 
 /// The screen overlay's visible half-size, which sprite anchors resolve against.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct OverlayExtent {
     pub(crate) center: Vec2,
     pub(crate) half_extent: Vec2,

@@ -590,8 +590,10 @@ settings gear.
   to one of them, marks both its own selection and the open scene, and copies an
   asset's path — but beyond opening a scene and slicing an image it cannot open,
   preview, create, rename, or delete anything it lists
-- No multi-select; viewport selection and transform gizmos currently cover
-  world sprites, filled tilemap cells, and meshes rather than UI elements
+- No multi-select. Viewport selection covers world sprites, filled tilemap
+  cells, meshes and UI images; UI text is selected from the hierarchy, because
+  what a string covers is decided by glyph layout inside the text renderer and a
+  guessed box would select the wrong thing near its edges
 - Context menus exist on the two panels that list things — a hierarchy row and
   a project row — and nowhere else. Empty space in either panel, a component
   heading, a property row, the Scene view, and a console line all still ignore a

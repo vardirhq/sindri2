@@ -297,21 +297,51 @@ tooltip, or the absence of a primary-click response.
 
 ## 7. Half of a scene cannot be reached in the viewport
 
-**Missing basic**, with one case that is actively misleading.
+**Missing basic**, with one case that is actively misleading — and, found while
+fixing it, one that was worse than this section knew.
+
+**Fixed**, except for UI text. UI images are picked in a pass of their own
+against the same overlay matrix the frame draws them through, and a UI element's
+gizmo is drawn where the element is. UI text is deliberately not picked: what a
+string covers is decided by glyph layout inside the text renderer, and a guessed
+box for it would select the wrong thing near its edges. Its gizmo is now correct,
+so it is still reachable from the hierarchy and movable in the view.
+
+**Nothing at all could be clicked, in fact.** Found while fixing the rest, and
+not visible from either side of it. The Scene view allocated its region with
+`Sense::drag()`, and egui sets a response's clicked flag only for a widget whose
+sense includes clicks — so `select_viewport_click`'s `clicked_by` was always
+false, and no click anywhere in the viewport selected anything, however correct
+the picking underneath. The tile brush was half-dead the same way: it painted on
+a drag and ignored a single click. The coupling between "what the response
+senses" and "what the panel then asks it" is stated in a test now, because it is
+invisible from both ends.
+
+**A transparent element swallowed every click.** Also found while fixing this,
+by clicking Gather's player and selecting its win banner instead: the banner is
+`tint` alpha zero, a third of the viewport wide, sitting in the middle of the
+scene until the game says otherwise. A thing drawn as nothing is not a thing to
+click, in the overlay or in the world, and picking skips both now. Exactly zero
+rather than a threshold — anything above it is visible, however faintly, and a
+faint thing is still something someone aimed at.
 
 Picking covers meshes, world sprites, and filled tilemap cells
 (`editor/src/picking.rs:24`), plus authored cameras through their overlay
-markers. It does not cover UI images, UI text, or entities with no drawable
-component. Twelve of Gather's twenty-two entities are UI: none of them can be
+markers. It did not cover UI images, UI text, or entities with no drawable
+component. Twelve of Gather's twenty-two entities are UI: none of them could be
 clicked in the view that draws them.
 
-Worse, the gizmo still appears for them, in the wrong place. A UI element's
+Worse, the gizmo still appeared for them, in the wrong place. A UI element's
 position is an offset from its anchor in overlay space
-(`crates/sindri-scene/src/extract/ui.rs:19`), and the gizmo is drawn at the
+(`crates/sindri-scene/src/extract/ui.rs:19`), and the gizmo was drawn at the
 entity's transform in *world* space. Confirmed: select Gather's `title`, choose
-Move, and the handle is a single red arm in the bottom-left corner of the Scene
+Move, and the handle was a single red arm in the bottom-left corner of the Scene
 view, mostly off screen, while the text it belongs to is at the top. Dragging it
-does change the right numbers. Nothing about where it is drawn says so.
+did change the right numbers. Nothing about where it was drawn said so. The
+gizmo is told where its handles belong now, separately from the transform it
+edits, so the pointer maths happens against the drawn origin and the answer
+lands on the authored value. A UI element is offered two arms rather than three:
+its Z orders it within the overlay rather than placing it.
 
 ## 8. Scene-level authoring has no home
 
@@ -401,8 +431,11 @@ The ordering is by what unblocks the most authoring, not by effort.
    only continue one.~~ Done. What is left in §8 is a surface that is about the
    scene rather than about an entity in it: the scene's name, an entity's stable
    ID, the snapping increments, and everything else the editor remembers.
-6. **Pick UI elements in the viewport**, and either draw their gizmo where the
-   element is or do not draw one.
+6. ~~**Pick UI elements in the viewport**, and either draw their gizmo where the
+   element is or do not draw one.~~ Done, except for UI text, which needs glyph
+   metrics the editor does not have. Two things nobody had noticed came out
+   with it: the viewport sensed drags but not clicks, so *nothing* in it could
+   be selected; and a fully transparent element swallowed every click over it.
 
 ## What this audit does not cover
 

@@ -36,8 +36,40 @@ All notable changes to Sindri Next will be documented here.
   the editor's business: `level` is written as `level.scene.json`, which is what
   the project browser lists as a scene and what reopening it finds.
 
+### Fixed
+
+- **Nothing in the Scene view could be selected by clicking it.** The viewport
+  allocated its region with `Sense::drag()`, and egui sets a response's clicked
+  flag only for a widget whose sense includes clicks — so the panel's
+  `clicked_by` was always false, whatever the picking underneath decided. The
+  tile brush was half-dead the same way: it painted on a drag and ignored a
+  single click. The coupling between what the response senses and what the panel
+  asks it is stated in a test now, because it is invisible from both ends.
+- **A fully transparent element swallowed every click over it.** Found by
+  clicking Gather's player and selecting its win banner instead: the banner is
+  `tint` alpha zero, a third of the viewport wide, sitting in the middle of the
+  scene until the game says otherwise. A thing drawn as nothing is not a thing
+  to click, in the overlay or in the world.
+- **A UI element's gizmo appeared where it is not.** A UI element's position is
+  an offset from its anchor in overlay space, and the handle was drawn at the
+  entity's transform in world space — so selecting Gather's title and choosing
+  Move put one red arm in the bottom-left corner of the Scene view, mostly off
+  screen, while the text was at the top. The gizmo is told where its handles
+  belong now, separately from the transform it edits, so the pointer maths
+  happens against the drawn origin and the answer lands on the authored value. A
+  UI element is offered two arms rather than three: its Z orders it within the
+  overlay rather than placing it.
+
 ### Changed
 
+- **UI elements can be picked in the view that draws them.** Twelve of Gather's
+  twenty-two entities are UI, and none of them could be clicked: an anchor picks
+  a point on the viewport and the transform is an offset from it, so a world ray
+  through a world camera passes nowhere near them. UI images are picked in a
+  pass of their own, against the same overlay matrix the frame draws them
+  through, and — being drawn over the world — take precedence over it. UI text is
+  deliberately left to the hierarchy: what a string covers is decided by glyph
+  layout inside the text renderer.
 - **Duplicate, rename in place, and Delete, from the row they act on.** The
   three verbs whose absence is felt on every entity after the first. Gather has
   five Orbs, five Pips, and five Pip Sockets, each of which had to be built from

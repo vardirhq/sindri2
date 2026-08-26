@@ -7,7 +7,10 @@
 
 use glam::{Mat4, Quat, Vec3};
 use sindri_core::{ComponentRegistryError, ComponentSchemaRegistry, EntityId, Transform3D, World};
-use sindri_scene::{MeshComponent, MeshPrimitive, SpriteComponent, TilemapComponent};
+use sindri_scene::{
+    MeshComponent, MeshPrimitive, OverlayPlacement, OverlayView, SpriteComponent, TilemapComponent,
+    UiImageComponent,
+};
 
 #[derive(Clone, Copy, Debug)]
 struct Hit {
@@ -48,6 +51,7 @@ pub fn pick_world(
     let sprites = components
         .query::<SpriteComponent>(world)?
         .into_iter()
+        .filter(|(_, sprite)| is_drawn(sprite.tint))
         .filter_map(|(entity, sprite)| {
             let transform = transform_of(world, entity);
             plane_hit(ray, transform, 0.5).map(|(depth, _)| Hit {
@@ -78,6 +82,47 @@ pub fn pick_world(
     Ok(transparent.or(nearest_mesh).map(|hit| hit.entity))
 }
 
+/// Selects the topmost UI element under a normalized viewport point.
+///
+/// A pass of its own, because UI is not in the world. It is laid out against
+/// the viewport — an anchor picks a point, and the transform is an offset from
+/// it — so a world ray through a world camera passes nowhere near it. Twelve of
+/// Gather's twenty-two entities are UI, and none of them could be clicked in
+/// the view that draws them.
+///
+/// Only images. What a string of UI text covers is decided by glyph layout
+/// inside the text renderer, and a guessed box for it would select the wrong
+/// thing near its edges; a UI text entity is still reachable from the hierarchy,
+/// and its gizmo now appears where the text is.
+pub fn pick_ui(
+    world: &World,
+    components: &ComponentSchemaRegistry,
+    overlay: OverlayView,
+    placement: &OverlayPlacement,
+    point: [f32; 2],
+) -> Result<Option<EntityId>, ComponentRegistryError> {
+    let Some(ray) = RaySegment::through_viewport(overlay.view_projection, point) else {
+        return Ok(None);
+    };
+    Ok(components
+        .query::<UiImageComponent>(world)?
+        .into_iter()
+        .filter(|(_, image)| is_drawn(image.tint))
+        .filter_map(|(entity, image)| {
+            let model = placement.place(transform_of(world, entity), image.anchor);
+            plane_hit_model(ray, model, 0.5).map(|(depth, _)| Hit {
+                entity,
+                depth,
+                layer: image.layer,
+            })
+        })
+        // The overlay is flat, so depth separates nothing: what decides which
+        // of two overlapping elements is on top is the layer, then the entity
+        // index, in the same direction the renderer stacks them.
+        .max_by(frontmost_transparent)
+        .map(|hit| hit.entity))
+}
+
 #[derive(Clone, Copy, Debug)]
 struct RaySegment {
     near: Vec3,
@@ -101,7 +146,15 @@ impl RaySegment {
     }
 
     fn in_local_space(self, transform: Transform3D) -> Option<Self> {
-        let inverse = transform_matrix(transform).inverse();
+        self.in_model_space(transform_matrix(transform))
+    }
+
+    /// The same, for something placed by a matrix rather than by a transform.
+    ///
+    /// A UI element is one: where it lands is its transform *and* its anchor
+    /// *and* the viewport's shape, which only the overlay can put together.
+    fn in_model_space(self, model: Mat4) -> Option<Self> {
+        let inverse = model.inverse();
         if !matrix_is_finite(inverse) {
             return None;
         }
@@ -148,7 +201,12 @@ fn cube_hit(ray: RaySegment) -> Option<f32> {
 
 /// Intersects a local Z=0 plane, optionally bounded like the sprite quad.
 fn plane_hit(ray: RaySegment, transform: Transform3D, half_extent: f32) -> Option<(f32, Vec3)> {
-    let ray = ray.in_local_space(transform)?;
+    plane_hit_model(ray, transform_matrix(transform), half_extent)
+}
+
+/// The same, against a model matrix that was not built from a transform alone.
+fn plane_hit_model(ray: RaySegment, model: Mat4, half_extent: f32) -> Option<(f32, Vec3)> {
+    let ray = ray.in_model_space(model)?;
     let direction = ray.far - ray.near;
     if direction.z.abs() <= f32::EPSILON {
         return None;
@@ -159,6 +217,22 @@ fn plane_hit(ray: RaySegment, transform: Transform3D, half_extent: f32) -> Optio
     }
     let point = ray.near + direction * depth;
     (point.x.abs() <= half_extent && point.y.abs() <= half_extent).then_some((depth, point))
+}
+
+/// Whether a tint puts anything on the screen at all.
+///
+/// A fully transparent element is drawn as nothing, and clicking nothing must
+/// not select it. Gather's win banner is exactly this: `tint` alpha zero, a
+/// third of the viewport wide, sitting in the middle of the scene until the
+/// game says otherwise. Picked, it would swallow every click in the centre of
+/// the view and select an element nobody can see.
+///
+/// Exactly zero rather than a threshold: anything above it is visible, however
+/// faintly, and a faint thing is still a thing someone aimed at. What is hidden
+/// this way is still selectable from the hierarchy, which is where an invisible
+/// entity is reachable at all.
+fn is_drawn(tint: [f32; 4]) -> bool {
+    tint[3] > 0.0
 }
 
 fn transform_of(world: &World, entity: EntityId) -> Transform3D {
@@ -195,164 +269,4 @@ fn frontmost_transparent(left: &Hit, right: &Hit) -> std::cmp::Ordering {
 }
 
 #[cfg(test)]
-mod tests {
-    use std::collections::BTreeMap;
-
-    use serde_json::{Value, json};
-    use sindri_core::EntityData;
-    use sindri_scene::SceneExtractor;
-
-    use super::*;
-
-    fn spawn(
-        world: &mut World,
-        transform: Transform3D,
-        type_name: &str,
-        payload: Value,
-    ) -> EntityId {
-        world.spawn(EntityData {
-            transform_3d: Some(transform),
-            components: BTreeMap::from([(type_name.to_owned(), payload)]),
-            ..EntityData::default()
-        })
-    }
-
-    fn sprite(layer: i32) -> Value {
-        json!({
-            "texture": "procedural:checkerboard",
-            "space": "world",
-            "layer": layer
-        })
-    }
-
-    #[test]
-    fn a_click_selects_the_sprite_quad_and_misses_outside_it() {
-        let extractor = SceneExtractor::new().unwrap();
-        let mut world = World::default();
-        let sprite = spawn(
-            &mut world,
-            Transform3D {
-                position: [0.0, 0.0, 0.5],
-                ..Transform3D::default()
-            },
-            "sindri.sprite",
-            sprite(0),
-        );
-
-        assert_eq!(
-            pick_world(&world, extractor.components(), Mat4::IDENTITY, [0.5, 0.5]).unwrap(),
-            Some(sprite)
-        );
-        assert_eq!(
-            pick_world(&world, extractor.components(), Mat4::IDENTITY, [0.9, 0.5]).unwrap(),
-            None
-        );
-    }
-
-    #[test]
-    fn the_higher_sprite_layer_wins_even_when_it_is_farther_back() {
-        let extractor = SceneExtractor::new().unwrap();
-        let mut world = World::default();
-        let _near = spawn(
-            &mut world,
-            Transform3D {
-                position: [0.0, 0.0, 0.2],
-                ..Transform3D::default()
-            },
-            "sindri.sprite",
-            sprite(0),
-        );
-        let high_layer = spawn(
-            &mut world,
-            Transform3D {
-                position: [0.0, 0.0, 0.8],
-                ..Transform3D::default()
-            },
-            "sindri.sprite",
-            sprite(1),
-        );
-
-        assert_eq!(
-            pick_world(&world, extractor.components(), Mat4::IDENTITY, [0.5, 0.5]).unwrap(),
-            Some(high_layer)
-        );
-    }
-
-    #[test]
-    fn opaque_geometry_blocks_a_sprite_behind_but_not_one_in_front() {
-        let extractor = SceneExtractor::new().unwrap();
-        let mut world = World::default();
-        let cube = spawn(
-            &mut world,
-            Transform3D {
-                position: [0.0, 0.0, 0.6],
-                scale: [0.1, 0.1, 0.1],
-                ..Transform3D::default()
-            },
-            "sindri.mesh",
-            json!({
-                "primitive": "cube",
-                "texture": "procedural:checkerboard"
-            }),
-        );
-        let _behind = spawn(
-            &mut world,
-            Transform3D {
-                position: [0.0, 0.0, 0.8],
-                ..Transform3D::default()
-            },
-            "sindri.sprite",
-            sprite(10),
-        );
-
-        assert_eq!(
-            pick_world(&world, extractor.components(), Mat4::IDENTITY, [0.5, 0.5]).unwrap(),
-            Some(cube)
-        );
-
-        let in_front = spawn(
-            &mut world,
-            Transform3D {
-                position: [0.0, 0.0, 0.2],
-                ..Transform3D::default()
-            },
-            "sindri.sprite",
-            sprite(-10),
-        );
-        assert_eq!(
-            pick_world(&world, extractor.components(), Mat4::IDENTITY, [0.5, 0.5]).unwrap(),
-            Some(in_front)
-        );
-    }
-
-    #[test]
-    fn only_a_filled_tilemap_cell_selects_the_map() {
-        let extractor = SceneExtractor::new().unwrap();
-        let mut world = World::default();
-        let map = spawn(
-            &mut world,
-            Transform3D {
-                position: [-0.5, 0.5, 0.5],
-                ..Transform3D::default()
-            },
-            "sindri.tilemap",
-            json!({
-                "texture": "textures/tiles.png",
-                "palette": ["floor"],
-                "columns": 2,
-                "rows": 1,
-                "tiles": [0, null],
-                "space": "world"
-            }),
-        );
-
-        assert_eq!(
-            pick_world(&world, extractor.components(), Mat4::IDENTITY, [0.5, 0.5]).unwrap(),
-            Some(map)
-        );
-        assert_eq!(
-            pick_world(&world, extractor.components(), Mat4::IDENTITY, [1.0, 0.5]).unwrap(),
-            None
-        );
-    }
-}
+mod tests;

@@ -3,15 +3,19 @@
 use eframe::egui::{self, Pos2, Rect, Response};
 use glam::Vec2 as GlamVec2;
 use sindri_core::{CommandBuffer, EntityId, Transform3D, WorldCommand};
-use sindri_scene::{CameraView, ViewCamera};
+use sindri_scene::{
+    CameraView, OverlayView, UiAnchor, UiImageComponent, UiTextComponent, ViewCamera,
+    overlay_for_viewport,
+};
 
 use crate::{
-    gizmo::{self, GizmoDrag},
+    gizmo::{self, Anchoring, GizmoDrag},
     picking,
     tilemap::{self, TileBrush, paint as paint_tile},
 };
 
 use super::EditorApp;
+use super::{UI_IMAGE_COMPONENT, UI_TEXT_COMPONENT};
 
 /// One tile under the Scene-view pointer, already projected back into the
 /// viewport so input and its feedback use the same answer.
@@ -88,6 +92,20 @@ impl EditorApp {
             (pointer.x - rect.min.x) / rect.width().max(1.0),
             (pointer.y - rect.min.y) / rect.height().max(1.0),
         ];
+        // The overlay is drawn over the world, so what is under the pointer
+        // there wins. Asked first for that reason rather than as a fallback.
+        if let Some((overlay, placement)) = overlay_for_viewport(aspect)
+            && let Some(entity) = picking::pick_ui(
+                &self.world,
+                self.scene.components(),
+                overlay,
+                &placement,
+                point,
+            )
+            .map_err(|error| error.to_string())?
+        {
+            return Ok(Some(entity));
+        }
         picking::pick_world(
             &self.world,
             self.scene.components(),
@@ -95,6 +113,15 @@ impl EditorApp {
             point,
         )
         .map_err(|error| error.to_string())
+    }
+
+    /// Whether this entity is laid out against the viewport rather than in the
+    /// world, and so is drawn — and gizmoed — on the overlay.
+    fn is_overlaid(&self, entity: EntityId) -> bool {
+        self.world.get(entity).is_some_and(|data| {
+            data.components.contains_key(UI_IMAGE_COMPONENT)
+                || data.components.contains_key(UI_TEXT_COMPONENT)
+        })
     }
 
     /// Applies a primary Scene-view click without taking drags or paint strokes.
@@ -183,24 +210,73 @@ impl EditorApp {
         &self,
         rect: Rect,
         camera: CameraView,
-    ) -> Option<(ViewCamera, gizmo::GizmoVisual)> {
+    ) -> Option<(ViewCamera, Anchoring, gizmo::GizmoVisual)> {
         let entity = self.selection?;
         let transform = self.world.get(entity)?.transform_3d?;
         let aspect = rect.width() / rect.height().max(1.0);
-        let camera = self
-            .scene
-            .world_camera_for_viewport(&self.world, aspect, camera)
-            .ok()
-            .flatten()?;
+        // Which space this entity is drawn in decides which camera its handle
+        // is projected through. Drawn through the world camera regardless, a
+        // UI element's handle appeared wherever its anchor offset happened to
+        // point in the world rather than where the element is.
+        let (camera, anchoring) = self.gizmo_camera(entity, aspect, transform, camera)?;
         let visual = gizmo::visual(
             self.gizmo_mode,
+            anchoring,
             transform,
             self.gizmo_space,
             camera.view_projection,
             GlamVec2::new(rect.width(), rect.height()),
             camera.framed_half_height,
         )?;
-        Some((camera, visual))
+        Some((camera, anchoring, visual))
+    }
+
+    /// The camera an entity's handles are drawn through, and where they sit.
+    fn gizmo_camera(
+        &self,
+        entity: EntityId,
+        aspect: f32,
+        transform: Transform3D,
+        camera: CameraView,
+    ) -> Option<(ViewCamera, Anchoring)> {
+        if self.is_overlaid(entity) {
+            let (overlay, placement) = overlay_for_viewport(aspect)?;
+            let anchor = self.ui_anchor(entity);
+            return Some((
+                as_view_camera(overlay),
+                Anchoring::on_overlay(placement.origin(transform, anchor)),
+            ));
+        }
+        let camera = self
+            .scene
+            .world_camera_for_viewport(&self.world, aspect, camera)
+            .ok()
+            .flatten()?;
+        Some((camera, Anchoring::in_world(transform)))
+    }
+
+    /// Which corner of the viewport a UI element is measured from.
+    ///
+    /// Read from whichever of the two UI components the entity carries; a
+    /// default anchor for one that carries neither is unreachable, because
+    /// nothing is overlaid without one.
+    fn ui_anchor(&self, entity: EntityId) -> UiAnchor {
+        let Some(data) = self.world.get(entity) else {
+            return UiAnchor::default();
+        };
+        data.components
+            .get(UI_IMAGE_COMPONENT)
+            .and_then(|payload| serde_json::from_value::<UiImageComponent>(payload.clone()).ok())
+            .map(|image| image.anchor)
+            .or_else(|| {
+                data.components
+                    .get(UI_TEXT_COMPONENT)
+                    .and_then(|payload| {
+                        serde_json::from_value::<UiTextComponent>(payload.clone()).ok()
+                    })
+                    .map(|text| text.anchor)
+            })
+            .unwrap_or_default()
     }
 
     /// Gives a transform handle first claim on primary drag and writes every
@@ -215,6 +291,7 @@ impl EditorApp {
         rect: Rect,
         response: &Response,
         camera: ViewCamera,
+        anchoring: Anchoring,
         visual: &gizmo::GizmoVisual,
     ) -> bool {
         if !self.authoring_enabled() {
@@ -235,6 +312,7 @@ impl EditorApp {
                 entity,
                 self.gizmo_mode,
                 axis,
+                anchoring,
                 transform,
                 self.gizmo_space,
                 camera.view_projection,
@@ -288,5 +366,18 @@ impl EditorApp {
             self.report(error.to_string());
             self.gizmo_drag = None;
         }
+    }
+}
+
+/// The overlay described the way a viewport's chrome asks for a camera.
+///
+/// The two carry the same three facts, and the gizmo does not care which of
+/// them it is drawing through — only that the matrix and the framed height
+/// belong to the same picture.
+fn as_view_camera(overlay: OverlayView) -> ViewCamera {
+    ViewCamera {
+        view: glam::Mat4::IDENTITY,
+        view_projection: overlay.view_projection,
+        framed_half_height: overlay.framed_half_height,
     }
 }

@@ -21,6 +21,7 @@ fn entity() -> EntityId {
 fn translate_handles_are_hit_tested_from_the_paths_that_are_drawn() {
     let visual = visual(
         GizmoMode::Translate,
+        Anchoring::in_world(Transform3D::default()),
         Transform3D::default(),
         GizmoSpace::World,
         camera(),
@@ -44,6 +45,7 @@ fn z_lock_removes_the_world_z_translation_handle() {
     };
     let visual = visual(
         GizmoMode::Translate,
+        Anchoring::in_world(transform),
         transform,
         GizmoSpace::World,
         camera(),
@@ -86,6 +88,7 @@ fn an_axis_drag_moves_one_world_unit_for_one_world_unit_on_screen() {
         entity(),
         GizmoMode::Translate,
         Axis::X,
+        Anchoring::in_world(Transform3D::default()),
         Transform3D::default(),
         GizmoSpace::World,
         camera,
@@ -113,6 +116,7 @@ fn a_ring_drag_composes_a_quarter_turn() {
         entity(),
         GizmoMode::Rotate,
         Axis::Z,
+        Anchoring::in_world(Transform3D::default()),
         Transform3D::default(),
         GizmoSpace::Local,
         camera,
@@ -130,4 +134,127 @@ fn a_ring_drag_composes_a_quarter_turn() {
     .unwrap();
     let rotation = Quat::from_array(turned.rotation);
     assert!(rotation.abs_diff_eq(Quat::from_rotation_z(std::f32::consts::FRAC_PI_2), 0.000_1));
+}
+
+/// A UI element's handles are drawn where the overlay puts it, and its third
+/// axis is not offered.
+///
+/// The bug this is the guard for: the gizmo was drawn at the entity's transform
+/// in world space while a UI element's transform is an offset from its anchor
+/// in overlay space, so selecting Gather's title and choosing Move put a single
+/// red arm in the bottom-left corner of the Scene view, mostly off screen,
+/// while the text it belonged to was at the top.
+#[test]
+fn an_overlaid_gizmo_sits_on_the_overlay_and_offers_two_axes() {
+    let (overlay, placement) = sindri_scene::overlay_for_viewport(1.0).unwrap();
+    let viewport = Vec2::splat(400.0);
+    let transform = Transform3D {
+        position: [0.0, -0.2, 0.0],
+        ..Transform3D::default()
+    };
+    let anchoring = Anchoring::on_overlay(placement.origin(transform, sindri_scene::UiAnchor::Top));
+
+    let overlaid = visual(
+        GizmoMode::Translate,
+        anchoring,
+        transform,
+        GizmoSpace::World,
+        overlay.view_projection,
+        viewport,
+        overlay.framed_half_height,
+    )
+    .unwrap();
+
+    // Near the top of the viewport, because that is where an element anchored
+    // there is drawn. Read as a world position it would be a hair below the
+    // centre — which is the answer that used to be given.
+    assert!(
+        overlaid.origin.y < viewport.y * 0.2,
+        "the handle belongs where the element is, not at {:?}",
+        overlaid.origin
+    );
+    assert_eq!(
+        overlaid.handles.len(),
+        2,
+        "a UI element's Z orders it rather than placing it, so there is no third arm"
+    );
+}
+
+/// The same call for a world entity is unchanged: the handle is at the
+/// transform, and all three axes are offered.
+#[test]
+fn a_world_gizmo_still_sits_at_its_transform() {
+    let camera = front_camera();
+    let viewport = Vec2::splat(400.0);
+    let transform = Transform3D::default();
+    let world = visual(
+        GizmoMode::Translate,
+        Anchoring::in_world(transform),
+        transform,
+        GizmoSpace::World,
+        camera,
+        viewport,
+        5.0,
+    )
+    .unwrap();
+    assert_eq!(world.handles.len(), 3);
+    assert!((world.origin - viewport * 0.5).length() < 0.001);
+}
+
+/// Dragging an overlaid handle writes the authored offset, not the point the
+/// handle was drawn at.
+///
+/// The two are different for anything not anchored to the centre, and the
+/// pointer maths has to happen against the drawn origin while the answer lands
+/// on the authored value.
+#[test]
+fn dragging_an_overlaid_handle_moves_the_authored_offset() {
+    let (overlay, placement) = sindri_scene::overlay_for_viewport(1.0).unwrap();
+    let viewport = Vec2::splat(400.0);
+    let transform = Transform3D {
+        position: [0.0, -0.2, 0.0],
+        ..Transform3D::default()
+    };
+    let anchoring = Anchoring::on_overlay(placement.origin(transform, sindri_scene::UiAnchor::Top));
+    let start = visual(
+        GizmoMode::Translate,
+        anchoring,
+        transform,
+        GizmoSpace::World,
+        overlay.view_projection,
+        viewport,
+        overlay.framed_half_height,
+    )
+    .unwrap()
+    .origin;
+
+    let drag = begin_drag(
+        entity(),
+        GizmoMode::Translate,
+        Axis::X,
+        anchoring,
+        transform,
+        GizmoSpace::World,
+        overlay.view_projection,
+        start,
+        viewport,
+    )
+    .unwrap();
+    let moved = update_drag(
+        drag,
+        overlay.view_projection,
+        start + Vec2::new(40.0, 0.0),
+        viewport,
+        Snapping::default(),
+    )
+    .unwrap();
+
+    assert!(
+        moved.position[0] > 0.0,
+        "dragging right must increase the offset, not jump to the drawn origin"
+    );
+    assert!(
+        (moved.position[1] + 0.2).abs() < 0.000_1,
+        "and must leave the other axis where it was authored"
+    );
 }

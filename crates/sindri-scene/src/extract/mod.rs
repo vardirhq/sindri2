@@ -28,8 +28,8 @@ use thiserror::Error;
 
 use crate::{AnimationError, SpriteAnimations, TextureBindings, TilemapError};
 
-pub use camera::ViewCamera;
 pub use camera::view::{CameraView, WorldProjection};
+pub use camera::{OverlayPlacement, OverlayView, ViewCamera, overlay_for_viewport};
 
 /// Turns a world into a frame the renderer can draw.
 ///
