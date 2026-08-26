@@ -10,7 +10,7 @@ use crate::{
 
 use super::Parser;
 
-impl<'a> Parser<'a> {
+impl Parser<'_> {
     pub(super) fn parse_container(&mut self, script: bool) -> Option<Item> {
         let start = self.current().span;
         self.advance();

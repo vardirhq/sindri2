@@ -10,7 +10,7 @@ use crate::{
 
 use super::Parser;
 
-impl<'a> Parser<'a> {
+impl Parser<'_> {
     pub(super) fn parse_block(&mut self) -> Option<Block> {
         let start = self.expect_simple(&TokenKind::LeftBrace, "expected `{`")?;
         let mut statements = Vec::new();

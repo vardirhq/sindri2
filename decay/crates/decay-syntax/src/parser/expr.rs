@@ -29,7 +29,7 @@ pub(super) fn binary_operator(kind: &TokenKind) -> Option<(u8, BinaryOp)> {
     }
 }
 
-impl<'a> Parser<'a> {
+impl Parser<'_> {
     pub(super) fn parse_expression(&mut self) -> Option<Expr> {
         self.parse_assignment()
     }
