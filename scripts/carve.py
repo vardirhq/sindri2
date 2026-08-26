@@ -128,21 +128,28 @@ def attribute_end(lines, start):
 
 
 def block_end(lines, start):
-    """Index of the line closing the item that starts at `start`."""
+    """Index of the line closing the item that starts at `start`.
+
+    A braced item ends where its brace closes; everything else ends at the
+    first `;` outside brackets. The two rules are separate because a
+    declaration can balance its brackets long before it ends —
+    `pub(crate) const CALLS: &[(&str, Call)] =` opens and closes three pairs
+    and then continues on the next line.
+    """
     depth = 0
-    opened = False
+    braced = False
     string = None
     for i in range(start, len(lines)):
         clean, string = strip_strings(lines[i], string)
         for char in clean:
             if char in "{([":
                 depth += 1
-                opened = True
+                braced = braced or char == "{"
             elif char in "})]":
                 depth -= 1
-        if string is None and opened and depth <= 0:
-            return i
-        if string is None and not opened and lines[i].rstrip().endswith(";"):
+        if string is not None or depth > 0:
+            continue
+        if braced or clean.rstrip().endswith(";"):
             return i
     return len(lines) - 1
 

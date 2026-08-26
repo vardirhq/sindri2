@@ -1,0 +1,76 @@
+//! Text components, laid out into the frame.
+
+use std::collections::BTreeMap;
+
+use sindri_core::World;
+use sindri_render::{
+    ExtractedFrame, FrameCamera, FrameCommand, FramePass, RenderLayer, RenderStage, TextInstance,
+    Viewport,
+};
+
+use crate::TextComponent;
+
+use super::camera::ResolvedCameras;
+use super::sprite::screen_sprite_matrix;
+use super::{SceneExtractError, SceneExtractor};
+
+impl SceneExtractor {
+    pub(super) fn push_text(
+        &self,
+        world: &World,
+        viewport: Viewport,
+        cameras: &ResolvedCameras,
+        frame: &mut ExtractedFrame,
+    ) -> Result<(), SceneExtractError> {
+        let texts = self.components.query::<TextComponent>(world)?;
+        if texts.is_empty() {
+            return Ok(());
+        }
+        // Screen-space projection is viewport-owned. The Option shape remains
+        // shared with world-camera resolution, but every resolver constructs
+        // this value rather than looking for a scene camera entity.
+        let overlay = cameras
+            .overlay
+            .expect("every resolved view includes screen-space projection");
+        let extent = cameras
+            .overlay_extent
+            .expect("every resolved view includes screen-space extent");
+        let width = f32::from(u16::try_from(viewport.width)?);
+        let height = f32::from(u16::try_from(viewport.height)?);
+        let mut layers: BTreeMap<i32, Vec<TextInstance>> = BTreeMap::new();
+
+        for (entity, text) in texts {
+            let transform = world
+                .get(entity)
+                .and_then(|data| data.transform_3d)
+                .unwrap_or_default();
+            let model = screen_sprite_matrix(transform, text.anchor, extent);
+            let clip = overlay.view_projection * model.w_axis;
+            let ndc = clip.truncate() / clip.w;
+            let position = [(ndc.x + 1.0) * 0.5 * width, (1.0 - ndc.y) * 0.5 * height];
+            layers
+                .entry(text.layer)
+                .or_default()
+                .push(TextInstance::new(
+                    text.text,
+                    text.font,
+                    position,
+                    text.font_size,
+                    text.line_height,
+                    text.color,
+                )?);
+        }
+
+        for (layer, instances) in layers {
+            frame.push(FramePass::new(
+                RenderStage::Overlay,
+                RenderLayer(layer),
+                FrameCamera {
+                    view_projection: overlay.view_projection,
+                },
+                FrameCommand::Text { instances },
+            ));
+        }
+        Ok(())
+    }
+}
