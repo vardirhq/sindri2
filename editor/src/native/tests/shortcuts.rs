@@ -102,3 +102,23 @@ fn typing_keeps_the_unmodified_keys() {
     // A modified key is still the editor's: Ctrl+S saves from inside a name.
     assert!(shortcuts_while(egui::Modifiers::COMMAND, egui::Key::S, true).save);
 }
+
+/// Save As must be asked for before Save, for the same reason redo is asked
+/// before undo: egui ignores an extra Shift when matching, so Ctrl+Shift+S
+/// tested against Ctrl+S matches it — and the shortcut for "fork this scene"
+/// would silently save over the file it was trying to fork.
+#[test]
+fn save_as_is_not_swallowed_by_save() {
+    let save_as = shortcuts_for(
+        egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
+        egui::Key::S,
+    );
+    assert!(save_as.save_as, "Ctrl+Shift+S must save as");
+    assert!(!save_as.save, "and must not also save");
+
+    let save = shortcuts_for(egui::Modifiers::COMMAND, egui::Key::S);
+    assert!(save.save && !save.save_as, "Ctrl+S is still save");
+
+    let new_scene = shortcuts_for(egui::Modifiers::COMMAND, egui::Key::N);
+    assert!(new_scene.new_scene);
+}

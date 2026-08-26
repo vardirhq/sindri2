@@ -8,6 +8,7 @@ use sindri_cube::DemoScene;
 use super::super::editing::find_by_source_id;
 use super::super::inspector_panel::draft::{EntityDraft, draft_commands};
 use super::super::scene_io::{load_world, open_scene_for};
+use super::super::scene_new::blank_scene;
 use super::super::unsaved::Discarding;
 use super::support::*;
 
@@ -153,4 +154,33 @@ fn each_discarding_action_says_what_it_is_about_to_do() {
         Discarding::Reload.question(),
         "closing and reloading are different losses"
     );
+}
+
+/// A new scene loads, is named, and comes with the one thing a scene cannot
+/// draw the player's view without.
+///
+/// An empty document is a legal scene and a black Game view — the extract draws
+/// through exactly one authored world camera — and "why is the game view empty"
+/// is not the first question a new project should raise.
+#[test]
+fn a_new_scene_opens_with_a_camera_and_a_name() {
+    let extractor = extractor();
+    let document = blank_scene(
+        &extractor,
+        std::path::Path::new("/project/first-level.scene.json"),
+    );
+
+    assert_eq!(document.metadata.name.as_deref(), Some("First Level"));
+    let world = load_world(&extractor, &document).expect("a new scene loads");
+    assert_eq!(world.len(), 1, "one camera and nothing else");
+    assert!(
+        world
+            .entities()
+            .all(|(_, data)| data.components.contains_key("sindri.camera")),
+        "the one entity a new scene has is the camera"
+    );
+
+    // And what New Scene writes is what reopening it reads.
+    let written = document.to_canonical_json().unwrap();
+    assert_eq!(SceneDocument::from_json(&written).unwrap(), document);
 }

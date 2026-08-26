@@ -318,14 +318,31 @@ does change the right numbers. Nothing about where it is drawn says so.
 **Missing basics.** There is no place in the editor that is about the scene
 rather than about an entity in it.
 
-- **No New Scene.** The File menu is Open, Save, Reload, Discard. A scene file
-  has to exist before the editor can do anything with it, and if the editor
-  starts where the default scene is not, it opens detached with Save disabled
-  and no way to create one. You cannot start Gather.
-- **No Save As.** No way to fork a scene, or to save a detached one.
+**The two that blocked starting a project are fixed.** A scene can be made and a
+scene can be forked, so the editor no longer requires a project someone else
+started. What is left in this section is a *surface* — a place that is about the
+scene — which the remaining four items all want and none of them has.
+
+- ~~**No New Scene.**~~ **Fixed.** File → New scene…, or Ctrl+N. It asks where
+  the scene goes, writes it, and opens it through the ordinary path, so a new
+  scene proves it loads before anyone works in it and everything a scene brings
+  with it — the project beside it, its textures, its scripts — is arranged by
+  the code that already knows how. A save box takes a name rather than an
+  extension, so the suffix is the editor's: `level` becomes
+  `level.scene.json`, which is what the browser lists as a scene and what
+  reopening it finds. It contains one world camera, because a scene with none
+  is a legal scene and a black Game view, and "why is the game view empty" is
+  not the first question a new project should raise.
+- ~~**No Save As.**~~ **Fixed.** File → Save scene as…, or Ctrl+Shift+S, and
+  offered whether or not the scene has a file — giving a detached scene one is
+  the case that had no way out at all. The path is adopted after the write, so
+  a save that fails leaves the scene attached to the file it was attached to,
+  and the project, the remembered scene, the textures and the scripts all
+  follow the scene to its new directory.
 - **The scene's name is invisible.** `SceneMetadata.name` is `"Gather"` in the
   shipped scene and round-trips through a save, but nothing in the editor shows
-  or edits it.
+  or edits it. A new scene is now named from its file name, which is the one
+  case the editor has an answer for.
 - **An entity's stable ID is invisible.** `source_id` is what a scene stores,
   what `sindri.grid.occupant` references, and what sibling order is derived
   from. The editor generates `game-object-N` and never shows it. Gather's IDs
@@ -380,8 +397,10 @@ The ordering is by what unblocks the most authoring, not by effort.
    a menu of its own for what it can already do. What is still open from §5 is
    multi-select and sibling reorder, which change what a *selection* is rather
    than what one entity can be told to do.
-5. **New Scene and Save As**, so the editor can start a project rather than only
-   continue one.
+5. ~~**New Scene and Save As**, so the editor can start a project rather than
+   only continue one.~~ Done. What is left in §8 is a surface that is about the
+   scene rather than about an entity in it: the scene's name, an entity's stable
+   ID, the snapping increments, and everything else the editor remembers.
 6. **Pick UI elements in the viewport**, and either draw their gizmo where the
    element is or do not draw one.
 

@@ -206,6 +206,20 @@ impl EditorApp {
         let authoring = self.authoring_enabled();
         let playing_tip = PLAYING_TIP;
         bar_menu(ui, "File", |ui| {
+            // First, because a scene file has to exist before the editor can do
+            // anything with it, and until this entry there was no way to make
+            // one: the editor could only continue a project someone else had
+            // started.
+            if ui
+                .add_enabled(
+                    authoring,
+                    egui::Button::new("New scene…").shortcut_text("Ctrl+N"),
+                )
+                .clicked()
+            {
+                self.discard_or_confirm(Discarding::NewScene, ui.ctx());
+                ui.close();
+            }
             if ui
                 .add_enabled(authoring, egui::Button::new("Open scene…"))
                 .clicked()
@@ -224,6 +238,19 @@ impl EditorApp {
             }
             if !authoring {
                 save.on_disabled_hover_text(playing_tip);
+            }
+            // Not gated on `saveable`: giving a scene with no file a file is
+            // the whole point of it, and a detached scene is exactly the case
+            // that had no way out.
+            if ui
+                .add_enabled(
+                    authoring,
+                    egui::Button::new("Save scene as…").shortcut_text("Ctrl+Shift+S"),
+                )
+                .clicked()
+            {
+                self.save_as();
+                ui.close();
             }
             if ui
                 .add_enabled(saveable && authoring, egui::Button::new("Reload from disk"))

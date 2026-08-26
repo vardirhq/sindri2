@@ -10,8 +10,8 @@ use glam::Vec2 as GlamVec2;
 use sindri_core::{CommandHistory, EngineLifecycle, EntityId, SceneComponent, World};
 use sindri_decay::ScriptComponent;
 use sindri_scene::{
-    AudioSourceComponent, GridNavigationComponent, GridOccupantComponent, SceneExtractor,
-    SpriteAnimations, SpriteComponent, UiImageComponent, UiTextComponent,
+    AudioSourceComponent, CameraComponent, GridNavigationComponent, GridOccupantComponent,
+    SceneExtractor, SpriteAnimations, SpriteComponent, UiImageComponent, UiTextComponent,
 };
 
 use crate::{
@@ -40,6 +40,7 @@ mod pointer;
 mod project_panel;
 mod runtime;
 mod scene_io;
+mod scene_new;
 mod shortcuts;
 mod slicer_view;
 mod tools;
@@ -59,6 +60,7 @@ use scene_io::open_requested_scene;
 use unsaved::Discarding;
 use viewport::{RuntimeViewport, SceneRenderers};
 
+const CAMERA_COMPONENT: &str = CameraComponent::TYPE_NAME;
 const SPRITE_COMPONENT: &str = SpriteComponent::TYPE_NAME;
 const UI_IMAGE_COMPONENT: &str = UiImageComponent::TYPE_NAME;
 const UI_TEXT_COMPONENT: &str = UiTextComponent::TYPE_NAME;

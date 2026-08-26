@@ -141,20 +141,23 @@ impl EditorApp {
         }
     }
 
+    /// The directory a file dialog should open in.
+    pub(super) fn scene_directory(&self) -> PathBuf {
+        self.file
+            .path()
+            .and_then(Path::parent)
+            .map_or_else(|| PathBuf::from("."), Path::to_path_buf)
+    }
+
     /// Asks for a scene file and opens it.
     ///
     /// Until this existed, the only way to open a scene was the command-line
     /// argument, which meant the editor could edit exactly the scene it was
     /// started on.
     pub(super) fn open_scene(&mut self) {
-        let started_in = self
-            .file
-            .path()
-            .and_then(Path::parent)
-            .map_or_else(|| PathBuf::from("."), Path::to_path_buf);
         let Some(path) = rfd::FileDialog::new()
             .add_filter("Sindri scene", &["json"])
-            .set_directory(started_in)
+            .set_directory(self.scene_directory())
             .pick_file()
         else {
             return;

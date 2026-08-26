@@ -19,6 +19,23 @@ All notable changes to Sindri Next will be documented here.
   itself, is now a compile error naming both fields. It used to compile and fail
   at runtime with a path name.
 
+### Added
+
+- **New Scene and Save As.** A scene file had to exist before the editor could
+  do anything with it, so the tool could only continue a project someone else
+  had started — and started somewhere the default scene is not, it opened
+  detached with Save disabled and no way to make a file to save into. New scene
+  (Ctrl+N) asks where the scene goes, writes it, and opens it through the
+  ordinary path, so a new scene proves it loads before anyone works in it. It
+  holds one world camera: a scene with none is legal and renders a black Game
+  view, and "why is the game view empty" is not the first question a new project
+  should raise. Save scene as… (Ctrl+Shift+S) is offered whether or not the
+  scene has a file, adopts the path only after the write succeeds, and takes the
+  project beside the scene, the remembered scene, the textures and the scripts
+  with it. A save box takes a name rather than an extension, so the suffix is
+  the editor's business: `level` is written as `level.scene.json`, which is what
+  the project browser lists as a scene and what reopening it finds.
+
 ### Changed
 
 - **Duplicate, rename in place, and Delete, from the row they act on.** The

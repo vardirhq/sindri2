@@ -368,6 +368,16 @@ frame.
   back canonically, reloads from disk, and discards changes — including a scene
   carrying components it has never heard of, which it keeps through a save and
   lists in the inspector
+- **Makes a scene and forks one**, so a project can be started rather than only
+  continued. New scene (Ctrl+N) asks where the file goes, writes it, and opens
+  it through the ordinary path; it holds one world camera, because a scene with
+  none renders a black Game view, and it is named from its file. Save scene as…
+  (Ctrl+Shift+S) is offered whether or not the scene has a file behind it —
+  giving a detached scene one is the case that used to have no answer — and the
+  project beside the scene, the remembered scene, the textures and the scripts
+  all move with it. A save box takes a name rather than an extension, so
+  `level` is written as `level.scene.json`, which is what the browser lists as a
+  scene and what reopening it finds
 - Shows the hierarchy from live runtime state as a Unity-style GameObject tree:
   every entity may own children, child-bearing rows fold with state remembered
   across launches, search retains and temporarily opens each match's ancestor
@@ -564,8 +574,8 @@ settings gear.
 
 ### Editor
 
-- Cannot create a scene, save one under another name, or create or delete an
-  asset. A scene file has to exist before the editor can do anything with it
+- Cannot create or delete an asset. Scenes it can make and fork; everything
+  else has to arrive from outside
 - A component's fields come from the registry, so one added in the editor is the
   same component the shipped scenes use. A type with no honest blank —
   `sindri.ui.text`, `sindri.animation.sprite`, `sindri.grid.occupant`,

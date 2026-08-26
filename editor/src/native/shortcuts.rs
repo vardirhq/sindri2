@@ -3,6 +3,7 @@
 use eframe::egui::{self};
 
 use super::EditorApp;
+use super::unsaved::Discarding;
 
 /// The editing shortcuts pressed this frame.
 ///
@@ -16,6 +17,8 @@ pub(super) struct Shortcuts {
     pub(super) undo: bool,
     pub(super) redo: bool,
     pub(super) save: bool,
+    pub(super) save_as: bool,
+    pub(super) new_scene: bool,
     pub(super) play: bool,
     pub(super) pause: bool,
     pub(super) duplicate: bool,
@@ -46,6 +49,13 @@ pub(super) fn pressed(input: &mut egui::InputState, typing: bool) -> Shortcuts {
         egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
         egui::Key::P,
     );
+    // And Save As before Save, for the third time: Ctrl+Shift+S tested against
+    // Ctrl+S matches, so asked the other way round a Save As would silently
+    // save over the file it was trying to fork.
+    let save_as = input.consume_key(
+        egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
+        egui::Key::S,
+    );
     // Not consumed at all while typing, so the key reaches the field that is
     // being typed into instead of being eaten here and doing nothing.
     let bare = |input: &mut egui::InputState, key| {
@@ -56,7 +66,9 @@ pub(super) fn pressed(input: &mut egui::InputState, typing: bool) -> Shortcuts {
         pause,
         play: input.consume_key(egui::Modifiers::COMMAND, egui::Key::P),
         undo: input.consume_key(egui::Modifiers::COMMAND, egui::Key::Z),
+        save_as,
         save: input.consume_key(egui::Modifiers::COMMAND, egui::Key::S),
+        new_scene: input.consume_key(egui::Modifiers::COMMAND, egui::Key::N),
         duplicate: input.consume_key(egui::Modifiers::COMMAND, egui::Key::D),
         rename: bare(input, egui::Key::F2),
         // Backspace as well as Delete, because the key a Mac keyboard labels
@@ -77,8 +89,13 @@ impl EditorApp {
         // because a running scene is not a thing they have anything to say
         // about.
         let authoring = self.authoring_enabled();
-        if keys.save {
+        if keys.save_as {
+            self.save_as();
+        } else if keys.save {
             self.save();
+        }
+        if keys.new_scene && authoring {
+            self.discard_or_confirm(Discarding::NewScene, context);
         }
         if authoring {
             if keys.redo {
