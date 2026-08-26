@@ -33,6 +33,7 @@ use super::editing::reparent_choices;
 use super::hierarchy::row::entity_icon;
 use super::{BORDER, EditorApp, PANEL_BG, panel_title};
 
+/// Stateful authoring surfaces shared across component sections.
 pub(super) struct InspectorTools<'a> {
     animation: &'a mut AnimationTool,
     tilemap: &'a mut TilemapTool,
