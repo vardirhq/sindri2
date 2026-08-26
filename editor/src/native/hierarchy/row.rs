@@ -5,7 +5,7 @@ use egui_material_icons::{
     MaterialIcon,
     icons::{
         ICON_CAMERA_ALT, ICON_DEPLOYED_CODE, ICON_IMAGE, ICON_KEYBOARD_ARROW_DOWN,
-        ICON_KEYBOARD_ARROW_RIGHT, ICON_VIEW_IN_AR,
+        ICON_KEYBOARD_ARROW_RIGHT, ICON_TITLE, ICON_VIEW_IN_AR, ICON_WEB_ASSET,
     },
 };
 use sindri_core::{EntityData, EntityId, World};
@@ -166,6 +166,13 @@ pub(crate) fn entity_name(entity: &EntityData) -> String {
     })
 }
 
+/// What an entity looks like in a list, from the first thing it carries that
+/// says what it is.
+///
+/// The UI family gets icons of its own, because "this is on the screen rather
+/// than in the world" is the most useful thing a row can say about an entity at
+/// a glance — it is the difference between two entities that otherwise read
+/// identically.
 pub(crate) fn entity_icon(entity: &EntityData) -> MaterialIcon {
     if entity.components.contains_key("sindri.camera") {
         ICON_CAMERA_ALT
@@ -173,6 +180,10 @@ pub(crate) fn entity_icon(entity: &EntityData) -> MaterialIcon {
         ICON_VIEW_IN_AR
     } else if entity.components.contains_key("sindri.sprite") {
         ICON_IMAGE
+    } else if entity.components.contains_key("sindri.ui.image") {
+        ICON_WEB_ASSET
+    } else if entity.components.contains_key("sindri.ui.text") {
+        ICON_TITLE
     } else {
         ICON_DEPLOYED_CODE
     }

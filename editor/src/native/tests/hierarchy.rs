@@ -8,6 +8,8 @@ use super::super::editing::{find_by_source_id, next_game_object_id, reparent_cho
 use super::super::hierarchy::row::{
     component_label, entity_name, hierarchy_drop_allowed, humanize,
 };
+use crate::space::EntitySpace;
+
 use super::super::hierarchy::rows::{hierarchy_rows, visible_hierarchy_rows};
 use super::support::*;
 
@@ -46,7 +48,7 @@ fn every_entity_appears_exactly_once_in_the_hierarchy() {
 fn collapsing_a_game_object_hides_its_whole_subtree() {
     let world = World::from_scene(&nested_scene()).unwrap().world;
     let root = find_by_source_id(&world, "root").unwrap();
-    let rows = visible_hierarchy_rows(&world, &BTreeSet::from([root]), "");
+    let rows = visible_hierarchy_rows(&world, &BTreeSet::from([root]), "", EntitySpace::World);
     assert_eq!(rows, vec![(root, 0)]);
 }
 
@@ -55,7 +57,7 @@ fn hierarchy_search_keeps_the_ancestor_path_visible() {
     let world = World::from_scene(&nested_scene()).unwrap().world;
     let named = |id: &str| find_by_source_id(&world, id).unwrap();
     let collapsed = BTreeSet::from([named("root"), named("torso")]);
-    let rows = visible_hierarchy_rows(&world, &collapsed, "arm");
+    let rows = visible_hierarchy_rows(&world, &collapsed, "arm", EntitySpace::World);
 
     assert_eq!(
         rows,
@@ -178,4 +180,38 @@ fn hierarchy_drop_rules_allow_moves_but_reject_noops_and_cycles() {
 fn labels_are_human_readable() {
     assert_eq!(humanize("checker-cube"), "Checker Cube");
     assert_eq!(component_label("sindri.sprite"), "Sprite");
+}
+
+/// The hierarchy is two lists, and which list an entity is in comes from what
+/// it carries rather than from anything an author has to maintain.
+#[test]
+fn the_hierarchy_lists_world_entities_and_ui_entities_apart() {
+    let mut world = World::default();
+    let prop = world.spawn(EntityData {
+        source_id: Some(SceneEntityId::new("prop").unwrap()),
+        components: [("sindri.sprite".to_owned(), serde_json::json!({}))]
+            .into_iter()
+            .collect(),
+        ..EntityData::default()
+    });
+    let pip = world.spawn(EntityData {
+        source_id: Some(SceneEntityId::new("pip").unwrap()),
+        components: [("sindri.ui.image".to_owned(), serde_json::json!({}))]
+            .into_iter()
+            .collect(),
+        ..EntityData::default()
+    });
+    let empty = world.spawn(EntityData {
+        source_id: Some(SceneEntityId::new("empty").unwrap()),
+        ..EntityData::default()
+    });
+
+    let listed = |space| -> Vec<sindri_core::EntityId> {
+        visible_hierarchy_rows(&world, &BTreeSet::new(), "", space)
+            .into_iter()
+            .map(|(entity, _)| entity)
+            .collect()
+    };
+    assert_eq!(listed(EntitySpace::World), vec![empty, prop]);
+    assert_eq!(listed(EntitySpace::Ui), vec![pip]);
 }

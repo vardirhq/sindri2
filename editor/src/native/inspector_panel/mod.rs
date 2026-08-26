@@ -27,7 +27,9 @@ use self::header::{ParentChoice, inspector_identity, inspector_parent, transform
 use self::rows::add_component_button;
 use self::section::components_sections;
 use self::section::grid::grid_choices;
-use crate::{animation::AnimationTool, scripts::SceneScripts, tilemap::TilemapTool};
+use crate::{
+    animation::AnimationTool, scripts::SceneScripts, space::declared_space, tilemap::TilemapTool,
+};
 
 use super::editing::reparent_choices;
 use super::hierarchy::row::entity_icon;
@@ -206,6 +208,7 @@ impl EditorApp {
                 let mut draft = EntityDraft::from(data);
                 let original = draft.clone();
                 let icon = entity_icon(data);
+                let space = declared_space(&data.components);
                 let original_components = data.components.clone();
                 let mut components = original_components.clone();
                 let parent = data.parent;
@@ -241,7 +244,7 @@ impl EditorApp {
                         tilemap: &mut self.tilemap_tool,
                     };
                     egui::ScrollArea::vertical().show(ui, |ui| {
-                        inspector_identity(ui, icon, &mut draft);
+                        inspector_identity(ui, icon, space, &mut draft);
                         reparented = inspector_parent(ui, entity, parent, &choices);
                         if let Some(transform) = &mut draft.transform_3d {
                             transform_3d_section(ui, transform);

@@ -372,6 +372,13 @@ frame.
   every entity may own children, child-bearing rows fold with state remembered
   across launches, search retains and temporarily opens each match's ancestor
   path, selection works anywhere on a row, and empty space or Escape clears it
+- **Lists world objects and UI objects apart**, under a World group and a UI
+  group, with icons of their own. Which group a top-level entity is in is read
+  from what it carries — a `sindri.ui.*` component means the viewport — so
+  nothing has to be kept in step by hand and no entity can claim a space it is
+  not drawn in. A group holding only UI elements is listed with the UI.
+  Create GameObject makes an empty object or a UI Image directly, and the
+  inspector says which space the selected entity is in
 - Inspector edits of name and the complete transform: position, Euler-degree
   rotation backed by the stored quaternion, scale, and the Z lock, which takes
   away movement off the current layer

@@ -1,14 +1,16 @@
 //! What every entity has: its name, its parent, and its transform.
 
-use eframe::egui::{self, FontId, RichText};
+use eframe::egui::{self, FontId, RichText, Stroke};
 use egui_material_icons::{MaterialIcon, icons::ICON_OPEN_WITH};
 use glam::{EulerRot, Quat};
 use sindri_core::{EntityId, Transform3D};
 
+use crate::space::EntitySpace;
+
 use super::super::hierarchy::rows::ROOT_LABEL;
 use super::super::{
-    TEXT_FAINT, TEXT_MUTED,
-    theme::{property_toggle, section_header},
+    ACCENT, ACCENT_SOFT, BORDER, TEXT_FAINT, TEXT_MUTED,
+    theme::{PANEL_RAISED, property_toggle, section_header},
 };
 use super::draft::EntityDraft;
 use super::rows::vector_row;
@@ -63,7 +65,12 @@ pub(super) fn inspector_parent(
     chosen.map_or(ParentChoice::Root, ParentChoice::Under)
 }
 
-pub(super) fn inspector_identity(ui: &mut egui::Ui, icon: MaterialIcon, draft: &mut EntityDraft) {
+pub(super) fn inspector_identity(
+    ui: &mut egui::Ui,
+    icon: MaterialIcon,
+    space: Option<EntitySpace>,
+    draft: &mut EntityDraft,
+) {
     ui.add_space(8.0);
     ui.horizontal(|ui| {
         ui.label(icon.outlined().rich_text().size(19.0).color(TEXT_MUTED));
@@ -72,9 +79,52 @@ pub(super) fn inspector_identity(ui: &mut egui::Ui, icon: MaterialIcon, draft: &
             egui::TextEdit::singleline(&mut draft.name).font(FontId::proportional(13.0)),
         );
     });
+    space_badge(ui, space);
     // "Tag  Untagged" and "Layer  Default" used to sit under the name. Neither
     // is a thing a Sindri entity has, so they were two lines of a different
     // engine's inspector printed over this one's.
+}
+
+/// Which space this entity is in, said once at the top.
+///
+/// It is a readout and not a control, because nothing here decides it: the
+/// components below do, and a dropdown claiming otherwise would be a switch
+/// wired to nothing. An entity carrying neither family reads as undecided,
+/// which is the truth and also why Add Component still offers it both.
+fn space_badge(ui: &mut egui::Ui, space: Option<EntitySpace>) {
+    let (label, tip) = match space {
+        Some(EntitySpace::World) => (
+            "In the world",
+            "Placed by its transform and drawn through the world camera",
+        ),
+        Some(EntitySpace::Ui) => (
+            "On the viewport",
+            "Anchored to the screen; no camera moves it and nothing in the world hides it",
+        ),
+        None => (
+            "Nothing drawn yet",
+            "Adding a component decides which space this belongs to",
+        ),
+    };
+    let known = space.is_some();
+    ui.add_space(4.0);
+    ui.horizontal(|ui| {
+        ui.add_space(28.0);
+        egui::Frame::new()
+            .fill(if known { ACCENT_SOFT } else { PANEL_RAISED })
+            .stroke(Stroke::new(1.0, if known { ACCENT } else { BORDER }))
+            .corner_radius(3.0)
+            .inner_margin(egui::Margin::symmetric(6, 2))
+            .show(ui, |ui| {
+                ui.label(RichText::new(label).size(10.0).color(if known {
+                    TEXT_MUTED
+                } else {
+                    TEXT_FAINT
+                }));
+            })
+            .response
+            .on_hover_text(tip);
+    });
 }
 
 pub(super) fn transform_3d_section(ui: &mut egui::Ui, transform: &mut Transform3D) {
