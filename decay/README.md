@@ -75,8 +75,9 @@ It supports:
 
 - numeric, boolean, string, null, and unit values;
 - `let` and `var` bindings, scoped to the block that declares them;
-- arithmetic, comparisons, boolean operators, and unary operators;
-- `if`/`else` jumps and returns;
+- arithmetic including `%`, comparisons, short-circuiting boolean operators,
+  and unary operators;
+- `if`/`else`, `while` with `break` and `continue`, and returns;
 - calls between Decay functions, bounded by a call-depth limit;
 - persistent per-instance script fields across multiple function calls;
 - host loads, stores, and calls through a narrow `Host` trait.
@@ -102,9 +103,16 @@ wrong number.
 `RuntimeError::CallDepthExceeded`. Unbounded recursion previously overflowed the
 host's own stack and aborted the process, which for a runtime meant to execute
 author scripts inside the editor takes the editor and any unsaved work with it.
-The limit is per `Runtime` and adjustable with `with_call_depth_limit`. Note
-that it bounds recursion only: an operation budget becomes necessary the moment
-loops exist, and does not yet.
+The limit is per `Runtime` and adjustable with `with_call_depth_limit`.
+
+It bounds recursion only, which was enough until `while` arrived. A loop needs
+no stack to run forever, so the same rule needed a second half: one outermost
+call may execute `DEFAULT_OPERATION_BUDGET` instructions, after which the
+runtime returns `RuntimeError::OperationBudgetExceeded`. It is counted per
+outermost call rather than per frame, so a script cannot buy itself more by
+recursing, and it is adjustable with `with_operation_budget`. The budget is not
+a safeguard added beside loops; it is the thing that made offering them
+acceptable.
 
 A host can therefore implement a path such as `Input.axis` without the Decay runtime knowing what input means. The same mechanism can later expose `this.transform.position.x`, entities, components, assets, and events from Sindri through a dedicated `sindri-decay` crate.
 
@@ -145,12 +153,15 @@ documentation claims Decay can do belongs in that test.
    `Input.axis` and `this.transform.position`, so a misspelled component field
    is a compile error with a line number rather than a runtime `UnknownPath`,
    and completion after a `.` becomes possible. See `docs/scripting.md`.
-3. **Everything after that is ordered in the engine repository's `ROADMAP.md`**,
-   under *The language basics, ordered by what a script cannot say*: loops with
-   the operation budget and the branch lowering that shares their machinery,
-   then the numeric spelling this file ends by complaining about, then one
-   collection, then a value for a position. `fixed_update` is there too, as a
-   host-side item rather than a language one.
+3. ~~**Loops, and everything sharing their machinery.**~~ Done: `while`,
+   `break`, `continue`, the operation budget that bounds them, short-circuiting
+   `&&` and `||`, `else if`, `%`, and a compile error for a field initializer
+   that reads a field declared below it.
+4. **Everything after that is ordered in the engine repository's `ROADMAP.md`**,
+   under *The language basics, ordered by what a script cannot say*: the numeric
+   spelling this file ends by complaining about, then one collection, then a
+   value for a position. `fixed_update` is there too, as a host-side item rather
+   than a language one.
 
    That plan lives there rather than here because that is where checkboxes are
    audited, and a second plan in a second file is a second thing to go stale.

@@ -70,7 +70,13 @@ impl Lowerer {
 
     pub(crate) fn lower_function(function: &FunctionDecl) -> IrFunction {
         let mut instructions = Vec::new();
-        Self::lower_block(&function.body, &mut instructions);
+        // A function body is where a loop can exist, and each body starts with
+        // none open; a field initializer is an expression and cannot contain one.
+        Self::lower_block(
+            &function.body,
+            &mut instructions,
+            &mut stmt::Loops::default(),
+        );
         if !matches!(instructions.last(), Some(Instruction::Return)) {
             instructions.push(Instruction::Return);
         }

@@ -92,6 +92,33 @@ impl Analyzer<'_, '_> {
                     self.analyze_block(else_branch, true);
                 }
             }
+            Stmt::While {
+                condition, body, ..
+            } => {
+                let condition_type = self.expr_type(condition);
+                if !matches!(condition_type, Type::Bool | Type::Unknown) {
+                    self.error(
+                        condition.span,
+                        format!(
+                            "while condition must be `bool`, found `{}`",
+                            condition_type.display_name()
+                        ),
+                    );
+                }
+                self.loop_depth += 1;
+                self.analyze_block(body, true);
+                self.loop_depth -= 1;
+            }
+            Stmt::Break { span } => {
+                if self.loop_depth == 0 {
+                    self.error(*span, "`break` outside of a loop".to_owned());
+                }
+            }
+            Stmt::Continue { span } => {
+                if self.loop_depth == 0 {
+                    self.error(*span, "`continue` outside of a loop".to_owned());
+                }
+            }
             Stmt::Block(block) => self.analyze_block(block, true),
         }
     }

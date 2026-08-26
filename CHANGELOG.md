@@ -6,6 +6,19 @@ All notable changes to Sindri Next will be documented here.
 
 - Add editor wall/footprint authoring, typed Decay pathfinding, and a Gather Wisp that proves authored A* navigation end to end.
 
+### Added
+
+- Decay has loops: `while`, with `break` and `continue`, bounded by a new
+  operation budget so that a script which does not stop cannot take the editor
+  with it. One call may run 1,000,000 instructions by default before
+  `OperationBudgetExceeded`, and the host may change that.
+- Decay has `%` and `%=`, a remainder whose sign follows its left operand.
+- Decay accepts a chained `else if`, which previously had to be written
+  `else { if ... }`.
+- A Decay field initializer that reads a field declared below it, or reads
+  itself, is now a compile error naming both fields. It used to compile and fail
+  at runtime with a path name.
+
 ### Changed
 
 - **The editor draws itself from one design system instead of eleven opinions.**

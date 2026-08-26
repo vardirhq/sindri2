@@ -18,8 +18,9 @@ script Wisp {
         }
         // Keeping the remainder rather than resetting to zero, which would
         // round every step up to the end of the frame it landed in and tie the
-        // wisp's cadence to the frame rate.
-        elapsed = elapsed - step_seconds;
+        // wisp's cadence to the frame rate. `%` rather than one subtraction, so
+        // a frame longer than a step does not leave a backlog to work off.
+        elapsed %= step_seconds;
 
         if !World.exists(floor) {
             floor = World.find("Floor");

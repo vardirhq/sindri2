@@ -104,10 +104,11 @@ identifiers, and no raw identifiers.
 ### Keywords
 
 ```text
-script  component  fn  let  var  if  else  return  true  false  null
+script  component  fn  let  var  if  else  while  break  continue
+return  true  false  null
 ```
 
-All eleven are reserved. There are no contextual keywords.
+All fourteen are reserved. There are no contextual keywords.
 
 ### Number literals
 
@@ -133,8 +134,8 @@ multi-line strings, no interpolation, and no single-quoted characters.
 ### Operators and punctuation
 
 ```text
-+   -   *   /
-+=  -=  *=  /=  =
++   -   *   /   %
++=  -=  *=  /=  %=  =
 ==  !=  <   <=  >   >=
 &&  ||  !
 ->  @   .   ,   ;   :
@@ -161,13 +162,17 @@ param        = IDENT [ ":" type ] ;
 type         = IDENT ;
 
 block        = "{" { stmt } "}" ;
-stmt         = binding | return | if | block | expr ";" ;
+stmt         = binding | return | if | while | break | continue
+             | block | expr ";" ;
 binding      = ( "let" | "var" ) IDENT [ ":" type ] [ "=" expr ] ";" ;
 return       = "return" [ expr ] ";" ;
-if           = "if" expr block [ "else" block ] ;
+if           = "if" expr block [ "else" ( block | if ) ] ;
+while        = "while" expr block ;
+break        = "break" ";" ;
+continue     = "continue" ";" ;
 
 expr         = assign ;
-assign       = binary [ ( "=" | "+=" | "-=" | "*=" | "/=" ) assign ] ;
+assign       = binary [ ( "=" | "+=" | "-=" | "*=" | "/=" | "%=" ) assign ] ;
 binary       = unary { binop unary } ;         (* see the precedence table *)
 unary        = [ "-" | "!" ] unary | postfix ;
 postfix      = primary { "." IDENT | "(" [ args ] ")" } ;
@@ -176,10 +181,14 @@ primary      = IDENT | NUMBER | STRING | "true" | "false" | "null"
              | "(" expr ")" ;
 ```
 
-Note that `if` takes a **block**, not a statement: `if x > 0.0 { }`, never
-`if x > 0.0 doThing();`. Parentheses around the condition are allowed but do
-nothing — they parse as an ordinary grouping expression — so write
+Note that `if` and `while` take a **block**, not a statement: `if x > 0.0 { }`,
+never `if x > 0.0 doThing();`. Parentheses around the condition are allowed but
+do nothing — they parse as an ordinary grouping expression — so write
 `if x > 0.0 { }` rather than `if (x > 0.0) { }`.
+
+`else if` is the one exception to `else` taking a block, and it is only a
+spelling: the parser builds `else { if ... }`, so a chain is nested blocks and
+nothing downstream sees a second kind of conditional.
 
 Attributes are permitted only on fields. An attribute on a function is a
 diagnostic.
@@ -291,8 +300,10 @@ let base: f32 = 2.0;
 let doubled: f32 = base * 2.0;   // fine
 ```
 
-Reading a field declared *below* compiles and then fails at runtime with
-`UnknownPath`. The analyzer does not catch this yet.
+Reading a field declared *below*, or reading the field itself, is a compile
+error naming both fields. It used to compile and fail at runtime with
+`UnknownPath`, which reported a path rather than the field that could not have
+had a value yet.
 
 ### `@export`
 
@@ -366,15 +377,42 @@ var y: f32 = 2.0;      // binding, reassignable
 y = 3.0;               // expression statement
 return y;              // return
 return;                // return unit
-if y > 0.0 { } else { }
+if y > 0.0 { } else if y < 0.0 { } else { }
+while y > 0.0 { y -= 1.0; }
 { }                    // bare block, its own scope
 ```
 
 A binding needs a type, an initializer, or both.
 
-`if` requires a `bool` condition — there is no truthiness, so `if x` where `x`
-is a number is a diagnostic. `else if` is written as `else { if ... }`; a
-chained `else if` is **not** supported by the grammar.
+`if` and `while` require a `bool` condition — there is no truthiness, so
+`if x` where `x` is a number is a diagnostic.
+
+### Loops
+
+`while` is the only loop. There is no `for`, no `loop`, and no iteration over
+anything, because there is nothing yet to iterate.
+
+```rust
+var i: f32 = 0.0;
+while i < 10.0 {
+    i += 1.0;
+
+    if i == 5.0 {
+        continue;      // back to the condition
+    }
+    if i == 8.0 {
+        break;         // out of the loop
+    }
+}
+```
+
+`break` leaves the innermost enclosing loop; `continue` returns to its
+condition. Both are refused at compile time outside a loop, and both close the
+blocks they leave, so a binding declared inside one does not outlive the turn
+that declared it.
+
+A loop is bounded by the **operation budget** rather than trusted — see
+[Execution limits](#execution-limits).
 
 ---
 
@@ -386,20 +424,22 @@ Loosest to tightest:
 
 | Level | Operators | Associativity |
 | --- | --- | --- |
-| 1 | `=` `+=` `-=` `*=` `/=` | right |
+| 1 | `=` `+=` `-=` `*=` `/=` `%=` | right |
 | 2 | `\|\|` | left |
 | 3 | `&&` | left |
 | 4 | `==` `!=` | left |
 | 5 | `<` `<=` `>` `>=` | left |
 | 6 | `+` `-` | left |
-| 7 | `*` `/` | left |
+| 7 | `*` `/` `%` | left |
 | 8 | `-` `!` (unary prefix) | right |
 | 9 | `.` `()` (postfix) | left |
 
 ### Operand rules
 
-- `+ - * /` require `f32` on both sides and produce `f32`. **`+` does not
+- `+ - * / %` require `f32` on both sides and produce `f32`. **`+` does not
   concatenate strings.**
+- `%` is a **remainder**, not a floored modulo: its sign follows the left
+  operand, so `-7.0 % 3.0` is `-1.0` rather than `2.0`.
 - `< <= > >=` require `f32` and produce `bool`.
 - `== !=` require the two sides to be compatible types, and produce `bool`.
 - `&& ||` require `bool` on both sides and produce `bool`, and **short-circuit**:
@@ -410,7 +450,7 @@ Loosest to tightest:
 
 ### Assignment
 
-`=` assigns. `+= -= *= /=` read, apply, and assign, and require `f32` on both
+`=` assigns. `+= -= *= /= %=` read, apply, and assign, and require `f32` on both
 sides.
 
 Assignment targets are a name or a member path. Assigning to a `let` binding, to
@@ -421,7 +461,8 @@ works.
 
 ### Division by zero
 
-`1.0 / 0.0` is infinity, not an error. There is no integer division to trap.
+`1.0 / 0.0` is infinity and `1.0 % 0.0` is NaN, neither of them an error. There
+is no integer division to trap.
 
 ---
 
@@ -477,11 +518,20 @@ Sindri-specific name, because the language does not have one.
 ## Execution limits
 
 Decay calls may nest 64 deep by default, after which the script fails with
-`CallDepthExceeded`. The host may change the limit.
+`CallDepthExceeded`.
 
-**There is no operation budget**, because there are no loops: recursion is
-currently the only way to run forever, and the depth limit bounds it. A budget
-becomes necessary the moment loops exist.
+One call may execute 1,000,000 instructions by default, after which it fails
+with `OperationBudgetExceeded`. The budget is per outermost call, so a script is
+not charged for what the previous frame did, and a script cannot buy itself more
+by recursing.
+
+The host may change either limit.
+
+Both exist for the same reason: a script that does not stop must not take the
+editor with it. The depth limit bounds recursion, which was the only way to run
+forever until `while` arrived; the budget bounds everything else, and is what
+makes a loop safe to offer at all. Neither is a panic — both are values the host
+reports for one entity while every other script keeps running.
 
 ---
 
@@ -492,28 +542,28 @@ Things that are true and that most readers — human or model — will guess wro
 1. **`this.method()` is not a method call.** A container has no methods; it is a
    compile error telling you to call it by bare name. Host *types* may have
    methods, and those work.
-2. **There is no `else if`.** Write `else { if ... }`.
-3. **There is no truthiness.** `if x` requires `x` to be `bool`.
-4. **`+` does not join strings.** It is numeric addition only.
-5. **All numbers are floats.** `7 / 2` is `3.5`. There is no integer type and no
-   integer division.
-6. **Member types are checked only where the host described them.**
+2. **There is no truthiness.** `if x` requires `x` to be `bool`.
+3. **`+` does not join strings.** It is numeric addition only.
+4. **All numbers are floats.** `7 / 2` is `3.5`. There is no integer type and no
+   integer division, and `%` is a remainder whose sign follows its left operand.
+5. **Member types are checked only where the host described them.**
    `this.transfrom.position.x` is now a compile error against Sindri, because
    Sindri describes its transform — but a path into a type nobody described is
    still accepted and still fails at runtime.
-7. **A field cannot read a field declared below it.** It compiles and fails at
-   runtime.
-8. **`let` fields are still settable by the host.** That is what `@export` means.
-9. **A parameter shadows nothing** — parameters and body bindings share one
+6. **`let` fields are still settable by the host.** That is what `@export` means.
+7. **A parameter shadows nothing** — parameters and body bindings share one
    scope, so reusing a parameter's name is a duplicate, not a shadow.
+8. **A loop can be stopped by its budget.** A script that runs too long fails
+   with `OperationBudgetExceeded` rather than hanging, and that failure is
+   reported like any other.
 
 ## What does not exist
 
 Do not write these. They are not unimplemented corners; they are absent from the
 grammar, and every one of them is a parse error or a diagnostic.
 
-**Control flow:** `while`, `for`, `loop`, `break`, `continue`, `match`, `else if`,
-ternaries, labelled blocks.
+**Control flow:** `for`, `loop`, `match`, ternaries, labelled blocks, `break` or
+`continue` with a label or a value.
 
 **Data:** arrays, lists, maps, dictionaries, tuples, structs, enums, indexing
 (`a[0]`), ranges (`0..3`), `Option`, `Result`, `?`.
@@ -553,6 +603,7 @@ locals, a non-`bool` `if` condition, and wrong argument counts.
 compilation and no warning level — everything reported is fatal.
 
 Runtime failures are values, not panics: `UnknownPath`, `Immutable`,
-`FunctionNotFound`, `Arity`, `InvalidBinary`, `CallDepthExceeded`, and others.
+`FunctionNotFound`, `Arity`, `InvalidBinary`, `CallDepthExceeded`,
+`OperationBudgetExceeded`, and others.
 The host decides what to do with them; `sindri-decay` reports them per entity and
 keeps running every other script.

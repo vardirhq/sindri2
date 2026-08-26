@@ -32,5 +32,16 @@ pub enum RuntimeError {
         function: String,
         limit: usize,
     },
+    /// A script ran longer than [`Runtime::operation_budget`] allows.
+    ///
+    /// The call-depth limit bounds recursion, which was the only way to run
+    /// forever before loops existed. `while` removed that guarantee: a loop
+    /// that never ends uses no extra stack and would simply never return, which
+    /// inside the editor means a frame that never finishes. The budget is what
+    /// makes a loop safe to offer at all — it turns a runaway script into a
+    /// reported failure for one entity, the way every other runtime error is.
+    OperationBudgetExceeded {
+        limit: usize,
+    },
     Host(String),
 }

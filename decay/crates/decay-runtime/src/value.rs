@@ -52,6 +52,11 @@ pub(crate) fn apply_binary(op: BinaryOp, left: Value, right: Value) -> Result<Va
         BinaryOp::Subtract => numbers(left, right, |a, b| a - b),
         BinaryOp::Multiply => numbers(left, right, |a, b| a * b),
         BinaryOp::Divide => numbers(left, right, |a, b| a / b),
+        // Remainder rather than a floored modulo, so the sign follows the left
+        // operand as it does in the language Decay is shaped after. `% 0.0` is
+        // NaN for the same reason `/ 0.0` is infinity: there is no integer
+        // division here to trap.
+        BinaryOp::Modulo => numbers(left, right, |a, b| a % b),
         BinaryOp::Less => compare(left, right, |a, b| a < b),
         BinaryOp::LessEqual => compare(left, right, |a, b| a <= b),
         BinaryOp::Greater => compare(left, right, |a, b| a > b),

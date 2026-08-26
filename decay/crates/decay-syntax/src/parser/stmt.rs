@@ -38,6 +38,15 @@ impl Parser<'_> {
         if self.at(&TokenKind::If) {
             return self.parse_if_statement();
         }
+        if self.at(&TokenKind::While) {
+            return self.parse_while_statement();
+        }
+        if self.at(&TokenKind::Break) {
+            return self.parse_break_statement();
+        }
+        if self.at(&TokenKind::Continue) {
+            return self.parse_continue_statement();
+        }
         if self.at(&TokenKind::LeftBrace) {
             return self.parse_block().map(Stmt::Block);
         }
@@ -89,7 +98,21 @@ impl Parser<'_> {
         let then_branch = self.parse_block()?;
         let mut end = then_branch.span;
         let else_branch = if self.consume_simple(&TokenKind::Else).is_some() {
-            let block = self.parse_block()?;
+            let block = if self.at(&TokenKind::If) {
+                // `else if` is the same tree as `else { if ... }`, built here
+                // rather than given a node of its own. A chain is then nested
+                // blocks, and everything downstream — scoping, lowering, the
+                // analyzer's branch handling — keeps working on one shape of
+                // conditional instead of learning a second.
+                let nested = self.parse_if_statement()?;
+                let span = nested.span();
+                Block {
+                    statements: vec![nested],
+                    span,
+                }
+            } else {
+                self.parse_block()?
+            };
             end = block.span;
             Some(block)
         } else {
@@ -99,6 +122,34 @@ impl Parser<'_> {
             condition,
             then_branch,
             else_branch,
+            span: start.join(end),
+        })
+    }
+
+    pub(super) fn parse_while_statement(&mut self) -> Option<Stmt> {
+        let start = self.expect_simple(&TokenKind::While, "expected `while`")?;
+        let condition = self.parse_expression()?;
+        let body = self.parse_block()?;
+        let span = start.join(body.span);
+        Some(Stmt::While {
+            condition,
+            body,
+            span,
+        })
+    }
+
+    pub(super) fn parse_break_statement(&mut self) -> Option<Stmt> {
+        let start = self.expect_simple(&TokenKind::Break, "expected `break`")?;
+        let end = self.expect_simple(&TokenKind::Semicolon, "expected `;` after `break`")?;
+        Some(Stmt::Break {
+            span: start.join(end),
+        })
+    }
+
+    pub(super) fn parse_continue_statement(&mut self) -> Option<Stmt> {
+        let start = self.expect_simple(&TokenKind::Continue, "expected `continue`")?;
+        let end = self.expect_simple(&TokenKind::Semicolon, "expected `;` after `continue`")?;
+        Some(Stmt::Continue {
             span: start.join(end),
         })
     }

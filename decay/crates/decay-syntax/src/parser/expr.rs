@@ -25,6 +25,7 @@ pub(super) fn binary_operator(kind: &TokenKind) -> Option<(u8, BinaryOp)> {
         TokenKind::Minus => Some((5, BinaryOp::Subtract)),
         TokenKind::Star => Some((6, BinaryOp::Multiply)),
         TokenKind::Slash => Some((6, BinaryOp::Divide)),
+        TokenKind::Percent => Some((6, BinaryOp::Modulo)),
         _ => None,
     }
 }
@@ -42,6 +43,7 @@ impl Parser<'_> {
             TokenKind::MinusEqual => AssignOp::Subtract,
             TokenKind::StarEqual => AssignOp::Multiply,
             TokenKind::SlashEqual => AssignOp::Divide,
+            TokenKind::PercentEqual => AssignOp::Modulo,
             _ => return Some(target),
         };
         self.advance();
