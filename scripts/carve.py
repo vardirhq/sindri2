@@ -37,6 +37,9 @@ signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 # A char or byte literal, which is not a lifetime and may hold any bracket.
 CHAR_LITERAL = re.compile(r"'(?:\\.|[^'\\])'")
 
+# The start of a string. Group 1 is the `#`s a raw string must close with.
+STRING_OPEN = re.compile(r'(?:b?r(#*)|b)?"')
+
 ITEM = re.compile(
     r"^(?:pub(?:\([^)]*\))? )?(?:async |unsafe |extern |const (?=fn ))*"
     r"(fn|struct|enum|trait|type|impl|mod|union|const|static)[ <]"
@@ -111,13 +114,15 @@ def signature_name(bare, kind, at):
 def attribute_end(lines, start):
     """Index of the line closing an attribute that may span several lines."""
     depth = 0
+    string = None
     for i in range(start, len(lines)):
-        for char in strip_strings(lines[i]):
+        clean, string = strip_strings(lines[i], string)
+        for char in clean:
             if char in "[(":
                 depth += 1
             elif char in "])":
                 depth -= 1
-        if depth <= 0:
+        if string is None and depth <= 0:
             return i
     return len(lines) - 1
 
@@ -126,38 +131,47 @@ def block_end(lines, start):
     """Index of the line closing the item that starts at `start`."""
     depth = 0
     opened = False
+    string = None
     for i in range(start, len(lines)):
-        for char in strip_strings(lines[i]):
+        clean, string = strip_strings(lines[i], string)
+        for char in clean:
             if char in "{([":
                 depth += 1
                 opened = True
             elif char in "})]":
                 depth -= 1
-        if opened and depth <= 0:
+        if string is None and opened and depth <= 0:
             return i
-        if not opened and lines[i].rstrip().endswith(";"):
+        if string is None and not opened and lines[i].rstrip().endswith(";"):
             return i
     return len(lines) - 1
 
 
-def strip_strings(line):
-    """The line with string and char literals and comments blanked out."""
+def strip_strings(line, string=None):
+    """One line with strings, char literals, and comments blanked out.
+
+    `string` carries an unterminated string in from the previous line and comes
+    back out for the next one, because a raw string holding braces —
+    `r"script Guard { ... }"` around a snippet of Decay — spans lines, and
+    counting its braces as code ends an item in the middle of itself.
+    """
     out = []
     i = 0
     while i < len(line):
+        if string is not None:
+            end = string_close(line, i, string)
+            if end is None:
+                return "".join(out), string
+            i = end
+            string = None
+            continue
         char = line[i]
         if char == "/" and line[i : i + 2] == "//":
             break
-        if char == '"':
-            i += 1
-            while i < len(line):
-                if line[i] == "\\":
-                    i += 2
-                    continue
-                if line[i] == '"':
-                    break
-                i += 1
-            i += 1
+        opening = STRING_OPEN.match(line, i)
+        if opening:
+            string = opening.group(1) or ""  # the `#`s a raw string closes with
+            i = opening.end()
             continue
         literal = CHAR_LITERAL.match(line, i)
         if literal:
@@ -165,7 +179,23 @@ def strip_strings(line):
             continue
         out.append(char)
         i += 1
-    return "".join(out)
+    return "".join(out), string
+
+
+def string_close(line, start, hashes):
+    """Index just past the end of an open string, or None if it runs on."""
+    if hashes:
+        at = line.find('"' + hashes, start)
+        return None if at < 0 else at + 1 + len(hashes)
+    i = start
+    while i < len(line):
+        if line[i] == "\\":
+            i += 2
+            continue
+        if line[i] == '"':
+            return i + 1
+        i += 1
+    return None
 
 
 def main():
@@ -199,7 +229,9 @@ def main():
     taken = sorted(index[name] for name in names)
     carved = []
     for start, end in taken:
-        carved.append("\n".join(lines[start : end + 1]))
+        piece = "\n".join(lines[start : end + 1])
+        check_balanced(piece, start)
+        carved.append(piece)
     drop = set()
     for start, end in taken:
         drop.update(range(start, end + 1))
@@ -207,6 +239,24 @@ def main():
 
     open(source, "w").write(collapse_blank_runs(kept))
     sys.stdout.write("\n\n".join(carved) + "\n")
+
+
+def check_balanced(piece, start):
+    """Refuse a cut whose brackets do not close, which is a misread, not code."""
+    depth = 0
+    string = None
+    for line in piece.split("\n"):
+        clean, string = strip_strings(line, string)
+        for char in clean:
+            if char in "{([":
+                depth += 1
+            elif char in "})]":
+                depth -= 1
+    if depth or string is not None:
+        raise SystemExit(
+            f"line {start + 1}: the item read here does not close "
+            f"(bracket depth {depth}). Refusing to cut it."
+        )
 
 
 def collapse_blank_runs(lines):
