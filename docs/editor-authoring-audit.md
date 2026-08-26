@@ -2,8 +2,9 @@
 
 Can Gather be built in the editor, as of `4dd70b4`?
 
-**No.** Four things stop it outright, and one of them writes over your scene
-file. This audit is the second of its kind; `docs/editor-audit.md` asked whether
+**No.** Four things stop it outright, one of them writes over your scene file,
+and a fifth — the complete absence of right-click menus — is why several of the
+others have nowhere to be fixed. This audit is the second of its kind; `docs/editor-audit.md` asked whether
 the controls did anything, and this one asks whether the controls that work add
 up to a tool you could author a game in.
 
@@ -180,11 +181,53 @@ What it does not:
 - **Multi-select.** One entity at a time, so no bulk move, delete, or reparent.
 - **Reorder siblings.** Order is `source_id` sorted (`hierarchy_sort_key`), so
   authoring order is alphabetical by an ID you cannot see or set.
-- **Context menu.** There is no right-click menu anywhere in the editor —
-  hierarchy or project browser. Every action is a toolbar icon or a top-level
-  menu.
 
-## 6. Half of a scene cannot be reached in the viewport
+Most of these are the actions a right-click would offer, which is §6.
+
+## 6. Nothing has a right-click menu
+
+**Missing basic**, and the one that makes several of the others feel worse than
+they are.
+
+There is not a single context menu in the editor. `grep -rn context_menu
+editor/src` returns nothing. Every action the tool has is a toolbar icon, a
+top-level menu, or a control inside the inspector — which means the actions that
+belong to *a specific thing* have nowhere to live, and so mostly do not exist.
+§5 is the visible half of this: duplicate, rename, and delete are missing partly
+because there was no obvious place to put them.
+
+Where a right-click is expected and does nothing today:
+
+| Where | What belongs there |
+| --- | --- |
+| A hierarchy row | Rename, Duplicate, Delete, Create child, Copy/Paste, Focus (F), Move to top level |
+| Hierarchy empty space | Create Empty, Create UI Image, Paste |
+| A project row | Open, Slice (a texture), Rename, Delete, Duplicate, Reveal in file manager |
+| Project empty space | New folder, Import, Refresh |
+| A component heading | Remove, Reset to default, Copy/Paste values, Move up/down |
+| A property row | Reset this field to its default, Copy value |
+| The Scene view | Frame selected, Frame all, Create at this point, Paste |
+| A console line | Copy message, Select the entity it names, Clear |
+
+Two things worth knowing before this is built, both found while checking it:
+
+**The viewport's right button is already taken — but only its drag.** Secondary
+drag orbits the scene camera (`editor/src/native/camera.rs:452`). A secondary
+*click* does nothing at all, and egui distinguishes the two, so a viewport
+context menu and the orbit can coexist. Whoever adds it should keep that
+distinction deliberate rather than discovering it.
+
+**Half the project browser cannot receive a right-click at all.** A row that the
+editor can do nothing with is given `Sense::hover()` rather than `Sense::click()`
+(`editor/src/native/project_panel/row.rs:103`), which is a deliberate signal:
+the comment beside it says a listing that lists is not the same as a control that
+looks like it does something. That reasoning was sound when the only verb was
+"open". It stops being sound the moment right-click offers Rename and Delete,
+which every row should have. The sense rule has to change with it, and the
+"is there anything to do here" signal has to move somewhere else — the hover
+tooltip, or the absence of a primary-click response.
+
+## 7. Half of a scene cannot be reached in the viewport
 
 **Missing basic**, with one case that is actively misleading.
 
@@ -202,7 +245,7 @@ Move, and the handle is a single red arm in the bottom-left corner of the Scene
 view, mostly off screen, while the text it belongs to is at the top. Dragging it
 does change the right numbers. Nothing about where it is drawn says so.
 
-## 7. Scene-level authoring has no home
+## 8. Scene-level authoring has no home
 
 **Missing basics.** There is no place in the editor that is about the scene
 rather than about an entity in it.
@@ -226,7 +269,7 @@ rather than about an entity in it.
 - **No preferences surface.** Layout is in the View menu; everything else the
   editor remembers is invisible.
 
-## 8. Smaller things, confirmed
+## 9. Smaller things, confirmed
 
 - **Adding a second camera breaks the scene in one click.** Add Component offers
   Camera whether or not the scene already has one, and a second authored camera
@@ -266,8 +309,10 @@ The ordering is by what unblocks the most authoring, not by effort.
 3. **Give the Project browser selection and folding**, and make the folder pane
    filter the list. These are three small changes to one panel and they are the
    difference between a listing and a browser.
-4. **Duplicate, rename in place, and Delete.** The three verbs whose absence is
-   felt on every entity after the first.
+4. **Duplicate, rename in place, and Delete**, reached from a right-click menu
+   on the thing they act on. The three verbs whose absence is felt on every
+   entity after the first, and the surface they have been missing. Context
+   menus on the hierarchy and the project browser are the same build.
 5. **New Scene and Save As**, so the editor can start a project rather than only
    continue one.
 6. **Pick UI elements in the viewport**, and either draw their gizmo where the

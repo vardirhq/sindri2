@@ -570,6 +570,10 @@ settings gear.
   fold nor filter, and it marks the open scene rather than what is selected
 - No multi-select; viewport selection and transform gizmos currently cover
   world sprites, filled tilemap cells, and meshes rather than UI elements
+- No context menus anywhere. Nothing in the editor answers a right-click, so
+  the per-object actions one would offer — duplicate, rename, delete, reveal,
+  reset a field — mostly do not exist
+- No duplicate, no copy/paste, no rename in place, and no Delete key
 - No prefabs, no play-mode-against-a-copy, no build or export controls
 - No versioned editor protocol; the editor and runtime are one process
 - Cannot open or edit a Decay script's *source* — the project browser lists
