@@ -23,6 +23,10 @@ jobs:
           components: clippy,rustfmt
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all --check
+      # Before anything is compiled, because it needs nothing compiled and a
+      # file past the cap is the cheapest failure this job can report.
+      - name: Check file sizes
+        run: scripts/check-file-size.py
       # Everything the rest of the job needs from the system, installed before
       # clippy rather than before the tests. Clippy compiles the native
       # dependency graph, so ALSA — which Rodio's CPAL backend links on Linux —

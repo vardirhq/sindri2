@@ -50,6 +50,9 @@ def tracked_rust_files(root: Path) -> list[Path]:
         path = Path(name)
         if SKIP_DIRS.intersection(path.parts):
             continue
+        # Tracked but deleted in the working tree: not a file to measure.
+        if not (root / path).is_file():
+            continue
         files.append(path)
     return sorted(files)
 
