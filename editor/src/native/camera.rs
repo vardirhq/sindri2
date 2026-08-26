@@ -13,7 +13,9 @@ use sindri_scene::{CameraComponent, CameraView, ViewCamera, WorldProjection};
 
 use crate::preferences::CameraProjection;
 
-use super::{ACCENT_BRIGHT, EditorApp, TEXT_MUTED, WorkspaceTab};
+use crate::ui::theme::color;
+
+use super::{EditorApp, WorkspaceTab};
 
 #[cfg(test)]
 mod tests;
@@ -345,7 +347,11 @@ fn paint_authored_cameras(
         let selected = selection == Some(visual.entity);
         let stroke = Stroke::new(
             if selected { 2.0 } else { 1.25 },
-            if selected { ACCENT_BRIGHT } else { TEXT_MUTED },
+            if selected {
+                color::FORGE_BRIGHT
+            } else {
+                color::TEXT_MUTED
+            },
         );
         for line in &visual.lines {
             painter.line_segment(*line, stroke);

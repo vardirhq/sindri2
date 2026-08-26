@@ -35,6 +35,51 @@ are added.
 - Useful at 1080p, with resizable hierarchy and inspector panels.
 - Visual polish is maintained continuously rather than postponed to a rewrite.
 
+## The design system
+
+`editor/src/ui/` is the only place the editor decides what it looks like. It
+holds three things and nothing else:
+
+- `theme` — the tokens: the palette, the metrics, the four text sizes, and the
+  egui `Style` built from them, so a stock `ComboBox` inside a component section
+  already looks like the editor without its call site dressing it.
+- `icons` — the icon vocabulary, by meaning rather than by glyph. A camera in
+  the hierarchy, in a component heading, and on the viewport's camera control is
+  one idea and one table entry.
+- `widgets/` — the controls built from both.
+
+Nothing in `ui/` knows what a scene, an entity, or a command is. That is the
+boundary that makes it a layer rather than a second copy of the editor, and it
+is why a panel under it reads as *what it does* instead of as a list of colours
+and offsets.
+
+**The rule that keeps it worth having: a panel does not name a colour, a gap, or
+a font size of its own.** A panel needing one that is not there means the token
+is missing, and it belongs in `theme`.
+
+A widget belongs in `widgets/` when it centralises painting, spacing,
+interaction, or meaning across more than one panel. A wrapper that only renames
+an egui call does not: it adds an import list and centralises nothing.
+
+Three of these are painted rather than assembled out of nested layouts, because
+an egui layout inherits its parent's direction and a `Frame` inside one takes
+the width it is given. The search box drew its magnifier on the far side of the
+field inside a right-aligned toolbar; the segmented switch stretched to the
+width of whatever panel held it. A control whose appearance must not depend on
+where it is used is measured and painted into a region it allocates itself.
+
+Two consequences of that are worth knowing before writing another one:
+
+- A galley laid out with a real colour keeps that colour, so a painted control
+  that tints its text at paint time must lay it out with `Color32::PLACEHOLDER`.
+- Ids for sub-parts come from the control's own allocation, not from `ui.id()`,
+  which every widget in one panel shares.
+
+The alignment the inspector depends on is `property::Property`: a fixed label
+column, and a value column that begins at the same x on every row in the window.
+egui allocates a child region by what its contents measured rather than by what
+was asked for, so that column only holds its width because the widget sets it.
+
 ## First shell boundary
 
 The editor opens a scene file, displays its entity hierarchy, selects entities,

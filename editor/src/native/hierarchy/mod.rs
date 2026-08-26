@@ -5,42 +5,42 @@ pub(super) mod rows;
 
 use std::collections::BTreeSet;
 
-use eframe::egui::{self, Stroke};
-use egui_material_icons::icons::{ICON_ACCOUNT_TREE, ICON_ADD, ICON_DELETE, ICON_WEB_ASSET};
+use eframe::egui;
 use sindri_core::EntityId;
 
-use self::row::{HierarchyDrag, entity_icon, entity_name, hierarchy_drop_target, hierarchy_row};
+use self::row::{HierarchyDrag, entity_icon, entity_is_bare, entity_name, hierarchy_drop_target};
 use self::rows::{hierarchy_group, hierarchy_preference_key, visible_hierarchy_rows};
 use crate::preferences::Layout as WorkspaceLayout;
 use crate::space::EntitySpace;
+use crate::ui::icons;
+use crate::ui::widgets::{
+    button::{self, Intent},
+    panel,
+    tree::{self, Children, RowStyle},
+};
 
 use super::EditorApp;
 use super::editing::CreateGameObject;
-use super::theme::{BORDER, PANEL_BG, panel_title, search_field};
 
 impl EditorApp {
     pub(super) fn hierarchy_panel(&mut self, ui: &mut egui::Ui) {
         // Distinct ids per side deliberately: switching layouts should not
         // carry a width chosen for a different arrangement.
-        let panel = match self.preferences.layout {
+        let panel_side = match self.preferences.layout {
             WorkspaceLayout::TwoByThree => egui::Panel::right("hierarchy-column"),
             WorkspaceLayout::Wide => egui::Panel::left("hierarchy-dock"),
         };
-        panel
+        panel_side
             .default_size(248.0)
-            .min_size(210.0)
+            .min_size(200.0)
             .max_size(340.0)
             .resizable(true)
-            .frame(
-                egui::Frame::new()
-                    .fill(PANEL_BG)
-                    .stroke(Stroke::new(1.0, BORDER)),
-            )
+            .frame(panel::frame())
             .show(ui, |ui| {
-                panel_title(ui, "Hierarchy");
-                search_field(ui, &mut self.search, "Search");
-                let (create, deleted) = self.hierarchy_toolbar(ui);
-                ui.add_space(6.0);
+                let (create, deleted) = self.hierarchy_header(ui);
+                panel::body(ui, |ui| {
+                    panel::search(ui, &mut self.search, "Filter entities");
+                });
                 self.hierarchy_contents(ui);
                 if let Some(create) = create {
                     self.create_game_object(create);
@@ -51,53 +51,80 @@ impl EditorApp {
             });
     }
 
-    fn hierarchy_toolbar(&self, ui: &mut egui::Ui) -> (Option<CreateGameObject>, Option<EntityId>) {
+    /// The panel's name, and the two things it can do to a scene.
+    ///
+    /// The actions live in the header rather than on a strip of their own: a
+    /// create menu and a delete button are one row's worth of controls, and a
+    /// second strip under the title spent eight vertical pixels saying so.
+    fn hierarchy_header(&self, ui: &mut egui::Ui) -> (Option<CreateGameObject>, Option<EntityId>) {
         let mut create = None;
         let mut deleted = None;
-        ui.horizontal(|ui| {
-            ui.add_space(10.0);
-            ui.menu_button(ICON_ADD.outlined().rich_text().size(14.0), |ui| {
-                ui.set_min_width(190.0);
-                // Which space a new object is in is a choice made here rather
-                // than a component hunted for afterwards, because it is the
-                // first thing an author knows about the thing they are making.
-                if ui.button("Create Empty").clicked() {
-                    create = Some(CreateGameObject::Empty { parent: None });
-                    ui.close();
-                }
-                if ui
-                    .add_enabled(
-                        self.selection.is_some(),
-                        egui::Button::new("Create Child").shortcut_text("under selection"),
-                    )
-                    .clicked()
-                {
-                    create = self.selection.map(|parent| CreateGameObject::Empty {
-                        parent: Some(parent),
-                    });
-                    ui.close();
-                }
-                ui.separator();
-                if ui.button("Create UI Image").clicked() {
-                    create = Some(CreateGameObject::UiImage);
-                    ui.close();
-                }
-            })
-            .response
-            .on_hover_text("Create GameObject");
+        panel::header(ui, icons::HIERARCHY, "Hierarchy", |ui| {
             // Offered only with something selected, because "delete" with
             // nothing chosen has no answer and a disabled button is a question
             // nobody asked.
             if let Some(entity) = self.selection
-                && ui
-                    .small_button(ICON_DELETE.outlined().rich_text().size(14.0))
-                    .on_hover_text("Delete entity")
-                    .clicked()
+                && button::row_icon(
+                    ui,
+                    icons::REMOVE,
+                    Intent::Danger,
+                    "Delete the selected entity",
+                )
+                .clicked()
             {
                 deleted = Some(entity);
             }
+            ui.menu_button(
+                icons::ADD
+                    .outlined()
+                    .rich_text()
+                    .size(15.0)
+                    .color(crate::ui::theme::color::TEXT_MUTED),
+                |ui| {
+                    ui.set_min_width(200.0);
+                    // Which space a new object is in is a choice made here
+                    // rather than a component hunted for afterwards, because it
+                    // is the first thing an author knows about the thing they
+                    // are making.
+                    if ui.button("Create Empty").clicked() {
+                        create = Some(CreateGameObject::Empty { parent: None });
+                        ui.close();
+                    }
+                    if ui
+                        .add_enabled(
+                            self.selection.is_some(),
+                            egui::Button::new("Create Child").shortcut_text("under selection"),
+                        )
+                        .clicked()
+                    {
+                        create = self.selection.map(|parent| CreateGameObject::Empty {
+                            parent: Some(parent),
+                        });
+                        ui.close();
+                    }
+                    ui.separator();
+                    if ui.button("Create UI Image").clicked() {
+                        create = Some(CreateGameObject::UiImage);
+                        ui.close();
+                    }
+                },
+            )
+            .response
+            .on_hover_text("Create GameObject");
         });
         (create, deleted)
+    }
+
+    /// Which entities the hierarchy is currently folded closed.
+    fn collapsed_entities(&self) -> BTreeSet<EntityId> {
+        self.world
+            .entities()
+            .filter_map(|(entity, _)| {
+                hierarchy_preference_key(self.file.path(), &self.world, entity)
+                    .filter(|key| self.preferences.collapsed_hierarchy.contains(key))
+                    .map(|_| entity)
+            })
+            .collect()
     }
 
     fn hierarchy_contents(&mut self, ui: &mut egui::Ui) {
@@ -105,30 +132,23 @@ impl EditorApp {
         egui::ScrollArea::vertical()
             .auto_shrink([false; 2])
             .show(ui, |ui| {
+                ui.spacing_mut().item_spacing.y = 0.0;
+                ui.add_space(2.0);
                 let needle = self.search.trim().to_lowercase();
-                let collapsed: BTreeSet<EntityId> = self
-                    .world
-                    .entities()
-                    .filter_map(|(entity, _)| {
-                        hierarchy_preference_key(self.file.path(), &self.world, entity)
-                            .filter(|key| self.preferences.collapsed_hierarchy.contains(key))
-                            .map(|_| entity)
-                    })
-                    .collect();
+                let collapsed = self.collapsed_entities();
                 let mut clicked: Option<Option<EntityId>> = None;
                 let mut toggled = None;
+                let mut listed = 0_usize;
                 // Two groups, because a scene holds two kinds of thing: what is
                 // in the world and what is drawn on top of it. Which group an
                 // entity is listed under is read from what it carries, so a
                 // drop on either header means the same thing — move to the top
                 // level — and the entity lands where its components say.
                 for (space, label, icon) in [
-                    (EntitySpace::World, "World", ICON_ACCOUNT_TREE),
-                    (EntitySpace::Ui, "UI", ICON_WEB_ASSET),
+                    (EntitySpace::World, "World", icons::WORLD),
+                    (EntitySpace::Ui, "UI", icons::UI_ELEMENT),
                 ] {
-                    if space == EntitySpace::Ui {
-                        ui.add_space(6.0);
-                    }
+                    ui.add_space(if space == EntitySpace::Ui { 8.0 } else { 0.0 });
                     let root = hierarchy_group(ui, label, icon);
                     if let Some(entity) = hierarchy_drop_target(ui, &root, &self.world, None) {
                         reparenting = Some((entity, None));
@@ -139,15 +159,21 @@ impl EditorApp {
                         let Some(data) = self.world.get(entity) else {
                             continue;
                         };
+                        listed += 1;
                         let name = entity_name(data);
-                        let row = hierarchy_row(
+                        let row = tree::row(
                             ui,
                             entity_icon(data),
                             &name,
-                            self.selection == Some(entity),
-                            depth + 1,
-                            !data.children.is_empty(),
-                            !collapsed.contains(&entity) || !needle.is_empty(),
+                            RowStyle {
+                                selected: self.selection == Some(entity),
+                                depth: depth + 1,
+                                children: Children::of(
+                                    data.children.len(),
+                                    collapsed.contains(&entity) && needle.is_empty(),
+                                ),
+                                dimmed: entity_is_bare(data),
+                            },
                         );
                         row.select.dnd_set_drag_payload(HierarchyDrag(entity));
                         if row.select.dragged() {
@@ -164,6 +190,17 @@ impl EditorApp {
                             clicked = Some(Some(entity));
                         }
                     }
+                }
+                if listed == 0 {
+                    ui.add_space(6.0);
+                    panel::note(
+                        ui,
+                        if needle.is_empty() {
+                            "This scene has no entities yet. Use + to create one."
+                        } else {
+                            "No entity here matches that filter."
+                        },
+                    );
                 }
                 if let Some(entity) = toggled
                     && let Some(key) =

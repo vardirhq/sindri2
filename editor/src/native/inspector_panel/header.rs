@@ -1,19 +1,17 @@
-//! What every entity has: its name, its parent, and its transform.
+//! What every entity has: its name, where it lives, and its transform.
 
-use eframe::egui::{self, FontId, RichText, Stroke};
-use egui_material_icons::{MaterialIcon, icons::ICON_OPEN_WITH};
+use eframe::egui::{self, Align, FontId, Layout, RichText, Stroke};
+use egui_material_icons::MaterialIcon;
 use glam::{EulerRot, Quat};
 use sindri_core::{EntityId, Transform3D};
 
 use crate::space::EntitySpace;
+use crate::ui::icons;
+use crate::ui::theme::{color, metric, radius, radius_tight, text};
+use crate::ui::widgets::{property, section, vector};
 
 use super::super::hierarchy::rows::ROOT_LABEL;
-use super::super::{
-    ACCENT, ACCENT_SOFT, BORDER, TEXT_FAINT, TEXT_MUTED,
-    theme::{PANEL_RAISED, property_toggle, section_header},
-};
 use super::draft::EntityDraft;
-use super::rows::vector_row;
 
 /// What the parent menu came back with.
 ///
@@ -47,39 +45,61 @@ pub(super) fn inspector_parent(
                 .map(|(_, name)| name.clone())
         })
         .unwrap_or_else(|| ROOT_LABEL.to_owned());
-    ui.horizontal(|ui| {
-        ui.add_space(27.0);
-        ui.label(RichText::new("Parent").size(11.0).color(TEXT_FAINT));
-        egui::ComboBox::from_id_salt(("parent", entity.index()))
-            .selected_text(RichText::new(current).size(11.0).color(TEXT_MUTED))
-            .show_ui(ui, |ui| {
-                ui.selectable_value(&mut chosen, None, ROOT_LABEL);
-                for (candidate, name) in choices {
-                    ui.selectable_value(&mut chosen, Some(*candidate), name);
-                }
-            });
-    });
+    property::Property::new("Parent")
+        .tip("Which entity this one moves with")
+        .show(ui, |ui| {
+            egui::ComboBox::from_id_salt(("parent", entity.index()))
+                .selected_text(
+                    RichText::new(current)
+                        .size(text::LABEL)
+                        .color(color::TEXT_MUTED),
+                )
+                .width(property::picker_width(ui))
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut chosen, None, ROOT_LABEL);
+                    for (candidate, name) in choices {
+                        ui.selectable_value(&mut chosen, Some(*candidate), name);
+                    }
+                });
+        });
     if chosen == parent {
         return ParentChoice::Unchanged;
     }
     chosen.map_or(ParentChoice::Root, ParentChoice::Under)
 }
 
+/// The card at the top of the inspector: what this entity is called, and what
+/// kind of thing it is.
+///
+/// Given a ground of its own so the name reads as the subject of the panel
+/// rather than as the first of thirty rows. The rows below it are properties of
+/// the thing this card names.
 pub(super) fn inspector_identity(
     ui: &mut egui::Ui,
     icon: MaterialIcon,
     space: Option<EntitySpace>,
     draft: &mut EntityDraft,
 ) {
-    ui.add_space(8.0);
-    ui.horizontal(|ui| {
-        ui.label(icon.outlined().rich_text().size(19.0).color(TEXT_MUTED));
-        ui.add_sized(
-            [ui.available_width() - 18.0, 29.0],
-            egui::TextEdit::singleline(&mut draft.name).font(FontId::proportional(13.0)),
-        );
-    });
-    space_badge(ui, space);
+    egui::Frame::new()
+        .fill(color::RAISED)
+        .stroke(Stroke::new(1.0, color::LINE_SOFT))
+        .corner_radius(radius())
+        .inner_margin(egui::Margin::symmetric(8, 7))
+        .outer_margin(egui::Margin::symmetric(metric::GUTTER_EDGE, 6))
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 7.0;
+                ui.label(icon.outlined().rich_text().size(19.0).color(color::FORGE));
+                ui.add_sized(
+                    [ui.available_width(), metric::CONTROL_HEIGHT + 4.0],
+                    egui::TextEdit::singleline(&mut draft.name)
+                        .font(FontId::proportional(text::BODY + 1.0))
+                        .hint_text("Unnamed entity"),
+                );
+            });
+            ui.add_space(5.0);
+            space_badge(ui, space);
+        });
     // "Tag  Untagged" and "Layer  Default" used to sit under the name. Neither
     // is a thing a Sindri entity has, so they were two lines of a different
     // engine's inspector printed over this one's.
@@ -107,32 +127,66 @@ fn space_badge(ui: &mut egui::Ui, space: Option<EntitySpace>) {
         ),
     };
     let known = space.is_some();
-    ui.add_space(4.0);
     ui.horizontal(|ui| {
-        ui.add_space(28.0);
         egui::Frame::new()
-            .fill(if known { ACCENT_SOFT } else { PANEL_RAISED })
-            .stroke(Stroke::new(1.0, if known { ACCENT } else { BORDER }))
-            .corner_radius(3.0)
+            .fill(if known { color::EMBER } else { color::WELL })
+            .stroke(Stroke::new(
+                1.0,
+                if known {
+                    color::FORGE_DIM
+                } else {
+                    color::LINE_SOFT
+                },
+            ))
+            .corner_radius(radius_tight())
             .inner_margin(egui::Margin::symmetric(6, 2))
             .show(ui, |ui| {
-                ui.label(RichText::new(label).size(10.0).color(if known {
-                    TEXT_MUTED
+                ui.label(RichText::new(label).size(text::NOTE).color(if known {
+                    color::FORGE
                 } else {
-                    TEXT_FAINT
+                    color::TEXT_FAINT
                 }));
             })
             .response
             .on_hover_text(tip);
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.label(
+                RichText::new("Entity")
+                    .size(text::NOTE)
+                    .color(color::TEXT_FAINT),
+            );
+        });
     });
 }
 
 pub(super) fn transform_3d_section(ui: &mut egui::Ui, transform: &mut Transform3D) {
-    section_header(ui, ICON_OPEN_WITH, "Transform");
+    let open = section::component(
+        ui,
+        egui::Id::new("inspector-transform"),
+        icons::TRANSFORM,
+        "Transform",
+        |ui| {
+            // The lock is the one thing about a transform that is not a number,
+            // so it is stated in the header rather than buried under nine drags.
+            if transform.z_locked {
+                crate::ui::widgets::toolbar::chip(ui, "Z locked", color::FORGE);
+            }
+        },
+    );
+    if !open {
+        return;
+    }
+    ui.add_space(4.0);
     // The Z drag is taken away rather than left to fail: the command layer
     // would refuse the edit anyway, and a control that cannot do what it looks
     // like it does is the thing this editor is trying not to grow.
-    vector_row(ui, "Position", &mut transform.position, transform.z_locked);
+    vector::row(
+        ui,
+        "Position",
+        &mut transform.position,
+        &[false, false, transform.z_locked],
+        0.05,
+    );
     let rotation = Quat::from_array(transform.rotation);
     let rotation = if rotation.is_finite() && rotation.length_squared() > f32::EPSILON {
         rotation.normalize()
@@ -141,7 +195,7 @@ pub(super) fn transform_3d_section(ui: &mut egui::Ui, transform: &mut Transform3
     };
     let (x, y, z) = rotation.to_euler(EulerRot::XYZ);
     let mut degrees = [x.to_degrees(), y.to_degrees(), z.to_degrees()];
-    if vector_row(ui, "Rotation", &mut degrees, false) {
+    if vector::row(ui, "Rotation", &mut degrees, &[false; 3], 0.25) {
         transform.rotation = Quat::from_euler(
             EulerRot::XYZ,
             degrees[0].to_radians(),
@@ -150,6 +204,7 @@ pub(super) fn transform_3d_section(ui: &mut egui::Ui, transform: &mut Transform3
         )
         .to_array();
     }
-    vector_row(ui, "Scale", &mut transform.scale, false);
-    property_toggle(ui, "Z lock", &mut transform.z_locked, "Locked", "Free");
+    vector::row(ui, "Scale", &mut transform.scale, &[false; 3], 0.01);
+    property::toggle(ui, "Z lock", &mut transform.z_locked, "Locked", "Free");
+    ui.add_space(4.0);
 }

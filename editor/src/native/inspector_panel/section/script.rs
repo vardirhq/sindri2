@@ -1,13 +1,14 @@
 //! `sindri.script`: the exports a script declares, typed.
 
-use eframe::egui::{self, Align, Layout, RichText};
+use eframe::egui::{self, RichText};
 use serde_json::Value;
 use sindri_decay::ScriptValue;
 
+use crate::ui::theme::{color, text};
+use crate::ui::widgets::property;
 use crate::{inspector, scripts::SceneScripts};
 
-use super::super::super::{TEXT_MUTED, theme::property_label};
-use super::super::rows::{text_row, value_row};
+use super::super::rows::{Authored, text_row, value_row};
 
 /// Which script of the chosen source this entity runs.
 ///
@@ -38,21 +39,22 @@ pub(super) fn script_choice_row(ui: &mut egui::Ui, payload: &mut Value, scripts:
         return;
     }
     let mut chosen = current.clone();
-    ui.horizontal(|ui| {
-        ui.add_space(10.0);
-        ui.label(RichText::new("Script").size(11.0).color(TEXT_MUTED));
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.add_space(7.0);
+    property::Property::new("Script")
+        .tip("Which of the source's scripts this entity runs")
+        .show(ui, |ui| {
             egui::ComboBox::from_id_salt("script-container")
-                .selected_text(RichText::new(&chosen).size(11.0).color(TEXT_MUTED))
-                .width(160.0)
+                .selected_text(
+                    RichText::new(&chosen)
+                        .size(text::LABEL)
+                        .color(color::TEXT_MUTED),
+                )
+                .width(property::picker_width(ui))
                 .show_ui(ui, |ui| {
                     for name in &declared {
                         ui.selectable_value(&mut chosen, name.clone(), name);
                     }
                 });
         });
-    });
     if chosen != current {
         payload["script"] = Value::String(chosen);
     }
@@ -74,11 +76,21 @@ pub(super) fn script_exports_section(
     let Some(exports) = scripts.exports(source, script) else {
         // Not the same as having no properties, and saying so matters: a panel
         // that showed nothing would look like a script with nothing to author.
-        property_label(ui, "Properties", "waiting for the script");
+        property::readout(
+            ui,
+            "Properties",
+            "waiting for the script",
+            Some("The source has not compiled yet, so what it exports is not known"),
+        );
         return;
     };
     if exports.is_empty() {
-        property_label(ui, "Properties", "none declared");
+        property::readout(
+            ui,
+            "Properties",
+            "none declared",
+            Some("This script has no @export fields to author"),
+        );
         return;
     }
 
@@ -92,7 +104,10 @@ pub(super) fn script_exports_section(
         let label = inspector::humanize(&export.name);
 
         let before = value.clone();
-        value_row(ui, &export.name, &mut value, 10.0);
+        // Marked when the scene set it: a script export showing its default is
+        // one the author has not touched, and the dot says so without a line of
+        // prose under every row.
+        value_row(ui, &export.name, &mut value, 0.0, Authored::of(authored));
         if value != before {
             // Setting a property is what puts it in the scene: a field left
             // alone stays absent, so a scene records the author's choices
@@ -105,21 +120,11 @@ pub(super) fn script_exports_section(
             if let Some(properties) = properties.as_object_mut() {
                 properties.insert(export.name.clone(), value);
             }
-        } else if !authored {
-            ui.horizontal(|ui| {
-                ui.add_space(22.0);
-                ui.label(
-                    RichText::new(format!(
-                        "default{}",
-                        export
-                            .type_name
-                            .as_ref()
-                            .map_or_else(String::new, |name| format!(" · {name}"))
-                    ))
-                    .size(9.0)
-                    .color(TEXT_MUTED),
-                );
-            });
+        } else if let Some(type_name) = export.type_name.as_ref() {
+            // The declared type, said once under the row rather than repeated
+            // in every label: it is what the script guarantees about the field,
+            // which is the whole reason the language is typed.
+            crate::ui::widgets::section::caption(ui, &format!("default · {type_name}"));
         }
         let _ = label;
     }

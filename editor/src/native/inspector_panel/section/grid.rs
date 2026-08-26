@@ -2,17 +2,18 @@
 
 use std::collections::BTreeSet;
 
-use eframe::egui::{self, Align, Layout, RichText};
-use egui_material_icons::icons::ICON_GRID_4X4;
+use eframe::egui;
 use serde_json::Value;
 use sindri_core::World;
 
 use crate::tilemap::{self};
-
-use super::super::super::{
-    PROBLEM, TEXT_MUTED,
-    theme::{property_label, section_header},
+use crate::ui::icons;
+use crate::ui::theme::metric;
+use crate::ui::widgets::{
+    button::{self, Intent},
+    panel, property, section,
 };
+
 use super::super::rows::numbers_row;
 
 pub(crate) fn grid_choices(world: &World) -> Vec<(String, String)> {
@@ -42,7 +43,7 @@ pub(super) fn grid_coord_row(ui: &mut egui::Ui, label: &str, value: &mut Value) 
         items[1].as_i64().unwrap_or_default() as f64,
     ];
     let labels = ["X".to_owned(), "Y".to_owned()];
-    if !numbers_row(ui, label, &labels, &mut numbers, 18.0) {
+    if !numbers_row(ui, label, &labels, &mut numbers, 10.0) {
         return false;
     }
     *value = serde_json::json!([numbers[0].round() as i64, numbers[1].round() as i64]);
@@ -54,23 +55,17 @@ pub(super) fn grid_navigation_section(
     payload: &mut Value,
     grid_size: Option<(u32, u32)>,
 ) {
-    section_header(ui, ICON_GRID_4X4, "Walls");
+    section::group(ui, icons::GRID, "Walls");
     let Some(walls) = payload.get_mut("walls").and_then(Value::as_array_mut) else {
-        property_label(ui, "Walls", "stored value is not a wall list");
+        property::readout(ui, "Walls", "stored value is not a wall list", None);
         return;
     };
     let mut remove = None;
     for (index, wall) in walls.iter_mut().enumerate() {
-        ui.horizontal(|ui| {
-            ui.add_space(10.0);
-            ui.label(
-                RichText::new(format!("Wall {}", index + 1))
-                    .size(10.0)
-                    .color(TEXT_MUTED),
-            );
-            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                ui.add_space(7.0);
-                if ui.small_button("Remove").clicked() {
+        property::Property::new(&format!("Wall {}", index + 1)).show(ui, |ui| {
+            property::trailing(ui, |ui| {
+                if button::row_icon(ui, icons::REMOVE, Intent::Danger, "Remove this wall").clicked()
+                {
                     remove = Some(index);
                 }
             });
@@ -105,14 +100,10 @@ pub(super) fn grid_navigation_section(
             adjacent && inside
         });
         if !valid {
-            ui.horizontal_wrapped(|ui| {
-                ui.add_space(18.0);
-                ui.label(
-                    RichText::new("Wall endpoints must be adjacent cells inside the tilemap.")
-                        .size(9.0)
-                        .color(PROBLEM),
-                );
-            });
+            panel::problem(
+                ui,
+                "Wall endpoints must be adjacent cells inside the tilemap.",
+            );
         }
     }
     if let Some(index) = remove {
@@ -120,9 +111,17 @@ pub(super) fn grid_navigation_section(
     }
     let can_add = grid_size.is_some_and(|(columns, rows)| columns > 1 || rows > 1);
     ui.horizontal(|ui| {
-        ui.add_space(10.0);
+        ui.add_space(metric::GUTTER);
         if ui
-            .add_enabled(can_add, egui::Button::new("Add wall"))
+            .add_enabled_ui(can_add, |ui| {
+                button::labelled(
+                    ui,
+                    "Add wall",
+                    Intent::Normal,
+                    "Block movement between two cells",
+                )
+            })
+            .inner
             .clicked()
         {
             let second = if grid_size.is_some_and(|(columns, _)| columns > 1) {
@@ -140,65 +139,49 @@ pub(super) fn grid_occupant_section(
     payload: &mut Value,
     grids: &[(String, String)],
 ) {
-    section_header(ui, ICON_GRID_4X4, "Occupancy");
+    section::group(ui, icons::GRID, "Occupancy");
     let current = payload
         .get("grid")
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_owned();
     let mut chosen = current.clone();
-    ui.horizontal(|ui| {
-        ui.add_space(10.0);
-        ui.label(RichText::new("Grid").size(11.0).color(TEXT_MUTED));
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.add_space(7.0);
-            egui::ComboBox::from_id_salt("grid-occupant-grid")
-                .selected_text(
-                    grids
-                        .iter()
-                        .find(|(_, id)| *id == chosen)
-                        .map_or(chosen.as_str(), |(label, _)| label.as_str()),
-                )
-                .width(170.0)
-                .show_ui(ui, |ui| {
-                    for (label, id) in grids {
-                        ui.selectable_value(&mut chosen, id.clone(), label);
-                    }
-                });
-        });
+    property::Property::new("Grid").show(ui, |ui| {
+        egui::ComboBox::from_id_salt("grid-occupant-grid")
+            .selected_text(
+                grids
+                    .iter()
+                    .find(|(_, id)| *id == chosen)
+                    .map_or(chosen.as_str(), |(label, _)| label.as_str()),
+            )
+            .width(property::picker_width(ui))
+            .show_ui(ui, |ui| {
+                for (label, id) in grids {
+                    ui.selectable_value(&mut chosen, id.clone(), label);
+                }
+            });
     });
     if chosen != current && !chosen.is_empty() {
         payload["grid"] = Value::String(chosen);
     }
     if grids.is_empty() {
-        ui.horizontal_wrapped(|ui| {
-            ui.add_space(10.0);
-            ui.label(
-                RichText::new("Add a tilemap before authoring an occupant.")
-                    .size(9.0)
-                    .color(PROBLEM),
-            );
-        });
+        panel::problem(ui, "Add a tilemap before authoring an occupant.");
     }
 
     let Some(footprint) = payload.get_mut("footprint").and_then(Value::as_array_mut) else {
-        property_label(ui, "Footprint", "stored value is not a cell list");
+        property::readout(ui, "Footprint", "stored value is not a cell list", None);
         return;
     };
     let may_remove = footprint.len() > 1;
     let mut remove = None;
     for (index, cell) in footprint.iter_mut().enumerate() {
-        ui.horizontal(|ui| {
-            ui.add_space(10.0);
-            ui.label(
-                RichText::new(format!("Cell {}", index + 1))
-                    .size(10.0)
-                    .color(TEXT_MUTED),
-            );
-            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                ui.add_space(7.0);
+        property::Property::new(&format!("Cell {}", index + 1)).show(ui, |ui| {
+            property::trailing(ui, |ui| {
                 if ui
-                    .add_enabled(may_remove, egui::Button::new("Remove"))
+                    .add_enabled_ui(may_remove, |ui| {
+                        button::row_icon(ui, icons::REMOVE, Intent::Danger, "Remove this cell")
+                    })
+                    .inner
                     .clicked()
                 {
                     remove = Some(index);
@@ -211,8 +194,15 @@ pub(super) fn grid_occupant_section(
         footprint.remove(index);
     }
     ui.horizontal(|ui| {
-        ui.add_space(10.0);
-        if ui.button("Add cell").clicked() {
+        ui.add_space(metric::GUTTER);
+        if button::labelled(
+            ui,
+            "Add cell",
+            Intent::Normal,
+            "Give this occupant another cell of footprint",
+        )
+        .clicked()
+        {
             let next_x = footprint
                 .iter()
                 .filter_map(Value::as_array)
@@ -232,13 +222,6 @@ pub(super) fn grid_occupant_section(
         !seen.insert(key)
     });
     if duplicate {
-        ui.horizontal_wrapped(|ui| {
-            ui.add_space(10.0);
-            ui.label(
-                RichText::new("Footprint cells must be unique offsets.")
-                    .size(9.0)
-                    .color(PROBLEM),
-            );
-        });
+        panel::problem(ui, "Footprint cells must be unique offsets.");
     }
 }

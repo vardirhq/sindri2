@@ -7,33 +7,25 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use eframe::egui::{self, Align, Layout, RichText, Stroke};
-use egui_material_icons::{
-    MaterialIcon,
-    icons::{
-        ICON_CODE, ICON_DEPLOYED_CODE, ICON_DESCRIPTION, ICON_FOLDER, ICON_GRID_VIEW, ICON_IMAGE,
-        ICON_PLAY_ARROW, ICON_REFRESH, ICON_VIEW_IN_AR, ICON_VIEW_LIST,
-    },
-};
+use eframe::egui::{self, Align, Layout, RichText};
+use egui_material_icons::MaterialIcon;
 
-use self::row::{asset_tile, folder_row, sliceable_row};
+use self::row::{folder_row, sliceable_row};
 use crate::{
     preferences::{AssetView, BottomTab, Layout as WorkspaceLayout},
     project::{AssetKind, ProjectTree},
+    ui::icons,
+    ui::theme::{color, metric, text},
+    ui::widgets::{
+        button, panel,
+        tabs::{self, Weight},
+    },
 };
 
 use super::EditorApp;
-use super::chrome::bottom_tab;
+use super::console_view::console_view;
 use super::unsaved::Discarding;
-use super::{
-    console_view::console_view,
-    theme::{BORDER, PANEL_BG, TEXT, TEXT_FAINT, icon_button},
-};
 
-/// What the project browser shows, until it reads a real asset directory.
-///
-/// Each entry carries its kind as well as its name, because a list has room to
-/// say what a thing is and a grid of generic icons does not.
 /// What a frame of the project browser asked for.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub(super) enum BrowserAction {
@@ -50,16 +42,16 @@ pub(super) enum BrowserAction {
 /// The icon a kind of file is drawn with.
 pub(super) const fn asset_icon(kind: AssetKind) -> MaterialIcon {
     match kind {
-        AssetKind::Folder => ICON_FOLDER,
-        AssetKind::Scene => ICON_DESCRIPTION,
-        AssetKind::Texture | AssetKind::Font => ICON_IMAGE,
+        AssetKind::Folder => icons::FOLDER,
+        AssetKind::Scene => icons::SCENE,
+        AssetKind::Texture | AssetKind::Font => icons::SPRITE,
         // A sprite and the sheet that cuts it are both about a grid over an
         // image, and neither is the image.
-        AssetKind::Sprite | AssetKind::Sheet => ICON_GRID_VIEW,
-        AssetKind::Mesh => ICON_VIEW_IN_AR,
-        AssetKind::Script => ICON_CODE,
-        AssetKind::Audio => ICON_PLAY_ARROW,
-        AssetKind::Other => ICON_DEPLOYED_CODE,
+        AssetKind::Sprite | AssetKind::Sheet => icons::TILEMAP,
+        AssetKind::Mesh => icons::MESH,
+        AssetKind::Script => icons::SCRIPT,
+        AssetKind::Audio => icons::AUDIO,
+        AssetKind::Other => icons::FILE,
     }
 }
 
@@ -79,22 +71,118 @@ fn project_browser(
     open: Option<&Path>,
 ) -> BrowserAction {
     if !folders {
-        return asset_column(ui, search, view, expanded, project, open);
+        return asset_column(ui, search, view, expanded, false, project, open);
     }
     let mut action = BrowserAction::None;
     ui.horizontal(|ui| {
         ui.vertical(|ui| {
-            ui.set_width(174.0);
+            ui.set_width(176.0);
+            ui.add_space(4.0);
             folder_row(ui, &project.label(), true, 0);
             for folder in project.folders() {
                 folder_row(ui, &folder.name, false, folder.depth + 1);
             }
         });
-        ui.separator();
-        ui.vertical(|ui| action = asset_column(ui, search, view, expanded, project, open));
+        // A hairline rather than egui's separator: the dock already has enough
+        // horizontal rules without one of them being three shades lighter.
+        let (rule, _) =
+            ui.allocate_exact_size(egui::vec2(1.0, ui.available_height()), egui::Sense::hover());
+        ui.painter().vline(
+            rule.center().x,
+            rule.y_range(),
+            crate::ui::theme::hairline(),
+        );
+        ui.vertical(|ui| {
+            action = asset_column(ui, search, view, expanded, true, project, open);
+        });
     });
     action
 }
+
+/// The browser's own controls: how it presents, and what it is filtered to.
+///
+/// `label` names the directory being listed, and is `None` when the folder tree
+/// beside it already says so — the dock showed "assets" twice, once in the tree
+/// and once over the list of the same directory.
+///
+/// Two rows when there is a label, one when there is not. As a bottom dock
+/// there is width for everything side by side; as a tall column there is not,
+/// and a right-aligned row that wants more width than it has grows leftwards,
+/// which put the asset rows underneath it half outside the panel.
+fn browser_tools(
+    ui: &mut egui::Ui,
+    search: &mut String,
+    view: &mut AssetView,
+    label: Option<&str>,
+) -> BrowserAction {
+    let mut action = BrowserAction::None;
+    let stacked = label.is_some();
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 5.0;
+        ui.add_space(metric::GUTTER);
+        if let Some(label) = label {
+            ui.label(
+                icons::FOLDER
+                    .outlined()
+                    .rich_text()
+                    .size(14.0)
+                    .color(color::FORGE_DIM),
+            );
+            ui.add(
+                egui::Label::new(
+                    RichText::new(label)
+                        .size(text::LABEL)
+                        .color(color::TEXT_MUTED),
+                )
+                .selectable(false)
+                .truncate(),
+            );
+        } else {
+            // Room measured from the controls that follow rather than taken
+            // from whatever is left, so the search never asks the row for more
+            // width than the row has.
+            let room = (ui.available_width() - CONTROLS_WIDTH - metric::GUTTER).max(80.0);
+            ui.allocate_ui(egui::vec2(room, metric::CONTROL_HEIGHT + 4.0), |ui| {
+                panel::search(ui, search, "Search assets");
+            });
+        }
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            ui.add_space(metric::GUTTER);
+            // The directory is read when a scene is opened, so a file added
+            // outside the editor needs asking for. This slot used to hold a
+            // filter icon that did nothing.
+            if button::icon(ui, icons::REFRESH, false, "Re-read the project directory").clicked() {
+                action = BrowserAction::Refresh;
+            }
+            let mut presentation = *view;
+            if button::Segmented::new(&mut presentation)
+                .option(AssetView::List, "List", "One row per file, with its kind")
+                .option(AssetView::Grid, "Tiles", "A plate per file, for looking")
+                .show(ui)
+            {
+                *view = presentation;
+            }
+        });
+    });
+    if stacked {
+        ui.add_space(4.0);
+        ui.horizontal(|ui| {
+            ui.add_space(metric::GUTTER);
+            let room = (ui.available_width() - metric::GUTTER).max(60.0);
+            ui.allocate_ui(egui::vec2(room, metric::CONTROL_HEIGHT + 4.0), |ui| {
+                panel::search(ui, search, "Search assets");
+            });
+        });
+    }
+    action
+}
+
+/// How much room the view switch and the refresh button take together.
+///
+/// A measured constant rather than a guess: the search box beside them is
+/// allocated the rest, and getting it wrong is how a toolbar overflows its
+/// panel.
+const CONTROLS_WIDTH: f32 = 152.0;
 
 /// The asset side of the browser: what it is showing, and how.
 fn asset_column(
@@ -102,54 +190,37 @@ fn asset_column(
     search: &mut String,
     view: &mut AssetView,
     expanded: &mut BTreeSet<PathBuf>,
+    folders: bool,
     project: &ProjectTree,
     open: Option<&Path>,
 ) -> BrowserAction {
-    let mut action = BrowserAction::None;
-    ui.horizontal(|ui| {
-        ui.label(RichText::new(project.label()).size(12.0).color(TEXT));
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            if icon_button(ui, ICON_VIEW_LIST, *view == AssetView::List, "List view").clicked() {
-                *view = AssetView::List;
-            }
-            if icon_button(ui, ICON_GRID_VIEW, *view == AssetView::Grid, "Grid view").clicked() {
-                *view = AssetView::Grid;
-            }
-            // The directory is read when a scene is opened, so a file added
-            // outside the editor needs asking for. This slot used to hold a
-            // filter icon that did nothing.
-            if icon_button(ui, ICON_REFRESH, false, "Re-read the project directory").clicked() {
-                action = BrowserAction::Refresh;
-            }
-            // Whatever is left after the buttons, rather than a fixed width
-            // that overflowed the moment the browser became a column.
-            let room = (ui.available_width() - 6.0).clamp(60.0, 210.0);
-            ui.add_sized(
-                [room, 27.0],
-                egui::TextEdit::singleline(search).hint_text("Search"),
-            );
-        });
-    });
-    ui.add_space(8.0);
+    ui.add_space(4.0);
+    // The folder tree already names the directory; without it the list has to.
+    let label = (!folders).then(|| project.label());
+    let mut action = browser_tools(ui, search, view, label.as_deref());
+    ui.add_space(5.0);
     if let Some(error) = project.error() {
-        ui.horizontal(|ui| {
-            ui.add_space(8.0);
-            ui.label(RichText::new(error).size(11.0).color(TEXT_FAINT));
-        });
+        panel::problem(ui, error);
         return action;
     }
     let searching = !search.trim().is_empty();
     let entries = project.matching(search);
     if entries.is_empty() {
-        ui.horizontal(|ui| {
-            ui.add_space(8.0);
-            let message = if searching {
-                "Nothing matches"
-            } else {
-                "This directory is empty"
-            };
-            ui.label(RichText::new(message).size(11.0).color(TEXT_FAINT));
-        });
+        if searching {
+            panel::empty_state(
+                ui,
+                icons::SEARCH,
+                "Nothing matches",
+                "No file beside this scene has that in its name.",
+            );
+        } else {
+            panel::empty_state(
+                ui,
+                icons::PROJECT,
+                "This directory is empty",
+                "Assets placed beside the scene file show up here.",
+            );
+        }
         return action;
     }
     // A project has more assets than a dock has room for, in either
@@ -160,9 +231,23 @@ fn asset_column(
         .show(ui, |ui| {
             match view {
                 AssetView::Grid => {
+                    ui.spacing_mut().item_spacing = egui::vec2(6.0, 6.0);
+                    ui.add_space(2.0);
                     ui.horizontal_wrapped(|ui| {
                         for entry in &entries {
-                            if asset_tile(ui, entry, open).double_clicked() {
+                            let tile = crate::ui::widgets::asset::tile(
+                                ui,
+                                asset_icon(entry.kind),
+                                &entry.name,
+                                open.is_some_and(|path| path == entry.path),
+                                None,
+                            );
+                            let tile = if entry.kind == AssetKind::Scene {
+                                tile.on_hover_text("Double-click to open")
+                            } else {
+                                tile.on_hover_text(entry.kind.label())
+                            };
+                            if tile.double_clicked() {
                                 action = BrowserAction::Open(entry.path.clone());
                             }
                         }
@@ -172,7 +257,7 @@ fn asset_column(
                     // Rows are denser than egui's default spacing, so the dock
                     // shows a useful number of them without taking height from
                     // the viewport it sits under.
-                    ui.spacing_mut().item_spacing.y = 1.0;
+                    ui.spacing_mut().item_spacing.y = 0.0;
                     for entry in &entries {
                         // A search shows a flat list, so an indentation would
                         // point at a parent the search has removed.
@@ -192,14 +277,7 @@ fn asset_column(
                 }
             }
             if project.truncated() {
-                ui.horizontal(|ui| {
-                    ui.add_space(8.0);
-                    ui.label(
-                        RichText::new("More files than the browser reads")
-                            .size(10.0)
-                            .color(TEXT_FAINT),
-                    );
-                });
+                panel::note(ui, "More files than the browser reads");
             }
         });
     action
@@ -210,7 +288,7 @@ impl EditorApp {
         let context = ui.ctx().clone();
         let mut action = BrowserAction::None;
         let mut clear_console = false;
-        let (panel, default, min, max) = match self.preferences.layout {
+        let (panel_side, default, min, max) = match self.preferences.layout {
             // A tall column, which is what makes the list view worth having.
             WorkspaceLayout::TwoByThree => {
                 (egui::Panel::right("project-column"), 280.0, 200.0, 420.0)
@@ -219,32 +297,47 @@ impl EditorApp {
         };
         // The folder tree only fits when the browser is a wide dock.
         let folders = self.preferences.layout == WorkspaceLayout::Wide;
-        panel
+        panel_side
             .default_size(default)
             .min_size(min)
             .max_size(max)
             .resizable(true)
-            .frame(
-                egui::Frame::new()
-                    .fill(PANEL_BG)
-                    .stroke(Stroke::new(1.0, BORDER)),
-            )
+            .frame(panel::frame())
             .show(ui, |ui| {
-                ui.horizontal(|ui| {
-                    bottom_tab(
-                        ui,
-                        &mut self.preferences.bottom_tab,
-                        BottomTab::Project,
-                        "Project",
-                    );
-                    bottom_tab(
-                        ui,
-                        &mut self.preferences.bottom_tab,
-                        BottomTab::Console,
-                        "Console",
-                    );
+                let counts = self.console.counts();
+                let mut chosen = self.preferences.bottom_tab;
+                tabs::strip(ui, |ui| {
+                    for (tab, icon, label) in [
+                        (BottomTab::Project, icons::PROJECT, "Project"),
+                        (BottomTab::Console, icons::CONSOLE, "Console"),
+                    ] {
+                        if tabs::tab(
+                            ui,
+                            Weight::Secondary,
+                            self.preferences.bottom_tab == tab,
+                            Some(icon),
+                            label,
+                        )
+                        .clicked()
+                        {
+                            chosen = tab;
+                        }
+                    }
+                    // An error nobody is looking at is the reason the console
+                    // exists, so the tab strip says there is one whichever tab
+                    // is showing.
+                    if counts.errors > 0 {
+                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                            ui.add_space(metric::GUTTER);
+                            crate::ui::widgets::toolbar::chip(
+                                ui,
+                                &counts.summary(),
+                                color::DANGER_TEXT,
+                            );
+                        });
+                    }
                 });
-                ui.separator();
+                self.preferences.bottom_tab = chosen;
                 match self.preferences.bottom_tab {
                     BottomTab::Project => {
                         action = project_browser(

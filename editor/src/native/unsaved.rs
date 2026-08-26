@@ -8,8 +8,11 @@ use std::path::PathBuf;
 
 use eframe::egui::{self, Align, Layout, RichText};
 
+use crate::ui::icons;
+use crate::ui::theme::{color, text};
+use crate::ui::widgets::button::{self, Intent};
+
 use super::EditorApp;
-use super::theme::{ACCENT_BRIGHT, TEXT, TEXT_MUTED};
 
 /// Something the user asked for that would throw unsaved work away.
 ///
@@ -121,33 +124,56 @@ impl EditorApp {
         let saveable = self.file.path().is_some();
         let mut answered = None;
         egui::Modal::new(egui::Id::new("sindri-discard-confirm")).show(context, |ui| {
-            ui.set_width(360.0);
-            ui.label(
-                RichText::new("Unsaved changes")
-                    .strong()
-                    .size(13.0)
-                    .color(TEXT),
-            );
-            ui.add_space(6.0);
-            ui.label(
-                RichText::new(action.question())
-                    .size(12.0)
-                    .color(TEXT_MUTED),
+            ui.set_width(372.0);
+            ui.horizontal(|ui| {
+                ui.label(
+                    icons::REMOVE
+                        .outlined()
+                        .rich_text()
+                        .size(17.0)
+                        .color(color::DANGER),
+                );
+                ui.label(
+                    RichText::new("Unsaved changes")
+                        .strong()
+                        .size(text::TITLE)
+                        .color(color::TEXT),
+                );
+            });
+            ui.add_space(7.0);
+            ui.add(
+                egui::Label::new(
+                    RichText::new(action.question())
+                        .size(text::BODY)
+                        .color(color::TEXT_MUTED),
+                )
+                .wrap(),
             );
             ui.add_space(14.0);
             ui.horizontal(|ui| {
-                if ui.button("Cancel").clicked() {
+                if button::labelled(ui, "Cancel", Intent::Quiet, "Leave everything as it is")
+                    .clicked()
+                {
                     answered = Some(Answer::Cancel);
                 }
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    if ui
-                        .button(RichText::new(action.verb()).color(ACCENT_BRIGHT))
+                    // The destructive answer is the one drawn as destructive,
+                    // and saving first is the one drawn as the way out.
+                    if button::labelled(ui, action.verb(), Intent::Danger, "Lose the changes")
                         .clicked()
                     {
                         answered = Some(Answer::Discard);
                     }
                     if ui
-                        .add_enabled(saveable, egui::Button::new("Save first"))
+                        .add_enabled_ui(saveable, |ui| {
+                            button::labelled(
+                                ui,
+                                "Save first",
+                                Intent::Primary,
+                                "Write the scene to disk, then carry on",
+                            )
+                        })
+                        .inner
                         .clicked()
                     {
                         answered = Some(Answer::Save);

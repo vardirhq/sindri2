@@ -4,22 +4,23 @@ use eframe::{
     egui::{self, Align2, Color32, FontId, Pos2, Rect, Sense, Shape, Stroke},
     wgpu,
 };
+use sindri_core::EngineState;
 use sindri_render::{
     FrameRenderers, FrameTarget, SpriteBatchRenderer, TextRenderer, TexturedCubeRenderer, Viewport,
     ViewportTarget, encode_prepared_frame,
 };
 use sindri_scene::CameraView;
 
+use super::camera::{EditorCamera, camera_for};
 use super::frame::physical_viewport_dimension;
 use super::hierarchy::row::entity_name;
-use super::overlay::{paint_runtime_overlay, paint_transform_gizmo, paint_viewport_border};
+use super::overlay::{
+    ViewportStatus, paint_runtime_overlay, paint_transform_gizmo, paint_viewport_border,
+};
 use super::pointer::TilemapHover;
 use super::scene_io::SceneSource;
 use super::{EditorApp, INITIAL_VIEWPORT_HEIGHT, INITIAL_VIEWPORT_WIDTH, WorkspaceTab};
-use super::{
-    camera::{EditorCamera, camera_for},
-    theme::{ACCENT_BRIGHT, PROBLEM, TEXT},
-};
+use crate::ui::theme::{color, text};
 
 /// The GPU pipelines every viewport draws with.
 ///
@@ -151,27 +152,23 @@ impl RuntimeViewport {
 impl EditorApp {
     /// Draws the cell a tilemap stroke would edit without changing the scene.
     fn paint_tilemap_hover(&self, ui: &egui::Ui, hover: &TilemapHover) {
-        let fill = if self.tilemap_tool.erase {
-            Color32::from_rgba_unmultiplied(255, 138, 148, 35)
+        // The brush wears the editor's own two answers: forge for a stroke that
+        // writes, danger for one that erases.
+        let tint = if self.tilemap_tool.erase {
+            color::DANGER
         } else {
-            Color32::from_rgba_unmultiplied(246, 169, 35, 35)
+            color::FORGE
         };
-        let stroke = Stroke::new(
-            2.0,
-            if self.tilemap_tool.erase {
-                PROBLEM
-            } else {
-                ACCENT_BRIGHT
-            },
-        );
+        let fill = tint.gamma_multiply(0.16);
+        let stroke = Stroke::new(2.0, tint);
         ui.painter()
             .add(Shape::convex_polygon(hover.outline.to_vec(), fill, stroke));
         ui.painter().text(
             hover.outline[0],
             Align2::LEFT_BOTTOM,
             format!("{}, {}", hover.column, hover.row),
-            FontId::proportional(10.0),
-            TEXT,
+            FontId::proportional(text::NOTE),
+            color::TEXT,
         );
     }
 
@@ -254,38 +251,62 @@ impl EditorApp {
             Color32::WHITE,
         );
         if editing {
-            if let Some(hover) = &hover {
-                self.paint_tilemap_hover(ui, hover);
-            }
-            if !painting && let Some((_, visual)) = self.gizmo_visual(rect, camera) {
-                paint_transform_gizmo(
-                    ui.painter(),
-                    rect,
-                    &visual,
-                    self.gizmo_drag.map(|drag| drag.axis),
-                );
-            }
-            // The same view the frame under it was drawn through, asked for
-            // rather than re-derived, so the axes cannot drift from the picture.
-            let axes = self
-                .scene
-                .world_camera(&self.world, camera)
-                .ok()
-                .flatten()
-                .map(|camera| camera.view);
-            paint_runtime_overlay(
-                ui.painter(),
-                rect,
-                &self
-                    .selection
-                    .and_then(|entity| self.world.get(entity))
-                    .map_or_else(|| "No selection".to_owned(), entity_name),
-                self.problem(),
-                axes,
-            );
+            self.paint_scene_chrome(ui, rect, camera, hover.as_ref(), painting);
         } else {
             paint_viewport_border(ui.painter(), rect, self.problem());
         }
         context.request_repaint();
+    }
+
+    /// Everything the Scene view wears over the rendered frame.
+    ///
+    /// Chrome only: nothing here changes the scene or the camera, so it is
+    /// drawn after the image and reads what the frame was drawn with rather
+    /// than working any of it out a second time.
+    fn paint_scene_chrome(
+        &self,
+        ui: &egui::Ui,
+        rect: Rect,
+        camera: CameraView,
+        hover: Option<&TilemapHover>,
+        painting: bool,
+    ) {
+        if let Some(hover) = hover {
+            self.paint_tilemap_hover(ui, hover);
+        }
+        if !painting && let Some((_, visual)) = self.gizmo_visual(rect, camera) {
+            paint_transform_gizmo(
+                ui.painter(),
+                rect,
+                &visual,
+                self.gizmo_drag.map(|drag| drag.axis),
+            );
+        }
+        // The same view the frame under it was drawn through, asked for rather
+        // than re-derived, so the axes cannot drift from the picture.
+        let axes = self
+            .scene
+            .world_camera(&self.world, camera)
+            .ok()
+            .flatten()
+            .map(|camera| camera.view);
+        // What a drag here would do, said where the pointer already is.
+        let selection = self
+            .selection
+            .and_then(|entity| self.world.get(entity))
+            .map_or_else(|| "No selection".to_owned(), entity_name);
+        paint_runtime_overlay(
+            ui.painter(),
+            rect,
+            &ViewportStatus {
+                selection: &selection,
+                mode: self.gizmo_mode.label(),
+                space: self.gizmo_space.label(),
+                snapping: self.gizmo_snapping.enabled,
+                playing: self.lifecycle.state() == EngineState::Running,
+            },
+            self.problem(),
+            axes,
+        );
     }
 }

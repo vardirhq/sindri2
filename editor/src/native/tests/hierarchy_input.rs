@@ -4,9 +4,33 @@ use eframe::egui::{self, Rect, Vec2};
 use egui_material_icons::icons::{ICON_ACCOUNT_TREE, ICON_LABEL};
 use sindri_core::World;
 
+use crate::ui::widgets::tree::{self, Children, RowStyle};
+
 use super::super::editing::find_by_source_id;
-use super::super::hierarchy::row::{HierarchyDrag, hierarchy_drop_target, hierarchy_row};
+use super::super::hierarchy::row::{HierarchyDrag, hierarchy_drop_target};
 use super::support::*;
+
+/// A hierarchy row as the panel draws one, so these tests exercise the widget
+/// the editor actually uses rather than a copy of it.
+fn hierarchy_row(
+    ui: &mut egui::Ui,
+    icon: egui_material_icons::MaterialIcon,
+    name: &str,
+    depth: usize,
+    has_children: bool,
+) -> tree::TreeRow {
+    tree::row(
+        ui,
+        icon,
+        name,
+        RowStyle {
+            selected: false,
+            depth,
+            children: Children::of(usize::from(has_children), false),
+            dimmed: false,
+        },
+    )
+}
 
 /// Presses and releases the pointer at `target`, and reports whether a
 /// hierarchy row drawn at the same place says it was clicked.
@@ -28,15 +52,8 @@ fn hierarchy_row_click_at(offset: Vec2, has_children: bool) -> (bool, bool) {
         };
         context
             .run_ui(input, |ui| {
-                let response = hierarchy_row(
-                    ui,
-                    ICON_ACCOUNT_TREE,
-                    "Checker Cube",
-                    false,
-                    0,
-                    has_children,
-                    true,
-                );
+                let response =
+                    hierarchy_row(ui, ICON_ACCOUNT_TREE, "Checker Cube", 0, has_children);
                 row.set(response.select.rect);
                 clicked.set(response.select.clicked());
                 toggled.set(response.toggle.is_some_and(|response| response.clicked()));
@@ -79,11 +96,11 @@ fn a_hierarchy_drag_releases_onto_another_row() {
                     ..Default::default()
                 },
                 |ui| {
-                    let source = hierarchy_row(ui, ICON_LABEL, "Arm", false, 0, false, false);
+                    let source = hierarchy_row(ui, ICON_LABEL, "Arm", 0, false);
                     source.select.dnd_set_drag_payload(HierarchyDrag(arm));
                     source_rect.set(source.select.rect);
 
-                    let target = hierarchy_row(ui, ICON_LABEL, "Leg", false, 0, false, false);
+                    let target = hierarchy_row(ui, ICON_LABEL, "Leg", 0, false);
                     target_rect.set(target.select.rect);
                     if let Some(entity) = hierarchy_drop_target(ui, &target.drop, &world, Some(leg))
                     {

@@ -2,19 +2,15 @@
 
 use std::path::Path;
 
-use eframe::egui::{
-    self, Align2, Color32, FontId, Pos2, Rect, RichText, Sense, Stroke, StrokeKind, Vec2,
-};
-use egui_material_icons::icons::{ICON_GRID_VIEW, ICON_IMAGE};
+use eframe::egui::{self, Align2, Color32, FontId, Pos2, Rect, Sense, Stroke, StrokeKind, Vec2};
 use serde_json::Value;
 
 use crate::tilemap::{self, PaletteSprite, TilemapTool, resize as resize_tilemap};
+use crate::ui::icons;
+use crate::ui::theme::{color, metric, radius, text};
+use crate::ui::widgets::{panel, property, section, toolbar};
 
 use super::super::super::slicer_view::grid_side;
-use super::super::super::{
-    ACCENT_BRIGHT, ACCENT_SOFT, BORDER, BORDER_SUBTLE, PROBLEM, TEXT, TEXT_MUTED,
-    theme::{FIELD_BG, section_header},
-};
 use super::super::rows::number_row;
 
 /// The part of a tilemap that cannot be represented as independent JSON rows:
@@ -26,27 +22,20 @@ pub(super) fn tilemap_section(
     tool: &mut TilemapTool,
 ) {
     let Ok(mut map) = tilemap::component(payload) else {
-        ui.horizontal_wrapped(|ui| {
-            ui.add_space(10.0);
-            ui.label(
-                RichText::new("This tilemap cannot be read; repair its stored fields first")
-                    .size(10.0)
-                    .color(PROBLEM),
-            );
-        });
+        panel::problem(
+            ui,
+            "This tilemap cannot be read; repair its stored fields first",
+        );
         return;
     };
 
-    section_header(ui, ICON_GRID_VIEW, "Map");
+    section::group(ui, icons::TILEMAP, "Map");
     let mut columns = f64::from(map.columns);
     let mut rows = f64::from(map.rows);
     let mut resized = number_row(ui, "Columns", &mut columns, 10.0, true);
     resized |= number_row(ui, "Rows", &mut rows, 10.0, true);
     if resized && let Err(error) = resize_tilemap(payload, grid_side(columns), grid_side(rows)) {
-        ui.horizontal_wrapped(|ui| {
-            ui.add_space(10.0);
-            ui.label(RichText::new(error).size(10.0).color(PROBLEM));
-        });
+        panel::problem(ui, &error);
     }
     // The resize above changes the payload this frame. Read it again so the
     // palette and the cell count below describe what the command will write.
@@ -54,29 +43,17 @@ pub(super) fn tilemap_section(
         map = resized;
     }
 
-    ui.horizontal(|ui| {
-        ui.add_space(10.0);
-        let label = if tool.enabled {
-            "Painting in Scene view"
+    // Painting takes the primary drag away from selection in the Scene view,
+    // which is a mode the author needs to be able to see they are in.
+    property::toggle(ui, "Brush", &mut tool.enabled, "Painting", "Off");
+    section::caption(
+        ui,
+        if tool.enabled {
+            "Primary drag paints. Middle or Shift-drag pans; secondary drag orbits."
         } else {
-            "Paint in Scene view"
-        };
-        if ui.selectable_label(tool.enabled, label).clicked() {
-            tool.enabled = !tool.enabled;
-        }
-    });
-    ui.horizontal_wrapped(|ui| {
-        ui.add_space(10.0);
-        ui.label(
-            RichText::new(if tool.enabled {
-                "Primary drag paints. Middle or Shift-drag pans; secondary drag orbits."
-            } else {
-                "Enable painting, then choose a sprite or the eraser."
-            })
-            .size(9.0)
-            .color(TEXT_MUTED),
-        );
-    });
+            "Enable painting, then choose a sprite or the eraser."
+        },
+    );
 
     tool.palette.ensure(project_root, &map.texture);
     let texture = tool.palette.texture_id(ui.ctx());
@@ -101,13 +78,10 @@ pub(super) fn tilemap_section(
         tool.sprite = sprites.first().map(|sprite| sprite.name.clone());
     }
 
-    section_header(ui, ICON_IMAGE, "Palette");
+    section::group(ui, icons::SPRITE, "Palette");
     tile_palette(ui, texture, &sprites, tool);
     if let Some(problem) = tool.palette.problem() {
-        ui.horizontal_wrapped(|ui| {
-            ui.add_space(10.0);
-            ui.label(RichText::new(problem).size(9.0).color(PROBLEM));
-        });
+        panel::problem(ui, problem);
     }
 }
 
@@ -118,7 +92,8 @@ pub(super) fn tile_palette(
     tool: &mut TilemapTool,
 ) {
     ui.horizontal_wrapped(|ui| {
-        ui.add_space(8.0);
+        ui.spacing_mut().item_spacing = egui::vec2(5.0, 5.0);
+        ui.add_space(metric::GUTTER);
         if palette_cell(ui, None, None, tool.erase) {
             tool.erase = true;
         }
@@ -131,14 +106,10 @@ pub(super) fn tile_palette(
         }
     });
     if sprites.is_empty() {
-        ui.horizontal_wrapped(|ui| {
-            ui.add_space(10.0);
-            ui.label(
-                RichText::new("Slice and name the map's texture to populate this palette.")
-                    .size(9.0)
-                    .color(TEXT_MUTED),
-            );
-        });
+        panel::note(
+            ui,
+            "Slice and name the map's texture to populate this palette.",
+        );
     }
 }
 
@@ -150,25 +121,31 @@ pub(super) fn palette_cell(
     texture: Option<egui::TextureId>,
     selected: bool,
 ) -> bool {
-    let (rect, response) = ui.allocate_exact_size(Vec2::new(72.0, 72.0), Sense::click());
+    // The eraser is deliberately the same shape as a sprite: it is one more
+    // thing the brush can be holding, not a different kind of control.
+    let (rect, response) = ui.allocate_exact_size(Vec2::new(64.0, 64.0), Sense::click());
     let painter = ui.painter_at(rect);
     let border = if selected {
-        ACCENT_BRIGHT
+        color::FORGE
     } else if response.hovered() {
-        TEXT_MUTED
+        color::LINE
     } else {
-        BORDER
+        color::LINE_SOFT
     };
-    painter.rect_filled(rect, 4.0, if selected { ACCENT_SOFT } else { FIELD_BG });
+    painter.rect_filled(
+        rect,
+        radius(),
+        if selected { color::EMBER } else { color::WELL },
+    );
     painter.rect_stroke(
         rect,
-        4.0,
+        radius(),
         Stroke::new(if selected { 2.0 } else { 1.0 }, border),
         StrokeKind::Inside,
     );
     let preview = Rect::from_min_max(
-        rect.min + Vec2::new(7.0, 6.0),
-        Pos2::new(rect.max.x - 7.0, rect.max.y - 20.0),
+        rect.min + Vec2::new(6.0, 5.0),
+        Pos2::new(rect.max.x - 6.0, rect.max.y - 17.0),
     );
     match (sprite, texture) {
         (Some(sprite), Some(texture)) if sprite.rect.is_some() => {
@@ -183,29 +160,34 @@ pub(super) fn palette_cell(
         (Some(_), _) => {
             painter.rect_stroke(
                 preview,
-                2.0,
-                Stroke::new(1.0, BORDER_SUBTLE),
+                crate::ui::theme::radius_tight(),
+                Stroke::new(1.0, color::LINE_SOFT),
                 StrokeKind::Inside,
             );
         }
         (None, _) => {
             painter.line_segment(
                 [preview.left_top(), preview.right_bottom()],
-                Stroke::new(2.0, PROBLEM),
+                Stroke::new(2.0, color::DANGER),
             );
             painter.line_segment(
                 [preview.right_top(), preview.left_bottom()],
-                Stroke::new(2.0, PROBLEM),
+                Stroke::new(2.0, color::DANGER),
             );
         }
     }
     let label = sprite.map_or("Erase", |sprite| sprite.name.as_str());
     painter.text(
-        Pos2::new(rect.center().x, rect.max.y - 12.0),
+        Pos2::new(rect.center().x, rect.max.y - 10.0),
         Align2::CENTER_CENTER,
         label,
-        FontId::proportional(9.0),
-        if selected { TEXT } else { TEXT_MUTED },
+        FontId::proportional(text::NOTE),
+        if selected {
+            color::FORGE_BRIGHT
+        } else {
+            color::TEXT_MUTED
+        },
     );
+    let _ = toolbar::chip;
     response.on_hover_text(label).clicked()
 }

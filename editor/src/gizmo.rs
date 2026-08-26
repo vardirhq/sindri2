@@ -41,6 +41,19 @@ pub enum GizmoSpace {
     Local,
 }
 
+impl GizmoSpace {
+    /// What this space is called wherever the editor names it.
+    ///
+    /// The toolbar's switch and the viewport's status plate both say it, and
+    /// two spellings of one state is how an interface teaches nobody anything.
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::World => "World",
+            Self::Local => "Local",
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Axis {
     X,

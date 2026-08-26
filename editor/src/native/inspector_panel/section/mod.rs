@@ -13,11 +13,7 @@ pub(super) mod tilemap;
 
 use std::collections::BTreeMap;
 
-use eframe::egui::{self, Align, Layout, RichText};
-use egui_material_icons::icons::{
-    ICON_CAMERA_ALT, ICON_CODE, ICON_DELETE, ICON_DEPLOYED_CODE, ICON_GRID_VIEW, ICON_IMAGE,
-    ICON_PLAY_ARROW, ICON_TITLE, ICON_VIEW_IN_AR, ICON_WEB_ASSET,
-};
+use eframe::egui;
 use serde_json::Value;
 use sindri_core::ComponentSchemaRegistry;
 
@@ -27,11 +23,14 @@ use self::script::{script_choice_row, script_exports_section};
 use self::text::text_section;
 use self::tilemap::tilemap_section;
 use crate::inspector;
+use crate::ui::icons;
+use crate::ui::widgets::{
+    button::{self, Intent},
+    section,
+};
 
 use super::super::hierarchy::row::component_label;
-use super::super::{
-    ACCENT, GRID_NAVIGATION_COMPONENT, GRID_OCCUPANT_COMPONENT, TEXT, UI_TEXT_COMPONENT,
-};
+use super::super::{GRID_NAVIGATION_COMPONENT, GRID_OCCUPANT_COMPONENT, UI_TEXT_COMPONENT};
 use super::field::object_rows;
 use super::{InspectorProject, InspectorTools};
 
@@ -59,43 +58,32 @@ pub(super) fn components_sections(
         .map(|map| (map.columns, map.rows));
     let mut removed = None;
     for (name, payload) in components.iter_mut() {
-        let icon = match name.as_str() {
-            "sindri.camera" => ICON_CAMERA_ALT,
-            "sindri.sprite" => ICON_IMAGE,
-            // The same icons the hierarchy gives these entities, so a row and
-            // its component are recognisably the same thing.
-            "sindri.ui.image" => ICON_WEB_ASSET,
-            "sindri.mesh" => ICON_VIEW_IN_AR,
-            "sindri.script" => ICON_CODE,
-            "sindri.ui.text" => ICON_TITLE,
-            "sindri.animation.sprite" => ICON_PLAY_ARROW,
-            "sindri.tilemap" => ICON_GRID_VIEW,
-            _ => ICON_DEPLOYED_CODE,
-        };
+        let title = component_label(name);
+        // The same icons the hierarchy gives these entities, so a row and its
+        // component are recognisably the same thing.
+        let open = section::component(
+            ui,
+            egui::Id::new(("inspector-component", name.as_str())),
+            icons::for_component(name),
+            &title,
+            |ui| {
+                if inspector::is_removable(name)
+                    && button::row_icon(
+                        ui,
+                        icons::REMOVE,
+                        Intent::Danger,
+                        &format!("Remove {title}"),
+                    )
+                    .clicked()
+                {
+                    removed = Some(name.clone());
+                }
+            },
+        );
+        if !open {
+            continue;
+        }
         ui.add_space(4.0);
-        ui.separator();
-        ui.horizontal(|ui| {
-            ui.add_space(10.0);
-            ui.label(icon.outlined().rich_text().size(16.0).color(ACCENT));
-            ui.label(
-                RichText::new(component_label(name))
-                    .strong()
-                    .size(12.0)
-                    .color(TEXT),
-            );
-            if inspector::is_removable(name) {
-                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    ui.add_space(7.0);
-                    if ui
-                        .small_button(ICON_DELETE.outlined().rich_text().size(13.0))
-                        .on_hover_text(format!("Remove {}", component_label(name)))
-                        .clicked()
-                    {
-                        removed = Some(name.clone());
-                    }
-                });
-            }
-        });
 
         // A script's @export fields come first and are drawn from what the
         // script declared, which is the whole reason the language is typed.
@@ -136,6 +124,7 @@ pub(super) fn components_sections(
             assets,
             name == "sindri.script",
         );
+        ui.add_space(5.0);
     }
     removed
 }

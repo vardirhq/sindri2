@@ -8,6 +8,31 @@ All notable changes to Sindri Next will be documented here.
 
 ### Changed
 
+- **The editor draws itself from one design system instead of eleven opinions.**
+  Every panel used to pick its own greys, gaps, and font sizes by copying the
+  panel beside it, so the same idea was spelled differently in each one and
+  property values were right-aligned — no two rows in a component started at the
+  same place. `editor/src/ui/` now holds the tokens, the icon vocabulary, and
+  the controls built from both, and the panels are rewired onto it: a scene row
+  is a banded row with a selection rule and a guide per level of nesting, a
+  component is a heading that folds and carries its own actions, a transform
+  component is a well with its axis letter on a spine tinted the colour that
+  axis has in the viewport, and a panel with nothing in it says what it is for
+  rather than being blank. Scene and Game read as workspaces rather than as two
+  more tabs, the scene tools are grouped by what they do and scroll rather than
+  clip when the viewport is narrow, and destructive actions — Discard changes,
+  Remove component, Delete entity — are drawn as destructive. Every interaction
+  is the one it was: selection, drag-and-drop reparenting, the fold
+  preferences, the slicer, the tile brush, and the checked-command path behind
+  every inspector edit.
+- **A procedural texture stops being reported as a texture the project lacks.**
+  The inspector's asset picker was built from the scene's directory alone, and
+  `procedural:checkerboard` is deliberately not a file, so the fixture's own
+  cube was marked as naming something that does not exist. The picker offers
+  what the engine can draw, which is the project's images and the ones it
+  generates.
+
+
 - **A scene now has two kinds of entity, and they are spelled apart.** A sprite
   is a thing in the world; a thing on the viewport is `sindri.ui.image`, and
   `sindri.text` becomes `sindri.ui.text`. `sindri.sprite` loses the `space`
