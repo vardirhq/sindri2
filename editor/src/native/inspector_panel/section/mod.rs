@@ -16,7 +16,7 @@ use std::collections::BTreeMap;
 use eframe::egui::{self, Align, Layout, RichText};
 use egui_material_icons::icons::{
     ICON_CAMERA_ALT, ICON_CODE, ICON_DELETE, ICON_DEPLOYED_CODE, ICON_GRID_VIEW, ICON_IMAGE,
-    ICON_LABEL, ICON_PLAY_ARROW, ICON_VIEW_IN_AR,
+    ICON_PLAY_ARROW, ICON_TITLE, ICON_VIEW_IN_AR, ICON_WEB_ASSET,
 };
 use serde_json::Value;
 use sindri_core::ComponentSchemaRegistry;
@@ -61,10 +61,13 @@ pub(super) fn components_sections(
     for (name, payload) in components.iter_mut() {
         let icon = match name.as_str() {
             "sindri.camera" => ICON_CAMERA_ALT,
-            "sindri.sprite" | "sindri.ui.image" => ICON_IMAGE,
+            "sindri.sprite" => ICON_IMAGE,
+            // The same icons the hierarchy gives these entities, so a row and
+            // its component are recognisably the same thing.
+            "sindri.ui.image" => ICON_WEB_ASSET,
             "sindri.mesh" => ICON_VIEW_IN_AR,
             "sindri.script" => ICON_CODE,
-            "sindri.ui.text" => ICON_LABEL,
+            "sindri.ui.text" => ICON_TITLE,
             "sindri.animation.sprite" => ICON_PLAY_ARROW,
             "sindri.tilemap" => ICON_GRID_VIEW,
             _ => ICON_DEPLOYED_CODE,
