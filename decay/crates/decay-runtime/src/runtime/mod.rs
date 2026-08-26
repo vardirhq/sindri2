@@ -23,11 +23,25 @@ use crate::value::{Value, apply_binary, apply_unary};
 /// have to be exact.
 pub const DEFAULT_CALL_DEPTH_LIMIT: usize = 64;
 
+/// How many instructions one call may execute before
+/// [`RuntimeError::OperationBudgetExceeded`].
+///
+/// Chosen the same way as the depth limit: far past what a frame of gameplay
+/// needs, and far short of a wait anyone would sit through. A script doing real
+/// work in an `update` runs hundreds of instructions, not a million; a script
+/// that reaches this has stopped making progress, and the point is that the
+/// editor says so instead of stopping with it.
+pub const DEFAULT_OPERATION_BUDGET: usize = 1_000_000;
+
 pub struct Runtime<'a, H: Host> {
     program: &'a IrProgram,
     host: H,
     call_depth_limit: usize,
     depth: usize,
+    operation_budget: usize,
+    /// Instructions executed since the outermost call began. Reset there rather
+    /// than per frame, so that a script cannot buy itself more by recursing.
+    operations: usize,
 }
 
 pub(super) struct Frame {
@@ -73,6 +87,8 @@ impl<'a, H: Host> Runtime<'a, H> {
             host,
             call_depth_limit: DEFAULT_CALL_DEPTH_LIMIT,
             depth: 0,
+            operation_budget: DEFAULT_OPERATION_BUDGET,
+            operations: 0,
         }
     }
 
@@ -88,6 +104,37 @@ impl<'a, H: Host> Runtime<'a, H> {
         self.call_depth_limit
     }
 
+    /// Sets how many instructions one call may execute.
+    #[must_use]
+    pub const fn with_operation_budget(mut self, budget: usize) -> Self {
+        self.operation_budget = budget;
+        self
+    }
+
+    #[must_use]
+    pub const fn operation_budget(&self) -> usize {
+        self.operation_budget
+    }
+
+    /// Starts a fresh budget, unless this is a call made from inside another.
+    pub(super) const fn begin_budget(&mut self) {
+        if self.depth == 0 {
+            self.operations = 0;
+        }
+    }
+
+    /// Charges one instruction against the budget, before it runs rather than
+    /// after, so the budget bounds what executes rather than what has executed.
+    fn charge(&mut self) -> Result<(), RuntimeError> {
+        self.operations += 1;
+        if self.operations > self.operation_budget {
+            return Err(RuntimeError::OperationBudgetExceeded {
+                limit: self.operation_budget,
+            });
+        }
+        Ok(())
+    }
+
     pub fn into_host(self) -> H {
         self.host
     }
@@ -101,6 +148,8 @@ impl<'a, H: Host> Runtime<'a, H> {
     ) -> Result<Value, RuntimeError> {
         let mut ip = 0usize;
         while ip < instructions.len() {
+            self.charge()?;
+
             match &instructions[ip] {
                 Instruction::Push(constant) => frame.stack.push(Value::from(constant)),
                 Instruction::Load(path) => {

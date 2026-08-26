@@ -40,7 +40,11 @@ impl Analyzer<'_, '_> {
         let right_type = self.expr_type(right);
 
         match op {
-            BinaryOp::Add | BinaryOp::Subtract | BinaryOp::Multiply | BinaryOp::Divide => {
+            BinaryOp::Add
+            | BinaryOp::Subtract
+            | BinaryOp::Multiply
+            | BinaryOp::Divide
+            | BinaryOp::Modulo => {
                 self.require_type(&left_type, &Type::F32, left.span);
                 self.require_type(&right_type, &Type::F32, right.span);
                 Type::F32

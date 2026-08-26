@@ -88,10 +88,40 @@ pub enum Stmt {
     If {
         condition: Expr,
         then_branch: Block,
+        /// A chained `else if` is parsed as a block holding one `If`, so the
+        /// tree has one shape of conditional rather than two.
         else_branch: Option<Block>,
         span: Span,
     },
+    While {
+        condition: Expr,
+        body: Block,
+        span: Span,
+    },
+    Break {
+        span: Span,
+    },
+    Continue {
+        span: Span,
+    },
     Block(Block),
+}
+
+impl Stmt {
+    /// Where the statement is, whichever form it takes.
+    #[must_use]
+    pub const fn span(&self) -> Span {
+        match self {
+            Self::Binding { span, .. }
+            | Self::Expr { span, .. }
+            | Self::Return { span, .. }
+            | Self::If { span, .. }
+            | Self::While { span, .. }
+            | Self::Break { span }
+            | Self::Continue { span } => *span,
+            Self::Block(block) => block.span,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -144,6 +174,7 @@ pub enum BinaryOp {
     Subtract,
     Multiply,
     Divide,
+    Modulo,
     Equal,
     NotEqual,
     Less,
@@ -161,4 +192,5 @@ pub enum AssignOp {
     Subtract,
     Multiply,
     Divide,
+    Modulo,
 }

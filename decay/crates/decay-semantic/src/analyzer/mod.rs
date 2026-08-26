@@ -46,6 +46,10 @@ pub(super) struct Analyzer<'a, 'd> {
     /// Every `script` and `component` in the program, so that `this` can be
     /// told apart from a host type of the same shape.
     containers: HashSet<String>,
+    /// How many `while` bodies enclose the statement being analyzed, so that a
+    /// `break` or `continue` with nothing to break out of is refused here
+    /// rather than lowered into a jump with no target.
+    loop_depth: usize,
 }
 
 impl<'a, 'd> Analyzer<'a, 'd> {
@@ -61,6 +65,7 @@ impl<'a, 'd> Analyzer<'a, 'd> {
             scopes: Vec::new(),
             current_return: Type::Unit,
             containers: HashSet::new(),
+            loop_depth: 0,
         }
     }
 

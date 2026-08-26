@@ -45,14 +45,9 @@ fn rejected(what: &str, source: &str) {
 /// lying.
 #[test]
 fn nothing_the_reference_calls_absent_compiles() {
-    rejected("`while`", "script T { fn f() { while true { } } }");
     rejected("`for`", "script T { fn f() { for i in 0..3 { } } }");
     rejected("`loop`", "script T { fn f() { loop { } } }");
     rejected("`match`", "script T { fn f(a: f32) { match a { } } }");
-    rejected(
-        "a chained `else if`",
-        "script T { fn f(a: bool) { if a { } else if a { } } }",
-    );
     rejected(
         "array literals",
         "script T { fn f() { let a: f32 = [1.0]; } }",
@@ -103,10 +98,11 @@ fn the_surprises_are_still_surprising() {
         "a field reading a field declared above it",
         "script T { let a: f32 = 2.0; let b: f32 = a; }",
     );
-    accepted(
-        "a field reading one declared below it, which fails only at runtime",
+    rejected(
+        "a field reading one declared below it",
         "script T { let a: f32 = b; let b: f32 = 2.0; }",
     );
+    rejected("a field reading itself", "script T { let a: f32 = a; }");
     accepted(
         "any path into a type the host has not described",
         "script T { fn f() { this.transfrom.position.x = 1.0; } }",
@@ -114,6 +110,40 @@ fn the_surprises_are_still_surprising() {
     rejected(
         "reaching for a method on a container, because there are none",
         "script T { fn helper() -> f32 { return 1.0; } fn f() { this.helper(); } }",
+    );
+}
+
+/// Loops, and the statements that only mean anything inside one.
+#[test]
+fn the_control_flow_the_reference_describes_compiles() {
+    accepted(
+        "`while` with a `bool` condition",
+        "script T { fn f(go: bool) { while go { } } }",
+    );
+    rejected(
+        "a `while` condition that is not `bool`, because there is no truthiness",
+        "script T { fn f(n: f32) { while n { } } }",
+    );
+    accepted(
+        "`break` and `continue` inside a loop",
+        "script T { fn f(go: bool) { while go { if go { continue; } break; } } }",
+    );
+    rejected("`break` outside a loop", "script T { fn f() { break; } }");
+    rejected(
+        "`continue` outside a loop",
+        "script T { fn f() { continue; } }",
+    );
+    accepted(
+        "a chained `else if`",
+        "script T { fn f(a: bool) { if a { } else if a { } else { } } }",
+    );
+    accepted(
+        "`%` and `%=` as arithmetic",
+        "script T { fn f() { var a: f32 = 7.0 % 2.0; a %= 3.0; } }",
+    );
+    rejected(
+        "`%` on something that is not a number",
+        "script T { fn f(a: bool) { let b: f32 = a % 2.0; } }",
     );
 }
 

@@ -545,13 +545,18 @@ so all of this is the same work in the same place, and splitting it would pay
 the cost of opening `decay-syntax`, `decay-semantic`, `decay-ir`, and
 `decay-runtime` four times.
 
-- [ ] `while`, with `break` and `continue`
-- [ ] An operation budget in `decay-runtime`, reported as a value like every
-  other runtime error. The call-depth limit is the precedent for its shape, and
-  both `decay/README.md` and `LANGUAGE.md` already state that a loop without a
-  budget cannot ship in an editor — an infinite loop takes the editor and any
-  unsaved work with it, which is what `CallDepthExceeded` exists to prevent for
-  recursion
+- [x] `while`, with `break` and `continue` — lowered through the patched jumps
+  the IR already had, with one addition that is easy to miss: a `break` or
+  `continue` emits the `ScopeExit` instructions it jumps over. A `return` can
+  skip them because the frame goes with it; a `break` leaves the frame running,
+  so a binding declared in the loop would otherwise outlive the turn that
+  declared it
+- [x] An operation budget in `decay-runtime`, reported as a value like every
+  other runtime error, shaped after the call-depth limit: 1,000,000 instructions
+  per outermost call by default, adjustable by the host, and counted so that a
+  script cannot buy itself more by recursing. This is what makes `while` safe to
+  offer — an infinite loop would otherwise take the editor and any unsaved work
+  with it, which is what `CallDepthExceeded` already prevented for recursion
 - [x] **Short-circuit `&&` and `||`.** Both operands used to be evaluated,
   which stopped being a curiosity when entity references landed:
   `target != null && target.transform.position.x > 0.0` read as a null guard,
@@ -561,11 +566,17 @@ the cost of opening `decay-syntax`, `decay-semantic`, `decay-ir`, and
   still pushed as a `bool`, so the operators' type has not changed. Done ahead of
   the rest of this slice because it is branch lowering with no dependency on
   loops
-- [ ] `else if`, as a desugar in the parser rather than a new statement form
-- [ ] `%`
-- [ ] Reject a field initializer that reads a field declared below it
-  (`LANGUAGE.md` Surprising Behaviour #8). It compiles and fails at runtime
-  today; it is a `decay-semantic` fix and this slice is already there
+- [x] `else if`, as a desugar in the parser rather than a new statement form:
+  the tree it builds is `else { if ... }`, so a chain is nested blocks and
+  scoping, lowering, and the analyzer keep working on one kind of conditional
+- [x] `%` and `%=`, as arithmetic. A remainder rather than a floored modulo, so
+  the sign follows the left operand as in the language Decay is shaped after
+- [x] Reject a field initializer that reads a field declared below it, or
+  itself. It used to compile and fail at runtime with `UnknownPath`, which named
+  a path rather than the field that could not have had a value yet. The
+  diagnostic names both fields, and the initializer is still analyzed against
+  the whole member map so that one mistake produces one diagnostic rather than
+  this one plus an unknown name
 - [x] Gather proof, partial and worth being exact about: `wisp.decay` now holds
   its floor and player references across frames instead of looking both up by
   name every step, guarded and refreshed through `World.exists`, and guards its
@@ -578,14 +589,18 @@ the cost of opening `decay-syntax`, `decay-semantic`, `decay-ir`, and
   yet, and inventing one to have a proof would be worse than saying so. The
   runtime tests hold that behaviour instead, by counting a host call that must
   not happen
-- [ ] Gather proof for `%`: `wisp.decay`'s step timer keeps its remainder by
-  subtracting `step_seconds` rather than resetting to zero, which stopped its
-  cadence depending on the frame rate. `%` makes that correct for a frame longer
-  than a step as well, which subtraction alone is not
+- [x] Gather proof for `%`: `wisp.decay`'s step timer is now
+  `elapsed %= step_seconds` rather than a reset to zero, which had rounded every
+  step up to the end of the frame it landed in and tied the wisp's cadence to
+  the frame rate. `%` rather than one subtraction, so a frame longer than a step
+  leaves no backlog
 
-`while` itself has no Gather caller in this slice, and that is deliberate rather
-than overlooked: its first real caller arrives in slice 3, and a loop must not
-be reachable before the budget that bounds it exists.
+`while` itself has no Gather caller, and that is deliberate rather than
+overlooked: nothing in Gather repeats work today, because each pip, orb, and
+wisp is its own entity minding itself — which is the right answer and not a
+workaround. Its first real caller arrives with slice 3, where a script can hold
+a path and walk it. The runtime tests carry the behaviour until then, including
+the budget stopping a loop that never ends.
 
 #### Slice 2 — stop spelling an `f64` as `f32`
 
@@ -594,7 +609,7 @@ next paragraph is not.
 
 - [ ] Decide it: either the only numeric type stops being called `f32`, or Decay
   values are actually stored narrowed and `WorldHost` stops being the one place
-  the two meet
+  the two meet. This is now the next slice — slice 1 is complete
 - [ ] Whichever is chosen, `decay/LANGUAGE.md`, `decay/README.md`,
   `docs/scripting.md`'s known gaps, and `docs/decay-direction.md` agree
   afterwards

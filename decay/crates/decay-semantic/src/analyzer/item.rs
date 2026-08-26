@@ -1,8 +1,8 @@
 //! Containers and functions: their members, fields, and bodies.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use decay_syntax::{FieldDecl, FunctionDecl, Member, Span};
+use decay_syntax::{Expr, ExprKind, FieldDecl, FunctionDecl, Member, Span};
 
 use crate::types::{FunctionType, Type};
 
@@ -53,9 +53,17 @@ impl Analyzer<'_, '_> {
             }
         }
 
+        // Field initializers run in declaration order, so a field may read only
+        // one declared above it. Reading one below used to compile and then
+        // fail at runtime with `UnknownPath` — a mistake a statically typed
+        // language should refuse before Play, and one whose runtime failure
+        // named a path rather than the field that could not have a value yet.
+        let mut declared = HashSet::new();
         for member in &container.members {
             if let Member::Field(field) = member {
+                self.check_field_order(field, &members, &declared);
                 self.check_field_initializer(field, &members);
+                declared.insert(field.name.clone());
             }
         }
 
@@ -75,6 +83,82 @@ impl Analyzer<'_, '_> {
     ) {
         if members.insert(name.to_owned(), symbol).is_some() {
             self.error(span, format!("duplicate member `{name}`"));
+        }
+    }
+
+    /// Reports every field this initializer reads that is not available yet.
+    ///
+    /// The type check that follows still sees the whole member map, so the
+    /// initializer is analyzed as written and reports nothing about an unknown
+    /// name on top of this. That keeps one mistake to one diagnostic, and lets
+    /// this one say what is actually wrong rather than that the name does not
+    /// exist — it does exist, a few lines further down, which is the point.
+    fn check_field_order(
+        &mut self,
+        field: &FieldDecl,
+        members: &HashMap<String, Symbol>,
+        declared: &HashSet<String>,
+    ) {
+        let Some(initializer) = &field.initializer else {
+            return;
+        };
+
+        let mut names = Vec::new();
+        Self::collect_field_reads(initializer, &mut names);
+        for (name, span) in names {
+            if declared.contains(&name) {
+                continue;
+            }
+            if name == field.name {
+                self.error(
+                    span,
+                    format!("field `{name}` cannot read itself in its own initializer"),
+                );
+            } else if members
+                .get(&name)
+                .is_some_and(|symbol| symbol.function.is_none())
+            {
+                self.error(
+                    span,
+                    format!(
+                        "field `{}` reads field `{name}`, which is declared below it;                          initializers run in declaration order",
+                        field.name
+                    ),
+                );
+            }
+        }
+    }
+
+    /// Every name an initializer reads that could be one of the container's own
+    /// fields: a bare identifier, or `this.<name>`, which mean the same field.
+    fn collect_field_reads(expr: &Expr, out: &mut Vec<(String, Span)>) {
+        match &expr.kind {
+            ExprKind::Identifier(name) => out.push((name.clone(), expr.span)),
+            ExprKind::Member { object, field } => {
+                if matches!(&object.kind, ExprKind::Identifier(name) if name == "this") {
+                    out.push((field.clone(), expr.span));
+                } else {
+                    Self::collect_field_reads(object, out);
+                }
+            }
+            ExprKind::Unary { expr: inner, .. } | ExprKind::Group(inner) => {
+                Self::collect_field_reads(inner, out);
+            }
+            ExprKind::Binary { left, right, .. } => {
+                Self::collect_field_reads(left, out);
+                Self::collect_field_reads(right, out);
+            }
+            ExprKind::Assign { target, value, .. } => {
+                Self::collect_field_reads(target, out);
+                Self::collect_field_reads(value, out);
+            }
+            ExprKind::Call { callee, args } => {
+                Self::collect_field_reads(callee, out);
+                for argument in args {
+                    Self::collect_field_reads(argument, out);
+                }
+            }
+            ExprKind::Number(_) | ExprKind::String(_) | ExprKind::Bool(_) | ExprKind::Null => {}
         }
     }
 

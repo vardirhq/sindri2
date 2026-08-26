@@ -647,8 +647,8 @@ the README.
 
 ### Not yet
 
-- **No loops**, and therefore no operation budget — call depth is bounded, which
-  is the only unbounded path today
+- No `for`, no iteration, and nothing to iterate — `while` exists, bounded by an
+  operation budget alongside the call-depth limit
 - No arrays, maps, closures, or first-class functions
 - No standard library; not even `math`
 - **No spawning.** Creating an entity means saying what to create and the engine

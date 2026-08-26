@@ -13,6 +13,7 @@ use super::{Frame, Runtime};
 
 impl<H: Host> Runtime<'_, H> {
     pub fn instantiate(&mut self, container_name: &str) -> Result<ScriptInstance, RuntimeError> {
+        self.begin_budget();
         let container = self.find_container(container_name)?.clone();
         let fields = self.initialize_fields(&container)?;
         Ok(ScriptInstance {
@@ -37,6 +38,7 @@ impl<H: Host> Runtime<'_, H> {
         function_name: &str,
         args: Vec<Value>,
     ) -> Result<Value, RuntimeError> {
+        self.begin_budget();
         let container = self.find_container(&instance.container_name)?.clone();
         self.call_in_container(&container, &mut instance.fields, function_name, args)
     }

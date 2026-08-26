@@ -110,6 +110,7 @@ impl Lowerer {
                         AssignOp::Subtract => BinaryOp::Subtract,
                         AssignOp::Multiply => BinaryOp::Multiply,
                         AssignOp::Divide => BinaryOp::Divide,
+                        AssignOp::Modulo => BinaryOp::Modulo,
                         AssignOp::Assign => unreachable!(),
                     };
                     instructions.push(Instruction::Binary(binary));
