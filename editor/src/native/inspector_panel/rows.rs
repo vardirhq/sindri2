@@ -21,14 +21,11 @@ pub(crate) fn object_rows(
     let Value::Object(fields) = payload else {
         return;
     };
-    // Which fields apply can depend on the others, so the decision is made
-    // against the payload as it was before this frame's edits.
-    let whole = Value::Object(fields.clone());
     for (key, value) in fields.iter_mut() {
         if skip_properties && key == "properties" {
             continue;
         }
-        if !inspector::applies(type_name, key, &whole) {
+        if !inspector::applies(type_name, key) {
             continue;
         }
         value_row(ui, key, value, 10.0);

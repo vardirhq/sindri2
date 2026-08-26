@@ -28,9 +28,9 @@ pub(crate) use call::{
     FUNCTIONS, GAME_CALLS, GRID_CALLS, GameCall, GridCall, HostFunction, INPUT_QUERIES, InputQuery,
     PRINT, TIME_VALUES, TimeValue, WORLD_CALLS, WorldCall,
 };
-pub(crate) use member::{SPRITE_MEMBERS, TRANSFORM_MEMBERS};
+pub(crate) use member::{SPRITE_MEMBERS, TRANSFORM_MEMBERS, UI_IMAGE_MEMBERS};
 pub(crate) use names::{
-    ENTITY, GAME, GRID, INPUT, SPRITE, TILEMAP_COMPONENT, TIME, TRANSFORM, WORLD,
+    ENTITY, GAME, GRID, INPUT, SPRITE, TILEMAP_COMPONENT, TIME, TRANSFORM, UI_IMAGE, WORLD,
 };
 
 use serde_json::Value as Json;
@@ -137,6 +137,7 @@ impl Scalar {
 pub(crate) const THIS: &[(&str, Node)] = &[
     ("transform", Node::Group(TRANSFORM, TRANSFORM_MEMBERS)),
     ("sprite", Node::Group(SPRITE, SPRITE_MEMBERS)),
+    ("ui_image", Node::Group(UI_IMAGE, UI_IMAGE_MEMBERS)),
     ("entity", Node::Handle(Handle::Own)),
 ];
 
@@ -149,6 +150,7 @@ pub(crate) const THIS: &[(&str, Node)] = &[
 pub(crate) const THROUGH_REFERENCE: &[(&str, Node)] = &[
     ("transform", Node::Group(TRANSFORM, TRANSFORM_MEMBERS)),
     ("sprite", Node::Group(SPRITE, SPRITE_MEMBERS)),
+    ("ui_image", Node::Group(UI_IMAGE, UI_IMAGE_MEMBERS)),
 ];
 
 /// Finds the leaf a path names, given the path's parts after `this`.

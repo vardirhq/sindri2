@@ -1,5 +1,5 @@
 {
-  "format_version": 7,
+  "format_version": 8,
   "metadata": {
     "name": "Component payload fixture",
     "editor": {
@@ -16,7 +16,7 @@
         "scale": [0.5, 0.125, 1.0]
       },
       "components": {
-        "sindri.sprite": {
+        "sindri.ui.image": {
           "layer": 100,
           "texture": "procedural:badge",
           "tint": [1.0, 1.0, 1.0, 0.88]

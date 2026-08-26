@@ -72,7 +72,7 @@ pub struct SceneTextures {
     /// scene that has never been saved, or one that failed to open. Procedural
     /// textures still work, because they do not come from anywhere.
     loader: Option<AssetLoader<TextureAssetDecoder>>,
-    /// Project font bytes used by `sindri.text` components.
+    /// Project font bytes used by `sindri.ui.text` components.
     fonts: Option<AssetLoader<FontAssetDecoder>>,
     /// What the files behind the loaded textures looked like when last examined.
     ///

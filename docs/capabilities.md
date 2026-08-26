@@ -382,8 +382,7 @@ frame.
   preserve policy promises. Every edit goes through `SetComponent`, so it
   undoes; every edit is checked against the component's own schema first, so one
   that would stop it decoding is refused and said aloud rather than written into
-  a scene that then will not open. A field that decides nothing is not offered —
-  a world-space sprite has no anchor row
+  a scene that then will not open
 - **Creating empty root or child GameObjects and deleting entities**, from the
   hierarchy. Creation assigns a stable scene ID immediately, and creating a
   child opens its parent. Deleting takes the whole subtree, and **undo brings
@@ -395,10 +394,12 @@ frame.
 - **Adding and removing components.** Add Component offers what the entity lacks
   and the registry can create, which excludes a type with no sensible blank
   rather than offering one the engine would reject. Text and sprite animation
-  are completed at the editor boundary: a project font gives Text a valid
+  are completed at the editor boundary: a project font gives UI Text a valid
   visible default, while a Sprite component whose texture has named sheet
-  sprites gives Sprite Animation its first one-frame clip. Both are undoable
-- **Text authoring.** A `sindri.text` component gets a multiline content editor
+  sprites gives Sprite Animation its first one-frame clip. Both are undoable.
+  The menu offers one space or the other: an entity carrying `sindri.ui.*` is on
+  the viewport and is not also offered a world sprite, and the reverse
+- **Text authoring.** A `sindri.ui.text` component gets a multiline content editor
   and a picker listing project-relative font assets. Existing missing font
   references remain visible and are called out instead of silently replaced
 - **Sprite-sheet and animation authoring.** Selecting a texture opens its image
@@ -502,7 +503,7 @@ settings gear.
 - **No reusable tileset asset model.** A tilemap has a component, renderer, and
   palette of named sprites from a sheet, but tile semantics such as terrain,
   collision, and reusable tile metadata do not exist
-- Text is currently screen-space only; world labels, wrapping/alignment
+- Text is currently a UI component only; world labels, wrapping/alignment
   controls, and rich spans remain
 - **One mesh primitive: `Cube`.** No quad, sphere, or glTF import
 - **No audio.** Now scheduled in `ROADMAP.md`; it previously had no item at all
@@ -527,8 +528,7 @@ settings gear.
 - No first-class project model or multi-scene workspace. The Project dock does
   read and filter the directory containing the open scene
 - No multi-select; viewport selection and transform gizmos currently cover
-  world-space sprites, filled tilemap cells, and meshes rather than screen-space
-  overlays
+  world sprites, filled tilemap cells, and meshes rather than UI elements
 - No prefabs, no play-mode-against-a-copy, no build or export controls
 - No versioned editor protocol; the editor and runtime are one process
 - Cannot open or edit a Decay script's *source* — the project browser lists

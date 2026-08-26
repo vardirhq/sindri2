@@ -26,18 +26,26 @@ fn context(input: &InputState) -> ScriptContext<'_> {
 
 /// An entity carrying every component the surface can reach into, so a path
 /// that needs one is not refused for the entity's sake.
+///
+/// It holds a world sprite *and* a UI image, which no authored entity should:
+/// a thing is either in the world or on the viewport, and the editor offers
+/// only one family per entity. Here they sit together so that both halves of
+/// the surface are exercised by one walk.
 fn world() -> (World, sindri_core::EntityId) {
     let mut world = World::default();
+    let image = || {
+        serde_json::json!({
+            "texture": "procedural:checkerboard",
+            "tint": [1.0, 1.0, 1.0, 1.0],
+            "layer": 0
+        })
+    };
     let entity = world.spawn(EntityData {
         transform_3d: Some(Transform3D::default()),
-        components: [(
-            names::SPRITE_COMPONENT.to_owned(),
-            serde_json::json!({
-                "texture": "procedural:checkerboard",
-                "tint": [1.0, 1.0, 1.0, 1.0],
-                "layer": 0
-            }),
-        )]
+        components: [
+            (names::SPRITE_COMPONENT.to_owned(), image()),
+            (names::UI_IMAGE_COMPONENT.to_owned(), image()),
+        ]
         .into_iter()
         .collect(),
         ..EntityData::default()

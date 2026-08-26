@@ -20,6 +20,7 @@ use step::{
     namespace::namespace_components,
     sprites::{name_the_parts_of_a_sheet, sort_sprites_by_where_they_are},
     transform::collapse_transform_2d,
+    ui::split_the_screen_from_the_world,
 };
 
 use std::collections::BTreeMap;
@@ -104,6 +105,9 @@ impl SceneMigrator {
             .expect("built-in steps are registered once and move forward");
         migrator
             .register(6, 7, remove_legacy_overlay_camera)
+            .expect("built-in steps are registered once and move forward");
+        migrator
+            .register(7, 8, split_the_screen_from_the_world)
             .expect("built-in steps are registered once and move forward");
         migrator
     }

@@ -7,7 +7,7 @@ use sindri_grid::{
 };
 use thiserror::Error;
 
-use super::sprite::{SpriteSpace, opaque_white};
+use super::opaque_white;
 
 /// How a tilemap's grid coordinates become world positions.
 ///
@@ -39,6 +39,12 @@ pub enum TileProjection {
 /// Variation comes from picking different cells of the sheet, not from tinting
 /// each tile: the tint is the map's, because a per-tile tint is a second way to
 /// say what a second tile already says.
+///
+/// A map is in the world. It used to carry the `space` a sprite carried, and
+/// defaulted to the screen, so the ordinary case — a floor — had to say it was
+/// not a HUD. Nothing authored a screen-space map, and a viewport-anchored grid
+/// of tiles is a UI element rather than a tilemap, so the field is gone and
+/// `sindri.ui.*` is where the overlay lives.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct TilemapComponent {
     /// The sliced image every tile is drawn from.
@@ -70,8 +76,6 @@ pub struct TilemapComponent {
     pub tint: [f32; 4],
     #[serde(default)]
     pub layer: i32,
-    #[serde(default)]
-    pub space: SpriteSpace,
 }
 
 const fn unit_tile() -> [f32; 2] {
@@ -248,13 +252,6 @@ impl TilemapComponent {
     pub fn sprite_of(&self, index: u32) -> Option<&str> {
         self.palette.get(index as usize).map(String::as_str)
     }
-
-    /// The anchor this map resolves against, matching a sprite's rule so the
-    /// two spaces cannot mean different things.
-    #[must_use]
-    pub const fn is_screen_space(&self) -> bool {
-        matches!(self.space, SpriteSpace::Screen)
-    }
 }
 
 impl SceneComponent for TilemapComponent {
@@ -281,7 +278,6 @@ mod tests {
             tiles: vec![Some(0); (columns * rows) as usize],
             tint: [1.0, 1.0, 1.0, 1.0],
             layer: 0,
-            space: SpriteSpace::World,
         }
     }
 

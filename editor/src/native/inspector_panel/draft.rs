@@ -15,11 +15,12 @@ use sindri_core::{
 
 use crate::{
     animation::{self},
+    space::{self, declared_space},
     tilemap::{self},
 };
 
 use super::super::hierarchy::row::entity_name;
-use super::super::{GRID_NAVIGATION_COMPONENT, GRID_OCCUPANT_COMPONENT, TEXT_COMPONENT};
+use super::super::{GRID_NAVIGATION_COMPONENT, GRID_OCCUPANT_COMPONENT, UI_TEXT_COMPONENT};
 
 /// The inspector's editable copy of an entity.
 ///
@@ -84,6 +85,12 @@ pub(crate) fn component_commands(
 /// and refused: a button that adds a component the engine will then reject is
 /// worse than no button, which is why the old Add Component was removed rather
 /// than left drawn.
+///
+/// The same rule decides the other filter. An entity is in the world or on the
+/// viewport, and what it already carries says which; offering the other
+/// family's components would let one entity be drawn twice, in two spaces, from
+/// one transform. An entity carrying nothing yet is offered both, and the first
+/// component added is what settles it.
 pub(crate) fn addable_components(
     components: &ComponentSchemaRegistry,
     present: &BTreeMap<String, Value>,
@@ -91,9 +98,11 @@ pub(crate) fn addable_components(
     first_sprite: Option<&str>,
     first_grid: Option<&str>,
 ) -> Vec<ComponentMetadata> {
+    let space = declared_space(present);
     components
         .registered_components()
         .filter(|metadata| !present.contains_key(&metadata.type_name))
+        .filter(|metadata| space::accepts(space, &metadata.type_name))
         .filter(|metadata| {
             metadata.type_name != GRID_NAVIGATION_COMPONENT
                 || present.contains_key(tilemap::TYPE_NAME)
@@ -114,7 +123,7 @@ pub(crate) fn addable_components(
 
 /// What Add Component writes for a fresh component.
 ///
-/// Built-ins normally own a fixed default in the registry. Text and sprite
+/// Built-ins normally own a fixed default in the registry. UI text and sprite
 /// animation cannot: their reproducible asset references must come from the
 /// project, so their defaults are completed at the editor boundary.
 pub(crate) fn component_default(
@@ -132,7 +141,7 @@ pub(crate) fn component_default(
             })
         });
     }
-    if type_name == TEXT_COMPONENT {
+    if type_name == UI_TEXT_COMPONENT {
         return first_font.map(|font| {
             serde_json::json!({
                 "text": "Text",

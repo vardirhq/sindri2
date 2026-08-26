@@ -12,6 +12,7 @@ use glam::Vec2 as GlamVec2;
 use sindri_core::{CommandHistory, EngineLifecycle, EntityId, SceneComponent, World};
 use sindri_scene::{
     GridNavigationComponent, GridOccupantComponent, SceneExtractor, SpriteAnimations,
+    SpriteComponent, UiImageComponent, UiTextComponent,
 };
 
 use crate::{
@@ -63,7 +64,9 @@ use theme::{
 use unsaved::Discarding;
 use viewport::{RuntimeViewport, SceneRenderers};
 
-const TEXT_COMPONENT: &str = "sindri.text";
+const SPRITE_COMPONENT: &str = SpriteComponent::TYPE_NAME;
+const UI_IMAGE_COMPONENT: &str = UiImageComponent::TYPE_NAME;
+const UI_TEXT_COMPONENT: &str = UiTextComponent::TYPE_NAME;
 const GRID_NAVIGATION_COMPONENT: &str = GridNavigationComponent::TYPE_NAME;
 const GRID_OCCUPANT_COMPONENT: &str = GridOccupantComponent::TYPE_NAME;
 const INITIAL_VIEWPORT_WIDTH: u32 = 960;

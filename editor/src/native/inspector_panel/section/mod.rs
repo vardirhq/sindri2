@@ -29,7 +29,7 @@ use crate::inspector;
 
 use super::super::hierarchy::row::component_label;
 use super::super::{
-    ACCENT, GRID_NAVIGATION_COMPONENT, GRID_OCCUPANT_COMPONENT, TEXT, TEXT_COMPONENT,
+    ACCENT, GRID_NAVIGATION_COMPONENT, GRID_OCCUPANT_COMPONENT, TEXT, UI_TEXT_COMPONENT,
 };
 use super::rows::object_rows;
 use super::{InspectorProject, InspectorTools};
@@ -59,10 +59,10 @@ pub(super) fn components_sections(
     for (name, payload) in components.iter_mut() {
         let icon = match name.as_str() {
             "sindri.camera" => ICON_CAMERA_ALT,
-            "sindri.sprite" => ICON_IMAGE,
+            "sindri.sprite" | "sindri.ui.image" => ICON_IMAGE,
             "sindri.mesh" => ICON_VIEW_IN_AR,
             "sindri.script" => ICON_CODE,
-            "sindri.text" => ICON_LABEL,
+            "sindri.ui.text" => ICON_LABEL,
             "sindri.animation.sprite" => ICON_PLAY_ARROW,
             "sindri.tilemap" => ICON_GRID_VIEW,
             _ => ICON_DEPLOYED_CODE,
@@ -99,7 +99,7 @@ pub(super) fn components_sections(
         if name == "sindri.script" {
             script_exports_section(ui, payload, scripts);
         }
-        if name == TEXT_COMPONENT {
+        if name == UI_TEXT_COMPONENT {
             text_section(ui, payload, fonts);
         }
         if name == crate::animation::TYPE_NAME {

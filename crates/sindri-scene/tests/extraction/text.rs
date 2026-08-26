@@ -10,7 +10,7 @@ fn text_extracts_in_pixels_from_a_screen_anchor_without_a_camera() {
     let world = world_from(&document(
         r#"
         { "id": "label", "transform_3d": { "position": [0.25, -0.5, 0.0] },
-          "components": { "sindri.text": {
+          "components": { "sindri.ui.text": {
             "text": "Gather", "font": "fonts/Inter.ttf", "font_size": 18.0,
             "line_height": 24.0, "color": [1.0, 0.5, 0.25, 1.0],
             "anchor": "top_left", "layer": 101 } } }"#,

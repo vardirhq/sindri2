@@ -20,7 +20,7 @@ Supporting camera stacks, render targets, split-screen, or explicit camera prior
 
 ## Screen-space UI and overlays
 
-Screen-space sprites and text do not require a camera entity. Their projection is owned by the viewport and their anchors resolve against the viewport's screen-space extent.
+The `sindri.ui.*` family does not require a camera entity. Their projection is owned by the viewport and their anchors resolve against the viewport's screen-space extent.
 
 This is intentionally similar in principle to a screen-space-overlay UI model: UI can exist without a second scene camera. An orthographic projection matrix may still be used internally to turn screen coordinates into clip space; that projection math is not an authored camera.
 

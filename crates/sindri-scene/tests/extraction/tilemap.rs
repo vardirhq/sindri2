@@ -15,7 +15,7 @@ fn a_tilemap_draws_only_the_cells_that_hold_a_tile() {
         { "id": "floor", "transform_3d": {},
           "components": { "sindri.tilemap": {
             "texture": "tiles", "palette": ["a", "b"],
-            "columns": 3, "rows": 2, "space": "world",
+            "columns": 3, "rows": 2,
             "tiles": [0, 1, null, 1, null, 0] } } }"#,
     ));
     let frame = SceneExtractor::new()
@@ -46,20 +46,20 @@ fn a_tilemap_places_its_tiles_where_loose_sprites_were() {
     let loose = world_from(&scene(
         r#",
         { "id": "a", "transform_3d": { "position": [0.5, -0.5, 0.0] },
-          "components": { "sindri.sprite": { "texture": "tiles", "space": "world" } } },
+          "components": { "sindri.sprite": { "texture": "tiles" } } },
         { "id": "b", "transform_3d": { "position": [1.5, -0.5, 0.0] },
-          "components": { "sindri.sprite": { "texture": "tiles", "space": "world" } } },
+          "components": { "sindri.sprite": { "texture": "tiles" } } },
         { "id": "c", "transform_3d": { "position": [0.5, -1.5, 0.0] },
-          "components": { "sindri.sprite": { "texture": "tiles", "space": "world" } } },
+          "components": { "sindri.sprite": { "texture": "tiles" } } },
         { "id": "d", "transform_3d": { "position": [1.5, -1.5, 0.0] },
-          "components": { "sindri.sprite": { "texture": "tiles", "space": "world" } } }"#,
+          "components": { "sindri.sprite": { "texture": "tiles" } } }"#,
     ));
     let mapped = world_from(&scene(
         r#",
         { "id": "floor", "transform_3d": {},
           "components": { "sindri.tilemap": {
             "texture": "tiles", "palette": ["a"],
-            "columns": 2, "rows": 2, "space": "world",
+            "columns": 2, "rows": 2,
             "tiles": [0, 0, 0, 0] } } }"#,
     ));
 
@@ -112,7 +112,7 @@ fn a_tilemap_transform_moves_rotates_and_scales_its_grid() {
             "scale": [2.0, 3.0, 1.0] },
           "components": { "sindri.tilemap": {
             "texture": "tiles", "palette": ["a"],
-            "columns": 1, "rows": 1, "space": "world",
+            "columns": 1, "rows": 1,
             "tiles": [0] } } }"#,
     ));
     let frame = SceneExtractor::new()
@@ -143,7 +143,7 @@ fn a_tilemap_of_the_wrong_size_is_reported() {
         { "id": "floor", "transform_3d": {},
           "components": { "sindri.tilemap": {
             "texture": "tiles", "palette": ["a"],
-            "columns": 4, "rows": 4, "space": "world",
+            "columns": 4, "rows": 4,
             "tiles": [0, 0] } } }"#,
     ));
     let error = SceneExtractor::new()
@@ -170,7 +170,7 @@ fn a_tile_outside_the_sheet_is_reported() {
         { "id": "floor", "transform_3d": {},
           "components": { "sindri.tilemap": {
             "texture": "tiles", "palette": ["a", "b"],
-            "columns": 1, "rows": 1, "space": "world",
+            "columns": 1, "rows": 1,
             "tiles": [7] } } }"#,
     ));
     let error = SceneExtractor::new()
@@ -197,10 +197,10 @@ fn a_tilemap_and_a_sprite_share_one_batch() {
         { "id": "floor", "transform_3d": {},
           "components": { "sindri.tilemap": {
             "texture": "tiles", "palette": ["a"],
-            "columns": 2, "rows": 1, "space": "world",
+            "columns": 2, "rows": 1,
             "tiles": [0, 0] } } },
         { "id": "prop", "transform_3d": { "position": [0.5, -0.5, 0.5] },
-          "components": { "sindri.sprite": { "texture": "tiles", "space": "world" } } }"#,
+          "components": { "sindri.sprite": { "texture": "tiles" } } }"#,
     ));
     let frame = SceneExtractor::new()
         .unwrap()

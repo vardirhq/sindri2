@@ -1,5 +1,5 @@
 {
-  "format_version": 7,
+  "format_version": 8,
   "metadata": {
     "name": "Shared 2D and 3D frame pipeline proof"
   },
@@ -12,7 +12,7 @@
         "scale": [0.38, 0.38, 1.0]
       },
       "components": {
-        "sindri.sprite": {
+        "sindri.ui.image": {
           "anchor": "bottom_right",
           "layer": 100,
           "texture": "textures/badge.png",
@@ -28,7 +28,7 @@
         "scale": [0.42, 0.42, 1.0]
       },
       "components": {
-        "sindri.sprite": {
+        "sindri.ui.image": {
           "anchor": "bottom_right",
           "layer": 100,
           "texture": "textures/badge.png",
@@ -44,7 +44,7 @@
         "scale": [0.34, 0.34, 1.0]
       },
       "components": {
-        "sindri.sprite": {
+        "sindri.ui.image": {
           "anchor": "bottom_right",
           "layer": 100,
           "texture": "textures/badge.png",
@@ -60,7 +60,7 @@
         "scale": [0.32, 0.32, 1.0]
       },
       "components": {
-        "sindri.sprite": {
+        "sindri.ui.image": {
           "anchor": "bottom_right",
           "layer": 100,
           "texture": "textures/badge.png",
@@ -76,7 +76,7 @@
         "scale": [0.36, 0.36, 1.0]
       },
       "components": {
-        "sindri.sprite": {
+        "sindri.ui.image": {
           "anchor": "bottom_right",
           "layer": 100,
           "texture": "textures/badge.png",

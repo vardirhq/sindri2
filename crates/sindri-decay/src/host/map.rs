@@ -75,17 +75,6 @@ impl WorldHost<'_> {
                 path.dotted()
             ))
         })?;
-        if payload
-            .get("space")
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or("screen")
-            != "world"
-        {
-            return Err(RuntimeError::Host(format!(
-                "{} needs a world-space tilemap; screen-space maps depend on a viewport",
-                path.dotted()
-            )));
-        }
         let tile_size = payload
             .get("tile_size")
             .and_then(serde_json::Value::as_array)

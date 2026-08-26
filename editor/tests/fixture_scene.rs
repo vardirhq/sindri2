@@ -206,15 +206,22 @@ fn the_fixture_is_one_of_each_drawable_and_one_authored_world_camera() {
     assert_eq!(count("sindri.mesh"), 1, "the fixture is one cube");
     assert_eq!(
         count("sindri.sprite"),
-        2,
-        "one still sprite and one that animates, because an animation decides \
-         which part of its sprite's texture is drawn rather than drawing itself"
+        1,
+        "one sprite in the world, so the fixture proves world-space drawing"
+    );
+    assert_eq!(
+        count("sindri.ui.image"),
+        1,
+        "and one on the viewport, which is the other kind of entity a scene \
+         holds; it is the animated one, because an animation decides which \
+         part of an image's texture is drawn rather than drawing itself"
     );
     assert_eq!(count("sindri.animation.sprite"), 1);
     assert_eq!(
         count("sindri.camera"),
         1,
-        "the cube needs one authored world camera; screen-space sprites use the viewport directly"
+        "the cube and the sprite need one authored world camera; the UI uses \
+         the viewport directly"
     );
     assert_eq!(document.entities.len(), 4, "and nothing else");
 }
@@ -234,7 +241,7 @@ fn every_component_in_the_fixture_matches_a_schema_the_editor_knows() {
 }
 
 #[test]
-fn the_fixture_extracts_to_one_mesh_pass_and_a_sprite_pass_per_texture() {
+fn the_fixture_extracts_to_one_pass_per_space_and_texture() {
     let world = World::from_scene(&document())
         .expect("the fixture loads")
         .world;
@@ -256,10 +263,11 @@ fn the_fixture_extracts_to_one_mesh_pass_and_a_sprite_pass_per_texture() {
         stages,
         [
             RenderStage::Opaque3d,
-            RenderStage::Overlay,
+            RenderStage::Transparent2d,
             RenderStage::Overlay
         ],
-        "the two sprites name different textures, and a batch is one draw call"
+        "the cube, the sprite in the world, and the image on the viewport are \
+         three draws in three spaces"
     );
 }
 
@@ -358,6 +366,7 @@ fn every_texture_the_fixture_names_can_actually_be_drawn() {
                 .components
                 .get("sindri.mesh")
                 .or_else(|| entity.components.get("sindri.sprite"))
+                .or_else(|| entity.components.get("sindri.ui.image"))
         })
         .filter_map(|payload| payload.get("texture")?.as_str())
         .collect();

@@ -4,11 +4,11 @@ use glam::{Mat4, Vec3};
 use sindri_core::World;
 use sindri_render::{SpriteInstance, TransparentOrder, UvRect};
 
-use crate::{SpriteAnchor, TextureBindings, TilemapComponent};
+use crate::{TextureBindings, TilemapComponent};
 
 use super::camera::ResolvedCameras;
 use super::camera::view::camera_distance;
-use super::sprite::{SpriteBatches, screen_sprite_matrix};
+use super::sprite::{DrawSpace, SpriteBatches};
 use super::{SceneExtractError, SceneExtractor, transform_matrix};
 
 impl SceneExtractor {
@@ -55,22 +55,8 @@ impl SceneExtractor {
                 let local = Mat4::from_translation(Vec3::new(offset_x, offset_y, 0.0))
                     * Mat4::from_scale(Vec3::new(tilemap.tile_size[0], tilemap.tile_size[1], 1.0));
 
-                let (model, camera) = if tilemap.is_screen_space() {
-                    let extent = cameras
-                        .overlay_extent
-                        .expect("every resolved view includes screen-space extent");
-                    (
-                        screen_sprite_matrix(transform, SpriteAnchor::default(), extent) * local,
-                        cameras
-                            .overlay
-                            .expect("every resolved view includes screen-space projection"),
-                    )
-                } else {
-                    (
-                        transform_matrix(transform) * local,
-                        cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?,
-                    )
-                };
+                let camera = cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?;
+                let model = transform_matrix(transform) * local;
                 let position = model.w_axis.truncate().with_z(transform.position[2]);
                 // Row and column break the tie rather than the entity index,
                 // because every tile of one map shares an entity. Reading order
@@ -82,7 +68,7 @@ impl SceneExtractor {
                     row.saturating_mul(tilemap.columns).saturating_add(column),
                 )?;
                 batches
-                    .entry((tilemap.space, tilemap.layer, texture))
+                    .entry((DrawSpace::World, tilemap.layer, texture))
                     .or_default()
                     .push((
                         order,

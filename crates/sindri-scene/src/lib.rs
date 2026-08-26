@@ -20,8 +20,8 @@ pub use audio::AudioSourceComponent;
 pub use camera_math::camera_rotation_from_look_at;
 pub use components::{
     CameraComponent, GridNavigationComponent, GridOccupantComponent, GridWallDocument,
-    MeshComponent, MeshPrimitive, SpriteAnchor, SpriteComponent, SpriteSpace, TextComponent,
-    TileProjection, TilemapComponent, TilemapError,
+    MeshComponent, MeshPrimitive, SpriteComponent, TileProjection, TilemapComponent, TilemapError,
+    UiAnchor, UiImageComponent, UiTextComponent,
 };
 pub use extract::{CameraView, SceneExtractError, SceneExtractor, ViewCamera, WorldProjection};
 pub use navigation::{GridNavigationError, GridPlacement, WorldGridNavigation};

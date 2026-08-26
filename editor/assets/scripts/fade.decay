@@ -3,7 +3,8 @@
 //
 // `this.sprite.tint.a` is a number inside the `sindri.sprite` payload the scene
 // stores. The script does not know that, and does not need to: it names a path,
-// and the host is the only thing that knows what a path means.
+// and the host is the only thing that knows what a path means. A HUD element
+// says `this.ui_image` instead, because it is a different component.
 script Fade {
     @export
     let cycles_per_second: f32 = 0.5;

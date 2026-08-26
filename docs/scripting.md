@@ -74,14 +74,22 @@ interprets, and `WorldHost` is the only place that gives them a meaning.
 | `this.transform.rotation_z` | `f32` | yes | yes |
 | `this.sprite.tint.{r,g,b,a}` | `f32` | yes | yes |
 | `this.sprite.layer` | `f32` | yes | yes |
+| `this.ui_image.tint.{r,g,b,a}` | `f32` | yes | yes |
+| `this.ui_image.layer` | `f32` | yes | yes |
 
-A sprite path reaches into the entity's stored `sindri.sprite` payload rather
-than through the typed view, because a component is a `Deserialize`-only view
-over a payload and the payload is what gets written back — going through the
-view would mean rebuilding and reserializing it, which is how a field the view
-does not know about gets dropped. A number written where the payload held an
-integer is rounded back to one, so touching a layer does not change a scene byte
-for byte.
+`sprite` is the thing in the world and `ui_image` is the thing on the viewport:
+two components, so two paths. A script says which it means rather than writing
+a tint that lands wherever the entity happened to be drawn — and an entity is
+only ever one of the two, so on any given entity exactly one of these paths has
+anything behind it.
+
+Either path reaches into the entity's stored payload — `sindri.sprite` or
+`sindri.ui.image` — rather than through the typed view, because a component is a
+`Deserialize`-only view over a payload and the payload is what gets written
+back: going through the view would mean rebuilding and reserializing it, which
+is how a field the view does not know about gets dropped. A number written where
+the payload held an integer is rounded back to one, so touching a layer does not
+change a scene byte for byte.
 
 An entity with no sprite is not an error at compile time — the surface says a
 script *may* reach one, not that every entity has one — and a write says so
@@ -104,6 +112,8 @@ table above lists, reaching the same numbers.
 | `this.entity.transform.rotation_z` | `f32` | yes | yes |
 | `this.entity.sprite.tint.{r,g,b,a}` | `f32` | yes | yes |
 | `this.entity.sprite.layer` | `f32` | yes | yes |
+| `this.entity.ui_image.tint.{r,g,b,a}` | `f32` | yes | yes |
+| `this.entity.ui_image.layer` | `f32` | yes | yes |
 
 | Call | Returns |
 | --- | --- |

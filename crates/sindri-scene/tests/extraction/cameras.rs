@@ -7,11 +7,11 @@ use sindri_scene::{CameraView, SceneExtractError, SceneExtractor, TextureBinding
 use crate::support::{VIEWPORT, document, world_from};
 
 #[test]
-fn screen_space_needs_no_authored_camera_but_world_space_does() {
+fn the_ui_needs_no_authored_camera_but_the_world_does() {
     let world_sprite_without_a_camera = document(
         r#"
         { "id": "prop", "transform_3d": {},
-          "components": { "sindri.sprite": { "texture": "b", "space": "world" } } }"#,
+          "components": { "sindri.sprite": { "texture": "b" } } }"#,
     );
     let world = world_from(&world_sprite_without_a_camera);
     assert!(matches!(
@@ -24,12 +24,12 @@ fn screen_space_needs_no_authored_camera_but_world_space_does() {
         Err(SceneExtractError::MissingWorldCamera)
     ));
 
-    let screen_sprite_without_a_camera = document(
+    let ui_image_without_a_camera = document(
         r#"
         { "id": "badge", "transform_3d": {},
-          "components": { "sindri.sprite": { "texture": "b" } } }"#,
+          "components": { "sindri.ui.image": { "texture": "b" } } }"#,
     );
-    let world = world_from(&screen_sprite_without_a_camera);
+    let world = world_from(&ui_image_without_a_camera);
     let frame = SceneExtractor::new()
         .unwrap()
         .extract(
@@ -38,7 +38,7 @@ fn screen_space_needs_no_authored_camera_but_world_space_does() {
             CameraView::default(),
             &TextureBindings::new(),
         )
-        .expect("screen-space rendering is viewport-owned");
+        .expect("the UI is viewport-owned");
     assert_eq!(frame.passes().len(), 1);
     assert_eq!(frame.passes()[0].stage, RenderStage::Overlay);
 }
@@ -110,12 +110,12 @@ fn world_content_without_a_camera_reports_missing_world_camera_but_screen_conten
         Err(SceneExtractError::MissingWorldCamera)
     ));
 
-    let sprite_only = document(
+    let ui_only = document(
         r#"
         { "id": "badge", "transform_3d": {},
-          "components": { "sindri.sprite": { "texture": "b" } } }"#,
+          "components": { "sindri.ui.image": { "texture": "b" } } }"#,
     );
-    let world = world_from(&sprite_only);
+    let world = world_from(&ui_only);
     let frame = SceneExtractor::new()
         .unwrap()
         .extract(
@@ -124,7 +124,7 @@ fn world_content_without_a_camera_reports_missing_world_camera_but_screen_conten
             CameraView::default(),
             &TextureBindings::new(),
         )
-        .expect("screen-only content needs no authored camera");
+        .expect("UI-only content needs no authored camera");
     assert_eq!(frame.passes().len(), 1);
     assert_eq!(frame.passes()[0].stage, RenderStage::Overlay);
 }

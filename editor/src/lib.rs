@@ -39,6 +39,9 @@ pub mod project;
 pub mod scene_camera;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod scene_file;
+/// Which of a scene's two spaces an entity belongs to.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod space;
 
 /// The Decay scripts an open scene runs.
 #[cfg(not(target_arch = "wasm32"))]

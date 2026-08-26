@@ -10,7 +10,7 @@ use crate::{SceneMigrator, Transform3D};
 use super::canonical::collapse_scalar_arrays;
 use super::error::{SceneError, SceneJsonError};
 
-pub const SCENE_FORMAT_VERSION: u32 = 7;
+pub const SCENE_FORMAT_VERSION: u32 = 8;
 
 /// A stable, project-authored entity identifier used only in serialized data.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]

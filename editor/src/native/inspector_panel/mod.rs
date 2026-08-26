@@ -31,7 +31,7 @@ use crate::{animation::AnimationTool, scripts::SceneScripts, tilemap::TilemapToo
 
 use super::editing::reparent_choices;
 use super::hierarchy::row::entity_icon;
-use super::{BORDER, EditorApp, PANEL_BG, panel_title};
+use super::{BORDER, EditorApp, PANEL_BG, SPRITE_COMPONENT, UI_IMAGE_COMPONENT, panel_title};
 
 /// Stateful authoring surfaces shared across component sections.
 pub(super) struct InspectorTools<'a> {
@@ -215,9 +215,12 @@ impl EditorApp {
                 let mut added = None;
                 let fonts = self.project.fonts();
                 let first_font = fonts.first().map(String::as_str);
+                // Either image family: an animated HUD element reads its
+                // sheet from the UI image, exactly as a world sprite does.
                 let animation_texture = components
-                    .get("sindri.sprite")
-                    .and_then(|sprite| sprite.get("texture"))
+                    .get(SPRITE_COMPONENT)
+                    .or_else(|| components.get(UI_IMAGE_COMPONENT))
+                    .and_then(|image| image.get("texture"))
                     .and_then(Value::as_str)
                     .and_then(|reference| SpriteRef::parse(reference).ok())
                     .map(|reference| reference.texture().to_owned());

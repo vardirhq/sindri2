@@ -153,10 +153,47 @@ fn add_component_offers_only_what_it_can_actually_add() {
         "not one it already has"
     );
     assert!(offered.contains(&"sindri.sprite".to_owned()));
-    assert!(offered.contains(&TEXT_COMPONENT.to_owned()));
     assert!(
         !offered.contains(&animation::TYPE_NAME.to_owned()),
         "and not one with no sensible blank, which the engine would refuse"
+    );
+    assert!(
+        !offered.contains(&UI_TEXT_COMPONENT.to_owned()),
+        "and not one from the other space: a mesh is in the world, and the UI \
+         is not somewhere a world entity can also be"
+    );
+}
+
+/// The two families are offered to the entities they belong on, and an entity
+/// carrying nothing yet is offered both because it has not chosen.
+#[test]
+fn the_menu_offers_one_space_or_the_other() {
+    let extractor = extractor();
+    let offered = |present: &BTreeMap<String, Value>| -> Vec<String> {
+        addable_components(
+            extractor.components(),
+            present,
+            Some("fonts/Inter.ttf"),
+            None,
+            None,
+        )
+        .into_iter()
+        .map(|metadata| metadata.type_name)
+        .collect()
+    };
+
+    let empty = offered(&BTreeMap::new());
+    assert!(empty.contains(&"sindri.sprite".to_owned()));
+    assert!(empty.contains(&UI_TEXT_COMPONENT.to_owned()));
+
+    let hud: BTreeMap<String, Value> = [(UI_IMAGE_COMPONENT.to_owned(), serde_json::json!({}))]
+        .into_iter()
+        .collect();
+    let hud = offered(&hud);
+    assert!(hud.contains(&UI_TEXT_COMPONENT.to_owned()));
+    assert!(
+        !hud.contains(&"sindri.sprite".to_owned()),
+        "a HUD element is not also a thing in the world"
     );
 }
 
@@ -201,12 +238,12 @@ fn text_is_addable_only_when_the_project_has_a_font() {
     assert!(
         !addable_components(components, &present, None, None, None)
             .iter()
-            .any(|metadata| metadata.type_name == TEXT_COMPONENT)
+            .any(|metadata| metadata.type_name == UI_TEXT_COMPONENT)
     );
 
     let payload = component_default(
         components,
-        TEXT_COMPONENT,
+        UI_TEXT_COMPONENT,
         Some("fonts/Inter.ttf"),
         None,
         None,
@@ -215,7 +252,7 @@ fn text_is_addable_only_when_the_project_has_a_font() {
     assert_eq!(payload["font"], "fonts/Inter.ttf");
     assert_eq!(payload["text"], "Text");
     components
-        .validate_payload(TEXT_COMPONENT, &payload)
+        .validate_payload(UI_TEXT_COMPONENT, &payload)
         .unwrap();
 }
 

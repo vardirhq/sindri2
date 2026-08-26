@@ -5,16 +5,19 @@
 //! carries the demo's choices, and retuning the demo breaks the editor's tests
 //! for no reason.
 //!
-//! This is the other thing: one cube, one still sprite, one sprite that plays a
-//! sheet, and the one authored world camera the cube needs. It exists to be
-//! asserted about, so it holds one of each rather than a composition. Open it
-//! by hand with `cargo run -p sindri-editor -- editor/assets/fixture.scene.json`.
+//! This is the other thing: one cube, one sprite in the world, one UI image
+//! that plays a sheet, and the one authored world camera the world content
+//! needs. It exists to be asserted about, so it holds one of each rather than a
+//! composition — including one of each *kind of entity*, since a scene holds
+//! things in the world and things on the viewport and they are drawn through
+//! different cameras. Open it by hand with
+//! `cargo run -p sindri-editor -- editor/assets/fixture.scene.json`.
 //!
 //! ## Camera semantics
 //!
-//! The cube needs an authored world camera or extraction fails with
-//! `MissingWorldCamera`. The sprites do not need a second camera: screen-space
-//! sprites and text resolve directly against the viewport-owned screen
+//! The cube and the world sprite need an authored world camera or extraction
+//! fails with `MissingWorldCamera`. The UI does not need a second camera:
+//! `sindri.ui.*` resolves directly against the viewport-owned screen
 //! projection, matching the runtime UI model. An authored orthographic camera
 //! is therefore another world-camera projection, not an overlay/UI camera.
 //!

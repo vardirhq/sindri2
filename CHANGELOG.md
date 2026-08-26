@@ -8,6 +8,17 @@ All notable changes to Sindri Next will be documented here.
 
 ### Changed
 
+- **A scene now has two kinds of entity, and they are spelled apart.** A sprite
+  is a thing in the world; a thing on the viewport is `sindri.ui.image`, and
+  `sindri.text` becomes `sindri.ui.text`. `sindri.sprite` loses the `space`
+  field that used to mean one component was really two — an anchor mattered on a
+  screen sprite and decided nothing on a world one — and `sindri.tilemap` loses
+  it too, because a map is in the world. Scene format 8 migrates every scene:
+  a screen sprite becomes a UI image with everything it drew with, a world
+  sprite keeps its name and loses the two fields that decided nothing, and a
+  screen-space tilemap stops the migration with a message rather than being
+  quietly relocated. Scripts follow: a HUD element writes
+  `this.ui_image.tint.a` where it used to write `this.sprite.tint.a`.
 - Rust source files are now capped at 600 lines, with 400 as the target, and
   `scripts/check-file-size.py` enforces it in CI. Twenty-one files were over the
   cap — the largest was the 4,714-line native editor — and each is now a
