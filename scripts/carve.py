@@ -34,9 +34,12 @@ import sys
 # Listings are read through `head` and `less`, which close the pipe early.
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
+# A char or byte literal, which is not a lifetime and may hold any bracket.
+CHAR_LITERAL = re.compile(r"'(?:\\.|[^'\\])'")
+
 ITEM = re.compile(
     r"^(?:pub(?:\([^)]*\))? )?(?:async |unsafe |extern |const (?=fn ))*"
-    r"(fn|struct|enum|trait|type|impl|mod|union|const|static) "
+    r"(fn|struct|enum|trait|type|impl|mod|union|const|static)[ <]"
 )
 
 
@@ -74,7 +77,7 @@ def items(lines, indent=0, span=None):
             match = ITEM.match(bare) if at_indent(line, pad) else None
             if match:
                 kind = match.group(1)
-                name = signature_name(stripped, kind)
+                name = signature_name(bare, kind, match.end(1))
                 start = attach if attach is not None else i
                 end = block_end(lines, i)
                 found.append((name, start, end))
@@ -95,13 +98,14 @@ def at_indent(line, pad):
     return line.startswith(pad) and not line[len(pad) : len(pad) + 1].isspace()
 
 
-def signature_name(line, kind):
-    rest = line.strip().split(kind + " ", 1)[1]
-    if kind in ("const", "static"):
-        return re.split(r"[:< =]", rest.strip(), 1)[0]
+def signature_name(bare, kind, at):
     if kind == "impl":
-        return "impl " + rest.rstrip("{ ").strip()
-    return re.split(r"[(<:{ ;=]", rest.strip(), 1)[0]
+        # The whole header, so `impl<T> Store<T>` and `impl Store` stay apart.
+        return bare.split("{", 1)[0].strip()
+    rest = bare[at:].lstrip()
+    if kind in ("const", "static"):
+        return re.split(r"[:< =]", rest, 1)[0]
+    return re.split(r"[(<:{ ;=]", rest, 1)[0]
 
 
 def attribute_end(lines, start):
@@ -155,8 +159,9 @@ def strip_strings(line):
                 i += 1
             i += 1
             continue
-        if char == "'" and line[i : i + 3] in ("'{'", "'}'", "'('", "')'"):
-            i += 3
+        literal = CHAR_LITERAL.match(line, i)
+        if literal:
+            i = literal.end()
             continue
         out.append(char)
         i += 1
