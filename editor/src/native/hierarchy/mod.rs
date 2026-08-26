@@ -13,6 +13,7 @@ use self::rows::{hierarchy_group, hierarchy_preference_key, visible_hierarchy_ro
 use crate::preferences::Layout as WorkspaceLayout;
 use crate::space::EntitySpace;
 use crate::ui::icons;
+use crate::ui::theme::color;
 use crate::ui::widgets::{
     button::{self, Intent},
     panel,
@@ -21,6 +22,7 @@ use crate::ui::widgets::{
 
 use super::EditorApp;
 use super::editing::CreateGameObject;
+use super::runtime::PLAYING_TIP;
 
 impl EditorApp {
     pub(super) fn hierarchy_panel(&mut self, ui: &mut egui::Ui) {
@@ -59,58 +61,69 @@ impl EditorApp {
     fn hierarchy_header(&self, ui: &mut egui::Ui) -> (Option<CreateGameObject>, Option<EntityId>) {
         let mut create = None;
         let mut deleted = None;
+        // Spawning and despawning are world writes, and a running scene is not
+        // the document: Stop puts back the world as it was when Play was
+        // pressed, so anything made here while playing would vanish without
+        // being mentioned.
+        let authoring = self.authoring_enabled();
         panel::header(ui, icons::HIERARCHY, "Hierarchy", |ui| {
-            // Offered only with something selected, because "delete" with
-            // nothing chosen has no answer and a disabled button is a question
-            // nobody asked.
-            if let Some(entity) = self.selection
-                && button::row_icon(
-                    ui,
-                    icons::REMOVE,
-                    Intent::Danger,
-                    "Delete the selected entity",
+            ui.add_enabled_ui(authoring, |ui| {
+                // Offered only with something selected, because "delete" with
+                // nothing chosen has no answer and a disabled button is a
+                // question nobody asked.
+                if let Some(entity) = self.selection
+                    && button::row_icon(
+                        ui,
+                        icons::REMOVE,
+                        Intent::Danger,
+                        "Delete the selected entity",
+                    )
+                    .clicked()
+                {
+                    deleted = Some(entity);
+                }
+                ui.menu_button(
+                    icons::ADD
+                        .outlined()
+                        .rich_text()
+                        .size(15.0)
+                        .color(color::TEXT_MUTED),
+                    |ui| {
+                        ui.set_min_width(200.0);
+                        // Which space a new object is in is a choice made here
+                        // rather than a component hunted for afterwards,
+                        // because it is the first thing an author knows about
+                        // the thing they are making.
+                        if ui.button("Create Empty").clicked() {
+                            create = Some(CreateGameObject::Empty { parent: None });
+                            ui.close();
+                        }
+                        if ui
+                            .add_enabled(
+                                self.selection.is_some(),
+                                egui::Button::new("Create Child").shortcut_text("under selection"),
+                            )
+                            .clicked()
+                        {
+                            create = self.selection.map(|parent| CreateGameObject::Empty {
+                                parent: Some(parent),
+                            });
+                            ui.close();
+                        }
+                        ui.separator();
+                        if ui.button("Create UI Image").clicked() {
+                            create = Some(CreateGameObject::UiImage);
+                            ui.close();
+                        }
+                    },
                 )
-                .clicked()
-            {
-                deleted = Some(entity);
-            }
-            ui.menu_button(
-                icons::ADD
-                    .outlined()
-                    .rich_text()
-                    .size(15.0)
-                    .color(crate::ui::theme::color::TEXT_MUTED),
-                |ui| {
-                    ui.set_min_width(200.0);
-                    // Which space a new object is in is a choice made here
-                    // rather than a component hunted for afterwards, because it
-                    // is the first thing an author knows about the thing they
-                    // are making.
-                    if ui.button("Create Empty").clicked() {
-                        create = Some(CreateGameObject::Empty { parent: None });
-                        ui.close();
-                    }
-                    if ui
-                        .add_enabled(
-                            self.selection.is_some(),
-                            egui::Button::new("Create Child").shortcut_text("under selection"),
-                        )
-                        .clicked()
-                    {
-                        create = self.selection.map(|parent| CreateGameObject::Empty {
-                            parent: Some(parent),
-                        });
-                        ui.close();
-                    }
-                    ui.separator();
-                    if ui.button("Create UI Image").clicked() {
-                        create = Some(CreateGameObject::UiImage);
-                        ui.close();
-                    }
-                },
-            )
-            .response
-            .on_hover_text("Create GameObject");
+                .response
+                .on_hover_text(if authoring {
+                    "Create GameObject"
+                } else {
+                    PLAYING_TIP
+                });
+            });
         });
         (create, deleted)
     }

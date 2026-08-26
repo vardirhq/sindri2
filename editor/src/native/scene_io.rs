@@ -15,7 +15,7 @@ use crate::{
 };
 
 use super::EditorApp;
-use super::runtime::initialized_lifecycle;
+use super::runtime::{PLAYING_TIP, initialized_lifecycle};
 
 /// One rendered view of the world, and the egui texture it is drawn through.
 /// Everything a frame is derived from: the world, the schemas that read it, and
@@ -108,7 +108,17 @@ pub fn load_world(extractor: &SceneExtractor, document: &SceneDocument) -> Resul
 
 impl EditorApp {
     /// Writes the world back to the file it came from.
+    ///
+    /// Refused while the scene is playing. `self.world` is the *running* world
+    /// then, so this used to write wherever the scripts had pushed everything
+    /// over the authored scene, mark the result saved, and then have Stop
+    /// restore a world the file no longer held. The guard is here as well as on
+    /// the controls because the keyboard reaches this directly.
     pub(super) fn save(&mut self) {
+        if !self.authoring_enabled() {
+            self.report(format!("Not saved. {PLAYING_TIP}"));
+            return;
+        }
         match self.file.save(&self.world) {
             Ok(()) => {
                 self.saved_revision = self.history.revision();

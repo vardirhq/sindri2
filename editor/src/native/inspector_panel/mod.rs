@@ -321,6 +321,11 @@ impl EditorApp {
     }
 
     /// Everything one entity has, drawn from a draft and committed as commands.
+    ///
+    /// Drawn disabled while the scene is playing. Every control here becomes a
+    /// command against the world, and Stop restores the world as it was when
+    /// Play was pressed — so an edit made now would be discarded silently and
+    /// leave the history describing a change that is no longer there.
     fn inspect_entity(&mut self, ui: &mut egui::Ui, entity: EntityId) {
         let Some(data) = self.world.get(entity) else {
             return;
@@ -338,6 +343,7 @@ impl EditorApp {
         let mut reparented = ParentChoice::Unchanged;
         let mut removed = None;
         let mut added = None;
+        let authoring = self.authoring_enabled();
         let context = self.panel_context(&components);
         let addable = self.addable_components(
             &components,
@@ -354,25 +360,27 @@ impl EditorApp {
             egui::ScrollArea::vertical()
                 .auto_shrink([false; 2])
                 .show(ui, |ui| {
-                    inspector_identity(ui, icon, space, &mut draft);
-                    reparented = inspector_parent(ui, entity, parent, &choices);
-                    if let Some(transform) = &mut draft.transform_3d {
-                        transform_3d_section(ui, transform);
-                    }
-                    removed = components_sections(
-                        ui,
-                        &mut components,
-                        &context.registry,
-                        &InspectorProject {
-                            scripts,
-                            root: context.root.as_deref(),
-                            assets: context.assets(),
-                            animation_texture: context.animation_texture.as_deref(),
-                            grids: &context.grids,
-                        },
-                        &mut tools,
-                    );
-                    added = add_component_button(ui, &addable);
+                    ui.add_enabled_ui(authoring, |ui| {
+                        inspector_identity(ui, icon, space, &mut draft);
+                        reparented = inspector_parent(ui, entity, parent, &choices);
+                        if let Some(transform) = &mut draft.transform_3d {
+                            transform_3d_section(ui, transform);
+                        }
+                        removed = components_sections(
+                            ui,
+                            &mut components,
+                            &context.registry,
+                            &InspectorProject {
+                                scripts,
+                                root: context.root.as_deref(),
+                                assets: context.assets(),
+                                animation_texture: context.animation_texture.as_deref(),
+                                grids: &context.grids,
+                            },
+                            &mut tools,
+                        );
+                        added = add_component_button(ui, &addable);
+                    });
                 });
         }
         self.commit_draft(entity, &original, &draft);

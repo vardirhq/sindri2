@@ -121,7 +121,13 @@ impl EditorApp {
 
     /// Writes one cell through the command layer. Repeated calls during one
     /// drag share a merge key, and pointer release closes that merge run.
+    ///
+    /// Refused while the scene is playing, for the reason every other world
+    /// write is: Stop would throw the painting away.
     pub(super) fn apply_tile_brush(&mut self, hover: &TilemapHover) {
+        if !self.authoring_enabled() {
+            return;
+        }
         let Some(original) = self
             .world
             .get(hover.entity)
@@ -199,6 +205,11 @@ impl EditorApp {
 
     /// Gives a transform handle first claim on primary drag and writes every
     /// intermediate answer through command history.
+    ///
+    /// Stands down entirely while the scene is playing: a drag is a world
+    /// write, and Stop restores the world as it was when Play was pressed. It
+    /// returns `false` there so the primary drag falls back to orbiting, which
+    /// is what a viewport that cannot be edited is still good for.
     pub(super) fn interact_gizmo(
         &mut self,
         rect: Rect,
@@ -206,6 +217,10 @@ impl EditorApp {
         camera: ViewCamera,
         visual: &gizmo::GizmoVisual,
     ) -> bool {
+        if !self.authoring_enabled() {
+            self.gizmo_drag = None;
+            return false;
+        }
         let pointer = response
             .interact_pointer_pos()
             .map(|pointer| GlamVec2::new(pointer.x - rect.min.x, pointer.y - rect.min.y));

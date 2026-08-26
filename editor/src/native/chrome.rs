@@ -12,7 +12,7 @@ use crate::ui::icons;
 use crate::ui::theme::{color, hairline, metric, text};
 use crate::ui::widgets::{button, panel, toolbar};
 
-use super::runtime::{Transport, play_button, transport_icon};
+use super::runtime::{PLAYING_TIP, Transport, play_button, transport_icon};
 use super::unsaved::Discarding;
 use super::{EditorApp, WorkspaceTab};
 
@@ -198,27 +198,35 @@ impl EditorApp {
     }
 
     /// Save is disabled rather than hidden when there is no file behind the
-    /// scene, so the reason it cannot be used is visible.
+    /// scene, so the reason it cannot be used is visible. The same is true of
+    /// every entry here while the scene is playing: each of them either writes
+    /// the running world to the file or replaces the world a run is using.
     fn file_menu(&mut self, ui: &mut egui::Ui) {
         let saveable = self.file.path().is_some();
+        let authoring = self.authoring_enabled();
+        let playing_tip = PLAYING_TIP;
         bar_menu(ui, "File", |ui| {
-            if ui.button("Open scene…").clicked() {
+            if ui
+                .add_enabled(authoring, egui::Button::new("Open scene…"))
+                .clicked()
+            {
                 self.discard_or_confirm(Discarding::OpenAnother, ui.ctx());
                 ui.close();
             }
             ui.separator();
-            if ui
-                .add_enabled(
-                    saveable,
-                    egui::Button::new("Save scene").shortcut_text("Ctrl+S"),
-                )
-                .clicked()
-            {
+            let save = ui.add_enabled(
+                saveable && authoring,
+                egui::Button::new("Save scene").shortcut_text("Ctrl+S"),
+            );
+            if save.clicked() {
                 self.save();
                 ui.close();
             }
+            if !authoring {
+                save.on_disabled_hover_text(playing_tip);
+            }
             if ui
-                .add_enabled(saveable, egui::Button::new("Reload from disk"))
+                .add_enabled(saveable && authoring, egui::Button::new("Reload from disk"))
                 .clicked()
             {
                 self.discard_or_confirm(Discarding::Reload, ui.ctx());
@@ -228,7 +236,10 @@ impl EditorApp {
             // Drawn in the colour the editor uses for anything that throws work
             // away, so it does not read as one more neutral menu entry.
             if ui
-                .button(RichText::new("Discard changes").color(color::DANGER_TEXT))
+                .add_enabled(
+                    authoring,
+                    egui::Button::new(RichText::new("Discard changes").color(color::DANGER_TEXT)),
+                )
                 .clicked()
             {
                 self.discard_or_confirm(Discarding::Reset, ui.ctx());
@@ -243,6 +254,7 @@ impl EditorApp {
     /// with what they would undo, which is the thing a menu can say and an icon
     /// cannot.
     fn edit_menu(&mut self, ui: &mut egui::Ui) {
+        let authoring = self.authoring_enabled();
         bar_menu(ui, "Edit", |ui| {
             let undo = self.history.undo_label().map_or_else(
                 || "Undo".to_owned(),
@@ -250,7 +262,7 @@ impl EditorApp {
             );
             if ui
                 .add_enabled(
-                    self.history.can_undo(),
+                    authoring && self.history.can_undo(),
                     egui::Button::new(undo).shortcut_text("Ctrl+Z"),
                 )
                 .clicked()
@@ -264,7 +276,7 @@ impl EditorApp {
             );
             if ui
                 .add_enabled(
-                    self.history.can_redo(),
+                    authoring && self.history.can_redo(),
                     egui::Button::new(redo).shortcut_text("Ctrl+Shift+Z"),
                 )
                 .clicked()

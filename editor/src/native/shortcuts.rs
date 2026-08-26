@@ -54,13 +54,21 @@ pub(super) fn pressed(input: &mut egui::InputState) -> Shortcuts {
 impl EditorApp {
     pub(super) fn handle_shortcuts(&mut self, context: &egui::Context) {
         let keys = context.input_mut(pressed);
+        // Read whatever the transport is doing, so a key is consumed rather
+        // than falling through to something else, and then acted on only where
+        // acting is allowed. Save says why it refused; undo and redo do not,
+        // because a running scene is not a thing they have anything to say
+        // about.
+        let authoring = self.authoring_enabled();
         if keys.save {
             self.save();
         }
-        if keys.redo {
-            self.redo();
-        } else if keys.undo {
-            self.undo();
+        if authoring {
+            if keys.redo {
+                self.redo();
+            } else if keys.undo {
+                self.undo();
+            }
         }
         if keys.focus {
             self.focus_selection();
