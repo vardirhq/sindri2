@@ -16,10 +16,9 @@ use sindri_render::{
 };
 use sindri_scene::{CameraView, SceneExtractor, TextureBindings};
 
-use crate::{
-    AUDIO_IDS, FONT_IDS, GatherError, SCENE_ID, SCRIPT_IDS, SHEET_IDS, Session, TEXTURE_IDS,
-    extractor,
-};
+use crate::assets::{AUDIO_IDS, FONT_IDS, SCENE_ID, SCRIPT_IDS, SHEET_IDS, TEXTURE_IDS, extractor};
+use crate::error::GatherError;
+use crate::session::Session;
 
 /// Gather's browser host deliberately starts empty.
 ///
