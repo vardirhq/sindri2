@@ -124,7 +124,9 @@ pub(super) fn console_row(ui: &mut egui::Ui, entry: &Entry) {
     ui.horizontal_top(|ui| {
         ui.spacing_mut().item_spacing.x = 5.0;
         ui.add_space(metric::GUTTER);
-        ui.add_space(2.0);
+        // Nudged onto the first line's centre: a dot allocated at the top of a
+        // wrapping row otherwise floats above the text it belongs to.
+        ui.add_space(4.0);
         panel::status_dot(ui, tint);
         // Wrapped, not truncated: an asset failure names a path and an
         // operating system error, and a line that runs off the edge of the dock

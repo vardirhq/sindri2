@@ -71,7 +71,7 @@ fn project_browser(
     open: Option<&Path>,
 ) -> BrowserAction {
     if !folders {
-        return asset_column(ui, search, view, expanded, project, open);
+        return asset_column(ui, search, view, expanded, false, project, open);
     }
     let mut action = BrowserAction::None;
     ui.horizontal(|ui| {
@@ -92,44 +92,60 @@ fn project_browser(
             rule.y_range(),
             crate::ui::theme::hairline(),
         );
-        ui.vertical(|ui| action = asset_column(ui, search, view, expanded, project, open));
+        ui.vertical(|ui| {
+            action = asset_column(ui, search, view, expanded, true, project, open);
+        });
     });
     action
 }
 
-/// The browser's own controls: where it is looking, how it presents, and what
-/// it is filtered to.
+/// The browser's own controls: how it presents, and what it is filtered to.
 ///
-/// Two rows rather than one. As a bottom dock there is width for everything
-/// side by side; as a tall column there is not, and a right-aligned row that
-/// wants more width than it has grows leftwards — which put the asset rows
-/// underneath it half outside the panel.
+/// `label` names the directory being listed, and is `None` when the folder tree
+/// beside it already says so — the dock showed "assets" twice, once in the tree
+/// and once over the list of the same directory.
+///
+/// Two rows when there is a label, one when there is not. As a bottom dock
+/// there is width for everything side by side; as a tall column there is not,
+/// and a right-aligned row that wants more width than it has grows leftwards,
+/// which put the asset rows underneath it half outside the panel.
 fn browser_tools(
     ui: &mut egui::Ui,
     search: &mut String,
     view: &mut AssetView,
-    label: &str,
+    label: Option<&str>,
 ) -> BrowserAction {
     let mut action = BrowserAction::None;
+    let stacked = label.is_some();
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 5.0;
         ui.add_space(metric::GUTTER);
-        ui.label(
-            icons::FOLDER
-                .outlined()
-                .rich_text()
-                .size(14.0)
-                .color(color::FORGE_DIM),
-        );
-        ui.add(
-            egui::Label::new(
-                RichText::new(label)
-                    .size(text::LABEL)
-                    .color(color::TEXT_MUTED),
-            )
-            .selectable(false)
-            .truncate(),
-        );
+        if let Some(label) = label {
+            ui.label(
+                icons::FOLDER
+                    .outlined()
+                    .rich_text()
+                    .size(14.0)
+                    .color(color::FORGE_DIM),
+            );
+            ui.add(
+                egui::Label::new(
+                    RichText::new(label)
+                        .size(text::LABEL)
+                        .color(color::TEXT_MUTED),
+                )
+                .selectable(false)
+                .truncate(),
+            );
+        } else {
+            // Room measured from the controls that follow rather than taken
+            // from whatever is left, so the search never asks the row for more
+            // width than the row has.
+            let room = (ui.available_width() - CONTROLS_WIDTH - metric::GUTTER).max(80.0);
+            ui.allocate_ui(egui::vec2(room, metric::CONTROL_HEIGHT + 4.0), |ui| {
+                panel::search(ui, search, "Search assets");
+            });
+        }
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             ui.add_space(metric::GUTTER);
             // The directory is read when a scene is opened, so a file added
@@ -148,16 +164,25 @@ fn browser_tools(
             }
         });
     });
-    ui.add_space(4.0);
-    ui.horizontal(|ui| {
-        ui.add_space(metric::GUTTER);
-        let room = (ui.available_width() - metric::GUTTER).max(60.0);
-        ui.allocate_ui(egui::vec2(room, metric::CONTROL_HEIGHT + 4.0), |ui| {
-            panel::search(ui, search, "Search assets");
+    if stacked {
+        ui.add_space(4.0);
+        ui.horizontal(|ui| {
+            ui.add_space(metric::GUTTER);
+            let room = (ui.available_width() - metric::GUTTER).max(60.0);
+            ui.allocate_ui(egui::vec2(room, metric::CONTROL_HEIGHT + 4.0), |ui| {
+                panel::search(ui, search, "Search assets");
+            });
         });
-    });
+    }
     action
 }
+
+/// How much room the view switch and the refresh button take together.
+///
+/// A measured constant rather than a guess: the search box beside them is
+/// allocated the rest, and getting it wrong is how a toolbar overflows its
+/// panel.
+const CONTROLS_WIDTH: f32 = 152.0;
 
 /// The asset side of the browser: what it is showing, and how.
 fn asset_column(
@@ -165,11 +190,14 @@ fn asset_column(
     search: &mut String,
     view: &mut AssetView,
     expanded: &mut BTreeSet<PathBuf>,
+    folders: bool,
     project: &ProjectTree,
     open: Option<&Path>,
 ) -> BrowserAction {
     ui.add_space(4.0);
-    let mut action = browser_tools(ui, search, view, &project.label());
+    // The folder tree already names the directory; without it the list has to.
+    let label = (!folders).then(|| project.label());
+    let mut action = browser_tools(ui, search, view, label.as_deref());
     ui.add_space(5.0);
     if let Some(error) = project.error() {
         panel::problem(ui, error);

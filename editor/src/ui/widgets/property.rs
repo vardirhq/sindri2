@@ -99,6 +99,12 @@ impl<'a> Property<'a> {
                 Vec2::new(width, metric::CONTROL_HEIGHT),
                 Layout::left_to_right(Align::Center),
                 |ui| {
+                    // The column is only a column if it holds its width. egui
+                    // allocates a child region by what its contents ended up
+                    // measuring, not by what was asked for, so without this the
+                    // label column was as wide as each label — and "Scale" put
+                    // its fields eleven pixels left of "Position"'s.
+                    ui.set_min_width(width);
                     ui.add(
                         egui::Label::new(
                             RichText::new(self.label)
@@ -117,6 +123,18 @@ impl<'a> Property<'a> {
             None => response,
         }
     }
+}
+
+/// Puts a row's own controls at the far end of it.
+///
+/// A remove button beside its label reads as part of the label; at the end of
+/// the row it reads as what the row can do, and lines up with every other row's.
+pub fn trailing<R>(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui) -> R) -> R {
+    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+        ui.add_space(metric::GUTTER);
+        add(ui)
+    })
+    .inner
 }
 
 /// A row whose value is text the editor wrote rather than a control.

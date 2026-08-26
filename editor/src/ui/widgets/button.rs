@@ -162,8 +162,12 @@ impl<'a, T: Copy + PartialEq> Segmented<'a, T> {
         let galleys: Vec<_> = options
             .iter()
             .map(|(_, label, _)| {
+                // Laid out with the placeholder colour so that the tint
+                // handed to `Painter::galley` is the one that takes effect: a
+                // galley built with a real colour keeps it, and every segment
+                // was drawn in the selected segment's white.
                 ui.painter()
-                    .layout_no_wrap((*label).to_owned(), font.clone(), color::TEXT)
+                    .layout_no_wrap((*label).to_owned(), font.clone(), Color32::PLACEHOLDER)
             })
             .collect();
         let segment_height = metric::CONTROL_HEIGHT - 3.0;
@@ -175,7 +179,11 @@ impl<'a, T: Copy + PartialEq> Segmented<'a, T> {
         // that, and the conversion is then exact rather than lossy.
         let gaps = f32::from(u8::try_from(widths.len().saturating_sub(1)).unwrap_or(u8::MAX));
         let total = widths.iter().sum::<f32>() + 2.0 * gaps + 6.0;
-        let (rect, _) = ui.allocate_exact_size(
+        // The whole strip is allocated first so that its own response carries
+        // an id egui made unique. Deriving the segments from `ui.id()` instead
+        // gave every switch in a panel the same ids, and egui painted its
+        // duplicate-id warning across the inspector's Transform section.
+        let (rect, strip) = ui.allocate_exact_size(
             Vec2::new(total, metric::CONTROL_HEIGHT + 2.0),
             Sense::hover(),
         );
@@ -198,7 +206,7 @@ impl<'a, T: Copy + PartialEq> Segmented<'a, T> {
             left += widths[index] + 2.0;
             let selected = *current == value;
             let response = tipped(
-                ui.interact(segment, ui.id().with(("segment", index)), Sense::click()),
+                ui.interact(segment, strip.id.with(index), Sense::click()),
                 tip,
             );
             if selected {

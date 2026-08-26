@@ -63,9 +63,12 @@ pub(super) fn grid_navigation_section(
     let mut remove = None;
     for (index, wall) in walls.iter_mut().enumerate() {
         property::Property::new(&format!("Wall {}", index + 1)).show(ui, |ui| {
-            if button::row_icon(ui, icons::REMOVE, Intent::Danger, "Remove this wall").clicked() {
-                remove = Some(index);
-            }
+            property::trailing(ui, |ui| {
+                if button::row_icon(ui, icons::REMOVE, Intent::Danger, "Remove this wall").clicked()
+                {
+                    remove = Some(index);
+                }
+            });
         });
         if let Some(coord) = wall.get_mut("first") {
             grid_coord_row(ui, "First", coord);
@@ -173,15 +176,17 @@ pub(super) fn grid_occupant_section(
     let mut remove = None;
     for (index, cell) in footprint.iter_mut().enumerate() {
         property::Property::new(&format!("Cell {}", index + 1)).show(ui, |ui| {
-            if ui
-                .add_enabled_ui(may_remove, |ui| {
-                    button::row_icon(ui, icons::REMOVE, Intent::Danger, "Remove this cell")
-                })
-                .inner
-                .clicked()
-            {
-                remove = Some(index);
-            }
+            property::trailing(ui, |ui| {
+                if ui
+                    .add_enabled_ui(may_remove, |ui| {
+                        button::row_icon(ui, icons::REMOVE, Intent::Danger, "Remove this cell")
+                    })
+                    .inner
+                    .clicked()
+                {
+                    remove = Some(index);
+                }
+            });
         });
         grid_coord_row(ui, "Offset", cell);
     }

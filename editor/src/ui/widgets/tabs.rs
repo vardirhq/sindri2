@@ -68,9 +68,11 @@ pub fn tab(
     let font = FontId::proportional(weight.font());
     // Measured rather than guessed from character count: the tab is painted, so
     // nothing else would stop a long name running past its own ground.
+    // Laid out with the placeholder colour so the tint below is the one that
+    // takes effect: a galley built with a real colour keeps it.
     let galley = ui
         .painter()
-        .layout_no_wrap(label.to_owned(), font, color::TEXT);
+        .layout_no_wrap(label.to_owned(), font, egui::Color32::PLACEHOLDER);
     let icon_width = if icon.is_some() { 20.0 } else { 0.0 };
     let width = galley.size().x + icon_width + 26.0;
     let (rect, response) =
