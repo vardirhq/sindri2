@@ -198,6 +198,47 @@ impl ProjectTree {
             .collect()
     }
 
+    /// Project-relative references to every texture the browser can see, and
+    /// the named sprites inside each.
+    ///
+    /// A sliced sheet contributes one reference per sprite — `tiles.png#floor`
+    /// — beside the whole image, because those are the references a component
+    /// can actually name. Offering the sheet alone would be offering to draw
+    /// every frame at once.
+    pub fn textures(&self) -> Vec<String> {
+        self.entries
+            .iter()
+            .filter(|entry| entry.kind == AssetKind::Texture)
+            .flat_map(|entry| {
+                let texture = entry.relative.replace('\\', "/");
+                let named = entry
+                    .sprites
+                    .iter()
+                    .map(|sprite| format!("{texture}#{sprite}"))
+                    .collect::<Vec<String>>();
+                std::iter::once(texture).chain(named)
+            })
+            .collect()
+    }
+
+    /// Project-relative references to every Decay script the browser can see.
+    ///
+    /// Decay only: `.rs` and `.wgsl` are listed as scripts by the browser
+    /// because they are source, but a `sindri.script` component naming one
+    /// would name something nothing can run.
+    pub fn scripts(&self) -> Vec<String> {
+        self.entries
+            .iter()
+            .filter(|entry| entry.kind == AssetKind::Script)
+            .map(|entry| entry.relative.replace('\\', "/"))
+            .filter(|reference| {
+                Path::new(reference)
+                    .extension()
+                    .is_some_and(|extension| extension.eq_ignore_ascii_case("decay"))
+            })
+            .collect()
+    }
+
     /// Named sprites belonging to one project-relative texture reference.
     pub fn sprites_for_texture(&self, texture: &str) -> Vec<String> {
         self.entries

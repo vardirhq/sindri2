@@ -33,6 +33,17 @@ All notable changes to Sindri Next will be documented here.
   mode and is labelled with what pressing it does, one icon holds and releases a
   running scene, and the editor says whether it is Editing, Playing, or Paused.
   Ctrl+P plays and stops; Ctrl+Shift+P pauses and resumes.
+- **The inspector shows what a component has, and edits it with controls that
+  know what it means.** Every field of a component is drawn whether or not this
+  instance wrote it down, so two of one component no longer show two different
+  sets of rows; a field left alone is still not written to the file. A field
+  whose value is one of a few names — a camera's projection, a UI anchor, a
+  tilemap's projection, a body's kind — is a menu rather than a text box, and
+  switching a camera's projection writes the fields that projection has instead
+  of producing a payload the schema refuses. A field naming a project file gets
+  a picker beside it, a tint gets a colour swatch, fields are ordered by what
+  they say about the component rather than alphabetically, and a row that is
+  only a readout says on hover why.
 - Rust source files are now capped at 600 lines, with 400 as the target, and
   `scripts/check-file-size.py` enforces it in CI. Twenty-one files were over the
   cap — the largest was the 4,714-line native editor — and each is now a

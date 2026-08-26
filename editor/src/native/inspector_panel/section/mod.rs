@@ -19,6 +19,7 @@ use egui_material_icons::icons::{
     ICON_LABEL, ICON_PLAY_ARROW, ICON_VIEW_IN_AR,
 };
 use serde_json::Value;
+use sindri_core::ComponentSchemaRegistry;
 
 use self::animation::animation_section;
 use self::grid::{grid_navigation_section, grid_occupant_section};
@@ -31,7 +32,7 @@ use super::super::hierarchy::row::component_label;
 use super::super::{
     ACCENT, GRID_NAVIGATION_COMPONENT, GRID_OCCUPANT_COMPONENT, TEXT, UI_TEXT_COMPONENT,
 };
-use super::rows::object_rows;
+use super::field::object_rows;
 use super::{InspectorProject, InspectorTools};
 
 /// Draws every component on an entity, editable, and reports what changed.
@@ -41,13 +42,14 @@ use super::{InspectorProject, InspectorTools};
 pub(super) fn components_sections(
     ui: &mut egui::Ui,
     components: &mut BTreeMap<String, Value>,
+    registry: &ComponentSchemaRegistry,
     project: &InspectorProject<'_>,
     tools: &mut InspectorTools<'_>,
 ) -> Option<String> {
     let InspectorProject {
         scripts,
         root: project_root,
-        fonts,
+        assets,
         animation_texture,
         grids,
     } = *project;
@@ -100,7 +102,7 @@ pub(super) fn components_sections(
             script_exports_section(ui, payload, scripts);
         }
         if name == UI_TEXT_COMPONENT {
-            text_section(ui, payload, fonts);
+            text_section(ui, payload, assets.fonts);
         }
         if name == crate::animation::TYPE_NAME {
             animation_section(
@@ -120,7 +122,16 @@ pub(super) fn components_sections(
         if name == GRID_OCCUPANT_COMPONENT {
             grid_occupant_section(ui, payload, grids);
         }
-        object_rows(ui, name, payload, name == "sindri.script");
+        // The registry's blank is what says which fields this component has,
+        // so an instance that wrote none of them still shows all of them.
+        object_rows(
+            ui,
+            name,
+            payload,
+            registry.default_payload(name),
+            assets,
+            name == "sindri.script",
+        );
     }
     removed
 }

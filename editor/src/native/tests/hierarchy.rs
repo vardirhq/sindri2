@@ -180,6 +180,11 @@ fn hierarchy_drop_rules_allow_moves_but_reject_noops_and_cycles() {
 fn labels_are_human_readable() {
     assert_eq!(humanize("checker-cube"), "Checker Cube");
     assert_eq!(component_label("sindri.sprite"), "Sprite");
+    assert_eq!(
+        component_label("sindri.ui.image"),
+        "UI Image",
+        "a word people write in capitals is not a typo in the panel"
+    );
 }
 
 /// The hierarchy is two lists, and which list an entity is in comes from what

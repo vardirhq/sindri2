@@ -45,6 +45,20 @@ pub enum TileProjection {
 /// not a HUD. Nothing authored a screen-space map, and a viewport-anchored grid
 /// of tiles is a UI element rather than a tilemap, so the field is gone and
 /// `sindri.ui.*` is where the overlay lives.
+impl TileProjection {
+    /// Every projection, by the name a scene stores, in the order a chooser
+    /// should offer them.
+    pub const ALL: [Self; 2] = [Self::Orthogonal, Self::Isometric];
+
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Orthogonal => "orthogonal",
+            Self::Isometric => "isometric",
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct TilemapComponent {
     /// The sliced image every tile is drawn from.

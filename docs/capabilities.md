@@ -390,6 +390,18 @@ frame.
   undoes; every edit is checked against the component's own schema first, so one
   that would stop it decoding is refused and said aloud rather than written into
   a scene that then will not open
+- **Controls that know what a field means.** A component draws every field it
+  has, filled out from the registry's own blank, so two of one component show
+  the same rows and a field nobody wrote down is still visible at what it means;
+  only a field actually changed is written back. A value that is one of a few
+  names is a menu — a camera's projection, a UI anchor, a tilemap's projection,
+  a rigid body's kind — taken from the engine's own list. A camera's projection
+  decides which other fields it has, so choosing one writes them: switching to
+  orthographic drops the vertical field of view, keeps the near and far planes,
+  and gains a vertical size, which typing the word into a text box could never
+  do. A field naming a project asset offers what the project holds while
+  staying typeable, a tint opens a colour picker, and a row that is only a
+  readout says on hover why it is one
 - **Creating empty root or child GameObjects and deleting entities**, from the
   hierarchy. Creation assigns a stable scene ID immediately, and creating a
   child opens its parent. Deleting takes the whole subtree, and **undo brings

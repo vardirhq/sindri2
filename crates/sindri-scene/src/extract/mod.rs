@@ -94,10 +94,10 @@ impl SceneExtractor {
         components.register_with_default::<CameraComponent>(
             "Camera",
             serde_json::json!({
-                "projection": "perspective",
-                "vertical_fov_degrees": 60.0,
-                "near": 0.1,
-                "far": 100.0
+                "projection": CameraComponent::PROJECTIONS[0],
+                "vertical_fov_degrees": CameraComponent::DEFAULT_VERTICAL_FOV_DEGREES,
+                "near": CameraComponent::DEFAULT_NEAR,
+                "far": CameraComponent::DEFAULT_FAR
             }),
         )?;
         components.register_with_default::<MeshComponent>(

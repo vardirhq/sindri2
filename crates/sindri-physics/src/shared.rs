@@ -14,6 +14,30 @@ pub enum RigidBodyKind {
     KinematicVelocity,
 }
 
+impl RigidBodyKind {
+    /// Every kind, in the order a chooser should offer them.
+    ///
+    /// Named here rather than wherever a list is drawn, so a kind added to the
+    /// enum is offered without anyone remembering to add it twice.
+    pub const ALL: [Self; 4] = [
+        Self::Static,
+        Self::Dynamic,
+        Self::KinematicPosition,
+        Self::KinematicVelocity,
+    ];
+
+    /// The name this kind is stored under.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Static => "static",
+            Self::Dynamic => "dynamic",
+            Self::KinematicPosition => "kinematic_position",
+            Self::KinematicVelocity => "kinematic_velocity",
+        }
+    }
+}
+
 /// A 32-bit collision membership/filter mask owned by Sindri.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct CollisionLayers {

@@ -198,6 +198,11 @@ pub(crate) fn humanize(value: &str) -> String {
         .split(['-', '_', '.'])
         .filter(|part| !part.is_empty())
         .map(|part| {
+            // "UI" is a word people write in capitals, and "Ui Image" over a
+            // component reads as a typo rather than as a name.
+            if part.eq_ignore_ascii_case("ui") {
+                return "UI".to_owned();
+            }
             let mut chars = part.chars();
             match chars.next() {
                 Some(first) => first.to_uppercase().chain(chars).collect(),

@@ -1,4 +1,8 @@
-//! The generic rows a value gets when no typed section claims it.
+//! The generic rows a value gets when no typed control claims it.
+//!
+//! By shape alone: a number is a drag, a string is a field, four numbers are a
+//! row. `field` is where a value gets a control that knows what it *means*, and
+//! everything it does not claim lands here.
 
 use eframe::egui::{self, Align, Layout, RichText};
 use serde_json::Value;
@@ -6,31 +10,7 @@ use sindri_core::ComponentMetadata;
 
 use crate::inspector;
 
-use super::super::{TEXT, TEXT_FAINT, TEXT_MUTED, theme::property_label};
-
-/// The rows of one payload, indented under its heading.
-///
-/// `skip_properties` keeps a script's authored values from appearing twice:
-/// they are drawn above as typed fields, from what the script declared.
-pub(crate) fn object_rows(
-    ui: &mut egui::Ui,
-    type_name: &str,
-    payload: &mut Value,
-    skip_properties: bool,
-) {
-    let Value::Object(fields) = payload else {
-        return;
-    };
-    for (key, value) in fields.iter_mut() {
-        if skip_properties && key == "properties" {
-            continue;
-        }
-        if !inspector::applies(type_name, key) {
-            continue;
-        }
-        value_row(ui, key, value, 10.0);
-    }
-}
+use super::super::{TEXT, TEXT_FAINT, TEXT_MUTED, theme::property_readout};
 
 /// One field, drawn as whatever its stored shape deserves.
 pub(crate) fn value_row(ui: &mut egui::Ui, key: &str, value: &mut Value, indent: f32) {
@@ -90,9 +70,22 @@ pub(crate) fn value_row(ui: &mut egui::Ui, key: &str, value: &mut Value, indent:
             }
         }
         // Shown as stored and left alone. A text field over a tilemap's tiles
-        // or a clip table is a way to break a scene, not a way to edit one.
+        // or a clip table is a way to break a scene, not a way to edit one —
+        // but a row with no control and no explanation is the complaint this
+        // panel keeps earning, so it says on hover why it is a readout.
         inspector::ValueKind::Opaque => {
-            property_label(ui, &label, &opaque_summary(value));
+            property_readout(
+                ui,
+                &label,
+                &opaque_summary(value),
+                Some(match value {
+                    Value::Null => "Not set, and nothing here can say what it should be",
+                    Value::Array(_) => {
+                        "A list of values with no single control that could edit it safely"
+                    }
+                    _ => "Shown as it is stored: editing it as text could break the scene",
+                }),
+            );
         }
     }
 }

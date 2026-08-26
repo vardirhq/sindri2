@@ -19,6 +19,9 @@
 //! edited into something the engine would refuse to load — the refusal happens
 //! while the author is still looking at the field.
 
+pub mod choices;
+pub mod fields;
+
 use serde_json::Value;
 
 /// What kind of widget a stored value gets.
