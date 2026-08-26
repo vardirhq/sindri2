@@ -15,9 +15,13 @@ someone reviews; it is not a way to opt out.
 """
 
 import argparse
+import signal
 import subprocess
 import sys
 from pathlib import Path
+
+# The report is read through `head` and `less`, which close the pipe early.
+signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 TARGET = 400
 CAP = 600
