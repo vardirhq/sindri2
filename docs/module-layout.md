@@ -145,9 +145,16 @@ scripts/carve.py editor/src/native/mod.rs text_section value_row > /tmp/piece.rs
 
 It is a refactoring aid, not part of the build. What it prints is exactly what
 it removed: the caller writes the module header, the imports, and the new
-visibility. Check its work — `cargo fmt --check` and the compiler catch a bad
-cut immediately, and comparing the line counts before and after catches a silent
+visibility. It moves every item sharing a name rather than the last one, and it
+refuses a cut it can tell it has misread — both because a split that silently
+drops code is the failure worth preventing.
+
+Check its work anyway. `cargo fmt --check` and the compiler catch a bad cut
+immediately, and comparing the line counts before and after catches a silent
 drop.
+
+`scripts/check-file-size.py --report` lists every file over the target, largest
+first, which is the worklist.
 
 ## Reviewing a split
 

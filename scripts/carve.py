@@ -21,10 +21,21 @@ the end of its block. What comes out is exactly what goes in: the caller adds
 the module header, the imports, and whatever visibility the move now needs —
 none of which this can know.
 
+A name that belongs to more than one item — two `#[cfg]` variants of the same
+function — moves all of them, and says so. Taking one and leaving the other is
+how a split loses code.
+
 It reads Rust by brace-counting rather than by parsing it, which is enough for
-the shape this repository is written in and is not a general Rust parser. Check
-what it produced: `cargo fmt --check` and the compiler catch a bad cut
-immediately, and comparing the lines before and after catches a silent drop.
+the shape this repository is written in and is not a general Rust parser. It
+knows about the things that used to fool it: byte and char literals holding a
+bracket, strings that run across lines, a declaration whose brackets balance
+before it ends, and generics after the item keyword. Where it can tell it has
+misread — a cut whose brackets do not close — it refuses to make the cut rather
+than writing a broken one.
+
+Check what it produced anyway. `cargo fmt --check` and the compiler catch a bad
+cut immediately, and comparing the line counts before and after catches a
+silent drop.
 """
 
 import re
