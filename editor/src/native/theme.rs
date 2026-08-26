@@ -163,12 +163,28 @@ pub(super) fn property_toggle(
 }
 
 pub(super) fn property_label(ui: &mut egui::Ui, label: &str, value: &str) {
+    property_readout(ui, label, value, None);
+}
+
+/// A property row that is a readout, optionally saying why it is only that.
+///
+/// A row nobody can change is not a fault by itself — a tilemap's thousand
+/// cells are edited on the map, not in a list — but a row that offers no
+/// control and no explanation is the editor's oldest complaint about itself.
+/// The reason goes on the hover, where it costs no space until it is wanted.
+pub(super) fn property_readout(ui: &mut egui::Ui, label: &str, value: &str, why: Option<&str>) {
     ui.horizontal(|ui| {
         ui.add_space(10.0);
-        ui.label(RichText::new(label).size(11.0).color(TEXT_MUTED));
+        let name = ui.label(RichText::new(label).size(11.0).color(TEXT_MUTED));
+        if let Some(why) = why {
+            name.on_hover_text(why);
+        }
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             ui.add_space(7.0);
-            ui.label(RichText::new(value).size(11.0).color(TEXT));
+            let shown = ui.label(RichText::new(value).size(11.0).color(TEXT));
+            if let Some(why) = why {
+                shown.on_hover_text(why);
+            }
         });
     });
 }

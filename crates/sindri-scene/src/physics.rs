@@ -2,6 +2,11 @@ use serde::Deserialize;
 use sindri_core::SceneComponent;
 use sindri_physics::{Collider2d, RigidBody2d};
 
+/// What drives a body, re-exported because a scene stores the name and the
+/// editor offers the choice: both need the engine's own list rather than a
+/// second copy of it.
+pub use sindri_physics::RigidBodyKind;
+
 /// An authored 2D rigid body.
 ///
 /// The scene owns only Sindri's public physics model. Rapier remains private to

@@ -9,4 +9,5 @@ pub(super) mod camera;
 pub(super) mod namespace;
 pub(super) mod sprites;
 pub(super) mod transform;
+pub(super) mod ui;
 pub(super) mod vector;

@@ -9,10 +9,12 @@ use eframe::egui::{self, Response, RichText, Sense};
 use egui_material_icons::MaterialIcon;
 use sindri_core::{EntityId, World};
 
+use crate::space::{EntitySpace, space_of};
+
 use super::super::theme::{TEXT, TEXT_MUTED};
 use super::row::entity_name;
 
-/// The root the hierarchy hangs from.
+/// One of the two roots the hierarchy hangs from.
 ///
 /// A collapse chevron used to sit in front of it, and nothing collapsed.
 pub(super) fn hierarchy_group(ui: &mut egui::Ui, label: &str, icon: MaterialIcon) -> Response {
@@ -36,7 +38,12 @@ pub(super) fn hierarchy_group(ui: &mut egui::Ui, label: &str, icon: MaterialIcon
 }
 
 /// What the root is called wherever a parent is named.
-pub(crate) const ROOT_LABEL: &str = "World";
+///
+/// One word for both groups, because there is one root: which of the two an
+/// entity is listed under is decided by what it carries, not by where it was
+/// dropped. "Top level" says that; "World" would promise that moving something
+/// there makes it a world object, which no parent change can do.
+pub(crate) const ROOT_LABEL: &str = "Top level";
 
 /// Flattens the world into display rows, parents before their children.
 ///
@@ -66,6 +73,7 @@ pub(crate) fn visible_hierarchy_rows(
     world: &World,
     collapsed: &BTreeSet<EntityId>,
     needle: &str,
+    space: EntitySpace,
 ) -> Vec<(EntityId, usize)> {
     let included = if needle.is_empty() {
         None
@@ -86,10 +94,14 @@ pub(crate) fn visible_hierarchy_rows(
         Some(included)
     };
 
+    // Only the roots are sorted into a group. What hangs under one stays under
+    // it, whatever it carries: the hierarchy an author built is theirs, and a
+    // panel that scattered children by component would be rearranging it.
     let mut roots: Vec<EntityId> = world
         .entities()
         .filter(|(_, data)| data.parent.is_none())
         .map(|(entity, _)| entity)
+        .filter(|entity| space_of(world, *entity) == space)
         .collect();
     roots.sort_by_key(|entity| hierarchy_sort_key(world, *entity));
 

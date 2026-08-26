@@ -2,8 +2,8 @@
   "format_version": 1,
   "assets": {
     "demo.scene.json": {
-      "bytes": 2948,
-      "hash": "sha256:11a2285130d6d7639f541ec2bc86ae88a1b8738a464de629b82b1b31439a574c"
+      "bytes": 2958,
+      "hash": "sha256:30bb6684f7975c33598c972dd81287adb7018f98c0bf881db358f63cbc1e5596"
     },
     "textures/badge.png": {
       "bytes": 362,

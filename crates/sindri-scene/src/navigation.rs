@@ -8,9 +8,7 @@ use sindri_grid::{
 };
 use thiserror::Error;
 
-use crate::{
-    GridNavigationComponent, GridOccupantComponent, SpriteSpace, TilemapComponent, TilemapError,
-};
+use crate::{GridNavigationComponent, GridOccupantComponent, TilemapComponent, TilemapError};
 
 /// One entity's derived placement on a world grid.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -63,10 +61,6 @@ impl WorldGridNavigation {
                 grid: grid_entity,
                 source,
             })?;
-        if matches!(tilemap.space, SpriteSpace::Screen) {
-            return Err(GridNavigationError::ScreenSpaceGrid(grid_entity));
-        }
-
         let grid_transform = grid_data.transform_3d.unwrap_or_default();
         validate_planar_grid(grid_entity, grid_transform)?;
         let bounds =
@@ -269,8 +263,6 @@ pub enum GridNavigationError {
         #[source]
         source: TilemapError,
     },
-    #[error("grid entity {0:?} is screen-space; gameplay grids must be world-space")]
-    ScreenSpaceGrid(EntityId),
     #[error("grid entity {0:?} needs a finite planar XY transform with non-zero XY scale")]
     InvalidGridTransform(EntityId),
     #[error("grid entity {grid:?} has invalid grid geometry: {source}")]

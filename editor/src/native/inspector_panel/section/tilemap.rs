@@ -7,7 +7,6 @@ use eframe::egui::{
 };
 use egui_material_icons::icons::{ICON_GRID_VIEW, ICON_IMAGE};
 use serde_json::Value;
-use sindri_scene::SpriteSpace;
 
 use crate::tilemap::{self, PaletteSprite, TilemapTool, resize as resize_tilemap};
 
@@ -55,10 +54,6 @@ pub(super) fn tilemap_section(
         map = resized;
     }
 
-    let world_space = map.space == SpriteSpace::World;
-    if !world_space {
-        tool.enabled = false;
-    }
     ui.horizontal(|ui| {
         ui.add_space(10.0);
         let label = if tool.enabled {
@@ -66,26 +61,20 @@ pub(super) fn tilemap_section(
         } else {
             "Paint in Scene view"
         };
-        if ui
-            .add_enabled_ui(world_space, |ui| ui.selectable_label(tool.enabled, label))
-            .inner
-            .clicked()
-        {
+        if ui.selectable_label(tool.enabled, label).clicked() {
             tool.enabled = !tool.enabled;
         }
     });
     ui.horizontal_wrapped(|ui| {
         ui.add_space(10.0);
         ui.label(
-            RichText::new(if !world_space {
-                "Scene painting supports world-space tilemaps; switch Space to world first."
-            } else if tool.enabled {
+            RichText::new(if tool.enabled {
                 "Primary drag paints. Middle or Shift-drag pans; secondary drag orbits."
             } else {
                 "Enable painting, then choose a sprite or the eraser."
             })
             .size(9.0)
-            .color(if world_space { TEXT_MUTED } else { PROBLEM }),
+            .color(TEXT_MUTED),
         );
     });
 

@@ -16,6 +16,8 @@ pub(super) struct Shortcuts {
     pub(super) undo: bool,
     pub(super) redo: bool,
     pub(super) save: bool,
+    pub(super) play: bool,
+    pub(super) pause: bool,
 }
 
 /// Reads the editing shortcuts, most specific first.
@@ -29,8 +31,17 @@ pub(super) fn pressed(input: &mut egui::InputState) -> Shortcuts {
         egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
         egui::Key::Z,
     ) || input.consume_key(egui::Modifiers::COMMAND, egui::Key::Y);
+    // Pause before play, for the same reason redo comes before undo: an extra
+    // Shift is ignored by a logical match, so Ctrl+Shift+P tested against
+    // Ctrl+P would play instead of pausing.
+    let pause = input.consume_key(
+        egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
+        egui::Key::P,
+    );
     Shortcuts {
         redo,
+        pause,
+        play: input.consume_key(egui::Modifiers::COMMAND, egui::Key::P),
         undo: input.consume_key(egui::Modifiers::COMMAND, egui::Key::Z),
         save: input.consume_key(egui::Modifiers::COMMAND, egui::Key::S),
         // Unmodified, as it is everywhere else that frames a selection. A text
@@ -53,6 +64,11 @@ impl EditorApp {
         }
         if keys.focus {
             self.focus_selection();
+        }
+        if keys.pause {
+            self.toggle_pause();
+        } else if keys.play {
+            self.toggle_play_mode();
         }
     }
 }

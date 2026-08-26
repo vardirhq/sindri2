@@ -372,6 +372,13 @@ frame.
   every entity may own children, child-bearing rows fold with state remembered
   across launches, search retains and temporarily opens each match's ancestor
   path, selection works anywhere on a row, and empty space or Escape clears it
+- **Lists world objects and UI objects apart**, under a World group and a UI
+  group, with icons of their own. Which group a top-level entity is in is read
+  from what it carries — a `sindri.ui.*` component means the viewport — so
+  nothing has to be kept in step by hand and no entity can claim a space it is
+  not drawn in. A group holding only UI elements is listed with the UI.
+  Create GameObject makes an empty object or a UI Image directly, and the
+  inspector says which space the selected entity is in
 - Inspector edits of name and the complete transform: position, Euler-degree
   rotation backed by the stored quaternion, scale, and the Z lock, which takes
   away movement off the current layer
@@ -382,8 +389,19 @@ frame.
   preserve policy promises. Every edit goes through `SetComponent`, so it
   undoes; every edit is checked against the component's own schema first, so one
   that would stop it decoding is refused and said aloud rather than written into
-  a scene that then will not open. A field that decides nothing is not offered —
-  a world-space sprite has no anchor row
+  a scene that then will not open
+- **Controls that know what a field means.** A component draws every field it
+  has, filled out from the registry's own blank, so two of one component show
+  the same rows and a field nobody wrote down is still visible at what it means;
+  only a field actually changed is written back. A value that is one of a few
+  names is a menu — a camera's projection, a UI anchor, a tilemap's projection,
+  a rigid body's kind — taken from the engine's own list. A camera's projection
+  decides which other fields it has, so choosing one writes them: switching to
+  orthographic drops the vertical field of view, keeps the near and far planes,
+  and gains a vertical size, which typing the word into a text box could never
+  do. A field naming a project asset offers what the project holds while
+  staying typeable, a tint opens a colour picker, and a row that is only a
+  readout says on hover why it is one
 - **Creating empty root or child GameObjects and deleting entities**, from the
   hierarchy. Creation assigns a stable scene ID immediately, and creating a
   child opens its parent. Deleting takes the whole subtree, and **undo brings
@@ -395,10 +413,19 @@ frame.
 - **Adding and removing components.** Add Component offers what the entity lacks
   and the registry can create, which excludes a type with no sensible blank
   rather than offering one the engine would reject. Text and sprite animation
-  are completed at the editor boundary: a project font gives Text a valid
+  are completed at the editor boundary: a project font gives UI Text a valid
   visible default, while a Sprite component whose texture has named sheet
-  sprites gives Sprite Animation its first one-frame clip. Both are undoable
-- **Text authoring.** A `sindri.text` component gets a multiline content editor
+  sprites gives Sprite Animation its first one-frame clip. Both are undoable.
+  The menu offers one space or the other: an entity carrying `sindri.ui.*` is on
+  the viewport and is not also offered a world sprite, and the reverse
+- **A transport that says what it does.** One button enters and leaves play
+  mode, labelled Play or Stop by which of the two pressing it will do; one icon
+  pauses and resumes a scene already in play mode, and is disabled outside it;
+  and a word beside them reads Editing, Playing, or Paused. Ctrl+P and
+  Ctrl+Shift+P are the same two actions. Stop puts back everything playing
+  changed, from the world as it was when Play was pressed rather than from the
+  authored file, so pressing Play never costs an unsaved edit
+- **Text authoring.** A `sindri.ui.text` component gets a multiline content editor
   and a picker listing project-relative font assets. Existing missing font
   references remain visible and are called out instead of silently replaced
 - **Sprite-sheet and animation authoring.** Selecting a texture opens its image
@@ -502,7 +529,7 @@ settings gear.
 - **No reusable tileset asset model.** A tilemap has a component, renderer, and
   palette of named sprites from a sheet, but tile semantics such as terrain,
   collision, and reusable tile metadata do not exist
-- Text is currently screen-space only; world labels, wrapping/alignment
+- Text is currently a UI component only; world labels, wrapping/alignment
   controls, and rich spans remain
 - **One mesh primitive: `Cube`.** No quad, sphere, or glTF import
 - **No audio.** Now scheduled in `ROADMAP.md`; it previously had no item at all
@@ -527,8 +554,7 @@ settings gear.
 - No first-class project model or multi-scene workspace. The Project dock does
   read and filter the directory containing the open scene
 - No multi-select; viewport selection and transform gizmos currently cover
-  world-space sprites, filled tilemap cells, and meshes rather than screen-space
-  overlays
+  world sprites, filled tilemap cells, and meshes rather than UI elements
 - No prefabs, no play-mode-against-a-copy, no build or export controls
 - No versioned editor protocol; the editor and runtime are one process
 - Cannot open or edit a Decay script's *source* — the project browser lists

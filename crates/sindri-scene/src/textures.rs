@@ -5,7 +5,8 @@ use sindri_render::{TextureId, TextureRegistry, UvRect};
 use thiserror::Error;
 
 use crate::{
-    MeshComponent, SpriteAnimationComponent, SpriteComponent, TextComponent, TilemapComponent,
+    MeshComponent, SpriteAnimationComponent, SpriteComponent, TilemapComponent, UiImageComponent,
+    UiTextComponent,
 };
 
 /// Maps the texture references a scene names to the textures a renderer holds.
@@ -308,6 +309,7 @@ pub const TEXTURE_NAMING_COMPONENTS: &[&str] = &[
     MeshComponent::TYPE_NAME,
     SpriteComponent::TYPE_NAME,
     TilemapComponent::TYPE_NAME,
+    UiImageComponent::TYPE_NAME,
 ];
 
 /// Every built-in component that names a project font, which is the list hosts
@@ -321,7 +323,7 @@ pub const TEXTURE_NAMING_COMPONENTS: &[&str] = &[
 /// font-naming component has no default payload to be read — it cannot invent a
 /// font — so the test probes each validator instead, and a component that
 /// deserializes a `font` has to be named here or fail the build.
-pub const FONT_NAMING_COMPONENTS: &[&str] = &[TextComponent::TYPE_NAME];
+pub const FONT_NAMING_COMPONENTS: &[&str] = &[UiTextComponent::TYPE_NAME];
 
 /// Every texture a world draws with that nothing has bound.
 ///

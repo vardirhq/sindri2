@@ -19,10 +19,11 @@ The current stage order is:
 Layers order passes within a stage. Equal stage/layer pairs preserve extraction order. Transparent
 sprites inside a batch continue to use `TransparentOrder` before they enter the frame packet.
 
-`Transparent2d` holds world-space sprites, which are drawn through the world camera and tested
-against the depth the opaque stage wrote; `Overlay` holds screen-anchored ones, which nothing in the
-world may hide, together with screen-space text ordered by the same layers. See [scene extraction](scene-extraction.md) for which space a sprite is in and
-[transparency](rendering-transparency.md) for what each does about depth.
+`Transparent2d` holds world sprites, which are drawn through the world camera and tested against the
+depth the opaque stage wrote; `Overlay` holds the `sindri.ui.*` family, which nothing in the world
+may hide, ordered by the same layers. See [scene extraction](scene-extraction.md) for which
+component draws in which space and [transparency](rendering-transparency.md) for what each does
+about depth.
 
 ## Clearing belongs to the frame
 

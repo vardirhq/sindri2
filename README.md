@@ -72,10 +72,11 @@ can reach.
 - shared `wgpu` device/surface policy for native and WebGPU
 - extraction/preparation/rendering stages with deterministic pass ordering
 - depth-tested 3D meshes, perspective and orthographic cameras, textured/tinted/layered 2D sprites, sprite sheets, and runtime sprite animation
+- a `sindri.ui.*` component family for anchored screen images and text, drawn through a projection the viewport owns rather than through any authored camera
 - orthogonal and isometric tilemaps extracted into the same sprite batches as loose world sprites
 - renderer-independent typed grid coordinates, bounds, neighbours, and reversible orthogonal/isometric projection math
 - authored grid walls and multi-cell occupants, with world-derived occupancy, placement validation, and deterministic A* paths
-- anchored, layered screen-space text rendered from project-owned OpenType font assets
+- layered screen text rendered from project-owned OpenType font assets
 - deterministic offscreen PNG rendering exercised by CI
 - Decay scripts that run against the live world through a typed host surface
 - a browser-playable companion game proving Decay, fixed-step input, entity references, and rendering together
@@ -87,17 +88,19 @@ The native editor is already an authoring tool rather than a mock shell. It work
 It currently supports:
 
 - opening, saving, reloading, and discarding canonical scene files
-- a searchable, collapsible GameObject hierarchy in which every entity can own children, filtered results retain their ancestor paths, and drag-and-drop reparents onto another GameObject or the World root
+- a searchable, collapsible GameObject hierarchy in which every entity can own children, filtered results retain their ancestor paths, and drag-and-drop reparents onto another GameObject or the top level
+- world objects and UI objects listed apart, decided by the components an entity carries rather than by anything kept in step by hand
 - creating empty root or child GameObjects and deleting subtrees, including undo that restores deleted entities at their original handles
 - editing names and transforms
-- adding, removing, and editing component payloads through the component schema registry
+- adding, removing, and editing component payloads through the component schema registry, with every field of a component shown whether or not it was written down
+- menus rather than text boxes for values that are one of a few names, including a camera projection switch that writes the fields that projection has
 - slicing sprite sheets, arranging named frames into timed clips, and previewing them in the inspector
-- adding text when the project has a font, editing multiline content, and choosing project font assets
+- adding text when the project has a font, editing multiline content, and choosing project font, texture, and script assets from what the project holds
 - editing unknown preserved components instead of silently throwing their data away
 - editing Decay `@export` properties directly in the inspector
 - undo/redo with drag merging and saved-state tracking
 - Scene and Game views with perspective/orthographic viewing, orbit, pan, zoom, click selection, and focus-selection
-- Play, Pause, and Stop using the real engine lifecycle
+- Play and Pause using the real engine lifecycle, with what the editor is doing said in a word
 - Decay execution and sprite animation during play, with the world restored to its pre-play state on Stop
 - keyboard input routed to scripts only while the game owns it
 - project browsing, console output, preferences, remembered layouts, and reopening the previous scene

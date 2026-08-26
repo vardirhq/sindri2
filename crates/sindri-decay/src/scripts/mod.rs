@@ -159,6 +159,27 @@ impl Scripts {
         exports_of(&self.programs.get(source)?.program, script)
     }
 
+    /// The scripts one compiled source declares.
+    ///
+    /// What an editor offers when asking which script of a file an entity runs.
+    /// Empty for a source that has not compiled, which is not the same as a
+    /// source declaring nothing — but both leave a panel with no names to
+    /// offer, so both are the same answer here.
+    #[must_use]
+    pub fn declared(&self, source: &str) -> Vec<String> {
+        self.programs
+            .get(source)
+            .map(|compiled| {
+                compiled
+                    .program
+                    .containers
+                    .iter()
+                    .map(|container| container.name.clone())
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
     pub fn clear(&mut self) {
         self.programs.clear();
         self.running.clear();

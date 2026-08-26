@@ -139,7 +139,8 @@ authored data it held before.
 Root-level singletons keep their flat names — `sindri.camera`, `sindri.mesh`,
 `sindri.sprite`, `sindri.text`, `sindri.tilemap`, and `sindri.script` are not
 owned by a subsystem in the same way, and renaming them would churn every scene
-for nothing.
+for nothing. (`sindri.text` did move later, in format 8, when the UI became a
+subsystem in exactly that sense.)
 
 A scene carrying both spellings of one component is the case that is not
 mechanical. The two payloads are different authored data and no choice between
@@ -184,6 +185,38 @@ screen overlay. The 6 → 7 migration removes that camera component while
 preserving the entity itself and every unrelated field/component it carries.
 Format-6 perspective cameras survive unchanged. A new orthographic camera
 authored in format 7 is a world camera and is never treated as UI.
+
+### Version 8
+
+The screen half of a scene becomes its own family of components. A sprite is a
+thing in the world; a thing on the viewport is `sindri.ui.image`, and
+`sindri.text` becomes `sindri.ui.text`.
+
+Format 7 said which by a `space` field on `sindri.sprite`, so one component
+meant two things. A screen sprite anchored itself to a viewport edge; a world
+sprite was placed by its transform and its anchor decided nothing at all — the
+editor hid the field to avoid offering a control that did nothing, which is the
+clearest possible statement that these were two components sharing a name. They
+are now two components, and an entity is a world object or a UI object by which
+of them it carries.
+
+The migration moves each sprite to the component it already behaved as. A sprite
+in `screen` space — including one that named no space, since screen was the
+default — becomes `sindri.ui.image` with its anchor, tint, layer, and texture
+carried across. A `world` sprite keeps its name and loses `space` along with the
+`anchor` that never applied to it. `sindri.text` was always screen-space, so
+only its key moves.
+
+`sindri.tilemap` loses `space` too, and here the default is the awkward case: a
+map that named no space was, by that default, on the screen. Nothing can invent
+a format-8 spelling for that — a viewport-anchored grid of tiles is a UI element
+rather than a tilemap — so a screen-space map **stops the migration** with a
+message naming the entity, rather than being shown quietly relocated into the
+world. Saying `"space": "world"` in the format-7 file first is the fix, and it
+is the answer for every map anyone has actually authored.
+
+Scripts move with the components: `this.ui_image.tint.a` is what a HUD element
+writes where it used to write `this.sprite.tint.a`. See `docs/scripting.md`.
 
 A version increase requires a registered `SceneMigrator` step **before** the new
 version is written anywhere. The migrator enforces the properties that keep a

@@ -31,6 +31,68 @@ pub(super) fn transport_icon(
     .on_hover_text(tip)
 }
 
+/// What the transport is doing, in the words the buttons use.
+///
+/// There used to be four controls for three states: a stop icon, a pause icon,
+/// a play icon, and an accent button — and the accent button said "Stop" while
+/// running but paused when pressed, while the play icon did the same. Whatever
+/// each was meant to be, together they were three ways to guess.
+///
+/// Two controls cover it, the way Unity's do. Play enters and leaves play mode;
+/// Pause holds and releases what is already playing; and this says which of the
+/// three states the editor is actually in, so the answer is read rather than
+/// inferred from which icon looks lit.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum Transport {
+    Editing,
+    Playing,
+    Paused,
+}
+
+impl Transport {
+    pub(super) const fn of(state: EngineState) -> Self {
+        match state {
+            EngineState::Running => Self::Playing,
+            EngineState::Paused => Self::Paused,
+            _ => Self::Editing,
+        }
+    }
+
+    /// Whether the scene is in play mode, running or held.
+    pub(super) const fn is_playing(self) -> bool {
+        !matches!(self, Self::Editing)
+    }
+
+    pub(super) const fn label(self) -> &'static str {
+        match self {
+            Self::Editing => "Editing",
+            Self::Playing => "Playing",
+            Self::Paused => "Paused",
+        }
+    }
+
+    /// What pressing Play would do, said as the button's own label.
+    pub(super) const fn play_label(self) -> &'static str {
+        if self.is_playing() { "Stop" } else { "Play" }
+    }
+
+    pub(super) const fn play_tip(self) -> &'static str {
+        if self.is_playing() {
+            "Stop the scene and put back everything playing changed  (Ctrl+P)"
+        } else {
+            "Run the scene's scripts and animations  (Ctrl+P)"
+        }
+    }
+
+    pub(super) const fn pause_tip(self) -> &'static str {
+        match self {
+            Self::Editing => "Nothing is running to pause",
+            Self::Playing => "Hold the scene where it is  (Ctrl+Shift+P)",
+            Self::Paused => "Carry on from here  (Ctrl+Shift+P)",
+        }
+    }
+}
+
 /// How much time an animation takes from a frame, given where the transport is.
 ///
 /// Only a running engine moves an animation on; paused holds where it is, which
@@ -54,12 +116,16 @@ pub(super) fn initialized_lifecycle() -> EngineLifecycle {
     lifecycle
 }
 
-pub(super) fn play_button(ui: &mut egui::Ui, playing: bool) -> Response {
-    let text = if playing { "Stop" } else { "Play" };
+/// The one button that enters and leaves play mode.
+///
+/// It is labelled with what pressing it does rather than with what the editor
+/// is doing, because a button is a verb. What the editor is doing is said
+/// beside it, in words, by [`Transport::label`].
+pub(super) fn play_button(ui: &mut egui::Ui, transport: Transport) -> Response {
     ui.add_sized(
-        [68.0, 29.0],
+        [72.0, 29.0],
         egui::Button::new(
-            RichText::new(text)
+            RichText::new(transport.play_label())
                 .strong()
                 .size(12.0)
                 .color(Color32::from_rgb(28, 23, 12)),
@@ -67,6 +133,7 @@ pub(super) fn play_button(ui: &mut egui::Ui, playing: bool) -> Response {
         .fill(ACCENT_BRIGHT)
         .stroke(Stroke::new(1.0, ACCENT)),
     )
+    .on_hover_text(transport.play_tip())
 }
 
 impl EditorApp {
@@ -125,19 +192,39 @@ impl EditorApp {
         }
     }
 
-    /// Play and pause move the engine lifecycle rather than a display flag, so
+    /// Enters play mode, or leaves it.
+    ///
+    /// One button, two directions, and no third meaning: pressing it while
+    /// something is playing stops it rather than pausing it, which is what its
+    /// label says and what the equivalent button does everywhere else. Pausing
+    /// is [`Self::toggle_pause`].
+    ///
+    /// Play and stop move the engine lifecycle rather than a display flag, so
     /// the editor exercises the same transitions a runtime host does.
-    pub(super) fn toggle_playback(&mut self) {
+    pub(super) fn toggle_play_mode(&mut self) {
+        if Transport::of(self.lifecycle.state()).is_playing() {
+            self.stop_playback();
+            return;
+        }
+        // Taken before the first frame runs, and only on a fresh start rather
+        // than on resume, so pausing and carrying on does not move the point
+        // stop returns to.
+        self.play_snapshot = Some(self.world.clone());
+        if let Err(error) = self.lifecycle.start() {
+            self.report(error.to_string());
+        }
+    }
+
+    /// Holds a running scene where it is, or lets a held one carry on.
+    ///
+    /// Does nothing outside play mode, where there is nothing to hold: the
+    /// button is disabled there, and this agrees with it rather than starting
+    /// something the author did not ask to start.
+    pub(super) fn toggle_pause(&mut self) {
         let result = match self.lifecycle.state() {
             EngineState::Running => self.lifecycle.pause(),
             EngineState::Paused => self.lifecycle.resume(),
-            _ => {
-                // Taken before the first frame runs, and only on a fresh start
-                // rather than on resume, so pausing and carrying on does not
-                // move the point stop returns to.
-                self.play_snapshot = Some(self.world.clone());
-                self.lifecycle.start()
-            }
+            _ => return,
         };
         if let Err(error) = result {
             self.report(error.to_string());
@@ -193,14 +280,6 @@ impl EditorApp {
             // broken clip fails every frame, and one entry with a count says
             // more than sixty a second.
             self.console.error(error.to_string());
-        }
-    }
-
-    pub(super) fn pause(&mut self) {
-        if self.lifecycle.state() == EngineState::Running
-            && let Err(error) = self.lifecycle.pause()
-        {
-            self.report(error.to_string());
         }
     }
 }

@@ -1,4 +1,4 @@
-//! Text components, laid out into the frame.
+//! `sindri.ui.text`, laid out into the frame.
 
 use std::collections::BTreeMap;
 
@@ -8,10 +8,10 @@ use sindri_render::{
     Viewport,
 };
 
-use crate::TextComponent;
+use crate::UiTextComponent;
 
 use super::camera::ResolvedCameras;
-use super::sprite::screen_sprite_matrix;
+use super::ui::ui_matrix;
 use super::{SceneExtractError, SceneExtractor};
 
 impl SceneExtractor {
@@ -22,7 +22,7 @@ impl SceneExtractor {
         cameras: &ResolvedCameras,
         frame: &mut ExtractedFrame,
     ) -> Result<(), SceneExtractError> {
-        let texts = self.components.query::<TextComponent>(world)?;
+        let texts = self.components.query::<UiTextComponent>(world)?;
         if texts.is_empty() {
             return Ok(());
         }
@@ -44,7 +44,7 @@ impl SceneExtractor {
                 .get(entity)
                 .and_then(|data| data.transform_3d)
                 .unwrap_or_default();
-            let model = screen_sprite_matrix(transform, text.anchor, extent);
+            let model = ui_matrix(transform, text.anchor, extent);
             let clip = overlay.view_projection * model.w_axis;
             let ndc = clip.truncate() / clip.w;
             let position = [(ndc.x + 1.0) * 0.5 * width, (1.0 - ndc.y) * 0.5 * height];

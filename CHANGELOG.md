@@ -8,6 +8,42 @@ All notable changes to Sindri Next will be documented here.
 
 ### Changed
 
+- **A scene now has two kinds of entity, and they are spelled apart.** A sprite
+  is a thing in the world; a thing on the viewport is `sindri.ui.image`, and
+  `sindri.text` becomes `sindri.ui.text`. `sindri.sprite` loses the `space`
+  field that used to mean one component was really two — an anchor mattered on a
+  screen sprite and decided nothing on a world one — and `sindri.tilemap` loses
+  it too, because a map is in the world. Scene format 8 migrates every scene:
+  a screen sprite becomes a UI image with everything it drew with, a world
+  sprite keeps its name and loses the two fields that decided nothing, and a
+  screen-space tilemap stops the migration with a message rather than being
+  quietly relocated. Scripts follow: a HUD element writes
+  `this.ui_image.tint.a` where it used to write `this.sprite.tint.a`.
+- **The Scene view's authored-camera gizmo stops lying about the camera.** Its
+  frustum is drawn at the aspect the camera actually renders at — the Game
+  viewport's — so resizing the Scene view no longer reshapes it, and every line
+  is clipped against the near plane in clip space, so orbiting past a camera no
+  longer smears its frustum across the viewport. The frustum is drawn for the
+  selected camera only; an unselected one keeps its marker and a short forward
+  stub, which is also all a click selects.
+- **Play, pause, and stop are two controls and a word instead of four
+  controls.** There were a stop icon, a pause icon, a play icon, and an accent
+  button — and the accent button said "Stop" while running but paused when
+  pressed, as did the play icon beside it. Now one button enters and leaves play
+  mode and is labelled with what pressing it does, one icon holds and releases a
+  running scene, and the editor says whether it is Editing, Playing, or Paused.
+  Ctrl+P plays and stops; Ctrl+Shift+P pauses and resumes.
+- **The inspector shows what a component has, and edits it with controls that
+  know what it means.** Every field of a component is drawn whether or not this
+  instance wrote it down, so two of one component no longer show two different
+  sets of rows; a field left alone is still not written to the file. A field
+  whose value is one of a few names — a camera's projection, a UI anchor, a
+  tilemap's projection, a body's kind — is a menu rather than a text box, and
+  switching a camera's projection writes the fields that projection has instead
+  of producing a payload the schema refuses. A field naming a project file gets
+  a picker beside it, a tint gets a colour swatch, fields are ordered by what
+  they say about the component rather than alphabetically, and a row that is
+  only a readout says on hover why.
 - Rust source files are now capped at 600 lines, with 400 as the target, and
   `scripts/check-file-size.py` enforces it in CI. Twenty-one files were over the
   cap — the largest was the 4,714-line native editor — and each is now a

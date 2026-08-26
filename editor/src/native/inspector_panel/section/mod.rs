@@ -16,22 +16,23 @@ use std::collections::BTreeMap;
 use eframe::egui::{self, Align, Layout, RichText};
 use egui_material_icons::icons::{
     ICON_CAMERA_ALT, ICON_CODE, ICON_DELETE, ICON_DEPLOYED_CODE, ICON_GRID_VIEW, ICON_IMAGE,
-    ICON_LABEL, ICON_PLAY_ARROW, ICON_VIEW_IN_AR,
+    ICON_PLAY_ARROW, ICON_TITLE, ICON_VIEW_IN_AR, ICON_WEB_ASSET,
 };
 use serde_json::Value;
+use sindri_core::ComponentSchemaRegistry;
 
 use self::animation::animation_section;
 use self::grid::{grid_navigation_section, grid_occupant_section};
-use self::script::script_exports_section;
+use self::script::{script_choice_row, script_exports_section};
 use self::text::text_section;
 use self::tilemap::tilemap_section;
 use crate::inspector;
 
 use super::super::hierarchy::row::component_label;
 use super::super::{
-    ACCENT, GRID_NAVIGATION_COMPONENT, GRID_OCCUPANT_COMPONENT, TEXT, TEXT_COMPONENT,
+    ACCENT, GRID_NAVIGATION_COMPONENT, GRID_OCCUPANT_COMPONENT, TEXT, UI_TEXT_COMPONENT,
 };
-use super::rows::object_rows;
+use super::field::object_rows;
 use super::{InspectorProject, InspectorTools};
 
 /// Draws every component on an entity, editable, and reports what changed.
@@ -41,13 +42,14 @@ use super::{InspectorProject, InspectorTools};
 pub(super) fn components_sections(
     ui: &mut egui::Ui,
     components: &mut BTreeMap<String, Value>,
+    registry: &ComponentSchemaRegistry,
     project: &InspectorProject<'_>,
     tools: &mut InspectorTools<'_>,
 ) -> Option<String> {
     let InspectorProject {
         scripts,
         root: project_root,
-        fonts,
+        assets,
         animation_texture,
         grids,
     } = *project;
@@ -60,9 +62,12 @@ pub(super) fn components_sections(
         let icon = match name.as_str() {
             "sindri.camera" => ICON_CAMERA_ALT,
             "sindri.sprite" => ICON_IMAGE,
+            // The same icons the hierarchy gives these entities, so a row and
+            // its component are recognisably the same thing.
+            "sindri.ui.image" => ICON_WEB_ASSET,
             "sindri.mesh" => ICON_VIEW_IN_AR,
             "sindri.script" => ICON_CODE,
-            "sindri.text" => ICON_LABEL,
+            "sindri.ui.text" => ICON_TITLE,
             "sindri.animation.sprite" => ICON_PLAY_ARROW,
             "sindri.tilemap" => ICON_GRID_VIEW,
             _ => ICON_DEPLOYED_CODE,
@@ -97,10 +102,11 @@ pub(super) fn components_sections(
         // The rest of the payload -- the source, the container -- follows as
         // ordinary rows.
         if name == "sindri.script" {
+            script_choice_row(ui, payload, scripts);
             script_exports_section(ui, payload, scripts);
         }
-        if name == TEXT_COMPONENT {
-            text_section(ui, payload, fonts);
+        if name == UI_TEXT_COMPONENT {
+            text_section(ui, payload, assets.fonts);
         }
         if name == crate::animation::TYPE_NAME {
             animation_section(
@@ -120,7 +126,16 @@ pub(super) fn components_sections(
         if name == GRID_OCCUPANT_COMPONENT {
             grid_occupant_section(ui, payload, grids);
         }
-        object_rows(ui, name, payload, name == "sindri.script");
+        // The registry's blank is what says which fields this component has,
+        // so an instance that wrote none of them still shows all of them.
+        object_rows(
+            ui,
+            name,
+            payload,
+            registry.default_payload(name),
+            assets,
+            name == "sindri.script",
+        );
     }
     removed
 }

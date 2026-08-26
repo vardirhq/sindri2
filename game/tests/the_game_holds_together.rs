@@ -297,7 +297,7 @@ fn walking_into_the_orbs_wins_the_game() {
                 .is_some_and(|id| id.as_str() == "banner")
         })
         .map(|(_, data)| {
-            data.components["sindri.sprite"]["tint"][3]
+            data.components["sindri.ui.image"]["tint"][3]
                 .as_f64()
                 .unwrap_or(0.0)
         })

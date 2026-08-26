@@ -73,6 +73,18 @@ impl RuntimeViewport {
         }
     }
 
+    /// The shape of what this viewport draws into.
+    ///
+    /// Read from the target rather than from whatever rect was last laid out,
+    /// so it answers the same thing whether or not this view was drawn in the
+    /// current layout — a Scene view alone in the window still knows what the
+    /// Game view frames.
+    pub(super) fn aspect(&self) -> f32 {
+        #[allow(clippy::cast_precision_loss)]
+        let (width, height) = (self.target.width() as f32, self.target.height() as f32);
+        if height <= 0.0 { 1.0 } else { width / height }
+    }
+
     fn render(
         &mut self,
         renderers: &mut SceneRenderers,

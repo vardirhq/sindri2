@@ -3,7 +3,7 @@
 use eframe::egui::{self, Pos2, Rect, Response};
 use glam::Vec2 as GlamVec2;
 use sindri_core::{CommandBuffer, EntityId, Transform3D, WorldCommand};
-use sindri_scene::{CameraView, SpriteSpace, ViewCamera};
+use sindri_scene::{CameraView, ViewCamera};
 
 use crate::{
     gizmo::{self, GizmoDrag},
@@ -24,8 +24,7 @@ pub(super) struct TilemapHover {
 
 impl EditorApp {
     /// Resolves the selected tilemap and pointer through the same camera used
-    /// for this frame. Screen-space maps intentionally do not take the Scene
-    /// view pointer: their cells belong to the Game viewport instead.
+    /// for this frame.
     pub(super) fn tilemap_hover(
         &self,
         rect: Rect,
@@ -38,9 +37,6 @@ impl EditorApp {
         let data = self.world.get(entity)?;
         let payload = data.components.get(tilemap::TYPE_NAME)?;
         let map = tilemap::component(payload).ok()?;
-        if map.space != SpriteSpace::World {
-            return None;
-        }
         let transform = data.transform_3d.unwrap_or_default();
         let aspect = rect.width() / rect.height().max(1.0);
         let camera = self

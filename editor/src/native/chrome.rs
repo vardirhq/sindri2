@@ -1,12 +1,11 @@
 //! The frame around the work: title bar, menus, tabs, and status bar.
 
 use eframe::egui::{self, Align, Layout, RichText, Stroke};
-use egui_material_icons::icons::{ICON_PAUSE, ICON_PLAY_ARROW, ICON_REDO, ICON_STOP, ICON_UNDO};
-use sindri_core::EngineState;
+use egui_material_icons::icons::{ICON_PAUSE, ICON_REDO, ICON_UNDO};
 
 use crate::preferences::{BottomTab, CameraProjection, Layout as WorkspaceLayout};
 
-use super::runtime::{play_button, transport_icon};
+use super::runtime::{Transport, play_button, transport_icon};
 use super::theme::{
     ACCENT, ACCENT_BRIGHT, ACCENT_SOFT, BORDER, PANEL_RAISED, SUCCESS, TEXT, TEXT_FAINT,
     TEXT_MUTED, TOP_BG, status_dot,
@@ -127,27 +126,38 @@ impl EditorApp {
                     {
                         self.redo();
                     }
-                    let running = self.lifecycle.state() == EngineState::Running;
-                    // Stop stops. It used to reset the scene to the file,
-                    // which is what the symbol between Pause and Play means to
-                    // nobody, and it did that without asking. Going back to
-                    // the authored scene is File → Discard changes, which now
+                    // Two controls and a word, for three states. There were
+                    // four controls, two of which paused when their labels said
+                    // stop and play, and a play icon sitting beside a Play
+                    // button that did the same thing. Whatever each was meant to
+                    // be, together they were several ways to guess.
+                    let transport = Transport::of(self.lifecycle.state());
+                    // Stop puts back everything playing changed. Going back to
+                    // the *authored* scene is File → Discard changes, which
                     // says what it will cost.
-                    let playing = matches!(
-                        self.lifecycle.state(),
-                        EngineState::Running | EngineState::Paused
-                    );
-                    if transport_icon(ui, ICON_STOP, false, playing, "Stop").clicked() {
-                        self.stop_playback();
+                    if play_button(ui, transport).clicked() {
+                        self.toggle_play_mode();
                     }
-                    if transport_icon(ui, ICON_PAUSE, !running, running, "Pause").clicked() {
-                        self.pause();
-                    }
-                    if transport_icon(ui, ICON_PLAY_ARROW, running, true, "Play").clicked()
-                        || play_button(ui, running).clicked()
+                    if transport_icon(
+                        ui,
+                        ICON_PAUSE,
+                        transport == Transport::Paused,
+                        transport.is_playing(),
+                        transport.pause_tip(),
+                    )
+                    .clicked()
                     {
-                        self.toggle_playback();
+                        self.toggle_pause();
                     }
+                    // What the editor is doing, in a word, so the state is read
+                    // rather than inferred from which control looks lit.
+                    ui.label(RichText::new(transport.label()).size(11.0).color(
+                        if transport.is_playing() {
+                            ACCENT_BRIGHT
+                        } else {
+                            TEXT_FAINT
+                        },
+                    ));
                     // A project name and a chevron used to sit at this end,
                     // naming a project that did not exist and opening nothing.
                     // What project is open is the browser's business, and it

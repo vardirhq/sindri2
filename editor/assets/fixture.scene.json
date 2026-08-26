@@ -1,5 +1,5 @@
 {
-  "format_version": 7,
+  "format_version": 8,
   "metadata": {
     "name": "Editor fixture"
   },
@@ -47,7 +47,7 @@
           "playing": "spin",
           "speed": 1.0
         },
-        "sindri.sprite": {
+        "sindri.ui.image": {
           "anchor": "top_right",
           "layer": 101,
           "texture": "textures/spin.png",
@@ -59,7 +59,7 @@
       "id": "sprite",
       "name": "Sprite",
       "transform_3d": {
-        "position": [0.0, 0.0, -0.0],
+        "position": [1.6, 0.0, 0.6],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.5, 0.5, 1.0]
       },
@@ -72,7 +72,6 @@
           "source": "scripts/fade.decay"
         },
         "sindri.sprite": {
-          "anchor": "center",
           "layer": 100,
           "texture": "textures/badge.png",
           "tint": [1.0, 1.0, 1.0, 1.0]

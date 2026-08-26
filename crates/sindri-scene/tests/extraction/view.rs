@@ -181,7 +181,7 @@ fn switching_the_world_projection_changes_only_the_world_camera() {
         { "id": "cube", "transform_3d": {},
           "components": { "sindri.mesh": { "primitive": "cube", "texture": "t" } } },
         { "id": "badge", "transform_3d": {},
-          "components": { "sindri.sprite": { "texture": "b", "layer": 100 } } }"#,
+          "components": { "sindri.ui.image": { "texture": "b", "layer": 100 } } }"#,
     ));
     let extractor = SceneExtractor::new().unwrap();
     let perspective = extractor

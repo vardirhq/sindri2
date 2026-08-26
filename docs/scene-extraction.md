@@ -37,8 +37,10 @@ let prepared = scene.extract_frame(engine.world(), viewport, &bindings)?;
 | --- | --- |
 | `sindri.camera` | The authored world/game view, with either `perspective` or `orthographic` projection |
 | `sindri.mesh` | One opaque pass per mesh, at the mesh's render layer |
-| `sindri.sprite` | One batched pass per space, sprite layer, and texture |
-| `sindri.animation.sprite` | Nothing of its own — it decides which part of the sheet the entity's sprite draws |
+| `sindri.sprite` | An image in the world: one batched pass per sprite layer and texture, drawn through the world camera |
+| `sindri.ui.image` | An image on the viewport: one batched pass per layer and texture, drawn through the viewport's own projection |
+| `sindri.ui.text` | Anchored screen text, one ordered pass per layer |
+| `sindri.animation.sprite` | Nothing of its own — it decides which part of the sheet the entity's sprite or UI image draws |
 
 A game registers its own component types alongside these with `SceneExtractor::register`.
 
@@ -46,20 +48,22 @@ A game registers its own component types alongside these with `SceneExtractor::r
 
 - **Deterministic order.** Passes sort by stage, then layer, then insertion. Entities are visited in
   world index order, so the same world always produces the same frame.
-- **Batching by layer.** Sprites group into one batch per render layer rather than requiring every
-  sprite in a scene to share one, and sort back to front within a layer using the
-  [transparent draw key](rendering-transparency.md).
-- **One explicit authored world camera.** World meshes, world-space sprites, and world tilemaps need
+- **Batching by space, layer, and texture.** Images group into one batch per render layer rather
+  than requiring every sprite in a scene to share one, and sort back to front within a layer using
+  the [transparent draw key](rendering-transparency.md). A world sprite and a UI image never share a
+  batch however much else they have in common: a batch is one draw, and the two differ in both
+  projection and pipeline.
+- **One explicit authored world camera.** Meshes, sprites, and tilemaps need
   an authored `sindri.camera`; drawing world content without one reports `MissingWorldCamera`, and
   more than one authored camera reports `MultipleWorldCameras` rather than relying on entity
   iteration order. Perspective and orthographic are projection choices of that same role.
-- **Screen space belongs to the viewport.** Screen-space sprites and text need no camera entity at
-  all. Extraction derives their stable screen projection and anchor extent from the viewport, so UI
-  cannot disappear because somebody deleted, moved, or rotated a scene camera.
+- **Screen space belongs to the viewport.** The `sindri.ui.*` family needs no camera entity at all.
+  Extraction derives its stable screen projection and anchor extent from the viewport, so UI cannot
+  disappear because somebody deleted, moved, or rotated a scene camera.
 
 ## Text
 
-`sindri.text` is screen-space text. Its entity transform offsets one of the nine
+`sindri.ui.text` is screen text. Its entity transform offsets one of the nine
 screen anchors, extraction projects that point into physical viewport pixels,
 and the resulting `TextInstance` carries content, font asset reference, font
 size, line height, colour, and layer. Strings on the same layer share one
@@ -275,7 +279,7 @@ bad UV rect does: the editor is where it gets fixed.
 
 ## Sprite animation
 
-`sindri.animation.sprite` sits beside `sindri.sprite` on the same entity and decides which sprite of
+`sindri.animation.sprite` sits beside `sindri.sprite` or `sindri.ui.image` on the same entity and decides which sprite of
 the sheet is drawn. The sprite still owns the texture, tint, space, anchor, and layer; the animation
 owns the clips and which one is playing. Where each named sprite *is* belongs to the sheet beside the
 image, which is why a clip no longer carries a grid. They are two components rather
@@ -328,38 +332,41 @@ Once a cursor *has* reached it, the clip decides alone. A frame that resolves to
 whole image rather than falling back to the resting pose, because a plausible picture of the wrong
 moment is the failure that hides.
 
-## Sprite space
+## The two spaces an image can be drawn in
 
-A sprite says which space it is in, and the answer decides three things at once: which projection
-draws it, which stage it lands in, and what its transform means.
+Which component an image is decides three things at once: which projection draws it, which stage it
+lands in, and what its transform means.
 
-| `space` | Projection | Stage | Depth | Transform |
+| Component | Projection | Stage | Depth | Transform |
 | --- | --- | --- | --- | --- |
-| `screen` (default) | Viewport-owned screen projection | `Overlay` | Ignored — nothing in the world may hide a HUD | X and Y offset an anchor; Z orders it without moving it |
-| `world` | Authored world camera, perspective or orthographic | `Transparent2d` | Tested, never written | The whole transform, exactly as a mesh reads it |
+| `sindri.ui.image` | Viewport-owned screen projection | `Overlay` | Ignored — nothing in the world may hide a HUD | X and Y offset an anchor; Z orders it without moving it |
+| `sindri.sprite` | Authored world camera, perspective or orthographic | `Transparent2d` | Tested, never written | The whole transform, exactly as a mesh reads it |
 
-The default is what every sprite already was, so a scene written before the choice existed draws
-where it always did. Two sprites in different spaces never share a batch however much else they have
-in common, because a batch is one draw call and these differ in both projection and pipeline.
+This used to be a `space` field on one component, and it is two components because the rows of that
+table are not two values of one thing: the anchor column is a field a UI image has and a sprite does
+not. `docs/versioning.md` covers the format 8 migration, and `docs/2d-model.md` the reasoning.
 
-Within a batch, sprites sort back to front by depth along the projection that draws them. A world
+The two never share a batch however much else they have in common, because a batch is one draw call
+and these differ in both projection and pipeline.
+
+Within a batch, images sort back to front by depth along the projection that draws them. A world
 sprite's order therefore changes when the world/viewer camera moves, without the scene changing at
-all. A screen sprite's order does not depend on any authored camera: its Z is a stable screen-space
-stack value and does not move the sprite itself.
+all. A UI element's order does not depend on any authored camera: its Z is a stable screen-space
+stack value and does not move the element itself.
 
 `layer` is the explicit override and beats both. A sprite in a higher layer draws in front of
 something nearer the camera, which is the rule people are surprised by once and then rely on.
 
 ## Anchors
 
-Sprite anchors resolve against the viewport-owned screen extent — a vertical size of 2 widened by
-the viewport aspect — so a sprite keeps its relationship to an edge as the window changes shape. An
-anchor is a corner, edge, or centre; the sprite's transform position offsets from there in X and Y.
+UI anchors resolve against the viewport-owned screen extent — a vertical size of 2 widened by the
+viewport aspect — so an element keeps its relationship to an edge as the window changes shape. An
+anchor is a corner, edge, or centre; the element's transform position offsets from there in X and Y.
 No scene camera owns this extent.
 
-Anchoring is a screen-space idea: a world-space sprite has no edge to hold on to. That is a shape in
-the type rather than a rule to remember — `SpriteComponent::screen_anchor` returns an `Option`, so
-extraction cannot read an anchor for a sprite that has no business having one.
+Anchoring is a screen idea: a world sprite has no edge to hold on to. That is why the anchor is a
+field of `UiImageComponent` and `UiTextComponent` and of nothing else — a sprite in the world cannot
+be read for an anchor because it does not have one, rather than having one that is ignored.
 
 ## Viewing without editing
 

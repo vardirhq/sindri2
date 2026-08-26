@@ -13,4 +13,5 @@ mod support;
 mod text;
 mod textures;
 mod tilemap;
+mod ui;
 mod view;

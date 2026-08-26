@@ -316,6 +316,9 @@ mod migration {
     /// is sorted by, negated, because the overlay camera looks down the axis
     /// from `+Z` and a greater depth meant further away. The stack comes out in
     /// the order it went in.
+    ///
+    /// Run through the whole chain, so these are `sindri.ui.image` by the end:
+    /// format 8 is where a screen sprite stopped being a sprite.
     #[test]
     fn a_sorting_depth_becomes_the_z_that_replaced_it() {
         let json = r#"{
@@ -345,10 +348,10 @@ mod migration {
         );
         assert_eq!(z("unsorted"), None, "a sprite with no depth is left alone");
         for entity in &document.entities {
-            let sprite = &entity.components["sindri.sprite"];
+            let image = &entity.components["sindri.ui.image"];
             assert!(
-                sprite.get("depth").is_none(),
-                "the depth field must not survive the upgrade: {sprite}"
+                image.get("depth").is_none(),
+                "the depth field must not survive the upgrade: {image}"
             );
         }
     }

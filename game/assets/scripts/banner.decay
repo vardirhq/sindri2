@@ -20,6 +20,6 @@ script Banner {
             shown = 0.0;
             celebrated = false;
         }
-        this.sprite.tint.a = shown;
+        this.ui_image.tint.a = shown;
     }
 }

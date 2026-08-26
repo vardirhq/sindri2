@@ -66,9 +66,9 @@ longer a hand-authored `depth` field on the sprite — it is the distance from t
 camera, measured along the camera's forward axis so that two sprites side by
 side at the same depth sort as equally far away.
 
-A screen-space sprite is the one place where that distance is not where the
-sprite is drawn. The viewport-owned screen projection reads X and Y for
-placement, so a HUD sprite's Z orders it without moving it — which also means no
+A UI element is the one place where that distance is not where the thing is
+drawn. The viewport-owned screen projection reads X and Y for placement, so a
+HUD element's Z orders it without moving it — which also means no
 HUD can be lost off an authored camera's far plane by being pushed a long way
 back.
 
@@ -182,20 +182,28 @@ and should say so rather than being attempted generally.
 ## Screen space is a different question
 
 A HUD is not in the world at all, so it is not on the 2D/3D axis and it is not a
-property of the world camera. It is a property of the sprite: this one draws in
-screen space, anchored to an edge, ignoring authored cameras entirely.
+property of the world camera. It is a property of **which component draws it**:
+`sindri.ui.image` is anchored to a viewport edge and ignores authored cameras
+entirely, while `sindri.sprite` is placed by its transform, drawn through the
+world camera, and hidden by opaque geometry in front of it.
 
-That is what the current sprite behaviour already is, and it stays. What changes
-is that it stops being the *only* behaviour.
+This started as one component with a `space` field, and that was wrong in a way
+worth writing down, because the same mistake is available in every engine. The
+two spaces do not hold the same fields: an anchor is what a HUD element is
+positioned by and decides nothing at all for a thing in the world. So the
+inspector hid the anchor on a world sprite — which is the clearest possible
+statement that these were two components sharing a name. A component that has to
+hide half of itself depending on one of its own fields is two components, and
+they are now spelled as two. `docs/scene-extraction.md` holds the table of what
+each draws.
 
-A sprite therefore carries a `space`: `screen`, which is the default and the
-behaviour every sprite had before there was a choice, or `world`, which places
-it by its transform, draws it through the world camera, and lets opaque geometry
-in front of it hide it. Nothing else about the sprite changes, and no scene
-changes meaning by gaining the field. `docs/scene-extraction.md` holds the table
-of what each space decides.
+That split is also what gives a scene two kinds of entity, in the way a Unity
+scene has objects and UI. Nothing declares which an entity is: carrying a
+`sindri.ui.*` component says it, the editor groups the hierarchy by it, and the
+Add Component menu offers one family or the other rather than letting one
+transform be drawn twice in two spaces.
 
-The two are separated at the batch, not at the draw: a screen sprite and a world
+The two are separated at the batch, not at the draw: a UI image and a world
 sprite never share a draw call, because they differ in projection and pipeline.
 Each sorts within its batch by its own depth rule, so a world sprite's order
 changes when its camera moves while a HUD's remains tied to screen-space Z.

@@ -13,6 +13,7 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Transform / position | ✅ | ✅ | 🟡 |
 | Rotation / scale | ✅ | ✅ | 🟡 |
 | 2D sprites | ✅ | ✅ | 🟡 |
+| UI images | ✅ | ✅ | 🟡 |
 | Sprite sheets | ✅ | ✅ | 🟡 |
 | Sprite animation | ✅ | ✅ | ❌ |
 | Tilemaps | ✅ | ✅ | ❌ |

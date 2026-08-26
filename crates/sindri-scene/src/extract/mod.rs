@@ -10,6 +10,7 @@ mod mesh;
 mod sprite;
 mod text;
 mod tilemap;
+mod ui;
 
 use camera::ResolvedCamera;
 use camera::view::{resolved_screen_overlay, safe_rotation};
@@ -28,7 +29,7 @@ use crate::{
     AnimationError, AudioSourceComponent, CameraComponent, Collider2dComponent,
     GridNavigationComponent, GridOccupantComponent, MeshComponent, PROCEDURAL_TEXTURES,
     RigidBody2dComponent, SpriteAnimationComponent, SpriteAnimations, SpriteComponent,
-    TextComponent, TextureBindings, TilemapComponent, TilemapError,
+    TextureBindings, TilemapComponent, TilemapError, UiImageComponent, UiTextComponent,
 };
 
 pub use camera::ViewCamera;
@@ -93,10 +94,10 @@ impl SceneExtractor {
         components.register_with_default::<CameraComponent>(
             "Camera",
             serde_json::json!({
-                "projection": "perspective",
-                "vertical_fov_degrees": 60.0,
-                "near": 0.1,
-                "far": 100.0
+                "projection": CameraComponent::PROJECTIONS[0],
+                "vertical_fov_degrees": CameraComponent::DEFAULT_VERTICAL_FOV_DEGREES,
+                "near": CameraComponent::DEFAULT_NEAR,
+                "far": CameraComponent::DEFAULT_FAR
             }),
         )?;
         components.register_with_default::<MeshComponent>(
@@ -115,6 +116,18 @@ impl SceneExtractor {
                 "layer": 0
             }),
         )?;
+        // The UI half of the same picture: anchored to the middle of the
+        // viewport, because an element that appears off the edge of the screen
+        // looks like a click that did nothing.
+        components.register_with_default::<UiImageComponent>(
+            "UI Image",
+            serde_json::json!({
+                "texture": PROCEDURAL_TEXTURES[0].reference,
+                "anchor": "center",
+                "tint": [1.0, 1.0, 1.0, 1.0],
+                "layer": 0
+            }),
+        )?;
         // No default: an animation with no sheet and no clips is a component
         // that does nothing, and one with an invented sheet would claim a
         // texture is laid out a way it is not.
@@ -122,7 +135,7 @@ impl SceneExtractor {
         // No default: unlike a procedural texture, there is no honest font the
         // engine can invent. The editor's font picker supplies a project asset
         // when text is added; existing text remains generically editable now.
-        components.register::<TextComponent>("Text")?;
+        components.register::<UiTextComponent>("UI Text")?;
         // A one-by-one map of one empty cell: the smallest tilemap that is
         // still a valid one, so adding the component in the editor gives
         // something to paint into rather than something to repair.
@@ -133,8 +146,7 @@ impl SceneExtractor {
                 "palette": [],
                 "columns": 1,
                 "rows": 1,
-                "tiles": [null],
-                "space": "world"
+                "tiles": [null]
             }),
         )?;
         components.register_with_default::<GridNavigationComponent>(
@@ -176,7 +188,7 @@ impl SceneExtractor {
         )?;
         // No default payload, for the reason the registry states: a blank one
         // would name the empty clip, and a button that adds a component the
-        // engine then rejects is worse than no button. `sindri.text` and
+        // engine then rejects is worse than no button. `sindri.ui.text` and
         // `sindri.animation.sprite` are registered the same way.
         components.register::<AudioSourceComponent>("Audio Source")?;
         Ok(Self { components })
@@ -233,7 +245,7 @@ impl SceneExtractor {
         let cameras = self.resolve_cameras(world, aspect, view)?;
         let mut frame = ExtractedFrame::new(viewport, ClearOperations::default());
         self.push_meshes(world, &cameras, textures, &mut frame)?;
-        self.push_sprites(world, &cameras, textures, animations, &mut frame)?;
+        self.push_images(world, &cameras, textures, animations, &mut frame)?;
         self.push_text(world, viewport, &cameras, &mut frame)?;
         Ok(frame.prepare()?)
     }
@@ -261,7 +273,7 @@ impl SceneExtractor {
 
         let mut frame = ExtractedFrame::new(viewport, ClearOperations::default());
         self.push_meshes(world, &cameras, textures, &mut frame)?;
-        self.push_sprites(world, &cameras, textures, animations, &mut frame)?;
+        self.push_images(world, &cameras, textures, animations, &mut frame)?;
         self.push_text(world, viewport, &cameras, &mut frame)?;
         Ok(frame.prepare()?)
     }

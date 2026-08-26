@@ -7,7 +7,7 @@
 
 use glam::{Mat4, Quat, Vec3};
 use sindri_core::{ComponentRegistryError, ComponentSchemaRegistry, EntityId, Transform3D, World};
-use sindri_scene::{MeshComponent, MeshPrimitive, SpriteComponent, SpriteSpace, TilemapComponent};
+use sindri_scene::{MeshComponent, MeshPrimitive, SpriteComponent, TilemapComponent};
 
 #[derive(Clone, Copy, Debug)]
 struct Hit {
@@ -48,7 +48,6 @@ pub fn pick_world(
     let sprites = components
         .query::<SpriteComponent>(world)?
         .into_iter()
-        .filter(|(_, sprite)| sprite.space == SpriteSpace::World)
         .filter_map(|(entity, sprite)| {
             let transform = transform_of(world, entity);
             plane_hit(ray, transform, 0.5).map(|(depth, _)| Hit {
@@ -60,7 +59,6 @@ pub fn pick_world(
     let tilemaps = components
         .query::<TilemapComponent>(world)?
         .into_iter()
-        .filter(|(_, map)| map.space == SpriteSpace::World)
         .filter_map(|(entity, map)| {
             let transform = transform_of(world, entity);
             let (depth, local) = plane_hit(ray, transform, f32::INFINITY)?;

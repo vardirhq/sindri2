@@ -6,12 +6,13 @@ pub(super) mod rows;
 use std::collections::BTreeSet;
 
 use eframe::egui::{self, Stroke};
-use egui_material_icons::icons::{ICON_ACCOUNT_TREE, ICON_ADD, ICON_DELETE};
+use egui_material_icons::icons::{ICON_ACCOUNT_TREE, ICON_ADD, ICON_DELETE, ICON_WEB_ASSET};
 use sindri_core::EntityId;
 
 use self::row::{HierarchyDrag, entity_icon, entity_name, hierarchy_drop_target, hierarchy_row};
 use self::rows::{hierarchy_group, hierarchy_preference_key, visible_hierarchy_rows};
 use crate::preferences::Layout as WorkspaceLayout;
+use crate::space::EntitySpace;
 
 use super::EditorApp;
 use super::editing::CreateGameObject;
@@ -42,10 +43,7 @@ impl EditorApp {
                 ui.add_space(6.0);
                 self.hierarchy_contents(ui);
                 if let Some(create) = create {
-                    self.create_entity(match create {
-                        CreateGameObject::Root => None,
-                        CreateGameObject::Child(parent) => Some(parent),
-                    });
+                    self.create_game_object(create);
                 }
                 if let Some(entity) = deleted {
                     self.delete_entity(entity);
@@ -59,15 +57,29 @@ impl EditorApp {
         ui.horizontal(|ui| {
             ui.add_space(10.0);
             ui.menu_button(ICON_ADD.outlined().rich_text().size(14.0), |ui| {
+                ui.set_min_width(190.0);
+                // Which space a new object is in is a choice made here rather
+                // than a component hunted for afterwards, because it is the
+                // first thing an author knows about the thing they are making.
                 if ui.button("Create Empty").clicked() {
-                    create = Some(CreateGameObject::Root);
+                    create = Some(CreateGameObject::Empty { parent: None });
                     ui.close();
                 }
                 if ui
-                    .add_enabled(self.selection.is_some(), egui::Button::new("Create Child"))
+                    .add_enabled(
+                        self.selection.is_some(),
+                        egui::Button::new("Create Child").shortcut_text("under selection"),
+                    )
                     .clicked()
                 {
-                    create = self.selection.map(CreateGameObject::Child);
+                    create = self.selection.map(|parent| CreateGameObject::Empty {
+                        parent: Some(parent),
+                    });
+                    ui.close();
+                }
+                ui.separator();
+                if ui.button("Create UI Image").clicked() {
+                    create = Some(CreateGameObject::UiImage);
                     ui.close();
                 }
             })
@@ -93,10 +105,6 @@ impl EditorApp {
         egui::ScrollArea::vertical()
             .auto_shrink([false; 2])
             .show(ui, |ui| {
-                let root = hierarchy_group(ui, "World", ICON_ACCOUNT_TREE);
-                if let Some(entity) = hierarchy_drop_target(ui, &root, &self.world, None) {
-                    reparenting = Some((entity, None));
-                }
                 let needle = self.search.trim().to_lowercase();
                 let collapsed: BTreeSet<EntityId> = self
                     .world
@@ -109,33 +117,52 @@ impl EditorApp {
                     .collect();
                 let mut clicked: Option<Option<EntityId>> = None;
                 let mut toggled = None;
-                for (entity, depth) in visible_hierarchy_rows(&self.world, &collapsed, &needle) {
-                    let Some(data) = self.world.get(entity) else {
-                        continue;
-                    };
-                    let name = entity_name(data);
-                    let row = hierarchy_row(
-                        ui,
-                        entity_icon(data),
-                        &name,
-                        self.selection == Some(entity),
-                        depth + 1,
-                        !data.children.is_empty(),
-                        !collapsed.contains(&entity) || !needle.is_empty(),
-                    );
-                    row.select.dnd_set_drag_payload(HierarchyDrag(entity));
-                    if row.select.dragged() {
-                        ui.ctx().set_cursor_icon(egui::CursorIcon::Grabbing);
+                // Two groups, because a scene holds two kinds of thing: what is
+                // in the world and what is drawn on top of it. Which group an
+                // entity is listed under is read from what it carries, so a
+                // drop on either header means the same thing — move to the top
+                // level — and the entity lands where its components say.
+                for (space, label, icon) in [
+                    (EntitySpace::World, "World", ICON_ACCOUNT_TREE),
+                    (EntitySpace::Ui, "UI", ICON_WEB_ASSET),
+                ] {
+                    if space == EntitySpace::Ui {
+                        ui.add_space(6.0);
                     }
-                    if let Some(dragged) =
-                        hierarchy_drop_target(ui, &row.drop, &self.world, Some(entity))
+                    let root = hierarchy_group(ui, label, icon);
+                    if let Some(entity) = hierarchy_drop_target(ui, &root, &self.world, None) {
+                        reparenting = Some((entity, None));
+                    }
+                    for (entity, depth) in
+                        visible_hierarchy_rows(&self.world, &collapsed, &needle, space)
                     {
-                        reparenting = Some((dragged, Some(entity)));
-                    }
-                    if row.toggle.is_some_and(|response| response.clicked()) {
-                        toggled = Some(entity);
-                    } else if row.select.clicked() {
-                        clicked = Some(Some(entity));
+                        let Some(data) = self.world.get(entity) else {
+                            continue;
+                        };
+                        let name = entity_name(data);
+                        let row = hierarchy_row(
+                            ui,
+                            entity_icon(data),
+                            &name,
+                            self.selection == Some(entity),
+                            depth + 1,
+                            !data.children.is_empty(),
+                            !collapsed.contains(&entity) || !needle.is_empty(),
+                        );
+                        row.select.dnd_set_drag_payload(HierarchyDrag(entity));
+                        if row.select.dragged() {
+                            ui.ctx().set_cursor_icon(egui::CursorIcon::Grabbing);
+                        }
+                        if let Some(dragged) =
+                            hierarchy_drop_target(ui, &row.drop, &self.world, Some(entity))
+                        {
+                            reparenting = Some((dragged, Some(entity)));
+                        }
+                        if row.toggle.is_some_and(|response| response.clicked()) {
+                            toggled = Some(entity);
+                        } else if row.select.clicked() {
+                            clicked = Some(Some(entity));
+                        }
                     }
                 }
                 if let Some(entity) = toggled

@@ -1,9 +1,9 @@
 // One lamp in the row that says how many orbs are gathered.
 //
-// This is the score, and it is sprites rather than text because the engine has
-// no text yet. A pip lights when the count reaches the number it was authored
-// with, so the row fills left to right without any of them knowing about the
-// others.
+// This is the score, and it is UI images rather than text because the engine
+// had no text when it was written. A pip lights when the count reaches the
+// number it was authored with, so the row fills left to right without any of
+// them knowing about the others.
 script Pip {
     @export
     let lights_at: f32 = 1.0;
@@ -11,12 +11,12 @@ script Pip {
     fn update(dt: f32) {
         // Two frames on one sheet: the empty ring, and the filled lamp.
         if Game.get("score", 0.0) >= lights_at {
-            this.sprite.tint.r = 1.0;
-            this.sprite.tint.g = 1.0;
-            this.sprite.tint.b = 1.0;
-            this.sprite.tint.a = 1.0;
+            this.ui_image.tint.r = 1.0;
+            this.ui_image.tint.g = 1.0;
+            this.ui_image.tint.b = 1.0;
+            this.ui_image.tint.a = 1.0;
         } else {
-            this.sprite.tint.a = 0.0;
+            this.ui_image.tint.a = 0.0;
         }
     }
 }

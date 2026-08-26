@@ -13,16 +13,22 @@ use sindri_scene::SpriteAnimations;
 
 use crate::slicer::Slicer;
 
-use super::EditorApp;
 use super::hierarchy::row::entity_name;
 use super::hierarchy::rows::{hierarchy_preference_key, hierarchy_rows};
+use super::inspector_panel::draft::component_default;
 use super::runtime::initialized_lifecycle;
 use super::scene_io::load_world;
+use super::{EditorApp, UI_IMAGE_COMPONENT};
 
+/// What the hierarchy's create menu was asked for.
+///
+/// A UI element is its own entry rather than "make an empty and then find the
+/// right component", because which space a thing is in is the first thing an
+/// author knows about it and the last thing they should have to discover.
 #[derive(Clone, Copy)]
 pub(super) enum CreateGameObject {
-    Root,
-    Child(EntityId),
+    Empty { parent: Option<EntityId> },
+    UiImage,
 }
 
 /// The parents `entity` may legally be moved under, in the order the hierarchy
@@ -112,6 +118,55 @@ impl EditorApp {
         self.selection = None;
         self.tilemap_tool.reset();
         self.animation_tool.reset();
+    }
+
+    /// Creates what the menu asked for, and selects it.
+    pub(super) fn create_game_object(&mut self, create: CreateGameObject) {
+        match create {
+            CreateGameObject::Empty { parent } => self.create_entity(parent),
+            CreateGameObject::UiImage => self.create_ui_image(),
+        }
+    }
+
+    /// Creates a UI element at the middle of the viewport.
+    ///
+    /// It arrives carrying `sindri.ui.image`, which is what puts it in the UI
+    /// group and what makes it visible: an empty entity called "UI something"
+    /// would be in neither space and would draw nothing.
+    fn create_ui_image(&mut self) {
+        let Some(payload) = component_default(
+            self.scene.components(),
+            UI_IMAGE_COMPONENT,
+            None,
+            None,
+            None,
+        ) else {
+            return;
+        };
+        let entity = self.world.next_handle();
+        let mut buffer = CommandBuffer::new();
+        buffer.push(WorldCommand::Spawn {
+            entity,
+            data: Box::new(EntityData {
+                source_id: Some(next_game_object_id(&self.world)),
+                name: Some("UI Image".to_owned()),
+                transform_3d: Some(Transform3D::default()),
+                components: [(UI_IMAGE_COMPONENT.to_owned(), payload)]
+                    .into_iter()
+                    .collect(),
+                ..EntityData::default()
+            }),
+        });
+        self.history.break_merge_run();
+        if let Err(error) = self
+            .history
+            .apply(buffer.into_transaction("Create UI Image"), &mut self.world)
+        {
+            self.report(error.to_string());
+            return;
+        }
+        self.select(Some(entity));
+        self.refresh_textures();
     }
 
     /// Creates an empty `GameObject`, optionally under another, and selects it.

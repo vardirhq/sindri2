@@ -1,4 +1,4 @@
-//! `sindri.text`: the string, its font, and its size.
+//! `sindri.ui.text`: the string, its font, and its size.
 
 use eframe::egui::{self, Align, Layout, RichText};
 use serde_json::Value;

@@ -20,12 +20,12 @@ pub use audio::AudioSourceComponent;
 pub use camera_math::camera_rotation_from_look_at;
 pub use components::{
     CameraComponent, GridNavigationComponent, GridOccupantComponent, GridWallDocument,
-    MeshComponent, MeshPrimitive, SpriteAnchor, SpriteComponent, SpriteSpace, TextComponent,
-    TileProjection, TilemapComponent, TilemapError,
+    MeshComponent, MeshPrimitive, SpriteComponent, TileProjection, TilemapComponent, TilemapError,
+    UiAnchor, UiImageComponent, UiTextComponent,
 };
 pub use extract::{CameraView, SceneExtractError, SceneExtractor, ViewCamera, WorldProjection};
 pub use navigation::{GridNavigationError, GridPlacement, WorldGridNavigation};
-pub use physics::{Collider2dComponent, RigidBody2dComponent};
+pub use physics::{Collider2dComponent, RigidBody2dComponent, RigidBodyKind};
 pub use textures::{
     FONT_NAMING_COMPONENTS, PROCEDURAL_TEXTURES, ProceduralTexture, SheetBindError,
     TEXTURE_NAMING_COMPONENTS, TextureBindings, referenced_fonts, referenced_sheets,

@@ -10,6 +10,7 @@
 //! claims it, and `draft` turns the whole of it into commands.
 
 pub(super) mod draft;
+pub(super) mod field;
 pub(super) mod header;
 pub(super) mod rows;
 pub(super) mod section;
@@ -18,25 +19,74 @@ use std::{collections::BTreeMap, path::Path};
 
 use eframe::egui::{self, Stroke};
 use serde_json::Value;
-use sindri_core::{CommandBuffer, ComponentMetadata, EntityId, SpriteRef, WorldCommand};
+use sindri_core::{
+    CommandBuffer, ComponentMetadata, ComponentSchemaRegistry, EntityId, SpriteRef, WorldCommand,
+};
 
 use self::draft::{
     EntityDraft, addable_components, component_commands, component_default, draft_commands,
 };
+use self::field::FieldAssets;
 use self::header::{ParentChoice, inspector_identity, inspector_parent, transform_3d_section};
 use self::rows::add_component_button;
 use self::section::components_sections;
 use self::section::grid::grid_choices;
-use crate::{animation::AnimationTool, scripts::SceneScripts, tilemap::TilemapTool};
+use crate::{
+    animation::AnimationTool, scripts::SceneScripts, space::declared_space, tilemap::TilemapTool,
+};
 
 use super::editing::reparent_choices;
 use super::hierarchy::row::entity_icon;
-use super::{BORDER, EditorApp, PANEL_BG, panel_title};
+use super::{BORDER, EditorApp, PANEL_BG, SPRITE_COMPONENT, UI_IMAGE_COMPONENT, panel_title};
 
 /// Stateful authoring surfaces shared across component sections.
 pub(super) struct InspectorTools<'a> {
     animation: &'a mut AnimationTool,
     tilemap: &'a mut TilemapTool,
+}
+
+/// Everything the panel reads off the project and the registry before it draws
+/// anything.
+///
+/// Gathered in one place because it is all read from `self`, and the panel then
+/// borrows `self` mutably to draw: without this the two would fight, and the
+/// alternative — reading each list inline — is what made one method long enough
+/// that nobody would read it either.
+struct PanelContext {
+    fonts: Vec<String>,
+    textures: Vec<String>,
+    scripts: Vec<String>,
+    audio: Vec<String>,
+    /// The sheet an animation on this entity reads, from whichever image
+    /// component the entity carries.
+    animation_texture: Option<String>,
+    animation_sprites: Vec<String>,
+    grids: Vec<(String, String)>,
+    root: Option<std::path::PathBuf>,
+    registry: ComponentSchemaRegistry,
+}
+
+impl PanelContext {
+    fn first_font(&self) -> Option<&str> {
+        self.fonts.first().map(String::as_str)
+    }
+
+    fn first_sprite(&self) -> Option<&str> {
+        self.animation_sprites.first().map(String::as_str)
+    }
+
+    fn first_grid(&self) -> Option<&str> {
+        self.grids.first().map(|(_, id)| id.as_str())
+    }
+
+    fn assets(&self) -> FieldAssets<'_> {
+        FieldAssets {
+            textures: &self.textures,
+            fonts: &self.fonts,
+            scripts: &self.scripts,
+            audio: &self.audio,
+        }
+    }
 }
 
 /// What the inspector reads about the project it is editing inside.
@@ -47,7 +97,8 @@ pub(super) struct InspectorTools<'a> {
 pub(super) struct InspectorProject<'a> {
     scripts: &'a SceneScripts,
     root: Option<&'a Path>,
-    fonts: &'a [String],
+    /// What the project holds, for the fields that name one of its files.
+    assets: FieldAssets<'a>,
     animation_texture: Option<&'a str>,
     grids: &'a [(String, String)],
 }
@@ -178,6 +229,32 @@ impl EditorApp {
         self.refresh_textures();
     }
 
+    fn panel_context(&self, components: &BTreeMap<String, Value>) -> PanelContext {
+        // Either image family: an animated HUD element reads its sheet from the
+        // UI image, exactly as a world sprite does.
+        let animation_texture = components
+            .get(SPRITE_COMPONENT)
+            .or_else(|| components.get(UI_IMAGE_COMPONENT))
+            .and_then(|image| image.get("texture"))
+            .and_then(Value::as_str)
+            .and_then(|reference| SpriteRef::parse(reference).ok())
+            .map(|reference| reference.texture().to_owned());
+        PanelContext {
+            fonts: self.project.fonts(),
+            textures: self.project.textures(),
+            scripts: self.project.scripts(),
+            audio: self.project.audio(),
+            animation_sprites: animation_texture
+                .as_deref()
+                .map(|texture| self.project.sprites_for_texture(texture))
+                .unwrap_or_default(),
+            animation_texture,
+            grids: grid_choices(&self.world),
+            root: self.project.root().map(Path::to_path_buf),
+            registry: self.scene.components().clone(),
+        }
+    }
+
     pub(super) fn inspector_panel(&mut self, ui: &mut egui::Ui) {
         egui::Panel::right("entity-inspector")
             .default_size(340.0)
@@ -206,6 +283,7 @@ impl EditorApp {
                 let mut draft = EntityDraft::from(data);
                 let original = draft.clone();
                 let icon = entity_icon(data);
+                let space = declared_space(&data.components);
                 let original_components = data.components.clone();
                 let mut components = original_components.clone();
                 let parent = data.parent;
@@ -213,24 +291,13 @@ impl EditorApp {
                 let mut reparented = ParentChoice::Unchanged;
                 let mut removed = None;
                 let mut added = None;
-                let fonts = self.project.fonts();
-                let first_font = fonts.first().map(String::as_str);
-                let animation_texture = components
-                    .get("sindri.sprite")
-                    .and_then(|sprite| sprite.get("texture"))
-                    .and_then(Value::as_str)
-                    .and_then(|reference| SpriteRef::parse(reference).ok())
-                    .map(|reference| reference.texture().to_owned());
-                let animation_sprites = animation_texture
-                    .as_deref()
-                    .map(|texture| self.project.sprites_for_texture(texture))
-                    .unwrap_or_default();
-                let first_sprite = animation_sprites.first().map(String::as_str);
-                let grids = grid_choices(&self.world);
-                let first_grid = grids.first().map(|(_, id)| id.as_str());
-                let addable =
-                    self.addable_components(&components, first_font, first_sprite, first_grid);
-                let project_root = self.project.root().map(Path::to_path_buf);
+                let context = self.panel_context(&components);
+                let addable = self.addable_components(
+                    &components,
+                    context.first_font(),
+                    context.first_sprite(),
+                    context.first_grid(),
+                );
                 {
                     let scripts = &self.scripts;
                     let mut tools = InspectorTools {
@@ -238,7 +305,7 @@ impl EditorApp {
                         tilemap: &mut self.tilemap_tool,
                     };
                     egui::ScrollArea::vertical().show(ui, |ui| {
-                        inspector_identity(ui, icon, &mut draft);
+                        inspector_identity(ui, icon, space, &mut draft);
                         reparented = inspector_parent(ui, entity, parent, &choices);
                         if let Some(transform) = &mut draft.transform_3d {
                             transform_3d_section(ui, transform);
@@ -246,12 +313,13 @@ impl EditorApp {
                         removed = components_sections(
                             ui,
                             &mut components,
+                            &context.registry,
                             &InspectorProject {
                                 scripts,
-                                root: project_root.as_deref(),
-                                fonts: &fonts,
-                                animation_texture: animation_texture.as_deref(),
-                                grids: &grids,
+                                root: context.root.as_deref(),
+                                assets: context.assets(),
+                                animation_texture: context.animation_texture.as_deref(),
+                                grids: &context.grids,
                             },
                             &mut tools,
                         );
@@ -264,7 +332,13 @@ impl EditorApp {
                     self.remove_component(entity, &type_name);
                 }
                 if let Some(type_name) = added {
-                    self.add_component(entity, &type_name, first_font, first_sprite, first_grid);
+                    self.add_component(
+                        entity,
+                        &type_name,
+                        context.first_font(),
+                        context.first_sprite(),
+                        context.first_grid(),
+                    );
                 }
                 match reparented {
                     ParentChoice::Unchanged => {}

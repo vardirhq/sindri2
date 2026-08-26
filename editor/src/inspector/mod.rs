@@ -19,6 +19,9 @@
 //! edited into something the engine would refuse to load — the refusal happens
 //! while the author is still looking at the field.
 
+pub mod choices;
+pub mod fields;
+
 use serde_json::Value;
 
 /// What kind of widget a stored value gets.
@@ -105,31 +108,29 @@ pub fn axis_labels(key: &str, len: usize) -> Vec<String> {
         .collect()
 }
 
-/// Whether a field applies, given the rest of its component's payload.
+/// Whether a field is drawn as a generic row, or belongs to something else.
 ///
-/// A world-space sprite has no edge to anchor to, so its stored anchor decides
-/// nothing — and a control that looks like it does something but does not is
-/// the exact failure `docs/editor-audit.md` was written to remove. Hiding it is
-/// the same answer `SpriteComponent::screen_anchor` gives in the engine, in the
-/// one place a panel can give it.
-///
-/// This is deliberately a short list rather than a general mechanism. Every
-/// entry is a rule that already exists in the engine; inventing one here would
-/// be a second opinion about what a component means.
+/// The list is only about fields another control already edits, and it is
+/// deliberately short. It used to also hide a world sprite's anchor, because
+/// that field decided nothing there and a control that looks like it does
+/// something but does not is the exact failure `docs/editor-audit.md` was
+/// written to remove. That entry is gone because the reason for it is: an
+/// anchor belongs to `sindri.ui.image` and a world sprite has no such field to
+/// hide. A component whose fields depend on its own values is two components,
+/// and hiding rows was the panel paying for that.
 #[must_use]
-pub fn applies(type_name: &str, key: &str, payload: &Value) -> bool {
+pub fn applies(type_name: &str, key: &str) -> bool {
     match (type_name, key) {
-        ("sindri.sprite", "anchor") => {
-            payload.get("space").and_then(Value::as_str) != Some("world")
-        }
         // These are replaced by their component's visual authoring controls.
         // A tilemap edits its interdependent storage as one grid; text content
         // needs a multiline field and a font is a project asset rather than an
-        // arbitrary string.
-        ("sindri.tilemap", "columns" | "rows" | "palette" | "tiles")
+        // arbitrary string; and which script of a source an entity runs is a
+        // choice among the ones that source declares.
+        ("sindri.script", "script")
+        | ("sindri.tilemap", "columns" | "rows" | "palette" | "tiles")
         | ("sindri.grid.navigation", "walls")
         | ("sindri.grid.occupant", "grid" | "footprint")
-        | ("sindri.text", "text" | "font")
+        | ("sindri.ui.text", "text" | "font")
         | ("sindri.animation.sprite", "clips" | "playing") => false,
         _ => true,
     }
@@ -178,67 +179,38 @@ mod tests {
         assert_eq!(value_kind(&json!([{ "a": 1 }])), ValueKind::Opaque);
     }
 
-    /// A world-space sprite has no edge to anchor to, so it is offered no
-    /// anchor to set as though it did.
+    /// Both image components draw every field they have, because neither has a
+    /// field that only sometimes means something.
     #[test]
-    fn a_field_that_decides_nothing_is_not_offered() {
-        let screen = json!({ "texture": "a.png", "anchor": "top_left" });
-        assert!(super::applies("sindri.sprite", "anchor", &screen));
-
-        let world = json!({ "texture": "a.png", "space": "world", "anchor": "top_left" });
-        assert!(!super::applies("sindri.sprite", "anchor", &world));
-        assert!(
-            super::applies("sindri.sprite", "texture", &world),
-            "and everything that does decide something still is"
-        );
+    fn an_image_component_hides_nothing() {
+        for key in ["texture", "tint", "layer"] {
+            assert!(super::applies("sindri.sprite", key));
+            assert!(super::applies("sindri.ui.image", key));
+        }
+        assert!(super::applies("sindri.ui.image", "anchor"));
     }
 
     #[test]
     fn tilemap_storage_is_replaced_by_its_visual_editor() {
-        let map = json!({
-            "texture": "tiles.png",
-            "columns": 2,
-            "rows": 2,
-            "palette": ["floor"],
-            "tiles": [0, null, null, 0]
-        });
         for key in ["columns", "rows", "palette", "tiles"] {
-            assert!(!super::applies("sindri.tilemap", key, &map));
+            assert!(!super::applies("sindri.tilemap", key));
         }
-        assert!(super::applies("sindri.tilemap", "texture", &map));
-        assert!(super::applies("sindri.tilemap", "layer", &map));
+        assert!(super::applies("sindri.tilemap", "texture"));
+        assert!(super::applies("sindri.tilemap", "layer"));
     }
 
     #[test]
     fn text_content_and_font_use_their_authoring_controls() {
-        let text = json!({ "text": "Gather\nthe light", "font": "fonts/Inter.ttf" });
-        assert!(!super::applies("sindri.text", "text", &text));
-        assert!(!super::applies("sindri.text", "font", &text));
-        assert!(super::applies("sindri.text", "font_size", &text));
+        assert!(!super::applies("sindri.ui.text", "text"));
+        assert!(!super::applies("sindri.ui.text", "font"));
+        assert!(super::applies("sindri.ui.text", "font_size"));
     }
 
     #[test]
     fn animation_clips_use_their_ordering_and_preview_controls() {
-        let animation = json!({
-            "clips": { "idle": { "frames": ["idle"], "seconds_per_frame": 0.2 } },
-            "playing": "idle",
-            "speed": 1.0
-        });
-        assert!(!super::applies(
-            "sindri.animation.sprite",
-            "clips",
-            &animation
-        ));
-        assert!(!super::applies(
-            "sindri.animation.sprite",
-            "playing",
-            &animation
-        ));
-        assert!(super::applies(
-            "sindri.animation.sprite",
-            "speed",
-            &animation
-        ));
+        assert!(!super::applies("sindri.animation.sprite", "clips"));
+        assert!(!super::applies("sindri.animation.sprite", "playing"));
+        assert!(super::applies("sindri.animation.sprite", "speed"));
     }
 
     #[test]

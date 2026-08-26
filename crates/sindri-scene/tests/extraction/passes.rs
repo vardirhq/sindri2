@@ -23,13 +23,14 @@ fn a_world_with_only_a_camera_draws_nothing() {
 }
 
 #[test]
-fn meshes_and_sprites_extract_into_ordered_passes() {
+fn meshes_and_ui_extract_into_ordered_passes() {
     let world = world_from(&scene(
         r#",
         { "id": "cube", "transform_3d": {},
           "components": { "sindri.mesh": { "primitive": "cube", "texture": "t", "layer": 0 } } },
         { "id": "badge", "transform_3d": {},
-          "components": { "sindri.sprite": { "texture": "b", "anchor": "center", "layer": 100 } } }"#,
+          "components": { "sindri.ui.image": {
+            "texture": "b", "anchor": "center", "layer": 100 } } }"#,
     ));
     let frame = SceneExtractor::new()
         .unwrap()

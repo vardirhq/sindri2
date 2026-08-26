@@ -1,5 +1,16 @@
 //! Orbit, pan, and framing, and what each leaves alone.
+use sindri_render::{look_at, orthographic_projection, perspective_projection};
+
 use super::*;
+
+/// A viewer looking at the origin from `+Z`, with the depth convention the
+/// renderer uses. `Mat4::IDENTITY` is not a view-projection: under a 0..1 depth
+/// range everything in front of a camera at the origin is behind the near
+/// plane, which is exactly what the clipping this file does now says.
+fn viewer() -> Mat4 {
+    orthographic_projection(-8.0, 8.0, -8.0, 8.0, 0.1, 100.0)
+        * look_at(Vec3::new(0.0, 0.0, 12.0), Vec3::ZERO, Vec3::Y)
+}
 
 fn moved_camera() -> EditorCamera {
     EditorCamera {
@@ -92,8 +103,9 @@ fn moving_perspective_camera_moves_projected_body() {
         Transform3D::default(),
         camera,
         rect,
-        Mat4::IDENTITY,
+        viewer(),
         1.0,
+        true,
     )
     .unwrap();
     let moved = camera_visual(
@@ -104,8 +116,9 @@ fn moving_perspective_camera_moves_projected_body() {
         },
         camera,
         rect,
-        Mat4::IDENTITY,
+        viewer(),
         1.0,
+        true,
     )
     .unwrap();
     assert!(moved.body[0].x > first.body[0].x);
@@ -128,8 +141,9 @@ fn orthographic_visual_uses_transform_position() {
         },
         camera,
         rect,
-        Mat4::IDENTITY,
+        viewer(),
         1.0,
+        true,
     )
     .unwrap();
     assert!(visual.body[0].x > rect.center().x);
@@ -151,5 +165,109 @@ fn camera_marker_is_pickable() {
     assert_eq!(
         pick_authored_camera(&[visual], Pos2::new(2.0, 1.0)),
         Some(entity)
+    );
+}
+
+/// The frustum belongs to the camera being worked on. Five scenes' worth of
+/// frustum crossing the viewport says nothing about any of them.
+#[test]
+fn only_the_selected_camera_draws_its_frustum() {
+    let rect = Rect::from_min_size(Pos2::ZERO, egui::Vec2::splat(400.0));
+    let camera = CameraComponent::Perspective {
+        vertical_fov_degrees: 60.0,
+        near: 0.1,
+        far: 10.0,
+    };
+    let entity = sindri_core::World::default().next_handle();
+    let visual = |selected| {
+        camera_visual(
+            entity,
+            Transform3D::default(),
+            camera,
+            rect,
+            viewer(),
+            1.0,
+            selected,
+        )
+        .unwrap()
+    };
+    assert!(visual(false).lines.len() < visual(true).lines.len());
+    assert!(
+        !visual(false).lines.is_empty(),
+        "an unselected camera still says which way it faces"
+    );
+    assert_eq!(
+        visual(false).hit_lines,
+        visual(true).hit_lines,
+        "and it is just as clickable either way"
+    );
+}
+
+/// The Scene view's shape must not change the shape of what an authored camera
+/// frames. Resizing the panel used to reshape the frustum, which is a picture
+/// claiming the scene changed because a divider moved.
+#[test]
+fn the_frustum_is_the_shape_of_the_game_viewport_not_the_panel() {
+    let camera = CameraComponent::Perspective {
+        vertical_fov_degrees: 60.0,
+        near: 0.1,
+        far: 10.0,
+    };
+    let width = |rect: Rect| {
+        let visual = camera_visual(
+            sindri_core::World::default().next_handle(),
+            Transform3D::default(),
+            camera,
+            rect,
+            viewer(),
+            16.0 / 9.0,
+            true,
+        )
+        .expect("the camera is in front of the viewer");
+        let xs: Vec<f32> = visual
+            .lines
+            .iter()
+            .flatten()
+            .map(|point| (point.x - rect.center().x) / rect.width())
+            .collect();
+        xs.iter().fold(0.0_f32, |widest, x| widest.max(x.abs()))
+    };
+
+    let square = width(Rect::from_min_size(Pos2::ZERO, egui::Vec2::splat(400.0)));
+    let wide = width(Rect::from_min_size(
+        Pos2::ZERO,
+        egui::Vec2::new(800.0, 400.0),
+    ));
+    assert!(
+        (square - wide).abs() < 1.0e-3,
+        "the frustum spanned {square} of a square panel and {wide} of a wide one"
+    );
+}
+
+/// A corner behind the eye has no projection, and dividing by its negative `w`
+/// produces a point on the wrong side of the screen. The segment is cut at the
+/// near plane instead, which is what stopped the frustum smearing across the
+/// viewport while orbiting.
+#[test]
+fn a_segment_crossing_the_eye_is_cut_rather_than_mirrored() {
+    let rect = Rect::from_min_size(Pos2::ZERO, egui::Vec2::splat(400.0));
+    let view_projection = perspective_projection(60.0_f32.to_radians(), 1.0, 0.1, 100.0);
+    let in_front = Vec3::new(0.0, 0.0, -5.0);
+    let behind = Vec3::new(0.0, 0.0, 5.0);
+
+    assert!(
+        project_point(rect, view_projection, behind).is_none(),
+        "a point behind the eye is not somewhere on screen"
+    );
+    let segment = project_segment(rect, view_projection, in_front, behind)
+        .expect("the half in front of the eye is still drawn");
+    assert!(
+        rect.expand(rect.width()).contains(segment[1]),
+        "the cut end landed at {:?}, which is not near the viewport at all",
+        segment[1]
+    );
+    assert!(
+        project_segment(rect, view_projection, behind, behind + Vec3::X).is_none(),
+        "a segment entirely behind the eye is not drawn at all"
     );
 }
