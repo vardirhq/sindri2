@@ -505,7 +505,10 @@ frame.
 
 Listed because a control that looks like a feature is worse than an absent one.
 `docs/editor-audit.md` is the full sweep — control by control, with what breaks
-under use and what the editor cannot express at all. This is the summary, and
+under use and what the editor cannot express at all.
+`docs/editor-authoring-audit.md` is the second sweep, which asks the harder
+question: whether the controls that do work add up to a tool the companion game
+could be built in. They do not yet, and it lists what stops it. This is the summary, and
 it is deliberately short now: everything the audit found is either working or
 gone, and what is left here is waiting on a build rather than on a handler.
 
@@ -550,9 +553,21 @@ settings gear.
 
 ### Editor
 
-- Cannot create or delete an asset
+- Cannot create a scene, save one under another name, or create or delete an
+  asset. A scene file has to exist before the editor can do anything with it
+- **Cannot add a `sindri.script` or a `sindri.audio.source` component**: both
+  are registered without a default payload, and Add Component offers only the
+  types that have one. Scripts already on an entity are fully editable
+- A component registered without a default payload shows only the fields its
+  stored payload happens to carry, so one added in the editor is not the same
+  component the shipped scenes use — `sindri.ui.text` and `sindri.tilemap` are
+  both affected, and an editor-made tilemap can never be isometric
+- **Saving while the scene is playing writes the running world to the file.**
+  Nothing gates Save on the transport, and Stop then restores the pre-play
+  snapshot, so the editor and the file disagree with no marker
 - No first-class project model or multi-scene workspace. The Project dock does
-  read and filter the directory containing the open scene
+  read and filter the directory containing the open scene; its folders neither
+  fold nor filter, and it marks the open scene rather than what is selected
 - No multi-select; viewport selection and transform gizmos currently cover
   world sprites, filled tilemap cells, and meshes rather than UI elements
 - No prefabs, no play-mode-against-a-copy, no build or export controls
