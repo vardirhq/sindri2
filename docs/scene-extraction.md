@@ -332,24 +332,27 @@ Once a cursor *has* reached it, the clip decides alone. A frame that resolves to
 whole image rather than falling back to the resting pose, because a plausible picture of the wrong
 moment is the failure that hides.
 
-## Sprite space
+## The two spaces an image can be drawn in
 
-A sprite says which space it is in, and the answer decides three things at once: which projection
-draws it, which stage it lands in, and what its transform means.
+Which component an image is decides three things at once: which projection draws it, which stage it
+lands in, and what its transform means.
 
-| `space` | Projection | Stage | Depth | Transform |
+| Component | Projection | Stage | Depth | Transform |
 | --- | --- | --- | --- | --- |
-| `screen` (default) | Viewport-owned screen projection | `Overlay` | Ignored — nothing in the world may hide a HUD | X and Y offset an anchor; Z orders it without moving it |
-| `world` | Authored world camera, perspective or orthographic | `Transparent2d` | Tested, never written | The whole transform, exactly as a mesh reads it |
+| `sindri.ui.image` | Viewport-owned screen projection | `Overlay` | Ignored — nothing in the world may hide a HUD | X and Y offset an anchor; Z orders it without moving it |
+| `sindri.sprite` | Authored world camera, perspective or orthographic | `Transparent2d` | Tested, never written | The whole transform, exactly as a mesh reads it |
 
-The default is what every sprite already was, so a scene written before the choice existed draws
-where it always did. Two sprites in different spaces never share a batch however much else they have
-in common, because a batch is one draw call and these differ in both projection and pipeline.
+This used to be a `space` field on one component, and it is two components because the rows of that
+table are not two values of one thing: the anchor column is a field a UI image has and a sprite does
+not. `docs/versioning.md` covers the format 8 migration, and `docs/2d-model.md` the reasoning.
 
-Within a batch, sprites sort back to front by depth along the projection that draws them. A world
+The two never share a batch however much else they have in common, because a batch is one draw call
+and these differ in both projection and pipeline.
+
+Within a batch, images sort back to front by depth along the projection that draws them. A world
 sprite's order therefore changes when the world/viewer camera moves, without the scene changing at
-all. A screen sprite's order does not depend on any authored camera: its Z is a stable screen-space
-stack value and does not move the sprite itself.
+all. A UI element's order does not depend on any authored camera: its Z is a stable screen-space
+stack value and does not move the element itself.
 
 `layer` is the explicit override and beats both. A sprite in a higher layer draws in front of
 something nearer the camera, which is the rule people are surprised by once and then rely on.
