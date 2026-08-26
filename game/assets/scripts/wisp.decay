@@ -5,18 +5,31 @@ script Wisp {
 
     var elapsed: f32 = 0.0;
 
+    // Found once and held, rather than looked up by name every step. A held
+    // reference outlives what it names, so each is re-checked before use and
+    // found again when it stops naming anything.
+    var floor: Entity;
+    var player: Entity;
+
     fn update(dt: f32) {
         elapsed += dt;
         if elapsed < step_seconds {
             return;
         }
-        elapsed = 0.0;
+        // Keeping the remainder rather than resetting to zero, which would
+        // round every step up to the end of the frame it landed in and tie the
+        // wisp's cadence to the frame rate.
+        elapsed = elapsed - step_seconds;
 
-        let floor = World.find("Floor");
-        let player = World.find("Player");
-        if floor == null || player == null {
-            return;
+        if !World.exists(floor) {
+            floor = World.find("Floor");
         }
-        Grid.step_toward(this.entity, floor, player);
+        if !World.exists(player) {
+            player = World.find("Player");
+        }
+
+        if floor != null && player != null {
+            Grid.step_toward(this.entity, floor, player);
+        }
     }
 }
