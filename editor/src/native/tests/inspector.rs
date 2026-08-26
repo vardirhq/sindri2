@@ -9,7 +9,8 @@ use crate::animation;
 
 use super::super::editing::find_by_source_id;
 use super::super::inspector_panel::draft::{
-    EntityDraft, addable_components, component_commands, component_default, draft_commands,
+    EntityDraft, ProjectDefaults, addable_components, component_commands, component_default,
+    draft_commands,
 };
 use super::super::*;
 use super::support::*;
@@ -140,9 +141,10 @@ fn add_component_offers_only_what_it_can_actually_add() {
     let offered: Vec<String> = addable_components(
         extractor.components(),
         &present,
-        Some("fonts/Inter.ttf"),
-        None,
-        None,
+        ProjectDefaults {
+            font: Some("fonts/Inter.ttf"),
+            ..ProjectDefaults::default()
+        },
     )
     .into_iter()
     .map(|metadata| metadata.type_name)
@@ -173,9 +175,10 @@ fn the_menu_offers_one_space_or_the_other() {
         addable_components(
             extractor.components(),
             present,
-            Some("fonts/Inter.ttf"),
-            None,
-            None,
+            ProjectDefaults {
+                font: Some("fonts/Inter.ttf"),
+                ..ProjectDefaults::default()
+            },
         )
         .into_iter()
         .map(|metadata| metadata.type_name)
@@ -203,21 +206,16 @@ fn the_menu_offers_one_space_or_the_other() {
 fn every_offered_default_is_one_the_engine_accepts() {
     let extractor = extractor();
     let components = extractor.components();
-    for metadata in addable_components(
-        components,
-        &BTreeMap::new(),
-        Some("fonts/Inter.ttf"),
-        Some("idle"),
-        Some("floor"),
-    ) {
-        let payload = component_default(
-            components,
-            &metadata.type_name,
-            Some("fonts/Inter.ttf"),
-            Some("idle"),
-            Some("floor"),
-        )
-        .expect("it was offered, so it has one");
+    let project = ProjectDefaults {
+        font: Some("fonts/Inter.ttf"),
+        sprite: Some("idle"),
+        grid: Some("floor"),
+        audio: Some("audio/pickup.wav"),
+        script: Some(("scripts/spin.decay", "Spin")),
+    };
+    for metadata in addable_components(components, &BTreeMap::new(), project) {
+        let payload = component_default(components, &metadata.type_name, project)
+            .expect("it was offered, so it has one");
         components
             .validate_payload(&metadata.type_name, &payload)
             .unwrap_or_else(|error| {
@@ -236,7 +234,7 @@ fn text_is_addable_only_when_the_project_has_a_font() {
     let present = BTreeMap::new();
 
     assert!(
-        !addable_components(components, &present, None, None, None)
+        !addable_components(components, &present, ProjectDefaults::default())
             .iter()
             .any(|metadata| metadata.type_name == UI_TEXT_COMPONENT)
     );
@@ -244,13 +242,19 @@ fn text_is_addable_only_when_the_project_has_a_font() {
     let payload = component_default(
         components,
         UI_TEXT_COMPONENT,
-        Some("fonts/Inter.ttf"),
-        None,
-        None,
+        ProjectDefaults {
+            font: Some("fonts/Inter.ttf"),
+            ..ProjectDefaults::default()
+        },
     )
     .expect("a project font completes a valid text component");
     assert_eq!(payload["font"], "fonts/Inter.ttf");
     assert_eq!(payload["text"], "Text");
+    // The whole component, not the two fields the editor used to write: a text
+    // added here and one authored by hand are now the same component.
+    assert_eq!(payload["font_size"], 24.0);
+    assert_eq!(payload["anchor"], "center");
+    assert_eq!(payload["layer"], 0);
     components
         .validate_payload(UI_TEXT_COMPONENT, &payload)
         .unwrap();
@@ -263,13 +267,20 @@ fn sprite_animation_is_addable_only_with_a_named_sheet_sprite() {
     let present = BTreeMap::new();
 
     assert!(
-        !addable_components(components, &present, None, None, None)
+        !addable_components(components, &present, ProjectDefaults::default())
             .iter()
             .any(|metadata| metadata.type_name == animation::TYPE_NAME)
     );
 
-    let payload = component_default(components, animation::TYPE_NAME, None, Some("idle"), None)
-        .expect("a named sheet sprite completes a valid animation component");
+    let payload = component_default(
+        components,
+        animation::TYPE_NAME,
+        ProjectDefaults {
+            sprite: Some("idle"),
+            ..ProjectDefaults::default()
+        },
+    )
+    .expect("a named sheet sprite completes a valid animation component");
     assert_eq!(
         payload["clips"]["clip"]["frames"],
         serde_json::json!(["idle"])
@@ -306,4 +317,98 @@ fn a_drag_run_collapses_into_one_undo_step() {
     history.undo(&mut world).unwrap();
     assert_eq!(EntityDraft::from(world.get(entity).unwrap()), original);
     assert!(!history.can_undo());
+}
+
+/// The two components Gather is mostly made of, and neither could be added.
+///
+/// Both were registered without a default payload, so `component_default`
+/// answered `None` and Add Component filtered them out — which meant the
+/// editor could not put a script on an entity at all, in an engine whose
+/// headline capability is scripting. Neither has an honest blank, because
+/// neither the source nor the clip is something the engine can invent; what it
+/// has is a project sitting beside the scene.
+#[test]
+fn a_script_and_a_clip_are_addable_once_the_project_holds_one() {
+    let extractor = extractor();
+    let components = extractor.components();
+    let present = BTreeMap::new();
+
+    let bare: Vec<String> = addable_components(components, &present, ProjectDefaults::default())
+        .into_iter()
+        .map(|metadata| metadata.type_name)
+        .collect();
+    assert!(
+        !bare.contains(&SCRIPT_COMPONENT.to_owned()),
+        "a project with no script source has nothing to point one at"
+    );
+    assert!(!bare.contains(&AUDIO_SOURCE_COMPONENT.to_owned()));
+
+    let project = ProjectDefaults {
+        audio: Some("audio/pickup.wav"),
+        script: Some(("scripts/spin.decay", "Spin")),
+        ..ProjectDefaults::default()
+    };
+    let offered: Vec<String> = addable_components(components, &present, project)
+        .into_iter()
+        .map(|metadata| metadata.type_name)
+        .collect();
+    assert!(offered.contains(&SCRIPT_COMPONENT.to_owned()));
+    assert!(offered.contains(&AUDIO_SOURCE_COMPONENT.to_owned()));
+
+    let script = component_default(components, SCRIPT_COMPONENT, project).unwrap();
+    assert_eq!(script["source"], "scripts/spin.decay");
+    assert_eq!(
+        script["script"], "Spin",
+        "and a container, because a source alone runs nothing"
+    );
+    assert_eq!(script["enabled"], true);
+    components
+        .validate_payload(SCRIPT_COMPONENT, &script)
+        .unwrap();
+
+    let clip = component_default(components, AUDIO_SOURCE_COMPONENT, project).unwrap();
+    assert_eq!(clip["clip"], "audio/pickup.wav");
+    assert_eq!(clip["volume"], 1.0);
+    components
+        .validate_payload(AUDIO_SOURCE_COMPONENT, &clip)
+        .unwrap();
+}
+
+/// A component added by a button and the same one authored by hand have to be
+/// the same component.
+///
+/// The audit's finding, as a test: the editor's `sindri.ui.text` wrote two
+/// fields, so its panel drew two rows where Gather's title drew seven, and a
+/// tilemap made here had no `projection` and could never be isometric.
+#[test]
+fn an_added_component_has_every_field_the_authored_one_has() {
+    let extractor = extractor();
+    let components = extractor.components();
+    let project = ProjectDefaults {
+        font: Some("fonts/Inter.ttf"),
+        ..ProjectDefaults::default()
+    };
+
+    let text = component_default(components, UI_TEXT_COMPONENT, project).unwrap();
+    let text = text.as_object().expect("an object");
+    for field in [
+        "text",
+        "font",
+        "font_size",
+        "line_height",
+        "color",
+        "anchor",
+        "layer",
+    ] {
+        assert!(text.contains_key(field), "UI Text is missing {field}");
+    }
+
+    let map = component_default(components, crate::tilemap::TYPE_NAME, project).unwrap();
+    let map = map.as_object().expect("an object");
+    for field in ["projection", "tile_size", "tint", "layer"] {
+        assert!(
+            map.contains_key(field),
+            "Tilemap is missing {field}; without projection it can never be isometric"
+        );
+    }
 }

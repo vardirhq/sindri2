@@ -10,9 +10,10 @@ use std::{collections::BTreeSet, path::PathBuf};
 use eframe::egui;
 use glam::Vec2 as GlamVec2;
 use sindri_core::{CommandHistory, EngineLifecycle, EntityId, SceneComponent, World};
+use sindri_decay::ScriptComponent;
 use sindri_scene::{
-    GridNavigationComponent, GridOccupantComponent, SceneExtractor, SpriteAnimations,
-    SpriteComponent, UiImageComponent, UiTextComponent,
+    AudioSourceComponent, GridNavigationComponent, GridOccupantComponent, SceneExtractor,
+    SpriteAnimations, SpriteComponent, UiImageComponent, UiTextComponent,
 };
 
 use crate::{
@@ -64,6 +65,8 @@ const UI_IMAGE_COMPONENT: &str = UiImageComponent::TYPE_NAME;
 const UI_TEXT_COMPONENT: &str = UiTextComponent::TYPE_NAME;
 const GRID_NAVIGATION_COMPONENT: &str = GridNavigationComponent::TYPE_NAME;
 const GRID_OCCUPANT_COMPONENT: &str = GridOccupantComponent::TYPE_NAME;
+const AUDIO_SOURCE_COMPONENT: &str = AudioSourceComponent::TYPE_NAME;
+const SCRIPT_COMPONENT: &str = ScriptComponent::TYPE_NAME;
 const INITIAL_VIEWPORT_WIDTH: u32 = 960;
 const INITIAL_VIEWPORT_HEIGHT: u32 = 540;
 

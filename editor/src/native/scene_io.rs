@@ -85,8 +85,20 @@ pub(super) fn open_scene_for(
 /// construction instead of by both remembering the same list.
 pub fn scene_extractor() -> SceneExtractor {
     let mut scene = SceneExtractor::new().expect("the built-in component schemas register");
+    // Fields but no default: a script names a source and a container, and
+    // neither is something the engine can invent. The editor completes both
+    // from the project and from what the source declares, which is why Script
+    // is addable at all.
     scene
-        .register::<ScriptComponent>("Script")
+        .register_with_fields::<ScriptComponent>(
+            "Script",
+            serde_json::json!({
+                "source": "",
+                "script": "",
+                "properties": {},
+                "enabled": true
+            }),
+        )
         .expect("sindri.script registers");
     scene
 }

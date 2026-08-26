@@ -4,7 +4,10 @@ Can Gather be built in the editor, as of `4dd70b4`?
 
 **No.** Four things stop it outright, one of them writes over your scene file,
 and a fifth — the complete absence of right-click menus — is why several of the
-others have nowhere to be fixed. This audit is the second of its kind; `docs/editor-audit.md` asked whether
+others have nowhere to be fixed.
+
+**Fixing has started.** §1, §2 and §3 are done, and each keeps its finding here
+because how it hid is the useful part. What is left is §4 onwards. This audit is the second of its kind; `docs/editor-audit.md` asked whether
 the controls did anything, and this one asks whether the controls that work add
 up to a tool you could author a game in.
 
@@ -35,6 +38,15 @@ Where a finding says "confirmed", it was reproduced in a running editor.
 
 **Blocker.** The most consequential finding, and the one with the widest blast
 radius, because it is invisible: nothing looks broken.
+
+**Fixed.** The registry now records two payloads and they are different
+questions: a *field template* saying what a component has, and a *default
+payload* saying what a fresh one is. The inspector draws from the first, so a
+type with no honest blank still shows all of its fields. Both are checked at
+registration against the field list serde will ask the type for, so a template
+that drifts from its struct is a startup error — which is how the tilemap's
+missing `projection` was found the moment the check existed. See
+`docs/component-schema-registry.md`.
 
 The inspector draws a component's fields from the *registry's default payload*,
 filled out with whatever the instance stored (`editor/src/inspector/fields.rs:25`).
@@ -81,6 +93,19 @@ entry needs a reason shown, not an absence.
 **Blocker**, and the sharpest single gap in the tool, because scripting is the
 headline capability.
 
+**Fixed.** Both Script and Audio Source have field templates now, and the editor
+completes each from the project beside the scene — the first `.decay` source
+that declares a container, the first audio clip — exactly as it already did for
+a font. A script added this way arrives with its source, its container, its
+typed `@export` fields, and `enabled`, which was never visible before.
+
+Making Script addable turned up a second bug behind it: `declared_space` treated
+every non-UI component as a world component, so adding a script to a fresh
+entity silently decided it was a world object and the menu stopped offering UI
+Text. Gather's banner and pips are UI images driven by scripts, so the editor
+could not have built its HUD. Only a component that *places* something — a
+camera, a mesh, a sprite, a tilemap — decides a space now.
+
 `ScriptComponent` is registered without a default
 (`editor/src/native/scene_io.rs:89`), so `component_default` returns `None` and
 `addable_components` filters it out. Confirmed: Add Component on a fresh entity
@@ -101,6 +126,15 @@ Related: `ScriptComponent.enabled` exists and is never shown, for the reason in
 ## 3. Saving while the scene is playing overwrites the file
 
 **Sharp edge, and the only finding here that destroys work.**
+
+**Fixed.** A running scene is not the document, and the editor says so in one
+place: `authoring_allowed` answers for the transport, and the inspector, the
+hierarchy's create and delete, the gizmo, the tile brush, undo, redo and every
+File entry ask it. Each disabled control explains itself on hover; a refused
+save says so in the console. What still works is everything that does not write:
+the viewport orbits and selects, and the inspector shows the values changing.
+Editing a running scene and *keeping* the changes needs history that can be
+rebased or a play mode against a copy, and is not this.
 
 `save()` writes `self.world` (`editor/src/native/scene_io.rs:111`), and during
 play `self.world` is the running world that scripts have been moving. Nothing
@@ -297,15 +331,12 @@ rather than about an entity in it.
 
 The ordering is by what unblocks the most authoring, not by effort.
 
-1. **Make Script and Audio Source addable**, and give every component a field
-   set derived from its schema rather than from a hand-written default. §1 and
-   §2 are one fix: the inspector should ask the registry what a component *has*,
-   not what a fresh one *looks like*. Until then the editor can only finish
-   scenes that were started in a text editor.
-2. **Stop play mode from writing to the file.** Disable Save while the transport
-   is running, or save the snapshot rather than the live world. Then decide what
-   an edit made during play means — discarding it silently is the same bug the
-   last audit closed at a different boundary.
+1. ~~**Make Script and Audio Source addable**, and give every component a field
+   set derived from its schema rather than from a hand-written default.~~ Done.
+   The registry answers "what does this component have" separately from "what is
+   a fresh one", and a template that drifts from its struct is a startup error.
+2. ~~**Stop play mode from writing to the file.**~~ Done. A running scene is not
+   the document, and one rule says so for every control that writes.
 3. **Give the Project browser selection and folding**, and make the folder pane
    filter the list. These are three small changes to one panel and they are the
    difference between a listing and a browser.

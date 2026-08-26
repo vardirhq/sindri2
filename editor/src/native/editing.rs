@@ -15,7 +15,7 @@ use crate::slicer::Slicer;
 
 use super::hierarchy::row::entity_name;
 use super::hierarchy::rows::{hierarchy_preference_key, hierarchy_rows};
-use super::inspector_panel::draft::component_default;
+use super::inspector_panel::draft::{ProjectDefaults, component_default};
 use super::runtime::initialized_lifecycle;
 use super::scene_io::load_world;
 use super::{EditorApp, UI_IMAGE_COMPONENT};
@@ -134,12 +134,12 @@ impl EditorApp {
     /// group and what makes it visible: an empty entity called "UI something"
     /// would be in neither space and would draw nothing.
     fn create_ui_image(&mut self) {
+        // A UI image has an honest blank in the registry, so nothing from the
+        // project is needed to complete it.
         let Some(payload) = component_default(
             self.scene.components(),
             UI_IMAGE_COMPONENT,
-            None,
-            None,
-            None,
+            ProjectDefaults::default(),
         ) else {
             return;
         };

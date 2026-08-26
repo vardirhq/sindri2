@@ -21,6 +21,39 @@ All notable changes to Sindri Next will be documented here.
 
 ### Changed
 
+- **A component added in the editor is the component the game uses.** The
+  registry recorded one payload per type and asked it two questions — what does
+  this component have, and what is a fresh one — so a type with no honest blank
+  had no answer to the first either. `sindri.ui.text` inspected as two rows for
+  a seven-field component, and a tilemap made in the editor had no `projection`
+  and could never be isometric. Those are now separate registrations: a field
+  template says what a component consists of, a default payload says what a
+  fresh one is, and a type may have the first without the second. Both are
+  checked against the field list serde will ask the type for, so a template that
+  drifts from its struct is a startup error rather than a missing row noticed a
+  release later.
+- **A script can be put on an entity.** `sindri.script` and
+  `sindri.audio.source` had no default payload and so were never offered by Add
+  Component — in an engine whose headline capability is scripting, and a
+  companion game that is thirteen script components. Both are offered now,
+  completed from the project beside the scene: the first `.decay` source that
+  declares a container, the first audio clip. A script arrives with its source,
+  its container, its typed `@export` fields, and `enabled`, which had never been
+  visible. Behind it, a component that says what an entity *does* no longer
+  decides where it *is*: a script on a fresh entity used to mark it a world
+  object and stop the menu offering UI Text, which made Gather's script-driven
+  HUD unbuildable.
+- **Play mode is read-only.** Saving while a scene was playing wrote the running
+  world to the file — the authored scene replaced by wherever the scripts had
+  pushed everything, marked as saved, with Stop then restoring a world the file
+  no longer held. Every other edit made while playing was discarded by Stop
+  without being mentioned, leaving undo describing changes the world no longer
+  contained. A running scene is not the document: the inspector, the hierarchy's
+  create and delete, the gizmo, the tile brush, undo, redo and the File menu all
+  stand down until it stops, each saying why. The viewport still orbits and
+  selects, and the inspector still shows the values changing.
+
+
 - **The editor draws itself from one design system instead of eleven opinions.**
   Every panel used to pick its own greys, gaps, and font sizes by copying the
   panel beside it, so the same idea was spelled differently in each one and

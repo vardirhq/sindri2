@@ -555,16 +555,15 @@ settings gear.
 
 - Cannot create a scene, save one under another name, or create or delete an
   asset. A scene file has to exist before the editor can do anything with it
-- **Cannot add a `sindri.script` or a `sindri.audio.source` component**: both
-  are registered without a default payload, and Add Component offers only the
-  types that have one. Scripts already on an entity are fully editable
-- A component registered without a default payload shows only the fields its
-  stored payload happens to carry, so one added in the editor is not the same
-  component the shipped scenes use — `sindri.ui.text` and `sindri.tilemap` are
-  both affected, and an editor-made tilemap can never be isometric
-- **Saving while the scene is playing writes the running world to the file.**
-  Nothing gates Save on the transport, and Stop then restores the pre-play
-  snapshot, so the editor and the file disagree with no marker
+- A component's fields come from the registry, so one added in the editor is the
+  same component the shipped scenes use. A type with no honest blank —
+  `sindri.ui.text`, `sindri.animation.sprite`, `sindri.grid.occupant`,
+  `sindri.audio.source` — is completed from the project beside the scene, and is
+  offered only when the project holds what it needs
+- Play mode is read-only. Nothing that writes to the world or the file is
+  available while a scene is running, because Stop restores the world as it was
+  when Play was pressed. Editing a running scene and keeping the changes is not
+  supported
 - No first-class project model or multi-scene workspace. The Project dock does
   read and filter the directory containing the open scene; its folders neither
   fold nor filter, and it marks the open scene rather than what is selected

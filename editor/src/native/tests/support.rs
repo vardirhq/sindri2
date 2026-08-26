@@ -8,10 +8,16 @@ use sindri_core::{SceneDocument, SceneEntity, SceneEntityId, World};
 use sindri_cube::DemoScene;
 use sindri_scene::SceneExtractor;
 
-use super::super::scene_io::load_world;
+use super::super::scene_io::{load_world, scene_extractor};
 
+/// The registry the editor actually runs with, rather than a second one.
+///
+/// `SceneExtractor::new` registers the engine's components; the editor adds
+/// `sindri.script` on top. A test built on the bare extractor is testing a
+/// registry the editor never has — which is how "can a script be added" was
+/// never asked.
 pub(super) fn extractor() -> SceneExtractor {
-    SceneExtractor::new().unwrap()
+    scene_extractor()
 }
 
 /// The scene the editor opens with no argument, loaded the way the editor

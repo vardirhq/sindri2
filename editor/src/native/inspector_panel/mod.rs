@@ -24,7 +24,8 @@ use sindri_core::{
 };
 
 use self::draft::{
-    EntityDraft, addable_components, component_commands, component_default, draft_commands,
+    EntityDraft, ProjectDefaults, addable_components, component_commands, component_default,
+    draft_commands,
 };
 use self::field::FieldAssets;
 use self::header::{ParentChoice, inspector_identity, inspector_parent, transform_3d_section};
@@ -78,6 +79,14 @@ struct PanelContext {
     textures: Vec<String>,
     scripts: Vec<String>,
     audio: Vec<String>,
+    /// The first `.decay` source the project holds that declares a script, and
+    /// the first script it declares.
+    ///
+    /// Both, because a script component naming a source and no container is one
+    /// that loads and runs nothing. A source still compiling declares nothing
+    /// yet, so Script becomes addable a moment after the project opens rather
+    /// than immediately — which is the honest order.
+    script_container: Option<(String, String)>,
     /// The sheet an animation on this entity reads, from whichever image
     /// component the entity carries.
     animation_texture: Option<String>,
@@ -88,16 +97,18 @@ struct PanelContext {
 }
 
 impl PanelContext {
-    fn first_font(&self) -> Option<&str> {
-        self.fonts.first().map(String::as_str)
-    }
-
-    fn first_sprite(&self) -> Option<&str> {
-        self.animation_sprites.first().map(String::as_str)
-    }
-
-    fn first_grid(&self) -> Option<&str> {
-        self.grids.first().map(|(_, id)| id.as_str())
+    /// What the project can complete a component the engine cannot invent with.
+    fn defaults(&self) -> ProjectDefaults<'_> {
+        ProjectDefaults {
+            font: self.fonts.first().map(String::as_str),
+            sprite: self.animation_sprites.first().map(String::as_str),
+            grid: self.grids.first().map(|(_, id)| id.as_str()),
+            audio: self.audio.first().map(String::as_str),
+            script: self
+                .script_container
+                .as_ref()
+                .map(|(source, script)| (source.as_str(), script.as_str())),
+        }
     }
 
     fn assets(&self) -> FieldAssets<'_> {
@@ -150,24 +161,16 @@ impl EditorApp {
 
     /// The components this entity does not have and the registry can create.
     ///
-    /// A type with no default payload is missing from the list rather than
-    /// offered and refused: a button that adds a component the engine will
-    /// then reject is worse than no button, which is why the old Add Component
-    /// was removed instead of left drawn.
+    /// A type nothing can build a fresh payload for is missing from the list
+    /// rather than offered and refused: a button that adds a component the
+    /// engine will then reject is worse than no button, which is why the old
+    /// Add Component was removed instead of left drawn.
     pub(super) fn addable_components(
         &self,
         present: &BTreeMap<String, Value>,
-        first_font: Option<&str>,
-        first_sprite: Option<&str>,
-        first_grid: Option<&str>,
+        project: ProjectDefaults<'_>,
     ) -> Vec<ComponentMetadata> {
-        addable_components(
-            self.scene.components(),
-            present,
-            first_font,
-            first_sprite,
-            first_grid,
-        )
+        addable_components(self.scene.components(), present, project)
     }
 
     /// Turns every changed component payload into a command.
@@ -205,17 +208,9 @@ impl EditorApp {
         &mut self,
         entity: EntityId,
         type_name: &str,
-        first_font: Option<&str>,
-        first_sprite: Option<&str>,
-        first_grid: Option<&str>,
+        project: ProjectDefaults<'_>,
     ) {
-        let Some(payload) = component_default(
-            self.scene.components(),
-            type_name,
-            first_font,
-            first_sprite,
-            first_grid,
-        ) else {
+        let Some(payload) = component_default(self.scene.components(), type_name, project) else {
             return;
         };
         let mut buffer = CommandBuffer::new();
@@ -260,10 +255,18 @@ impl EditorApp {
             .and_then(Value::as_str)
             .and_then(|reference| SpriteRef::parse(reference).ok())
             .map(|reference| reference.texture().to_owned());
+        let scripts = self.project.scripts();
         PanelContext {
+            script_container: scripts.iter().find_map(|source| {
+                self.scripts
+                    .declared(source)
+                    .into_iter()
+                    .next()
+                    .map(|script| (source.clone(), script))
+            }),
             fonts: self.project.fonts(),
             textures: drawable_textures(&self.project),
-            scripts: self.project.scripts(),
+            scripts,
             audio: self.project.audio(),
             animation_sprites: animation_texture
                 .as_deref()
@@ -345,12 +348,7 @@ impl EditorApp {
         let mut added = None;
         let authoring = self.authoring_enabled();
         let context = self.panel_context(&components);
-        let addable = self.addable_components(
-            &components,
-            context.first_font(),
-            context.first_sprite(),
-            context.first_grid(),
-        );
+        let addable = self.addable_components(&components, context.defaults());
         {
             let scripts = &self.scripts;
             let mut tools = InspectorTools {
@@ -389,13 +387,7 @@ impl EditorApp {
             self.remove_component(entity, &type_name);
         }
         if let Some(type_name) = added {
-            self.add_component(
-                entity,
-                &type_name,
-                context.first_font(),
-                context.first_sprite(),
-                context.first_grid(),
-            );
+            self.add_component(entity, &type_name, context.defaults());
         }
         match reparented {
             ParentChoice::Unchanged => {}

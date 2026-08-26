@@ -6,6 +6,12 @@ use thiserror::Error;
 
 use crate::{EntityId, SceneDocument, SceneEntityId, SceneError, World};
 
+mod fields;
+#[cfg(test)]
+mod tests;
+
+use fields::declared_fields;
+
 pub trait SceneComponent: DeserializeOwned {
     const TYPE_NAME: &'static str;
     const SCHEMA_VERSION: u32 = 1;
@@ -31,12 +37,32 @@ type ComponentValidator = fn(&Value) -> Result<(), serde_json::Error>;
 struct ComponentRegistration {
     metadata: ComponentMetadata,
     validate: ComponentValidator,
+    /// Every field this component has, at the value it takes when nobody has
+    /// said otherwise.
+    ///
+    /// This is the answer to "what does this component consist of", and it is
+    /// deliberately a different question from "what is a valid fresh one". An
+    /// editor draws a component by filling this out with whatever the instance
+    /// stored, so two of one component show the same rows whether or not each
+    /// wrote every field down.
+    ///
+    /// `None` only for a type registered by someone who did not say — a game's
+    /// own component, say. Such a type is still readable and editable; its
+    /// panel just shows the fields its payload happens to carry, which is all
+    /// anything knows about it.
+    fields: Option<Value>,
     /// The payload a freshly added component of this type starts as.
     ///
     /// `None` for a type that has no sensible blank — one naming an asset it
     /// cannot invent, say. Such a type stays readable and editable and simply
     /// cannot be *added* by a button, which is honest: a button that adds a
     /// component the engine will then reject is worse than no button.
+    ///
+    /// A type can have fields and no default. `sindri.ui.text` is the case
+    /// that made the distinction necessary: it has seven fields and no honest
+    /// blank, because there is no font the engine can invent. Conflating the
+    /// two meant its panel showed two rows where the same component authored by
+    /// hand showed seven.
     default_payload: Option<Value>,
 }
 
@@ -46,12 +72,35 @@ pub struct ComponentSchemaRegistry {
 }
 
 impl ComponentSchemaRegistry {
-    /// Registers a component the editor can read and edit but not create.
+    /// Registers a component whose fields nothing has described.
+    ///
+    /// Readable, editable, and not creatable, and its panel shows only the
+    /// fields its payload carries. For a built-in type prefer
+    /// [`Self::register_with_fields`], which is what stops one added by a
+    /// button from being a different-looking component than the same one
+    /// authored by hand.
     pub fn register<T: SceneComponent>(
         &mut self,
         display_name: impl Into<String>,
     ) -> Result<(), ComponentRegistryError> {
-        self.register_component::<T>(display_name, None)
+        self.register_component::<T>(display_name, None, None)
+    }
+
+    /// Registers a component along with every field it has, but no fresh
+    /// blank.
+    ///
+    /// For a type that cannot honestly be created without something only the
+    /// host can supply — a font, a sheet, the ID of another entity. The field
+    /// template still says what the component consists of, so it inspects like
+    /// any other; it just cannot be added by a button until whoever owns the
+    /// project completes it.
+    pub fn register_with_fields<T: SceneComponent>(
+        &mut self,
+        display_name: impl Into<String>,
+        fields: Value,
+    ) -> Result<(), ComponentRegistryError> {
+        Self::check_template::<T>(&fields)?;
+        self.register_component::<T>(display_name, Some(fields), None)
     }
 
     /// Registers a component along with the payload a fresh one starts as.
@@ -60,23 +109,73 @@ impl ComponentSchemaRegistry {
     /// default that does not decode fails at startup — where it is a build
     /// error someone sees immediately — instead of producing an entity the
     /// scene will not load.
+    ///
+    /// A type with an honest default has no separate field template: the
+    /// default already names every field, or it would not be one.
     pub fn register_with_default<T: SceneComponent>(
         &mut self,
         display_name: impl Into<String>,
         default_payload: Value,
     ) -> Result<(), ComponentRegistryError> {
-        validate_payload::<T>(&default_payload).map_err(|source| {
+        Self::check_template::<T>(&default_payload)?;
+        self.register_component::<T>(
+            display_name,
+            Some(default_payload.clone()),
+            Some(default_payload),
+        )
+    }
+
+    /// A template has to decode as the component, be an object, and name every
+    /// field the component actually has.
+    ///
+    /// The last check is the one that matters. A hand-written template is a
+    /// second copy of the struct's field list, and a second copy drifts: the
+    /// editor's `sindri.ui.text` showed two rows for a component with seven
+    /// fields because nobody noticed the two lists had parted. Serde knows the
+    /// real list ([`declared_fields`]), so the drift is a registration error
+    /// rather than something to discover in a screenshot a release later.
+    ///
+    /// Both directions are checked. A missing name means a field nothing can
+    /// edit; an extra one means a row for a field the component does not have,
+    /// which `serde_json` would otherwise ignore in silence.
+    fn check_template<T: SceneComponent>(template: &Value) -> Result<(), ComponentRegistryError> {
+        let Some(object) = template.as_object() else {
+            return Err(ComponentRegistryError::InvalidFields(T::TYPE_NAME));
+        };
+        validate_payload::<T>(template).map_err(|source| {
             ComponentRegistryError::InvalidDefault {
                 type_name: T::TYPE_NAME.to_owned(),
                 source,
             }
         })?;
-        self.register_component::<T>(display_name, Some(default_payload))
+        let Some(declared) = declared_fields::<T>() else {
+            return Ok(());
+        };
+        let mut wrong: Vec<String> = declared
+            .iter()
+            .filter(|field| !object.contains_key(**field))
+            .map(|field| format!("missing '{field}'"))
+            .collect();
+        wrong.extend(
+            object
+                .keys()
+                .filter(|key| !declared.contains(&key.as_str()))
+                .map(|key| format!("unknown '{key}'")),
+        );
+        if wrong.is_empty() {
+            Ok(())
+        } else {
+            Err(ComponentRegistryError::TemplateMismatch {
+                type_name: T::TYPE_NAME,
+                wrong: wrong.join(", "),
+            })
+        }
     }
 
     fn register_component<T: SceneComponent>(
         &mut self,
         display_name: impl Into<String>,
+        fields: Option<Value>,
         default_payload: Option<Value>,
     ) -> Result<(), ComponentRegistryError> {
         validate_type_name(T::TYPE_NAME)?;
@@ -98,10 +197,22 @@ impl ComponentSchemaRegistry {
                     schema_version: T::SCHEMA_VERSION,
                 },
                 validate: validate_payload::<T>,
+                fields,
                 default_payload,
             },
         );
         Ok(())
+    }
+
+    /// Every field this component has, at its unstated value, or `None` for a
+    /// type nothing has described.
+    ///
+    /// What an editor draws a component *from*. A panel that used
+    /// [`Self::default_payload`] for this showed only the fields a creatable
+    /// component happened to start with, and nothing at all for a type that
+    /// cannot be created.
+    pub fn fields(&self, type_name: &str) -> Option<&Value> {
+        self.registrations.get(type_name)?.fields.as_ref()
     }
 
     /// The payload a freshly added component of this type starts as, or `None`
@@ -248,7 +359,14 @@ pub enum ComponentRegistryError {
     AlreadyRegistered(String),
     #[error("component type '{0}' is not registered")]
     NotRegistered(&'static str),
-    #[error("the default payload for component type '{type_name}' is not valid")]
+    #[error("the field template for component type '{0}' is not an object")]
+    InvalidFields(&'static str),
+    #[error("the field template for component type '{type_name}' does not match it: {wrong}")]
+    TemplateMismatch {
+        type_name: &'static str,
+        wrong: String,
+    },
+    #[error("the payload registered for component type '{type_name}' does not decode as it")]
     InvalidDefault {
         type_name: String,
         #[source]
@@ -268,98 +386,4 @@ pub enum ComponentRegistryError {
     },
     #[error(transparent)]
     InvalidScene(#[from] SceneError),
-}
-
-#[cfg(test)]
-mod tests {
-    use std::collections::BTreeMap;
-
-    use serde::Deserialize;
-    use serde_json::json;
-
-    use super::*;
-    use crate::SceneEntity;
-
-    #[derive(Debug, Deserialize, PartialEq, Eq)]
-    struct Health {
-        current: u16,
-        maximum: u16,
-    }
-
-    impl SceneComponent for Health {
-        const TYPE_NAME: &'static str = "game.health";
-    }
-
-    fn health_scene(payload: Value) -> SceneDocument {
-        SceneDocument {
-            entities: vec![SceneEntity {
-                components: BTreeMap::from([(Health::TYPE_NAME.to_owned(), payload)]),
-                ..SceneEntity::new(SceneEntityId::new("player").unwrap())
-            }],
-            ..SceneDocument::default()
-        }
-    }
-
-    #[test]
-    fn registered_components_validate_and_query_as_typed_values() {
-        let mut registry = ComponentSchemaRegistry::default();
-        registry.register::<Health>("Health").unwrap();
-        assert_eq!(
-            registry.metadata(Health::TYPE_NAME),
-            Some(&ComponentMetadata {
-                type_name: Health::TYPE_NAME.to_owned(),
-                display_name: "Health".to_owned(),
-                schema_version: 1,
-            })
-        );
-        let scene = health_scene(json!({ "current": 8, "maximum": 10 }));
-        registry
-            .validate_scene(&scene, UnknownComponentPolicy::Reject)
-            .unwrap();
-        let loaded = World::from_scene(&scene).unwrap();
-
-        let components = registry.query::<Health>(&loaded.world).unwrap();
-        assert_eq!(components.len(), 1);
-        assert_eq!(
-            components[0].1,
-            Health {
-                current: 8,
-                maximum: 10,
-            }
-        );
-    }
-
-    #[test]
-    fn unknown_components_can_be_preserved_or_rejected() {
-        let scene = health_scene(json!({ "current": 8, "maximum": 10 }));
-        let registry = ComponentSchemaRegistry::default();
-        registry
-            .validate_scene(&scene, UnknownComponentPolicy::Preserve)
-            .unwrap();
-        assert!(matches!(
-            registry.validate_scene(&scene, UnknownComponentPolicy::Reject),
-            Err(ComponentRegistryError::UnknownComponent { .. })
-        ));
-    }
-
-    #[test]
-    fn registered_schema_rejects_invalid_payloads() {
-        let mut registry = ComponentSchemaRegistry::default();
-        registry.register::<Health>("Health").unwrap();
-        let scene = health_scene(json!({ "current": "many", "maximum": 10 }));
-        assert!(matches!(
-            registry.validate_scene(&scene, UnknownComponentPolicy::Reject),
-            Err(ComponentRegistryError::InvalidPayload { .. })
-        ));
-    }
-
-    #[test]
-    fn duplicate_registration_is_rejected() {
-        let mut registry = ComponentSchemaRegistry::default();
-        registry.register::<Health>("Health").unwrap();
-        assert!(matches!(
-            registry.register::<Health>("Health"),
-            Err(ComponentRegistryError::AlreadyRegistered(_))
-        ));
-    }
 }
