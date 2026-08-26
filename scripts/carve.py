@@ -222,7 +222,9 @@ def main():
         found = items(lines, indent=4, span=(start + 1, end))
     else:
         found = items(lines)
-    index = {name: (start, end) for name, start, end in found}
+    index = {}
+    for name, start, end in found:
+        index.setdefault(name, []).append((start, end))
 
     if not names:
         for name, start, end in found:
@@ -233,7 +235,13 @@ def main():
     if missing:
         raise SystemExit(f"not found: {missing}")
 
-    taken = sorted(index[name] for name in names)
+    # A name can belong to more than one item — two `#[cfg]` variants of the
+    # same function — and moving one of them and leaving the other is how a
+    # split loses code. Every item with the name goes.
+    taken = sorted(span for name in names for span in index[name])
+    for name in names:
+        if len(index[name]) > 1:
+            print(f"note: {name} is {len(index[name])} items; moving all", file=sys.stderr)
     carved = []
     for start, end in taken:
         piece = "\n".join(lines[start : end + 1])
