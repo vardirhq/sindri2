@@ -1,9 +1,14 @@
 //! The rows the hierarchy shows, and what reparenting does to them.
 
-use sindri_core::{CommandHistory, SceneEntityId};
+use std::collections::BTreeSet;
 
-use super::super::*;
+use sindri_core::{CommandBuffer, CommandHistory, EntityData, SceneEntityId, World, WorldCommand};
 
+use super::super::editing::{find_by_source_id, next_game_object_id, reparent_choices};
+use super::super::hierarchy::row::{
+    component_label, entity_name, hierarchy_drop_allowed, humanize,
+};
+use super::super::hierarchy::rows::{hierarchy_rows, visible_hierarchy_rows};
 use super::support::*;
 
 #[test]

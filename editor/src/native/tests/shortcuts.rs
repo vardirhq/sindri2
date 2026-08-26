@@ -1,11 +1,13 @@
 //! Which keystroke means which command.
 
-use super::super::*;
+use eframe::egui::{self};
+
+use super::super::shortcuts::{Shortcuts, pressed};
 
 /// Which shortcuts a key press produces, read through a real egui frame.
 fn shortcuts_for(modifiers: egui::Modifiers, key: egui::Key) -> Shortcuts {
     let context = egui::Context::default();
-    let pressed = std::cell::Cell::new(Shortcuts::default());
+    let read = std::cell::Cell::new(Shortcuts::default());
     let input = egui::RawInput {
         events: vec![egui::Event::Key {
             key,
@@ -18,10 +20,10 @@ fn shortcuts_for(modifiers: egui::Modifiers, key: egui::Key) -> Shortcuts {
     };
     context
         .run_ui(input, |ui| {
-            pressed.set(ui.ctx().input_mut(shortcuts));
+            read.set(ui.ctx().input_mut(pressed));
         })
         .drop_without_applying_deltas();
-    pressed.get()
+    read.get()
 }
 
 /// Redo must be asked for before undo, because egui ignores an extra Shift

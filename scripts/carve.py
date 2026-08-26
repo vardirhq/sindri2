@@ -35,7 +35,7 @@ import sys
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 ITEM = re.compile(
-    r"^(?:pub(?:\([^)]*\))? )?(?:async |unsafe |extern )*"
+    r"^(?:pub(?:\([^)]*\))? )?(?:async |unsafe |extern |const (?=fn ))*"
     r"(fn|struct|enum|trait|type|impl|mod|union|const|static) "
 )
 

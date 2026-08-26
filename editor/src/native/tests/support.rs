@@ -4,10 +4,11 @@
 //! depending on the working directory. Only the tests want it: the editor
 //! itself no longer loads through the example's scene type.
 
-use sindri_core::{SceneDocument, SceneEntity, SceneEntityId};
+use sindri_core::{SceneDocument, SceneEntity, SceneEntityId, World};
 use sindri_cube::DemoScene;
+use sindri_scene::SceneExtractor;
 
-use super::super::*;
+use super::super::scene_io::load_world;
 
 pub(super) fn extractor() -> SceneExtractor {
     SceneExtractor::new().unwrap()

@@ -1,13 +1,14 @@
 //! Opening, saving, and throwing away a scene.
 
-use sindri_core::{CommandHistory, SceneDocument};
+use std::path::PathBuf;
+
+use sindri_core::{CommandBuffer, CommandHistory, SceneDocument, Transform3D, WorldCommand};
 use sindri_cube::DemoScene;
 
-use super::super::{
-    inspector_panel::{EntityDraft, draft_commands},
-    *,
-};
-
+use super::super::editing::find_by_source_id;
+use super::super::inspector_panel::{EntityDraft, draft_commands};
+use super::super::scene_io::{load_world, open_scene_for};
+use super::super::unsaved::Discarding;
 use super::support::*;
 
 #[test]

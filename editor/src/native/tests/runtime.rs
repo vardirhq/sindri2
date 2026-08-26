@@ -1,6 +1,9 @@
 //! Play, pause, and stop, and what they let move.
 
-use super::super::{console_view::lifecycle_label, *};
+use sindri_core::{EngineState, FixedStepConfig};
+
+use super::super::console_view::lifecycle_label;
+use super::super::runtime::{animation_delta, initialized_lifecycle};
 
 /// The transport decides whether an animation moves, and nothing else does.
 #[test]

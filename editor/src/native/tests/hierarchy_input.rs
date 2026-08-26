@@ -1,7 +1,11 @@
 //! Where a click on a hierarchy row lands, and what a drag off one does.
 
-use super::super::*;
+use eframe::egui::{self, Rect, Vec2};
+use egui_material_icons::icons::{ICON_ACCOUNT_TREE, ICON_LABEL};
+use sindri_core::World;
 
+use super::super::editing::find_by_source_id;
+use super::super::hierarchy::row::{HierarchyDrag, hierarchy_drop_target, hierarchy_row};
 use super::support::*;
 
 /// Presses and releases the pointer at `target`, and reports whether a

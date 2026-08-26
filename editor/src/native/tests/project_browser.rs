@@ -1,6 +1,12 @@
 //! What a row in the project browser answers to.
 
-use super::super::*;
+use std::path::PathBuf;
+
+use eframe::egui::{self, Rect, Vec2};
+
+use crate::project::{AssetKind, ProjectEntry};
+
+use super::super::project_panel::row::asset_row;
 
 /// Whether an asset row reports a double click `offset` points into it.
 ///

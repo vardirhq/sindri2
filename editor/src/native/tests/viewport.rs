@@ -1,9 +1,14 @@
 //! The axis indicator and framing a selection.
 
+use eframe::egui::Vec2;
+use glam::{Mat4, Vec3};
 use sindri_render::look_at;
+use sindri_scene::CameraView;
 
-use super::super::{camera::pan_to_centre, *};
-
+use super::super::camera::pan_to_centre;
+use super::super::editing::find_by_source_id;
+use super::super::overlay::{AXIS_ARM, axis_arms};
+use super::super::*;
 use super::support::*;
 
 /// Where one axis ends up on screen, by name.

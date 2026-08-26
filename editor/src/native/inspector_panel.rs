@@ -9,6 +9,11 @@
 //! script exports — that a component gets instead of a raw JSON field when
 //! showing one a text box could turn a scene into one that will not load.
 
+use super::editing::reparent_choices;
+use super::hierarchy::row::{component_label, entity_icon, entity_name};
+use super::hierarchy::rows::ROOT_LABEL;
+use super::slicer_view::grid_side;
+
 /// What the parent menu came back with.
 ///
 /// "Move to the root" and "nothing was chosen" are both an absence of a parent
@@ -135,9 +140,8 @@ use crate::{
 
 use super::{
     ACCENT, ACCENT_BRIGHT, ACCENT_SOFT, BORDER, BORDER_SUBTLE, EditorApp,
-    GRID_NAVIGATION_COMPONENT, GRID_OCCUPANT_COMPONENT, PANEL_BG, PROBLEM, ROOT_LABEL, TEXT,
-    TEXT_COMPONENT, TEXT_FAINT, TEXT_MUTED, component_label, entity_icon, entity_name, grid_side,
-    panel_title, reparent_choices,
+    GRID_NAVIGATION_COMPONENT, GRID_OCCUPANT_COMPONENT, PANEL_BG, PROBLEM, TEXT, TEXT_COMPONENT,
+    TEXT_FAINT, TEXT_MUTED, panel_title,
     theme::{FIELD_BG, property_label, property_toggle, section_header},
 };
 

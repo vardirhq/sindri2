@@ -1,0 +1,299 @@
+//! Opening, saving, and reloading a scene, and what the shell shows about it.
+
+use std::path::{Path, PathBuf};
+
+use eframe::egui::{self};
+use sindri_core::{SceneDocument, UnknownComponentPolicy, World};
+use sindri_decay::ScriptComponent;
+use sindri_scene::{SceneExtractor, SpriteAnimations};
+
+use crate::{
+    project::ProjectTree,
+    scene_file::{DEFAULT_SCENE_PATH, SceneFile},
+    scripts::SceneScripts,
+    textures::SceneTextures,
+};
+
+use super::EditorApp;
+use super::runtime::initialized_lifecycle;
+
+/// One rendered view of the world, and the egui texture it is drawn through.
+/// Everything a frame is derived from: the world, the schemas that read it, and
+/// the runtime state beside it.
+///
+/// Together rather than as five arguments, because they are one thing — the
+/// state of the open scene — and each view draws all of it or none of it.
+#[derive(Clone, Copy)]
+pub(super) struct SceneSource<'a> {
+    pub(super) scene: &'a SceneExtractor,
+    pub(super) world: &'a World,
+    pub(super) animations: &'a SpriteAnimations,
+    pub(super) textures: &'a SceneTextures,
+}
+
+/// Opens the scene named on the command line, or the demo scene beside it.
+///
+/// A missing or unreadable file is reported rather than fatal: the editor opens
+/// on the scene compiled into it and says what went wrong, which beats a window
+/// that never appears.
+pub(super) fn open_requested_scene(remembered: Option<&str>) -> (SceneFile, Option<String>) {
+    open_scene_for(std::env::args().nth(1).as_deref(), remembered)
+}
+
+/// Opens whichever scene was asked for, in order of how deliberately.
+///
+/// A path on the command line is the most deliberate thing anyone can say, so
+/// it wins. Otherwise the scene the editor was last left in, which is what
+/// makes reopening the editor continue rather than restart. Otherwise the demo
+/// scene, so a clean clone is useful.
+///
+/// A remembered scene that has moved or been deleted since is not a reason to
+/// open on nothing: that choice was made last week, the failure is not the
+/// user's doing now, and falling back to the default while saying what happened
+/// leaves them somewhere they can work. A path given on the command line gets
+/// no such fallback — standing in a different scene for the one someone just
+/// named reads as though it opened.
+pub(super) fn open_scene_for(
+    argument: Option<&str>,
+    remembered: Option<&str>,
+) -> (SceneFile, Option<String>) {
+    let path = argument.or(remembered).unwrap_or(DEFAULT_SCENE_PATH);
+    match SceneFile::open(path) {
+        Ok(file) => (file, None),
+        // The reported failure is the remembered scene's, not the fallback's:
+        // what went wrong is that the file someone was working in is not
+        // there, and the demo scene's absence would not be news.
+        Err(error) if argument.is_none() && remembered.is_some() => (
+            SceneFile::open(DEFAULT_SCENE_PATH)
+                .unwrap_or_else(|_| SceneFile::detached(SceneDocument::default())),
+            Some(error.to_string()),
+        ),
+        Err(error) => (
+            SceneFile::detached(SceneDocument::default()),
+            Some(error.to_string()),
+        ),
+    }
+}
+
+/// The component schemas the editor understands.
+///
+/// `sindri.script` is registered here rather than in `sindri-scene`, because
+/// the engine's scene crate must not learn about a language —
+/// `SceneExtractor::register` exists for exactly this, a component the host
+/// brings of its own. It is one function rather than an inline registration so
+/// that the editor and everything asserting about the editor's scenes agree by
+/// construction instead of by both remembering the same list.
+pub fn scene_extractor() -> SceneExtractor {
+    let mut scene = SceneExtractor::new().expect("the built-in component schemas register");
+    scene
+        .register::<ScriptComponent>("Script")
+        .expect("sindri.script registers");
+    scene
+}
+
+/// Builds a runtime world from a document the editor has opened.
+///
+/// `Preserve` rather than `Reject`: a scene may carry components this build has
+/// never heard of, and the format exists to keep them through a load, an edit,
+/// and a save. Rejecting them is how the editor came to refuse — and from the
+/// command line, crash on — any project that defined a component of its own.
+pub fn load_world(extractor: &SceneExtractor, document: &SceneDocument) -> Result<World, String> {
+    extractor
+        .validate(document, UnknownComponentPolicy::Preserve)
+        .map_err(|error| error.to_string())?;
+    Ok(World::from_scene(document)
+        .map_err(|error| error.to_string())?
+        .world)
+}
+
+impl EditorApp {
+    /// Writes the world back to the file it came from.
+    pub(super) fn save(&mut self) {
+        match self.file.save(&self.world) {
+            Ok(()) => {
+                self.saved_revision = self.history.revision();
+                self.notice = None;
+                self.console.info(format!("Saved {}", self.file.label()));
+            }
+            Err(error) => self.report(error.to_string()),
+        }
+    }
+
+    /// Asks for a scene file and opens it.
+    ///
+    /// Until this existed, the only way to open a scene was the command-line
+    /// argument, which meant the editor could edit exactly the scene it was
+    /// started on.
+    pub(super) fn open_scene(&mut self) {
+        let started_in = self
+            .file
+            .path()
+            .and_then(Path::parent)
+            .map_or_else(|| PathBuf::from("."), Path::to_path_buf);
+        let Some(path) = rfd::FileDialog::new()
+            .add_filter("Sindri scene", &["json"])
+            .set_directory(started_in)
+            .pick_file()
+        else {
+            return;
+        };
+        self.open_path(&path);
+    }
+
+    /// Replaces the open scene with the one in `path`.
+    ///
+    /// A different scene is a different world, so every runtime handle in the
+    /// old one is now meaningless: history is cleared rather than left pointing
+    /// at entities that no longer exist, and so is the selection. The file is
+    /// only adopted once its world loads, so a scene that fails to open leaves
+    /// the editor on the one that was already working.
+    pub(super) fn open_path(&mut self, path: &Path) {
+        let opened = match SceneFile::open(path) {
+            Ok(opened) => opened,
+            Err(error) => {
+                self.report(error.to_string());
+                return;
+            }
+        };
+        match load_world(&self.scene, opened.document()) {
+            Ok(world) => {
+                self.file = opened;
+                self.project = ProjectTree::beside(self.file.path());
+                self.world = world;
+                self.history.clear();
+                self.selection = None;
+                self.tilemap_tool.reset();
+                self.animation_tool.reset();
+                self.saved_revision = self.history.revision();
+                self.lifecycle = initialized_lifecycle();
+                // A cursor belongs to the world it was advanced against, and
+                // a freshly loaded world reuses entity slots from the start.
+                self.animations = SpriteAnimations::new();
+                self.play_snapshot = None;
+                self.notice = None;
+                self.announce_scene();
+                self.reload_textures();
+                self.reload_scripts();
+                self.remember_open_scene();
+            }
+            Err(error) => self.report(error),
+        }
+    }
+
+    /// Re-reads the file, discarding unsaved edits along with their history.
+    pub(super) fn reload(&mut self) {
+        if let Err(error) = self.file.reload() {
+            self.report(error.to_string());
+            return;
+        }
+        self.refresh_project();
+        self.reset_to_authored();
+    }
+
+    /// Re-reads the directory the browser is showing.
+    ///
+    /// The tree is cached, so a file added or removed outside the editor is
+    /// invisible until something asks for it again. Opening or reloading a
+    /// scene asks, and so does the browser's own refresh control — which is
+    /// what used to be an inert filter icon.
+    pub(super) fn refresh_project(&mut self) {
+        self.project = ProjectTree::beside(self.file.path());
+        self.tilemap_tool.palette.invalidate();
+        self.animation_tool.palette.invalidate();
+    }
+
+    /// Changes the selection, ending any in-progress merge run so the next
+    /// edit starts its own undo step.
+    /// What to show the user, preferring what they just did over what the
+    /// renderer is doing, since an action's failure is the newer news.
+    pub(super) fn problem(&self) -> Option<&str> {
+        self.notice.as_deref().or(self.render_error.as_deref())
+    }
+
+    /// Records which scene to reopen on the next launch.
+    ///
+    /// A detached scene clears it rather than leaving the previous one: the
+    /// editor should reopen where it was left, and it was left nowhere.
+    pub(super) fn remember_open_scene(&mut self) {
+        self.preferences.last_scene = self.file.path().map(|path| path.display().to_string());
+    }
+
+    /// Names the open scene in the window title.
+    ///
+    /// The title is where an operating system shows what a window is for — in a
+    /// task switcher, a dock, a window list — and "Sindri Editor" answers that
+    /// with the name of the program. The file goes first because that is the
+    /// part a switcher has room for, and the unsaved marker goes with it,
+    /// matching the status bar rather than inventing a second vocabulary.
+    pub(super) fn update_title(&mut self, context: &egui::Context) {
+        let title = format!(
+            "{}{} - Sindri Editor",
+            self.file.label(),
+            if self.unsaved() { " (unsaved)" } else { "" }
+        );
+        if title == self.title {
+            return;
+        }
+        context.send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
+        self.title = title;
+    }
+
+    /// Says what a scene turned out to be once it was loaded.
+    pub(super) fn announce_scene(&mut self) {
+        self.console.info(format!(
+            "Opened {} - {} entities",
+            self.file.label(),
+            self.world.len()
+        ));
+    }
+
+    /// Starts the open scene's textures loading from its own directory.
+    ///
+    /// A new scene resolves its references against a new directory, so the
+    /// whole set is rebuilt rather than re-rooted. That is also how the previous
+    /// scene's textures are released: the registry that owned them is dropped,
+    /// and a `Texture2D` frees its GPU texture when it goes.
+    pub(super) fn reload_textures(&mut self) {
+        let state = self.render_state.clone();
+        self.renderers.text.clear_bindings();
+        self.textures = SceneTextures::for_scene(&state.device, &state.queue, self.file.path());
+        self.textured_revision = self.history.revision();
+        let notes = self.textures.request(&self.world, &mut self.renderers.text);
+        self.record_texture_notes(notes);
+    }
+
+    /// Asks again for whatever the world references, after an edit that could
+    /// have changed it.
+    pub(super) fn refresh_textures(&mut self) {
+        if self.textured_revision == self.history.revision() {
+            return;
+        }
+        self.textured_revision = self.history.revision();
+        let notes = self.textures.request(&self.world, &mut self.renderers.text);
+        self.record_texture_notes(notes);
+        self.refresh_scripts();
+    }
+
+    /// Asks again for whatever scripts the world names, after an edit that
+    /// could have changed it.
+    ///
+    /// Shares `textured_revision` deliberately: both ask "has the world changed
+    /// since we last looked", and two counters that must agree is one more
+    /// thing to keep in step than there is any reason for.
+    fn refresh_scripts(&mut self) {
+        let notes = self.scripts.request(&self.world, self.scene.components());
+        self.record_script_notes(notes);
+    }
+
+    /// Points the scripts at the open scene's directory and asks for its
+    /// sources.
+    ///
+    /// Rebuilt rather than re-rooted for the same reason the textures are: a
+    /// new scene resolves its references somewhere else, and the previous
+    /// scene's sources and running instances go when the old one drops.
+    pub(super) fn reload_scripts(&mut self) {
+        self.scripts = SceneScripts::for_scene(self.file.path());
+        let notes = self.scripts.request(&self.world, self.scene.components());
+        self.record_script_notes(notes);
+    }
+}
