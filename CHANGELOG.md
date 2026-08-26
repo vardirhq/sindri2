@@ -19,6 +19,13 @@ All notable changes to Sindri Next will be documented here.
   screen-space tilemap stops the migration with a message rather than being
   quietly relocated. Scripts follow: a HUD element writes
   `this.ui_image.tint.a` where it used to write `this.sprite.tint.a`.
+- **The Scene view's authored-camera gizmo stops lying about the camera.** Its
+  frustum is drawn at the aspect the camera actually renders at — the Game
+  viewport's — so resizing the Scene view no longer reshapes it, and every line
+  is clipped against the near plane in clip space, so orbiting past a camera no
+  longer smears its frustum across the viewport. The frustum is drawn for the
+  selected camera only; an unselected one keeps its marker and a short forward
+  stub, which is also all a click selects.
 - Rust source files are now capped at 600 lines, with 400 as the target, and
   `scripts/check-file-size.py` enforces it in CI. Twenty-one files were over the
   cap — the largest was the 4,714-line native editor — and each is now a

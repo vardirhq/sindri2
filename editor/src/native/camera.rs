@@ -7,7 +7,7 @@
 use std::f32::consts::TAU;
 
 use eframe::egui::{self, Color32, LayerId, Order, Painter, Pos2, Rect, Response, Shape, Stroke};
-use glam::{Mat4, Quat, Vec2 as GlamVec2, Vec3};
+use glam::{Mat4, Quat, Vec2 as GlamVec2, Vec3, Vec4};
 use sindri_core::{EntityId, SceneComponent, Transform3D};
 use sindri_scene::{CameraComponent, CameraView, ViewCamera, WorldProjection};
 
@@ -128,9 +128,32 @@ fn orthographic_corners(vertical_size: f32, near: f32, far: f32, aspect: f32) ->
     [plane(near), plane(far)]
 }
 
-fn project_point(rect: Rect, view_projection: Mat4, point: Vec3) -> Option<Pos2> {
+/// How close to the eye a point may be and still be projected.
+///
+/// A clip-space `w` at or below this is a point on or behind the eye, and
+/// dividing by it is where a frustum turns into the spray of lines that used to
+/// appear when the Scene view was orbited past an authored camera.
+const NEAR_CLIP: f32 = 1.0e-4;
+
+fn clip_of(view_projection: Mat4, point: Vec3) -> Option<Vec4> {
     let clip = view_projection * point.extend(1.0);
-    if !clip.is_finite() || clip.w.abs() <= f32::EPSILON {
+    clip.is_finite().then_some(clip)
+}
+
+/// Whether a clip-space point is in front of the near plane, and so has a
+/// place on screen at all.
+fn in_front(clip: Vec4) -> bool {
+    clip.w >= NEAR_CLIP && clip.z >= 0.0
+}
+
+/// Where a clip-space point lands in the viewport.
+///
+/// Only the divide is done here. Whether the point deserves to be projected is
+/// [`in_front`] for a point and [`clipped_segment`] for a line, because a line
+/// half in front of the viewer is drawn as far as the near plane rather than
+/// dropped.
+fn project_clip(rect: Rect, clip: Vec4) -> Option<Pos2> {
+    if clip.w <= 0.0 {
         return None;
     }
     let ndc = clip.truncate() / clip.w;
@@ -143,20 +166,57 @@ fn project_point(rect: Rect, view_projection: Mat4, point: Vec3) -> Option<Pos2>
     ))
 }
 
-fn projected_plane(
-    rect: Rect,
-    view_projection: Mat4,
-    model: Mat4,
-    plane: [Vec3; 4],
-) -> Option<[Pos2; 4]> {
-    Some([
-        project_point(rect, view_projection, model.transform_point3(plane[0]))?,
-        project_point(rect, view_projection, model.transform_point3(plane[1]))?,
-        project_point(rect, view_projection, model.transform_point3(plane[2]))?,
-        project_point(rect, view_projection, model.transform_point3(plane[3]))?,
-    ])
+fn project_point(rect: Rect, view_projection: Mat4, point: Vec3) -> Option<Pos2> {
+    let clip = clip_of(view_projection, point)?;
+    in_front(clip).then(|| project_clip(rect, clip)).flatten()
 }
 
+/// The part of a segment that is in front of the viewer, in clip space.
+///
+/// Clipping happens here, before the perspective divide, because after it the
+/// question cannot be asked: a point behind the eye divides by a negative `w`
+/// and lands somewhere plausible-looking on the opposite side of the screen.
+/// Drawing the line to that point is what made a camera's frustum lurch and
+/// smear across the viewport while orbiting — the maths was not wrong so much
+/// as asked a question that has no answer.
+fn clipped_segment(start: Vec4, end: Vec4) -> Option<(Vec4, Vec4)> {
+    // Both half-spaces the near plane is made of: in front of the eye, and no
+    // nearer than the near plane itself.
+    let planes: [fn(Vec4) -> f32; 2] = [|point| point.w - NEAR_CLIP, |point| point.z];
+    let (mut start, mut end) = (start, end);
+    for distance in planes {
+        let (near, far) = (distance(start), distance(end));
+        match (near >= 0.0, far >= 0.0) {
+            (false, false) => return None,
+            (true, true) => {}
+            (true, false) => end = start.lerp(end, near / (near - far)),
+            (false, true) => start = end.lerp(start, far / (far - near)),
+        }
+    }
+    Some((start, end))
+}
+
+/// One world-space segment as a line on screen, clipped to what is visible.
+fn project_segment(rect: Rect, view_projection: Mat4, start: Vec3, end: Vec3) -> Option<[Pos2; 2]> {
+    let (start, end) = clipped_segment(
+        clip_of(view_projection, start)?,
+        clip_of(view_projection, end)?,
+    )?;
+    Some([project_clip(rect, start)?, project_clip(rect, end)?])
+}
+
+/// One authored camera as it is drawn in the Scene view.
+///
+/// `aspect` is the aspect the camera actually renders at — the Game view's —
+/// and not the Scene view's. They used to be the same number, so resizing the
+/// Scene view reshaped a frustum that had not changed: the picture said the
+/// camera frames more of the world because the panel beside it got wider, which
+/// is a lie about the scene.
+///
+/// The frustum is drawn for the selected camera only. An unselected one is its
+/// marker and a short forward stub, because a frustum is a hundred units long
+/// and five of them crossing the viewport say nothing about the camera anybody
+/// is actually working on.
 fn camera_visual(
     entity: EntityId,
     transform: Transform3D,
@@ -164,26 +224,14 @@ fn camera_visual(
     rect: Rect,
     view_projection: Mat4,
     aspect: f32,
+    selected: bool,
 ) -> Option<AuthoredCameraVisual> {
     let rotation = safe_rotation(transform);
     let position = Vec3::from_array(transform.position);
     let model = Mat4::from_rotation_translation(rotation, position);
     let forward = rotation * -Vec3::Z;
-    let corners = match camera {
-        CameraComponent::Perspective {
-            vertical_fov_degrees,
-            near,
-            far,
-        } => perspective_corners(vertical_fov_degrees, near, far, aspect),
-        CameraComponent::Orthographic {
-            vertical_size,
-            near,
-            far,
-        } => orthographic_corners(vertical_size, near, far, aspect),
-    };
 
     let centre = project_point(rect, view_projection, position)?;
-    let forward_tip = project_point(rect, view_projection, position + forward * 0.8)?;
     let body_radius = 7.0;
     let body = vec![
         Pos2::new(centre.x - body_radius, centre.y - body_radius * 0.65),
@@ -193,21 +241,61 @@ fn camera_visual(
         Pos2::new(centre.x - body_radius, centre.y + body_radius * 0.65),
     ];
 
-    let near = projected_plane(rect, view_projection, model, corners[0])?;
-    let far = projected_plane(rect, view_projection, model, corners[1])?;
+    // The stub is both what says which way the camera faces and what a click
+    // lands on besides the marker. Everything else is a picture rather than a
+    // target: a far-plane edge a hundred units away is not what someone means
+    // when they click on it.
     let mut lines = Vec::with_capacity(13);
-    for index in 0..4 {
-        lines.push([near[index], near[(index + 1) % 4]]);
-        lines.push([far[index], far[(index + 1) % 4]]);
-        lines.push([near[index], far[index]]);
+    let hit_lines = project_segment(rect, view_projection, position, position + forward * 0.8)
+        .map(|stub| vec![stub])
+        .unwrap_or_default();
+    lines.extend(hit_lines.iter().copied());
+
+    if selected {
+        let corners = match camera {
+            CameraComponent::Perspective {
+                vertical_fov_degrees,
+                near,
+                far,
+            } => perspective_corners(vertical_fov_degrees, near, far, aspect),
+            CameraComponent::Orthographic {
+                vertical_size,
+                near,
+                far,
+            } => orthographic_corners(vertical_size, near, far, aspect),
+        };
+        let world = |plane: [Vec3; 4]| plane.map(|corner| model.transform_point3(corner));
+        let (near, far) = (world(corners[0]), world(corners[1]));
+        // Each edge is clipped on its own, so an edge that leaves the view
+        // shortens instead of taking the whole frustum with it.
+        for index in 0..4 {
+            let next = (index + 1) % 4;
+            lines.extend(project_segment(
+                rect,
+                view_projection,
+                near[index],
+                near[next],
+            ));
+            lines.extend(project_segment(
+                rect,
+                view_projection,
+                far[index],
+                far[next],
+            ));
+            lines.extend(project_segment(
+                rect,
+                view_projection,
+                near[index],
+                far[index],
+            ));
+        }
     }
-    lines.push([centre, forward_tip]);
 
     Some(AuthoredCameraVisual {
         entity,
         body,
-        hit_lines: lines.clone(),
         lines,
+        hit_lines,
     })
 }
 
@@ -276,10 +364,14 @@ fn paint_authored_cameras(
 
 impl EditorApp {
     fn authored_camera_visuals(&self, rect: Rect, camera: CameraView) -> Vec<AuthoredCameraVisual> {
-        let aspect = rect.width() / rect.height().max(1.0);
+        // Two aspects, deliberately. The Scene view's decides how the world is
+        // projected onto this panel; the Game view's decides what an authored
+        // camera frames, because that is the viewport it renders into.
+        let scene_aspect = rect.width() / rect.height().max(1.0);
+        let framed_aspect = self.game_viewport.aspect();
         let Some(scene_camera) = self
             .scene
-            .world_camera_for_viewport(&self.world, aspect, camera)
+            .world_camera_for_viewport(&self.world, scene_aspect, camera)
             .ok()
             .flatten()
         else {
@@ -297,7 +389,8 @@ impl EditorApp {
                     camera,
                     rect,
                     scene_camera.view_projection,
-                    aspect,
+                    framed_aspect,
+                    self.selection == Some(entity),
                 )
             })
             .collect()
