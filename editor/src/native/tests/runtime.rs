@@ -3,7 +3,7 @@
 use sindri_core::{EngineState, FixedStepConfig};
 
 use super::super::console_view::lifecycle_label;
-use super::super::runtime::{animation_delta, initialized_lifecycle};
+use super::super::runtime::{Transport, animation_delta, initialized_lifecycle};
 
 /// The transport decides whether an animation moves, and nothing else does.
 #[test]
@@ -49,4 +49,39 @@ fn the_lifecycle_drives_play_pause_and_stop() {
     lifecycle.resume().unwrap();
     lifecycle.stop().unwrap();
     assert_eq!(lifecycle_label(lifecycle.state()), "stopped");
+}
+
+/// Every engine state is one of the three the transport can show, and the Play
+/// button is labelled with what pressing it does rather than with where the
+/// editor already is.
+#[test]
+fn the_transport_says_which_of_three_states_the_editor_is_in() {
+    assert_eq!(Transport::of(EngineState::Running), Transport::Playing);
+    assert_eq!(Transport::of(EngineState::Paused), Transport::Paused);
+    for state in [
+        EngineState::Created,
+        EngineState::Initialized,
+        EngineState::Stopped,
+        EngineState::Destroyed,
+    ] {
+        assert_eq!(
+            Transport::of(state),
+            Transport::Editing,
+            "{state:?} is not play mode"
+        );
+    }
+
+    assert_eq!(Transport::Editing.play_label(), "Play");
+    assert_eq!(
+        Transport::Playing.play_label(),
+        "Stop",
+        "the button says what pressing it does"
+    );
+    assert_eq!(
+        Transport::Paused.play_label(),
+        "Stop",
+        "including from a paused scene, which is still in play mode"
+    );
+    assert!(!Transport::Editing.is_playing());
+    assert!(Transport::Playing.is_playing() && Transport::Paused.is_playing());
 }

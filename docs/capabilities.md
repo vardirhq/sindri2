@@ -406,6 +406,13 @@ frame.
   sprites gives Sprite Animation its first one-frame clip. Both are undoable.
   The menu offers one space or the other: an entity carrying `sindri.ui.*` is on
   the viewport and is not also offered a world sprite, and the reverse
+- **A transport that says what it does.** One button enters and leaves play
+  mode, labelled Play or Stop by which of the two pressing it will do; one icon
+  pauses and resumes a scene already in play mode, and is disabled outside it;
+  and a word beside them reads Editing, Playing, or Paused. Ctrl+P and
+  Ctrl+Shift+P are the same two actions. Stop puts back everything playing
+  changed, from the world as it was when Play was pressed rather than from the
+  authored file, so pressing Play never costs an unsaved edit
 - **Text authoring.** A `sindri.ui.text` component gets a multiline content editor
   and a picker listing project-relative font assets. Existing missing font
   references remain visible and are called out instead of silently replaced

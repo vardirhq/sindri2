@@ -26,6 +26,13 @@ All notable changes to Sindri Next will be documented here.
   longer smears its frustum across the viewport. The frustum is drawn for the
   selected camera only; an unselected one keeps its marker and a short forward
   stub, which is also all a click selects.
+- **Play, pause, and stop are two controls and a word instead of four
+  controls.** There were a stop icon, a pause icon, a play icon, and an accent
+  button — and the accent button said "Stop" while running but paused when
+  pressed, as did the play icon beside it. Now one button enters and leaves play
+  mode and is labelled with what pressing it does, one icon holds and releases a
+  running scene, and the editor says whether it is Editing, Playing, or Paused.
+  Ctrl+P plays and stops; Ctrl+Shift+P pauses and resumes.
 - Rust source files are now capped at 600 lines, with 400 as the target, and
   `scripts/check-file-size.py` enforces it in CI. Twenty-one files were over the
   cap — the largest was the 4,714-line native editor — and each is now a
