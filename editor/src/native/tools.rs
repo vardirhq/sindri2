@@ -1,23 +1,25 @@
-//! The two tool strips over the scene view.
+//! The tool strip over the scene view.
+//!
+//! Nine controls used to sit here in one undifferentiated row of identical
+//! boxes, which says all nine are the same kind of thing. They are not: four
+//! choose a manipulator, one chooses the axes it works in, one turns snapping
+//! on, two move the scene camera, and one chooses the projection. Grouping is
+//! the whole design — a reader should be able to find the rotate tool without
+//! reading a tooltip.
 
-use eframe::egui::{self, Align, Layout, RichText, Stroke};
-use egui_material_icons::icons::{
-    ICON_CAMERA_ALT, ICON_CENTER_FOCUS_STRONG, ICON_GRID_4X4, ICON_MOVE, ICON_ROTATE_RIGHT,
-    ICON_SCALE, ICON_SELECT,
-};
+use eframe::egui::{self, Align, Layout};
 
-use crate::{
-    gizmo::{GizmoMode, GizmoSpace},
-    // `egui::Layout` is a different thing entirely and is already in scope.
-    preferences::CameraProjection,
-};
+use crate::gizmo::{GizmoMode, GizmoSpace};
+use crate::ui::icons;
+use crate::ui::theme::{color, metric};
+use crate::ui::widgets::{button, toolbar};
 
 use super::EditorApp;
-use super::chrome::projection_button;
-use super::theme::{BORDER_SUBTLE, PANEL_RAISED, TEXT_FAINT, TEXT_MUTED, icon_button};
+use super::chrome::projection_choice;
 
 impl EditorApp {
-    fn transform_tools(&mut self, ui: &mut egui::Ui) {
+    /// The four manipulators, and the keys that also choose them.
+    fn manipulators(&mut self, ui: &mut egui::Ui) {
         let shortcut_mode = ui.input_mut(|input| {
             [
                 (egui::Key::Q, GizmoMode::Select),
@@ -33,61 +35,99 @@ impl EditorApp {
             })
         });
         if let Some(mode) = shortcut_mode {
-            self.gizmo_mode = mode;
-            self.gizmo_drag = None;
-            self.history.break_merge_run();
+            self.choose_mode(mode);
         }
-        for (mode, icon, key) in [
-            (GizmoMode::Select, ICON_SELECT, "Q"),
-            (GizmoMode::Translate, ICON_MOVE, "W"),
-            (GizmoMode::Rotate, ICON_ROTATE_RIGHT, "E"),
-            (GizmoMode::Scale, ICON_SCALE, "R"),
-        ] {
-            if icon_button(
-                ui,
-                icon,
-                self.gizmo_mode == mode,
-                &format!("{} ({key})", mode.label()),
-            )
-            .clicked()
-            {
-                self.gizmo_mode = mode;
-                self.gizmo_drag = None;
-                self.history.break_merge_run();
-            }
-        }
-        if ui
-            .add_sized(
-                [48.0, 28.0],
-                egui::Button::new(
-                    RichText::new(match self.gizmo_space {
-                        GizmoSpace::World => "World",
-                        GizmoSpace::Local => "Local",
-                    })
-                    .size(10.0)
-                    .color(TEXT_MUTED),
+        toolbar::group(ui, |ui| {
+            for (mode, icon, key) in [
+                (GizmoMode::Select, icons::SELECT, "Q"),
+                (GizmoMode::Translate, icons::TRANSLATE, "W"),
+                (GizmoMode::Rotate, icons::ROTATE, "E"),
+                (GizmoMode::Scale, icons::SCALE, "R"),
+            ] {
+                if button::icon(
+                    ui,
+                    icon,
+                    self.gizmo_mode == mode,
+                    &format!("{} ({key})", mode.label()),
                 )
-                .fill(PANEL_RAISED)
-                .stroke(Stroke::new(1.0, BORDER_SUBTLE)),
+                .clicked()
+                {
+                    self.choose_mode(mode);
+                }
+            }
+        });
+    }
+
+    /// Chooses a manipulator, ending whatever drag the last one was in.
+    fn choose_mode(&mut self, mode: GizmoMode) {
+        self.gizmo_mode = mode;
+        self.gizmo_drag = None;
+        self.history.break_merge_run();
+    }
+
+    /// Which axes the manipulators work in, and whether they snap.
+    fn manipulator_options(&mut self, ui: &mut egui::Ui) {
+        let mut space = self.gizmo_space;
+        if button::Segmented::new(&mut space)
+            .option(
+                GizmoSpace::Local,
+                "Local",
+                "Move and rotate along the object's own axes",
             )
-            .on_hover_text("Toggle world/local movement and rotation axes")
-            .clicked()
+            .option(
+                GizmoSpace::World,
+                "World",
+                "Move and rotate along the world's axes",
+            )
+            .show(ui)
         {
-            self.gizmo_space = match self.gizmo_space {
-                GizmoSpace::World => GizmoSpace::Local,
-                GizmoSpace::Local => GizmoSpace::World,
-            };
+            self.gizmo_space = space;
             self.gizmo_drag = None;
         }
         let snap_tip = format!(
-            "Snap: {} units · {}° · {} scale",
+            "Snap to {} units · {}° · {} scale",
             self.gizmo_snapping.translation,
             self.gizmo_snapping.rotation_degrees,
             self.gizmo_snapping.scale
         );
-        if icon_button(ui, ICON_GRID_4X4, self.gizmo_snapping.enabled, &snap_tip).clicked() {
+        if button::icon(ui, icons::SNAP, self.gizmo_snapping.enabled, &snap_tip).clicked() {
             self.gizmo_snapping.enabled = !self.gizmo_snapping.enabled;
         }
+    }
+
+    /// Where the scene camera is looking, and the two ways to send it back.
+    fn camera_controls(&mut self, ui: &mut egui::Ui) {
+        toolbar::group(ui, |ui| {
+            if button::icon(
+                ui,
+                icons::RESET_VIEW,
+                self.view_moved(),
+                "Put the scene camera back where it started",
+            )
+            .clicked()
+            {
+                self.reset_view();
+            }
+            let focusable = self.selection.is_some();
+            if ui
+                .add_enabled_ui(focusable, |ui| {
+                    button::icon(
+                        ui,
+                        icons::FOCUS,
+                        false,
+                        if focusable {
+                            "Frame the selection (F)"
+                        } else {
+                            "Select something to frame it"
+                        },
+                    )
+                })
+                .inner
+                .clicked()
+            {
+                self.focus_selection();
+            }
+        });
     }
 
     /// The row of tools above the viewport.
@@ -95,53 +135,30 @@ impl EditorApp {
     /// The game view has none of them: they change what the editor is looking
     /// at, and that view exists to show what the player would see.
     pub(super) fn scene_tools(&mut self, ui: &mut egui::Ui, editing: bool) {
-        ui.horizontal(|ui| {
+        toolbar::strip(ui, metric::TOOLBAR_HEIGHT, |ui| {
             if !editing {
-                // The game view is what the player sees, so the tools
-                // for changing what they are looking at do not apply.
-                ui.add_space(8.0);
-                ui.label(
-                    RichText::new("Rendering through the authored camera")
-                        .size(11.0)
-                        .color(TEXT_FAINT),
-                );
+                toolbar::readout(ui, "camera", "Authored", true);
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    ui.label(
+                        egui::RichText::new("Scene tools do not apply to the game view")
+                            .size(crate::ui::theme::text::NOTE)
+                            .color(color::TEXT_FAINT),
+                    );
+                });
                 return;
             }
-            // The projection pair claims its width first so the icon row
-            // shrinks beside it. Laid out the other way round, a narrow
-            // viewport drew the icons straight over the buttons.
+            // The projection pair claims its width first so the tool groups
+            // shrink beside it. Laid out the other way round, a narrow viewport
+            // drew the tools straight over the buttons.
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                ui.add_space(8.0);
-                projection_button(
-                    ui,
-                    &mut self.preferences.projection,
-                    CameraProjection::Orthographic,
-                    "Ortho",
-                );
-                projection_button(
-                    ui,
-                    &mut self.preferences.projection,
-                    CameraProjection::Perspective,
-                    "Perspective",
-                );
+                projection_choice(ui, &mut self.preferences.projection);
+                toolbar::divider(ui);
                 ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                    ui.add_space(8.0);
-                    self.transform_tools(ui);
-                    // Panning can carry the subject off screen entirely, so
-                    // the way back is a control rather than a remembered
-                    // number.
-                    if icon_button(ui, ICON_CAMERA_ALT, self.view_moved(), "Reset view").clicked() {
-                        self.reset_view();
-                    }
-                    if ui
-                        .add_enabled_ui(self.selection.is_some(), |ui| {
-                            icon_button(ui, ICON_CENTER_FOCUS_STRONG, false, "Focus selection (F)")
-                        })
-                        .inner
-                        .clicked()
-                    {
-                        self.focus_selection();
-                    }
+                    ui.spacing_mut().item_spacing.x = 4.0;
+                    self.manipulators(ui);
+                    self.manipulator_options(ui);
+                    toolbar::divider(ui);
+                    self.camera_controls(ui);
                 });
             });
         });

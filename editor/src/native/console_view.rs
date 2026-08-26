@@ -7,13 +7,15 @@
 use eframe::egui::{self, Align, Color32, Layout, RichText};
 use sindri_core::EngineState;
 
+use crate::ui::theme::{color, metric, text};
+use crate::ui::widgets::{button, button::Intent, panel};
 use crate::{
     console::{Console, Entry, Level},
     scripts::ScriptNote,
     textures::TextureNote,
 };
 
-use super::{ACCENT, ACCENT_BRIGHT, EditorApp, TEXT_FAINT, TEXT_MUTED, status_dot};
+use super::EditorApp;
 
 impl EditorApp {
     /// Says that something the user asked for did not happen.
@@ -49,6 +51,16 @@ impl EditorApp {
     }
 }
 
+/// The colour a line is written in, which is the only thing that distinguishes
+/// three kinds of message in a list of forty.
+const fn level_tint(level: Level) -> Color32 {
+    match level {
+        Level::Info => color::TEXT_MUTED,
+        Level::Warning => color::WARNING,
+        Level::Error => color::DANGER_TEXT,
+    }
+}
+
 /// What the editor has said, newest at the bottom.
 ///
 /// This used to be three fixed lines, two of them interpolating a real number,
@@ -59,29 +71,39 @@ impl EditorApp {
 /// Returns true when the user asked to clear it.
 pub(super) fn console_view(ui: &mut egui::Ui, console: &Console, state: EngineState) -> bool {
     let mut cleared = false;
+    ui.add_space(4.0);
     ui.horizontal(|ui| {
-        ui.add_space(10.0);
-        status_dot(ui, ACCENT);
+        ui.spacing_mut().item_spacing.x = 5.0;
+        ui.add_space(metric::GUTTER);
+        panel::status_dot(ui, color::FORGE);
         ui.label(
             RichText::new(format!("Engine {}", lifecycle_label(state)))
-                .size(11.0)
-                .color(TEXT_MUTED),
+                .size(text::LABEL)
+                .color(color::TEXT_MUTED),
         );
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.add_space(8.0);
+            ui.add_space(metric::GUTTER);
             if ui
-                .add_enabled(
-                    !console.is_empty(),
-                    egui::Button::new(RichText::new("Clear").size(11.0).color(TEXT_MUTED))
-                        .frame(false),
-                )
+                .add_enabled_ui(!console.is_empty(), |ui| {
+                    button::labelled(ui, "Clear", Intent::Quiet, "Empty the console")
+                })
+                .inner
                 .clicked()
             {
                 cleared = true;
             }
         });
     });
-    ui.separator();
+    panel::rule_tight(ui);
+    if console.is_empty() {
+        panel::empty_state(
+            ui,
+            crate::ui::icons::CONSOLE,
+            "Nothing to report",
+            "Loads, script output, and anything that fails show up here.",
+        );
+        return cleared;
+    }
     egui::ScrollArea::vertical()
         .auto_shrink([false, false])
         // Pinned to the newest entry: a log you have to scroll to the bottom of
@@ -89,6 +111,7 @@ pub(super) fn console_view(ui: &mut egui::Ui, console: &Console, state: EngineSt
         .stick_to_bottom(true)
         .show(ui, |ui| {
             ui.spacing_mut().item_spacing.y = 1.0;
+            ui.add_space(2.0);
             for entry in console.entries() {
                 console_row(ui, entry);
             }
@@ -97,24 +120,22 @@ pub(super) fn console_view(ui: &mut egui::Ui, console: &Console, state: EngineSt
 }
 
 pub(super) fn console_row(ui: &mut egui::Ui, entry: &Entry) {
-    let color = match entry.level {
-        Level::Info => TEXT_MUTED,
-        Level::Warning => ACCENT_BRIGHT,
-        Level::Error => Color32::from_rgb(255, 138, 148),
-    };
+    let tint = level_tint(entry.level);
     ui.horizontal_top(|ui| {
-        ui.add_space(10.0);
-        status_dot(ui, color);
+        ui.spacing_mut().item_spacing.x = 5.0;
+        ui.add_space(metric::GUTTER);
+        ui.add_space(2.0);
+        panel::status_dot(ui, tint);
         // Wrapped, not truncated: an asset failure names a path and an
         // operating system error, and a line that runs off the edge of the dock
         // is a line nobody can act on.
-        ui.add(egui::Label::new(RichText::new(&entry.message).size(11.0).color(color)).wrap());
+        ui.add(
+            egui::Label::new(RichText::new(&entry.message).size(text::LABEL).color(tint)).wrap(),
+        );
+        // A message that repeated sixty times is one line with a count, not
+        // sixty lines that scroll the useful one away.
         if entry.count > 1 {
-            ui.label(
-                RichText::new(format!("x{}", entry.count))
-                    .size(10.0)
-                    .color(TEXT_FAINT),
-            );
+            crate::ui::widgets::toolbar::chip(ui, &format!("x{}", entry.count), color::TEXT_FAINT);
         }
     });
 }

@@ -43,7 +43,6 @@ mod runtime;
 mod scene_io;
 mod shortcuts;
 mod slicer_view;
-mod theme;
 mod tools;
 mod unsaved;
 mod viewport;
@@ -57,10 +56,6 @@ pub use scene_io::{load_world, scene_extractor};
 
 use runtime::initialized_lifecycle;
 use scene_io::open_requested_scene;
-use theme::{
-    ACCENT, ACCENT_BRIGHT, ACCENT_SOFT, BORDER, BORDER_SUBTLE, PANEL_BG, PROBLEM, TEXT, TEXT_FAINT,
-    TEXT_MUTED, configure_theme, panel_title, status_dot,
-};
 use unsaved::Discarding;
 use viewport::{RuntimeViewport, SceneRenderers};
 
@@ -203,7 +198,7 @@ struct EditorApp {
 
 impl EditorApp {
     fn new(context: &eframe::CreationContext<'_>) -> Self {
-        configure_theme(&context.egui_ctx);
+        crate::ui::theme::install(&context.egui_ctx);
         let preferences = Preferences::load(context.storage);
         let scene = scene_extractor();
         let (file, open_error) = open_requested_scene(preferences.last_scene.as_deref());

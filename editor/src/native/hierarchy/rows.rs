@@ -5,36 +5,20 @@
 
 use std::{collections::BTreeSet, path::Path};
 
-use eframe::egui::{self, Response, RichText, Sense};
+use eframe::egui::{self, Response};
 use egui_material_icons::MaterialIcon;
 use sindri_core::{EntityId, World};
 
 use crate::space::{EntitySpace, space_of};
+use crate::ui::widgets::tree;
 
-use super::super::theme::{TEXT, TEXT_MUTED};
 use super::row::entity_name;
 
 /// One of the two roots the hierarchy hangs from.
 ///
 /// A collapse chevron used to sit in front of it, and nothing collapsed.
 pub(super) fn hierarchy_group(ui: &mut egui::Ui, label: &str, icon: MaterialIcon) -> Response {
-    let width = ui.available_width();
-    let row = ui.scope_builder(egui::UiBuilder::new().sense(Sense::hover()), |ui| {
-        ui.set_min_width(width);
-        ui.horizontal(|ui| {
-            ui.add_space(10.0);
-            let icon = ui.add(
-                egui::Label::new(icon.outlined().rich_text().size(15.0).color(TEXT_MUTED))
-                    .sense(Sense::hover()),
-            );
-            let label = ui.add(
-                egui::Label::new(RichText::new(label).size(12.0).color(TEXT)).sense(Sense::hover()),
-            );
-            icon | label
-        })
-        .inner
-    });
-    row.response | row.inner
+    tree::group(ui, icon, label)
 }
 
 /// What the root is called wherever a parent is named.

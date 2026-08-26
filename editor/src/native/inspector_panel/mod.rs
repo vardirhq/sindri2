@@ -17,7 +17,7 @@ pub(super) mod section;
 
 use std::{collections::BTreeMap, path::Path};
 
-use eframe::egui::{self, Stroke};
+use eframe::egui;
 use serde_json::Value;
 use sindri_core::{
     CommandBuffer, ComponentMetadata, ComponentSchemaRegistry, EntityId, SpriteRef, WorldCommand,
@@ -31,13 +31,34 @@ use self::header::{ParentChoice, inspector_identity, inspector_parent, transform
 use self::rows::add_component_button;
 use self::section::components_sections;
 use self::section::grid::grid_choices;
+use sindri_scene::PROCEDURAL_TEXTURES;
+
+use crate::project::ProjectTree;
+use crate::ui::icons;
+use crate::ui::theme::color;
+use crate::ui::widgets::{panel, toolbar};
 use crate::{
     animation::AnimationTool, scripts::SceneScripts, space::declared_space, tilemap::TilemapTool,
 };
 
 use super::editing::reparent_choices;
 use super::hierarchy::row::entity_icon;
-use super::{BORDER, EditorApp, PANEL_BG, SPRITE_COMPONENT, UI_IMAGE_COMPONENT, panel_title};
+use super::{EditorApp, SPRITE_COMPONENT, UI_IMAGE_COMPONENT};
+
+/// Every texture reference the engine can actually draw.
+///
+/// The project's own files, plus the handful the engine generates. A procedural
+/// reference is deliberately not parseable as an asset path, so a picker built
+/// from the directory alone both refused to offer `procedural:checkerboard` and
+/// marked the fixture's own cube as naming a texture that does not exist.
+fn drawable_textures(project: &ProjectTree) -> Vec<String> {
+    let mut textures: Vec<String> = PROCEDURAL_TEXTURES
+        .iter()
+        .map(|texture| texture.reference.to_owned())
+        .collect();
+    textures.extend(project.textures());
+    textures
+}
 
 /// Stateful authoring surfaces shared across component sections.
 pub(super) struct InspectorTools<'a> {
@@ -241,7 +262,7 @@ impl EditorApp {
             .map(|reference| reference.texture().to_owned());
         PanelContext {
             fonts: self.project.fonts(),
-            textures: self.project.textures(),
+            textures: drawable_textures(&self.project),
             scripts: self.project.scripts(),
             audio: self.project.audio(),
             animation_sprites: animation_texture
@@ -255,96 +276,123 @@ impl EditorApp {
         }
     }
 
+    /// The panel: its frame, its header, and whichever of its three states it
+    /// is in — slicing an image, editing an entity, or empty.
     pub(super) fn inspector_panel(&mut self, ui: &mut egui::Ui) {
         egui::Panel::right("entity-inspector")
             .default_size(340.0)
             .min_size(300.0)
             .max_size(440.0)
             .resizable(true)
-            .frame(
-                egui::Frame::new()
-                    .fill(PANEL_BG)
-                    .stroke(Stroke::new(1.0, BORDER)),
-            )
+            .frame(panel::frame())
             .show(ui, |ui| {
-                panel_title(ui, "Inspector");
-                if self.slicer.is_some() {
+                let slicing = self.slicer.is_some();
+                panel::header(ui, icons::INSPECTOR, "Inspector", |ui| {
+                    if slicing {
+                        toolbar::chip(ui, "Slicing", color::FORGE);
+                    }
+                });
+                if slicing {
                     self.slicer_panel(ui);
                     return;
                 }
+                // An empty inspector used to be a blank rectangle, which is
+                // indistinguishable from a panel that has stopped working.
                 let Some(entity) = self.selection else {
-                    return;
-                };
-                let Some(data) = self.world.get(entity) else {
-                    return;
-                };
-                // Widgets edit a draft copy; every difference becomes a command,
-                // so the world is only ever written through the command layer.
-                let mut draft = EntityDraft::from(data);
-                let original = draft.clone();
-                let icon = entity_icon(data);
-                let space = declared_space(&data.components);
-                let original_components = data.components.clone();
-                let mut components = original_components.clone();
-                let parent = data.parent;
-                let choices = reparent_choices(&self.world, entity);
-                let mut reparented = ParentChoice::Unchanged;
-                let mut removed = None;
-                let mut added = None;
-                let context = self.panel_context(&components);
-                let addable = self.addable_components(
-                    &components,
-                    context.first_font(),
-                    context.first_sprite(),
-                    context.first_grid(),
-                );
-                {
-                    let scripts = &self.scripts;
-                    let mut tools = InspectorTools {
-                        animation: &mut self.animation_tool,
-                        tilemap: &mut self.tilemap_tool,
-                    };
-                    egui::ScrollArea::vertical().show(ui, |ui| {
-                        inspector_identity(ui, icon, space, &mut draft);
-                        reparented = inspector_parent(ui, entity, parent, &choices);
-                        if let Some(transform) = &mut draft.transform_3d {
-                            transform_3d_section(ui, transform);
-                        }
-                        removed = components_sections(
-                            ui,
-                            &mut components,
-                            &context.registry,
-                            &InspectorProject {
-                                scripts,
-                                root: context.root.as_deref(),
-                                assets: context.assets(),
-                                animation_texture: context.animation_texture.as_deref(),
-                                grids: &context.grids,
-                            },
-                            &mut tools,
-                        );
-                        added = add_component_button(ui, &addable);
-                    });
-                }
-                self.commit_draft(entity, &original, &draft);
-                self.commit_components(entity, &original_components, &components);
-                if let Some(type_name) = removed {
-                    self.remove_component(entity, &type_name);
-                }
-                if let Some(type_name) = added {
-                    self.add_component(
-                        entity,
-                        &type_name,
-                        context.first_font(),
-                        context.first_sprite(),
-                        context.first_grid(),
+                    panel::empty_state(
+                        ui,
+                        icons::INSPECTOR,
+                        "Nothing selected",
+                        "Pick an entity in the hierarchy, or an image in the project, to edit it here.",
                     );
+                    return;
+                };
+                if self.world.get(entity).is_none() {
+                    panel::empty_state(
+                        ui,
+                        icons::INSPECTOR,
+                        "That entity is gone",
+                        "It was removed from the scene while it was selected.",
+                    );
+                    return;
                 }
-                match reparented {
-                    ParentChoice::Unchanged => {}
-                    ParentChoice::Root => self.reparent(entity, None),
-                    ParentChoice::Under(parent) => self.reparent(entity, Some(parent)),
-                }
+                self.inspect_entity(ui, entity);
             });
+    }
+
+    /// Everything one entity has, drawn from a draft and committed as commands.
+    fn inspect_entity(&mut self, ui: &mut egui::Ui, entity: EntityId) {
+        let Some(data) = self.world.get(entity) else {
+            return;
+        };
+        // Widgets edit a draft copy; every difference becomes a command,
+        // so the world is only ever written through the command layer.
+        let mut draft = EntityDraft::from(data);
+        let original = draft.clone();
+        let icon = entity_icon(data);
+        let space = declared_space(&data.components);
+        let original_components = data.components.clone();
+        let mut components = original_components.clone();
+        let parent = data.parent;
+        let choices = reparent_choices(&self.world, entity);
+        let mut reparented = ParentChoice::Unchanged;
+        let mut removed = None;
+        let mut added = None;
+        let context = self.panel_context(&components);
+        let addable = self.addable_components(
+            &components,
+            context.first_font(),
+            context.first_sprite(),
+            context.first_grid(),
+        );
+        {
+            let scripts = &self.scripts;
+            let mut tools = InspectorTools {
+                animation: &mut self.animation_tool,
+                tilemap: &mut self.tilemap_tool,
+            };
+            egui::ScrollArea::vertical()
+                .auto_shrink([false; 2])
+                .show(ui, |ui| {
+                    inspector_identity(ui, icon, space, &mut draft);
+                    reparented = inspector_parent(ui, entity, parent, &choices);
+                    if let Some(transform) = &mut draft.transform_3d {
+                        transform_3d_section(ui, transform);
+                    }
+                    removed = components_sections(
+                        ui,
+                        &mut components,
+                        &context.registry,
+                        &InspectorProject {
+                            scripts,
+                            root: context.root.as_deref(),
+                            assets: context.assets(),
+                            animation_texture: context.animation_texture.as_deref(),
+                            grids: &context.grids,
+                        },
+                        &mut tools,
+                    );
+                    added = add_component_button(ui, &addable);
+                });
+        }
+        self.commit_draft(entity, &original, &draft);
+        self.commit_components(entity, &original_components, &components);
+        if let Some(type_name) = removed {
+            self.remove_component(entity, &type_name);
+        }
+        if let Some(type_name) = added {
+            self.add_component(
+                entity,
+                &type_name,
+                context.first_font(),
+                context.first_sprite(),
+                context.first_grid(),
+            );
+        }
+        match reparented {
+            ParentChoice::Unchanged => {}
+            ParentChoice::Root => self.reparent(entity, None),
+            ParentChoice::Under(parent) => self.reparent(entity, Some(parent)),
+        }
     }
 }

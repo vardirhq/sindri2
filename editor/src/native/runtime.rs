@@ -5,8 +5,9 @@ use egui_material_icons::MaterialIcon;
 use sindri_core::{EngineLifecycle, EngineState, FixedStepConfig};
 use sindri_scene::SpriteAnimations;
 
+use crate::ui::theme::{color, metric, radius, text};
+
 use super::EditorApp;
-use super::theme::{ACCENT, ACCENT_BRIGHT, BORDER, TEXT_FAINT};
 
 pub(super) fn transport_icon(
     ui: &mut egui::Ui,
@@ -15,18 +16,22 @@ pub(super) fn transport_icon(
     enabled: bool,
     tip: &str,
 ) -> Response {
-    let color = if selected {
-        ACCENT
-    } else if enabled {
-        TEXT_FAINT
+    let tint = if selected {
+        color::FORGE_BRIGHT
     } else {
-        BORDER
+        color::TEXT_MUTED
     };
     ui.add_enabled(
         enabled,
-        egui::Button::new(icon.outlined().rich_text().size(16.0).color(color))
-            .frame(false)
-            .min_size(Vec2::new(26.0, 26.0)),
+        egui::Button::new(icon.outlined().rich_text().size(16.0).color(tint))
+            .fill(if selected {
+                color::EMBER
+            } else {
+                Color32::TRANSPARENT
+            })
+            .stroke(Stroke::NONE)
+            .corner_radius(radius())
+            .min_size(Vec2::splat(metric::TOOL_SIZE - 2.0)),
     )
     .on_hover_text(tip)
 }
@@ -123,15 +128,20 @@ pub(super) fn initialized_lifecycle() -> EngineLifecycle {
 /// beside it, in words, by [`Transport::label`].
 pub(super) fn play_button(ui: &mut egui::Ui, transport: Transport) -> Response {
     ui.add_sized(
-        [72.0, 29.0],
+        [70.0, metric::CONTROL_HEIGHT + 5.0],
         egui::Button::new(
             RichText::new(transport.play_label())
                 .strong()
-                .size(12.0)
-                .color(Color32::from_rgb(28, 23, 12)),
+                .size(text::BODY)
+                .color(Color32::from_rgb(26, 20, 9)),
         )
-        .fill(ACCENT_BRIGHT)
-        .stroke(Stroke::new(1.0, ACCENT)),
+        .fill(if transport.is_playing() {
+            color::FORGE
+        } else {
+            color::FORGE_BRIGHT
+        })
+        .stroke(Stroke::new(1.0, color::FORGE))
+        .corner_radius(radius()),
     )
     .on_hover_text(transport.play_tip())
 }

@@ -1,169 +1,176 @@
-//! The frame around the work: title bar, menus, tabs, and status bar.
+//! The frame around the work: title bar, menus, and status bar.
+//!
+//! The window's own furniture, as distinct from any one panel's. What belongs
+//! here is what is true of the whole editor — which scene is open, whether it
+//! is running, whether anything has gone wrong — and nothing that belongs to
+//! the thing being edited.
 
-use eframe::egui::{self, Align, Layout, RichText, Stroke};
-use egui_material_icons::icons::{ICON_PAUSE, ICON_REDO, ICON_UNDO};
+use eframe::egui::{self, Align, Layout, RichText, Sense, Stroke, Vec2};
 
-use crate::preferences::{BottomTab, CameraProjection, Layout as WorkspaceLayout};
+use crate::preferences::{CameraProjection, Layout as WorkspaceLayout};
+use crate::ui::icons;
+use crate::ui::theme::{color, hairline, metric, text};
+use crate::ui::widgets::{button, panel, toolbar};
 
 use super::runtime::{Transport, play_button, transport_icon};
-use super::theme::{
-    ACCENT, ACCENT_BRIGHT, ACCENT_SOFT, BORDER, PANEL_RAISED, SUCCESS, TEXT, TEXT_FAINT,
-    TEXT_MUTED, TOP_BG, status_dot,
-};
 use super::unsaved::Discarding;
 use super::{EditorApp, WorkspaceTab};
 
-pub(super) fn workspace_tab(
-    ui: &mut egui::Ui,
-    current: &mut WorkspaceTab,
-    value: WorkspaceTab,
-    label: &str,
-) {
-    if ui
-        .add(
-            egui::Button::new(RichText::new(label).size(12.0).color(if *current == value {
-                TEXT
-            } else {
-                TEXT_FAINT
-            }))
-            .selected(*current == value)
-            .frame(false),
-        )
-        .clicked()
-    {
-        *current = value;
-    }
+/// How much room the transport group takes, so the bar can centre it.
+///
+/// Measured from the controls rather than guessed: the bar used to push the
+/// transport along with a fraction of the available width, which put it in a
+/// different place at every window size.
+const TRANSPORT_WIDTH: f32 = 214.0;
+
+/// The mark in the corner: Sindri's forge diamond, painted rather than set.
+///
+/// The bundled Inter subset has no geometric glyph that would do, and the
+/// documentation site's brandmark is a rotated square — three lines of painter
+/// rather than an image asset the editor would have to load.
+fn brandmark(ui: &mut egui::Ui) {
+    let (rect, _) = ui.allocate_exact_size(Vec2::splat(16.0), Sense::hover());
+    let centre = rect.center();
+    let arm = 6.5;
+    ui.painter().add(egui::Shape::convex_polygon(
+        vec![
+            centre + Vec2::new(0.0, -arm),
+            centre + Vec2::new(arm, 0.0),
+            centre + Vec2::new(0.0, arm),
+            centre + Vec2::new(-arm, 0.0),
+        ],
+        color::FORGE,
+        Stroke::NONE,
+    ));
 }
 
-pub(super) fn bottom_tab(
+/// A menu whose button reads as part of the bar rather than as a control.
+fn bar_menu<R>(
     ui: &mut egui::Ui,
-    current: &mut BottomTab,
-    value: BottomTab,
     label: &str,
-) {
-    if ui
-        .add(
-            egui::Button::new(RichText::new(label).size(12.0).color(if *current == value {
-                TEXT
-            } else {
-                TEXT_FAINT
-            }))
-            .selected(*current == value)
-            .frame(false),
-        )
-        .clicked()
-    {
-        *current = value;
-    }
+    contents: impl FnOnce(&mut egui::Ui) -> R,
+) -> egui::InnerResponse<Option<R>> {
+    ui.menu_button(
+        RichText::new(label)
+            .size(text::LABEL)
+            .color(color::TEXT_MUTED),
+        |ui| {
+            ui.set_min_width(196.0);
+            contents(ui)
+        },
+    )
 }
 
-pub(super) fn projection_button(
-    ui: &mut egui::Ui,
-    current: &mut CameraProjection,
-    value: CameraProjection,
-    label: &str,
-) {
-    let selected = *current == value;
-    if ui
-        .add(
-            egui::Button::new(RichText::new(label).size(11.0).color(if selected {
-                ACCENT_BRIGHT
-            } else {
-                TEXT_FAINT
-            }))
-            .selected(selected)
-            .fill(if selected { ACCENT_SOFT } else { PANEL_RAISED })
-            .stroke(Stroke::new(1.0, if selected { ACCENT } else { BORDER })),
+pub(super) fn projection_choice(ui: &mut egui::Ui, current: &mut CameraProjection) {
+    button::Segmented::new(current)
+        .option(
+            CameraProjection::Perspective,
+            "Perspective",
+            "Look at the scene the way a perspective camera would",
         )
-        .clicked()
-    {
-        *current = value;
-    }
+        .option(
+            CameraProjection::Orthographic,
+            "Ortho",
+            "Look at the scene without perspective, for placing things exactly",
+        )
+        .show(ui);
 }
 
 impl EditorApp {
     pub(super) fn top_bar(&mut self, ui: &mut egui::Ui) {
         egui::Panel::top("editor-top-bar")
-            .exact_size(44.0)
-            .frame(
-                egui::Frame::new()
-                    .fill(TOP_BG)
-                    .stroke(Stroke::new(1.0, BORDER)),
-            )
+            .exact_size(metric::TOP_BAR_HEIGHT)
+            .frame(egui::Frame::new().fill(color::HEADER))
             .show(ui, |ui| {
-                ui.spacing_mut().item_spacing.x = 11.0;
+                let base = ui.max_rect();
+                ui.painter()
+                    .hline(base.x_range(), base.bottom() - 0.5, hairline());
                 ui.horizontal_centered(|ui| {
-                    ui.add_space(14.0);
+                    ui.spacing_mut().item_spacing.x = 8.0;
+                    ui.add_space(12.0);
+                    brandmark(ui);
                     ui.label(
                         RichText::new("SINDRI")
                             .strong()
-                            .size(15.0)
-                            .color(ACCENT_BRIGHT),
+                            .size(text::TITLE)
+                            .color(color::TEXT),
                     );
-                    ui.add_space(8.0);
+                    toolbar::divider(ui);
                     self.file_menu(ui);
                     self.edit_menu(ui);
                     self.view_menu(ui);
-                    // "Scene", "Build", "Tools", and "Help" used to sit here.
-                    // None of them opened: they were labels shaped like menus,
-                    // which is a promise about four features that do not exist.
-                    ui.add_space((ui.available_width() * 0.22).max(16.0));
-                    let undo_tip = self.history.undo_label().map_or_else(
-                        || "Nothing to undo".to_owned(),
-                        |label| format!("Undo {label}"),
-                    );
-                    if transport_icon(ui, ICON_UNDO, false, self.history.can_undo(), &undo_tip)
-                        .clicked()
-                    {
-                        self.undo();
-                    }
-                    let redo_tip = self.history.redo_label().map_or_else(
-                        || "Nothing to redo".to_owned(),
-                        |label| format!("Redo {label}"),
-                    );
-                    if transport_icon(ui, ICON_REDO, false, self.history.can_redo(), &redo_tip)
-                        .clicked()
-                    {
-                        self.redo();
-                    }
-                    // Two controls and a word, for three states. There were
-                    // four controls, two of which paused when their labels said
-                    // stop and play, and a play icon sitting beside a Play
-                    // button that did the same thing. Whatever each was meant to
-                    // be, together they were several ways to guess.
-                    let transport = Transport::of(self.lifecycle.state());
-                    // Stop puts back everything playing changed. Going back to
-                    // the *authored* scene is File → Discard changes, which
-                    // says what it will cost.
-                    if play_button(ui, transport).clicked() {
-                        self.toggle_play_mode();
-                    }
-                    if transport_icon(
-                        ui,
-                        ICON_PAUSE,
-                        transport == Transport::Paused,
-                        transport.is_playing(),
-                        transport.pause_tip(),
-                    )
-                    .clicked()
-                    {
-                        self.toggle_pause();
-                    }
-                    // What the editor is doing, in a word, so the state is read
-                    // rather than inferred from which control looks lit.
-                    ui.label(RichText::new(transport.label()).size(11.0).color(
-                        if transport.is_playing() {
-                            ACCENT_BRIGHT
-                        } else {
-                            TEXT_FAINT
-                        },
-                    ));
-                    // A project name and a chevron used to sit at this end,
-                    // naming a project that did not exist and opening nothing.
-                    // What project is open is the browser's business, and it
-                    // says so from the directory it is reading.
+                    // Centred on the window rather than on whatever the menus
+                    // left over: measured from the bar itself, so the transport
+                    // does not drift sideways as the menu labels change.
+                    let centre = base.center().x - TRANSPORT_WIDTH / 2.0;
+                    let lead = (centre - ui.cursor().left()).max(12.0);
+                    ui.add_space(lead);
+                    self.transport(ui);
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        ui.add_space(12.0);
+                        // Which arrangement the window is in, said where the
+                        // View menu that changes it can be reached.
+                        ui.label(
+                            RichText::new(self.preferences.layout.label())
+                                .size(text::NOTE)
+                                .color(color::TEXT_FAINT),
+                        );
+                    });
                 });
             });
+    }
+
+    /// Undo, redo, and the three states the engine can be in.
+    fn transport(&mut self, ui: &mut egui::Ui) {
+        let transport = Transport::of(self.lifecycle.state());
+        toolbar::group(ui, |ui| {
+            let undo_tip = self.history.undo_label().map_or_else(
+                || "Nothing to undo".to_owned(),
+                |label| format!("Undo {label}  (Ctrl+Z)"),
+            );
+            if transport_icon(ui, icons::UNDO, false, self.history.can_undo(), &undo_tip).clicked()
+            {
+                self.undo();
+            }
+            let redo_tip = self.history.redo_label().map_or_else(
+                || "Nothing to redo".to_owned(),
+                |label| format!("Redo {label}  (Ctrl+Shift+Z)"),
+            );
+            if transport_icon(ui, icons::REDO, false, self.history.can_redo(), &redo_tip).clicked()
+            {
+                self.redo();
+            }
+        });
+        ui.add_space(6.0);
+        // Two controls and a word, for three states. Stop puts back everything
+        // playing changed; going back to the *authored* scene is File → Discard
+        // changes, which says what it will cost.
+        if play_button(ui, transport).clicked() {
+            self.toggle_play_mode();
+        }
+        if transport_icon(
+            ui,
+            icons::PAUSE,
+            transport == Transport::Paused,
+            transport.is_playing(),
+            transport.pause_tip(),
+        )
+        .clicked()
+        {
+            self.toggle_pause();
+        }
+        ui.add_space(4.0);
+        // What the editor is doing, in a word, so the state is read rather than
+        // inferred from which control looks lit.
+        toolbar::chip(
+            ui,
+            transport.label(),
+            if transport.is_playing() {
+                color::FORGE_BRIGHT
+            } else {
+                color::TEXT_FAINT
+            },
+        );
     }
 
     /// Chooses how the workspace is arranged.
@@ -172,9 +179,12 @@ impl EditorApp {
     /// restart: rearranging the editor every time it opens is the thing this
     /// exists to stop.
     fn view_menu(&mut self, ui: &mut egui::Ui) {
-        ui.menu_button(RichText::new("View").size(12.0).color(TEXT_MUTED), |ui| {
-            ui.set_min_width(170.0);
-            ui.label(RichText::new("Layout").size(11.0).color(TEXT_FAINT));
+        bar_menu(ui, "View", |ui| {
+            ui.label(
+                RichText::new("LAYOUT")
+                    .size(text::NOTE)
+                    .color(color::TEXT_FAINT),
+            );
             for layout in WorkspaceLayout::ALL {
                 if ui
                     .selectable_label(self.preferences.layout == layout, layout.label())
@@ -191,8 +201,7 @@ impl EditorApp {
     /// scene, so the reason it cannot be used is visible.
     fn file_menu(&mut self, ui: &mut egui::Ui) {
         let saveable = self.file.path().is_some();
-        ui.menu_button(RichText::new("File").size(12.0).color(TEXT_MUTED), |ui| {
-            ui.set_min_width(190.0);
+        bar_menu(ui, "File", |ui| {
             if ui.button("Open scene…").clicked() {
                 self.discard_or_confirm(Discarding::OpenAnother, ui.ctx());
                 ui.close();
@@ -216,7 +225,12 @@ impl EditorApp {
                 ui.close();
             }
             ui.separator();
-            if ui.button("Discard changes").clicked() {
+            // Drawn in the colour the editor uses for anything that throws work
+            // away, so it does not read as one more neutral menu entry.
+            if ui
+                .button(RichText::new("Discard changes").color(color::DANGER_TEXT))
+                .clicked()
+            {
                 self.discard_or_confirm(Discarding::Reset, ui.ctx());
                 ui.close();
             }
@@ -227,10 +241,9 @@ impl EditorApp {
     ///
     /// The same two actions as the toolbar icons and the keyboard, labelled
     /// with what they would undo, which is the thing a menu can say and an icon
-    /// cannot. "Edit" was a label shaped like a menu until this.
+    /// cannot.
     fn edit_menu(&mut self, ui: &mut egui::Ui) {
-        ui.menu_button(RichText::new("Edit").size(12.0).color(TEXT_MUTED), |ui| {
-            ui.set_min_width(190.0);
+        bar_menu(ui, "Edit", |ui| {
             let undo = self.history.undo_label().map_or_else(
                 || "Undo".to_owned(),
                 |label| format!("Undo {}", label.to_lowercase()),
@@ -264,17 +277,24 @@ impl EditorApp {
 
     pub(super) fn status_bar(&self, ui: &mut egui::Ui) {
         egui::Panel::bottom("editor-status")
-            .exact_size(26.0)
-            .frame(
-                egui::Frame::new()
-                    .fill(TOP_BG)
-                    .stroke(Stroke::new(1.0, BORDER)),
-            )
+            .exact_size(metric::STATUS_HEIGHT)
+            .frame(egui::Frame::new().fill(color::HEADER))
             .show(ui, |ui| {
+                let base = ui.max_rect();
+                ui.painter()
+                    .hline(base.x_range(), base.top() + 0.5, hairline());
                 ui.horizontal_centered(|ui| {
-                    ui.add_space(12.0);
+                    ui.spacing_mut().item_spacing.x = 6.0;
+                    ui.add_space(10.0);
                     let healthy = self.problem().is_none();
-                    status_dot(ui, if healthy { SUCCESS } else { ACCENT_BRIGHT });
+                    panel::status_dot(
+                        ui,
+                        if healthy {
+                            color::SUCCESS
+                        } else {
+                            color::DANGER
+                        },
+                    );
                     ui.label(
                         // Not "the renderer reported an error": what went wrong
                         // is as likely to be a file that would not open, and
@@ -284,42 +304,55 @@ impl EditorApp {
                         } else {
                             "Something went wrong"
                         })
-                        .size(11.0)
-                        .color(TEXT_MUTED),
+                        .size(text::LABEL)
+                        .color(color::TEXT_MUTED),
                     );
-                    ui.add_space(10.0);
-                    ui.label(RichText::new("|").size(11.0).color(BORDER));
-                    ui.add_space(10.0);
+                    toolbar::divider(ui);
                     ui.label(
-                        RichText::new(if self.unsaved() {
-                            format!("{} (unsaved)", self.file.label())
-                        } else {
-                            self.file.label()
-                        })
-                        .size(11.0)
-                        .color(if self.unsaved() {
-                            ACCENT
-                        } else {
-                            TEXT_MUTED
-                        }),
+                        icons::SCENE
+                            .outlined()
+                            .rich_text()
+                            .size(13.0)
+                            .color(color::TEXT_FAINT),
                     );
+                    ui.label(
+                        RichText::new(self.file.label())
+                            .size(text::LABEL)
+                            .color(color::TEXT_MUTED),
+                    );
+                    // Unsaved work is a state worth spotting from across the
+                    // room, so it is a marked chip rather than a word in
+                    // brackets after the file name.
+                    if self.unsaved() {
+                        toolbar::chip(ui, "Unsaved", color::FORGE);
+                    }
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        ui.add_space(12.0);
+                        ui.add_space(10.0);
                         // Counted rather than guessed from whether a notice is
                         // showing, which is what this used to do: it said "1
                         // Error" for anything at all and never mentioned a
-                        // warning, because nothing in the editor could produce
-                        // one.
+                        // warning.
                         let counts = self.console.counts();
-                        ui.label(RichText::new(counts.summary()).size(11.0).color(
+                        ui.label(RichText::new(counts.summary()).size(text::LABEL).color(
                             if counts.errors > 0 {
-                                ACCENT_BRIGHT
+                                color::DANGER_TEXT
                             } else {
-                                TEXT_FAINT
+                                color::TEXT_FAINT
                             },
                         ));
+                        if counts.errors > 0 {
+                            panel::status_dot(ui, color::DANGER);
+                        }
                     });
                 });
             });
+    }
+}
+
+/// Which workspace a tab selects, and what it is called.
+pub(super) const fn workspace_label(tab: WorkspaceTab) -> &'static str {
+    match tab {
+        WorkspaceTab::Scene => "Scene",
+        WorkspaceTab::Game => "Game",
     }
 }

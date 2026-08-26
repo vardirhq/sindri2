@@ -1,13 +1,17 @@
 //! The sprite slicer's panel and the preview it draws over a texture.
 
-use eframe::egui::{self, Align, Color32, Layout, RichText, Sense, Stroke, Vec2};
-use egui_material_icons::icons::{ICON_GRID_VIEW, ICON_IMAGE, ICON_LABEL};
+use eframe::egui::{self, Color32, RichText, Sense, Stroke, Vec2};
 
 use crate::slicer::Slicer;
+use crate::ui::icons;
+use crate::ui::theme::{color, metric, radius, text};
+use crate::ui::widgets::{
+    button::{self, Intent},
+    panel, property, section,
+};
 
 use super::EditorApp;
 use super::inspector_panel::rows::number_row;
-use super::theme::{ACCENT, ACCENT_BRIGHT, PROBLEM, TEXT, TEXT_FAINT, TEXT_MUTED, section_header};
 
 /// The heading above one section of the inspector.
 ///
@@ -44,6 +48,37 @@ pub(super) fn grid_side(value: f64) -> u32 {
     value.clamp(1.0, 256.0) as u32
 }
 
+/// The numbers that decide where the cells fall.
+///
+/// Six drags in one place rather than scattered through the panel: they are one
+/// idea — how the sheet is divided — and every one of them moves every cell.
+fn slice_grid(ui: &mut egui::Ui, slicer: &mut Slicer) {
+    section::group(ui, icons::TILEMAP, "Slice");
+    let mut columns = f64::from(slicer.columns);
+    let mut rows = f64::from(slicer.rows);
+    let mut resized = number_row(ui, "Columns", &mut columns, 10.0, true);
+    resized |= number_row(ui, "Rows", &mut rows, 10.0, true);
+    if resized {
+        slicer.columns = grid_side(columns);
+        slicer.rows = grid_side(rows);
+        slicer.fit_names();
+        slicer.clamp_selection();
+    }
+
+    let mut margin_x = f64::from(slicer.margin[0]);
+    let mut margin_y = f64::from(slicer.margin[1]);
+    let mut spacing_x = f64::from(slicer.spacing[0]);
+    let mut spacing_y = f64::from(slicer.spacing[1]);
+    let mut measured = number_row(ui, "Margin X", &mut margin_x, 10.0, true);
+    measured |= number_row(ui, "Margin Y", &mut margin_y, 10.0, true);
+    measured |= number_row(ui, "Spacing X", &mut spacing_x, 10.0, true);
+    measured |= number_row(ui, "Spacing Y", &mut spacing_y, 10.0, true);
+    if measured {
+        slicer.margin = [pixel_count(margin_x), pixel_count(margin_y)];
+        slicer.spacing = [pixel_count(spacing_x), pixel_count(spacing_y)];
+    }
+}
+
 /// Naming the chosen cell, and a list of the ones already named.
 ///
 /// A field per cell is fine at four and unusable at two hundred and fifty-six,
@@ -51,75 +86,48 @@ pub(super) fn grid_side(value: f64) -> u32 {
 /// it a name. Everything unnamed already has an answer — its index — so a list
 /// of the named ones is the whole of what there is to review.
 fn slice_names(ui: &mut egui::Ui, slicer: &mut Slicer) {
-    section_header(ui, ICON_LABEL, "Names");
+    section::group(ui, icons::LABEL, "Names");
     slicer.fit_names();
     slicer.clamp_selection();
 
     let selected = slicer.selected;
     let placeholder = selected.to_string();
-    ui.horizontal(|ui| {
-        ui.add_space(10.0);
-        ui.label(
-            RichText::new(format!("Cell {selected}"))
-                .size(11.0)
-                .color(TEXT),
-        );
-    });
     if let Some(name) = slicer.names.get_mut(selected as usize) {
-        ui.horizontal(|ui| {
-            ui.add_space(14.0);
-            ui.add(
-                egui::TextEdit::singleline(name)
-                    .hint_text(&placeholder)
-                    .desired_width(f32::INFINITY),
+        property::Property::new(&format!("Cell {selected}")).show(ui, |ui| {
+            ui.add_sized(
+                [property::value_width(ui), metric::CONTROL_HEIGHT],
+                egui::TextEdit::singleline(name).hint_text(&placeholder),
             );
         });
     }
-    ui.horizontal(|ui| {
-        ui.add_space(14.0);
-        ui.label(
-            RichText::new(
-                "Click a cell on the image to name it. A cell left blank is called by its index.",
-            )
-            .size(9.0)
-            .color(TEXT_MUTED),
-        );
-    });
+    section::caption(
+        ui,
+        "Click a cell on the image to name it. A cell left blank is called by its index.",
+    );
 
     let named = slicer.named();
     if named.is_empty() {
         return;
     }
     ui.add_space(6.0);
-    ui.horizontal(|ui| {
-        ui.add_space(10.0);
-        ui.label(
-            RichText::new(format!("{} named", named.len()))
-                .size(9.0)
-                .color(TEXT_FAINT),
-        );
-    });
+    panel::note(ui, &format!("{} named", named.len()));
     let mut jump = None;
     for (index, name) in named {
-        ui.horizontal(|ui| {
-            ui.add_space(14.0);
-            let row = ui.add(
-                egui::Label::new(
-                    RichText::new(format!("{index:>4}  {name}"))
-                        .size(10.0)
-                        .color(if index == selected {
-                            ACCENT
-                        } else {
-                            TEXT_MUTED
-                        }),
-                )
-                .selectable(false)
-                .sense(Sense::click()),
-            );
-            if row.clicked() {
-                jump = Some(index);
-            }
-        });
+        // A named cell is a row that jumps to it, drawn with the tree's own
+        // banding so it reads as a list of things rather than as a paragraph.
+        let row = crate::ui::widgets::tree::row(
+            ui,
+            icons::LABEL,
+            &format!("{index}  ·  {name}"),
+            crate::ui::widgets::tree::RowStyle {
+                selected: index == selected,
+                depth: 1,
+                ..crate::ui::widgets::tree::RowStyle::default()
+            },
+        );
+        if row.select.clicked() {
+            jump = Some(index);
+        }
     }
     // The list is also how a cell is found again on a sheet too large to scan.
     if let Some(jump) = jump {
@@ -138,14 +146,7 @@ fn slice_preview(ui: &mut egui::Ui, slicer: &mut Slicer) {
     let rects = slicer.cell_rects();
     let selected = slicer.selected;
     let Some(texture) = slicer.texture(ui.ctx()) else {
-        ui.horizontal(|ui| {
-            ui.add_space(10.0);
-            ui.label(
-                RichText::new("No preview: this build cannot read the image")
-                    .size(10.0)
-                    .color(TEXT_MUTED),
-            );
-        });
+        panel::note(ui, "No preview: this build cannot read the image");
         return;
     };
     if width == 0 || height == 0 {
@@ -163,12 +164,12 @@ fn slice_preview(ui: &mut egui::Ui, slicer: &mut Slicer) {
 
     let mut picked = None;
     ui.horizontal(|ui| {
-        ui.add_space(10.0);
+        ui.add_space(metric::GUTTER);
         let (rect, response) = ui.allocate_exact_size(size, Sense::click());
         let painter = ui.painter_at(rect);
         // A flat ground behind the image, so a transparent sheet reads as
         // transparent rather than as the panel's own background.
-        painter.rect_filled(rect, 2.0, Color32::from_rgb(28, 32, 42));
+        painter.rect_filled(rect, radius(), color::WELL);
         painter.image(
             texture,
             rect,
@@ -188,7 +189,7 @@ fn slice_preview(ui: &mut egui::Ui, slicer: &mut Slicer) {
                 Vec2::new(w * rect.width(), h * rect.height()),
             )
         };
-        let faint = Stroke::new(1.0, ACCENT.gamma_multiply(0.55));
+        let faint = Stroke::new(1.0, color::FORGE.gamma_multiply(0.5));
         for (index, cell) in rects.iter().enumerate() {
             if u32::try_from(index).is_ok_and(|index| index == selected) {
                 continue;
@@ -196,7 +197,7 @@ fn slice_preview(ui: &mut egui::Ui, slicer: &mut Slicer) {
             painter.rect_stroke(cell_rect(*cell), 0.0, faint, egui::StrokeKind::Inside);
         }
         if let Some(cell) = rects.get(selected as usize) {
-            let bright = Stroke::new(2.0, ACCENT_BRIGHT);
+            let bright = Stroke::new(2.0, color::FORGE_BRIGHT);
             painter.rect_stroke(cell_rect(*cell), 0.0, bright, egui::StrokeKind::Inside);
         }
 
@@ -225,81 +226,81 @@ impl EditorApp {
         };
         let mut save = false;
         let mut close = false;
-        egui::ScrollArea::vertical().show(ui, |ui| {
-            ui.horizontal(|ui| {
+        egui::ScrollArea::vertical()
+            .auto_shrink([false; 2])
+            .show(ui, |ui| {
+                let (width, height) = slicer.size();
+                // The image being cut is the subject of the panel while the slicer
+                // is open, so it gets the identity card an entity would.
+                egui::Frame::new()
+                    .fill(color::RAISED)
+                    .stroke(Stroke::new(1.0, color::LINE_SOFT))
+                    .corner_radius(radius())
+                    .inner_margin(egui::Margin::symmetric(8, 6))
+                    .outer_margin(egui::Margin::symmetric(metric::GUTTER_EDGE, 6))
+                    .show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                icons::SPRITE
+                                    .outlined()
+                                    .rich_text()
+                                    .size(17.0)
+                                    .color(color::FORGE),
+                            );
+                            ui.vertical(|ui| {
+                                ui.label(
+                                    RichText::new(slicer.name())
+                                        .size(text::BODY)
+                                        .color(color::TEXT),
+                                );
+                                ui.label(
+                                    RichText::new(format!("{width} × {height} px"))
+                                        .size(text::NOTE)
+                                        .color(color::TEXT_FAINT),
+                                );
+                            });
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    if button::row_icon(
+                                        ui,
+                                        icons::CLOSE,
+                                        Intent::Quiet,
+                                        "Stop slicing and go back to the entity inspector",
+                                    )
+                                    .clicked()
+                                    {
+                                        close = true;
+                                    }
+                                },
+                            );
+                        });
+                    });
+
+                slice_preview(ui, slicer);
+                ui.add_space(8.0);
+                slice_grid(ui, slicer);
+                ui.add_space(6.0);
+                slice_names(ui, slicer);
                 ui.add_space(10.0);
-                ui.label(
-                    ICON_IMAGE
-                        .outlined()
-                        .rich_text()
-                        .size(15.0)
-                        .color(TEXT_FAINT),
-                );
-                ui.label(RichText::new(slicer.name()).size(12.0).color(TEXT));
-                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    ui.add_space(8.0);
-                    if ui.button("Close").clicked() {
-                        close = true;
+                ui.horizontal(|ui| {
+                    ui.add_space(metric::GUTTER);
+                    if button::labelled(
+                        ui,
+                        "Save slice",
+                        Intent::Primary,
+                        "Write the sheet beside the image so the project can use its sprites",
+                    )
+                    .clicked()
+                    {
+                        save = true;
                     }
                 });
-            });
-            let (width, height) = slicer.size();
-            ui.horizontal(|ui| {
-                ui.add_space(10.0);
-                ui.label(
-                    RichText::new(format!("{width} x {height}"))
-                        .size(10.0)
-                        .color(TEXT_MUTED),
-                );
-            });
-            ui.add_space(6.0);
-
-            let columns = slicer.columns;
-            let rows = slicer.rows;
-            slice_preview(ui, slicer);
-            ui.add_space(8.0);
-
-            section_header(ui, ICON_GRID_VIEW, "Slice");
-            let mut columns_now = f64::from(columns);
-            let mut rows_now = f64::from(rows);
-            let mut resized = number_row(ui, "Columns", &mut columns_now, 10.0, true);
-            resized |= number_row(ui, "Rows", &mut rows_now, 10.0, true);
-            if resized {
-                slicer.columns = grid_side(columns_now);
-                slicer.rows = grid_side(rows_now);
-                slicer.fit_names();
-                slicer.clamp_selection();
-            }
-
-            let mut margin_x = f64::from(slicer.margin[0]);
-            let mut margin_y = f64::from(slicer.margin[1]);
-            let mut spacing_x = f64::from(slicer.spacing[0]);
-            let mut spacing_y = f64::from(slicer.spacing[1]);
-            let mut measured = number_row(ui, "Margin X", &mut margin_x, 10.0, true);
-            measured |= number_row(ui, "Margin Y", &mut margin_y, 10.0, true);
-            measured |= number_row(ui, "Spacing X", &mut spacing_x, 10.0, true);
-            measured |= number_row(ui, "Spacing Y", &mut spacing_y, 10.0, true);
-            if measured {
-                slicer.margin = [pixel_count(margin_x), pixel_count(margin_y)];
-                slicer.spacing = [pixel_count(spacing_x), pixel_count(spacing_y)];
-            }
-
-            ui.add_space(6.0);
-            slice_names(ui, slicer);
-            ui.add_space(10.0);
-            ui.horizontal(|ui| {
-                ui.add_space(10.0);
-                if ui.button("Save slice").clicked() {
-                    save = true;
+                if let Some(problem) = &slicer.problem {
+                    panel::problem(ui, problem);
                 }
+                ui.add_space(8.0);
             });
-            if let Some(problem) = &slicer.problem {
-                ui.horizontal_wrapped(|ui| {
-                    ui.add_space(10.0);
-                    ui.label(RichText::new(problem).size(10.0).color(PROBLEM));
-                });
-            }
-        });
 
         if save {
             let name = slicer.name();

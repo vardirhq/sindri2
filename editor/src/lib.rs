@@ -54,3 +54,6 @@ pub mod textures;
 /// Painting a tilemap from a sliced image through undoable component edits.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod tilemap;
+/// The editor's design system: its tokens, its icons, and its controls.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod ui;
