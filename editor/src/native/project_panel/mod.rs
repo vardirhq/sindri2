@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use eframe::egui::{self, Align, Layout, RichText};
 use egui_material_icons::MaterialIcon;
 
-use self::row::{folder_row, listing_row};
+use self::row::{folder_row, listing_row, row_menu};
 use self::state::BrowserState;
 use crate::{
     preferences::{AssetView, BottomTab, Layout as WorkspaceLayout},
@@ -41,6 +41,9 @@ pub(super) enum BrowserAction {
     LookIn(PathBuf),
     /// List the whole project again.
     LookInProject,
+    /// Put something on the clipboard — a path a component field wants, which
+    /// otherwise had to be read off a row and typed back in by hand.
+    Copy(String),
 }
 
 /// The icon a kind of file is drawn with.
@@ -288,15 +291,20 @@ fn asset_tile(
         AssetKind::Folder => "Double-click to look inside this folder",
         kind => kind.label(),
     });
+    // The same menu the list view offers: which presentation the browser is in
+    // is a matter of how files are drawn, not of what can be done with one.
+    let asked = row_menu(&tile, entry);
     if tile.double_clicked() {
         return match entry.kind {
             AssetKind::Scene => Some(BrowserAction::Open(entry.path.clone())),
             AssetKind::Folder => Some(BrowserAction::LookIn(entry.path.clone())),
-            _ => None,
+            _ => asked,
         };
     }
-    tile.clicked()
-        .then(|| BrowserAction::Select(entry.path.clone()))
+    if tile.clicked() {
+        return Some(BrowserAction::Select(entry.path.clone()));
+    }
+    asked
 }
 
 /// The way back out of a folder, for the arrangement that has no folder tree.
@@ -428,6 +436,13 @@ impl EditorApp {
             BrowserAction::Select(path) => self.select_asset(&path),
             BrowserAction::LookIn(folder) => self.browser.look_in(Some(&folder)),
             BrowserAction::LookInProject => self.browser.look_in(None),
+            BrowserAction::Copy(text) => {
+                // Said in the console rather than through `report`, which is
+                // for things that did not happen: a copy that worked is not a
+                // failure, and marking it one puts a red count on the tab.
+                context.copy_text(text.clone());
+                self.console.info(format!("Copied {text}"));
+            }
         }
     }
 }

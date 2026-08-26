@@ -21,6 +21,31 @@ All notable changes to Sindri Next will be documented here.
 
 ### Changed
 
+- **Duplicate, rename in place, and Delete, from the row they act on.** The
+  three verbs whose absence is felt on every entity after the first. Gather has
+  five Orbs, five Pips, and five Pip Sockets, each of which had to be built from
+  scratch; renaming meant selecting a row and finding the name field in another
+  panel; and Delete was one icon in a header. All three are on the hierarchy
+  row's own right-click menu and on a key: Ctrl+D, F2, and Delete or Backspace.
+  A rename happens in the row, focused as it appears, Enter to commit and Escape
+  to abandon. A duplicate takes the whole subtree, lands beside the original as
+  a sibling, earns a stable ID nothing else is using, and undoes in one step —
+  which needs the copy rehearsed against a clone of the world first, because
+  `WorldCommand::Spawn` names the handle it spawns at and `World::next_handle`
+  answers the same thing however many times it is asked.
+- **The editor answers a right-click.** There was not one `context_menu` call in
+  it, which is half of why the verbs above did not exist: an action that belongs
+  to *a specific thing* had nowhere to live. A hierarchy row and a project row
+  have menus now, both drawn through one primitive so a menu does not change
+  width with the name of whatever is selected and a destructive entry reads as
+  destructive. The project row's menu offers what the browser can already do —
+  open a scene, look inside a folder, slice an image — and the asset path a
+  component field wants, which until now had to be read off the row and typed
+  back in by hand.
+- **The unmodified shortcut keys belong to whatever is being typed into.** With
+  a text field now in the hierarchy, F while renaming would have framed the
+  camera and Backspace would have deleted the entity being named rather than a
+  letter of its name.
 - **The Project dock is a browser rather than a listing.** Its folders fold, so
   a project with four asset directories is no longer a wall of every file in all
   of them. Its folder pane navigates: choosing one lists that folder and nothing

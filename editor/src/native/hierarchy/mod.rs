@@ -8,7 +8,7 @@ use std::collections::BTreeSet;
 use eframe::egui;
 use sindri_core::EntityId;
 
-use self::row::{HierarchyDrag, entity_icon, entity_is_bare, entity_name, hierarchy_drop_target};
+use self::row::{RowLook, entity_name, entity_row, hierarchy_drop_target};
 use self::rows::{hierarchy_group, hierarchy_preference_key, visible_hierarchy_rows};
 use crate::preferences::Layout as WorkspaceLayout;
 use crate::space::EntitySpace;
@@ -17,7 +17,6 @@ use crate::ui::theme::color;
 use crate::ui::widgets::{
     button::{self, Intent},
     panel,
-    tree::{self, Children, RowStyle},
 };
 
 use super::EditorApp;
@@ -142,6 +141,8 @@ impl EditorApp {
 
     fn hierarchy_contents(&mut self, ui: &mut egui::Ui) {
         let mut reparenting = None;
+        let mut asked: Option<RowAction> = None;
+        let authoring = self.authoring_enabled();
         egui::ScrollArea::vertical()
             .auto_shrink([false; 2])
             .show(ui, |ui| {
@@ -169,37 +170,33 @@ impl EditorApp {
                     for (entity, depth) in
                         visible_hierarchy_rows(&self.world, &collapsed, &needle, space)
                     {
-                        let Some(data) = self.world.get(entity) else {
+                        if self.world.get(entity).is_none() {
                             continue;
-                        };
+                        }
                         listed += 1;
-                        let name = entity_name(data);
-                        let row = tree::row(
+                        let renaming = self.renaming == Some(entity);
+                        let report = entity_row(
                             ui,
-                            entity_icon(data),
-                            &name,
-                            RowStyle {
+                            &self.world,
+                            entity,
+                            &RowLook {
+                                depth,
                                 selected: self.selection == Some(entity),
-                                depth: depth + 1,
-                                children: Children::of(
-                                    data.children.len(),
-                                    collapsed.contains(&entity) && needle.is_empty(),
-                                ),
-                                dimmed: entity_is_bare(data),
+                                collapsed: collapsed.contains(&entity) && needle.is_empty(),
+                                authoring,
                             },
+                            renaming.then_some(&mut self.rename_draft),
                         );
-                        row.select.dnd_set_drag_payload(HierarchyDrag(entity));
-                        if row.select.dragged() {
-                            ui.ctx().set_cursor_icon(egui::CursorIcon::Grabbing);
+                        if report.asked.is_some() {
+                            asked = report.asked;
                         }
-                        if let Some(dragged) =
-                            hierarchy_drop_target(ui, &row.drop, &self.world, Some(entity))
-                        {
-                            reparenting = Some((dragged, Some(entity)));
+                        if report.reparent.is_some() {
+                            reparenting = report.reparent;
                         }
-                        if row.toggle.is_some_and(|response| response.clicked()) {
+                        if report.toggled {
                             toggled = Some(entity);
-                        } else if row.select.clicked() {
+                        }
+                        if report.clicked {
                             clicked = Some(Some(entity));
                         }
                     }
@@ -235,6 +232,9 @@ impl EditorApp {
                     self.select(entity);
                 }
             });
+        if let Some(action) = asked {
+            self.act_on_row(action);
+        }
         if let Some((entity, parent)) = reparenting {
             self.reparent(entity, parent);
             self.select(Some(entity));
@@ -244,5 +244,55 @@ impl EditorApp {
                 self.preferences.collapsed_hierarchy.remove(&key);
             }
         }
+    }
+}
+
+/// What a row's menu, its keys, or a double click asked for.
+///
+/// Gathered as a value and acted on after the listing has finished drawing,
+/// because every one of them borrows the world the rows are being read from.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum RowAction {
+    BeginRename(EntityId),
+    CommitRename,
+    CancelRename,
+    Duplicate(EntityId),
+    CreateChild(EntityId),
+    Delete(EntityId),
+    Focus(EntityId),
+}
+
+impl EditorApp {
+    /// Carries out what a row asked for.
+    pub(super) fn act_on_row(&mut self, action: RowAction) {
+        match action {
+            RowAction::BeginRename(entity) => self.begin_rename(entity),
+            RowAction::CommitRename => {
+                if let Some(entity) = self.renaming.take() {
+                    let draft = std::mem::take(&mut self.rename_draft);
+                    self.rename_entity(entity, &draft);
+                }
+            }
+            RowAction::CancelRename => {
+                self.renaming = None;
+                self.rename_draft.clear();
+            }
+            RowAction::Duplicate(entity) => self.duplicate_entity(entity),
+            RowAction::CreateChild(entity) => self.create_game_object(CreateGameObject::Empty {
+                parent: Some(entity),
+            }),
+            RowAction::Delete(entity) => self.delete_entity(entity),
+            RowAction::Focus(entity) => {
+                self.select(Some(entity));
+                self.focus_selection();
+            }
+        }
+    }
+
+    /// Starts renaming one entity, with its current name as the draft.
+    pub(super) fn begin_rename(&mut self, entity: EntityId) {
+        self.select(Some(entity));
+        self.rename_draft = self.world.get(entity).map(entity_name).unwrap_or_default();
+        self.renaming = Some(entity);
     }
 }

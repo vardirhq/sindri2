@@ -10,7 +10,7 @@ use std::path::Path;
 use eframe::egui::{self, Response};
 
 use crate::project::{AssetKind, ProjectEntry};
-use crate::ui::widgets::asset;
+use crate::ui::widgets::{asset, menu};
 
 use super::state::BrowserState;
 use super::{BrowserAction, asset_icon};
@@ -55,13 +55,13 @@ pub(crate) fn listing_row(
             state.expanded_sheets.remove(&entry.path);
         }
     }
+    let mut asked = row_menu(&row, entry);
     if row.double_clicked() && entry.kind == AssetKind::Scene {
-        return Some(BrowserAction::Open(entry.path.clone()));
+        asked = Some(BrowserAction::Open(entry.path.clone()));
+    } else if row.clicked() {
+        asked = Some(BrowserAction::Select(entry.path.clone()));
     }
-    if row.clicked() {
-        return Some(BrowserAction::Select(entry.path.clone()));
-    }
-    None
+    asked
 }
 
 /// A folder in the listing: it folds, and a double click looks inside it.
@@ -87,13 +87,13 @@ fn folder_listing_row(
     if showing != was {
         state.toggle_fold(&entry.path);
     }
+    let mut asked = row_menu(&row, entry);
     if row.double_clicked() {
-        return Some(BrowserAction::LookIn(entry.path.clone()));
+        asked = Some(BrowserAction::LookIn(entry.path.clone()));
+    } else if row.clicked() {
+        asked = Some(BrowserAction::Select(entry.path.clone()));
     }
-    if row.clicked() {
-        return Some(BrowserAction::Select(entry.path.clone()));
-    }
-    None
+    asked
 }
 
 /// One named part of a sliced image, under the image it came from.
@@ -158,6 +158,49 @@ pub(crate) fn asset_row(
         AssetKind::Folder => "Double-click to look inside this folder",
         _ => entry.kind.label(),
     })
+}
+
+/// The menu a right-click opens on one asset.
+///
+/// Only what the editor can actually carry out: the verb the row's double
+/// click already performs, said in words rather than left to be guessed, and
+/// the two paths worth copying. A component that names an asset names it by
+/// the path relative to the project, which until now had to be typed from
+/// reading the row.
+pub(crate) fn row_menu(response: &Response, entry: &ProjectEntry) -> Option<BrowserAction> {
+    let mut asked = None;
+    menu::on_right_click(response, |ui| {
+        menu::subject(ui, &entry.name);
+        let opens = match entry.kind {
+            AssetKind::Scene => Some(("Open scene", BrowserAction::Open(entry.path.clone()))),
+            AssetKind::Folder => Some(("Look inside", BrowserAction::LookIn(entry.path.clone()))),
+            AssetKind::Texture => Some((
+                "Slice into sprites",
+                BrowserAction::Select(entry.path.clone()),
+            )),
+            _ => None,
+        };
+        if let Some((label, action)) = opens
+            && menu::item(ui, label).clicked()
+        {
+            asked = Some(action);
+            ui.close();
+        }
+        ui.separator();
+        // The path a component field wants is the one relative to the project;
+        // a folder is never named by one, so it is offered only its own.
+        if entry.kind != AssetKind::Folder && menu::item(ui, "Copy asset path").clicked() {
+            asked = Some(BrowserAction::Copy(entry.relative.clone()));
+            ui.close();
+        }
+        if menu::item(ui, "Copy full path").clicked() {
+            asked = Some(BrowserAction::Copy(
+                entry.path.to_string_lossy().into_owned(),
+            ));
+            ui.close();
+        }
+    });
+    asked
 }
 
 /// A folder in the browser's tree pane, which navigates rather than folds.

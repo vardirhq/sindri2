@@ -109,6 +109,13 @@ struct EditorApp {
     /// cancelled to ask the question is not cancelled a second time.
     closing: bool,
     selection: Option<EntityId>,
+    /// The entity whose name is being typed into, and the draft.
+    ///
+    /// Renaming lives on the hierarchy row rather than in a dialog, so this is
+    /// the row that has turned into a text field. Editor state, never scene
+    /// state: an abandoned rename changes nothing.
+    renaming: Option<EntityId>,
+    rename_draft: String,
     history: CommandHistory,
     search: String,
     asset_search: String,
@@ -236,6 +243,8 @@ impl EditorApp {
             confirming: None,
             closing: false,
             selection,
+            renaming: None,
+            rename_draft: String::new(),
             history: CommandHistory::default(),
             search: String::new(),
             asset_search: String::new(),

@@ -402,6 +402,17 @@ frame.
   do. A field naming a project asset offers what the project holds while
   staying typeable, a tint opens a colour picker, and a row that is only a
   readout says on hover why it is one
+- **Every verb that acts on one entity, from that entity's own right-click
+  menu.** Rename, Duplicate, Create child, Frame in the Scene view, and Delete,
+  each also on a key — F2, Ctrl+D, F, and Delete or Backspace. Rename happens in
+  the row itself, focused as it appears, committed with Enter and abandoned with
+  Escape, so fixing one name among forty does not move your eyes to another
+  panel; a double click starts it. Duplicate copies the whole subtree beside the
+  original as a sibling, gives each copy a stable ID nothing else is using, and
+  undoes in one step. A project row has a menu of its own for what the browser
+  can already do — open a scene, look inside a folder, slice an image — plus the
+  asset path a component field wants, which until now had to be read off the row
+  and typed back in
 - **Creating empty root or child GameObjects and deleting entities**, from the
   hierarchy. Creation assigns a stable scene ID immediately, and creating a
   child opens its parent. Deleting takes the whole subtree, and **undo brings
@@ -566,14 +577,19 @@ settings gear.
   supported
 - No first-class project model or multi-scene workspace. The Project dock reads
   the directory containing the open scene, folds its folders, scopes the listing
-  to one of them, and marks both its own selection and the open scene — but it
-  cannot open, preview, create, rename, or delete anything it lists
+  to one of them, marks both its own selection and the open scene, and copies an
+  asset's path — but beyond opening a scene and slicing an image it cannot open,
+  preview, create, rename, or delete anything it lists
 - No multi-select; viewport selection and transform gizmos currently cover
   world sprites, filled tilemap cells, and meshes rather than UI elements
-- No context menus anywhere. Nothing in the editor answers a right-click, so
-  the per-object actions one would offer — duplicate, rename, delete, reveal,
-  reset a field — mostly do not exist
-- No duplicate, no copy/paste, no rename in place, and no Delete key
+- Context menus exist on the two panels that list things — a hierarchy row and
+  a project row — and nowhere else. Empty space in either panel, a component
+  heading, a property row, the Scene view, and a console line all still ignore a
+  right-click, so the actions that belong there (paste, reset a field, frame
+  all, copy a message) do not exist
+- No copy/paste of entities or of components, no multi-select, and no way to
+  reorder siblings: order is the stable ID sorted, which is not something the
+  editor lets you set
 - No prefabs, no play-mode-against-a-copy, no build or export controls
 - No versioned editor protocol; the editor and runtime are one process
 - Cannot open or edit a Decay script's *source* — the project browser lists

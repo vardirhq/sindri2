@@ -211,15 +211,31 @@ to arrive from outside the editor, and the browser has to be told to re-read
 **Missing basics.** What it does: create empty, create child, create UI image,
 select, delete the selection, drag to reparent, fold, filter by name.
 
+**Three of the five fixed.** Duplicate, rename in place, and delete by keyboard
+all exist now, each reachable three ways: the row's own right-click menu (§6),
+its key, and — for rename — a double click. Multi-select and sibling reorder are
+still open, and are the two that change what a *selection* is rather than what
+one entity can be told to do.
+
 What it does not:
 
-- **Duplicate.** Gather has five Orbs, five Pips, and five Pip Sockets. Each
-  would be built from scratch. There is no Ctrl+D and no copy/paste of entities
-  or of components.
-- **Rename in place.** No double-click, no F2. Renaming means selecting the row
-  and finding the name field in the inspector.
-- **Delete by keyboard.** No Delete key. Delete is one icon in the panel header,
-  and only when something is selected.
+- ~~**Duplicate.**~~ **Fixed.** Ctrl+D, or Duplicate in the row's menu. A copy
+  takes everything under it, keeps the original's parent so it appears as a
+  sibling, earns a stable ID nothing else is using (`orb-1-copy`, then
+  `orb-1-copy-2`), and undoes in one step. The handles are the interesting
+  part: `WorldCommand::Spawn` names the handle it spawns at and
+  `World::next_handle` is a peek rather than an allocation, so the copy is
+  rehearsed against a clone of the world to learn the handles the real one is
+  about to hand out (`editor/src/native/editing/duplicate.rs`). Copy/paste of
+  entities or of components is still open.
+- ~~**Rename in place.**~~ **Fixed.** Double-click a row or press F2, and the
+  name becomes a field in the row itself, focused the frame it appears. Enter
+  commits through the same `SetName` command the inspector writes; Escape
+  abandons it. Gather has forty entities and fixing one name should not move
+  your eyes to another panel.
+- ~~**Delete by keyboard.**~~ **Fixed.** Delete, or Backspace — the key a Mac
+  keyboard labels "delete". The header icon stays, because a key nobody has
+  been told about is not a discoverable verb.
 - **Multi-select.** One entity at a time, so no bulk move, delete, or reparent.
 - **Reorder siblings.** Order is `source_id` sorted (`hierarchy_sort_key`), so
   authoring order is alphabetical by an ID you cannot see or set.
@@ -231,6 +247,14 @@ Most of these are the actions a right-click would offer, which is §6.
 **Missing basic**, and the one that makes several of the others feel worse than
 they are.
 
+**Partly fixed.** The two panels that list things have menus now: a hierarchy
+row and a project row. `ui::widgets::menu` is where the shape lives — a fixed
+width so a menu does not resize with the name of whatever is selected, a subject
+line naming what the entries act on, entries that say their key, and a
+destructive entry that reads as destructive. The other six surfaces in the table
+below are still open, and the two notes under it still apply to whoever builds
+them.
+
 There is not a single context menu in the editor. `grep -rn context_menu
 editor/src` returns nothing. Every action the tool has is a toolbar icon, a
 top-level menu, or a control inside the inspector — which means the actions that
@@ -240,16 +264,16 @@ because there was no obvious place to put them.
 
 Where a right-click is expected and does nothing today:
 
-| Where | What belongs there |
-| --- | --- |
-| A hierarchy row | Rename, Duplicate, Delete, Create child, Copy/Paste, Focus (F), Move to top level |
-| Hierarchy empty space | Create Empty, Create UI Image, Paste |
-| A project row | Open, Slice (a texture), Rename, Delete, Duplicate, Reveal in file manager |
-| Project empty space | New folder, Import, Refresh |
-| A component heading | Remove, Reset to default, Copy/Paste values, Move up/down |
-| A property row | Reset this field to its default, Copy value |
-| The Scene view | Frame selected, Frame all, Create at this point, Paste |
-| A console line | Copy message, Select the entity it names, Clear |
+| Where | What belongs there | State |
+| --- | --- | --- |
+| A hierarchy row | Rename, Duplicate, Delete, Create child, Copy/Paste, Focus (F), Move to top level | **Done** but for copy/paste and move-to-top-level |
+| Hierarchy empty space | Create Empty, Create UI Image, Paste | Open |
+| A project row | Open, Slice (a texture), Rename, Delete, Duplicate, Reveal in file manager | **Partly**: open, slice, and the two paths worth copying. Rename, delete and duplicate are file operations, which is the rest of §4 |
+| Project empty space | New folder, Import, Refresh | Open |
+| A component heading | Remove, Reset to default, Copy/Paste values, Move up/down | Open |
+| A property row | Reset this field to its default, Copy value | Open |
+| The Scene view | Frame selected, Frame all, Create at this point, Paste | Open |
+| A console line | Copy message, Select the entity it names, Clear | Open |
 
 Two things worth knowing before this is built, both found while checking it:
 
@@ -259,7 +283,9 @@ drag orbits the scene camera (`editor/src/native/camera.rs:452`). A secondary
 context menu and the orbit can coexist. Whoever adds it should keep that
 distinction deliberate rather than discovering it.
 
-**Half the project browser cannot receive a right-click at all.** A row that the
+**Half the project browser cannot receive a right-click at all.** *(Fixed with
+§4: every row is `Sense::click()` now, and the panel rather than the row decides
+what pressing one does.)* A row that the
 editor can do nothing with is given `Sense::hover()` rather than `Sense::click()`
 (`editor/src/native/project_panel/row.rs:103`), which is a deliberate signal:
 the comment beside it says a listing that lists is not the same as a control that
@@ -348,10 +374,12 @@ The ordering is by what unblocks the most authoring, not by effort.
 3. ~~**Give the Project browser selection and folding**, and make the folder
    pane filter the list.~~ Done. What is left in §4 is opening and previewing
    what it lists, and file operations.
-4. **Duplicate, rename in place, and Delete**, reached from a right-click menu
-   on the thing they act on. The three verbs whose absence is felt on every
-   entity after the first, and the surface they have been missing. Context
-   menus on the hierarchy and the project browser are the same build.
+4. ~~**Duplicate, rename in place, and Delete**, reached from a right-click menu
+   on the thing they act on.~~ Done. All three exist on the hierarchy, each
+   reachable from the row's menu and from its key, and the project browser has
+   a menu of its own for what it can already do. What is still open from §5 is
+   multi-select and sibling reorder, which change what a *selection* is rather
+   than what one entity can be told to do.
 5. **New Scene and Save As**, so the editor can start a project rather than only
    continue one.
 6. **Pick UI elements in the viewport**, and either draw their gizmo where the

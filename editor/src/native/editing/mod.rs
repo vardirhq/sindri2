@@ -14,6 +14,10 @@ use sindri_scene::SpriteAnimations;
 use crate::project::AssetKind;
 use crate::slicer::Slicer;
 
+pub(super) mod duplicate;
+
+use duplicate::duplicate_commands;
+
 use super::hierarchy::row::entity_name;
 use super::hierarchy::rows::{hierarchy_preference_key, hierarchy_rows};
 use super::inspector_panel::draft::{ProjectDefaults, component_default};
@@ -248,6 +252,56 @@ impl EditorApp {
         }
         self.select(None);
         self.refresh_textures();
+    }
+
+    /// Copies an entity and everything under it, beside it, and selects the
+    /// copy.
+    ///
+    /// One transaction, so a duplicated subtree undoes in one step rather than
+    /// leaving half a copy behind. The copy keeps the original's parent, so it
+    /// appears as a sibling — which is what "duplicate" means everywhere else,
+    /// and is what makes building five pips from one bearable.
+    pub(super) fn duplicate_entity(&mut self, entity: EntityId) {
+        let (buffer, root) = duplicate_commands(&self.world, entity);
+        if buffer.is_empty() {
+            return;
+        }
+        self.history.break_merge_run();
+        if let Err(error) = self
+            .history
+            .apply(buffer.into_transaction("Duplicate entity"), &mut self.world)
+        {
+            self.report(error.to_string());
+            return;
+        }
+        self.select(root);
+        self.refresh_textures();
+    }
+
+    /// Renames an entity, through the same command path the inspector uses.
+    ///
+    /// A blank name is a request to have no name rather than to be called
+    /// nothing: the hierarchy falls back to the stable ID, which is what an
+    /// entity that never had a name shows.
+    pub(super) fn rename_entity(&mut self, entity: EntityId, name: &str) {
+        let name = name.trim();
+        let current = self.world.get(entity).and_then(|data| data.name.clone());
+        let wanted = (!name.is_empty()).then(|| name.to_owned());
+        if current == wanted {
+            return;
+        }
+        let mut buffer = CommandBuffer::new();
+        buffer.push(WorldCommand::SetName {
+            entity,
+            name: wanted,
+        });
+        self.history.break_merge_run();
+        if let Err(error) = self
+            .history
+            .apply(buffer.into_transaction("Rename entity"), &mut self.world)
+        {
+            self.report(error.to_string());
+        }
     }
 
     /// Moves an entity under a new parent, or out to the root with `None`.
