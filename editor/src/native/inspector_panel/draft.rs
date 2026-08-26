@@ -21,8 +21,8 @@ use crate::{
 
 use super::super::hierarchy::row::entity_name;
 use super::super::{
-    AUDIO_SOURCE_COMPONENT, GRID_NAVIGATION_COMPONENT, GRID_OCCUPANT_COMPONENT, SCRIPT_COMPONENT,
-    UI_TEXT_COMPONENT,
+    AUDIO_SOURCE_COMPONENT, CAMERA_COMPONENT, GRID_NAVIGATION_COMPONENT, GRID_OCCUPANT_COMPONENT,
+    SCRIPT_COMPONENT, UI_TEXT_COMPONENT,
 };
 
 /// The inspector's editable copy of an entity.
@@ -106,35 +106,98 @@ pub(crate) struct ProjectDefaults<'a> {
     pub(crate) script: Option<(&'a str, &'a str)>,
 }
 
-/// The components an entity does not have and the registry can create.
+/// What the rest of the scene already holds.
 ///
-/// A type with no way to build a fresh payload is missing from the list rather
-/// than offered and refused: a button that adds a component the engine will
-/// then reject is worse than no button, which is why the old Add Component was
-/// removed instead of left drawn.
+/// Not everything about a component is decided by the entity it would go on. A
+/// world camera is a fact about the *scene*: the extract draws the player's
+/// view through exactly one and refuses a scene with two, so whether Camera can
+/// be added here depends on what some other entity is carrying.
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct SceneHolds {
+    pub(crate) world_camera: bool,
+}
+
+/// One component type as Add Component presents it.
+pub(crate) struct Offer {
+    pub(crate) metadata: ComponentMetadata,
+    /// Why this cannot be added yet, or `None` when it can.
+    ///
+    /// Listed and disabled rather than absent. The rule used to be that a type
+    /// nothing could build was simply missing, on the grounds that a button
+    /// which adds a component the engine then rejects is worse than no button —
+    /// which is right, and is not what this is. An entry that says *why* is
+    /// neither of those: Sprite Animation needs a sliced sheet, Grid Occupant
+    /// needs a grid, UI Text needs a font, and an author who cannot see that is
+    /// left guessing why the menu is shorter than the documentation.
+    pub(crate) withheld: Option<&'static str>,
+}
+
+/// Every component this entity could carry, and whether it can carry it yet.
 ///
-/// The same rule decides the other filter. An entity is in the world or on the
-/// viewport, and what it already carries says which; offering the other
-/// family's components would let one entity be drawn twice, in two spaces, from
-/// one transform. An entity carrying nothing yet is offered both, and the first
-/// component added is what settles it.
+/// An entity is in the world or on the viewport, and what it already carries
+/// says which; the other family's components are left out entirely rather than
+/// listed and refused, because offering them would let one entity be drawn
+/// twice, in two spaces, from one transform — and a menu twice as long saying
+/// "no" to half of itself explains nothing. An entity carrying nothing yet is
+/// offered both, and the first component added is what settles it.
+///
+/// A type with neither a default payload nor a field template is left out for
+/// the same reason: there is nothing to say about it and nothing to write.
 pub(crate) fn addable_components(
     components: &ComponentSchemaRegistry,
     present: &BTreeMap<String, Value>,
     project: ProjectDefaults<'_>,
-) -> Vec<ComponentMetadata> {
+    scene: SceneHolds,
+) -> Vec<Offer> {
     let space = declared_space(present);
     components
         .registered_components()
         .filter(|metadata| !present.contains_key(&metadata.type_name))
         .filter(|metadata| space::accepts(space, &metadata.type_name))
         .filter(|metadata| {
-            metadata.type_name != GRID_NAVIGATION_COMPONENT
-                || present.contains_key(tilemap::TYPE_NAME)
+            components.fields(&metadata.type_name).is_some()
+                || components.default_payload(&metadata.type_name).is_some()
         })
-        .filter(|metadata| component_default(components, &metadata.type_name, project).is_some())
-        .cloned()
+        .map(|metadata| Offer {
+            metadata: metadata.clone(),
+            withheld: withheld(components, metadata, present, project, scene),
+        })
         .collect()
+}
+
+/// Why a component is listed but cannot be added.
+fn withheld(
+    components: &ComponentSchemaRegistry,
+    metadata: &ComponentMetadata,
+    present: &BTreeMap<String, Value>,
+    project: ProjectDefaults<'_>,
+    scene: SceneHolds,
+) -> Option<&'static str> {
+    // First, because it is the one that breaks a scene rather than merely
+    // failing to help. A second authored world camera is not tolerated: the
+    // extract refuses the whole scene with `MultipleWorldCameras`, both
+    // viewports go dark, and nothing says which two entities are the cameras.
+    // Offering Camera here was a button that broke the scene in one click.
+    if metadata.type_name == CAMERA_COMPONENT && scene.world_camera {
+        return Some("This scene already has a world camera, and a second one stops it opening");
+    }
+    if metadata.type_name == GRID_NAVIGATION_COMPONENT && !present.contains_key(tilemap::TYPE_NAME)
+    {
+        return Some("Add a Tilemap to this entity first: navigation is over its grid");
+    }
+    if component_default(components, &metadata.type_name, project).is_some() {
+        return None;
+    }
+    // What is missing is whatever the project could not supply, and each of
+    // these names the one thing to go and make.
+    Some(match metadata.type_name.as_str() {
+        UI_TEXT_COMPONENT => "No font in the project beside this scene",
+        AUDIO_SOURCE_COMPONENT => "No audio clip in the project beside this scene",
+        GRID_OCCUPANT_COMPONENT => "Nothing in this scene has a grid to occupy",
+        SCRIPT_COMPONENT => "No .decay script in the project declares a container to run",
+        animation::TYPE_NAME => "Slice an image into sprites first: a clip is made of them",
+        _ => "The editor has no blank to start this component from",
+    })
 }
 
 /// What Add Component writes for a fresh component.

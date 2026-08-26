@@ -9,8 +9,8 @@ use crate::animation;
 
 use super::super::editing::find_by_source_id;
 use super::super::inspector_panel::draft::{
-    EntityDraft, ProjectDefaults, addable_components, component_commands, component_default,
-    draft_commands,
+    EntityDraft, ProjectDefaults, SceneHolds, addable_components, component_commands,
+    component_default, draft_commands,
 };
 use super::super::*;
 use super::support::*;
@@ -130,25 +130,50 @@ fn an_unknown_component_can_still_be_edited() {
     assert_eq!(buffer.len(), 1);
 }
 
-/// Add Component offers what the entity lacks and the registry can create,
-/// and nothing else.
+/// The types a menu built from these offers would let you actually pick.
+fn usable(
+    components: &sindri_core::ComponentSchemaRegistry,
+    present: &BTreeMap<String, Value>,
+    project: ProjectDefaults<'_>,
+) -> Vec<String> {
+    addable_components(components, present, project, SceneHolds::default())
+        .into_iter()
+        .filter(|offer| offer.withheld.is_none())
+        .map(|offer| offer.metadata.type_name)
+        .collect()
+}
+
+/// Why a type is not on offer, or `None` when it is — and `None` for a type
+/// the menu does not list at all.
+fn reason(
+    components: &sindri_core::ComponentSchemaRegistry,
+    present: &BTreeMap<String, Value>,
+    project: ProjectDefaults<'_>,
+    scene: SceneHolds,
+    type_name: &str,
+) -> Option<&'static str> {
+    addable_components(components, present, project, scene)
+        .into_iter()
+        .find(|offer| offer.metadata.type_name == type_name)
+        .and_then(|offer| offer.withheld)
+}
+
+/// Add Component lets you pick what the entity lacks and the registry can
+/// create, and nothing else.
 #[test]
 fn add_component_offers_only_what_it_can_actually_add() {
     let extractor = extractor();
     let present: BTreeMap<String, Value> = [("sindri.mesh".to_owned(), serde_json::json!({}))]
         .into_iter()
         .collect();
-    let offered: Vec<String> = addable_components(
+    let offered = usable(
         extractor.components(),
         &present,
         ProjectDefaults {
             font: Some("fonts/Inter.ttf"),
             ..ProjectDefaults::default()
         },
-    )
-    .into_iter()
-    .map(|metadata| metadata.type_name)
-    .collect();
+    );
 
     assert!(
         !offered.contains(&"sindri.mesh".to_owned()),
@@ -172,7 +197,7 @@ fn add_component_offers_only_what_it_can_actually_add() {
 fn the_menu_offers_one_space_or_the_other() {
     let extractor = extractor();
     let offered = |present: &BTreeMap<String, Value>| -> Vec<String> {
-        addable_components(
+        usable(
             extractor.components(),
             present,
             ProjectDefaults {
@@ -180,9 +205,6 @@ fn the_menu_offers_one_space_or_the_other() {
                 ..ProjectDefaults::default()
             },
         )
-        .into_iter()
-        .map(|metadata| metadata.type_name)
-        .collect()
     };
 
     let empty = offered(&BTreeMap::new());
@@ -213,16 +235,13 @@ fn every_offered_default_is_one_the_engine_accepts() {
         audio: Some("audio/pickup.wav"),
         script: Some(("scripts/spin.decay", "Spin")),
     };
-    for metadata in addable_components(components, &BTreeMap::new(), project) {
-        let payload = component_default(components, &metadata.type_name, project)
+    for type_name in usable(components, &BTreeMap::new(), project) {
+        let payload = component_default(components, &type_name, project)
             .expect("it was offered, so it has one");
         components
-            .validate_payload(&metadata.type_name, &payload)
+            .validate_payload(&type_name, &payload)
             .unwrap_or_else(|error| {
-                panic!(
-                    "the default for {} does not decode: {error}",
-                    metadata.type_name
-                )
+                panic!("the default for {type_name} does not decode: {error}");
             });
     }
 }
@@ -234,9 +253,19 @@ fn text_is_addable_only_when_the_project_has_a_font() {
     let present = BTreeMap::new();
 
     assert!(
-        !addable_components(components, &present, ProjectDefaults::default())
-            .iter()
-            .any(|metadata| metadata.type_name == UI_TEXT_COMPONENT)
+        !usable(components, &present, ProjectDefaults::default())
+            .contains(&UI_TEXT_COMPONENT.to_owned())
+    );
+    assert_eq!(
+        reason(
+            components,
+            &present,
+            ProjectDefaults::default(),
+            SceneHolds::default(),
+            UI_TEXT_COMPONENT,
+        ),
+        Some("No font in the project beside this scene"),
+        "and the menu says so rather than being quietly shorter"
     );
 
     let payload = component_default(
@@ -267,9 +296,8 @@ fn sprite_animation_is_addable_only_with_a_named_sheet_sprite() {
     let present = BTreeMap::new();
 
     assert!(
-        !addable_components(components, &present, ProjectDefaults::default())
-            .iter()
-            .any(|metadata| metadata.type_name == animation::TYPE_NAME)
+        !usable(components, &present, ProjectDefaults::default())
+            .contains(&animation::TYPE_NAME.to_owned())
     );
 
     let payload = component_default(
@@ -333,10 +361,7 @@ fn a_script_and_a_clip_are_addable_once_the_project_holds_one() {
     let components = extractor.components();
     let present = BTreeMap::new();
 
-    let bare: Vec<String> = addable_components(components, &present, ProjectDefaults::default())
-        .into_iter()
-        .map(|metadata| metadata.type_name)
-        .collect();
+    let bare = usable(components, &present, ProjectDefaults::default());
     assert!(
         !bare.contains(&SCRIPT_COMPONENT.to_owned()),
         "a project with no script source has nothing to point one at"
@@ -348,10 +373,7 @@ fn a_script_and_a_clip_are_addable_once_the_project_holds_one() {
         script: Some(("scripts/spin.decay", "Spin")),
         ..ProjectDefaults::default()
     };
-    let offered: Vec<String> = addable_components(components, &present, project)
-        .into_iter()
-        .map(|metadata| metadata.type_name)
-        .collect();
+    let offered = usable(components, &present, project);
     assert!(offered.contains(&SCRIPT_COMPONENT.to_owned()));
     assert!(offered.contains(&AUDIO_SOURCE_COMPONENT.to_owned()));
 
@@ -411,4 +433,63 @@ fn an_added_component_has_every_field_the_authored_one_has() {
             "Tilemap is missing {field}; without projection it can never be isometric"
         );
     }
+}
+
+/// A second world camera is not offered, because adding one breaks the scene.
+///
+/// The extract draws the player's view through exactly one authored world
+/// camera and refuses a scene with two: both viewports go dark with "the scene
+/// contains more than one authored world camera", and nothing says which two
+/// entities are now the cameras. Add Component offered Camera regardless, so it
+/// was a button that broke the scene in one click.
+#[test]
+fn a_second_world_camera_is_listed_but_not_offered() {
+    let extractor = extractor();
+    let components = extractor.components();
+    let present = BTreeMap::new();
+    let project = ProjectDefaults::default();
+
+    assert!(
+        usable(components, &present, project).contains(&"sindri.camera".to_owned()),
+        "a scene with no camera can be given one"
+    );
+
+    let taken = SceneHolds { world_camera: true };
+    assert!(
+        !addable_components(components, &present, project, taken)
+            .into_iter()
+            .any(|offer| offer.metadata.type_name == "sindri.camera" && offer.withheld.is_none()),
+        "and a scene that already has one cannot"
+    );
+    assert_eq!(
+        reason(components, &present, project, taken, "sindri.camera"),
+        Some("This scene already has a world camera, and a second one stops it opening"),
+        "listed with the reason rather than silently missing"
+    );
+}
+
+/// Grid Navigation says what to add first rather than simply not appearing.
+#[test]
+fn navigation_asks_for_the_tilemap_it_navigates() {
+    let extractor = extractor();
+    let components = extractor.components();
+    assert_eq!(
+        reason(
+            components,
+            &BTreeMap::new(),
+            ProjectDefaults::default(),
+            SceneHolds::default(),
+            GRID_NAVIGATION_COMPONENT,
+        ),
+        Some("Add a Tilemap to this entity first: navigation is over its grid")
+    );
+
+    let with_map: BTreeMap<String, Value> =
+        [(crate::tilemap::TYPE_NAME.to_owned(), serde_json::json!({}))]
+            .into_iter()
+            .collect();
+    assert!(
+        usable(components, &with_map, ProjectDefaults::default())
+            .contains(&GRID_NAVIGATION_COMPONENT.to_owned())
+    );
 }

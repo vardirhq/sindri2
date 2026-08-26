@@ -10,11 +10,12 @@
 
 use eframe::egui::{self, RichText};
 use serde_json::Value;
-use sindri_core::ComponentMetadata;
 
 use crate::inspector;
 use crate::ui::theme::{color, metric, text};
 use crate::ui::widgets::{property, vector};
+
+use super::draft::Offer;
 
 /// Whether a field holds what the author put there or what the schema did.
 ///
@@ -249,10 +250,7 @@ fn labelled_drag(
 /// Absent entirely when there is nothing to add, rather than shown disabled: an
 /// entity that already has everything is not a state worth drawing a greyed-out
 /// control for.
-pub(crate) fn add_component_button(
-    ui: &mut egui::Ui,
-    addable: &[ComponentMetadata],
-) -> Option<String> {
+pub(crate) fn add_component_button(ui: &mut egui::Ui, addable: &[Offer]) -> Option<String> {
     if addable.is_empty() {
         return None;
     }
@@ -272,9 +270,18 @@ pub(crate) fn add_component_button(
                     .color(color::TEXT),
                 |ui| {
                     ui.set_min_width(200.0);
-                    for metadata in addable {
-                        if ui.button(&metadata.display_name).clicked() {
-                            chosen = Some(metadata.type_name.clone());
+                    for offer in addable {
+                        // Listed either way. An entry that cannot be used says
+                        // what to go and make; absent, it said nothing, and the
+                        // menu was simply shorter than the documentation.
+                        let entry = ui.add_enabled(
+                            offer.withheld.is_none(),
+                            egui::Button::new(&offer.metadata.display_name),
+                        );
+                        if let Some(reason) = offer.withheld {
+                            entry.on_disabled_hover_text(reason);
+                        } else if entry.clicked() {
+                            chosen = Some(offer.metadata.type_name.clone());
                             ui.close();
                         }
                     }

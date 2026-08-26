@@ -51,7 +51,8 @@ pub(super) const fn asset_icon(kind: AssetKind) -> MaterialIcon {
     match kind {
         AssetKind::Folder => icons::FOLDER,
         AssetKind::Scene => icons::SCENE,
-        AssetKind::Texture | AssetKind::Font => icons::SPRITE,
+        AssetKind::Texture => icons::SPRITE,
+        AssetKind::Font => icons::FONT,
         // A sprite and the sheet that cuts it are both about a grid over an
         // image, and neither is the image.
         AssetKind::Sprite | AssetKind::Sheet => icons::TILEMAP,

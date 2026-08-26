@@ -431,9 +431,12 @@ frame.
   named. That works because the history undoes in order: reaching a delete
   means everything after it is already undone, so the slot it freed is free
   again
-- **Adding and removing components.** Add Component offers what the entity lacks
-  and the registry can create, which excludes a type with no sensible blank
-  rather than offering one the engine would reject. Text and sprite animation
+- **Adding and removing components.** Add Component lists every type the
+  entity's space accepts and disables the ones that cannot be added yet, each
+  saying why: no font in the project, no sliced sprite to build a clip from, no
+  tilemap on this entity to navigate. Camera is among them on a scene that
+  already has a world camera — a second authored one is a hard extract error, so
+  offering it was a button that broke the scene in one click. Text and sprite animation
   are completed at the editor boundary: a project font gives UI Text a valid
   visible default, while a Sprite component whose texture has named sheet
   sprites gives Sprite Animation its first one-frame clip. Both are undoable.

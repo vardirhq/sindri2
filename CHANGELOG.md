@@ -38,6 +38,14 @@ All notable changes to Sindri Next will be documented here.
 
 ### Fixed
 
+- **Add Component could break the scene in one click.** It offered Camera
+  whether or not the scene already had one, and a second authored world camera
+  is a hard extract error — both viewports go dark with "the scene contains more
+  than one authored world camera", and nothing says which two entities are now
+  the cameras. Camera is listed and disabled on a scene that already has one.
+- **A `.txt` file drew with the glyph the editor uses for an entity**, claiming
+  it is an object in the scene, and a font shared the image glyph with a
+  texture. Both have their own now.
 - **Nothing in the Scene view could be selected by clicking it.** The viewport
   allocated its region with `Sense::drag()`, and egui sets a response's clicked
   flag only for a widget whose sense includes clicks — so the panel's
@@ -62,6 +70,13 @@ All notable changes to Sindri Next will be documented here.
 
 ### Changed
 
+- **Add Component says what it is not offering, and why.** Sprite Animation
+  needs a sliced sheet, Grid Occupant needs a grid, UI Text needs a font in the
+  project — and failing any of those, the entry was simply absent, leaving the
+  menu quietly shorter than the documentation. Every type the entity's space
+  accepts is listed now, disabled with the reason. The rule it replaces stands
+  where it belongs: a button that adds a component the engine then rejects is
+  worse than no button, and an entry that says why is neither of those.
 - **UI elements can be picked in the view that draws them.** Twelve of Gather's
   twenty-two entities are UI, and none of them could be clicked: an anchor picks
   a point on the viewport and the transform is an offset from it, so a world ray

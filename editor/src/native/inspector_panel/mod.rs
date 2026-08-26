@@ -19,13 +19,11 @@ use std::{collections::BTreeMap, path::Path};
 
 use eframe::egui;
 use serde_json::Value;
-use sindri_core::{
-    CommandBuffer, ComponentMetadata, ComponentSchemaRegistry, EntityId, SpriteRef, WorldCommand,
-};
+use sindri_core::{CommandBuffer, ComponentSchemaRegistry, EntityId, SpriteRef, WorldCommand};
 
 use self::draft::{
-    EntityDraft, ProjectDefaults, addable_components, component_commands, component_default,
-    draft_commands,
+    EntityDraft, Offer, ProjectDefaults, SceneHolds, addable_components, component_commands,
+    component_default, draft_commands,
 };
 use self::field::FieldAssets;
 use self::header::{ParentChoice, inspector_identity, inspector_parent, transform_3d_section};
@@ -44,7 +42,7 @@ use crate::{
 
 use super::editing::reparent_choices;
 use super::hierarchy::row::entity_icon;
-use super::{EditorApp, SPRITE_COMPONENT, UI_IMAGE_COMPONENT};
+use super::{CAMERA_COMPONENT, EditorApp, SPRITE_COMPONENT, UI_IMAGE_COMPONENT};
 
 /// Every texture reference the engine can actually draw.
 ///
@@ -159,18 +157,30 @@ impl EditorApp {
         }
     }
 
-    /// The components this entity does not have and the registry can create.
-    ///
-    /// A type nothing can build a fresh payload for is missing from the list
-    /// rather than offered and refused: a button that adds a component the
-    /// engine will then reject is worse than no button, which is why the old
-    /// Add Component was removed instead of left drawn.
+    /// Every component this entity could carry, and whether it can carry it
+    /// yet — each one that cannot saying why.
     pub(super) fn addable_components(
         &self,
         present: &BTreeMap<String, Value>,
         project: ProjectDefaults<'_>,
-    ) -> Vec<ComponentMetadata> {
-        addable_components(self.scene.components(), present, project)
+    ) -> Vec<Offer> {
+        addable_components(
+            self.scene.components(),
+            present,
+            project,
+            self.scene_holds(),
+        )
+    }
+
+    /// What the rest of the scene already holds that a component here would
+    /// have to be the only one of.
+    fn scene_holds(&self) -> SceneHolds {
+        SceneHolds {
+            world_camera: self
+                .world
+                .entities()
+                .any(|(_, data)| data.components.contains_key(CAMERA_COMPONENT)),
+        }
     }
 
     /// Turns every changed component payload into a command.

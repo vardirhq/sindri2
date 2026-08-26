@@ -386,18 +386,27 @@ scene — which the remaining four items all want and none of them has.
 
 ## 9. Smaller things, confirmed
 
-- **Adding a second camera breaks the scene in one click.** Add Component offers
-  Camera whether or not the scene already has one, and a second authored camera
-  is a hard extract error. Confirmed: both viewports show "the scene contains
-  more than one authored world camera", and nothing says which two entities are
-  the cameras. The error handling is good; the offer should not have been made.
-- **Add Component says nothing about what it is not offering.** Sprite Animation
-  needs a sliced sheet on the entity; Grid Occupant needs a tilemap somewhere;
-  UI Text needs a font in the project. Fail any of those and the entry is simply
-  absent, with no line explaining why.
-- **A file's kind is signalled by the wrong icon.** A `.txt` file draws with the
-  3D-box glyph the editor uses for an entity, and a font draws with the image
-  glyph a texture uses (`editor/src/native/project_panel/mod.rs`).
+- ~~**Adding a second camera breaks the scene in one click.**~~ **Fixed.** Add
+  Component offered Camera whether or not the scene already had one, and a
+  second authored camera is a hard extract error: both viewports show "the scene
+  contains more than one authored world camera", and nothing says which two
+  entities are the cameras. The error handling was good; the offer should not
+  have been made. Camera is listed and disabled on a scene that already has one,
+  saying so on hover.
+- ~~**Add Component says nothing about what it is not offering.**~~ **Fixed.**
+  Every type the entity's space accepts is listed now, and one that cannot be
+  added yet is disabled with the reason — "No font in the project beside this
+  scene", "Slice an image into sprites first", "Add a Tilemap to this entity
+  first". The old rule stands where it belongs: a button that adds a component
+  the engine then rejects is worse than no button. An entry that says *why* is
+  neither of those. Only the other space's components are still left out
+  entirely, because a menu twice as long saying "no" to half of itself explains
+  nothing.
+- ~~**A file's kind is signalled by the wrong icon.**~~ **Fixed.** A `.txt` drew
+  with the 3D-box glyph the editor uses for an entity, claiming the file is an
+  object in the scene; it is a sheet of paper now. A font shared the image glyph
+  with a texture, so a project's typefaces and its sprite sheets were the same
+  row with different words after them; it has its own.
 - **No entity enable/disable.** `EntityData` has no such field, so this is an
   engine gap rather than an editor one, but it is a basic an author will look
   for early.

@@ -25,7 +25,17 @@ pub const WORLD: MaterialIcon = icons::ICON_ACCOUNT_TREE;
 pub const FOLDER: MaterialIcon = icons::ICON_FOLDER;
 pub const SCENE: MaterialIcon = icons::ICON_DESCRIPTION;
 pub const AUDIO: MaterialIcon = icons::ICON_PLAY_ARROW;
-pub const FILE: MaterialIcon = icons::ICON_DEPLOYED_CODE;
+/// A typeface, which is not a picture.
+///
+/// It shared the image glyph with a texture, so a project's fonts and its
+/// sprite sheets were the same row with different words after them.
+pub const FONT: MaterialIcon = icons::ICON_FONT_DOWNLOAD;
+/// A file the editor has nothing particular to say about.
+///
+/// A sheet of paper, not the 3D box the hierarchy draws an entity with: a
+/// `.txt` beside a scene is not an object in it, and drawing it as one made the
+/// project browser claim something about the file that is not true.
+pub const FILE: MaterialIcon = icons::ICON_DRAFT;
 pub const TRANSFORM: MaterialIcon = icons::ICON_OPEN_WITH;
 pub const LABEL: MaterialIcon = icons::ICON_LABEL;
 
