@@ -96,29 +96,17 @@ impl Server {
         )
     }
 
-    fn respond(
-        &self,
-        id: Option<Value>,
-        result: Value,
-        output: &mut impl Write,
-    ) -> io::Result<()> {
+    fn respond(&self, id: Option<Value>, result: Value, output: &mut impl Write) -> io::Result<()> {
         if let Some(id) = id {
-            write_message(
-                output,
-                &json!({"jsonrpc":"2.0","id":id,"result":result}),
-            )?;
+            write_message(output, &json!({"jsonrpc":"2.0","id":id,"result":result}))?;
         }
         Ok(())
     }
 
     fn did_open(&mut self, params: &Value, output: &mut impl Write) -> io::Result<()> {
         if let (Some(uri), Some(text)) = (
-            params
-                .pointer("/textDocument/uri")
-                .and_then(Value::as_str),
-            params
-                .pointer("/textDocument/text")
-                .and_then(Value::as_str),
+            params.pointer("/textDocument/uri").and_then(Value::as_str),
+            params.pointer("/textDocument/text").and_then(Value::as_str),
         ) {
             self.documents.insert(uri.to_owned(), text.to_owned());
             self.publish_diagnostics(uri, text, output)?;
@@ -127,9 +115,7 @@ impl Server {
     }
 
     fn did_change(&mut self, params: &Value, output: &mut impl Write) -> io::Result<()> {
-        if let Some(uri) = params
-            .pointer("/textDocument/uri")
-            .and_then(Value::as_str)
+        if let Some(uri) = params.pointer("/textDocument/uri").and_then(Value::as_str)
             && let Some(text) = params
                 .pointer("/contentChanges/0/text")
                 .and_then(Value::as_str)
@@ -142,9 +128,7 @@ impl Server {
 
     fn did_save(&mut self, params: &Value, output: &mut impl Write) -> io::Result<()> {
         self.project = ProjectIndex::scan(self.root.as_deref());
-        if let Some(uri) = params
-            .pointer("/textDocument/uri")
-            .and_then(Value::as_str)
+        if let Some(uri) = params.pointer("/textDocument/uri").and_then(Value::as_str)
             && let Some(text) = self.documents.get(uri).cloned()
         {
             self.publish_diagnostics(uri, &text, output)?;
@@ -194,7 +178,7 @@ impl Server {
         if string_argument(before, "World.find").is_some() {
             return Value::Array(
                 self.project
-                    .entity_ids
+                    .entity_names
                     .iter()
                     .map(|id| completion_item(id, 12, Some("Scene entity")))
                     .collect(),
@@ -247,11 +231,7 @@ impl Server {
         let Some(word) = word_at(&source, offset) else {
             return Value::Null;
         };
-        if let Some((_, symbol)) = self
-            .environment
-            .globals()
-            .find(|(name, _)| *name == word)
-        {
+        if let Some((_, symbol)) = self.environment.globals().find(|(name, _)| *name == word) {
             return hover_symbol(word, symbol);
         }
         if let Some((_, symbol)) = container_members(&source)
@@ -269,10 +249,7 @@ impl Server {
     }
 
     fn document_symbols(&self, params: &Value) -> Value {
-        let Some(uri) = params
-            .pointer("/textDocument/uri")
-            .and_then(Value::as_str)
-        else {
+        let Some(uri) = params.pointer("/textDocument/uri").and_then(Value::as_str) else {
             return json!([]);
         };
         let Some(source) = self.documents.get(uri) else {
@@ -322,11 +299,7 @@ impl Server {
         Some((source, offset))
     }
 
-    fn members_for_chain(
-        &self,
-        source: &str,
-        chain: &[String],
-    ) -> Vec<(String, ExternalSymbol)> {
+    fn members_for_chain(&self, source: &str, chain: &[String]) -> Vec<(String, ExternalSymbol)> {
         let Some(first) = chain.first() else {
             return Vec::new();
         };
@@ -350,12 +323,16 @@ impl Server {
         let start = usize::from(first == "this");
         for segment in &chain[start..] {
             let symbol = if start == 1 && current.is_none() {
-                self.environment.this().member(segment).cloned().or_else(|| {
-                    container_members(source)
-                        .into_iter()
-                        .find(|(name, _)| name == segment)
-                        .map(|(_, symbol)| symbol)
-                })
+                self.environment
+                    .this()
+                    .member(segment)
+                    .cloned()
+                    .or_else(|| {
+                        container_members(source)
+                            .into_iter()
+                            .find(|(name, _)| name == segment)
+                            .map(|(_, symbol)| symbol)
+                    })
             } else {
                 current.as_ref().and_then(|ty| {
                     type_members(&self.environment, ty)

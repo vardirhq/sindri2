@@ -45,12 +45,7 @@ pub(crate) fn container_members(source: &str) -> Vec<(String, ExternalSymbol)> {
         .map(|member| match member {
             Member::Field(field) => (
                 field.name.clone(),
-                ExternalSymbol::Value(
-                    field
-                        .ty
-                        .as_ref()
-                        .map_or(Type::Unknown, Type::from_ref),
-                ),
+                ExternalSymbol::Value(field.ty.as_ref().map_or(Type::Unknown, Type::from_ref)),
             ),
             Member::Function(function) => (
                 function.name.clone(),
@@ -58,12 +53,7 @@ pub(crate) fn container_members(source: &str) -> Vec<(String, ExternalSymbol)> {
                     params: function
                         .params
                         .iter()
-                        .map(|param| {
-                            param
-                                .ty
-                                .as_ref()
-                                .map_or(Type::Unknown, Type::from_ref)
-                        })
+                        .map(|param| param.ty.as_ref().map_or(Type::Unknown, Type::from_ref))
                         .collect(),
                     return_type: function
                         .return_type

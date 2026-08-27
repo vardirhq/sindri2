@@ -1,8 +1,4 @@
-use std::{
-    collections::BTreeSet,
-    fs,
-    path::Path,
-};
+use std::{collections::BTreeSet, fs, path::Path};
 
 use serde_json::Value;
 
@@ -46,10 +42,7 @@ impl ProjectIndex {
                 .extension()
                 .and_then(|extension| extension.to_str())
                 .map(str::to_ascii_lowercase);
-            if matches!(
-                extension.as_deref(),
-                Some("wav" | "ogg" | "mp3" | "flac")
-            ) {
+            if matches!(extension.as_deref(), Some("wav" | "ogg" | "mp3" | "flac")) {
                 self.audio_assets.insert(relative.clone());
             }
             if !relative.ends_with(".scene.json") {
