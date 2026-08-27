@@ -18,6 +18,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.95.0
         with:
           components: clippy
+      - name: Install audio headers
+        run: sudo apt-get update && sudo apt-get install --yes libasound2-dev
       - name: Capture clippy output
         run: |
           cargo clippy --package decay-lsp --all-targets --all-features --message-format=short > decay-lsp-clippy.txt 2>&1 || true
