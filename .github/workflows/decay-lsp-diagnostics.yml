@@ -22,7 +22,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install --yes libasound2-dev
       - name: Capture clippy output
         run: |
-          cargo clippy --package decay-lsp --all-targets --all-features --message-format=short > decay-lsp-clippy.txt 2>&1 || true
+          cargo clippy --package decay-lsp --all-targets --all-features --message-format=short 2>&1 | tail -n 120 > decay-lsp-clippy.txt || true
       - name: Commit diagnostics
         run: |
           git config user.name github-actions[bot]
@@ -32,4 +32,5 @@ jobs:
             exit 0
           fi
           git commit -m "Capture Decay LSP clippy diagnostics"
+          git pull --rebase origin feature/decay-lsp
           git push
