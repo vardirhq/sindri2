@@ -7,8 +7,9 @@ use sindri_core::World;
 use crate::ui::widgets::tree::{self, Children, RowStyle};
 
 use super::super::editing::find_by_source_id;
-use super::super::hierarchy::row::{HierarchyDrag, hierarchy_drop_target};
+use super::super::hierarchy::row::{HierarchyDrag, hierarchy_drop_target, picked};
 use super::support::*;
+use crate::selection::Pick;
 
 /// A hierarchy row as the panel draws one, so these tests exercise the widget
 /// the editor actually uses rather than a copy of it.
@@ -243,4 +244,36 @@ fn enter_commits_a_renamed_row() {
 fn escape_abandons_a_rename() {
     let (said, _) = driven_rename(egui::Key::Escape);
     assert_eq!(said, Some(tree::Rename::Cancelled));
+}
+
+/// What the modifiers held during a click mean, read the way the row reads
+/// them.
+///
+/// Shift wins over Ctrl when both are down, because a range is the more
+/// specific request and answering half of each would be answering neither.
+#[test]
+fn the_modifiers_decide_what_a_click_means() {
+    let context = egui::Context::default();
+    let read = |modifiers: egui::Modifiers| {
+        let answer = std::cell::Cell::new(Pick::Only);
+        // Modifiers reach the context as an event rather than as a field, so
+        // this is one pressed and then held over an otherwise empty frame.
+        let input = egui::RawInput {
+            events: vec![egui::Event::ModifiersChanged(modifiers)],
+            ..Default::default()
+        };
+        let mut output = context.run_ui(input, |ui| answer.set(picked(ui)));
+        // The frame allocated a font atlas; dropping the deltas unhandled is a
+        // panic in epaint, and nothing here paints them.
+        output.textures_delta.clear();
+        answer.get()
+    };
+
+    assert_eq!(read(egui::Modifiers::NONE), Pick::Only);
+    assert_eq!(read(egui::Modifiers::COMMAND), Pick::Also);
+    assert_eq!(read(egui::Modifiers::SHIFT), Pick::Through);
+    assert_eq!(
+        read(egui::Modifiers::COMMAND | egui::Modifiers::SHIFT),
+        Pick::Through
+    );
 }

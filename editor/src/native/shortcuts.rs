@@ -126,13 +126,18 @@ impl EditorApp {
     fn act_on_selection(&mut self, keys: Shortcuts) {
         match self.focus {
             Focus::Hierarchy => {
-                let Some(entity) = self.selection else { return };
+                let Some(entity) = self.selection.primary() else {
+                    return;
+                };
+                // Duplicate and delete take the whole selection; rename takes
+                // the primary, because five rows cannot become one field and
+                // renaming five things to the same name is not a verb.
                 if keys.duplicate {
-                    self.duplicate_entity(entity);
+                    self.duplicate_selection();
                 } else if keys.rename {
                     self.begin_rename(entity);
                 } else if keys.delete {
-                    self.delete_entity(entity);
+                    self.delete_selection();
                 }
             }
             Focus::Project => {

@@ -136,6 +136,18 @@ pub struct GizmoDrag {
     space: GizmoSpace,
 }
 
+impl GizmoDrag {
+    /// The transform this drag started from.
+    ///
+    /// Handed out so a selection's other entities can be moved by what the
+    /// drag has done so far rather than by what it did since the last frame,
+    /// which would drift over a long drag.
+    #[must_use]
+    pub const fn start(&self) -> Transform3D {
+        self.start
+    }
+}
+
 #[derive(Clone, Copy)]
 struct Ray {
     origin: Vec3,
@@ -167,6 +179,16 @@ impl Anchoring {
             origin: Vec3::from_array(transform.position),
             flat: false,
         }
+    }
+
+    /// Where the handles sit, in whatever space they are drawn in.
+    ///
+    /// Handed out so that a companion in a multiple selection can be marked at
+    /// the same point its handle would have been drawn at, rather than at the
+    /// transform a UI element is only offset from.
+    #[must_use]
+    pub const fn origin(self) -> Vec3 {
+        self.origin
     }
 
     /// A UI element, drawn where the overlay puts it.
@@ -377,6 +399,15 @@ fn snapped(value: f32, step: f32, snapping: Snapping) -> f32 {
     }
 }
 
+/// A point in whatever space a gizmo is drawn in, as a point in the viewport.
+///
+/// `None` for a point behind the camera or off any finite matrix, which is not
+/// an error: it means there is nothing to draw there.
+#[must_use]
+pub fn to_viewport(view_projection: Mat4, point: Vec3, viewport: Vec2) -> Option<Vec2> {
+    project(view_projection, point, viewport)
+}
+
 fn project(view_projection: Mat4, point: Vec3, viewport: Vec2) -> Option<Vec2> {
     let clip = view_projection * point.extend(1.0);
     if !clip.is_finite() || clip.w <= 0.000_001 {
@@ -461,4 +492,47 @@ fn segment_distance(point: Vec2, start: Vec2, end: Vec2) -> f32 {
     }
     let amount = ((point - start).dot(segment) / length_squared).clamp(0.0, 1.0);
     point.distance(start + segment * amount)
+}
+
+/// What one drag did to a transform, as something another transform can be
+/// told to do too.
+///
+/// A follower is moved by the same offset, turned by the same rotation about
+/// its own origin, and scaled by the same amount added to whatever it already
+/// held. Additive scale rather than a ratio because that is what the handle
+/// itself does — a scale drag adds a screen-space amount to the transform it
+/// grabbed — and because a ratio makes a follower at scale zero unmovable and
+/// one at scale ten leap.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Change {
+    position: Vec3,
+    rotation: Quat,
+    scale: Vec3,
+}
+
+impl Change {
+    /// What it took to get from one transform to another.
+    #[must_use]
+    pub fn between(from: Transform3D, to: Transform3D) -> Self {
+        Self {
+            position: Vec3::from_array(to.position) - Vec3::from_array(from.position),
+            rotation: Quat::from_array(to.rotation) * Quat::from_array(from.rotation).inverse(),
+            scale: Vec3::from_array(to.scale) - Vec3::from_array(from.scale),
+        }
+    }
+
+    /// The same change, done to another transform.
+    #[must_use]
+    pub fn applied_to(self, start: Transform3D) -> Transform3D {
+        Transform3D {
+            position: (Vec3::from_array(start.position) + self.position).to_array(),
+            rotation: (self.rotation * Quat::from_array(start.rotation))
+                .normalize()
+                .to_array(),
+            scale: (Vec3::from_array(start.scale) + self.scale).to_array(),
+            // A follower's own declaration, not the primary's: whether an
+            // entity stays on its layer is a fact about that entity.
+            z_locked: start.z_locked,
+        }
+    }
 }

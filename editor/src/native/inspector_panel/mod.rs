@@ -388,11 +388,20 @@ impl EditorApp {
                 let reading = self.preview.is_some();
                 let hearing = self.heard.is_some();
                 let showing_font = self.shown_font.is_some();
+                let selected = self.selection.len();
                 panel::header(ui, icons::INSPECTOR, "Inspector", |ui| {
                     if slicing {
                         toolbar::chip(ui, "Slicing", color::FORGE);
                     } else if reading || hearing || showing_font {
                         toolbar::chip(ui, "Preview", color::TEXT_FAINT);
+                    } else if selected > 1 {
+                        // One panel, one subject: a set of fields cannot be
+                        // about five entities at once. So the panel stays on
+                        // the last one pointed at and says how many the verbs
+                        // outside it — Delete, Duplicate, a gizmo drag — would
+                        // take, rather than letting a selection of five look
+                        // like a selection of one.
+                        toolbar::chip(ui, &format!("{selected} selected"), color::FORGE);
                     }
                 });
                 if !showing_font {
@@ -420,7 +429,7 @@ impl EditorApp {
                 // panel used to spend this space on a shrug, and the scene's
                 // own name — a real field that round-trips through a save —
                 // was shown nowhere at all.
-                let Some(entity) = self.selection else {
+                let Some(entity) = self.selection.primary() else {
                     self.scene_section(ui);
                     return;
                 };

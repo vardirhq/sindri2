@@ -11,22 +11,20 @@ use sindri_core::{
 };
 use sindri_scene::SpriteAnimations;
 
-use crate::audition;
-use crate::preview::{self, TextPreview};
 use crate::project::AssetKind;
-use crate::slicer::Slicer;
-use crate::typeface;
+use crate::selection;
 
+pub(super) mod choosing;
 pub(super) mod duplicate;
 
-use duplicate::duplicate_commands;
+use duplicate::duplicate_into;
 
 use super::hierarchy::row::entity_name;
 use super::hierarchy::rows::{hierarchy_preference_key, hierarchy_rows};
 use super::inspector_panel::draft::{ProjectDefaults, component_default};
 use super::runtime::initialized_lifecycle;
 use super::scene_io::load_world;
-use super::{EditorApp, Focus, UI_IMAGE_COMPONENT};
+use super::{EditorApp, UI_IMAGE_COMPONENT};
 
 /// What the hierarchy's create menu was asked for.
 ///
@@ -58,7 +56,7 @@ pub(super) fn reparent_choices(world: &World, entity: EntityId) -> Vec<(EntityId
 }
 
 /// Whether the editor opens the slicer for this file.
-fn is_sliceable(path: &Path) -> bool {
+pub(super) fn is_sliceable(path: &Path) -> bool {
     AssetKind::of_path(path) == AssetKind::Texture
 }
 
@@ -104,89 +102,6 @@ impl EditorApp {
                     .or_else(|| data.source_id.as_ref().map(|id| id.as_str().to_owned()))
             })
             .unwrap_or_else(|| format!("{entity:?}"))
-    }
-
-    pub(super) fn select(&mut self, entity: Option<EntityId>) {
-        self.focus = Focus::Hierarchy;
-        if entity.is_some() {
-            // One inspector, one subject. Selecting an entity puts the file
-            // away rather than leaving it behind a panel showing something
-            // else.
-            self.show_nothing();
-        }
-        if self.selection != entity {
-            self.history.break_merge_run();
-            self.gizmo_drag = None;
-            self.tilemap_tool.reset();
-            self.animation_tool.reset();
-            // A half-typed stable ID belongs to the entity it was being typed
-            // for. Carried over, it would appear in the next entity's field
-            // and be written to it on the way out.
-            self.id_edit = None;
-            self.selection = entity;
-        }
-    }
-
-    /// Puts away whatever the inspector was showing about a file.
-    pub(super) fn show_nothing(&mut self) {
-        self.slicer = None;
-        self.preview = None;
-        self.heard = None;
-        // The font stays registered with egui until the panel stops showing
-        // one, so a project font does not outlive the row that asked for it.
-        self.shown_font = None;
-    }
-
-    /// Whether the inspector is already showing this exact file.
-    ///
-    /// Asked before anything is put away, so clicking the selected row again
-    /// does not reload a file, restart a font, or reset a slicer someone is
-    /// halfway through.
-    fn already_showing(&self, path: &Path) -> bool {
-        self.slicer.as_ref().is_some_and(|open| open.path() == path)
-            || self
-                .preview
-                .as_ref()
-                .is_some_and(|open| open.path() == path)
-            || self.heard.as_deref() == Some(path)
-            || self.shown_font.as_deref() == Some(path)
-    }
-
-    /// Marks an asset in the browser, and shows it if there is anything to
-    /// show.
-    ///
-    /// The browser used to mark only the open scene, so selecting a file
-    /// changed nothing visible and there was no such thing as "the asset I am
-    /// pointing at" for anything else to act on. Now four kinds have something
-    /// to show, and the rest are marked and nothing more.
-    pub(super) fn select_asset(&mut self, path: &Path) {
-        self.focus = Focus::Project;
-        self.browser.selected = Some(path.to_owned());
-        if !path.is_file() {
-            return;
-        }
-        // Four things the inspector can show about a file: an image slices, a
-        // text file is read, a clip plays and a font draws. All four take the
-        // panel over, so choosing one puts the others away rather than leaving
-        // it showing the file before last.
-        if self.already_showing(path) {
-            return;
-        }
-        self.show_nothing();
-        if is_sliceable(path) {
-            self.slicer = Some(Slicer::open(path));
-        } else if preview::is_readable(path) {
-            self.preview = Some(TextPreview::open(path));
-        } else if audition::is_audible(path) {
-            self.heard = Some(path.to_owned());
-        } else if typeface::is_a_typeface(path) {
-            self.shown_font = Some(path.to_owned());
-        } else {
-            return;
-        }
-        self.selection = None;
-        self.tilemap_tool.reset();
-        self.animation_tool.reset();
     }
 
     /// Creates what the menu asked for, and selects it.
@@ -288,12 +203,49 @@ impl EditorApp {
     /// Undo brings it back at the same handle, so this is not the one-way door
     /// a delete usually is — see [`sindri_core::World::spawn_at`].
     pub(super) fn delete_entity(&mut self, entity: EntityId) {
+        self.delete_entities(&[entity]);
+    }
+
+    /// Deletes everything selected.
+    ///
+    /// What the header's button and the Delete key mean, now that "the
+    /// selection" can be five things.
+    pub(super) fn delete_selection(&mut self) {
+        let selected = self.selection.clone();
+        self.delete_entities(selected.all());
+    }
+
+    /// Copies everything selected.
+    pub(super) fn duplicate_selection(&mut self) {
+        let selected = self.selection.clone();
+        self.duplicate_entities(selected.all());
+    }
+
+    /// Deletes every entity named, in one transaction.
+    ///
+    /// One step rather than one per entity, because a selection of five pips
+    /// deleted by mistake should come back with one Ctrl+Z. The set is folded
+    /// first: a despawn already takes the subtree, so a parent and its child
+    /// both named would despawn the child's handle twice and the second one
+    /// would fail the whole transaction.
+    pub(super) fn delete_entities(&mut self, entities: &[EntityId]) {
+        let roots = selection::topmost(&self.world, entities);
+        if roots.is_empty() {
+            return;
+        }
         let mut buffer = CommandBuffer::new();
-        buffer.push(WorldCommand::Despawn { entity });
+        for entity in roots {
+            buffer.push(WorldCommand::Despawn { entity });
+        }
         self.history.break_merge_run();
+        let label = if entities.len() == 1 {
+            "Delete entity".to_owned()
+        } else {
+            format!("Delete {} entities", entities.len())
+        };
         if let Err(error) = self
             .history
-            .apply(buffer.into_transaction("Delete entity"), &mut self.world)
+            .apply(buffer.into_transaction(label), &mut self.world)
         {
             self.report(error.to_string());
             return;
@@ -310,19 +262,48 @@ impl EditorApp {
     /// appears as a sibling — which is what "duplicate" means everywhere else,
     /// and is what makes building five pips from one bearable.
     pub(super) fn duplicate_entity(&mut self, entity: EntityId) {
-        let (buffer, root) = duplicate_commands(&self.world, entity);
+        self.duplicate_entities(&[entity]);
+    }
+
+    /// Copies every entity named, in one transaction, and selects the copies.
+    ///
+    /// Folded like a delete, for the same reason turned around: duplicating a
+    /// parent already copies its child, so naming both would land two copies
+    /// of the child. Each copy is rehearsed against the world the one before it
+    /// left behind, so five copies earn five different stable IDs rather than
+    /// five collisions.
+    pub(super) fn duplicate_entities(&mut self, entities: &[EntityId]) {
+        let roots = selection::topmost(&self.world, entities);
+        let mut buffer = CommandBuffer::new();
+        let mut copies = Vec::new();
+        // One rehearsal for the lot, so each copy is told the handles and the
+        // stable IDs the copies before it took.
+        let mut rehearsal = self.world.clone();
+        for entity in roots {
+            copies.extend(duplicate_into(
+                &mut rehearsal,
+                &self.world,
+                entity,
+                &mut buffer,
+            ));
+        }
         if buffer.is_empty() {
             return;
         }
         self.history.break_merge_run();
+        let label = if copies.len() == 1 {
+            "Duplicate entity".to_owned()
+        } else {
+            format!("Duplicate {} entities", copies.len())
+        };
         if let Err(error) = self
             .history
-            .apply(buffer.into_transaction("Duplicate entity"), &mut self.world)
+            .apply(buffer.into_transaction(label), &mut self.world)
         {
             self.report(error.to_string());
             return;
         }
-        self.select(root);
+        self.select_many(copies);
         self.refresh_textures();
     }
 
@@ -353,22 +334,60 @@ impl EditorApp {
     }
 
     /// Moves an entity under a new parent, or out to the root with `None`.
+    pub(super) fn reparent(&mut self, entity: EntityId, parent: Option<EntityId>) {
+        self.reparent_all(&[entity], parent);
+    }
+
+    /// Moves a dragged row, or the whole selection it belongs to.
+    ///
+    /// Dragging one of five banded rows moves the five, because that is what
+    /// the band promised; dragging a row outside the selection moves that row
+    /// alone, because a drag is not a way of selecting. The set is folded, so a
+    /// parent and its child both selected do not fight over where the child
+    /// goes, and a move the world refuses is reported and the rest still
+    /// happen — the transaction is per entity, because "reparent five things"
+    /// failing wholesale on the one illegal drop is worse than moving four.
+    pub(super) fn reparent_dragged(&mut self, entity: EntityId, parent: Option<EntityId>) {
+        if self.selection.contains(entity) && self.selection.len() > 1 {
+            let moving = self.selection.clone();
+            self.reparent_all(moving.all(), parent);
+        } else {
+            self.reparent_all(&[entity], parent);
+        }
+    }
+
+    /// Moves every entity named under a new parent, or out to the root.
     ///
     /// Its own transaction rather than part of the inspector draft: a parent
     /// change is one discrete choice, and merging it into a transform drag
     /// would make one undo step that both moved and reparented.
     ///
     /// The move is offered only where [`World::check_set_parent`] allows it, so
-    /// reaching the error here means the world changed under the open menu. It
-    /// is reported rather than ignored, because silently doing nothing is how
-    /// an interface teaches people it is unreliable.
-    pub(super) fn reparent(&mut self, entity: EntityId, parent: Option<EntityId>) {
+    /// reaching the error here means the world changed under the open menu, or
+    /// that one entity of several cannot go where the rest can. It is reported
+    /// rather than ignored, because silently doing nothing is how an interface
+    /// teaches people it is unreliable.
+    fn reparent_all(&mut self, entities: &[EntityId], parent: Option<EntityId>) {
+        let moving = selection::topmost(&self.world, entities);
         let mut buffer = CommandBuffer::new();
-        buffer.push(WorldCommand::SetParent { entity, parent });
+        for entity in moving {
+            if Some(entity) == parent {
+                continue;
+            }
+            buffer.push(WorldCommand::SetParent { entity, parent });
+        }
+        if buffer.is_empty() {
+            return;
+        }
+        let label = if buffer.len() == 1 {
+            "Reparent entity".to_owned()
+        } else {
+            format!("Reparent {} entities", buffer.len())
+        };
         self.history.break_merge_run();
         if let Err(error) = self
             .history
-            .apply(buffer.into_transaction("Reparent entity"), &mut self.world)
+            .apply(buffer.into_transaction(label), &mut self.world)
         {
             self.report(error.to_string());
         }
@@ -379,6 +398,10 @@ impl EditorApp {
         if let Err(error) = self.history.undo(&mut self.world) {
             self.report(error.to_string());
         }
+        // Undoing a Spawn despawns it, and a handle the world no longer holds
+        // must not stay in the selection: the next verb would aim a command at
+        // it, and the inspector would draw a panel about nothing.
+        self.selection.retain_live(&self.world);
     }
 
     pub(super) fn redo(&mut self) {
@@ -386,6 +409,7 @@ impl EditorApp {
         if let Err(error) = self.history.redo(&mut self.world) {
             self.report(error.to_string());
         }
+        self.selection.retain_live(&self.world);
     }
 
     /// Rebuilds the runtime scene from the authored document.
@@ -398,7 +422,7 @@ impl EditorApp {
                 self.world = world;
                 self.history.clear();
                 self.saved_revision = self.history.revision();
-                self.selection = None;
+                self.selection.clear();
                 self.tilemap_tool.reset();
                 self.animation_tool.reset();
                 self.lifecycle = initialized_lifecycle();

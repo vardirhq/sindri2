@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 
 use sindri_core::{CommandBuffer, CommandHistory, EntityData, SceneEntityId, World, WorldCommand};
 
-use super::super::editing::duplicate::duplicate_commands;
+use super::super::editing::duplicate::duplicate_into;
 use super::super::editing::{find_by_source_id, next_game_object_id, reparent_choices};
 use super::super::hierarchy::row::{
     component_label, entity_name, hierarchy_drop_allowed, humanize,
@@ -237,8 +237,8 @@ fn duplicating_an_entity_copies_everything_under_it() {
     let root = find_by_source_id(&world, "root").unwrap();
     let before = world.len();
 
-    let (buffer, copy) = duplicate_commands(&world, torso);
-    let copy = copy.unwrap();
+    let mut buffer = CommandBuffer::new();
+    let copy = duplicate_into(&mut world.clone(), &world, torso, &mut buffer).unwrap();
     let mut history = CommandHistory::default();
     history
         .apply(buffer.into_transaction("Duplicate entity"), &mut world)
@@ -275,7 +275,8 @@ fn a_duplicate_gets_an_unused_stable_id() {
 
     let mut ids = Vec::new();
     for _ in 0..3 {
-        let (buffer, copy) = duplicate_commands(&world, leg);
+        let mut buffer = CommandBuffer::new();
+        let copy = duplicate_into(&mut world.clone(), &world, leg, &mut buffer);
         history
             .apply(buffer.into_transaction("Duplicate entity"), &mut world)
             .unwrap();
@@ -306,6 +307,48 @@ fn duplicating_nothing_asks_for_nothing() {
         .apply(buffer.into_transaction("Delete entity"), &mut world)
         .unwrap();
 
-    let (buffer, copy) = duplicate_commands(&world, leg);
+    let mut buffer = CommandBuffer::new();
+    let copy = duplicate_into(&mut world.clone(), &world, leg, &mut buffer);
     assert!(buffer.is_empty() && copy.is_none());
+}
+
+/// Copying a selection is one transaction, so its copies have to be rehearsed
+/// against one another: separately rehearsed, each would be told the same next
+/// handle and pick the same unused stable ID, and the transaction would spawn
+/// them on top of each other.
+#[test]
+fn copies_made_in_one_transaction_do_not_collide() {
+    let mut world = World::from_scene(&nested_scene()).unwrap().world;
+    let leg = find_by_source_id(&world, "leg").unwrap();
+    let torso = find_by_source_id(&world, "torso").unwrap();
+    let before = world.len();
+
+    let mut rehearsal = world.clone();
+    let mut buffer = CommandBuffer::new();
+    let copies: Vec<_> = [leg, torso]
+        .into_iter()
+        .filter_map(|entity| duplicate_into(&mut rehearsal, &world, entity, &mut buffer))
+        .collect();
+
+    CommandHistory::default()
+        .apply(buffer.into_transaction("Duplicate 2 entities"), &mut world)
+        .expect("a rehearsed copy is a copy the world accepts");
+
+    assert_eq!(copies.len(), 2);
+    // The leg, the torso, and the torso's arm.
+    assert_eq!(world.len(), before + 3);
+    let ids: Vec<String> = copies
+        .iter()
+        .map(|copy| {
+            world
+                .get(*copy)
+                .unwrap()
+                .source_id
+                .as_ref()
+                .unwrap()
+                .as_str()
+                .to_owned()
+        })
+        .collect();
+    assert_eq!(ids, vec!["leg-copy", "torso-copy"]);
 }

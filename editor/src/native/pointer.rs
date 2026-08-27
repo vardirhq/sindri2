@@ -11,6 +11,7 @@ use sindri_scene::{
 use crate::{
     gizmo::{self, Anchoring, GizmoDrag},
     picking,
+    selection::{self, Pick},
     tilemap::{self, TileBrush, paint as paint_tile},
 };
 
@@ -37,7 +38,7 @@ impl EditorApp {
     ) -> Option<TilemapHover> {
         self.tilemap_tool.brush()?;
         let pointer = pointer.filter(|pointer| rect.contains(*pointer))?;
-        let entity = self.selection?;
+        let entity = self.selection.primary()?;
         let data = self.world.get(entity)?;
         let payload = data.components.get(tilemap::TYPE_NAME)?;
         let map = tilemap::component(payload).ok()?;
@@ -138,8 +139,20 @@ impl EditorApp {
         let Some(pointer) = response.interact_pointer_pos() else {
             return;
         };
+        // Ctrl adds and removes here as it does in the hierarchy. Shift does
+        // not: a range is the rows between two rows, and a viewport has no
+        // rows to run one along.
+        let how = if response.ctx.input(|input| input.modifiers.command) {
+            Pick::Also
+        } else {
+            Pick::Only
+        };
         match self.pick_viewport(rect, pointer, camera) {
-            Ok(entity) => self.select(entity),
+            // Clicking empty space still clears, whatever is held: there is no
+            // entity to add, and leaving the selection alone would make an
+            // empty click mean nothing at all.
+            Ok(None) => self.select(None),
+            Ok(Some(entity)) => self.pick(Some(entity), how, &[]),
             Err(error) => self
                 .console
                 .warning(format!("Viewport selection failed: {error}")),
@@ -211,7 +224,7 @@ impl EditorApp {
         rect: Rect,
         camera: CameraView,
     ) -> Option<(ViewCamera, Anchoring, gizmo::GizmoVisual)> {
-        let entity = self.selection?;
+        let entity = self.selection.primary()?;
         let transform = self.world.get(entity)?.transform_3d?;
         let aspect = rect.width() / rect.height().max(1.0);
         // Which space this entity is drawn in decides which camera its handle
@@ -229,6 +242,31 @@ impl EditorApp {
             camera.framed_half_height,
         )?;
         Some((camera, anchoring, visual))
+    }
+
+    /// Where in the viewport every selected entity other than the primary is.
+    ///
+    /// One gizmo, one primary — a panel of fields and a set of handles can only
+    /// be about one subject. So the rest of the selection needs to say it is
+    /// there some other way, or a drag that moves five things looks like a bug
+    /// in a drag that moves one. Marked at the point each entity's own handle
+    /// would have been drawn at, which for a UI element is where the overlay
+    /// puts it rather than where its transform is.
+    pub(super) fn selection_marks(&self, rect: Rect, camera: CameraView) -> Vec<Pos2> {
+        let primary = self.selection.primary();
+        let aspect = rect.width() / rect.height().max(1.0);
+        let viewport = GlamVec2::new(rect.width(), rect.height());
+        self.selection
+            .all()
+            .iter()
+            .filter(|entity| Some(**entity) != primary)
+            .filter_map(|entity| {
+                let transform = self.world.get(*entity)?.transform_3d?;
+                let (camera, anchoring) = self.gizmo_camera(*entity, aspect, transform, camera)?;
+                let at = gizmo::to_viewport(camera.view_projection, anchoring.origin(), viewport)?;
+                Some(rect.min + egui::vec2(at.x, at.y))
+            })
+            .collect()
     }
 
     /// The camera an entity's handles are drawn through, and where they sit.
@@ -305,7 +343,8 @@ impl EditorApp {
         let owns_primary = self.gizmo_drag.is_some() || hovered.is_some();
 
         if response.drag_started_by(egui::PointerButton::Primary)
-            && let (Some(entity), Some(axis), Some(pointer)) = (self.selection, hovered, pointer)
+            && let (Some(entity), Some(axis), Some(pointer)) =
+                (self.selection.primary(), hovered, pointer)
             && let Some(transform) = self.world.get(entity).and_then(|data| data.transform_3d)
         {
             self.gizmo_drag = gizmo::begin_drag(
@@ -319,6 +358,7 @@ impl EditorApp {
                 pointer,
                 GlamVec2::new(rect.width(), rect.height()),
             );
+            self.gizmo_followers = self.followers_of(entity);
         }
 
         if response.dragged_by(egui::PointerButton::Primary)
@@ -335,19 +375,40 @@ impl EditorApp {
         }
         if response.drag_stopped_by(egui::PointerButton::Primary) {
             self.gizmo_drag = None;
+            self.gizmo_followers.clear();
         }
         owns_primary
+    }
+
+    /// What else a drag on the primary's handle moves, and where each started.
+    ///
+    /// Taken once, when the drag starts, rather than read each frame: the drag
+    /// applies the primary's whole change from its own start, so a follower
+    /// read after it had already moved would compound.
+    ///
+    /// Folded, because a transform is inherited: a parent and its child both
+    /// selected would move the child by the parent's delta and then again by
+    /// its own.
+    fn followers_of(&self, primary: EntityId) -> Vec<(EntityId, Transform3D)> {
+        if self.selection.len() < 2 {
+            return Vec::new();
+        }
+        selection::topmost(&self.world, self.selection.all())
+            .into_iter()
+            .filter(|entity| *entity != primary)
+            .filter_map(|entity| Some((entity, self.world.get(entity)?.transform_3d?)))
+            .collect()
     }
 
     /// A whole drag is one undo step even though its current answer is applied
     /// every frame, because all of its transactions share this merge key.
     fn apply_gizmo_transform(&mut self, drag: GizmoDrag, transform: Transform3D) {
-        if self
+        let unchanged = self
             .world
             .get(drag.entity)
             .and_then(|data| data.transform_3d)
-            == Some(transform)
-        {
+            == Some(transform);
+        if unchanged && self.gizmo_followers.is_empty() {
             return;
         }
         let mut buffer = CommandBuffer::new();
@@ -355,6 +416,16 @@ impl EditorApp {
             entity: drag.entity,
             transform: Some(transform),
         });
+        // The same change, from each follower's own start rather than from the
+        // primary's: dragging a row of five pips two units right moves each of
+        // them two units right, and leaves the row a row.
+        let change = gizmo::Change::between(drag.start(), transform);
+        for (entity, start) in &self.gizmo_followers {
+            buffer.push(WorldCommand::SetTransform3D {
+                entity: *entity,
+                transform: Some(change.applied_to(*start)),
+            });
+        }
         let transaction = buffer
             .into_transaction(format!("{} entity", drag.mode.label()))
             .merging(format!(

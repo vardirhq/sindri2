@@ -52,6 +52,9 @@ pub mod space;
 /// The Decay scripts an open scene runs.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod scripts;
+/// What "the selection" is once it can be more than one entity.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod selection;
 /// Slicing an image into named sprites, on the image.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod slicer;

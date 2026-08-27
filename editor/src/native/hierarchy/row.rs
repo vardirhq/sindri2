@@ -16,12 +16,20 @@ use crate::ui::widgets::{
     tree::{self, Children, Rename, RowStyle},
 };
 
+use crate::selection::Pick;
+
 use super::RowAction;
 
 /// How one row is drawn, and whether the scene can be edited behind it.
 pub(super) struct RowLook {
     pub(super) depth: usize,
     pub(super) selected: bool,
+    /// How many entities are selected in all.
+    ///
+    /// The row's menu needs it: right-clicking one of five selected rows and
+    /// choosing Delete should delete the five, and the entry has to say so
+    /// before it is chosen rather than after.
+    pub(super) selected_count: usize,
     pub(super) collapsed: bool,
     /// Whether the verbs that write to the world are offered at all. A running
     /// scene is not the document, and Stop puts back what Play started with.
@@ -38,8 +46,9 @@ pub(super) struct RowReport {
     pub(super) reparent: Option<(EntityId, Option<EntityId>)>,
     /// Whether the fold triangle was pressed.
     pub(super) toggled: bool,
-    /// Whether the row itself was pressed, which selects.
-    pub(super) clicked: bool,
+    /// How the row was pressed, if it was: a plain click, a Ctrl-click, or a
+    /// Shift-click, which mean three different things to a selection.
+    pub(super) clicked: Option<Pick>,
 }
 
 /// One entity as a row: what it looks like, what a drag does to it, and every
@@ -77,11 +86,22 @@ pub(super) fn entity_row(
     // The row's own menu, which is where every verb that acts on one entity
     // lives. Without it there was nowhere to put duplicate, rename, or delete,
     // and so none of the three existed.
+    // A menu on a row inside the selection is a menu about the selection.
+    // Anywhere else it is about the one row, and right-clicking outside a
+    // selection does not silently act on entities somewhere else in the tree.
+    let group = if look.selected {
+        look.selected_count.max(1)
+    } else {
+        1
+    };
     row_menu(
         &row.select,
         &name,
         entity,
-        look.authoring,
+        Group {
+            size: group,
+            authoring: look.authoring,
+        },
         &mut report.asked,
     );
     // A rename is a text field, and dragging a text field out of the hierarchy
@@ -102,44 +122,72 @@ pub(super) fn entity_row(
         // other tool puts it.
         report.asked = Some(RowAction::BeginRename(entity));
     } else if row.select.clicked() && !renaming {
-        report.clicked = true;
+        report.clicked = Some(picked(ui));
     }
     report
 }
 
-/// The menu a right-click opens on one entity.
+/// How many entities a row's menu is about, and whether it may write.
+#[derive(Clone, Copy)]
+struct Group {
+    size: usize,
+    authoring: bool,
+}
+
+/// The menu a right-click opens on a row.
 fn row_menu(
     response: &Response,
     name: &str,
     entity: EntityId,
-    authoring: bool,
+    group: Group,
     asked: &mut Option<RowAction>,
 ) {
+    let many = group.size > 1;
+    let subject = if many {
+        format!("{} entities", group.size)
+    } else {
+        name.to_owned()
+    };
     menu::on_right_click(response, |ui| {
-        menu::subject(ui, name);
-        ui.add_enabled_ui(authoring, |ui| {
+        menu::subject(ui, &subject);
+        ui.add_enabled_ui(group.authoring, |ui| {
+            // Renaming stays about the one row even inside a selection: five
+            // rows cannot become one field, and giving five entities the same
+            // name is not what anyone meant.
             if menu::item_with_key(ui, "Rename", "F2").clicked() {
                 *asked = Some(RowAction::BeginRename(entity));
                 ui.close();
             }
             if menu::item_with_key(ui, "Duplicate", "Ctrl+D").clicked() {
-                *asked = Some(RowAction::Duplicate(entity));
+                *asked = Some(if many {
+                    RowAction::DuplicateSelection
+                } else {
+                    RowAction::Duplicate(entity)
+                });
                 ui.close();
             }
-            if menu::item(ui, "Create child").clicked() {
+            if !many && menu::item(ui, "Create child").clicked() {
                 *asked = Some(RowAction::CreateChild(entity));
                 ui.close();
             }
         });
         ui.separator();
         if menu::item_with_key(ui, "Frame in the Scene view", "F").clicked() {
-            *asked = Some(RowAction::Focus(entity));
+            *asked = Some(if many {
+                RowAction::FocusSelection
+            } else {
+                RowAction::Focus(entity)
+            });
             ui.close();
         }
         ui.separator();
-        ui.add_enabled_ui(authoring, |ui| {
+        ui.add_enabled_ui(group.authoring, |ui| {
             if menu::danger(ui, "Delete", "Del").clicked() {
-                *asked = Some(RowAction::Delete(entity));
+                *asked = Some(if many {
+                    RowAction::DeleteSelection
+                } else {
+                    RowAction::Delete(entity)
+                });
                 ui.close();
             }
         });
@@ -242,4 +290,22 @@ pub(crate) fn humanize(value: &str) -> String {
         })
         .collect::<Vec<_>>()
         .join(" ")
+}
+
+/// What the modifiers held during a click mean to the selection.
+///
+/// Shift wins over Ctrl when both are down, because a range is the more
+/// specific request and answering half of each would be answering neither.
+/// `command` rather than `ctrl` on the Ctrl branch, because egui reports a
+/// Mac's Command key there and Ctrl-click on a Mac is a right-click.
+pub(crate) fn picked(ui: &egui::Ui) -> Pick {
+    ui.input(|input| {
+        if input.modifiers.shift {
+            Pick::Through
+        } else if input.modifiers.command {
+            Pick::Also
+        } else {
+            Pick::Only
+        }
+    })
 }

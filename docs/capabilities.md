@@ -433,6 +433,16 @@ frame.
   do. A field naming a project asset offers what the project holds while
   staying typeable, a tint opens a colour picker, and a row that is only a
   readout says on hover why it is one
+- **More than one entity at a time.** Ctrl-click adds and removes, Shift-click
+  takes the range between two rows as the hierarchy is drawing them, and
+  Ctrl-click does the same in the Scene view. Delete, Duplicate and a drag to a
+  new parent then take the whole selection in one undo step, and dragging the
+  handles moves, turns or scales every selected entity by what the one under
+  the pointer was moved, turned or scaled by — from each one's own start, so a
+  row stays a row. One panel and one set of handles can only be about one
+  subject, so the inspector stays on the last entity pointed at and says how
+  many the verbs outside it would take; the rest of the selection wears a ring
+  in the Scene view where its own handles would have been
 - **Every verb that acts on one entity, from that entity's own right-click
   menu.** Rename, Duplicate, Create child, Frame in the Scene view, and Delete,
   each also on a key — F2, Ctrl+D, F, and Delete or Backspace. Rename happens in
@@ -632,18 +642,18 @@ settings gear.
   kinds that are not text have a preview of their own: a `.wav`, `.ogg` or
   `.mp3` plays on demand through the editor's own audio device, and a `.ttf` or
   `.otf` draws a sample in the face itself
-- No multi-select. Viewport selection covers world sprites, filled tilemap
-  cells, meshes and UI images; UI text is selected from the hierarchy, because
-  what a string covers is decided by glyph layout inside the text renderer and a
-  guessed box would select the wrong thing near its edges
+- Viewport selection covers world sprites, filled tilemap cells, meshes and UI
+  images; UI text is selected from the hierarchy, because what a string covers
+  is decided by glyph layout inside the text renderer and a guessed box would
+  select the wrong thing near its edges
 - Context menus exist on the two panels that list things — a hierarchy row and
   a project row — and nowhere else. Empty space in either panel, a component
   heading, a property row, the Scene view, and a console line all still ignore a
   right-click, so the actions that belong there (paste, reset a field, frame
   all, copy a message) do not exist
-- No copy/paste of entities or of components, no multi-select, and no way to
-  reorder siblings: order is the stable ID sorted, which the editor now lets you
-  set, but only by naming each entity rather than by moving a row
+- No copy/paste of entities or of components, and no way to reorder siblings:
+  order is the stable ID sorted, which the editor now lets you set, but only by
+  naming each entity rather than by moving a row
 - No prefabs, no play-mode-against-a-copy, no build or export controls
 - No versioned editor protocol; the editor and runtime are one process
 - Cannot open or edit a Decay script's *source* — the project browser lists

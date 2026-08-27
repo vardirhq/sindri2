@@ -131,7 +131,7 @@ impl EditorApp {
             {
                 self.reset_view();
             }
-            let focusable = self.selection.is_some();
+            let focusable = !self.selection.is_empty();
             if ui
                 .add_enabled_ui(focusable, |ui| {
                     button::icon(

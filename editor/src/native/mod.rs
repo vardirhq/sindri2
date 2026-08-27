@@ -9,7 +9,7 @@ use std::path::PathBuf;
 
 use eframe::egui;
 use glam::Vec2 as GlamVec2;
-use sindri_core::{CommandHistory, EngineLifecycle, EntityId, SceneComponent, World};
+use sindri_core::{CommandHistory, EngineLifecycle, EntityId, SceneComponent, Transform3D, World};
 use sindri_decay::ScriptComponent;
 use sindri_scene::{
     AudioSourceComponent, CameraComponent, GridNavigationComponent, GridOccupantComponent,
@@ -18,6 +18,7 @@ use sindri_scene::{
 
 use crate::audition::Audition;
 use crate::preview::TextPreview;
+use crate::selection::Selection;
 use crate::typeface::Typeface;
 use crate::{
     animation::AnimationTool,
@@ -129,7 +130,12 @@ struct EditorApp {
     /// Set once closing has been agreed to, so the close request the editor
     /// cancelled to ask the question is not cancelled a second time.
     closing: bool,
-    selection: Option<EntityId>,
+    /// Which entities the editor is pointing at, and which of them the
+    /// inspector and the gizmo are about.
+    selection: Selection,
+    /// What a gizmo drag moves besides its own entity, and where each of them
+    /// started. Empty unless a drag on a multiple selection is in progress.
+    gizmo_followers: Vec<(EntityId, Transform3D)>,
     /// The entity whose name is being typed into, and the draft.
     ///
     /// Renaming lives on the hierarchy row rather than in a dialog, so this is
@@ -278,7 +284,7 @@ impl EditorApp {
         // Nothing is selected until something is chosen. This used to name an
         // entity from the demo scene, which selected the cube in that one scene
         // and silently nothing in every other.
-        let selection = None;
+        let selection = Selection::default();
         let render_state = context
             .wgpu_render_state
             .clone()
@@ -298,6 +304,7 @@ impl EditorApp {
             confirming: None,
             closing: false,
             selection,
+            gizmo_followers: Vec::new(),
             renaming: None,
             rename_draft: String::new(),
             id_edit: None,

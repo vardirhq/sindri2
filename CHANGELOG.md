@@ -21,6 +21,23 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **More than one entity can be selected at a time.** Every bulk verb was
+  impossible to express while a selection was one entity: deleting five pips
+  meant five deletes and five undo steps, and moving a row of them meant
+  dragging each one to the same place by eye. Ctrl-click adds and removes,
+  Shift-click takes the range between two rows as the hierarchy is drawing them,
+  and Ctrl-click does the same in the Scene view. Delete, Duplicate and a drag
+  to a new parent then take the whole selection in one undo step, and so does a
+  gizmo drag: each selected entity is moved, turned or scaled by what the one
+  under the pointer was, from its own start, so a row stays a row. A selection
+  has a primary as well as a set — the last entity pointed at — because a panel
+  of fields and one set of handles can only be about one subject; the inspector
+  stays on it and says how many the verbs outside it would take, and the rest of
+  the selection wears a ring in the Scene view where its own handles would have
+  been. Every bulk verb folds the set to its topmost entities first, because all
+  of them already take the subtree: a parent and its child both selected would
+  otherwise despawn the child's handle twice, land two copies of it, or move it
+  by the parent's delta and then again by its own.
 - **A clip can be heard and a font can be seen before either is named in a
   component.** They were the last two kinds the project browser could list and
   do nothing with, and both are decisions a filename cannot answer: which of

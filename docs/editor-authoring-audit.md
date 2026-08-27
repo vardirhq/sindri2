@@ -271,11 +271,10 @@ script rather than reading one.
 **Missing basics.** What it does: create empty, create child, create UI image,
 select, delete the selection, drag to reparent, fold, filter by name.
 
-**Three of the five fixed.** Duplicate, rename in place, and delete by keyboard
-all exist now, each reachable three ways: the row's own right-click menu (§6),
-its key, and — for rename — a double click. Multi-select and sibling reorder are
-still open, and are the two that change what a *selection* is rather than what
-one entity can be told to do.
+**Four of the five fixed.** Duplicate, rename in place, delete by keyboard and
+multi-select all exist now; the first three are each reachable three ways — the
+row's own right-click menu (§6), its key, and, for rename, a double click.
+Sibling reorder is the one still open.
 
 What it does not:
 
@@ -296,7 +295,25 @@ What it does not:
 - ~~**Delete by keyboard.**~~ **Fixed.** Delete, or Backspace — the key a Mac
   keyboard labels "delete". The header icon stays, because a key nobody has
   been told about is not a discoverable verb.
-- **Multi-select.** One entity at a time, so no bulk move, delete, or reparent.
+- ~~**Multi-select.**~~ **Fixed.** Ctrl-click adds and removes, Shift-click
+  takes the range between two rows as the panel is drawing them — a range in a
+  tree is the rows between two rows, so a collapsed subtree is not in it and
+  neither is anything the filter hid — and Ctrl-click does the same in the Scene
+  view, where there are no rows for a range to run along. Delete, Duplicate and
+  a drag to a new parent then take the whole selection in one undo step, and so
+  does a gizmo drag: each selected entity is moved, turned or scaled by what the
+  primary was, from its own start, so a row of five pips dragged two units right
+  is still a row (`editor/src/gizmo.rs`, `Change`). Two things fall out of it
+  that are worth naming. A selection has a *primary* as well as a set — the last
+  entity pointed at — because a panel of fields and one set of handles can only
+  be about one subject; the inspector stays on it and says how many the verbs
+  outside it would take, and the rest of the selection wears a ring in the Scene
+  view where its own handles would have been, or a drag that moves five things
+  looks like a bug in a drag that moves one. And every bulk verb folds the set
+  first (`editor/src/selection.rs`, `topmost`), because all of them already take
+  the subtree: a parent and its child both selected would despawn the child's
+  handle twice, land two copies of it, or move it by the parent's delta and then
+  again by its own.
 - **Reorder siblings.** Order is `source_id` sorted (`hierarchy_sort_key`), so
   authoring order is alphabetical by an ID you cannot see or set.
 
@@ -528,8 +545,8 @@ The ordering is by what unblocks the most authoring, not by effort.
    on the thing they act on.~~ Done. All three exist on the hierarchy, each
    reachable from the row's menu and from its key, and the project browser has
    a menu of its own for what it can already do. What is still open from §5 is
-   multi-select and sibling reorder, which change what a *selection* is rather
-   than what one entity can be told to do.
+   sibling reorder, which changes what the *file* records rather than what one
+   entity can be told to do.
 5. ~~**New Scene and Save As**, so the editor can start a project rather than
    only continue one.~~ Done. What is left in §8 is a surface that is about the
    scene rather than about an entity in it: the scene's name, an entity's stable

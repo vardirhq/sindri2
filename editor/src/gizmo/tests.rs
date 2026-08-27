@@ -258,3 +258,91 @@ fn dragging_an_overlaid_handle_moves_the_authored_offset() {
         "and must leave the other axis where it was authored"
     );
 }
+
+/// A follower moves by the same offset from wherever it started, which is what
+/// keeps a row of five pips a row when one of them is dragged.
+#[test]
+fn a_follower_moves_by_the_same_offset_from_its_own_start() {
+    let from = Transform3D {
+        position: [1.0, 0.0, 0.0],
+        ..Transform3D::default()
+    };
+    let to = Transform3D {
+        position: [1.0, 2.5, 0.0],
+        ..Transform3D::default()
+    };
+    let follower = Transform3D {
+        position: [-4.0, -1.0, 3.0],
+        ..Transform3D::default()
+    };
+
+    let moved = Change::between(from, to).applied_to(follower);
+    assert!(Vec3::from_array(moved.position).abs_diff_eq(Vec3::new(-4.0, 1.5, 3.0), 0.000_1));
+    assert!(
+        Vec3::from_array(moved.scale).abs_diff_eq(Vec3::from_array(follower.scale), 0.000_1),
+        "a move is not a scale"
+    );
+}
+
+/// Rotation is a quaternion, so the same turn is composed onto whatever the
+/// follower already held rather than added to it.
+#[test]
+fn a_follower_turns_by_the_same_rotation_about_its_own_origin() {
+    let quarter_turn = Quat::from_rotation_y(std::f32::consts::FRAC_PI_2);
+    let from = Transform3D::default();
+    let to = Transform3D {
+        rotation: quarter_turn.to_array(),
+        ..Transform3D::default()
+    };
+    let follower = Transform3D {
+        rotation: Quat::from_rotation_y(std::f32::consts::FRAC_PI_2).to_array(),
+        position: [5.0, 0.0, 0.0],
+        ..Transform3D::default()
+    };
+
+    let turned = Change::between(from, to).applied_to(follower);
+    let expected = Quat::from_rotation_y(std::f32::consts::PI);
+    assert!(
+        Quat::from_array(turned.rotation).abs_diff_eq(expected, 0.000_1),
+        "two quarter turns make a half turn, not a sum of components"
+    );
+    assert!(
+        Vec3::from_array(turned.position).abs_diff_eq(Vec3::from_array(follower.position), 0.000_1),
+        "and turning is not moving: a follower spins where it stands"
+    );
+}
+
+/// Scale is additive rather than a ratio, so a follower at scale zero still
+/// moves and one at scale ten does not leap.
+#[test]
+fn a_follower_scales_by_the_same_amount_it_can_survive() {
+    let from = Transform3D::default();
+    let to = Transform3D {
+        scale: [2.0, 2.0, 2.0],
+        ..Transform3D::default()
+    };
+    let flat = Transform3D {
+        scale: [0.0, 1.0, 10.0],
+        ..Transform3D::default()
+    };
+
+    assert!(
+        Vec3::from_array(Change::between(from, to).applied_to(flat).scale)
+            .abs_diff_eq(Vec3::new(1.0, 2.0, 11.0), 0.000_1)
+    );
+}
+
+/// Whether an entity stays on its layer is a fact about that entity, so a
+/// follower keeps its own lock rather than inheriting the dragged one's.
+#[test]
+fn a_follower_keeps_its_own_layer_lock() {
+    let from = Transform3D::default();
+    let to = Transform3D {
+        position: [0.0, 1.0, 0.0],
+        z_locked: true,
+        ..Transform3D::default()
+    };
+    let free = Transform3D::default();
+
+    assert!(!Change::between(from, to).applied_to(free).z_locked);
+}
