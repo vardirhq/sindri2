@@ -589,8 +589,15 @@ settings gear.
 
 ### Editor
 
-- Cannot create or delete an asset. Scenes it can make and fork; everything
-  else has to arrive from outside
+- **File operations on the project.** A row's menu makes a folder, renames in
+  place, copies beside itself, imports files from anywhere into the project, and
+  deletes — with the directory re-read afterwards, so Refresh is for changes made
+  outside the editor rather than for its own. None of them undo: the history
+  describes a world and these describe a directory. What stands in for it is
+  that each is checked before it runs and refuses rather than overwrites, that
+  nothing can name a path outside the project, and that deleting asks first.
+  Renaming the open scene follows it, so the next save does not write it back
+  under its old name
 - A component's fields come from the registry, so one added in the editor is the
   same component the shipped scenes use. A type with no honest blank —
   `sindri.ui.text`, `sindri.animation.sprite`, `sindri.grid.occupant`,
@@ -602,9 +609,11 @@ settings gear.
   supported
 - No first-class project model or multi-scene workspace. The Project dock reads
   the directory containing the open scene, folds its folders, scopes the listing
-  to one of them, marks both its own selection and the open scene, and copies an
-  asset's path — but beyond opening a scene and slicing an image it cannot open,
-  preview, create, rename, or delete anything it lists
+  to one of them, marks both its own selection and the open scene, copies an
+  asset's path, and makes, renames, copies, imports and deletes files — but
+  beyond opening a scene and slicing an image it cannot *open or preview*
+  anything it lists: a `.decay` script, a font and an audio clip are each a row
+  and a name
 - No multi-select. Viewport selection covers world sprites, filled tilemap
   cells, meshes and UI images; UI text is selected from the hierarchy, because
   what a string covers is decided by glyph layout inside the text renderer and a

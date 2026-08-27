@@ -1,5 +1,6 @@
 //! The project browser: the folder tree and the assets in a folder.
 
+mod files;
 pub(super) mod row;
 pub(super) mod state;
 
@@ -44,6 +45,21 @@ pub(super) enum BrowserAction {
     /// Put something on the clipboard — a path a component field wants, which
     /// otherwise had to be read off a row and typed back in by hand.
     Copy(String),
+    /// Start renaming a row in place.
+    Rename(PathBuf),
+    /// Make a folder beside this row, or inside it when it is a folder.
+    NewFolder(PathBuf),
+    /// Copy a file or folder beside itself.
+    Duplicate(PathBuf),
+    /// Ask before removing a file from disk. There is no undo for a disk
+    /// write, so this is the one browser action that stops to ask.
+    ConfirmDelete(PathBuf),
+    /// Copy files from elsewhere into the project.
+    Import(PathBuf),
+    /// A rename typed into a row was finished.
+    CommitRename(PathBuf),
+    /// A rename typed into a row was abandoned.
+    CancelRename,
 }
 
 /// The icon a kind of file is drawn with.
@@ -69,6 +85,7 @@ pub(super) const fn asset_icon(kind: AssetKind) -> MaterialIcon {
 /// column width the folder tree and the asset list were drawing over each
 /// other. So the narrow arrangement drops the tree rather than shrinking it,
 /// which is also why a list reads better there than a grid of identical icons.
+#[allow(clippy::too_many_arguments)]
 fn project_browser(
     ui: &mut egui::Ui,
     search: &mut String,
@@ -77,9 +94,10 @@ fn project_browser(
     folders: bool,
     project: &ProjectTree,
     open: Option<&Path>,
+    renaming: &mut Option<(PathBuf, String)>,
 ) -> BrowserAction {
     if !folders {
-        return asset_column(ui, search, view, browser, false, project, open);
+        return asset_column(ui, search, view, browser, false, project, open, renaming);
     }
     let mut action = BrowserAction::None;
     ui.horizontal(|ui| {
@@ -109,7 +127,7 @@ fn project_browser(
             crate::ui::theme::hairline(),
         );
         ui.vertical(|ui| {
-            let listed = asset_column(ui, search, view, browser, true, project, open);
+            let listed = asset_column(ui, search, view, browser, true, project, open, renaming);
             if listed != BrowserAction::None {
                 action = listed;
             }
@@ -204,6 +222,7 @@ fn browser_tools(
 const CONTROLS_WIDTH: f32 = 152.0;
 
 /// The asset side of the browser: what it is showing, and how.
+#[allow(clippy::too_many_arguments)]
 fn asset_column(
     ui: &mut egui::Ui,
     search: &mut String,
@@ -212,6 +231,7 @@ fn asset_column(
     folders: bool,
     project: &ProjectTree,
     open: Option<&Path>,
+    renaming: &mut Option<(PathBuf, String)>,
 ) -> BrowserAction {
     ui.add_space(4.0);
     // The folder tree already names the directory; without it the list has to,
@@ -257,8 +277,14 @@ fn asset_column(
                     // the viewport it sits under.
                     ui.spacing_mut().item_spacing.y = 0.0;
                     for (entry, depth) in &rows {
+                        // The row being renamed gets the draft; every other
+                        // row gets its name.
+                        let editing = renaming
+                            .as_mut()
+                            .filter(|(path, _)| path == &entry.path)
+                            .map(|(_, name)| name);
                         if let Some(chosen) =
-                            listing_row(ui, entry, *depth, searching, open, browser)
+                            listing_row(ui, entry, *depth, searching, open, browser, editing)
                         {
                             action = chosen;
                         }
@@ -414,6 +440,7 @@ impl EditorApp {
                             folders,
                             &self.project,
                             self.file.path(),
+                            &mut self.asset_rename,
                         );
                     }
                     BottomTab::Console => {
@@ -437,6 +464,17 @@ impl EditorApp {
             BrowserAction::Select(path) => self.select_asset(&path),
             BrowserAction::LookIn(folder) => self.browser.look_in(Some(&folder)),
             BrowserAction::LookInProject => self.browser.look_in(None),
+            BrowserAction::Rename(path) => self.begin_asset_rename(&path),
+            BrowserAction::CommitRename(path) => {
+                if let Some((_, name)) = self.asset_rename.take() {
+                    self.rename_asset(&path, &name);
+                }
+            }
+            BrowserAction::CancelRename => self.asset_rename = None,
+            BrowserAction::NewFolder(beside) => self.new_folder(&beside),
+            BrowserAction::Duplicate(path) => self.duplicate_asset(&path),
+            BrowserAction::ConfirmDelete(path) => self.deleting = Some(path),
+            BrowserAction::Import(into) => self.import_assets(&into),
             BrowserAction::Copy(text) => {
                 // Said in the console rather than through `report`, which is
                 // for things that did not happen: a copy that worked is not a

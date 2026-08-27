@@ -21,6 +21,28 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **The project browser can make, rename, copy, import and delete files.** Every
+  asset used to have to arrive from outside the editor — there was no create, no
+  folder, no rename, no delete, no duplicate and no import — so building a
+  project meant a file manager beside the window and the Refresh button
+  afterwards. A row's menu does all five now, and the directory is re-read
+  afterwards, so Refresh is for changes made outside the editor rather than for
+  its own.
+
+  None of them go through the undo history, and that is not an oversight: the
+  history describes a world and these describe a directory, so undoing a delete
+  would mean holding the bytes of every removed file for as long as the session
+  lasts. What stands in for it is that each operation is checked before it runs
+  and refuses rather than overwrites; that nothing can name a path outside the
+  project, because a row hands over whatever was typed into it and `../secrets`
+  is a perfectly good string but not a file name; and that deleting — the one
+  with nothing behind it, and which takes a whole folder — asks first.
+
+  Renaming the open scene follows it, because the editor holds the path it saves
+  to and a rename it was not told about would write the scene back under its old
+  name and leave two of them on disk. A copy keeps the whole suffix that says
+  what kind of asset it is, since `file_stem` stops at the last dot and a
+  duplicated scene would otherwise become `level.scene copy.json`.
 - **An entity's stable ID is visible and editable**, and the scene has a panel
   of its own. `source_id` is what the file keys an entity by, what a parent link
   names, what sibling order is derived from and what `sindri.grid.occupant`
@@ -85,6 +107,11 @@ All notable changes to Sindri Next will be documented here.
 
 ### Changed
 
+- **Delete and F2 act on whichever selection was made last.** The editor holds
+  two — an entity and an asset — and these keys always meant the entity, so the
+  project browser's menu could not honestly print them beside its own entries.
+  Choosing something is what says which the keys mean, which is what a selection
+  already communicates.
 - **Add Component says what it is not offering, and why.** Sprite Animation
   needs a sliced sheet, Grid Occupant needs a grid, UI Text needs a font in the
   project — and failing any of those, the entry was simply absent, leaving the

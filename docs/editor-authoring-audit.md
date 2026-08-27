@@ -165,13 +165,15 @@ world underneath them is temporary.
 
 **Missing basics.** Four separate gaps, three of which you named.
 
-**Three of the four fixed.** Folders fold, the folder pane navigates, and the
-browser has a selection of its own — marked with the band a selected row wears,
+**Three and a half of the four fixed.** Folders fold, the folder pane navigates,
+and the browser has a selection of its own — marked with the band a selected row wears,
 while the open scene keeps a quieter rule in the margin, because "the scene I
 have open" and "the thing I am pointing at" are different facts. Every row
 answers a click now, including the ones the editor can do nothing else with,
 because a row that cannot be selected cannot carry a right-click menu either.
-The fourth gap — opening, previewing, and file operations — is still open.
+Of the fourth gap, the file operations are done — make a folder, rename, copy,
+import, delete — and opening or previewing what the browser lists is still
+open.
 
 **Folders do not open or close.** `ProjectTree` produces one flat, sorted, fully
 expanded list with a `depth` per row (`editor/src/project/mod.rs`). There is no
@@ -201,10 +203,35 @@ audio, meshes and everything else are inert:
 - Audio has no preview. You cannot hear a clip before naming it in a component.
 - Fonts have no preview. You pick a font by filename.
 
-And there are no file operations of any kind: no create, no folder, no rename,
-no delete, no duplicate, no reveal-in-file-manager, no import. Every asset has
-to arrive from outside the editor, and the browser has to be told to re-read
-(the Refresh button) when one does.
+~~And there are no file operations of any kind: no create, no folder, no rename,
+no delete, no duplicate, no reveal-in-file-manager, no import.~~ **Fixed**, bar
+reveal-in-file-manager. A row's menu makes a folder, renames in place, copies
+beside itself, imports files from anywhere, and deletes — and the browser
+re-reads the directory itself afterwards, so Refresh is for changes made outside
+it rather than for the editor's own.
+
+None of these go through the undo history, and that is not an oversight: the
+history describes a world and these describe a directory, so undoing a delete
+would mean the editor holding the bytes of every file anyone removed for as long
+as the session lasted. What keeps them honest instead is that each is checked
+before it runs (`editor/src/project/ops.rs`) and refuses rather than overwrites,
+that nothing can name a path outside the project — a browser row hands over
+whatever was typed into it, and `../../etc/hosts` is a perfectly good string —
+and that the one operation with nothing behind it asks first.
+
+Renaming the open scene follows it, because the editor holds the path it saves
+to and a rename it was not told about would write the scene back under its old
+name and leave two of them on disk. A copy keeps the whole suffix that says what
+kind of asset it is: `Path::file_stem` stops at the last dot, so a duplicated
+scene would otherwise become `level.scene copy.json`, which the browser no
+longer reads as a scene.
+
+Delete and F2 act on whichever selection was made last, so the browser's menu
+can print its keys honestly — the editor holds two selections, and until now
+those keys always meant the entity.
+
+What is still open in this section is opening and previewing what the browser
+lists.
 
 ## 5. The hierarchy is missing most of its verbs
 
@@ -455,6 +482,12 @@ The ordering is by what unblocks the most authoring, not by effort.
    metrics the editor does not have. Two things nobody had noticed came out
    with it: the viewport sensed drags but not clicks, so *nothing* in it could
    be selected; and a fully transparent element swallowed every click over it.
+
+7. ~~**File operations in the project browser**, so a project can be built
+   without a file manager beside the window.~~ Done. What is left in §4 is
+   opening and previewing what the browser lists: a `.decay` script, a font and
+   an audio clip are each a row and a name, and none of the three can be looked
+   at or listened to.
 
 ## What this audit does not cover
 

@@ -2,8 +2,8 @@
 
 use eframe::egui::{self};
 
-use super::EditorApp;
 use super::unsaved::Discarding;
+use super::{EditorApp, Focus};
 
 /// The editing shortcuts pressed this frame.
 ///
@@ -103,18 +103,7 @@ impl EditorApp {
             } else if keys.undo {
                 self.undo();
             }
-            // One entity at a time, and exclusive: duplicating and then
-            // deleting in the same frame would act on a selection the first
-            // verb had already moved.
-            if let Some(entity) = self.selection {
-                if keys.duplicate {
-                    self.duplicate_entity(entity);
-                } else if keys.rename {
-                    self.begin_rename(entity);
-                } else if keys.delete {
-                    self.delete_entity(entity);
-                }
-            }
+            self.act_on_selection(keys);
         }
         if keys.focus {
             self.focus_selection();
@@ -123,6 +112,42 @@ impl EditorApp {
             self.toggle_pause();
         } else if keys.play {
             self.toggle_play_mode();
+        }
+    }
+
+    /// Duplicate, rename and delete, on whichever selection the keys mean.
+    ///
+    /// The editor holds two — an entity and an asset — and these three verbs
+    /// exist for both. Which one a key acts on is decided by what was chosen
+    /// last, so a project row's menu can honestly print the keys beside its
+    /// entries. Exclusive, and one thing at a time: duplicating and then
+    /// deleting in the same frame would act on a selection the first verb had
+    /// already moved.
+    fn act_on_selection(&mut self, keys: Shortcuts) {
+        match self.focus {
+            Focus::Hierarchy => {
+                let Some(entity) = self.selection else { return };
+                if keys.duplicate {
+                    self.duplicate_entity(entity);
+                } else if keys.rename {
+                    self.begin_rename(entity);
+                } else if keys.delete {
+                    self.delete_entity(entity);
+                }
+            }
+            Focus::Project => {
+                let Some(path) = self.browser.selected.clone() else {
+                    return;
+                };
+                if keys.duplicate {
+                    self.duplicate_asset(&path);
+                } else if keys.rename {
+                    self.begin_asset_rename(&path);
+                } else if keys.delete {
+                    // Asked rather than done: a disk write has no undo.
+                    self.deleting = Some(path);
+                }
+            }
         }
     }
 }

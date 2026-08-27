@@ -5,6 +5,8 @@
 //! submodules hold the work, this file holds what they all share: the state
 //! itself, the constants they agree on, and how the window is opened.
 
+use std::path::PathBuf;
+
 use eframe::egui;
 use glam::Vec2 as GlamVec2;
 use sindri_core::{CommandHistory, EngineLifecycle, EntityId, SceneComponent, World};
@@ -59,6 +61,19 @@ use runtime::initialized_lifecycle;
 use scene_io::open_requested_scene;
 use unsaved::Discarding;
 use viewport::{RuntimeViewport, SceneRenderers};
+
+/// Which of the editor's two selections the keys act on.
+///
+/// Set by choosing something rather than by clicking a panel: picking an entity
+/// means the keys mean that entity, and picking a file means they mean the
+/// file. That is what a selection already communicates, and it needs no
+/// separate notion of which panel has focus.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub(crate) enum Focus {
+    #[default]
+    Hierarchy,
+    Project,
+}
 
 const CAMERA_COMPONENT: &str = CameraComponent::TYPE_NAME;
 const SPRITE_COMPONENT: &str = SpriteComponent::TYPE_NAME;
@@ -127,6 +142,20 @@ struct EditorApp {
     id_edit: Option<(EntityId, String)>,
     /// The scene's name being typed, for the same reason.
     scene_name_edit: Option<String>,
+    /// The asset being renamed in the project browser, and the name so far.
+    asset_rename: Option<(PathBuf, String)>,
+    /// Which panel the keys that act on "the selection" mean.
+    ///
+    /// The editor holds two selections — an entity and an asset — and Delete
+    /// has to act on one of them. Without this it acted on the entity always,
+    /// so a project row's menu could offer a key that did something else to
+    /// something else.
+    focus: Focus,
+    /// The file a delete is waiting to be confirmed for.
+    ///
+    /// A disk write has no undo behind it, so this is the one browser action
+    /// that stops to ask.
+    deleting: Option<PathBuf>,
     history: CommandHistory,
     search: String,
     asset_search: String,
@@ -258,6 +287,9 @@ impl EditorApp {
             rename_draft: String::new(),
             id_edit: None,
             scene_name_edit: None,
+            asset_rename: None,
+            focus: Focus::Hierarchy,
+            deleting: None,
             history: CommandHistory::default(),
             search: String::new(),
             asset_search: String::new(),

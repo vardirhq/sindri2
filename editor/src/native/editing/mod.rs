@@ -23,7 +23,7 @@ use super::hierarchy::rows::{hierarchy_preference_key, hierarchy_rows};
 use super::inspector_panel::draft::{ProjectDefaults, component_default};
 use super::runtime::initialized_lifecycle;
 use super::scene_io::load_world;
-use super::{EditorApp, UI_IMAGE_COMPONENT};
+use super::{EditorApp, Focus, UI_IMAGE_COMPONENT};
 
 /// What the hierarchy's create menu was asked for.
 ///
@@ -104,6 +104,7 @@ impl EditorApp {
     }
 
     pub(super) fn select(&mut self, entity: Option<EntityId>) {
+        self.focus = Focus::Hierarchy;
         if entity.is_some() {
             // One inspector, one subject. Selecting an entity puts the image
             // away rather than leaving it behind a panel showing something
@@ -132,6 +133,7 @@ impl EditorApp {
     /// act on. A texture also opens the slicer, which is the one asset the
     /// editor can currently do something with.
     pub(super) fn select_asset(&mut self, path: &Path) {
+        self.focus = Focus::Project;
         self.browser.selected = Some(path.to_owned());
         if !path.is_file() || !is_sliceable(path) {
             return;

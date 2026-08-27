@@ -7,12 +7,20 @@ use eframe::egui::{self, Rect, Vec2};
 use crate::project::{AssetKind, ProjectEntry};
 
 use super::super::project_panel::BrowserAction;
-use super::super::project_panel::row::{asset_row, listing_row};
+use super::super::project_panel::row::{RowEdit, asset_row, listing_row};
 use super::super::project_panel::state::BrowserState;
 
 /// Whether an asset row reports a click `offset` points into it.
 fn asset_row_click_at(kind: AssetKind, offset: Vec2) -> bool {
     driven_row(kind, offset, Reported::Clicked)
+}
+
+/// A row that is only being listed: not folded, not being renamed.
+fn listed<'a>() -> RowEdit<'a> {
+    RowEdit {
+        expanded: None,
+        editing: None,
+    }
 }
 
 /// One file for a row test to draw.
@@ -60,7 +68,7 @@ fn driven_listing_row(kind: AssetKind, wanted: Reported) -> Option<BrowserAction
                 },
                 |ui| {
                     let before = ui.cursor().min;
-                    let chosen = listing_row(ui, &entry, 0, false, None, &mut state);
+                    let chosen = listing_row(ui, &entry, 0, false, None, &mut state, None);
                     row.set(Rect::from_min_max(before, ui.cursor().min));
                     if let Some(chosen) = chosen {
                         *acted.borrow_mut() = Some(chosen);
@@ -102,7 +110,7 @@ fn driven_row(kind: AssetKind, offset: Vec2, wanted: Reported) -> bool {
         };
         context
             .run_ui(input, |ui| {
-                let response = asset_row(ui, &entry, 0, false, None, &state, None);
+                let response = asset_row(ui, &entry, 0, false, None, &state, listed()).response;
                 row.set(response.rect);
                 opened.set(match wanted {
                     Reported::Clicked => response.clicked(),
@@ -206,4 +214,78 @@ fn only_a_scene_opens_on_a_double_click() {
             "{kind:?} must be selectable by a single click"
         );
     }
+}
+
+/// Renaming a row in place reports the answer the panel acts on.
+///
+/// The same interaction the hierarchy has, in the other panel, and driven the
+/// same way: whether Enter commits and Escape abandons is egui's answer about
+/// focus and key handling rather than one reading the code gives.
+fn driven_asset_rename(finish: egui::Key) -> (Option<bool>, String) {
+    let context = egui::Context::default();
+    egui_material_icons::initialize(&context);
+    let entry = entry_of(AssetKind::Texture);
+    let state = BrowserState::default();
+    let draft = std::cell::RefCell::new("orb.png".to_owned());
+    let said = std::cell::Cell::new(None);
+    let draw = |events: Vec<egui::Event>| {
+        context
+            .run_ui(
+                egui::RawInput {
+                    events,
+                    ..Default::default()
+                },
+                |ui| {
+                    let mut draft = draft.borrow_mut();
+                    let row = asset_row(
+                        ui,
+                        &entry,
+                        0,
+                        false,
+                        None,
+                        &state,
+                        RowEdit {
+                            expanded: None,
+                            editing: Some(&mut draft),
+                        },
+                    );
+                    if row.renamed.is_some() {
+                        said.set(row.renamed);
+                    }
+                },
+            )
+            .drop_without_applying_deltas();
+    };
+
+    // The field asks for focus as it is drawn, so it has it from the next
+    // frame — which is the frame the typing has to arrive in.
+    draw(Vec::new());
+    draw(vec![egui::Event::Text("2".to_owned())]);
+    draw(vec![egui::Event::Key {
+        key: finish,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: egui::Modifiers::default(),
+    }]);
+    let text = draft.borrow().clone();
+    (said.get(), text)
+}
+
+/// Enter commits a renamed file, with whatever was typed into it.
+#[test]
+fn enter_commits_a_renamed_asset() {
+    let (said, draft) = driven_asset_rename(egui::Key::Enter);
+    assert_eq!(said, Some(true));
+    assert!(
+        draft.contains('2'),
+        "the typed text never reached the field: {draft:?}"
+    );
+}
+
+/// Escape abandons it, so a rename started by accident costs nothing — which
+/// matters more here than in the hierarchy, because this one writes to disk.
+#[test]
+fn escape_abandons_an_asset_rename() {
+    assert_eq!(driven_asset_rename(egui::Key::Escape).0, Some(false));
 }
