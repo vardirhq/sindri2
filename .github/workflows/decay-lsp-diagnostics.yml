@@ -1,0 +1,33 @@
+name: Decay LSP diagnostics
+
+on:
+  push:
+    branches: [feature/decay-lsp]
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feature/decay-lsp
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: clippy
+      - name: Capture clippy output
+        run: |
+          cargo clippy --package decay-lsp --all-targets --all-features --message-format=short > decay-lsp-clippy.txt 2>&1 || true
+      - name: Commit diagnostics
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add decay-lsp-clippy.txt
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Capture Decay LSP clippy diagnostics"
+          git push
