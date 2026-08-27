@@ -433,6 +433,11 @@ frame.
   do. A field naming a project asset offers what the project holds while
   staying typeable, a tint opens a colour picker, and a row that is only a
   readout says on hover why it is one
+- **A History dock showing what undo will do, and everything past it.** The
+  undo stack drawn: "Scene opened", every step in the order it happened, the
+  step the world is at marked, and the undone steps still listed under it
+  because they are still reachable. Clicking one travels there, by calling the
+  same undo and redo the keys call, one step at a time
 - **Everything the Scene view draws can be clicked in it**, including strings.
   Meshes, world sprites, filled tilemap cells, authored cameras and UI images
   are hit-tested from their own geometry; a string has none in the scene, so its

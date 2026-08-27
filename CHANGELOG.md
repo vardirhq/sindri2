@@ -21,6 +21,18 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **A History dock, showing what Ctrl+Z will do and everything past it.** The
+  history was answerable one step at a time, from a label on a menu entry nobody
+  opens mid-edit, so "how far back can I go" had no answer and an edit made
+  twenty steps ago that turned out to be wrong was undone by pressing a key
+  twenty times and watching the viewport to see where you were. The dock is the
+  stack drawn: "Scene opened", then every step in the order it happened, the one
+  the world is at marked, and the steps already undone still listed under it
+  dimmed, because they are still reachable. Clicking one travels there — by
+  calling the same undo and redo the keys call, once per step, rather than by a
+  jump of its own. `CommandHistory` gained `undo_steps` and `redo_steps`, which
+  hand out labels and keep the transactions private: a caller holding one could
+  apply it out of order.
 - **A string can be clicked in the Scene view.** It was the last drawn thing
   that could not be, and the reason was real: a string is the one drawn thing
   with no size in the scene. What it covers is glyph layout — kerning, fallback,

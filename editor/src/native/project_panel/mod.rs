@@ -379,7 +379,7 @@ fn empty_listing(ui: &mut egui::Ui, searching: bool, scoped: bool) {
 }
 
 impl EditorApp {
-    /// The dock's two tabs, and the count that says an error is waiting.
+    /// The dock's tabs, and the count that says an error is waiting.
     fn dock_tabs(&mut self, ui: &mut egui::Ui) {
         let counts = self.console.counts();
         let mut chosen = self.preferences.bottom_tab;
@@ -387,6 +387,7 @@ impl EditorApp {
             for (tab, icon, label) in [
                 (BottomTab::Project, icons::PROJECT, "Project"),
                 (BottomTab::Console, icons::CONSOLE, "Console"),
+                (BottomTab::History, icons::UNDO, "History"),
             ] {
                 if tabs::tab(
                     ui,
@@ -418,6 +419,7 @@ impl EditorApp {
         let mut action = BrowserAction::None;
         let mut clear_console = false;
         let mut go_to = None;
+        let mut travel = None;
         let (panel_side, default, min, max) = match self.preferences.layout {
             // A tall column, which is what makes the list view worth having.
             WorkspaceLayout::TwoByThree => {
@@ -466,6 +468,9 @@ impl EditorApp {
                         clear_console = answered.cleared;
                         go_to = answered.go_to;
                     }
+                    BottomTab::History => {
+                        travel = super::history_view::history_panel(ui, &self.history);
+                    }
                 }
             });
         if clear_console {
@@ -473,6 +478,9 @@ impl EditorApp {
         }
         if let Some(entity) = go_to {
             self.select(Some(entity));
+        }
+        if let Some(travel) = travel {
+            self.travel_history(travel);
         }
         // Acted on outside the panel, because every answer writes to state the
         // browser was reading from.

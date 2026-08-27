@@ -146,6 +146,21 @@ impl CommandHistory {
         !self.redo.is_empty()
     }
 
+    /// Every step that can be undone, oldest first.
+    ///
+    /// The stack itself stays private — a caller that could reach the
+    /// transactions could apply one out of order — but their labels are what a
+    /// history panel is. Without them "what will Ctrl+Z do" is answerable one
+    /// step at a time from a menu entry, and "how far back can I go" not at all.
+    pub fn undo_steps(&self) -> impl ExactSizeIterator<Item = &str> {
+        self.undo.iter().map(Transaction::label)
+    }
+
+    /// Every step that can be redone, in the order redoing them would replay.
+    pub fn redo_steps(&self) -> impl ExactSizeIterator<Item = &str> {
+        self.redo.iter().rev().map(Transaction::label)
+    }
+
     pub fn undo_label(&self) -> Option<&str> {
         self.undo.last().map(Transaction::label)
     }

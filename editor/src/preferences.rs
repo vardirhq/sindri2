@@ -103,6 +103,7 @@ pub enum BottomTab {
     #[default]
     Project,
     Console,
+    History,
 }
 
 /// Editor settings that outlive a session.

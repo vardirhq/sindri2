@@ -211,3 +211,44 @@ fn a_zero_limit_applies_without_recording() {
     assert_eq!(world.get(entity).unwrap().name.as_deref(), Some("Applied"));
     assert!(!history.can_undo());
 }
+
+/// The two stacks, readable as labels so a history panel can be the stack
+/// drawn. Undone steps read oldest first, because that is the order they
+/// happened in; redoable ones read in the order redoing would replay them.
+#[test]
+fn the_stacks_read_out_in_the_order_they_are_shown() {
+    let (mut world, entity, _) = world_with_two_entities();
+    let mut history = CommandHistory::default();
+    for name in ["First", "Second", "Third"] {
+        history
+            .apply(
+                edit(
+                    format!("Rename to {name}"),
+                    vec![WorldCommand::SetName {
+                        entity,
+                        name: Some(name.into()),
+                    }],
+                ),
+                &mut world,
+            )
+            .unwrap();
+    }
+
+    assert_eq!(
+        history.undo_steps().collect::<Vec<_>>(),
+        ["Rename to First", "Rename to Second", "Rename to Third"]
+    );
+    assert_eq!(history.redo_steps().len(), 0);
+
+    history.undo(&mut world).unwrap();
+    history.undo(&mut world).unwrap();
+    assert_eq!(
+        history.undo_steps().collect::<Vec<_>>(),
+        ["Rename to First"]
+    );
+    assert_eq!(
+        history.redo_steps().collect::<Vec<_>>(),
+        ["Rename to Second", "Rename to Third"],
+        "the next redo is the one listed first"
+    );
+}

@@ -40,6 +40,7 @@ mod console_view;
 mod editing;
 mod frame;
 mod hierarchy;
+mod history_view;
 mod inspector_panel;
 mod overlay;
 mod pointer;

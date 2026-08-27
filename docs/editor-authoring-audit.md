@@ -555,8 +555,17 @@ scene — which the remaining four items all want and none of them has.
   `ScriptFailure` gained `entity()` and `detail()` for it: the runtime says
   which handle and what went wrong, and the editor, which holds the world, says
   "Wisp".
-- **No undo history view**, so "what will Ctrl+Z do" is answerable only from the
-  Edit menu's label.
+- ~~**No undo history view**, so "what will Ctrl+Z do" is answerable only from
+  the Edit menu's label.~~ **Fixed.** A History tab beside Project and Console,
+  which is the stack drawn: "Scene opened", then every step in the order it
+  happened, the one the world is at marked, and the steps that have been undone
+  still listed under it dimmed because they are still reachable. Clicking one
+  travels there. It travels by calling the same undo and redo the keys call,
+  once per step, rather than by a jump of its own — a second way to move the
+  world is a second thing that can disagree with the first, and each step is
+  already a transaction that knows how to reverse itself. `CommandHistory`
+  hands out the two stacks as labels and keeps the transactions private, for
+  the same reason: a caller holding one could apply it out of order.
 
 ---
 
