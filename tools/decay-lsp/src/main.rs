@@ -38,7 +38,7 @@ impl Server {
         }
     }
 
-    fn handle(&mut self, message: Value, output: &mut impl Write) -> io::Result<bool> {
+    fn handle(&mut self, message: &Value, output: &mut impl Write) -> io::Result<bool> {
         let method = message
             .get("method")
             .and_then(Value::as_str)
@@ -60,15 +60,15 @@ impl Server {
             "textDocument/didChange" => self.did_change(&params, output)?,
             "textDocument/didSave" => self.did_save(&params, output)?,
             "textDocument/completion" => {
-                self.respond(id, self.completion(&params), output)?;
+                Self::respond(id, self.completion(&params), output)?;
             }
             "textDocument/hover" => {
-                self.respond(id, self.hover(&params), output)?;
+                Self::respond(id, self.hover(&params), output)?;
             }
             "textDocument/documentSymbol" => {
-                self.respond(id, self.document_symbols(&params), output)?;
+                Self::respond(id, self.document_symbols(&params), output)?;
             }
-            _ => self.respond(id, Value::Null, output)?,
+            _ => Self::respond(id, Value::Null, output)?,
         }
         Ok(!self.shutdown || method != "exit")
     }
@@ -81,7 +81,7 @@ impl Server {
     ) -> io::Result<()> {
         self.root = initialization_root(params);
         self.project = ProjectIndex::scan(self.root.as_deref());
-        self.respond(
+        Self::respond(
             id,
             json!({
                 "serverInfo": { "name": "decay-lsp", "version": env!("CARGO_PKG_VERSION") },
@@ -96,9 +96,13 @@ impl Server {
         )
     }
 
-    fn respond(&self, id: Option<Value>, result: Value, output: &mut impl Write) -> io::Result<()> {
+    fn respond(id: Option<Value>, result: Value, output: &mut impl Write) -> io::Result<()> {
         if let Some(id) = id {
-            write_message(output, &json!({"jsonrpc":"2.0","id":id,"result":result}))?;
+            let mut response = serde_json::Map::new();
+            response.insert("jsonrpc".to_owned(), Value::String("2.0".to_owned()));
+            response.insert("id".to_owned(), id);
+            response.insert("result".to_owned(), result);
+            write_message(output, &Value::Object(response))?;
         }
         Ok(())
     }
@@ -382,7 +386,7 @@ fn main() -> io::Result<()> {
     let mut output = stdout.lock();
     let mut server = Server::new();
     while let Some(message) = read_message(&mut input)? {
-        if !server.handle(message, &mut output)? {
+        if !server.handle(&message, &mut output)? {
             break;
         }
     }
