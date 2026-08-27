@@ -24,6 +24,11 @@ pub(super) struct Shortcuts {
     pub(super) duplicate: bool,
     pub(super) rename: bool,
     pub(super) delete: bool,
+    /// Which way a row was asked to move among its siblings, if it was.
+    ///
+    /// Not a bool, because the two are one question with two answers and a
+    /// frame cannot carry both.
+    pub(super) move_by: Option<isize>,
 }
 
 /// Reads the editing shortcuts, most specific first.
@@ -76,6 +81,15 @@ pub(super) fn pressed(input: &mut egui::InputState, typing: bool) -> Shortcuts {
         delete: bare(input, egui::Key::Delete) || bare(input, egui::Key::Backspace),
         // Unmodified, as it is everywhere else that frames a selection.
         focus: bare(input, egui::Key::F),
+        // Alt rather than bare arrows: the arrows belong to whatever has the
+        // keyboard, and a scene view will want them.
+        move_by: if input.consume_key(egui::Modifiers::ALT, egui::Key::ArrowUp) {
+            Some(-1)
+        } else if input.consume_key(egui::Modifiers::ALT, egui::Key::ArrowDown) {
+            Some(1)
+        } else {
+            None
+        },
     }
 }
 
@@ -138,6 +152,10 @@ impl EditorApp {
                     self.begin_rename(entity);
                 } else if keys.delete {
                     self.delete_selection();
+                } else if let Some(offset) = keys.move_by {
+                    // The primary, like rename: moving five rows one place at
+                    // once has no single answer.
+                    self.move_among_siblings(entity, offset);
                 }
             }
             Focus::Project => {

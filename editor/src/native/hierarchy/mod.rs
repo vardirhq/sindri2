@@ -10,6 +10,7 @@ use sindri_core::EntityId;
 
 use self::row::{RowLook, entity_name, entity_row, hierarchy_drop_target};
 use self::rows::{hierarchy_group, hierarchy_preference_key, visible_hierarchy_rows};
+use crate::ordering;
 use crate::preferences::Layout as WorkspaceLayout;
 use crate::selection::Pick;
 use crate::space::EntitySpace;
@@ -147,6 +148,30 @@ impl EditorApp {
             .collect()
     }
 
+    /// Everything one row needs to know about itself that is not in the world.
+    ///
+    /// Gathered here rather than inline, because the listing is a loop and a
+    /// dozen lines of look inside it hides the loop.
+    fn row_look(
+        &self,
+        entity: EntityId,
+        depth: usize,
+        collapsed: bool,
+        authoring: bool,
+    ) -> RowLook {
+        RowLook {
+            depth,
+            selected: self.selection.contains(entity),
+            selected_count: self.selection.len(),
+            can_move: (
+                ordering::can_move(&self.world, entity, -1),
+                ordering::can_move(&self.world, entity, 1),
+            ),
+            collapsed,
+            authoring,
+        }
+    }
+
     fn hierarchy_contents(&mut self, ui: &mut egui::Ui) {
         let mut reparenting = None;
         let mut asked: Option<RowAction> = None;
@@ -184,18 +209,14 @@ impl EditorApp {
                             continue;
                         }
                         listed.push(entity);
+                        let folded = collapsed.contains(&entity) && needle.is_empty();
                         let renaming = self.renaming == Some(entity);
+                        let look = self.row_look(entity, depth, folded, authoring);
                         let report = entity_row(
                             ui,
                             &self.world,
                             entity,
-                            &RowLook {
-                                depth,
-                                selected: self.selection.contains(entity),
-                                selected_count: self.selection.len(),
-                                collapsed: collapsed.contains(&entity) && needle.is_empty(),
-                                authoring,
-                            },
+                            &look,
                             renaming.then_some(&mut self.rename_draft),
                         );
                         if report.asked.is_some() {
@@ -276,6 +297,8 @@ pub(super) enum RowAction {
     DeleteSelection,
     Focus(EntityId),
     FocusSelection,
+    /// Move this entity that many places among its siblings.
+    MoveBy(EntityId, isize),
 }
 
 impl EditorApp {
@@ -305,6 +328,7 @@ impl EditorApp {
                 self.focus_selection();
             }
             RowAction::FocusSelection => self.focus_selection(),
+            RowAction::MoveBy(entity, offset) => self.move_among_siblings(entity, offset),
         }
     }
 

@@ -271,10 +271,10 @@ script rather than reading one.
 **Missing basics.** What it does: create empty, create child, create UI image,
 select, delete the selection, drag to reparent, fold, filter by name.
 
-**Four of the five fixed.** Duplicate, rename in place, delete by keyboard and
-multi-select all exist now; the first three are each reachable three ways — the
-row's own right-click menu (§6), its key, and, for rename, a double click.
-Sibling reorder is the one still open.
+**All five fixed.** Duplicate, rename in place, delete by keyboard,
+multi-select and sibling reorder all exist now; each is reachable from the
+row's own right-click menu (§6) and from a key, and rename also from a double
+click.
 
 What it does not:
 
@@ -314,8 +314,27 @@ What it does not:
   the subtree: a parent and its child both selected would despawn the child's
   handle twice, land two copies of it, or move it by the parent's delta and then
   again by its own.
-- **Reorder siblings.** Order is `source_id` sorted (`hierarchy_sort_key`), so
-  authoring order is alphabetical by an ID you cannot see or set.
+- ~~**Reorder siblings.**~~ **Fixed.** Move up and Move down, on the row's menu
+  and on Alt+Up and Alt+Down, greyed out at the ends of a list rather than
+  offered and refused. Where the order is *recorded* is the whole of the
+  problem. A scene's document order is canonical — sorted by ID, and explicitly
+  meaningless, so that a save stays stable while entities are added and
+  reparented — and draw order is expressed by render layers and depths. So
+  sibling order is a fact about a panel rather than about a scene being played,
+  and it goes in `EntityData.editor`, the section of the file a runtime carries
+  but never interprets (`editor/src/ordering.rs`). No format change, and a
+  scene nobody has reordered still lists alphabetically by ID, because an
+  entity that records no place sorts after every entity that does and ties
+  break on the ID — which is also why something created after a reorder arrives
+  at the bottom of its parent's list, and why something dropped onto a new
+  parent forgets the place it held under the old one. Moving one row stamps
+  every sibling rather than only the two that swapped: recording one place and
+  leaving the rest to sort by ID would make a list half of which is
+  alphabetical, and the next move would read an order that is not the one on
+  screen. It goes through the command layer like everything else saved with the
+  document, which needed one new command — `WorldCommand::SetEditorEntry` —
+  because the editor map had no write path and so nothing in it could be undone
+  or mark a document unsaved.
 
 Most of these are the actions a right-click would offer, which is §6.
 
@@ -542,11 +561,12 @@ The ordering is by what unblocks the most authoring, not by effort.
    pane filter the list.~~ Done. What is left in §4 is opening and previewing
    what it lists, and file operations.
 4. ~~**Duplicate, rename in place, and Delete**, reached from a right-click menu
-   on the thing they act on.~~ Done. All three exist on the hierarchy, each
-   reachable from the row's menu and from its key, and the project browser has
-   a menu of its own for what it can already do. What is still open from §5 is
-   sibling reorder, which changes what the *file* records rather than what one
-   entity can be told to do.
+   on the thing they act on.~~ Done, and §5 is closed with it. All three exist
+   on the hierarchy, each reachable from the row's menu and from its key, and
+   the project browser has a menu of its own for what it can already do.
+   Multi-select and sibling reorder came with them: the first changes what a
+   *selection* is, and the second gave the editor somewhere to record an order
+   that the scene format deliberately does not.
 5. ~~**New Scene and Save As**, so the editor can start a project rather than
    only continue one.~~ Done. What is left in §8 is a surface that is about the
    scene rather than about an entity in it: the scene's name, an entity's stable

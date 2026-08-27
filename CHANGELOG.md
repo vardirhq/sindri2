@@ -21,6 +21,21 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **Siblings can be reordered by moving them rather than by renaming them.**
+  Order was the stable ID sorted, so authoring order was alphabetical by a
+  string most authors never look at: five pips made from one arrived as
+  `pip-1`, `pip-1-copy`, `pip-1-copy-2`, and putting them in the order the HUD
+  reads them meant renaming their IDs. Move up and Move down now sit on a row's
+  right-click menu and on Alt+Up and Alt+Down, greyed out at the ends of a list
+  rather than offered and refused. Where the order is recorded is the whole of
+  the problem: a scene's document order is canonical and deliberately
+  meaningless, so that a save stays stable while entities are added and
+  reparented, and draw order is expressed by render layers and depths. So
+  sibling order goes in the entity's editor-only section of the file, which a
+  runtime carries but never interprets — no format change, and a scene nobody
+  has reordered still lists exactly as it did. That needed one new command,
+  `WorldCommand::SetEditorEntry`: the editor map had no write path, so nothing
+  in it could be undone or mark a document unsaved.
 - **More than one entity can be selected at a time.** Every bulk verb was
   impossible to express while a selection was one entity: deleting five pips
   meant five deletes and five undo steps, and moving a row of them meant

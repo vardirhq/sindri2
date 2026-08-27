@@ -433,6 +433,13 @@ frame.
   do. A field naming a project asset offers what the project holds while
   staying typeable, a tint opens a colour picker, and a row that is only a
   readout says on hover why it is one
+- **Sibling order, moved rather than renamed.** Move up and Move down on a
+  row's menu and on Alt+Up and Alt+Down, greyed out at the ends of a list. The
+  order lives in the entity's editor-only section of the file rather than in
+  the scene proper, because document order is canonical and meaningless by
+  design and draw order is render layers and depths — so where a row sits in a
+  panel is a fact about the panel. A scene nobody has reordered still lists
+  alphabetically by stable ID
 - **More than one entity at a time.** Ctrl-click adds and removes, Shift-click
   takes the range between two rows as the hierarchy is drawing them, and
   Ctrl-click does the same in the Scene view. Delete, Duplicate and a drag to a
@@ -651,9 +658,7 @@ settings gear.
   heading, a property row, the Scene view, and a console line all still ignore a
   right-click, so the actions that belong there (paste, reset a field, frame
   all, copy a message) do not exist
-- No copy/paste of entities or of components, and no way to reorder siblings:
-  order is the stable ID sorted, which the editor now lets you set, but only by
-  naming each entity rather than by moving a row
+- No copy/paste of entities or of components
 - No prefabs, no play-mode-against-a-copy, no build or export controls
 - No versioned editor protocol; the editor and runtime are one process
 - Cannot open or edit a Decay script's *source* — the project browser lists

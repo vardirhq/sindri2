@@ -24,6 +24,11 @@ use super::RowAction;
 pub(super) struct RowLook {
     pub(super) depth: usize,
     pub(super) selected: bool,
+    /// Whether this row has anywhere to go up, and anywhere to go down.
+    ///
+    /// Read here rather than in the menu, because the menu is built while the
+    /// world is already borrowed to draw the row.
+    pub(super) can_move: (bool, bool),
     /// How many entities are selected in all.
     ///
     /// The row's menu needs it: right-clicking one of five selected rows and
@@ -101,6 +106,7 @@ pub(super) fn entity_row(
         Group {
             size: group,
             authoring: look.authoring,
+            can_move: look.can_move,
         },
         &mut report.asked,
     );
@@ -132,6 +138,7 @@ pub(super) fn entity_row(
 struct Group {
     size: usize,
     authoring: bool,
+    can_move: (bool, bool),
 }
 
 /// The menu a right-click opens on a row.
@@ -168,6 +175,29 @@ fn row_menu(
             }
             if !many && menu::item(ui, "Create child").clicked() {
                 *asked = Some(RowAction::CreateChild(entity));
+                ui.close();
+            }
+        });
+        ui.separator();
+        // Greyed out at the ends of a list rather than offered and refused: a
+        // control that does nothing is how an interface teaches people to stop
+        // trusting it. Order is the one verb here that stays about the row
+        // even inside a selection, because moving five rows one place at once
+        // has no single answer.
+        ui.add_enabled_ui(group.authoring, |ui| {
+            let (up, down) = group.can_move;
+            if ui
+                .add_enabled(up, menu::entry("Move up", "Alt+Up"))
+                .clicked()
+            {
+                *asked = Some(RowAction::MoveBy(entity, -1));
+                ui.close();
+            }
+            if ui
+                .add_enabled(down, menu::entry("Move down", "Alt+Down"))
+                .clicked()
+            {
+                *asked = Some(RowAction::MoveBy(entity, 1));
                 ui.close();
             }
         });

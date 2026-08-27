@@ -11,6 +11,7 @@ use sindri_core::{
 };
 use sindri_scene::SpriteAnimations;
 
+use crate::ordering;
 use crate::project::AssetKind;
 use crate::selection;
 
@@ -333,6 +334,27 @@ impl EditorApp {
         }
     }
 
+    /// Moves an entity `offset` places among its siblings.
+    ///
+    /// Its own transaction, and the label counts what it actually changed:
+    /// moving one row rewrites every sibling's recorded place, and an undo step
+    /// called "Move 4 entities" would be describing bookkeeping rather than
+    /// what was asked for.
+    pub(super) fn move_among_siblings(&mut self, entity: EntityId, offset: isize) {
+        let buffer = ordering::move_by(&self.world, entity, offset);
+        if buffer.is_empty() {
+            return;
+        }
+        self.history.break_merge_run();
+        let label = if offset < 0 { "Move up" } else { "Move down" };
+        if let Err(error) = self
+            .history
+            .apply(buffer.into_transaction(label), &mut self.world)
+        {
+            self.report(error.to_string());
+        }
+    }
+
     /// Moves an entity under a new parent, or out to the root with `None`.
     pub(super) fn reparent(&mut self, entity: EntityId, parent: Option<EntityId>) {
         self.reparent_all(&[entity], parent);
@@ -370,19 +392,33 @@ impl EditorApp {
     fn reparent_all(&mut self, entities: &[EntityId], parent: Option<EntityId>) {
         let moving = selection::topmost(&self.world, entities);
         let mut buffer = CommandBuffer::new();
+        let mut moved = 0_usize;
         for entity in moving {
             if Some(entity) == parent {
                 continue;
             }
             buffer.push(WorldCommand::SetParent { entity, parent });
+            moved += 1;
+            // The place it held was a place among its old siblings, and it
+            // means nothing among its new ones. Forgotten rather than
+            // reinterpreted, so the entity lands at the bottom of the list it
+            // was dropped into — which is where a thing you have just put
+            // somewhere belongs, and where the eye is already looking.
+            if self.world.get(entity).and_then(ordering::rank).is_some() {
+                buffer.push(WorldCommand::SetEditorEntry {
+                    entity,
+                    key: ordering::ORDER_KEY.to_owned(),
+                    value: None,
+                });
+            }
         }
         if buffer.is_empty() {
             return;
         }
-        let label = if buffer.len() == 1 {
+        let label = if moved == 1 {
             "Reparent entity".to_owned()
         } else {
-            format!("Reparent {} entities", buffer.len())
+            format!("Reparent {moved} entities")
         };
         self.history.break_merge_run();
         if let Err(error) = self

@@ -61,6 +61,21 @@ pub enum WorldCommand {
         entity: EntityId,
         type_name: String,
     },
+    /// Writes one entry in an entity's editor-only map.
+    ///
+    /// That map is state a runtime carries but never interprets — where an
+    /// entity sits among its siblings, say, which is a fact about a tree in a
+    /// panel rather than about a scene being played. It goes through the
+    /// command layer anyway, for the reason [`Self::SetSceneName`] does: it is
+    /// saved with the document, so it has to be undoable and it has to make the
+    /// document unsaved.
+    SetEditorEntry {
+        entity: EntityId,
+        key: String,
+        /// `None` removes the entry, which is how a value goes back to not
+        /// being there rather than to being `null`.
+        value: Option<Value>,
+    },
     /// Creates an entity at an exact handle.
     ///
     /// The handle is chosen by the caller — from [`World::next_handle`] — rather
@@ -106,6 +121,7 @@ impl WorldCommand {
             | Self::SetParent { entity, .. }
             | Self::SetComponent { entity, .. }
             | Self::RemoveComponent { entity, .. }
+            | Self::SetEditorEntry { entity, .. }
             | Self::Spawn { entity, .. }
             | Self::Despawn { entity }
             // The root of the subtree, which is the entity a label would name.
@@ -129,25 +145,7 @@ impl WorldCommand {
             Self::SetSourceId { entity, source_id } => set_source_id(world, entity, source_id),
             Self::SetSceneName { name } => Ok(set_scene_name(world, name)),
             Self::SetTransform3D { entity, transform } => {
-                let data = world
-                    .get_mut(entity)
-                    .ok_or(WorldError::InvalidEntity(entity))?;
-                // The one place a declared Z lock is respected, which is what
-                // makes it worth declaring: every tool writes through here.
-                // Refusing before the write is what keeps a transaction's
-                // all-or-nothing promise honest — a rejected command has
-                // changed nothing to roll back.
-                if data
-                    .transform_3d
-                    .is_some_and(|current| current.z_lock_rejects(transform))
-                {
-                    return Err(WorldError::TransformZLocked(entity));
-                }
-                let previous = std::mem::replace(&mut data.transform_3d, transform);
-                Ok(Self::SetTransform3D {
-                    entity,
-                    transform: previous,
-                })
+                set_transform_3d(world, entity, transform)
             }
             Self::SetParent { entity, parent } => {
                 let previous = world
@@ -190,6 +188,9 @@ impl WorldCommand {
                     // Removing an absent component is a no-op, and so is its reverse.
                     None => Ok(Self::RemoveComponent { entity, type_name }),
                 }
+            }
+            Self::SetEditorEntry { entity, key, value } => {
+                set_editor_entry(world, entity, key, value)
             }
             Self::Spawn { entity, data } => {
                 world.spawn_at(entity, *data)?;
@@ -237,6 +238,57 @@ impl WorldCommand {
 /// Checked before the write, like every other refusal in `apply`: a rejected
 /// command must leave the world exactly as it found it, which is what makes a
 /// transaction all-or-nothing.
+/// Writes an entity's transform, unless it has declared that it stays put.
+fn set_transform_3d(
+    world: &mut World,
+    entity: EntityId,
+    transform: Option<Transform3D>,
+) -> Result<WorldCommand, WorldError> {
+    let data = world
+        .get_mut(entity)
+        .ok_or(WorldError::InvalidEntity(entity))?;
+    // The one place a declared Z lock is respected, which is what makes it
+    // worth declaring: every tool writes through here. Refusing before the
+    // write is what keeps a transaction's all-or-nothing promise honest — a
+    // rejected command has changed nothing to roll back.
+    if data
+        .transform_3d
+        .is_some_and(|current| current.z_lock_rejects(transform))
+    {
+        return Err(WorldError::TransformZLocked(entity));
+    }
+    let previous = std::mem::replace(&mut data.transform_3d, transform);
+    Ok(WorldCommand::SetTransform3D {
+        entity,
+        transform: previous,
+    })
+}
+
+/// Writes or clears one entry in an entity's editor-only map.
+///
+/// Its own function for the reason the identity write has one: the `apply`
+/// match is the shape of the command set, and a body long enough to scroll
+/// hides that shape.
+fn set_editor_entry(
+    world: &mut World,
+    entity: EntityId,
+    key: String,
+    value: Option<Value>,
+) -> Result<WorldCommand, WorldError> {
+    let data = world
+        .get_mut(entity)
+        .ok_or(WorldError::InvalidEntity(entity))?;
+    let previous = match value {
+        Some(value) => data.editor.insert(key.clone(), value),
+        None => data.editor.remove(&key),
+    };
+    Ok(WorldCommand::SetEditorEntry {
+        entity,
+        key,
+        value: previous,
+    })
+}
+
 fn set_source_id(
     world: &mut World,
     entity: EntityId,

@@ -49,6 +49,9 @@ pub mod scene_file;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod space;
 
+/// Where an entity sits among its siblings.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod ordering;
 /// The Decay scripts an open scene runs.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod scripts;
