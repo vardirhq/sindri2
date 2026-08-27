@@ -27,8 +27,8 @@ Then run the extension from VS Code's Extension Development Host. Set `decay.ser
 - completion for Decay keywords, script members, Sindri globals, and typed host members
 - hover signatures/types
 - document symbols for scripts, components, fields, and functions
-- scene-aware entity ID completion inside `World.find("...")`
+- scene-aware entity-name completion inside `World.find("...")`
 - project-aware audio asset completion inside `Audio.play("...")` and `Audio.loop("...")`
 - TextMate syntax highlighting and bracket/comment behavior
 
-Scene IDs and audio assets are refreshed when a Decay document is saved. The language server deliberately reads project files but never writes them.
+Entity names and audio assets are refreshed when a Decay document is saved. The language server deliberately reads project files but never writes them.
