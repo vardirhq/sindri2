@@ -23,7 +23,10 @@ pub use components::{
     MeshComponent, MeshPrimitive, SpriteComponent, TileProjection, TilemapComponent, TilemapError,
     UiAnchor, UiImageComponent, UiTextComponent,
 };
-pub use extract::{CameraView, SceneExtractError, SceneExtractor, ViewCamera, WorldProjection};
+pub use extract::{
+    CameraView, OverlayPlacement, OverlayView, SceneExtractError, SceneExtractor, ViewCamera,
+    WorldProjection, overlay_for_viewport,
+};
 pub use navigation::{GridNavigationError, GridPlacement, WorldGridNavigation};
 pub use physics::{Collider2dComponent, RigidBody2dComponent, RigidBodyKind};
 pub use textures::{

@@ -19,7 +19,157 @@ All notable changes to Sindri Next will be documented here.
   itself, is now a compile error naming both fields. It used to compile and fail
   at runtime with a path name.
 
+### Added
+
+- **An entity's stable ID is visible and editable**, and the scene has a panel
+  of its own. `source_id` is what the file keys an entity by, what a parent link
+  names, what sibling order is derived from and what `sindri.grid.occupant`
+  points at — and nothing showed it, so the editor could produce
+  `game-object-1` and nothing else while Gather's entities are `player`,
+  `floor`, `orb-1`. It is a field under the name now, and renaming one takes
+  every occupant that points at it along in the same transaction: a stable ID is
+  a reference, not a label, and renaming a grid without rewriting its occupants
+  leaves a scene that still opens with nothing on the board. An ID that is blank
+  or already taken is refused at the field rather than written and rejected.
+  With nothing selected, the inspector now shows the scene rather than a shrug:
+  its name — a real field that round-trips through a save and was shown nowhere
+  — its file, and how many entities it holds. Both are written once the edit is
+  finished rather than on every keystroke, and both go through the command
+  history, so the editor still knows when the document is unsaved.
+- **New Scene and Save As.** A scene file had to exist before the editor could
+  do anything with it, so the tool could only continue a project someone else
+  had started — and started somewhere the default scene is not, it opened
+  detached with Save disabled and no way to make a file to save into. New scene
+  (Ctrl+N) asks where the scene goes, writes it, and opens it through the
+  ordinary path, so a new scene proves it loads before anyone works in it. It
+  holds one world camera: a scene with none is legal and renders a black Game
+  view, and "why is the game view empty" is not the first question a new project
+  should raise. Save scene as… (Ctrl+Shift+S) is offered whether or not the
+  scene has a file, adopts the path only after the write succeeds, and takes the
+  project beside the scene, the remembered scene, the textures and the scripts
+  with it. A save box takes a name rather than an extension, so the suffix is
+  the editor's business: `level` is written as `level.scene.json`, which is what
+  the project browser lists as a scene and what reopening it finds.
+
+### Fixed
+
+- **Add Component could break the scene in one click.** It offered Camera
+  whether or not the scene already had one, and a second authored world camera
+  is a hard extract error — both viewports go dark with "the scene contains more
+  than one authored world camera", and nothing says which two entities are now
+  the cameras. Camera is listed and disabled on a scene that already has one.
+- **A `.txt` file drew with the glyph the editor uses for an entity**, claiming
+  it is an object in the scene, and a font shared the image glyph with a
+  texture. Both have their own now.
+- **Nothing in the Scene view could be selected by clicking it.** The viewport
+  allocated its region with `Sense::drag()`, and egui sets a response's clicked
+  flag only for a widget whose sense includes clicks — so the panel's
+  `clicked_by` was always false, whatever the picking underneath decided. The
+  tile brush was half-dead the same way: it painted on a drag and ignored a
+  single click. The coupling between what the response senses and what the panel
+  asks it is stated in a test now, because it is invisible from both ends.
+- **A fully transparent element swallowed every click over it.** Found by
+  clicking Gather's player and selecting its win banner instead: the banner is
+  `tint` alpha zero, a third of the viewport wide, sitting in the middle of the
+  scene until the game says otherwise. A thing drawn as nothing is not a thing
+  to click, in the overlay or in the world.
+- **A UI element's gizmo appeared where it is not.** A UI element's position is
+  an offset from its anchor in overlay space, and the handle was drawn at the
+  entity's transform in world space — so selecting Gather's title and choosing
+  Move put one red arm in the bottom-left corner of the Scene view, mostly off
+  screen, while the text was at the top. The gizmo is told where its handles
+  belong now, separately from the transform it edits, so the pointer maths
+  happens against the drawn origin and the answer lands on the authored value. A
+  UI element is offered two arms rather than three: its Z orders it within the
+  overlay rather than placing it.
+
 ### Changed
+
+- **Add Component says what it is not offering, and why.** Sprite Animation
+  needs a sliced sheet, Grid Occupant needs a grid, UI Text needs a font in the
+  project — and failing any of those, the entry was simply absent, leaving the
+  menu quietly shorter than the documentation. Every type the entity's space
+  accepts is listed now, disabled with the reason. The rule it replaces stands
+  where it belongs: a button that adds a component the engine then rejects is
+  worse than no button, and an entry that says why is neither of those.
+- **UI elements can be picked in the view that draws them.** Twelve of Gather's
+  twenty-two entities are UI, and none of them could be clicked: an anchor picks
+  a point on the viewport and the transform is an offset from it, so a world ray
+  through a world camera passes nowhere near them. UI images are picked in a
+  pass of their own, against the same overlay matrix the frame draws them
+  through, and — being drawn over the world — take precedence over it. UI text is
+  deliberately left to the hierarchy: what a string covers is decided by glyph
+  layout inside the text renderer.
+- **Duplicate, rename in place, and Delete, from the row they act on.** The
+  three verbs whose absence is felt on every entity after the first. Gather has
+  five Orbs, five Pips, and five Pip Sockets, each of which had to be built from
+  scratch; renaming meant selecting a row and finding the name field in another
+  panel; and Delete was one icon in a header. All three are on the hierarchy
+  row's own right-click menu and on a key: Ctrl+D, F2, and Delete or Backspace.
+  A rename happens in the row, focused as it appears, Enter to commit and Escape
+  to abandon. A duplicate takes the whole subtree, lands beside the original as
+  a sibling, earns a stable ID nothing else is using, and undoes in one step —
+  which needs the copy rehearsed against a clone of the world first, because
+  `WorldCommand::Spawn` names the handle it spawns at and `World::next_handle`
+  answers the same thing however many times it is asked.
+- **The editor answers a right-click.** There was not one `context_menu` call in
+  it, which is half of why the verbs above did not exist: an action that belongs
+  to *a specific thing* had nowhere to live. A hierarchy row and a project row
+  have menus now, both drawn through one primitive so a menu does not change
+  width with the name of whatever is selected and a destructive entry reads as
+  destructive. The project row's menu offers what the browser can already do —
+  open a scene, look inside a folder, slice an image — and the asset path a
+  component field wants, which until now had to be read off the row and typed
+  back in by hand.
+- **The unmodified shortcut keys belong to whatever is being typed into.** With
+  a text field now in the hierarchy, F while renaming would have framed the
+  camera and Backspace would have deleted the entity being named rather than a
+  letter of its name.
+- **The Project dock is a browser rather than a listing.** Its folders fold, so
+  a project with four asset directories is no longer a wall of every file in all
+  of them. Its folder pane navigates: choosing one lists that folder and nothing
+  else, and it used to be labels with no sense that selected nothing and
+  filtered nothing. And it has a selection of its own, marked with the band a
+  selected row wears — it used to mark only the open scene, so the scene file
+  was permanently lit and clicking anything else changed nothing visible. The
+  open scene keeps a quieter rule in the margin, because which scene is open and
+  which asset is selected are different facts. Every row answers a click now,
+  including the ones the editor can do nothing else with: what a row can do is
+  said on hover instead of by refusing to respond.
+
+
+- **A component added in the editor is the component the game uses.** The
+  registry recorded one payload per type and asked it two questions — what does
+  this component have, and what is a fresh one — so a type with no honest blank
+  had no answer to the first either. `sindri.ui.text` inspected as two rows for
+  a seven-field component, and a tilemap made in the editor had no `projection`
+  and could never be isometric. Those are now separate registrations: a field
+  template says what a component consists of, a default payload says what a
+  fresh one is, and a type may have the first without the second. Both are
+  checked against the field list serde will ask the type for, so a template that
+  drifts from its struct is a startup error rather than a missing row noticed a
+  release later.
+- **A script can be put on an entity.** `sindri.script` and
+  `sindri.audio.source` had no default payload and so were never offered by Add
+  Component — in an engine whose headline capability is scripting, and a
+  companion game that is thirteen script components. Both are offered now,
+  completed from the project beside the scene: the first `.decay` source that
+  declares a container, the first audio clip. A script arrives with its source,
+  its container, its typed `@export` fields, and `enabled`, which had never been
+  visible. Behind it, a component that says what an entity *does* no longer
+  decides where it *is*: a script on a fresh entity used to mark it a world
+  object and stop the menu offering UI Text, which made Gather's script-driven
+  HUD unbuildable.
+- **Play mode is read-only.** Saving while a scene was playing wrote the running
+  world to the file — the authored scene replaced by wherever the scripts had
+  pushed everything, marked as saved, with Stop then restoring a world the file
+  no longer held. Every other edit made while playing was discarded by Stop
+  without being mentioned, leaving undo describing changes the world no longer
+  contained. A running scene is not the document: the inspector, the hierarchy's
+  create and delete, the gizmo, the tile brush, undo, redo and the File menu all
+  stand down until it stops, each saying why. The viewport still orbits and
+  selects, and the inspector still shows the values changing.
+
 
 - **The editor draws itself from one design system instead of eleven opinions.**
   Every panel used to pick its own greys, gaps, and font sizes by copying the

@@ -35,9 +35,13 @@ pub(crate) struct FieldAssets<'a> {
 /// The rows of one payload, indented under its heading.
 ///
 /// Every field the component has, whether or not this one wrote it down: the
-/// panel draws the registry's blank filled out with what is stored, so two of
-/// one component show the same rows. What is written back is only what changed,
-/// which `fields::merge_edits` decides.
+/// panel draws the registry's *field template* filled out with what is stored,
+/// so two of one component show the same rows. What is written back is only
+/// what changed, which `fields::merge_edits` decides.
+///
+/// The template, not the default payload. Those were the same value until a
+/// type with no honest fresh instance — `sindri.ui.text` — turned out to have
+/// no template either, and so drew two rows for a component with seven.
 ///
 /// `skip_properties` keeps a script's authored values from appearing twice:
 /// they are drawn above as typed fields, from what the script declared.
@@ -45,13 +49,13 @@ pub(crate) fn object_rows(
     ui: &mut egui::Ui,
     type_name: &str,
     payload: &mut Value,
-    defaults: Option<&Value>,
+    fields: Option<&Value>,
     assets: FieldAssets<'_>,
     skip_properties: bool,
 ) {
     // The blank is the one for the variant this payload is, not whichever
     // variant the registry's fresh component happens to be.
-    let blank = defaults.map(|defaults| choices::blank_for(type_name, defaults, payload));
+    let blank = fields.map(|fields| choices::blank_for(type_name, fields, payload));
     let mut drawn = fields::drawn_payload(blank.as_ref(), payload);
     for key in fields::ordered_keys(&drawn) {
         if (skip_properties && key == "properties") || !inspector::applies(type_name, &key) {

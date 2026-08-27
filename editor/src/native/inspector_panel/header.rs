@@ -11,7 +11,7 @@ use crate::ui::theme::{color, metric, radius, radius_tight, text};
 use crate::ui::widgets::{property, section, vector};
 
 use super::super::hierarchy::rows::ROOT_LABEL;
-use super::draft::EntityDraft;
+use super::draft::{EntityDraft, IdentityRefusal};
 
 /// What the parent menu came back with.
 ///
@@ -78,8 +78,9 @@ pub(super) fn inspector_identity(
     ui: &mut egui::Ui,
     icon: MaterialIcon,
     space: Option<EntitySpace>,
+    identity: Identity<'_>,
     draft: &mut EntityDraft,
-) {
+) -> IdentityEdit {
     egui::Frame::new()
         .fill(color::RAISED)
         .stroke(Stroke::new(1.0, color::LINE_SOFT))
@@ -98,11 +99,84 @@ pub(super) fn inspector_identity(
                 );
             });
             ui.add_space(5.0);
+            let edit = stable_id(ui, identity);
+            ui.add_space(5.0);
             space_badge(ui, space);
-        });
+            edit
+        })
+        .inner
     // "Tag  Untagged" and "Layer  Default" used to sit under the name. Neither
     // is a thing a Sindri entity has, so they were two lines of a different
     // engine's inspector printed over this one's.
+}
+
+/// The stable ID as the panel hands it over: the text being edited, and why it
+/// cannot be used if it cannot.
+pub(super) struct Identity<'a> {
+    pub(super) text: &'a mut String,
+    pub(super) refused: Option<IdentityRefusal>,
+}
+
+/// What happened to the ID field this frame.
+///
+/// Two answers rather than one, because a stable ID is not written as it is
+/// typed. Renaming `orb-1` to `player` passes through `p`, `pl`, `pla` — each
+/// of which would be a real rename of a real identity, rewriting every
+/// component that points at it, and one of which might collide with something.
+/// So the panel holds the text until the edit is finished and writes once.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub(super) struct IdentityEdit {
+    pub(super) changed: bool,
+    pub(super) finished: bool,
+}
+
+/// The identity the scene file keys this entity under.
+///
+/// Under the name because it is the quieter of the two and most authors will
+/// leave it alone — but visible and editable, because it is what a parent link
+/// names, what sibling order is derived from, and what `sindri.grid.occupant`
+/// points at. It was neither, so the editor could produce `game-object-1` and
+/// nothing else, and a scene of `player`, `floor` and `orb-1` was unreachable.
+///
+/// A value that cannot be used is shown in the colour the editor uses for a
+/// refusal and says why on hover, rather than being written and rejected: the
+/// draft is committed every frame, so a refused command would be refused again
+/// on the next one and the console would fill with the same line.
+fn stable_id(ui: &mut egui::Ui, identity: Identity<'_>) -> IdentityEdit {
+    let Identity { text, refused } = identity;
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 6.0;
+        ui.add_space(26.0);
+        ui.label(
+            RichText::new("ID")
+                .size(text::NOTE)
+                .color(color::TEXT_FAINT),
+        );
+        let field = ui.add_sized(
+            [ui.available_width(), metric::CONTROL_HEIGHT],
+            egui::TextEdit::singleline(text)
+                .font(FontId::monospace(text::LABEL))
+                .text_color(if refused.is_some() {
+                    color::DANGER_TEXT
+                } else {
+                    color::TEXT_MUTED
+                })
+                .hint_text("game-object"),
+        );
+        let edit = IdentityEdit {
+            changed: field.changed(),
+            // Enter and clicking away are both "done", and both arrive here.
+            finished: field.lost_focus(),
+        };
+        match refused {
+            Some(refusal) => field.on_hover_text(refusal.reason()),
+            None => field.on_hover_text(
+                "What the scene file keys this entity by, and what a component naming it points at",
+            ),
+        };
+        edit
+    })
+    .inner
 }
 
 /// Which space this entity is in, said once at the top.

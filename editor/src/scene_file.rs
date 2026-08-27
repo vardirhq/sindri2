@@ -87,14 +87,30 @@ impl SceneFile {
     /// file exactly and a review sees only what changed.
     pub fn save(&mut self, world: &World) -> Result<(), SceneFileError> {
         let path = self.path.clone().ok_or(SceneFileError::NoPath)?;
+        self.save_as(&path, world)
+    }
+
+    /// Writes a world to a path, and adopts it.
+    ///
+    /// The adoption happens after the write rather than before it, so a save
+    /// that fails leaves the scene attached to the file it was attached to. A
+    /// detached scene — one the editor opened with no file behind it — becomes
+    /// a real file this way, which is the only way it ever could.
+    pub fn save_as(&mut self, path: &Path, world: &World) -> Result<(), SceneFileError> {
         let document = world.to_scene()?;
-        let text = document.to_canonical_json()?;
-        std::fs::write(&path, text).map_err(|source| SceneFileError::Write {
-            path: path.display().to_string(),
-            source,
-        })?;
+        write_scene(path, &document)?;
+        self.path = Some(path.to_path_buf());
         self.document = document;
         Ok(())
+    }
+
+    /// Writes a document to a path nothing is open on yet.
+    ///
+    /// What New Scene uses. The file is written and then opened through the
+    /// ordinary path rather than adopted in memory, so a new scene proves it
+    /// loads before anyone starts working in it.
+    pub fn create(path: &Path, document: &SceneDocument) -> Result<(), SceneFileError> {
+        write_scene(path, document)
     }
 
     /// Re-reads the file, discarding whatever the editor had in memory.
@@ -103,6 +119,36 @@ impl SceneFile {
         *self = Self::open(path)?;
         Ok(())
     }
+}
+
+/// The path a scene chosen in a save dialog is actually written to.
+///
+/// A scene is `*.scene.json` and nothing else: that is what the project browser
+/// recognises and what `SceneFile::open` is offered in a file dialog. Someone
+/// typing "level" into a save box means a scene called level, and writing that
+/// verbatim would produce one the browser lists as a plain file and cannot
+/// reopen.
+pub fn scene_path(chosen: &Path) -> PathBuf {
+    let name = chosen
+        .file_name()
+        .map_or_else(String::new, |name| name.to_string_lossy().into_owned());
+    if name.to_lowercase().ends_with(SCENE_SUFFIX) {
+        return chosen.to_path_buf();
+    }
+    let stem = name.strip_suffix(".json").unwrap_or(&name);
+    chosen.with_file_name(format!("{stem}{SCENE_SUFFIX}"))
+}
+
+/// What a scene file is called, and what the browser reads a scene by.
+const SCENE_SUFFIX: &str = ".scene.json";
+
+/// Writes a document as canonical JSON.
+fn write_scene(path: &Path, document: &SceneDocument) -> Result<(), SceneFileError> {
+    let text = document.to_canonical_json()?;
+    std::fs::write(path, text).map_err(|source| SceneFileError::Write {
+        path: path.display().to_string(),
+        source,
+    })
 }
 
 impl fmt::Display for SceneFile {
@@ -154,6 +200,48 @@ mod tests {
         let path = directory.join("scene.json");
         std::fs::write(&path, text).unwrap();
         path
+    }
+
+    /// A save dialog takes a name, not an extension, so the suffix is the
+    /// editor's business: a scene written as `level.json` would be listed by
+    /// the project browser as a plain file it cannot open.
+    #[test]
+    fn a_chosen_name_becomes_a_scene_file_name() {
+        let cases = [
+            ("level", "level.scene.json"),
+            ("level.json", "level.scene.json"),
+            ("level.scene.json", "level.scene.json"),
+            // Already a scene, whatever case it was typed in.
+            ("Level.Scene.JSON", "Level.Scene.JSON"),
+        ];
+        for (chosen, expected) in cases {
+            assert_eq!(
+                scene_path(&PathBuf::from("/project").join(chosen)),
+                PathBuf::from("/project").join(expected),
+                "{chosen} was not turned into a scene file name"
+            );
+        }
+    }
+
+    /// A scene with no file behind it gains one, and what it writes reopens.
+    ///
+    /// The case the editor could not answer at all: started where the default
+    /// scene is not, it opened detached with Save disabled and no way to make
+    /// a file to save into.
+    #[test]
+    fn a_detached_scene_can_be_saved_somewhere() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut file = SceneFile::detached(SceneDocument::default());
+        assert!(file.path().is_none() && file.save(&World::default()).is_err());
+
+        let world = World::from_scene(&SceneDocument::from_json(&authored_json()).unwrap())
+            .unwrap()
+            .world;
+        let path = directory.path().join("forked.scene.json");
+        file.save_as(&path, &world).unwrap();
+
+        assert_eq!(file.path(), Some(path.as_path()));
+        assert_eq!(SceneFile::open(&path).unwrap().document(), file.document());
     }
 
     #[test]

@@ -21,6 +21,9 @@ use super::EditorApp;
 /// reset the scene rather than stopping anything.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) enum Discarding {
+    /// Making a scene replaces the open one, so it costs the same work
+    /// opening another does.
+    NewScene,
     OpenAnother,
     /// A scene chosen in the project browser, which knows the path already and
     /// so has no dialog to open.
@@ -35,6 +38,7 @@ impl Discarding {
     /// they pressed.
     pub(super) const fn question(&self) -> &'static str {
         match self {
+            Self::NewScene => "Make a new scene and discard the changes to this one?",
             Self::OpenAnother | Self::OpenPath(_) => {
                 "Open another scene and discard the changes to this one?"
             }
@@ -46,6 +50,7 @@ impl Discarding {
 
     pub(super) const fn verb(&self) -> &'static str {
         match self {
+            Self::NewScene => "Make one anyway",
             Self::OpenAnother | Self::OpenPath(_) => "Open anyway",
             Self::Reload => "Reload anyway",
             Self::Reset => "Discard",
@@ -81,6 +86,7 @@ impl EditorApp {
     fn discard(&mut self, action: Discarding, context: &egui::Context) {
         self.confirming = None;
         match action {
+            Discarding::NewScene => self.new_scene(),
             Discarding::OpenAnother => self.open_scene(),
             Discarding::OpenPath(path) => self.open_path(&path),
             Discarding::Reload => self.reload(),

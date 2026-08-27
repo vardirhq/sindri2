@@ -168,3 +168,79 @@ fn a_hierarchy_chevron_folds_without_selecting() {
     assert!(toggled, "the child-bearing row's chevron must fold it");
     assert!(!selected, "folding a row must not also change selection");
 }
+
+/// Renames a row through real frames and reports what it said, plus the draft
+/// it left behind.
+///
+/// Driven rather than reasoned about because the interesting parts are all
+/// egui's: whether the field takes focus the frame it appears, whether typed
+/// text reaches it, and whether Enter is a commit while Escape is not.
+fn driven_rename(finish: egui::Key) -> (Option<tree::Rename>, String) {
+    let context = egui::Context::default();
+    egui_material_icons::initialize(&context);
+    let draft = std::cell::RefCell::new("Orb 1".to_owned());
+    let said = std::cell::Cell::new(None);
+    let draw = |events: Vec<egui::Event>| {
+        context
+            .run_ui(
+                egui::RawInput {
+                    events,
+                    ..Default::default()
+                },
+                |ui| {
+                    let mut draft = draft.borrow_mut();
+                    let row = tree::row_named(
+                        ui,
+                        ICON_LABEL,
+                        "Orb 1",
+                        RowStyle {
+                            selected: true,
+                            depth: 0,
+                            children: Children::None,
+                            dimmed: false,
+                        },
+                        Some(&mut draft),
+                    );
+                    if row.rename.is_some() {
+                        said.set(row.rename);
+                    }
+                },
+            )
+            .drop_without_applying_deltas();
+    };
+
+    // The field asks for focus as it is drawn, so it has it from the next
+    // frame — which is the frame the typing has to arrive in.
+    draw(Vec::new());
+    draw(vec![egui::Event::Text(" Far".to_owned())]);
+    draw(vec![egui::Event::Key {
+        key: finish,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: egui::Modifiers::default(),
+    }]);
+    let text = draft.borrow().clone();
+    (said.get(), text)
+}
+
+/// Enter commits a rename, with whatever was typed into it.
+#[test]
+fn enter_commits_a_renamed_row() {
+    let (said, draft) = driven_rename(egui::Key::Enter);
+    assert_eq!(said, Some(tree::Rename::Committed));
+    assert!(
+        draft.contains("Far"),
+        "the typed text never reached the field: {draft:?}"
+    );
+}
+
+/// Escape abandons it, so a rename started by accident costs nothing.
+///
+/// Reported as its own answer rather than as "committed with the old name",
+/// because the panel has to know not to write a command at all.
+#[test]
+fn escape_abandons_a_rename() {
+    let (said, _) = driven_rename(egui::Key::Escape);
+    assert_eq!(said, Some(tree::Rename::Cancelled));
+}

@@ -117,6 +117,7 @@ pub struct GizmoDrag {
     pub entity: EntityId,
     pub mode: GizmoMode,
     pub axis: Axis,
+    anchoring: Anchoring,
     start: Transform3D,
     direction: Vec3,
     start_parameter: f32,
@@ -130,9 +131,52 @@ struct Ray {
     direction: Vec3,
 }
 
+/// Where a gizmo's handles belong, and what its axes mean there.
+///
+/// A world entity is placed by its transform, so the handle goes at the
+/// transform and the two are the same thing. A UI element is not placed by its
+/// transform: an anchor picks a point on the viewport and the transform is an
+/// offset from that point, so drawing the handle at the transform puts it
+/// wherever that offset happens to point in the world. Confirmed on Gather's
+/// title: one red arm in the bottom-left corner of the Scene view, mostly off
+/// screen, while the text it belonged to was at the top.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Anchoring {
+    /// The point the handles radiate from, in whatever space they are drawn in.
+    origin: Vec3,
+    /// Whether the third axis places the thing or only orders it.
+    flat: bool,
+}
+
+impl Anchoring {
+    /// A world entity, drawn where its transform says it is.
+    #[must_use]
+    pub fn in_world(transform: Transform3D) -> Self {
+        Self {
+            origin: Vec3::from_array(transform.position),
+            flat: false,
+        }
+    }
+
+    /// A UI element, drawn where the overlay puts it.
+    ///
+    /// `flat`, because a UI element's Z orders it within the overlay rather
+    /// than placing it: a third arm would be a handle pointing straight at the
+    /// viewer that changes a draw order when dragged, which is not what a
+    /// translate handle promises.
+    #[must_use]
+    pub const fn on_overlay(origin: Vec2) -> Self {
+        Self {
+            origin: Vec3::new(origin.x, origin.y, 0.0),
+            flat: true,
+        }
+    }
+}
+
 /// Builds the exact screen-space paths that are painted and hit-tested.
 pub fn visual(
     mode: GizmoMode,
+    anchoring: Anchoring,
     transform: Transform3D,
     space: GizmoSpace,
     view_projection: Mat4,
@@ -142,7 +186,7 @@ pub fn visual(
     if mode == GizmoMode::Select || viewport.x <= 0.0 || viewport.y <= 0.0 {
         return None;
     }
-    let origin_world = Vec3::from_array(transform.position);
+    let origin_world = anchoring.origin;
     let origin = project(view_projection, origin_world, viewport)?;
     let world_per_point = 2.0 * framed_half_height / viewport.y.max(1.0);
     let radius = (HANDLE_PIXELS * world_per_point).max(0.001);
@@ -150,7 +194,8 @@ pub fn visual(
     let mut handles = Vec::new();
 
     for axis in Axis::ALL {
-        let Some(direction) = direction(axis, rotation, space, transform.z_locked, mode) else {
+        let Some(direction) = direction(axis, rotation, space, anchoring.locks_z(transform), mode)
+        else {
             continue;
         };
         let points = if mode == GizmoMode::Rotate {
@@ -187,6 +232,7 @@ pub fn begin_drag(
     entity: EntityId,
     mode: GizmoMode,
     axis: Axis,
+    anchoring: Anchoring,
     transform: Transform3D,
     space: GizmoSpace,
     view_projection: Mat4,
@@ -194,9 +240,9 @@ pub fn begin_drag(
     viewport: Vec2,
 ) -> Option<GizmoDrag> {
     let rotation = normalized_rotation(transform);
-    let direction = direction(axis, rotation, space, transform.z_locked, mode)?;
+    let direction = direction(axis, rotation, space, anchoring.locks_z(transform), mode)?;
     let ray = ray(view_projection, pointer, viewport)?;
-    let origin = Vec3::from_array(transform.position);
+    let origin = anchoring.origin;
     let (start_parameter, start_vector) = if mode == GizmoMode::Rotate {
         let point = ray_plane(ray, origin, direction)?;
         (0.0, (point - origin).normalize_or_zero())
@@ -207,6 +253,7 @@ pub fn begin_drag(
         entity,
         mode,
         axis,
+        anchoring,
         start: transform,
         direction,
         start_parameter,
@@ -223,7 +270,10 @@ pub fn update_drag(
     snapping: Snapping,
 ) -> Option<Transform3D> {
     let ray = ray(view_projection, pointer, viewport)?;
-    let origin = Vec3::from_array(drag.start.position);
+    // Where the handle is, which is not always where the transform is: the
+    // pointer maths is done against the drawn origin, and the answer is applied
+    // to the authored value.
+    let origin = drag.anchoring.origin;
     let mut next = drag.start;
     match drag.mode {
         GizmoMode::Select => return None,
@@ -234,9 +284,10 @@ pub fn update_drag(
                 snapping.translation,
                 snapping,
             );
-            let mut position = origin + drag.direction * delta;
-            if drag.start.z_locked {
-                position.z = origin.z;
+            let authored = Vec3::from_array(drag.start.position);
+            let mut position = authored + drag.direction * delta;
+            if drag.anchoring.locks_z(drag.start) {
+                position.z = authored.z;
             }
             next.position = position.to_array();
         }
@@ -266,6 +317,16 @@ pub fn update_drag(
         }
     }
     Some(next)
+}
+
+impl Anchoring {
+    /// Whether a translate handle may move this thing off its layer.
+    ///
+    /// Either because the entity says so, or because the space it is drawn in
+    /// has no third dimension to move through.
+    const fn locks_z(self, transform: Transform3D) -> bool {
+        self.flat || transform.z_locked
+    }
 }
 
 fn normalized_rotation(transform: Transform3D) -> Quat {

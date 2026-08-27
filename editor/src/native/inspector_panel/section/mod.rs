@@ -114,13 +114,14 @@ pub(super) fn components_sections(
         if name == GRID_OCCUPANT_COMPONENT {
             grid_occupant_section(ui, payload, grids);
         }
-        // The registry's blank is what says which fields this component has,
-        // so an instance that wrote none of them still shows all of them.
+        // The registry's field template is what says which fields this
+        // component has, so an instance that wrote none of them still shows all
+        // of them.
         object_rows(
             ui,
             name,
             payload,
-            registry.default_payload(name),
+            registry.fields(name),
             assets,
             name == "sindri.script",
         );

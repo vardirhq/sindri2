@@ -3,7 +3,7 @@
 use sindri_core::{EngineState, FixedStepConfig};
 
 use super::super::console_view::lifecycle_label;
-use super::super::runtime::{Transport, animation_delta, initialized_lifecycle};
+use super::super::runtime::{Transport, animation_delta, authoring_allowed, initialized_lifecycle};
 
 /// The transport decides whether an animation moves, and nothing else does.
 #[test]
@@ -84,4 +84,34 @@ fn the_transport_says_which_of_three_states_the_editor_is_in() {
     );
     assert!(!Transport::Editing.is_playing());
     assert!(Transport::Playing.is_playing() && Transport::Paused.is_playing());
+}
+
+/// A running scene is not the document, so nothing may write to it.
+///
+/// The bug this holds shut: `save` writes the *live* world, so Ctrl+S while a
+/// scene was playing replaced the authored file with wherever the scripts had
+/// pushed everything — and Stop then restored a world the file no longer
+/// matched, with the status bar reporting no unsaved work. Every guard in the
+/// editor asks this one question, which is why it is worth a test of its own.
+#[test]
+fn nothing_may_be_authored_while_the_scene_is_playing() {
+    assert!(
+        !authoring_allowed(EngineState::Running),
+        "a running scene is thrown away by Stop"
+    );
+    assert!(
+        !authoring_allowed(EngineState::Paused),
+        "a paused scene is still a run in progress, and Stop still throws it away"
+    );
+    for state in [
+        EngineState::Created,
+        EngineState::Initialized,
+        EngineState::Stopped,
+        EngineState::Destroyed,
+    ] {
+        assert!(
+            authoring_allowed(state),
+            "{state:?} is not play mode, so the world is the document"
+        );
+    }
 }

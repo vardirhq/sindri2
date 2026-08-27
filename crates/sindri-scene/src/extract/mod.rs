@@ -7,6 +7,7 @@
 
 mod camera;
 mod mesh;
+mod registry;
 mod sprite;
 mod text;
 mod tilemap;
@@ -25,15 +26,10 @@ use sindri_render::{
 };
 use thiserror::Error;
 
-use crate::{
-    AnimationError, AudioSourceComponent, CameraComponent, Collider2dComponent,
-    GridNavigationComponent, GridOccupantComponent, MeshComponent, PROCEDURAL_TEXTURES,
-    RigidBody2dComponent, SpriteAnimationComponent, SpriteAnimations, SpriteComponent,
-    TextureBindings, TilemapComponent, TilemapError, UiImageComponent, UiTextComponent,
-};
+use crate::{AnimationError, SpriteAnimations, TextureBindings, TilemapError};
 
-pub use camera::ViewCamera;
 pub use camera::view::{CameraView, WorldProjection};
+pub use camera::{OverlayPlacement, OverlayView, ViewCamera, overlay_for_viewport};
 
 /// Turns a world into a frame the renderer can draw.
 ///
@@ -83,115 +79,14 @@ pub enum SceneExtractError {
     TextViewport(#[from] std::num::TryFromIntError),
 }
 
+use registry::builtin_components;
+
 impl SceneExtractor {
     /// Registers the built-in `sindri.*` components.
     pub fn new() -> Result<Self, SceneExtractError> {
-        let mut components = ComponentSchemaRegistry::default();
-        // Each default is what a freshly added component of that type looks
-        // like, and is what makes the type addable at all. They are chosen to
-        // be visible rather than neutral: a sprite added to an entity should
-        // appear, or the author is left wondering whether the click worked.
-        components.register_with_default::<CameraComponent>(
-            "Camera",
-            serde_json::json!({
-                "projection": CameraComponent::PROJECTIONS[0],
-                "vertical_fov_degrees": CameraComponent::DEFAULT_VERTICAL_FOV_DEGREES,
-                "near": CameraComponent::DEFAULT_NEAR,
-                "far": CameraComponent::DEFAULT_FAR
-            }),
-        )?;
-        components.register_with_default::<MeshComponent>(
-            "Mesh",
-            serde_json::json!({
-                "primitive": "cube",
-                "texture": PROCEDURAL_TEXTURES[0].reference,
-                "layer": 0
-            }),
-        )?;
-        components.register_with_default::<SpriteComponent>(
-            "Sprite",
-            serde_json::json!({
-                "texture": PROCEDURAL_TEXTURES[0].reference,
-                "tint": [1.0, 1.0, 1.0, 1.0],
-                "layer": 0
-            }),
-        )?;
-        // The UI half of the same picture: anchored to the middle of the
-        // viewport, because an element that appears off the edge of the screen
-        // looks like a click that did nothing.
-        components.register_with_default::<UiImageComponent>(
-            "UI Image",
-            serde_json::json!({
-                "texture": PROCEDURAL_TEXTURES[0].reference,
-                "anchor": "center",
-                "tint": [1.0, 1.0, 1.0, 1.0],
-                "layer": 0
-            }),
-        )?;
-        // No default: an animation with no sheet and no clips is a component
-        // that does nothing, and one with an invented sheet would claim a
-        // texture is laid out a way it is not.
-        components.register::<SpriteAnimationComponent>("Sprite Animation")?;
-        // No default: unlike a procedural texture, there is no honest font the
-        // engine can invent. The editor's font picker supplies a project asset
-        // when text is added; existing text remains generically editable now.
-        components.register::<UiTextComponent>("UI Text")?;
-        // A one-by-one map of one empty cell: the smallest tilemap that is
-        // still a valid one, so adding the component in the editor gives
-        // something to paint into rather than something to repair.
-        components.register_with_default::<TilemapComponent>(
-            "Tilemap",
-            serde_json::json!({
-                "texture": PROCEDURAL_TEXTURES[0].reference,
-                "palette": [],
-                "columns": 1,
-                "rows": 1,
-                "tiles": [null]
-            }),
-        )?;
-        components.register_with_default::<GridNavigationComponent>(
-            "Grid Navigation",
-            serde_json::json!({ "walls": [] }),
-        )?;
-        // No default: an occupant must name the stable ID of the grid it
-        // belongs to. Inventing one would create a valid-looking component
-        // that cannot ever resolve.
-        components.register::<GridOccupantComponent>("Grid Occupant")?;
-        // Physics defaults are ordinary Sindri values rather than backend
-        // values. A newly added body starts dynamic and a collider starts as a
-        // one-unit box, so both are immediately valid and visible in the
-        // generic command-backed inspector.
-        components.register_with_default::<RigidBody2dComponent>(
-            "Rigid Body 2D",
-            serde_json::json!({
-                "kind": "dynamic",
-                "pose": { "position": [0.0, 0.0], "rotation": 0.0 },
-                "linear_velocity": [0.0, 0.0],
-                "angular_velocity": 0.0,
-                "gravity_scale": 1.0,
-                "linear_damping": 0.0,
-                "angular_damping": 0.0,
-                "lock_rotation": false
-            }),
-        )?;
-        components.register_with_default::<Collider2dComponent>(
-            "Collider 2D",
-            serde_json::json!({
-                "shape": { "shape": "box", "half_extents": [0.5, 0.5] },
-                "offset": [0.0, 0.0],
-                "rotation": 0.0,
-                "sensor": false,
-                "layers": { "memberships": 4_294_967_295_u32, "filter": 4_294_967_295_u32 },
-                "friction": 0.5,
-                "restitution": 0.0
-            }),
-        )?;
-        // No default payload, for the reason the registry states: a blank one
-        // would name the empty clip, and a button that adds a component the
-        // engine then rejects is worse than no button. `sindri.ui.text` and
-        // `sindri.animation.sprite` are registered the same way.
-        components.register::<AudioSourceComponent>("Audio Source")?;
-        Ok(Self { components })
+        Ok(Self {
+            components: builtin_components()?,
+        })
     }
 
     pub const fn components(&self) -> &ComponentSchemaRegistry {
@@ -204,6 +99,23 @@ impl SceneExtractor {
         display_name: impl Into<String>,
     ) -> Result<(), SceneExtractError> {
         self.components.register::<T>(display_name)?;
+        Ok(())
+    }
+
+    /// Registers an additional component type along with every field it has.
+    ///
+    /// Preferred over [`Self::register`] for anything an editor will draw: the
+    /// field template is what lets a panel show the same rows for one of these
+    /// however it was authored. The registry checks the template against what
+    /// serde will ask the type for, so one that drifts is a registration error
+    /// rather than a panel quietly missing a row.
+    pub fn register_with_fields<T: SceneComponent>(
+        &mut self,
+        display_name: impl Into<String>,
+        fields: serde_json::Value,
+    ) -> Result<(), SceneExtractError> {
+        self.components
+            .register_with_fields::<T>(display_name, fields)?;
         Ok(())
     }
 

@@ -25,6 +25,17 @@ pub struct TreeRow {
     /// The region a drag can be released onto, which includes the chevron.
     pub drop: Response,
     pub toggle: Option<Response>,
+    /// What happened to a name being typed into this row, if one was.
+    pub rename: Option<Rename>,
+}
+
+/// How a rename on a row ended.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Rename {
+    /// The draft is the new name.
+    Committed,
+    /// Escape: the name is what it was.
+    Cancelled,
 }
 
 /// What hangs under a row, which decides whether it gets a fold control.
@@ -79,7 +90,25 @@ pub fn indent(depth: usize, step: f32) -> f32 {
 
 /// One row of a tree: a band, a chevron, an icon, and a name.
 pub fn row(ui: &mut egui::Ui, icon: MaterialIcon, name: &str, style: RowStyle) -> TreeRow {
+    row_named(ui, icon, name, style, None)
+}
+
+/// The same row, with its name being typed into.
+///
+/// Renaming happens on the row rather than in a dialog or only in the
+/// inspector, because the row is where the name is: an author looking at a list
+/// of forty entities should be able to fix one without their eyes leaving it.
+/// `editing` carries the draft; the row reports whether it was committed.
+pub fn row_named(
+    ui: &mut egui::Ui,
+    icon: MaterialIcon,
+    name: &str,
+    style: RowStyle,
+    editing: Option<&mut String>,
+) -> TreeRow {
     let width = ui.available_width();
+    let mut committed = false;
+    let mut cancelled = false;
     let builder = UiBuilder::new().sense(Sense::click_and_drag());
     let scope = ui.scope_builder(builder, |ui| {
         ui.set_min_width(width);
@@ -105,17 +134,35 @@ pub fn row(ui: &mut egui::Ui, icon: MaterialIcon, name: &str, style: RowStyle) -
                     ))
                     .sense(Sense::click_and_drag()),
                 );
-                let label = ui.add(
-                    egui::Label::new(RichText::new(name).size(text::BODY).color(
-                        match (style.selected, style.dimmed) {
-                            (true, _) => color::TEXT,
-                            (false, true) => color::TEXT_FAINT,
-                            (false, false) => color::TEXT_MUTED,
-                        },
-                    ))
-                    .selectable(false)
-                    .sense(Sense::click_and_drag()),
-                );
+                let label = match editing {
+                    Some(draft) => {
+                        let field = ui.add(
+                            egui::TextEdit::singleline(draft)
+                                .desired_width(ui.available_width() - 6.0)
+                                .font(egui::FontId::proportional(text::BODY)),
+                        );
+                        // Focused the frame it appears, so renaming is one act
+                        // rather than "start renaming, then click the box".
+                        if !field.has_focus() && !field.lost_focus() {
+                            field.request_focus();
+                        }
+                        committed = field.lost_focus()
+                            && !ui.input(|input| input.key_pressed(egui::Key::Escape));
+                        cancelled = ui.input(|input| input.key_pressed(egui::Key::Escape));
+                        field
+                    }
+                    None => ui.add(
+                        egui::Label::new(RichText::new(name).size(text::BODY).color(
+                            match (style.selected, style.dimmed) {
+                                (true, _) => color::TEXT,
+                                (false, true) => color::TEXT_FAINT,
+                                (false, false) => color::TEXT_MUTED,
+                            },
+                        ))
+                        .selectable(false)
+                        .sense(Sense::click_and_drag()),
+                    ),
+                };
                 (icon | label, toggle)
             })
             .inner;
@@ -135,6 +182,11 @@ pub fn row(ui: &mut egui::Ui, icon: MaterialIcon, name: &str, style: RowStyle) -
         select,
         drop,
         toggle,
+        rename: match (committed, cancelled) {
+            (_, true) => Some(Rename::Cancelled),
+            (true, _) => Some(Rename::Committed),
+            _ => None,
+        },
     }
 }
 

@@ -2,64 +2,98 @@
 //!
 //! The row itself is `ui::widgets::asset`, which the hierarchy's tree row
 //! shares its banding and indentation with. What is here is what a *project*
-//! row is: which files the editor can do something with, and what hangs
-//! underneath a sliced image.
+//! row is: what the editor can do with each kind of file, and what hangs
+//! underneath a folder or a sliced image.
 
-use std::{
-    collections::BTreeSet,
-    path::{Path, PathBuf},
-};
+use std::path::Path;
 
 use eframe::egui::{self, Response};
 
 use crate::project::{AssetKind, ProjectEntry};
-use crate::ui::widgets::asset;
+use crate::ui::widgets::{asset, menu};
 
-use super::super::project_panel::{BrowserAction, asset_icon};
+use super::state::BrowserState;
+use super::{BrowserAction, asset_icon};
 
-/// One asset row, plus the sprites under it when its image is sliced and
-/// showing.
+/// One row of the listing, plus whatever hangs under it.
 ///
-/// Its own function because the row and its children are one thing to a reader
-/// — an image and its parts — even though the browser draws them as sibling
-/// rows.
-pub(super) fn sliceable_row(
+/// A folder's contents and a sliced image's sprites are both "what is under
+/// this row", so both fold from the same chevron and both are drawn here — the
+/// listing itself is flat, and this is where a row and its children read as one
+/// thing.
+pub(crate) fn listing_row(
     ui: &mut egui::Ui,
     entry: &ProjectEntry,
     depth: usize,
     searching: bool,
     open: Option<&Path>,
-    expanded: &mut BTreeSet<PathBuf>,
+    state: &mut BrowserState,
 ) -> Option<BrowserAction> {
+    if entry.kind == AssetKind::Folder {
+        return folder_listing_row(ui, entry, depth, searching, open, state);
+    }
     // A search shows a flat list, so parts under an image would be pointing at
     // a parent the search may have removed.
     let sliced = !entry.sprites.is_empty() && !searching;
-    let mut showing = expanded.contains(&entry.path);
+    let mut showing = state.expanded_sheets.contains(&entry.path);
     let row = asset_row(
         ui,
         entry,
         depth,
         searching,
         open,
+        state,
         sliced.then_some(&mut showing),
     );
     if sliced {
         if showing {
-            expanded.insert(entry.path.clone());
+            state.expanded_sheets.insert(entry.path.clone());
             for sprite in &entry.sprites {
                 sprite_row(ui, sprite, depth + 1);
             }
         } else {
-            expanded.remove(&entry.path);
+            state.expanded_sheets.remove(&entry.path);
         }
     }
+    let mut asked = row_menu(&row, entry);
     if row.double_clicked() && entry.kind == AssetKind::Scene {
-        return Some(BrowserAction::Open(entry.path.clone()));
+        asked = Some(BrowserAction::Open(entry.path.clone()));
+    } else if row.clicked() {
+        asked = Some(BrowserAction::Select(entry.path.clone()));
     }
-    if row.clicked() && entry.kind == AssetKind::Texture {
-        return Some(BrowserAction::Select(entry.path.clone()));
+    asked
+}
+
+/// A folder in the listing: it folds, and a double click looks inside it.
+fn folder_listing_row(
+    ui: &mut egui::Ui,
+    entry: &ProjectEntry,
+    depth: usize,
+    searching: bool,
+    open: Option<&Path>,
+    state: &mut BrowserState,
+) -> Option<BrowserAction> {
+    let mut showing = !state.is_folded(&entry.path);
+    let was = showing;
+    let row = asset_row(
+        ui,
+        entry,
+        depth,
+        searching,
+        open,
+        state,
+        (!searching).then_some(&mut showing),
+    );
+    if showing != was {
+        state.toggle_fold(&entry.path);
     }
-    None
+    let mut asked = row_menu(&row, entry);
+    if row.double_clicked() {
+        asked = Some(BrowserAction::LookIn(entry.path.clone()));
+    } else if row.clicked() {
+        asked = Some(BrowserAction::Select(entry.path.clone()));
+    }
+    asked
 }
 
 /// One named part of a sliced image, under the image it came from.
@@ -75,32 +109,30 @@ fn sprite_row(ui: &mut egui::Ui, sprite: &str, depth: usize) {
             name: sprite,
             kind: AssetKind::Sprite.label(),
             depth,
+            selected: false,
             current: false,
-            actionable: false,
             expanded: None,
         },
     );
 }
 
-/// One asset as a row: what it is called, what it is, and whether it is the
-/// scene the editor has open.
+/// One asset as a row: what it is called, what it is, whether the browser has
+/// it selected, and whether it is the scene the editor has open.
 ///
-/// A scene row answers a double click, because opening one is the only thing
-/// the editor can do with a file. A texture row answers a click, because
-/// selecting it opens the slicer. Every other row is a listing and says so by
-/// not responding — a listing that lists is not the same as a control that
-/// looks like it does something.
+/// Every row answers a click, because a row that cannot be selected cannot
+/// carry a right-click menu either. What each kind can *do* is said on hover:
+/// a scene opens, an image slices, and everything else is a listing that can
+/// still be pointed at.
 pub(crate) fn asset_row(
     ui: &mut egui::Ui,
     entry: &ProjectEntry,
     depth: usize,
     searching: bool,
     open: Option<&Path>,
-    // `Some` for a sliced image, carrying whether its parts are showing. A row
-    // with nothing under it gets no triangle rather than a disabled one.
+    state: &BrowserState,
+    // `Some` for a folder or a sliced image, carrying whether it is open.
     expanded: Option<&mut bool>,
 ) -> Response {
-    let actionable = matches!(entry.kind, AssetKind::Scene | AssetKind::Texture);
     // Under a search the path below the root is what tells two files of the
     // same name apart.
     let name = if searching {
@@ -115,19 +147,63 @@ pub(crate) fn asset_row(
             name,
             kind: entry.kind.label(),
             depth,
+            selected: state.selected.as_deref() == Some(entry.path.as_path()),
             current: open.is_some_and(|path| path == entry.path),
-            actionable,
             expanded,
         },
     );
-    match entry.kind {
-        AssetKind::Scene => row.on_hover_text("Double-click to open this scene"),
-        AssetKind::Texture => row.on_hover_text("Click to slice this image into sprites"),
-        _ => row,
-    }
+    row.on_hover_text(match entry.kind {
+        AssetKind::Scene => "Double-click to open this scene",
+        AssetKind::Texture => "Click to slice this image into sprites",
+        AssetKind::Folder => "Double-click to look inside this folder",
+        _ => entry.kind.label(),
+    })
 }
 
-/// A folder in the browser's tree.
-pub(super) fn folder_row(ui: &mut egui::Ui, label: &str, selected: bool, depth: usize) {
-    asset::folder(ui, label, selected, depth);
+/// The menu a right-click opens on one asset.
+///
+/// Only what the editor can actually carry out: the verb the row's double
+/// click already performs, said in words rather than left to be guessed, and
+/// the two paths worth copying. A component that names an asset names it by
+/// the path relative to the project, which until now had to be typed from
+/// reading the row.
+pub(crate) fn row_menu(response: &Response, entry: &ProjectEntry) -> Option<BrowserAction> {
+    let mut asked = None;
+    menu::on_right_click(response, |ui| {
+        menu::subject(ui, &entry.name);
+        let opens = match entry.kind {
+            AssetKind::Scene => Some(("Open scene", BrowserAction::Open(entry.path.clone()))),
+            AssetKind::Folder => Some(("Look inside", BrowserAction::LookIn(entry.path.clone()))),
+            AssetKind::Texture => Some((
+                "Slice into sprites",
+                BrowserAction::Select(entry.path.clone()),
+            )),
+            _ => None,
+        };
+        if let Some((label, action)) = opens
+            && menu::item(ui, label).clicked()
+        {
+            asked = Some(action);
+            ui.close();
+        }
+        ui.separator();
+        // The path a component field wants is the one relative to the project;
+        // a folder is never named by one, so it is offered only its own.
+        if entry.kind != AssetKind::Folder && menu::item(ui, "Copy asset path").clicked() {
+            asked = Some(BrowserAction::Copy(entry.relative.clone()));
+            ui.close();
+        }
+        if menu::item(ui, "Copy full path").clicked() {
+            asked = Some(BrowserAction::Copy(
+                entry.path.to_string_lossy().into_owned(),
+            ));
+            ui.close();
+        }
+    });
+    asked
+}
+
+/// A folder in the browser's tree pane, which navigates rather than folds.
+pub(super) fn folder_row(ui: &mut egui::Ui, label: &str, selected: bool, depth: usize) -> Response {
+    asset::folder(ui, label, selected, depth)
 }

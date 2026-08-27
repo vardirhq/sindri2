@@ -5,14 +5,13 @@
 //! submodules hold the work, this file holds what they all share: the state
 //! itself, the constants they agree on, and how the window is opened.
 
-use std::{collections::BTreeSet, path::PathBuf};
-
 use eframe::egui;
 use glam::Vec2 as GlamVec2;
 use sindri_core::{CommandHistory, EngineLifecycle, EntityId, SceneComponent, World};
+use sindri_decay::ScriptComponent;
 use sindri_scene::{
-    GridNavigationComponent, GridOccupantComponent, SceneExtractor, SpriteAnimations,
-    SpriteComponent, UiImageComponent, UiTextComponent,
+    AudioSourceComponent, CameraComponent, GridNavigationComponent, GridOccupantComponent,
+    SceneExtractor, SpriteAnimations, SpriteComponent, UiImageComponent, UiTextComponent,
 };
 
 use crate::{
@@ -41,6 +40,7 @@ mod pointer;
 mod project_panel;
 mod runtime;
 mod scene_io;
+mod scene_new;
 mod shortcuts;
 mod slicer_view;
 mod tools;
@@ -54,16 +54,20 @@ mod tests;
 // outside the editor reaches them here, not at the file they happen to live in.
 pub use scene_io::{load_world, scene_extractor};
 
+use project_panel::state::BrowserState;
 use runtime::initialized_lifecycle;
 use scene_io::open_requested_scene;
 use unsaved::Discarding;
 use viewport::{RuntimeViewport, SceneRenderers};
 
+const CAMERA_COMPONENT: &str = CameraComponent::TYPE_NAME;
 const SPRITE_COMPONENT: &str = SpriteComponent::TYPE_NAME;
 const UI_IMAGE_COMPONENT: &str = UiImageComponent::TYPE_NAME;
 const UI_TEXT_COMPONENT: &str = UiTextComponent::TYPE_NAME;
 const GRID_NAVIGATION_COMPONENT: &str = GridNavigationComponent::TYPE_NAME;
 const GRID_OCCUPANT_COMPONENT: &str = GridOccupantComponent::TYPE_NAME;
+const AUDIO_SOURCE_COMPONENT: &str = AudioSourceComponent::TYPE_NAME;
+const SCRIPT_COMPONENT: &str = ScriptComponent::TYPE_NAME;
 const INITIAL_VIEWPORT_WIDTH: u32 = 960;
 const INITIAL_VIEWPORT_HEIGHT: u32 = 540;
 
@@ -107,6 +111,22 @@ struct EditorApp {
     /// cancelled to ask the question is not cancelled a second time.
     closing: bool,
     selection: Option<EntityId>,
+    /// The entity whose name is being typed into, and the draft.
+    ///
+    /// Renaming lives on the hierarchy row rather than in a dialog, so this is
+    /// the row that has turned into a text field. Editor state, never scene
+    /// state: an abandoned rename changes nothing.
+    renaming: Option<EntityId>,
+    rename_draft: String,
+    /// The stable ID being typed into the inspector, and whose it is.
+    ///
+    /// Held across frames because a stable ID is not written as it is typed:
+    /// renaming `orb-1` to `player` passes through `p`, `pl`, `pla`, each of
+    /// which would be a real identity written into the world and into every
+    /// component pointing at it.
+    id_edit: Option<(EntityId, String)>,
+    /// The scene's name being typed, for the same reason.
+    scene_name_edit: Option<String>,
     history: CommandHistory,
     search: String,
     asset_search: String,
@@ -123,12 +143,13 @@ struct EditorApp {
     /// Clip selection and playback cursor for the inspector's animation
     /// preview. Like runtime animation state, none of this is scene data.
     animation_tool: AnimationTool,
-    /// Which sliced images are showing their sprites.
+    /// Where the project browser is looking: its selection, the folder it is
+    /// scoped to, and what it has folded away.
     ///
-    /// Collapsed until asked for, and not remembered across launches: which
-    /// sheet you were looking inside is about the minute rather than the
-    /// project, unlike the panel sizes beside it in `Preferences`.
-    expanded_sheets: BTreeSet<PathBuf>,
+    /// Not remembered across launches: which folder you were looking inside is
+    /// about the minute rather than the project, unlike the panel sizes beside
+    /// it in `Preferences`.
+    browser: BrowserState,
     /// The directory the open scene lives in, as it was last read.
     ///
     /// Read when a scene is opened rather than every frame: the browser redraws
@@ -233,13 +254,17 @@ impl EditorApp {
             confirming: None,
             closing: false,
             selection,
+            renaming: None,
+            rename_draft: String::new(),
+            id_edit: None,
+            scene_name_edit: None,
             history: CommandHistory::default(),
             search: String::new(),
             asset_search: String::new(),
             slicer: None,
             tilemap_tool: TilemapTool::default(),
             animation_tool: AnimationTool::default(),
-            expanded_sheets: BTreeSet::new(),
+            browser: BrowserState::default(),
             project,
             workspace_tab: WorkspaceTab::Scene,
             preferences,

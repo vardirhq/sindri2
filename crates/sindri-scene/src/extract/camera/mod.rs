@@ -6,15 +6,17 @@
 
 pub(super) mod view;
 
-use glam::{Mat4, Vec3};
-use sindri_core::World;
+use glam::{Mat4, Vec2, Vec3};
+use sindri_core::{Transform3D, World};
 use sindri_render::{PerspectiveCamera, orthographic_projection, perspective_projection};
 
 use self::view::{
     CameraView, OverlayExtent, WorldProjection, orbited_offset, panned_shift,
     resolved_screen_overlay, safe_rotation,
 };
-use crate::CameraComponent;
+use crate::{CameraComponent, UiAnchor};
+
+use super::ui::ui_matrix;
 
 use super::{SceneExtractError, SceneExtractor};
 
@@ -54,6 +56,73 @@ pub struct ViewCamera {
     /// by exactly this much — so it is also what turns a distance on screen
     /// back into a pan, which is how a viewport centres itself on something.
     pub framed_half_height: f32,
+}
+
+/// The overlay a UI element is laid out against, for one viewport.
+///
+/// The overlay is viewport-owned rather than camera-owned — no scene entity
+/// decides where it is, which is why moving or deleting a gameplay camera
+/// cannot move a HUD — so it needs nothing but the aspect ratio to resolve.
+///
+/// Handed out for the same reason [`ViewCamera`] is: the editor has to turn a
+/// pointer back into the element under it, and a matrix rebuilt in the editor
+/// is a second answer about the same overlay that only has to disagree once.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct OverlayView {
+    /// The exact projection and view a UI element is drawn through.
+    pub view_projection: Mat4,
+    /// Half the height the overlay spans, in overlay units. A UI element's
+    /// position is measured in these, so this is what turns a drag on screen
+    /// into an offset from an anchor.
+    pub framed_half_height: f32,
+}
+
+/// Where the overlay sits for a viewport of this shape.
+pub fn overlay_for_viewport(aspect: f32) -> Option<(OverlayView, OverlayPlacement)> {
+    let resolved = resolved_screen_overlay(aspect);
+    let camera = resolved.overlay?;
+    let extent = resolved.overlay_extent?;
+    Some((
+        OverlayView {
+            view_projection: camera.view_projection,
+            framed_half_height: camera.framed_half_height,
+        },
+        OverlayPlacement { extent },
+    ))
+}
+
+/// Where an anchored element lands on the overlay.
+///
+/// A separate type from [`OverlayView`] because it answers a different
+/// question — not "what is this drawn through" but "where on the viewport does
+/// this end up" — and because it holds the extent, which is the only part a
+/// caller outside this crate has no business reading field by field.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct OverlayPlacement {
+    extent: OverlayExtent,
+}
+
+impl OverlayPlacement {
+    /// The model matrix a UI element with this transform and anchor is drawn
+    /// with — the same one the frame uses, from the same function.
+    #[must_use]
+    pub fn place(&self, transform: Transform3D, anchor: UiAnchor) -> Mat4 {
+        ui_matrix(transform, anchor, self.extent)
+    }
+
+    /// Where the element's own origin sits, in overlay units.
+    ///
+    /// What a transform gizmo for a UI element is drawn at. Drawn at the raw
+    /// transform instead, it appears wherever that offset happens to point in
+    /// the world — for an element anchored top-centre with a small offset,
+    /// that is the middle of the viewport rather than the element.
+    #[must_use]
+    pub fn origin(&self, transform: Transform3D, anchor: UiAnchor) -> Vec2 {
+        let unit = Vec2::from_array(anchor.unit_offset());
+        self.extent.center
+            + unit * self.extent.half_extent
+            + Vec2::from_array(transform.position_2d())
+    }
 }
 
 impl SceneExtractor {

@@ -22,11 +22,16 @@ pub struct Entry<'a> {
     /// What kind of file this is, shown at the end of the row.
     pub kind: &'a str,
     pub depth: usize,
-    /// The scene the editor currently has open.
+    /// Whether the browser has this file selected.
+    ///
+    /// Separate from [`Self::current`], which is a fact about the editor rather
+    /// than about the browser. The row drew only the latter, so the open scene
+    /// wore the selection band permanently and clicking anything marked
+    /// nothing.
+    pub selected: bool,
+    /// The scene the editor currently has open, marked wherever it appears.
     pub current: bool,
-    /// Whether there is anything the editor can do with this file.
-    pub actionable: bool,
-    /// `Some` for a sliced image, carrying whether its parts are showing.
+    /// `Some` for a folder or a sliced image, carrying whether it is open.
     pub expanded: Option<&'a mut bool>,
 }
 
@@ -42,15 +47,16 @@ pub fn row(ui: &mut egui::Ui, entry: Entry<'_>) -> Response {
         name,
         kind,
         depth,
+        selected,
         current,
-        actionable,
         expanded,
     } = entry;
-    let sense = if actionable {
-        Sense::click()
-    } else {
-        Sense::hover()
-    };
+    // Every row answers the pointer, whether or not the editor can open what it
+    // names. A row that cannot be clicked cannot be selected, and one that
+    // cannot be selected has nowhere to put a right-click menu — which is how
+    // rename and delete came to have no home. What a row can *do* is said on
+    // hover instead of by refusing to respond.
+    let sense = Sense::click();
     let width = ui.available_width();
     let scope = ui.scope_builder(egui::UiBuilder::new().sense(sense), |ui| {
         ui.set_min_width(width);
@@ -85,19 +91,23 @@ pub fn row(ui: &mut egui::Ui, entry: Entry<'_>) -> Response {
                     None => ui.add_space(14.0),
                 }
                 let icon = ui.add(
-                    egui::Label::new(icon.outlined().rich_text().size(14.0).color(if current {
-                        color::FORGE
-                    } else {
-                        color::TEXT_FAINT
-                    }))
+                    egui::Label::new(icon.outlined().rich_text().size(14.0).color(
+                        if current || selected {
+                            color::FORGE
+                        } else {
+                            color::TEXT_FAINT
+                        },
+                    ))
                     .sense(sense),
                 );
                 let label = ui.add(
-                    egui::Label::new(RichText::new(name).size(text::LABEL).color(if current {
-                        color::TEXT
-                    } else {
-                        color::TEXT_MUTED
-                    }))
+                    egui::Label::new(RichText::new(name).size(text::LABEL).color(
+                        if current || selected {
+                            color::TEXT
+                        } else {
+                            color::TEXT_MUTED
+                        },
+                    ))
                     .selectable(false)
                     .truncate()
                     .sense(sense),
@@ -124,7 +134,19 @@ pub fn row(ui: &mut egui::Ui, entry: Entry<'_>) -> Response {
     let (inner, ground) = scope.inner;
     let rect = scope.response.rect;
     let hovered = scope.response.hovered() || inner.hovered();
-    tree::paint_ground(ui, ground, rect, current, hovered && actionable, depth);
+    tree::paint_ground(ui, ground, rect, selected, hovered, depth);
+    // The open scene is a standing fact rather than a selection, so it is
+    // marked in the margin instead of taking the band a selected row wears.
+    if current {
+        ui.painter().rect_filled(
+            egui::Rect::from_min_size(
+                rect.right_top() - Vec2::new(metric::SELECT_RULE, 0.0),
+                Vec2::new(metric::SELECT_RULE, rect.height()),
+            ),
+            0.0,
+            color::FORGE_DIM,
+        );
+    }
     scope.response | inner
 }
 
@@ -207,30 +229,48 @@ fn elide(name: &str, limit: usize) -> String {
     format!("{kept}…")
 }
 
-/// A folder in the browser's tree, which is a listing rather than a control.
-pub fn folder(ui: &mut egui::Ui, label: &str, selected: bool, depth: usize) {
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 4.0;
-        ui.add_space(6.0 + tree::indent(depth, metric::INDENT));
-        ui.label(
-            icons::FOLDER
-                .outlined()
-                .rich_text()
-                .size(14.0)
-                .color(if selected {
-                    color::FORGE
-                } else {
-                    color::TEXT_FAINT
-                }),
-        );
-        ui.add(
-            egui::Label::new(RichText::new(label).size(text::LABEL).color(if selected {
-                color::TEXT
-            } else {
-                color::TEXT_MUTED
-            }))
-            .selectable(false)
-            .truncate(),
-        );
+/// A folder in the browser's tree pane.
+///
+/// Answers a click: the pane it lives in used to be labels with no sense, so it
+/// listed the project's folders and selected none of them.
+pub fn folder(ui: &mut egui::Ui, label: &str, selected: bool, depth: usize) -> Response {
+    let width = ui.available_width();
+    let scope = ui.scope_builder(egui::UiBuilder::new().sense(Sense::click()), |ui| {
+        ui.set_min_width(width);
+        ui.set_min_height(metric::ROW_HEIGHT);
+        let ground = tree::reserve(ui);
+        let inner = ui
+            .horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 4.0;
+                ui.add_space(6.0 + tree::indent(depth, metric::INDENT));
+                let icon = ui.add(
+                    egui::Label::new(icons::FOLDER.outlined().rich_text().size(14.0).color(
+                        if selected {
+                            color::FORGE
+                        } else {
+                            color::TEXT_FAINT
+                        },
+                    ))
+                    .sense(Sense::click()),
+                );
+                let label = ui.add(
+                    egui::Label::new(RichText::new(label).size(text::LABEL).color(if selected {
+                        color::TEXT
+                    } else {
+                        color::TEXT_MUTED
+                    }))
+                    .selectable(false)
+                    .truncate()
+                    .sense(Sense::click()),
+                );
+                icon | label
+            })
+            .inner;
+        (inner, ground)
     });
+    let (inner, ground) = scope.inner;
+    let rect = scope.response.rect;
+    let hovered = scope.response.hovered() || inner.hovered();
+    tree::paint_ground(ui, ground, rect, selected, hovered, depth);
+    scope.response | inner
 }

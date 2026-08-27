@@ -43,12 +43,21 @@ impl AssetKind {
         }
     }
 
+    /// What the file at this path is, judged by its name.
+    #[must_use]
+    pub fn of_path(path: &std::path::Path) -> Self {
+        if path.is_dir() {
+            return Self::Folder;
+        }
+        Self::of_file(&path.to_string_lossy())
+    }
+
     /// What a file of this name is, judged by its extension.
     ///
     /// A scene is `*.scene.json` rather than any JSON, because the editor can
     /// open one and not the other, and a row that offers to open a settings
     /// file as a scene is the same class of lie this module exists to remove.
-    pub(super) fn of_file(name: &str) -> Self {
+    pub(crate) fn of_file(name: &str) -> Self {
         let lower = name.to_lowercase();
         if lower.ends_with(".scene.json") {
             return Self::Scene;

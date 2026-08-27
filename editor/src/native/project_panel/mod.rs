@@ -1,16 +1,15 @@
 //! The project browser: the folder tree and the assets in a folder.
 
 pub(super) mod row;
+pub(super) mod state;
 
-use std::{
-    collections::BTreeSet,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use eframe::egui::{self, Align, Layout, RichText};
 use egui_material_icons::MaterialIcon;
 
-use self::row::{folder_row, sliceable_row};
+use self::row::{folder_row, listing_row, row_menu};
+use self::state::BrowserState;
 use crate::{
     preferences::{AssetView, BottomTab, Layout as WorkspaceLayout},
     project::{AssetKind, ProjectTree},
@@ -35,8 +34,16 @@ pub(super) enum BrowserAction {
     Refresh,
     /// Open a scene the browser is showing.
     Open(PathBuf),
-    /// Show an asset in the inspector, which for a texture means its slice.
+    /// Mark an asset as the browser's selection. A texture also opens the
+    /// slicer, which is the one asset the editor can do something with.
     Select(PathBuf),
+    /// List one folder rather than the whole project.
+    LookIn(PathBuf),
+    /// List the whole project again.
+    LookInProject,
+    /// Put something on the clipboard — a path a component field wants, which
+    /// otherwise had to be read off a row and typed back in by hand.
+    Copy(String),
 }
 
 /// The icon a kind of file is drawn with.
@@ -44,7 +51,8 @@ pub(super) const fn asset_icon(kind: AssetKind) -> MaterialIcon {
     match kind {
         AssetKind::Folder => icons::FOLDER,
         AssetKind::Scene => icons::SCENE,
-        AssetKind::Texture | AssetKind::Font => icons::SPRITE,
+        AssetKind::Texture => icons::SPRITE,
+        AssetKind::Font => icons::FONT,
         // A sprite and the sheet that cuts it are both about a grid over an
         // image, and neither is the image.
         AssetKind::Sprite | AssetKind::Sheet => icons::TILEMAP,
@@ -65,22 +73,30 @@ fn project_browser(
     ui: &mut egui::Ui,
     search: &mut String,
     view: &mut AssetView,
-    expanded: &mut BTreeSet<PathBuf>,
+    browser: &mut BrowserState,
     folders: bool,
     project: &ProjectTree,
     open: Option<&Path>,
 ) -> BrowserAction {
     if !folders {
-        return asset_column(ui, search, view, expanded, false, project, open);
+        return asset_column(ui, search, view, browser, false, project, open);
     }
     let mut action = BrowserAction::None;
     ui.horizontal(|ui| {
         ui.vertical(|ui| {
             ui.set_width(176.0);
             ui.add_space(4.0);
-            folder_row(ui, &project.label(), true, 0);
+            // The pane navigates: choosing a folder lists that folder. It used
+            // to be labels with no sense, so it named the project's folders and
+            // did nothing with any of them.
+            if folder_row(ui, &project.label(), !browser.is_scoped(), 0).clicked() {
+                action = BrowserAction::LookInProject;
+            }
             for folder in project.folders() {
-                folder_row(ui, &folder.name, false, folder.depth + 1);
+                let chosen = browser.folder.as_deref() == Some(folder.path.as_path());
+                if folder_row(ui, &folder.name, chosen, folder.depth + 1).clicked() {
+                    action = BrowserAction::LookIn(folder.path.clone());
+                }
             }
         });
         // A hairline rather than egui's separator: the dock already has enough
@@ -93,7 +109,10 @@ fn project_browser(
             crate::ui::theme::hairline(),
         );
         ui.vertical(|ui| {
-            action = asset_column(ui, search, view, expanded, true, project, open);
+            let listed = asset_column(ui, search, view, browser, true, project, open);
+            if listed != BrowserAction::None {
+                action = listed;
+            }
         });
     });
     action
@@ -189,38 +208,29 @@ fn asset_column(
     ui: &mut egui::Ui,
     search: &mut String,
     view: &mut AssetView,
-    expanded: &mut BTreeSet<PathBuf>,
+    browser: &mut BrowserState,
     folders: bool,
     project: &ProjectTree,
     open: Option<&Path>,
 ) -> BrowserAction {
     ui.add_space(4.0);
-    // The folder tree already names the directory; without it the list has to.
-    let label = (!folders).then(|| project.label());
+    // The folder tree already names the directory; without it the list has to,
+    // and when the browser is looking inside a folder it says which.
+    let label = (!folders).then(|| browser.label_within(project));
     let mut action = browser_tools(ui, search, view, label.as_deref());
+    if !folders && browser.is_scoped() && back_out(ui) {
+        action = BrowserAction::LookInProject;
+    }
     ui.add_space(5.0);
     if let Some(error) = project.error() {
         panel::problem(ui, error);
         return action;
     }
     let searching = !search.trim().is_empty();
-    let entries = project.matching(search);
-    if entries.is_empty() {
-        if searching {
-            panel::empty_state(
-                ui,
-                icons::SEARCH,
-                "Nothing matches",
-                "No file beside this scene has that in its name.",
-            );
-        } else {
-            panel::empty_state(
-                ui,
-                icons::PROJECT,
-                "This directory is empty",
-                "Assets placed beside the scene file show up here.",
-            );
-        }
+    let matching = project.matching(search);
+    let rows = browser.rows(&matching, searching);
+    if rows.is_empty() {
+        empty_listing(ui, searching, browser.is_scoped());
         return action;
     }
     // A project has more assets than a dock has room for, in either
@@ -234,21 +244,9 @@ fn asset_column(
                     ui.spacing_mut().item_spacing = egui::vec2(6.0, 6.0);
                     ui.add_space(2.0);
                     ui.horizontal_wrapped(|ui| {
-                        for entry in &entries {
-                            let tile = crate::ui::widgets::asset::tile(
-                                ui,
-                                asset_icon(entry.kind),
-                                &entry.name,
-                                open.is_some_and(|path| path == entry.path),
-                                None,
-                            );
-                            let tile = if entry.kind == AssetKind::Scene {
-                                tile.on_hover_text("Double-click to open")
-                            } else {
-                                tile.on_hover_text(entry.kind.label())
-                            };
-                            if tile.double_clicked() {
-                                action = BrowserAction::Open(entry.path.clone());
+                        for (entry, _) in &rows {
+                            if let Some(chosen) = asset_tile(ui, entry, browser, open) {
+                                action = chosen;
                             }
                         }
                     });
@@ -258,18 +256,9 @@ fn asset_column(
                     // shows a useful number of them without taking height from
                     // the viewport it sits under.
                     ui.spacing_mut().item_spacing.y = 0.0;
-                    for entry in &entries {
-                        // A search shows a flat list, so an indentation would
-                        // point at a parent the search has removed.
-                        let depth = if searching { 0 } else { entry.depth };
-                        // A sliced image's parts sit under it, because that is
-                        // where a person looks for them: they belong to the
-                        // image, not to the directory. Collapsed until asked
-                        // for, because a sheet is as likely to hold sixty-four
-                        // frames as four, and a browser that cannot be scrolled
-                        // past is the failure the hierarchy already taught us.
+                    for (entry, depth) in &rows {
                         if let Some(chosen) =
-                            sliceable_row(ui, entry, depth, searching, open, expanded)
+                            listing_row(ui, entry, *depth, searching, open, browser)
                         {
                             action = chosen;
                         }
@@ -281,6 +270,83 @@ fn asset_column(
             }
         });
     action
+}
+
+/// One asset as a tile, reporting what selecting it means.
+fn asset_tile(
+    ui: &mut egui::Ui,
+    entry: &crate::project::ProjectEntry,
+    browser: &BrowserState,
+    open: Option<&Path>,
+) -> Option<BrowserAction> {
+    let tile = crate::ui::widgets::asset::tile(
+        ui,
+        asset_icon(entry.kind),
+        &entry.name,
+        browser.selected.as_deref() == Some(entry.path.as_path())
+            || open.is_some_and(|path| path == entry.path),
+        None,
+    );
+    let tile = tile.on_hover_text(match entry.kind {
+        AssetKind::Scene => "Double-click to open this scene",
+        AssetKind::Folder => "Double-click to look inside this folder",
+        kind => kind.label(),
+    });
+    // The same menu the list view offers: which presentation the browser is in
+    // is a matter of how files are drawn, not of what can be done with one.
+    let asked = row_menu(&tile, entry);
+    if tile.double_clicked() {
+        return match entry.kind {
+            AssetKind::Scene => Some(BrowserAction::Open(entry.path.clone())),
+            AssetKind::Folder => Some(BrowserAction::LookIn(entry.path.clone())),
+            _ => asked,
+        };
+    }
+    if tile.clicked() {
+        return Some(BrowserAction::Select(entry.path.clone()));
+    }
+    asked
+}
+
+/// The way back out of a folder, for the arrangement that has no folder tree.
+fn back_out(ui: &mut egui::Ui) -> bool {
+    ui.horizontal(|ui| {
+        ui.add_space(metric::GUTTER);
+        button::labelled(
+            ui,
+            "Back to project",
+            button::Intent::Quiet,
+            "List every asset again",
+        )
+        .clicked()
+    })
+    .inner
+}
+
+/// What the browser says when the listing is empty, which depends on why.
+fn empty_listing(ui: &mut egui::Ui, searching: bool, scoped: bool) {
+    if searching {
+        panel::empty_state(
+            ui,
+            icons::SEARCH,
+            "Nothing matches",
+            "No file beside this scene has that in its name.",
+        );
+    } else if scoped {
+        panel::empty_state(
+            ui,
+            icons::FOLDER,
+            "This folder is empty",
+            "Nothing is in it yet. Go back to the project to see the rest.",
+        );
+    } else {
+        panel::empty_state(
+            ui,
+            icons::PROJECT,
+            "This directory is empty",
+            "Assets placed beside the scene file show up here.",
+        );
+    }
 }
 
 impl EditorApp {
@@ -344,7 +410,7 @@ impl EditorApp {
                             ui,
                             &mut self.asset_search,
                             &mut self.preferences.asset_view,
-                            &mut self.expanded_sheets,
+                            &mut self.browser,
                             folders,
                             &self.project,
                             self.file.path(),
@@ -360,8 +426,8 @@ impl EditorApp {
         if clear_console {
             self.console.clear();
         }
-        // Acted on outside the panel, because both answers write to the field
-        // the browser was reading from.
+        // Acted on outside the panel, because every answer writes to state the
+        // browser was reading from.
         match action {
             BrowserAction::None => {}
             BrowserAction::Refresh => self.refresh_project(),
@@ -369,6 +435,15 @@ impl EditorApp {
                 self.discard_or_confirm(Discarding::OpenPath(path), &context);
             }
             BrowserAction::Select(path) => self.select_asset(&path),
+            BrowserAction::LookIn(folder) => self.browser.look_in(Some(&folder)),
+            BrowserAction::LookInProject => self.browser.look_in(None),
+            BrowserAction::Copy(text) => {
+                // Said in the console rather than through `report`, which is
+                // for things that did not happen: a copy that worked is not a
+                // failure, and marking it one puts a red count on the tab.
+                context.copy_text(text.clone());
+                self.console.info(format!("Copied {text}"));
+            }
         }
     }
 }

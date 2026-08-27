@@ -2,6 +2,7 @@
 
 mod components;
 mod despawn;
+mod identity;
 mod locked;
 mod merge;
 mod support;

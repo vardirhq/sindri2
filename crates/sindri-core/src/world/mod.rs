@@ -177,6 +177,8 @@ pub enum WorldError {
     HierarchyCycle,
     #[error("entity {0:?} has no stable scene ID and cannot be saved")]
     UnstableEntity(EntityId),
+    #[error("another entity already has the stable ID '{}'", .0.as_str())]
+    DuplicateSourceId(SceneEntityId),
     #[error(
         "entity {0:?} declares its transform's Z locked; unlock it before \
          moving it off that layer"

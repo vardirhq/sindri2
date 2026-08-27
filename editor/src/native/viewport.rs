@@ -149,6 +149,18 @@ impl RuntimeViewport {
     }
 }
 
+/// What the viewport answers to.
+///
+/// Clicks as well as drags, and the click half is not optional: egui sets a
+/// response's clicked flag only for a widget whose sense includes clicks, and
+/// this used to be `Sense::drag()`. So `clicked_by` was always false and
+/// *nothing* in the Scene view could be selected by clicking it, whatever the
+/// picking code decided. The tile brush was half-dead the same way — it
+/// painted on a drag and ignored a single click.
+pub(super) const fn viewport_sense() -> Sense {
+    Sense::CLICK.union(Sense::DRAG).union(Sense::FOCUSABLE)
+}
+
 impl EditorApp {
     /// Draws the cell a tilemap stroke would edit without changing the scene.
     fn paint_tilemap_hover(&self, ui: &egui::Ui, hover: &TilemapHover) {
@@ -181,14 +193,15 @@ impl EditorApp {
     pub(super) fn render_view(&mut self, ui: &mut egui::Ui, tab: WorkspaceTab) {
         let context = ui.ctx().clone();
         let editing = tab == WorkspaceTab::Scene;
-        let (rect, response) = ui.allocate_exact_size(ui.available_size(), Sense::drag());
+        let (rect, response) = ui.allocate_exact_size(ui.available_size(), viewport_sense());
         let painting = editing && self.tilemap_tool.brush().is_some();
         let camera_before_input = self.scene_camera();
         let gizmo_owned = if editing && !painting {
-            self.gizmo_visual(rect, camera_before_input)
-                .is_some_and(|(camera, visual)| {
-                    self.interact_gizmo(rect, &response, camera, &visual)
-                })
+            self.gizmo_visual(rect, camera_before_input).is_some_and(
+                |(camera, anchoring, visual)| {
+                    self.interact_gizmo(rect, &response, camera, anchoring, &visual)
+                },
+            )
         } else {
             false
         };
@@ -274,7 +287,7 @@ impl EditorApp {
         if let Some(hover) = hover {
             self.paint_tilemap_hover(ui, hover);
         }
-        if !painting && let Some((_, visual)) = self.gizmo_visual(rect, camera) {
+        if !painting && let Some((_, _, visual)) = self.gizmo_visual(rect, camera) {
             paint_transform_gizmo(
                 ui.painter(),
                 rect,

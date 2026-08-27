@@ -7,6 +7,10 @@
 //! that question, so the hierarchy, the icons, and the Add Component menu all
 //! get the same answer.
 //!
+//! Only a component that *places* something has an opinion. A script, a clip,
+//! a rigid body, a footprint and a set of clips say what an entity does, not
+//! where it is, and an entity carrying only those has still chosen neither.
+//!
 //! Nothing here is stored. Deriving the space from the components means it
 //! cannot disagree with what actually draws, and an entity cannot be marked as
 //! UI while holding a component that puts it in the world.
@@ -18,6 +22,25 @@ use sindri_core::{EntityData, EntityId, World};
 
 /// The prefix every UI component's type name starts with.
 pub const UI_NAMESPACE: &str = "sindri.ui.";
+
+/// The components that put the entity carrying them *in the world*.
+///
+/// Named, rather than taken to be everything that is not UI. A script, a clip,
+/// a rigid body, a grid occupant and a set of animation clips say nothing about
+/// which space their entity is in — Gather's banner and pips are UI images
+/// driven by scripts, and its player is a world sprite driven by one. Treating
+/// any non-UI component as a world component meant adding a script to a fresh
+/// entity silently decided it was a world object, after which the menu would
+/// not offer UI Text at all: the editor could not have built Gather's HUD.
+///
+/// These four are the ones that place something: three that draw through a
+/// camera, and the camera itself.
+pub const WORLD_COMPONENTS: [&str; 4] = [
+    "sindri.camera",
+    "sindri.mesh",
+    "sindri.sprite",
+    "sindri.tilemap",
+];
 
 /// The space one entity is in.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -42,17 +65,31 @@ pub fn is_ui_component(type_name: &str) -> bool {
     type_name.starts_with(UI_NAMESPACE)
 }
 
+/// Whether a component type puts the entity carrying it in the world.
+#[must_use]
+pub fn is_world_component(type_name: &str) -> bool {
+    WORLD_COMPONENTS.contains(&type_name)
+}
+
 /// The space an entity's own components put it in, if they say anything.
 ///
 /// An entity with no components — a fresh `GameObject`, a node used only to
-/// group others — says nothing, which is `None` rather than a guess.
+/// group others — says nothing, which is `None` rather than a guess. So does
+/// one carrying only components that are about behaviour rather than about
+/// where a thing is: a script decides nothing, and an entity holding one is
+/// still free to become either.
 #[must_use]
 pub fn declared_space(components: &BTreeMap<String, Value>) -> Option<EntitySpace> {
-    components
+    if components
         .keys()
         .any(|type_name| is_ui_component(type_name))
-        .then_some(EntitySpace::Ui)
-        .or_else(|| (!components.is_empty()).then_some(EntitySpace::World))
+    {
+        return Some(EntitySpace::Ui);
+    }
+    components
+        .keys()
+        .any(|type_name| is_world_component(type_name))
+        .then_some(EntitySpace::World)
 }
 
 /// The space an entity is treated as being in, including what it holds.
@@ -137,6 +174,44 @@ mod tests {
         assert_eq!(declared_space(&components(&[])), None);
         assert!(accepts(None, "sindri.ui.image"));
         assert!(accepts(None, "sindri.sprite"));
+    }
+
+    /// A script says what an entity *does*, not where it is. Gather's banner
+    /// and pips are UI images driven by scripts; treating a script as a world
+    /// component meant a fresh entity given one could never be given UI Text,
+    /// so the editor could not have built that HUD.
+    #[test]
+    fn a_component_about_behaviour_decides_no_space() {
+        for neutral in [
+            "sindri.script",
+            "sindri.audio.source",
+            "sindri.animation.sprite",
+            "sindri.grid.occupant",
+            "sindri.physics.rigid_body_2d",
+        ] {
+            assert_eq!(
+                declared_space(&components(&[neutral])),
+                None,
+                "{neutral} says nothing about which space its entity is in"
+            );
+            assert!(accepts(
+                declared_space(&components(&[neutral])),
+                "sindri.ui.text"
+            ));
+            assert!(accepts(
+                declared_space(&components(&[neutral])),
+                "sindri.sprite"
+            ));
+        }
+        assert_eq!(
+            declared_space(&components(&["sindri.script", "sindri.ui.image"])),
+            Some(EntitySpace::Ui),
+            "and it goes wherever the component that does place it says"
+        );
+        assert_eq!(
+            declared_space(&components(&["sindri.script", "sindri.sprite"])),
+            Some(EntitySpace::World)
+        );
     }
 
     #[test]

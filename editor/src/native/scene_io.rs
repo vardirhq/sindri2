@@ -15,7 +15,7 @@ use crate::{
 };
 
 use super::EditorApp;
-use super::runtime::initialized_lifecycle;
+use super::runtime::{PLAYING_TIP, initialized_lifecycle};
 
 /// One rendered view of the world, and the egui texture it is drawn through.
 /// Everything a frame is derived from: the world, the schemas that read it, and
@@ -85,8 +85,20 @@ pub(super) fn open_scene_for(
 /// construction instead of by both remembering the same list.
 pub fn scene_extractor() -> SceneExtractor {
     let mut scene = SceneExtractor::new().expect("the built-in component schemas register");
+    // Fields but no default: a script names a source and a container, and
+    // neither is something the engine can invent. The editor completes both
+    // from the project and from what the source declares, which is why Script
+    // is addable at all.
     scene
-        .register::<ScriptComponent>("Script")
+        .register_with_fields::<ScriptComponent>(
+            "Script",
+            serde_json::json!({
+                "source": "",
+                "script": "",
+                "properties": {},
+                "enabled": true
+            }),
+        )
         .expect("sindri.script registers");
     scene
 }
@@ -108,7 +120,17 @@ pub fn load_world(extractor: &SceneExtractor, document: &SceneDocument) -> Resul
 
 impl EditorApp {
     /// Writes the world back to the file it came from.
+    ///
+    /// Refused while the scene is playing. `self.world` is the *running* world
+    /// then, so this used to write wherever the scripts had pushed everything
+    /// over the authored scene, mark the result saved, and then have Stop
+    /// restore a world the file no longer held. The guard is here as well as on
+    /// the controls because the keyboard reaches this directly.
     pub(super) fn save(&mut self) {
+        if !self.authoring_enabled() {
+            self.report(format!("Not saved. {PLAYING_TIP}"));
+            return;
+        }
         match self.file.save(&self.world) {
             Ok(()) => {
                 self.saved_revision = self.history.revision();
@@ -119,20 +141,23 @@ impl EditorApp {
         }
     }
 
+    /// The directory a file dialog should open in.
+    pub(super) fn scene_directory(&self) -> PathBuf {
+        self.file
+            .path()
+            .and_then(Path::parent)
+            .map_or_else(|| PathBuf::from("."), Path::to_path_buf)
+    }
+
     /// Asks for a scene file and opens it.
     ///
     /// Until this existed, the only way to open a scene was the command-line
     /// argument, which meant the editor could edit exactly the scene it was
     /// started on.
     pub(super) fn open_scene(&mut self) {
-        let started_in = self
-            .file
-            .path()
-            .and_then(Path::parent)
-            .map_or_else(|| PathBuf::from("."), Path::to_path_buf);
         let Some(path) = rfd::FileDialog::new()
             .add_filter("Sindri scene", &["json"])
-            .set_directory(started_in)
+            .set_directory(self.scene_directory())
             .pick_file()
         else {
             return;

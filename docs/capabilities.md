@@ -368,6 +368,16 @@ frame.
   back canonically, reloads from disk, and discards changes — including a scene
   carrying components it has never heard of, which it keeps through a save and
   lists in the inspector
+- **Makes a scene and forks one**, so a project can be started rather than only
+  continued. New scene (Ctrl+N) asks where the file goes, writes it, and opens
+  it through the ordinary path; it holds one world camera, because a scene with
+  none renders a black Game view, and it is named from its file. Save scene as…
+  (Ctrl+Shift+S) is offered whether or not the scene has a file behind it —
+  giving a detached scene one is the case that used to have no answer — and the
+  project beside the scene, the remembered scene, the textures and the scripts
+  all move with it. A save box takes a name rather than an extension, so
+  `level` is written as `level.scene.json`, which is what the browser lists as a
+  scene and what reopening it finds
 - Shows the hierarchy from live runtime state as a Unity-style GameObject tree:
   every entity may own children, child-bearing rows fold with state remembered
   across launches, search retains and temporarily opens each match's ancestor
@@ -382,6 +392,18 @@ frame.
 - Inspector edits of name and the complete transform: position, Euler-degree
   rotation backed by the stored quaternion, scale, and the Z lock, which takes
   away movement off the current layer
+- **An entity's stable ID, shown and editable.** It is what the file keys an
+  entity by, what a parent link names, what sibling order is derived from and
+  what `sindri.grid.occupant` points at, and it used to be invisible — so a
+  scene made here was `game-object-1`, `game-object-2`, and a shipped scene's
+  `player` and `orb-1` were unreachable. Renaming one carries every occupant
+  that names it along in the same undo step; one that is blank or already taken
+  is refused at the field rather than written
+- **The scene itself, where an entity's inspector would be.** With nothing
+  selected the panel shows the scene's own name — a real field that round-trips
+  through a save — along with its file and how many entities it holds. The
+  rename is an ordinary undoable edit, so the editor still knows the document
+  is unsaved
 - **Editing any component's fields in the inspector**, driven by the stored
   payload rather than by hand-written rows: numbers get drags, booleans get
   checkboxes, text gets a field, and a short numeric array gets a labelled row.
@@ -402,6 +424,17 @@ frame.
   do. A field naming a project asset offers what the project holds while
   staying typeable, a tint opens a colour picker, and a row that is only a
   readout says on hover why it is one
+- **Every verb that acts on one entity, from that entity's own right-click
+  menu.** Rename, Duplicate, Create child, Frame in the Scene view, and Delete,
+  each also on a key — F2, Ctrl+D, F, and Delete or Backspace. Rename happens in
+  the row itself, focused as it appears, committed with Enter and abandoned with
+  Escape, so fixing one name among forty does not move your eyes to another
+  panel; a double click starts it. Duplicate copies the whole subtree beside the
+  original as a sibling, gives each copy a stable ID nothing else is using, and
+  undoes in one step. A project row has a menu of its own for what the browser
+  can already do — open a scene, look inside a folder, slice an image — plus the
+  asset path a component field wants, which until now had to be read off the row
+  and typed back in
 - **Creating empty root or child GameObjects and deleting entities**, from the
   hierarchy. Creation assigns a stable scene ID immediately, and creating a
   child opens its parent. Deleting takes the whole subtree, and **undo brings
@@ -410,9 +443,12 @@ frame.
   named. That works because the history undoes in order: reaching a delete
   means everything after it is already undone, so the slot it freed is free
   again
-- **Adding and removing components.** Add Component offers what the entity lacks
-  and the registry can create, which excludes a type with no sensible blank
-  rather than offering one the engine would reject. Text and sprite animation
+- **Adding and removing components.** Add Component lists every type the
+  entity's space accepts and disables the ones that cannot be added yet, each
+  saying why: no font in the project, no sliced sprite to build a clip from, no
+  tilemap on this entity to navigate. Camera is among them on a scene that
+  already has a world camera — a second authored one is a hard extract error, so
+  offering it was a button that broke the scene in one click. Text and sprite animation
   are completed at the editor boundary: a project font gives UI Text a valid
   visible default, while a Sprite component whose texture has named sheet
   sprites gives Sprite Animation its first one-frame clip. Both are undoable.
@@ -553,27 +589,34 @@ settings gear.
 
 ### Editor
 
-- Cannot create a scene, save one under another name, or create or delete an
-  asset. A scene file has to exist before the editor can do anything with it
-- **Cannot add a `sindri.script` or a `sindri.audio.source` component**: both
-  are registered without a default payload, and Add Component offers only the
-  types that have one. Scripts already on an entity are fully editable
-- A component registered without a default payload shows only the fields its
-  stored payload happens to carry, so one added in the editor is not the same
-  component the shipped scenes use — `sindri.ui.text` and `sindri.tilemap` are
-  both affected, and an editor-made tilemap can never be isometric
-- **Saving while the scene is playing writes the running world to the file.**
-  Nothing gates Save on the transport, and Stop then restores the pre-play
-  snapshot, so the editor and the file disagree with no marker
-- No first-class project model or multi-scene workspace. The Project dock does
-  read and filter the directory containing the open scene; its folders neither
-  fold nor filter, and it marks the open scene rather than what is selected
-- No multi-select; viewport selection and transform gizmos currently cover
-  world sprites, filled tilemap cells, and meshes rather than UI elements
-- No context menus anywhere. Nothing in the editor answers a right-click, so
-  the per-object actions one would offer — duplicate, rename, delete, reveal,
-  reset a field — mostly do not exist
-- No duplicate, no copy/paste, no rename in place, and no Delete key
+- Cannot create or delete an asset. Scenes it can make and fork; everything
+  else has to arrive from outside
+- A component's fields come from the registry, so one added in the editor is the
+  same component the shipped scenes use. A type with no honest blank —
+  `sindri.ui.text`, `sindri.animation.sprite`, `sindri.grid.occupant`,
+  `sindri.audio.source` — is completed from the project beside the scene, and is
+  offered only when the project holds what it needs
+- Play mode is read-only. Nothing that writes to the world or the file is
+  available while a scene is running, because Stop restores the world as it was
+  when Play was pressed. Editing a running scene and keeping the changes is not
+  supported
+- No first-class project model or multi-scene workspace. The Project dock reads
+  the directory containing the open scene, folds its folders, scopes the listing
+  to one of them, marks both its own selection and the open scene, and copies an
+  asset's path — but beyond opening a scene and slicing an image it cannot open,
+  preview, create, rename, or delete anything it lists
+- No multi-select. Viewport selection covers world sprites, filled tilemap
+  cells, meshes and UI images; UI text is selected from the hierarchy, because
+  what a string covers is decided by glyph layout inside the text renderer and a
+  guessed box would select the wrong thing near its edges
+- Context menus exist on the two panels that list things — a hierarchy row and
+  a project row — and nowhere else. Empty space in either panel, a component
+  heading, a property row, the Scene view, and a console line all still ignore a
+  right-click, so the actions that belong there (paste, reset a field, frame
+  all, copy a message) do not exist
+- No copy/paste of entities or of components, no multi-select, and no way to
+  reorder siblings: order is the stable ID sorted, which is not something the
+  editor lets you set
 - No prefabs, no play-mode-against-a-copy, no build or export controls
 - No versioned editor protocol; the editor and runtime are one process
 - Cannot open or edit a Decay script's *source* — the project browser lists

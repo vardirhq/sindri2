@@ -8,19 +8,20 @@ use std::collections::BTreeSet;
 use eframe::egui;
 use sindri_core::EntityId;
 
-use self::row::{HierarchyDrag, entity_icon, entity_is_bare, entity_name, hierarchy_drop_target};
+use self::row::{RowLook, entity_name, entity_row, hierarchy_drop_target};
 use self::rows::{hierarchy_group, hierarchy_preference_key, visible_hierarchy_rows};
 use crate::preferences::Layout as WorkspaceLayout;
 use crate::space::EntitySpace;
 use crate::ui::icons;
+use crate::ui::theme::color;
 use crate::ui::widgets::{
     button::{self, Intent},
     panel,
-    tree::{self, Children, RowStyle},
 };
 
 use super::EditorApp;
 use super::editing::CreateGameObject;
+use super::runtime::PLAYING_TIP;
 
 impl EditorApp {
     pub(super) fn hierarchy_panel(&mut self, ui: &mut egui::Ui) {
@@ -59,58 +60,69 @@ impl EditorApp {
     fn hierarchy_header(&self, ui: &mut egui::Ui) -> (Option<CreateGameObject>, Option<EntityId>) {
         let mut create = None;
         let mut deleted = None;
+        // Spawning and despawning are world writes, and a running scene is not
+        // the document: Stop puts back the world as it was when Play was
+        // pressed, so anything made here while playing would vanish without
+        // being mentioned.
+        let authoring = self.authoring_enabled();
         panel::header(ui, icons::HIERARCHY, "Hierarchy", |ui| {
-            // Offered only with something selected, because "delete" with
-            // nothing chosen has no answer and a disabled button is a question
-            // nobody asked.
-            if let Some(entity) = self.selection
-                && button::row_icon(
-                    ui,
-                    icons::REMOVE,
-                    Intent::Danger,
-                    "Delete the selected entity",
+            ui.add_enabled_ui(authoring, |ui| {
+                // Offered only with something selected, because "delete" with
+                // nothing chosen has no answer and a disabled button is a
+                // question nobody asked.
+                if let Some(entity) = self.selection
+                    && button::row_icon(
+                        ui,
+                        icons::REMOVE,
+                        Intent::Danger,
+                        "Delete the selected entity",
+                    )
+                    .clicked()
+                {
+                    deleted = Some(entity);
+                }
+                ui.menu_button(
+                    icons::ADD
+                        .outlined()
+                        .rich_text()
+                        .size(15.0)
+                        .color(color::TEXT_MUTED),
+                    |ui| {
+                        ui.set_min_width(200.0);
+                        // Which space a new object is in is a choice made here
+                        // rather than a component hunted for afterwards,
+                        // because it is the first thing an author knows about
+                        // the thing they are making.
+                        if ui.button("Create Empty").clicked() {
+                            create = Some(CreateGameObject::Empty { parent: None });
+                            ui.close();
+                        }
+                        if ui
+                            .add_enabled(
+                                self.selection.is_some(),
+                                egui::Button::new("Create Child").shortcut_text("under selection"),
+                            )
+                            .clicked()
+                        {
+                            create = self.selection.map(|parent| CreateGameObject::Empty {
+                                parent: Some(parent),
+                            });
+                            ui.close();
+                        }
+                        ui.separator();
+                        if ui.button("Create UI Image").clicked() {
+                            create = Some(CreateGameObject::UiImage);
+                            ui.close();
+                        }
+                    },
                 )
-                .clicked()
-            {
-                deleted = Some(entity);
-            }
-            ui.menu_button(
-                icons::ADD
-                    .outlined()
-                    .rich_text()
-                    .size(15.0)
-                    .color(crate::ui::theme::color::TEXT_MUTED),
-                |ui| {
-                    ui.set_min_width(200.0);
-                    // Which space a new object is in is a choice made here
-                    // rather than a component hunted for afterwards, because it
-                    // is the first thing an author knows about the thing they
-                    // are making.
-                    if ui.button("Create Empty").clicked() {
-                        create = Some(CreateGameObject::Empty { parent: None });
-                        ui.close();
-                    }
-                    if ui
-                        .add_enabled(
-                            self.selection.is_some(),
-                            egui::Button::new("Create Child").shortcut_text("under selection"),
-                        )
-                        .clicked()
-                    {
-                        create = self.selection.map(|parent| CreateGameObject::Empty {
-                            parent: Some(parent),
-                        });
-                        ui.close();
-                    }
-                    ui.separator();
-                    if ui.button("Create UI Image").clicked() {
-                        create = Some(CreateGameObject::UiImage);
-                        ui.close();
-                    }
-                },
-            )
-            .response
-            .on_hover_text("Create GameObject");
+                .response
+                .on_hover_text(if authoring {
+                    "Create GameObject"
+                } else {
+                    PLAYING_TIP
+                });
+            });
         });
         (create, deleted)
     }
@@ -129,6 +141,8 @@ impl EditorApp {
 
     fn hierarchy_contents(&mut self, ui: &mut egui::Ui) {
         let mut reparenting = None;
+        let mut asked: Option<RowAction> = None;
+        let authoring = self.authoring_enabled();
         egui::ScrollArea::vertical()
             .auto_shrink([false; 2])
             .show(ui, |ui| {
@@ -156,37 +170,33 @@ impl EditorApp {
                     for (entity, depth) in
                         visible_hierarchy_rows(&self.world, &collapsed, &needle, space)
                     {
-                        let Some(data) = self.world.get(entity) else {
+                        if self.world.get(entity).is_none() {
                             continue;
-                        };
+                        }
                         listed += 1;
-                        let name = entity_name(data);
-                        let row = tree::row(
+                        let renaming = self.renaming == Some(entity);
+                        let report = entity_row(
                             ui,
-                            entity_icon(data),
-                            &name,
-                            RowStyle {
+                            &self.world,
+                            entity,
+                            &RowLook {
+                                depth,
                                 selected: self.selection == Some(entity),
-                                depth: depth + 1,
-                                children: Children::of(
-                                    data.children.len(),
-                                    collapsed.contains(&entity) && needle.is_empty(),
-                                ),
-                                dimmed: entity_is_bare(data),
+                                collapsed: collapsed.contains(&entity) && needle.is_empty(),
+                                authoring,
                             },
+                            renaming.then_some(&mut self.rename_draft),
                         );
-                        row.select.dnd_set_drag_payload(HierarchyDrag(entity));
-                        if row.select.dragged() {
-                            ui.ctx().set_cursor_icon(egui::CursorIcon::Grabbing);
+                        if report.asked.is_some() {
+                            asked = report.asked;
                         }
-                        if let Some(dragged) =
-                            hierarchy_drop_target(ui, &row.drop, &self.world, Some(entity))
-                        {
-                            reparenting = Some((dragged, Some(entity)));
+                        if report.reparent.is_some() {
+                            reparenting = report.reparent;
                         }
-                        if row.toggle.is_some_and(|response| response.clicked()) {
+                        if report.toggled {
                             toggled = Some(entity);
-                        } else if row.select.clicked() {
+                        }
+                        if report.clicked {
                             clicked = Some(Some(entity));
                         }
                     }
@@ -222,6 +232,9 @@ impl EditorApp {
                     self.select(entity);
                 }
             });
+        if let Some(action) = asked {
+            self.act_on_row(action);
+        }
         if let Some((entity, parent)) = reparenting {
             self.reparent(entity, parent);
             self.select(Some(entity));
@@ -231,5 +244,55 @@ impl EditorApp {
                 self.preferences.collapsed_hierarchy.remove(&key);
             }
         }
+    }
+}
+
+/// What a row's menu, its keys, or a double click asked for.
+///
+/// Gathered as a value and acted on after the listing has finished drawing,
+/// because every one of them borrows the world the rows are being read from.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum RowAction {
+    BeginRename(EntityId),
+    CommitRename,
+    CancelRename,
+    Duplicate(EntityId),
+    CreateChild(EntityId),
+    Delete(EntityId),
+    Focus(EntityId),
+}
+
+impl EditorApp {
+    /// Carries out what a row asked for.
+    pub(super) fn act_on_row(&mut self, action: RowAction) {
+        match action {
+            RowAction::BeginRename(entity) => self.begin_rename(entity),
+            RowAction::CommitRename => {
+                if let Some(entity) = self.renaming.take() {
+                    let draft = std::mem::take(&mut self.rename_draft);
+                    self.rename_entity(entity, &draft);
+                }
+            }
+            RowAction::CancelRename => {
+                self.renaming = None;
+                self.rename_draft.clear();
+            }
+            RowAction::Duplicate(entity) => self.duplicate_entity(entity),
+            RowAction::CreateChild(entity) => self.create_game_object(CreateGameObject::Empty {
+                parent: Some(entity),
+            }),
+            RowAction::Delete(entity) => self.delete_entity(entity),
+            RowAction::Focus(entity) => {
+                self.select(Some(entity));
+                self.focus_selection();
+            }
+        }
+    }
+
+    /// Starts renaming one entity, with its current name as the draft.
+    pub(super) fn begin_rename(&mut self, entity: EntityId) {
+        self.select(Some(entity));
+        self.rename_draft = self.world.get(entity).map(entity_name).unwrap_or_default();
+        self.renaming = Some(entity);
     }
 }

@@ -4,7 +4,10 @@ Can Gather be built in the editor, as of `4dd70b4`?
 
 **No.** Four things stop it outright, one of them writes over your scene file,
 and a fifth — the complete absence of right-click menus — is why several of the
-others have nowhere to be fixed. This audit is the second of its kind; `docs/editor-audit.md` asked whether
+others have nowhere to be fixed.
+
+**Fixing has started.** §1, §2 and §3 are done, and each keeps its finding here
+because how it hid is the useful part. What is left is §4 onwards. This audit is the second of its kind; `docs/editor-audit.md` asked whether
 the controls did anything, and this one asks whether the controls that work add
 up to a tool you could author a game in.
 
@@ -35,6 +38,15 @@ Where a finding says "confirmed", it was reproduced in a running editor.
 
 **Blocker.** The most consequential finding, and the one with the widest blast
 radius, because it is invisible: nothing looks broken.
+
+**Fixed.** The registry now records two payloads and they are different
+questions: a *field template* saying what a component has, and a *default
+payload* saying what a fresh one is. The inspector draws from the first, so a
+type with no honest blank still shows all of its fields. Both are checked at
+registration against the field list serde will ask the type for, so a template
+that drifts from its struct is a startup error — which is how the tilemap's
+missing `projection` was found the moment the check existed. See
+`docs/component-schema-registry.md`.
 
 The inspector draws a component's fields from the *registry's default payload*,
 filled out with whatever the instance stored (`editor/src/inspector/fields.rs:25`).
@@ -81,6 +93,19 @@ entry needs a reason shown, not an absence.
 **Blocker**, and the sharpest single gap in the tool, because scripting is the
 headline capability.
 
+**Fixed.** Both Script and Audio Source have field templates now, and the editor
+completes each from the project beside the scene — the first `.decay` source
+that declares a container, the first audio clip — exactly as it already did for
+a font. A script added this way arrives with its source, its container, its
+typed `@export` fields, and `enabled`, which was never visible before.
+
+Making Script addable turned up a second bug behind it: `declared_space` treated
+every non-UI component as a world component, so adding a script to a fresh
+entity silently decided it was a world object and the menu stopped offering UI
+Text. Gather's banner and pips are UI images driven by scripts, so the editor
+could not have built its HUD. Only a component that *places* something — a
+camera, a mesh, a sprite, a tilemap — decides a space now.
+
 `ScriptComponent` is registered without a default
 (`editor/src/native/scene_io.rs:89`), so `component_default` returns `None` and
 `addable_components` filters it out. Confirmed: Add Component on a fresh entity
@@ -101,6 +126,15 @@ Related: `ScriptComponent.enabled` exists and is never shown, for the reason in
 ## 3. Saving while the scene is playing overwrites the file
 
 **Sharp edge, and the only finding here that destroys work.**
+
+**Fixed.** A running scene is not the document, and the editor says so in one
+place: `authoring_allowed` answers for the transport, and the inspector, the
+hierarchy's create and delete, the gizmo, the tile brush, undo, redo and every
+File entry ask it. Each disabled control explains itself on hover; a refused
+save says so in the console. What still works is everything that does not write:
+the viewport orbits and selects, and the inspector shows the values changing.
+Editing a running scene and *keeping* the changes needs history that can be
+rebased or a play mode against a copy, and is not this.
 
 `save()` writes `self.world` (`editor/src/native/scene_io.rs:111`), and during
 play `self.world` is the running world that scripts have been moving. Nothing
@@ -130,6 +164,14 @@ world underneath them is temporary.
 ## 4. The Project browser is a listing, not a browser
 
 **Missing basics.** Four separate gaps, three of which you named.
+
+**Three of the four fixed.** Folders fold, the folder pane navigates, and the
+browser has a selection of its own — marked with the band a selected row wears,
+while the open scene keeps a quieter rule in the margin, because "the scene I
+have open" and "the thing I am pointing at" are different facts. Every row
+answers a click now, including the ones the editor can do nothing else with,
+because a row that cannot be selected cannot carry a right-click menu either.
+The fourth gap — opening, previewing, and file operations — is still open.
 
 **Folders do not open or close.** `ProjectTree` produces one flat, sorted, fully
 expanded list with a `depth` per row (`editor/src/project/mod.rs`). There is no
@@ -169,15 +211,31 @@ to arrive from outside the editor, and the browser has to be told to re-read
 **Missing basics.** What it does: create empty, create child, create UI image,
 select, delete the selection, drag to reparent, fold, filter by name.
 
+**Three of the five fixed.** Duplicate, rename in place, and delete by keyboard
+all exist now, each reachable three ways: the row's own right-click menu (§6),
+its key, and — for rename — a double click. Multi-select and sibling reorder are
+still open, and are the two that change what a *selection* is rather than what
+one entity can be told to do.
+
 What it does not:
 
-- **Duplicate.** Gather has five Orbs, five Pips, and five Pip Sockets. Each
-  would be built from scratch. There is no Ctrl+D and no copy/paste of entities
-  or of components.
-- **Rename in place.** No double-click, no F2. Renaming means selecting the row
-  and finding the name field in the inspector.
-- **Delete by keyboard.** No Delete key. Delete is one icon in the panel header,
-  and only when something is selected.
+- ~~**Duplicate.**~~ **Fixed.** Ctrl+D, or Duplicate in the row's menu. A copy
+  takes everything under it, keeps the original's parent so it appears as a
+  sibling, earns a stable ID nothing else is using (`orb-1-copy`, then
+  `orb-1-copy-2`), and undoes in one step. The handles are the interesting
+  part: `WorldCommand::Spawn` names the handle it spawns at and
+  `World::next_handle` is a peek rather than an allocation, so the copy is
+  rehearsed against a clone of the world to learn the handles the real one is
+  about to hand out (`editor/src/native/editing/duplicate.rs`). Copy/paste of
+  entities or of components is still open.
+- ~~**Rename in place.**~~ **Fixed.** Double-click a row or press F2, and the
+  name becomes a field in the row itself, focused the frame it appears. Enter
+  commits through the same `SetName` command the inspector writes; Escape
+  abandons it. Gather has forty entities and fixing one name should not move
+  your eyes to another panel.
+- ~~**Delete by keyboard.**~~ **Fixed.** Delete, or Backspace — the key a Mac
+  keyboard labels "delete". The header icon stays, because a key nobody has
+  been told about is not a discoverable verb.
 - **Multi-select.** One entity at a time, so no bulk move, delete, or reparent.
 - **Reorder siblings.** Order is `source_id` sorted (`hierarchy_sort_key`), so
   authoring order is alphabetical by an ID you cannot see or set.
@@ -189,6 +247,14 @@ Most of these are the actions a right-click would offer, which is §6.
 **Missing basic**, and the one that makes several of the others feel worse than
 they are.
 
+**Partly fixed.** The two panels that list things have menus now: a hierarchy
+row and a project row. `ui::widgets::menu` is where the shape lives — a fixed
+width so a menu does not resize with the name of whatever is selected, a subject
+line naming what the entries act on, entries that say their key, and a
+destructive entry that reads as destructive. The other six surfaces in the table
+below are still open, and the two notes under it still apply to whoever builds
+them.
+
 There is not a single context menu in the editor. `grep -rn context_menu
 editor/src` returns nothing. Every action the tool has is a toolbar icon, a
 top-level menu, or a control inside the inspector — which means the actions that
@@ -198,16 +264,16 @@ because there was no obvious place to put them.
 
 Where a right-click is expected and does nothing today:
 
-| Where | What belongs there |
-| --- | --- |
-| A hierarchy row | Rename, Duplicate, Delete, Create child, Copy/Paste, Focus (F), Move to top level |
-| Hierarchy empty space | Create Empty, Create UI Image, Paste |
-| A project row | Open, Slice (a texture), Rename, Delete, Duplicate, Reveal in file manager |
-| Project empty space | New folder, Import, Refresh |
-| A component heading | Remove, Reset to default, Copy/Paste values, Move up/down |
-| A property row | Reset this field to its default, Copy value |
-| The Scene view | Frame selected, Frame all, Create at this point, Paste |
-| A console line | Copy message, Select the entity it names, Clear |
+| Where | What belongs there | State |
+| --- | --- | --- |
+| A hierarchy row | Rename, Duplicate, Delete, Create child, Copy/Paste, Focus (F), Move to top level | **Done** but for copy/paste and move-to-top-level |
+| Hierarchy empty space | Create Empty, Create UI Image, Paste | Open |
+| A project row | Open, Slice (a texture), Rename, Delete, Duplicate, Reveal in file manager | **Partly**: open, slice, and the two paths worth copying. Rename, delete and duplicate are file operations, which is the rest of §4 |
+| Project empty space | New folder, Import, Refresh | Open |
+| A component heading | Remove, Reset to default, Copy/Paste values, Move up/down | Open |
+| A property row | Reset this field to its default, Copy value | Open |
+| The Scene view | Frame selected, Frame all, Create at this point, Paste | Open |
+| A console line | Copy message, Select the entity it names, Clear | Open |
 
 Two things worth knowing before this is built, both found while checking it:
 
@@ -217,7 +283,9 @@ drag orbits the scene camera (`editor/src/native/camera.rs:452`). A secondary
 context menu and the orbit can coexist. Whoever adds it should keep that
 distinction deliberate rather than discovering it.
 
-**Half the project browser cannot receive a right-click at all.** A row that the
+**Half the project browser cannot receive a right-click at all.** *(Fixed with
+§4: every row is `Sense::click()` now, and the panel rather than the row decides
+what pressing one does.)* A row that the
 editor can do nothing with is given `Sense::hover()` rather than `Sense::click()`
 (`editor/src/native/project_panel/row.rs:103`), which is a deliberate signal:
 the comment beside it says a listing that lists is not the same as a control that
@@ -229,40 +297,97 @@ tooltip, or the absence of a primary-click response.
 
 ## 7. Half of a scene cannot be reached in the viewport
 
-**Missing basic**, with one case that is actively misleading.
+**Missing basic**, with one case that is actively misleading — and, found while
+fixing it, one that was worse than this section knew.
+
+**Fixed**, except for UI text. UI images are picked in a pass of their own
+against the same overlay matrix the frame draws them through, and a UI element's
+gizmo is drawn where the element is. UI text is deliberately not picked: what a
+string covers is decided by glyph layout inside the text renderer, and a guessed
+box for it would select the wrong thing near its edges. Its gizmo is now correct,
+so it is still reachable from the hierarchy and movable in the view.
+
+**Nothing at all could be clicked, in fact.** Found while fixing the rest, and
+not visible from either side of it. The Scene view allocated its region with
+`Sense::drag()`, and egui sets a response's clicked flag only for a widget whose
+sense includes clicks — so `select_viewport_click`'s `clicked_by` was always
+false, and no click anywhere in the viewport selected anything, however correct
+the picking underneath. The tile brush was half-dead the same way: it painted on
+a drag and ignored a single click. The coupling between "what the response
+senses" and "what the panel then asks it" is stated in a test now, because it is
+invisible from both ends.
+
+**A transparent element swallowed every click.** Also found while fixing this,
+by clicking Gather's player and selecting its win banner instead: the banner is
+`tint` alpha zero, a third of the viewport wide, sitting in the middle of the
+scene until the game says otherwise. A thing drawn as nothing is not a thing to
+click, in the overlay or in the world, and picking skips both now. Exactly zero
+rather than a threshold — anything above it is visible, however faintly, and a
+faint thing is still something someone aimed at.
 
 Picking covers meshes, world sprites, and filled tilemap cells
 (`editor/src/picking.rs:24`), plus authored cameras through their overlay
-markers. It does not cover UI images, UI text, or entities with no drawable
-component. Twelve of Gather's twenty-two entities are UI: none of them can be
+markers. It did not cover UI images, UI text, or entities with no drawable
+component. Twelve of Gather's twenty-two entities are UI: none of them could be
 clicked in the view that draws them.
 
-Worse, the gizmo still appears for them, in the wrong place. A UI element's
+Worse, the gizmo still appeared for them, in the wrong place. A UI element's
 position is an offset from its anchor in overlay space
-(`crates/sindri-scene/src/extract/ui.rs:19`), and the gizmo is drawn at the
+(`crates/sindri-scene/src/extract/ui.rs:19`), and the gizmo was drawn at the
 entity's transform in *world* space. Confirmed: select Gather's `title`, choose
-Move, and the handle is a single red arm in the bottom-left corner of the Scene
+Move, and the handle was a single red arm in the bottom-left corner of the Scene
 view, mostly off screen, while the text it belongs to is at the top. Dragging it
-does change the right numbers. Nothing about where it is drawn says so.
+did change the right numbers. Nothing about where it was drawn said so. The
+gizmo is told where its handles belong now, separately from the transform it
+edits, so the pointer maths happens against the drawn origin and the answer
+lands on the authored value. A UI element is offered two arms rather than three:
+its Z orders it within the overlay rather than placing it.
 
 ## 8. Scene-level authoring has no home
 
 **Missing basics.** There is no place in the editor that is about the scene
 rather than about an entity in it.
 
-- **No New Scene.** The File menu is Open, Save, Reload, Discard. A scene file
-  has to exist before the editor can do anything with it, and if the editor
-  starts where the default scene is not, it opens detached with Save disabled
-  and no way to create one. You cannot start Gather.
-- **No Save As.** No way to fork a scene, or to save a detached one.
-- **The scene's name is invisible.** `SceneMetadata.name` is `"Gather"` in the
-  shipped scene and round-trips through a save, but nothing in the editor shows
-  or edits it.
-- **An entity's stable ID is invisible.** `source_id` is what a scene stores,
-  what `sindri.grid.occupant` references, and what sibling order is derived
-  from. The editor generates `game-object-N` and never shows it. Gather's IDs
-  are `player`, `floor`, `orb-1`; the editor cannot produce those or rename to
-  them.
+**The two that blocked starting a project are fixed.** A scene can be made and a
+scene can be forked, so the editor no longer requires a project someone else
+started. What is left in this section is a *surface* — a place that is about the
+scene — which the remaining four items all want and none of them has.
+
+- ~~**No New Scene.**~~ **Fixed.** File → New scene…, or Ctrl+N. It asks where
+  the scene goes, writes it, and opens it through the ordinary path, so a new
+  scene proves it loads before anyone works in it and everything a scene brings
+  with it — the project beside it, its textures, its scripts — is arranged by
+  the code that already knows how. A save box takes a name rather than an
+  extension, so the suffix is the editor's: `level` becomes
+  `level.scene.json`, which is what the browser lists as a scene and what
+  reopening it finds. It contains one world camera, because a scene with none
+  is a legal scene and a black Game view, and "why is the game view empty" is
+  not the first question a new project should raise.
+- ~~**No Save As.**~~ **Fixed.** File → Save scene as…, or Ctrl+Shift+S, and
+  offered whether or not the scene has a file — giving a detached scene one is
+  the case that had no way out at all. The path is adopted after the write, so
+  a save that fails leaves the scene attached to the file it was attached to,
+  and the project, the remembered scene, the textures and the scripts all
+  follow the scene to its new directory.
+- ~~**The scene's name is invisible.**~~ **Fixed.** `SceneMetadata.name` is
+  `"Gather"` in the shipped scene and round-trips through a save, and nothing
+  showed or edited it. The inspector with nothing selected shows the scene
+  instead of a shrug: its name, editable; the file it is written to; and how
+  many entities it holds. The rename goes through the command history like
+  every other edit — not because renaming a scene is dangerous, but because the
+  editor decides whether a document is unsaved by watching the history, and a
+  change made outside it is one it would let someone close the window on.
+- ~~**An entity's stable ID is invisible.**~~ **Fixed.** `source_id` is what a
+  scene stores, what `sindri.grid.occupant` references, and what sibling order
+  is derived from — and it was shown nowhere, so the editor could produce
+  `game-object-N` and nothing else while Gather's are `player`, `floor`,
+  `orb-1`. It is a field under the name now. Renaming one takes every occupant
+  that points at it along in the same transaction, because a stable ID is a
+  reference and not a label: renaming a grid without rewriting its occupants
+  leaves a scene that still opens with nothing on the board. An ID that is
+  blank or already taken is refused at the field, in the colour the editor uses
+  for a refusal, rather than written and rejected — the draft is committed every
+  frame, so a refused command would be refused again on the next one.
 - **No snapping settings.** The snap toggle's tooltip names its increments —
   0.5 units, 15°, 0.1 scale — and they are constants
   (`editor/src/gizmo.rs:85`). Nothing can change them.
@@ -271,18 +396,27 @@ rather than about an entity in it.
 
 ## 9. Smaller things, confirmed
 
-- **Adding a second camera breaks the scene in one click.** Add Component offers
-  Camera whether or not the scene already has one, and a second authored camera
-  is a hard extract error. Confirmed: both viewports show "the scene contains
-  more than one authored world camera", and nothing says which two entities are
-  the cameras. The error handling is good; the offer should not have been made.
-- **Add Component says nothing about what it is not offering.** Sprite Animation
-  needs a sliced sheet on the entity; Grid Occupant needs a tilemap somewhere;
-  UI Text needs a font in the project. Fail any of those and the entry is simply
-  absent, with no line explaining why.
-- **A file's kind is signalled by the wrong icon.** A `.txt` file draws with the
-  3D-box glyph the editor uses for an entity, and a font draws with the image
-  glyph a texture uses (`editor/src/native/project_panel/mod.rs`).
+- ~~**Adding a second camera breaks the scene in one click.**~~ **Fixed.** Add
+  Component offered Camera whether or not the scene already had one, and a
+  second authored camera is a hard extract error: both viewports show "the scene
+  contains more than one authored world camera", and nothing says which two
+  entities are the cameras. The error handling was good; the offer should not
+  have been made. Camera is listed and disabled on a scene that already has one,
+  saying so on hover.
+- ~~**Add Component says nothing about what it is not offering.**~~ **Fixed.**
+  Every type the entity's space accepts is listed now, and one that cannot be
+  added yet is disabled with the reason — "No font in the project beside this
+  scene", "Slice an image into sprites first", "Add a Tilemap to this entity
+  first". The old rule stands where it belongs: a button that adds a component
+  the engine then rejects is worse than no button. An entry that says *why* is
+  neither of those. Only the other space's components are still left out
+  entirely, because a menu twice as long saying "no" to half of itself explains
+  nothing.
+- ~~**A file's kind is signalled by the wrong icon.**~~ **Fixed.** A `.txt` drew
+  with the 3D-box glyph the editor uses for an entity, claiming the file is an
+  object in the scene; it is a sheet of paper now. A font shared the image glyph
+  with a texture, so a project's typefaces and its sprite sheets were the same
+  row with different words after them; it has its own.
 - **No entity enable/disable.** `EntityData` has no such field, so this is an
   engine gap rather than an editor one, but it is a basic an author will look
   for early.
@@ -297,26 +431,30 @@ rather than about an entity in it.
 
 The ordering is by what unblocks the most authoring, not by effort.
 
-1. **Make Script and Audio Source addable**, and give every component a field
-   set derived from its schema rather than from a hand-written default. §1 and
-   §2 are one fix: the inspector should ask the registry what a component *has*,
-   not what a fresh one *looks like*. Until then the editor can only finish
-   scenes that were started in a text editor.
-2. **Stop play mode from writing to the file.** Disable Save while the transport
-   is running, or save the snapshot rather than the live world. Then decide what
-   an edit made during play means — discarding it silently is the same bug the
-   last audit closed at a different boundary.
-3. **Give the Project browser selection and folding**, and make the folder pane
-   filter the list. These are three small changes to one panel and they are the
-   difference between a listing and a browser.
-4. **Duplicate, rename in place, and Delete**, reached from a right-click menu
-   on the thing they act on. The three verbs whose absence is felt on every
-   entity after the first, and the surface they have been missing. Context
-   menus on the hierarchy and the project browser are the same build.
-5. **New Scene and Save As**, so the editor can start a project rather than only
-   continue one.
-6. **Pick UI elements in the viewport**, and either draw their gizmo where the
-   element is or do not draw one.
+1. ~~**Make Script and Audio Source addable**, and give every component a field
+   set derived from its schema rather than from a hand-written default.~~ Done.
+   The registry answers "what does this component have" separately from "what is
+   a fresh one", and a template that drifts from its struct is a startup error.
+2. ~~**Stop play mode from writing to the file.**~~ Done. A running scene is not
+   the document, and one rule says so for every control that writes.
+3. ~~**Give the Project browser selection and folding**, and make the folder
+   pane filter the list.~~ Done. What is left in §4 is opening and previewing
+   what it lists, and file operations.
+4. ~~**Duplicate, rename in place, and Delete**, reached from a right-click menu
+   on the thing they act on.~~ Done. All three exist on the hierarchy, each
+   reachable from the row's menu and from its key, and the project browser has
+   a menu of its own for what it can already do. What is still open from §5 is
+   multi-select and sibling reorder, which change what a *selection* is rather
+   than what one entity can be told to do.
+5. ~~**New Scene and Save As**, so the editor can start a project rather than
+   only continue one.~~ Done. What is left in §8 is a surface that is about the
+   scene rather than about an entity in it: the scene's name, an entity's stable
+   ID, the snapping increments, and everything else the editor remembers.
+6. ~~**Pick UI elements in the viewport**, and either draw their gizmo where the
+   element is or do not draw one.~~ Done, except for UI text, which needs glyph
+   metrics the editor does not have. Two things nobody had noticed came out
+   with it: the viewport sensed drags but not clicks, so *nothing* in it could
+   be selected; and a fully transparent element swallowed every click over it.
 
 ## What this audit does not cover
 

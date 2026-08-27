@@ -75,6 +75,15 @@ Two consequences of that are worth knowing before writing another one:
 - Ids for sub-parts come from the control's own allocation, not from `ui.id()`,
   which every widget in one panel shares.
 
+`widgets/menu` is the other kind of centralising: not painting, but the two
+things every call site would get wrong on its own. A menu opens at a fixed
+width, so it does not resize with the length of the name of whatever happens to
+be selected; and a destructive entry reads as destructive rather than as one
+more neutral line of text. A menu cannot return a value through egui's closure,
+so every one of them writes what was chosen into a slot the caller owns and the
+panel acts on it after the listing has finished drawing — which it must, because
+every verb worth putting in a menu writes to the world the rows were read from.
+
 The alignment the inspector depends on is `property::Property`: a fixed label
 column, and a value column that begins at the same x on every row in the window.
 egui allocates a child region by what its contents measured rather than by what

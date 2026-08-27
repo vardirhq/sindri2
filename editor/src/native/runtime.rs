@@ -146,7 +146,42 @@ pub(super) fn play_button(ui: &mut egui::Ui, transport: Transport) -> Response {
     .on_hover_text(transport.play_tip())
 }
 
+/// What the editor says when it refuses to author a running scene.
+///
+/// One sentence, in one place, because it is on every disabled control and in
+/// the console line a refused save leaves behind.
+pub(super) const PLAYING_TIP: &str = "Stop the scene first: a running scene is not the document";
+
+/// Whether the editor may write to the world and to the file in this state.
+///
+/// A free function so the rule can be tested without a window and a GPU, which
+/// is what an `EditorApp` needs to exist. Every guard in the editor asks this
+/// one question, so there is one answer to get right.
+pub(super) const fn authoring_allowed(state: EngineState) -> bool {
+    !Transport::of(state).is_playing()
+}
+
 impl EditorApp {
+    /// Whether the editor may write to the world and to the file right now.
+    ///
+    /// False while the scene is playing, and that is the whole of play mode's
+    /// safety. Stop restores the world as it was when Play was pressed
+    /// ([`Self::stop_playback`]), so an edit made in between is thrown away —
+    /// and the history keeps its transaction, leaving undo describing changes
+    /// the world no longer contains. Saving was worse still: `save` writes the
+    /// live world, so Ctrl+S mid-run replaced the authored scene on disk with
+    /// wherever the scripts had pushed everything, and Stop then restored a
+    /// world the file no longer matched.
+    ///
+    /// Editing a running scene and keeping the changes is a real feature, and
+    /// it is not this one: it needs history that can be rebased onto a world
+    /// that moved underneath it, or a play mode that runs against a copy.
+    /// Until then the honest answer is that a running scene is not the
+    /// document.
+    pub(super) const fn authoring_enabled(&self) -> bool {
+        authoring_allowed(self.lifecycle.state())
+    }
+
     /// Takes delivery of any script that arrived, then moves every script on by
     /// whatever this frame is worth.
     ///

@@ -4,6 +4,7 @@ use std::collections::BTreeSet;
 
 use sindri_core::{CommandBuffer, CommandHistory, EntityData, SceneEntityId, World, WorldCommand};
 
+use super::super::editing::duplicate::duplicate_commands;
 use super::super::editing::{find_by_source_id, next_game_object_id, reparent_choices};
 use super::super::hierarchy::row::{
     component_label, entity_name, hierarchy_drop_allowed, humanize,
@@ -219,4 +220,92 @@ fn the_hierarchy_lists_world_entities_and_ui_entities_apart() {
     };
     assert_eq!(listed(EntitySpace::World), vec![empty, prop]);
     assert_eq!(listed(EntitySpace::Ui), vec![pip]);
+}
+
+/// Duplicating copies the whole subtree, keeps the original's parent, and
+/// undoes in one step.
+///
+/// The handles are the interesting part: `WorldCommand::Spawn` names the
+/// handle it spawns at, and `World::next_handle` is a peek rather than an
+/// allocation, so a transaction that spawns four entities cannot ask for four
+/// handles by asking four times. The copy is rehearsed on a clone for exactly
+/// that reason, and this is what says the rehearsal matched.
+#[test]
+fn duplicating_an_entity_copies_everything_under_it() {
+    let mut world = World::from_scene(&nested_scene()).unwrap().world;
+    let torso = find_by_source_id(&world, "torso").unwrap();
+    let root = find_by_source_id(&world, "root").unwrap();
+    let before = world.len();
+
+    let (buffer, copy) = duplicate_commands(&world, torso);
+    let copy = copy.unwrap();
+    let mut history = CommandHistory::default();
+    history
+        .apply(buffer.into_transaction("Duplicate entity"), &mut world)
+        .unwrap();
+
+    assert_eq!(world.len(), before + 2, "the torso and its arm");
+    let copied = world.get(copy).unwrap();
+    assert_eq!(copied.parent, Some(root), "a duplicate is a sibling");
+    assert_eq!(copied.children.len(), 1, "and brought its arm with it");
+    let child = world.get(copied.children[0]).unwrap();
+    assert_eq!(
+        child.parent,
+        Some(copy),
+        "which hangs off the copy, not the original"
+    );
+    assert!(
+        world.get(torso).unwrap().children.len() == 1,
+        "and the original kept exactly its own"
+    );
+
+    history.undo(&mut world).unwrap();
+    assert_eq!(world.len(), before, "one undo takes the whole copy back");
+}
+
+/// Every copy earns a stable ID nothing else is using.
+///
+/// A stable ID is what `sindri.grid.occupant` names and what sibling order is
+/// sorted by, so two entities sharing one is not a cosmetic collision.
+#[test]
+fn a_duplicate_gets_an_unused_stable_id() {
+    let mut world = World::from_scene(&nested_scene()).unwrap().world;
+    let leg = find_by_source_id(&world, "leg").unwrap();
+    let mut history = CommandHistory::default();
+
+    let mut ids = Vec::new();
+    for _ in 0..3 {
+        let (buffer, copy) = duplicate_commands(&world, leg);
+        history
+            .apply(buffer.into_transaction("Duplicate entity"), &mut world)
+            .unwrap();
+        ids.push(
+            world
+                .get(copy.unwrap())
+                .unwrap()
+                .source_id
+                .as_ref()
+                .unwrap()
+                .as_str()
+                .to_owned(),
+        );
+    }
+
+    assert_eq!(ids, vec!["leg-copy", "leg-copy-2", "leg-copy-3"]);
+}
+
+/// A handle that names nothing produces no commands, rather than a transaction
+/// that spawns an empty entity.
+#[test]
+fn duplicating_nothing_asks_for_nothing() {
+    let mut world = World::from_scene(&nested_scene()).unwrap().world;
+    let leg = find_by_source_id(&world, "leg").unwrap();
+    let mut buffer = CommandBuffer::new();
+    buffer.push(WorldCommand::Despawn { entity: leg });
+    CommandHistory::default()
+        .apply(buffer.into_transaction("Delete entity"), &mut world)
+        .unwrap();
+
+    let (buffer, copy) = duplicate_commands(&world, leg);
+    assert!(buffer.is_empty() && copy.is_none());
 }

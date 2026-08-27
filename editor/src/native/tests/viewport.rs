@@ -116,3 +116,23 @@ fn focusing_a_selection_puts_it_in_the_middle_of_the_view() {
         after.y
     );
 }
+
+/// The Scene view has to sense clicks, not only drags.
+///
+/// egui sets a response's clicked flag only for a widget whose sense includes
+/// clicks, and the viewport sensed drags alone — so `clicked_by` was always
+/// false and nothing in the Scene view could be selected by clicking it, however
+/// correct the picking underneath. The coupling is invisible from either side,
+/// which is why it is stated here.
+#[test]
+fn the_viewport_answers_a_click_as_well_as_a_drag() {
+    let sense = super::super::viewport::viewport_sense();
+    assert!(
+        sense.senses_click(),
+        "select_viewport_click asks the response whether it was clicked"
+    );
+    assert!(
+        sense.senses_drag(),
+        "and the camera and the tile brush both read drags"
+    );
+}
