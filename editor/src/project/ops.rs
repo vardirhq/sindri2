@@ -118,6 +118,24 @@ pub fn create_folder(root: &Path, parent: &Path, name: &str) -> Result<PathBuf, 
     Ok(path)
 }
 
+/// Makes a file with the given contents inside `parent`.
+///
+/// What "New script" needs. The contents are the caller's business — this only
+/// promises that nothing was overwritten and that the name is a name.
+pub fn create_file(
+    root: &Path,
+    parent: &Path,
+    name: &str,
+    contents: &str,
+) -> Result<PathBuf, AssetOpError> {
+    let name = checked_name(name)?;
+    let path = parent.join(name);
+    inside(root, &path)?;
+    vacant(&path)?;
+    std::fs::write(&path, contents).map_err(|source| AssetOpError::io(&path, source))?;
+    Ok(path)
+}
+
 /// Renames a file or folder in place, keeping it where it is.
 ///
 /// A rename is a move, and a move that can land anywhere is not a rename: the

@@ -32,6 +32,9 @@ pub mod native;
 pub mod picking;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod preferences;
+/// Looking at a file the project browser lists.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod preview;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod project;
 /// The editor-only camera used by the Scene view.

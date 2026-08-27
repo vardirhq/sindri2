@@ -49,6 +49,8 @@ pub(super) enum BrowserAction {
     Rename(PathBuf),
     /// Make a folder beside this row, or inside it when it is a folder.
     NewFolder(PathBuf),
+    /// Make a `.decay` script there.
+    NewScript(PathBuf),
     /// Copy a file or folder beside itself.
     Duplicate(PathBuf),
     /// Ask before removing a file from disk. There is no undo for a disk
@@ -472,6 +474,7 @@ impl EditorApp {
             }
             BrowserAction::CancelRename => self.asset_rename = None,
             BrowserAction::NewFolder(beside) => self.new_folder(&beside),
+            BrowserAction::NewScript(beside) => self.new_script(&beside),
             BrowserAction::Duplicate(path) => self.duplicate_asset(&path),
             BrowserAction::ConfirmDelete(path) => self.deleting = Some(path),
             BrowserAction::Import(into) => self.import_assets(&into),

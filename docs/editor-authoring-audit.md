@@ -165,15 +165,16 @@ world underneath them is temporary.
 
 **Missing basics.** Four separate gaps, three of which you named.
 
-**Three and a half of the four fixed.** Folders fold, the folder pane navigates,
+**Three and three-quarters of the four fixed.** Folders fold, the folder pane navigates,
 and the browser has a selection of its own — marked with the band a selected row wears,
 while the open scene keeps a quieter rule in the margin, because "the scene I
 have open" and "the thing I am pointing at" are different facts. Every row
 answers a click now, including the ones the editor can do nothing else with,
 because a row that cannot be selected cannot carry a right-click menu either.
-Of the fourth gap, the file operations are done — make a folder, rename, copy,
-import, delete — and opening or previewing what the browser lists is still
-open.
+The fourth gap is mostly closed: the file operations are done — make a folder,
+make a script, rename, copy, import, delete — and every text file the browser
+lists can be read in the inspector. What is left is a preview for the two kinds
+that are not text: hearing an audio clip, and seeing a font.
 
 **Folders do not open or close.** `ProjectTree` produces one flat, sorted, fully
 expanded list with a `depth` per row (`editor/src/project/mod.rs`). There is no
@@ -194,14 +195,29 @@ wears the selection band permanently, and selecting a texture — which does
 something real, it opens the slicer — marks nothing at all. Confirmed: with
 `spin.png` open in the slicer, the highlighted row is still the scene.
 
-**Most files do nothing when clicked.** Only Scene and Texture rows are
+**Most files do nothing when clicked.** Only Scene and Texture rows were
 interactive (`editor/src/native/project_panel/row.rs:103`). Scripts, fonts,
-audio, meshes and everything else are inert:
+audio, meshes and everything else were inert:
 
-- `.decay` scripts cannot be opened, previewed, or created. The project browser
-  lists the language's source files and can do nothing with any of them.
-- Audio has no preview. You cannot hear a clip before naming it in a component.
-- Fonts have no preview. You pick a font by filename.
+- ~~`.decay` scripts cannot be opened, previewed, or created.~~ **Fixed.**
+  Selecting a text file shows it in the inspector, the same way selecting an
+  image opens the slicer — the file, its line count, and its source in a
+  monospace column that scrolls both ways, because source is written in columns
+  and wrapping it puts a continuation where a statement was. Read-only, and the
+  panel says so: an editor that opens a script in a text box is promising to be
+  a code editor — syntax, errors at the line they are on, find, an undo stack of
+  its own — and half of that is worse than none. What it answers is the question
+  the browser could not, which is what is in this file. It covers every text
+  file the browser lists, not only `.decay`: a scene, a sheet, a README, a
+  `.toml`. And **New script here** writes one that compiles and does nothing,
+  because a file that reports an error before anyone has typed a line of it is a
+  worse start than an empty one.
+- **Audio has no preview.** You cannot hear a clip before naming it in a
+  component. Still open: it needs playback on demand rather than through a
+  running scene.
+- **Fonts have no preview.** You pick a font by filename. Still open: it needs
+  the project's font loaded into the editor's own text stack to draw a sample,
+  and reading a `.ttf` as text says nothing.
 
 ~~And there are no file operations of any kind: no create, no folder, no rename,
 no delete, no duplicate, no reveal-in-file-manager, no import.~~ **Fixed**, bar
@@ -484,10 +500,11 @@ The ordering is by what unblocks the most authoring, not by effort.
    be selected; and a fully transparent element swallowed every click over it.
 
 7. ~~**File operations in the project browser**, so a project can be built
-   without a file manager beside the window.~~ Done. What is left in §4 is
-   opening and previewing what the browser lists: a `.decay` script, a font and
-   an audio clip are each a row and a name, and none of the three can be looked
-   at or listened to.
+   without a file manager beside the window, and a way to look at what it
+   lists.~~ Done. Every text file the browser lists opens in the inspector, and
+   a script can be made there. What is left in §4 is a preview for the two kinds
+   that are not text: an audio clip needs playback on demand, and a font needs
+   loading into the editor's own text stack to draw a sample.
 
 ## What this audit does not cover
 

@@ -610,10 +610,11 @@ settings gear.
 - No first-class project model or multi-scene workspace. The Project dock reads
   the directory containing the open scene, folds its folders, scopes the listing
   to one of them, marks both its own selection and the open scene, copies an
-  asset's path, and makes, renames, copies, imports and deletes files — but
-  beyond opening a scene and slicing an image it cannot *open or preview*
-  anything it lists: a `.decay` script, a font and an audio clip are each a row
-  and a name
+  asset's path, and makes, renames, copies, imports and deletes files. Every
+  text file it lists opens in the inspector, read-only — a `.decay` script, a
+  scene, a sheet, a README — and a script can be made from a row's menu. What it
+  still cannot preview is the two kinds that are not text: an audio clip cannot
+  be heard, and a font is picked by filename
 - No multi-select. Viewport selection covers world sprites, filled tilemap
   cells, meshes and UI images; UI text is selected from the hierarchy, because
   what a string covers is decided by glyph layout inside the text renderer and a

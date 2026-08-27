@@ -21,6 +21,19 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **A text file the browser lists can be read in the editor, and a script can be
+  made there.** The project browser listed the language's own source files and
+  could do nothing with any of them, in an engine whose headline capability is
+  scripting. Selecting one shows it in the inspector now, the same way selecting
+  an image opens the slicer: the file, its line count, and its source in a
+  monospace column that scrolls both ways. Read-only, and it says so — an editor
+  that opens a script in a text box is promising to be a code editor, and half
+  of that is worse than none. It covers every text file the browser lists, not
+  only `.decay`. **New script here** writes one that compiles and does nothing,
+  because a file that reports an error before anyone has typed a line of it is a
+  worse start than an empty one. Audio and fonts still have no preview: one
+  needs playback on demand and the other needs the project's font in the
+  editor's own text stack, and reading either as text says nothing.
 - **The project browser can make, rename, copy, import and delete files.** Every
   asset used to have to arrive from outside the editor — there was no create, no
   folder, no rename, no delete, no duplicate and no import — so building a

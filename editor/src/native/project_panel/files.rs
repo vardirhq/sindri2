@@ -89,6 +89,31 @@ impl EditorApp {
         }
     }
 
+    /// Makes a `.decay` script and starts renaming it.
+    ///
+    /// The browser listed the language's own source files and could not make
+    /// one, in an engine whose headline capability is scripting. What it
+    /// writes is a script that compiles and does nothing, because a file that
+    /// reports an error the moment it is created is a worse start than an
+    /// empty one.
+    pub(super) fn new_script(&mut self, beside: &Path) {
+        let Some(root) = self.project.root().map(Path::to_path_buf) else {
+            return;
+        };
+        let Some(parent) = directory_for(beside) else {
+            return;
+        };
+        let name = unused_name(&parent, "script", ".decay");
+        match ops::create_file(&root, &parent, &name, STARTER_SCRIPT) {
+            Ok(path) => {
+                self.refresh_project();
+                self.select_asset(&path);
+                self.begin_asset_rename(&path);
+            }
+            Err(error) => self.report(error.to_string()),
+        }
+    }
+
     /// Copies a file or folder beside itself.
     pub(in crate::native) fn duplicate_asset(&mut self, path: &Path) {
         let Some(root) = self.project.root().map(Path::to_path_buf) else {
@@ -121,7 +146,16 @@ impl EditorApp {
                     self.remember_open_scene();
                 }
                 self.refresh_project();
-                self.browser.selected = Some(target);
+                // Whatever the inspector was showing of this file is showing
+                // the old path; re-opening it is how it follows the rename.
+                self.browser.selected = Some(target.clone());
+                if self
+                    .preview
+                    .as_ref()
+                    .is_some_and(|open| open.path() == path)
+                {
+                    self.preview = Some(crate::preview::TextPreview::open(&target));
+                }
             }
             Err(error) => self.report(error.to_string()),
         }
@@ -140,9 +174,17 @@ impl EditorApp {
                 if self.browser.selected.as_deref() == Some(path) {
                     self.browser.selected = None;
                 }
-                // The image the slicer is showing may be the one just removed.
+                // The file the inspector is showing may be the one just
+                // removed, in either of the two ways it can be showing one.
                 if self.slicer.as_ref().is_some_and(|open| open.path() == path) {
                     self.slicer = None;
+                }
+                if self
+                    .preview
+                    .as_ref()
+                    .is_some_and(|open| open.path() == path)
+                {
+                    self.preview = None;
                 }
                 self.refresh_project();
                 self.console.info(format!("Deleted {}", named(path)));
@@ -191,15 +233,27 @@ fn directory_for(row: &Path) -> Option<PathBuf> {
     row.parent().map(Path::to_path_buf)
 }
 
-/// A folder name nothing in `parent` is using yet.
-fn unused_folder_name(parent: &Path) -> String {
-    let mut candidate = "New folder".to_owned();
+/// What a new script starts as.
+///
+/// A container the scene can name and an `update` that runs, so the file
+/// compiles the moment it exists: a script that reports an error before anyone
+/// has written a line of it is a worse start than an empty one.
+const STARTER_SCRIPT: &str = "script Script {\n    fn update(dt: f32) {\n    }\n}\n";
+
+/// A name nothing in `parent` is using yet.
+fn unused_name(parent: &Path, stem: &str, suffix: &str) -> String {
+    let mut candidate = format!("{stem}{suffix}");
     let mut nth = 2_u32;
     while parent.join(&candidate).exists() {
-        candidate = format!("New folder {nth}");
+        candidate = format!("{stem} {nth}{suffix}");
         nth += 1;
     }
     candidate
+}
+
+/// A folder name nothing in `parent` is using yet.
+fn unused_folder_name(parent: &Path) -> String {
+    unused_name(parent, "New folder", "")
 }
 
 /// What to call a path in a one-line message.

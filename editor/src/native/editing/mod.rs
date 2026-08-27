@@ -11,6 +11,7 @@ use sindri_core::{
 };
 use sindri_scene::SpriteAnimations;
 
+use crate::preview::{self, TextPreview};
 use crate::project::AssetKind;
 use crate::slicer::Slicer;
 
@@ -106,10 +107,11 @@ impl EditorApp {
     pub(super) fn select(&mut self, entity: Option<EntityId>) {
         self.focus = Focus::Hierarchy;
         if entity.is_some() {
-            // One inspector, one subject. Selecting an entity puts the image
+            // One inspector, one subject. Selecting an entity puts the file
             // away rather than leaving it behind a panel showing something
             // else.
             self.slicer = None;
+            self.preview = None;
         }
         if self.selection != entity {
             self.history.break_merge_run();
@@ -135,13 +137,31 @@ impl EditorApp {
     pub(super) fn select_asset(&mut self, path: &Path) {
         self.focus = Focus::Project;
         self.browser.selected = Some(path.to_owned());
-        if !path.is_file() || !is_sliceable(path) {
+        if !path.is_file() {
             return;
         }
-        if self.slicer.as_ref().is_some_and(|open| open.path() == path) {
+        // An image slices and a text file is read. Both take the inspector
+        // over, so choosing one puts the other away rather than leaving a
+        // panel showing the file before last.
+        if is_sliceable(path) {
+            self.preview = None;
+            if self.slicer.as_ref().is_some_and(|open| open.path() == path) {
+                return;
+            }
+            self.slicer = Some(Slicer::open(path));
+        } else if preview::is_readable(path) {
+            self.slicer = None;
+            if self
+                .preview
+                .as_ref()
+                .is_some_and(|open| open.path() == path)
+            {
+                return;
+            }
+            self.preview = Some(TextPreview::open(path));
+        } else {
             return;
         }
-        self.slicer = Some(Slicer::open(path));
         self.selection = None;
         self.tilemap_tool.reset();
         self.animation_tool.reset();

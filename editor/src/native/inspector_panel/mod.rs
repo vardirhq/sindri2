@@ -385,13 +385,20 @@ impl EditorApp {
             .frame(panel::frame())
             .show(ui, |ui| {
                 let slicing = self.slicer.is_some();
+                let reading = self.preview.is_some();
                 panel::header(ui, icons::INSPECTOR, "Inspector", |ui| {
                     if slicing {
                         toolbar::chip(ui, "Slicing", color::FORGE);
+                    } else if reading {
+                        toolbar::chip(ui, "Read-only", color::TEXT_FAINT);
                     }
                 });
                 if slicing {
                     self.slicer_panel(ui);
+                    return;
+                }
+                if reading {
+                    self.preview_panel(ui);
                     return;
                 }
                 // An empty inspector used to be a blank rectangle, which is

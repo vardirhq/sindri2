@@ -16,6 +16,7 @@ use sindri_scene::{
     SceneExtractor, SpriteAnimations, SpriteComponent, UiImageComponent, UiTextComponent,
 };
 
+use crate::preview::TextPreview;
 use crate::{
     animation::AnimationTool,
     console::Console,
@@ -39,6 +40,7 @@ mod hierarchy;
 mod inspector_panel;
 mod overlay;
 mod pointer;
+mod preview_view;
 mod project_panel;
 mod runtime;
 mod scene_io;
@@ -142,6 +144,12 @@ struct EditorApp {
     id_edit: Option<(EntityId, String)>,
     /// The scene's name being typed, for the same reason.
     scene_name_edit: Option<String>,
+    /// The file the inspector is showing the contents of.
+    ///
+    /// Beside the slicer rather than inside it: an image and a script are both
+    /// "a file the inspector is showing instead of an entity", but what the
+    /// panel does with them has nothing in common.
+    preview: Option<TextPreview>,
     /// The asset being renamed in the project browser, and the name so far.
     asset_rename: Option<(PathBuf, String)>,
     /// Which panel the keys that act on "the selection" mean.
@@ -287,6 +295,7 @@ impl EditorApp {
             rename_draft: String::new(),
             id_edit: None,
             scene_name_edit: None,
+            preview: None,
             asset_rename: None,
             focus: Focus::Hierarchy,
             deleting: None,

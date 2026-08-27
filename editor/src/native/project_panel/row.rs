@@ -195,6 +195,7 @@ pub(crate) fn asset_row(
             AssetKind::Scene => "Double-click to open this scene",
             AssetKind::Texture => "Click to slice this image into sprites",
             AssetKind::Folder => "Double-click to look inside this folder",
+            AssetKind::Script | AssetKind::Sheet => "Click to read this file",
             _ => entry.kind.label(),
         }),
         renamed: row.renamed,
@@ -242,6 +243,10 @@ pub(crate) fn row_menu(response: &Response, entry: &ProjectEntry) -> Option<Brow
         }
         if menu::item(ui, "New folder here").clicked() {
             asked = Some(BrowserAction::NewFolder(entry.path.clone()));
+            ui.close();
+        }
+        if menu::item(ui, "New script here").clicked() {
+            asked = Some(BrowserAction::NewScript(entry.path.clone()));
             ui.close();
         }
         if menu::item(ui, "Import files…").clicked() {
