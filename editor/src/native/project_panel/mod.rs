@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 
 use eframe::egui::{self, Align, Layout, RichText};
 use egui_material_icons::MaterialIcon;
+use sindri_core::EntityId;
 
 use self::row::{folder_row, listing_row, row_menu};
 use self::state::BrowserState;
@@ -378,10 +379,45 @@ fn empty_listing(ui: &mut egui::Ui, searching: bool, scoped: bool) {
 }
 
 impl EditorApp {
+    /// The dock's two tabs, and the count that says an error is waiting.
+    fn dock_tabs(&mut self, ui: &mut egui::Ui) {
+        let counts = self.console.counts();
+        let mut chosen = self.preferences.bottom_tab;
+        tabs::strip(ui, |ui| {
+            for (tab, icon, label) in [
+                (BottomTab::Project, icons::PROJECT, "Project"),
+                (BottomTab::Console, icons::CONSOLE, "Console"),
+            ] {
+                if tabs::tab(
+                    ui,
+                    Weight::Secondary,
+                    self.preferences.bottom_tab == tab,
+                    Some(icon),
+                    label,
+                )
+                .clicked()
+                {
+                    chosen = tab;
+                }
+            }
+            // An error nobody is looking at is the reason the console
+            // exists, so the tab strip says there is one whichever tab
+            // is showing.
+            if counts.errors > 0 {
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    ui.add_space(metric::GUTTER);
+                    crate::ui::widgets::toolbar::chip(ui, &counts.summary(), color::DANGER_TEXT);
+                });
+            }
+        });
+        self.preferences.bottom_tab = chosen;
+    }
+
     pub(super) fn asset_panel(&mut self, ui: &mut egui::Ui) {
         let context = ui.ctx().clone();
         let mut action = BrowserAction::None;
         let mut clear_console = false;
+        let mut go_to = None;
         let (panel_side, default, min, max) = match self.preferences.layout {
             // A tall column, which is what makes the list view worth having.
             WorkspaceLayout::TwoByThree => {
@@ -398,40 +434,7 @@ impl EditorApp {
             .resizable(true)
             .frame(panel::frame())
             .show(ui, |ui| {
-                let counts = self.console.counts();
-                let mut chosen = self.preferences.bottom_tab;
-                tabs::strip(ui, |ui| {
-                    for (tab, icon, label) in [
-                        (BottomTab::Project, icons::PROJECT, "Project"),
-                        (BottomTab::Console, icons::CONSOLE, "Console"),
-                    ] {
-                        if tabs::tab(
-                            ui,
-                            Weight::Secondary,
-                            self.preferences.bottom_tab == tab,
-                            Some(icon),
-                            label,
-                        )
-                        .clicked()
-                        {
-                            chosen = tab;
-                        }
-                    }
-                    // An error nobody is looking at is the reason the console
-                    // exists, so the tab strip says there is one whichever tab
-                    // is showing.
-                    if counts.errors > 0 {
-                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                            ui.add_space(metric::GUTTER);
-                            crate::ui::widgets::toolbar::chip(
-                                ui,
-                                &counts.summary(),
-                                color::DANGER_TEXT,
-                            );
-                        });
-                    }
-                });
-                self.preferences.bottom_tab = chosen;
+                self.dock_tabs(ui);
                 match self.preferences.bottom_tab {
                     BottomTab::Project => {
                         action = project_browser(
@@ -446,14 +449,30 @@ impl EditorApp {
                         );
                     }
                     BottomTab::Console => {
-                        if console_view(ui, &self.console, self.lifecycle.state()) {
-                            clear_console = true;
-                        }
+                        // The world is read for a name rather than handed over:
+                        // the console knows which entity a line is about, and
+                        // what it is called is the panel's question.
+                        let world = &self.world;
+                        let named = |entity: EntityId| {
+                            world.get(entity).map(super::hierarchy::row::entity_name)
+                        };
+                        let answered = console_view(
+                            ui,
+                            &self.console,
+                            self.lifecycle.state(),
+                            &mut self.preferences.console_filter,
+                            &named,
+                        );
+                        clear_console = answered.cleared;
+                        go_to = answered.go_to;
                     }
                 }
             });
         if clear_console {
             self.console.clear();
+        }
+        if let Some(entity) = go_to {
+            self.select(Some(entity));
         }
         // Acted on outside the panel, because every answer writes to state the
         // browser was reading from.

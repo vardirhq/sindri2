@@ -88,6 +88,16 @@ All notable changes to Sindri Next will be documented here.
 
 ### Fixed
 
+- **A script failure named a handle nobody could look up.** It printed
+  `entity EntityId { index: 4, generation: 0 }`, which is what the runtime has
+  and not something anyone can find in a hierarchy. `ScriptFailure` says which
+  entity and what went wrong separately now, so the editor — which holds the
+  world — writes "Wisp: names script 'NoSuchContainer', which
+  'scripts/wisp.decay' does not declare", and the console row ends in that
+  entity's name as the way to it. The entity is carried on the entry rather than
+  read back out of the message: searching the text for something that looks like
+  a name would select the wrong entity the first time a message mentioned a word
+  that happened to be one.
 - **Add Component could break the scene in one click.** It offered Camera
   whether or not the scene already had one, and a second authored world camera
   is a hard extract error — both viewports go dark with "the scene contains more
@@ -120,6 +130,11 @@ All notable changes to Sindri Next will be documented here.
 
 ### Changed
 
+- **The console filters by level.** All, Problems, or Errors, remembered across
+  launches because it is a reading preference rather than a state: someone
+  watching for a failure wants it filtered to failures for as long as they are
+  watching. A filter that hides everything says so, since an empty panel
+  otherwise reads as a console that stopped working.
 - **Delete and F2 act on whichever selection was made last.** The editor holds
   two — an entity and an asset — and these keys always meant the entity, so the
   project browser's menu could not honestly print them beside its own entries.

@@ -389,6 +389,12 @@ frame.
   not drawn in. A group holding only UI elements is listed with the UI.
   Create GameObject makes an empty object or a UI Image directly, and the
   inspector says which space the selected entity is in
+- **A console that can be read.** Filtered by level — everything, problems, or
+  only what did not happen — and remembered across launches, because someone
+  watching for a failure wants it filtered for as long as they are watching. An
+  entry about an entity ends in that entity's name and selecting it goes there:
+  a script failure used to print the runtime's own handle, which is not
+  something anyone can look for in a hierarchy
 - Inspector edits of name and the complete transform: position, Euler-degree
   rotation backed by the stored quaternion, scale, and the Z lock, which takes
   away movement off the current layer
@@ -625,8 +631,8 @@ settings gear.
   right-click, so the actions that belong there (paste, reset a field, frame
   all, copy a message) do not exist
 - No copy/paste of entities or of components, no multi-select, and no way to
-  reorder siblings: order is the stable ID sorted, which is not something the
-  editor lets you set
+  reorder siblings: order is the stable ID sorted, which the editor now lets you
+  set, but only by naming each entity rather than by moving a row
 - No prefabs, no play-mode-against-a-copy, no build or export controls
 - No versioned editor protocol; the editor and runtime are one process
 - Cannot open or edit a Decay script's *source* — the project browser lists

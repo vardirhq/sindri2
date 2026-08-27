@@ -13,6 +13,34 @@ use serde::{Deserialize, Serialize};
 /// stays put; a field that changes meaning gets a new name instead.
 const KEY: &str = "sindri.editor.preferences";
 
+/// How much of the console is shown.
+///
+/// Remembered, because it is a reading preference rather than a state: someone
+/// watching for a failure wants the console filtered to failures for as long as
+/// they are watching, not for one frame.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ConsoleFilter {
+    /// Everything the editor said.
+    #[default]
+    All,
+    /// Only what went wrong, and what might have.
+    Problems,
+    /// Only what did not happen.
+    Errors,
+}
+
+impl ConsoleFilter {
+    /// The lowest level this shows.
+    pub const fn floor(self) -> crate::console::Level {
+        match self {
+            Self::All => crate::console::Level::Info,
+            Self::Problems => crate::console::Level::Warning,
+            Self::Errors => crate::console::Level::Error,
+        }
+    }
+}
+
 /// How the project browser presents assets.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -92,6 +120,7 @@ pub enum BottomTab {
 pub struct Preferences {
     pub layout: Layout,
     pub asset_view: AssetView,
+    pub console_filter: ConsoleFilter,
     pub projection: CameraProjection,
     pub bottom_tab: BottomTab,
     /// The scene file the editor last had open, reopened on the next launch.
@@ -151,6 +180,7 @@ mod tests {
         let chosen = Preferences {
             layout: Layout::Wide,
             asset_view: AssetView::Grid,
+            console_filter: ConsoleFilter::Errors,
             projection: CameraProjection::Orthographic,
             bottom_tab: BottomTab::Console,
             last_scene: Some("projects/level.scene.json".to_owned()),
@@ -201,6 +231,7 @@ mod tests {
         let chosen = Preferences {
             layout: Layout::Wide,
             asset_view: AssetView::Grid,
+            console_filter: ConsoleFilter::Errors,
             projection: CameraProjection::Orthographic,
             bottom_tab: BottomTab::Console,
             last_scene: Some("projects/level.scene.json".to_owned()),

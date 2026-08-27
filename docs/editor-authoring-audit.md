@@ -463,8 +463,22 @@ scene — which the remaining four items all want and none of them has.
 - **No entity enable/disable.** `EntityData` has no such field, so this is an
   engine gap rather than an editor one, but it is a basic an author will look
   for early.
-- **The console cannot be filtered.** No level filter, and no way to get from an
-  error naming an entity to that entity.
+- ~~**The console cannot be filtered.**~~ **Fixed.** All / Problems / Errors,
+  remembered across launches because it is a reading preference rather than a
+  state: someone watching for a failure wants the console filtered to failures
+  for as long as they are watching. A filter that hides everything says it did,
+  so an empty panel does not read as a console that stopped working.
+- ~~**No way to get from an error naming an entity to that entity.**~~
+  **Fixed**, and it was worse than "no way": a script failure printed
+  `entity EntityId { index: 4, generation: 0 }`, which is what the runtime has
+  and is not something anyone can look for in a hierarchy. A console entry
+  carries the entity it is about — carried rather than read back out of the
+  message, because searching the text for something that looks like a name
+  would select the wrong entity the first time a message mentioned a word that
+  happened to be one — and the row ends in that entity's name as the way to it.
+  `ScriptFailure` gained `entity()` and `detail()` for it: the runtime says
+  which handle and what went wrong, and the editor, which holds the world, says
+  "Wisp".
 - **No undo history view**, so "what will Ctrl+Z do" is answerable only from the
   Edit menu's label.
 
