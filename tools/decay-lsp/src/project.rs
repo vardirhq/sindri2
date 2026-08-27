@@ -8,7 +8,7 @@ use serde_json::Value;
 
 #[derive(Default)]
 pub(crate) struct ProjectIndex {
-    pub(crate) entity_ids: BTreeSet<String>,
+    pub(crate) entity_names: BTreeSet<String>,
     pub(crate) audio_assets: BTreeSet<String>,
 }
 
@@ -61,26 +61,18 @@ impl ProjectIndex {
             let Ok(value) = serde_json::from_str::<Value>(&text) else {
                 continue;
             };
-            collect_source_ids(&value, &mut self.entity_ids);
+            collect_entity_names(&value, &mut self.entity_names);
         }
     }
 }
 
-fn collect_source_ids(value: &Value, into: &mut BTreeSet<String>) {
-    match value {
-        Value::Object(map) => {
-            if let Some(id) = map.get("source_id").and_then(Value::as_str) {
-                into.insert(id.to_owned());
-            }
-            for child in map.values() {
-                collect_source_ids(child, into);
-            }
+fn collect_entity_names(scene: &Value, into: &mut BTreeSet<String>) {
+    let Some(entities) = scene.get("entities").and_then(Value::as_array) else {
+        return;
+    };
+    for entity in entities {
+        if let Some(name) = entity.get("name").and_then(Value::as_str) {
+            into.insert(name.to_owned());
         }
-        Value::Array(values) => {
-            for child in values {
-                collect_source_ids(child, into);
-            }
-        }
-        _ => {}
     }
 }
