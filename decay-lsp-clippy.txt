@@ -6,186 +6,186 @@ info: downloading component rustfmt
 [1m[92m     Locking[0m 477 packages to latest Rust 1.95 compatible versions
 [1m[92m      Adding[0m fontdb v0.23.0 [1m[33m(available: v0.24.0)[0m
 [1m[92m Downloading[0m crates ...
-[1m[92m  Downloaded[0m approx v0.5.1
-[1m[92m  Downloaded[0m equivalent v1.0.2
-[1m[92m  Downloaded[0m bit-vec v0.9.1
-[1m[92m  Downloaded[0m rustc-hash v2.1.3
-[1m[92m  Downloaded[0m bit-set v0.10.0
-[1m[92m  Downloaded[0m autocfg v1.5.1
-[1m[92m  Downloaded[0m document-features v0.2.12
-[1m[92m  Downloaded[0m lazy_static v1.5.0
-[1m[92m  Downloaded[0m scopeguard v1.2.0
-[1m[92m  Downloaded[0m rustc-hash v1.1.0
-[1m[92m  Downloaded[0m alsa-sys v0.4.0
-[1m[92m  Downloaded[0m alsa v0.11.0
-[1m[92m  Downloaded[0m allocator-api2 v0.2.21
-[1m[92m  Downloaded[0m gpu-allocator v0.28.0
-[1m[92m  Downloaded[0m font-types v0.12.4
-[1m[92m  Downloaded[0m self_cell v1.3.0
-[1m[92m  Downloaded[0m downcast-rs v2.0.2
-[1m[92m  Downloaded[0m dlib v0.5.3
-[1m[92m  Downloaded[0m arrayvec v0.7.8
-[1m[92m  Downloaded[0m num-derive v0.4.2
-[1m[92m  Downloaded[0m khronos-egl v6.0.0
-[1m[92m  Downloaded[0m linebender_resource_handle v0.1.1
-[1m[92m  Downloaded[0m serde v1.0.229
-[1m[92m  Downloaded[0m sys-locale v0.3.2
-[1m[92m  Downloaded[0m rstar v0.13.0
-[1m[92m  Downloaded[0m wgpu-naga-bridge v30.0.1
-[1m[92m  Downloaded[0m half v2.7.1
-[1m[92m  Downloaded[0m tinyvec_macros v0.1.1
-[1m[92m  Downloaded[0m core_maths v0.1.1
-[1m[92m  Downloaded[0m symphonia v0.5.5
-[1m[92m  Downloaded[0m parking_lot_core v0.9.12
-[1m[92m  Downloaded[0m rawpointer v0.2.1
 [1m[92m  Downloaded[0m cfg-if v1.0.4
-[1m[92m  Downloaded[0m naga-types v30.0.1
-[1m[92m  Downloaded[0m quote v1.0.47
-[1m[92m  Downloaded[0m version_check v0.9.5
-[1m[92m  Downloaded[0m stable_deref_trait v1.2.1
-[1m[92m  Downloaded[0m unicode-linebreak v0.1.5
-[1m[92m  Downloaded[0m hound v3.5.1
-[1m[92m  Downloaded[0m symphonia-metadata v0.5.5
-[1m[92m  Downloaded[0m pkg-config v0.3.34
-[1m[92m  Downloaded[0m wgpu-core-deps-windows-linux-android v30.0.1
-[1m[92m  Downloaded[0m matrixmultiply v0.3.11
-[1m[92m  Downloaded[0m zmij v1.0.23
-[1m[92m  Downloaded[0m thiserror-impl v2.0.20
-[1m[92m  Downloaded[0m static_assertions v1.1.0
-[1m[92m  Downloaded[0m num-bigint v0.4.8
-[1m[92m  Downloaded[0m termcolor v1.4.1
+[1m[92m  Downloaded[0m cfg_aliases v0.2.2
+[1m[92m  Downloaded[0m approx v0.5.1
+[1m[92m  Downloaded[0m rustc-hash v2.1.3
+[1m[92m  Downloaded[0m scopeguard v1.2.0
+[1m[92m  Downloaded[0m bytemuck_derive v1.12.0
+[1m[92m  Downloaded[0m lazy_static v1.5.0
+[1m[92m  Downloaded[0m rstar v0.13.0
+[1m[92m  Downloaded[0m presser v0.3.1
+[1m[92m  Downloaded[0m raw-window-handle v0.6.2
+[1m[92m  Downloaded[0m rangemap v1.8.0
+[1m[92m  Downloaded[0m roxmltree v0.20.0
+[1m[92m  Downloaded[0m tinyvec v1.12.0
 [1m[92m  Downloaded[0m zeno v0.3.3
-[1m[92m  Downloaded[0m hashbrown v0.16.1
+[1m[92m  Downloaded[0m zmij v1.0.23
+[1m[92m  Downloaded[0m fontdb v0.23.0
+[1m[92m  Downloaded[0m version_check v0.9.5
+[1m[92m  Downloaded[0m wgpu-core-deps-windows-linux-android v30.0.1
+[1m[92m  Downloaded[0m hashbrown v0.17.1
 [1m[92m  Downloaded[0m yazi v0.2.1
-[1m[92m  Downloaded[0m symphonia-bundle-mp3 v0.5.5
-[1m[92m  Downloaded[0m harfrust v0.5.2
-[1m[92m  Downloaded[0m unicode-ident v1.0.24
-[1m[92m  Downloaded[0m slotmap v1.1.1
-[1m[92m  Downloaded[0m simba v0.10.2
-[1m[92m  Downloaded[0m unicode-bidi v0.3.18
-[1m[92m  Downloaded[0m symphonia-core v0.5.5
-[1m[92m  Downloaded[0m ash v0.38.0+1.3.281
-[1m[92m  Downloaded[0m zerocopy-derive v0.8.56
+[1m[92m  Downloaded[0m num-derive v0.4.2
+[1m[92m  Downloaded[0m num-bigint v0.4.8
 [1m[92m  Downloaded[0m typenum v1.20.1
+[1m[92m  Downloaded[0m thiserror-impl v2.0.20
+[1m[92m  Downloaded[0m wgpu-naga-bridge v30.0.1
+[1m[92m  Downloaded[0m unicode-ident v1.0.24
+[1m[92m  Downloaded[0m termcolor v1.4.1
+[1m[92m  Downloaded[0m slotmap v1.1.1
+[1m[92m  Downloaded[0m unicode-linebreak v0.1.5
+[1m[92m  Downloaded[0m symphonia-bundle-mp3 v0.5.5
+[1m[92m  Downloaded[0m unicode-script v0.5.8
+[1m[92m  Downloaded[0m unicode-bidi v0.3.18
 [1m[92m  Downloaded[0m unicode-segmentation v1.13.3
-[1m[92m  Downloaded[0m glyphon v0.12.0
+[1m[92m  Downloaded[0m parking_lot_core v0.9.12
+[1m[92m  Downloaded[0m zerocopy-derive v0.8.56
 [1m[92m  Downloaded[0m wgpu-types v30.0.1
-[1m[92m  Downloaded[0m read-fonts v0.41.0
-[1m[92m  Downloaded[0m serde_json v1.0.151
-[1m[92m  Downloaded[0m rapier2d v0.35.2
-[1m[92m  Downloaded[0m ttf-parser v0.25.1
-[1m[92m  Downloaded[0m wide v1.7.0
-[1m[92m  Downloaded[0m rapier3d v0.35.2
-[1m[92m  Downloaded[0m wgpu v30.0.1
-[1m[92m  Downloaded[0m zerocopy v0.8.56
 [1m[92m  Downloaded[0m unicode-width v0.2.2
-[1m[92m  Downloaded[0m syn v2.0.119
-[1m[92m  Downloaded[0m parry2d v0.30.2
-[1m[92m  Downloaded[0m skrifa v0.44.0
-[1m[92m  Downloaded[0m wgpu-core v30.0.1
-[1m[92m  Downloaded[0m syn v3.0.4
-[1m[92m  Downloaded[0m parry3d v0.30.2
-[1m[92m  Downloaded[0m skrifa v0.40.0
+[1m[92m  Downloaded[0m wide v1.7.0
+[1m[92m  Downloaded[0m glow v0.17.0
+[1m[92m  Downloaded[0m libm v0.2.16
+[1m[92m  Downloaded[0m zerocopy v0.8.56
+[1m[92m  Downloaded[0m wgpu v30.0.1
 [1m[92m  Downloaded[0m swash v0.2.10
+[1m[92m  Downloaded[0m syn v3.0.4
+[1m[92m  Downloaded[0m glyphon v0.12.0
+[1m[92m  Downloaded[0m wgpu-core v30.0.1
+[1m[92m  Downloaded[0m syn v2.0.119
 [1m[92m  Downloaded[0m wgpu-hal v30.0.1
-[1m[92m  Downloaded[0m glam v0.30.10
+[1m[92m  Downloaded[0m document-features v0.2.12
+[1m[92m  Downloaded[0m read-fonts v0.37.0
+[1m[92m  Downloaded[0m skrifa v0.40.0
+[1m[92m  Downloaded[0m nalgebra v0.35.0
+[1m[92m  Downloaded[0m ash v0.38.0+1.3.281
+[1m[92m  Downloaded[0m rapier2d v0.35.2
 [1m[92m  Downloaded[0m spade v2.15.1
 [1m[92m  Downloaded[0m robust v1.2.0
-[1m[92m  Downloaded[0m read-fonts v0.37.0
-[1m[92m  Downloaded[0m glam v0.32.1
-[1m[92m  Downloaded[0m libc v0.2.189
-[1m[92m  Downloaded[0m naga v30.0.1
-[1m[92m  Downloaded[0m glam v0.31.1
-[1m[92m  Downloaded[0m glam v0.33.5
-[1m[92m  Downloaded[0m nalgebra v0.35.0
-[1m[92m  Downloaded[0m cpal v0.17.3
-[1m[92m  Downloaded[0m hashbrown v0.17.1
-[1m[92m  Downloaded[0m glow v0.17.0
-[1m[92m  Downloaded[0m unicode-script v0.5.8
-[1m[92m  Downloaded[0m tinyvec v1.12.0
-[1m[92m  Downloaded[0m smallvec v1.15.2
+[1m[92m  Downloaded[0m ttf-parser v0.25.1
+[1m[92m  Downloaded[0m hashbrown v0.16.1
+[1m[92m  Downloaded[0m skrifa v0.44.0
+[1m[92m  Downloaded[0m rapier3d v0.35.2
+[1m[92m  Downloaded[0m parry2d v0.30.2
+[1m[92m  Downloaded[0m read-fonts v0.41.0
+[1m[92m  Downloaded[0m serde_json v1.0.151
 [1m[92m  Downloaded[0m rodio v0.22.2
-[1m[92m  Downloaded[0m libm v0.2.16
-[1m[92m  Downloaded[0m spirv v0.4.0+sdk-1.4.341.0
-[1m[92m  Downloaded[0m smol_str v0.3.6
-[1m[92m  Downloaded[0m safe_arch v1.2.0
-[1m[92m  Downloaded[0m memchr v2.8.3
-[1m[92m  Downloaded[0m proc-macro2 v1.0.107
-[1m[92m  Downloaded[0m fontdb v0.23.0
-[1m[92m  Downloaded[0m codespan-reporting v0.13.1
-[1m[92m  Downloaded[0m thiserror v2.0.20
-[1m[92m  Downloaded[0m rangemap v1.8.0
-[1m[92m  Downloaded[0m num-traits v0.2.19
-[1m[92m  Downloaded[0m indexmap v2.14.0
-[1m[92m  Downloaded[0m heapless v0.8.0
-[1m[92m  Downloaded[0m bytemuck_derive v1.12.0
-[1m[92m  Downloaded[0m bytemuck v1.25.2
-[1m[92m  Downloaded[0m wayland-sys v0.31.11
-[1m[92m  Downloaded[0m roxmltree v0.20.0
-[1m[92m  Downloaded[0m log v0.4.34
-[1m[92m  Downloaded[0m litrs v1.0.0
+[1m[92m  Downloaded[0m parry3d v0.30.2
+[1m[92m  Downloaded[0m glam v0.31.1
+[1m[92m  Downloaded[0m libc v0.2.189
+[1m[92m  Downloaded[0m harfrust v0.5.2
+[1m[92m  Downloaded[0m cpal v0.17.3
+[1m[92m  Downloaded[0m allocator-api2 v0.2.21
 [1m[92m  Downloaded[0m parking_lot v0.12.5
 [1m[92m  Downloaded[0m ogg v0.8.0
+[1m[92m  Downloaded[0m lewton v0.10.2
+[1m[92m  Downloaded[0m naga v30.0.1
+[1m[92m  Downloaded[0m glam v0.32.1
+[1m[92m  Downloaded[0m glam v0.33.5
+[1m[92m  Downloaded[0m glam v0.30.10
+[1m[92m  Downloaded[0m heapless v0.8.0
+[1m[92m  Downloaded[0m serde_derive v1.0.229
+[1m[92m  Downloaded[0m serde v1.0.229
+[1m[92m  Downloaded[0m self_cell v1.3.0
+[1m[92m  Downloaded[0m once_cell v1.21.4
+[1m[92m  Downloaded[0m log v0.4.34
+[1m[92m  Downloaded[0m lock_api v0.4.14
+[1m[92m  Downloaded[0m half v2.7.1
 [1m[92m  Downloaded[0m euclid v0.22.14
+[1m[92m  Downloaded[0m autocfg v1.5.1
+[1m[92m  Downloaded[0m symphonia-core v0.5.5
+[1m[92m  Downloaded[0m spirv v0.4.0+sdk-1.4.341.0
+[1m[92m  Downloaded[0m proc-macro2 v1.0.107
+[1m[92m  Downloaded[0m bitflags v2.13.1
+[1m[92m  Downloaded[0m stable_deref_trait v1.2.1
+[1m[92m  Downloaded[0m fontconfig-parser v0.5.8
+[1m[92m  Downloaded[0m arrayvec v0.7.8
+[1m[92m  Downloaded[0m alsa-sys v0.4.0
+[1m[92m  Downloaded[0m naga-types v30.0.1
+[1m[92m  Downloaded[0m matrixmultiply v0.3.11
+[1m[92m  Downloaded[0m simba v0.10.2
+[1m[92m  Downloaded[0m rustc-hash v1.1.0
+[1m[92m  Downloaded[0m quote v1.0.47
+[1m[92m  Downloaded[0m hash32 v0.3.1
+[1m[92m  Downloaded[0m bit-set v0.10.0
+[1m[92m  Downloaded[0m sys-locale v0.3.2
+[1m[92m  Downloaded[0m serde_core v1.0.229
+[1m[92m  Downloaded[0m foldhash v0.2.0
+[1m[92m  Downloaded[0m nalgebra-macros v0.3.0
+[1m[92m  Downloaded[0m memmap2 v0.9.11
 [1m[92m  Downloaded[0m encoding_rs v0.8.35
-[1m[92m  Downloaded[0m slab v0.4.12
-[1m[92m  Downloaded[0m etagere v0.3.0
+[1m[92m  Downloaded[0m safe_arch v1.2.0
 [1m[92m  Downloaded[0m num-complex v0.4.6
+[1m[92m  Downloaded[0m symphonia-metadata v0.5.5
+[1m[92m  Downloaded[0m static_assertions v1.1.0
+[1m[92m  Downloaded[0m smallvec v1.15.2
+[1m[92m  Downloaded[0m rawpointer v0.2.1
+[1m[92m  Downloaded[0m profiling v1.0.18
+[1m[92m  Downloaded[0m num-rational v0.4.2
+[1m[92m  Downloaded[0m memchr v2.8.3
+[1m[92m  Downloaded[0m khronos-egl v6.0.0
+[1m[92m  Downloaded[0m equivalent v1.0.2
+[1m[92m  Downloaded[0m either v1.18.0
+[1m[92m  Downloaded[0m thiserror v2.0.20
+[1m[92m  Downloaded[0m hound v3.5.1
+[1m[92m  Downloaded[0m byteorder v1.5.0
+[1m[92m  Downloaded[0m litrs v1.0.0
+[1m[92m  Downloaded[0m etagere v0.3.0
+[1m[92m  Downloaded[0m dlib v0.5.3
+[1m[92m  Downloaded[0m smol_str v0.3.6
+[1m[92m  Downloaded[0m slab v0.4.12
+[1m[92m  Downloaded[0m renderdoc-sys v1.1.0
+[1m[92m  Downloaded[0m dasp_sample v0.11.0
+[1m[92m  Downloaded[0m downcast-rs v2.0.2
+[1m[92m  Downloaded[0m wayland-sys v0.31.11
 [1m[92m  Downloaded[0m libloading v0.8.9
+[1m[92m  Downloaded[0m itoa v1.0.18
+[1m[92m  Downloaded[0m tinyvec_macros v0.1.1
+[1m[92m  Downloaded[0m symphonia v0.5.5
+[1m[92m  Downloaded[0m lru v0.16.4
+[1m[92m  Downloaded[0m font-types v0.12.4
+[1m[92m  Downloaded[0m core_maths v0.1.1
+[1m[92m  Downloaded[0m bitflags v1.3.2
+[1m[92m  Downloaded[0m pkg-config v0.3.34
+[1m[92m  Downloaded[0m indexmap v2.14.0
+[1m[92m  Downloaded[0m codespan-reporting v0.13.1
+[1m[92m  Downloaded[0m num-traits v0.2.19
+[1m[92m  Downloaded[0m gpu-allocator v0.28.0
+[1m[92m  Downloaded[0m profiling-procmacros v1.0.18
+[1m[92m  Downloaded[0m ena v0.14.4
+[1m[92m  Downloaded[0m ordered-float v5.5.0
+[1m[92m  Downloaded[0m num-integer v0.1.47
 [1m[92m  Downloaded[0m glamx v0.3.0
 [1m[92m  Downloaded[0m font-types v0.11.3
-[1m[92m  Downloaded[0m raw-window-handle v0.6.2
-[1m[92m  Downloaded[0m ordered-float v5.5.0
-[1m[92m  Downloaded[0m num-rational v0.4.2
-[1m[92m  Downloaded[0m memmap2 v0.9.11
-[1m[92m  Downloaded[0m lru v0.16.4
-[1m[92m  Downloaded[0m byteorder v1.5.0
-[1m[92m  Downloaded[0m presser v0.3.1
-[1m[92m  Downloaded[0m once_cell v1.21.4
-[1m[92m  Downloaded[0m foldhash v0.2.0
-[1m[92m  Downloaded[0m bitflags v1.3.2
-[1m[92m  Downloaded[0m num-integer v0.1.47
-[1m[92m  Downloaded[0m nalgebra-macros v0.3.0
-[1m[92m  Downloaded[0m lock_api v0.4.14
-[1m[92m  Downloaded[0m lewton v0.10.2
-[1m[92m  Downloaded[0m ena v0.14.4
-[1m[92m  Downloaded[0m either v1.18.0
-[1m[92m  Downloaded[0m bitflags v2.13.1
-[1m[92m  Downloaded[0m profiling-procmacros v1.0.18
-[1m[92m  Downloaded[0m dasp_sample v0.11.0
-[1m[92m  Downloaded[0m cfg_aliases v0.2.2
-[1m[92m  Downloaded[0m serde_derive v1.0.229
-[1m[92m  Downloaded[0m serde_core v1.0.229
-[1m[92m  Downloaded[0m renderdoc-sys v1.1.0
-[1m[92m  Downloaded[0m profiling v1.0.18
-[1m[92m  Downloaded[0m fontconfig-parser v0.5.8
-[1m[92m  Downloaded[0m itoa v1.0.18
-[1m[92m  Downloaded[0m hash32 v0.3.1
+[1m[92m  Downloaded[0m alsa v0.11.0
+[1m[92m  Downloaded[0m linebender_resource_handle v0.1.1
+[1m[92m  Downloaded[0m bit-vec v0.9.1
+[1m[92m  Downloaded[0m bytemuck v1.25.2
 [1m[92m  Downloaded[0m cosmic-text v0.19.0
 [1m[92m   Compiling[0m proc-macro2 v1.0.107
 [1m[92m   Compiling[0m quote v1.0.47
 [1m[92m   Compiling[0m unicode-ident v1.0.24
 [1m[92m   Compiling[0m libm v0.2.16
 [1m[92m   Compiling[0m autocfg v1.5.1
-[1m[92m   Compiling[0m num-traits v0.2.19
-[1m[92m    Checking[0m cfg-if v1.0.4
 [1m[92m    Checking[0m log v0.4.34
+[1m[92m    Checking[0m cfg-if v1.0.4
 [1m[92m   Compiling[0m thiserror v2.0.20
+[1m[92m   Compiling[0m num-traits v0.2.19
 [1m[92m    Checking[0m bitflags v2.13.1
-[1m[92m   Compiling[0m libc v0.2.189
-[1m[92m    Checking[0m arrayvec v0.7.8
 [1m[92m    Checking[0m foldhash v0.2.0
+[1m[92m    Checking[0m arrayvec v0.7.8
+[1m[92m   Compiling[0m libc v0.2.189
 [1m[92m   Compiling[0m syn v3.0.4
 [1m[92m   Compiling[0m syn v2.0.119
 [1m[92m    Checking[0m hashbrown v0.17.1
 [1m[92m   Compiling[0m pkg-config v0.3.34
 [1m[92m    Checking[0m smallvec v1.15.2
 [1m[92m   Compiling[0m cfg_aliases v0.2.2
-[1m[92m    Checking[0m equivalent v1.0.2
 [1m[92m    Checking[0m once_cell v1.21.4
+[1m[92m    Checking[0m equivalent v1.0.2
 [1m[92m    Checking[0m static_assertions v1.1.0
-[1m[92m    Checking[0m num-integer v0.1.47
 [1m[92m    Checking[0m ordered-float v5.5.0
+[1m[92m    Checking[0m num-integer v0.1.47
 [1m[92m    Checking[0m libloading v0.8.9
 [1m[92m   Compiling[0m zerocopy v0.8.56
 [1m[92m    Checking[0m num-bigint v0.4.8
@@ -200,116 +200,134 @@ info: downloading component rustfmt
 [1m[92m   Compiling[0m matrixmultiply v0.3.11
 [1m[92m    Checking[0m bytemuck v1.25.2
 [1m[92m   Compiling[0m ash v0.38.0+1.3.281
-[1m[92m   Compiling[0m profiling-procmacros v1.0.18
-[1m[92m   Compiling[0m zerocopy-derive v0.8.56
 [1m[92m    Checking[0m safe_arch v1.2.0
-[1m[92m    Checking[0m naga-types v30.0.1
-[1m[92m   Compiling[0m parking_lot_core v0.9.12
-[1m[92m    Checking[0m profiling v1.0.18
-[1m[92m    Checking[0m bit-vec v0.9.1
 [1m[92m    Checking[0m unicode-width v0.2.2
+[1m[92m    Checking[0m naga-types v30.0.1
+[1m[92m   Compiling[0m zerocopy-derive v0.8.56
+[1m[92m   Compiling[0m profiling-procmacros v1.0.18
+[1m[92m   Compiling[0m parking_lot_core v0.9.12
+[1m[92m    Checking[0m bit-vec v0.9.1
 [1m[92m    Checking[0m wide v1.7.0
-[1m[92m    Checking[0m bit-set v0.10.0
+[1m[92m    Checking[0m profiling v1.0.18
 [1m[92m    Checking[0m codespan-reporting v0.13.1
+[1m[92m    Checking[0m bit-set v0.10.0
 [1m[92m    Checking[0m glam v0.33.5
 [1m[92m   Compiling[0m wayland-sys v0.31.11
 [1m[92m    Checking[0m num-complex v0.4.6
 [1m[92m    Checking[0m core_maths v0.1.1
 [1m[92m    Checking[0m spirv v0.4.0+sdk-1.4.341.0
+[1m[92m    Checking[0m tinyvec_macros v0.1.1
 [1m[92m    Checking[0m allocator-api2 v0.2.21
 [1m[92m    Checking[0m raw-window-handle v0.6.2
 [1m[92m    Checking[0m rawpointer v0.2.1
-[1m[92m    Checking[0m tinyvec_macros v0.1.1
 [1m[92m   Compiling[0m khronos-egl v6.0.0
 [1m[92m    Checking[0m scopeguard v1.2.0
 [1m[92m    Checking[0m lock_api v0.4.14
-[1m[92m    Checking[0m tinyvec v1.12.0
 [1m[92m    Checking[0m wgpu-types v30.0.1
 [1m[92m    Checking[0m half v2.7.1
 [1m[92m    Checking[0m hashbrown v0.16.1
+[1m[92m    Checking[0m tinyvec v1.12.0
 [1m[92m    Checking[0m simba v0.10.2
 [1m[92m   Compiling[0m nalgebra-macros v0.3.0
 [1m[92m    Checking[0m dlib v0.5.3
 [1m[92m   Compiling[0m wgpu-hal v30.0.1
 [1m[92m   Compiling[0m serde_core v1.0.229
-[1m[92m    Checking[0m typenum v1.20.1
 [1m[92m   Compiling[0m version_check v0.9.5
+[1m[92m    Checking[0m typenum v1.20.1
 [1m[92m    Checking[0m presser v0.3.1
 [1m[92m   Compiling[0m slotmap v1.1.1
 [1m[92m    Checking[0m parking_lot v0.12.5
-[1m[92m    Checking[0m font-types v0.12.4
 [1m[92m    Checking[0m font-types v0.11.3
 [1m[92m    Checking[0m nalgebra v0.35.0
+[1m[92m    Checking[0m font-types v0.12.4
 [1m[92m    Checking[0m renderdoc-sys v1.1.0
-[1m[92m   Compiling[0m heapless v0.8.0
-[1m[92m    Checking[0m glow v0.17.0
 [1m[92m   Compiling[0m zmij v1.0.23
-[1m[92m    Checking[0m read-fonts v0.37.0
-[1m[92m    Checking[0m wgpu-naga-bridge v30.0.1
+[1m[92m    Checking[0m glow v0.17.0
+[1m[92m   Compiling[0m heapless v0.8.0
 [1m[92m    Checking[0m read-fonts v0.41.0
+[1m[92m    Checking[0m wgpu-naga-bridge v30.0.1
+[1m[92m    Checking[0m read-fonts v0.37.0
 [1m[92m    Checking[0m glamx v0.3.0
+[1m[92m    Checking[0m gpu-allocator v0.28.0
 [1m[92m   Compiling[0m num-derive v0.4.2
 [1m[92m    Checking[0m hash32 v0.3.1
 [1m[92m   Compiling[0m alsa-sys v0.4.0
 [1m[92m   Compiling[0m wgpu-core v30.0.1
-[1m[92m    Checking[0m gpu-allocator v0.28.0
 [1m[92m    Checking[0m ena v0.14.4
-[1m[92m    Checking[0m either v1.18.0
-[1m[92m   Compiling[0m serde_json v1.0.151
-[1m[92m    Checking[0m downcast-rs v2.0.2
 [1m[92m    Checking[0m bitflags v1.3.2
-[1m[92m    Checking[0m roxmltree v0.20.0
 [1m[92m    Checking[0m stable_deref_trait v1.2.1
-[1m[92m    Checking[0m slab v0.4.12
-[1m[92m    Checking[0m lazy_static v1.5.0
-[1m[92m   Compiling[0m serde v1.0.229
 [1m[92m   Compiling[0m litrs v1.0.0
-[1m[92m    Checking[0m fontconfig-parser v0.5.8
-[1m[92m    Checking[0m symphonia-core v0.5.5
+[1m[92m   Compiling[0m serde v1.0.229
+[1m[92m    Checking[0m downcast-rs v2.0.2
+[1m[92m    Checking[0m either v1.18.0
+[1m[92m    Checking[0m lazy_static v1.5.0
+[1m[92m    Checking[0m slab v0.4.12
+[1m[92m    Checking[0m roxmltree v0.20.0
+[1m[92m   Compiling[0m serde_json v1.0.151
 [1m[92m   Compiling[0m document-features v0.2.12
+[1m[92m    Checking[0m symphonia-core v0.5.5
+[1m[92m    Checking[0m fontconfig-parser v0.5.8
+[1m[92m    Checking[0m wgpu-core-deps-windows-linux-android v30.0.1
 [1m[92m    Checking[0m skrifa v0.44.0
 [1m[92m    Checking[0m ttf-parser v0.25.1
-[1m[91merror[0m: failed to run custom build command for `alsa-sys v0.4.0`
-
-Caused by:
-  process didn't exit successfully: `/home/runner/work/sindri2/sindri2/target/debug/build/alsa-sys-5e38870c989fcce7/build-script-build` (exit status: 101)
-  --- stdout
-  cargo:rerun-if-env-changed=ALSA_NO_PKG_CONFIG
-  cargo:rerun-if-env-changed=PKG_CONFIG_x86_64-unknown-linux-gnu
-  cargo:rerun-if-env-changed=PKG_CONFIG_x86_64_unknown_linux_gnu
-  cargo:rerun-if-env-changed=HOST_PKG_CONFIG
-  cargo:rerun-if-env-changed=PKG_CONFIG
-  cargo:rerun-if-env-changed=PKG_CONFIG_PATH_x86_64-unknown-linux-gnu
-  cargo:rerun-if-env-changed=PKG_CONFIG_PATH_x86_64_unknown_linux_gnu
-  cargo:rerun-if-env-changed=HOST_PKG_CONFIG_PATH
-  cargo:rerun-if-env-changed=PKG_CONFIG_PATH
-  cargo:rerun-if-env-changed=PKG_CONFIG_LIBDIR_x86_64-unknown-linux-gnu
-  cargo:rerun-if-env-changed=PKG_CONFIG_LIBDIR_x86_64_unknown_linux_gnu
-  cargo:rerun-if-env-changed=HOST_PKG_CONFIG_LIBDIR
-  cargo:rerun-if-env-changed=PKG_CONFIG_LIBDIR
-  cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR_x86_64-unknown-linux-gnu
-  cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR_x86_64_unknown_linux_gnu
-  cargo:rerun-if-env-changed=HOST_PKG_CONFIG_SYSROOT_DIR
-  cargo:rerun-if-env-changed=PKG_CONFIG_SYSROOT_DIR
-
-  --- stderr
-
-  thread 'main' (3298) panicked at /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/alsa-sys-0.4.0/build.rs:13:19:
-
-  pkg-config exited with status code 1
-  > PKG_CONFIG_ALLOW_SYSTEM_LIBS=1 PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1 pkg-config --libs --cflags alsa
-
-  pkg-config output:
-    Package alsa was not found in the pkg-config search path.
-    Perhaps you should add the directory containing `alsa.pc'
-    to the PKG_CONFIG_PATH environment variable
-    Package 'alsa', required by 'virtual:world', not found
-
-  The system library `alsa` required by crate `alsa-sys` was not found.
-  The file `alsa.pc` needs to be installed and the PKG_CONFIG_PATH environment variable must contain its parent directory.
-  The PKG_CONFIG_PATH environment variable is not set.
-
-  HINT: if you have installed the library, try setting PKG_CONFIG_PATH to the directory containing `alsa.pc`.
-
-  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-[1m[33mwarning[0m: build failed, waiting for other jobs to finish...
+[1m[92m   Compiling[0m serde_derive v1.0.229
+[1m[92m   Compiling[0m wgpu v30.0.1
+[1m[92m    Checking[0m memmap2 v0.9.11
+[1m[92m    Checking[0m encoding_rs v0.8.35
+[1m[92m    Checking[0m memchr v2.8.3
+[1m[92m    Checking[0m zeno v0.3.3
+[1m[92m    Checking[0m yazi v0.2.1
+[1m[92m    Checking[0m itoa v1.0.18
+[1m[92m    Checking[0m symphonia-metadata v0.5.5
+[1m[92m    Checking[0m swash v0.2.10
+[1m[92m    Checking[0m fontdb v0.23.0
+[1m[92m    Checking[0m rstar v0.13.0
+[1m[92m    Checking[0m skrifa v0.40.0
+[1m[92m    Checking[0m harfrust v0.5.2
+[1m[92m    Checking[0m euclid v0.22.14
+[1m[92m    Checking[0m unicode-linebreak v0.1.5
+[1m[92m    Checking[0m unicode-segmentation v1.13.3
+[1m[92m    Checking[0m smol_str v0.3.6
+[1m[92m    Checking[0m unicode-script v0.5.8
+[1m[92m    Checking[0m sys-locale v0.3.2
+[1m[92m   Compiling[0m cpal v0.17.3
+[1m[92m    Checking[0m rangemap v1.8.0
+[1m[92m    Checking[0m self_cell v1.3.0
+[1m[92m    Checking[0m unicode-bidi v0.3.18
+[1m[92m    Checking[0m linebender_resource_handle v0.1.1
+[1m[92m    Checking[0m rustc-hash v2.1.3
+[1m[92m    Checking[0m etagere v0.3.0
+[1m[92m    Checking[0m sindri-core v0.1.0 (/home/runner/work/sindri2/sindri2/crates/sindri-core)
+[1m[92m    Checking[0m cosmic-text v0.19.0
+[1m[92m    Checking[0m alsa v0.11.0
+[1m[92m    Checking[0m parry3d v0.30.2
+[1m[92m    Checking[0m symphonia-bundle-mp3 v0.5.5
+[1m[92m    Checking[0m parry2d v0.30.2
+[1m[92m    Checking[0m ogg v0.8.0
+[1m[92m    Checking[0m decay-syntax v0.0.1 (/home/runner/work/sindri2/sindri2/decay/crates/decay-syntax)
+[1m[92m    Checking[0m lru v0.16.4
+[1m[92m    Checking[0m dasp_sample v0.11.0
+[1m[92m    Checking[0m decay-semantic v0.0.1 (/home/runner/work/sindri2/sindri2/decay/crates/decay-semantic)
+[1m[92m    Checking[0m lewton v0.10.2
+[1m[92m    Checking[0m symphonia v0.5.5
+[1m[92m    Checking[0m hound v3.5.1
+[1m[92m    Checking[0m rodio v0.22.2
+[1m[92m    Checking[0m rapier2d v0.35.2
+[1m[92m    Checking[0m glyphon v0.12.0
+[1m[92m    Checking[0m rapier3d v0.35.2
+[1m[92m    Checking[0m sindri-render v0.1.0 (/home/runner/work/sindri2/sindri2/crates/sindri-render)
+[1m[92m    Checking[0m decay-ir v0.0.1 (/home/runner/work/sindri2/sindri2/decay/crates/decay-ir)
+[1m[92m    Checking[0m sindri-grid v0.1.0 (/home/runner/work/sindri2/sindri2/crates/sindri-grid)
+[1m[92m    Checking[0m decay-runtime v0.0.1 (/home/runner/work/sindri2/sindri2/decay/crates/decay-runtime)
+[1m[92m    Checking[0m sindri-platform v0.1.0 (/home/runner/work/sindri2/sindri2/crates/sindri-platform)
+[1m[92m    Checking[0m sindri-physics v0.1.0 (/home/runner/work/sindri2/sindri2/crates/sindri-physics)
+[1m[92m    Checking[0m sindri-scene v0.1.0 (/home/runner/work/sindri2/sindri2/crates/sindri-scene)
+[1m[92m    Checking[0m sindri-decay v0.1.0 (/home/runner/work/sindri2/sindri2/crates/sindri-decay)
+[1m[92m    Checking[0m decay-lsp v0.1.0 (/home/runner/work/sindri2/sindri2/tools/decay-lsp)
+tools/decay-lsp/src/protocol.rs:1:30: [1m[33mwarning[0m: unused import: `Read`
+tools/decay-lsp/src/main.rs:41:35: [1m[33mwarning[0m: this argument is passed by value, but not consumed in the function body
+tools/decay-lsp/src/main.rs:99:16: [1m[33mwarning[0m: unused `self` argument
+tools/decay-lsp/src/main.rs:99:50: [1m[33mwarning[0m: this argument is passed by value, but not consumed in the function body
+[1m[33mwarning[0m: `decay-lsp` (bin "decay-lsp" test) generated 4 warnings (1 duplicate)
+[1m[33mwarning[0m: `decay-lsp` (bin "decay-lsp") generated 4 warnings (3 duplicates)
+[1m[92m    Finished[0m `dev` profile [unoptimized + debuginfo] target(s) in 39.05s
