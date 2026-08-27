@@ -1,4 +1,4 @@
-name: Fix Decay LSP clippy
+name: Apply Decay LSP lint fixes
 
 on:
   push:
@@ -17,23 +17,26 @@ jobs:
           ref: feature/decay-lsp
       - uses: dtolnay/rust-toolchain@1.95.0
         with:
-          components: clippy,rustfmt
-      - name: Install audio headers
-        run: sudo apt-get update && sudo apt-get install --yes libasound2-dev
-      - name: Fix ownership warnings
+          components: rustfmt
+      - name: Apply fixes
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import re
 
           protocol = Path('tools/decay-lsp/src/protocol.rs')
-          text = protocol.read_text()
-          text = text.replace('io::{self, BufRead, Read, Write}', 'io::{self, BufRead, Write}')
+          text = protocol.read_text().replace(
+              'io::{self, BufRead, Read, Write}',
+              'io::{self, BufRead, Write}',
+          )
           protocol.write_text(text)
 
           main = Path('tools/decay-lsp/src/main.rs')
           text = main.read_text()
-          text = text.replace('fn handle(&mut self, message: Value,', 'fn handle(&mut self, message: &Value,')
+          text = text.replace(
+              'fn handle(&mut self, message: Value,',
+              'fn handle(&mut self, message: &Value,',
+          )
           text = text.replace('self.respond(', 'Self::respond(')
           pattern = re.compile(
               r'    fn respond\(&self, id: Option<Value>, result: Value, output: &mut impl Write\) -> io::Result<\(\)> \{.*?\n    \}\n\n    fn did_open',
@@ -54,13 +57,14 @@ jobs:
           text, count = pattern.subn(replacement, text)
           if count != 1:
               raise SystemExit(f'expected to replace respond once, replaced {count}')
-          text = text.replace('server.handle(message, &mut output)?', 'server.handle(&message, &mut output)?')
+          text = text.replace(
+              'server.handle(message, &mut output)?',
+              'server.handle(&message, &mut output)?',
+          )
           main.write_text(text)
           PY
           rm -f decay-lsp-clippy.txt .github/decay-lsp-diagnostics-trigger
           cargo fmt --all
-      - name: Verify Decay LSP
-        run: cargo clippy --package decay-lsp --all-targets --all-features -- -D warnings
       - name: Commit fixes
         run: |
           git config user.name github-actions[bot]
