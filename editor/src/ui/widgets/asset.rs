@@ -33,6 +33,18 @@ pub struct Entry<'a> {
     pub current: bool,
     /// `Some` for a folder or a sliced image, carrying whether it is open.
     pub expanded: Option<&'a mut bool>,
+    /// The name being typed, when this row is being renamed in place.
+    ///
+    /// The same interaction the hierarchy uses, for the same reason: a browser
+    /// of forty files should let one be renamed without the eyes leaving it.
+    pub editing: Option<&'a mut String>,
+}
+
+/// What a browser row reported: its response, and whether a rename finished.
+pub struct AssetRow {
+    pub response: Response,
+    /// `Some(true)` when the name was committed, `Some(false)` when abandoned.
+    pub renamed: Option<bool>,
 }
 
 /// One file as a row.
@@ -41,7 +53,7 @@ pub struct Entry<'a> {
 /// rather than its own: a widget inside a sensing scope takes precedence over
 /// the scope, and an ordinary egui label is selectable text, so it would answer
 /// a double click by selecting a word and the row would never hear about it.
-pub fn row(ui: &mut egui::Ui, entry: Entry<'_>) -> Response {
+pub fn row(ui: &mut egui::Ui, entry: Entry<'_>) -> AssetRow {
     let Entry {
         icon,
         name,
@@ -50,7 +62,10 @@ pub fn row(ui: &mut egui::Ui, entry: Entry<'_>) -> Response {
         selected,
         current,
         expanded,
+        editing,
     } = entry;
+    let mut committed = false;
+    let mut cancelled = false;
     // Every row answers the pointer, whether or not the editor can open what it
     // names. A row that cannot be clicked cannot be selected, and one that
     // cannot be selected has nowhere to put a right-click menu — which is how
@@ -100,18 +115,10 @@ pub fn row(ui: &mut egui::Ui, entry: Entry<'_>) -> Response {
                     ))
                     .sense(sense),
                 );
-                let label = ui.add(
-                    egui::Label::new(RichText::new(name).size(text::LABEL).color(
-                        if current || selected {
-                            color::TEXT
-                        } else {
-                            color::TEXT_MUTED
-                        },
-                    ))
-                    .selectable(false)
-                    .truncate()
-                    .sense(sense),
-                );
+                let named = name_of(ui, name, editing, current || selected, sense);
+                committed = named.committed;
+                cancelled = named.cancelled;
+                let label = named.response;
                 let badge = ui
                     .with_layout(Layout::right_to_left(Align::Center), |ui| {
                         ui.add_space(metric::GUTTER);
@@ -147,7 +154,63 @@ pub fn row(ui: &mut egui::Ui, entry: Entry<'_>) -> Response {
             color::FORGE_DIM,
         );
     }
-    scope.response | inner
+    AssetRow {
+        response: scope.response | inner,
+        renamed: match (committed, cancelled) {
+            (_, true) => Some(false),
+            (true, _) => Some(true),
+            _ => None,
+        },
+    }
+}
+
+/// What a row's name reported: the widget, and how a rename ended.
+struct Named {
+    response: Response,
+    committed: bool,
+    cancelled: bool,
+}
+
+/// A row's name, as a label or as the field replacing it while it is renamed.
+fn name_of(
+    ui: &mut egui::Ui,
+    name: &str,
+    editing: Option<&mut String>,
+    lit: bool,
+    sense: Sense,
+) -> Named {
+    let Some(draft) = editing else {
+        return Named {
+            response: ui.add(
+                egui::Label::new(RichText::new(name).size(text::LABEL).color(if lit {
+                    color::TEXT
+                } else {
+                    color::TEXT_MUTED
+                }))
+                .selectable(false)
+                .truncate()
+                .sense(sense),
+            ),
+            committed: false,
+            cancelled: false,
+        };
+    };
+    let field = ui.add(
+        egui::TextEdit::singleline(draft)
+            .desired_width(ui.available_width() - 6.0)
+            .font(egui::FontId::proportional(text::LABEL)),
+    );
+    // Focused the frame it appears, so renaming is one act rather than "start
+    // renaming, then click the box".
+    if !field.has_focus() && !field.lost_focus() {
+        field.request_focus();
+    }
+    let cancelled = ui.input(|input| input.key_pressed(egui::Key::Escape));
+    Named {
+        committed: field.lost_focus() && !cancelled,
+        cancelled,
+        response: field,
+    }
 }
 
 /// One file as a tile: a plate to look at, and a name under it.

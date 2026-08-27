@@ -160,9 +160,9 @@ impl eframe::App for EditorApp {
         if ui.ctx().input(|input| input.pointer.any_released()) {
             self.history.break_merge_run();
         }
-        // Drawn last so it sits over everything, and asked before Escape is
+        // Drawn last so they sit over everything, and asked before Escape is
         // read as clearing the selection.
-        if self.confirm_dialog(ui.ctx()) {
+        if self.confirm_dialog(ui.ctx()) || self.confirm_delete(ui.ctx()) {
             return;
         }
         // Escape clears the selection wherever the pointer happens to be. The

@@ -113,6 +113,16 @@ impl SceneFile {
         write_scene(path, document)
     }
 
+    /// Follows the file to a new path without writing anything.
+    ///
+    /// What renaming the open scene in the project browser needs: the editor
+    /// holds the path it saves to, so a rename the editor was not told about
+    /// would have the next save write the scene back under its old name and
+    /// leave two of them on disk.
+    pub fn adopt(&mut self, path: &Path) {
+        self.path = Some(path.to_path_buf());
+    }
+
     /// Re-reads the file, discarding whatever the editor had in memory.
     pub fn reload(&mut self) -> Result<(), SceneFileError> {
         let path = self.path.clone().ok_or(SceneFileError::NoPath)?;

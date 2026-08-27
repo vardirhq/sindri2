@@ -186,7 +186,7 @@ impl EditorApp {
                 self.project = ProjectTree::beside(self.file.path());
                 self.world = world;
                 self.history.clear();
-                self.selection = None;
+                self.selection.clear();
                 self.tilemap_tool.reset();
                 self.animation_tool.reset();
                 self.saved_revision = self.history.revision();

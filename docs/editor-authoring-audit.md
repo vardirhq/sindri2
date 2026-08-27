@@ -6,10 +6,13 @@ Can Gather be built in the editor, as of `4dd70b4`?
 and a fifth — the complete absence of right-click menus — is why several of the
 others have nowhere to be fixed.
 
-**Fixing has started.** §1, §2 and §3 are done, and each keeps its finding here
-because how it hid is the useful part. What is left is §4 onwards. This audit is the second of its kind; `docs/editor-audit.md` asked whether
-the controls did anything, and this one asks whether the controls that work add
-up to a tool you could author a game in.
+**Fixed, and the answer is now yes.** Every finding below is done except the
+right-click surfaces §6 tabulates, which are additions rather than gaps: six
+panels where a menu is expected and there is not one yet. Each finding keeps its
+text here because how it hid is the useful part. This audit is the second of its
+kind; `docs/editor-audit.md` asked whether the controls did anything, and this
+one asks whether the controls that work add up to a tool you could author a game
+in.
 
 The test is deliberately concrete. Gather is the companion game, its scene is in
 the repository, and every capability the engine claims is exercised by it. So
@@ -165,13 +168,16 @@ world underneath them is temporary.
 
 **Missing basics.** Four separate gaps, three of which you named.
 
-**Three of the four fixed.** Folders fold, the folder pane navigates, and the
-browser has a selection of its own — marked with the band a selected row wears,
+**All four fixed.** Folders fold, the folder pane navigates,
+and the browser has a selection of its own — marked with the band a selected row wears,
 while the open scene keeps a quieter rule in the margin, because "the scene I
 have open" and "the thing I am pointing at" are different facts. Every row
 answers a click now, including the ones the editor can do nothing else with,
 because a row that cannot be selected cannot carry a right-click menu either.
-The fourth gap — opening, previewing, and file operations — is still open.
+The fourth gap is closed: the file operations are done — make a folder, make a
+script, rename, copy, import, delete — and every kind the browser lists now has
+something the inspector can show about it. A text file is read, an image slices,
+a clip plays, and a font draws a sample.
 
 **Folders do not open or close.** `ProjectTree` produces one flat, sorted, fully
 expanded list with a `depth` per row (`editor/src/project/mod.rs`). There is no
@@ -192,30 +198,86 @@ wears the selection band permanently, and selecting a texture — which does
 something real, it opens the slicer — marks nothing at all. Confirmed: with
 `spin.png` open in the slicer, the highlighted row is still the scene.
 
-**Most files do nothing when clicked.** Only Scene and Texture rows are
+**Most files do nothing when clicked.** Only Scene and Texture rows were
 interactive (`editor/src/native/project_panel/row.rs:103`). Scripts, fonts,
-audio, meshes and everything else are inert:
+audio, meshes and everything else were inert:
 
-- `.decay` scripts cannot be opened, previewed, or created. The project browser
-  lists the language's source files and can do nothing with any of them.
-- Audio has no preview. You cannot hear a clip before naming it in a component.
-- Fonts have no preview. You pick a font by filename.
+- ~~`.decay` scripts cannot be opened, previewed, or created.~~ **Fixed.**
+  Selecting a text file shows it in the inspector, the same way selecting an
+  image opens the slicer — the file, its line count, and its source in a
+  monospace column that scrolls both ways, because source is written in columns
+  and wrapping it puts a continuation where a statement was. Read-only, and the
+  panel says so: an editor that opens a script in a text box is promising to be
+  a code editor — syntax, errors at the line they are on, find, an undo stack of
+  its own — and half of that is worse than none. What it answers is the question
+  the browser could not, which is what is in this file. It covers every text
+  file the browser lists, not only `.decay`: a scene, a sheet, a README, a
+  `.toml`. And **New script here** writes one that compiles and does nothing,
+  because a file that reports an error before anyone has typed a line of it is a
+  worse start than an empty one.
+- ~~**Audio has no preview.**~~ **Fixed.** Selecting a `.wav`, `.ogg` or
+  `.mp3` offers Play and Stop, and the clip is played by the editor rather than
+  by the scene: the panel owns its own `AudioBackend`, opened on the first clip
+  rather than at startup, so auditioning a sound needs no running world and
+  cannot leave a voice in the one someone then presses Play on
+  (`editor/src/audition.rs`). A container nothing decodes is not offered a play
+  button, because a control that cannot do what it says is worse than no
+  control. A device that will not open says so in the console rather than
+  failing quietly.
+- ~~**Fonts have no preview.**~~ **Fixed.** Selecting a `.ttf` or `.otf` draws
+  a sample in the face itself, at two sizes, over letters, digits and the
+  punctuation a HUD actually uses rather than a pangram — what someone is
+  deciding is whether this face suits a score, and "0 1 2 3" is the half of
+  that a pangram leaves out. The sample is drawn by egui rather than by the
+  engine's text renderer, because asking the scene's renderer for a picture of
+  a string to put in a dock would be a second text pipeline for one label. The
+  interesting part is how the font gets in: `Context::set_fonts` *replaces*
+  every definition the context holds and takes effect a frame later, so
+  installing a project font that way silently unbinds the icon families the
+  whole editor draws with and panics on the next frame. `Context::add_font`
+  inserts instead, which is what the icon font itself uses
+  (`editor/src/typeface.rs`). A `.ttf` that is not a font says so, rather than
+  drawing the sample in the editor's own face and looking fine.
 
-And there are no file operations of any kind: no create, no folder, no rename,
-no delete, no duplicate, no reveal-in-file-manager, no import. Every asset has
-to arrive from outside the editor, and the browser has to be told to re-read
-(the Refresh button) when one does.
+~~And there are no file operations of any kind: no create, no folder, no rename,
+no delete, no duplicate, no reveal-in-file-manager, no import.~~ **Fixed**, bar
+reveal-in-file-manager. A row's menu makes a folder, renames in place, copies
+beside itself, imports files from anywhere, and deletes — and the browser
+re-reads the directory itself afterwards, so Refresh is for changes made outside
+it rather than for the editor's own.
+
+None of these go through the undo history, and that is not an oversight: the
+history describes a world and these describe a directory, so undoing a delete
+would mean the editor holding the bytes of every file anyone removed for as long
+as the session lasted. What keeps them honest instead is that each is checked
+before it runs (`editor/src/project/ops.rs`) and refuses rather than overwrites,
+that nothing can name a path outside the project — a browser row hands over
+whatever was typed into it, and `../../etc/hosts` is a perfectly good string —
+and that the one operation with nothing behind it asks first.
+
+Renaming the open scene follows it, because the editor holds the path it saves
+to and a rename it was not told about would write the scene back under its old
+name and leave two of them on disk. A copy keeps the whole suffix that says what
+kind of asset it is: `Path::file_stem` stops at the last dot, so a duplicated
+scene would otherwise become `level.scene copy.json`, which the browser no
+longer reads as a scene.
+
+Delete and F2 act on whichever selection was made last, so the browser's menu
+can print its keys honestly — the editor holds two selections, and until now
+those keys always meant the entity.
+
+What is still open in this section is reveal-in-file-manager, and editing a
+script rather than reading one.
 
 ## 5. The hierarchy is missing most of its verbs
 
 **Missing basics.** What it does: create empty, create child, create UI image,
 select, delete the selection, drag to reparent, fold, filter by name.
 
-**Three of the five fixed.** Duplicate, rename in place, and delete by keyboard
-all exist now, each reachable three ways: the row's own right-click menu (§6),
-its key, and — for rename — a double click. Multi-select and sibling reorder are
-still open, and are the two that change what a *selection* is rather than what
-one entity can be told to do.
+**All five fixed.** Duplicate, rename in place, delete by keyboard,
+multi-select and sibling reorder all exist now; each is reachable from the
+row's own right-click menu (§6) and from a key, and rename also from a double
+click.
 
 What it does not:
 
@@ -236,9 +298,46 @@ What it does not:
 - ~~**Delete by keyboard.**~~ **Fixed.** Delete, or Backspace — the key a Mac
   keyboard labels "delete". The header icon stays, because a key nobody has
   been told about is not a discoverable verb.
-- **Multi-select.** One entity at a time, so no bulk move, delete, or reparent.
-- **Reorder siblings.** Order is `source_id` sorted (`hierarchy_sort_key`), so
-  authoring order is alphabetical by an ID you cannot see or set.
+- ~~**Multi-select.**~~ **Fixed.** Ctrl-click adds and removes, Shift-click
+  takes the range between two rows as the panel is drawing them — a range in a
+  tree is the rows between two rows, so a collapsed subtree is not in it and
+  neither is anything the filter hid — and Ctrl-click does the same in the Scene
+  view, where there are no rows for a range to run along. Delete, Duplicate and
+  a drag to a new parent then take the whole selection in one undo step, and so
+  does a gizmo drag: each selected entity is moved, turned or scaled by what the
+  primary was, from its own start, so a row of five pips dragged two units right
+  is still a row (`editor/src/gizmo.rs`, `Change`). Two things fall out of it
+  that are worth naming. A selection has a *primary* as well as a set — the last
+  entity pointed at — because a panel of fields and one set of handles can only
+  be about one subject; the inspector stays on it and says how many the verbs
+  outside it would take, and the rest of the selection wears a ring in the Scene
+  view where its own handles would have been, or a drag that moves five things
+  looks like a bug in a drag that moves one. And every bulk verb folds the set
+  first (`editor/src/selection.rs`, `topmost`), because all of them already take
+  the subtree: a parent and its child both selected would despawn the child's
+  handle twice, land two copies of it, or move it by the parent's delta and then
+  again by its own.
+- ~~**Reorder siblings.**~~ **Fixed.** Move up and Move down, on the row's menu
+  and on Alt+Up and Alt+Down, greyed out at the ends of a list rather than
+  offered and refused. Where the order is *recorded* is the whole of the
+  problem. A scene's document order is canonical — sorted by ID, and explicitly
+  meaningless, so that a save stays stable while entities are added and
+  reparented — and draw order is expressed by render layers and depths. So
+  sibling order is a fact about a panel rather than about a scene being played,
+  and it goes in `EntityData.editor`, the section of the file a runtime carries
+  but never interprets (`editor/src/ordering.rs`). No format change, and a
+  scene nobody has reordered still lists alphabetically by ID, because an
+  entity that records no place sorts after every entity that does and ties
+  break on the ID — which is also why something created after a reorder arrives
+  at the bottom of its parent's list, and why something dropped onto a new
+  parent forgets the place it held under the old one. Moving one row stamps
+  every sibling rather than only the two that swapped: recording one place and
+  leaving the rest to sort by ID would make a list half of which is
+  alphabetical, and the next move would read an order that is not the one on
+  screen. It goes through the command layer like everything else saved with the
+  document, which needed one new command — `WorldCommand::SetEditorEntry` —
+  because the editor map had no write path and so nothing in it could be undone
+  or mark a document unsaved.
 
 Most of these are the actions a right-click would offer, which is §6.
 
@@ -300,12 +399,25 @@ tooltip, or the absence of a primary-click response.
 **Missing basic**, with one case that is actively misleading — and, found while
 fixing it, one that was worse than this section knew.
 
-**Fixed**, except for UI text. UI images are picked in a pass of their own
-against the same overlay matrix the frame draws them through, and a UI element's
-gizmo is drawn where the element is. UI text is deliberately not picked: what a
-string covers is decided by glyph layout inside the text renderer, and a guessed
-box for it would select the wrong thing near its edges. Its gizmo is now correct,
-so it is still reachable from the hierarchy and movable in the view.
+**Fixed.** UI images are picked in a pass of their own against the same overlay
+matrix the frame draws them through, and a UI element's gizmo is drawn where the
+element is.
+
+UI text took a second pass, because a string is the one drawn thing with no size
+in the scene: what it covers is decided by glyph layout — kerning, fallback, the
+wrap the viewport imposes — inside the text renderer, and a box guessed from the
+font size and the character count picks the wrong entity along its edges, which
+is worse than not picking at all. So the box is not guessed. `TextRenderer`
+answers it (`TextRenderer::measure`), from the same shaping the frame is drawn
+with — one function now, shared by drawing and measuring, because two copies is
+exactly how a pick box ends up disagreeing with the picture it is over. Where the
+string starts comes from the same place for the same reason:
+`OverlayPlacement::text_origin` is what the frame's text pass positions with.
+The editor measures at the resolution the view renders at and hands `pick_ui` the
+boxes; picking itself stays free of the GPU and settles a string against an image
+by the layer rule two images already settle it by. Confirmed in the running
+editor: clicking the word GATHER selects `title`, and clicking the empty space
+beside it selects nothing.
 
 **Nothing at all could be clicked, in fact.** Found while fixing the rest, and
 not visible from either side of it. The Scene view allocated its region with
@@ -348,10 +460,12 @@ its Z orders it within the overlay rather than placing it.
 **Missing basics.** There is no place in the editor that is about the scene
 rather than about an entity in it.
 
-**The two that blocked starting a project are fixed.** A scene can be made and a
-scene can be forked, so the editor no longer requires a project someone else
-started. What is left in this section is a *surface* — a place that is about the
-scene — which the remaining four items all want and none of them has.
+**Fixed.** A scene can be made and a scene can be forked, so the editor no
+longer requires a project someone else started, and the four facts that had
+nowhere to live — the scene's name, an entity's stable ID, the snapping
+increments, and what the panel shows with nothing selected — each found one. The
+fifth item, a preferences surface, is deliberately still absent; the bullet says
+why.
 
 - ~~**No New Scene.**~~ **Fixed.** File → New scene…, or Ctrl+N. It asks where
   the scene goes, writes it, and opens it through the ordinary path, so a new
@@ -388,11 +502,21 @@ scene — which the remaining four items all want and none of them has.
   blank or already taken is refused at the field, in the colour the editor uses
   for a refusal, rather than written and rejected — the draft is committed every
   frame, so a refused command would be refused again on the next one.
-- **No snapping settings.** The snap toggle's tooltip names its increments —
-  0.5 units, 15°, 0.1 scale — and they are constants
-  (`editor/src/gizmo.rs:85`). Nothing can change them.
-- **No preferences surface.** Layout is in the View menu; everything else the
-  editor remembers is invisible.
+- ~~**No snapping settings.**~~ **Fixed.** The snap toggle's tooltip named its
+  increments — 0.5 units, 15°, 0.1 scale — and they were constants nothing could
+  change, so a board laid out on quarter units was a board laid out by hand.
+  Right-clicking the snap button sets all three, and they are remembered:
+  someone working at half a unit wants half a unit tomorrow too. Zero is
+  allowed and means that one does not round, which is what the gizmo already did
+  with a zero step and is an ordinary way to work.
+- **No preferences surface**, and on reflection the editor should not grow one.
+  Layout is in the View menu, the asset view is in the browser's toolbar, the
+  console filter is in the console's, and the snap increments are on the snap
+  button. Each control sits on the thing it controls, which is where it is
+  looked for; a dialog listing all four would be a second place to find each of
+  them and the only home for none. What is genuinely missing is not a surface
+  but the settings that still have no control anywhere — and after this, that
+  list is empty.
 
 ## 9. Smaller things, confirmed
 
@@ -417,13 +541,49 @@ scene — which the remaining four items all want and none of them has.
   object in the scene; it is a sheet of paper now. A font shared the image glyph
   with a texture, so a project's typefaces and its sprite sheets were the same
   row with different words after them; it has its own.
-- **No entity enable/disable.** `EntityData` has no such field, so this is an
-  engine gap rather than an editor one, but it is a basic an author will look
-  for early.
-- **The console cannot be filtered.** No level filter, and no way to get from an
-  error naming an entity to that entity.
-- **No undo history view**, so "what will Ctrl+Z do" is answerable only from the
-  Edit menu's label.
+- ~~**No entity enable/disable.**~~ **Fixed**, in the engine, because that is
+  where the gap was. `EntityData` and `SceneEntity` carry a `disabled` flag, and
+  `World::is_active` is the question anything drawing, stepping, scripting or
+  picking asks — it walks ancestors, so switching off a HUD switches off its
+  pips. The filter is applied once, in `ComponentSchemaRegistry::query`, rather
+  than at each of the six places that would otherwise have to remember it: the
+  ones that forgot would draw something nothing can click, or step something
+  nobody can see. The flag is per entity and is never written down through a
+  subtree, so re-enabling a parent brings back exactly the children that were
+  on. Omitted from a saved scene when false, so no format change and every
+  existing file is byte for byte what it was. In the editor it is an Active
+  switch on the inspector — greyed out, and saying so, on a child that is off
+  because its parent is — plus Disable and Enable on a row's menu, which take
+  the whole selection; a switched-off row is struck through rather than dimmed,
+  because dim already means "nothing here to act on" and this is the row you
+  would switch back on.
+- ~~**The console cannot be filtered.**~~ **Fixed.** All / Problems / Errors,
+  remembered across launches because it is a reading preference rather than a
+  state: someone watching for a failure wants the console filtered to failures
+  for as long as they are watching. A filter that hides everything says it did,
+  so an empty panel does not read as a console that stopped working.
+- ~~**No way to get from an error naming an entity to that entity.**~~
+  **Fixed**, and it was worse than "no way": a script failure printed
+  `entity EntityId { index: 4, generation: 0 }`, which is what the runtime has
+  and is not something anyone can look for in a hierarchy. A console entry
+  carries the entity it is about — carried rather than read back out of the
+  message, because searching the text for something that looks like a name
+  would select the wrong entity the first time a message mentioned a word that
+  happened to be one — and the row ends in that entity's name as the way to it.
+  `ScriptFailure` gained `entity()` and `detail()` for it: the runtime says
+  which handle and what went wrong, and the editor, which holds the world, says
+  "Wisp".
+- ~~**No undo history view**, so "what will Ctrl+Z do" is answerable only from
+  the Edit menu's label.~~ **Fixed.** A History tab beside Project and Console,
+  which is the stack drawn: "Scene opened", then every step in the order it
+  happened, the one the world is at marked, and the steps that have been undone
+  still listed under it dimmed because they are still reachable. Clicking one
+  travels there. It travels by calling the same undo and redo the keys call,
+  once per step, rather than by a jump of its own — a second way to move the
+  world is a second thing that can disagree with the first, and each step is
+  already a transaction that knows how to reverse itself. `CommandHistory`
+  hands out the two stacks as labels and keeps the transactions private, for
+  the same reason: a caller holding one could apply it out of order.
 
 ---
 
@@ -441,20 +601,35 @@ The ordering is by what unblocks the most authoring, not by effort.
    pane filter the list.~~ Done. What is left in §4 is opening and previewing
    what it lists, and file operations.
 4. ~~**Duplicate, rename in place, and Delete**, reached from a right-click menu
-   on the thing they act on.~~ Done. All three exist on the hierarchy, each
-   reachable from the row's menu and from its key, and the project browser has
-   a menu of its own for what it can already do. What is still open from §5 is
-   multi-select and sibling reorder, which change what a *selection* is rather
-   than what one entity can be told to do.
+   on the thing they act on.~~ Done, and §5 is closed with it. All three exist
+   on the hierarchy, each reachable from the row's menu and from its key, and
+   the project browser has a menu of its own for what it can already do.
+   Multi-select and sibling reorder came with them: the first changes what a
+   *selection* is, and the second gave the editor somewhere to record an order
+   that the scene format deliberately does not.
 5. ~~**New Scene and Save As**, so the editor can start a project rather than
-   only continue one.~~ Done. What is left in §8 is a surface that is about the
-   scene rather than about an entity in it: the scene's name, an entity's stable
-   ID, the snapping increments, and everything else the editor remembers.
+   only continue one.~~ Done, and §8 is closed with it: the scene's name, an
+   entity's stable ID and the snapping increments each found a surface, and the
+   inspector shows the scene itself when nothing is selected.
 6. ~~**Pick UI elements in the viewport**, and either draw their gizmo where the
-   element is or do not draw one.~~ Done, except for UI text, which needs glyph
-   metrics the editor does not have. Two things nobody had noticed came out
-   with it: the viewport sensed drags but not clicks, so *nothing* in it could
-   be selected; and a fully transparent element swallowed every click over it.
+   element is or do not draw one.~~ Done, UI text included: the glyph metrics
+   the editor did not have are now asked of the renderer that owns them, from
+   the same shaping the frame is drawn with. Two things nobody had noticed came
+   out with it: the viewport sensed drags but not clicks, so *nothing* in it
+   could be selected; and a fully transparent element swallowed every click
+   over it.
+
+7. ~~**File operations in the project browser**, so a project can be built
+   without a file manager beside the window, and a way to look at what it
+   lists.~~ Done, and §4 is closed with it. Every kind the browser lists has a
+   preview now: a text file is read, an image slices, a clip plays through the
+   editor's own audio device, and a font draws a sample in the face itself.
+
+Everything on that list is done, and so is everything §9 found. What is left in
+the whole audit is the six right-click surfaces §6 tabulates — empty space in
+either listing panel, a component heading, a property row, the Scene view, and a
+console line — which are places to put actions that already exist rather than
+gaps in what the editor can express.
 
 ## What this audit does not cover
 

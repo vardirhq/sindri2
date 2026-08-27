@@ -12,7 +12,7 @@ use eframe::egui;
 use crate::gizmo::{GizmoMode, GizmoSpace};
 use crate::ui::icons;
 use crate::ui::theme::{color, metric};
-use crate::ui::widgets::{button, toolbar};
+use crate::ui::widgets::{button, menu, property, toolbar};
 
 use super::EditorApp;
 use super::chrome::projection_choice;
@@ -84,15 +84,38 @@ impl EditorApp {
             self.gizmo_space = space;
             self.gizmo_drag = None;
         }
-        let snap_tip = format!(
-            "Snap to {} units · {}° · {} scale",
-            self.gizmo_snapping.translation,
-            self.gizmo_snapping.rotation_degrees,
-            self.gizmo_snapping.scale
+        self.snap_control(ui);
+    }
+
+    /// The snap toggle, and the increments it snaps to.
+    ///
+    /// The increments were constants: the tooltip named three numbers and there
+    /// was nowhere to set any of them, so a board laid out on quarter units was
+    /// a board laid out by hand. They live behind a right-click on the button
+    /// that turns snapping on, because that is the control they belong to and a
+    /// toolbar has no room for three number fields nobody usually touches.
+    fn snap_control(&mut self, ui: &mut egui::Ui) {
+        let snapping = self.preferences.snapping;
+        let tip = format!(
+            "Snap to {} units · {}° · {} scale\nRight-click to change the increments",
+            snapping.translation, snapping.rotation_degrees, snapping.scale
         );
-        if button::icon(ui, icons::SNAP, self.gizmo_snapping.enabled, &snap_tip).clicked() {
-            self.gizmo_snapping.enabled = !self.gizmo_snapping.enabled;
+        let snap = button::icon(ui, icons::SNAP, snapping.enabled, &tip);
+        if snap.clicked() {
+            self.preferences.snapping.enabled = !snapping.enabled;
         }
+        menu::on_right_click(&snap, |ui| {
+            menu::subject(ui, "Snap to");
+            // A step of zero is a real answer — "do not round this one" — so
+            // the floor is zero rather than something arbitrarily small.
+            snap_step(ui, "Units", &mut self.preferences.snapping.translation);
+            snap_step(
+                ui,
+                "Degrees",
+                &mut self.preferences.snapping.rotation_degrees,
+            );
+            snap_step(ui, "Scale", &mut self.preferences.snapping.scale);
+        });
     }
 
     /// Where the scene camera is looking, and the two ways to send it back.
@@ -108,7 +131,7 @@ impl EditorApp {
             {
                 self.reset_view();
             }
-            let focusable = self.selection.is_some();
+            let focusable = !self.selection.is_empty();
             if ui
                 .add_enabled_ui(focusable, |ui| {
                     button::icon(
@@ -159,4 +182,20 @@ impl EditorApp {
             projection_choice(ui, &mut self.preferences.projection);
         });
     }
+}
+
+/// One increment, as a row in the snap menu.
+///
+/// Zero is allowed and means this one does not round: snapping a position while
+/// leaving rotation free is an ordinary way to work, and it is what the gizmo
+/// already did with a zero step.
+fn snap_step(ui: &mut egui::Ui, label: &str, value: &mut f32) {
+    property::Property::new(label).show(ui, |ui| {
+        ui.add(
+            egui::DragValue::new(value)
+                .speed(0.05)
+                .range(0.0..=360.0)
+                .max_decimals(3),
+        );
+    });
 }

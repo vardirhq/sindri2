@@ -3,8 +3,10 @@
 use eframe::egui::{self, Color32, Response, RichText, Stroke, Vec2};
 use egui_material_icons::MaterialIcon;
 use sindri_core::{EngineLifecycle, EngineState, FixedStepConfig};
+use sindri_decay::ScriptFailure;
 use sindri_scene::SpriteAnimations;
 
+use crate::console::Level;
 use crate::ui::theme::{color, metric, radius, text};
 
 use super::EditorApp;
@@ -210,7 +212,7 @@ impl EditorApp {
         // wants authored without anyone pressing Play.
         let components = self.scene.components().clone();
         for failure in self.scripts.compile(&self.world, &components) {
-            self.console.error(failure.to_string());
+            self.record_script_failure(&failure);
         }
 
         if delta == 0.0 {
@@ -233,7 +235,24 @@ impl EditorApp {
             // Collapsed by the console the same way a broken clip is: a script
             // that fails does it sixty times a second, and one line with a
             // count says more than sixty that scroll.
-            self.console.error(failure.to_string());
+            self.record_script_failure(&failure);
+        }
+    }
+
+    /// Says what a script did wrong, naming the entity it happened on.
+    ///
+    /// The runtime has only a handle, and `EntityId { index: 4, generation: 0 }`
+    /// is not something anyone can look for in a hierarchy. The editor holds
+    /// the world, so it says "Wisp" — and records which entity the line is
+    /// about, so the console row can be the way to it.
+    fn record_script_failure(&mut self, failure: &ScriptFailure) {
+        match failure.entity() {
+            None => self.console.error(failure.to_string()),
+            Some(entity) => {
+                let message = format!("{}: {}", self.entity_label(entity), failure.detail());
+                self.console
+                    .record_about(Level::Error, message, Some(entity));
+            }
         }
     }
 

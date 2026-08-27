@@ -179,7 +179,17 @@ fn an_anchored_ui_image_is_picked_where_it_is_drawn() {
         json!({ "texture": "procedural:checkerboard", "anchor": "top" }),
     );
 
-    let pick = |point| pick_ui(&world, extractor.components(), overlay, &placement, point).unwrap();
+    let pick = |point| {
+        pick_ui(
+            &world,
+            extractor.components(),
+            overlay,
+            &placement,
+            point,
+            &[],
+        )
+        .unwrap()
+    };
     // Near the top of the viewport, which is where an element anchored
     // there is drawn — and where its transform, read as a world position,
     // says nothing at all.
@@ -215,18 +225,55 @@ fn the_higher_ui_layer_wins_where_two_overlap() {
             extractor.components(),
             overlay,
             &placement,
-            [0.5, 0.5]
+            [0.5, 0.5],
+            &[]
         )
         .unwrap(),
         Some(pip)
     );
 }
 
-/// UI text is not picked, deliberately: what a string covers is decided by
-/// glyph layout inside the text renderer, and a guessed box for it would
-/// select the wrong thing near its edges.
+/// A string is picked from the box it was measured to occupy, and only from
+/// that box: what a string covers is glyph layout, so the answer is handed in
+/// from where the text renderer is rather than guessed here.
 #[test]
-fn ui_text_is_left_to_the_hierarchy() {
+fn a_string_is_picked_from_the_box_it_was_measured_to_fill() {
+    let extractor = SceneExtractor::new().unwrap();
+    let (overlay, placement) = sindri_scene::overlay_for_viewport(1.0).unwrap();
+    let mut world = World::default();
+    let title = spawn(
+        &mut world,
+        Transform3D::default(),
+        "sindri.ui.text",
+        json!({ "text": "GATHER", "font": "fonts/Inter.ttf", "anchor": "center" }),
+    );
+    let measured = [TextTarget {
+        entity: title,
+        layer: 0,
+        bounds: [0.4, 0.48, 0.6, 0.54],
+    }];
+    let pick = |point| {
+        pick_ui(
+            &world,
+            extractor.components(),
+            overlay,
+            &placement,
+            point,
+            &measured,
+        )
+        .unwrap()
+    };
+
+    assert_eq!(pick([0.5, 0.5]), Some(title));
+    assert_eq!(pick([0.5, 0.7]), None, "below the line is not the line");
+    assert_eq!(pick([0.9, 0.5]), None, "and neither is past its end");
+}
+
+/// A string with nothing measured for it is not picked at all — which is what
+/// happens to one whose font never arrived, because the frame does not draw it
+/// either.
+#[test]
+fn a_string_with_no_measured_box_is_not_picked() {
     let extractor = SceneExtractor::new().unwrap();
     let (overlay, placement) = sindri_scene::overlay_for_viewport(1.0).unwrap();
     let mut world = World::default();
@@ -234,7 +281,7 @@ fn ui_text_is_left_to_the_hierarchy() {
         &mut world,
         Transform3D::default(),
         "sindri.ui.text",
-        json!({ "text": "GATHER", "font": "fonts/Inter.ttf", "anchor": "center" }),
+        json!({ "text": "GATHER", "font": "fonts/Missing.ttf", "anchor": "center" }),
     );
 
     assert_eq!(
@@ -243,11 +290,54 @@ fn ui_text_is_left_to_the_hierarchy() {
             extractor.components(),
             overlay,
             &placement,
-            [0.5, 0.5]
+            [0.5, 0.5],
+            &[]
         )
         .unwrap(),
         None
     );
+}
+
+/// An image over a string wins where they overlap, by the same layer rule two
+/// images settle it with.
+#[test]
+fn a_higher_layer_wins_between_a_string_and_an_image() {
+    let extractor = SceneExtractor::new().unwrap();
+    let (overlay, placement) = sindri_scene::overlay_for_viewport(1.0).unwrap();
+    let mut world = World::default();
+    let plate = spawn(
+        &mut world,
+        Transform3D::default(),
+        "sindri.ui.image",
+        json!({ "texture": "procedural:checkerboard", "anchor": "center", "layer": 4 }),
+    );
+    let title = spawn(
+        &mut world,
+        Transform3D::default(),
+        "sindri.ui.text",
+        json!({ "text": "GATHER", "font": "fonts/Inter.ttf", "anchor": "center", "layer": 1 }),
+    );
+    let over_the_plate = |layer| {
+        [TextTarget {
+            entity: title,
+            layer,
+            bounds: [0.4, 0.45, 0.6, 0.55],
+        }]
+    };
+    let pick = |texts: &[TextTarget]| {
+        pick_ui(
+            &world,
+            extractor.components(),
+            overlay,
+            &placement,
+            [0.5, 0.5],
+            texts,
+        )
+        .unwrap()
+    };
+
+    assert_eq!(pick(&over_the_plate(1)), Some(plate));
+    assert_eq!(pick(&over_the_plate(9)), Some(title));
 }
 
 /// A fully transparent element is not clickable.
@@ -280,7 +370,8 @@ fn an_invisible_element_is_not_clicked() {
             extractor.components(),
             overlay,
             &placement,
-            [0.5, 0.5]
+            [0.5, 0.5],
+            &[]
         )
         .unwrap(),
         None,

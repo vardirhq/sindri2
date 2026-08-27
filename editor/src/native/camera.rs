@@ -12,6 +12,7 @@ use sindri_core::{EntityId, SceneComponent, Transform3D};
 use sindri_scene::{CameraComponent, CameraView, ViewCamera, WorldProjection};
 
 use crate::preferences::CameraProjection;
+use crate::selection::Selection;
 
 use crate::ui::theme::color;
 
@@ -341,10 +342,10 @@ fn pick_authored_camera(visuals: &[AuthoredCameraVisual], pointer: Pos2) -> Opti
 fn paint_authored_cameras(
     painter: &Painter,
     visuals: &[AuthoredCameraVisual],
-    selection: Option<EntityId>,
+    selection: &Selection,
 ) {
     for visual in visuals {
-        let selected = selection == Some(visual.entity);
+        let selected = selection.contains(visual.entity);
         let stroke = Stroke::new(
             if selected { 2.0 } else { 1.25 },
             if selected {
@@ -396,7 +397,7 @@ impl EditorApp {
                     rect,
                     scene_camera.view_projection,
                     framed_aspect,
-                    self.selection == Some(entity),
+                    self.selection.contains(entity),
                 )
             })
             .collect()
@@ -431,7 +432,7 @@ impl EditorApp {
                 egui::Id::new(CAMERA_OVERLAY_LAYER),
             ))
             .with_clip_rect(response.rect);
-        paint_authored_cameras(&painter, &visuals, self.selection);
+        paint_authored_cameras(&painter, &visuals, &self.selection);
     }
 
     pub(super) fn move_camera(
@@ -466,12 +467,18 @@ impl EditorApp {
     }
 
     pub(super) fn focus_selection(&mut self) {
-        let Some(position) = self
+        // The middle of everything selected rather than of the primary, so
+        // framing a row of five pips puts the row on screen rather than
+        // whichever one was clicked last.
+        let placed: Vec<Vec3> = self
             .selection
-            .and_then(|entity| self.world.get(entity))
-            .and_then(|data| data.transform_3d)
+            .all()
+            .iter()
+            .filter_map(|entity| self.world.get(*entity))
+            .filter_map(|data| data.transform_3d)
             .map(|transform| Vec3::from_array(transform.position))
-        else {
+            .collect();
+        let Some(position) = centre_of(&placed) else {
             return;
         };
         let Ok(Some(camera)) = self.scene.world_camera(&self.world, self.scene_camera()) else {
@@ -505,4 +512,15 @@ impl EditorApp {
         self.viewport_pan = GlamVec2::ZERO;
         self.viewport_zoom = 1.0;
     }
+}
+
+/// The middle of a set of points, or `None` for no points at all.
+fn centre_of(points: &[Vec3]) -> Option<Vec3> {
+    let mut total = Vec3::ZERO;
+    let mut counted = 0.0_f32;
+    for point in points {
+        total += *point;
+        counted += 1.0;
+    }
+    (counted > 0.0).then(|| total / counted)
 }

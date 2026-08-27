@@ -239,6 +239,14 @@ pub struct SceneEntity {
     /// Forward-compatible component payloads keyed by registered component name.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub components: BTreeMap<String, Value>,
+    /// Whether this entity has been switched off.
+    ///
+    /// Off means it takes no part in the scene, and neither does anything under
+    /// it. Omitted from a saved scene when false, so an entity that says
+    /// nothing is on and every scene that predates the switch is byte for byte
+    /// what it was.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub disabled: bool,
     /// Editor-only state that runtimes must ignore.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub editor: BTreeMap<String, Value>,
@@ -252,6 +260,7 @@ impl SceneEntity {
             parent: None,
             transform_3d: None,
             components: BTreeMap::new(),
+            disabled: false,
             editor: BTreeMap::new(),
         }
     }

@@ -21,6 +21,128 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **An entity can be switched off without being deleted.** It was the last of
+  the audit's smaller findings and it was an engine gap, not an editor one:
+  nothing in the scene format said an entity could be inactive, so the editor
+  had nothing to offer. `EntityData` and `SceneEntity` carry a `disabled` flag
+  now, and `World::is_active` is the question anything drawing, stepping,
+  scripting or picking asks — it walks ancestors, so switching off a HUD
+  switches off its pips. The filter is applied once, in
+  `ComponentSchemaRegistry::query`, rather than at each of the six places that
+  would otherwise have to remember it. The flag is per entity and is never
+  written down through a subtree, so re-enabling a parent brings back exactly
+  the children that were on. Omitted from a saved scene when false, so there is
+  no format change and every existing file is byte for byte what it was. In the
+  editor: an Active switch on the inspector, greyed out and saying so on a child
+  that is off because its parent is; Disable and Enable on a hierarchy row's
+  menu, taking the whole selection; and a struck-through row for anything
+  switched off, because dim already means "nothing here to act on" and this is
+  the row you would switch back on.
+- **A History dock, showing what Ctrl+Z will do and everything past it.** The
+  history was answerable one step at a time, from a label on a menu entry nobody
+  opens mid-edit, so "how far back can I go" had no answer and an edit made
+  twenty steps ago that turned out to be wrong was undone by pressing a key
+  twenty times and watching the viewport to see where you were. The dock is the
+  stack drawn: "Scene opened", then every step in the order it happened, the one
+  the world is at marked, and the steps already undone still listed under it
+  dimmed, because they are still reachable. Clicking one travels there — by
+  calling the same undo and redo the keys call, once per step, rather than by a
+  jump of its own. `CommandHistory` gained `undo_steps` and `redo_steps`, which
+  hand out labels and keep the transactions private: a caller holding one could
+  apply it out of order.
+- **A string can be clicked in the Scene view.** It was the last drawn thing
+  that could not be, and the reason was real: a string is the one drawn thing
+  with no size in the scene. What it covers is glyph layout — kerning, fallback,
+  the wrap the viewport imposes — decided inside the text renderer, and a box
+  guessed from the font size and the character count picks the wrong entity
+  along its edges, which is worse than not picking at all. So the box is not
+  guessed. `TextRenderer::measure` answers it from the same shaping the frame is
+  drawn with, now one function shared by drawing and measuring, and
+  `OverlayPlacement::text_origin` answers where the string starts from the same
+  place the frame's text pass positions it. The editor measures at the
+  resolution the view renders at and hands the boxes to picking, which stays
+  free of the GPU and settles a string against an image by the layer rule two
+  images already settle it by.
+- **Siblings can be reordered by moving them rather than by renaming them.**
+  Order was the stable ID sorted, so authoring order was alphabetical by a
+  string most authors never look at: five pips made from one arrived as
+  `pip-1`, `pip-1-copy`, `pip-1-copy-2`, and putting them in the order the HUD
+  reads them meant renaming their IDs. Move up and Move down now sit on a row's
+  right-click menu and on Alt+Up and Alt+Down, greyed out at the ends of a list
+  rather than offered and refused. Where the order is recorded is the whole of
+  the problem: a scene's document order is canonical and deliberately
+  meaningless, so that a save stays stable while entities are added and
+  reparented, and draw order is expressed by render layers and depths. So
+  sibling order goes in the entity's editor-only section of the file, which a
+  runtime carries but never interprets — no format change, and a scene nobody
+  has reordered still lists exactly as it did. That needed one new command,
+  `WorldCommand::SetEditorEntry`: the editor map had no write path, so nothing
+  in it could be undone or mark a document unsaved.
+- **More than one entity can be selected at a time.** Every bulk verb was
+  impossible to express while a selection was one entity: deleting five pips
+  meant five deletes and five undo steps, and moving a row of them meant
+  dragging each one to the same place by eye. Ctrl-click adds and removes,
+  Shift-click takes the range between two rows as the hierarchy is drawing them,
+  and Ctrl-click does the same in the Scene view. Delete, Duplicate and a drag
+  to a new parent then take the whole selection in one undo step, and so does a
+  gizmo drag: each selected entity is moved, turned or scaled by what the one
+  under the pointer was, from its own start, so a row stays a row. A selection
+  has a primary as well as a set — the last entity pointed at — because a panel
+  of fields and one set of handles can only be about one subject; the inspector
+  stays on it and says how many the verbs outside it would take, and the rest of
+  the selection wears a ring in the Scene view where its own handles would have
+  been. Every bulk verb folds the set to its topmost entities first, because all
+  of them already take the subtree: a parent and its child both selected would
+  otherwise despawn the child's handle twice, land two copies of it, or move it
+  by the parent's delta and then again by its own.
+- **A clip can be heard and a font can be seen before either is named in a
+  component.** They were the last two kinds the project browser could list and
+  do nothing with, and both are decisions a filename cannot answer: which of
+  four `.wav` files is the pickup, and which of four typefaces suits a score.
+  Selecting an audio file offers Play and Stop, played by the editor's own
+  audio device rather than by the scene — opened on the first clip rather than
+  at startup, so it argues with nothing until asked, and a preview cannot leave
+  a voice running in the world someone then presses Play on. Selecting a `.ttf`
+  or `.otf` draws a sample in the face itself, at two sizes, over the letters,
+  digits and punctuation a HUD actually uses rather than a pangram. A container
+  nothing decodes is offered no play button and a `.ttf` that is not a font
+  says so, because a preview whose whole job is to reveal what a filename hides
+  should not hide it too.
+- **A text file the browser lists can be read in the editor, and a script can be
+  made there.** The project browser listed the language's own source files and
+  could do nothing with any of them, in an engine whose headline capability is
+  scripting. Selecting one shows it in the inspector now, the same way selecting
+  an image opens the slicer: the file, its line count, and its source in a
+  monospace column that scrolls both ways. Read-only, and it says so — an editor
+  that opens a script in a text box is promising to be a code editor, and half
+  of that is worse than none. It covers every text file the browser lists, not
+  only `.decay`. **New script here** writes one that compiles and does nothing,
+  because a file that reports an error before anyone has typed a line of it is a
+  worse start than an empty one. Audio and fonts still have no preview: one
+  needs playback on demand and the other needs the project's font in the
+  editor's own text stack, and reading either as text says nothing.
+- **The project browser can make, rename, copy, import and delete files.** Every
+  asset used to have to arrive from outside the editor — there was no create, no
+  folder, no rename, no delete, no duplicate and no import — so building a
+  project meant a file manager beside the window and the Refresh button
+  afterwards. A row's menu does all five now, and the directory is re-read
+  afterwards, so Refresh is for changes made outside the editor rather than for
+  its own.
+
+  None of them go through the undo history, and that is not an oversight: the
+  history describes a world and these describe a directory, so undoing a delete
+  would mean holding the bytes of every removed file for as long as the session
+  lasts. What stands in for it is that each operation is checked before it runs
+  and refuses rather than overwrites; that nothing can name a path outside the
+  project, because a row hands over whatever was typed into it and `../secrets`
+  is a perfectly good string but not a file name; and that deleting — the one
+  with nothing behind it, and which takes a whole folder — asks first.
+
+  Renaming the open scene follows it, because the editor holds the path it saves
+  to and a rename it was not told about would write the scene back under its old
+  name and leave two of them on disk. A copy keeps the whole suffix that says
+  what kind of asset it is, since `file_stem` stops at the last dot and a
+  duplicated scene would otherwise become `level.scene copy.json`.
 - **An entity's stable ID is visible and editable**, and the scene has a panel
   of its own. `source_id` is what the file keys an entity by, what a parent link
   names, what sibling order is derived from and what `sindri.grid.occupant`
@@ -53,6 +175,16 @@ All notable changes to Sindri Next will be documented here.
 
 ### Fixed
 
+- **A script failure named a handle nobody could look up.** It printed
+  `entity EntityId { index: 4, generation: 0 }`, which is what the runtime has
+  and not something anyone can find in a hierarchy. `ScriptFailure` says which
+  entity and what went wrong separately now, so the editor — which holds the
+  world — writes "Wisp: names script 'NoSuchContainer', which
+  'scripts/wisp.decay' does not declare", and the console row ends in that
+  entity's name as the way to it. The entity is carried on the entry rather than
+  read back out of the message: searching the text for something that looks like
+  a name would select the wrong entity the first time a message mentioned a word
+  that happened to be one.
 - **Add Component could break the scene in one click.** It offered Camera
   whether or not the scene already had one, and a second authored world camera
   is a hard extract error — both viewports go dark with "the scene contains more
@@ -85,6 +217,24 @@ All notable changes to Sindri Next will be documented here.
 
 ### Changed
 
+- **The snap increments can be set, and are remembered.** The snap button's
+  tooltip named 0.5 units, 15° and 0.1 scale, and all three were constants
+  nothing could change — so a board laid out on quarter units was a board laid
+  out by hand. Right-clicking the button sets them. They live there rather than
+  in a preferences dialog because that is the control they belong to, and a
+  toolbar has no room for three number fields nobody usually touches. Zero is
+  allowed and means that one does not round, which is what the gizmo already did
+  with a zero step.
+- **The console filters by level.** All, Problems, or Errors, remembered across
+  launches because it is a reading preference rather than a state: someone
+  watching for a failure wants it filtered to failures for as long as they are
+  watching. A filter that hides everything says so, since an empty panel
+  otherwise reads as a console that stopped working.
+- **Delete and F2 act on whichever selection was made last.** The editor holds
+  two — an entity and an asset — and these keys always meant the entity, so the
+  project browser's menu could not honestly print them beside its own entries.
+  Choosing something is what says which the keys mean, which is what a selection
+  already communicates.
 - **Add Component says what it is not offering, and why.** Sprite Animation
   needs a sliced sheet, Grid Occupant needs a grid, UI Text needs a font in the
   project — and failing any of those, the entry was simply absent, leaving the

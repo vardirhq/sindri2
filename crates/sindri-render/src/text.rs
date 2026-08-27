@@ -134,6 +134,58 @@ impl TextRenderer {
         self.fonts.contains_key(reference)
     }
 
+    /// How much of the viewport one string covers, in physical pixels.
+    ///
+    /// `None` for an unbound font, which is what [`Self::draw`] does with one
+    /// too: a string whose face never arrived is not drawn, so it covers
+    /// nothing and there is nothing to hit-test against.
+    ///
+    /// The width is the widest laid-out line rather than the box the text was
+    /// laid out *into*: glyphon is given the whole viewport to wrap in, so the
+    /// box is the viewport and would answer "yes" to every point in it. The
+    /// height is the lines it actually used.
+    ///
+    /// This exists because an editor cannot otherwise say where a string is.
+    /// Every other drawn thing has a size in the scene — a sprite has one, a UI
+    /// image has one — and a string's is decided by glyph layout inside this
+    /// module. A guessed box picks the wrong thing near its edges, which is
+    /// worse than not picking at all, so the answer comes from the same
+    /// shaping the frame is drawn from.
+    pub fn measure(&mut self, instance: &TextInstance, viewport: Viewport) -> Option<[f32; 2]> {
+        let family = self.fonts.get(instance.font()).cloned()?;
+        let buffer = self.shape(instance, &family, viewport);
+        let mut width = 0.0_f32;
+        let mut lines = 0.0_f32;
+        for run in buffer.layout_runs() {
+            width = width.max(run.line_w);
+            lines += 1.0;
+        }
+        Some([width, lines * instance.line_height()])
+    }
+
+    /// One instance laid out, the only place that is decided.
+    ///
+    /// Shared by drawing and measuring rather than written twice, because two
+    /// copies is exactly how a pick box ends up disagreeing with the picture it
+    /// is meant to be over.
+    fn shape(&mut self, instance: &TextInstance, family: &str, viewport: Viewport) -> Buffer {
+        let mut buffer = Buffer::new(
+            &mut self.font_system,
+            Metrics::new(instance.font_size(), instance.line_height()),
+        );
+        let width = f32::from(u16::try_from(viewport.width).unwrap_or(u16::MAX));
+        let height = f32::from(u16::try_from(viewport.height).unwrap_or(u16::MAX));
+        buffer.set_size(Some(width), Some(height));
+        buffer.set_text(
+            instance.text(),
+            &Attrs::new().family(Family::Name(family)),
+            Shaping::Advanced,
+            None,
+        );
+        buffer.shape_until_scroll(&mut self.font_system, false);
+        buffer
+    }
+
     /// Shapes and draws one ordered text pass into an existing frame target.
     ///
     /// An unbound font skips its string. Asset diagnostics name it separately;
@@ -167,21 +219,7 @@ impl TextRenderer {
             .collect();
         let mut buffers = Vec::with_capacity(resolved.len());
         for (instance, family) in &resolved {
-            let mut buffer = Buffer::new(
-                &mut self.font_system,
-                Metrics::new(instance.font_size(), instance.line_height()),
-            );
-            let width = f32::from(u16::try_from(viewport.width).unwrap_or(u16::MAX));
-            let height = f32::from(u16::try_from(viewport.height).unwrap_or(u16::MAX));
-            buffer.set_size(Some(width), Some(height));
-            buffer.set_text(
-                instance.text(),
-                &Attrs::new().family(Family::Name(family)),
-                Shaping::Advanced,
-                None,
-            );
-            buffer.shape_until_scroll(&mut self.font_system, false);
-            buffers.push(buffer);
+            buffers.push(self.shape(instance, family, viewport));
         }
         let areas = buffers
             .iter()

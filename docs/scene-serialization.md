@@ -59,6 +59,14 @@ deliberate. It is omitted when false, so a scene that declares nothing writes
 nothing and a scene written before the lock existed is byte for byte what it
 was. See [how Sindri does 2D](2d-model.md) for what respects it.
 
+An entity may also declare `disabled`, which says it takes no part in the scene:
+nothing it carries is drawn, stepped, scripted or picked, and neither is
+anything under it. It stays in the document — that is the difference between
+switching something off and deleting it. Omitted when false, for the same reason
+`z_locked` is. `World::is_active` is the question a runtime asks, and it walks
+ancestors: the flag is never written down through a subtree, so switching a
+parent back on brings back exactly the children that were on.
+
 Scenes reject non-finite transform values. JSON has no `NaN` or `Infinity` literal, so a scene
 containing one could not be read back; validation catches it at the point it is introduced instead.
 

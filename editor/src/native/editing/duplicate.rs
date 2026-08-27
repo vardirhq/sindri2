@@ -14,24 +14,26 @@
 
 use sindri_core::{CommandBuffer, EntityData, EntityId, SceneEntityId, World, WorldCommand};
 
-/// The commands that copy `entity` and its descendants beside it.
+/// Adds the commands that copy `entity` and its descendants beside it, and
+/// answers with the handle the copy's root will land on.
 ///
-/// Empty when there is nothing at that handle, which is the only failure it can
-/// have: everything else is a spawn the world is about to accept.
-pub(crate) fn duplicate_commands(
+/// `None` when there is nothing at that handle, which is the only failure this
+/// can have: everything else is a spawn the world is about to accept.
+///
+/// `rehearsal` is a clone of the world that receives exactly the spawns the
+/// real one is about to, so it hands out the handles the real one will. It is
+/// taken rather than made here because copying a *selection* is one
+/// transaction: five copies rehearsed separately would each be told the same
+/// next handle and each pick the same unused stable ID, and the transaction
+/// would spawn five things on top of each other.
+pub(crate) fn duplicate_into(
+    rehearsal: &mut World,
     world: &World,
     entity: EntityId,
-) -> (CommandBuffer, Option<EntityId>) {
-    let mut buffer = CommandBuffer::new();
-    if world.get(entity).is_none() {
-        return (buffer, None);
-    }
-    // The rehearsal. It is a real world, so it allocates handles and links
-    // parents exactly as the command layer will.
-    let mut rehearsal = world.clone();
-    let parent = world.get(entity).and_then(|data| data.parent);
-    let root = copy_into(&mut rehearsal, world, entity, parent, &mut buffer);
-    (buffer, Some(root))
+    buffer: &mut CommandBuffer,
+) -> Option<EntityId> {
+    let parent = world.get(entity)?.parent;
+    Some(copy_into(rehearsal, world, entity, parent, buffer))
 }
 
 /// Copies one entity and then everything under it, depth first.
@@ -55,6 +57,10 @@ fn copy_into(
         children: Vec::new(),
         transform_3d: source.transform_3d,
         components: source.components.clone(),
+        // A copy of a switched-off entity is switched off: the copy is of what
+        // is there, and one that arrived running would be a surprise in a
+        // subtree someone deliberately quietened.
+        disabled: source.disabled,
         editor: source.editor.clone(),
     };
     let handle = rehearsal.spawn(data.clone());

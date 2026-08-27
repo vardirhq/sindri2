@@ -3,18 +3,21 @@
 use eframe::egui::{self, Pos2, Rect, Response};
 use glam::Vec2 as GlamVec2;
 use sindri_core::{CommandBuffer, EntityId, Transform3D, WorldCommand};
+use sindri_render::{TextInstance, Viewport};
 use sindri_scene::{
-    CameraView, OverlayView, UiAnchor, UiImageComponent, UiTextComponent, ViewCamera,
-    overlay_for_viewport,
+    CameraView, OverlayPlacement, OverlayView, UiAnchor, UiImageComponent, UiTextComponent,
+    ViewCamera, overlay_for_viewport,
 };
 
 use crate::{
     gizmo::{self, Anchoring, GizmoDrag},
     picking,
+    selection::{self, Pick},
     tilemap::{self, TileBrush, paint as paint_tile},
 };
 
 use super::EditorApp;
+use super::frame::physical_viewport_dimension;
 use super::{UI_IMAGE_COMPONENT, UI_TEXT_COMPONENT};
 
 /// One tile under the Scene-view pointer, already projected back into the
@@ -37,7 +40,7 @@ impl EditorApp {
     ) -> Option<TilemapHover> {
         self.tilemap_tool.brush()?;
         let pointer = pointer.filter(|pointer| rect.contains(*pointer))?;
-        let entity = self.selection?;
+        let entity = self.selection.primary()?;
         let data = self.world.get(entity)?;
         let payload = data.components.get(tilemap::TYPE_NAME)?;
         let map = tilemap::component(payload).ok()?;
@@ -71,11 +74,16 @@ impl EditorApp {
     }
 
     /// Resolves a Scene-view point through the exact camera that drew it.
+    ///
+    /// `scale` is the window's points-per-pixel, which matters here for one
+    /// reason: a string is laid out in physical pixels, so how much of the
+    /// viewport it covers depends on how many pixels the viewport has.
     fn pick_viewport(
-        &self,
+        &mut self,
         rect: Rect,
         pointer: Pos2,
         camera: CameraView,
+        scale: f32,
     ) -> Result<Option<EntityId>, String> {
         if !rect.contains(pointer) {
             return Ok(None);
@@ -94,17 +102,24 @@ impl EditorApp {
         ];
         // The overlay is drawn over the world, so what is under the pointer
         // there wins. Asked first for that reason rather than as a fallback.
-        if let Some((overlay, placement)) = overlay_for_viewport(aspect)
-            && let Some(entity) = picking::pick_ui(
+        if let Some((overlay, placement)) = overlay_for_viewport(aspect) {
+            let viewport = Viewport::new(
+                physical_viewport_dimension(rect.width(), scale),
+                physical_viewport_dimension(rect.height(), scale),
+            );
+            let texts = self.text_targets(viewport, overlay, &placement);
+            if let Some(entity) = picking::pick_ui(
                 &self.world,
                 self.scene.components(),
                 overlay,
                 &placement,
                 point,
+                &texts,
             )
             .map_err(|error| error.to_string())?
-        {
-            return Ok(Some(entity));
+            {
+                return Ok(Some(entity));
+            }
         }
         picking::pick_world(
             &self.world,
@@ -113,6 +128,71 @@ impl EditorApp {
             point,
         )
         .map_err(|error| error.to_string())
+    }
+
+    /// Every UI string as the box it actually occupies.
+    ///
+    /// Measured through the renderer that draws them rather than guessed from
+    /// the font size and the character count, because what a string covers is
+    /// glyph layout — kerning, fallback, the wrap the viewport imposes — and a
+    /// box that is nearly right picks the wrong entity along its edges. It is
+    /// measured at the resolution the view is rendered at, so the fraction of
+    /// the viewport it works out to is the fraction the picture shows.
+    ///
+    /// A string whose font never arrived measures to nothing and is left out,
+    /// which is what the frame does with it too: an unbound face is not drawn,
+    /// so there is nothing there to click.
+    fn text_targets(
+        &mut self,
+        viewport: Viewport,
+        overlay: OverlayView,
+        placement: &OverlayPlacement,
+    ) -> Vec<picking::TextTarget> {
+        let Ok(texts) = self
+            .scene
+            .components()
+            .query::<UiTextComponent>(&self.world)
+        else {
+            return Vec::new();
+        };
+        let width = f32::from(u16::try_from(viewport.width).unwrap_or(u16::MAX)).max(1.0);
+        let height = f32::from(u16::try_from(viewport.height).unwrap_or(u16::MAX)).max(1.0);
+        texts
+            .into_iter()
+            // A fully transparent string swallowing clicks is the bug the win
+            // banner already taught: it is drawn, technically, and it is not
+            // there to look at.
+            .filter(|(_, text)| picking::is_drawn(text.color))
+            .filter_map(|(entity, text)| {
+                let transform = self
+                    .world
+                    .get(entity)
+                    .and_then(|data| data.transform_3d)
+                    .unwrap_or_default();
+                let origin = placement.text_origin(overlay, transform, text.anchor);
+                let layer = text.layer;
+                let instance = TextInstance::new(
+                    text.text,
+                    text.font,
+                    [origin[0] * width, origin[1] * height],
+                    text.font_size,
+                    text.line_height,
+                    text.color,
+                )
+                .ok()?;
+                let size = self.renderers.text.measure(&instance, viewport)?;
+                Some(picking::TextTarget {
+                    entity,
+                    layer,
+                    bounds: [
+                        origin[0],
+                        origin[1],
+                        origin[0] + size[0] / width,
+                        origin[1] + size[1] / height,
+                    ],
+                })
+            })
+            .collect()
     }
 
     /// Whether this entity is laid out against the viewport rather than in the
@@ -138,8 +218,21 @@ impl EditorApp {
         let Some(pointer) = response.interact_pointer_pos() else {
             return;
         };
-        match self.pick_viewport(rect, pointer, camera) {
-            Ok(entity) => self.select(entity),
+        // Ctrl adds and removes here as it does in the hierarchy. Shift does
+        // not: a range is the rows between two rows, and a viewport has no
+        // rows to run one along.
+        let how = if response.ctx.input(|input| input.modifiers.command) {
+            Pick::Also
+        } else {
+            Pick::Only
+        };
+        let scale = response.ctx.pixels_per_point();
+        match self.pick_viewport(rect, pointer, camera, scale) {
+            // Clicking empty space still clears, whatever is held: there is no
+            // entity to add, and leaving the selection alone would make an
+            // empty click mean nothing at all.
+            Ok(None) => self.select(None),
+            Ok(Some(entity)) => self.pick(Some(entity), how, &[]),
             Err(error) => self
                 .console
                 .warning(format!("Viewport selection failed: {error}")),
@@ -211,7 +304,7 @@ impl EditorApp {
         rect: Rect,
         camera: CameraView,
     ) -> Option<(ViewCamera, Anchoring, gizmo::GizmoVisual)> {
-        let entity = self.selection?;
+        let entity = self.selection.primary()?;
         let transform = self.world.get(entity)?.transform_3d?;
         let aspect = rect.width() / rect.height().max(1.0);
         // Which space this entity is drawn in decides which camera its handle
@@ -229,6 +322,31 @@ impl EditorApp {
             camera.framed_half_height,
         )?;
         Some((camera, anchoring, visual))
+    }
+
+    /// Where in the viewport every selected entity other than the primary is.
+    ///
+    /// One gizmo, one primary — a panel of fields and a set of handles can only
+    /// be about one subject. So the rest of the selection needs to say it is
+    /// there some other way, or a drag that moves five things looks like a bug
+    /// in a drag that moves one. Marked at the point each entity's own handle
+    /// would have been drawn at, which for a UI element is where the overlay
+    /// puts it rather than where its transform is.
+    pub(super) fn selection_marks(&self, rect: Rect, camera: CameraView) -> Vec<Pos2> {
+        let primary = self.selection.primary();
+        let aspect = rect.width() / rect.height().max(1.0);
+        let viewport = GlamVec2::new(rect.width(), rect.height());
+        self.selection
+            .all()
+            .iter()
+            .filter(|entity| Some(**entity) != primary)
+            .filter_map(|entity| {
+                let transform = self.world.get(*entity)?.transform_3d?;
+                let (camera, anchoring) = self.gizmo_camera(*entity, aspect, transform, camera)?;
+                let at = gizmo::to_viewport(camera.view_projection, anchoring.origin(), viewport)?;
+                Some(rect.min + egui::vec2(at.x, at.y))
+            })
+            .collect()
     }
 
     /// The camera an entity's handles are drawn through, and where they sit.
@@ -305,7 +423,8 @@ impl EditorApp {
         let owns_primary = self.gizmo_drag.is_some() || hovered.is_some();
 
         if response.drag_started_by(egui::PointerButton::Primary)
-            && let (Some(entity), Some(axis), Some(pointer)) = (self.selection, hovered, pointer)
+            && let (Some(entity), Some(axis), Some(pointer)) =
+                (self.selection.primary(), hovered, pointer)
             && let Some(transform) = self.world.get(entity).and_then(|data| data.transform_3d)
         {
             self.gizmo_drag = gizmo::begin_drag(
@@ -319,6 +438,7 @@ impl EditorApp {
                 pointer,
                 GlamVec2::new(rect.width(), rect.height()),
             );
+            self.gizmo_followers = self.followers_of(entity);
         }
 
         if response.dragged_by(egui::PointerButton::Primary)
@@ -328,26 +448,47 @@ impl EditorApp {
                 camera.view_projection,
                 pointer,
                 GlamVec2::new(rect.width(), rect.height()),
-                self.gizmo_snapping,
+                self.preferences.snapping,
             )
         {
             self.apply_gizmo_transform(drag, next);
         }
         if response.drag_stopped_by(egui::PointerButton::Primary) {
             self.gizmo_drag = None;
+            self.gizmo_followers.clear();
         }
         owns_primary
+    }
+
+    /// What else a drag on the primary's handle moves, and where each started.
+    ///
+    /// Taken once, when the drag starts, rather than read each frame: the drag
+    /// applies the primary's whole change from its own start, so a follower
+    /// read after it had already moved would compound.
+    ///
+    /// Folded, because a transform is inherited: a parent and its child both
+    /// selected would move the child by the parent's delta and then again by
+    /// its own.
+    fn followers_of(&self, primary: EntityId) -> Vec<(EntityId, Transform3D)> {
+        if self.selection.len() < 2 {
+            return Vec::new();
+        }
+        selection::topmost(&self.world, self.selection.all())
+            .into_iter()
+            .filter(|entity| *entity != primary)
+            .filter_map(|entity| Some((entity, self.world.get(entity)?.transform_3d?)))
+            .collect()
     }
 
     /// A whole drag is one undo step even though its current answer is applied
     /// every frame, because all of its transactions share this merge key.
     fn apply_gizmo_transform(&mut self, drag: GizmoDrag, transform: Transform3D) {
-        if self
+        let unchanged = self
             .world
             .get(drag.entity)
             .and_then(|data| data.transform_3d)
-            == Some(transform)
-        {
+            == Some(transform);
+        if unchanged && self.gizmo_followers.is_empty() {
             return;
         }
         let mut buffer = CommandBuffer::new();
@@ -355,6 +496,16 @@ impl EditorApp {
             entity: drag.entity,
             transform: Some(transform),
         });
+        // The same change, from each follower's own start rather than from the
+        // primary's: dragging a row of five pips two units right moves each of
+        // them two units right, and leaves the row a row.
+        let change = gizmo::Change::between(drag.start(), transform);
+        for (entity, start) in &self.gizmo_followers {
+            buffer.push(WorldCommand::SetTransform3D {
+                entity: *entity,
+                transform: Some(change.applied_to(*start)),
+            });
+        }
         let transaction = buffer
             .into_transaction(format!("{} entity", drag.mode.label()))
             .merging(format!(

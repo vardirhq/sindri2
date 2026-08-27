@@ -389,6 +389,15 @@ frame.
   not drawn in. A group holding only UI elements is listed with the UI.
   Create GameObject makes an empty object or a UI Image directly, and the
   inspector says which space the selected entity is in
+- **Snapping increments that can be set**, from a right-click on the snap
+  button, and remembered across launches. They were constants the tooltip named
+  and nothing could change. A step of zero means that one does not round
+- **A console that can be read.** Filtered by level — everything, problems, or
+  only what did not happen — and remembered across launches, because someone
+  watching for a failure wants it filtered for as long as they are watching. An
+  entry about an entity ends in that entity's name and selecting it goes there:
+  a script failure used to print the runtime's own handle, which is not
+  something anyone can look for in a hierarchy
 - Inspector edits of name and the complete transform: position, Euler-degree
   rotation backed by the stored quaternion, scale, and the Z lock, which takes
   away movement off the current layer
@@ -424,6 +433,42 @@ frame.
   do. A field naming a project asset offers what the project holds while
   staying typeable, a tint opens a colour picker, and a row that is only a
   readout says on hover why it is one
+- **Switching an entity off without deleting it.** Off means it takes no part
+  in the scene — not drawn, not stepped, not scripted, not picked — and neither
+  does anything under it, while it stays in the world and in the file. An Active
+  switch on the inspector, Disable and Enable on a hierarchy row's menu taking
+  the whole selection, and a struck-through row for anything switched off. The
+  flag is per entity and never written down through a subtree, so re-enabling a
+  parent brings back exactly the children that were on
+- **A History dock showing what undo will do, and everything past it.** The
+  undo stack drawn: "Scene opened", every step in the order it happened, the
+  step the world is at marked, and the undone steps still listed under it
+  because they are still reachable. Clicking one travels there, by calling the
+  same undo and redo the keys call, one step at a time
+- **Everything the Scene view draws can be clicked in it**, including strings.
+  Meshes, world sprites, filled tilemap cells, authored cameras and UI images
+  are hit-tested from their own geometry; a string has none in the scene, so its
+  box is measured by the text renderer that draws it — the same shaping, at the
+  resolution the view renders at — rather than guessed from the font size, which
+  would pick the wrong entity along its edges. A fully transparent element is
+  skipped in both passes: a thing drawn as nothing is not a thing to click
+- **Sibling order, moved rather than renamed.** Move up and Move down on a
+  row's menu and on Alt+Up and Alt+Down, greyed out at the ends of a list. The
+  order lives in the entity's editor-only section of the file rather than in
+  the scene proper, because document order is canonical and meaningless by
+  design and draw order is render layers and depths — so where a row sits in a
+  panel is a fact about the panel. A scene nobody has reordered still lists
+  alphabetically by stable ID
+- **More than one entity at a time.** Ctrl-click adds and removes, Shift-click
+  takes the range between two rows as the hierarchy is drawing them, and
+  Ctrl-click does the same in the Scene view. Delete, Duplicate and a drag to a
+  new parent then take the whole selection in one undo step, and dragging the
+  handles moves, turns or scales every selected entity by what the one under
+  the pointer was moved, turned or scaled by — from each one's own start, so a
+  row stays a row. One panel and one set of handles can only be about one
+  subject, so the inspector stays on the last entity pointed at and says how
+  many the verbs outside it would take; the rest of the selection wears a ring
+  in the Scene view where its own handles would have been
 - **Every verb that acts on one entity, from that entity's own right-click
   menu.** Rename, Duplicate, Create child, Frame in the Scene view, and Delete,
   each also on a key — F2, Ctrl+D, F, and Delete or Backspace. Rename happens in
@@ -527,6 +572,13 @@ frame.
 - A Project dock listing the real contents of the directory the open scene
   lives in, with a list/grid toggle, a search that filters it, a refresh, and a
   double click on a scene row to open it
+- **A preview for every kind of asset the browser lists.** An image opens the
+  slicer, a text file is read in a monospace column, a clip plays on demand, and
+  a font draws a sample in the face itself. The last two are what a filename
+  cannot answer: which of four `.wav` files is the pickup, and which of four
+  typefaces suits a score. The clip plays through the editor's own audio device
+  rather than the scene's, so auditioning one needs no running world and cannot
+  leave a voice behind in it
 - A Console dock holding what the editor has actually said — every failure, what
   each scene turned out to be when it opened, and every texture it names that
   nothing has bound — bounded, with a repeated message collapsed into a count so
@@ -544,9 +596,11 @@ Listed because a control that looks like a feature is worse than an absent one.
 under use and what the editor cannot express at all.
 `docs/editor-authoring-audit.md` is the second sweep, which asks the harder
 question: whether the controls that do work add up to a tool the companion game
-could be built in. They do not yet, and it lists what stops it. This is the summary, and
-it is deliberately short now: everything the audit found is either working or
-gone, and what is left here is waiting on a build rather than on a handler.
+could be built in. They now do — every finding it made is fixed except the six
+right-click surfaces it tabulates, which are places to put actions that already
+exist rather than gaps in what the editor can express. This is the summary, and
+it is deliberately short: everything the audits found is either working or gone,
+and what is left here is waiting on a build rather than on a handler.
 
 - **Play and Pause** — they run sprite animation and Decay scripts. No other gameplay
   is stepped, so the demo's own turning cube does not turn
@@ -589,8 +643,15 @@ settings gear.
 
 ### Editor
 
-- Cannot create or delete an asset. Scenes it can make and fork; everything
-  else has to arrive from outside
+- **File operations on the project.** A row's menu makes a folder, renames in
+  place, copies beside itself, imports files from anywhere into the project, and
+  deletes — with the directory re-read afterwards, so Refresh is for changes made
+  outside the editor rather than for its own. None of them undo: the history
+  describes a world and these describe a directory. What stands in for it is
+  that each is checked before it runs and refuses rather than overwrites, that
+  nothing can name a path outside the project, and that deleting asks first.
+  Renaming the open scene follows it, so the next save does not write it back
+  under its old name
 - A component's fields come from the registry, so one added in the editor is the
   same component the shipped scenes use. A type with no honest blank —
   `sindri.ui.text`, `sindri.animation.sprite`, `sindri.grid.occupant`,
@@ -602,21 +663,19 @@ settings gear.
   supported
 - No first-class project model or multi-scene workspace. The Project dock reads
   the directory containing the open scene, folds its folders, scopes the listing
-  to one of them, marks both its own selection and the open scene, and copies an
-  asset's path — but beyond opening a scene and slicing an image it cannot open,
-  preview, create, rename, or delete anything it lists
-- No multi-select. Viewport selection covers world sprites, filled tilemap
-  cells, meshes and UI images; UI text is selected from the hierarchy, because
-  what a string covers is decided by glyph layout inside the text renderer and a
-  guessed box would select the wrong thing near its edges
+  to one of them, marks both its own selection and the open scene, copies an
+  asset's path, and makes, renames, copies, imports and deletes files. Every
+  text file it lists opens in the inspector, read-only — a `.decay` script, a
+  scene, a sheet, a README — and a script can be made from a row's menu. The two
+  kinds that are not text have a preview of their own: a `.wav`, `.ogg` or
+  `.mp3` plays on demand through the editor's own audio device, and a `.ttf` or
+  `.otf` draws a sample in the face itself
 - Context menus exist on the two panels that list things — a hierarchy row and
   a project row — and nowhere else. Empty space in either panel, a component
   heading, a property row, the Scene view, and a console line all still ignore a
   right-click, so the actions that belong there (paste, reset a field, frame
   all, copy a message) do not exist
-- No copy/paste of entities or of components, no multi-select, and no way to
-  reorder siblings: order is the stable ID sorted, which is not something the
-  editor lets you set
+- No copy/paste of entities or of components
 - No prefabs, no play-mode-against-a-copy, no build or export controls
 - No versioned editor protocol; the editor and runtime are one process
 - Cannot open or edit a Decay script's *source* — the project browser lists

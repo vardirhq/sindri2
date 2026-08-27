@@ -9,6 +9,9 @@
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod animation;
+/// Hearing a clip without a running scene.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod audition;
 /// Scene-view geometry for authored camera frustums.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod camera_visualization;
@@ -32,6 +35,9 @@ pub mod native;
 pub mod picking;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod preferences;
+/// Looking at a file the project browser lists.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod preview;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod project;
 /// The editor-only camera used by the Scene view.
@@ -43,9 +49,15 @@ pub mod scene_file;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod space;
 
+/// Where an entity sits among its siblings.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod ordering;
 /// The Decay scripts an open scene runs.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod scripts;
+/// What "the selection" is once it can be more than one entity.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod selection;
 /// Slicing an image into named sprites, on the image.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod slicer;
@@ -54,6 +66,9 @@ pub mod textures;
 /// Painting a tilemap from a sliced image through undoable component edits.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod tilemap;
+/// Seeing a font before naming it in a component.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod typeface;
 /// The editor's design system: its tokens, its icons, and its controls.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ui;

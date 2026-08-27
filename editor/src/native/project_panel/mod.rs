@@ -1,5 +1,6 @@
 //! The project browser: the folder tree and the assets in a folder.
 
+mod files;
 pub(super) mod row;
 pub(super) mod state;
 
@@ -7,6 +8,7 @@ use std::path::{Path, PathBuf};
 
 use eframe::egui::{self, Align, Layout, RichText};
 use egui_material_icons::MaterialIcon;
+use sindri_core::EntityId;
 
 use self::row::{folder_row, listing_row, row_menu};
 use self::state::BrowserState;
@@ -44,6 +46,23 @@ pub(super) enum BrowserAction {
     /// Put something on the clipboard — a path a component field wants, which
     /// otherwise had to be read off a row and typed back in by hand.
     Copy(String),
+    /// Start renaming a row in place.
+    Rename(PathBuf),
+    /// Make a folder beside this row, or inside it when it is a folder.
+    NewFolder(PathBuf),
+    /// Make a `.decay` script there.
+    NewScript(PathBuf),
+    /// Copy a file or folder beside itself.
+    Duplicate(PathBuf),
+    /// Ask before removing a file from disk. There is no undo for a disk
+    /// write, so this is the one browser action that stops to ask.
+    ConfirmDelete(PathBuf),
+    /// Copy files from elsewhere into the project.
+    Import(PathBuf),
+    /// A rename typed into a row was finished.
+    CommitRename(PathBuf),
+    /// A rename typed into a row was abandoned.
+    CancelRename,
 }
 
 /// The icon a kind of file is drawn with.
@@ -69,6 +88,7 @@ pub(super) const fn asset_icon(kind: AssetKind) -> MaterialIcon {
 /// column width the folder tree and the asset list were drawing over each
 /// other. So the narrow arrangement drops the tree rather than shrinking it,
 /// which is also why a list reads better there than a grid of identical icons.
+#[allow(clippy::too_many_arguments)]
 fn project_browser(
     ui: &mut egui::Ui,
     search: &mut String,
@@ -77,9 +97,10 @@ fn project_browser(
     folders: bool,
     project: &ProjectTree,
     open: Option<&Path>,
+    renaming: &mut Option<(PathBuf, String)>,
 ) -> BrowserAction {
     if !folders {
-        return asset_column(ui, search, view, browser, false, project, open);
+        return asset_column(ui, search, view, browser, false, project, open, renaming);
     }
     let mut action = BrowserAction::None;
     ui.horizontal(|ui| {
@@ -109,7 +130,7 @@ fn project_browser(
             crate::ui::theme::hairline(),
         );
         ui.vertical(|ui| {
-            let listed = asset_column(ui, search, view, browser, true, project, open);
+            let listed = asset_column(ui, search, view, browser, true, project, open, renaming);
             if listed != BrowserAction::None {
                 action = listed;
             }
@@ -204,6 +225,7 @@ fn browser_tools(
 const CONTROLS_WIDTH: f32 = 152.0;
 
 /// The asset side of the browser: what it is showing, and how.
+#[allow(clippy::too_many_arguments)]
 fn asset_column(
     ui: &mut egui::Ui,
     search: &mut String,
@@ -212,6 +234,7 @@ fn asset_column(
     folders: bool,
     project: &ProjectTree,
     open: Option<&Path>,
+    renaming: &mut Option<(PathBuf, String)>,
 ) -> BrowserAction {
     ui.add_space(4.0);
     // The folder tree already names the directory; without it the list has to,
@@ -257,8 +280,14 @@ fn asset_column(
                     // the viewport it sits under.
                     ui.spacing_mut().item_spacing.y = 0.0;
                     for (entry, depth) in &rows {
+                        // The row being renamed gets the draft; every other
+                        // row gets its name.
+                        let editing = renaming
+                            .as_mut()
+                            .filter(|(path, _)| path == &entry.path)
+                            .map(|(_, name)| name);
                         if let Some(chosen) =
-                            listing_row(ui, entry, *depth, searching, open, browser)
+                            listing_row(ui, entry, *depth, searching, open, browser, editing)
                         {
                             action = chosen;
                         }
@@ -350,10 +379,47 @@ fn empty_listing(ui: &mut egui::Ui, searching: bool, scoped: bool) {
 }
 
 impl EditorApp {
+    /// The dock's tabs, and the count that says an error is waiting.
+    fn dock_tabs(&mut self, ui: &mut egui::Ui) {
+        let counts = self.console.counts();
+        let mut chosen = self.preferences.bottom_tab;
+        tabs::strip(ui, |ui| {
+            for (tab, icon, label) in [
+                (BottomTab::Project, icons::PROJECT, "Project"),
+                (BottomTab::Console, icons::CONSOLE, "Console"),
+                (BottomTab::History, icons::UNDO, "History"),
+            ] {
+                if tabs::tab(
+                    ui,
+                    Weight::Secondary,
+                    self.preferences.bottom_tab == tab,
+                    Some(icon),
+                    label,
+                )
+                .clicked()
+                {
+                    chosen = tab;
+                }
+            }
+            // An error nobody is looking at is the reason the console
+            // exists, so the tab strip says there is one whichever tab
+            // is showing.
+            if counts.errors > 0 {
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    ui.add_space(metric::GUTTER);
+                    crate::ui::widgets::toolbar::chip(ui, &counts.summary(), color::DANGER_TEXT);
+                });
+            }
+        });
+        self.preferences.bottom_tab = chosen;
+    }
+
     pub(super) fn asset_panel(&mut self, ui: &mut egui::Ui) {
         let context = ui.ctx().clone();
         let mut action = BrowserAction::None;
         let mut clear_console = false;
+        let mut go_to = None;
+        let mut travel = None;
         let (panel_side, default, min, max) = match self.preferences.layout {
             // A tall column, which is what makes the list view worth having.
             WorkspaceLayout::TwoByThree => {
@@ -370,40 +436,7 @@ impl EditorApp {
             .resizable(true)
             .frame(panel::frame())
             .show(ui, |ui| {
-                let counts = self.console.counts();
-                let mut chosen = self.preferences.bottom_tab;
-                tabs::strip(ui, |ui| {
-                    for (tab, icon, label) in [
-                        (BottomTab::Project, icons::PROJECT, "Project"),
-                        (BottomTab::Console, icons::CONSOLE, "Console"),
-                    ] {
-                        if tabs::tab(
-                            ui,
-                            Weight::Secondary,
-                            self.preferences.bottom_tab == tab,
-                            Some(icon),
-                            label,
-                        )
-                        .clicked()
-                        {
-                            chosen = tab;
-                        }
-                    }
-                    // An error nobody is looking at is the reason the console
-                    // exists, so the tab strip says there is one whichever tab
-                    // is showing.
-                    if counts.errors > 0 {
-                        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                            ui.add_space(metric::GUTTER);
-                            crate::ui::widgets::toolbar::chip(
-                                ui,
-                                &counts.summary(),
-                                color::DANGER_TEXT,
-                            );
-                        });
-                    }
-                });
-                self.preferences.bottom_tab = chosen;
+                self.dock_tabs(ui);
                 match self.preferences.bottom_tab {
                     BottomTab::Project => {
                         action = project_browser(
@@ -414,17 +447,40 @@ impl EditorApp {
                             folders,
                             &self.project,
                             self.file.path(),
+                            &mut self.asset_rename,
                         );
                     }
                     BottomTab::Console => {
-                        if console_view(ui, &self.console, self.lifecycle.state()) {
-                            clear_console = true;
-                        }
+                        // The world is read for a name rather than handed over:
+                        // the console knows which entity a line is about, and
+                        // what it is called is the panel's question.
+                        let world = &self.world;
+                        let named = |entity: EntityId| {
+                            world.get(entity).map(super::hierarchy::row::entity_name)
+                        };
+                        let answered = console_view(
+                            ui,
+                            &self.console,
+                            self.lifecycle.state(),
+                            &mut self.preferences.console_filter,
+                            &named,
+                        );
+                        clear_console = answered.cleared;
+                        go_to = answered.go_to;
+                    }
+                    BottomTab::History => {
+                        travel = super::history_view::history_panel(ui, &self.history);
                     }
                 }
             });
         if clear_console {
             self.console.clear();
+        }
+        if let Some(entity) = go_to {
+            self.select(Some(entity));
+        }
+        if let Some(travel) = travel {
+            self.travel_history(travel);
         }
         // Acted on outside the panel, because every answer writes to state the
         // browser was reading from.
@@ -437,6 +493,18 @@ impl EditorApp {
             BrowserAction::Select(path) => self.select_asset(&path),
             BrowserAction::LookIn(folder) => self.browser.look_in(Some(&folder)),
             BrowserAction::LookInProject => self.browser.look_in(None),
+            BrowserAction::Rename(path) => self.begin_asset_rename(&path),
+            BrowserAction::CommitRename(path) => {
+                if let Some((_, name)) = self.asset_rename.take() {
+                    self.rename_asset(&path, &name);
+                }
+            }
+            BrowserAction::CancelRename => self.asset_rename = None,
+            BrowserAction::NewFolder(beside) => self.new_folder(&beside),
+            BrowserAction::NewScript(beside) => self.new_script(&beside),
+            BrowserAction::Duplicate(path) => self.duplicate_asset(&path),
+            BrowserAction::ConfirmDelete(path) => self.deleting = Some(path),
+            BrowserAction::Import(into) => self.import_assets(&into),
             BrowserAction::Copy(text) => {
                 // Said in the console rather than through `report`, which is
                 // for things that did not happen: a copy that worked is not a

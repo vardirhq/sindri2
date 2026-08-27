@@ -28,7 +28,7 @@ use self::draft::{
 };
 use self::field::FieldAssets;
 use self::header::{
-    Identity, IdentityEdit, ParentChoice, inspector_identity, inspector_parent,
+    Identity, IdentityEdit, ParentChoice, active_row, inspector_identity, inspector_parent,
     transform_3d_section,
 };
 use self::rows::add_component_button;
@@ -385,13 +385,42 @@ impl EditorApp {
             .frame(panel::frame())
             .show(ui, |ui| {
                 let slicing = self.slicer.is_some();
+                let reading = self.preview.is_some();
+                let hearing = self.heard.is_some();
+                let showing_font = self.shown_font.is_some();
+                let selected = self.selection.len();
                 panel::header(ui, icons::INSPECTOR, "Inspector", |ui| {
                     if slicing {
                         toolbar::chip(ui, "Slicing", color::FORGE);
+                    } else if reading || hearing || showing_font {
+                        toolbar::chip(ui, "Preview", color::TEXT_FAINT);
+                    } else if selected > 1 {
+                        // One panel, one subject: a set of fields cannot be
+                        // about five entities at once. So the panel stays on
+                        // the last one pointed at and says how many the verbs
+                        // outside it — Delete, Duplicate, a gizmo drag — would
+                        // take, rather than letting a selection of five look
+                        // like a selection of one.
+                        toolbar::chip(ui, &format!("{selected} selected"), color::FORGE);
                     }
                 });
+                if !showing_font {
+                    self.typeface.forget();
+                }
                 if slicing {
                     self.slicer_panel(ui);
+                    return;
+                }
+                if reading {
+                    self.preview_panel(ui);
+                    return;
+                }
+                if hearing {
+                    self.audition_panel(ui);
+                    return;
+                }
+                if showing_font {
+                    self.typeface_panel(ui);
                     return;
                 }
                 // An empty inspector used to be a blank rectangle, which is
@@ -400,7 +429,7 @@ impl EditorApp {
                 // panel used to spend this space on a shrug, and the scene's
                 // own name — a real field that round-trips through a save —
                 // was shown nowhere at all.
-                let Some(entity) = self.selection else {
+                let Some(entity) = self.selection.primary() else {
                     self.scene_section(ui);
                     return;
                 };
@@ -436,8 +465,13 @@ impl EditorApp {
         let original_components = data.components.clone();
         let mut components = original_components.clone();
         let parent = data.parent;
+        let disabled = data.disabled;
+        // Off because a parent is off is a different fact from off in its own
+        // right, and only one of the two has a switch here.
+        let inherited_off = !disabled && !self.world.is_active(entity);
         let choices = reparent_choices(&self.world, entity);
         let mut reparented = ParentChoice::Unchanged;
+        let mut switched = None;
         let mut removed = None;
         let mut added = None;
         let authoring = self.authoring_enabled();
@@ -474,6 +508,7 @@ impl EditorApp {
                             &mut draft,
                         );
                         reparented = inspector_parent(ui, entity, parent, &choices);
+                        switched = active_row(ui, disabled, inherited_off);
                         if let Some(transform) = &mut draft.transform_3d {
                             transform_3d_section(ui, transform);
                         }
@@ -502,6 +537,9 @@ impl EditorApp {
         }
         if let Some(type_name) = added {
             self.add_component(entity, &type_name, context.defaults());
+        }
+        if let Some(on) = switched {
+            self.switch_entities(&[entity], on);
         }
         match reparented {
             ParentChoice::Unchanged => {}

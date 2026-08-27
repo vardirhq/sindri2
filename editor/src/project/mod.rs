@@ -12,6 +12,7 @@
 //! the frame someone opens it is a browser that hangs.
 
 mod kind;
+pub mod ops;
 mod sheet;
 
 #[cfg(test)]

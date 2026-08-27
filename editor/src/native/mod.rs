@@ -5,19 +5,25 @@
 //! submodules hold the work, this file holds what they all share: the state
 //! itself, the constants they agree on, and how the window is opened.
 
+use std::path::PathBuf;
+
 use eframe::egui;
 use glam::Vec2 as GlamVec2;
-use sindri_core::{CommandHistory, EngineLifecycle, EntityId, SceneComponent, World};
+use sindri_core::{CommandHistory, EngineLifecycle, EntityId, SceneComponent, Transform3D, World};
 use sindri_decay::ScriptComponent;
 use sindri_scene::{
     AudioSourceComponent, CameraComponent, GridNavigationComponent, GridOccupantComponent,
     SceneExtractor, SpriteAnimations, SpriteComponent, UiImageComponent, UiTextComponent,
 };
 
+use crate::audition::Audition;
+use crate::preview::TextPreview;
+use crate::selection::Selection;
+use crate::typeface::Typeface;
 use crate::{
     animation::AnimationTool,
     console::Console,
-    gizmo::{GizmoDrag, GizmoMode, GizmoSpace, Snapping},
+    gizmo::{GizmoDrag, GizmoMode, GizmoSpace},
     input::EditorInput,
     preferences::Preferences,
     project::ProjectTree,
@@ -34,9 +40,11 @@ mod console_view;
 mod editing;
 mod frame;
 mod hierarchy;
+mod history_view;
 mod inspector_panel;
 mod overlay;
 mod pointer;
+mod preview_view;
 mod project_panel;
 mod runtime;
 mod scene_io;
@@ -59,6 +67,19 @@ use runtime::initialized_lifecycle;
 use scene_io::open_requested_scene;
 use unsaved::Discarding;
 use viewport::{RuntimeViewport, SceneRenderers};
+
+/// Which of the editor's two selections the keys act on.
+///
+/// Set by choosing something rather than by clicking a panel: picking an entity
+/// means the keys mean that entity, and picking a file means they mean the
+/// file. That is what a selection already communicates, and it needs no
+/// separate notion of which panel has focus.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub(crate) enum Focus {
+    #[default]
+    Hierarchy,
+    Project,
+}
 
 const CAMERA_COMPONENT: &str = CameraComponent::TYPE_NAME;
 const SPRITE_COMPONENT: &str = SpriteComponent::TYPE_NAME;
@@ -110,7 +131,12 @@ struct EditorApp {
     /// Set once closing has been agreed to, so the close request the editor
     /// cancelled to ask the question is not cancelled a second time.
     closing: bool,
-    selection: Option<EntityId>,
+    /// Which entities the editor is pointing at, and which of them the
+    /// inspector and the gizmo are about.
+    selection: Selection,
+    /// What a gizmo drag moves besides its own entity, and where each of them
+    /// started. Empty unless a drag on a multiple selection is in progress.
+    gizmo_followers: Vec<(EntityId, Transform3D)>,
     /// The entity whose name is being typed into, and the draft.
     ///
     /// Renaming lives on the hierarchy row rather than in a dialog, so this is
@@ -127,6 +153,32 @@ struct EditorApp {
     id_edit: Option<(EntityId, String)>,
     /// The scene's name being typed, for the same reason.
     scene_name_edit: Option<String>,
+    /// The file the inspector is showing the contents of.
+    ///
+    /// Beside the slicer rather than inside it: an image and a script are both
+    /// "a file the inspector is showing instead of an entity", but what the
+    /// panel does with them has nothing in common.
+    preview: Option<TextPreview>,
+    /// The clip the inspector is offering to play, and the device that plays it.
+    heard: Option<PathBuf>,
+    audition: Audition,
+    /// The font the inspector is showing a sample of.
+    shown_font: Option<PathBuf>,
+    typeface: Typeface,
+    /// The asset being renamed in the project browser, and the name so far.
+    asset_rename: Option<(PathBuf, String)>,
+    /// Which panel the keys that act on "the selection" mean.
+    ///
+    /// The editor holds two selections — an entity and an asset — and Delete
+    /// has to act on one of them. Without this it acted on the entity always,
+    /// so a project row's menu could offer a key that did something else to
+    /// something else.
+    focus: Focus,
+    /// The file a delete is waiting to be confirmed for.
+    ///
+    /// A disk write has no undo behind it, so this is the one browser action
+    /// that stops to ask.
+    deleting: Option<PathBuf>,
     history: CommandHistory,
     search: String,
     asset_search: String,
@@ -165,7 +217,6 @@ struct EditorApp {
     viewport_pan: GlamVec2,
     gizmo_mode: GizmoMode,
     gizmo_space: GizmoSpace,
-    gizmo_snapping: Snapping,
     gizmo_drag: Option<GizmoDrag>,
     renderers: SceneRenderers,
     /// eframe's device and queue, kept because textures are uploaded whenever a
@@ -234,7 +285,7 @@ impl EditorApp {
         // Nothing is selected until something is chosen. This used to name an
         // entity from the demo scene, which selected the cube in that one scene
         // and silently nothing in every other.
-        let selection = None;
+        let selection = Selection::default();
         let render_state = context
             .wgpu_render_state
             .clone()
@@ -254,10 +305,19 @@ impl EditorApp {
             confirming: None,
             closing: false,
             selection,
+            gizmo_followers: Vec::new(),
             renaming: None,
             rename_draft: String::new(),
             id_edit: None,
             scene_name_edit: None,
+            preview: None,
+            heard: None,
+            audition: Audition::default(),
+            shown_font: None,
+            typeface: Typeface::default(),
+            asset_rename: None,
+            focus: Focus::Hierarchy,
+            deleting: None,
             history: CommandHistory::default(),
             search: String::new(),
             asset_search: String::new(),
@@ -275,7 +335,6 @@ impl EditorApp {
             viewport_pan: GlamVec2::ZERO,
             gizmo_mode: GizmoMode::Select,
             gizmo_space: GizmoSpace::Local,
-            gizmo_snapping: Snapping::default(),
             gizmo_drag: None,
             renderers,
             render_state: state_for_textures,

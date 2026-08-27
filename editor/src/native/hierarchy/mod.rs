@@ -10,7 +10,9 @@ use sindri_core::EntityId;
 
 use self::row::{RowLook, entity_name, entity_row, hierarchy_drop_target};
 use self::rows::{hierarchy_group, hierarchy_preference_key, visible_hierarchy_rows};
+use crate::ordering;
 use crate::preferences::Layout as WorkspaceLayout;
+use crate::selection::Pick;
 use crate::space::EntitySpace;
 use crate::ui::icons;
 use crate::ui::theme::color;
@@ -46,8 +48,8 @@ impl EditorApp {
                 if let Some(create) = create {
                     self.create_game_object(create);
                 }
-                if let Some(entity) = deleted {
-                    self.delete_entity(entity);
+                if deleted {
+                    self.delete_selection();
                 }
             });
     }
@@ -57,9 +59,9 @@ impl EditorApp {
     /// The actions live in the header rather than on a strip of their own: a
     /// create menu and a delete button are one row's worth of controls, and a
     /// second strip under the title spent eight vertical pixels saying so.
-    fn hierarchy_header(&self, ui: &mut egui::Ui) -> (Option<CreateGameObject>, Option<EntityId>) {
+    fn hierarchy_header(&self, ui: &mut egui::Ui) -> (Option<CreateGameObject>, bool) {
         let mut create = None;
-        let mut deleted = None;
+        let mut deleted = false;
         // Spawning and despawning are world writes, and a running scene is not
         // the document: Stop puts back the world as it was when Play was
         // pressed, so anything made here while playing would vanish without
@@ -70,16 +72,20 @@ impl EditorApp {
                 // Offered only with something selected, because "delete" with
                 // nothing chosen has no answer and a disabled button is a
                 // question nobody asked.
-                if let Some(entity) = self.selection
+                if !self.selection.is_empty()
                     && button::row_icon(
                         ui,
                         icons::REMOVE,
                         Intent::Danger,
-                        "Delete the selected entity",
+                        if self.selection.len() == 1 {
+                            "Delete the selected entity"
+                        } else {
+                            "Delete the selected entities"
+                        },
                     )
                     .clicked()
                 {
-                    deleted = Some(entity);
+                    deleted = true;
                 }
                 ui.menu_button(
                     icons::ADD
@@ -99,14 +105,17 @@ impl EditorApp {
                         }
                         if ui
                             .add_enabled(
-                                self.selection.is_some(),
+                                !self.selection.is_empty(),
                                 egui::Button::new("Create Child").shortcut_text("under selection"),
                             )
                             .clicked()
                         {
-                            create = self.selection.map(|parent| CreateGameObject::Empty {
-                                parent: Some(parent),
-                            });
+                            create =
+                                self.selection
+                                    .primary()
+                                    .map(|parent| CreateGameObject::Empty {
+                                        parent: Some(parent),
+                                    });
                             ui.close();
                         }
                         ui.separator();
@@ -139,6 +148,34 @@ impl EditorApp {
             .collect()
     }
 
+    /// Everything one row needs to know about itself that is not in the world.
+    ///
+    /// Gathered here rather than inline, because the listing is a loop and a
+    /// dozen lines of look inside it hides the loop.
+    fn row_look(
+        &self,
+        entity: EntityId,
+        depth: usize,
+        collapsed: bool,
+        authoring: bool,
+    ) -> RowLook {
+        RowLook {
+            depth,
+            selected: self.selection.contains(entity),
+            switched_off: !self.world.is_active(entity),
+            selected_count: self.selection.len(),
+            can_move: {
+                let beside = self.listed_beside(entity);
+                (
+                    ordering::can_move(&self.world, entity, -1, &beside),
+                    ordering::can_move(&self.world, entity, 1, &beside),
+                )
+            },
+            collapsed,
+            authoring,
+        }
+    }
+
     fn hierarchy_contents(&mut self, ui: &mut egui::Ui) {
         let mut reparenting = None;
         let mut asked: Option<RowAction> = None;
@@ -150,9 +187,11 @@ impl EditorApp {
                 ui.add_space(2.0);
                 let needle = self.search.trim().to_lowercase();
                 let collapsed = self.collapsed_entities();
-                let mut clicked: Option<Option<EntityId>> = None;
+                let mut clicked: Option<(Option<EntityId>, Pick)> = None;
                 let mut toggled = None;
-                let mut listed = 0_usize;
+                // The rows in the order they are drawn, which is the order a
+                // Shift-click's range runs along.
+                let mut listed: Vec<EntityId> = Vec::new();
                 // Two groups, because a scene holds two kinds of thing: what is
                 // in the world and what is drawn on top of it. Which group an
                 // entity is listed under is read from what it carries, so a
@@ -173,18 +212,15 @@ impl EditorApp {
                         if self.world.get(entity).is_none() {
                             continue;
                         }
-                        listed += 1;
+                        listed.push(entity);
+                        let folded = collapsed.contains(&entity) && needle.is_empty();
                         let renaming = self.renaming == Some(entity);
+                        let look = self.row_look(entity, depth, folded, authoring);
                         let report = entity_row(
                             ui,
                             &self.world,
                             entity,
-                            &RowLook {
-                                depth,
-                                selected: self.selection == Some(entity),
-                                collapsed: collapsed.contains(&entity) && needle.is_empty(),
-                                authoring,
-                            },
+                            &look,
                             renaming.then_some(&mut self.rename_draft),
                         );
                         if report.asked.is_some() {
@@ -196,12 +232,12 @@ impl EditorApp {
                         if report.toggled {
                             toggled = Some(entity);
                         }
-                        if report.clicked {
-                            clicked = Some(Some(entity));
+                        if let Some(how) = report.clicked {
+                            clicked = Some((Some(entity), how));
                         }
                     }
                 }
-                if listed == 0 {
+                if listed.is_empty() {
                     ui.add_space(6.0);
                     panel::note(
                         ui,
@@ -226,18 +262,20 @@ impl EditorApp {
                     .allocate_response(ui.available_size(), egui::Sense::click())
                     .clicked()
                 {
-                    clicked = Some(None);
+                    clicked = Some((None, Pick::Only));
                 }
-                if let Some(entity) = clicked {
-                    self.select(entity);
+                if let Some((entity, how)) = clicked {
+                    self.pick(entity, how, &listed);
                 }
             });
         if let Some(action) = asked {
             self.act_on_row(action);
         }
         if let Some((entity, parent)) = reparenting {
-            self.reparent(entity, parent);
-            self.select(Some(entity));
+            self.reparent_dragged(entity, parent);
+            if !self.selection.contains(entity) {
+                self.select(Some(entity));
+            }
             if let Some(parent) = parent
                 && let Some(key) = hierarchy_preference_key(self.file.path(), &self.world, parent)
             {
@@ -257,9 +295,18 @@ pub(super) enum RowAction {
     CommitRename,
     CancelRename,
     Duplicate(EntityId),
+    DuplicateSelection,
     CreateChild(EntityId),
     Delete(EntityId),
+    DeleteSelection,
     Focus(EntityId),
+    FocusSelection,
+    /// Switch this entity on or off.
+    Switch(EntityId, bool),
+    /// Switch everything selected on or off.
+    SwitchSelection(bool),
+    /// Move this entity that many places among its siblings.
+    MoveBy(EntityId, isize),
 }
 
 impl EditorApp {
@@ -278,14 +325,23 @@ impl EditorApp {
                 self.rename_draft.clear();
             }
             RowAction::Duplicate(entity) => self.duplicate_entity(entity),
+            RowAction::DuplicateSelection => self.duplicate_selection(),
             RowAction::CreateChild(entity) => self.create_game_object(CreateGameObject::Empty {
                 parent: Some(entity),
             }),
             RowAction::Delete(entity) => self.delete_entity(entity),
+            RowAction::DeleteSelection => self.delete_selection(),
             RowAction::Focus(entity) => {
                 self.select(Some(entity));
                 self.focus_selection();
             }
+            RowAction::FocusSelection => self.focus_selection(),
+            RowAction::Switch(entity, on) => self.switch_entities(&[entity], on),
+            RowAction::SwitchSelection(on) => {
+                let selected = self.selection.clone();
+                self.switch_entities(selected.all(), on);
+            }
+            RowAction::MoveBy(entity, offset) => self.move_among_siblings(entity, offset),
         }
     }
 

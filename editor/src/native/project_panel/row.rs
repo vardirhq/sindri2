@@ -10,6 +10,7 @@ use std::path::Path;
 use eframe::egui::{self, Response};
 
 use crate::project::{AssetKind, ProjectEntry};
+use crate::ui::widgets::asset::AssetRow;
 use crate::ui::widgets::{asset, menu};
 
 use super::state::BrowserState;
@@ -28,9 +29,10 @@ pub(crate) fn listing_row(
     searching: bool,
     open: Option<&Path>,
     state: &mut BrowserState,
+    editing: Option<&mut String>,
 ) -> Option<BrowserAction> {
     if entry.kind == AssetKind::Folder {
-        return folder_listing_row(ui, entry, depth, searching, open, state);
+        return folder_listing_row(ui, entry, depth, searching, open, state, editing);
     }
     // A search shows a flat list, so parts under an image would be pointing at
     // a parent the search may have removed.
@@ -43,7 +45,10 @@ pub(crate) fn listing_row(
         searching,
         open,
         state,
-        sliced.then_some(&mut showing),
+        RowEdit {
+            expanded: sliced.then_some(&mut showing),
+            editing,
+        },
     );
     if sliced {
         if showing {
@@ -55,13 +60,25 @@ pub(crate) fn listing_row(
             state.expanded_sheets.remove(&entry.path);
         }
     }
-    let mut asked = row_menu(&row, entry);
-    if row.double_clicked() && entry.kind == AssetKind::Scene {
+    if let Some(action) = renamed(&row, entry) {
+        return Some(action);
+    }
+    let mut asked = row_menu(&row.response, entry);
+    if row.response.double_clicked() && entry.kind == AssetKind::Scene {
         asked = Some(BrowserAction::Open(entry.path.clone()));
-    } else if row.clicked() {
+    } else if row.response.clicked() {
         asked = Some(BrowserAction::Select(entry.path.clone()));
     }
     asked
+}
+
+/// What a finished rename asked for, or `None` while it is still being typed.
+fn renamed(row: &AssetRow, entry: &ProjectEntry) -> Option<BrowserAction> {
+    Some(if row.renamed? {
+        BrowserAction::CommitRename(entry.path.clone())
+    } else {
+        BrowserAction::CancelRename
+    })
 }
 
 /// A folder in the listing: it folds, and a double click looks inside it.
@@ -72,6 +89,7 @@ fn folder_listing_row(
     searching: bool,
     open: Option<&Path>,
     state: &mut BrowserState,
+    editing: Option<&mut String>,
 ) -> Option<BrowserAction> {
     let mut showing = !state.is_folded(&entry.path);
     let was = showing;
@@ -82,15 +100,21 @@ fn folder_listing_row(
         searching,
         open,
         state,
-        (!searching).then_some(&mut showing),
+        RowEdit {
+            expanded: (!searching).then_some(&mut showing),
+            editing,
+        },
     );
     if showing != was {
         state.toggle_fold(&entry.path);
     }
-    let mut asked = row_menu(&row, entry);
-    if row.double_clicked() {
+    if let Some(action) = renamed(&row, entry) {
+        return Some(action);
+    }
+    let mut asked = row_menu(&row.response, entry);
+    if row.response.double_clicked() {
         asked = Some(BrowserAction::LookIn(entry.path.clone()));
-    } else if row.clicked() {
+    } else if row.response.clicked() {
         asked = Some(BrowserAction::Select(entry.path.clone()));
     }
     asked
@@ -112,8 +136,21 @@ fn sprite_row(ui: &mut egui::Ui, sprite: &str, depth: usize) {
             selected: false,
             current: false,
             expanded: None,
+            editing: None,
         },
     );
+}
+
+/// What a row is doing beyond listing a file.
+///
+/// Together rather than as two more arguments, because they are the same kind
+/// of thing — the state a row carries while it is being interacted with — and
+/// a row that is neither folded nor being renamed passes `RowEdit::none()`.
+pub(crate) struct RowEdit<'a> {
+    /// `Some` for a folder or a sliced image, carrying whether it is open.
+    pub(crate) expanded: Option<&'a mut bool>,
+    /// `Some` while this row is being renamed in place.
+    pub(crate) editing: Option<&'a mut String>,
 }
 
 /// One asset as a row: what it is called, what it is, whether the browser has
@@ -130,9 +167,9 @@ pub(crate) fn asset_row(
     searching: bool,
     open: Option<&Path>,
     state: &BrowserState,
-    // `Some` for a folder or a sliced image, carrying whether it is open.
-    expanded: Option<&mut bool>,
-) -> Response {
+    edit: RowEdit<'_>,
+) -> AssetRow {
+    let RowEdit { expanded, editing } = edit;
     // Under a search the path below the root is what tells two files of the
     // same name apart.
     let name = if searching {
@@ -150,14 +187,21 @@ pub(crate) fn asset_row(
             selected: state.selected.as_deref() == Some(entry.path.as_path()),
             current: open.is_some_and(|path| path == entry.path),
             expanded,
+            editing,
         },
     );
-    row.on_hover_text(match entry.kind {
-        AssetKind::Scene => "Double-click to open this scene",
-        AssetKind::Texture => "Click to slice this image into sprites",
-        AssetKind::Folder => "Double-click to look inside this folder",
-        _ => entry.kind.label(),
-    })
+    AssetRow {
+        response: row.response.on_hover_text(match entry.kind {
+            AssetKind::Scene => "Double-click to open this scene",
+            AssetKind::Texture => "Click to slice this image into sprites",
+            AssetKind::Folder => "Double-click to look inside this folder",
+            AssetKind::Script | AssetKind::Sheet => "Click to read this file",
+            AssetKind::Audio => "Click to hear this clip",
+            AssetKind::Font => "Click to see this typeface",
+            _ => entry.kind.label(),
+        }),
+        renamed: row.renamed,
+    }
 }
 
 /// The menu a right-click opens on one asset.
@@ -187,6 +231,31 @@ pub(crate) fn row_menu(response: &Response, entry: &ProjectEntry) -> Option<Brow
             ui.close();
         }
         ui.separator();
+        // The file operations. None of these go through the undo history —
+        // they are disk writes, and the history describes a world rather than
+        // a directory — so the destructive one asks first and the rest refuse
+        // rather than overwrite.
+        if menu::item_with_key(ui, "Rename", "F2").clicked() {
+            asked = Some(BrowserAction::Rename(entry.path.clone()));
+            ui.close();
+        }
+        if menu::item(ui, "Duplicate").clicked() {
+            asked = Some(BrowserAction::Duplicate(entry.path.clone()));
+            ui.close();
+        }
+        if menu::item(ui, "New folder here").clicked() {
+            asked = Some(BrowserAction::NewFolder(entry.path.clone()));
+            ui.close();
+        }
+        if menu::item(ui, "New script here").clicked() {
+            asked = Some(BrowserAction::NewScript(entry.path.clone()));
+            ui.close();
+        }
+        if menu::item(ui, "Import files…").clicked() {
+            asked = Some(BrowserAction::Import(entry.path.clone()));
+            ui.close();
+        }
+        ui.separator();
         // The path a component field wants is the one relative to the project;
         // a folder is never named by one, so it is offered only its own.
         if entry.kind != AssetKind::Folder && menu::item(ui, "Copy asset path").clicked() {
@@ -197,6 +266,11 @@ pub(crate) fn row_menu(response: &Response, entry: &ProjectEntry) -> Option<Brow
             asked = Some(BrowserAction::Copy(
                 entry.path.to_string_lossy().into_owned(),
             ));
+            ui.close();
+        }
+        ui.separator();
+        if menu::danger(ui, "Delete", "Del").clicked() {
+            asked = Some(BrowserAction::ConfirmDelete(entry.path.clone()));
             ui.close();
         }
     });

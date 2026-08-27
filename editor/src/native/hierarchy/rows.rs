@@ -9,6 +9,7 @@ use eframe::egui::{self, Response};
 use egui_material_icons::MaterialIcon;
 use sindri_core::{EntityId, World};
 
+use crate::ordering::sibling_key as hierarchy_sort_key;
 use crate::space::{EntitySpace, space_of};
 use crate::ui::widgets::tree;
 
@@ -31,8 +32,9 @@ pub(crate) const ROOT_LABEL: &str = "Top level";
 
 /// Flattens the world into display rows, parents before their children.
 ///
-/// Siblings are ordered by stable ID so the panel matches the order the scene
-/// is saved in, rather than the order slots happen to be allocated.
+/// Siblings are ordered by whatever place they record, and by stable ID where
+/// they record none — see [`crate::ordering`]. A scene nobody has reordered
+/// therefore lists exactly as it did when the ID was the only answer.
 pub(crate) fn hierarchy_rows(world: &World) -> Vec<(EntityId, usize)> {
     let mut roots: Vec<EntityId> = world
         .entities()
@@ -136,16 +138,6 @@ fn push_hierarchy_row(
     for child in children {
         push_hierarchy_row(world, child, depth + 1, rows);
     }
-}
-
-fn hierarchy_sort_key(world: &World, entity: EntityId) -> String {
-    world
-        .get(entity)
-        .and_then(|data| data.source_id.as_ref())
-        .map_or_else(
-            || format!("~{:010}", entity.index()),
-            |id| id.as_str().to_owned(),
-        )
 }
 
 pub(crate) fn hierarchy_preference_key(

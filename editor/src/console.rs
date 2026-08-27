@@ -14,6 +14,8 @@
 
 use std::collections::VecDeque;
 
+use sindri_core::EntityId;
+
 /// How many entries the console keeps.
 ///
 /// A window rather than everything: the interesting entries are the recent
@@ -53,6 +55,13 @@ pub struct Entry {
     /// One for a message said once. A render error repeats every frame, and a
     /// count is both shorter and more informative than two hundred copies.
     pub count: usize,
+    /// The entity this is about, when it is about one.
+    ///
+    /// Carried rather than read back out of the message. An error that names an
+    /// entity is one someone wants to go to, and finding it by searching the
+    /// text for something that looks like a name would select the wrong entity
+    /// the first time a message mentioned a word that happened to be one.
+    pub subject: Option<EntityId>,
 }
 
 /// The editor's log.
@@ -64,6 +73,16 @@ pub struct Console {
 impl Console {
     /// Records a message, or counts it again if it is the one just recorded.
     pub fn record(&mut self, level: Level, message: impl Into<String>) {
+        self.record_about(level, message, None);
+    }
+
+    /// The same, for something that is about one entity.
+    pub fn record_about(
+        &mut self,
+        level: Level,
+        message: impl Into<String>,
+        subject: Option<EntityId>,
+    ) {
         let message = message.into();
         if let Some(last) = self.entries.back_mut()
             && last.level == level
@@ -76,6 +95,7 @@ impl Console {
             level,
             message,
             count: 1,
+            subject,
         });
         while self.entries.len() > CAPACITY {
             self.entries.pop_front();
@@ -105,6 +125,18 @@ impl Console {
 
     pub fn clear(&mut self) {
         self.entries.clear();
+    }
+
+    /// The entries at or above a level, oldest first.
+    ///
+    /// A console left open for an hour is mostly loads and script output, and
+    /// the thing worth reading is the one line that went wrong. Filtering by
+    /// level is how that line is found without scrolling past two hundred that
+    /// did not.
+    pub fn at_least(&self, level: Level) -> impl Iterator<Item = &Entry> {
+        self.entries
+            .iter()
+            .filter(move |entry| entry.level >= level)
     }
 
     /// How many errors and warnings the log holds, which is what the status bar
@@ -239,5 +271,66 @@ mod tests {
         console.clear();
         assert_eq!(console.counts().summary(), "0 Errors, 0 Warnings");
         assert!(console.is_empty());
+    }
+
+    /// Filtering by level is how the one line that went wrong is found without
+    /// scrolling past two hundred that did not.
+    #[test]
+    fn a_filter_keeps_everything_at_or_above_its_level() {
+        let mut console = Console::default();
+        console.info("Opened level.scene.json");
+        console.warning("badge.png is not bound");
+        console.error("Could not save");
+
+        let shown = |level| -> Vec<String> {
+            console
+                .at_least(level)
+                .map(|entry| entry.message.clone())
+                .collect()
+        };
+        assert_eq!(shown(Level::Info).len(), 3);
+        assert_eq!(
+            shown(Level::Warning),
+            vec![
+                "badge.png is not bound".to_owned(),
+                "Could not save".to_owned()
+            ]
+        );
+        assert_eq!(shown(Level::Error), vec!["Could not save".to_owned()]);
+    }
+
+    /// A line about an entity carries which one, rather than the panel reading
+    /// it back out of the message.
+    ///
+    /// Searching the text for something that looks like a name would select the
+    /// wrong entity the first time a message mentioned a word that happened to
+    /// be one.
+    #[test]
+    fn an_entry_can_name_the_entity_it_is_about() {
+        let mut world = sindri_core::World::default();
+        let entity = world.spawn(sindri_core::EntityData::default());
+        let mut console = Console::default();
+
+        console.error("Could not save");
+        console.record_about(Level::Error, "Wisp: failed in Wisp.update", Some(entity));
+
+        let subjects: Vec<Option<sindri_core::EntityId>> =
+            console.entries().map(|entry| entry.subject).collect();
+        assert_eq!(subjects, vec![None, Some(entity)]);
+    }
+
+    /// A repeated line is still one line with a count, subject and all.
+    #[test]
+    fn a_repeated_line_about_an_entity_still_collapses() {
+        let mut world = sindri_core::World::default();
+        let entity = world.spawn(sindri_core::EntityData::default());
+        let mut console = Console::default();
+        for _ in 0..60 {
+            console.record_about(Level::Error, "Wisp: divided by zero", Some(entity));
+        }
+        assert_eq!(console.entries().len(), 1);
+        let entry = console.entries().next().unwrap();
+        assert_eq!(entry.count, 60);
+        assert_eq!(entry.subject, Some(entity));
     }
 }

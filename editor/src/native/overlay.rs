@@ -53,6 +53,18 @@ pub(super) fn paint_transform_gizmo(
     );
 }
 
+/// Where the rest of a multiple selection is.
+///
+/// A ring rather than a second set of arms: only one entity can carry handles,
+/// so what the others need to say is "this moves too", and a mark that looked
+/// like a gizmo would invite a drag that does nothing.
+pub(super) fn paint_selection_marks(painter: &egui::Painter, marks: &[Pos2]) {
+    for mark in marks {
+        painter.circle_stroke(*mark, 5.0, Stroke::new(1.5, color::FORGE_BRIGHT));
+        painter.circle_filled(*mark, 1.5, color::FORGE_BRIGHT);
+    }
+}
+
 /// What the Scene view says about itself, in the corner it can spare.
 ///
 /// One plate rather than two floating labels: the selection, the mode it would

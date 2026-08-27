@@ -15,7 +15,8 @@ use super::camera::{EditorCamera, camera_for};
 use super::frame::physical_viewport_dimension;
 use super::hierarchy::row::entity_name;
 use super::overlay::{
-    ViewportStatus, paint_runtime_overlay, paint_transform_gizmo, paint_viewport_border,
+    ViewportStatus, paint_runtime_overlay, paint_selection_marks, paint_transform_gizmo,
+    paint_viewport_border,
 };
 use super::pointer::TilemapHover;
 use super::scene_io::SceneSource;
@@ -287,13 +288,16 @@ impl EditorApp {
         if let Some(hover) = hover {
             self.paint_tilemap_hover(ui, hover);
         }
-        if !painting && let Some((_, _, visual)) = self.gizmo_visual(rect, camera) {
-            paint_transform_gizmo(
-                ui.painter(),
-                rect,
-                &visual,
-                self.gizmo_drag.map(|drag| drag.axis),
-            );
+        if !painting {
+            paint_selection_marks(ui.painter(), &self.selection_marks(rect, camera));
+            if let Some((_, _, visual)) = self.gizmo_visual(rect, camera) {
+                paint_transform_gizmo(
+                    ui.painter(),
+                    rect,
+                    &visual,
+                    self.gizmo_drag.map(|drag| drag.axis),
+                );
+            }
         }
         // The same view the frame under it was drawn through, asked for rather
         // than re-derived, so the axes cannot drift from the picture.
@@ -304,10 +308,15 @@ impl EditorApp {
             .flatten()
             .map(|camera| camera.view);
         // What a drag here would do, said where the pointer already is.
-        let selection = self
-            .selection
-            .and_then(|entity| self.world.get(entity))
-            .map_or_else(|| "No selection".to_owned(), entity_name);
+        let selection = match self.selection.len() {
+            0 => "No selection".to_owned(),
+            1 => self
+                .selection
+                .primary()
+                .and_then(|entity| self.world.get(entity))
+                .map_or_else(|| "No selection".to_owned(), entity_name),
+            many => format!("{many} entities"),
+        };
         paint_runtime_overlay(
             ui.painter(),
             rect,
@@ -315,7 +324,7 @@ impl EditorApp {
                 selection: &selection,
                 mode: self.gizmo_mode.label(),
                 space: self.gizmo_space.label(),
-                snapping: self.gizmo_snapping.enabled,
+                snapping: self.preferences.snapping.enabled,
                 playing: self.lifecycle.state() == EngineState::Running,
             },
             self.problem(),

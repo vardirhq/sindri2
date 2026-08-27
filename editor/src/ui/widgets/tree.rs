@@ -81,6 +81,12 @@ pub struct RowStyle {
     pub children: Children,
     /// A row that is listed but is not itself a thing to act on.
     pub dimmed: bool,
+    /// A row for something that is still there and is switched off.
+    ///
+    /// Struck through rather than dimmed, because dim already means "nothing
+    /// here to act on" and a switched-off entity is very much something to act
+    /// on — it is the thing you would switch back on.
+    pub struck: bool,
 }
 
 /// How far in a row at this depth starts.
@@ -134,34 +140,37 @@ pub fn row_named(
                     ))
                     .sense(Sense::click_and_drag()),
                 );
-                let label = match editing {
-                    Some(draft) => {
-                        let field = ui.add(
-                            egui::TextEdit::singleline(draft)
-                                .desired_width(ui.available_width() - 6.0)
-                                .font(egui::FontId::proportional(text::BODY)),
-                        );
-                        // Focused the frame it appears, so renaming is one act
-                        // rather than "start renaming, then click the box".
-                        if !field.has_focus() && !field.lost_focus() {
-                            field.request_focus();
-                        }
-                        committed = field.lost_focus()
-                            && !ui.input(|input| input.key_pressed(egui::Key::Escape));
-                        cancelled = ui.input(|input| input.key_pressed(egui::Key::Escape));
-                        field
+                let label = if let Some(draft) = editing {
+                    let field = ui.add(
+                        egui::TextEdit::singleline(draft)
+                            .desired_width(ui.available_width() - 6.0)
+                            .font(egui::FontId::proportional(text::BODY)),
+                    );
+                    // Focused the frame it appears, so renaming is one act
+                    // rather than "start renaming, then click the box".
+                    if !field.has_focus() && !field.lost_focus() {
+                        field.request_focus();
                     }
-                    None => ui.add(
-                        egui::Label::new(RichText::new(name).size(text::BODY).color(
-                            match (style.selected, style.dimmed) {
-                                (true, _) => color::TEXT,
-                                (false, true) => color::TEXT_FAINT,
-                                (false, false) => color::TEXT_MUTED,
-                            },
-                        ))
-                        .selectable(false)
-                        .sense(Sense::click_and_drag()),
-                    ),
+                    committed = field.lost_focus()
+                        && !ui.input(|input| input.key_pressed(egui::Key::Escape));
+                    cancelled = ui.input(|input| input.key_pressed(egui::Key::Escape));
+                    field
+                } else {
+                    let mut text = RichText::new(name).size(text::BODY).color(
+                        match (style.selected, style.dimmed) {
+                            (true, _) => color::TEXT,
+                            (false, true) => color::TEXT_FAINT,
+                            (false, false) => color::TEXT_MUTED,
+                        },
+                    );
+                    if style.struck {
+                        text = text.strikethrough();
+                    }
+                    ui.add(
+                        egui::Label::new(text)
+                            .selectable(false)
+                            .sense(Sense::click_and_drag()),
+                    )
                 };
                 (icon | label, toggle)
             })

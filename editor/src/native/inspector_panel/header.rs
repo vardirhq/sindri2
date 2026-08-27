@@ -68,6 +68,36 @@ pub(super) fn inspector_parent(
     chosen.map_or(ParentChoice::Root, ParentChoice::Under)
 }
 
+/// Whether this entity takes part in the scene, as its own switch.
+///
+/// A row rather than a checkbox tucked beside the name, because it is the
+/// largest single fact about an entity: off means nothing it carries is drawn,
+/// stepped, scripted or picked, and neither is anything under it. Reports the
+/// wanted state only when it changed, like the parent picker above it, because
+/// it is a discrete choice and merging it into the draft would make one undo
+/// step that both renamed and switched off.
+///
+/// `inherited` is a child whose parent is the one switched off. It is shown as
+/// off and cannot be switched here: what would it mean to enable it? The switch
+/// that governs it is on the parent, and offering a second one that does
+/// nothing is the kind of control this editor is trying not to grow.
+pub(super) fn active_row(ui: &mut egui::Ui, disabled: bool, inherited: bool) -> Option<bool> {
+    let mut wanted = !disabled && !inherited;
+    let mut changed = false;
+    property::Property::new("Active")
+        .tip(if inherited {
+            "Switched off by a parent. The switch that governs this is on the parent."
+        } else {
+            "Off takes this entity and everything under it out of the scene: not drawn, not stepped, not scripted, not picked"
+        })
+        .show(ui, |ui| {
+            ui.add_enabled_ui(!inherited, |ui| {
+                changed = property::switch(ui, &mut wanted, "On", "Off");
+            });
+        });
+    changed.then_some(wanted)
+}
+
 /// The card at the top of the inspector: what this entity is called, and what
 /// kind of thing it is.
 ///

@@ -42,10 +42,17 @@ pub fn item(ui: &mut egui::Ui, label: &str) -> Response {
 
 /// One entry with the key that also does it.
 pub fn item_with_key(ui: &mut egui::Ui, label: &str, key: &str) -> Response {
-    ui.add(
-        egui::Button::new(RichText::new(label).size(text::BODY).color(color::TEXT))
-            .shortcut_text(RichText::new(key).size(text::NOTE).color(color::TEXT_FAINT)),
-    )
+    ui.add(entry(label, key))
+}
+
+/// The same entry, built rather than added.
+///
+/// Handed back so a caller can offer it disabled: the first row has nowhere to
+/// move up to, and saying so before the entry is chosen is better than
+/// accepting the choice and doing nothing.
+pub fn entry(label: &str, key: &str) -> egui::Button<'static> {
+    egui::Button::new(RichText::new(label).size(text::BODY).color(color::TEXT))
+        .shortcut_text(RichText::new(key).size(text::NOTE).color(color::TEXT_FAINT))
 }
 
 /// One entry that throws something away.

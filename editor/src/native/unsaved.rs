@@ -6,11 +6,10 @@
 
 use std::path::PathBuf;
 
-use eframe::egui::{self, Align, Layout, RichText};
+use eframe::egui::{self, Align, Layout};
 
-use crate::ui::icons;
-use crate::ui::theme::{color, text};
 use crate::ui::widgets::button::{self, Intent};
+use crate::ui::widgets::dialog;
 
 use super::EditorApp;
 
@@ -129,34 +128,12 @@ impl EditorApp {
         };
         let saveable = self.file.path().is_some();
         let mut answered = None;
-        egui::Modal::new(egui::Id::new("sindri-discard-confirm")).show(context, |ui| {
-            ui.set_width(372.0);
-            ui.horizontal(|ui| {
-                ui.label(
-                    icons::REMOVE
-                        .outlined()
-                        .rich_text()
-                        .size(17.0)
-                        .color(color::DANGER),
-                );
-                ui.label(
-                    RichText::new("Unsaved changes")
-                        .strong()
-                        .size(text::TITLE)
-                        .color(color::TEXT),
-                );
-            });
-            ui.add_space(7.0);
-            ui.add(
-                egui::Label::new(
-                    RichText::new(action.question())
-                        .size(text::BODY)
-                        .color(color::TEXT_MUTED),
-                )
-                .wrap(),
-            );
-            ui.add_space(14.0);
-            ui.horizontal(|ui| {
+        dialog::ask(
+            context,
+            "sindri-discard-confirm",
+            "Unsaved changes",
+            action.question(),
+            |ui| {
                 if button::labelled(ui, "Cancel", Intent::Quiet, "Leave everything as it is")
                     .clicked()
                 {
@@ -185,8 +162,8 @@ impl EditorApp {
                         answered = Some(Answer::Save);
                     }
                 });
-            });
-        });
+            },
+        );
         match answered {
             None => {}
             Some(Answer::Cancel) => self.confirming = None,
