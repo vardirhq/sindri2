@@ -130,6 +130,14 @@ All notable changes to Sindri Next will be documented here.
 
 ### Changed
 
+- **The snap increments can be set, and are remembered.** The snap button's
+  tooltip named 0.5 units, 15° and 0.1 scale, and all three were constants
+  nothing could change — so a board laid out on quarter units was a board laid
+  out by hand. Right-clicking the button sets them. They live there rather than
+  in a preferences dialog because that is the control they belong to, and a
+  toolbar has no room for three number fields nobody usually touches. Zero is
+  allowed and means that one does not round, which is what the gizmo already did
+  with a zero step.
 - **The console filters by level.** All, Problems, or Errors, remembered across
   launches because it is a reading preference rather than a state: someone
   watching for a failure wants it filtered to failures for as long as they are

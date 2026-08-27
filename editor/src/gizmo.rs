@@ -81,7 +81,18 @@ impl Axis {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+/// What a drag rounds to, and whether it rounds at all.
+///
+/// Remembered rather than reset every launch: someone laying out a grid at half
+/// a unit wants half a unit tomorrow too, and the increments were constants
+/// nothing could change — the snap button's tooltip named three numbers and
+/// there was nowhere to set any of them.
+///
+/// A step of zero means "do not round this one", which is what
+/// `snapped` already did with it and is a useful answer: snapping a position
+/// while leaving rotation free is an ordinary way to work.
+#[derive(Clone, Copy, Debug, PartialEq, serde::Deserialize, serde::Serialize)]
+#[serde(default)]
 pub struct Snapping {
     pub enabled: bool,
     pub translation: f32,

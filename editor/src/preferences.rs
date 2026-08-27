@@ -121,6 +121,7 @@ pub struct Preferences {
     pub layout: Layout,
     pub asset_view: AssetView,
     pub console_filter: ConsoleFilter,
+    pub snapping: crate::gizmo::Snapping,
     pub projection: CameraProjection,
     pub bottom_tab: BottomTab,
     /// The scene file the editor last had open, reopened on the next launch.
@@ -181,6 +182,12 @@ mod tests {
             layout: Layout::Wide,
             asset_view: AssetView::Grid,
             console_filter: ConsoleFilter::Errors,
+            snapping: crate::gizmo::Snapping {
+                enabled: true,
+                translation: 0.25,
+                rotation_degrees: 45.0,
+                scale: 0.5,
+            },
             projection: CameraProjection::Orthographic,
             bottom_tab: BottomTab::Console,
             last_scene: Some("projects/level.scene.json".to_owned()),
@@ -232,6 +239,12 @@ mod tests {
             layout: Layout::Wide,
             asset_view: AssetView::Grid,
             console_filter: ConsoleFilter::Errors,
+            snapping: crate::gizmo::Snapping {
+                enabled: true,
+                translation: 0.25,
+                rotation_degrees: 45.0,
+                scale: 0.5,
+            },
             projection: CameraProjection::Orthographic,
             bottom_tab: BottomTab::Console,
             last_scene: Some("projects/level.scene.json".to_owned()),

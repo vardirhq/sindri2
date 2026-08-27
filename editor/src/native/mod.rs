@@ -20,7 +20,7 @@ use crate::preview::TextPreview;
 use crate::{
     animation::AnimationTool,
     console::Console,
-    gizmo::{GizmoDrag, GizmoMode, GizmoSpace, Snapping},
+    gizmo::{GizmoDrag, GizmoMode, GizmoSpace},
     input::EditorInput,
     preferences::Preferences,
     project::ProjectTree,
@@ -202,7 +202,6 @@ struct EditorApp {
     viewport_pan: GlamVec2,
     gizmo_mode: GizmoMode,
     gizmo_space: GizmoSpace,
-    gizmo_snapping: Snapping,
     gizmo_drag: Option<GizmoDrag>,
     renderers: SceneRenderers,
     /// eframe's device and queue, kept because textures are uploaded whenever a
@@ -316,7 +315,6 @@ impl EditorApp {
             viewport_pan: GlamVec2::ZERO,
             gizmo_mode: GizmoMode::Select,
             gizmo_space: GizmoSpace::Local,
-            gizmo_snapping: Snapping::default(),
             gizmo_drag: None,
             renderers,
             render_state: state_for_textures,

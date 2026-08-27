@@ -431,11 +431,21 @@ scene — which the remaining four items all want and none of them has.
   blank or already taken is refused at the field, in the colour the editor uses
   for a refusal, rather than written and rejected — the draft is committed every
   frame, so a refused command would be refused again on the next one.
-- **No snapping settings.** The snap toggle's tooltip names its increments —
-  0.5 units, 15°, 0.1 scale — and they are constants
-  (`editor/src/gizmo.rs:85`). Nothing can change them.
-- **No preferences surface.** Layout is in the View menu; everything else the
-  editor remembers is invisible.
+- ~~**No snapping settings.**~~ **Fixed.** The snap toggle's tooltip named its
+  increments — 0.5 units, 15°, 0.1 scale — and they were constants nothing could
+  change, so a board laid out on quarter units was a board laid out by hand.
+  Right-clicking the snap button sets all three, and they are remembered:
+  someone working at half a unit wants half a unit tomorrow too. Zero is
+  allowed and means that one does not round, which is what the gizmo already did
+  with a zero step and is an ordinary way to work.
+- **No preferences surface**, and on reflection the editor should not grow one.
+  Layout is in the View menu, the asset view is in the browser's toolbar, the
+  console filter is in the console's, and the snap increments are on the snap
+  button. Each control sits on the thing it controls, which is where it is
+  looked for; a dialog listing all four would be a second place to find each of
+  them and the only home for none. What is genuinely missing is not a surface
+  but the settings that still have no control anywhere — and after this, that
+  list is empty.
 
 ## 9. Smaller things, confirmed
 

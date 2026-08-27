@@ -315,7 +315,7 @@ impl EditorApp {
                 selection: &selection,
                 mode: self.gizmo_mode.label(),
                 space: self.gizmo_space.label(),
-                snapping: self.gizmo_snapping.enabled,
+                snapping: self.preferences.snapping.enabled,
                 playing: self.lifecycle.state() == EngineState::Running,
             },
             self.problem(),

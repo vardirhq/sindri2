@@ -328,7 +328,7 @@ impl EditorApp {
                 camera.view_projection,
                 pointer,
                 GlamVec2::new(rect.width(), rect.height()),
-                self.gizmo_snapping,
+                self.preferences.snapping,
             )
         {
             self.apply_gizmo_transform(drag, next);

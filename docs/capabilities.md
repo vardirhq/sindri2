@@ -389,6 +389,9 @@ frame.
   not drawn in. A group holding only UI elements is listed with the UI.
   Create GameObject makes an empty object or a UI Image directly, and the
   inspector says which space the selected entity is in
+- **Snapping increments that can be set**, from a right-click on the snap
+  button, and remembered across launches. They were constants the tooltip named
+  and nothing could change. A step of zero means that one does not round
 - **A console that can be read.** Filtered by level — everything, problems, or
   only what did not happen — and remembered across launches, because someone
   watching for a failure wants it filtered for as long as they are watching. An
