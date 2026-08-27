@@ -10,8 +10,20 @@ use decay_syntax::{Item, Member, Span, parse};
 use serde_json::{Value, json};
 
 const KEYWORDS: &[&str] = &[
-    "script", "component", "fn", "let", "var", "if", "else", "while", "break",
-    "continue", "return", "true", "false", "null",
+    "script",
+    "component",
+    "fn",
+    "let",
+    "var",
+    "if",
+    "else",
+    "while",
+    "break",
+    "continue",
+    "return",
+    "true",
+    "false",
+    "null",
 ];
 
 #[derive(Default)]
@@ -36,13 +48,26 @@ impl ProjectIndex {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_dir() {
-                if !matches!(path.file_name().and_then(|name| name.to_str()), Some(".git" | "target" | "node_modules")) {
+                if !matches!(
+                    path.file_name().and_then(|name| name.to_str()),
+                    Some(".git" | "target" | "node_modules")
+                ) {
                     self.scan_dir(root, &path);
                 }
                 continue;
             }
-            let relative = path.strip_prefix(root).unwrap_or(&path).to_string_lossy().replace('\\', "/");
-            if matches!(path.extension().and_then(|ext| ext.to_str()).map(str::to_ascii_lowercase).as_deref(), Some("wav" | "ogg" | "mp3" | "flac")) {
+            let relative = path
+                .strip_prefix(root)
+                .unwrap_or(&path)
+                .to_string_lossy()
+                .replace('\\', "/");
+            if matches!(
+                path.extension()
+                    .and_then(|ext| ext.to_str())
+                    .map(str::to_ascii_lowercase)
+                    .as_deref(),
+                Some("wav" | "ogg" | "mp3" | "flac")
+            ) {
                 self.audio_assets.insert(relative.clone());
             }
             if !relative.ends_with(".scene.json") {
@@ -98,7 +123,10 @@ impl Server {
     }
 
     fn handle(&mut self, message: Value, output: &mut impl Write) -> io::Result<bool> {
-        let method = message.get("method").and_then(Value::as_str).unwrap_or_default();
+        let method = message
+            .get("method")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
         let id = message.get("id").cloned();
         let params = message.get("params").cloned().unwrap_or(Value::Null);
 
@@ -107,19 +135,22 @@ impl Server {
                 self.root = initialization_root(&params);
                 self.project = ProjectIndex::scan(self.root.as_deref());
                 if let Some(id) = id {
-                    write_message(output, &json!({
-                        "jsonrpc": "2.0",
-                        "id": id,
-                        "result": {
-                            "serverInfo": { "name": "decay-lsp", "version": env!("CARGO_PKG_VERSION") },
-                            "capabilities": {
-                                "textDocumentSync": 1,
-                                "completionProvider": { "triggerCharacters": [".", "\""] },
-                                "hoverProvider": true,
-                                "documentSymbolProvider": true
+                    write_message(
+                        output,
+                        &json!({
+                            "jsonrpc": "2.0",
+                            "id": id,
+                            "result": {
+                                "serverInfo": { "name": "decay-lsp", "version": env!("CARGO_PKG_VERSION") },
+                                "capabilities": {
+                                    "textDocumentSync": 1,
+                                    "completionProvider": { "triggerCharacters": [".", "\""] },
+                                    "hoverProvider": true,
+                                    "documentSymbolProvider": true
+                                }
                             }
-                        }
-                    }))?;
+                        }),
+                    )?;
                 }
             }
             "initialized" => {}
@@ -141,7 +172,9 @@ impl Server {
             }
             "textDocument/didChange" => {
                 if let Some(uri) = params.pointer("/textDocument/uri").and_then(Value::as_str)
-                    && let Some(text) = params.pointer("/contentChanges/0/text").and_then(Value::as_str)
+                    && let Some(text) = params
+                        .pointer("/contentChanges/0/text")
+                        .and_then(Value::as_str)
                 {
                     self.documents.insert(uri.to_owned(), text.to_owned());
                     self.publish_diagnostics(uri, text, output)?;
@@ -182,7 +215,12 @@ impl Server {
         Ok(!self.shutdown || method != "exit")
     }
 
-    fn publish_diagnostics(&self, uri: &str, source: &str, output: &mut impl Write) -> io::Result<()> {
+    fn publish_diagnostics(
+        &self,
+        uri: &str,
+        source: &str,
+        output: &mut impl Write,
+    ) -> io::Result<()> {
         let analysis = decay_semantic::analyze_with_environment(source, &self.environment);
         let diagnostics = analysis
             .diagnostics
@@ -200,11 +238,14 @@ impl Server {
                 })
             })
             .collect::<Vec<_>>();
-        write_message(output, &json!({
-            "jsonrpc":"2.0",
-            "method":"textDocument/publishDiagnostics",
-            "params":{"uri":uri,"diagnostics":diagnostics}
-        }))
+        write_message(
+            output,
+            &json!({
+                "jsonrpc":"2.0",
+                "method":"textDocument/publishDiagnostics",
+                "params":{"uri":uri,"diagnostics":diagnostics}
+            }),
+        )
     }
 
     fn completion(&self, params: &Value) -> Value {
@@ -214,15 +255,30 @@ impl Server {
         let before = &source[..offset.min(source.len())];
 
         if string_argument(before, "World.find").is_some() {
-            return Value::Array(self.project.entity_ids.iter().map(|id| completion_item(id, 12, Some("Scene entity"))).collect());
+            return Value::Array(
+                self.project
+                    .entity_ids
+                    .iter()
+                    .map(|id| completion_item(id, 12, Some("Scene entity")))
+                    .collect(),
+            );
         }
-        if string_argument(before, "Audio.play").is_some() || string_argument(before, "Audio.loop").is_some() {
-            return Value::Array(self.project.audio_assets.iter().map(|asset| completion_item(asset, 17, Some("Project audio asset"))).collect());
+        if string_argument(before, "Audio.play").is_some()
+            || string_argument(before, "Audio.loop").is_some()
+        {
+            return Value::Array(
+                self.project
+                    .audio_assets
+                    .iter()
+                    .map(|asset| completion_item(asset, 17, Some("Project audio asset")))
+                    .collect(),
+            );
         }
 
         let (chain, prefix) = completion_chain(before);
         if let Some(chain) = chain {
-            let items = self.members_for_chain(&source, &chain)
+            let items = self
+                .members_for_chain(&source, &chain)
                 .into_iter()
                 .filter(|(name, _)| name.starts_with(&prefix))
                 .map(|(name, symbol)| symbol_completion(&name, &symbol))
@@ -230,9 +286,20 @@ impl Server {
             return Value::Array(items);
         }
 
-        let mut items = KEYWORDS.iter().map(|keyword| completion_item(keyword, 14, Some("Decay keyword"))).collect::<Vec<_>>();
-        items.extend(self.environment.globals().map(|(name, symbol)| symbol_completion(name, symbol)));
-        items.extend(container_members(&source).into_iter().map(|(name, symbol)| symbol_completion(&name, &symbol)));
+        let mut items = KEYWORDS
+            .iter()
+            .map(|keyword| completion_item(keyword, 14, Some("Decay keyword")))
+            .collect::<Vec<_>>();
+        items.extend(
+            self.environment
+                .globals()
+                .map(|(name, symbol)| symbol_completion(name, symbol)),
+        );
+        items.extend(
+            container_members(&source)
+                .into_iter()
+                .map(|(name, symbol)| symbol_completion(&name, &symbol)),
+        );
         Value::Array(items)
     }
 
@@ -246,7 +313,10 @@ impl Server {
         if let Some((_, symbol)) = self.environment.globals().find(|(name, _)| *name == word) {
             return hover_symbol(word, symbol);
         }
-        if let Some((_, symbol)) = container_members(&source).into_iter().find(|(name, _)| name == word) {
+        if let Some((_, symbol)) = container_members(&source)
+            .into_iter()
+            .find(|(name, _)| name == word)
+        {
             return hover_symbol(word, &symbol);
         }
         if KEYWORDS.contains(&word) {
@@ -268,20 +338,24 @@ impl Server {
             let container = match item {
                 Item::Script(container) | Item::Component(container) => container,
             };
-            let children = container.members.into_iter().map(|member| match member {
-                Member::Field(field) => json!({
-                    "name": field.name,
-                    "kind": 8,
-                    "range": span_range(source, field.span),
-                    "selectionRange": span_range(source, field.span)
-                }),
-                Member::Function(function) => json!({
-                    "name": function.name,
-                    "kind": 12,
-                    "range": span_range(source, function.span),
-                    "selectionRange": span_range(source, function.span)
-                }),
-            }).collect::<Vec<_>>();
+            let children = container
+                .members
+                .into_iter()
+                .map(|member| match member {
+                    Member::Field(field) => json!({
+                        "name": field.name,
+                        "kind": 8,
+                        "range": span_range(source, field.span),
+                        "selectionRange": span_range(source, field.span)
+                    }),
+                    Member::Function(function) => json!({
+                        "name": function.name,
+                        "kind": 12,
+                        "range": span_range(source, function.span),
+                        "selectionRange": span_range(source, function.span)
+                    }),
+                })
+                .collect::<Vec<_>>();
             symbols.push(json!({
                 "name": container.name,
                 "kind": 5,
@@ -309,18 +383,31 @@ impl Server {
         let mut current = if first == "this" {
             None
         } else {
-            match self.environment.globals().find(|(name, _)| name == first).map(|(_, symbol)| symbol.clone()) {
+            match self
+                .environment
+                .globals()
+                .find(|(name, _)| name == first)
+                .map(|(_, symbol)| symbol.clone())
+            {
                 Some(ExternalSymbol::Value(ty)) => Some(ty),
                 Some(ExternalSymbol::Function(function)) => Some(function.return_type),
-                None => container_members(source).into_iter().find(|(name, _)| name == first).and_then(|(_, symbol)| match symbol {
-                    ExternalSymbol::Value(ty) => Some(ty),
-                    ExternalSymbol::Function(function) => Some(function.return_type),
-                }),
+                None => container_members(source)
+                    .into_iter()
+                    .find(|(name, _)| name == first)
+                    .and_then(|(_, symbol)| match symbol {
+                        ExternalSymbol::Value(ty) => Some(ty),
+                        ExternalSymbol::Function(function) => Some(function.return_type),
+                    }),
             }
         };
 
         if chain.len() == 1 && first == "this" {
-            let mut members = self.environment.this().members().map(|(name, symbol)| (name.to_owned(), symbol.clone())).collect::<Vec<_>>();
+            let mut members = self
+                .environment
+                .this()
+                .members()
+                .map(|(name, symbol)| (name.to_owned(), symbol.clone()))
+                .collect::<Vec<_>>();
             members.extend(container_members(source));
             return members;
         }
@@ -328,9 +415,21 @@ impl Server {
         let start = usize::from(first == "this");
         for segment in &chain[start..] {
             let symbol = if start == 1 && current.is_none() {
-                self.environment.this().member(segment).cloned().or_else(|| container_members(source).into_iter().find(|(name, _)| name == segment).map(|(_, symbol)| symbol))
+                self.environment
+                    .this()
+                    .member(segment)
+                    .cloned()
+                    .or_else(|| {
+                        container_members(source)
+                            .into_iter()
+                            .find(|(name, _)| name == segment)
+                            .map(|(_, symbol)| symbol)
+                    })
             } else {
-                current.as_ref().and_then(|ty| type_members(&self.environment, ty).and_then(|host| host.member(segment).cloned()))
+                current.as_ref().and_then(|ty| {
+                    type_members(&self.environment, ty)
+                        .and_then(|host| host.member(segment).cloned())
+                })
             };
             current = symbol.and_then(|symbol| match symbol {
                 ExternalSymbol::Value(ty) => Some(ty),
@@ -341,11 +440,20 @@ impl Server {
             }
         }
 
-        current.and_then(|ty| type_members(&self.environment, &ty)).map_or_else(Vec::new, |host| host.members().map(|(name, symbol)| (name.to_owned(), symbol.clone())).collect())
+        current
+            .and_then(|ty| type_members(&self.environment, &ty))
+            .map_or_else(Vec::new, |host| {
+                host.members()
+                    .map(|(name, symbol)| (name.to_owned(), symbol.clone()))
+                    .collect()
+            })
     }
 }
 
-fn type_members<'a>(environment: &'a Environment, ty: &Type) -> Option<&'a decay_semantic::HostType> {
+fn type_members<'a>(
+    environment: &'a Environment,
+    ty: &Type,
+) -> Option<&'a decay_semantic::HostType> {
     match ty {
         Type::Named(name) => environment.get_type(name),
         _ => None,
@@ -360,23 +468,43 @@ fn container_members(source: &str) -> Vec<(String, ExternalSymbol)> {
     let container = match item {
         Item::Script(container) | Item::Component(container) => container,
     };
-    container.members.iter().map(|member| match member {
-        Member::Field(field) => (
-            field.name.clone(),
-            ExternalSymbol::Value(field.ty.as_ref().map_or(Type::Unknown, Type::from_ref)),
-        ),
-        Member::Function(function) => (
-            function.name.clone(),
-            ExternalSymbol::Function(FunctionType {
-                params: function.params.iter().map(|param| param.ty.as_ref().map_or(Type::Unknown, Type::from_ref)).collect(),
-                return_type: function.return_type.as_ref().map_or(Type::Unit, Type::from_ref),
-            }),
-        ),
-    }).collect()
+    container
+        .members
+        .iter()
+        .map(|member| match member {
+            Member::Field(field) => (
+                field.name.clone(),
+                ExternalSymbol::Value(field.ty.as_ref().map_or(Type::Unknown, Type::from_ref)),
+            ),
+            Member::Function(function) => (
+                function.name.clone(),
+                ExternalSymbol::Function(FunctionType {
+                    params: function
+                        .params
+                        .iter()
+                        .map(|param| param.ty.as_ref().map_or(Type::Unknown, Type::from_ref))
+                        .collect(),
+                    return_type: function
+                        .return_type
+                        .as_ref()
+                        .map_or(Type::Unit, Type::from_ref),
+                }),
+            ),
+        })
+        .collect()
 }
 
 fn completion_chain(before: &str) -> (Option<Vec<String>>, String) {
-    let tail = before.chars().rev().take_while(|character| character.is_ascii_alphanumeric() || *character == '_' || *character == '.').collect::<String>().chars().rev().collect::<String>();
+    let tail = before
+        .chars()
+        .rev()
+        .take_while(|character| {
+            character.is_ascii_alphanumeric() || *character == '_' || *character == '.'
+        })
+        .collect::<String>()
+        .chars()
+        .rev()
+        .collect::<String>();
     if !tail.contains('.') {
         return (None, tail);
     }
@@ -399,27 +527,46 @@ fn completion_item(label: &str, kind: u8, detail: Option<&str>) -> Value {
 fn symbol_completion(name: &str, symbol: &ExternalSymbol) -> Value {
     match symbol {
         ExternalSymbol::Value(ty) => json!({"label":name,"kind":6,"detail":ty.display_name()}),
-        ExternalSymbol::Function(function) => json!({"label":name,"kind":3,"detail":signature(name, function),"insertText":format!("{name}($1)"),"insertTextFormat":2}),
+        ExternalSymbol::Function(function) => {
+            json!({"label":name,"kind":3,"detail":signature(name, function),"insertText":format!("{name}($1)"),"insertTextFormat":2})
+        }
     }
 }
 
 fn hover_symbol(name: &str, symbol: &ExternalSymbol) -> Value {
     let value = match symbol {
         ExternalSymbol::Value(ty) => format!("```decay\n{name}: {}\n```", ty.display_name()),
-        ExternalSymbol::Function(function) => format!("```decay\n{}\n```", signature(name, function)),
+        ExternalSymbol::Function(function) => {
+            format!("```decay\n{}\n```", signature(name, function))
+        }
     };
     json!({"contents":{"kind":"markdown","value":value}})
 }
 
 fn signature(name: &str, function: &FunctionType) -> String {
-    let params = function.params.iter().map(Type::display_name).collect::<Vec<_>>().join(", ");
-    format!("fn {name}({params}) -> {}", function.return_type.display_name())
+    let params = function
+        .params
+        .iter()
+        .map(Type::display_name)
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!(
+        "fn {name}({params}) -> {}",
+        function.return_type.display_name()
+    )
 }
 
 fn initialization_root(params: &Value) -> Option<PathBuf> {
-    params.get("rootPath").and_then(Value::as_str).map(PathBuf::from).or_else(|| {
-        params.get("rootUri").and_then(Value::as_str).and_then(file_uri_to_path)
-    })
+    params
+        .get("rootPath")
+        .and_then(Value::as_str)
+        .map(PathBuf::from)
+        .or_else(|| {
+            params
+                .get("rootUri")
+                .and_then(Value::as_str)
+                .and_then(file_uri_to_path)
+        })
 }
 
 fn file_uri_to_path(uri: &str) -> Option<PathBuf> {
@@ -432,7 +579,8 @@ fn percent_decode(value: &str) -> String {
     let mut output = Vec::with_capacity(bytes.len());
     let mut index = 0;
     while index < bytes.len() {
-        if bytes[index] == b'%' && index + 2 < bytes.len()
+        if bytes[index] == b'%'
+            && index + 2 < bytes.len()
             && let Ok(hex) = u8::from_str_radix(&value[index + 1..index + 3], 16)
         {
             output.push(hex);
@@ -447,7 +595,8 @@ fn percent_decode(value: &str) -> String {
 
 fn span_range(source: &str, span: Span) -> Value {
     let (start_line, start_character) = position_at(source, span.start);
-    let (end_line, end_character) = position_at(source, span.end.max(span.start + 1).min(source.len()));
+    let (end_line, end_character) =
+        position_at(source, span.end.max(span.start + 1).min(source.len()));
     json!({
         "start":{"line":start_line,"character":start_character},
         "end":{"line":end_line,"character":end_character}
@@ -484,8 +633,12 @@ fn offset_at(source: &str, line: usize, character: usize) -> usize {
 
 fn word_at(source: &str, offset: usize) -> Option<&str> {
     let offset = offset.min(source.len());
-    let start = source[..offset].rfind(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_')).map_or(0, |index| index + 1);
-    let end = source[offset..].find(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_')).map_or(source.len(), |index| offset + index);
+    let start = source[..offset]
+        .rfind(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
+        .map_or(0, |index| index + 1);
+    let end = source[offset..]
+        .find(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
+        .map_or(source.len(), |index| offset + index);
     (start < end).then(|| &source[start..end])
 }
 
@@ -508,7 +661,9 @@ fn read_message(input: &mut impl BufRead) -> io::Result<Option<Value>> {
     };
     let mut body = vec![0; length];
     input.read_exact(&mut body)?;
-    serde_json::from_slice(&body).map(Some).map_err(io::Error::other)
+    serde_json::from_slice(&body)
+        .map(Some)
+        .map_err(io::Error::other)
 }
 
 fn write_message(output: &mut impl Write, value: &Value) -> io::Result<()> {
