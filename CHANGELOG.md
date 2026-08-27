@@ -21,6 +21,19 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **A string can be clicked in the Scene view.** It was the last drawn thing
+  that could not be, and the reason was real: a string is the one drawn thing
+  with no size in the scene. What it covers is glyph layout — kerning, fallback,
+  the wrap the viewport imposes — decided inside the text renderer, and a box
+  guessed from the font size and the character count picks the wrong entity
+  along its edges, which is worse than not picking at all. So the box is not
+  guessed. `TextRenderer::measure` answers it from the same shaping the frame is
+  drawn with, now one function shared by drawing and measuring, and
+  `OverlayPlacement::text_origin` answers where the string starts from the same
+  place the frame's text pass positions it. The editor measures at the
+  resolution the view renders at and hands the boxes to picking, which stays
+  free of the GPU and settles a string against an image by the layer rule two
+  images already settle it by.
 - **Siblings can be reordered by moving them rather than by renaming them.**
   Order was the stable ID sorted, so authoring order was alphabetical by a
   string most authors never look at: five pips made from one arrived as

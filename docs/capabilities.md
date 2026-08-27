@@ -433,6 +433,13 @@ frame.
   do. A field naming a project asset offers what the project holds while
   staying typeable, a tint opens a colour picker, and a row that is only a
   readout says on hover why it is one
+- **Everything the Scene view draws can be clicked in it**, including strings.
+  Meshes, world sprites, filled tilemap cells, authored cameras and UI images
+  are hit-tested from their own geometry; a string has none in the scene, so its
+  box is measured by the text renderer that draws it — the same shaping, at the
+  resolution the view renders at — rather than guessed from the font size, which
+  would pick the wrong entity along its edges. A fully transparent element is
+  skipped in both passes: a thing drawn as nothing is not a thing to click
 - **Sibling order, moved rather than renamed.** Move up and Move down on a
   row's menu and on Alt+Up and Alt+Down, greyed out at the ends of a list. The
   order lives in the entity's editor-only section of the file rather than in
@@ -649,10 +656,6 @@ settings gear.
   kinds that are not text have a preview of their own: a `.wav`, `.ogg` or
   `.mp3` plays on demand through the editor's own audio device, and a `.ttf` or
   `.otf` draws a sample in the face itself
-- Viewport selection covers world sprites, filled tilemap cells, meshes and UI
-  images; UI text is selected from the hierarchy, because what a string covers
-  is decided by glyph layout inside the text renderer and a guessed box would
-  select the wrong thing near its edges
 - Context menus exist on the two panels that list things — a hierarchy row and
   a project row — and nowhere else. Empty space in either panel, a component
   heading, a property row, the Scene view, and a console line all still ignore a

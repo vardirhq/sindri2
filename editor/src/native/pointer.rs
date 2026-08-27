@@ -3,9 +3,10 @@
 use eframe::egui::{self, Pos2, Rect, Response};
 use glam::Vec2 as GlamVec2;
 use sindri_core::{CommandBuffer, EntityId, Transform3D, WorldCommand};
+use sindri_render::{TextInstance, Viewport};
 use sindri_scene::{
-    CameraView, OverlayView, UiAnchor, UiImageComponent, UiTextComponent, ViewCamera,
-    overlay_for_viewport,
+    CameraView, OverlayPlacement, OverlayView, UiAnchor, UiImageComponent, UiTextComponent,
+    ViewCamera, overlay_for_viewport,
 };
 
 use crate::{
@@ -16,6 +17,7 @@ use crate::{
 };
 
 use super::EditorApp;
+use super::frame::physical_viewport_dimension;
 use super::{UI_IMAGE_COMPONENT, UI_TEXT_COMPONENT};
 
 /// One tile under the Scene-view pointer, already projected back into the
@@ -72,11 +74,16 @@ impl EditorApp {
     }
 
     /// Resolves a Scene-view point through the exact camera that drew it.
+    ///
+    /// `scale` is the window's points-per-pixel, which matters here for one
+    /// reason: a string is laid out in physical pixels, so how much of the
+    /// viewport it covers depends on how many pixels the viewport has.
     fn pick_viewport(
-        &self,
+        &mut self,
         rect: Rect,
         pointer: Pos2,
         camera: CameraView,
+        scale: f32,
     ) -> Result<Option<EntityId>, String> {
         if !rect.contains(pointer) {
             return Ok(None);
@@ -95,17 +102,24 @@ impl EditorApp {
         ];
         // The overlay is drawn over the world, so what is under the pointer
         // there wins. Asked first for that reason rather than as a fallback.
-        if let Some((overlay, placement)) = overlay_for_viewport(aspect)
-            && let Some(entity) = picking::pick_ui(
+        if let Some((overlay, placement)) = overlay_for_viewport(aspect) {
+            let viewport = Viewport::new(
+                physical_viewport_dimension(rect.width(), scale),
+                physical_viewport_dimension(rect.height(), scale),
+            );
+            let texts = self.text_targets(viewport, overlay, &placement);
+            if let Some(entity) = picking::pick_ui(
                 &self.world,
                 self.scene.components(),
                 overlay,
                 &placement,
                 point,
+                &texts,
             )
             .map_err(|error| error.to_string())?
-        {
-            return Ok(Some(entity));
+            {
+                return Ok(Some(entity));
+            }
         }
         picking::pick_world(
             &self.world,
@@ -114,6 +128,71 @@ impl EditorApp {
             point,
         )
         .map_err(|error| error.to_string())
+    }
+
+    /// Every UI string as the box it actually occupies.
+    ///
+    /// Measured through the renderer that draws them rather than guessed from
+    /// the font size and the character count, because what a string covers is
+    /// glyph layout — kerning, fallback, the wrap the viewport imposes — and a
+    /// box that is nearly right picks the wrong entity along its edges. It is
+    /// measured at the resolution the view is rendered at, so the fraction of
+    /// the viewport it works out to is the fraction the picture shows.
+    ///
+    /// A string whose font never arrived measures to nothing and is left out,
+    /// which is what the frame does with it too: an unbound face is not drawn,
+    /// so there is nothing there to click.
+    fn text_targets(
+        &mut self,
+        viewport: Viewport,
+        overlay: OverlayView,
+        placement: &OverlayPlacement,
+    ) -> Vec<picking::TextTarget> {
+        let Ok(texts) = self
+            .scene
+            .components()
+            .query::<UiTextComponent>(&self.world)
+        else {
+            return Vec::new();
+        };
+        let width = f32::from(u16::try_from(viewport.width).unwrap_or(u16::MAX)).max(1.0);
+        let height = f32::from(u16::try_from(viewport.height).unwrap_or(u16::MAX)).max(1.0);
+        texts
+            .into_iter()
+            // A fully transparent string swallowing clicks is the bug the win
+            // banner already taught: it is drawn, technically, and it is not
+            // there to look at.
+            .filter(|(_, text)| picking::is_drawn(text.color))
+            .filter_map(|(entity, text)| {
+                let transform = self
+                    .world
+                    .get(entity)
+                    .and_then(|data| data.transform_3d)
+                    .unwrap_or_default();
+                let origin = placement.text_origin(overlay, transform, text.anchor);
+                let layer = text.layer;
+                let instance = TextInstance::new(
+                    text.text,
+                    text.font,
+                    [origin[0] * width, origin[1] * height],
+                    text.font_size,
+                    text.line_height,
+                    text.color,
+                )
+                .ok()?;
+                let size = self.renderers.text.measure(&instance, viewport)?;
+                Some(picking::TextTarget {
+                    entity,
+                    layer,
+                    bounds: [
+                        origin[0],
+                        origin[1],
+                        origin[0] + size[0] / width,
+                        origin[1] + size[1] / height,
+                    ],
+                })
+            })
+            .collect()
     }
 
     /// Whether this entity is laid out against the viewport rather than in the
@@ -147,7 +226,8 @@ impl EditorApp {
         } else {
             Pick::Only
         };
-        match self.pick_viewport(rect, pointer, camera) {
+        let scale = response.ctx.pixels_per_point();
+        match self.pick_viewport(rect, pointer, camera, scale) {
             // Clicking empty space still clears, whatever is held: there is no
             // entity to add, and leaving the selection alone would make an
             // empty click mean nothing at all.

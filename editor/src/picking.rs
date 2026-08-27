@@ -90,21 +90,23 @@ pub fn pick_world(
 /// Gather's twenty-two entities are UI, and none of them could be clicked in
 /// the view that draws them.
 ///
-/// Only images. What a string of UI text covers is decided by glyph layout
-/// inside the text renderer, and a guessed box for it would select the wrong
-/// thing near its edges; a UI text entity is still reachable from the hierarchy,
-/// and its gizmo now appears where the text is.
+/// Images are hit-tested from their transform and anchor, the way the overlay
+/// places them. Strings are not: what a string covers is decided by glyph
+/// layout inside the text renderer, so their boxes are measured there and
+/// handed in as [`TextTarget`]s rather than guessed here — a guessed box picks
+/// the wrong thing near its edges, which is worse than not picking at all.
 pub fn pick_ui(
     world: &World,
     components: &ComponentSchemaRegistry,
     overlay: OverlayView,
     placement: &OverlayPlacement,
     point: [f32; 2],
+    texts: &[TextTarget],
 ) -> Result<Option<EntityId>, ComponentRegistryError> {
     let Some(ray) = RaySegment::through_viewport(overlay.view_projection, point) else {
         return Ok(None);
     };
-    Ok(components
+    let images = components
         .query::<UiImageComponent>(world)?
         .into_iter()
         .filter(|(_, image)| is_drawn(image.tint))
@@ -115,12 +117,43 @@ pub fn pick_ui(
                 depth,
                 layer: image.layer,
             })
-        })
+        });
+    let strings = texts
+        .iter()
+        .filter(|text| text.covers(point))
+        .map(|text| Hit {
+            entity: text.entity,
+            // Flat, like every other overlay hit, so the comparison below decides.
+            depth: 0.0,
+            layer: text.layer,
+        });
+    Ok(images
+        .chain(strings)
         // The overlay is flat, so depth separates nothing: what decides which
         // of two overlapping elements is on top is the layer, then the entity
         // index, in the same direction the renderer stacks them.
         .max_by(frontmost_transparent)
         .map(|hit| hit.entity))
+}
+
+/// One laid-out string as a box in the viewport.
+///
+/// Measured by whatever holds the text renderer and handed to [`pick_ui`],
+/// because the renderer owns the font system and this module owns no GPU.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TextTarget {
+    pub entity: EntityId,
+    pub layer: i32,
+    /// Left, top, right and bottom, each a fraction across the viewport — the
+    /// same units a pick point is in.
+    pub bounds: [f32; 4],
+}
+
+impl TextTarget {
+    fn covers(&self, point: [f32; 2]) -> bool {
+        let [left, top, right, bottom] = self.bounds;
+        (left..=right).contains(&point[0]) && (top..=bottom).contains(&point[1])
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -231,7 +264,10 @@ fn plane_hit_model(ray: RaySegment, model: Mat4, half_extent: f32) -> Option<(f3
 /// faintly, and a faint thing is still a thing someone aimed at. What is hidden
 /// this way is still selectable from the hierarchy, which is where an invisible
 /// entity is reachable at all.
-fn is_drawn(tint: [f32; 4]) -> bool {
+///
+/// Public because a string's colour is the same question, and it is asked
+/// where strings are measured rather than here.
+pub fn is_drawn(tint: [f32; 4]) -> bool {
     tint[3] > 0.0
 }
 

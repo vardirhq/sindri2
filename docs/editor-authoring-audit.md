@@ -396,12 +396,25 @@ tooltip, or the absence of a primary-click response.
 **Missing basic**, with one case that is actively misleading — and, found while
 fixing it, one that was worse than this section knew.
 
-**Fixed**, except for UI text. UI images are picked in a pass of their own
-against the same overlay matrix the frame draws them through, and a UI element's
-gizmo is drawn where the element is. UI text is deliberately not picked: what a
-string covers is decided by glyph layout inside the text renderer, and a guessed
-box for it would select the wrong thing near its edges. Its gizmo is now correct,
-so it is still reachable from the hierarchy and movable in the view.
+**Fixed.** UI images are picked in a pass of their own against the same overlay
+matrix the frame draws them through, and a UI element's gizmo is drawn where the
+element is.
+
+UI text took a second pass, because a string is the one drawn thing with no size
+in the scene: what it covers is decided by glyph layout — kerning, fallback, the
+wrap the viewport imposes — inside the text renderer, and a box guessed from the
+font size and the character count picks the wrong entity along its edges, which
+is worse than not picking at all. So the box is not guessed. `TextRenderer`
+answers it (`TextRenderer::measure`), from the same shaping the frame is drawn
+with — one function now, shared by drawing and measuring, because two copies is
+exactly how a pick box ends up disagreeing with the picture it is over. Where the
+string starts comes from the same place for the same reason:
+`OverlayPlacement::text_origin` is what the frame's text pass positions with.
+The editor measures at the resolution the view renders at and hands `pick_ui` the
+boxes; picking itself stays free of the GPU and settles a string against an image
+by the layer rule two images already settle it by. Confirmed in the running
+editor: clicking the word GATHER selects `title`, and clicking the empty space
+beside it selects nothing.
 
 **Nothing at all could be clicked, in fact.** Found while fixing the rest, and
 not visible from either side of it. The Scene view allocated its region with
@@ -572,10 +585,12 @@ The ordering is by what unblocks the most authoring, not by effort.
    scene rather than about an entity in it: the scene's name, an entity's stable
    ID, the snapping increments, and everything else the editor remembers.
 6. ~~**Pick UI elements in the viewport**, and either draw their gizmo where the
-   element is or do not draw one.~~ Done, except for UI text, which needs glyph
-   metrics the editor does not have. Two things nobody had noticed came out
-   with it: the viewport sensed drags but not clicks, so *nothing* in it could
-   be selected; and a fully transparent element swallowed every click over it.
+   element is or do not draw one.~~ Done, UI text included: the glyph metrics
+   the editor did not have are now asked of the renderer that owns them, from
+   the same shaping the frame is drawn with. Two things nobody had noticed came
+   out with it: the viewport sensed drags but not clicks, so *nothing* in it
+   could be selected; and a fully transparent element swallowed every click
+   over it.
 
 7. ~~**File operations in the project browser**, so a project can be built
    without a file manager beside the window, and a way to look at what it

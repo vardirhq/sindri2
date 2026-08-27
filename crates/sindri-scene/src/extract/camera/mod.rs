@@ -103,11 +103,40 @@ pub struct OverlayPlacement {
 }
 
 impl OverlayPlacement {
+    /// The placement for an already-resolved extent.
+    ///
+    /// Crate-internal: the extract has the extent in hand and would otherwise
+    /// have to re-derive it from an aspect it already used.
+    pub(crate) const fn new(extent: OverlayExtent) -> Self {
+        Self { extent }
+    }
+
     /// The model matrix a UI element with this transform and anchor is drawn
     /// with — the same one the frame uses, from the same function.
     #[must_use]
     pub fn place(&self, transform: Transform3D, anchor: UiAnchor) -> Mat4 {
         ui_matrix(transform, anchor, self.extent)
+    }
+
+    /// Where a string's top-left lands, as a fraction of the viewport.
+    ///
+    /// Text is the one overlay element positioned in viewport pixels rather
+    /// than in overlay units: glyphon lays a string out from a point, and the
+    /// frame's text pass hands it this one. Answered as a fraction so a caller
+    /// can scale it by whichever resolution it is asking about — and so that
+    /// an editor hit-testing a click can ask the same question the frame asks,
+    /// from the same function, rather than keeping a second copy of two
+    /// projections and a divide.
+    #[must_use]
+    pub fn text_origin(
+        &self,
+        view: OverlayView,
+        transform: Transform3D,
+        anchor: UiAnchor,
+    ) -> [f32; 2] {
+        let clip = view.view_projection * self.place(transform, anchor).w_axis;
+        let ndc = clip.truncate() / clip.w;
+        [(ndc.x + 1.0) * 0.5, (1.0 - ndc.y) * 0.5]
     }
 
     /// Where the element's own origin sits, in overlay units.

@@ -10,8 +10,7 @@ use sindri_render::{
 
 use crate::UiTextComponent;
 
-use super::camera::ResolvedCameras;
-use super::ui::ui_matrix;
+use super::camera::{OverlayPlacement, OverlayView, ResolvedCameras};
 use super::{SceneExtractError, SceneExtractor};
 
 impl SceneExtractor {
@@ -35,6 +34,11 @@ impl SceneExtractor {
         let extent = cameras
             .overlay_extent
             .expect("every resolved view includes screen-space extent");
+        let placement = OverlayPlacement::new(extent);
+        let view = OverlayView {
+            view_projection: overlay.view_projection,
+            framed_half_height: overlay.framed_half_height,
+        };
         let width = f32::from(u16::try_from(viewport.width)?);
         let height = f32::from(u16::try_from(viewport.height)?);
         let mut layers: BTreeMap<i32, Vec<TextInstance>> = BTreeMap::new();
@@ -44,10 +48,8 @@ impl SceneExtractor {
                 .get(entity)
                 .and_then(|data| data.transform_3d)
                 .unwrap_or_default();
-            let model = ui_matrix(transform, text.anchor, extent);
-            let clip = overlay.view_projection * model.w_axis;
-            let ndc = clip.truncate() / clip.w;
-            let position = [(ndc.x + 1.0) * 0.5 * width, (1.0 - ndc.y) * 0.5 * height];
+            let fraction = placement.text_origin(view, transform, text.anchor);
+            let position = [fraction[0] * width, fraction[1] * height];
             layers
                 .entry(text.layer)
                 .or_default()
