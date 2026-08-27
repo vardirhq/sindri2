@@ -4,6 +4,12 @@ use sindri_core::{CommandHistory, EntityData, EntityId, SceneEntityId, World};
 
 use super::{ORDER_KEY, can_move, move_by, rank, siblings};
 
+/// Every sibling counts, which is the case everywhere but the hierarchy's top
+/// level — the one place the panel draws two groups.
+fn all(_: EntityId) -> bool {
+    true
+}
+
 /// Four children of one parent, named in the order their IDs sort in.
 fn family() -> (World, EntityId, Vec<EntityId>) {
     let mut world = World::default();
@@ -60,7 +66,7 @@ fn a_move_records_the_whole_list() {
     let (mut world, parent, children) = family();
     let mut history = CommandHistory::default();
 
-    let buffer = move_by(&world, children[3], -2);
+    let buffer = move_by(&world, children[3], -2, &all);
     assert_eq!(
         buffer.len(),
         4,
@@ -84,7 +90,7 @@ fn a_move_undoes() {
     let mut history = CommandHistory::default();
     history
         .apply(
-            move_by(&world, children[0], 1).into_transaction("Move down"),
+            move_by(&world, children[0], 1, &all).into_transaction("Move down"),
             &mut world,
         )
         .unwrap();
@@ -113,11 +119,11 @@ fn a_move_undoes() {
 #[test]
 fn the_ends_of_a_list_refuse_rather_than_wrap() {
     let (world, _, children) = family();
-    assert!(!can_move(&world, children[0], -1));
-    assert!(move_by(&world, children[0], -1).is_empty());
-    assert!(!can_move(&world, children[3], 1));
-    assert!(move_by(&world, children[3], 1).is_empty());
-    assert!(can_move(&world, children[1], -1) && can_move(&world, children[1], 1));
+    assert!(!can_move(&world, children[0], -1, &all));
+    assert!(move_by(&world, children[0], -1, &all).is_empty());
+    assert!(!can_move(&world, children[3], 1, &all));
+    assert!(move_by(&world, children[3], 1, &all).is_empty());
+    assert!(can_move(&world, children[1], -1, &all) && can_move(&world, children[1], 1, &all));
 }
 
 /// Top-level entities are siblings too, and there is no parent to read their
@@ -138,7 +144,7 @@ fn the_top_level_reorders_like_any_other_parent() {
     let mut history = CommandHistory::default();
     history
         .apply(
-            move_by(&world, roots[2], -1).into_transaction("Move up"),
+            move_by(&world, roots[2], -1, &all).into_transaction("Move up"),
             &mut world,
         )
         .unwrap();
@@ -154,7 +160,7 @@ fn a_newcomer_arrives_at_the_bottom() {
     let mut history = CommandHistory::default();
     history
         .apply(
-            move_by(&world, children[3], -3).into_transaction("Move up"),
+            move_by(&world, children[3], -3, &all).into_transaction("Move up"),
             &mut world,
         )
         .unwrap();
@@ -169,5 +175,51 @@ fn a_newcomer_arrives_at_the_bottom() {
         named(&world, &siblings(&world, Some(parent))),
         ["d", "a", "b", "c", "aardvark"],
         "even one whose ID sorts first"
+    );
+}
+
+/// The hierarchy draws the top level as two groups, so "the row above this
+/// one" there means the row above it in its own group. Moving past a row from
+/// the other group would change the recorded order and move nothing on screen.
+#[test]
+fn a_move_at_the_top_level_stays_inside_its_group() {
+    let mut world = World::default();
+    // Interleaved by ID, which is how they sort before anyone reorders: a, b,
+    // c, d — and the groups below split them into (a, c) and (b, d).
+    let roots: Vec<EntityId> = ["a", "b", "c", "d"]
+        .into_iter()
+        .map(|id| {
+            world.spawn(EntityData {
+                source_id: Some(SceneEntityId::new(id).unwrap()),
+                ..EntityData::default()
+            })
+        })
+        .collect();
+    let first_group = [roots[0], roots[2]];
+    let grouped = |entity: EntityId| first_group.contains(&entity);
+    let mine = |entity: EntityId| grouped(entity) == grouped(roots[2]);
+
+    // `c` is the second of its group, so it has exactly one place to go up and
+    // none to go down — even though the full list has a row on either side.
+    assert!(can_move(&world, roots[2], -1, &mine));
+    assert!(!can_move(&world, roots[2], 1, &mine));
+
+    let mut history = CommandHistory::default();
+    history
+        .apply(
+            move_by(&world, roots[2], -1, &mine).into_transaction("Move up"),
+            &mut world,
+        )
+        .unwrap();
+
+    let order = named(&world, &siblings(&world, None));
+    assert_eq!(
+        order.iter().position(|id| id == "c"),
+        Some(0),
+        "c moved above a, which is the row above it in its group: {order:?}"
+    );
+    assert!(
+        order.iter().position(|id| id == "c") < order.iter().position(|id| id == "a"),
+        "{order:?}"
     );
 }

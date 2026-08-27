@@ -296,6 +296,14 @@ impl ComponentSchemaRegistry {
         })
     }
 
+    /// Every *active* entity carrying `T`, decoded.
+    ///
+    /// Active is the filter, not a caller's afterthought: this is what
+    /// rendering, stepping, scripting and picking all ask, and an entity that
+    /// has been switched off — or whose parent has — takes no part in any of
+    /// them. Leaving it to each caller would mean six places to forget it, and
+    /// the ones that forgot would draw something nothing can click or step
+    /// something nobody can see.
     pub fn query<T: SceneComponent>(
         &self,
         world: &World,
@@ -303,6 +311,7 @@ impl ComponentSchemaRegistry {
         self.require_registered(T::TYPE_NAME)?;
         world
             .entities()
+            .filter(|(entity_id, _)| world.is_active(*entity_id))
             .filter_map(|(entity_id, entity)| {
                 entity
                     .components

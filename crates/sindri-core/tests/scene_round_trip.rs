@@ -255,6 +255,42 @@ fn a_locked_transform_saves_what_it_declared_and_nothing_else() {
     );
 }
 
+/// A switched-off entity survives a save, and a scene where nothing is switched
+/// off writes nothing about it — so every file that predates the switch is byte
+/// for byte what it was.
+#[test]
+fn a_switched_off_entity_saves_what_it_declared_and_nothing_else() {
+    let json = format!(
+        r#"{{
+        "format_version": {},
+        "entities": [
+            {{ "id": "debug-overlay", "disabled": true }},
+            {{ "id": "player" }}
+        ]
+    }}"#,
+        sindri_core::SCENE_FORMAT_VERSION
+    );
+    let document = SceneDocument::from_json(&json).expect("the scene parses");
+    let loaded = World::from_scene(&document).expect("it loads");
+
+    let overlay = loaded.entity_map[&SceneEntityId::new("debug-overlay").unwrap()];
+    let player = loaded.entity_map[&SceneEntityId::new("player").unwrap()];
+    assert!(!loaded.world.is_active(overlay));
+    assert!(loaded.world.is_active(player));
+
+    let saved = loaded.world.to_scene().expect("it saves");
+    let canonical = saved.to_canonical_json().expect("canonical json");
+    assert!(
+        canonical.contains("\"disabled\": true"),
+        "a declared switch must survive the round trip: {canonical}"
+    );
+    assert_eq!(
+        canonical.matches("disabled").count(),
+        1,
+        "an entity that declares nothing must write nothing: {canonical}"
+    );
+}
+
 /// Each format change, checked against documents written before it.
 ///
 /// Format 2 collapsed the separate 2D transform into the one 3D transform, and

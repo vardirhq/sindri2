@@ -27,6 +27,7 @@ impl World {
                 name: entity.name.clone(),
                 transform_3d: entity.transform_3d,
                 components: entity.components.clone(),
+                disabled: entity.disabled,
                 editor: entity.editor.clone(),
                 ..EntityData::default()
             });
@@ -78,6 +79,7 @@ impl World {
                 parent,
                 transform_3d: data.transform_3d,
                 components: data.components.clone(),
+                disabled: data.disabled,
                 editor: data.editor.clone(),
                 ..SceneEntity::new(source_id)
             });

@@ -536,9 +536,22 @@ scene — which the remaining four items all want and none of them has.
   object in the scene; it is a sheet of paper now. A font shared the image glyph
   with a texture, so a project's typefaces and its sprite sheets were the same
   row with different words after them; it has its own.
-- **No entity enable/disable.** `EntityData` has no such field, so this is an
-  engine gap rather than an editor one, but it is a basic an author will look
-  for early.
+- ~~**No entity enable/disable.**~~ **Fixed**, in the engine, because that is
+  where the gap was. `EntityData` and `SceneEntity` carry a `disabled` flag, and
+  `World::is_active` is the question anything drawing, stepping, scripting or
+  picking asks — it walks ancestors, so switching off a HUD switches off its
+  pips. The filter is applied once, in `ComponentSchemaRegistry::query`, rather
+  than at each of the six places that would otherwise have to remember it: the
+  ones that forgot would draw something nothing can click, or step something
+  nobody can see. The flag is per entity and is never written down through a
+  subtree, so re-enabling a parent brings back exactly the children that were
+  on. Omitted from a saved scene when false, so no format change and every
+  existing file is byte for byte what it was. In the editor it is an Active
+  switch on the inspector — greyed out, and saying so, on a child that is off
+  because its parent is — plus Disable and Enable on a row's menu, which take
+  the whole selection; a switched-off row is struck through rather than dimmed,
+  because dim already means "nothing here to act on" and this is the row you
+  would switch back on.
 - ~~**The console cannot be filtered.**~~ **Fixed.** All / Problems / Errors,
   remembered across launches because it is a reading preference rather than a
   state: someone watching for a failure wants the console filtered to failures

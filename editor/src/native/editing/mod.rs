@@ -14,6 +14,7 @@ use sindri_scene::SpriteAnimations;
 use crate::ordering;
 use crate::project::AssetKind;
 use crate::selection;
+use crate::space::space_of;
 
 pub(super) mod choosing;
 pub(super) mod duplicate;
@@ -334,6 +335,65 @@ impl EditorApp {
         }
     }
 
+    /// Switches entities on or off, in one transaction.
+    ///
+    /// Off means the entity takes no part in the scene: nothing it carries is
+    /// drawn, stepped, scripted or picked, and neither is anything under it. It
+    /// stays in the world and in the file — that is what makes it different
+    /// from a delete you undo, and it is what an author reaches for to try a
+    /// scene without one of its pieces.
+    ///
+    /// Nothing is folded here, unlike a delete or a move: the flag is per
+    /// entity and a child under a switched-off parent is off *because of the
+    /// parent*, so writing it down through the subtree would make re-enabling
+    /// the parent ambiguous for a child that was off on its own account.
+    pub(super) fn switch_entities(&mut self, entities: &[EntityId], on: bool) {
+        let mut buffer = CommandBuffer::new();
+        for entity in entities {
+            if self.world.get(*entity).is_some_and(|data| data.disabled) == on {
+                buffer.push(WorldCommand::SetDisabled {
+                    entity: *entity,
+                    disabled: !on,
+                });
+            }
+        }
+        if buffer.is_empty() {
+            return;
+        }
+        let verb = if on { "Enable" } else { "Disable" };
+        let label = if buffer.len() == 1 {
+            format!("{verb} entity")
+        } else {
+            format!("{verb} {} entities", buffer.len())
+        };
+        self.history.break_merge_run();
+        if let Err(error) = self
+            .history
+            .apply(buffer.into_transaction(label), &mut self.world)
+        {
+            self.report(error.to_string());
+            return;
+        }
+        // A switched-off sprite stops being drawn, so the textures it was the
+        // only user of stop being needed.
+        self.refresh_textures();
+    }
+
+    /// Which of an entity's siblings the hierarchy lists it beside.
+    ///
+    /// Everything under a parent, except at the top level, which the panel
+    /// draws as two groups: what is in the world, and what is drawn on top of
+    /// it. A UI row's neighbours there are the other UI rows, so that is what
+    /// Move up moves it past.
+    pub(super) fn listed_beside(&self, entity: EntityId) -> impl Fn(EntityId) -> bool + '_ {
+        let grouped = self
+            .world
+            .get(entity)
+            .is_some_and(|data| data.parent.is_none());
+        let space = space_of(&self.world, entity);
+        move |sibling| !grouped || space_of(&self.world, sibling) == space
+    }
+
     /// Moves an entity `offset` places among its siblings.
     ///
     /// Its own transaction, and the label counts what it actually changed:
@@ -341,7 +401,7 @@ impl EditorApp {
     /// called "Move 4 entities" would be describing bookkeeping rather than
     /// what was asked for.
     pub(super) fn move_among_siblings(&mut self, entity: EntityId, offset: isize) {
-        let buffer = ordering::move_by(&self.world, entity, offset);
+        let buffer = ordering::move_by(&self.world, entity, offset, &self.listed_beside(entity));
         if buffer.is_empty() {
             return;
         }

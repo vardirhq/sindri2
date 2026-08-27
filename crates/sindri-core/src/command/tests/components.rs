@@ -122,3 +122,74 @@ fn an_editor_entry_round_trips_through_set_and_remove() {
         "and undoing the first write leaves no entry at all"
     );
 }
+
+/// Off takes an entity and everything under it out of the scene, and the
+/// switch is per entity rather than written down through the subtree: a child
+/// is off *because of* its parent, so re-enabling the parent brings it back
+/// without anyone having to remember which children were off already.
+#[test]
+fn switching_a_parent_off_takes_its_children_with_it() {
+    let (mut world, parent, child) = world_with_two_entities();
+    world.set_parent(child, Some(parent)).unwrap();
+    let mut history = CommandHistory::default();
+    assert!(world.is_active(parent) && world.is_active(child));
+
+    history
+        .apply(
+            edit(
+                "Disable parent",
+                vec![WorldCommand::SetDisabled {
+                    entity: parent,
+                    disabled: true,
+                }],
+            ),
+            &mut world,
+        )
+        .unwrap();
+    assert!(!world.is_active(parent));
+    assert!(
+        !world.is_active(child),
+        "and neither does what hangs under it"
+    );
+    assert!(
+        !world.get(child).unwrap().disabled,
+        "the child's own switch is untouched, which is what makes this reversible"
+    );
+
+    history.undo(&mut world).unwrap();
+    assert!(world.is_active(parent) && world.is_active(child));
+}
+
+/// A component on a switched-off entity is not part of the scene, which is the
+/// one thing every renderer, stepper and picker asks.
+#[test]
+fn a_switched_off_entity_is_not_queried() {
+    use crate::{ComponentSchemaRegistry, SceneComponent};
+
+    #[derive(serde::Serialize, serde::Deserialize)]
+    struct Marker {
+        value: i32,
+    }
+    impl SceneComponent for Marker {
+        const TYPE_NAME: &'static str = "tests.marker";
+    }
+
+    let (mut world, parent, child) = world_with_two_entities();
+    world.set_parent(child, Some(parent)).unwrap();
+    for entity in [parent, child] {
+        world
+            .get_mut(entity)
+            .unwrap()
+            .components
+            .insert(Marker::TYPE_NAME.to_owned(), json!({ "value": 1 }));
+    }
+    let mut registry = ComponentSchemaRegistry::default();
+    registry.register::<Marker>("Marker").unwrap();
+    assert_eq!(registry.query::<Marker>(&world).unwrap().len(), 2);
+
+    world.get_mut(parent).unwrap().disabled = true;
+    assert!(
+        registry.query::<Marker>(&world).unwrap().is_empty(),
+        "the parent is off and the child is under it"
+    );
+}

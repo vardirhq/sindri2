@@ -21,9 +21,16 @@ use crate::selection::Pick;
 use super::RowAction;
 
 /// How one row is drawn, and whether the scene can be edited behind it.
+///
+/// The pedantic lint reads a row of bools as a struct that should have been an
+/// enum. It should not: these are independent facts about one row, and every
+/// combination of them is a row that exists.
+#[allow(clippy::struct_excessive_bools)]
 pub(super) struct RowLook {
     pub(super) depth: usize,
     pub(super) selected: bool,
+    /// Whether this entity, or something above it, is switched off.
+    pub(super) switched_off: bool,
     /// Whether this row has anywhere to go up, and anywhere to go down.
     ///
     /// Read here rather than in the menu, because the menu is built while the
@@ -80,6 +87,7 @@ pub(super) fn entity_row(
             depth: look.depth + 1,
             children: Children::of(data.children.len(), look.collapsed),
             dimmed: entity_is_bare(data),
+            struck: look.switched_off,
         },
         draft,
     );
@@ -107,6 +115,7 @@ pub(super) fn entity_row(
             size: group,
             authoring: look.authoring,
             can_move: look.can_move,
+            switched_off: look.switched_off,
         },
         &mut report.asked,
     );
@@ -139,6 +148,7 @@ struct Group {
     size: usize,
     authoring: bool,
     can_move: (bool, bool),
+    switched_off: bool,
 }
 
 /// The menu a right-click opens on a row.
@@ -175,6 +185,20 @@ fn row_menu(
             }
             if !many && menu::item(ui, "Create child").clicked() {
                 *asked = Some(RowAction::CreateChild(entity));
+                ui.close();
+            }
+            // On or off is a fact about each entity, so a selection is switched
+            // together: what someone means by disabling five rows is five
+            // entities off, not a toggle applied five times to whatever each
+            // happened to be.
+            let switching_on = group.switched_off;
+            let label = if switching_on { "Enable" } else { "Disable" };
+            if menu::item(ui, label).clicked() {
+                *asked = Some(if many {
+                    RowAction::SwitchSelection(switching_on)
+                } else {
+                    RowAction::Switch(entity, switching_on)
+                });
                 ui.close();
             }
         });

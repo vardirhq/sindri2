@@ -28,7 +28,7 @@ use self::draft::{
 };
 use self::field::FieldAssets;
 use self::header::{
-    Identity, IdentityEdit, ParentChoice, inspector_identity, inspector_parent,
+    Identity, IdentityEdit, ParentChoice, active_row, inspector_identity, inspector_parent,
     transform_3d_section,
 };
 use self::rows::add_component_button;
@@ -465,8 +465,13 @@ impl EditorApp {
         let original_components = data.components.clone();
         let mut components = original_components.clone();
         let parent = data.parent;
+        let disabled = data.disabled;
+        // Off because a parent is off is a different fact from off in its own
+        // right, and only one of the two has a switch here.
+        let inherited_off = !disabled && !self.world.is_active(entity);
         let choices = reparent_choices(&self.world, entity);
         let mut reparented = ParentChoice::Unchanged;
+        let mut switched = None;
         let mut removed = None;
         let mut added = None;
         let authoring = self.authoring_enabled();
@@ -503,6 +508,7 @@ impl EditorApp {
                             &mut draft,
                         );
                         reparented = inspector_parent(ui, entity, parent, &choices);
+                        switched = active_row(ui, disabled, inherited_off);
                         if let Some(transform) = &mut draft.transform_3d {
                             transform_3d_section(ui, transform);
                         }
@@ -531,6 +537,9 @@ impl EditorApp {
         }
         if let Some(type_name) = added {
             self.add_component(entity, &type_name, context.defaults());
+        }
+        if let Some(on) = switched {
+            self.switch_entities(&[entity], on);
         }
         match reparented {
             ParentChoice::Unchanged => {}

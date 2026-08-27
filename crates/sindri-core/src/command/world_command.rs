@@ -61,6 +61,17 @@ pub enum WorldCommand {
         entity: EntityId,
         type_name: String,
     },
+    /// Switches an entity, and everything under it, off or back on.
+    ///
+    /// Not a delete you undo: the entity stays in the world and in the file,
+    /// which is the whole difference. What changes is that nothing it carries
+    /// is drawn, stepped, scripted or picked — see [`World::is_active`], which
+    /// is the question those all ask, and which walks ancestors so that
+    /// switching off a HUD switches off its pips too.
+    SetDisabled {
+        entity: EntityId,
+        disabled: bool,
+    },
     /// Writes one entry in an entity's editor-only map.
     ///
     /// That map is state a runtime carries but never interprets — where an
@@ -121,6 +132,7 @@ impl WorldCommand {
             | Self::SetParent { entity, .. }
             | Self::SetComponent { entity, .. }
             | Self::RemoveComponent { entity, .. }
+            | Self::SetDisabled { entity, .. }
             | Self::SetEditorEntry { entity, .. }
             | Self::Spawn { entity, .. }
             | Self::Despawn { entity }
@@ -188,6 +200,16 @@ impl WorldCommand {
                     // Removing an absent component is a no-op, and so is its reverse.
                     None => Ok(Self::RemoveComponent { entity, type_name }),
                 }
+            }
+            Self::SetDisabled { entity, disabled } => {
+                let data = world
+                    .get_mut(entity)
+                    .ok_or(WorldError::InvalidEntity(entity))?;
+                let previous = std::mem::replace(&mut data.disabled, disabled);
+                Ok(Self::SetDisabled {
+                    entity,
+                    disabled: previous,
+                })
             }
             Self::SetEditorEntry { entity, key, value } => {
                 set_editor_entry(world, entity, key, value)

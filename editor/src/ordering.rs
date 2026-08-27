@@ -65,11 +65,21 @@ pub fn siblings(world: &World, parent: Option<EntityId>) -> Vec<EntityId> {
     siblings
 }
 
-/// The commands that move an entity `offset` places among its siblings.
+/// The commands that move an entity `offset` places among the siblings it is
+/// listed beside.
 ///
 /// Empty when there is nowhere to move to, which is what the ends of a list
 /// are: the first row's Move up is refused rather than wrapping around, and a
 /// refusal that changes nothing is better than a move that surprises.
+///
+/// `alongside` says which siblings the entity is *listed* beside, which is not
+/// always all of them: the hierarchy draws the top level as two groups — what
+/// is in the world, and what is drawn on top of it — so "the row above this
+/// one" there means the row above it in its own group. Without the filter, a UI
+/// row moved up past a world row would change the recorded order and move
+/// nothing on screen, which is exactly the control that teaches people to stop
+/// trusting a panel. The move still lands in the full list, so the two groups
+/// share one order rather than each having its own to collide with.
 ///
 /// Every sibling is stamped, not only the two that swapped. Recording one
 /// entity's place and leaving the rest to sort by ID would put it in a list
@@ -78,16 +88,14 @@ pub fn siblings(world: &World, parent: Option<EntityId>) -> Vec<EntityId> {
 /// drawn order are the same list, always, and it is what makes this idempotent:
 /// a parent already in order produces no commands at all.
 #[must_use]
-pub fn move_by(world: &World, entity: EntityId, offset: isize) -> CommandBuffer {
+pub fn move_by(
+    world: &World,
+    entity: EntityId,
+    offset: isize,
+    alongside: &dyn Fn(EntityId) -> bool,
+) -> CommandBuffer {
     let mut buffer = CommandBuffer::new();
-    let Some(parent) = world.get(entity).map(|data| data.parent) else {
-        return buffer;
-    };
-    let mut order = siblings(world, parent);
-    let Some(from) = order.iter().position(|sibling| *sibling == entity) else {
-        return buffer;
-    };
-    let Some(to) = checked_move(from, offset, order.len()) else {
+    let Some((mut order, from, to)) = landing(world, entity, offset, alongside) else {
         return buffer;
     };
     let moved = order.remove(from);
@@ -102,16 +110,38 @@ pub fn move_by(world: &World, entity: EntityId, offset: isize) -> CommandBuffer 
 /// it and doing nothing, which is how an interface teaches people to stop
 /// trusting it.
 #[must_use]
-pub fn can_move(world: &World, entity: EntityId, offset: isize) -> bool {
-    let Some(parent) = world.get(entity).map(|data| data.parent) else {
-        return false;
-    };
-    let order = siblings(world, parent);
-    order
+pub fn can_move(
+    world: &World,
+    entity: EntityId,
+    offset: isize,
+    alongside: &dyn Fn(EntityId) -> bool,
+) -> bool {
+    landing(world, entity, offset, alongside).is_some()
+}
+
+/// The sibling list, where the entity is in it, and where it would land.
+///
+/// Both indices are into the *full* list; the offset is counted in the filtered
+/// one, which is what the panel shows.
+fn landing(
+    world: &World,
+    entity: EntityId,
+    offset: isize,
+    alongside: &dyn Fn(EntityId) -> bool,
+) -> Option<(Vec<EntityId>, usize, usize)> {
+    let order = siblings(world, world.get(entity)?.parent);
+    let listed: Vec<usize> = order
         .iter()
-        .position(|sibling| *sibling == entity)
-        .and_then(|from| checked_move(from, offset, order.len()))
-        .is_some()
+        .enumerate()
+        .filter(|(_, sibling)| alongside(**sibling))
+        .map(|(at, _)| at)
+        .collect();
+    let from = listed
+        .iter()
+        .position(|at| order[*at] == entity)
+        .filter(|_| alongside(entity))?;
+    let to = checked_move(from, offset, listed.len())?;
+    Some((order, listed[from], listed[to]))
 }
 
 /// Where an index lands after a move, or `None` for off the end of the list.

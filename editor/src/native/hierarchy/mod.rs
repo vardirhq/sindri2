@@ -162,11 +162,15 @@ impl EditorApp {
         RowLook {
             depth,
             selected: self.selection.contains(entity),
+            switched_off: !self.world.is_active(entity),
             selected_count: self.selection.len(),
-            can_move: (
-                ordering::can_move(&self.world, entity, -1),
-                ordering::can_move(&self.world, entity, 1),
-            ),
+            can_move: {
+                let beside = self.listed_beside(entity);
+                (
+                    ordering::can_move(&self.world, entity, -1, &beside),
+                    ordering::can_move(&self.world, entity, 1, &beside),
+                )
+            },
             collapsed,
             authoring,
         }
@@ -297,6 +301,10 @@ pub(super) enum RowAction {
     DeleteSelection,
     Focus(EntityId),
     FocusSelection,
+    /// Switch this entity on or off.
+    Switch(EntityId, bool),
+    /// Switch everything selected on or off.
+    SwitchSelection(bool),
     /// Move this entity that many places among its siblings.
     MoveBy(EntityId, isize),
 }
@@ -328,6 +336,11 @@ impl EditorApp {
                 self.focus_selection();
             }
             RowAction::FocusSelection => self.focus_selection(),
+            RowAction::Switch(entity, on) => self.switch_entities(&[entity], on),
+            RowAction::SwitchSelection(on) => {
+                let selected = self.selection.clone();
+                self.switch_entities(selected.all(), on);
+            }
             RowAction::MoveBy(entity, offset) => self.move_among_siblings(entity, offset),
         }
     }

@@ -21,6 +21,23 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **An entity can be switched off without being deleted.** It was the last of
+  the audit's smaller findings and it was an engine gap, not an editor one:
+  nothing in the scene format said an entity could be inactive, so the editor
+  had nothing to offer. `EntityData` and `SceneEntity` carry a `disabled` flag
+  now, and `World::is_active` is the question anything drawing, stepping,
+  scripting or picking asks — it walks ancestors, so switching off a HUD
+  switches off its pips. The filter is applied once, in
+  `ComponentSchemaRegistry::query`, rather than at each of the six places that
+  would otherwise have to remember it. The flag is per entity and is never
+  written down through a subtree, so re-enabling a parent brings back exactly
+  the children that were on. Omitted from a saved scene when false, so there is
+  no format change and every existing file is byte for byte what it was. In the
+  editor: an Active switch on the inspector, greyed out and saying so on a child
+  that is off because its parent is; Disable and Enable on a hierarchy row's
+  menu, taking the whole selection; and a struck-through row for anything
+  switched off, because dim already means "nothing here to act on" and this is
+  the row you would switch back on.
 - **A History dock, showing what Ctrl+Z will do and everything past it.** The
   history was answerable one step at a time, from a label on a menu entry nobody
   opens mid-edit, so "how far back can I go" had no answer and an edit made

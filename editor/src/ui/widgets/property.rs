@@ -162,17 +162,26 @@ pub fn readout(ui: &mut egui::Ui, label: &str, value: &str, why: Option<&str>) {
 pub fn toggle(ui: &mut egui::Ui, label: &str, value: &mut bool, on: &str, off: &str) -> bool {
     let mut changed = false;
     Property::new(label).show(ui, |ui| {
-        let mut chosen = *value;
-        if super::button::Segmented::new(&mut chosen)
-            .option(true, on, "")
-            .option(false, off, "")
-            .show(ui)
-        {
-            *value = chosen;
-            changed = true;
-        }
+        changed = switch(ui, value, on, off);
     });
     changed
+}
+
+/// The two-word switch alone, without a row around it.
+///
+/// Handed out so a caller that wants its own label or its own tooltip does not
+/// have to build a second switch that looks nearly the same.
+pub fn switch(ui: &mut egui::Ui, value: &mut bool, on: &str, off: &str) -> bool {
+    let mut chosen = *value;
+    if super::button::Segmented::new(&mut chosen)
+        .option(true, on, "")
+        .option(false, off, "")
+        .show(ui)
+    {
+        *value = chosen;
+        return true;
+    }
+    false
 }
 
 /// The width a control should take to fill the rest of a property row.

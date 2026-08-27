@@ -99,6 +99,7 @@ fn step(ui: &mut egui::Ui, label: &str, stage: Stage, current: bool) -> bool {
             // An undone step is listed but is not where the world is, and it
             // has to read as the difference rather than as another step back.
             dimmed: stage == Stage::Undone,
+            struck: false,
         },
     );
     row.select

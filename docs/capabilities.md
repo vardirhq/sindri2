@@ -433,6 +433,13 @@ frame.
   do. A field naming a project asset offers what the project holds while
   staying typeable, a tint opens a colour picker, and a row that is only a
   readout says on hover why it is one
+- **Switching an entity off without deleting it.** Off means it takes no part
+  in the scene — not drawn, not stepped, not scripted, not picked — and neither
+  does anything under it, while it stays in the world and in the file. An Active
+  switch on the inspector, Disable and Enable on a hierarchy row's menu taking
+  the whole selection, and a struck-through row for anything switched off. The
+  flag is per entity and never written down through a subtree, so re-enabling a
+  parent brings back exactly the children that were on
 - **A History dock showing what undo will do, and everything past it.** The
   undo stack drawn: "Scene opened", every step in the order it happened, the
   step the world is at marked, and the undone steps still listed under it

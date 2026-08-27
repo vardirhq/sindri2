@@ -28,6 +28,18 @@ pub struct EntityData {
     pub children: Vec<EntityId>,
     pub transform_3d: Option<Transform3D>,
     pub components: BTreeMap<String, Value>,
+    /// Whether this entity has been switched off.
+    ///
+    /// Off means it takes no part in the scene: nothing it carries is drawn,
+    /// stepped, scripted or picked, and neither is anything under it. It is
+    /// still in the world and still in the file — that is the difference
+    /// between disabling something and deleting it, and it is why the answer is
+    /// a flag rather than a delete you undo.
+    ///
+    /// `false` by default, so an entity that says nothing is on. See
+    /// [`World::is_active`], which is the question anything drawing or stepping
+    /// actually asks, because a parent's switch governs its children too.
+    pub disabled: bool,
     /// Editor-only state that the runtime carries but never interprets.
     pub editor: BTreeMap<String, Value>,
 }
@@ -47,6 +59,31 @@ pub struct World {
 }
 
 impl World {
+    /// Whether this entity takes part in the scene.
+    ///
+    /// False for an entity that has been switched off, for anything under one,
+    /// and for a handle the world no longer holds. Ancestors are walked because
+    /// switching off a HUD has to switch off the HUD, not leave its five pips
+    /// drawn over nothing — and because the alternative, writing the flag down
+    /// through a subtree, makes re-enabling ambiguous for a child that was off
+    /// on its own account.
+    #[must_use]
+    pub fn is_active(&self, entity: EntityId) -> bool {
+        let mut cursor = Some(entity);
+        // Bounded by the number of entities: `check_set_parent` refuses to make
+        // a cycle, and a handle the world has lost ends the walk.
+        while let Some(current) = cursor {
+            let Some(data) = self.get(current) else {
+                return false;
+            };
+            if data.disabled {
+                return false;
+            }
+            cursor = data.parent;
+        }
+        true
+    }
+
     pub fn spawn(&mut self, data: EntityData) -> EntityId {
         self.len += 1;
         if let Some(index) = self.free.pop() {

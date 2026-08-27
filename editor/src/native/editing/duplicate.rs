@@ -57,6 +57,10 @@ fn copy_into(
         children: Vec::new(),
         transform_3d: source.transform_3d,
         components: source.components.clone(),
+        // A copy of a switched-off entity is switched off: the copy is of what
+        // is there, and one that arrived running would be a surprise in a
+        // subtree someone deliberately quietened.
+        disabled: source.disabled,
         editor: source.editor.clone(),
     };
     let handle = rehearsal.spawn(data.clone());

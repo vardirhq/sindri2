@@ -29,6 +29,7 @@ fn hierarchy_row(
             depth,
             children: Children::of(usize::from(has_children), false),
             dimmed: false,
+            struck: false,
         },
     )
 }
@@ -199,6 +200,7 @@ fn driven_rename(finish: egui::Key) -> (Option<tree::Rename>, String) {
                             depth: 0,
                             children: Children::None,
                             dimmed: false,
+                            struck: false,
                         },
                         Some(&mut draft),
                     );
