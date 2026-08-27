@@ -488,8 +488,13 @@ frame.
   named. That works because the history undoes in order: reaching a delete
   means everything after it is already undone, so the slot it freed is free
   again
-- **Adding and removing components.** Add Component lists every type the
-  entity's space accepts and disables the ones that cannot be added yet, each
+- **Adding and removing components.** Add Component groups every type the
+  entity's space accepts under Rendering, UI, Physics, Grid or Behaviour — by an
+  authored table rather than by the type name's namespace, which is a naming
+  scheme and not a taxonomy — and a family holding one offer is listed at the
+  top level rather than hidden behind a heading. Only the components that
+  *place* something are exclusive to a space, so a UI element can be given the
+  script that drives it. It disables the ones that cannot be added yet, each
   saying why: no font in the project, no sliced sprite to build a clip from, no
   tilemap on this entity to navigate. Camera is among them on a scene that
   already has a world camera — a second authored one is a hard extract error, so

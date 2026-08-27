@@ -20,11 +20,18 @@ pub const SCRIPT: MaterialIcon = icons::ICON_CODE;
 pub const ANIMATION: MaterialIcon = icons::ICON_PLAY_ARROW;
 pub const TILEMAP: MaterialIcon = icons::ICON_GRID_VIEW;
 pub const GRID: MaterialIcon = icons::ICON_GRID_4X4;
+pub const PHYSICS: MaterialIcon = icons::ICON_BOLT;
+pub const COLLIDER: MaterialIcon = icons::ICON_CROP_SQUARE;
 pub const ENTITY: MaterialIcon = icons::ICON_DEPLOYED_CODE;
 pub const WORLD: MaterialIcon = icons::ICON_ACCOUNT_TREE;
 pub const FOLDER: MaterialIcon = icons::ICON_FOLDER;
 pub const SCENE: MaterialIcon = icons::ICON_DESCRIPTION;
-pub const AUDIO: MaterialIcon = icons::ICON_PLAY_ARROW;
+/// A clip, which is not an animation.
+///
+/// It shared the play glyph with `ANIMATION`, so a project's sounds and its
+/// sprite clips were the same row with different words after them — the same
+/// collision a font had with a texture.
+pub const AUDIO: MaterialIcon = icons::ICON_VOLUME_UP;
 /// A typeface, which is not a picture.
 ///
 /// It shared the image glyph with a texture, so a project's fonts and its
@@ -72,20 +79,13 @@ pub const FOCUS: MaterialIcon = icons::ICON_CENTER_FOCUS_STRONG;
 /// The icon a component type is drawn with, wherever it is named.
 ///
 /// One table, so the hierarchy row for a sprite and the inspector header for
-/// `sindri.sprite` cannot disagree about what a sprite looks like.
+/// `sindri.sprite` cannot disagree about what a sprite looks like — and it is
+/// the same table that says which family the component is listed under, so a
+/// component cannot arrive with a glyph and no family or the other way round.
+/// Kept here as well as there because this module is the icon vocabulary, and
+/// a caller asking for an icon should not have to know where the answer lives.
 pub fn for_component(type_name: &str) -> MaterialIcon {
-    match type_name {
-        "sindri.camera" => CAMERA,
-        "sindri.mesh" => MESH,
-        "sindri.sprite" => SPRITE,
-        "sindri.ui.image" => UI_ELEMENT,
-        "sindri.ui.text" => TEXT,
-        "sindri.script" => SCRIPT,
-        "sindri.animation.sprite" => ANIMATION,
-        "sindri.tilemap" => TILEMAP,
-        "sindri.grid.navigation" | "sindri.grid.occupant" => GRID,
-        _ => ENTITY,
-    }
+    crate::components::icon(type_name)
 }
 
 /// What an entity looks like in a list, from the first thing it carries that
