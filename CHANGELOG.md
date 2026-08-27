@@ -21,6 +21,21 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **An entity's stable ID is visible and editable**, and the scene has a panel
+  of its own. `source_id` is what the file keys an entity by, what a parent link
+  names, what sibling order is derived from and what `sindri.grid.occupant`
+  points at — and nothing showed it, so the editor could produce
+  `game-object-1` and nothing else while Gather's entities are `player`,
+  `floor`, `orb-1`. It is a field under the name now, and renaming one takes
+  every occupant that points at it along in the same transaction: a stable ID is
+  a reference, not a label, and renaming a grid without rewriting its occupants
+  leaves a scene that still opens with nothing on the board. An ID that is blank
+  or already taken is refused at the field rather than written and rejected.
+  With nothing selected, the inspector now shows the scene rather than a shrug:
+  its name — a real field that round-trips through a save and was shown nowhere
+  — its file, and how many entities it holds. Both are written once the edit is
+  finished rather than on every keystroke, and both go through the command
+  history, so the editor still knows when the document is unsaved.
 - **New Scene and Save As.** A scene file had to exist before the editor could
   do anything with it, so the tool could only continue a project someone else
   had started — and started somewhere the default scene is not, it opened

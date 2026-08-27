@@ -392,6 +392,18 @@ frame.
 - Inspector edits of name and the complete transform: position, Euler-degree
   rotation backed by the stored quaternion, scale, and the Z lock, which takes
   away movement off the current layer
+- **An entity's stable ID, shown and editable.** It is what the file keys an
+  entity by, what a parent link names, what sibling order is derived from and
+  what `sindri.grid.occupant` points at, and it used to be invisible — so a
+  scene made here was `game-object-1`, `game-object-2`, and a shipped scene's
+  `player` and `orb-1` were unreachable. Renaming one carries every occupant
+  that names it along in the same undo step; one that is blank or already taken
+  is refused at the field rather than written
+- **The scene itself, where an entity's inspector would be.** With nothing
+  selected the panel shows the scene's own name — a real field that round-trips
+  through a save — along with its file and how many entities it holds. The
+  rename is an ordinary undoable edit, so the editor still knows the document
+  is unsaved
 - **Editing any component's fields in the inspector**, driven by the stored
   payload rather than by hand-written rows: numbers get drags, booleans get
   checkboxes, text gets a field, and a short numeric array gets a labelled row.

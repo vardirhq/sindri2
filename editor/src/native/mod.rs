@@ -118,6 +118,15 @@ struct EditorApp {
     /// state: an abandoned rename changes nothing.
     renaming: Option<EntityId>,
     rename_draft: String,
+    /// The stable ID being typed into the inspector, and whose it is.
+    ///
+    /// Held across frames because a stable ID is not written as it is typed:
+    /// renaming `orb-1` to `player` passes through `p`, `pl`, `pla`, each of
+    /// which would be a real identity written into the world and into every
+    /// component pointing at it.
+    id_edit: Option<(EntityId, String)>,
+    /// The scene's name being typed, for the same reason.
+    scene_name_edit: Option<String>,
     history: CommandHistory,
     search: String,
     asset_search: String,
@@ -247,6 +256,8 @@ impl EditorApp {
             selection,
             renaming: None,
             rename_draft: String::new(),
+            id_edit: None,
+            scene_name_edit: None,
             history: CommandHistory::default(),
             search: String::new(),
             asset_search: String::new(),

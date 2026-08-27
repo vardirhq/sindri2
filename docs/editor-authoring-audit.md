@@ -369,15 +369,25 @@ scene — which the remaining four items all want and none of them has.
   a save that fails leaves the scene attached to the file it was attached to,
   and the project, the remembered scene, the textures and the scripts all
   follow the scene to its new directory.
-- **The scene's name is invisible.** `SceneMetadata.name` is `"Gather"` in the
-  shipped scene and round-trips through a save, but nothing in the editor shows
-  or edits it. A new scene is now named from its file name, which is the one
-  case the editor has an answer for.
-- **An entity's stable ID is invisible.** `source_id` is what a scene stores,
-  what `sindri.grid.occupant` references, and what sibling order is derived
-  from. The editor generates `game-object-N` and never shows it. Gather's IDs
-  are `player`, `floor`, `orb-1`; the editor cannot produce those or rename to
-  them.
+- ~~**The scene's name is invisible.**~~ **Fixed.** `SceneMetadata.name` is
+  `"Gather"` in the shipped scene and round-trips through a save, and nothing
+  showed or edited it. The inspector with nothing selected shows the scene
+  instead of a shrug: its name, editable; the file it is written to; and how
+  many entities it holds. The rename goes through the command history like
+  every other edit — not because renaming a scene is dangerous, but because the
+  editor decides whether a document is unsaved by watching the history, and a
+  change made outside it is one it would let someone close the window on.
+- ~~**An entity's stable ID is invisible.**~~ **Fixed.** `source_id` is what a
+  scene stores, what `sindri.grid.occupant` references, and what sibling order
+  is derived from — and it was shown nowhere, so the editor could produce
+  `game-object-N` and nothing else while Gather's are `player`, `floor`,
+  `orb-1`. It is a field under the name now. Renaming one takes every occupant
+  that points at it along in the same transaction, because a stable ID is a
+  reference and not a label: renaming a grid without rewriting its occupants
+  leaves a scene that still opens with nothing on the board. An ID that is
+  blank or already taken is refused at the field, in the colour the editor uses
+  for a refusal, rather than written and rejected — the draft is committed every
+  frame, so a refused command would be refused again on the next one.
 - **No snapping settings.** The snap toggle's tooltip names its increments —
   0.5 units, 15°, 0.1 scale — and they are constants
   (`editor/src/gizmo.rs:85`). Nothing can change them.

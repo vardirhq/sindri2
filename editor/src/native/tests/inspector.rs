@@ -9,8 +9,8 @@ use crate::animation;
 
 use super::super::editing::find_by_source_id;
 use super::super::inspector_panel::draft::{
-    EntityDraft, ProjectDefaults, SceneHolds, addable_components, component_commands,
-    component_default, draft_commands,
+    EntityDraft, IdentityRefusal, ProjectDefaults, SceneHolds, addable_components,
+    component_commands, component_default, draft_commands, identity_commands,
 };
 use super::super::*;
 use super::support::*;
@@ -491,5 +491,100 @@ fn navigation_asks_for_the_tilemap_it_navigates() {
     assert!(
         usable(components, &with_map, ProjectDefaults::default())
             .contains(&GRID_NAVIGATION_COMPONENT.to_owned())
+    );
+}
+
+/// Renaming a grid takes every occupant that names it with it.
+///
+/// A stable ID is a reference, not a label: `sindri.grid.occupant` names the
+/// grid it stands on by one. Renaming a grid without rewriting its occupants
+/// would leave every piece pointing at an entity that no longer exists — the
+/// scene would still open, and nothing would be on the board.
+#[test]
+fn renaming_a_grid_repoints_the_pieces_standing_on_it() {
+    use sindri_core::{CommandHistory, EntityData, SceneEntityId, World};
+
+    let mut world = World::default();
+    let grid = world.spawn(EntityData {
+        source_id: Some(SceneEntityId::new("game-object-1").unwrap()),
+        ..EntityData::default()
+    });
+    let piece = world.spawn(EntityData {
+        source_id: Some(SceneEntityId::new("orb-1").unwrap()),
+        components: BTreeMap::from([(
+            GRID_OCCUPANT_COMPONENT.to_owned(),
+            serde_json::json!({ "grid": "game-object-1", "footprint": [[0, 0]] }),
+        )]),
+        ..EntityData::default()
+    });
+
+    let buffer = identity_commands(&world, grid, "floor").expect("a free ID");
+    let mut history = CommandHistory::default();
+    history
+        .apply(buffer.into_transaction("Change stable ID"), &mut world)
+        .unwrap();
+
+    assert_eq!(
+        world
+            .get(grid)
+            .unwrap()
+            .source_id
+            .as_ref()
+            .unwrap()
+            .as_str(),
+        "floor"
+    );
+    assert_eq!(
+        world.get(piece).unwrap().components[GRID_OCCUPANT_COMPONENT]["grid"],
+        "floor",
+        "the piece has to follow the board it stands on"
+    );
+    // Fields the editor has never heard of ride along, because the stored
+    // payload is what gets written back rather than a decoded component.
+    assert_eq!(
+        world.get(piece).unwrap().components[GRID_OCCUPANT_COMPONENT]["footprint"],
+        serde_json::json!([[0, 0]])
+    );
+
+    history.undo(&mut world).unwrap();
+    assert_eq!(
+        world.get(piece).unwrap().components[GRID_OCCUPANT_COMPONENT]["grid"],
+        "game-object-1",
+        "and one undo puts both back"
+    );
+}
+
+/// An ID the scene cannot use produces no commands, and says which fault it is.
+///
+/// Refused here rather than by the command layer because the inspector's draft
+/// is committed every frame: a command refused once would be refused again on
+/// the next frame, and the console would fill with the same line.
+#[test]
+fn an_unusable_stable_id_is_refused_before_it_is_written() {
+    use sindri_core::{EntityData, SceneEntityId, World};
+
+    let mut world = World::default();
+    let first = world.spawn(EntityData {
+        source_id: Some(SceneEntityId::new("player").unwrap()),
+        ..EntityData::default()
+    });
+    let second = world.spawn(EntityData {
+        source_id: Some(SceneEntityId::new("floor").unwrap()),
+        ..EntityData::default()
+    });
+
+    assert_eq!(
+        identity_commands(&world, second, "player").err(),
+        Some(IdentityRefusal::Taken)
+    );
+    assert_eq!(
+        identity_commands(&world, second, "   ").err(),
+        Some(IdentityRefusal::Empty)
+    );
+    assert!(
+        identity_commands(&world, first, "player")
+            .expect("its own ID is not a collision")
+            .is_empty(),
+        "and asking for the ID it already has is nothing to do"
     );
 }

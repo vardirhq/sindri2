@@ -9,8 +9,8 @@ use std::collections::BTreeMap;
 
 use serde_json::Value;
 use sindri_core::{
-    CommandBuffer, ComponentMetadata, ComponentSchemaRegistry, EntityData, EntityId, Transform3D,
-    WorldCommand,
+    CommandBuffer, ComponentMetadata, ComponentSchemaRegistry, EntityData, EntityId, SceneEntityId,
+    Transform3D, World, WorldCommand,
 };
 
 use crate::{
@@ -32,6 +32,14 @@ use super::super::{
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct EntityDraft {
     pub(crate) name: String,
+    /// The identity the scene file keys this entity under.
+    ///
+    /// Separate from the name, and not a cosmetic difference: this is what a
+    /// parent link names, what sibling order is derived from, and what
+    /// `sindri.grid.occupant` points at. It was invisible, so the editor made
+    /// `game-object-1` and a shipped scene's `player`, `floor` and `orb-1`
+    /// could not be reproduced.
+    pub(crate) source_id: String,
     pub(crate) transform_3d: Option<Transform3D>,
 }
 
@@ -39,6 +47,11 @@ impl From<&EntityData> for EntityDraft {
     fn from(data: &EntityData) -> Self {
         Self {
             name: entity_name(data),
+            source_id: data
+                .source_id
+                .as_ref()
+                .map(|id| id.as_str().to_owned())
+                .unwrap_or_default(),
             transform_3d: data.transform_3d,
         }
     }
@@ -264,6 +277,90 @@ fn completed<'a>(
         payload.insert(key.to_owned(), value);
     }
     Some(Value::Object(payload))
+}
+
+/// Why a stable ID cannot be used.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum IdentityRefusal {
+    Empty,
+    Taken,
+}
+
+impl IdentityRefusal {
+    pub(crate) const fn reason(self) -> &'static str {
+        match self {
+            Self::Empty => "Every entity needs a stable ID: it is what the file keys this one by",
+            Self::Taken => "Another entity already has this ID, and two cannot share one",
+        }
+    }
+}
+
+/// The commands that give an entity a new stable ID, keeping the scene
+/// pointing at it.
+///
+/// A stable ID is a reference, not a label. `sindri.grid.occupant` names the
+/// grid it stands on by one, so renaming a grid without rewriting its occupants
+/// would leave every piece pointing at an entity that no longer exists — the
+/// scene would still open, and nothing would be on the board. One buffer, so
+/// the rename and the re-pointing are one undo step.
+///
+/// `Ok` with an empty buffer means there was nothing to change.
+pub(crate) fn identity_commands(
+    world: &World,
+    entity: EntityId,
+    wanted: &str,
+) -> Result<CommandBuffer, IdentityRefusal> {
+    let mut buffer = CommandBuffer::new();
+    let wanted = wanted.trim();
+    let Some(data) = world.get(entity) else {
+        return Ok(buffer);
+    };
+    let current = data.source_id.as_ref().map(SceneEntityId::as_str);
+    if current == Some(wanted) {
+        return Ok(buffer);
+    }
+    let Ok(id) = SceneEntityId::new(wanted) else {
+        return Err(IdentityRefusal::Empty);
+    };
+    if world
+        .entities()
+        .any(|(other, data)| other != entity && data.source_id.as_ref() == Some(&id))
+    {
+        return Err(IdentityRefusal::Taken);
+    }
+    buffer.push(WorldCommand::SetSourceId {
+        entity,
+        source_id: Some(id.clone()),
+    });
+    for (occupant, payload) in occupants_of(world, current) {
+        let mut payload = payload;
+        payload["grid"] = Value::from(id.as_str());
+        buffer.push(WorldCommand::SetComponent {
+            entity: occupant,
+            type_name: GRID_OCCUPANT_COMPONENT.to_owned(),
+            payload,
+        });
+    }
+    Ok(buffer)
+}
+
+/// Every occupant whose grid is the entity being renamed.
+///
+/// Read from the stored payload rather than the decoded component, because the
+/// payload is what gets written back: an occupant carrying a field the editor
+/// has never heard of keeps it through the rename.
+fn occupants_of(world: &World, grid: Option<&str>) -> Vec<(EntityId, Value)> {
+    let Some(grid) = grid else {
+        return Vec::new();
+    };
+    world
+        .entities()
+        .filter_map(|(entity, data)| {
+            let payload = data.components.get(GRID_OCCUPANT_COMPONENT)?;
+            (payload.get("grid").and_then(Value::as_str) == Some(grid))
+                .then(|| (entity, payload.clone()))
+        })
+        .collect()
 }
 
 pub(crate) fn draft_commands(

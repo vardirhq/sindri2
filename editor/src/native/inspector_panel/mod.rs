@@ -13,6 +13,7 @@ pub(super) mod draft;
 pub(super) mod field;
 pub(super) mod header;
 pub(super) mod rows;
+mod scene;
 pub(super) mod section;
 
 use std::{collections::BTreeMap, path::Path};
@@ -23,11 +24,15 @@ use sindri_core::{CommandBuffer, ComponentSchemaRegistry, EntityId, SpriteRef, W
 
 use self::draft::{
     EntityDraft, Offer, ProjectDefaults, SceneHolds, addable_components, component_commands,
-    component_default, draft_commands,
+    component_default, draft_commands, identity_commands,
 };
 use self::field::FieldAssets;
-use self::header::{ParentChoice, inspector_identity, inspector_parent, transform_3d_section};
+use self::header::{
+    Identity, IdentityEdit, ParentChoice, inspector_identity, inspector_parent,
+    transform_3d_section,
+};
 use self::rows::add_component_button;
+use self::scene::{SceneSummary, scene_section};
 use self::section::components_sections;
 use self::section::grid::grid_choices;
 use sindri_scene::PROCEDURAL_TEXTURES;
@@ -183,6 +188,86 @@ impl EditorApp {
         }
     }
 
+    /// The scene itself, shown where an entity's inspector would be.
+    ///
+    /// The name is held across frames and written once the edit is finished,
+    /// for the reason the stable ID beside an entity is: a name committed every
+    /// keystroke is one undo step per letter.
+    fn scene_section(&mut self, ui: &mut egui::Ui) {
+        let mut name = self
+            .scene_name_edit
+            .clone()
+            .unwrap_or_else(|| self.world.metadata().name.clone().unwrap_or_default());
+        let file = self.file.path().map(|path| path.display().to_string());
+        let finished = scene_section(
+            ui,
+            SceneSummary {
+                name: &mut name,
+                file: file.as_deref(),
+                entities: self.world.len(),
+            },
+        );
+        if finished {
+            self.scene_name_edit = None;
+            self.rename_scene(&name);
+        } else {
+            self.scene_name_edit = Some(name);
+        }
+    }
+
+    /// Renames the scene, through the history like every other edit.
+    ///
+    /// A blank name is a request to have none rather than to be called nothing,
+    /// which is what a scene that was never named already has.
+    fn rename_scene(&mut self, name: &str) {
+        let name = name.trim();
+        let wanted = (!name.is_empty()).then(|| name.to_owned());
+        if self.world.metadata().name == wanted {
+            return;
+        }
+        let mut buffer = CommandBuffer::new();
+        buffer.push(WorldCommand::SetSceneName { name: wanted });
+        self.history.break_merge_run();
+        if let Err(error) = self
+            .history
+            .apply(buffer.into_transaction("Rename scene"), &mut self.world)
+        {
+            self.report(error.to_string());
+        }
+    }
+
+    /// Holds the ID being typed, and writes it once the edit is finished.
+    fn settle_identity(&mut self, entity: EntityId, text: String, edit: IdentityEdit) {
+        if edit.finished {
+            self.id_edit = None;
+            self.commit_identity(entity, &text);
+        } else if edit.changed {
+            self.id_edit = Some((entity, text));
+        }
+    }
+
+    /// Writes a changed stable ID, and whatever pointed at the old one.
+    ///
+    /// Its own transaction rather than part of the entity draft: a rename here
+    /// rewrites other entities' components, which is a discrete act and not
+    /// something to merge into a transform drag. A value the scene cannot use
+    /// produces no commands at all — the field says why instead.
+    fn commit_identity(&mut self, entity: EntityId, wanted: &str) {
+        let Ok(buffer) = identity_commands(&self.world, entity, wanted) else {
+            return;
+        };
+        if buffer.is_empty() {
+            return;
+        }
+        self.history.break_merge_run();
+        if let Err(error) = self
+            .history
+            .apply(buffer.into_transaction("Change stable ID"), &mut self.world)
+        {
+            self.report(error.to_string());
+        }
+    }
+
     /// Turns every changed component payload into a command.
     ///
     /// Each is checked against its own schema first. A payload is written back
@@ -311,13 +396,12 @@ impl EditorApp {
                 }
                 // An empty inspector used to be a blank rectangle, which is
                 // indistinguishable from a panel that has stopped working.
+                // With nothing in focus, the thing in focus is the scene. The
+                // panel used to spend this space on a shrug, and the scene's
+                // own name — a real field that round-trips through a save —
+                // was shown nowhere at all.
                 let Some(entity) = self.selection else {
-                    panel::empty_state(
-                        ui,
-                        icons::INSPECTOR,
-                        "Nothing selected",
-                        "Pick an entity in the hierarchy, or an image in the project, to edit it here.",
-                    );
+                    self.scene_section(ui);
                     return;
                 };
                 if self.world.get(entity).is_none() {
@@ -359,6 +443,16 @@ impl EditorApp {
         let authoring = self.authoring_enabled();
         let context = self.panel_context(&components);
         let addable = self.addable_components(&components, context.defaults());
+        // The text the ID field is showing: whatever is being typed if this
+        // entity's ID is mid-edit, and what the world holds otherwise.
+        let mut identity = match &self.id_edit {
+            Some((held, text)) if *held == entity => text.clone(),
+            _ => draft.source_id.clone(),
+        };
+        // Asked before the panel draws, because the field has to show a
+        // refusal rather than the console reporting one every frame.
+        let identity_refused = identity_commands(&self.world, entity, &identity).err();
+        let mut identity_edit = IdentityEdit::default();
         {
             let scripts = &self.scripts;
             let mut tools = InspectorTools {
@@ -369,7 +463,16 @@ impl EditorApp {
                 .auto_shrink([false; 2])
                 .show(ui, |ui| {
                     ui.add_enabled_ui(authoring, |ui| {
-                        inspector_identity(ui, icon, space, &mut draft);
+                        identity_edit = inspector_identity(
+                            ui,
+                            icon,
+                            space,
+                            Identity {
+                                text: &mut identity,
+                                refused: identity_refused,
+                            },
+                            &mut draft,
+                        );
                         reparented = inspector_parent(ui, entity, parent, &choices);
                         if let Some(transform) = &mut draft.transform_3d {
                             transform_3d_section(ui, transform);
@@ -392,6 +495,7 @@ impl EditorApp {
                 });
         }
         self.commit_draft(entity, &original, &draft);
+        self.settle_identity(entity, identity, identity_edit);
         self.commit_components(entity, &original_components, &components);
         if let Some(type_name) = removed {
             self.remove_component(entity, &type_name);

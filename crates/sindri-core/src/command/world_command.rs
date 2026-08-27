@@ -2,7 +2,7 @@
 
 use serde_json::Value;
 
-use crate::{EntityData, EntityId, Transform3D, World, WorldError};
+use crate::{EntityData, EntityId, SceneEntityId, Transform3D, World, WorldError};
 
 /// A deferred mutation of a world.
 ///
@@ -21,6 +21,27 @@ use crate::{EntityData, EntityId, Transform3D, World, WorldError};
 pub enum WorldCommand {
     SetName {
         entity: EntityId,
+        name: Option<String>,
+    },
+    /// Changes the stable identity a scene stores this entity under.
+    ///
+    /// Distinct from [`Self::SetName`], which is a label. A stable ID is what
+    /// the file keys an entity by, what a parent link names, what sibling order
+    /// is derived from, and what a component like `sindri.grid.occupant`
+    /// points at — so two entities sharing one is not a cosmetic collision, and
+    /// this refuses rather than allowing it.
+    SetSourceId {
+        entity: EntityId,
+        source_id: Option<SceneEntityId>,
+    },
+    /// Renames the scene itself.
+    ///
+    /// The one command here that is not about an entity. It goes through the
+    /// command layer anyway, for the reason every other edit does: an editor
+    /// tracks whether a document is unsaved by watching the history, so a
+    /// change made outside it is a change the editor does not know it has and
+    /// would let someone close the window on.
+    SetSceneName {
         name: Option<String>,
     },
     SetTransform3D {
@@ -73,10 +94,14 @@ pub enum WorldCommand {
 }
 
 impl WorldCommand {
-    /// The entity this command writes to.
-    pub const fn entity(&self) -> EntityId {
+    /// The entity this command writes to, if it is about one.
+    ///
+    /// `None` for a command that edits the scene rather than something in it.
+    pub const fn entity(&self) -> Option<EntityId> {
         match self {
+            Self::SetSceneName { .. } => None,
             Self::SetName { entity, .. }
+            | Self::SetSourceId { entity, .. }
             | Self::SetTransform3D { entity, .. }
             | Self::SetParent { entity, .. }
             | Self::SetComponent { entity, .. }
@@ -84,7 +109,7 @@ impl WorldCommand {
             | Self::Spawn { entity, .. }
             | Self::Despawn { entity }
             // The root of the subtree, which is the entity a label would name.
-            | Self::Restore { root: entity, .. } => *entity,
+            | Self::Restore { root: entity, .. } => Some(*entity),
         }
     }
 
@@ -101,6 +126,8 @@ impl WorldCommand {
                     name: previous,
                 })
             }
+            Self::SetSourceId { entity, source_id } => set_source_id(world, entity, source_id),
+            Self::SetSceneName { name } => Ok(set_scene_name(world, name)),
             Self::SetTransform3D { entity, transform } => {
                 let data = world
                     .get_mut(entity)
@@ -203,4 +230,39 @@ impl WorldCommand {
             }
         }
     }
+}
+
+/// Gives an entity a new stable identity, refusing one another already holds.
+///
+/// Checked before the write, like every other refusal in `apply`: a rejected
+/// command must leave the world exactly as it found it, which is what makes a
+/// transaction all-or-nothing.
+fn set_source_id(
+    world: &mut World,
+    entity: EntityId,
+    source_id: Option<SceneEntityId>,
+) -> Result<WorldCommand, WorldError> {
+    if let Some(wanted) = &source_id
+        && world
+            .entities()
+            .any(|(other, data)| other != entity && data.source_id.as_ref() == Some(wanted))
+    {
+        return Err(WorldError::DuplicateSourceId(wanted.clone()));
+    }
+    let data = world
+        .get_mut(entity)
+        .ok_or(WorldError::InvalidEntity(entity))?;
+    let previous = std::mem::replace(&mut data.source_id, source_id);
+    Ok(WorldCommand::SetSourceId {
+        entity,
+        source_id: previous,
+    })
+}
+
+/// Renames the scene, returning the command that names it back.
+fn set_scene_name(world: &mut World, name: Option<String>) -> WorldCommand {
+    let mut metadata = world.metadata().clone();
+    let previous = std::mem::replace(&mut metadata.name, name);
+    world.set_metadata(metadata);
+    WorldCommand::SetSceneName { name: previous }
 }

@@ -115,6 +115,10 @@ impl EditorApp {
             self.gizmo_drag = None;
             self.tilemap_tool.reset();
             self.animation_tool.reset();
+            // A half-typed stable ID belongs to the entity it was being typed
+            // for. Carried over, it would appear in the next entity's field
+            // and be written to it on the way out.
+            self.id_edit = None;
             self.selection = entity;
         }
     }
