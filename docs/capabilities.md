@@ -536,6 +536,13 @@ frame.
 - A Project dock listing the real contents of the directory the open scene
   lives in, with a list/grid toggle, a search that filters it, a refresh, and a
   double click on a scene row to open it
+- **A preview for every kind of asset the browser lists.** An image opens the
+  slicer, a text file is read in a monospace column, a clip plays on demand, and
+  a font draws a sample in the face itself. The last two are what a filename
+  cannot answer: which of four `.wav` files is the pickup, and which of four
+  typefaces suits a score. The clip plays through the editor's own audio device
+  rather than the scene's, so auditioning one needs no running world and cannot
+  leave a voice behind in it
 - A Console dock holding what the editor has actually said — every failure, what
   each scene turned out to be when it opened, and every texture it names that
   nothing has bound — bounded, with a repeated message collapsed into a count so
@@ -621,9 +628,10 @@ settings gear.
   to one of them, marks both its own selection and the open scene, copies an
   asset's path, and makes, renames, copies, imports and deletes files. Every
   text file it lists opens in the inspector, read-only — a `.decay` script, a
-  scene, a sheet, a README — and a script can be made from a row's menu. What it
-  still cannot preview is the two kinds that are not text: an audio clip cannot
-  be heard, and a font is picked by filename
+  scene, a sheet, a README — and a script can be made from a row's menu. The two
+  kinds that are not text have a preview of their own: a `.wav`, `.ogg` or
+  `.mp3` plays on demand through the editor's own audio device, and a `.ttf` or
+  `.otf` draws a sample in the face itself
 - No multi-select. Viewport selection covers world sprites, filled tilemap
   cells, meshes and UI images; UI text is selected from the hierarchy, because
   what a string covers is decided by glyph layout inside the text renderer and a

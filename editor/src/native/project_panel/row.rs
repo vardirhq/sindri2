@@ -196,6 +196,8 @@ pub(crate) fn asset_row(
             AssetKind::Texture => "Click to slice this image into sprites",
             AssetKind::Folder => "Double-click to look inside this folder",
             AssetKind::Script | AssetKind::Sheet => "Click to read this file",
+            AssetKind::Audio => "Click to hear this clip",
+            AssetKind::Font => "Click to see this typeface",
             _ => entry.kind.label(),
         }),
         renamed: row.renamed,

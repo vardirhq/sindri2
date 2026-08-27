@@ -9,6 +9,9 @@
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod animation;
+/// Hearing a clip without a running scene.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod audition;
 /// Scene-view geometry for authored camera frustums.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod camera_visualization;
@@ -57,6 +60,9 @@ pub mod textures;
 /// Painting a tilemap from a sliced image through undoable component edits.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod tilemap;
+/// Seeing a font before naming it in a component.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod typeface;
 /// The editor's design system: its tokens, its icons, and its controls.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ui;

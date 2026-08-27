@@ -386,19 +386,32 @@ impl EditorApp {
             .show(ui, |ui| {
                 let slicing = self.slicer.is_some();
                 let reading = self.preview.is_some();
+                let hearing = self.heard.is_some();
+                let showing_font = self.shown_font.is_some();
                 panel::header(ui, icons::INSPECTOR, "Inspector", |ui| {
                     if slicing {
                         toolbar::chip(ui, "Slicing", color::FORGE);
-                    } else if reading {
-                        toolbar::chip(ui, "Read-only", color::TEXT_FAINT);
+                    } else if reading || hearing || showing_font {
+                        toolbar::chip(ui, "Preview", color::TEXT_FAINT);
                     }
                 });
+                if !showing_font {
+                    self.typeface.forget();
+                }
                 if slicing {
                     self.slicer_panel(ui);
                     return;
                 }
                 if reading {
                     self.preview_panel(ui);
+                    return;
+                }
+                if hearing {
+                    self.audition_panel(ui);
+                    return;
+                }
+                if showing_font {
+                    self.typeface_panel(ui);
                     return;
                 }
                 // An empty inspector used to be a blank rectangle, which is

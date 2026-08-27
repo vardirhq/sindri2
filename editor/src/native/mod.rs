@@ -16,7 +16,9 @@ use sindri_scene::{
     SceneExtractor, SpriteAnimations, SpriteComponent, UiImageComponent, UiTextComponent,
 };
 
+use crate::audition::Audition;
 use crate::preview::TextPreview;
+use crate::typeface::Typeface;
 use crate::{
     animation::AnimationTool,
     console::Console,
@@ -150,6 +152,12 @@ struct EditorApp {
     /// "a file the inspector is showing instead of an entity", but what the
     /// panel does with them has nothing in common.
     preview: Option<TextPreview>,
+    /// The clip the inspector is offering to play, and the device that plays it.
+    heard: Option<PathBuf>,
+    audition: Audition,
+    /// The font the inspector is showing a sample of.
+    shown_font: Option<PathBuf>,
+    typeface: Typeface,
     /// The asset being renamed in the project browser, and the name so far.
     asset_rename: Option<(PathBuf, String)>,
     /// Which panel the keys that act on "the selection" mean.
@@ -295,6 +303,10 @@ impl EditorApp {
             id_edit: None,
             scene_name_edit: None,
             preview: None,
+            heard: None,
+            audition: Audition::default(),
+            shown_font: None,
+            typeface: Typeface::default(),
             asset_rename: None,
             focus: Focus::Hierarchy,
             deleting: None,

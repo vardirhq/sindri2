@@ -165,16 +165,16 @@ world underneath them is temporary.
 
 **Missing basics.** Four separate gaps, three of which you named.
 
-**Three and three-quarters of the four fixed.** Folders fold, the folder pane navigates,
+**All four fixed.** Folders fold, the folder pane navigates,
 and the browser has a selection of its own — marked with the band a selected row wears,
 while the open scene keeps a quieter rule in the margin, because "the scene I
 have open" and "the thing I am pointing at" are different facts. Every row
 answers a click now, including the ones the editor can do nothing else with,
 because a row that cannot be selected cannot carry a right-click menu either.
-The fourth gap is mostly closed: the file operations are done — make a folder,
-make a script, rename, copy, import, delete — and every text file the browser
-lists can be read in the inspector. What is left is a preview for the two kinds
-that are not text: hearing an audio clip, and seeing a font.
+The fourth gap is closed: the file operations are done — make a folder, make a
+script, rename, copy, import, delete — and every kind the browser lists now has
+something the inspector can show about it. A text file is read, an image slices,
+a clip plays, and a font draws a sample.
 
 **Folders do not open or close.** `ProjectTree` produces one flat, sorted, fully
 expanded list with a `depth` per row (`editor/src/project/mod.rs`). There is no
@@ -212,12 +212,29 @@ audio, meshes and everything else were inert:
   `.toml`. And **New script here** writes one that compiles and does nothing,
   because a file that reports an error before anyone has typed a line of it is a
   worse start than an empty one.
-- **Audio has no preview.** You cannot hear a clip before naming it in a
-  component. Still open: it needs playback on demand rather than through a
-  running scene.
-- **Fonts have no preview.** You pick a font by filename. Still open: it needs
-  the project's font loaded into the editor's own text stack to draw a sample,
-  and reading a `.ttf` as text says nothing.
+- ~~**Audio has no preview.**~~ **Fixed.** Selecting a `.wav`, `.ogg` or
+  `.mp3` offers Play and Stop, and the clip is played by the editor rather than
+  by the scene: the panel owns its own `AudioBackend`, opened on the first clip
+  rather than at startup, so auditioning a sound needs no running world and
+  cannot leave a voice in the one someone then presses Play on
+  (`editor/src/audition.rs`). A container nothing decodes is not offered a play
+  button, because a control that cannot do what it says is worse than no
+  control. A device that will not open says so in the console rather than
+  failing quietly.
+- ~~**Fonts have no preview.**~~ **Fixed.** Selecting a `.ttf` or `.otf` draws
+  a sample in the face itself, at two sizes, over letters, digits and the
+  punctuation a HUD actually uses rather than a pangram — what someone is
+  deciding is whether this face suits a score, and "0 1 2 3" is the half of
+  that a pangram leaves out. The sample is drawn by egui rather than by the
+  engine's text renderer, because asking the scene's renderer for a picture of
+  a string to put in a dock would be a second text pipeline for one label. The
+  interesting part is how the font gets in: `Context::set_fonts` *replaces*
+  every definition the context holds and takes effect a frame later, so
+  installing a project font that way silently unbinds the icon families the
+  whole editor draws with and panics on the next frame. `Context::add_font`
+  inserts instead, which is what the icon font itself uses
+  (`editor/src/typeface.rs`). A `.ttf` that is not a font says so, rather than
+  drawing the sample in the editor's own face and looking fine.
 
 ~~And there are no file operations of any kind: no create, no folder, no rename,
 no delete, no duplicate, no reveal-in-file-manager, no import.~~ **Fixed**, bar
@@ -246,8 +263,8 @@ Delete and F2 act on whichever selection was made last, so the browser's menu
 can print its keys honestly — the editor holds two selections, and until now
 those keys always meant the entity.
 
-What is still open in this section is opening and previewing what the browser
-lists.
+What is still open in this section is reveal-in-file-manager, and editing a
+script rather than reading one.
 
 ## 5. The hierarchy is missing most of its verbs
 
@@ -525,10 +542,9 @@ The ordering is by what unblocks the most authoring, not by effort.
 
 7. ~~**File operations in the project browser**, so a project can be built
    without a file manager beside the window, and a way to look at what it
-   lists.~~ Done. Every text file the browser lists opens in the inspector, and
-   a script can be made there. What is left in §4 is a preview for the two kinds
-   that are not text: an audio clip needs playback on demand, and a font needs
-   loading into the editor's own text stack to draw a sample.
+   lists.~~ Done, and §4 is closed with it. Every kind the browser lists has a
+   preview now: a text file is read, an image slices, a clip plays through the
+   editor's own audio device, and a font draws a sample in the face itself.
 
 ## What this audit does not cover
 

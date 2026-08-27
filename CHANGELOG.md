@@ -21,6 +21,19 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **A clip can be heard and a font can be seen before either is named in a
+  component.** They were the last two kinds the project browser could list and
+  do nothing with, and both are decisions a filename cannot answer: which of
+  four `.wav` files is the pickup, and which of four typefaces suits a score.
+  Selecting an audio file offers Play and Stop, played by the editor's own
+  audio device rather than by the scene — opened on the first clip rather than
+  at startup, so it argues with nothing until asked, and a preview cannot leave
+  a voice running in the world someone then presses Play on. Selecting a `.ttf`
+  or `.otf` draws a sample in the face itself, at two sizes, over the letters,
+  digits and punctuation a HUD actually uses rather than a pangram. A container
+  nothing decodes is offered no play button and a `.ttf` that is not a font
+  says so, because a preview whose whole job is to reveal what a filename hides
+  should not hide it too.
 - **A text file the browser lists can be read in the editor, and a script can be
   made there.** The project browser listed the language's own source files and
   could do nothing with any of them, in an engine whose headline capability is
