@@ -596,9 +596,11 @@ Listed because a control that looks like a feature is worse than an absent one.
 under use and what the editor cannot express at all.
 `docs/editor-authoring-audit.md` is the second sweep, which asks the harder
 question: whether the controls that do work add up to a tool the companion game
-could be built in. They do not yet, and it lists what stops it. This is the summary, and
-it is deliberately short now: everything the audit found is either working or
-gone, and what is left here is waiting on a build rather than on a handler.
+could be built in. They now do — every finding it made is fixed except the six
+right-click surfaces it tabulates, which are places to put actions that already
+exist rather than gaps in what the editor can express. This is the summary, and
+it is deliberately short: everything the audits found is either working or gone,
+and what is left here is waiting on a build rather than on a handler.
 
 - **Play and Pause** — they run sprite animation and Decay scripts. No other gameplay
   is stepped, so the demo's own turning cube does not turn

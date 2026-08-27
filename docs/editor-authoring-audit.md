@@ -6,10 +6,13 @@ Can Gather be built in the editor, as of `4dd70b4`?
 and a fifth — the complete absence of right-click menus — is why several of the
 others have nowhere to be fixed.
 
-**Fixing has started.** §1, §2 and §3 are done, and each keeps its finding here
-because how it hid is the useful part. What is left is §4 onwards. This audit is the second of its kind; `docs/editor-audit.md` asked whether
-the controls did anything, and this one asks whether the controls that work add
-up to a tool you could author a game in.
+**Fixed, and the answer is now yes.** Every finding below is done except the
+right-click surfaces §6 tabulates, which are additions rather than gaps: six
+panels where a menu is expected and there is not one yet. Each finding keeps its
+text here because how it hid is the useful part. This audit is the second of its
+kind; `docs/editor-audit.md` asked whether the controls did anything, and this
+one asks whether the controls that work add up to a tool you could author a game
+in.
 
 The test is deliberately concrete. Gather is the companion game, its scene is in
 the repository, and every capability the engine claims is exercised by it. So
@@ -457,10 +460,12 @@ its Z orders it within the overlay rather than placing it.
 **Missing basics.** There is no place in the editor that is about the scene
 rather than about an entity in it.
 
-**The two that blocked starting a project are fixed.** A scene can be made and a
-scene can be forked, so the editor no longer requires a project someone else
-started. What is left in this section is a *surface* — a place that is about the
-scene — which the remaining four items all want and none of them has.
+**Fixed.** A scene can be made and a scene can be forked, so the editor no
+longer requires a project someone else started, and the four facts that had
+nowhere to live — the scene's name, an entity's stable ID, the snapping
+increments, and what the panel shows with nothing selected — each found one. The
+fifth item, a preferences surface, is deliberately still absent; the bullet says
+why.
 
 - ~~**No New Scene.**~~ **Fixed.** File → New scene…, or Ctrl+N. It asks where
   the scene goes, writes it, and opens it through the ordinary path, so a new
@@ -603,9 +608,9 @@ The ordering is by what unblocks the most authoring, not by effort.
    *selection* is, and the second gave the editor somewhere to record an order
    that the scene format deliberately does not.
 5. ~~**New Scene and Save As**, so the editor can start a project rather than
-   only continue one.~~ Done. What is left in §8 is a surface that is about the
-   scene rather than about an entity in it: the scene's name, an entity's stable
-   ID, the snapping increments, and everything else the editor remembers.
+   only continue one.~~ Done, and §8 is closed with it: the scene's name, an
+   entity's stable ID and the snapping increments each found a surface, and the
+   inspector shows the scene itself when nothing is selected.
 6. ~~**Pick UI elements in the viewport**, and either draw their gizmo where the
    element is or do not draw one.~~ Done, UI text included: the glyph metrics
    the editor did not have are now asked of the renderer that owns them, from
@@ -619,6 +624,12 @@ The ordering is by what unblocks the most authoring, not by effort.
    lists.~~ Done, and §4 is closed with it. Every kind the browser lists has a
    preview now: a text file is read, an image slices, a clip plays through the
    editor's own audio device, and a font draws a sample in the face itself.
+
+Everything on that list is done, and so is everything §9 found. What is left in
+the whole audit is the six right-click surfaces §6 tabulates — empty space in
+either listing panel, a component heading, a property row, the Scene view, and a
+console line — which are places to put actions that already exist rather than
+gaps in what the editor can express.
 
 ## What this audit does not cover
 
