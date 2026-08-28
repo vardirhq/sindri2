@@ -376,7 +376,10 @@ frame.
   `sindri.toml`, so the browser is rooted at the whole project and headed with
   the project's own name — Gather rather than `assets`. A launch honours the
   command line first, the last project when the user asked for that, and the
-  welcome window otherwise. `docs/project-format.md` is the contract
+  welcome window otherwise. **Set as main scene** on a scene row nominates what
+  the project opens on, and a scene made in a project that nominates nothing
+  claims the empty place rather than leaving the project opening on nothing.
+  `docs/project-format.md` is the contract
 - Opens a scene from a command-line argument or **File → Open scene**, saves it
   back canonically, reloads from disk, and discards changes — including a scene
   carrying components it has never heard of, which it keeps through a save and

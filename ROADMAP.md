@@ -341,8 +341,9 @@ the engine would be authoring things nothing can run.
   more than one scene at a time does not exist
 - [ ] Import assets from a watched directory, decoding and registering them without a rebuild
 - [ ] Surface project settings, whatever `sindri.toml` turns out to hold — partly done: the file
-  exists and carries a format version, the project's name, and the scene it opens; nothing in it can
-  be edited from the editor, and the runtime does not read it
+  exists and carries a format version, the project's name, and the scene it opens, which the project
+  browser can now nominate; the name cannot be edited from the editor, and the runtime does not read
+  the file at all
 - [x] Show editor, script, render, and asset failures in the console; broader
   structured engine logging can grow behind the same surface
 - [ ] Search and filter that reaches both the hierarchy and the project browser

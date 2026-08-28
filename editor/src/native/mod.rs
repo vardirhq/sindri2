@@ -46,6 +46,7 @@ mod inspector_panel;
 mod overlay;
 mod pointer;
 mod preview_view;
+mod project_open;
 mod project_panel;
 mod runtime;
 mod scene_io;
@@ -297,6 +298,12 @@ struct EditorApp {
     open_project_root: Option<PathBuf>,
     /// What the open project calls itself, for the browser's header.
     project_name: Option<String>,
+    /// The scene the open project opens on, as its manifest last said.
+    ///
+    /// Kept beside the name because the browser reads both every frame it
+    /// draws, and a manifest read per frame is a file read at the rate a
+    /// viewport redraws. The editor is the only thing that changes it.
+    project_main_scene: Option<PathBuf>,
 }
 
 impl EditorApp {
@@ -399,6 +406,7 @@ impl EditorApp {
             window_shown: false,
             open_project_root: None,
             project_name: None,
+            project_main_scene: None,
         };
         // Said after the field is built rather than during it, because what
         // there is to say is read off the world and the bindings.

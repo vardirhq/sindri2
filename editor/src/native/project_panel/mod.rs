@@ -63,6 +63,41 @@ pub(super) enum BrowserAction {
     CommitRename(PathBuf),
     /// A rename typed into a row was abandoned.
     CancelRename,
+    /// Nominate a scene as the one its project opens on.
+    SetMainScene(PathBuf),
+}
+
+/// The two scenes a row cannot recognise on its own.
+///
+/// A row knows what file it is. Whether that file is the scene being edited,
+/// and whether it is the one its project opens on, are facts about the editor
+/// rather than about the directory — and both change what the row says and what
+/// its menu offers. Together rather than as two more arguments, because they
+/// are the same kind of thing and every caller has both or neither.
+#[derive(Clone, Copy, Default)]
+pub(crate) struct SceneRoles<'a> {
+    /// The scene the editor has open.
+    pub(crate) open: Option<&'a Path>,
+    /// The scene the open project opens on.
+    pub(crate) main: Option<&'a Path>,
+    /// Whether a project is open at all.
+    ///
+    /// Separate from `main`, because a project that nominates nothing yet is
+    /// exactly the case where nominating one matters most: gating on `main`
+    /// alone would offer it everywhere except where it is needed.
+    pub(crate) in_project: bool,
+}
+
+impl SceneRoles<'_> {
+    /// Whether a path is the scene being edited.
+    pub(crate) fn is_open(&self, path: &Path) -> bool {
+        self.open == Some(path)
+    }
+
+    /// Whether a path is the scene its project opens on.
+    pub(crate) fn is_main(&self, path: &Path) -> bool {
+        self.main == Some(path)
+    }
 }
 
 /// The icon a kind of file is drawn with.
@@ -96,11 +131,11 @@ fn project_browser(
     browser: &mut BrowserState,
     folders: bool,
     project: &ProjectTree,
-    open: Option<&Path>,
+    scenes: SceneRoles<'_>,
     renaming: &mut Option<(PathBuf, String)>,
 ) -> BrowserAction {
     if !folders {
-        return asset_column(ui, search, view, browser, false, project, open, renaming);
+        return asset_column(ui, search, view, browser, false, project, scenes, renaming);
     }
     let mut action = BrowserAction::None;
     ui.horizontal(|ui| {
@@ -130,7 +165,7 @@ fn project_browser(
             crate::ui::theme::hairline(),
         );
         ui.vertical(|ui| {
-            let listed = asset_column(ui, search, view, browser, true, project, open, renaming);
+            let listed = asset_column(ui, search, view, browser, true, project, scenes, renaming);
             if listed != BrowserAction::None {
                 action = listed;
             }
@@ -233,7 +268,7 @@ fn asset_column(
     browser: &mut BrowserState,
     folders: bool,
     project: &ProjectTree,
-    open: Option<&Path>,
+    scenes: SceneRoles<'_>,
     renaming: &mut Option<(PathBuf, String)>,
 ) -> BrowserAction {
     ui.add_space(4.0);
@@ -268,7 +303,7 @@ fn asset_column(
                     ui.add_space(2.0);
                     ui.horizontal_wrapped(|ui| {
                         for (entry, _) in &rows {
-                            if let Some(chosen) = asset_tile(ui, entry, browser, open) {
+                            if let Some(chosen) = asset_tile(ui, entry, browser, scenes) {
                                 action = chosen;
                             }
                         }
@@ -287,7 +322,7 @@ fn asset_column(
                             .filter(|(path, _)| path == &entry.path)
                             .map(|(_, name)| name);
                         if let Some(chosen) =
-                            listing_row(ui, entry, *depth, searching, open, browser, editing)
+                            listing_row(ui, entry, *depth, searching, scenes, browser, editing)
                         {
                             action = chosen;
                         }
@@ -306,14 +341,13 @@ fn asset_tile(
     ui: &mut egui::Ui,
     entry: &crate::project::ProjectEntry,
     browser: &BrowserState,
-    open: Option<&Path>,
+    scenes: SceneRoles<'_>,
 ) -> Option<BrowserAction> {
     let tile = crate::ui::widgets::asset::tile(
         ui,
         asset_icon(entry.kind),
         &entry.name,
-        browser.selected.as_deref() == Some(entry.path.as_path())
-            || open.is_some_and(|path| path == entry.path),
+        browser.selected.as_deref() == Some(entry.path.as_path()) || scenes.is_open(&entry.path),
         None,
     );
     let tile = tile.on_hover_text(match entry.kind {
@@ -323,7 +357,7 @@ fn asset_tile(
     });
     // The same menu the list view offers: which presentation the browser is in
     // is a matter of how files are drawn, not of what can be done with one.
-    let asked = row_menu(&tile, entry);
+    let asked = row_menu(&tile, entry, scenes);
     if tile.double_clicked() {
         return match entry.kind {
             AssetKind::Scene => Some(BrowserAction::Open(entry.path.clone())),
@@ -446,7 +480,11 @@ impl EditorApp {
                             &mut self.browser,
                             folders,
                             &self.project,
-                            self.file.path(),
+                            SceneRoles {
+                                open: self.file.path(),
+                                main: self.project_main_scene.as_deref(),
+                                in_project: self.open_project_root.is_some(),
+                            },
                             &mut self.asset_rename,
                         );
                     }
@@ -505,6 +543,7 @@ impl EditorApp {
             BrowserAction::Duplicate(path) => self.duplicate_asset(&path),
             BrowserAction::ConfirmDelete(path) => self.deleting = Some(path),
             BrowserAction::Import(into) => self.import_assets(&into),
+            BrowserAction::SetMainScene(path) => self.set_main_scene(&path),
             BrowserAction::Copy(text) => {
                 // Said in the console rather than through `report`, which is
                 // for things that did not happen: a copy that worked is not a

@@ -32,6 +32,10 @@ Three fields, and each is read by something today.
   window lists and what the project browser's header shows.
 - `main_scene` is the scene opening the project opens, relative to the root and
   written with forward slashes so a checkout on another platform still finds it.
+  Set from the project browser — **Set as main scene** on any scene row that is
+  not already it — and claimed automatically by a scene made in a project that
+  nominates none, which is never an overwrite: a project that already opens on
+  something has been decided about.
   Optional, because a project can legitimately have no obvious first scene, and
   a nominated scene that has been deleted opens **nothing** rather than some
   other scene that happens to be nearby — standing one in for the other reads as
@@ -165,9 +169,10 @@ Two consequences worth knowing:
 
 - One scene at a time. The roadmap's "manage more than one scene at a time" is
   untouched: a project can hold many scenes and the editor opens one of them.
-- No settings surface. `sindri.toml` holds a name and a nominated scene, and
-  neither can be edited from the editor — a project is renamed by editing the
-  file.
+- Only half a settings surface. **Set as main scene** in the project browser
+  nominates what a project opens on, and a scene made inside a project that
+  nominates nothing claims the empty place. The project's *name* still cannot
+  be changed from the editor — a project is renamed by editing the file.
 - Nothing in the engine reads `sindri.toml`. It is editor metadata today. When
   the runtime needs a project file — a window size, a starting scene for a
   build — this is the file it should read, and moving the format into a crate is
