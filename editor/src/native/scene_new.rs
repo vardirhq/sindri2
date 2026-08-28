@@ -120,6 +120,9 @@ impl EditorApp {
             return;
         }
         self.open_path(&path);
+        // After the open, so the project this scene belongs to has been worked
+        // out by the code that already knows how rather than guessed at here.
+        self.nominate_if_unclaimed(&path);
     }
 
     /// Asks where a scene should go, starting where the open one is.

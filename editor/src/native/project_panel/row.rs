@@ -5,8 +5,6 @@
 //! row is: what the editor can do with each kind of file, and what hangs
 //! underneath a folder or a sliced image.
 
-use std::path::Path;
-
 use eframe::egui::{self, Response};
 
 use crate::project::{AssetKind, ProjectEntry};
@@ -14,7 +12,7 @@ use crate::ui::widgets::asset::AssetRow;
 use crate::ui::widgets::{asset, menu};
 
 use super::state::BrowserState;
-use super::{BrowserAction, asset_icon};
+use super::{BrowserAction, SceneRoles, asset_icon};
 
 /// One row of the listing, plus whatever hangs under it.
 ///
@@ -27,12 +25,12 @@ pub(crate) fn listing_row(
     entry: &ProjectEntry,
     depth: usize,
     searching: bool,
-    open: Option<&Path>,
+    scenes: SceneRoles<'_>,
     state: &mut BrowserState,
     editing: Option<&mut String>,
 ) -> Option<BrowserAction> {
     if entry.kind == AssetKind::Folder {
-        return folder_listing_row(ui, entry, depth, searching, open, state, editing);
+        return folder_listing_row(ui, entry, depth, searching, scenes, state, editing);
     }
     // A search shows a flat list, so parts under an image would be pointing at
     // a parent the search may have removed.
@@ -43,7 +41,7 @@ pub(crate) fn listing_row(
         entry,
         depth,
         searching,
-        open,
+        scenes,
         state,
         RowEdit {
             expanded: sliced.then_some(&mut showing),
@@ -63,7 +61,7 @@ pub(crate) fn listing_row(
     if let Some(action) = renamed(&row, entry) {
         return Some(action);
     }
-    let mut asked = row_menu(&row.response, entry);
+    let mut asked = row_menu(&row.response, entry, scenes);
     if row.response.double_clicked() && entry.kind == AssetKind::Scene {
         asked = Some(BrowserAction::Open(entry.path.clone()));
     } else if row.response.clicked() {
@@ -87,7 +85,7 @@ fn folder_listing_row(
     entry: &ProjectEntry,
     depth: usize,
     searching: bool,
-    open: Option<&Path>,
+    scenes: SceneRoles<'_>,
     state: &mut BrowserState,
     editing: Option<&mut String>,
 ) -> Option<BrowserAction> {
@@ -98,7 +96,7 @@ fn folder_listing_row(
         entry,
         depth,
         searching,
-        open,
+        scenes,
         state,
         RowEdit {
             expanded: (!searching).then_some(&mut showing),
@@ -111,7 +109,7 @@ fn folder_listing_row(
     if let Some(action) = renamed(&row, entry) {
         return Some(action);
     }
-    let mut asked = row_menu(&row.response, entry);
+    let mut asked = row_menu(&row.response, entry, scenes);
     if row.response.double_clicked() {
         asked = Some(BrowserAction::LookIn(entry.path.clone()));
     } else if row.response.clicked() {
@@ -165,7 +163,7 @@ pub(crate) fn asset_row(
     entry: &ProjectEntry,
     depth: usize,
     searching: bool,
-    open: Option<&Path>,
+    scenes: SceneRoles<'_>,
     state: &BrowserState,
     edit: RowEdit<'_>,
 ) -> AssetRow {
@@ -185,13 +183,16 @@ pub(crate) fn asset_row(
             kind: entry.kind.label(),
             depth,
             selected: state.selected.as_deref() == Some(entry.path.as_path()),
-            current: open.is_some_and(|path| path == entry.path),
+            current: scenes.is_open(&entry.path),
             expanded,
             editing,
         },
     );
     AssetRow {
         response: row.response.on_hover_text(match entry.kind {
+            AssetKind::Scene if scenes.is_main(&entry.path) => {
+                "This is what the project opens. Double-click to open it now."
+            }
             AssetKind::Scene => "Double-click to open this scene",
             AssetKind::Texture => "Click to slice this image into sprites",
             AssetKind::Folder => "Double-click to look inside this folder",
@@ -211,7 +212,11 @@ pub(crate) fn asset_row(
 /// the two paths worth copying. A component that names an asset names it by
 /// the path relative to the project, which until now had to be typed from
 /// reading the row.
-pub(crate) fn row_menu(response: &Response, entry: &ProjectEntry) -> Option<BrowserAction> {
+pub(crate) fn row_menu(
+    response: &Response,
+    entry: &ProjectEntry,
+    scenes: SceneRoles<'_>,
+) -> Option<BrowserAction> {
     let mut asked = None;
     menu::on_right_click(response, |ui| {
         menu::subject(ui, &entry.name);
@@ -228,6 +233,17 @@ pub(crate) fn row_menu(response: &Response, entry: &ProjectEntry) -> Option<Brow
             && menu::item(ui, label).clicked()
         {
             asked = Some(action);
+            ui.close();
+        }
+        // Offered on a scene that is not already the one its project opens on.
+        // The scene that *is* says so on hover instead: an entry that sets what
+        // is already set is an entry that does nothing when it is pressed.
+        if entry.kind == AssetKind::Scene
+            && scenes.in_project
+            && !scenes.is_main(&entry.path)
+            && menu::item(ui, "Set as main scene").clicked()
+        {
+            asked = Some(BrowserAction::SetMainScene(entry.path.clone()));
             ui.close();
         }
         ui.separator();

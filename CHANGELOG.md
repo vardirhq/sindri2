@@ -8,6 +8,15 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **A project's main scene can be chosen.** `sindri.toml` nominates the scene a
+  project opens on, and until now that field was written once when the project
+  was created and then only editable by hand — a project whose first scene
+  turned out to be a sketch opened on the sketch for ever. **Set as main scene**
+  on any scene row in the project browser nominates it, the row that already is
+  it says so on hover rather than offering an entry that would change nothing,
+  and a scene made in a project that nominates none claims the empty place. A
+  project that already opens on something is never silently re-pointed.
+
 - **The editor opens a project, and asks which one.** A project is a directory
   holding `sindri.toml` — a format version, a name, and the scene opening it
   opens — and the welcome window is its own window, with the editor's hidden

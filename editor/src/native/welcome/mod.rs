@@ -19,13 +19,13 @@
 //! you have, the two ways to get another one, and the projects this repository
 //! ships so that a clean clone still has something to open.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex, PoisonError};
 
 use eframe::egui::{self, ViewportBuilder, ViewportId};
 
 use crate::preferences::Preferences;
-use crate::project::{Project, ProjectTree, RecentProjects, manifest};
+use crate::project::{Project, RecentProjects};
 
 use super::EditorApp;
 use super::unsaved::Discarding;
@@ -280,135 +280,18 @@ impl EditorApp {
         }
     }
 
-    /// Makes a project and opens it.
-    ///
-    /// The blank scene comes from the same place New Scene's does — the
-    /// component registry's own default payload — rather than from a second
-    /// copy of that answer living beside the project format.
-    fn create_project(&mut self, root: &Path, name: &str) {
-        let document = super::scene_new::blank_scene(&self.scene, &root.join("main.scene.json"));
-        match Project::create(root, name, &document) {
-            Ok(project) => {
-                self.console.info(format!(
-                    "Created {} in {}",
-                    project.name(),
-                    project.root().display()
-                ));
-                self.open_project(&project);
-            }
-            Err(error) => self.tell_welcome(error.to_string()),
-        }
-    }
-
-    /// Opens a project by its root.
-    pub(super) fn open_project_at(&mut self, root: &Path) {
-        match Project::open(root) {
-            Ok(project) => self.open_project(&project),
-            Err(error) => self.tell_welcome(error.to_string()),
-        }
-    }
-
-    /// Opens a project the editor has already read.
-    ///
-    /// The scene comes second and is allowed to be absent: a project whose
-    /// manifest nominates no scene, or nominates one that has been deleted, is
-    /// still a project worth opening — the browser shows its files, and the
-    /// editor says there is nothing open rather than refusing the project.
-    fn open_project(&mut self, project: &Project) {
-        self.preferences.recent_projects.remember(project);
-        self.project_name = Some(project.name().to_owned());
-        self.open_project_root = Some(project.root().to_path_buf());
-        if let Some(scene) = self.scene_for(project) {
-            self.open_path(&scene);
-        } else {
-            self.project = self.project_tree();
-            self.console.info(format!(
-                "Opened {} - no scene is nominated in {}",
-                project.name(),
-                manifest::MANIFEST_NAME
-            ));
-        }
-        // Only once the project is actually open: a failed scene load leaves
-        // the editor where it was, and hiding the window someone is working in
-        // behind a welcome screen would be the worse half of that failure.
-        self.welcome = None;
-    }
-
-    /// Which of a project's scenes opening it opens.
-    ///
-    /// The scene the editor was last left in when that scene is inside this
-    /// project, and the project's nominated scene otherwise. Reopening a
-    /// project should put someone back where they were working rather than at
-    /// its front door, and `main_scene` is what a project opens on the first
-    /// time and after working somewhere else.
-    fn scene_for(&self, project: &Project) -> Option<PathBuf> {
-        self.preferences
-            .last_scene
-            .as_ref()
-            .map(PathBuf::from)
-            .filter(|scene| scene.starts_with(project.root()) && scene.is_file())
-            .or_else(|| project.main_scene())
-    }
-
-    /// Asks for a folder and opens the project in it.
-    ///
-    /// Through the same confirmation every other way of replacing the open
-    /// scene goes through: a project is a scene and everything around it, so
-    /// opening one costs at least as much unsaved work as opening a scene.
-    pub(super) fn browse_for_project(&mut self, context: &egui::Context) {
-        let Some(root) = rfd::FileDialog::new()
-            .set_directory(self.scene_directory())
-            .pick_folder()
-        else {
-            return;
-        };
-        self.discard_or_confirm(Discarding::OpenProject(root), context);
-    }
-
     /// Says something to the welcome window if it is up, and to the editor if
     /// it is not.
     ///
     /// A creation that failed has to be reported where the person who asked for
     /// it is looking, and that is the window they typed the name into.
-    fn tell_welcome(&mut self, problem: String) {
+    pub(super) fn tell_welcome(&mut self, problem: String) {
         self.console.error(problem.clone());
         if let Some(welcome) = &self.welcome {
             state(welcome).problem = Some(problem);
         } else {
             self.report(problem);
         }
-    }
-
-    /// The browser's view of whatever is open.
-    ///
-    /// Rooted at the project when there is one, so the browser shows the whole
-    /// project rather than the folder the open scene happens to sit in, and
-    /// named by the manifest so a game called Gather is not listed as `assets`.
-    pub(super) fn project_tree(&self) -> ProjectTree {
-        match (&self.open_project_root, &self.project_name) {
-            (Some(root), Some(name)) => ProjectTree::rooted_as(root, name),
-            (Some(root), None) => ProjectTree::rooted(root),
-            _ => ProjectTree::beside(self.file.path()),
-        }
-    }
-
-    /// Follows a scene to whichever project it belongs to.
-    ///
-    /// Called whenever a scene is opened, so a scene opened from the command
-    /// line or from a file dialog opens *as* its project — walking up from the
-    /// file to the nearest `sindri.toml`. A scene in no project leaves the
-    /// editor with none, which is the state it was always in before projects
-    /// existed and is still a perfectly good way to edit one file.
-    pub(super) fn adopt_project_for(&mut self, scene: &Path) {
-        let project = manifest::root_for(scene).and_then(|root| Project::open(&root).ok());
-        let Some(project) = project else {
-            self.project_name = None;
-            self.open_project_root = None;
-            return;
-        };
-        self.preferences.recent_projects.remember(&project);
-        self.project_name = Some(project.name().to_owned());
-        self.open_project_root = Some(project.root().to_path_buf());
     }
 
     /// Reveals the editor's own window.

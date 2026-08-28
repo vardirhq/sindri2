@@ -6,9 +6,9 @@ use eframe::egui::{self, Rect, Vec2};
 
 use crate::project::{AssetKind, ProjectEntry};
 
-use super::super::project_panel::BrowserAction;
 use super::super::project_panel::row::{RowEdit, asset_row, listing_row};
 use super::super::project_panel::state::BrowserState;
+use super::super::project_panel::{BrowserAction, SceneRoles};
 
 /// Whether an asset row reports a click `offset` points into it.
 fn asset_row_click_at(kind: AssetKind, offset: Vec2) -> bool {
@@ -68,7 +68,15 @@ fn driven_listing_row(kind: AssetKind, wanted: Reported) -> Option<BrowserAction
                 },
                 |ui| {
                     let before = ui.cursor().min;
-                    let chosen = listing_row(ui, &entry, 0, false, None, &mut state, None);
+                    let chosen = listing_row(
+                        ui,
+                        &entry,
+                        0,
+                        false,
+                        SceneRoles::default(),
+                        &mut state,
+                        None,
+                    );
                     row.set(Rect::from_min_max(before, ui.cursor().min));
                     if let Some(chosen) = chosen {
                         *acted.borrow_mut() = Some(chosen);
@@ -110,7 +118,16 @@ fn driven_row(kind: AssetKind, offset: Vec2, wanted: Reported) -> bool {
         };
         context
             .run_ui(input, |ui| {
-                let response = asset_row(ui, &entry, 0, false, None, &state, listed()).response;
+                let response = asset_row(
+                    ui,
+                    &entry,
+                    0,
+                    false,
+                    SceneRoles::default(),
+                    &state,
+                    listed(),
+                )
+                .response;
                 row.set(response.rect);
                 opened.set(match wanted {
                     Reported::Clicked => response.clicked(),
@@ -242,7 +259,7 @@ fn driven_asset_rename(finish: egui::Key) -> (Option<bool>, String) {
                         &entry,
                         0,
                         false,
-                        None,
+                        SceneRoles::default(),
                         &state,
                         RowEdit {
                             expanded: None,

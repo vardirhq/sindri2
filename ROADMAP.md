@@ -341,8 +341,9 @@ the engine would be authoring things nothing can run.
   more than one scene at a time does not exist
 - [ ] Import assets from a watched directory, decoding and registering them without a rebuild
 - [ ] Surface project settings, whatever `sindri.toml` turns out to hold — partly done: the file
-  exists and carries a format version, the project's name, and the scene it opens; nothing in it can
-  be edited from the editor, and the runtime does not read it
+  exists and carries a format version, the project's name, and the scene it opens, which the project
+  browser can now nominate; the name cannot be edited from the editor, and the runtime does not read
+  the file at all
 - [x] Show editor, script, render, and asset failures in the console; broader
   structured engine logging can grow behind the same surface
 - [ ] Search and filter that reaches both the hierarchy and the project browser
@@ -409,13 +410,13 @@ would do the most good, which is roughly the order it is listed in here. What
 it found that was drawn and idle is done and has moved above; what is left is
 what the editor cannot yet do.
 
-- [ ] Edit a rotation, which the format stores, the renderer applies, and the inspector prints the word "Quaternion" for
+- [x] Edit a rotation, which the format stores, the renderer applies, and the inspector used to print the word "Quaternion" for — the transform section drags it as Euler degrees and writes the quaternion back, so a rotation authored here is the one the renderer applies and the one the file keeps
 - [x] Select world sprites, filled tilemap cells, and meshes by clicking in the Scene viewport; picking inverts the exact camera used to draw the frame, respects the renderer's local geometry, transparent layers and depth, and opaque occlusion, while an empty click clears the selection
 - [ ] Asset thumbnails, after which the grid view is worth defaulting to again
 - [ ] Show which entity a hierarchy row is, when its name is empty or repeated
 - [x] Keep a filtered hierarchy readable: matches retain their full ancestor path, temporarily opened without changing the user's stored folds
 - [x] Group a hierarchy of repeated entities with Unity-style GameObjects: every entity can own children, child-bearing rows collapse, fold state survives a restart, and the create menu adds either an empty root or a child
-- [ ] Give the console a way to clear or filter what it holds, since a transient error stays in the count long after it stops being true
+- [x] Give the console a way to clear or filter what it holds, since a transient error stays in the count long after it stops being true — Clear empties it, and the All/Problems/Errors filter is remembered across launches because someone watching for a failure is watching for a while
 
 ## The companion game — continuous, not a milestone
 
