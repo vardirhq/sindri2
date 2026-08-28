@@ -7,12 +7,7 @@ use sindri_core::{SceneDocument, UnknownComponentPolicy, World};
 use sindri_decay::ScriptComponent;
 use sindri_scene::{SceneExtractor, SpriteAnimations};
 
-use crate::{
-    project::ProjectTree,
-    scene_file::{DEFAULT_SCENE_PATH, SceneFile},
-    scripts::SceneScripts,
-    textures::SceneTextures,
-};
+use crate::{scene_file::SceneFile, scripts::SceneScripts, textures::SceneTextures};
 
 use super::EditorApp;
 use super::runtime::{PLAYING_TIP, initialized_lifecycle};
@@ -31,43 +26,21 @@ pub(super) struct SceneSource<'a> {
     pub(super) textures: &'a SceneTextures,
 }
 
-/// Opens the scene named on the command line, or the demo scene beside it.
+/// Opens the scene a launch named.
 ///
-/// A missing or unreadable file is reported rather than fatal: the editor opens
-/// on the scene compiled into it and says what went wrong, which beats a window
-/// that never appears.
-pub(super) fn open_requested_scene(remembered: Option<&str>) -> (SceneFile, Option<String>) {
-    open_scene_for(std::env::args().nth(1).as_deref(), remembered)
-}
-
-/// Opens whichever scene was asked for, in order of how deliberately.
+/// No fallback. Standing a different scene in for the one someone just named on
+/// the command line reads as though theirs opened, so a path that is missing or
+/// unreadable is reported and the editor opens on nothing — a window that says
+/// what went wrong beats one that never appears, and beats one quietly showing
+/// somebody else's scene.
 ///
-/// A path on the command line is the most deliberate thing anyone can say, so
-/// it wins. Otherwise the scene the editor was last left in, which is what
-/// makes reopening the editor continue rather than restart. Otherwise the demo
-/// scene, so a clean clone is useful.
-///
-/// A remembered scene that has moved or been deleted since is not a reason to
-/// open on nothing: that choice was made last week, the failure is not the
-/// user's doing now, and falling back to the default while saying what happened
-/// leaves them somewhere they can work. A path given on the command line gets
-/// no such fallback — standing in a different scene for the one someone just
-/// named reads as though it opened.
-pub(super) fn open_scene_for(
-    argument: Option<&str>,
-    remembered: Option<&str>,
-) -> (SceneFile, Option<String>) {
-    let path = argument.or(remembered).unwrap_or(DEFAULT_SCENE_PATH);
+/// Which scene a launch with no argument means is not this function's question
+/// any more. `project::launch` answers it, in the same order of deliberateness
+/// this used to: the command line, then the project the editor was last left
+/// in, then the welcome window.
+pub(super) fn open_named_scene(path: &str) -> (SceneFile, Option<String>) {
     match SceneFile::open(path) {
         Ok(file) => (file, None),
-        // The reported failure is the remembered scene's, not the fallback's:
-        // what went wrong is that the file someone was working in is not
-        // there, and the demo scene's absence would not be news.
-        Err(error) if argument.is_none() && remembered.is_some() => (
-            SceneFile::open(DEFAULT_SCENE_PATH)
-                .unwrap_or_else(|_| SceneFile::detached(SceneDocument::default())),
-            Some(error.to_string()),
-        ),
         Err(error) => (
             SceneFile::detached(SceneDocument::default()),
             Some(error.to_string()),
@@ -142,11 +115,18 @@ impl EditorApp {
     }
 
     /// The directory a file dialog should open in.
+    ///
+    /// Beside the open scene, or the open project when there is no scene: a
+    /// project can be opened with nothing in it yet, and a Save As that started
+    /// in the working directory would offer to put the first scene somewhere
+    /// outside the project it belongs to.
     pub(super) fn scene_directory(&self) -> PathBuf {
         self.file
             .path()
             .and_then(Path::parent)
-            .map_or_else(|| PathBuf::from("."), Path::to_path_buf)
+            .map(Path::to_path_buf)
+            .or_else(|| self.open_project_root.clone())
+            .unwrap_or_else(|| PathBuf::from("."))
     }
 
     /// Asks for a scene file and opens it.
@@ -183,7 +163,11 @@ impl EditorApp {
         match load_world(&self.scene, opened.document()) {
             Ok(world) => {
                 self.file = opened;
-                self.project = ProjectTree::beside(self.file.path());
+                // A scene carries its project with it: one opened from inside a
+                // project opens that project, and one opened outside every
+                // project leaves the editor with none.
+                self.adopt_project_for(path);
+                self.project = self.project_tree();
                 self.world = world;
                 self.history.clear();
                 self.selection.clear();
@@ -222,7 +206,7 @@ impl EditorApp {
     /// scene asks, and so does the browser's own refresh control — which is
     /// what used to be an inert filter icon.
     pub(super) fn refresh_project(&mut self) {
-        self.project = ProjectTree::beside(self.file.path());
+        self.project = self.project_tree();
         self.tilemap_tool.palette.invalidate();
         self.animation_tool.palette.invalidate();
     }

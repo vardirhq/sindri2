@@ -28,6 +28,7 @@ These documents govern the work:
 - `docs/FEASIBILITY.md` — non-negotiable architectural decisions and risks.
 - `docs/dependency-policy.md` — dependency, licence, source, and MSRV policy.
 - `docs/decay-direction.md` — accepted Editor + Decay authoring direction.
+- `docs/project-format.md` — what a project is, and what `sindri.toml` holds.
 - `docs/scripting.md` and `decay/LANGUAGE.md` — scripting contracts.
 - `docs/capabilities.md` — detailed evidence for what actually works.
 - `docs/function-matrix.md` — 30-second Engine / Editor / Script checklist.

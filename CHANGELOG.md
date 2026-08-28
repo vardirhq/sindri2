@@ -8,6 +8,30 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **The editor opens a project, and asks which one.** A project is a directory
+  holding `sindri.toml` — a format version, a name, and the scene opening it
+  opens — and the welcome window is its own window, with the editor's hidden
+  behind it until a project is chosen. It lists the projects you have opened,
+  marks one that has moved or been deleted as missing rather than dropping it
+  silently, and offers the two ways to get another: **New project**, which
+  writes a manifest, a scene with a camera in it, and the folders assets resolve
+  from; and **Open project**, which takes a folder that already is one. Gather
+  ships with a manifest and is offered as a sample when the editor is run from a
+  checkout. `docs/project-format.md` is the contract.
+
+  A scene carries its project with it: one opened from the command line, a file
+  dialog, or a browser row walks up to the nearest `sindri.toml`, so the project
+  browser roots at the whole project and is headed with the project's own name —
+  Gather rather than `assets`. A scene in no project still opens, which is what
+  the editor did before projects existed.
+
+  A launch honours the command line first, then the last project when the
+  welcome window's footer was ticked to skip it, then the window. Reopening a
+  project reopens the scene you were last in inside it, rather than its front
+  door. `sindri-editor` with no argument now opens the welcome window rather
+  than the demo scene compiled into the repository, which is also why
+  `scripts/capture-editor.sh` names that scene explicitly.
+
 - Decay has loops: `while`, with `break` and `continue`, bounded by a new
   operation budget so that a script which does not stop cannot take the editor
   with it. One call may run 1,000,000 instructions by default before

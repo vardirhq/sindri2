@@ -335,9 +335,14 @@ the engine would be authoring things nothing can run.
 
 ### Working on a project
 
-- [ ] Open a project rather than a single scene, and manage more than one scene at a time
+- [ ] Open a project rather than a single scene, and manage more than one scene at a time — partly
+  done: a project is a directory holding `sindri.toml`, the welcome window lists, makes and opens
+  one, a scene opened from anywhere adopts the project it is inside, and the browser roots at it;
+  more than one scene at a time does not exist
 - [ ] Import assets from a watched directory, decoding and registering them without a rebuild
-- [ ] Surface project settings, whatever `sindri.toml` turns out to hold
+- [ ] Surface project settings, whatever `sindri.toml` turns out to hold — partly done: the file
+  exists and carries a format version, the project's name, and the scene it opens; nothing in it can
+  be edited from the editor, and the runtime does not read it
 - [x] Show editor, script, render, and asset failures in the console; broader
   structured engine logging can grow behind the same surface
 - [ ] Search and filter that reaches both the hierarchy and the project browser
@@ -393,6 +398,7 @@ Done:
 - [x] Widen the viewport's zoom and pitch limits, make the zoom proportional, stop the orbit reaching the pole, and add **Focus selection**
 - [x] Stop reporting a script that is still loading as a compile error — asset loading is asynchronous, so every cold open logged one error per scripted entity for the moment between the scene landing and its scripts arriving, and the console keeps what it is told; opening the companion game showed twelve errors against a game that was working
 - [x] Let `scripts/capture-editor.sh` photograph a named scene rather than only the fixture, which is what taking the editor to the game needed
+- [x] A welcome window, in a window of its own: the projects you have, the ones that have gone missing, a New Project that makes a manifest and a scene rather than a save dialog, and the shipped Gather project — replacing a launch that opened the demo scene compiled into the repository whatever you were actually working on
 
 Wanted, in no particular order. Several of these are small enough to do the
 moment they annoy someone, and are also named in Milestone 11 as part of the

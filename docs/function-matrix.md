@@ -52,7 +52,7 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | 2D collision | ✅ | ❌ | ❌ |
 | 3D physics | ❌ | ❌ | ❌ |
 | 3D collision | ❌ | ❌ | ❌ |
-| Project management | 🟡 | ❌ | — |
+| Project management | 🟡 | 🟡 | — |
 | Game export | 🟡 | ❌ | — |
 
 A checkmark means the function is implemented and exercised on that surface,

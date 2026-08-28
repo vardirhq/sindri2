@@ -6,6 +6,11 @@
 //! shared here is the shape and not the buttons: a modal of one width, an icon
 //! in the colour of the consequence, a title, and the question wrapped under
 //! it. The caller adds whatever answering it means.
+//!
+//! `form` is the same modal without the consequence. Making a project is not a
+//! warning and must not be dressed as one — the danger icon is what tells
+//! somebody at a glance that a modal is about to cost them something, and a
+//! modal that wears it to ask for a name is what makes it stop meaning that.
 
 use eframe::egui::{self, RichText};
 
@@ -55,6 +60,33 @@ pub fn ask<R>(
             );
             ui.add_space(14.0);
             ui.horizontal(answers).inner
+        })
+        .inner
+}
+
+/// A modal that asks for something rather than about something.
+///
+/// The same width and the same ground as `ask`, so a form and a warning are
+/// recognisably the same window; a plain title and no icon, so they are not
+/// recognisably the same *kind* of window. Everything inside it, including the
+/// buttons that finish it, belongs to the caller.
+pub fn form<R>(
+    context: &egui::Context,
+    id: &str,
+    title: &str,
+    contents: impl FnOnce(&mut egui::Ui) -> R,
+) -> R {
+    egui::Modal::new(egui::Id::new(id))
+        .show(context, |ui| {
+            ui.set_width(DIALOG_WIDTH);
+            ui.label(
+                RichText::new(title)
+                    .strong()
+                    .size(text::TITLE)
+                    .color(color::TEXT),
+            );
+            ui.add_space(10.0);
+            contents(ui)
         })
         .inner
 }

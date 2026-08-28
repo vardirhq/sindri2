@@ -28,7 +28,7 @@ const TRANSPORT_WIDTH: f32 = 214.0;
 /// The bundled Inter subset has no geometric glyph that would do, and the
 /// documentation site's brandmark is a rotated square — three lines of painter
 /// rather than an image asset the editor would have to load.
-fn brandmark(ui: &mut egui::Ui) {
+pub(super) fn brandmark(ui: &mut egui::Ui) {
     let (rect, _) = ui.allocate_exact_size(Vec2::splat(16.0), Sense::hover());
     let centre = rect.center();
     let arm = 6.5;
@@ -206,10 +206,31 @@ impl EditorApp {
         let authoring = self.authoring_enabled();
         let playing_tip = PLAYING_TIP;
         bar_menu(ui, "File", |ui| {
-            // First, because a scene file has to exist before the editor can do
-            // anything with it, and until this entry there was no way to make
-            // one: the editor could only continue a project someone else had
-            // started.
+            // The project entries come first because a project is what the
+            // scene entries under them are inside of. None of the three costs
+            // unsaved work by itself: two open a window that asks, and opening
+            // a project goes through the same confirmation opening a scene
+            // does.
+            if ui.button("New project…").clicked() {
+                self.open_welcome_creating();
+                ui.close();
+            }
+            if ui.button("Open project…").clicked() {
+                self.browse_for_project(ui.ctx());
+                ui.close();
+            }
+            if ui
+                .button("Welcome…")
+                .on_hover_text("The projects you have, and the ways to get another")
+                .clicked()
+            {
+                self.open_welcome();
+                ui.close();
+            }
+            ui.separator();
+            // A scene file has to exist before the editor can do anything with
+            // it, and until this entry there was no way to make one: the editor
+            // could only continue a project someone else had started.
             if ui
                 .add_enabled(
                     authoring,
