@@ -410,8 +410,9 @@ frame.
   and nothing could change. A step of zero means that one does not round
 - **A console that can be read.** Filtered by level — everything, problems, or
   only what did not happen — and remembered across launches, because someone
-  watching for a failure wants it filtered for as long as they are watching. An
-  entry about an entity ends in that entity's name and selecting it goes there:
+  watching for a failure wants it filtered for as long as they are watching.
+  Clear empties it, so a transient failure stops being counted once it has
+  stopped being true. An entry about an entity ends in that entity's name and selecting it goes there:
   a script failure used to print the runtime's own handle, which is not
   something anyone can look for in a hierarchy
 - Inspector edits of name and the complete transform: position, Euler-degree
