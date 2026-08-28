@@ -19,8 +19,32 @@ All notable changes to Sindri Next will be documented here.
   itself, is now a compile error naming both fields. It used to compile and fail
   at runtime with a path name.
 
+### Fixed
+
+- **A UI element could not be given the script that drives it.** `space::accepts`
+  read the two families as symmetric, so a UI entity accepted `sindri.ui.*` and
+  nothing else: selecting Gather's banner — a UI image driven by a script — and
+  pressing Add Component offered one entry, UI Text. The banner could be opened
+  and not rebuilt. Only the four components that *place* something are exclusive
+  to a space, which `declared_space` already knew and `accepts` was not asking;
+  the test that existed only checked a UI entity refuses a sprite, so a rule
+  stated in two directions was tested in one.
+
 ### Added
 
+- **Add Component is grouped.** Thirteen entries is a list you read rather than
+  a menu you use, and it only grows. They sit under Rendering, UI, Physics, Grid
+  and Behaviour now, from an authored table rather than from splitting the type
+  name on its dots — the namespace is a naming scheme, not a taxonomy, and
+  splitting it gives two one-entry submenus and five components with no family
+  at all. A family holding a single offer is listed at the top level instead,
+  because hiding a lone entry behind a heading is a click that buys nothing.
+  That table also says which glyph each component draws with, so the two facts
+  cannot drift: they already had, and audio sources, rigid bodies and colliders
+  were all drawing with the generic entity box. A test asserts every registered
+  component has a row, so the next one added to the engine fails the build
+  rather than quietly arriving unfamilied — and audio stopped sharing the play
+  glyph with sprite animation while the two were side by side in it.
 - **An entity can be switched off without being deleted.** It was the last of
   the audit's smaller findings and it was an engine gap, not an editor one:
   nothing in the scene format said an entity could be inactive, so the editor

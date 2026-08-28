@@ -123,6 +123,19 @@ picker offers what the project holds, the container picker offers what the
 source declares, and `@export` properties are drawn as typed fields. All of it
 is unreachable, because there is no way to get the component onto an entity.
 
+**And the same bug had a second half nobody looked for.** Making Script
+addable fixed the *world* direction — adding a script no longer decided an
+entity was a world object — but `space::accepts` stayed symmetric, so a UI
+entity accepted `sindri.ui.*` and nothing else. Confirmed in the running editor
+long after §2 was marked done: select Gather's banner, a UI image driven by a
+script, press Add Component, and the entire menu is one entry, UI Text. The
+banner could be opened and not rebuilt, which is the test this audit is
+measured by. Only the four components that *place* something are exclusive, and
+`declared_space` already knew it — `WORLD_COMPONENTS` is that list, and
+`accepts` was not asking it. The lesson is the one this document keeps
+learning: a rule stated in two directions needs a test in both, and the one
+that existed only asserted a UI entity refuses a sprite.
+
 Related: `ScriptComponent.enabled` exists and is never shown, for the reason in
 §1. There is no way to disable a script without deleting it.
 
@@ -527,6 +540,18 @@ why.
   entities are the cameras. The error handling was good; the offer should not
   have been made. Camera is listed and disabled on a scene that already has one,
   saying so on hover.
+- ~~**Add Component is one flat list.**~~ **Fixed.** Thirteen entries is a list
+  you read rather than a menu you use, and it only grows. They are grouped now
+  — Rendering, UI, Physics, Grid, Behaviour — by an authored table rather than
+  by splitting the type name on its dots: the namespace is a naming scheme, not
+  a taxonomy, and splitting it yields two one-entry submenus and five
+  components with no family at all. A family holding one offer is listed at the
+  top level instead, because hiding a lone entry behind a heading is a click
+  that buys nothing. The table also says which glyph each component draws with,
+  so the two facts cannot drift apart — they already had, and audio, rigid
+  bodies and colliders were drawing with the generic entity box. A test asserts
+  every registered type has a row, so the next component added to the engine
+  fails the build rather than arriving unfamilied.
 - ~~**Add Component says nothing about what it is not offering.**~~ **Fixed.**
   Every type the entity's space accepts is listed now, and one that cannot be
   added yet is disabled with the reason — "No font in the project beside this

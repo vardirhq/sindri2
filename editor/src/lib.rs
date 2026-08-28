@@ -15,6 +15,9 @@ pub mod audition;
 /// Scene-view geometry for authored camera frustums.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod camera_visualization;
+/// What the editor knows about a component type that the registry does not.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod components;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod console;
 #[cfg(not(target_arch = "wasm32"))]

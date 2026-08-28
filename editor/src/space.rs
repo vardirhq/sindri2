@@ -133,7 +133,13 @@ pub fn space_of_data(data: &EntityData) -> EntitySpace {
 pub fn accepts(space: Option<EntitySpace>, type_name: &str) -> bool {
     match space {
         None => true,
-        Some(EntitySpace::Ui) => is_ui_component(type_name),
+        // Only the components that *place* something are exclusive, and the
+        // rule has to read the same way in both directions. It did not: a UI
+        // entity accepted `sindri.ui.*` and nothing else, so selecting Gather's
+        // banner — a UI image driven by a script — and pressing Add Component
+        // offered exactly one entry, UI Text. The banner could be opened and
+        // not rebuilt, which is the whole test this editor is measured by.
+        Some(EntitySpace::Ui) => !is_world_component(type_name),
         Some(EntitySpace::World) => !is_ui_component(type_name),
     }
 }
@@ -220,6 +226,27 @@ mod tests {
         assert!(accepts(Some(EntitySpace::World), "sindri.sprite"));
         assert!(!accepts(Some(EntitySpace::Ui), "sindri.sprite"));
         assert!(accepts(Some(EntitySpace::Ui), "sindri.ui.text"));
+    }
+
+    /// Only what places something is exclusive, in *both* directions. The rule
+    /// was symmetric — a UI entity accepted `sindri.ui.*` and nothing else — so
+    /// a UI image could never be given the script that drives it, and Gather's
+    /// banner was an entity the editor could open and not rebuild.
+    #[test]
+    fn a_ui_entity_still_takes_what_says_nothing_about_space() {
+        for neutral in [
+            "sindri.script",
+            "sindri.audio.source",
+            "sindri.animation.sprite",
+            "sindri.grid.occupant",
+            "sindri.physics2d.rigid_body",
+        ] {
+            assert!(
+                accepts(Some(EntitySpace::Ui), neutral),
+                "{neutral} says nothing about which space its entity is in"
+            );
+            assert!(accepts(Some(EntitySpace::World), neutral));
+        }
     }
 
     /// A node that holds nothing but HUD elements belongs with the HUD, which
