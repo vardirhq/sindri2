@@ -159,8 +159,9 @@ not accept editor input yet.
 ## Defaults, and what is remembered
 
 Settings survive a launch through eframe's storage: the project browser's
-presentation, the viewport projection, and which bottom dock is open, alongside
-the window geometry and panel sizes egui persists itself. Anything derived from
+presentation and how much of the project it lists, the viewport projection, and
+which bottom dock is open, alongside the window geometry and panel sizes egui
+persists itself. Anything derived from
 the scene, the selection, or the current camera is state rather than preference,
 and restoring it would be restoring a moment rather than a choice.
 
@@ -175,6 +176,13 @@ Two of them are worth writing down:
   per file type rather than a picture of the asset, so until a thumbnail is a
   thumbnail the grid spends more space to say less. This flips back when there
   is something to look at.
+- **The project browser opens on the assets.** A project holds more than what a
+  scene can name — Gather keeps a Cargo manifest, a `src/`, a `tests/`, and a
+  web page beside its `assets/` — and none of that is something an inspector
+  field can point at. The listing starts at the directory asset references
+  resolve against, and the rest of the project is a switch in the browser's
+  toolbar rather than hidden: deciding what someone's project contains is not
+  the browser's to decide, but neither is burying the textures in it.
 - **The workspace layout stays viewport-first**, as `design-qa.md` chose. A
   layout that quarters the viewport to fit a second view is a different product
   decision, not a preference, and it belongs behind a named layout rather than
@@ -248,7 +256,9 @@ cube example, both named by the demo scene. Every other reference in every other
 magenta missing checker. Nothing had failed to load, because nothing had been asked to load.
 
 A scene's texture references say what it needs, and the directory the scene lives in is where they
-resolve, so opening a project's scene shows that project's art. References that name a file go
+resolve — the *scene's* directory, which is not the project root whenever a project keeps its scene
+under `assets/`; `docs/project-format.md` has why that distinction is worth writing down twice. So
+opening a project's scene shows that project's art. References that name a file go
 through `sindri-assets` — a `FileSystemAssetSource` rooted at the scene's directory, feeding the
 bounded queue, decoded and uploaded when they arrive. References the engine generates are bound
 before any of that starts, and the two cannot be confused because a procedural reference is not a

@@ -95,7 +95,13 @@ struct PanelContext {
     animation_texture: Option<String>,
     animation_sprites: Vec<String>,
     grids: Vec<(String, String)>,
-    root: Option<std::path::PathBuf>,
+    /// The directory a reference out of the scene resolves against.
+    ///
+    /// Not the project root, which is the folder above it whenever a project
+    /// keeps its scene under `assets/`: the palettes join a scene's texture
+    /// reference onto this to read the file, and joining it onto the root
+    /// reads nothing.
+    assets_root: Option<std::path::PathBuf>,
     registry: ComponentSchemaRegistry,
 }
 
@@ -131,7 +137,8 @@ impl PanelContext {
 /// project asset would otherwise add another parameter to one signature.
 pub(super) struct InspectorProject<'a> {
     scripts: &'a SceneScripts,
-    root: Option<&'a Path>,
+    /// The directory a reference out of the scene resolves against.
+    assets_root: Option<&'a Path>,
     /// What the project holds, for the fields that name one of its files.
     assets: FieldAssets<'a>,
     animation_texture: Option<&'a str>,
@@ -369,7 +376,7 @@ impl EditorApp {
                 .unwrap_or_default(),
             animation_texture,
             grids: grid_choices(&self.world),
-            root: self.project.root().map(Path::to_path_buf),
+            assets_root: self.project.assets_root().map(Path::to_path_buf),
             registry: self.scene.components().clone(),
         }
     }
@@ -518,7 +525,7 @@ impl EditorApp {
                             &context.registry,
                             &InspectorProject {
                                 scripts,
-                                root: context.root.as_deref(),
+                                assets_root: context.assets_root.as_deref(),
                                 assets: context.assets(),
                                 animation_texture: context.animation_texture.as_deref(),
                                 grids: &context.grids,

@@ -374,7 +374,12 @@ frame.
   with a manifest and is listed as a shipped sample when the editor is run from
   the repository. A scene opened from anywhere walks up to the nearest
   `sindri.toml`, so the browser is rooted at the whole project and headed with
-  the project's own name — Gather rather than `assets`. A launch honours the
+  the project's own name — Gather rather than `assets`. What it *lists* is the
+  directory asset references resolve against, which is the open scene's own:
+  a project's Cargo manifest and `src/` are part of the project and are not
+  files a component can name, and the rest of the project is a switch in the
+  browser's toolbar away, remembered between launches and drawn only where the
+  two listings differ. A launch honours the
   command line first, the last project when the user asked for that, and the
   welcome window otherwise. **Set as main scene** on a scene row nominates what
   the project opens on, and a scene made in a project that nominates nothing
@@ -448,8 +453,11 @@ frame.
   orthographic drops the vertical field of view, keeps the near and far planes,
   and gains a vertical size, which typing the word into a text box could never
   do. A field naming a project asset offers what the project holds while
-  staying typeable, a tint opens a colour picker, and a row that is only a
-  readout says on hover why it is one
+  staying typeable — spelled the way the open scene resolves it, which is not
+  the path from the project root whenever a project keeps its scene under
+  `assets/`, and a reference the loader could never reach is offered nowhere
+  rather than under a path that will not load — a tint opens a colour picker,
+  and a row that is only a readout says on hover why it is one
 - **Switching an entity off without deleting it.** Off means it takes no part
   in the scene — not drawn, not stepped, not scripted, not picked — and neither
   does anything under it, while it stays in the world and in the file. An Active
@@ -495,8 +503,8 @@ frame.
   original as a sibling, gives each copy a stable ID nothing else is using, and
   undoes in one step. A project row has a menu of its own for what the browser
   can already do — open a scene, look inside a folder, slice an image — plus the
-  asset path a component field wants, which until now had to be read off the row
-  and typed back in
+  asset path a component field wants, the one the open scene resolves against,
+  which until now had to be read off the row and typed back in
 - **Creating empty root or child GameObjects and deleting entities**, from the
   hierarchy. Creation assigns a stable scene ID immediately, and creating a
   child opens its parent. Deleting takes the whole subtree, and **undo brings
@@ -529,7 +537,8 @@ frame.
   changed, from the world as it was when Play was pressed rather than from the
   authored file, so pressing Play never costs an unsaved edit
 - **Text authoring.** A `sindri.ui.text` component gets a multiline content editor
-  and a picker listing project-relative font assets. Existing missing font
+  and a picker listing the project's font assets, spelled as the scene resolves
+  them. Existing missing font
   references remain visible and are called out instead of silently replaced
 - **Sprite-sheet and animation authoring.** Selecting a texture opens its image
   slicer for grid dimensions and cell names. A `sindri.animation.sprite`

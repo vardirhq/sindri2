@@ -54,6 +54,39 @@ All notable changes to Sindri Next will be documented here.
 
 ### Fixed
 
+- **Every asset picker offered a path that would not load.** The project browser
+  is rooted at the project, and asset references resolve against the directory
+  the open scene sits in. Those are the same folder for a project the editor
+  creates and two folders apart for one that keeps its scene under `assets/` —
+  which is the layout the companion game uses. So the inspector read Gather's
+  working `textures/orb.png` as a reference the project does not contain, marked
+  it in the warning colour, and offered `assets/textures/orb.png` in its place:
+  the correct path from the project root, and the one that makes the sprite
+  disappear. **Copy asset path** on a browser row copied the same unusable
+  string. The tree now knows both — where a file sits below the root, and how a
+  scene names it — and every picker, every "this reference is not in the
+  project" warning, and the copied path use the second. A file the loader cannot
+  reach at all, such as the game's own `src/main.rs`, is offered nowhere rather
+  than offered under a path that will not resolve.
+
+  The tile and sprite palettes had the same fault from the other end: they read
+  the image behind a reference by joining it onto the project root, so selecting
+  Gather's floor showed a missing-file message where its tiles should be, and a
+  sprite animation's preview showed one where its sheet should be. Both now join
+  onto the directory the reference actually resolves against.
+
+### Changed
+
+- **The project browser lists the assets, not the whole checkout.** Gather's
+  project holds a Cargo manifest, a `src/`, a `tests/`, and a web page beside
+  the `assets/` directory that has its scene, art, scripts, fonts, and audio in
+  it, and the browser listed all of it — so most of the rows in the panel named
+  files no component can reference. The listing now starts at the directory
+  asset references resolve against, and a switch in the browser's toolbar shows
+  the rest of the project when you want it, remembered between launches. The
+  switch appears only where the two listings differ: a project whose scene sits
+  beside its `textures/` has nothing hidden and is offered no control.
+
 - **A UI element could not be given the script that drives it.** `space::accepts`
   read the two families as symmetric, so a UI entity accepted `sindri.ui.*` and
   nothing else: selecting Gather's banner — a UI image driven by a script — and

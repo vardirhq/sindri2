@@ -47,7 +47,7 @@ pub(super) fn components_sections(
 ) -> Option<String> {
     let InspectorProject {
         scripts,
-        root: project_root,
+        assets_root,
         assets,
         animation_texture,
         grids,
@@ -97,16 +97,10 @@ pub(super) fn components_sections(
             text_section(ui, payload, assets.fonts);
         }
         if name == crate::animation::TYPE_NAME {
-            animation_section(
-                ui,
-                payload,
-                project_root,
-                animation_texture,
-                tools.animation,
-            );
+            animation_section(ui, payload, assets_root, animation_texture, tools.animation);
         }
         if name == crate::tilemap::TYPE_NAME {
-            tilemap_section(ui, payload, project_root, tools.tilemap);
+            tilemap_section(ui, payload, assets_root, tools.tilemap);
         }
         if name == GRID_NAVIGATION_COMPONENT {
             grid_navigation_section(ui, payload, grid_size);

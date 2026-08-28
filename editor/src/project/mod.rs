@@ -54,6 +54,20 @@ pub struct ProjectEntry {
     /// Where it sits below the root, which is what a filtered row shows instead
     /// of an indentation that would point at a parent the filter removed.
     pub relative: String,
+    /// How a scene names this file, or `None` when nothing can name it.
+    ///
+    /// Not the same string as [`Self::relative`], and the difference is the
+    /// whole point: a reference is resolved against the directory the asset
+    /// loader is rooted at, which is the open scene's own directory, while
+    /// `relative` is measured from the project root. Those are the same folder
+    /// for a project the editor created and are two folders apart for one that
+    /// keeps its scene under `assets/` — where `assets/textures/orb.png` is the
+    /// path from the root and `textures/orb.png` is the reference that loads.
+    ///
+    /// `None` for a directory, which nothing references, and for a file outside
+    /// the directory references resolve against — a `src/main.rs` beside the
+    /// assets is a real file that no component can name.
+    pub reference: Option<String>,
     pub kind: AssetKind,
     pub depth: usize,
     /// For a texture, the sprites its sheet names. Empty when it has no sheet,
@@ -78,6 +92,11 @@ pub struct ProjectTree {
     /// `assets`. A manifest is the only place that name exists, so a tree
     /// rooted at a project is told it.
     name: Option<String>,
+    /// The directory asset references are resolved against.
+    ///
+    /// The project root until something says otherwise, and the open scene's
+    /// own directory once [`ProjectTree::resolving_at`] has been told it.
+    assets: Option<PathBuf>,
     entries: Vec<ProjectEntry>,
     truncated: bool,
     error: Option<String>,
@@ -106,6 +125,36 @@ impl ProjectTree {
         Self::read(root, Some(name.to_owned()))
     }
 
+    /// Points the tree's asset references at the directory they resolve against.
+    ///
+    /// The one thing a directory listing cannot work out for itself. A scene
+    /// names its assets relative to its own directory — that is where
+    /// `SceneTextures::for_scene` roots the loader — and the browser is rooted
+    /// at the project, which is a different folder whenever a project keeps its
+    /// scene under `assets/`. Reading the tree from the root and offering its
+    /// root-relative paths as references is how the inspector came to mark
+    /// `textures/orb.png` as missing and to offer `assets/textures/orb.png`,
+    /// which is the spelling that does not load.
+    ///
+    /// A directory outside the tree is ignored rather than honoured: it would
+    /// leave every file in the project unreferenceable, which is a worse answer
+    /// than the root.
+    #[must_use]
+    pub fn resolving_at(mut self, assets: Option<&Path>) -> Self {
+        let Some(assets) = assets else {
+            return self;
+        };
+        if !self
+            .root
+            .as_ref()
+            .is_some_and(|root| assets.starts_with(root))
+        {
+            return self;
+        }
+        self.point_references_at(assets);
+        self
+    }
+
     fn read(root: &Path, name: Option<String>) -> Self {
         let mut tree = Self {
             root: Some(root.to_path_buf()),
@@ -120,7 +169,22 @@ impl ProjectTree {
                 .to_lowercase()
                 .cmp(&right.relative.to_lowercase())
         });
+        tree.point_references_at(root);
         tree
+    }
+
+    /// Works out how each file would be named from `assets`.
+    ///
+    /// A folder gets none: nothing references a directory, and giving one a
+    /// reference would put it in a picker as something a component could name.
+    fn point_references_at(&mut self, assets: &Path) {
+        for entry in &mut self.entries {
+            entry.reference = (entry.kind != AssetKind::Folder)
+                .then(|| entry.path.strip_prefix(assets).ok())
+                .flatten()
+                .map(|below| below.to_string_lossy().replace('\\', "/"));
+        }
+        self.assets = Some(assets.to_path_buf());
     }
 
     fn walk(&mut self, root: &Path, directory: &Path, depth: usize) -> Result<(), String> {
@@ -175,6 +239,9 @@ impl ProjectTree {
             self.entries.push(ProjectEntry {
                 name,
                 relative,
+                // Filled in once the walk is done, by the one place that knows
+                // which directory references resolve against.
+                reference: None,
                 kind,
                 depth,
                 path: path.clone(),
@@ -192,6 +259,26 @@ impl ProjectTree {
 
     pub fn root(&self) -> Option<&Path> {
         self.root.as_deref()
+    }
+
+    /// The directory asset references resolve against.
+    ///
+    /// The project root for a project the editor created, whose scene sits
+    /// beside its `textures/` and `scripts/`. A folder below it for a project
+    /// that keeps its scene under `assets/`, which is the layout the companion
+    /// game uses and the one the browser has to tell apart from the root.
+    pub fn assets_root(&self) -> Option<&Path> {
+        self.assets.as_deref()
+    }
+
+    /// Whether the project keeps anything outside the directory it loads assets
+    /// from.
+    ///
+    /// What makes listing only the assets worth offering: a project whose
+    /// scene sits at its root has nothing to hide, and a control that switches
+    /// between two identical listings is a control that does nothing.
+    pub fn keeps_more_than_assets(&self) -> bool {
+        self.assets.is_some() && self.assets != self.root
     }
 
     /// What the root is called, for a header that has one line to spend.
@@ -216,22 +303,33 @@ impl ProjectTree {
         &self.entries
     }
 
-    /// Project-relative references to every font the browser can see.
+    /// Every file of one kind, spelled the way a scene names it.
     ///
     /// A scene stores logical asset IDs rather than absolute paths, so the
     /// inspector must offer the same spelling the asset loader resolves. The
     /// browser has already done the bounded directory walk; reusing it keeps a
     /// font picker from walking the project again every frame.
-    pub fn fonts(&self) -> Vec<String> {
+    ///
+    /// A file the loader cannot reach has no reference and is left out
+    /// entirely, because offering a path that will not load is worse than
+    /// offering nothing: the field would accept it and the scene would draw the
+    /// missing checker.
+    fn referenced(&self, kind: AssetKind) -> impl Iterator<Item = &str> {
         self.entries
             .iter()
-            .filter(|entry| entry.kind == AssetKind::Font)
-            .map(|entry| entry.relative.replace('\\', "/"))
+            .filter(move |entry| entry.kind == kind)
+            .filter_map(|entry| entry.reference.as_deref())
+    }
+
+    /// References to every font the browser can see.
+    pub fn fonts(&self) -> Vec<String> {
+        self.referenced(AssetKind::Font)
+            .map(str::to_owned)
             .collect()
     }
 
-    /// Project-relative references to every texture the browser can see, and
-    /// the named sprites inside each.
+    /// References to every texture the browser can see, and the named sprites
+    /// inside each.
     ///
     /// A sliced sheet contributes one reference per sprite — `tiles.png#floor`
     /// — beside the whole image, because those are the references a component
@@ -241,51 +339,47 @@ impl ProjectTree {
         self.entries
             .iter()
             .filter(|entry| entry.kind == AssetKind::Texture)
-            .flat_map(|entry| {
-                let texture = entry.relative.replace('\\', "/");
+            .filter_map(|entry| Some((entry.reference.as_deref()?, entry)))
+            .flat_map(|(texture, entry)| {
                 let named = entry
                     .sprites
                     .iter()
                     .map(|sprite| format!("{texture}#{sprite}"))
                     .collect::<Vec<String>>();
-                std::iter::once(texture).chain(named)
+                std::iter::once(texture.to_owned()).chain(named)
             })
             .collect()
     }
 
-    /// Project-relative references to every audio clip the browser can see.
+    /// References to every audio clip the browser can see.
     pub fn audio(&self) -> Vec<String> {
-        self.entries
-            .iter()
-            .filter(|entry| entry.kind == AssetKind::Audio)
-            .map(|entry| entry.relative.replace('\\', "/"))
+        self.referenced(AssetKind::Audio)
+            .map(str::to_owned)
             .collect()
     }
 
-    /// Project-relative references to every Decay script the browser can see.
+    /// References to every Decay script the browser can see.
     ///
     /// Decay only: `.rs` and `.wgsl` are listed as scripts by the browser
     /// because they are source, but a `sindri.script` component naming one
     /// would name something nothing can run.
     pub fn scripts(&self) -> Vec<String> {
-        self.entries
-            .iter()
-            .filter(|entry| entry.kind == AssetKind::Script)
-            .map(|entry| entry.relative.replace('\\', "/"))
+        self.referenced(AssetKind::Script)
             .filter(|reference| {
                 Path::new(reference)
                     .extension()
                     .is_some_and(|extension| extension.eq_ignore_ascii_case("decay"))
             })
+            .map(str::to_owned)
             .collect()
     }
 
-    /// Named sprites belonging to one project-relative texture reference.
+    /// Named sprites belonging to one texture reference.
     pub fn sprites_for_texture(&self, texture: &str) -> Vec<String> {
         self.entries
             .iter()
             .find(|entry| {
-                entry.kind == AssetKind::Texture && entry.relative.replace('\\', "/") == texture
+                entry.kind == AssetKind::Texture && entry.reference.as_deref() == Some(texture)
             })
             .map(|entry| entry.sprites.clone())
             .unwrap_or_default()
@@ -321,11 +415,30 @@ impl ProjectTree {
             .collect()
     }
 
-    /// The directories in the tree, which is what the folder pane lists.
-    pub fn folders(&self) -> Vec<&ProjectEntry> {
+    /// The directories a listing rooted at `within` navigates, each with the
+    /// depth it is drawn at.
+    ///
+    /// Depth is measured from that listing's own root rather than from the
+    /// project's, so the folders inside an assets directory sit at the left
+    /// edge instead of one indent in under a parent the listing does not show.
+    /// `None` is the whole project, which is what the pane listed before there
+    /// was anything narrower to list.
+    pub fn folders_in(&self, within: Option<&Path>) -> Vec<(&ProjectEntry, usize)> {
+        let base = within
+            .and_then(|within| {
+                self.entries
+                    .iter()
+                    .find(|entry| entry.path == within)
+                    .map(|entry| entry.depth + 1)
+            })
+            .unwrap_or(0);
         self.entries
             .iter()
             .filter(|entry| entry.kind == AssetKind::Folder)
+            .filter(|entry| {
+                within.is_none_or(|within| entry.path.starts_with(within) && entry.path != within)
+            })
+            .map(|entry| (entry, entry.depth.saturating_sub(base)))
             .collect()
     }
 }

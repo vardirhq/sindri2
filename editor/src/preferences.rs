@@ -56,6 +56,31 @@ pub enum AssetView {
     Grid,
 }
 
+/// How much of the project the browser lists.
+///
+/// A project is not only its assets. Gather keeps a Cargo manifest, a `src/`,
+/// a `tests/`, and a web page beside the `assets/` directory its scene and art
+/// live in, and none of those is a file a component can name — listing them
+/// beside the textures makes the browser a directory listing again, which is
+/// what it exists not to be.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AssetScope {
+    /// Only the directory asset references resolve against.
+    ///
+    /// The default, because it is the only directory whose paths mean anything
+    /// in an inspector field: everything in it can be named by a scene, and
+    /// everything outside it cannot.
+    #[default]
+    Assets,
+    /// Every file in the project, including the ones the editor never loads.
+    ///
+    /// Offered rather than assumed. Hiding a project's own source from the
+    /// person editing it would be the browser deciding what their project
+    /// contains, so the rest of it is one control away and says so.
+    Project,
+}
+
 /// Which projection the scene viewport uses.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -121,6 +146,12 @@ pub enum BottomTab {
 pub struct Preferences {
     pub layout: Layout,
     pub asset_view: AssetView,
+    /// How much of the project the browser lists.
+    ///
+    /// A reading preference like the console filter rather than a state:
+    /// someone who wants to see their `src/` beside their textures wants it for
+    /// as long as they are working that way, not for one frame.
+    pub asset_scope: AssetScope,
     pub console_filter: ConsoleFilter,
     pub snapping: crate::gizmo::Snapping,
     pub projection: CameraProjection,
@@ -193,6 +224,7 @@ mod tests {
         let chosen = Preferences {
             layout: Layout::Wide,
             asset_view: AssetView::Grid,
+            asset_scope: AssetScope::Project,
             console_filter: ConsoleFilter::Errors,
             snapping: crate::gizmo::Snapping {
                 enabled: true,
@@ -260,6 +292,7 @@ mod tests {
         let chosen = Preferences {
             layout: Layout::Wide,
             asset_view: AssetView::Grid,
+            asset_scope: AssetScope::Project,
             console_filter: ConsoleFilter::Errors,
             snapping: crate::gizmo::Snapping {
                 enabled: true,

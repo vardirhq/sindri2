@@ -64,6 +64,12 @@ pub const REDO: MaterialIcon = icons::ICON_REDO;
 pub const PAUSE: MaterialIcon = icons::ICON_PAUSE;
 pub const LIST_VIEW: MaterialIcon = icons::ICON_VIEW_LIST;
 pub const GRID_VIEW: MaterialIcon = icons::ICON_GRID_VIEW;
+/// Every file in the project, not only the ones a scene can name.
+///
+/// An open folder against the closed one `FOLDER` draws, because that is the
+/// difference the control makes: the same project, with the parts the editor
+/// never loads showing.
+pub const ALL_FILES: MaterialIcon = icons::ICON_FOLDER_OPEN;
 pub const EXPANDED: MaterialIcon = icons::ICON_KEYBOARD_ARROW_DOWN;
 pub const COLLAPSED: MaterialIcon = icons::ICON_KEYBOARD_ARROW_RIGHT;
 

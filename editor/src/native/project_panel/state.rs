@@ -57,23 +57,30 @@ impl BrowserState {
         self.folder = folder.map(Path::to_path_buf);
     }
 
+    /// The directory the listing is measured from.
+    ///
+    /// The folder the browser was pointed into, and otherwise the baseline it
+    /// is showing — which is the assets directory until someone asks for the
+    /// whole project, and `None` once they have.
+    fn scope<'a>(&'a self, base: Option<&'a Path>) -> Option<&'a Path> {
+        self.folder.as_deref().or(base)
+    }
+
     /// Whether this entry is inside whatever the browser is scoped to.
-    fn in_scope(&self, entry: &ProjectEntry) -> bool {
-        self.folder
-            .as_ref()
-            .is_none_or(|folder| entry.path.starts_with(folder) && entry.path != *folder)
+    fn in_scope(&self, entry: &ProjectEntry, base: Option<&Path>) -> bool {
+        self.scope(base)
+            .is_none_or(|folder| entry.path.starts_with(folder) && entry.path != folder)
     }
 
     /// Whether a folded folder between here and the scope hides this entry.
-    fn folded_away(&self, entry: &ProjectEntry) -> bool {
+    fn folded_away(&self, entry: &ProjectEntry, base: Option<&Path>) -> bool {
         self.collapsed.iter().any(|folded| {
-            entry.path.starts_with(folded) && entry.path != *folded && self.in_folder(folded)
+            entry.path.starts_with(folded) && entry.path != *folded && self.in_folder(folded, base)
         })
     }
 
-    fn in_folder(&self, path: &Path) -> bool {
-        self.folder
-            .as_ref()
+    fn in_folder(&self, path: &Path, base: Option<&Path>) -> bool {
+        self.scope(base)
             .is_none_or(|folder| path.starts_with(folder) && path != folder)
     }
 
@@ -83,28 +90,34 @@ impl BrowserState {
     /// inside a folder starts its contents at the left edge rather than three
     /// indents in. A search is a flat list of matches, because an indentation
     /// under a parent the search removed points at nothing.
+    ///
+    /// `base` is where the listing starts when the browser has been pointed
+    /// nowhere in particular: the project's assets directory, or `None` for the
+    /// whole project. It is the panel's to decide, because it is a fact about
+    /// the project on disk rather than about what the browser is doing.
     pub(crate) fn rows<'a>(
         &self,
         entries: &[&'a ProjectEntry],
         searching: bool,
+        base: Option<&Path>,
     ) -> Vec<(&'a ProjectEntry, usize)> {
         // Measured from the scope's own row rather than from the path, so a
         // folder's contents start at the left edge however deep the folder is.
-        let base = self.folder.as_ref().and_then(|folder| {
+        let indent = self.scope(base).and_then(|folder| {
             entries
                 .iter()
-                .find(|entry| entry.path == *folder)
+                .find(|entry| entry.path == folder)
                 .map(|entry| entry.depth + 1)
         });
         entries
             .iter()
-            .filter(|entry| self.in_scope(entry))
-            .filter(|entry| searching || !self.folded_away(entry))
+            .filter(|entry| self.in_scope(entry, base))
+            .filter(|entry| searching || !self.folded_away(entry, base))
             .map(|entry| {
                 let depth = if searching {
                     0
                 } else {
-                    entry.depth.saturating_sub(base.unwrap_or(0))
+                    entry.depth.saturating_sub(indent.unwrap_or(0))
                 };
                 (*entry, depth)
             })
@@ -133,7 +146,7 @@ impl BrowserState {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
 
     use super::{BrowserState, ProjectEntry};
     use crate::project::AssetKind;
@@ -146,6 +159,7 @@ mod tests {
                 .map(|name| name.to_string_lossy().into_owned())
                 .unwrap_or_default(),
             relative: relative.to_owned(),
+            reference: (kind != AssetKind::Folder).then(|| relative.to_owned()),
             kind,
             depth: relative.matches('/').count(),
             path,
@@ -164,9 +178,18 @@ mod tests {
     }
 
     fn shown(state: &BrowserState, tree: &[ProjectEntry]) -> Vec<(String, usize)> {
+        shown_from(state, tree, None)
+    }
+
+    /// What the listing shows when it starts somewhere other than the root.
+    fn shown_from(
+        state: &BrowserState,
+        tree: &[ProjectEntry],
+        base: Option<&Path>,
+    ) -> Vec<(String, usize)> {
         let entries: Vec<&ProjectEntry> = tree.iter().collect();
         state
-            .rows(&entries, false)
+            .rows(&entries, false, base)
             .into_iter()
             .map(|(entry, depth)| (entry.relative.clone(), depth))
             .collect()
@@ -243,6 +266,53 @@ mod tests {
         );
     }
 
+    /// A project that keeps its scene under `assets/` also keeps a Cargo
+    /// manifest, a `src/`, and a web page beside it, and none of those is
+    /// something a scene can name. So the listing starts at the assets
+    /// directory, and the rest of the project is a control away rather than
+    /// two thirds of the rows.
+    #[test]
+    fn a_listing_can_start_below_the_project_root() {
+        let mut tree = tree();
+        tree.push(entry("Cargo.toml", AssetKind::Other));
+        tree.push(entry("src", AssetKind::Folder));
+        tree.push(entry("src/main.rs", AssetKind::Script));
+        let assets = PathBuf::from("/project/textures");
+        let state = BrowserState::default();
+
+        assert_eq!(
+            shown_from(&state, &tree, Some(&assets)),
+            vec![("textures/tiles.png".to_owned(), 0)],
+            "the baseline scopes the listing and starts it at the left edge"
+        );
+        assert!(
+            !state.is_scoped(),
+            "a baseline is where the browser starts, not somewhere it was pointed"
+        );
+        assert_eq!(
+            shown_from(&state, &tree, None).len(),
+            8,
+            "and asking for the whole project still shows every file in it"
+        );
+    }
+
+    /// Being pointed into a folder wins over the baseline, so a folder outside
+    /// the assets directory can still be looked inside once the whole project
+    /// is showing.
+    #[test]
+    fn looking_in_a_folder_overrides_the_baseline() {
+        let mut tree = tree();
+        tree.push(entry("src", AssetKind::Folder));
+        tree.push(entry("src/main.rs", AssetKind::Script));
+        let mut state = BrowserState::default();
+        state.look_in(Some(&PathBuf::from("/project/src")));
+
+        assert_eq!(
+            shown_from(&state, &tree, Some(&PathBuf::from("/project/textures"))),
+            vec![("src/main.rs".to_owned(), 0)]
+        );
+    }
+
     /// A search is a flat list of matches wherever they are, because an
     /// indentation under a parent the search removed points at nothing.
     #[test]
@@ -251,7 +321,7 @@ mod tests {
         let mut state = BrowserState::default();
         state.toggle_fold(&PathBuf::from("/project/scripts"));
         let entries: Vec<&ProjectEntry> = tree.iter().collect();
-        let rows = state.rows(&entries, true);
+        let rows = state.rows(&entries, true, None);
         assert_eq!(rows.len(), 5);
         assert!(rows.iter().all(|(_, depth)| *depth == 0));
     }

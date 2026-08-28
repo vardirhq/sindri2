@@ -3,22 +3,24 @@
 mod files;
 pub(super) mod row;
 pub(super) mod state;
+mod tools;
 
 use std::path::{Path, PathBuf};
 
-use eframe::egui::{self, Align, Layout, RichText};
+use eframe::egui::{self, Align, Layout};
 use egui_material_icons::MaterialIcon;
 use sindri_core::EntityId;
 
 use self::row::{folder_row, listing_row, row_menu};
 use self::state::BrowserState;
+use self::tools::{back_out, browser_tools, empty_listing};
 use crate::{
-    preferences::{AssetView, BottomTab, Layout as WorkspaceLayout},
+    preferences::{AssetScope, AssetView, BottomTab, Layout as WorkspaceLayout},
     project::{AssetKind, ProjectTree},
     ui::icons,
-    ui::theme::{color, metric, text},
+    ui::theme::{color, metric},
     ui::widgets::{
-        button, panel,
+        panel,
         tabs::{self, Weight},
     },
 };
@@ -117,6 +119,56 @@ pub(super) const fn asset_icon(kind: AssetKind) -> MaterialIcon {
     }
 }
 
+/// What the browser is listing, and how much of the project that is.
+///
+/// A project is not only its assets: Gather keeps a Cargo manifest, a `src/`,
+/// a `tests/`, and a web page beside the `assets/` directory that holds its
+/// scene, its art, and its scripts. Only the second of those contains anything
+/// a component can name — a texture field resolves `textures/orb.png` against
+/// the open scene's own directory, and there is no spelling of `src/main.rs`
+/// that a scene can use at all.
+///
+/// So the browser starts at the assets and says that the rest is there. What
+/// the listing is *rooted* at is this; what the user has since pointed it into
+/// is `BrowserState`, and that wins.
+#[derive(Clone, Copy)]
+struct Listing<'a> {
+    project: &'a ProjectTree,
+    /// Where the listing starts, or `None` for the whole project.
+    base: Option<&'a Path>,
+}
+
+impl<'a> Listing<'a> {
+    fn of(project: &'a ProjectTree, scope: AssetScope) -> Self {
+        Self {
+            project,
+            base: match scope {
+                AssetScope::Project => None,
+                // The root is not a narrowing, so it is not a base: it would
+                // hide the project's own row from the folder tree and answer
+                // "back to project" with the listing already showing.
+                AssetScope::Assets => project
+                    .keeps_more_than_assets()
+                    .then(|| project.assets_root())
+                    .flatten(),
+            },
+        }
+    }
+
+    /// What going back from a folder goes back to.
+    fn label(&self) -> String {
+        self.base.map_or_else(
+            || self.project.label(),
+            |base| {
+                base.file_name().map_or_else(
+                    || self.project.label(),
+                    |name| name.to_string_lossy().into_owned(),
+                )
+            },
+        )
+    }
+}
+
 /// The project browser, in one column or two.
 ///
 /// Two panes need width the bottom dock has and a side column does not: at
@@ -128,14 +180,17 @@ fn project_browser(
     ui: &mut egui::Ui,
     search: &mut String,
     view: &mut AssetView,
+    scope: &mut AssetScope,
     browser: &mut BrowserState,
     folders: bool,
-    project: &ProjectTree,
+    listing: Listing<'_>,
     scenes: SceneRoles<'_>,
     renaming: &mut Option<(PathBuf, String)>,
 ) -> BrowserAction {
     if !folders {
-        return asset_column(ui, search, view, browser, false, project, scenes, renaming);
+        return asset_column(
+            ui, search, view, scope, browser, false, listing, scenes, renaming,
+        );
     }
     let mut action = BrowserAction::None;
     ui.horizontal(|ui| {
@@ -145,12 +200,16 @@ fn project_browser(
             // The pane navigates: choosing a folder lists that folder. It used
             // to be labels with no sense, so it named the project's folders and
             // did nothing with any of them.
-            if folder_row(ui, &project.label(), !browser.is_scoped(), 0).clicked() {
+            //
+            // Named for the project even when the listing starts below it: the
+            // root row is where "back" goes, and "assets" is what the folder is
+            // called rather than what the person is working on.
+            if folder_row(ui, &listing.project.label(), !browser.is_scoped(), 0).clicked() {
                 action = BrowserAction::LookInProject;
             }
-            for folder in project.folders() {
+            for (folder, depth) in listing.project.folders_in(listing.base) {
                 let chosen = browser.folder.as_deref() == Some(folder.path.as_path());
-                if folder_row(ui, &folder.name, chosen, folder.depth + 1).clicked() {
+                if folder_row(ui, &folder.name, chosen, depth + 1).clicked() {
                     action = BrowserAction::LookIn(folder.path.clone());
                 }
             }
@@ -165,7 +224,9 @@ fn project_browser(
             crate::ui::theme::hairline(),
         );
         ui.vertical(|ui| {
-            let listed = asset_column(ui, search, view, browser, true, project, scenes, renaming);
+            let listed = asset_column(
+                ui, search, view, scope, browser, true, listing, scenes, renaming,
+            );
             if listed != BrowserAction::None {
                 action = listed;
             }
@@ -174,109 +235,30 @@ fn project_browser(
     action
 }
 
-/// The browser's own controls: how it presents, and what it is filtered to.
-///
-/// `label` names the directory being listed, and is `None` when the folder tree
-/// beside it already says so — the dock showed "assets" twice, once in the tree
-/// and once over the list of the same directory.
-///
-/// Two rows when there is a label, one when there is not. As a bottom dock
-/// there is width for everything side by side; as a tall column there is not,
-/// and a right-aligned row that wants more width than it has grows leftwards,
-/// which put the asset rows underneath it half outside the panel.
-fn browser_tools(
-    ui: &mut egui::Ui,
-    search: &mut String,
-    view: &mut AssetView,
-    label: Option<&str>,
-) -> BrowserAction {
-    let mut action = BrowserAction::None;
-    let stacked = label.is_some();
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 5.0;
-        ui.add_space(metric::GUTTER);
-        if let Some(label) = label {
-            ui.label(
-                icons::FOLDER
-                    .outlined()
-                    .rich_text()
-                    .size(14.0)
-                    .color(color::FORGE_DIM),
-            );
-            ui.add(
-                egui::Label::new(
-                    RichText::new(label)
-                        .size(text::LABEL)
-                        .color(color::TEXT_MUTED),
-                )
-                .selectable(false)
-                .truncate(),
-            );
-        } else {
-            // Room measured from the controls that follow rather than taken
-            // from whatever is left, so the search never asks the row for more
-            // width than the row has.
-            let room = (ui.available_width() - CONTROLS_WIDTH - metric::GUTTER).max(80.0);
-            ui.allocate_ui(egui::vec2(room, metric::CONTROL_HEIGHT + 4.0), |ui| {
-                panel::search(ui, search, "Search assets");
-            });
-        }
-        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            ui.add_space(metric::GUTTER);
-            // The directory is read when a scene is opened, so a file added
-            // outside the editor needs asking for. This slot used to hold a
-            // filter icon that did nothing.
-            if button::icon(ui, icons::REFRESH, false, "Re-read the project directory").clicked() {
-                action = BrowserAction::Refresh;
-            }
-            let mut presentation = *view;
-            if button::Segmented::new(&mut presentation)
-                .option(AssetView::List, "List", "One row per file, with its kind")
-                .option(AssetView::Grid, "Tiles", "A plate per file, for looking")
-                .show(ui)
-            {
-                *view = presentation;
-            }
-        });
-    });
-    if stacked {
-        ui.add_space(4.0);
-        ui.horizontal(|ui| {
-            ui.add_space(metric::GUTTER);
-            let room = (ui.available_width() - metric::GUTTER).max(60.0);
-            ui.allocate_ui(egui::vec2(room, metric::CONTROL_HEIGHT + 4.0), |ui| {
-                panel::search(ui, search, "Search assets");
-            });
-        });
-    }
-    action
-}
-
-/// How much room the view switch and the refresh button take together.
-///
-/// A measured constant rather than a guess: the search box beside them is
-/// allocated the rest, and getting it wrong is how a toolbar overflows its
-/// panel.
-const CONTROLS_WIDTH: f32 = 152.0;
-
 /// The asset side of the browser: what it is showing, and how.
 #[allow(clippy::too_many_arguments)]
 fn asset_column(
     ui: &mut egui::Ui,
     search: &mut String,
     view: &mut AssetView,
+    scope: &mut AssetScope,
     browser: &mut BrowserState,
     folders: bool,
-    project: &ProjectTree,
+    listing: Listing<'_>,
     scenes: SceneRoles<'_>,
     renaming: &mut Option<(PathBuf, String)>,
 ) -> BrowserAction {
+    let project = listing.project;
     ui.add_space(4.0);
     // The folder tree already names the directory; without it the list has to,
     // and when the browser is looking inside a folder it says which.
     let label = (!folders).then(|| browser.label_within(project));
-    let mut action = browser_tools(ui, search, view, label.as_deref());
-    if !folders && browser.is_scoped() && back_out(ui) {
+    // Offered only where the two listings differ, which is a fact about the
+    // project rather than a preference: a project whose scene sits beside its
+    // textures has one listing either way.
+    let switchable = project.keeps_more_than_assets().then_some(scope);
+    let mut action = browser_tools(ui, search, view, switchable, label.as_deref());
+    if !folders && browser.is_scoped() && back_out(ui, &listing.label()) {
         action = BrowserAction::LookInProject;
     }
     ui.add_space(5.0);
@@ -286,7 +268,7 @@ fn asset_column(
     }
     let searching = !search.trim().is_empty();
     let matching = project.matching(search);
-    let rows = browser.rows(&matching, searching);
+    let rows = browser.rows(&matching, searching, listing.base);
     if rows.is_empty() {
         empty_listing(ui, searching, browser.is_scoped());
         return action;
@@ -371,47 +353,6 @@ fn asset_tile(
     asked
 }
 
-/// The way back out of a folder, for the arrangement that has no folder tree.
-fn back_out(ui: &mut egui::Ui) -> bool {
-    ui.horizontal(|ui| {
-        ui.add_space(metric::GUTTER);
-        button::labelled(
-            ui,
-            "Back to project",
-            button::Intent::Quiet,
-            "List every asset again",
-        )
-        .clicked()
-    })
-    .inner
-}
-
-/// What the browser says when the listing is empty, which depends on why.
-fn empty_listing(ui: &mut egui::Ui, searching: bool, scoped: bool) {
-    if searching {
-        panel::empty_state(
-            ui,
-            icons::SEARCH,
-            "Nothing matches",
-            "No file beside this scene has that in its name.",
-        );
-    } else if scoped {
-        panel::empty_state(
-            ui,
-            icons::FOLDER,
-            "This folder is empty",
-            "Nothing is in it yet. Go back to the project to see the rest.",
-        );
-    } else {
-        panel::empty_state(
-            ui,
-            icons::PROJECT,
-            "This directory is empty",
-            "Assets placed beside the scene file show up here.",
-        );
-    }
-}
-
 impl EditorApp {
     /// The dock's tabs, and the count that says an error is waiting.
     fn dock_tabs(&mut self, ui: &mut egui::Ui) {
@@ -463,6 +404,10 @@ impl EditorApp {
         };
         // The folder tree only fits when the browser is a wide dock.
         let folders = self.preferences.layout == WorkspaceLayout::Wide;
+        // Read before the panel borrows the preferences mutably: how much of
+        // the project is listed is decided from the tree, and the switch that
+        // changes it lives inside.
+        let scope = self.preferences.asset_scope;
         panel_side
             .default_size(default)
             .min_size(min)
@@ -477,9 +422,10 @@ impl EditorApp {
                             ui,
                             &mut self.asset_search,
                             &mut self.preferences.asset_view,
+                            &mut self.preferences.asset_scope,
                             &mut self.browser,
                             folders,
-                            &self.project,
+                            Listing::of(&self.project, scope),
                             SceneRoles {
                                 open: self.file.path(),
                                 main: self.project_main_scene.as_deref(),

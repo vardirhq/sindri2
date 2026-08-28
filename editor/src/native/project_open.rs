@@ -106,12 +106,20 @@ impl EditorApp {
     /// Rooted at the project when there is one, so the browser shows the whole
     /// project rather than the folder the open scene happens to sit in, and
     /// named by the manifest so a game called Gather is not listed as `assets`.
+    ///
+    /// Told the open scene's directory as well, because rooting the tree at the
+    /// project moved it away from the directory asset references resolve
+    /// against. They are the same folder for a project the editor created and
+    /// two folders apart for one whose scene lives under `assets/` — and a tree
+    /// that does not know the difference offers `assets/textures/orb.png` to a
+    /// texture field that loads `textures/orb.png`.
     pub(super) fn project_tree(&self) -> ProjectTree {
         match (&self.open_project_root, &self.project_name) {
             (Some(root), Some(name)) => ProjectTree::rooted_as(root, name),
             (Some(root), None) => ProjectTree::rooted(root),
             _ => ProjectTree::beside(self.file.path()),
         }
+        .resolving_at(self.file.path().and_then(Path::parent))
     }
 
     /// Follows a scene to whichever project it belongs to.

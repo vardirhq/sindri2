@@ -18,7 +18,7 @@ use super::super::rows::number_row;
 pub(super) fn tilemap_section(
     ui: &mut egui::Ui,
     payload: &mut Value,
-    project_root: Option<&Path>,
+    assets_root: Option<&Path>,
     tool: &mut TilemapTool,
 ) {
     let Ok(mut map) = tilemap::component(payload) else {
@@ -55,7 +55,7 @@ pub(super) fn tilemap_section(
         },
     );
 
-    tool.palette.ensure(project_root, &map.texture);
+    tool.palette.ensure(assets_root, &map.texture);
     let texture = tool.palette.texture_id(ui.ctx());
     let mut sprites = tool.palette.sprites().to_vec();
     // A broken or changed sheet must not make a sprite already used by the map
