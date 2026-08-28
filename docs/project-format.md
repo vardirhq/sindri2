@@ -80,6 +80,43 @@ A directory that already holds a `sindri.toml` is refused rather than
 overwritten. A directory holding other files is allowed, and the form says so
 before the button is pressed.
 
+## The project root and the asset root are two directories
+
+A project is rooted at its `sindri.toml`. Asset references are not: a scene
+names its textures, scripts, fonts, and clips relative to **the directory the
+scene file itself is in**, because that is where `SceneTextures::for_scene`
+roots the loader.
+
+For a project the editor creates those are the same folder, and the distinction
+never shows. For Gather they are two folders apart:
+
+```text
+game/                       <- the project root: sindri.toml, Cargo.toml, src/
+└── assets/                 <- the asset root: where references resolve
+    ├── gather.scene.json
+    └── textures/orb.png    <- the scene names this "textures/orb.png"
+```
+
+`assets/textures/orb.png` is that file's path from the project root and is not a
+reference to it. Writing it into a texture field names a file the loader will
+look for at `game/assets/assets/textures/orb.png`, which is nothing, and the
+sprite draws the missing checker.
+
+So the browser knows both. `ProjectEntry::relative` is the path below the root,
+which is what a search result shows to tell two files of the same name apart;
+`ProjectEntry::reference` is how a scene names the file, which is what every
+picker offers, what **Copy asset path** copies, and what the inspector checks a
+typed reference against. A file outside the asset root has no reference at all —
+Gather's `src/main.rs` is a real file that no component can name — and is
+offered by nothing rather than offered under a path that will not resolve.
+
+The browser lists the asset root by default for the same reason. A project's
+Cargo manifest and its `src/` are part of the project and are not part of what
+an editor field can point at, and a panel two thirds full of rows whose paths
+mean nothing is a directory listing rather than an asset browser. The rest of
+the project is one control away in the browser's toolbar, and the choice is
+remembered; the control is drawn only where the two listings actually differ.
+
 ## Which project a launch opens
 
 In order of how deliberately it was asked for, which is the ordering
@@ -95,9 +132,9 @@ In order of how deliberately it was asked for, which is the ordering
 
 A scene carries its project with it. Opening one — from the command line, from
 a file dialog, from a browser row — walks up from the file to the nearest
-`sindri.toml`, so a scene inside a project opens *as* that project and the
-browser shows the whole project rather than the folder the scene sits in. A
-scene in no project leaves the editor with none, which is the state it was
+`sindri.toml`, so a scene inside a project opens *as* that project: the browser
+is rooted at the project and headed with its name, and lists the assets inside
+it. A scene in no project leaves the editor with none, which is the state it was
 always in before projects existed and is still a perfectly good way to edit one
 file.
 

@@ -103,11 +103,166 @@ fn a_row_knows_what_kind_of_file_it_is() {
 }
 
 #[test]
-fn fonts_are_project_relative_asset_references() {
+fn fonts_are_asset_references_the_loader_resolves() {
     let directory = project();
     let tree = ProjectTree::rooted(directory.path());
 
     assert_eq!(tree.fonts(), ["fonts/Inter.ttf"]);
+}
+
+/// A project that keeps its scene under `assets/` — which the companion game
+/// does — resolves references against that directory, not against the project
+/// root the browser is rooted at.
+///
+/// The whole reason this exists: the inspector offered `assets/textures/orb.png`
+/// and marked the `textures/orb.png` the scene actually loads as missing, so
+/// accepting the offer made the sprite disappear.
+fn nested_project() -> tempfile::TempDir {
+    let directory = tempfile::tempdir().unwrap();
+    let root = directory.path();
+    fs::write(root.join("Cargo.toml"), "").unwrap();
+    fs::write(root.join("index.html"), "").unwrap();
+    fs::create_dir(root.join("src")).unwrap();
+    fs::write(root.join("src/main.rs"), "").unwrap();
+    fs::create_dir(root.join("assets")).unwrap();
+    fs::write(root.join("assets/gather.scene.json"), "{}").unwrap();
+    fs::create_dir(root.join("assets/textures")).unwrap();
+    fs::write(root.join("assets/textures/orb.png"), "").unwrap();
+    fs::create_dir(root.join("assets/scripts")).unwrap();
+    fs::write(root.join("assets/scripts/orb.decay"), "").unwrap();
+    fs::create_dir(root.join("assets/fonts")).unwrap();
+    fs::write(root.join("assets/fonts/Inter.ttf"), "").unwrap();
+    fs::create_dir(root.join("assets/audio")).unwrap();
+    fs::write(root.join("assets/audio/background.wav"), "").unwrap();
+    directory
+}
+
+#[test]
+fn references_are_resolved_against_the_scene_rather_than_the_root() {
+    let directory = nested_project();
+    let root = directory.path();
+    let tree = ProjectTree::rooted_as(root, "Gather").resolving_at(Some(&root.join("assets")));
+
+    assert_eq!(tree.textures(), ["textures/orb.png"]);
+    assert_eq!(tree.scripts(), ["scripts/orb.decay"]);
+    assert_eq!(tree.fonts(), ["fonts/Inter.ttf"]);
+    assert_eq!(tree.audio(), ["audio/background.wav"]);
+    assert_eq!(
+        tree.assets_root(),
+        Some(root.join("assets").as_path()),
+        "and the tree says which directory those are relative to"
+    );
+    assert!(
+        tree.keeps_more_than_assets(),
+        "a project with a src/ beside its assets has more than the browser needs to list"
+    );
+}
+
+/// A file no scene can name is left out of every picker rather than offered
+/// under a path that will not load.
+#[test]
+fn what_the_loader_cannot_reach_is_not_offered() {
+    let directory = nested_project();
+    let root = directory.path();
+    let tree = ProjectTree::rooted(root).resolving_at(Some(&root.join("assets")));
+    let referenced = |name: &str| {
+        tree.entries()
+            .iter()
+            .find(|entry| entry.name == name)
+            .and_then(|entry| entry.reference.clone())
+    };
+
+    assert_eq!(referenced("orb.png"), Some("textures/orb.png".to_owned()));
+    assert_eq!(
+        referenced("main.rs"),
+        None,
+        "a source file outside the assets"
+    );
+    assert_eq!(referenced("Cargo.toml"), None);
+    assert_eq!(
+        referenced("textures"),
+        None,
+        "and nothing references a folder"
+    );
+    assert!(
+        !tree
+            .scripts()
+            .iter()
+            .any(|script| script.contains("main.rs")),
+        "the script picker offers what a scene can run, not what is on disk"
+    );
+}
+
+/// The layout the editor creates: the scene sits at the root, so a reference
+/// and a path below the root are the same string and nothing has to be told
+/// anything.
+#[test]
+fn a_flat_project_resolves_against_its_own_root() {
+    let directory = project();
+    let root = directory.path();
+    let tree = ProjectTree::rooted(root).resolving_at(Some(root));
+
+    assert_eq!(tree.assets_root(), Some(root));
+    assert!(
+        !tree.keeps_more_than_assets(),
+        "there is no second listing to offer, so the browser does not offer one"
+    );
+    assert_eq!(
+        tree.textures(),
+        ["textures/badge.png", "textures/tiles.png"]
+    );
+}
+
+/// A directory outside the tree would leave every file unreferenceable, which
+/// is a worse answer than the root the tree already had.
+#[test]
+fn an_asset_root_outside_the_project_is_ignored() {
+    let directory = project();
+    let elsewhere = tempfile::tempdir().unwrap();
+    let tree = ProjectTree::rooted(directory.path()).resolving_at(Some(elsewhere.path()));
+
+    assert_eq!(tree.assets_root(), Some(directory.path()));
+    assert_eq!(tree.fonts(), ["fonts/Inter.ttf"]);
+}
+
+/// The folder pane lists what the listing it sits beside can navigate, at the
+/// depth that listing draws it: a project's own `src/` is not a folder of
+/// assets, and `assets/textures` is one indent from the assets rather than two
+/// from the root.
+#[test]
+fn the_folder_pane_follows_the_listing_it_belongs_to() {
+    let directory = nested_project();
+    let root = directory.path();
+    let assets = root.join("assets");
+    let tree = ProjectTree::rooted(root).resolving_at(Some(&assets));
+    let listed = |within: Option<&Path>| {
+        tree.folders_in(within)
+            .into_iter()
+            .map(|(entry, depth)| (entry.name.clone(), depth))
+            .collect::<Vec<(String, usize)>>()
+    };
+
+    assert_eq!(
+        listed(Some(&assets)),
+        [
+            ("audio".to_owned(), 0),
+            ("fonts".to_owned(), 0),
+            ("scripts".to_owned(), 0),
+            ("textures".to_owned(), 0),
+        ]
+    );
+    assert_eq!(
+        listed(None),
+        [
+            ("assets".to_owned(), 0),
+            ("audio".to_owned(), 1),
+            ("fonts".to_owned(), 1),
+            ("scripts".to_owned(), 1),
+            ("textures".to_owned(), 1),
+            ("src".to_owned(), 0),
+        ],
+        "and the whole project still lists every folder in it"
+    );
 }
 
 #[test]

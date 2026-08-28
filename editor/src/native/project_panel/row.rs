@@ -210,7 +210,7 @@ pub(crate) fn asset_row(
 /// Only what the editor can actually carry out: the verb the row's double
 /// click already performs, said in words rather than left to be guessed, and
 /// the two paths worth copying. A component that names an asset names it by
-/// the path relative to the project, which until now had to be typed from
+/// the path the scene resolves against, which until now had to be typed from
 /// reading the row.
 pub(crate) fn row_menu(
     response: &Response,
@@ -272,10 +272,16 @@ pub(crate) fn row_menu(
             ui.close();
         }
         ui.separator();
-        // The path a component field wants is the one relative to the project;
-        // a folder is never named by one, so it is offered only its own.
-        if entry.kind != AssetKind::Folder && menu::item(ui, "Copy asset path").clicked() {
-            asked = Some(BrowserAction::Copy(entry.relative.clone()));
+        // The path a component field wants is the one the open scene resolves
+        // against, which is not the path from the project root whenever a
+        // project keeps its scene under `assets/`. A file with no such path —
+        // a folder, or anything the loader cannot reach — is offered only its
+        // own, because copying a reference that will not load is worse than
+        // copying nothing.
+        if let Some(reference) = &entry.reference
+            && menu::item(ui, "Copy asset path").clicked()
+        {
+            asked = Some(BrowserAction::Copy(reference.clone()));
             ui.close();
         }
         if menu::item(ui, "Copy full path").clicked() {

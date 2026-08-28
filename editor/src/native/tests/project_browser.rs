@@ -30,6 +30,7 @@ fn entry_of(kind: AssetKind) -> ProjectEntry {
         path: PathBuf::from("/project/level.scene.json"),
         name: "level.scene.json".to_owned(),
         relative: "level.scene.json".to_owned(),
+        reference: Some("level.scene.json".to_owned()),
         kind,
         depth: 0,
     }

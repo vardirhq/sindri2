@@ -53,8 +53,13 @@ impl SpritePalette {
     }
 
     /// Loads the texture and its derived sheet when either changes identity.
-    pub fn ensure(&mut self, root: Option<&Path>, texture: &str) {
-        let Some(root) = root else {
+    ///
+    /// Rooted where the *scene* is rather than where the project is, because
+    /// `texture` is a reference out of a scene and that is the directory a
+    /// reference resolves against. Joining one onto the project root finds
+    /// nothing whenever a project keeps its scene under `assets/`.
+    pub fn ensure(&mut self, assets: Option<&Path>, texture: &str) {
+        let Some(root) = assets else {
             self.invalidate();
             self.problem = Some("Save the scene before loading project sprites".to_owned());
             return;

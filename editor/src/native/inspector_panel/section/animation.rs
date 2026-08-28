@@ -26,7 +26,7 @@ use super::super::rows::{bool_row, number_row};
 pub(super) fn animation_section(
     ui: &mut egui::Ui,
     payload: &mut Value,
-    project_root: Option<&Path>,
+    assets_root: Option<&Path>,
     texture: Option<&str>,
     tool: &mut AnimationTool,
 ) {
@@ -37,7 +37,7 @@ pub(super) fn animation_section(
         );
         return;
     };
-    tool.palette.ensure(project_root, texture);
+    tool.palette.ensure(assets_root, texture);
     let sprite_names: Vec<String> = tool
         .palette
         .sprites()
@@ -111,7 +111,7 @@ pub(super) fn animation_section(
         && animation::remove_clip(payload, name).unwrap_or(false)
     {
         tool.reset();
-        tool.palette.ensure(project_root, texture);
+        tool.palette.ensure(assets_root, texture);
         authored = animation::component(payload).unwrap_or(authored);
         selected = tool.selected(&authored).map(str::to_owned);
     }
