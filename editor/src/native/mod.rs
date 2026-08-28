@@ -6,6 +6,7 @@
 //! itself, the constants they agree on, and how the window is opened.
 
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 use eframe::egui;
 use glam::Vec2 as GlamVec2;
@@ -26,7 +27,7 @@ use crate::{
     gizmo::{GizmoDrag, GizmoMode, GizmoSpace},
     input::EditorInput,
     preferences::Preferences,
-    project::ProjectTree,
+    project::{Launch, ProjectTree, launch},
     scene_file::SceneFile,
     scripts::SceneScripts,
     slicer::Slicer,
@@ -54,6 +55,7 @@ mod slicer_view;
 mod tools;
 mod unsaved;
 mod viewport;
+mod welcome;
 
 #[cfg(test)]
 mod tests;
@@ -64,7 +66,7 @@ pub use scene_io::{load_world, scene_extractor};
 
 use project_panel::state::BrowserState;
 use runtime::initialized_lifecycle;
-use scene_io::open_requested_scene;
+use scene_io::open_named_scene;
 use unsaved::Discarding;
 use viewport::{RuntimeViewport, SceneRenderers};
 
@@ -98,7 +100,17 @@ pub fn run() -> eframe::Result {
         viewport: egui::ViewportBuilder::default()
             .with_title("Sindri Editor")
             .with_inner_size([1_440.0, 1_024.0])
-            .with_min_inner_size([1_100.0, 720.0]),
+            .with_min_inner_size([1_100.0, 720.0])
+            // Hidden until there is something to show. A launch that opens the
+            // welcome window would otherwise flash an empty editor up behind
+            // it, and the first frame is where the editor learns which of the
+            // two this launch is: the preferences it decides from live in
+            // eframe's storage, which does not exist until the app is built.
+            //
+            // eframe paints a hidden window directly, ten times a second, so
+            // that a `Visible` command still reaches it. That is what makes
+            // this safe rather than a window that can never be shown again.
+            .with_visible(false),
         ..Default::default()
     };
     eframe::run_native(
@@ -266,6 +278,25 @@ struct EditorApp {
     /// viewport command per frame is sixty round trips a second to say the same
     /// thing.
     title: String,
+    /// The welcome window, while it is open.
+    ///
+    /// Behind an `Arc<Mutex<_>>` because it is drawn by a viewport callback
+    /// that egui requires to be `Send + Sync`, and read back here every frame.
+    welcome: Option<Arc<Mutex<welcome::Welcome>>>,
+    /// Whether the editor's own window has been revealed.
+    ///
+    /// It starts hidden, so this is also the answer to "is the editor what the
+    /// user is looking at" — which decides whether closing the welcome window
+    /// closes the editor or just the window.
+    window_shown: bool,
+    /// The root of the open project, when a project is open.
+    ///
+    /// A scene can still be edited without one — that is what the editor did
+    /// before projects existed, and what a scene named on the command line
+    /// outside any project still does.
+    open_project_root: Option<PathBuf>,
+    /// What the open project calls itself, for the browser's header.
+    project_name: Option<String>,
 }
 
 impl EditorApp {
@@ -273,7 +304,21 @@ impl EditorApp {
         crate::ui::theme::install(&context.egui_ctx);
         let preferences = Preferences::load(context.storage);
         let scene = scene_extractor();
-        let (file, open_error) = open_requested_scene(preferences.last_scene.as_deref());
+        // What this launch is about, before anything is loaded: a scene, a
+        // project, or a question. Only the first of those opens a file here —
+        // opening a project needs the editor that this is building.
+        let decided = launch::decide(
+            std::env::args().nth(1).as_deref(),
+            preferences.recent_projects.most_recent(),
+            preferences.open_last_project,
+        );
+        let (file, open_error) = match &decided {
+            Launch::Scene(path) => open_named_scene(&path.display().to_string()),
+            Launch::Project(_) | Launch::Welcome => (
+                SceneFile::detached(sindri_core::SceneDocument::default()),
+                None,
+            ),
+        };
         // A scene that will not load must not take the editor down with it.
         // This used to unwrap, so a file that parsed and then failed validation
         // killed the process before the window existed — and the failure it
@@ -350,17 +395,39 @@ impl EditorApp {
             render_error: None,
             console: Console::default(),
             title: String::new(),
+            welcome: None,
+            window_shown: false,
+            open_project_root: None,
+            project_name: None,
         };
         // Said after the field is built rather than during it, because what
         // there is to say is read off the world and the bindings.
         if let Some(failure) = app.notice.clone() {
             app.console.error(failure);
         }
-        app.announce_scene();
+        app.arrange_for(decided);
         let notes = app.textures.request(&app.world, &mut app.renderers.text);
         app.record_texture_notes(notes);
         app.reload_scripts();
         app.remember_open_scene();
         app
+    }
+
+    /// Puts the editor where the launch said it should be.
+    ///
+    /// Only a scene has been opened by the time this runs. A project is opened
+    /// through the same path the welcome window opens one through, so a launch
+    /// and a click arrange the editor identically rather than in two places
+    /// that have to be kept agreeing.
+    fn arrange_for(&mut self, decided: Launch) {
+        match decided {
+            Launch::Scene(path) => {
+                self.announce_scene();
+                self.adopt_project_for(&path);
+                self.project = self.project_tree();
+            }
+            Launch::Project(root) => self.open_project_at(&root),
+            Launch::Welcome => self.open_welcome(),
+        }
     }
 }

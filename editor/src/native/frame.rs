@@ -123,6 +123,16 @@ impl eframe::App for EditorApp {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        // Before anything else: the welcome window is a window of its own, and
+        // while it is the only one open there is no scene to draw, no viewport
+        // to render into, and a hidden window to not spend a frame on.
+        if self.welcome.is_some() {
+            self.show_welcome(ui.ctx());
+            if self.awaiting_welcome() {
+                return;
+            }
+        }
+        self.show_window(ui.ctx());
         // Before anything is drawn, so a texture that arrived since the last
         // frame is bound by the time this one extracts.
         self.refresh_textures();

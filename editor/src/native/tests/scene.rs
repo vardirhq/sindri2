@@ -7,7 +7,7 @@ use sindri_cube::DemoScene;
 
 use super::super::editing::find_by_source_id;
 use super::super::inspector_panel::draft::{EntityDraft, draft_commands};
-use super::super::scene_io::{load_world, open_scene_for};
+use super::super::scene_io::{load_world, open_named_scene};
 use super::super::scene_new::blank_scene;
 use super::super::unsaved::Discarding;
 use super::support::*;
@@ -60,49 +60,36 @@ fn edits_survive_a_save_and_reload_of_the_real_scene() {
     );
 }
 
-/// The editor reopens where it was left, and a path on the command line
-/// still wins — the most deliberate thing anyone can say about which scene
-/// to open should not be overruled by a choice made last week.
+/// A scene named on the command line is opened, and it is the one that opens.
 #[test]
-fn the_remembered_scene_is_reopened_unless_one_was_named() {
+fn the_named_scene_is_the_one_that_opens() {
     let directory = tempfile::tempdir().unwrap();
-    let write = |name: &str| {
-        let path = directory.path().join(name);
-        std::fs::write(
-            &path,
-            DemoScene::authored_document()
-                .unwrap()
-                .to_canonical_json()
-                .unwrap(),
-        )
-        .unwrap();
-        path.display().to_string()
-    };
-    let remembered = write("remembered.scene.json");
-    let named = write("named.scene.json");
+    let path = directory.path().join("named.scene.json");
+    std::fs::write(
+        &path,
+        DemoScene::authored_document()
+            .unwrap()
+            .to_canonical_json()
+            .unwrap(),
+    )
+    .unwrap();
 
-    let (file, error) = open_scene_for(None, Some(&remembered));
+    let (file, error) = open_named_scene(&path.display().to_string());
     assert_eq!(error, None);
-    assert_eq!(file.label(), "remembered.scene.json");
-
-    let (file, error) = open_scene_for(Some(&named), Some(&remembered));
-    assert_eq!(error, None);
-    assert_eq!(
-        file.label(),
-        "named.scene.json",
-        "an argument outranks what was remembered"
-    );
+    assert_eq!(file.label(), "named.scene.json");
 }
 
-/// A project can move or be deleted between launches. Refusing to open
-/// anything because of that would make a remembered path a liability.
+/// Standing another scene in for the one somebody named would read as though
+/// theirs had opened, so a named scene that is missing opens nothing and says
+/// so — and the editor still starts, which is the other half of the rule.
 #[test]
-fn a_remembered_scene_that_is_gone_says_so_rather_than_opening_nothing() {
+fn a_named_scene_that_is_gone_says_so_rather_than_opening_another() {
     let directory = tempfile::tempdir().unwrap();
     let missing = directory.path().join("gone.scene.json");
-    let (_, error) = open_scene_for(None, Some(&missing.display().to_string()));
+    let (file, error) = open_named_scene(&missing.display().to_string());
     let error = error.expect("a scene that is not there is worth saying");
     assert!(error.contains("gone.scene.json"), "{error}");
+    assert_eq!(file.path(), None, "and nothing else was opened instead");
 }
 
 /// The marker means the file and the world differ, not that something was

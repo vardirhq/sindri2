@@ -12,13 +12,22 @@
 //! the frame someone opens it is a browser that hangs.
 
 mod kind;
+/// What the editor opens when it starts, and why.
+pub mod launch;
+/// What makes a directory a project rather than a folder with a scene in it.
+pub mod manifest;
 pub mod ops;
+/// The projects the welcome window offers.
+pub mod recent;
 mod sheet;
 
 #[cfg(test)]
 mod tests;
 
 pub use kind::AssetKind;
+pub use launch::Launch;
+pub use manifest::{MANIFEST_NAME, Project, ProjectError};
+pub use recent::{RecentProject, RecentProjects};
 pub use sheet::{sliced_texture_beside, sprites_beside};
 
 use std::path::{Path, PathBuf};
@@ -62,6 +71,13 @@ pub struct ProjectEntry {
 #[derive(Clone, Debug, Default)]
 pub struct ProjectTree {
     root: Option<PathBuf>,
+    /// What the project calls itself, when the browser is showing one.
+    ///
+    /// A folder name is what the browser had, and it is not always the answer:
+    /// the companion game is called Gather and lives in a directory called
+    /// `assets`. A manifest is the only place that name exists, so a tree
+    /// rooted at a project is told it.
+    name: Option<String>,
     entries: Vec<ProjectEntry>,
     truncated: bool,
     error: Option<String>,
@@ -82,8 +98,18 @@ impl ProjectTree {
 
     /// Reads a directory as the project root.
     pub fn rooted(root: &Path) -> Self {
+        Self::read(root, None)
+    }
+
+    /// Reads a project's directory, under the name the project gives itself.
+    pub fn rooted_as(root: &Path, name: &str) -> Self {
+        Self::read(root, Some(name.to_owned()))
+    }
+
+    fn read(root: &Path, name: Option<String>) -> Self {
         let mut tree = Self {
             root: Some(root.to_path_buf()),
+            name,
             ..Self::default()
         };
         if let Err(error) = tree.walk(root, root, 0) {
@@ -169,7 +195,12 @@ impl ProjectTree {
     }
 
     /// What the root is called, for a header that has one line to spend.
+    ///
+    /// The project's own name when it has one, and the folder's otherwise.
     pub fn label(&self) -> String {
+        if let Some(name) = &self.name {
+            return name.clone();
+        }
         self.root.as_ref().map_or_else(
             || "No project".to_owned(),
             |root| {

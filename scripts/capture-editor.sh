@@ -6,16 +6,14 @@ output_path=${1:?"usage: capture-editor.sh OUTPUT.png [SCENE.json]"}
 output_dir=$(dirname "$output_path")
 mkdir -p "$output_dir"
 
-# The editor takes a scene on its command line and falls back to the demo one,
-# so passing a second argument here photographs whichever scene is of interest
-# rather than only the fixture.
-scene=${2:-}
+# The editor takes a scene on its command line, and a launch with nothing on it
+# opens the welcome window instead of a scene — which is the right behaviour for
+# a person and the wrong one for a screenshot. So the demo scene is named here
+# rather than left to a default: passing a second argument photographs whichever
+# scene is of interest, and passing none photographs the one this always did.
+scene=${2:-examples/cube/assets/demo.scene.json}
 
-if [ -n "$scene" ]; then
-    cargo run --package sindri-editor -- "$scene" &
-else
-    cargo run --package sindri-editor &
-fi
+cargo run --package sindri-editor -- "$scene" &
 editor_pid=$!
 window_id=""
 

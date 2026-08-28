@@ -121,6 +121,73 @@ pub fn labelled(ui: &mut egui::Ui, label: &str, intent: Intent, tip: &str) -> Re
     tipped(response, tip)
 }
 
+/// A button that fills the width it is given, with an icon and a label.
+///
+/// What a column of actions is made of, where a row of toolbar squares would
+/// be: the welcome window offers two verbs and has room to say them, and a
+/// button whose width is its label's leaves a ragged column. Here rather than
+/// in the window that uses it because honouring `Intent` means reading the
+/// fills and strokes above, which nothing outside this module can.
+///
+/// Painted rather than assembled, for the reason the segmented switch is: an
+/// icon and a label are two font families and `Button` takes one text, and a
+/// `Frame` around a `horizontal` takes the direction of whatever laid it out.
+pub fn wide(
+    ui: &mut egui::Ui,
+    glyph: MaterialIcon,
+    label: &str,
+    intent: Intent,
+    tip: &str,
+) -> Response {
+    let (rect, response) =
+        ui.allocate_exact_size(Vec2::new(ui.available_width(), WIDE_HEIGHT), Sense::click());
+    let fill = if response.hovered() {
+        intent.fill(false).gamma_multiply(1.3)
+    } else {
+        intent.fill(false)
+    };
+    ui.painter().rect(
+        rect,
+        radius(),
+        fill,
+        intent.stroke(false),
+        egui::StrokeKind::Inside,
+    );
+    let foreground = intent.foreground(false);
+    // Laid out with the placeholder colour so the tint below is the one that
+    // takes effect: a galley built with a real colour keeps it.
+    let galley = ui.painter().layout_no_wrap(
+        label.to_owned(),
+        egui::FontId::proportional(text::BODY),
+        Color32::PLACEHOLDER,
+    );
+    // Icon and label centred as one group, so buttons carrying labels of
+    // different lengths still read as one column.
+    let icon_width = 21.0;
+    let total = icon_width + galley.size().x;
+    let left = rect.center().x - total / 2.0;
+    let painter = ui.painter_at(rect);
+    painter.text(
+        egui::Pos2::new(left, rect.center().y),
+        egui::Align2::LEFT_CENTER,
+        glyph.outlined().codepoint,
+        egui::FontId::new(15.0, glyph.outlined().font_family()),
+        foreground,
+    );
+    painter.galley(
+        egui::Pos2::new(left + icon_width, rect.center().y - galley.size().y / 2.0),
+        galley,
+        foreground,
+    );
+    tipped(response, tip)
+}
+
+/// How tall a `wide` button is.
+///
+/// Taller than a control in a property row: this is a thing to press rather
+/// than a value to edit, and it is the only control in its column.
+const WIDE_HEIGHT: f32 = 30.0;
+
 /// One choice in a strip of mutually exclusive ones.
 ///
 /// Drawn as one continuous control rather than as separate buttons: the group

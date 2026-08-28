@@ -180,12 +180,36 @@ Two of them are worth writing down:
   decision, not a preference, and it belongs behind a named layout rather than
   in the default.
 
+## A project is a directory, and a scene is a file in it
+
+The editor's unit of work is a project: a directory containing `sindri.toml`.
+Before that file existed, "the project" was a word for whichever folder the open
+scene happened to sit in — enough to browse assets beside a scene, and not enough
+to have a name, to be listed, or to be told apart from any other folder with a
+`.scene.json` in it.
+
+The welcome window is the front door and is its own window, with the editor's
+hidden until a project is open. `docs/project-format.md` is the contract: what
+the file holds, what creating a project makes, which project a launch opens, and
+why the window is a deferred viewport rather than a screen inside the editor.
+
+Two things about it belong here, because they are about the shell rather than
+the format. The editor's window starts hidden and is revealed when a project
+opens, which is also what makes closing the welcome window with nothing open
+close the editor — a running process with no window is a process with no way
+back to it. And a scene carries its project with it: every path that opens a
+scene walks up to the nearest manifest, so the browser roots at the project and
+the header carries the project's name, while a scene in no project leaves the
+editor with none. That last state is not a degraded one. It is what the editor
+did before projects existed, and it is still how you edit one file.
+
 ## A scene is a file
 
-The editor takes a path — the demo scene by default, or one named on the command
-line — and reads it from disk. A missing or unreadable file is reported in the
-interface and the editor opens on the copy compiled into it, so it starts
-anywhere while saying what went wrong.
+The editor takes a path — one named on the command line, the one a project
+nominates, or the one it was last left in — and reads it from disk. A missing or unreadable file named on the command line
+is reported in the interface and the editor opens on nothing, so it starts
+anywhere while saying what went wrong — and never by quietly standing another
+scene in for the one somebody named.
 
 Saving writes the world back through `World::to_scene` and canonical
 serialization, which is what makes it safe to offer: saving a scene nobody
@@ -208,13 +232,14 @@ neither "something was written" nor "the stack is this deep" is the same
 question. Undoing back to what was saved reads as saved again, and a state the
 history left behind is never numbered twice.
 
-Which scene is open is a preference rather than session state, and the distinction is worth naming
+Which project is open is a preference rather than session state, and the distinction is worth naming
 because everything else the editor remembers is a choice: it is not where the camera happened to be
-pointing when the window closed, it is which project someone is working on. A path on the command
-line still wins, and a remembered scene that has moved or been deleted since falls back to the demo
-one and says so — that choice was made last week and its failure is not the user's doing now. The
-window title carries the same file name and unsaved marker as the status bar, so a task switcher can
-tell two editors apart.
+pointing when the window closed, it is what someone is working on. A path on the command line still
+wins. A remembered project that has moved or been deleted since falls back to the welcome window
+rather than to an error — that choice was made last week and its failure is not the user's doing
+now. Which scene inside the project is remembered too, so reopening a project puts someone back
+where they were working rather than at its front door. The window title carries the file name and
+unsaved marker the status bar does, so a task switcher can tell two editors apart.
 
 ## A scene brings its own textures
 

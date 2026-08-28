@@ -1,4 +1,4 @@
-//! The four ways to throw unsaved work away, and the question they ask first.
+//! The ways to throw unsaved work away, and the question they ask first.
 //!
 //! Each of these used to happen the moment it was clicked. Routing them all
 //! through one confirmation is why `Discarding` exists at all: the dialog has
@@ -27,6 +27,9 @@ pub(super) enum Discarding {
     /// A scene chosen in the project browser, which knows the path already and
     /// so has no dialog to open.
     OpenPath(PathBuf),
+    /// A project chosen in the welcome window, which replaces the open scene
+    /// along with everything around it.
+    OpenProject(PathBuf),
     Reload,
     Reset,
     Close,
@@ -38,6 +41,7 @@ impl Discarding {
     pub(super) const fn question(&self) -> &'static str {
         match self {
             Self::NewScene => "Make a new scene and discard the changes to this one?",
+            Self::OpenProject(_) => "Open another project and discard the changes to this scene?",
             Self::OpenAnother | Self::OpenPath(_) => {
                 "Open another scene and discard the changes to this one?"
             }
@@ -50,7 +54,7 @@ impl Discarding {
     pub(super) const fn verb(&self) -> &'static str {
         match self {
             Self::NewScene => "Make one anyway",
-            Self::OpenAnother | Self::OpenPath(_) => "Open anyway",
+            Self::OpenAnother | Self::OpenPath(_) | Self::OpenProject(_) => "Open anyway",
             Self::Reload => "Reload anyway",
             Self::Reset => "Discard",
             Self::Close => "Close anyway",
@@ -88,6 +92,7 @@ impl EditorApp {
             Discarding::NewScene => self.new_scene(),
             Discarding::OpenAnother => self.open_scene(),
             Discarding::OpenPath(path) => self.open_path(&path),
+            Discarding::OpenProject(root) => self.open_project_at(&root),
             Discarding::Reload => self.reload(),
             Discarding::Reset => self.reset_to_authored(),
             // Agreeing to close is not closing. The request that raised the

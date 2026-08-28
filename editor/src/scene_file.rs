@@ -15,12 +15,6 @@ use std::{
 use sindri_core::{SceneDocument, SceneJsonError, SceneMigrator, World, WorldError};
 use thiserror::Error;
 
-/// Where the editor looks when it is started with no argument.
-///
-/// The demo scene is the only one in the repository, and starting in it is what
-/// makes the editor useful from a clean clone.
-pub const DEFAULT_SCENE_PATH: &str = "examples/cube/assets/demo.scene.json";
-
 /// A scene document together with the file it belongs to.
 #[derive(Clone, Debug)]
 pub struct SceneFile {

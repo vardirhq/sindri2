@@ -364,6 +364,19 @@ frame.
 
 ### Works
 
+- **Opens a project, not only a scene.** A project is a directory holding
+  `sindri.toml`, which carries a format version, the project's name, and the
+  scene opening it opens. The welcome window is its own window and the editor's
+  is hidden behind it until a project is open: it lists the twelve most recently
+  opened projects, marks one that has moved or been deleted as missing rather
+  than dropping it, makes a project — a manifest, a scene, and the folders
+  assets resolve from — and opens a folder that already is one. Gather ships
+  with a manifest and is listed as a shipped sample when the editor is run from
+  the repository. A scene opened from anywhere walks up to the nearest
+  `sindri.toml`, so the browser is rooted at the whole project and headed with
+  the project's own name — Gather rather than `assets`. A launch honours the
+  command line first, the last project when the user asked for that, and the
+  welcome window otherwise. `docs/project-format.md` is the contract
 - Opens a scene from a command-line argument or **File → Open scene**, saves it
   back canonically, reloads from disk, and discards changes — including a scene
   carrying components it has never heard of, which it keeps through a save and

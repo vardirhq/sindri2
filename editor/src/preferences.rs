@@ -138,6 +138,17 @@ pub struct Preferences {
     /// `GameObject` both reveal their children. Keeping this outside the scene
     /// means navigating the hierarchy never makes authored content unsaved.
     pub collapsed_hierarchy: BTreeSet<String>,
+    /// The projects the welcome window offers, most recently opened first.
+    pub recent_projects: crate::project::RecentProjects,
+    /// Whether a launch reopens the last project instead of asking.
+    ///
+    /// False by default, which is the welcome window being the front door. That
+    /// is a real cost — one extra click for someone who works in one project all
+    /// day — and it is the reason this setting exists rather than the reason to
+    /// default the other way: a tool that decides for you which project you
+    /// meant is only right until the day it is not, and the welcome window is
+    /// also the only way to reach a project you have not opened recently.
+    pub open_last_project: bool,
 }
 
 impl Preferences {
@@ -193,6 +204,8 @@ mod tests {
             bottom_tab: BottomTab::Console,
             last_scene: Some("projects/level.scene.json".to_owned()),
             collapsed_hierarchy: BTreeSet::from(["projects/level.scene.json::player".to_owned()]),
+            recent_projects: crate::project::RecentProjects::default(),
+            open_last_project: true,
         };
         let text = serde_json::to_string(&chosen).unwrap();
         assert_eq!(serde_json::from_str::<Preferences>(&text).unwrap(), chosen);
@@ -209,6 +222,14 @@ mod tests {
         assert_eq!(
             partial.last_scene, None,
             "settings from before the editor remembered a scene open the default one"
+        );
+        assert!(
+            partial.recent_projects.is_empty(),
+            "settings from before projects existed list none"
+        );
+        assert!(
+            !partial.open_last_project,
+            "and they open the welcome window rather than a project they never recorded"
         );
     }
 
@@ -250,6 +271,8 @@ mod tests {
             bottom_tab: BottomTab::Console,
             last_scene: Some("projects/level.scene.json".to_owned()),
             collapsed_hierarchy: BTreeSet::new(),
+            recent_projects: crate::project::RecentProjects::default(),
+            open_last_project: true,
         };
 
         chosen.save(&mut storage);
