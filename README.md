@@ -210,6 +210,7 @@ The root workspace explicitly excludes `decay/` so path dependencies cannot sile
 The detailed contracts live alongside the code:
 
 - [`docs/capabilities.md`](docs/capabilities.md) — what demonstrably works today
+- [`docs/orbital-last-stand-audit.md`](docs/orbital-last-stand-audit.md) — vertical-slice audit against a high-churn 2D action game
 - [`docs/scripting.md`](docs/scripting.md) — the exact Decay-to-Sindri host surface
 - [`decay/LANGUAGE.md`](decay/LANGUAGE.md) — Decay language reference
 - [`docs/decay-direction.md`](docs/decay-direction.md) — why Decay exists and how the scripting direction evolved
