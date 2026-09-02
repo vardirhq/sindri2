@@ -104,6 +104,10 @@ mod tests {
     #[test]
     fn the_page_says_what_is_missing() {
         let page = page_for("Game", "/");
+        assert!(
+            page.contains("!navigator.gpu"),
+            "no missing-WebGPU capability guard"
+        );
         assert!(page.contains("WebGPU"), "no WebGPU message");
         assert!(page.contains("sindri:failed"), "no failure channel");
     }
