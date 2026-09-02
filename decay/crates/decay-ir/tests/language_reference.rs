@@ -45,16 +45,20 @@ fn rejected(what: &str, source: &str) {
 /// lying.
 #[test]
 fn nothing_the_reference_calls_absent_compiles() {
-    rejected("`for`", "script T { fn f() { for i in 0..3 { } } }");
+    // `for` exists, and walks a collection; what stays absent is the range it
+    // used to be paired with in this list.
+    rejected("ranges", "script T { fn f() { for i in 0..3 { } } }");
     rejected("`loop`", "script T { fn f() { loop { } } }");
     rejected("`match`", "script T { fn f(a: f32) { match a { } } }");
     rejected(
         "array literals",
         "script T { fn f() { let a: f32 = [1.0]; } }",
     );
+    // Indexing exists, and only on a collection. Indexing something that holds
+    // one value is what stays refused.
     rejected(
-        "indexing",
-        "script T { fn f(a: f32) { let b: f32 = a[0]; } }",
+        "indexing a value that holds one thing",
+        "script T { fn f(a: f32) { let b: f32 = a[0.0]; } }",
     );
     rejected("block comments", "script T { /* nope */ }");
     rejected(

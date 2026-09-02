@@ -16,6 +16,13 @@ struct LoopContext {
     /// How many scopes were open when the loop began. A `break` or `continue`
     /// closes the difference before it jumps.
     scope_depth: usize,
+    /// Whether leaving this loop early has a walk to close.
+    ///
+    /// True for `for`, false for `while`. A `break` out of a `for` has to let
+    /// go of the collection it was walking; a `break` out of a `while` has
+    /// nothing to let go of, and emitting the close anyway would unbalance an
+    /// enclosing loop's walk.
+    walks: bool,
 }
 
 /// The scope depth and the open loops, carried down the statement tree.
@@ -43,14 +50,15 @@ impl Loops {
     }
 }
 
-impl Lowerer {
+impl Lowerer<'_> {
     pub(super) fn lower_block(
+        &self,
         block: &Block,
         instructions: &mut Vec<Instruction>,
         loops: &mut Loops,
     ) {
         for statement in &block.statements {
-            Self::lower_stmt(statement, instructions, loops);
+            self.lower_stmt(statement, instructions, loops);
         }
     }
 
@@ -61,18 +69,71 @@ impl Lowerer {
     /// them are patched. A `Return` leaving a scope unclosed costs nothing:
     /// the frame goes with it.
     pub(super) fn lower_scoped_block(
+        &self,
         block: &Block,
         instructions: &mut Vec<Instruction>,
         loops: &mut Loops,
     ) {
         instructions.push(Instruction::ScopeEnter);
         loops.depth += 1;
-        Self::lower_block(block, instructions, loops);
+        self.lower_block(block, instructions, loops);
         loops.depth -= 1;
         instructions.push(Instruction::ScopeExit);
     }
 
+    /// `for name in items { ... }`.
+    fn lower_for(
+        &self,
+        name: &str,
+        iterable: &decay_syntax::Expr,
+        body: &Block,
+        instructions: &mut Vec<Instruction>,
+        loops: &mut Loops,
+    ) {
+        // The collection is evaluated once, before the loop, and the
+        // walk over it lives beside the value stack. A script that
+        // reassigns the name it came from does not change what this
+        // loop is walking, which is the behaviour a counted lowering
+        // would have got wrong.
+        self.lower_expr(iterable, instructions);
+        instructions.push(Instruction::IterBegin);
+
+        // Where `continue` goes: taking the next element is both the
+        // test and the step, so one target serves both.
+        let next = instructions.len();
+        instructions.push(Instruction::IterNext(usize::MAX));
+
+        loops.open.push(LoopContext {
+            continue_target: next,
+            breaks: Vec::new(),
+            scope_depth: loops.depth,
+            walks: true,
+        });
+        instructions.push(Instruction::ScopeEnter);
+        loops.depth += 1;
+        instructions.push(Instruction::Declare {
+            name: name.to_owned(),
+            // An element is what the collection holds at that position,
+            // not a place to put something.
+            mutable: false,
+        });
+        self.lower_block(body, instructions, loops);
+        loops.depth -= 1;
+        instructions.push(Instruction::ScopeExit);
+        let context = loops.open.pop().expect("the loop just pushed is open");
+        instructions.push(Instruction::Jump(next));
+
+        // A `break` has already closed its walk, so it lands past the
+        // exhaustion path rather than sharing it.
+        let broke = instructions.len();
+        for site in context.breaks {
+            instructions[site] = Instruction::Jump(broke);
+        }
+        instructions[next] = Instruction::IterNext(broke);
+    }
+
     pub(super) fn lower_stmt(
+        &self,
         statement: &Stmt,
         instructions: &mut Vec<Instruction>,
         loops: &mut Loops,
@@ -88,7 +149,7 @@ impl Lowerer {
                 // also what the language means: a binding cannot refer to
                 // itself.
                 if let Some(initializer) = initializer {
-                    Self::lower_expr(initializer, instructions);
+                    self.lower_expr(initializer, instructions);
                 } else {
                     instructions.push(Instruction::Push(Constant::Null));
                 }
@@ -98,12 +159,12 @@ impl Lowerer {
                 });
             }
             Stmt::Expr { expr, .. } => {
-                Self::lower_expr(expr, instructions);
+                self.lower_expr(expr, instructions);
                 instructions.push(Instruction::Pop);
             }
             Stmt::Return { value, .. } => {
                 if let Some(value) = value {
-                    Self::lower_expr(value, instructions);
+                    self.lower_expr(value, instructions);
                 }
                 instructions.push(Instruction::Return);
             }
@@ -113,18 +174,18 @@ impl Lowerer {
                 else_branch,
                 ..
             } => {
-                Self::lower_expr(condition, instructions);
+                self.lower_expr(condition, instructions);
                 let jump_if_false = instructions.len();
                 instructions.push(Instruction::JumpIfFalse(usize::MAX));
 
-                Self::lower_scoped_block(then_branch, instructions, loops);
+                self.lower_scoped_block(then_branch, instructions, loops);
 
                 if let Some(else_branch) = else_branch {
                     let jump_to_end = instructions.len();
                     instructions.push(Instruction::Jump(usize::MAX));
                     let else_start = instructions.len();
                     instructions[jump_if_false] = Instruction::JumpIfFalse(else_start);
-                    Self::lower_scoped_block(else_branch, instructions, loops);
+                    self.lower_scoped_block(else_branch, instructions, loops);
                     let end = instructions.len();
                     instructions[jump_to_end] = Instruction::Jump(end);
                 } else {
@@ -138,7 +199,7 @@ impl Lowerer {
                 // The condition is re-evaluated every turn, so it is also where
                 // `continue` goes: one target serves both.
                 let condition_start = instructions.len();
-                Self::lower_expr(condition, instructions);
+                self.lower_expr(condition, instructions);
                 let jump_if_false = instructions.len();
                 instructions.push(Instruction::JumpIfFalse(usize::MAX));
 
@@ -146,8 +207,9 @@ impl Lowerer {
                     continue_target: condition_start,
                     breaks: Vec::new(),
                     scope_depth: loops.depth,
+                    walks: false,
                 });
-                Self::lower_scoped_block(body, instructions, loops);
+                self.lower_scoped_block(body, instructions, loops);
                 let context = loops.open.pop().expect("the loop just pushed is open");
 
                 instructions.push(Instruction::Jump(condition_start));
@@ -161,6 +223,9 @@ impl Lowerer {
                 // The analyzer refuses a `break` outside a loop, so there is
                 // always one to leave; nothing is emitted if it did not.
                 if loops.unwind_to_loop(instructions).is_some() {
+                    if loops.open.last().is_some_and(|context| context.walks) {
+                        instructions.push(Instruction::IterEnd);
+                    }
                     let site = instructions.len();
                     instructions.push(Instruction::Jump(usize::MAX));
                     if let Some(context) = loops.open.last_mut() {
@@ -173,7 +238,13 @@ impl Lowerer {
                     instructions.push(Instruction::Jump(condition));
                 }
             }
-            Stmt::Block(block) => Self::lower_scoped_block(block, instructions, loops),
+            Stmt::For {
+                name,
+                iterable,
+                body,
+                ..
+            } => self.lower_for(name, iterable, body, instructions, loops),
+            Stmt::Block(block) => self.lower_scoped_block(block, instructions, loops),
         }
     }
 }

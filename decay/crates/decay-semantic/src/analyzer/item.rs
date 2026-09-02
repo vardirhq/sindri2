@@ -15,7 +15,10 @@ impl Analyzer<'_, '_> {
         for member in &container.members {
             match member {
                 Member::Field(field) => {
-                    let ty = field.ty.as_ref().map_or(Type::Unknown, Type::from_ref);
+                    let ty = field
+                        .ty
+                        .as_ref()
+                        .map_or(Type::Unknown, |ty| self.resolve_type(ty));
                     self.insert_member(
                         &mut members,
                         &field.name,
@@ -151,6 +154,10 @@ impl Analyzer<'_, '_> {
             ExprKind::Assign { target, value, .. } => {
                 Self::collect_field_reads(target, out);
                 Self::collect_field_reads(value, out);
+            }
+            ExprKind::Index { object, index } => {
+                Self::collect_field_reads(object, out);
+                Self::collect_field_reads(index, out);
             }
             ExprKind::Call { callee, args } => {
                 Self::collect_field_reads(callee, out);

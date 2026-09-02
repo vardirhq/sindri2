@@ -12,7 +12,7 @@ pub use parser::{Parsed, parse};
 #[cfg(test)]
 mod tests;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 pub struct Span {
     pub start: usize,
     pub end: usize,
@@ -40,6 +40,8 @@ pub enum TokenKind {
     If,
     Else,
     While,
+    For,
+    In,
     Break,
     Continue,
     Return,
@@ -224,6 +226,8 @@ impl<'a> Lexer<'a> {
             "if" => TokenKind::If,
             "else" => TokenKind::Else,
             "while" => TokenKind::While,
+            "for" => TokenKind::For,
+            "in" => TokenKind::In,
             "break" => TokenKind::Break,
             "continue" => TokenKind::Continue,
             "return" => TokenKind::Return,

@@ -80,6 +80,37 @@ pub enum Instruction {
     },
     Unary(UnaryOp),
     Binary(BinaryOp),
+    /// Pops an index and a collection, pushes the element at that index.
+    ///
+    /// The index is the language's one numeric type. There is no integer type,
+    /// so a fractional or out-of-range index is refused here, where the value
+    /// is known, rather than by a type nobody wanted to introduce.
+    Index,
+    /// Pops a collection, pushes how many elements it holds.
+    ///
+    /// An instruction rather than a path load, because there is no host to ask
+    /// what the length of a value is. The analyzer says which member reads are
+    /// this one; see `decay_semantic::ValueMember`.
+    Length,
+    /// Pops a collection and opens a walk over it.
+    ///
+    /// A `for` loop is lowered to this rather than to an index and a counter,
+    /// so the collection is evaluated once and the loop cannot be confused by
+    /// a script that reassigns the name it came from. The walk lives beside
+    /// the value stack rather than on it, so no value a script could hold ever
+    /// represents "part way through a loop".
+    IterBegin,
+    /// Takes the next element of the innermost walk and pushes it.
+    ///
+    /// When the collection is spent it closes the walk and jumps to the given
+    /// instruction instead, so the ordinary path out of a loop needs no
+    /// separate cleanup.
+    IterNext(usize),
+    /// Closes the innermost walk without finishing it.
+    ///
+    /// What a `break` emits: leaving a loop early still has to let go of what
+    /// it was walking.
+    IterEnd,
     Call {
         callee: Path,
         argument_count: usize,

@@ -6,23 +6,37 @@
 mod expr;
 mod stmt;
 
-use decay_semantic::Analysis;
-use decay_syntax::{FunctionDecl, Item, Member};
+use decay_semantic::{Analysis, ValueMember, ValueMembers};
+use decay_syntax::{FunctionDecl, Item, Member, Span};
 
 use crate::ir::{ContainerKind, Instruction, IrContainer, IrField, IrFunction, IrProgram};
 
-pub(crate) struct Lowerer;
+/// The walk, and what the analysis told it.
+///
+/// Stateful because lowering is not purely syntactic: a member read may be a
+/// path the host answers or a property of a value the language owns, and only
+/// the analysis knows which. Guessing from the member's name would make `len`
+/// a name no host type could ever use.
+#[allow(clippy::zero_sized_map_values)]
+pub(crate) struct Lowerer<'a> {
+    value_members: &'a ValueMembers,
+}
 
-impl Lowerer {
-    pub(crate) fn lower_program(analysis: &Analysis) -> IrProgram {
+impl<'a> Lowerer<'a> {
+    pub(crate) fn lower_program(analysis: &'a Analysis) -> IrProgram {
+        let lowerer = Self {
+            value_members: &analysis.value_members,
+        };
         let containers = analysis
             .program
             .items
             .iter()
             .map(|item| match item {
-                Item::Script(container) => Self::lower_container(ContainerKind::Script, container),
+                Item::Script(container) => {
+                    lowerer.lower_container(ContainerKind::Script, container)
+                }
                 Item::Component(container) => {
-                    Self::lower_container(ContainerKind::Component, container)
+                    lowerer.lower_container(ContainerKind::Component, container)
                 }
             })
             .collect();
@@ -30,7 +44,13 @@ impl Lowerer {
         IrProgram { containers }
     }
 
+    /// What the analysis decided a member read at this span is, if anything.
+    pub(super) fn value_member(&self, span: Span) -> Option<ValueMember> {
+        self.value_members.get(&span).copied()
+    }
+
     pub(crate) fn lower_container(
+        &self,
         kind: ContainerKind,
         container: &decay_syntax::ContainerDecl,
     ) -> IrContainer {
@@ -42,7 +62,7 @@ impl Lowerer {
                 Member::Field(field) => {
                     let initializer = field.initializer.as_ref().map(|expr| {
                         let mut instructions = Vec::new();
-                        Self::lower_expr(expr, &mut instructions);
+                        self.lower_expr(expr, &mut instructions);
                         instructions
                     });
                     fields.push(IrField {
@@ -56,7 +76,7 @@ impl Lowerer {
                         initializer,
                     });
                 }
-                Member::Function(function) => functions.push(Self::lower_function(function)),
+                Member::Function(function) => functions.push(self.lower_function(function)),
             }
         }
 
@@ -68,11 +88,11 @@ impl Lowerer {
         }
     }
 
-    pub(crate) fn lower_function(function: &FunctionDecl) -> IrFunction {
+    pub(crate) fn lower_function(&self, function: &FunctionDecl) -> IrFunction {
         let mut instructions = Vec::new();
         // A function body is where a loop can exist, and each body starts with
         // none open; a field initializer is an expression and cannot contain one.
-        Self::lower_block(
+        self.lower_block(
             &function.body,
             &mut instructions,
             &mut stmt::Loops::default(),

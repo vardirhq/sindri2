@@ -12,9 +12,9 @@ mod stmt;
 
 use std::collections::{HashMap, HashSet};
 
-use decay_syntax::{Item, Program, Span};
+use decay_syntax::{Item, Program, Span, TypeRef};
 
-use crate::diagnostic::{Diagnostic, DiagnosticPhase, line_column};
+use crate::diagnostic::{Diagnostic, DiagnosticPhase, ValueMembers, line_column};
 use crate::environment::{Environment, ExternalSymbol};
 use crate::types::{FunctionType, Type};
 
@@ -37,10 +37,19 @@ pub(super) struct Symbol {
     function: Option<FunctionType>,
 }
 
+// `ValueMembers` carries one variant today, so Clippy would rather it were a
+// set. See its own definition for why it is a map: the next value type to
+// arrive makes "which member" more than one answer, and a set would have to
+// become this again.
+#[allow(clippy::zero_sized_map_values)]
 pub(super) struct Analyzer<'a, 'd> {
     source: &'a str,
     environment: &'a Environment,
     diagnostics: &'d mut Vec<Diagnostic>,
+    /// Where a member read resolved to something the language owns rather than
+    /// to a path the host answers. Written here, read by the lowering.
+    ///
+    value_members: &'d mut ValueMembers,
     scopes: Vec<HashMap<String, Symbol>>,
     current_return: Type,
     /// Every `script` and `component` in the program, so that `this` can be
@@ -52,16 +61,19 @@ pub(super) struct Analyzer<'a, 'd> {
     loop_depth: usize,
 }
 
+#[allow(clippy::zero_sized_map_values)]
 impl<'a, 'd> Analyzer<'a, 'd> {
     pub(super) fn new(
         source: &'a str,
         environment: &'a Environment,
         diagnostics: &'d mut Vec<Diagnostic>,
+        value_members: &'d mut ValueMembers,
     ) -> Self {
         Self {
             source,
             environment,
             diagnostics,
+            value_members,
             scopes: Vec::new(),
             current_return: Type::Unit,
             containers: HashSet::new(),
@@ -119,6 +131,40 @@ impl<'a, 'd> Analyzer<'a, 'd> {
 
     pub(super) fn lookup(&self, name: &str) -> Option<&Symbol> {
         self.scopes.iter().rev().find_map(|scope| scope.get(name))
+    }
+
+    /// The type a written annotation means, reporting a malformed one.
+    ///
+    /// `Type::from_ref` answers for any `TypeRef` because the IR and the host
+    /// both need it to; this is where a *script* writing one is told it wrote
+    /// it wrong. `Array` is the only type that takes an argument and the only
+    /// one that needs one, so both halves of that are checked here rather than
+    /// discovered as an `unknown` element type three errors later.
+    pub(super) fn resolve_type(&mut self, reference: &TypeRef) -> Type {
+        let is_array = reference.name == crate::types::ARRAY;
+        match (&reference.argument, is_array) {
+            (None, true) => self.error(
+                reference.span,
+                format!(
+                    "`{}` needs an element type, as in `{}<Entity>`",
+                    crate::types::ARRAY,
+                    crate::types::ARRAY
+                ),
+            ),
+            (Some(_), false) => self.error(
+                reference.span,
+                format!(
+                    "`{}` takes no type argument; only `{}` does",
+                    reference.name,
+                    crate::types::ARRAY
+                ),
+            ),
+            _ => {}
+        }
+        if let Some(argument) = &reference.argument {
+            self.resolve_type(argument);
+        }
+        Type::from_ref(reference)
     }
 
     pub(super) fn require_type(&mut self, actual: &Type, expected: &Type, span: Span) {

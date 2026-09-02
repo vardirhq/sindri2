@@ -41,6 +41,9 @@ impl Parser<'_> {
         if self.at(&TokenKind::While) {
             return self.parse_while_statement();
         }
+        if self.at(&TokenKind::For) {
+            return self.parse_for_statement();
+        }
         if self.at(&TokenKind::Break) {
             return self.parse_break_statement();
         }
@@ -133,6 +136,22 @@ impl Parser<'_> {
         let span = start.join(body.span);
         Some(Stmt::While {
             condition,
+            body,
+            span,
+        })
+    }
+
+    pub(super) fn parse_for_statement(&mut self) -> Option<Stmt> {
+        let start = self.expect_simple(&TokenKind::For, "expected `for`")?;
+        let (name, name_span) = self.expect_identifier("expected a name for each element")?;
+        self.expect_simple(&TokenKind::In, "expected `in` after the loop variable")?;
+        let iterable = self.parse_expression()?;
+        let body = self.parse_block()?;
+        let span = start.join(body.span);
+        Some(Stmt::For {
+            name,
+            name_span,
+            iterable,
             body,
             span,
         })

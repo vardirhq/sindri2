@@ -256,6 +256,11 @@ impl Host for WorldHost<'_> {
                     // the packing is the host's business, and printing it
                     // would invite a script to depend on it.
                     Some(Value::Reference(_)) => "entity".to_owned(),
+                    // How many, not what: printing a collection of two
+                    // thousand entities into the console is not what anyone
+                    // reaching for `print` wanted, and the elements are
+                    // reachable one at a time anyway.
+                    Some(Value::Array(values)) => format!("{} entries", values.len()),
                 });
                 return Ok(Some(Value::Unit));
             }

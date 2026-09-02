@@ -137,11 +137,19 @@ pub(super) fn script_exports_section(
 /// that means something different the next time it is opened. An `@export` of
 /// an entity is not authorable for that reason, and the inspector shows it as
 /// empty rather than as a number nobody can act on.
+///
+/// A collection stores as null for a sharper reason: there is no literal for
+/// one and nothing but the host makes one, so an authored collection is not a
+/// thing that can exist. A field declared `Array<T>` has no authorable value
+/// and the panel shows it as empty, which is the truth.
 pub(super) fn script_value_json(value: &ScriptValue) -> Value {
     match value {
         ScriptValue::Number(number) => Value::from(*number),
         ScriptValue::Bool(flag) => Value::Bool(*flag),
         ScriptValue::String(text) => Value::String(text.clone()),
-        ScriptValue::Reference(_) | ScriptValue::Null | ScriptValue::Unit => Value::Null,
+        ScriptValue::Reference(_)
+        | ScriptValue::Array(_)
+        | ScriptValue::Null
+        | ScriptValue::Unit => Value::Null,
     }
 }
