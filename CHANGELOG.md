@@ -8,6 +8,42 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **A game can remember things between runs.** `SaveStore` and `SaveDocument` in
+  `sindri-core`, a `SaveBackend` trait in `sindri-platform` with file, browser,
+  memory and deliberately-damaged implementations, and a `Save` namespace in
+  Decay.
+
+  The document is **flat** rather than a tree. Decay holds numbers, truths and
+  text and nothing else, so a structure a script could not build is a structure
+  nothing could write; `settings.volume` and `progress.best_wave` are keys, and
+  the file stays something a person can read and repair. Keys are ordered, so the
+  same state is the same bytes and a save can be diffed.
+
+  **Three absences, told apart.** A first run starts cheerfully; a save that was
+  there and would not parse is worth telling someone about *before* their
+  progress is written over; and one written by a newer build is reported without
+  being read, because a reader that guessed at a format it does not know would
+  corrupt it the moment it wrote back.
+
+  `FileSaves` writes beside the target and renames over it — a save half written
+  is a save destroyed, at the exact moment someone's machine lost power mid-run.
+  `BrowserSaves` uses `localStorage`, chosen over every larger browser store
+  because the alternatives are asynchronous and a game should not have to ask
+  whether its progress has landed yet.
+
+  **Nothing in Decay touches storage.** How often someone's disk is written is a
+  decision about their machine, so the store is in memory and the host writes it
+  out on a cadence and before it stops. Writing the same value again is not a
+  change. A NaN is refused outright, because it comes back next run and poisons
+  whatever reads it long after the frame that produced it has gone.
+
+  Editor Play keeps its save in memory and never writes it to disk: persistence
+  can be play-tested, and pressing Play does not put a file in someone's project.
+
+- **The script host dispatches by table.** Each namespace was six near-identical
+  lines in one function, which had reached a length nobody reads. A namespace is
+  now one line in `host/dispatch.rs`.
+
 - **Numbers a run can be replayed from.** `sindri_core::Rng` is a PCG-XSH-RR
   64/32 generator written out rather than depended on. Every general-purpose
   crate reaches the operating system for a seed, which on

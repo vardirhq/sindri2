@@ -275,6 +275,84 @@ asks once per frame is fine; a script that asks once per bullet per frame is
 quadratic, and the operation budget will eventually say so in a way that names
 the script rather than the pattern. Ask once and hold the answer for the frame.
 
+### What a game remembers
+
+| Call | Returns |
+| --- | --- |
+| `Save.number(key, fallback)` | `f32` |
+| `Save.set_number(key, value)` | nothing |
+| `Save.flag(key, fallback)` | `bool` |
+| `Save.set_flag(key, value)` | nothing |
+| `Save.has(key)` | `bool` |
+| `Save.clear()` | nothing |
+| `Save.is_new()` | `bool` |
+| `Save.is_damaged()` | `bool` |
+| `Save.is_from_newer()` | `bool` |
+
+```rust
+script Progress {
+    fn start() {
+        this.best = Save.number("best_wave", 0.0);
+    }
+
+    fn on_run_ended(wave: f32) {
+        if wave > this.best {
+            Save.set_number("best_wave", wave);
+        }
+    }
+}
+```
+
+**A save is a flat key/value document, not a tree.** Decay holds numbers, truths
+and text and nothing else, so a structure a script could not build is a structure
+nothing could write. A game that wants `settings.volume` and `progress.best_wave`
+writes those keys, and the file stays something a person can read and repair.
+
+**A fallback rather than an optional**, because every caller has one — a starting
+score, a default volume — and a save is mostly read on the run where nothing has
+been stored yet. Reading a key that holds the wrong kind of value gives the
+fallback too: a script asking the wrong question should not get a
+plausible-looking answer that lets the mistake run.
+
+**Nothing here writes to a disk.** How often someone's storage is touched is a
+decision about their machine, and a script asking for a write every frame would
+make that decision badly on everyone's behalf. Writes go to a store in memory;
+the host puts it somewhere, on its own schedule and before it stops. Writing the
+same value again is not a change, so a game that stores its volume every frame
+does not keep a disk busy.
+
+**Three ways a save can be absent, and they are not the same.**
+
+- `is_new` — nothing has been stored. A first run.
+- `is_damaged` — something was stored and could not be read. Worth telling
+  someone about *before* their progress is written over, which is the whole
+  reason it is separate from the first.
+- `is_from_newer` — a newer build wrote it. Its values are not loaded, because a
+  reader that guessed at a format it does not know would corrupt the newer save
+  the moment it wrote back.
+
+```rust
+fn start() {
+    if Save.is_damaged() {
+        Ui.set_text(this.notice, "Your saved progress could not be read.");
+    }
+}
+```
+
+**A value that is not a number is refused**, because a NaN written to a save
+comes back next run and poisons whatever reads it, long after the frame that
+produced it has gone.
+
+**Editor preferences are not game saves** and never mix. A save belongs to the
+game — it is the player's, it ships with the build, and it round-trips
+identically in a browser and on a desktop. Editor state belongs to whoever is
+running the editor and never leaves their machine.
+
+**There is no `set_text`.** The reference game's saved state is settings,
+statistics, unlocks, currency and run history — numbers and truths. A string a
+script can neither build nor compare would be nearly inert, so the store carries
+text and the surface does not expose it until something needs it.
+
 ### Numbers a run can be replayed from
 
 | Call | Returns |

@@ -30,6 +30,7 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Text | ✅ | ✅ | 🟡 |
 | UI buttons and layout | ✅ | 🟡 | 🟡 |
 | Seeded randomness | ✅ | ➖ | 🟡 |
+| Game saves | ✅ | ➖ | 🟡 |
 | Project fonts | ✅ | ✅ | ❌ |
 | Perspective camera | ✅ | 🟡 | ❌ |
 | Orthographic camera | ✅ | 🟡 | ❌ |

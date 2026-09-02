@@ -74,6 +74,13 @@ pub struct ScriptFrame<'a> {
     /// rather than handing out the same number for ever — a game whose waves
     /// never vary should hear about it on the first frame.
     pub random: Option<&'a mut sindri_core::Rng>,
+    /// What the game remembers, when the host is keeping a save.
+    ///
+    /// `None` for a host that keeps none, and then `Save.*` says so rather than
+    /// accepting writes that go nowhere — a game whose progress silently never
+    /// persists should be heard about on the first frame, not after someone has
+    /// played for an hour.
+    pub saves: Option<&'a mut sindri_core::SaveStore>,
     pub delta_seconds: f32,
 }
 
@@ -89,6 +96,7 @@ impl<'a> ScriptFrame<'a> {
             physics: None,
             screen_ui: None,
             random: None,
+            saves: None,
             delta_seconds,
         }
     }
@@ -111,6 +119,13 @@ impl<'a> ScriptFrame<'a> {
     #[must_use]
     pub fn with_random(mut self, random: &'a mut sindri_core::Rng) -> Self {
         self.random = Some(random);
+        self
+    }
+
+    /// The same frame, with what the game remembers.
+    #[must_use]
+    pub fn with_saves(mut self, saves: &'a mut sindri_core::SaveStore) -> Self {
+        self.saves = Some(saves);
         self
     }
 
@@ -231,6 +246,7 @@ impl Scripts {
             physics,
             screen_ui,
             random,
+            saves,
             delta_seconds,
         } = frame;
         let mut report = ScriptReport::default();
@@ -267,6 +283,7 @@ impl Scripts {
             physics,
             screen_ui,
             random,
+            saves,
             started: BTreeSet::new(),
             spawned: Vec::new(),
         };

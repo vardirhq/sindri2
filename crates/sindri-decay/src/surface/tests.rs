@@ -201,6 +201,7 @@ fn the_host_answers_every_path_the_analyzer_accepts() {
     let mut spawned = Vec::new();
     let screen_ui = sindri_scene::ScreenUi::new();
     let mut random = sindri_core::Rng::default();
+    let mut saves = sindri_core::SaveStore::default();
     let mut physics = physics_world();
     let events: Vec<sindri_physics::PhysicsEvent2d> = Vec::new();
     let environment = environment();
@@ -238,6 +239,7 @@ fn the_host_answers_every_path_the_analyzer_accepts() {
                     }),
                     screen_ui: Some(&screen_ui),
                     random: Some(&mut random),
+                    saves: Some(&mut saves),
                     audio: &mut audio,
                 },
             );
@@ -262,6 +264,7 @@ fn the_host_answers_every_path_the_analyzer_accepts() {
                     }),
                     screen_ui: Some(&screen_ui),
                     random: Some(&mut random),
+                    saves: Some(&mut saves),
                     audio: &mut audio,
                 },
             );
@@ -290,6 +293,7 @@ fn the_host_answers_every_global_the_analyzer_describes() {
     let mut spawned = Vec::new();
     let screen_ui = sindri_scene::ScreenUi::new();
     let mut random = sindri_core::Rng::default();
+    let mut saves = sindri_core::SaveStore::default();
     let mut physics = physics_world();
     let events: Vec<sindri_physics::PhysicsEvent2d> = Vec::new();
     let environment = environment();
@@ -334,6 +338,7 @@ fn the_host_answers_every_global_the_analyzer_describes() {
                     }),
                     screen_ui: Some(&screen_ui),
                     random: Some(&mut random),
+                    saves: Some(&mut saves),
                     audio: &mut audio,
                 },
             );
@@ -444,6 +449,7 @@ fn every_described_function_is_one_the_host_performs() {
     // is refused, and that would look like a host that does not know the call.
     let screen_ui = sindri_scene::ScreenUi::new();
     let mut random = sindri_core::Rng::default();
+    let mut saves = sindri_core::SaveStore::default();
     let environment = environment();
 
     for (name, symbol) in environment.globals() {
@@ -465,6 +471,7 @@ fn every_described_function_is_one_the_host_performs() {
                 physics: None,
                 screen_ui: Some(&screen_ui),
                 random: Some(&mut random),
+                saves: Some(&mut saves),
                 audio: &mut audio,
             },
         );

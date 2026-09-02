@@ -63,6 +63,8 @@ pub struct HostServices<'a> {
     pub screen_ui: Option<&'a sindri_scene::ScreenUi>,
     /// The run's random stream, when the host is running one.
     pub random: Option<&'a mut sindri_core::Rng>,
+    /// What the game remembers, when the host is keeping a save.
+    pub saves: Option<&'a mut sindri_core::SaveStore>,
     /// What the script asked to be played, in order.
     pub audio: &'a mut Vec<AudioCommand>,
 }
@@ -80,6 +82,7 @@ impl<'a> WorldHost<'a> {
             physics,
             screen_ui,
             random,
+            saves,
             audio,
         } = services;
         Self {
@@ -90,6 +93,7 @@ impl<'a> WorldHost<'a> {
                 blackboard,
                 crate::host::WorldServices {
                     spawning,
+                    saves,
                     physics,
                     screen_ui,
                     random,
@@ -260,6 +264,7 @@ mod tests {
                 physics: None,
                 screen_ui: None,
                 random: None,
+                saves: None,
                 audio: &mut queue,
             },
         );
@@ -327,6 +332,7 @@ mod tests {
                 physics: None,
                 screen_ui: None,
                 random: None,
+                saves: None,
                 audio: &mut queue,
             },
         );

@@ -15,8 +15,8 @@ use crate::{
         ENTITY, FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, GridCall, HostFunction,
         INPUT, INPUT_QUERIES, Node, PHYSICS, PHYSICS_CALLS, POINTER, POINTER_QUERIES,
         POINTER_VALUES, PREFAB, PRINT, PhysicsCall, PointerValue, RANDOM, RANDOM_CALLS, RandomCall,
-        THIS, THROUGH_REFERENCE, TIME, TIME_VALUES, TOUCH, TOUCH_CALLS, TOUCH_COUNT, UI, UI_CALLS,
-        UiCall, WORLD, WORLD_CALLS, WorldCall,
+        SAVE, SAVE_CALLS, SaveCall, THIS, THROUGH_REFERENCE, TIME, TIME_VALUES, TOUCH, TOUCH_CALLS,
+        TOUCH_COUNT, UI, UI_CALLS, UiCall, WORLD, WORLD_CALLS, WorldCall,
     },
 };
 
@@ -111,6 +111,7 @@ pub fn environment() -> Environment {
     add_physics_surface(&mut environment);
     add_ui_surface(&mut environment);
     add_random_surface(&mut environment);
+    add_save_surface(&mut environment);
     add_grid_surface(&mut environment);
     add_audio_surface(&mut environment);
 
@@ -283,6 +284,35 @@ pub(super) fn add_random_surface(environment: &mut Environment) {
     }
     environment.add_type(RANDOM, random);
     environment.add_value(RANDOM, Type::Named(RANDOM.to_owned()));
+}
+
+/// What a game remembers between runs.
+pub(super) fn add_save_surface(environment: &mut Environment) {
+    let mut save = HostType::new();
+    for (name, call) in SAVE_CALLS {
+        save = save.with_function(
+            *name,
+            FunctionType {
+                params: match call {
+                    SaveCall::Number | SaveCall::SetNumber => vec![Type::String, Type::F32],
+                    SaveCall::Flag | SaveCall::SetFlag => vec![Type::String, Type::Bool],
+                    SaveCall::Has => vec![Type::String],
+                    _ => Vec::new(),
+                },
+                return_type: match call {
+                    SaveCall::Number => Type::F32,
+                    SaveCall::Flag
+                    | SaveCall::Has
+                    | SaveCall::IsNew
+                    | SaveCall::IsDamaged
+                    | SaveCall::IsFromNewer => Type::Bool,
+                    SaveCall::SetNumber | SaveCall::SetFlag | SaveCall::Clear => Type::Unit,
+                },
+            },
+        );
+    }
+    environment.add_type(SAVE, save);
+    environment.add_value(SAVE, Type::Named(SAVE.to_owned()));
 }
 
 pub(super) fn add_grid_surface(environment: &mut Environment) {

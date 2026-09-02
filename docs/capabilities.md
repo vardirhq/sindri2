@@ -185,6 +185,41 @@ without reading the payload. No game yet plays a scene whose bodies move —
 separate feature-track slices in `docs/physics.md` rather than things this
 foundation pretends to have completed.
 
+### Game saves
+
+`sindri_core::SaveStore` is a flat, versioned key/value document. Flat because
+Decay holds numbers, truths and text and nothing else: a structure a script could
+not build is a structure nothing could write, and the file stays something a
+person can read and repair. Ordered keys, so the same saved state is the same
+bytes and a save can be diffed.
+
+Three absences are distinguished, because they call for different things: a
+first run starts cheerfully, a **damaged** save is worth telling someone about
+before their progress is written over, and one written by a **newer** build is
+reported without being read — a reader that guessed at a format it does not know
+would corrupt it the moment it wrote back.
+
+`sindri_platform::SaveBackend` is where the bytes go. `MemorySaves` is the
+default so a headless run and a test have somewhere to write without choosing a
+path; `DamagedSaves` exists so the unreadable path can be proven without
+corrupting a real file; `FileSaves` writes beside the target and renames over it,
+because a save half written is a save destroyed at the exact moment someone's
+machine lost power mid-run; `BrowserSaves` uses `localStorage`, chosen over every
+larger browser store because the alternatives are asynchronous and a game should
+not have to ask whether its progress has landed yet.
+
+Nothing in Decay writes to storage. The store is in memory, marked dirty on
+change, and the host writes it out on a cadence and before it stops — how often
+someone's disk is touched is a decision about their machine. Writing the same
+value again is not a change, so a game storing its volume every frame does not
+keep a disk busy.
+
+Editor Play keeps a save in memory for the editor's lifetime and never writes it
+to disk: `Save.*` calls work and round-trip inside a session so persistence can
+be play-tested, but putting a file into someone's project because they pressed
+Play would be a side effect they did not ask for. Editor preferences are a
+separate thing and stay separate.
+
 ### Randomness
 
 `sindri_core::Rng` is a **PCG-XSH-RR 64/32** generator written out rather than
@@ -868,6 +903,11 @@ error with a line number. Reaching through a stale or null reference is reported
 rather than silently ignored. Verified in the game: the orbs used to compare
 against a position the player published to the shared board, and now ask the
 player directly, with the picture unchanged.
+
+**And a game can remember things between runs.** `Save.number`, `set_number`,
+`flag`, `set_flag`, `has`, `clear`, and three questions that tell a first run
+from a damaged save from one a newer build wrote. Exercised in
+`crates/sindri-decay/tests/a_script_remembers.rs`.
 
 **And a script can draw numbers a run can be replayed from.** `Random.value`,
 `range`, `int`, `pick` and `seed` read the host's stream, which a seed

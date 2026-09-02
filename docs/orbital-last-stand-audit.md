@@ -33,7 +33,8 @@ Decay, gameplay collision access, persistence, particles or equivalent effect
 rendering, and a product export pipeline.
 
 **Spawning, reusable definitions, collections, queries, pointer/touch input,
-gameplay collision, the screen UI and seeded randomness are now done.** `docs/prefabs.md`, `docs/scripting.md`,
+gameplay collision, the screen UI, seeded randomness and persistence are now
+done.** `docs/prefabs.md`, `docs/scripting.md`,
 `docs/physics.md` and `decay/LANGUAGE.md` are the contracts; the rest of the
 list stands.
 
@@ -90,7 +91,7 @@ The statuses mean:
 | Upgrade/build data | Exported scalar fields exist | **Missing** for collections, catalog queries, weighted choices, and loadout data |
 | Sprite animation | Runtime/editor animation works | **Partial**; Decay cannot select or control clips |
 | Audio | Native, browser, and silent backends plus Decay playback calls | **Ready**, with host-side clip gathering still manual |
-| Persistent progression | Editor preferences persist, but there is no game save/storage API | **Missing** |
+| Persistent progression | Versioned key/value saves with file, browser, memory and damaged backends, and a `Save` namespace in Decay | **Ready** |
 | Browser release | Gather proves a hand-built WASM/WebGPU Pages host | **Partial**; no general project export and browser asset fetching is not exercised |
 | Full editor playtest | Scripts and animation run in editor Play | **Partial**; not the complete application/game loop |
 | Mobile/browser fallback | WebGPU browser host exists, and touch reaches gameplay on every host | **Partial**; no WebGL fallback |
@@ -244,7 +245,15 @@ touch/drag abstraction through the same input state the host already owns.
 Editor Game view routing, browser pointer capture, focus loss, and viewport
 coordinates must agree. A mobile game cannot rely on keyboard-only script input.
 
-### 6. Persistence
+### 6. Persistence — done
+
+Delivered as `SaveStore` and `SaveDocument` in `sindri-core`, the `SaveBackend`
+trait with file, browser, memory and deliberately-damaged implementations in
+`sindri-platform`, and the `Save` namespace in Decay. Every requirement below is
+met. One choice worth naming: a flat key/value document rather than slots, since
+Decay can express numbers, truths and text and nothing else — `settings.volume`
+and `progress.best_wave` are keys, and the file stays readable and repairable.
+What follows is the original statement of the requirement.
 
 The game needs a versioned, game-owned save API for settings and progression.
 
@@ -305,7 +314,7 @@ possible, not by subsystem familiarity.
    `docs/scripting.md` on `Ui` and `Pointer.over_ui`
 6. ~~**Host-owned seeded randomness**~~ — done; see `docs/scripting.md` on
    `Random`
-7. **Game persistence boundary**
+7. ~~**Game persistence boundary**~~ — done; see `docs/scripting.md` on `Save`
 8. **Measured particle/effect path**
 9. **Complete editor Play application loop**
 10. **Static-web project export with gathered assets**

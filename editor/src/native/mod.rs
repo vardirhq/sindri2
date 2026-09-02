@@ -264,6 +264,15 @@ struct EditorApp {
     /// that can be found again, and it is the opposite of what a shipped game
     /// wants — which is why a game seeds itself instead.
     random: sindri_core::Rng,
+    /// What a played scene remembers.
+    ///
+    /// Kept in memory for as long as the editor is open, and never written to
+    /// disk. A script's `Save.*` calls work and round-trip inside a session, so
+    /// persistence can be play-tested; putting a file into someone's project
+    /// directory because they pressed Play would be a side effect they did not
+    /// ask for. Where a real save belongs is the shipped host's decision, and
+    /// `docs/scripting.md` says so.
+    saves: sindri_core::SaveStore,
     /// Where the Game view was drawn last frame, in window points.
     ///
     /// Kept because scripts advance before the layout runs, so the rectangle a
@@ -433,6 +442,7 @@ impl EditorApp {
             physics: ScenePhysics2d::top_down().expect("zero gravity is finite"),
             screen_ui: ScreenUi::default(),
             random: sindri_core::Rng::default(),
+            saves: sindri_core::SaveStore::default(),
             animations: SpriteAnimations::new(),
             scripts: SceneScripts::for_scene(None),
             input: EditorInput::default(),

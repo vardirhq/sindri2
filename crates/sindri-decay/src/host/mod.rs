@@ -12,9 +12,11 @@
 
 mod call;
 mod convert;
+mod dispatch;
 mod map;
 mod physics;
 mod random;
+mod save;
 mod ui;
 
 use std::collections::BTreeSet;
@@ -24,15 +26,13 @@ use decay_runtime::{Host, RuntimeError, Value};
 use sindri_core::{EntityId, Transform3D, World};
 use sindri_platform::InputState;
 
-use self::convert::{as_f32, button, describe, key, number};
+use self::convert::{as_f32, describe, number};
 use crate::{
     Blackboard, PrefabSources,
     surface::{
-        FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, Handle, HostFunction, INPUT,
-        INPUT_QUERIES, InputQuery, Leaf, PHYSICS, PHYSICS_CALLS, POINTER, POINTER_QUERIES,
-        POINTER_VALUES, PRINT, PointerQuery, PointerValue, RANDOM, RANDOM_CALLS, TIME, TIME_VALUES,
-        TOUCH, TOUCH_CALLS, TOUCH_COUNT, TimeValue, TouchCall, UI, UI_CALLS, WORLD, WORLD_CALLS,
-        follow_mut, handle, leaf, leaf_through_reference,
+        FUNCTIONS, Handle, HostFunction, Leaf, POINTER, POINTER_VALUES, PRINT, PointerValue, TIME,
+        TIME_VALUES, TOUCH, TOUCH_COUNT, TimeValue, TouchCall, follow_mut, handle, leaf,
+        leaf_through_reference,
     },
 };
 
@@ -81,6 +81,8 @@ pub struct WorldHost<'a> {
     spawning: Spawning<'a>,
     /// The physics a script may read and drive, when the host runs any.
     physics: Option<crate::Physics2d<'a>>,
+    /// What the game remembers, when the host is keeping a save.
+    saves: Option<&'a mut sindri_core::SaveStore>,
     /// The run's random stream, when the host is running one.
     ///
     /// Mutable because drawing a number is what advances it: a stream a script
@@ -286,102 +288,9 @@ impl Host for WorldHost<'_> {
         }
 
         if let [namespace, name] = parts.as_slice()
-            && *namespace == GAME
-            && let Some((_, call)) = GAME_CALLS.iter().find(|(known, _)| known == name)
+            && let Some(result) = self.namespaced_call(namespace, name, path, args)
         {
-            let note = match args.first() {
-                Some(Value::String(note)) => note.clone(),
-                other => {
-                    return Err(RuntimeError::Host(format!(
-                        "{} names its note with text, and the script gave {other:?}",
-                        path.dotted()
-                    )));
-                }
-            };
-            let value = |index: usize| -> Result<f64, RuntimeError> {
-                args.get(index)
-                    .ok_or_else(|| {
-                        RuntimeError::Host(format!("{} wants more arguments", path.dotted()))
-                    })
-                    .and_then(|value| number(path, value))
-            };
-            return Ok(Some(match call {
-                GameCall::Get => Value::Number(self.blackboard.get(&note, value(1)?)),
-                GameCall::Set => {
-                    self.blackboard.set(note, value(1)?);
-                    Value::Unit
-                }
-            }));
-        }
-
-        if let [namespace, name] = parts.as_slice()
-            && *namespace == WORLD
-            && let Some((_, call)) = WORLD_CALLS.iter().find(|(known, _)| known == name)
-        {
-            return self.world_call(*call, path, args).map(Some);
-        }
-
-        if let [namespace, name] = parts.as_slice()
-            && *namespace == PHYSICS
-            && let Some((_, call)) = PHYSICS_CALLS.iter().find(|(known, _)| known == name)
-        {
-            return self.physics_call(*call, path, args).map(Some);
-        }
-
-        if let [namespace, name] = parts.as_slice()
-            && *namespace == UI
-            && let Some((_, call)) = UI_CALLS.iter().find(|(known, _)| known == name)
-        {
-            return self.ui_call(*call, path, args).map(Some);
-        }
-
-        if let [namespace, name] = parts.as_slice()
-            && *namespace == RANDOM
-            && let Some((_, call)) = RANDOM_CALLS.iter().find(|(known, _)| known == name)
-        {
-            return self.random_call(*call, path, args).map(Some);
-        }
-
-        if let [namespace, name] = parts.as_slice()
-            && *namespace == GRID
-            && let Some((_, call)) = GRID_CALLS.iter().find(|(known, _)| known == name)
-        {
-            return self.grid_call(*call, path, args).map(Some);
-        }
-
-        if let [namespace, name] = parts.as_slice()
-            && *namespace == POINTER
-            && let Some((_, query)) = POINTER_QUERIES.iter().find(|(known, _)| known == name)
-        {
-            let input = self.context.input;
-            let button = button(path, args.first())?;
-            return Ok(Some(Value::Bool(match query {
-                PointerQuery::Down => input.pointer_down(button),
-                PointerQuery::Pressed => input.pointer_pressed(button),
-                PointerQuery::Released => input.pointer_released(button),
-            })));
-        }
-
-        if let [namespace, name] = parts.as_slice()
-            && *namespace == TOUCH
-            && let Some((_, call)) = TOUCH_CALLS.iter().find(|(known, _)| known == name)
-        {
-            return self.touch_call(*call, path, args).map(Some);
-        }
-
-        if let [namespace, name] = parts.as_slice()
-            && *namespace == INPUT
-            && let Some((_, query)) = INPUT_QUERIES.iter().find(|(known, _)| known == name)
-        {
-            let input = self.context.input;
-            return Ok(Some(match query {
-                InputQuery::Axis => Value::Number(f64::from(
-                    input.axis(key(path, args.first())?, key(path, args.get(1))?),
-                )),
-                InputQuery::Down => Value::Bool(input.key_down(key(path, args.first())?)),
-                InputQuery::Pressed => Value::Bool(input.key_pressed(key(path, args.first())?)),
-                InputQuery::Released => Value::Bool(input.key_released(key(path, args.first())?)),
-            }));
+            return result.map(Some);
         }
 
         Ok(None)
@@ -395,6 +304,8 @@ impl Host for WorldHost<'_> {
 /// queue, which is the wrapper's business rather than this host's.
 pub struct WorldServices<'a> {
     pub spawning: Spawning<'a>,
+    /// What the game remembers, when the host is keeping a save.
+    pub saves: Option<&'a mut sindri_core::SaveStore>,
     pub physics: Option<crate::Physics2d<'a>>,
     pub screen_ui: Option<&'a sindri_scene::ScreenUi>,
     pub random: Option<&'a mut sindri_core::Rng>,
@@ -410,6 +321,7 @@ impl<'a> WorldHost<'a> {
     ) -> Self {
         let WorldServices {
             spawning,
+            saves,
             physics,
             screen_ui,
             random,
@@ -423,6 +335,7 @@ impl<'a> WorldHost<'a> {
             physics,
             screen_ui,
             random,
+            saves,
             printed: Vec::new(),
         }
     }

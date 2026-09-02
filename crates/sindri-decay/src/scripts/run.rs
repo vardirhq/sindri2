@@ -44,6 +44,8 @@ pub(super) struct TickWorld<'a> {
     pub(super) screen_ui: Option<&'a sindri_scene::ScreenUi>,
     /// The run's random stream, when the host is running one.
     pub(super) random: Option<&'a mut sindri_core::Rng>,
+    /// What the game remembers, when the host is keeping a save.
+    pub(super) saves: Option<&'a mut sindri_core::SaveStore>,
 }
 
 pub(super) fn tick(
@@ -110,6 +112,7 @@ pub(super) fn tick(
                 // Reborrowed per tick like physics: one stream, shared by every
                 // script in the pass, so a run's numbers are the run's.
                 random: at.random.as_deref_mut(),
+                saves: at.saves.as_deref_mut(),
                 audio: &mut *at.audio,
             },
         ),

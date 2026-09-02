@@ -270,6 +270,7 @@ impl EditorApp {
                 }),
                 screen_ui: &self.screen_ui,
                 random: &mut self.random,
+                saves: &mut self.saves,
                 delta_seconds: delta,
             },
         );

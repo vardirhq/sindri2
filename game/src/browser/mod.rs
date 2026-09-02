@@ -95,11 +95,14 @@ impl BrowserGatherApp {
             ))?;
         }
 
-        let mut engine = EngineHost::new_with_audio(
-            Session::with_sources(self.scene.components().clone(), project.scripts),
-            sindri_core::FixedStepConfig::default(),
-            audio,
-        )?;
+        let mut session = Session::with_sources(self.scene.components().clone(), project.scripts);
+        // A named key, because two games sharing an origin must not share a
+        // save.
+        session.keep_saves_in(Box::new(sindri_platform::BrowserSaves::under(
+            "sindri.gather.save",
+        )));
+        let mut engine =
+            EngineHost::new_with_audio(session, sindri_core::FixedStepConfig::default(), audio)?;
         *engine.world_mut() = World::from_scene(&project.scene)?.world;
         engine.start()?;
         engine.set_viewport(self.viewport[0], self.viewport[1]);

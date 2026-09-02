@@ -45,11 +45,15 @@ impl DesktopApp for GatherApp {
         let mut audio = gather_audio_backend()?;
         bind_audio(&mut audio)?;
 
-        let mut engine = EngineHost::new_with_audio(
-            Session::new(scene.components().clone()),
-            FixedStepConfig::default(),
-            audio,
-        )?;
+        let mut session = Session::new(scene.components().clone());
+        // Beside the executable rather than in an application data directory:
+        // Gather is a demonstration that gets run from a checkout, and a save
+        // buried in a per-user folder is one nobody can find to delete. A real
+        // game names a path its platform expects.
+        session.keep_saves_in(Box::new(sindri_platform::FileSaves::at(
+            std::path::Path::new("gather-save.json"),
+        )));
+        let mut engine = EngineHost::new_with_audio(session, FixedStepConfig::default(), audio)?;
         *engine.world_mut() = world()?;
         engine.start()?;
 

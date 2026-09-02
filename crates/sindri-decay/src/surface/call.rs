@@ -377,6 +377,51 @@ pub(crate) const RANDOM_CALLS: &[(&str, RandomCall)] = &[
     ("seed", RandomCall::Seed),
 ];
 
+/// What a game remembers between runs.
+///
+/// Reads and writes go to an in-memory store; getting it onto a disk or into a
+/// browser is the host's business and happens on its own schedule. A script
+/// that had to ask for a write would be a script deciding how often someone's
+/// disk is touched.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum SaveCall {
+    /// A stored number, or the fallback when there is none.
+    ///
+    /// A fallback rather than an optional because every caller has one — a
+    /// starting score, a default volume — and a save is mostly read on the run
+    /// where nothing has been stored yet.
+    Number,
+    SetNumber,
+    Flag,
+    SetFlag,
+    /// Whether anything is stored under a key.
+    Has,
+    /// Forgets everything, which is what "reset my progress" means.
+    Clear,
+    /// Whether this is a first run, with nothing stored.
+    IsNew,
+    /// Whether something was stored and could not be read.
+    ///
+    /// Separate from `IsNew` because they call for different things: a first
+    /// run starts cheerfully, and a damaged save is worth telling someone about
+    /// before their progress is written over.
+    IsDamaged,
+    /// Whether what is stored was written by a newer build than this one.
+    IsFromNewer,
+}
+
+pub(crate) const SAVE_CALLS: &[(&str, SaveCall)] = &[
+    ("number", SaveCall::Number),
+    ("set_number", SaveCall::SetNumber),
+    ("flag", SaveCall::Flag),
+    ("set_flag", SaveCall::SetFlag),
+    ("has", SaveCall::Has),
+    ("clear", SaveCall::Clear),
+    ("is_new", SaveCall::IsNew),
+    ("is_damaged", SaveCall::IsDamaged),
+    ("is_from_newer", SaveCall::IsFromNewer),
+];
+
 /// What a script can ask about the frame it is in.
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum TimeValue {
