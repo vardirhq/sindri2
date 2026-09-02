@@ -198,8 +198,12 @@ const requiredAssetKinds = [
   ['font', 'fonts/Inter.ttf'],
   ['audio', 'audio/background.wav'],
 ];
+// Exported assets sit below a content-hash directory; the manifest itself
+// deliberately does not. Match the logical ID at the end of either shape.
+const fetched = (asset) =>
+  [...fetchedAssets].some((path) => path === asset || path.endsWith(`/${asset}`));
 const missingAssets = EXPECT_ASSETS
-  ? requiredAssetKinds.filter(([, asset]) => !fetchedAssets.has(asset))
+  ? requiredAssetKinds.filter(([, asset]) => !fetched(asset))
   : [];
 
 console.log(`webgpu: ${webgpu ? 'yes' : 'no'}`);
