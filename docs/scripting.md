@@ -275,6 +275,76 @@ asks once per frame is fine; a script that asks once per bullet per frame is
 quadratic, and the operation budget will eventually say so in a way that names
 the script rather than the pattern. Ask once and hold the answer for the frame.
 
+### Bodies, and what they touched
+
+| Call | Returns |
+| --- | --- |
+| `Physics.velocity_x(entity)` | `f32` |
+| `Physics.velocity_y(entity)` | `f32` |
+| `Physics.set_velocity(entity, x, y)` | nothing |
+| `Physics.apply_impulse(entity, x, y)` | nothing |
+| `Physics.collision_started()` | `Array<Entity>` |
+| `Physics.collision_stopped()` | `Array<Entity>` |
+| `Physics.sensor_entered()` | `Array<Entity>` |
+| `Physics.sensor_exited()` | `Array<Entity>` |
+
+This is **Sindri physics, never Rapier**. `docs/physics.md` makes the backend a
+private implementation detail, and a namespace that leaked its vocabulary would
+make the backend unreplaceable one script at a time.
+
+A body is authored, not created here: an entity carries `sindri.physics2d.collider`
+and optionally `sindri.physics2d.rigid_body`, and `ScenePhysics2d` keeps the
+simulation in step with what the scene says. A prefab carrying those components
+spawns with them, which is how a bullet gets a body.
+
+```rust
+script Bullet {
+    @export let speed: f32 = 400.0;
+
+    fn start() {
+        Physics.set_velocity(this.entity, this.speed, 0.0);
+    }
+
+    fn update(dt: f32) {
+        for hit in Physics.sensor_entered() {
+            World.despawn(hit);
+            World.despawn(this.entity);
+        }
+    }
+}
+```
+
+**The event calls take nothing and answer about the entity the script is on.**
+An event is about a *pair*, and the pair a script cares about is the one it is
+half of — so the answer names the other half. A manager script that wanted every
+collision in the world would be asking a different question, and the surface does
+not offer it yet.
+
+They are **queries rather than callbacks**, because Decay now has a value that
+can hold several entities and a lifecycle function would be a second way for the
+host to enter a script. The order is the order the step reported, which is the
+same order twice for the same simulation.
+
+**Started, not touching.** `collision_started` answers with what began touching
+during the last step, so a projectile that should hit each target once hits each
+target once without keeping a list. That is the shape the reference game's
+piercing bullets need, and it falls out of the event rather than being a feature.
+
+**Despawning from an event is safe.** Removing either half — the thing that was
+hit, or the thing that hit it — is an ordinary `World.despawn`, and the body
+leaves the simulation before the next step. Walking the answer while despawning
+from it is the case `World.exists` covers, exactly as for any other collection of
+references.
+
+**A host with no physics refuses these**, rather than reporting a velocity of
+zero for a body that does not exist. A game whose bullets never move because
+nothing is stepping should hear about it on the first frame.
+
+**There is no ray cast, no overlap query, and no contact detail yet.**
+`docs/physics.md` lists them as first-slice-adjacent, and none has a demonstrated
+consumer; a query surface invented before something needs it is a shape chosen
+by guesswork.
+
 ### Grid position
 
 | Call | Returns |

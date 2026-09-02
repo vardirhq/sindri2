@@ -13,9 +13,9 @@ use crate::{
     audio_host::AUDIO,
     surface::{
         ENTITY, FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, GridCall, HostFunction,
-        INPUT, INPUT_QUERIES, Node, POINTER, POINTER_QUERIES, POINTER_VALUES, PREFAB, PRINT,
-        PointerValue, THIS, THROUGH_REFERENCE, TIME, TIME_VALUES, TOUCH, TOUCH_CALLS, TOUCH_COUNT,
-        WORLD, WORLD_CALLS, WorldCall,
+        INPUT, INPUT_QUERIES, Node, PHYSICS, PHYSICS_CALLS, POINTER, POINTER_QUERIES,
+        POINTER_VALUES, PREFAB, PRINT, PhysicsCall, PointerValue, THIS, THROUGH_REFERENCE, TIME,
+        TIME_VALUES, TOUCH, TOUCH_CALLS, TOUCH_COUNT, WORLD, WORLD_CALLS, WorldCall,
     },
 };
 
@@ -142,6 +142,7 @@ pub fn environment() -> Environment {
     environment.add_value(WORLD, Type::Named(WORLD.to_owned()));
 
     add_pointer_surface(&mut environment);
+    add_physics_surface(&mut environment);
     add_grid_surface(&mut environment);
     add_audio_surface(&mut environment);
 
@@ -184,6 +185,36 @@ pub(super) fn add_pointer_surface(environment: &mut Environment) {
     }
     environment.add_type(TOUCH, touch);
     environment.add_value(TOUCH, Type::Named(TOUCH.to_owned()));
+}
+
+/// What a script can do to a body, and ask about what it touched.
+pub(super) fn add_physics_surface(environment: &mut Environment) {
+    let entity = || Type::Named(ENTITY.to_owned());
+    let mut physics = HostType::new();
+    for (name, call) in PHYSICS_CALLS {
+        physics = physics.with_function(
+            *name,
+            FunctionType {
+                params: match call {
+                    PhysicsCall::VelocityX | PhysicsCall::VelocityY => vec![entity()],
+                    PhysicsCall::SetVelocity | PhysicsCall::ApplyImpulse => {
+                        vec![entity(), Type::F32, Type::F32]
+                    }
+                    // An event query is about the entity the script is on, so
+                    // it takes nothing: an event is about a pair, and the pair
+                    // a script cares about is the one it is half of.
+                    _ => Vec::new(),
+                },
+                return_type: match call {
+                    PhysicsCall::VelocityX | PhysicsCall::VelocityY => Type::F32,
+                    PhysicsCall::SetVelocity | PhysicsCall::ApplyImpulse => Type::Unit,
+                    _ => Type::array_of(entity()),
+                },
+            },
+        );
+    }
+    environment.add_type(PHYSICS, physics);
+    environment.add_value(PHYSICS, Type::Named(PHYSICS.to_owned()));
 }
 
 pub(super) fn add_grid_surface(environment: &mut Environment) {

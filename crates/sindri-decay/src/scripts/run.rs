@@ -8,7 +8,7 @@ use sindri_core::{EntityId, World};
 use sindri_platform::InputState;
 
 use crate::{
-    Blackboard, PrefabSources, ScriptComponent, ScriptContext, ScriptFailure, WorldHost,
+    Blackboard, Physics2d, PrefabSources, ScriptComponent, ScriptContext, ScriptFailure, WorldHost,
     audio_host::AudioCommand, host::Spawning,
 };
 
@@ -38,6 +38,8 @@ pub(super) struct TickWorld<'a> {
     pub(super) started: BTreeSet<EntityId>,
     /// What every call in this pass has created so far.
     pub(super) spawned: Vec<EntityId>,
+    /// The physics a script may read and drive, when the host runs any.
+    pub(super) physics: Option<Physics2d<'a>>,
 }
 
 pub(super) fn tick(
@@ -91,6 +93,14 @@ pub(super) fn tick(
                 started: &at.started,
                 spawned: &mut at.spawned,
             },
+            // Reborrowed per tick rather than moved: every script in the pass
+            // reads the same frame's events and drives the same world, and one
+            // taking physics away from the rest would make which script ran
+            // first decide what the others could do.
+            at.physics.as_mut().map(|physics| Physics2d {
+                world: &mut *physics.world,
+                events: physics.events,
+            }),
             &mut *at.audio,
         ),
     );

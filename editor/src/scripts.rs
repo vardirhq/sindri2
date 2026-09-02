@@ -23,8 +23,8 @@ use sindri_assets::{
 };
 use sindri_core::{AssetId, AssetStatus, ComponentSchemaRegistry, PrefabDocument, World};
 use sindri_decay::{
-    PrefabSources, ScriptExport, ScriptFailure, ScriptReport, ScriptSources, Scripts,
-    referenced_sources,
+    Physics2d, PrefabSources, ScriptExport, ScriptFailure, ScriptFrame, ScriptReport,
+    ScriptSources, Scripts, referenced_sources,
 };
 use sindri_platform::InputState;
 
@@ -238,21 +238,25 @@ impl SceneScripts {
     }
 
     /// Moves every script in the world on by `delta_seconds`.
+    ///
+    /// `physics` is the world Play is stepping, so a script can drive a body
+    /// and be told what it touched. `None` while the scene is at rest, which is
+    /// when nothing is stepping and a `Physics.*` call should say so rather
+    /// than answer about a simulation nobody is running.
     pub fn advance(
         &mut self,
         world: &mut World,
         components: &ComponentSchemaRegistry,
         input: &InputState,
+        physics: Option<Physics2d<'_>>,
         delta_seconds: f32,
     ) -> ScriptReport {
-        self.scripts.advance(
-            world,
-            components,
-            &self.sources,
-            &self.prefabs,
-            input,
-            delta_seconds,
-        )
+        let mut frame =
+            ScriptFrame::new(&self.sources, input, delta_seconds).with_prefabs(&self.prefabs);
+        if let Some(physics) = physics {
+            frame = frame.with_physics(physics);
+        }
+        self.scripts.advance(world, components, frame)
     }
 
     /// What one script declares it wants authored, for the inspector to draw.

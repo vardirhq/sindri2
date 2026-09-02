@@ -9,7 +9,7 @@
 use std::collections::BTreeSet;
 
 use sindri_core::{SceneComponent, SceneDocument, Transform3D, UnknownComponentPolicy, World};
-use sindri_decay::{AudioCommand, PrefabSources, ScriptComponent, ScriptSources, Scripts};
+use sindri_decay::{AudioCommand, ScriptComponent, ScriptFrame, ScriptSources, Scripts};
 use sindri_gather::{AUDIO, FONTS, Session, extractor, sources, world};
 use sindri_grid::{GridCoord, GridPoint, GridSpace, PlanePoint};
 use sindri_platform::InputState;
@@ -259,10 +259,7 @@ fn walking_into_the_orbs_wins_the_game() {
             let report = scripts.advance(
                 &mut world,
                 extractor.components(),
-                &sources,
-                &PrefabSources::new(),
-                &held,
-                1.0 / 60.0,
+                ScriptFrame::new(&sources, &held, 1.0 / 60.0),
             );
             assert!(report.failures.is_empty(), "{:?}", report.failures);
 
@@ -285,10 +282,7 @@ fn walking_into_the_orbs_wins_the_game() {
         scripts.advance(
             &mut world,
             extractor.components(),
-            &sources,
-            &PrefabSources::new(),
-            &InputState::default(),
-            1.0 / 60.0,
+            ScriptFrame::new(&sources, &InputState::default(), 1.0 / 60.0),
         );
     }
     let banner = world
@@ -387,10 +381,7 @@ fn starting_over_starts_at_nothing() {
     scripts.advance(
         &mut world,
         extractor.components(),
-        &sources(),
-        &PrefabSources::new(),
-        &InputState::default(),
-        0.5,
+        ScriptFrame::new(&sources(), &InputState::default(), 0.5),
     );
     scripts.clear();
     assert!(!scripts.blackboard().has("score"));

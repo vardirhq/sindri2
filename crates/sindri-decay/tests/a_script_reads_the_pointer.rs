@@ -10,7 +10,7 @@ use serde_json::json;
 use sindri_core::{
     ComponentSchemaRegistry, EntityData, EntityId, SceneComponent, Transform3D, World,
 };
-use sindri_decay::{PrefabSources, ScriptComponent, ScriptReport, ScriptSources, Scripts};
+use sindri_decay::{ScriptComponent, ScriptFrame, ScriptReport, ScriptSources, Scripts};
 use sindri_platform::{InputEvent, InputState};
 
 fn registry() -> ComponentSchemaRegistry {
@@ -49,10 +49,7 @@ fn advance(
     scripts.advance(
         world,
         &registry(),
-        sources,
-        &PrefabSources::new(),
-        input,
-        1.0 / 60.0,
+        ScriptFrame::new(sources, input, 1.0 / 60.0),
     )
 }
 

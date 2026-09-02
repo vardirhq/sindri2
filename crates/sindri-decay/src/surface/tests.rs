@@ -119,6 +119,16 @@ fn pointing() -> InputState {
     input
 }
 
+/// A physics world with nothing in it.
+///
+/// The described physics calls take an entity that has a body, and the surface
+/// test's subjects have none — so what these prove is that the host *performs*
+/// the call, which for a body it does not know is an error rather than an
+/// unknown path. The distinction the walk is checking is exactly that one.
+fn physics_world() -> sindri_physics::PhysicsWorld2d {
+    sindri_physics::PhysicsWorld2d::new([0.0, 0.0]).expect("a world with no gravity")
+}
+
 fn blackboard() -> crate::Blackboard {
     crate::Blackboard::new()
 }
@@ -176,6 +186,8 @@ fn the_host_answers_every_path_the_analyzer_accepts() {
     let prefabs = prefabs();
     let started = std::collections::BTreeSet::new();
     let mut spawned = Vec::new();
+    let mut physics = physics_world();
+    let events: Vec<sindri_physics::PhysicsEvent2d> = Vec::new();
     let environment = environment();
     let mut checked = 0;
 
@@ -204,6 +216,10 @@ fn the_host_answers_every_path_the_analyzer_accepts() {
                     started: &started,
                     spawned: &mut spawned,
                 },
+                Some(crate::Physics2d {
+                    world: &mut physics,
+                    events: &events,
+                }),
                 &mut audio,
             );
             assert!(
@@ -220,6 +236,10 @@ fn the_host_answers_every_path_the_analyzer_accepts() {
                     started: &started,
                     spawned: &mut spawned,
                 },
+                Some(crate::Physics2d {
+                    world: &mut physics,
+                    events: &events,
+                }),
                 &mut audio,
             );
             assert_eq!(
@@ -245,6 +265,8 @@ fn the_host_answers_every_global_the_analyzer_describes() {
     let prefabs = prefabs();
     let started = std::collections::BTreeSet::new();
     let mut spawned = Vec::new();
+    let mut physics = physics_world();
+    let events: Vec<sindri_physics::PhysicsEvent2d> = Vec::new();
     let environment = environment();
     let mut checked = 0;
 
@@ -260,6 +282,16 @@ fn the_host_answers_every_global_the_analyzer_describes() {
             let path = Path(vec![namespace.to_owned(), name.to_owned()]);
             let dotted = path.dotted();
             let [spare, grid, mover, target] = subjects(&mut world, checked);
+            // The physics calls take an entity with a body. Without one they
+            // would prove only that the host refuses, and what this test is
+            // about is whether the host knows the path at all.
+            physics
+                .insert_body(
+                    spare,
+                    sindri_physics::RigidBody2d::default(),
+                    sindri_physics::Collider2d::circle(1.0),
+                )
+                .expect("a fresh entity takes a body");
             let mut host = WorldHost::new(
                 &mut world,
                 entity,
@@ -270,6 +302,10 @@ fn the_host_answers_every_global_the_analyzer_describes() {
                     started: &started,
                     spawned: &mut spawned,
                 },
+                Some(crate::Physics2d {
+                    world: &mut physics,
+                    events: &events,
+                }),
                 &mut audio,
             );
             match member {
@@ -386,6 +422,7 @@ fn every_described_function_is_one_the_host_performs() {
                 started: &started,
                 spawned: &mut spawned,
             },
+            None,
             &mut audio,
         );
         assert!(

@@ -26,6 +26,13 @@ pub(crate) const WORLD: &str = "World";
 
 pub(crate) const GRID: &str = "Grid";
 
+/// What a body is doing, and what it touched.
+///
+/// Sindri physics, never Rapier: `docs/physics.md` makes the backend a private
+/// implementation detail, and a namespace that leaked its vocabulary would make
+/// the backend unreplaceable one script at a time.
+pub(crate) const PHYSICS: &str = "Physics";
+
 /// The type of a value that names another entity.
 pub(crate) const ENTITY: &str = "Entity";
 

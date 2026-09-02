@@ -32,9 +32,10 @@ collection/query access, dynamic interactive UI, pointer/touch access from
 Decay, gameplay collision access, persistence, particles or equivalent effect
 rendering, and a product export pipeline.
 
-**Spawning, reusable definitions, collections, queries and pointer/touch input
-are now done.** `docs/prefabs.md`, `docs/scripting.md` and `decay/LANGUAGE.md`
-are the contracts; the rest of the list stands.
+**Spawning, reusable definitions, collections, queries, pointer/touch input and
+gameplay collision are now done.** `docs/prefabs.md`, `docs/scripting.md`,
+`docs/physics.md` and `decay/LANGUAGE.md` are the contracts; the rest of the
+list stands.
 
 ## What the reference game exercises
 
@@ -82,7 +83,7 @@ The statuses mean:
 | Query groups of enemies/projectiles | `Array<T>` is a Decay value, and `World.with_tag` answers with a bounded, ordered, active-only group | **Ready** |
 | Timed procedural behavior | Stateful update scripts, bounded loops, spawning, and collections exist | **Partial**; still blocked by randomness |
 | Seeded random waves and module offers | Host-owned seeded randomness is planned, not implemented | **Missing** |
-| Circle/sensor collision gameplay | Rapier2D runtime, masks, shapes, and events exist | **Partial**; no Decay access or exercised game integration |
+| Circle/sensor collision gameplay | `ScenePhysics2d` drives the runtime from authored components; Decay has velocity, impulse, and per-entity collision/sensor event queries | **Ready** |
 | Mouse and touch movement | Unified `Pointer` plus raw `Touch` in Decay, routed through the editor Game view in its own pixels | **Ready** |
 | Runtime HUD values | Screen text and images render | **Partial**; Decay cannot change text content |
 | Interactive menus and modal flows | Anchored screen image/text components exist | **Missing** as a runtime button, focus, layout, and navigation system |
@@ -169,7 +170,19 @@ A minimal useful slice would include:
 This should build on the collection work already described in the Decay
 roadmap, not introduce an Orbital-specific enemy list.
 
-### 3. Gameplay collision surface
+### 3. Gameplay collision surface — done
+
+Delivered as `ScenePhysics2d` on the scene side and the `Physics` namespace in
+Decay. Every requirement below is met except the instrumentation, which is the
+measured-performance work the effects slice carries: circle and box colliders,
+sensors and masks, velocity and kinematic movement, deterministic events, and
+safe destruction from one. Piercing without duplicate hits falls out of
+`collision_started` rather than needing a feature — an event that fires when
+contact *begins* fires once per target.
+
+Manual distance checks remain a valid gameplay tool: `World.with_tag` plus
+transform reads is a loop a script can write, and nothing forces a game through
+physics. What follows is the original statement of the requirement.
 
 The Rapier2D foundation is useful, but the feature is not complete until scripts
 can drive bodies and consume collision/sensor events.
@@ -273,7 +286,8 @@ possible, not by subsystem familiarity.
    `decay/LANGUAGE.md` on `Array<T>` and `docs/scripting.md` on `World.with_tag`
 3. ~~**Pointer/touch input through Decay and Game view**~~ — done; see
    `docs/scripting.md` on `Pointer` and `Touch`
-4. **Typed 2D collision access and event delivery**
+4. ~~**Typed 2D collision access and event delivery**~~ — done; see
+   `docs/scripting.md` on `Physics` and `docs/physics.md` on the step order
 5. **Dynamic text plus a minimal interactive screen UI**
 6. **Host-owned seeded randomness**
 7. **Game persistence boundary**

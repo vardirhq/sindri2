@@ -10,7 +10,7 @@ use sindri_core::{
     ComponentSchemaRegistry, EntityData, EntityId, SceneComponent, TagsComponent, Transform3D,
     World,
 };
-use sindri_decay::{PrefabSources, ScriptComponent, ScriptReport, ScriptSources, Scripts};
+use sindri_decay::{ScriptComponent, ScriptFrame, ScriptReport, ScriptSources, Scripts};
 use sindri_platform::InputState;
 
 fn registry() -> ComponentSchemaRegistry {
@@ -60,10 +60,7 @@ fn advance(world: &mut World, sources: &ScriptSources) -> ScriptReport {
     Scripts::new().advance(
         world,
         &registry(),
-        sources,
-        &PrefabSources::new(),
-        &InputState::default(),
-        1.0 / 60.0,
+        ScriptFrame::new(sources, &InputState::default(), 1.0 / 60.0),
     )
 }
 

@@ -166,13 +166,24 @@ shape of the later 3D slice, but no 3D runtime behavior is claimed yet.
 
 `sindri.physics2d.rigid_body` and `sindri.physics2d.collider` are registered
 scene components with defaults the engine accepts, so a scene authors bodies and
-colliders and the editor's generic component inspector adds and edits them. What
-the editor does not have is physics-specific authoring: no collider outline in
-the viewport, no handles for a shape, and nothing that shows a body's kind
-without reading the payload. Decay access and Gather use are still missing
-entirely, so nothing yet plays a scene whose bodies move. Those remain separate
-feature-track slices in `docs/physics.md` rather than things this foundation
-pretends to have completed.
+colliders and the editor's generic component inspector adds and edits them.
+
+`ScenePhysics2d` is what joins the two halves. It builds the simulation from
+those components, keeps it in step as entities are spawned, switched off, and
+despawned — a body outliving its entity would collide on behalf of nothing — and
+writes what physics decided back into the transforms the renderer reads, leaving
+the authored Z and the 3D scale alone. A body whose authored values have not
+changed is left as it is rather than rebuilt, because rebuilding one discards the
+velocity and contacts the simulation owns. Editor Play and the game session both
+step it once per fixed update, before scripts run, so a script observes the
+events of the step that just happened.
+
+What the editor does not have is physics-specific authoring: no collider outline
+in the viewport, no handles for a shape, and nothing that shows a body's kind
+without reading the payload. No game yet plays a scene whose bodies move —
+`games/orbital-last-stand` is where that proof will come from. Both remain
+separate feature-track slices in `docs/physics.md` rather than things this
+foundation pretends to have completed.
 
 ### Grid geometry
 
@@ -790,6 +801,16 @@ error with a line number. Reaching through a stale or null reference is reported
 rather than silently ignored. Verified in the game: the orbs used to compare
 against a position the player published to the shared board, and now ask the
 player directly, with the picture unchanged.
+
+**And a script can drive a body and be told what it touched.**
+`Physics.set_velocity`, `apply_impulse` and `velocity_x`/`_y` act on an entity's
+body; `collision_started`, `collision_stopped`, `sensor_entered` and
+`sensor_exited` answer with the entities this one touched during the last step,
+as an `Array<Entity>`. An event is about a pair, so the answer names the other
+half — whichever side of the event this entity was on. Despawning either half
+from inside the answer is safe. A host running no physics refuses the call
+rather than reporting a velocity of zero for a body that does not exist.
+Exercised in `crates/sindri-decay/tests/a_script_drives_a_body.rs`.
 
 **And a script can tell where the person is pointing.** `Pointer.x`,
 `Pointer.y` and `Pointer.inside` read the position and whether there is one;

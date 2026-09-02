@@ -25,6 +25,17 @@ impl PrefabSources {
         Self::default()
     }
 
+    /// The empty set, borrowed for as long as anyone wants it.
+    ///
+    /// So a caller with no prefabs writes nothing rather than keeping an empty
+    /// one alive beside the call. Built once and shared, because it holds
+    /// nothing and never will.
+    #[must_use]
+    pub fn none() -> &'static Self {
+        static NONE: std::sync::OnceLock<PrefabSources> = std::sync::OnceLock::new();
+        NONE.get_or_init(Self::default)
+    }
+
     pub fn insert(&mut self, id: impl Into<String>, prefab: PrefabDocument) {
         self.prefabs.insert(id.into(), prefab);
     }

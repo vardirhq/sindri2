@@ -14,7 +14,7 @@ use serde_json::json;
 use sindri_core::{
     ComponentSchemaRegistry, EntityData, EntityId, SceneComponent, Transform3D, World,
 };
-use sindri_decay::{PrefabSources, ScriptComponent, ScriptFailure, ScriptSources, Scripts};
+use sindri_decay::{ScriptComponent, ScriptFailure, ScriptFrame, ScriptSources, Scripts};
 use sindri_platform::InputState;
 
 fn registry() -> ComponentSchemaRegistry {
@@ -57,10 +57,7 @@ fn run(world: &mut World, sources: &ScriptSources) -> Vec<ScriptFailure> {
     let report = scripts.advance(
         world,
         &registry(),
-        sources,
-        &PrefabSources::new(),
-        &InputState::default(),
-        1.0 / 60.0,
+        ScriptFrame::new(sources, &InputState::default(), 1.0 / 60.0),
     );
     report.failures
 }

@@ -5,13 +5,13 @@
 //! and hands what they did to the engine.
 
 use sindri_core::{ComponentSchemaRegistry, World};
-use sindri_decay::{AudioCommand, PrefabSources, ScriptSources, Scripts};
+use sindri_decay::{AudioCommand, PrefabSources, ScriptFrame, ScriptSources, Scripts};
 
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_platform::NativeAudioBackend;
 use sindri_platform::{AudioBackend, AudioError, FrameContext, Game, InputState, PlaybackSettings};
-use sindri_scene::{AudioSourceComponent, SpriteAnimations};
+use sindri_scene::{AudioSourceComponent, ScenePhysics2d, SpriteAnimations};
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::assets::sources;
@@ -37,6 +37,12 @@ pub struct Session {
     prefabs: PrefabSources,
     components: ComponentSchemaRegistry,
     animations: SpriteAnimations,
+    /// The physics the scripts may drive.
+    ///
+    /// Stepped every fixed update whether or not the scene authors a collider,
+    /// which costs nothing for a scene with none and means a scene that grows
+    /// one needs no change here. No gravity: Gather is seen from above.
+    physics: ScenePhysics2d,
     pending_audio: Vec<AudioCommand>,
     autoplay_started: bool,
 }
@@ -61,6 +67,7 @@ impl Session {
             prefabs: PrefabSources::new(),
             components,
             animations: SpriteAnimations::new(),
+            physics: ScenePhysics2d::top_down().expect("zero gravity is finite"),
             pending_audio: Vec::new(),
             autoplay_started: false,
         }
@@ -73,13 +80,24 @@ impl Session {
         input: &InputState,
         delta_seconds: f32,
     ) -> Result<(), GatherError> {
+        // Physics first, so a script observes the events of the step that just
+        // happened and its writes take effect on the next one, which is the
+        // order `docs/physics.md` fixes.
+        self.physics.step(
+            world,
+            &self.components,
+            std::time::Duration::from_secs_f32(delta_seconds),
+        )?;
+        let (physics, events) = self.physics.for_scripts();
         let report = self.scripts.advance(
             world,
             &self.components,
-            &self.sources,
-            &self.prefabs,
-            input,
-            delta_seconds,
+            ScriptFrame::new(&self.sources, input, delta_seconds)
+                .with_prefabs(&self.prefabs)
+                .with_physics(sindri_decay::Physics2d {
+                    world: physics,
+                    events,
+                }),
         );
         self.pending_audio
             .extend(self.scripts.take_audio_commands());

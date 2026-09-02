@@ -10,6 +10,8 @@ pub enum GatherError {
     #[error(transparent)]
     Scene(#[from] sindri_scene::SceneExtractError),
     #[error(transparent)]
+    Physics(#[from] sindri_scene::PhysicsSyncError),
+    #[error(transparent)]
     Document(#[from] sindri_core::SceneError),
     #[error(transparent)]
     World(#[from] sindri_core::WorldError),

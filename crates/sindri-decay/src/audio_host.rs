@@ -56,10 +56,13 @@ impl<'a> WorldHost<'a> {
         context: ScriptContext<'a>,
         blackboard: &'a mut Blackboard,
         spawning: Spawning<'a>,
+        physics: Option<crate::Physics2d<'a>>,
         audio: &'a mut Vec<AudioCommand>,
     ) -> Self {
         Self {
-            inner: crate::host::WorldHost::new(world, entity, context, blackboard, spawning),
+            inner: crate::host::WorldHost::new(
+                world, entity, context, blackboard, spawning, physics,
+            ),
             audio,
         }
     }
@@ -221,6 +224,7 @@ mod tests {
             },
             &mut board,
             spawning(&prefabs, &started, &mut spawned),
+            None,
             &mut queue,
         );
         host.call(
@@ -283,6 +287,7 @@ mod tests {
             },
             &mut board,
             spawning(&prefabs, &started, &mut spawned),
+            None,
             &mut queue,
         );
         let error = host

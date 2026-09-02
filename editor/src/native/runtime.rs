@@ -224,9 +224,27 @@ impl EditorApp {
         if delta == 0.0 {
             return;
         }
-        let report = self
-            .scripts
-            .advance(&mut self.world, &components, self.input.state(), delta);
+        // Physics first, so a script observes the events of the step that just
+        // happened and its writes take effect on the next one. `docs/physics.md`
+        // fixes that order: consumers run after the step publishes.
+        if let Err(error) = self.physics.step(
+            &mut self.world,
+            &components,
+            std::time::Duration::from_secs_f32(delta),
+        ) {
+            self.console.error(format!("Physics: {error}"));
+        }
+        let (physics, events) = self.physics.for_scripts();
+        let report = self.scripts.advance(
+            &mut self.world,
+            &components,
+            self.input.state(),
+            Some(sindri_decay::Physics2d {
+                world: physics,
+                events,
+            }),
+            delta,
+        );
 
         for message in report.printed {
             // Named by entity, because "moving" is not something an author can

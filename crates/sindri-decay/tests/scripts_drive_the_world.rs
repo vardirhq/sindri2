@@ -9,7 +9,7 @@ use serde_json::{Value, json};
 use sindri_core::{
     ComponentSchemaRegistry, EntityData, EntityId, SceneComponent, Transform3D, World,
 };
-use sindri_decay::{PrefabSources, ScriptComponent, ScriptFailure, ScriptSources, Scripts};
+use sindri_decay::{ScriptComponent, ScriptFailure, ScriptFrame, ScriptSources, Scripts};
 use sindri_platform::InputState;
 
 const SPIN: &str = r"
@@ -83,10 +83,7 @@ fn a_script_moves_the_entity_it_is_attached_to() {
     let failures = scripts.advance(
         &mut world,
         &registry(),
-        &sources(),
-        &PrefabSources::new(),
-        &InputState::default(),
-        0.25,
+        ScriptFrame::new(&sources(), &InputState::default(), 0.25),
     );
     assert!(failures.is_quiet(), "{failures:?}");
     assert!((rotation(&world, entity) - 0.25).abs() < 1.0e-5);
@@ -96,10 +93,7 @@ fn a_script_moves_the_entity_it_is_attached_to() {
     scripts.advance(
         &mut world,
         &registry(),
-        &sources(),
-        &PrefabSources::new(),
-        &InputState::default(),
-        0.25,
+        ScriptFrame::new(&sources(), &InputState::default(), 0.25),
     );
     assert!((rotation(&world, entity) - 0.5).abs() < 1.0e-5);
 }
@@ -114,10 +108,7 @@ fn an_authored_property_reaches_the_script() {
     let failures = scripts.advance(
         &mut world,
         &registry(),
-        &sources(),
-        &PrefabSources::new(),
-        &InputState::default(),
-        0.25,
+        ScriptFrame::new(&sources(), &InputState::default(), 0.25),
     );
     assert!(failures.is_quiet(), "{failures:?}");
     assert!(
@@ -138,10 +129,7 @@ fn a_property_that_would_go_nowhere_is_refused() {
         let failures = Scripts::new().advance(
             &mut world,
             &registry(),
-            &sources(),
-            &PrefabSources::new(),
-            &InputState::default(),
-            0.25,
+            ScriptFrame::new(&sources(), &InputState::default(), 0.25),
         );
         let reported = format!("{failures:?}");
         assert!(
@@ -171,10 +159,7 @@ fn a_failing_script_does_not_stop_the_rest() {
     let failures = Scripts::new().advance(
         &mut world,
         &registry(),
-        &sources(),
-        &PrefabSources::new(),
-        &InputState::default(),
-        0.25,
+        ScriptFrame::new(&sources(), &InputState::default(), 0.25),
     );
 
     assert_eq!(failures.failures.len(), 1, "{failures:?}");
@@ -199,10 +184,7 @@ fn a_broken_source_reports_its_diagnostics() {
     let failures = Scripts::new().advance(
         &mut world,
         &registry(),
-        &sources,
-        &PrefabSources::new(),
-        &InputState::default(),
-        0.25,
+        ScriptFrame::new(&sources, &InputState::default(), 0.25),
     );
 
     match failures.failures.as_slice() {
@@ -229,10 +211,7 @@ fn replacing_a_source_recompiles_it() {
     scripts.advance(
         &mut world,
         &registry(),
-        &sources,
-        &PrefabSources::new(),
-        &InputState::default(),
-        1.0,
+        ScriptFrame::new(&sources, &InputState::default(), 1.0),
     );
     assert!((rotation(&world, entity) - 1.0).abs() < 1.0e-5);
 
@@ -243,10 +222,7 @@ fn replacing_a_source_recompiles_it() {
     let failures = scripts.advance(
         &mut world,
         &registry(),
-        &sources,
-        &PrefabSources::new(),
-        &InputState::default(),
-        1.0,
+        ScriptFrame::new(&sources, &InputState::default(), 1.0),
     );
     assert!(failures.is_quiet(), "{failures:?}");
     assert!(
@@ -266,10 +242,7 @@ fn a_disabled_script_does_not_run() {
     let failures = Scripts::new().advance(
         &mut world,
         &registry(),
-        &sources(),
-        &PrefabSources::new(),
-        &InputState::default(),
-        0.25,
+        ScriptFrame::new(&sources(), &InputState::default(), 0.25),
     );
 
     assert!(failures.is_quiet(), "{failures:?}");
@@ -294,10 +267,7 @@ fn a_misspelled_path_is_a_compile_error_rather_than_a_first_frame_failure() {
     let failures = Scripts::new().advance(
         &mut world,
         &registry(),
-        &sources,
-        &PrefabSources::new(),
-        &InputState::default(),
-        0.25,
+        ScriptFrame::new(&sources, &InputState::default(), 0.25),
     );
 
     match failures.failures.as_slice() {
@@ -343,10 +313,7 @@ fn the_paths_the_surface_describes_still_compile() {
     let failures = Scripts::new().advance(
         &mut world,
         &registry(),
-        &sources,
-        &PrefabSources::new(),
-        &InputState::default(),
-        0.25,
+        ScriptFrame::new(&sources, &InputState::default(), 0.25),
     );
     assert!(failures.is_quiet(), "{failures:?}");
 }
@@ -365,10 +332,7 @@ fn reaching_for_a_method_is_refused_with_advice() {
     let failures = Scripts::new().advance(
         &mut world,
         &registry(),
-        &sources,
-        &PrefabSources::new(),
-        &InputState::default(),
-        0.25,
+        ScriptFrame::new(&sources, &InputState::default(), 0.25),
     );
     let reported = format!("{failures:?}");
     assert!(reported.contains("call it as `helper(...)`"), "{reported}");

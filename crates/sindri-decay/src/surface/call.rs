@@ -232,6 +232,57 @@ pub(crate) const GRID_CALLS: &[(&str, GridCall)] = &[
     ("step_toward", GridCall::StepToward),
 ];
 
+/// What a script can do to a body, and ask about what it touched.
+///
+/// The velocity pair is split for the reason `Grid.position_x` and
+/// `position_y` are: Decay has no vector value yet. Setting takes both at once,
+/// because a velocity with one axis half-applied is a frame of motion nobody
+/// asked for.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum PhysicsCall {
+    VelocityX,
+    VelocityY,
+    SetVelocity,
+    ApplyImpulse,
+    /// The entities this one started touching during the last step.
+    ///
+    /// A query rather than a callback, because Decay now has a value that can
+    /// hold several entities and a lifecycle function would be a second way for
+    /// the host to enter a script. Answered for the entity the script is on:
+    /// an event is about a pair, and the pair a script cares about is the one it
+    /// is half of.
+    CollisionStarted,
+    CollisionStopped,
+    /// The same, for colliders authored as sensors, which register a touch and
+    /// do not push back.
+    SensorEntered,
+    SensorExited,
+}
+
+pub(crate) const PHYSICS_CALLS: &[(&str, PhysicsCall)] = &[
+    ("velocity_x", PhysicsCall::VelocityX),
+    ("velocity_y", PhysicsCall::VelocityY),
+    ("set_velocity", PhysicsCall::SetVelocity),
+    ("apply_impulse", PhysicsCall::ApplyImpulse),
+    ("collision_started", PhysicsCall::CollisionStarted),
+    ("collision_stopped", PhysicsCall::CollisionStopped),
+    ("sensor_entered", PhysicsCall::SensorEntered),
+    ("sensor_exited", PhysicsCall::SensorExited),
+];
+
+impl PhysicsCall {
+    /// Whether this asks about what happened rather than acting on a body.
+    pub(crate) const fn is_event(self) -> bool {
+        matches!(
+            self,
+            Self::CollisionStarted
+                | Self::CollisionStopped
+                | Self::SensorEntered
+                | Self::SensorExited
+        )
+    }
+}
+
 /// What a script can ask about the frame it is in.
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum TimeValue {

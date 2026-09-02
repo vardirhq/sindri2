@@ -13,6 +13,7 @@
 mod call;
 mod convert;
 mod map;
+mod physics;
 
 use std::collections::BTreeSet;
 
@@ -26,9 +27,10 @@ use crate::{
     Blackboard, PrefabSources,
     surface::{
         FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, Handle, HostFunction, INPUT,
-        INPUT_QUERIES, InputQuery, Leaf, POINTER, POINTER_QUERIES, POINTER_VALUES, PRINT,
-        PointerQuery, PointerValue, TIME, TIME_VALUES, TOUCH, TOUCH_CALLS, TOUCH_COUNT, TimeValue,
-        TouchCall, WORLD, WORLD_CALLS, follow_mut, handle, leaf, leaf_through_reference,
+        INPUT_QUERIES, InputQuery, Leaf, PHYSICS, PHYSICS_CALLS, POINTER, POINTER_QUERIES,
+        POINTER_VALUES, PRINT, PointerQuery, PointerValue, TIME, TIME_VALUES, TOUCH, TOUCH_CALLS,
+        TOUCH_COUNT, TimeValue, TouchCall, WORLD, WORLD_CALLS, follow_mut, handle, leaf,
+        leaf_through_reference,
     },
 };
 
@@ -75,6 +77,8 @@ pub struct WorldHost<'a> {
     blackboard: &'a mut Blackboard,
     /// What spawning needs, and what it produced.
     spawning: Spawning<'a>,
+    /// The physics a script may read and drive, when the host runs any.
+    physics: Option<crate::Physics2d<'a>>,
     /// What the script said, in order. Drained by the caller after the call.
     printed: Vec<String>,
 }
@@ -305,6 +309,13 @@ impl Host for WorldHost<'_> {
         }
 
         if let [namespace, name] = parts.as_slice()
+            && *namespace == PHYSICS
+            && let Some((_, call)) = PHYSICS_CALLS.iter().find(|(known, _)| known == name)
+        {
+            return self.physics_call(*call, path, args).map(Some);
+        }
+
+        if let [namespace, name] = parts.as_slice()
             && *namespace == GRID
             && let Some((_, call)) = GRID_CALLS.iter().find(|(known, _)| known == name)
         {
@@ -357,6 +368,7 @@ impl<'a> WorldHost<'a> {
         context: ScriptContext<'a>,
         blackboard: &'a mut Blackboard,
         spawning: Spawning<'a>,
+        physics: Option<crate::Physics2d<'a>>,
     ) -> Self {
         Self {
             world,
@@ -364,6 +376,7 @@ impl<'a> WorldHost<'a> {
             context,
             blackboard,
             spawning,
+            physics,
             printed: Vec::new(),
         }
     }

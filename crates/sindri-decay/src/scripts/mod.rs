@@ -19,8 +19,8 @@ use sindri_platform::InputState;
 
 use self::run::{TickWorld, ensure_compiled, tick};
 use crate::{
-    Blackboard, PrefabSources, ScriptComponent, ScriptExport, ScriptFailure, ScriptMessage,
-    ScriptReport, audio_host::AudioCommand, exports::exports_of, surface::PREFAB,
+    Blackboard, Physics2d, PrefabSources, ScriptComponent, ScriptExport, ScriptFailure,
+    ScriptMessage, ScriptReport, audio_host::AudioCommand, exports::exports_of, surface::PREFAB,
 };
 
 pub use environment::{environment, referenced_sources};
@@ -43,6 +43,55 @@ const SPAWN_ROUNDS: usize = 8;
 /// with it. This is the same protection stated in the units the mistake is
 /// made in.
 pub(crate) const SPAWN_LIMIT_PER_PASS: usize = 4096;
+
+/// Everything one pass of scripts needs from the frame around it.
+///
+/// A struct rather than parameters, because the list had reached six and every
+/// capability the scripting surface grows adds another: the input, the prefabs
+/// it may spawn, the physics it may drive. A caller that does not offer one of
+/// them says so by leaving a field out of the literal rather than by passing
+/// something empty in the right position.
+pub struct ScriptFrame<'a> {
+    pub sources: &'a ScriptSources,
+    pub prefabs: &'a PrefabSources,
+    pub input: &'a InputState,
+    /// The physics a script may read and drive, when the host runs any.
+    ///
+    /// `None` for a host with no physics — a headless test, a scene that never
+    /// authored a collider — and then a script calling `Physics.*` is told so
+    /// rather than quietly doing nothing.
+    pub physics: Option<Physics2d<'a>>,
+    pub delta_seconds: f32,
+}
+
+impl<'a> ScriptFrame<'a> {
+    /// A frame with sources and nothing else, for a caller that only runs
+    /// scripts.
+    #[must_use]
+    pub fn new(sources: &'a ScriptSources, input: &'a InputState, delta_seconds: f32) -> Self {
+        Self {
+            sources,
+            prefabs: PrefabSources::none(),
+            input,
+            physics: None,
+            delta_seconds,
+        }
+    }
+
+    /// The same frame, with prefabs a script may spawn.
+    #[must_use]
+    pub fn with_prefabs(mut self, prefabs: &'a PrefabSources) -> Self {
+        self.prefabs = prefabs;
+        self
+    }
+
+    /// The same frame, with physics a script may read and drive.
+    #[must_use]
+    pub fn with_physics(mut self, physics: Physics2d<'a>) -> Self {
+        self.physics = Some(physics);
+        self
+    }
+}
 
 struct Compiled {
     source: String,
@@ -144,11 +193,15 @@ impl Scripts {
         &mut self,
         world: &mut World,
         components: &ComponentSchemaRegistry,
-        sources: &ScriptSources,
-        prefabs: &PrefabSources,
-        input: &InputState,
-        delta_seconds: f32,
+        frame: ScriptFrame<'_>,
     ) -> ScriptReport {
+        let ScriptFrame {
+            sources,
+            prefabs,
+            input,
+            physics,
+            delta_seconds,
+        } = frame;
         let mut report = ScriptReport::default();
         if !delta_seconds.is_finite() || delta_seconds < 0.0 {
             report.failures.push(ScriptFailure::BadDelta(delta_seconds));
@@ -180,6 +233,7 @@ impl Scripts {
             sources,
             prefabs,
             input,
+            physics,
             started: BTreeSet::new(),
             spawned: Vec::new(),
         };

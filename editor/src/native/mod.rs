@@ -14,7 +14,8 @@ use sindri_core::{CommandHistory, EngineLifecycle, EntityId, SceneComponent, Tra
 use sindri_decay::ScriptComponent;
 use sindri_scene::{
     AudioSourceComponent, CameraComponent, GridNavigationComponent, GridOccupantComponent,
-    SceneExtractor, SpriteAnimations, SpriteComponent, UiImageComponent, UiTextComponent,
+    SceneExtractor, ScenePhysics2d, SpriteAnimations, SpriteComponent, UiImageComponent,
+    UiTextComponent,
 };
 
 use crate::audition::Audition;
@@ -245,6 +246,12 @@ struct EditorApp {
     textured_revision: u64,
     scene_viewport: RuntimeViewport,
     game_viewport: RuntimeViewport,
+    /// The physics Play steps, and the bodies a scene's colliders became.
+    ///
+    /// No gravity: the engine has no opinion about which way is down, and a
+    /// scene-level setting is a project-format field that arrives with the
+    /// feature that reads it. `docs/physics.md` has the open item.
+    physics: ScenePhysics2d,
     /// Where the Game view was drawn last frame, in window points.
     ///
     /// Kept because scripts advance before the layout runs, so the rectangle a
@@ -315,13 +322,13 @@ struct EditorApp {
 }
 
 impl EditorApp {
-    fn new(context: &eframe::CreationContext<'_>) -> Self {
-        crate::ui::theme::install(&context.egui_ctx);
-        let preferences = Preferences::load(context.storage);
-        let scene = scene_extractor();
-        // What this launch is about, before anything is loaded: a scene, a
-        // project, or a question. Only the first of those opens a file here —
-        // opening a project needs the editor that this is building.
+    /// What this launch opens, before anything else is built.
+    ///
+    /// Its own step because deciding is one thing and constructing is another,
+    /// and the constructor had grown past what a reader can hold.
+    fn opening(preferences: &Preferences) -> (Launch, SceneFile, Option<String>) {
+        // Only a scene opens a file here — opening a project needs the editor
+        // that this is building.
         let decided = launch::decide(
             std::env::args().nth(1).as_deref(),
             preferences.recent_projects.most_recent(),
@@ -334,6 +341,14 @@ impl EditorApp {
                 None,
             ),
         };
+        (decided, file, open_error)
+    }
+
+    fn new(context: &eframe::CreationContext<'_>) -> Self {
+        crate::ui::theme::install(&context.egui_ctx);
+        let preferences = Preferences::load(context.storage);
+        let scene = scene_extractor();
+        let (decided, file, open_error) = Self::opening(&preferences);
         // A scene that will not load must not take the editor down with it.
         // This used to unwrap, so a file that parsed and then failed validation
         // killed the process before the window existed — and the failure it
@@ -403,6 +418,7 @@ impl EditorApp {
             scene_viewport,
             game_viewport,
             game_view_rect: None,
+            physics: ScenePhysics2d::top_down().expect("zero gravity is finite"),
             animations: SpriteAnimations::new(),
             scripts: SceneScripts::for_scene(None),
             input: EditorInput::default(),

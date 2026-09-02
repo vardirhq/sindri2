@@ -8,6 +8,31 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **Physics reaches a game.** Rapier2D ran, and nothing could get at it: masks,
+  shapes, bodies and events all existed, with no way to author a scene that used
+  them and no Decay access at all. `ScenePhysics2d` is the join — it builds the
+  simulation from `sindri.physics2d.*` components, keeps it in step as entities
+  are spawned, switched off and despawned, and writes what physics decided back
+  into the transforms the renderer reads, leaving the authored Z alone.
+
+  Decay gained `Physics`: `set_velocity`, `apply_impulse`, `velocity_x`/`_y`, and
+  four event queries — `collision_started`, `collision_stopped`, `sensor_entered`,
+  `sensor_exited` — each answering with the entities *this* one touched, as an
+  `Array<Entity>`. Queries rather than callbacks, because the language now has a
+  value that holds several entities and a lifecycle function would be a second
+  way for the host into a script. A projectile that should hit each target once
+  gets that from `collision_started` without keeping a list.
+
+  Editor Play and the game session both step physics before running scripts, so a
+  script observes the events of the step that just happened. A host running no
+  physics refuses a `Physics.*` call rather than reporting a velocity of zero for
+  a body that does not exist.
+
+- **`Scripts::advance` takes a `ScriptFrame`.** The parameter list had reached
+  six and every capability the scripting surface grows adds another. A caller
+  that offers no prefabs or no physics now leaves a field out rather than passing
+  something empty in the right position.
+
 - **A script can read where the person is pointing.** Decay could read the
   keyboard and nothing else, which is enough for a game driven by arrow keys and
   no use to one that is mouse- and touch-first. `Pointer` is one namespace for

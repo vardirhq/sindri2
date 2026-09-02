@@ -16,7 +16,8 @@ use sindri_core::{
     SceneEntityId, Transform3D, World,
 };
 use sindri_decay::{
-    PrefabSources, ScriptComponent, ScriptFailure, ScriptReport, ScriptSources, Scripts,
+    PrefabSources, ScriptComponent, ScriptFailure, ScriptFrame, ScriptReport, ScriptSources,
+    Scripts,
 };
 use sindri_platform::InputState;
 
@@ -88,10 +89,7 @@ fn advance(
     scripts.advance(
         world,
         &registry(),
-        sources,
-        prefabs,
-        &InputState::default(),
-        1.0 / 60.0,
+        ScriptFrame::new(sources, &InputState::default(), 1.0 / 60.0).with_prefabs(prefabs),
     )
 }
 

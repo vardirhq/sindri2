@@ -65,10 +65,11 @@ sindri-desktop    -> sindri-platform + sindri-gpu
 sindri-assets     -> sindri-core
 sindri-gpu        -> wgpu only (render is dev-only)
 sindri-render     -> wgpu + glam + bytemuck only
-sindri-scene      -> sindri-core + sindri-grid + sindri-render
 sindri            -> assets + core + grid + optional gpu/render/scene
-sindri-decay      -> core + grid + platform + decay language crates
-editor            -> assets + core + decay + platform + render + scene
+sindri-physics    -> sindri-core (+ sindri-grid only when a real integration needs it)
+sindri-scene      -> sindri-core + sindri-grid + sindri-render + sindri-physics
+sindri-decay      -> core + grid + physics + platform + scene + decay language crates
+editor            -> assets + core + decay + physics + platform + render + scene
 sindri-gather     -> consumer of the engine; nothing depends on it
 ```
 
