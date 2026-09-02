@@ -13,7 +13,8 @@ use crate::{
     audio_host::AUDIO,
     surface::{
         ENTITY, FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, GridCall, HostFunction,
-        INPUT, INPUT_QUERIES, Node, PREFAB, PRINT, THIS, THROUGH_REFERENCE, TIME, TIME_VALUES,
+        INPUT, INPUT_QUERIES, Node, POINTER, POINTER_QUERIES, POINTER_VALUES, PREFAB, PRINT,
+        PointerValue, THIS, THROUGH_REFERENCE, TIME, TIME_VALUES, TOUCH, TOUCH_CALLS, TOUCH_COUNT,
         WORLD, WORLD_CALLS, WorldCall,
     },
 };
@@ -140,10 +141,49 @@ pub fn environment() -> Environment {
     environment.add_type(WORLD, world);
     environment.add_value(WORLD, Type::Named(WORLD.to_owned()));
 
+    add_pointer_surface(&mut environment);
     add_grid_surface(&mut environment);
     add_audio_surface(&mut environment);
 
     environment
+}
+
+/// Where the person is pointing, and the fingers behind it.
+pub(super) fn add_pointer_surface(environment: &mut Environment) {
+    let mut pointer = HostType::new();
+    for (name, value) in POINTER_VALUES {
+        pointer = pointer.with_value(
+            *name,
+            match value {
+                PointerValue::X | PointerValue::Y => Type::F32,
+                PointerValue::Inside => Type::Bool,
+            },
+        );
+    }
+    for (name, _) in POINTER_QUERIES {
+        pointer = pointer.with_function(
+            *name,
+            FunctionType {
+                params: vec![Type::String],
+                return_type: Type::Bool,
+            },
+        );
+    }
+    environment.add_type(POINTER, pointer);
+    environment.add_value(POINTER, Type::Named(POINTER.to_owned()));
+
+    let mut touch = HostType::new().with_value(TOUCH_COUNT, Type::F32);
+    for (name, _) in TOUCH_CALLS {
+        touch = touch.with_function(
+            *name,
+            FunctionType {
+                params: vec![Type::F32],
+                return_type: Type::F32,
+            },
+        );
+    }
+    environment.add_type(TOUCH, touch);
+    environment.add_value(TOUCH, Type::Named(TOUCH.to_owned()));
 }
 
 pub(super) fn add_grid_surface(environment: &mut Environment) {

@@ -342,6 +342,87 @@ cancel into whichever the operating system reported last. A press is not a hold:
 `just_pressed` is true for one frame however long the key stays down, and the
 operating system's key repeat is not a second press.
 
+### Where the person is pointing
+
+| Path | Type |
+| --- | --- |
+| `Pointer.x` | `f32` |
+| `Pointer.y` | `f32` |
+| `Pointer.inside` | `bool` |
+
+| Call | Returns |
+| --- | --- |
+| `Pointer.is_down(button)` | `bool` |
+| `Pointer.just_pressed(button)` | `bool` |
+| `Pointer.just_released(button)` | `bool` |
+
+| Path | Type |
+| --- | --- |
+| `Touch.count` | `f32` |
+
+| Call | Returns |
+| --- | --- |
+| `Touch.x(index)` | `f32` |
+| `Touch.y(index)` | `f32` |
+
+`Pointer` is **one namespace for the mouse and the finger**, and that is the
+whole point of it: a game that aims at a point should not have to ask which
+device the person is using, and a game written for a mouse then works on a phone
+without a second code path.
+
+```rust
+script Aim {
+    fn update(dt: f32) {
+        if Pointer.inside && Pointer.is_down("Left") {
+            this.transform.position.x = Pointer.x;
+            this.transform.position.y = Pointer.y;
+        }
+    }
+}
+```
+
+What each unified answer means when both a mouse and a finger are present:
+
+- **Position** is the mouse when there is one, and the first finger otherwise. A
+  machine with both is a machine someone is using the mouse on.
+- **`is_down("Left")`** is the left mouse button *or* any finger. A tap and a
+  click are the same line of gameplay code, which is the convention the web
+  settled on. A finger is `Left` and nothing else — it is not a right-click.
+- **`just_released("Left")`** for a finger means the *last* one left. A second
+  finger lifting while one is still down is not the pointer coming up, any more
+  than releasing the right mouse button releases the left.
+
+Buttons are named `"Left"`, `"Middle"`, `"Right"`, matching case-insensitively
+because the name is typed by a person. **A name nothing answers to is refused**,
+exactly as a key name is: a control that silently does nothing cannot be
+reproduced.
+
+`Pointer.inside` is false when the mouse has left the window and nothing is
+touching the screen. A position read while it is false is zero rather than an
+error — the mouse leaving mid-frame is an ordinary thing, not a mistake in a
+script — so a script that cares must ask `inside` *before* it believes a
+position.
+
+**Coordinates are logical pixels with the origin at the top left of the
+viewport**, which is the same thing on every host: the window on native and in
+the browser, and the Game view's own rectangle in the editor. A script reading
+`Pointer.x` gets the same meaning in editor Play as in the real build, which is
+what makes playtesting in the editor worth anything.
+
+`Touch` is the raw fingers, for a game that wants more than "where is the person
+pointing" — a second finger, or a pinch. `Touch.count` is how many are down, and
+`Touch.x`/`Touch.y` take which one, counting from zero, in a stable order: a
+finger keeps its place while it stays down, so a drag cannot jump from one
+finger to another. Asking for a finger that is not down is refused rather than
+answered with zero, which would read as a finger in the corner of the screen.
+
+**There is no drag abstraction, deliberately.** The reference game this surface
+was built for treats a touch as a drag with a four-pixel deadzone and a
+fifty-five-pixel radius, normalized to a unit vector. Those are *tuning*, and
+baking one game's numbers into an engine is how an engine acquires a genre. A
+script records where the pointer went down and subtracts each frame, which is
+four lines and belongs to the game.
+
 ### The frame
 
 | Path | Type |
@@ -426,9 +507,9 @@ Three absences, each for a reason worth stating.
 quaternion by hand, and offering a third of a 3D rotation API is worse than
 offering none.
 
-**No mouse, and no `vec2`.** The same reason for `vec2`: it is a value type.
-The mouse is simply not needed yet by anything, and the acceptance list did not
-ask for it.
+**No `vec2`.** It is a value type, and Decay does not have one yet, so a
+position is two numbers wherever one appears — `Pointer.x` and `Pointer.y` for
+the same reason `Grid.position_x` and `Grid.position_y` are a pair.
 
 **No query by component type.** A script asks for a group by authored tag, and
 that is the only way to ask. Spelling `sindri.sprite` in a script would put

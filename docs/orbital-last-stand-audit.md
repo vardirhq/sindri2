@@ -32,9 +32,9 @@ collection/query access, dynamic interactive UI, pointer/touch access from
 Decay, gameplay collision access, persistence, particles or equivalent effect
 rendering, and a product export pipeline.
 
-**Spawning, reusable definitions, collections and queries are now done.**
-`docs/prefabs.md`, `docs/scripting.md` and `decay/LANGUAGE.md` are the
-contracts; the rest of the list stands.
+**Spawning, reusable definitions, collections, queries and pointer/touch input
+are now done.** `docs/prefabs.md`, `docs/scripting.md` and `decay/LANGUAGE.md`
+are the contracts; the rest of the list stands.
 
 ## What the reference game exercises
 
@@ -83,7 +83,7 @@ The statuses mean:
 | Timed procedural behavior | Stateful update scripts, bounded loops, spawning, and collections exist | **Partial**; still blocked by randomness |
 | Seeded random waves and module offers | Host-owned seeded randomness is planned, not implemented | **Missing** |
 | Circle/sensor collision gameplay | Rapier2D runtime, masks, shapes, and events exist | **Partial**; no Decay access or exercised game integration |
-| Mouse and touch movement | Platform input tracks pointer state | **Partial**; Decay exposes keyboard only and touch has no gameplay contract |
+| Mouse and touch movement | Unified `Pointer` plus raw `Touch` in Decay, routed through the editor Game view in its own pixels | **Ready** |
 | Runtime HUD values | Screen text and images render | **Partial**; Decay cannot change text content |
 | Interactive menus and modal flows | Anchored screen image/text components exist | **Missing** as a runtime button, focus, layout, and navigation system |
 | Upgrade/build data | Exported scalar fields exist | **Missing** for collections, catalog queries, weighted choices, and loadout data |
@@ -92,7 +92,7 @@ The statuses mean:
 | Persistent progression | Editor preferences persist, but there is no game save/storage API | **Missing** |
 | Browser release | Gather proves a hand-built WASM/WebGPU Pages host | **Partial**; no general project export and browser asset fetching is not exercised |
 | Full editor playtest | Scripts and animation run in editor Play | **Partial**; not the complete application/game loop |
-| Mobile/browser fallback | WebGPU browser host exists | **Partial**; no WebGL fallback and mobile touch authoring is absent |
+| Mobile/browser fallback | WebGPU browser host exists, and touch reaches gameplay on every host | **Partial**; no WebGL fallback |
 
 ## What can be built now
 
@@ -204,7 +204,14 @@ This game needs:
 A complete retained-mode UI system is not required before starting. A small,
 coherent screen UI slice is.
 
-### 5. Input parity
+### 5. Input parity — done
+
+Delivered as the `Pointer` and `Touch` namespaces. Every requirement below is
+met. The one thing deliberately not built is the normalized drag: the reference
+game's deadzone and radius are tuning, and baking one game's numbers into an
+engine is how an engine acquires a genre — a script records where the pointer
+went down and subtracts, which is four lines. What follows is the original
+statement of the requirement.
 
 Decay should receive pointer position, button edges, and a normalized
 touch/drag abstraction through the same input state the host already owns.
@@ -264,7 +271,8 @@ possible, not by subsystem familiarity.
    `docs/prefabs.md`
 2. ~~**Bounded entity queries and the first Decay collection**~~ — done; see
    `decay/LANGUAGE.md` on `Array<T>` and `docs/scripting.md` on `World.with_tag`
-3. **Pointer/touch input through Decay and Game view**
+3. ~~**Pointer/touch input through Decay and Game view**~~ — done; see
+   `docs/scripting.md` on `Pointer` and `Touch`
 4. **Typed 2D collision access and event delivery**
 5. **Dynamic text plus a minimal interactive screen UI**
 6. **Host-owned seeded randomness**

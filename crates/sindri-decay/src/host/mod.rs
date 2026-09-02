@@ -21,13 +21,14 @@ use decay_runtime::{Host, RuntimeError, Value};
 use sindri_core::{EntityId, Transform3D, World};
 use sindri_platform::InputState;
 
-use self::convert::{as_f32, describe, key, number};
+use self::convert::{as_f32, button, describe, key, number};
 use crate::{
     Blackboard, PrefabSources,
     surface::{
         FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, Handle, HostFunction, INPUT,
-        INPUT_QUERIES, InputQuery, Leaf, PRINT, TIME, TIME_VALUES, TimeValue, WORLD, WORLD_CALLS,
-        follow_mut, handle, leaf, leaf_through_reference,
+        INPUT_QUERIES, InputQuery, Leaf, POINTER, POINTER_QUERIES, POINTER_VALUES, PRINT,
+        PointerQuery, PointerValue, TIME, TIME_VALUES, TOUCH, TOUCH_CALLS, TOUCH_COUNT, TimeValue,
+        TouchCall, WORLD, WORLD_CALLS, follow_mut, handle, leaf, leaf_through_reference,
     },
 };
 
@@ -97,6 +98,25 @@ impl Host for WorldHost<'_> {
                         TimeValue::Elapsed => self.context.elapsed_seconds,
                     }))
                 }));
+        }
+
+        // Where the person is pointing, and how many fingers are down. Facts
+        // about the frame like `Time.delta`, and never about a subject: a
+        // reference cannot be asked where the mouse is.
+        if subject.is_none()
+            && let [namespace, name] = parts.as_slice()
+        {
+            if *namespace == POINTER
+                && let Some((_, value)) = POINTER_VALUES.iter().find(|(known, _)| known == name)
+            {
+                return Ok(Some(self.pointer_value(*value)));
+            }
+            if *namespace == TOUCH && *name == TOUCH_COUNT {
+                // `usize` to `f64` is exact for every count a hand can produce,
+                // and the platform bounds it to ten regardless.
+                #[allow(clippy::cast_precision_loss)]
+                return Ok(Some(Value::Number(self.context.input.touch_count() as f64)));
+            }
         }
 
         let Some(under) = Self::addressed(subject, path) else {
@@ -244,39 +264,8 @@ impl Host for WorldHost<'_> {
         }
         let parts: Vec<&str> = path.0.iter().map(String::as_str).collect();
 
-        if let [name] = parts.as_slice() {
-            if *name == PRINT {
-                self.printed.push(match args.first() {
-                    Some(Value::String(text)) => text.clone(),
-                    Some(Value::Number(number)) => format!("{number}"),
-                    Some(Value::Bool(value)) => format!("{value}"),
-                    Some(Value::Null) | None => "null".to_owned(),
-                    Some(Value::Unit) => "unit".to_owned(),
-                    // Named by what it is rather than by the number inside:
-                    // the packing is the host's business, and printing it
-                    // would invite a script to depend on it.
-                    Some(Value::Reference(_)) => "entity".to_owned(),
-                    // How many, not what: printing a collection of two
-                    // thousand entities into the console is not what anyone
-                    // reaching for `print` wanted, and the elements are
-                    // reachable one at a time anyway.
-                    Some(Value::Array(values)) => format!("{} entries", values.len()),
-                });
-                return Ok(Some(Value::Unit));
-            }
-            if let Some((_, function)) = FUNCTIONS.iter().find(|(known, _)| known == name) {
-                let argument = |index: usize| -> Result<f64, RuntimeError> {
-                    args.get(index)
-                        .ok_or_else(|| {
-                            RuntimeError::Host(format!("{} wants more arguments", path.dotted()))
-                        })
-                        .and_then(|value| number(path, value))
-                };
-                return Ok(Some(Value::Number(match function {
-                    HostFunction::Unary(apply) => apply(argument(0)?),
-                    HostFunction::Binary(apply) => apply(argument(0)?, argument(1)?),
-                })));
-            }
+        if let Some(value) = self.bare_call(&parts, path, args)? {
+            return Ok(Some(value));
         }
 
         if let [namespace, name] = parts.as_slice()
@@ -323,6 +312,26 @@ impl Host for WorldHost<'_> {
         }
 
         if let [namespace, name] = parts.as_slice()
+            && *namespace == POINTER
+            && let Some((_, query)) = POINTER_QUERIES.iter().find(|(known, _)| known == name)
+        {
+            let input = self.context.input;
+            let button = button(path, args.first())?;
+            return Ok(Some(Value::Bool(match query {
+                PointerQuery::Down => input.pointer_down(button),
+                PointerQuery::Pressed => input.pointer_pressed(button),
+                PointerQuery::Released => input.pointer_released(button),
+            })));
+        }
+
+        if let [namespace, name] = parts.as_slice()
+            && *namespace == TOUCH
+            && let Some((_, call)) = TOUCH_CALLS.iter().find(|(known, _)| known == name)
+        {
+            return self.touch_call(*call, path, args).map(Some);
+        }
+
+        if let [namespace, name] = parts.as_slice()
             && *namespace == INPUT
             && let Some((_, query)) = INPUT_QUERIES.iter().find(|(known, _)| known == name)
         {
@@ -362,6 +371,105 @@ impl<'a> WorldHost<'a> {
     /// Everything the script printed during the call.
     pub fn take_printed(&mut self) -> Vec<String> {
         std::mem::take(&mut self.printed)
+    }
+
+    /// `print` and the maths, which are the only calls with no namespace.
+    ///
+    /// Their own function because the dispatch that follows them is one arm per
+    /// namespace, and a reader looking for `World.spawn` should not have to
+    /// scroll past the argument handling for `min`.
+    fn bare_call(
+        &mut self,
+        parts: &[&str],
+        path: &Path,
+        args: &[Value],
+    ) -> Result<Option<Value>, RuntimeError> {
+        let [name] = parts else {
+            return Ok(None);
+        };
+        {
+            if *name == PRINT {
+                self.printed.push(match args.first() {
+                    Some(Value::String(text)) => text.clone(),
+                    Some(Value::Number(number)) => format!("{number}"),
+                    Some(Value::Bool(value)) => format!("{value}"),
+                    Some(Value::Null) | None => "null".to_owned(),
+                    Some(Value::Unit) => "unit".to_owned(),
+                    // Named by what it is rather than by the number inside:
+                    // the packing is the host's business, and printing it
+                    // would invite a script to depend on it.
+                    Some(Value::Reference(_)) => "entity".to_owned(),
+                    // How many, not what: printing a collection of two
+                    // thousand entities into the console is not what anyone
+                    // reaching for `print` wanted, and the elements are
+                    // reachable one at a time anyway.
+                    Some(Value::Array(values)) => format!("{} entries", values.len()),
+                });
+                return Ok(Some(Value::Unit));
+            }
+            if let Some((_, function)) = FUNCTIONS.iter().find(|(known, _)| known == name) {
+                let argument = |index: usize| -> Result<f64, RuntimeError> {
+                    args.get(index)
+                        .ok_or_else(|| {
+                            RuntimeError::Host(format!("{} wants more arguments", path.dotted()))
+                        })
+                        .and_then(|value| number(path, value))
+                };
+                return Ok(Some(Value::Number(match function {
+                    HostFunction::Unary(apply) => apply(argument(0)?),
+                    HostFunction::Binary(apply) => apply(argument(0)?, argument(1)?),
+                })));
+            }
+        }
+        Ok(None)
+    }
+
+    /// One of the numbers a script reads about the pointer.
+    ///
+    /// A pointer that is not there reads as zero rather than as an error,
+    /// because "the mouse left the window" is an ordinary thing that happens
+    /// mid-frame and not a mistake in a script. `Pointer.inside` is how a
+    /// script that cares asks, and it has to be asked *before* the position is
+    /// believed.
+    fn pointer_value(&self, value: PointerValue) -> Value {
+        let position = self.context.input.pointer_position();
+        match value {
+            PointerValue::Inside => Value::Bool(position.is_some()),
+            PointerValue::X => Value::Number(f64::from(position.unwrap_or([0.0, 0.0])[0])),
+            PointerValue::Y => Value::Number(f64::from(position.unwrap_or([0.0, 0.0])[1])),
+        }
+    }
+
+    /// Where one finger is.
+    fn touch_call(
+        &self,
+        call: TouchCall,
+        path: &Path,
+        args: &[Value],
+    ) -> Result<Value, RuntimeError> {
+        let index = number(path, args.first().unwrap_or(&Value::Null))?;
+        if !index.is_finite() || index.fract() != 0.0 || index < 0.0 {
+            return Err(RuntimeError::Host(format!(
+                "{} takes which finger, counting from zero, and the script gave {index}",
+                path.dotted()
+            )));
+        }
+        // Guarded above: finite, non-negative, and whole.
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let position = self.context.input.touch_at(index as usize).ok_or_else(|| {
+            // Named rather than answered with zero: a script reading finger
+            // three when two are down has a bound that is wrong, and a zero
+            // would read as a finger in the corner of the screen.
+            RuntimeError::Host(format!(
+                "{} was asked for finger {index}, and {} are down",
+                path.dotted(),
+                self.context.input.touch_count()
+            ))
+        })?;
+        Ok(Value::Number(f64::from(match call {
+            TouchCall::X => position[0],
+            TouchCall::Y => position[1],
+        })))
     }
 
     pub(super) fn transform_of(&self, entity: EntityId) -> Option<Transform3D> {

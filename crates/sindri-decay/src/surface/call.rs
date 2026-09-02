@@ -58,6 +58,60 @@ pub(crate) const INPUT_QUERIES: &[(&str, InputQuery)] = &[
     ("just_released", InputQuery::Released),
 ];
 
+/// A question a script asks about where the person is pointing.
+///
+/// One namespace for the mouse and the finger, because a game that aims at a
+/// point should not have to ask which the person is using — and a game written
+/// for a mouse then works on a phone without a second code path. What each
+/// unified answer means when both are present is in `docs/scripting.md`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum PointerQuery {
+    Down,
+    Pressed,
+    Released,
+}
+
+pub(crate) const POINTER_QUERIES: &[(&str, PointerQuery)] = &[
+    ("is_down", PointerQuery::Down),
+    ("just_pressed", PointerQuery::Pressed),
+    ("just_released", PointerQuery::Released),
+];
+
+/// A value a script reads about where the pointer is.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum PointerValue {
+    X,
+    Y,
+    /// Whether there is a pointer at all.
+    ///
+    /// A mouse outside the window and a screen nobody is touching are the same
+    /// answer, and a game drawing a cursor or testing a button needs to know
+    /// before it reads a position that would otherwise be the last one.
+    Inside,
+}
+
+pub(crate) const POINTER_VALUES: &[(&str, PointerValue)] = &[
+    ("x", PointerValue::X),
+    ("y", PointerValue::Y),
+    ("inside", PointerValue::Inside),
+];
+
+/// A question about the fingers specifically.
+///
+/// Separate from `Pointer` because it answers something `Pointer` cannot: how
+/// many there are, and where the second one is. A game that only needs "where
+/// is the person pointing" never touches this.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum TouchCall {
+    X,
+    Y,
+}
+
+pub(crate) const TOUCH_CALLS: &[(&str, TouchCall)] = &[("x", TouchCall::X), ("y", TouchCall::Y)];
+
+/// How many fingers are down, as a value rather than a call.
+pub(crate) const TOUCH_COUNT: &str = "count";
+
 /// A note left on the board shared by every script in the world.
 ///
 /// The smallest thing that lets two scripts cooperate. Decay has no value that

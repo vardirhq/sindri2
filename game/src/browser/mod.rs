@@ -186,9 +186,15 @@ impl DesktopApp for BrowserGatherApp {
             engine.queue_input(event);
             return;
         }
+        // A finger counts as the gesture that unlocks audio. Browsers require
+        // one before a sound may play, and a phone is the machine most likely
+        // to be asking — a list that named only keys and mouse buttons would
+        // leave a touch-only device silent for the whole run.
         if matches!(
             event,
-            InputEvent::KeyPressed(_) | InputEvent::ButtonPressed(_)
+            InputEvent::KeyPressed(_)
+                | InputEvent::ButtonPressed(_)
+                | InputEvent::TouchStarted { .. }
         ) && let Some(audio) = &mut self.audio
         {
             let _ = audio.unlock();

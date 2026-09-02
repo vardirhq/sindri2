@@ -205,7 +205,13 @@ impl EditorApp {
         // stopping releases what was held rather than leaving it down.
         let listening =
             self.lifecycle.state() == EngineState::Running && !context.egui_wants_keyboard_input();
-        self.input.update(context, listening);
+        self.input.update(context, listening, self.game_view_rect);
+        // Forgotten now that this frame's input has been read, and filled in
+        // again by whichever view draws. A workspace that stops showing the
+        // Game view then reports no rectangle rather than the last one it had,
+        // and a script sees the pointer leave rather than sticking where the
+        // view used to be.
+        self.game_view_rect = None;
 
         // Compiled whatever the transport says, so a broken script reports at
         // the scene it was opened with and the inspector can read what a script

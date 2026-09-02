@@ -8,6 +8,26 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **A script can read where the person is pointing.** Decay could read the
+  keyboard and nothing else, which is enough for a game driven by arrow keys and
+  no use to one that is mouse- and touch-first. `Pointer` is one namespace for
+  both: the position is the mouse when there is one and the first finger
+  otherwise, and `is_down("Left")` is the left button *or* any finger — so a tap
+  and a click are the same line of gameplay, and a game written for a mouse
+  works on a phone without a second code path. `Touch` is the raw fingers for a
+  game that wants a second one.
+
+  The platform gained touch behind the same boundary as the keyboard, bounded to
+  ten fingers, ordered stably so a drag cannot jump between them, and let go of
+  when a window loses focus. The editor routes it all through the Game view in
+  **that view's own pixels**, so a script reads the same position in Play that it
+  reads in the real build; a pointer over the inspector is reported as gone
+  rather than clamped to the edge. A tap now also unlocks browser audio, which a
+  list naming only keys and mouse buttons had left silent on a phone.
+
+  There is no drag abstraction, deliberately: a deadzone and a radius are tuning,
+  and baking one game's numbers into an engine is how an engine acquires a genre.
+
 - **A script can ask about a group of entities.** Decay gained `Array<T>`: a
   fixed-length collection with `for … in`, indexing, and `.len`, which only a
   host can make — there is no literal, no `push`, and no way to write into an

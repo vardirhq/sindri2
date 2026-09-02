@@ -12,6 +12,12 @@ pub(crate) const RGBA: &str = "Rgba";
 
 pub(crate) const INPUT: &str = "Input";
 
+/// Where the person is pointing, whatever they are pointing with.
+pub(crate) const POINTER: &str = "Pointer";
+
+/// The fingers, for a game that wants more than one.
+pub(crate) const TOUCH: &str = "Touch";
+
 pub(crate) const TIME: &str = "Time";
 
 pub(crate) const GAME: &str = "Game";

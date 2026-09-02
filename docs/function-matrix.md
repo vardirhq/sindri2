@@ -33,7 +33,8 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Orthographic camera | ✅ | 🟡 | ❌ |
 | Pixel snapping | ✅ | 🟡 | ❌ |
 | Keyboard input | ✅ | 🟡 | ✅ |
-| Pointer / mouse input | ✅ | 🟡 | ❌ |
+| Pointer / mouse input | ✅ | ✅ | 🟡 |
+| Touch input | ✅ | ✅ | 🟡 |
 | Audio playback | ✅ | 🟡 | ✅ |
 | Audio looping | ✅ | 🟡 | ✅ |
 | Audio pause / resume | ✅ | 🟡 | ✅ |

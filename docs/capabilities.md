@@ -97,11 +97,27 @@ whether the world and the file still agree — including after undoing back to i
 
 ### Input
 
-Keyboard and pointer input arrive as platform-independent events and accumulate
-into an `InputState` that answers held, pressed-this-frame, and
+Keyboard, mouse, and touch input arrive as platform-independent events and
+accumulate into an `InputState` that answers held, pressed-this-frame, and
 released-this-frame for keys and mouse buttons, plus pointer position, pointer
 delta, scroll delta, and window focus. `axis(negative, positive)` returns -1, 0, or 1 and gives zero
 when both are held, so opposed movement keys cannot resolve by event order.
+
+Touch is held beside the mouse rather than folded into it, because they are
+different facts: a mouse has one position and is always somewhere, while fingers
+arrive and leave and there may be several. Fingers are bounded at ten, ordered
+by the id their host gave them so one keeps its place while it stays down, and
+let go of when a window loses focus — a finger cannot be reported as lifted once
+the window has stopped hearing about it. What *unifies* the two is a separate
+question and is answered where a game reads it: `pointer_position` is the mouse
+if there is one and the first finger otherwise, and `pointer_down(Left)` is the
+left button or any finger.
+
+The editor routes all of it through the Game view during Play, in **that view's
+own pixels**, so a script reads the same position there as in the real build.
+A pointer outside the view is reported as gone rather than clamped to its edge,
+because a game told the person is pointing at somewhere they are not is worse
+than a game told they are not pointing at all.
 
 ### Audio
 
@@ -775,6 +791,15 @@ rather than silently ignored. Verified in the game: the orbs used to compare
 against a position the player published to the shared board, and now ask the
 player directly, with the picture unchanged.
 
+**And a script can tell where the person is pointing.** `Pointer.x`,
+`Pointer.y` and `Pointer.inside` read the position and whether there is one;
+`Pointer.is_down`, `just_pressed` and `just_released` take a button name.
+`Touch.count`, `Touch.x` and `Touch.y` reach the individual fingers. A button
+name nothing answers to is refused exactly as a key name is, and asking for a
+finger that is not down is refused rather than answered with zero, which would
+read as a finger in the corner of the screen. Exercised in
+`crates/sindri-decay/tests/a_script_reads_the_pointer.rs`.
+
 **And a script can ask about several.** `World.with_tag` answers with an
 `Array<Entity>` — every active entity carrying an authored `sindri.tags` tag,
 in deterministic world order, bounded at 8192 and refused rather than truncated
@@ -845,8 +870,10 @@ the README.
 - No standard library; not even `math`
 - Despawning is not undoable — no script write is, and play mode restores from a
   snapshot, so routing it through `WorldCommand` stays open
-- No mouse, and no general component surface beyond `sindri.sprite`; tilemaps
-  are available only through the deliberately narrow `Grid` coordinate API
+- No general component surface beyond `sindri.sprite`; tilemaps are available
+  only through the deliberately narrow `Grid` coordinate API
+- No scroll wheel, and no gamepad. The platform tracks scroll; nothing has
+  needed it from a script yet
 - No LSP, no formatter, no debugger, no syntax highlighting anywhere
 - No script state migration across a reload: a changed file recompiles, and the
   running instance keeps whatever fields it had

@@ -195,6 +195,14 @@ impl EditorApp {
         let context = ui.ctx().clone();
         let editing = tab == WorkspaceTab::Scene;
         let (rect, response) = ui.allocate_exact_size(ui.available_size(), viewport_sense());
+        // Only the Game view records one. The Scene view must not clear it:
+        // the two-by-three workspace draws the Game view first, so clearing
+        // here would throw away the rectangle that was just recorded.
+        // Forgetting a view that stopped being drawn is `advance_scripts`'s
+        // job, once per frame.
+        if !editing {
+            self.game_view_rect = Some(rect);
+        }
         let painting = editing && self.tilemap_tool.brush().is_some();
         let camera_before_input = self.scene_camera();
         let gizmo_owned = if editing && !painting {

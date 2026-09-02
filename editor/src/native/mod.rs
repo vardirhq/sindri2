@@ -245,6 +245,14 @@ struct EditorApp {
     textured_revision: u64,
     scene_viewport: RuntimeViewport,
     game_viewport: RuntimeViewport,
+    /// Where the Game view was drawn last frame, in window points.
+    ///
+    /// Kept because scripts advance before the layout runs, so the rectangle a
+    /// pointer is made relative to is the previous frame's. `None` until the
+    /// view has been drawn once, and while the workspace is showing the Scene
+    /// view instead — a pointer has nowhere to be when the game is not on
+    /// screen.
+    game_view_rect: Option<egui::Rect>,
     /// Where each animated sprite has got to.
     ///
     /// Runtime state, so it lives here rather than in the world: an animation
@@ -394,6 +402,7 @@ impl EditorApp {
             textured_revision: 0,
             scene_viewport,
             game_viewport,
+            game_view_rect: None,
             animations: SpriteAnimations::new(),
             scripts: SceneScripts::for_scene(None),
             input: EditorInput::default(),

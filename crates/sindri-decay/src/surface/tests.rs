@@ -105,6 +105,20 @@ fn subjects(world: &mut World, nth: usize) -> [sindri_core::EntityId; 4] {
     [spare, grid, mover, target]
 }
 
+/// An input with a mouse and two fingers on it.
+///
+/// The surface asks every described call to *perform*, and the touch calls are
+/// asked for a finger by index — so a default input with nothing down would
+/// prove only that the host refuses, which is not what this test is about.
+fn pointing() -> InputState {
+    let mut input = InputState::default();
+    input.apply(sindri_platform::InputEvent::PointerMoved { x: 12.0, y: 34.0 });
+    for id in 0..2 {
+        input.apply(sindri_platform::InputEvent::TouchStarted { id, x: 1.0, y: 2.0 });
+    }
+    input
+}
+
 fn blackboard() -> crate::Blackboard {
     crate::Blackboard::new()
 }
@@ -156,7 +170,7 @@ fn world() -> (World, sindri_core::EntityId) {
 #[test]
 fn the_host_answers_every_path_the_analyzer_accepts() {
     let (mut world, entity) = world();
-    let input = InputState::default();
+    let input = pointing();
     let mut board = blackboard();
     let mut audio = Vec::new();
     let prefabs = prefabs();
@@ -225,7 +239,7 @@ fn the_host_answers_every_path_the_analyzer_accepts() {
 #[test]
 fn the_host_answers_every_global_the_analyzer_describes() {
     let (mut world, entity) = world();
-    let input = InputState::default();
+    let input = pointing();
     let mut board = blackboard();
     let mut audio = Vec::new();
     let prefabs = prefabs();
@@ -294,6 +308,10 @@ fn arguments_for(
         .iter()
         .enumerate()
         .map(|(index, ty)| match ty {
+            // A name means different things per namespace: a key here, a
+            // button there. The builder has to know, or half the surface is
+            // exercised with an argument it refuses.
+            Type::String if namespace == super::POINTER => Value::String("Left".to_owned()),
             Type::String => Value::String("Space".to_owned()),
             Type::Bool => Value::Bool(true),
             Type::Named(named) if named == ENTITY && namespace == super::GRID => {
@@ -345,7 +363,7 @@ fn walk(
 #[test]
 fn every_described_function_is_one_the_host_performs() {
     let (mut world, entity) = world();
-    let input = InputState::default();
+    let input = pointing();
     let mut board = blackboard();
     let mut audio = Vec::new();
     let prefabs = prefabs();
