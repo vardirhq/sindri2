@@ -123,6 +123,7 @@ table above lists, reaching the same numbers.
 | `World.spawn(prefab)` | `Entity` |
 | `World.set_parent(entity, parent)` | nothing |
 | `World.set_property(entity, name, value)` | nothing |
+| `World.with_tag(tag)` | `Array<Entity>` |
 
 An `Entity` is opaque. A script can hold one in a `var` or a field, pass it,
 compare it, and reach through it to the same transform and sprite paths it
@@ -222,6 +223,57 @@ same protection stated in the units the mistake is made in.
 Spawned entities carry no stable scene ID. A prefab's identities name entities
 *inside the prefab*: two instances carrying them would collide on every one, and
 a scene saved with the collision would refuse to load.
+
+### Groups of entities
+
+A game that spawns hundreds of enemies cannot hold a reference to each of them.
+`World.with_tag` is how it asks for them all at once, and `Array<Entity>` — see
+`decay/LANGUAGE.md` — is what it gets back.
+
+```rust
+script Sweep {
+    @export let enemy: String = "enemy";
+
+    fn update(dt: f32) {
+        for enemy in World.with_tag(this.enemy) {
+            enemy.transform.position.y -= 40.0 * dt;
+        }
+    }
+}
+```
+
+**By tag, not by name.** `World.find` matches the name a scene gave *one*
+entity. A game whose enemies are "Scout 41" through "Scout 300" has three
+hundred authored names and still no way to say "the enemies". A tag says what
+an entity *is*, and `sindri.tags` is where one is authored.
+
+**Active only**, which is the filter every other walk of the world uses: an
+entity switched off — or whose parent is — takes no part in rendering,
+stepping, scripting or picking, and a query that answered with one would be the
+odd one out.
+
+**In world order**, which is deterministic and is the same order twice for the
+same world. It is not an order a game should depend on for *meaning* — it is
+allocation order, and reusing a freed slot changes it — but a run is
+reproducible and a test is stable.
+
+**It is a snapshot of handles.** The collection does not change when the world
+does. An entity despawned while a script is part way through walking one leaves
+a handle that no longer names anything, which is exactly the case `World.exists`
+is for; reaching through it is an error naming the path, as it is anywhere else.
+That is the safe behaviour rather than a silent skip, because a script walking a
+group it is also destroying should say which it meant.
+
+**Bounded at 8192.** A query walks the world, so its cost is the world's size
+whatever the answer; the bound is on what a script then holds and walks. Past
+it the call is refused rather than truncated: a query that quietly returned the
+first eight thousand enemies would be a game that quietly stopped hitting some
+of them.
+
+**Asking is not free.** One call walks every entity in the world. A script that
+asks once per frame is fine; a script that asks once per bullet per frame is
+quadratic, and the operation budget will eventually say so in a way that names
+the script rather than the pattern. Ask once and hold the answer for the frame.
 
 ### Grid position
 
@@ -378,10 +430,10 @@ offering none.
 The mouse is simply not needed yet by anything, and the acceptance list did not
 ask for it.
 
-**No query, and no collection.** A script can name one entity at a time. A game
-that spawns hundreds cannot hold a reference to each of them, and answering that
-needs a Decay value that holds several things — which the language does not have
-yet. `docs/orbital-last-stand-plan.md` has it as the slice after this one.
+**No query by component type.** A script asks for a group by authored tag, and
+that is the only way to ask. Spelling `sindri.sprite` in a script would put
+engine internals in gameplay code, and it would make every enemy that happens to
+have a sprite an enemy. If a game wants a group, it says so by tagging it.
 
 The **Z lock is honoured**. A script is a write path like any other, and one
 that could ignore the lock would be the hole that makes the lock worthless.

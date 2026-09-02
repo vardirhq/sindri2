@@ -775,6 +775,16 @@ rather than silently ignored. Verified in the game: the orbs used to compare
 against a position the player published to the shared board, and now ask the
 player directly, with the picture unchanged.
 
+**And a script can ask about several.** `World.with_tag` answers with an
+`Array<Entity>` — every active entity carrying an authored `sindri.tags` tag,
+in deterministic world order, bounded at 8192 and refused rather than truncated
+past it. A tag says what an entity *is*, which is the question a game that makes
+its enemies as it goes actually has: they have no authored names for `find` to
+match, and asking by component type would put `sindri.sprite` in gameplay code.
+The answer is a snapshot of handles, so an entity despawned mid-walk leaves one
+that `World.exists` answers false for. Exercised in
+`crates/sindri-decay/tests/a_script_asks_for_a_group.rs`.
+
 **And a script can make one.** `World.spawn` takes a typed `Prefab` — an asset
 reference the scene authored into an `@export` field, not a string in the
 source, which is what lets the editor resolve it and load the document before
@@ -825,10 +835,13 @@ the README.
 
 ### Not yet
 
-- No `for`, no iteration, and nothing to iterate — `while` exists, bounded by an
-  operation budget alongside the call-depth limit
-- No arrays, maps, closures, or first-class functions — which is the reason a
-  script can name one entity at a time and not a group of them
+- No ranges, so `for` walks a collection and nothing else. `while` and `for` are
+  both bounded by the operation budget alongside the call-depth limit
+- No array literals, no `push`, and no way to write into an element:
+  `Array<T>` exists, and only a host makes one. No maps, closures, or
+  first-class functions
+- No query by more than one tag at a time, and no measured cost for a query at
+  combat density
 - No standard library; not even `math`
 - Despawning is not undoable — no script write is, and play mode restores from a
   snapshot, so routing it through `WorldCommand` stays open

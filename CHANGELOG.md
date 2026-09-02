@@ -8,6 +8,24 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **A script can ask about a group of entities.** Decay gained `Array<T>`: a
+  fixed-length collection with `for … in`, indexing, and `.len`, which only a
+  host can make — there is no literal, no `push`, and no way to write into an
+  element, and that is what lets a host bound one. `World.with_tag` answers with
+  the entities carrying an authored `sindri.tags` tag, active-only, in
+  deterministic world order, bounded at 8192 and refused rather than truncated
+  past it.
+
+  By tag rather than by name, because `World.find` matches the name a scene gave
+  one entity and a game whose enemies are made as it goes has no authored names
+  for them. By tag rather than by component type, because spelling
+  `sindri.sprite` in a script would put engine internals in gameplay code.
+
+  Indices stay the language's one numeric type; a fractional, negative, or
+  out-of-range index is three different runtime errors, because they are three
+  different mistakes. `decay/LANGUAGE.md` and `docs/scripting.md` are the
+  contracts.
+
 - **A script can make an entity.** Decay could find another entity, reach
   through it, check whether it still existed, and remove it — and could not
   create one, because creating one means saying what to create and the engine

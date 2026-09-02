@@ -127,6 +127,19 @@ pub(crate) enum WorldCall {
     /// change nothing a script could see, which is the silent no-op this whole
     /// surface is arranged to avoid.
     SetProperty,
+    /// Every active entity carrying an authored tag, in world order.
+    ///
+    /// The answer to "a game cannot hold a reference to each of three hundred
+    /// enemies". By tag rather than by name, because `find` matches the name a
+    /// scene gave *one* entity and a game whose enemies are "Scout 41" through
+    /// "Scout 300" has three hundred authored names and no way to say "the
+    /// enemies". By tag rather than by component type, because spelling
+    /// `sindri.sprite` in a script puts engine internals in gameplay code and
+    /// makes every enemy that happens to have a sprite an enemy.
+    ///
+    /// Bounded, ordered, and a snapshot. See `docs/scripting.md` for what each
+    /// of those costs and buys.
+    WithTag,
 }
 
 pub(crate) const WORLD_CALLS: &[(&str, WorldCall)] = &[
@@ -136,6 +149,7 @@ pub(crate) const WORLD_CALLS: &[(&str, WorldCall)] = &[
     ("spawn", WorldCall::Spawn),
     ("set_parent", WorldCall::SetParent),
     ("set_property", WorldCall::SetProperty),
+    ("with_tag", WorldCall::WithTag),
 ];
 
 /// A conversion between an entity's world position and a tilemap's logical

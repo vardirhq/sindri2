@@ -32,8 +32,9 @@ collection/query access, dynamic interactive UI, pointer/touch access from
 Decay, gameplay collision access, persistence, particles or equivalent effect
 rendering, and a product export pipeline.
 
-**Spawning and reusable definitions are now done.** `docs/prefabs.md` and
-`docs/scripting.md` are the contracts; the rest of the list stands.
+**Spawning, reusable definitions, collections and queries are now done.**
+`docs/prefabs.md`, `docs/scripting.md` and `decay/LANGUAGE.md` are the
+contracts; the rest of the list stands.
 
 ## What the reference game exercises
 
@@ -78,8 +79,8 @@ The statuses mean:
 | High-volume entity lifetime | Core world supports safe spawn/despawn and has measured storage scaling; scripts now spawn within a bounded per-pass budget | **Partial**; the churn itself is not yet measured from Decay |
 | Spawn enemies, bullets, pickups, and hazards from Decay | `World.spawn` takes a typed prefab reference and answers with a generation-checked entity | **Ready** |
 | Reusable enemy/projectile definitions | Prefabs: versioned single-root scene fragments, validated and canonical; no editor authoring yet | **Partial**; the format and spawn path work, making one still means writing the file |
-| Query groups of enemies/projectiles | Decay has safe references but no general query or collection surface; arrays are unfinished | **Missing** |
-| Timed procedural behavior | Stateful update scripts and bounded `while` loops exist | **Partial**; blocked by spawning, collections, and randomness |
+| Query groups of enemies/projectiles | `Array<T>` is a Decay value, and `World.with_tag` answers with a bounded, ordered, active-only group | **Ready** |
+| Timed procedural behavior | Stateful update scripts, bounded loops, spawning, and collections exist | **Partial**; still blocked by randomness |
 | Seeded random waves and module offers | Host-owned seeded randomness is planned, not implemented | **Missing** |
 | Circle/sensor collision gameplay | Rapier2D runtime, masks, shapes, and events exist | **Partial**; no Decay access or exercised game integration |
 | Mouse and touch movement | Platform input tracks pointer state | **Partial**; Decay exposes keyboard only and touch has no gameplay contract |
@@ -114,9 +115,10 @@ the game.
 
 ### An editor + Decay implementation
 
-Not yet, but the first blocker is gone: a script can now create an enemy from an
-authored prefab. What remains in the way is querying, randomized reuse, dynamic
-UI, touch input, collision from Decay, and persistence. Pre-placing everything
+Not yet, but the first two blockers are gone: a script can create an enemy from
+an authored prefab, and it can ask the world for all of them at once. What
+remains in the way is randomness, dynamic UI, touch input, collision from Decay,
+and persistence. Pre-placing everything
 would still be a workaround that teaches the engine the wrong lesson, and it is
 still not what this audit is asking for.
 
@@ -144,7 +146,14 @@ Required behavior:
 - report missing or incompatible definitions as typed errors
 - make lifetime and script cancellation deterministic
 
-### 2. Queries and collections
+### 2. Queries and collections — done
+
+Delivered as `Array<T>` in the language and `World.with_tag` on the Sindri
+surface. Every requirement below is met except querying by typed component,
+which was deliberately not built: spelling `sindri.sprite` in a script puts
+engine internals in gameplay code and makes every enemy that happens to have a
+sprite an enemy. A tag says what an entity *is*, and that is the only way to
+ask. What follows is the original statement of the requirement.
 
 A bullet-heavy game cannot retain an individual authored reference to every
 target. It needs bounded, typed access to groups.
@@ -253,7 +262,8 @@ possible, not by subsystem familiarity.
 
 1. ~~**Reusable spawn definitions + typed Decay spawning**~~ — done; see
    `docs/prefabs.md`
-2. **Bounded entity queries and the first Decay collection**
+2. ~~**Bounded entity queries and the first Decay collection**~~ — done; see
+   `decay/LANGUAGE.md` on `Array<T>` and `docs/scripting.md` on `World.with_tag`
 3. **Pointer/touch input through Decay and Game view**
 4. **Typed 2D collision access and event delivery**
 5. **Dynamic text plus a minimal interactive screen UI**

@@ -10,6 +10,9 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | --- | :---: | :---: | :---: |
 | Entities | ✅ | ✅ | 🟡 |
 | Prefabs | ✅ | ❌ | 🟡 |
+| Tags | ✅ | ✅ | 🟡 |
+| Entity queries | ✅ | — | 🟡 |
+| Collections | — | — | 🟡 |
 | Hierarchy / parenting | ✅ | ✅ | 🟡 |
 | Transform / position | ✅ | ✅ | 🟡 |
 | Rotation / scale | ✅ | ✅ | 🟡 |

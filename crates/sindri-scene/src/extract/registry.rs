@@ -18,7 +18,7 @@
 //! Conflating the two is what made `sindri.ui.text` inspect as two rows when it
 //! has seven.
 
-use sindri_core::ComponentSchemaRegistry;
+use sindri_core::{ComponentSchemaRegistry, TagsComponent};
 
 use crate::animation::SpriteAnimationComponent;
 use crate::audio::AudioSourceComponent;
@@ -131,6 +131,10 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
 /// Everything else a scene carries: how it navigates, how it collides, and what
 /// it sounds like.
 fn register_gameplay(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
+    // A fresh set of tags is empty rather than invented: the engine has no
+    // opinion about what an entity is, and a tag it made up would be one a
+    // query silently answered with.
+    components.register_with_default::<TagsComponent>("Tags", serde_json::json!({ "tags": [] }))?;
     components.register_with_default::<GridNavigationComponent>(
         "Grid Navigation",
         serde_json::json!({ "walls": [] }),

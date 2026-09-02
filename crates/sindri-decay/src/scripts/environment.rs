@@ -109,7 +109,7 @@ pub fn environment() -> Environment {
             *name,
             FunctionType {
                 params: match call {
-                    WorldCall::Find => vec![Type::String],
+                    WorldCall::Find | WorldCall::WithTag => vec![Type::String],
                     WorldCall::Spawn => vec![Type::Named(PREFAB.to_owned())],
                     WorldCall::Despawn | WorldCall::Exists => {
                         vec![Type::Named(ENTITY.to_owned())]
@@ -128,6 +128,7 @@ pub fn environment() -> Environment {
                 },
                 return_type: match call {
                     WorldCall::Find | WorldCall::Spawn => Type::Named(ENTITY.to_owned()),
+                    WorldCall::WithTag => Type::array_of(Type::Named(ENTITY.to_owned())),
                     WorldCall::Despawn | WorldCall::SetParent | WorldCall::SetProperty => {
                         Type::Unit
                     }
