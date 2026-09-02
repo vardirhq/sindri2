@@ -150,7 +150,7 @@ jobs:
           # deployment would serve, page and manifest and hashed assets and all.
           cargo run --quiet --package sindri-export --bin sindri-export -- \
             game target/dist/gather --base /sindri2/
-          cp -R game/pkg target/dist/gather/pkg
+          cp -R game/pkg/. target/dist/gather/pkg/
           node scripts/browser/smoke.mjs examples/cube target/render-artifacts/browser-cube.png
           SINDRI_EXPECT_ASSETS=1 SINDRI_BASE_PATH=/sindri2/ \
             node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-gather.png
