@@ -101,12 +101,41 @@ pub(crate) enum WorldCall {
     /// names — that is what generation checking is for — so a script that holds
     /// one across frames needs to be able to ask.
     Exists,
+    /// Creates the entities an authored prefab describes and answers with its
+    /// root.
+    ///
+    /// By asset ID rather than by a value, because a prefab is a file the
+    /// project holds and Decay has no literal for one. A name the host has not
+    /// loaded is refused at the call: a spawn that silently produced nothing is
+    /// a bug report nobody can reproduce.
+    Spawn,
+    /// Puts one entity under another, or at the root when given `null`.
+    ///
+    /// Separate from `spawn` rather than an argument to it, because reparenting
+    /// is a thing a script wants to do to entities it did not create.
+    SetParent,
+    /// Authors an `@export` property on an entity whose script has not started.
+    ///
+    /// The one thing a spawner cannot do with the paths it already has. A
+    /// script's own fields are not on the surface — the analyzer cannot know
+    /// which container another entity runs — so a per-instance starting value
+    /// is set the way the scene sets one, by writing the authored property the
+    /// instance is built from.
+    ///
+    /// Refused once the script is running. Properties are applied when the
+    /// instance is created, so a later write would land in the payload and
+    /// change nothing a script could see, which is the silent no-op this whole
+    /// surface is arranged to avoid.
+    SetProperty,
 }
 
 pub(crate) const WORLD_CALLS: &[(&str, WorldCall)] = &[
     ("find", WorldCall::Find),
     ("despawn", WorldCall::Despawn),
     ("exists", WorldCall::Exists),
+    ("spawn", WorldCall::Spawn),
+    ("set_parent", WorldCall::SetParent),
+    ("set_property", WorldCall::SetProperty),
 ];
 
 /// A conversion between an entity's world position and a tilemap's logical

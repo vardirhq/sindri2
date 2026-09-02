@@ -9,7 +9,7 @@
 use std::collections::BTreeSet;
 
 use sindri_core::{SceneComponent, SceneDocument, Transform3D, UnknownComponentPolicy, World};
-use sindri_decay::{AudioCommand, ScriptComponent, ScriptSources, Scripts};
+use sindri_decay::{AudioCommand, PrefabSources, ScriptComponent, ScriptSources, Scripts};
 use sindri_gather::{AUDIO, FONTS, Session, extractor, sources, world};
 use sindri_grid::{GridCoord, GridPoint, GridSpace, PlanePoint};
 use sindri_platform::InputState;
@@ -260,6 +260,7 @@ fn walking_into_the_orbs_wins_the_game() {
                 &mut world,
                 extractor.components(),
                 &sources,
+                &PrefabSources::new(),
                 &held,
                 1.0 / 60.0,
             );
@@ -285,6 +286,7 @@ fn walking_into_the_orbs_wins_the_game() {
             &mut world,
             extractor.components(),
             &sources,
+            &PrefabSources::new(),
             &InputState::default(),
             1.0 / 60.0,
         );
@@ -386,6 +388,7 @@ fn starting_over_starts_at_nothing() {
         &mut world,
         extractor.components(),
         &sources(),
+        &PrefabSources::new(),
         &InputState::default(),
         0.5,
     );

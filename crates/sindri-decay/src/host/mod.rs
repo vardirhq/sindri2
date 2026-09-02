@@ -14,6 +14,8 @@ mod call;
 mod convert;
 mod map;
 
+use std::collections::BTreeSet;
+
 use decay_ir::Path;
 use decay_runtime::{Host, RuntimeError, Value};
 use sindri_core::{EntityId, Transform3D, World};
@@ -21,7 +23,7 @@ use sindri_platform::InputState;
 
 use self::convert::{as_f32, describe, key, number};
 use crate::{
-    Blackboard,
+    Blackboard, PrefabSources,
     surface::{
         FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, Handle, HostFunction, INPUT,
         INPUT_QUERIES, InputQuery, Leaf, PRINT, TIME, TIME_VALUES, TimeValue, WORLD, WORLD_CALLS,
@@ -40,6 +42,26 @@ pub struct ScriptContext<'a> {
     pub elapsed_seconds: f32,
 }
 
+/// What `World.spawn` needs, and where what it makes is recorded.
+///
+/// Grouped rather than three more parameters, because they are one thing: the
+/// prefabs a spawn may name, the instances that already exist, and the list the
+/// runner reads back to know what to start.
+pub struct Spawning<'a> {
+    /// What `World.spawn` can name.
+    pub prefabs: &'a PrefabSources,
+    /// Which entities already have a script instance.
+    ///
+    /// A snapshot taken before the pass rather than the live map, which is
+    /// borrowed by the runner for the length of the call. Stale only in the
+    /// safe direction: an entity spawned during the pass is genuinely not
+    /// running yet, because instantiating one would mean executing Decay from
+    /// inside a host call.
+    pub started: &'a BTreeSet<EntityId>,
+    /// What this pass has created, for the runner to start.
+    pub spawned: &'a mut Vec<EntityId>,
+}
+
 /// The world, seen through one entity's script.
 ///
 /// Borrowed for the length of a single script call rather than held, because a
@@ -50,6 +72,8 @@ pub struct WorldHost<'a> {
     context: ScriptContext<'a>,
     /// The notes every script in the world shares.
     blackboard: &'a mut Blackboard,
+    /// What spawning needs, and what it produced.
+    spawning: Spawning<'a>,
     /// What the script said, in order. Drained by the caller after the call.
     printed: Vec<String>,
 }
@@ -318,12 +342,14 @@ impl<'a> WorldHost<'a> {
         entity: EntityId,
         context: ScriptContext<'a>,
         blackboard: &'a mut Blackboard,
+        spawning: Spawning<'a>,
     ) -> Self {
         Self {
             world,
             entity,
             context,
             blackboard,
+            spawning,
             printed: Vec::new(),
         }
     }

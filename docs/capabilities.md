@@ -62,6 +62,14 @@ see `docs/2d-model.md`.
 Entity storage was measured at 1k, 10k, and 100k entities before considering an
 archetype ECS; `docs/entity-scaling.md` records why one is not warranted.
 
+A **prefab** is an authored reusable entity definition: a single-root scene
+fragment in the same document shape a scene uses, sharing its entity rules,
+component payloads, versioning, and canonical serialization. `World::spawn_prefab`
+creates the whole subtree or none of it, and answers with the root, every entity
+made, and which authored identity each became. Instances carry no `source_id`,
+because a prefab's identities name entities inside the prefab and two instances
+would collide on every one. `docs/prefabs.md` is the contract.
+
 ### Scenes
 
 Scenes are versioned JSON documents with stable authored IDs kept separate from
@@ -666,8 +674,12 @@ settings gear.
   but no editor, Decay, or Gather pathfinding integration yet
 - No optional TypeScript embedding SDK; browser games currently expose narrow
   application entry points and run their gameplay in Decay
-- No spawning from a script. Cross-entity lookup, access, existence checks, and
-  despawning work through generation-checked entity references; see below
+- No editor authoring of prefabs. The format, the spawn path, and the Decay
+  surface all work, but making a prefab means writing the file: nothing turns a
+  selected entity into one, and a `Prefab` field draws as the string it is
+  stored as rather than as an asset picker
+- No prefab instance link. A spawned entity does not remember what it came
+  from, so editing a prefab does not update instances of it in an open scene
 - Hot reload covers assets, not the scene file: editing a scene on disk while it
   is open is not noticed
 - No deterministic system ordering
@@ -763,6 +775,20 @@ rather than silently ignored. Verified in the game: the orbs used to compare
 against a position the player published to the shared board, and now ask the
 player directly, with the picture unchanged.
 
+**And a script can make one.** `World.spawn` takes a typed `Prefab` — an asset
+reference the scene authored into an `@export` field, not a string in the
+source, which is what lets the editor resolve it and load the document before
+the frame that needs it — and answers with a generation-checked reference to the
+new root. Overrides are the ordinary writes through that reference;
+`World.set_parent` moves it, and `World.set_property` authors a per-instance
+starting value that reaches the spawned script before its first callback. A
+spawned script starts within the same pass, so a bullet fired during an update
+moves during that update. Both the cascade that allows and the number of
+entities one pass may create are bounded and reported rather than run.
+Exercised in `crates/sindri-decay/tests/a_script_makes_an_entity.rs`. Not yet
+exercised as gameplay: `games/orbital-last-stand` is the project that will,
+and until it does this is a working surface rather than a proven capability.
+
 The board is still there and still earns its place, for facts that belong to the
 game rather than to an entity — the score, whether the game is won.
 
@@ -801,11 +827,9 @@ the README.
 
 - No `for`, no iteration, and nothing to iterate — `while` exists, bounded by an
   operation budget alongside the call-depth limit
-- No arrays, maps, closures, or first-class functions
+- No arrays, maps, closures, or first-class functions — which is the reason a
+  script can name one entity at a time and not a group of them
 - No standard library; not even `math`
-- **No spawning.** Creating an entity means saying what to create and the engine
-  has no prefab to say it with, so this is blocked on the engine rather than on
-  the language. Finding, reaching, and despawning exist
 - Despawning is not undoable — no script write is, and play mode restores from a
   snapshot, so routing it through `WorldCommand` stays open
 - No mouse, and no general component surface beyond `sindri.sprite`; tilemaps

@@ -5,7 +5,7 @@
 //! and hands what they did to the engine.
 
 use sindri_core::{ComponentSchemaRegistry, World};
-use sindri_decay::{AudioCommand, ScriptSources, Scripts};
+use sindri_decay::{AudioCommand, PrefabSources, ScriptSources, Scripts};
 
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(not(target_arch = "wasm32"))]
@@ -29,6 +29,12 @@ pub(crate) fn gather_audio_backend() -> Result<GatherAudio, GatherError> {
 pub struct Session {
     scripts: Scripts,
     sources: ScriptSources,
+    /// The prefabs the scripts can spawn.
+    ///
+    /// Empty: Gather shows what the engine already does rather than reaching
+    /// for what it has just grown, and nothing it runs spawns. A host that does
+    /// fills this the same way it fills the sources.
+    prefabs: PrefabSources,
     components: ComponentSchemaRegistry,
     animations: SpriteAnimations,
     pending_audio: Vec<AudioCommand>,
@@ -52,6 +58,7 @@ impl Session {
         Self {
             scripts: Scripts::new(),
             sources,
+            prefabs: PrefabSources::new(),
             components,
             animations: SpriteAnimations::new(),
             pending_audio: Vec::new(),
@@ -66,9 +73,14 @@ impl Session {
         input: &InputState,
         delta_seconds: f32,
     ) -> Result<(), GatherError> {
-        let report =
-            self.scripts
-                .advance(world, &self.components, &self.sources, input, delta_seconds);
+        let report = self.scripts.advance(
+            world,
+            &self.components,
+            &self.sources,
+            &self.prefabs,
+            input,
+            delta_seconds,
+        );
         self.pending_audio
             .extend(self.scripts.take_audio_commands());
         for failure in &report.failures {

@@ -23,6 +23,18 @@ pub(crate) const GRID: &str = "Grid";
 /// The type of a value that names another entity.
 pub(crate) const ENTITY: &str = "Entity";
 
+/// The type of a value that names an authored prefab.
+///
+/// Opaque, like [`ENTITY`], and for a sharper reason: a prefab reference is a
+/// project asset, and the only way a script can hold one is for the scene to
+/// have authored it into an `@export` field. That is what lets the editor draw
+/// an asset picker for it, resolve it against the project, load the document
+/// before the first frame, and refuse a reference that names nothing. A string
+/// literal in a script's source would be none of those things — invisible to
+/// the asset pipeline and discovered wrong on the frame it is spawned — which
+/// is why `World.spawn` takes this and not text.
+pub(crate) const PREFAB: &str = "Prefab";
+
 /// The component a sprite's fields live in.
 pub(crate) const SPRITE_COMPONENT: &str = "sindri.sprite";
 

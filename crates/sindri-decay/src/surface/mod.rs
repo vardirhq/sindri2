@@ -30,7 +30,7 @@ pub(crate) use call::{
 };
 pub(crate) use member::{SPRITE_MEMBERS, TRANSFORM_MEMBERS, UI_IMAGE_MEMBERS};
 pub(crate) use names::{
-    ENTITY, GAME, GRID, INPUT, SPRITE, TILEMAP_COMPONENT, TIME, TRANSFORM, UI_IMAGE, WORLD,
+    ENTITY, GAME, GRID, INPUT, PREFAB, SPRITE, TILEMAP_COMPONENT, TIME, TRANSFORM, UI_IMAGE, WORLD,
 };
 
 use serde_json::Value as Json;

@@ -8,6 +8,26 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **A script can make an entity.** Decay could find another entity, reach
+  through it, check whether it still existed, and remove it — and could not
+  create one, because creating one means saying what to create and the engine
+  had nothing to say it with. A **prefab** is that: an authored reusable
+  definition, stored as a single-root scene fragment in the same document shape
+  a scene uses, so it carries every component a scene can carry and is
+  validated, versioned, and canonically written by the same code.
+  `World.spawn(prefab)` answers with a generation-checked reference, and
+  overrides are the ordinary writes through it rather than JSON escaping into
+  the language. `World.set_parent` moves one, and `World.set_property` authors
+  a per-instance starting value before the spawned script's first callback.
+
+  A prefab reference is a typed `Prefab`, authored into an `@export` field, not
+  a string in a script's source — which is what lets the editor resolve it, load
+  the document before the frame that needs it, and refuse a reference naming
+  nothing. A spawned script starts within the same pass, so a bullet fired
+  during an update moves during that update; the rounds that makes possible are
+  bounded, and so is the number of entities one pass may create.
+  `docs/prefabs.md` and `docs/scripting.md` are the contracts.
+
 - **A project's main scene can be chosen.** `sindri.toml` nominates the scene a
   project opens on, and until now that field was written once when the project
   was created and then only editable by hand — a project whose first scene

@@ -21,9 +21,10 @@ use sindri_assets::{
     AssetLoadOutcome, AssetLoadQueueConfig, AssetLoader, AssetWatch, FileSystemAssetSource,
     TextAssetDecoder,
 };
-use sindri_core::{AssetId, AssetStatus, ComponentSchemaRegistry, World};
+use sindri_core::{AssetId, AssetStatus, ComponentSchemaRegistry, PrefabDocument, World};
 use sindri_decay::{
-    ScriptExport, ScriptFailure, ScriptReport, ScriptSources, Scripts, referenced_sources,
+    PrefabSources, ScriptExport, ScriptFailure, ScriptReport, ScriptSources, Scripts,
+    referenced_sources,
 };
 use sindri_platform::InputState;
 
@@ -51,6 +52,13 @@ pub struct SceneScripts {
     watch: Option<AssetWatch>,
     last_examined: Instant,
     sources: ScriptSources,
+    /// The prefabs the scene's scripts can spawn.
+    ///
+    /// Loaded through the same text loader as the scripts, because a prefab is
+    /// a JSON document and the pipeline has no reason to know more than that.
+    /// A document that will not parse is reported once, here, rather than on
+    /// the frame a script spawns it.
+    prefabs: PrefabSources,
     scripts: Scripts,
 }
 
@@ -64,6 +72,7 @@ impl SceneScripts {
             watch: root.map(AssetWatch::new),
             last_examined: Instant::now(),
             sources: ScriptSources::new(),
+            prefabs: PrefabSources::new(),
             scripts: Scripts::new(),
         }
     }
@@ -75,7 +84,12 @@ impl SceneScripts {
         components: &ComponentSchemaRegistry,
     ) -> Vec<ScriptNote> {
         let mut notes = Vec::new();
-        let referenced = referenced_sources(world, components);
+        let mut referenced = referenced_sources(world, components);
+        // Prefabs are named by the *declared type* of a script's exported
+        // fields, so they only become visible once the script has compiled.
+        // Asking every frame is what makes a prefab authored a moment ago load
+        // a moment later rather than at the next scene open.
+        referenced.extend(self.scripts.referenced_prefabs(world, components));
         let wanted: BTreeSet<AssetId> = referenced
             .iter()
             .filter_map(|reference| AssetId::new(reference.clone()).ok())
@@ -85,6 +99,7 @@ impl SceneScripts {
             loader: Some(loader),
             watch,
             sources,
+            prefabs,
             ..
         } = self
         else {
@@ -101,12 +116,13 @@ impl SceneScripts {
         // the file it used to be.
         for released in loader.retain(&wanted) {
             sources.remove(released.as_str());
+            prefabs.remove(released.as_str());
         }
         if let Some(watch) = watch.as_mut() {
             watch.retain(&wanted);
         }
         for id in &wanted {
-            if sources.get(id.as_str()).is_some() {
+            if sources.get(id.as_str()).is_some() || prefabs.get(id.as_str()).is_some() {
                 continue;
             }
             if let Err(error) = loader.request(id.clone()) {
@@ -132,6 +148,7 @@ impl SceneScripts {
             loader: Some(loader),
             watch,
             sources,
+            prefabs,
             ..
         } = self
         else {
@@ -143,8 +160,19 @@ impl SceneScripts {
                     let Some(text) = loader.get(&id) else {
                         continue;
                     };
-                    let again = sources.get(id.as_str()).is_some();
-                    sources.insert(id.as_str(), text.clone());
+                    let again =
+                        sources.get(id.as_str()).is_some() || prefabs.get(id.as_str()).is_some();
+                    if is_prefab(id.as_str()) {
+                        match PrefabDocument::from_json(text) {
+                            Ok(prefab) => prefabs.insert(id.as_str(), prefab),
+                            Err(error) => {
+                                notes.push(ScriptNote::Failed(format!("{id}: {error}")));
+                                continue;
+                            }
+                        }
+                    } else {
+                        sources.insert(id.as_str(), text.clone());
+                    }
                     notes.push(if again {
                         ScriptNote::Reloaded(format!("Reloaded {id}"))
                     } else {
@@ -217,8 +245,14 @@ impl SceneScripts {
         input: &InputState,
         delta_seconds: f32,
     ) -> ScriptReport {
-        self.scripts
-            .advance(world, components, &self.sources, input, delta_seconds)
+        self.scripts.advance(
+            world,
+            components,
+            &self.sources,
+            &self.prefabs,
+            input,
+            delta_seconds,
+        )
     }
 
     /// What one script declares it wants authored, for the inspector to draw.
@@ -273,6 +307,18 @@ impl SceneScripts {
 fn root_of(scene: Option<&Path>) -> Option<PathBuf> {
     scene.and_then(Path::parent).map(Path::to_path_buf)
 }
+
+/// Whether a delivered asset is a prefab rather than a script.
+///
+/// By suffix, because both arrive as text and the loader has no reason to know
+/// the difference. `PREFAB_SUFFIX` is the same convention scenes use, and it is
+/// what the editor writes when it makes one.
+fn is_prefab(id: &str) -> bool {
+    id.ends_with(PREFAB_SUFFIX)
+}
+
+/// What a prefab file is called.
+pub const PREFAB_SUFFIX: &str = ".prefab.json";
 
 #[cfg(test)]
 mod tests {

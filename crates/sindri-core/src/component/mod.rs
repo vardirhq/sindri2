@@ -333,6 +333,39 @@ impl ComponentSchemaRegistry {
             .collect()
     }
 
+    /// The `T` one entity carries, decoded, or `None`.
+    ///
+    /// Filtered on active for the same reason [`Self::query`] is: an entity
+    /// that has been switched off — or whose parent has — takes no part in
+    /// rendering, stepping, scripting or picking, and a caller asking about one
+    /// entity is asking the same question as a caller asking about all of them.
+    pub fn get<T: SceneComponent>(
+        &self,
+        world: &World,
+        entity: EntityId,
+    ) -> Result<Option<T>, ComponentRegistryError> {
+        self.require_registered(T::TYPE_NAME)?;
+        if !world.is_active(entity) {
+            return Ok(None);
+        }
+        let Some(data) = world.get(entity) else {
+            return Ok(None);
+        };
+        let Some(payload) = data.components.get(T::TYPE_NAME) else {
+            return Ok(None);
+        };
+        serde_json::from_value(payload.clone())
+            .map(Some)
+            .map_err(|source| ComponentRegistryError::InvalidPayload {
+                entity: data.source_id.as_ref().map_or_else(
+                    || format!("{entity:?}"),
+                    |source_id| source_id.as_str().to_owned(),
+                ),
+                type_name: T::TYPE_NAME.to_owned(),
+                source,
+            })
+    }
+
     fn require_registered(&self, type_name: &'static str) -> Result<(), ComponentRegistryError> {
         self.registrations
             .contains_key(type_name)

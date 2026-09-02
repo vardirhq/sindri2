@@ -9,7 +9,7 @@ use serde_json::{Value, json};
 use sindri_core::{
     ComponentSchemaRegistry, EntityData, EntityId, SceneComponent, Transform3D, World,
 };
-use sindri_decay::{ScriptComponent, ScriptFailure, ScriptSources, Scripts};
+use sindri_decay::{PrefabSources, ScriptComponent, ScriptFailure, ScriptSources, Scripts};
 use sindri_platform::InputState;
 
 const SPIN: &str = r"
@@ -84,6 +84,7 @@ fn a_script_moves_the_entity_it_is_attached_to() {
         &mut world,
         &registry(),
         &sources(),
+        &PrefabSources::new(),
         &InputState::default(),
         0.25,
     );
@@ -96,6 +97,7 @@ fn a_script_moves_the_entity_it_is_attached_to() {
         &mut world,
         &registry(),
         &sources(),
+        &PrefabSources::new(),
         &InputState::default(),
         0.25,
     );
@@ -113,6 +115,7 @@ fn an_authored_property_reaches_the_script() {
         &mut world,
         &registry(),
         &sources(),
+        &PrefabSources::new(),
         &InputState::default(),
         0.25,
     );
@@ -136,6 +139,7 @@ fn a_property_that_would_go_nowhere_is_refused() {
             &mut world,
             &registry(),
             &sources(),
+            &PrefabSources::new(),
             &InputState::default(),
             0.25,
         );
@@ -168,6 +172,7 @@ fn a_failing_script_does_not_stop_the_rest() {
         &mut world,
         &registry(),
         &sources(),
+        &PrefabSources::new(),
         &InputState::default(),
         0.25,
     );
@@ -195,6 +200,7 @@ fn a_broken_source_reports_its_diagnostics() {
         &mut world,
         &registry(),
         &sources,
+        &PrefabSources::new(),
         &InputState::default(),
         0.25,
     );
@@ -224,6 +230,7 @@ fn replacing_a_source_recompiles_it() {
         &mut world,
         &registry(),
         &sources,
+        &PrefabSources::new(),
         &InputState::default(),
         1.0,
     );
@@ -237,6 +244,7 @@ fn replacing_a_source_recompiles_it() {
         &mut world,
         &registry(),
         &sources,
+        &PrefabSources::new(),
         &InputState::default(),
         1.0,
     );
@@ -259,6 +267,7 @@ fn a_disabled_script_does_not_run() {
         &mut world,
         &registry(),
         &sources(),
+        &PrefabSources::new(),
         &InputState::default(),
         0.25,
     );
@@ -286,6 +295,7 @@ fn a_misspelled_path_is_a_compile_error_rather_than_a_first_frame_failure() {
         &mut world,
         &registry(),
         &sources,
+        &PrefabSources::new(),
         &InputState::default(),
         0.25,
     );
@@ -334,6 +344,7 @@ fn the_paths_the_surface_describes_still_compile() {
         &mut world,
         &registry(),
         &sources,
+        &PrefabSources::new(),
         &InputState::default(),
         0.25,
     );
@@ -355,6 +366,7 @@ fn reaching_for_a_method_is_refused_with_advice() {
         &mut world,
         &registry(),
         &sources,
+        &PrefabSources::new(),
         &InputState::default(),
         0.25,
     );

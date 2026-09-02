@@ -120,6 +120,9 @@ table above lists, reaching the same numbers.
 | `World.find(name)` | `Entity`, or `null` |
 | `World.exists(entity)` | `bool` |
 | `World.despawn(entity)` | nothing |
+| `World.spawn(prefab)` | `Entity` |
+| `World.set_parent(entity, parent)` | nothing |
+| `World.set_property(entity, name, value)` | nothing |
 
 An `Entity` is opaque. A script can hold one in a `var` or a field, pass it,
 compare it, and reach through it to the same transform and sprite paths it
@@ -152,9 +155,73 @@ transform writes produce no undo entry either, and play mode restores the world
 from the snapshot it took when Play was pressed. `ROADMAP.md` keeps routing this
 through `WorldCommand` as an open item rather than pretending it is done.
 
-There is still no spawning. Creating an entity means saying what to create, and
-the engine has no prefab to say it with — that is a real dependency rather than
-an oversight, and it is why this stops at finding and removing.
+### Making one
+
+`World.spawn` creates the entities a prefab describes and answers with its root.
+A prefab is an authored reusable definition — one root and everything under it,
+in the same document shape a scene uses. `docs/prefabs.md` is what one is.
+
+**It takes a `Prefab`, not text.** A `Prefab` is opaque, like an `Entity`: a
+script cannot build one, and the only way to hold one is for the scene to have
+authored it into an `@export` field.
+
+```rust
+script Spawner {
+    @export let bullet: Prefab;
+    @export let speed: f32 = 400.0;
+
+    fn update(dt: f32) {
+        let shot = World.spawn(this.bullet);
+        shot.transform.position.x = this.transform.position.x;
+        World.set_property(shot, "speed", this.speed);
+    }
+}
+```
+
+That is a deliberate restriction and it buys four things a string literal could
+not: the editor draws an asset picker for the field, the reference resolves
+against the project like every other asset, the document loads before the frame
+that needs it, and a reference naming nothing is refused when the project is
+read rather than on the frame it is spawned. A prefab named in a script's source
+would be invisible to all of it.
+
+An exported prefab field the scene never filled in is `null`, and spawning it is
+an error saying so — not a spawn that quietly makes nothing.
+
+**Overrides are ordinary writes.** The call answers with a reference, and
+everything above is reachable through it: position, scale, rotation, tint,
+layer. `World.set_parent` puts it under something, or at the root when given
+`null`. Nothing here takes a bag of JSON.
+
+**A starting value for a script is `World.set_property`.** It is the one thing
+the paths above cannot do: a script's own fields are not on the surface, because
+the analyzer cannot know which container another entity runs. So a per-instance
+starting value is set the way the *scene* sets one — by authoring the property
+the instance will be built from — and it is refused, named, in exactly the cases
+the scene's own properties are: a field the script does not declare, a field
+that is not `@export`, a value Decay has no type for.
+
+It is also refused once that entity's script is running, because properties are
+applied when an instance is built and a later write would land in the payload
+and change nothing a script could see.
+
+**A spawned script starts in the same pass.** A bullet created during an update
+moves during that update rather than standing still for a frame. It cannot start
+during the call that created it — building an instance runs the container's
+field initializers, which is Decay code, and the world is already lent to the
+call in progress — so the pass finishes and then starts what it made. A script
+started that way may spawn in turn, and those rounds are bounded: a cascade that
+does not settle after eight is reported rather than taking the frame with it.
+
+**Spawning is bounded.** One pass may create 4096 entities. Decay's operation
+budget already stops a loop that never ends, but it stops it after a million
+instructions — long after a spawn loop with a mistaken bound has put a hundred
+thousand entities in the world and taken the editor with it. The limit is the
+same protection stated in the units the mistake is made in.
+
+Spawned entities carry no stable scene ID. A prefab's identities name entities
+*inside the prefab*: two instances carrying them would collide on every one, and
+a scene saved with the collision would refuse to load.
 
 ### Grid position
 
@@ -307,15 +374,14 @@ Three absences, each for a reason worth stating.
 quaternion by hand, and offering a third of a 3D rotation API is worse than
 offering none.
 
-**No spawning.** Decay now has opaque entity references: a script can find,
-hold, compare, inspect, modify, check, and despawn another entity. Creating one
-still needs an engine-level description of what to create, and no prefab or
-equivalent authored template exists yet. The shared board remains for facts
-that belong to the game rather than to an entity.
-
 **No mouse, and no `vec2`.** The same reason for `vec2`: it is a value type.
 The mouse is simply not needed yet by anything, and the acceptance list did not
 ask for it.
+
+**No query, and no collection.** A script can name one entity at a time. A game
+that spawns hundreds cannot hold a reference to each of them, and answering that
+needs a Decay value that holds several things — which the language does not have
+yet. `docs/orbital-last-stand-plan.md` has it as the slice after this one.
 
 The **Z lock is honoured**. A script is a write path like any other, and one
 that could ignore the lock would be the hole that makes the lock worthless.
@@ -390,9 +456,6 @@ back does not change what undo means.
 
 ## Known gaps
 
-- No spawning. Finding, reaching through, checking, and despawning another
-  entity work through opaque generation-checked references; spawning remains
-  blocked on the engine defining what authored or prefab data should be created.
 - Despawning and other script writes are not routed through `WorldCommand` and
   therefore do not produce undo entries. Editor play mode restores its snapshot
   on Stop instead.

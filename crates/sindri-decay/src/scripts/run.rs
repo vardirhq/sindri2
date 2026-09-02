@@ -1,6 +1,6 @@
 //! One tick of the scripts a world holds.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use decay_ir::{IrContainer, lower_with_environment};
 use decay_runtime::{Runtime, ScriptInstance, Value};
@@ -8,28 +8,46 @@ use sindri_core::{EntityId, World};
 use sindri_platform::InputState;
 
 use crate::{
-    Blackboard, ScriptComponent, ScriptContext, ScriptFailure, WorldHost, audio_host::AudioCommand,
+    Blackboard, PrefabSources, ScriptComponent, ScriptContext, ScriptFailure, WorldHost,
+    audio_host::AudioCommand, host::Spawning,
 };
 
 use super::environment::environment;
 use super::sources::{START, ScriptSources, UPDATE};
 use super::{Compiled, Running};
 
-#[allow(clippy::too_many_arguments)]
+/// Everything a tick needs that is not about which entity it is for.
+///
+/// Grouped rather than passed one by one because the list had grown past what
+/// a reader can hold, and every caller passes the same things.
+pub(super) struct TickWorld<'a> {
+    pub(super) programs: &'a mut BTreeMap<String, Compiled>,
+    pub(super) running: &'a mut BTreeMap<EntityId, Running>,
+    pub(super) blackboard: &'a mut Blackboard,
+    pub(super) audio: &'a mut Vec<AudioCommand>,
+    pub(super) world: &'a mut World,
+    pub(super) sources: &'a ScriptSources,
+    pub(super) prefabs: &'a PrefabSources,
+    pub(super) input: &'a InputState,
+    /// Which entities have a script instance.
+    ///
+    /// Owned and updated as the pass runs rather than snapshotted before it.
+    /// A snapshot was wrong for the entity being instantiated in the very tick
+    /// that reads it: on its first frame a script could author its own
+    /// property, change nothing, and be told nothing.
+    pub(super) started: BTreeSet<EntityId>,
+    /// What every call in this pass has created so far.
+    pub(super) spawned: Vec<EntityId>,
+}
+
 pub(super) fn tick(
-    programs: &mut BTreeMap<String, Compiled>,
-    running: &mut BTreeMap<EntityId, Running>,
-    blackboard: &mut Blackboard,
-    audio: &mut Vec<AudioCommand>,
-    world: &mut World,
-    sources: &ScriptSources,
-    input: &InputState,
+    at: &mut TickWorld<'_>,
     entity: EntityId,
     component: &ScriptComponent,
     delta_seconds: f32,
 ) -> Result<Vec<String>, ScriptFailure> {
-    ensure_compiled(programs, sources, entity, component)?;
-    let compiled = &programs[&component.source];
+    ensure_compiled(at.programs, at.sources, entity, component)?;
+    let compiled = &at.programs[&component.source];
 
     let container = compiled
         .program
@@ -42,50 +60,63 @@ pub(super) fn tick(
             script: component.script.clone(),
         })?;
 
-    let elapsed_seconds = running
+    let elapsed_seconds = at
+        .running
         .get(&entity)
         .map_or(0.0, |current| current.elapsed_seconds)
         + delta_seconds;
     let context = ScriptContext {
-        input,
+        input: at.input,
         delta_seconds,
         elapsed_seconds,
     };
+
+    let fresh = !at.running.get(&entity).is_some_and(|current| {
+        current.source == component.source && current.script == component.script
+    });
+    // Recorded before any of this script's code runs, because by then the
+    // instance either exists or is being built, and either way its authored
+    // properties have been decided.
+    at.started.insert(entity);
+
     let mut runtime = Runtime::new(
         &compiled.program,
-        WorldHost::new(world, entity, context, blackboard, audio),
+        WorldHost::new(
+            &mut *at.world,
+            entity,
+            context,
+            &mut *at.blackboard,
+            Spawning {
+                prefabs: at.prefabs,
+                started: &at.started,
+                spawned: &mut at.spawned,
+            },
+            &mut *at.audio,
+        ),
     );
 
-    let started = match running.get(&entity) {
-        Some(current)
-            if current.source == component.source && current.script == component.script =>
-        {
-            false
-        }
-        _ => {
-            let mut instance = runtime.instantiate(&component.script).map_err(|error| {
-                ScriptFailure::runtime(entity, &component.script, START, &error)
-            })?;
-            apply_properties(&mut instance, container, entity, component)?;
-            running.insert(
-                entity,
-                Running {
-                    elapsed_seconds,
-                    source: component.source.clone(),
-                    script: component.script.clone(),
-                    instance,
-                },
-            );
-            true
-        }
-    };
+    if fresh {
+        let mut instance = runtime
+            .instantiate(&component.script)
+            .map_err(|error| ScriptFailure::runtime(entity, &component.script, START, &error))?;
+        apply_properties(&mut instance, container, entity, component)?;
+        at.running.insert(
+            entity,
+            Running {
+                elapsed_seconds,
+                source: component.source.clone(),
+                script: component.script.clone(),
+                instance,
+            },
+        );
+    }
 
-    let Some(current) = running.get_mut(&entity) else {
+    let Some(current) = at.running.get_mut(&entity) else {
         return Ok(Vec::new());
     };
     current.elapsed_seconds = elapsed_seconds;
 
-    if started && container.functions.iter().any(|f| f.name == START) {
+    if fresh && container.functions.iter().any(|f| f.name == START) {
         runtime
             .call_instance(&mut current.instance, START, vec![])
             .map_err(|error| ScriptFailure::runtime(entity, &component.script, START, &error))?;

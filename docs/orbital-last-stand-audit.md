@@ -10,11 +10,11 @@ useful because it stresses a different part of a 2D engine than Gather: high
 entity churn, procedural combat patterns, touch input, interactive screen UI,
 persistent progression, and a complete static-web release.
 
-This audit reflects Sindri `main` at commit
-`b381cb1a3801511c4fa13e887526823cdf7a5bfa`. When capabilities change, update
-the relevant status here rather than treating this as a permanent verdict.
-`docs/capabilities.md` remains the source of truth for what Sindri demonstrably
-does.
+This audit was written against Sindri `main` at commit
+`b381cb1a3801511c4fa13e887526823cdf7a5bfa`, and its statuses are updated as the
+gaps close rather than left as a permanent verdict. The work closing them is
+planned in `docs/orbital-last-stand-plan.md`; `docs/capabilities.md` remains the
+source of truth for what Sindri demonstrably does.
 
 ## Executive finding
 
@@ -27,10 +27,13 @@ prove that a user can make this game *in Sindri*. The complete current game
 would require several engine and authoring capabilities to be implemented as
 part of the port.
 
-The decisive gaps are script-side spawning, reusable spawn definitions,
+The decisive gaps were script-side spawning, reusable spawn definitions,
 collection/query access, dynamic interactive UI, pointer/touch access from
 Decay, gameplay collision access, persistence, particles or equivalent effect
 rendering, and a product export pipeline.
+
+**Spawning and reusable definitions are now done.** `docs/prefabs.md` and
+`docs/scripting.md` are the contracts; the rest of the list stands.
 
 ## What the reference game exercises
 
@@ -72,9 +75,9 @@ The statuses mean:
 | Fixed-step update and lifecycle | Fixed-step simulation, capped frame time, pause/resume, native/browser hosts | **Ready** |
 | 2D world rendering and layering | Textured/tinted/layered sprites, animation, cameras, screen images and text | **Ready** for sprite-based art |
 | Procedural vector shapes and glow effects | No general shape/primitive or particle authoring system | **Partial**; bake sprites or add a render feature |
-| High-volume entity lifetime | Core world supports safe spawn/despawn and has measured storage scaling | **Rust escape hatch** |
-| Spawn enemies, bullets, pickups, and hazards from Decay | Decay can find and despawn, but cannot spawn | **Missing** |
-| Reusable enemy/projectile definitions | No prefab or equivalent spawn contract | **Missing** |
+| High-volume entity lifetime | Core world supports safe spawn/despawn and has measured storage scaling; scripts now spawn within a bounded per-pass budget | **Partial**; the churn itself is not yet measured from Decay |
+| Spawn enemies, bullets, pickups, and hazards from Decay | `World.spawn` takes a typed prefab reference and answers with a generation-checked entity | **Ready** |
+| Reusable enemy/projectile definitions | Prefabs: versioned single-root scene fragments, validated and canonical; no editor authoring yet | **Partial**; the format and spawn path work, making one still means writing the file |
 | Query groups of enemies/projectiles | Decay has safe references but no general query or collection surface; arrays are unfinished | **Missing** |
 | Timed procedural behavior | Stateful update scripts and bounded `while` loops exist | **Partial**; blocked by spawning, collections, and randomness |
 | Seeded random waves and module offers | Host-owned seeded randomness is planned, not implemented | **Missing** |
@@ -111,15 +114,20 @@ the game.
 
 ### An editor + Decay implementation
 
-This is not currently feasible without changing Sindri. The first enemy cannot
-be created dynamically from a script, and even pre-authoring a large pool would
-not solve querying, randomized reuse, dynamic UI, touch input, or persistence.
-Pre-placing everything would be a workaround that teaches the engine the wrong
-lesson.
+Not yet, but the first blocker is gone: a script can now create an enemy from an
+authored prefab. What remains in the way is querying, randomized reuse, dynamic
+UI, touch input, collision from Decay, and persistence. Pre-placing everything
+would still be a workaround that teaches the engine the wrong lesson, and it is
+still not what this audit is asking for.
 
 ## Gaps this game would expose
 
-### 1. Spawn contract and reusable definitions
+### 1. Spawn contract and reusable definitions — done
+
+Delivered as **prefabs**: `docs/prefabs.md` for the format, `docs/scripting.md`
+for the scripting surface. Every requirement below is met, except that making a
+prefab still means writing the file — the editor cannot yet produce one from a
+selection. What follows is the original statement of the requirement.
 
 Decay needs a typed way to request an entity from an authored reusable
 definition. The engine should decide whether that definition is called a prefab,
@@ -243,7 +251,8 @@ A usable slice should:
 This is ordered by the earliest point at which a genuine playable slice becomes
 possible, not by subsystem familiarity.
 
-1. **Reusable spawn definitions + typed Decay spawning**
+1. ~~**Reusable spawn definitions + typed Decay spawning**~~ — done; see
+   `docs/prefabs.md`
 2. **Bounded entity queries and the first Decay collection**
 3. **Pointer/touch input through Decay and Game view**
 4. **Typed 2D collision access and event delivery**

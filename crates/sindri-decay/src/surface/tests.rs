@@ -10,7 +10,100 @@ use sindri_core::{EntityData, Transform3D, World};
 use sindri_platform::InputState;
 
 use crate::surface::names;
-use crate::{ScriptContext, WorldHost, environment, surface::ENTITY};
+use crate::{
+    PrefabSources, ScriptContext, Spawning, WorldHost, environment,
+    surface::{ENTITY, PREFAB},
+};
+
+/// The prefab this module's calls spawn, and the document behind it.
+///
+/// A real prefab rather than an absent one, because the assertion below is that
+/// the host *performs* every described call — and a spawn of a prefab nobody
+/// loaded is refused, which would prove nothing about whether the host knows
+/// the path.
+const SPARE_PREFAB: &str = "prefabs/spare.prefab.json";
+
+fn prefabs() -> PrefabSources {
+    let mut prefabs = PrefabSources::new();
+    prefabs.insert(
+        SPARE_PREFAB,
+        sindri_core::PrefabDocument::single(sindri_core::SceneEntity::new(
+            sindri_core::SceneEntityId::new("spare").expect("a literal identity"),
+        )),
+    );
+    prefabs
+}
+
+/// The entities one described call is exercised against.
+///
+/// A fresh set per call, because one of these calls removes whatever it is
+/// given and the rest still need a world. The spare carries a script component
+/// because one described call authors a property on one and an entity with no
+/// script is refused; the other three exist because the grid namespace needs
+/// three distinct roles — who moves, which grid, where to.
+fn subjects(world: &mut World, nth: usize) -> [sindri_core::EntityId; 4] {
+    let spare = world.spawn(EntityData {
+        transform_3d: Some(Transform3D::default()),
+        components: [(
+            "sindri.script".to_owned(),
+            serde_json::json!({ "source": "scripts/spare.decay", "script": "Spare" }),
+        )]
+        .into_iter()
+        .collect(),
+        ..EntityData::default()
+    });
+    let grid_name = format!("surface-grid-{nth}");
+    let grid = world.spawn(EntityData {
+        source_id: Some(
+            sindri_core::SceneEntityId::new(grid_name.clone()).expect("stable test id"),
+        ),
+        transform_3d: Some(Transform3D::default()),
+        components: [
+            (
+                super::TILEMAP_COMPONENT.to_owned(),
+                serde_json::json!({
+                    "columns": 2,
+                    "rows": 1,
+                    "space": "world",
+                    "texture": "tiles.png",
+                    "palette": ["tile"],
+                    "tiles": [0, 0]
+                }),
+            ),
+            (
+                "sindri.grid.navigation".to_owned(),
+                serde_json::json!({ "walls": [] }),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+        ..EntityData::default()
+    });
+    let mover = world.spawn(EntityData {
+        transform_3d: Some(Transform3D {
+            position: [0.5, -0.5, 0.0],
+            ..Transform3D::default()
+        }),
+        components: [(
+            "sindri.grid.occupant".to_owned(),
+            serde_json::json!({
+                "grid": grid_name,
+                "footprint": [[0, 0]]
+            }),
+        )]
+        .into_iter()
+        .collect(),
+        ..EntityData::default()
+    });
+    let target = world.spawn(EntityData {
+        transform_3d: Some(Transform3D {
+            position: [1.5, -0.5, 0.0],
+            ..Transform3D::default()
+        }),
+        ..EntityData::default()
+    });
+    [spare, grid, mover, target]
+}
 
 fn blackboard() -> crate::Blackboard {
     crate::Blackboard::new()
@@ -66,6 +159,9 @@ fn the_host_answers_every_path_the_analyzer_accepts() {
     let input = InputState::default();
     let mut board = blackboard();
     let mut audio = Vec::new();
+    let prefabs = prefabs();
+    let started = std::collections::BTreeSet::new();
+    let mut spawned = Vec::new();
     let environment = environment();
     let mut checked = 0;
 
@@ -84,14 +180,34 @@ fn the_host_answers_every_path_the_analyzer_accepts() {
                 terminal.display_name()
             );
 
-            let mut host =
-                WorldHost::new(&mut world, entity, context(&input), &mut board, &mut audio);
+            let mut host = WorldHost::new(
+                &mut world,
+                entity,
+                context(&input),
+                &mut board,
+                Spawning {
+                    prefabs: &prefabs,
+                    started: &started,
+                    spawned: &mut spawned,
+                },
+                &mut audio,
+            );
             assert!(
                 matches!(host.load(None, &path), Ok(Some(Value::Number(_)))),
                 "the analyzer accepts {dotted} and the host cannot read it"
             );
-            let mut host =
-                WorldHost::new(&mut world, entity, context(&input), &mut board, &mut audio);
+            let mut host = WorldHost::new(
+                &mut world,
+                entity,
+                context(&input),
+                &mut board,
+                Spawning {
+                    prefabs: &prefabs,
+                    started: &started,
+                    spawned: &mut spawned,
+                },
+                &mut audio,
+            );
             assert_eq!(
                 host.store(None, &path, Value::Number(1.0)),
                 Ok(true),
@@ -112,6 +228,9 @@ fn the_host_answers_every_global_the_analyzer_describes() {
     let input = InputState::default();
     let mut board = blackboard();
     let mut audio = Vec::new();
+    let prefabs = prefabs();
+    let started = std::collections::BTreeSet::new();
+    let mut spawned = Vec::new();
     let environment = environment();
     let mut checked = 0;
 
@@ -126,64 +245,19 @@ fn the_host_answers_every_global_the_analyzer_describes() {
         for (name, member) in described.members() {
             let path = Path(vec![namespace.to_owned(), name.to_owned()]);
             let dotted = path.dotted();
-            // A spare entity per call, because one of these calls removes
-            // whatever it is given and the rest still need a world.
-            let spare = world.spawn(EntityData {
-                transform_3d: Some(Transform3D::default()),
-                ..EntityData::default()
-            });
-            let grid_name = format!("surface-grid-{checked}");
-            let grid = world.spawn(EntityData {
-                source_id: Some(
-                    sindri_core::SceneEntityId::new(grid_name.clone()).expect("stable test id"),
-                ),
-                transform_3d: Some(Transform3D::default()),
-                components: [
-                    (
-                        super::TILEMAP_COMPONENT.to_owned(),
-                        serde_json::json!({
-                            "columns": 2,
-                            "rows": 1,
-                            "space": "world",
-                            "texture": "tiles.png",
-                            "palette": ["tile"],
-                            "tiles": [0, 0]
-                        }),
-                    ),
-                    (
-                        "sindri.grid.navigation".to_owned(),
-                        serde_json::json!({ "walls": [] }),
-                    ),
-                ]
-                .into_iter()
-                .collect(),
-                ..EntityData::default()
-            });
-            let mover = world.spawn(EntityData {
-                transform_3d: Some(Transform3D {
-                    position: [0.5, -0.5, 0.0],
-                    ..Transform3D::default()
-                }),
-                components: [(
-                    "sindri.grid.occupant".to_owned(),
-                    serde_json::json!({
-                        "grid": grid_name,
-                        "footprint": [[0, 0]]
-                    }),
-                )]
-                .into_iter()
-                .collect(),
-                ..EntityData::default()
-            });
-            let target = world.spawn(EntityData {
-                transform_3d: Some(Transform3D {
-                    position: [1.5, -0.5, 0.0],
-                    ..Transform3D::default()
-                }),
-                ..EntityData::default()
-            });
-            let mut host =
-                WorldHost::new(&mut world, entity, context(&input), &mut board, &mut audio);
+            let [spare, grid, mover, target] = subjects(&mut world, checked);
+            let mut host = WorldHost::new(
+                &mut world,
+                entity,
+                context(&input),
+                &mut board,
+                Spawning {
+                    prefabs: &prefabs,
+                    started: &started,
+                    spawned: &mut spawned,
+                },
+                &mut audio,
+            );
             match member {
                 ExternalSymbol::Value(_) => assert!(
                     matches!(host.load(None, &path), Ok(Some(_))),
@@ -225,7 +299,17 @@ fn arguments_for(
             Type::Named(named) if named == ENTITY && namespace == super::GRID => {
                 Value::Reference(grid_roles[index.min(2)].to_bits())
             }
-            Type::Named(named) if named == ENTITY => Value::Reference(spare.to_bits()),
+            // The first entity argument is the disposable one, because one of
+            // these calls removes what it is given. A second is something else
+            // entirely: `World.set_parent(spare, spare)` would be a cycle, and
+            // the host is right to refuse it.
+            Type::Named(named) if named == ENTITY && index == 0 => {
+                Value::Reference(spare.to_bits())
+            }
+            Type::Named(named) if named == ENTITY => Value::Reference(grid_roles[2].to_bits()),
+            // A prefab value is the asset ID the scene authored, which is what
+            // the host resolves against what it loaded.
+            Type::Named(named) if named == PREFAB => Value::String(SPARE_PREFAB.to_owned()),
             _ => Value::Number(1.0),
         })
         .collect()
@@ -264,6 +348,9 @@ fn every_described_function_is_one_the_host_performs() {
     let input = InputState::default();
     let mut board = blackboard();
     let mut audio = Vec::new();
+    let prefabs = prefabs();
+    let started = std::collections::BTreeSet::new();
+    let mut spawned = Vec::new();
     let environment = environment();
 
     for (name, symbol) in environment.globals() {
@@ -271,7 +358,18 @@ fn every_described_function_is_one_the_host_performs() {
             continue;
         };
         let args = vec![Value::Number(1.0); signature.params.len()];
-        let mut host = WorldHost::new(&mut world, entity, context(&input), &mut board, &mut audio);
+        let mut host = WorldHost::new(
+            &mut world,
+            entity,
+            context(&input),
+            &mut board,
+            Spawning {
+                prefabs: &prefabs,
+                started: &started,
+                spawned: &mut spawned,
+            },
+            &mut audio,
+        );
         assert!(
             matches!(
                 host.call(None, &Path(vec![name.to_owned()]), &args),

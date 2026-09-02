@@ -8,7 +8,7 @@
 use decay_ir::Path;
 use decay_runtime::{Host, RuntimeError, Value};
 
-use crate::{Blackboard, ScriptContext};
+use crate::{Blackboard, ScriptContext, host::Spawning};
 
 pub(crate) const AUDIO: &str = "Audio";
 
@@ -55,10 +55,11 @@ impl<'a> WorldHost<'a> {
         entity: sindri_core::EntityId,
         context: ScriptContext<'a>,
         blackboard: &'a mut Blackboard,
+        spawning: Spawning<'a>,
         audio: &'a mut Vec<AudioCommand>,
     ) -> Self {
         Self {
-            inner: crate::host::WorldHost::new(world, entity, context, blackboard),
+            inner: crate::host::WorldHost::new(world, entity, context, blackboard, spawning),
             audio,
         }
     }
@@ -175,7 +176,32 @@ mod tests {
     use sindri_platform::InputState;
 
     use super::{AudioCommand, WorldHost};
-    use crate::{Blackboard, ScriptContext};
+    use crate::{Blackboard, ScriptContext, host::Spawning};
+
+    /// A spawning context for a test that is not about spawning.
+    fn nothing_to_spawn() -> (
+        crate::PrefabSources,
+        std::collections::BTreeSet<sindri_core::EntityId>,
+        Vec<sindri_core::EntityId>,
+    ) {
+        (
+            crate::PrefabSources::new(),
+            std::collections::BTreeSet::new(),
+            Vec::new(),
+        )
+    }
+
+    fn spawning<'a>(
+        prefabs: &'a crate::PrefabSources,
+        started: &'a std::collections::BTreeSet<sindri_core::EntityId>,
+        spawned: &'a mut Vec<sindri_core::EntityId>,
+    ) -> Spawning<'a> {
+        Spawning {
+            prefabs,
+            started,
+            spawned,
+        }
+    }
 
     #[test]
     fn audio_call_emits_intent_without_a_device() {
@@ -184,6 +210,7 @@ mod tests {
         let input = InputState::default();
         let mut board = Blackboard::new();
         let mut queue = Vec::new();
+        let (prefabs, started, mut spawned) = nothing_to_spawn();
         let mut host = WorldHost::new(
             &mut world,
             entity,
@@ -193,6 +220,7 @@ mod tests {
                 elapsed_seconds: 0.0,
             },
             &mut board,
+            spawning(&prefabs, &started, &mut spawned),
             &mut queue,
         );
         host.call(
@@ -244,6 +272,7 @@ mod tests {
         let input = InputState::default();
         let mut board = Blackboard::new();
         let mut queue = Vec::new();
+        let (prefabs, started, mut spawned) = nothing_to_spawn();
         let mut host = WorldHost::new(
             &mut world,
             entity,
@@ -253,6 +282,7 @@ mod tests {
                 elapsed_seconds: 0.0,
             },
             &mut board,
+            spawning(&prefabs, &started, &mut spawned),
             &mut queue,
         );
         let error = host

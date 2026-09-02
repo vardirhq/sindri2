@@ -6,9 +6,10 @@
 
 use decay_ir::Path;
 use decay_runtime::{RuntimeError, Value};
-use sindri_core::EntityId;
+use sindri_core::{EntityId, SceneComponent};
 use sindri_grid::GridPoint;
 
+use crate::ScriptComponent;
 use crate::surface::{GridCall, WorldCall};
 
 use super::WorldHost;
@@ -70,7 +71,146 @@ impl WorldHost<'_> {
                 self.despawn(entity, path)?;
                 Ok(Value::Unit)
             }
+            WorldCall::Spawn => self.spawn_call(path, args),
+            WorldCall::SetParent => {
+                let child = self.entity_argument(path, args, 0, "the entity to move")?;
+                let parent = match args.get(1) {
+                    Some(Value::Reference(_)) => {
+                        Some(self.entity_argument(path, args, 1, "the new parent")?)
+                    }
+                    // `null` is how a script says "at the root", which is the
+                    // only other place an entity can be.
+                    Some(Value::Null) | None => None,
+                    Some(other) => {
+                        return Err(RuntimeError::Host(format!(
+                            "{} takes an entity or null as the new parent, and the \
+                             script gave {other:?}",
+                            path.dotted()
+                        )));
+                    }
+                };
+                self.world
+                    .set_parent(child, parent)
+                    .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
+                Ok(Value::Unit)
+            }
+            WorldCall::SetProperty => self.set_property_call(path, args),
         }
+    }
+
+    /// Creates what a prefab describes, and answers with its root.
+    fn spawn_call(&mut self, path: &Path, args: &[Value]) -> Result<Value, RuntimeError> {
+        let id = match args.first() {
+            // A `Prefab` value is the asset ID the scene authored into an
+            // `@export` field. Decay never sees it as text, and the script that
+            // holds it cannot have built it.
+            Some(Value::String(id)) => id,
+            // The ordinary way to reach this: an exported prefab field the
+            // scene never filled in. Named as what it is, rather than reported
+            // as a missing asset called "null".
+            Some(Value::Null) | None => {
+                return Err(RuntimeError::Host(format!(
+                    "{} was given no prefab; the entity's script has an exported \
+                     prefab field that the scene has not authored",
+                    path.dotted()
+                )));
+            }
+            Some(other) => {
+                return Err(RuntimeError::Host(format!(
+                    "{} takes an authored prefab, and the script gave {other:?}",
+                    path.dotted()
+                )));
+            }
+        };
+        let Some(prefab) = self.spawning.prefabs.get(id) else {
+            // Named rather than answered with null. A spawn that silently
+            // produced no entity is a bug report nobody can reproduce, and a
+            // mistyped asset ID is the ordinary way to reach this.
+            return Err(RuntimeError::Host(format!(
+                "{} names the prefab '{id}', which this project has not loaded",
+                path.dotted()
+            )));
+        };
+        if self.spawning.spawned.len() + prefab.entities.len() > crate::SPAWN_LIMIT_PER_PASS {
+            return Err(RuntimeError::Host(format!(
+                "{} would take this pass past {} spawned entities",
+                path.dotted(),
+                crate::SPAWN_LIMIT_PER_PASS
+            )));
+        }
+
+        let prefab = prefab.clone();
+        let created = self
+            .world
+            .spawn_prefab(&prefab)
+            .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
+        self.spawning
+            .spawned
+            .extend(created.entities.iter().copied());
+        Ok(Value::Reference(created.root.to_bits()))
+    }
+
+    /// Authors one `@export` property on an entity whose script has not started.
+    fn set_property_call(&mut self, path: &Path, args: &[Value]) -> Result<Value, RuntimeError> {
+        let entity = self.entity_argument(path, args, 0, "the entity to author")?;
+        let Some(Value::String(property)) = args.get(1) else {
+            return Err(RuntimeError::Host(format!(
+                "{} names the property, as text",
+                path.dotted()
+            )));
+        };
+        if self.spawning.started.contains(&entity) {
+            return Err(RuntimeError::Host(format!(
+                "{} cannot author '{property}': that entity's script has already \
+                 started, and properties are applied when an instance is built",
+                path.dotted()
+            )));
+        }
+        let value = match args.get(2) {
+            Some(Value::Number(number)) => serde_json::Value::from(*number),
+            Some(Value::Bool(value)) => serde_json::Value::from(*value),
+            Some(Value::String(text)) => serde_json::Value::from(text.clone()),
+            other => {
+                return Err(RuntimeError::Host(format!(
+                    "{} authors a number, a truth, or text, and the script gave \
+                     {other:?}",
+                    path.dotted()
+                )));
+            }
+        };
+
+        let Some(data) = self.world.get_mut(entity) else {
+            return Err(RuntimeError::Host(format!(
+                "{}'s entity no longer exists",
+                path.dotted()
+            )));
+        };
+        let Some(payload) = data.components.get_mut(ScriptComponent::TYPE_NAME) else {
+            return Err(RuntimeError::Host(format!(
+                "{} needs a {} on that entity, and it has none",
+                path.dotted(),
+                ScriptComponent::TYPE_NAME
+            )));
+        };
+        // The payload is written rather than the typed view, for the reason
+        // every other component write here is: a view is `Deserialize`-only and
+        // rebuilding one drops the fields it does not know about.
+        let Some(properties) = payload
+            .as_object_mut()
+            .map(|object| {
+                object
+                    .entry("properties")
+                    .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new()))
+            })
+            .and_then(serde_json::Value::as_object_mut)
+        else {
+            return Err(RuntimeError::Host(format!(
+                "{}'s script component does not hold properties",
+                path.dotted()
+            )));
+        };
+        properties.insert(property.clone(), value);
+        Ok(Value::Unit)
     }
 
     /// Removes `entity` and everything under it.

@@ -8,15 +8,30 @@ are authoritative over remembered context from earlier sessions.
 ## Product direction
 
 Sindri Next is a pre-alpha Rust game engine targeting native desktop and WebGPU
-browsers, with a native editor, the Decay gameplay language, and Gather as its
-companion game. The engine is developed vertically: runtime capability,
+browsers, with a native editor, the Decay gameplay language, and two games that
+prove it. The engine is developed vertically: runtime capability,
 authoring, scripting, and a real game should evolve together where the feature
 applies.
 
-The companion game is not a disposable demo. **Relevant gameplay capabilities
-are not complete until Gather uses them in a real gameplay context.** A unit
-test, component type, editor control, or callable Decay API is necessary evidence
-but is not a substitute for exercising the feature in the game.
+Two games serve two different purposes, and confusing them wastes both.
+
+**Gather is the showcase.** It demonstrates capabilities the engine already has,
+in a real gameplay context. A unit test, component type, editor control, or
+callable Decay API is necessary evidence but is not a substitute for a feature
+being used in a game — and Gather is where a finished capability proves it can
+be used. It is not a disposable demo, and it does not reach for what the engine
+grew yesterday.
+
+**Orbital Last Stand is the forcing function.** It is a recreation of a real,
+complete game built only through the editor and Decay, and its job is to find
+what the engine, editor, and language cannot do yet. Every gap it hits is closed
+as a *general* Sindri capability, never as something shaped around that game.
+A new gameplay capability is proven there first. See
+`docs/orbital-last-stand-plan.md`.
+
+So: a capability the engine already had is not complete until Gather uses it; a
+capability being added is proven in Orbital Last Stand, and may reach Gather
+later or not at all. Say which of the two a change is, in its documentation.
 
 ## Read before changing architecture
 
@@ -84,9 +99,10 @@ When a capability changes, update the relevant documentation in the same commit:
 - `CHANGELOG.md` for user-visible behaviour.
 - `ROADMAP.md` only when an item's real acceptance criteria are complete.
 
-For gameplay capabilities, include the corresponding Gather evolution in the
-same feature track. If Gather cannot reasonably exercise the capability, explain
-why in the feature documentation rather than silently skipping the proof.
+For gameplay capabilities, name the game that exercises them — Gather for a
+capability that already existed, Orbital Last Stand for one being added — in the
+same feature track. A capability exercised by neither is not complete, and
+saying so is better than an unqualified checkmark.
 
 ## Working method
 
@@ -108,7 +124,7 @@ Before declaring a PR ready:
 
 1. Review the final diff from `main`, not just the latest commit.
 2. Re-check dependency direction and target-specific `cfg` behaviour.
-3. Verify documentation and Gather integration required by the capability rule.
+3. Verify the documentation and game integration the capability rule requires.
 4. Run the required native, Decay, WASM, browser, render, or dependency checks
    that the touched code can affect.
 5. Confirm CI is green on the final head.

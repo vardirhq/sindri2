@@ -13,8 +13,8 @@ use crate::{
     audio_host::AUDIO,
     surface::{
         ENTITY, FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, GridCall, HostFunction,
-        INPUT, INPUT_QUERIES, Node, PRINT, THIS, THROUGH_REFERENCE, TIME, TIME_VALUES, WORLD,
-        WORLD_CALLS, WorldCall,
+        INPUT, INPUT_QUERIES, Node, PREFAB, PRINT, THIS, THROUGH_REFERENCE, TIME, TIME_VALUES,
+        WORLD, WORLD_CALLS, WorldCall,
     },
 };
 
@@ -110,13 +110,27 @@ pub fn environment() -> Environment {
             FunctionType {
                 params: match call {
                     WorldCall::Find => vec![Type::String],
+                    WorldCall::Spawn => vec![Type::Named(PREFAB.to_owned())],
                     WorldCall::Despawn | WorldCall::Exists => {
                         vec![Type::Named(ENTITY.to_owned())]
                     }
+                    WorldCall::SetParent => vec![
+                        Type::Named(ENTITY.to_owned()),
+                        Type::Named(ENTITY.to_owned()),
+                    ],
+                    // The value is `Unknown` because an exported field may be a
+                    // number, a truth, or text, and Decay has no union. The
+                    // host checks what it was given, and the instance refuses a
+                    // value the field cannot hold when it is built.
+                    WorldCall::SetProperty => {
+                        vec![Type::Named(ENTITY.to_owned()), Type::String, Type::Unknown]
+                    }
                 },
                 return_type: match call {
-                    WorldCall::Find => Type::Named(ENTITY.to_owned()),
-                    WorldCall::Despawn => Type::Unit,
+                    WorldCall::Find | WorldCall::Spawn => Type::Named(ENTITY.to_owned()),
+                    WorldCall::Despawn | WorldCall::SetParent | WorldCall::SetProperty => {
+                        Type::Unit
+                    }
                     WorldCall::Exists => Type::Bool,
                 },
             },
