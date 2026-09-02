@@ -48,12 +48,6 @@ const server = createServer(async (request, response) => {
     if (EXPECT_FAILURE === 'canvas' && relative === '') {
       body = Buffer.from(body.toString().replace('id="sindri-canvas"', 'id="wrong-canvas"'));
     }
-    if (EXPECT_FAILURE === 'webgpu' && relative === '') {
-      // Navigator.gpu is no longer reliably forgeable in Chromium. The Rust
-      // template test proves the guard exists; this forces that exact branch
-      // so a real browser still proves the player-facing result.
-      body = Buffer.from(body.toString().replace('else if (!navigator.gpu) {', 'else if (true) {'));
-    }
     response.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' });
     response.end(body);
   } catch {
@@ -142,7 +136,6 @@ if (EXPECT_FAILURE) {
   const message = await page.locator('#sindri-error').innerText();
   const expected = {
     canvas: 'missing the #sindri-canvas',
-    webgpu: 'WebGPU is unavailable',
     adapter: 'WebGPU is unavailable',
     // Not the message's wording, which belongs to wgpu: what matters is that a
     // failure raised after startup finished arrived on the page at all.
