@@ -48,6 +48,12 @@ const server = createServer(async (request, response) => {
     if (EXPECT_FAILURE === 'canvas' && relative === '') {
       body = Buffer.from(body.toString().replace('id="sindri-canvas"', 'id="wrong-canvas"'));
     }
+    if (EXPECT_FAILURE === 'webgpu' && relative === '') {
+      // Navigator.gpu is no longer reliably forgeable in Chromium. The Rust
+      // template test proves the guard exists; this forces that exact branch
+      // so a real browser still proves the player-facing result.
+      body = Buffer.from(body.toString().replace('else if (!navigator.gpu) {', 'else if (true) {'));
+    }
     response.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' });
     response.end(body);
   } catch {
@@ -57,20 +63,17 @@ const server = createServer(async (request, response) => {
 await new Promise((done) => server.listen(0, done));
 const port = server.address().port;
 
-const gpuArgs =
-  EXPECT_FAILURE === 'webgpu'
-    ? ['--disable-webgpu', '--disable-gpu']
-    : [
-        '--enable-unsafe-webgpu',
-        '--enable-features=Vulkan',
-        '--use-angle=vulkan',
-        '--use-vulkan=swiftshader',
-        '--enable-gpu',
-        '--ignore-gpu-blocklist',
-      ];
 const browser = await chromium.launch({
   executablePath: process.env.CHROME_PATH || undefined,
-  args: [...gpuArgs, '--no-sandbox'],
+  args: [
+    '--enable-unsafe-webgpu',
+    '--enable-features=Vulkan',
+    '--use-angle=vulkan',
+    '--use-vulkan=swiftshader',
+    '--enable-gpu',
+    '--ignore-gpu-blocklist',
+    '--no-sandbox',
+  ],
 });
 const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
 
