@@ -92,3 +92,34 @@ fn the_whole_build_is_there() {
     assert!(page.contains(r#"<base href="/sindri2/">"#), "{page}");
     assert!(page.contains("Orbital Last Stand"), "the game is not named");
 }
+
+/// 10 and 11 together, minus the browser: the build that would be served is
+/// opened the way a browser opens it — every asset by the logical ID the
+/// manifest names, out of the hashed directory it names — and played.
+///
+/// This is what catches a build that is complete by the hashes and still not a
+/// game. A missing script is bytes nobody asked for; here it is a run that
+/// does not start.
+#[test]
+fn the_exported_build_plays() {
+    let (scratch, _) = exported("plays");
+    let mut run = orbital_last_stand::Run::open_export(&scratch.0).expect("the build opens");
+
+    for _ in 0..6 {
+        let notes = run.step(1.0 / 60.0);
+        assert!(notes.is_empty(), "{notes:#?}");
+    }
+    assert_eq!(run.board("run_state"), 0.0, "the title should be showing");
+
+    run.click("TitleStart");
+    assert_eq!(run.board("run_state"), 1.0, "START should start the run");
+
+    for _ in 0..900 {
+        let notes = run.step(1.0 / 60.0);
+        assert!(notes.is_empty(), "{notes:#?}");
+    }
+    // Spawned from prefabs that only reached this directory because the export
+    // followed a script's declared field types into them.
+    assert!(run.board("kills") > 0.0, "nothing died in the build");
+    assert!(run.count("enemy") > 0, "nothing was spawned in the build");
+}

@@ -55,8 +55,45 @@ impl Run {
     /// # Errors
     /// If the project will not read, will not parse, or will not load.
     pub fn open() -> Result<Self, String> {
-        let root = project();
-        let scene_path = root.join("assets/orbital.scene.json");
+        Self::open_from(&project().join("assets"), "orbital.scene.json")
+    }
+
+    /// Opens a build rather than a source tree.
+    ///
+    /// Everything is read by the logical ID the manifest names, out of the
+    /// content-hashed directory it names — which is what a browser does, and
+    /// the reason this can say whether an export is playable rather than only
+    /// whether its bytes arrived.
+    ///
+    /// # Errors
+    /// If the build will not read, will not parse, or will not load.
+    pub fn open_export(root: &Path) -> Result<Self, String> {
+        let text = std::fs::read_to_string(root.join("assets/sindri.manifest.json"))
+            .map_err(|error| format!("no manifest: {error}"))?;
+        let manifest: serde_json::Value =
+            serde_json::from_str(&text).map_err(|error| error.to_string())?;
+        let content_root = manifest
+            .get("content_root")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default();
+        let assets = root.join("assets").join(content_root);
+        let scene = manifest
+            .get("assets")
+            .and_then(serde_json::Value::as_object)
+            .and_then(|assets| {
+                assets
+                    .iter()
+                    .find(|(_, entry)| {
+                        entry.get("kind").and_then(serde_json::Value::as_str) == Some("scene")
+                    })
+                    .map(|(id, _)| id.clone())
+            })
+            .ok_or_else(|| "the manifest names no scene".to_owned())?;
+        Self::open_from(&assets, &scene)
+    }
+
+    fn open_from(root: &Path, scene: &str) -> Result<Self, String> {
+        let scene_path = root.join(scene);
         let text =
             std::fs::read_to_string(&scene_path).map_err(|e| format!("{scene_path:?}: {e}"))?;
         let document: SceneDocument = serde_json::from_str(&text).map_err(|e| e.to_string())?;
@@ -75,7 +112,7 @@ impl Run {
         // Read from the directory rather than listed here, because a list here
         // is the thing that makes adding an enemy mean editing Rust.
         let mut sources = ScriptSources::new();
-        for entry in std::fs::read_dir(root.join("assets/scripts")).map_err(|e| e.to_string())? {
+        for entry in std::fs::read_dir(root.join("scripts")).map_err(|e| e.to_string())? {
             let path = entry.map_err(|e| e.to_string())?.path();
             if path.extension().is_some_and(|e| e == "decay") {
                 let name = path.file_name().unwrap_or_default().to_string_lossy();
@@ -84,7 +121,7 @@ impl Run {
             }
         }
         let mut prefabs = PrefabSources::new();
-        for entry in std::fs::read_dir(root.join("assets/prefabs")).map_err(|e| e.to_string())? {
+        for entry in std::fs::read_dir(root.join("prefabs")).map_err(|e| e.to_string())? {
             let path = entry.map_err(|e| e.to_string())?.path();
             let name = path
                 .file_name()
