@@ -6,11 +6,13 @@
 //! carries: `scene` is the seam between the two.
 
 mod hierarchy;
+mod prefab;
 mod scene;
 
 #[cfg(test)]
 mod tests;
 
+pub use prefab::SpawnedPrefab;
 pub use scene::LoadedScene;
 
 use std::collections::BTreeMap;
@@ -18,7 +20,7 @@ use std::collections::BTreeMap;
 use serde_json::Value;
 use thiserror::Error;
 
-use crate::{EntityId, SceneEntityId, SceneError, SceneMetadata, Transform3D};
+use crate::{EntityId, PrefabError, SceneEntityId, SceneError, SceneMetadata, Transform3D};
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct EntityData {
@@ -223,4 +225,6 @@ pub enum WorldError {
     TransformZLocked(EntityId),
     #[error(transparent)]
     InvalidScene(#[from] SceneError),
+    #[error(transparent)]
+    InvalidPrefab(PrefabError),
 }

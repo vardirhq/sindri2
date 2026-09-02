@@ -8,6 +8,7 @@
 mod canonical;
 mod document;
 mod error;
+mod graph;
 
 #[cfg(test)]
 mod tests;
@@ -16,3 +17,6 @@ pub use document::{
     SCENE_FORMAT_VERSION, SceneDocument, SceneEntity, SceneEntityId, SceneMetadata,
 };
 pub use error::{SceneError, SceneJsonError};
+
+pub(crate) use canonical::collapse_scalar_arrays;
+pub(crate) use graph::{roots, validate_entities};

@@ -7,7 +7,7 @@
 //! line of its own.
 
 /// The column budget for keeping an array of scalars on one line.
-pub(super) const INLINE_ARRAY_WIDTH: usize = 96;
+pub(crate) const INLINE_ARRAY_WIDTH: usize = 96;
 
 /// Collapses arrays that contain only scalars onto a single line.
 ///
@@ -18,7 +18,7 @@ pub(super) const INLINE_ARRAY_WIDTH: usize = 96;
 /// objects or nested arrays, and scalar arrays too long to fit, keep the
 /// expanded form. The decision depends only on the already deterministic
 /// pretty output, so canonical serialization stays a fixed point.
-pub(super) fn collapse_scalar_arrays(pretty: &str) -> String {
+pub(crate) fn collapse_scalar_arrays(pretty: &str) -> String {
     let bytes = pretty.as_bytes();
     let mut output = String::with_capacity(pretty.len());
     let mut index = 0;
