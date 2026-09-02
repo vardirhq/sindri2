@@ -84,11 +84,12 @@ impl ProjectExport {
         components
             .register::<sindri_decay::ScriptComponent>("Script")
             .map_err(|error| ExportError::Project(format!("sindri.script: {error}")))?;
-        let world = World::from_scene(&document)
+        let mut world = World::from_scene(&document)
             .map_err(|error| {
                 ExportError::Project(format!("the main scene does not load: {error}"))
             })?
             .world;
+        everything_on(&mut world);
 
         let mut assets = vec![GatheredAsset {
             // A scene is named by its file, so two scenes in one project do not
@@ -166,6 +167,7 @@ impl ProjectExport {
                 world
                     .spawn_prefab(&prefab)
                     .map_err(|error| ExportError::Project(format!("{id}: {error}")))?;
+                everything_on(&mut world);
                 pending.push(world);
             }
         }
@@ -240,6 +242,26 @@ fn kind_of(id: &str) -> AssetKind {
         _ if id.ends_with(PREFAB_SUFFIX) => AssetKind::Prefab,
         _ if id.ends_with(".sheet.json") => AssetKind::Sheet,
         _ => AssetKind::Other,
+    }
+}
+
+/// Switches on every entity in a copy of a world about to be walked.
+///
+/// The walks are the runtime's, and the runtime's walks are active-only —
+/// correctly, because nothing switched off is drawn or stepped. An export is
+/// the other question: not what is running, but what this project could ever
+/// need. A scene's menus are switched off until something shows them, so an
+/// export that asked the runtime's question shipped a game with no pause
+/// screen and no way to notice until someone pressed Escape in a build.
+///
+/// Done to the export's own throwaway world, so nothing that is saved or
+/// played changes.
+fn everything_on(world: &mut World) {
+    let entities: Vec<_> = world.entities().map(|(entity, _)| entity).collect();
+    for entity in entities {
+        if let Some(data) = world.get_mut(entity) {
+            data.disabled = false;
+        }
     }
 }
 

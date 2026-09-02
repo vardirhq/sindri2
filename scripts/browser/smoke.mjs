@@ -179,15 +179,29 @@ const refused = audio.filter(
   (record) => record.settled !== 'played' || record.playedTo === 0,
 );
 
-const requiredAssetKinds = [
-  ['manifest', 'sindri.manifest.json'],
-  ['scene', 'gather.scene.json'],
-  ['script', 'scripts/player.decay'],
-  ['texture', 'textures/player.png'],
-  ['sheet', 'textures/player.sheet.json'],
-  ['font', 'fonts/Inter.ttf'],
-  ['audio', 'audio/background.wav'],
-];
+// Read from the manifest the build actually shipped, rather than written down
+// here. A list here is a list of one project's file names: it passed for
+// Gather and would have passed for a game with no prefabs, no scripts and no
+// sound, because none of those were on it.
+const requiredAssetKinds = [['manifest', 'sindri.manifest.json']];
+try {
+  const manifest = JSON.parse(
+    await readFile(join(ROOT, 'assets', 'sindri.manifest.json'), 'utf8'),
+  );
+  const first = new Map();
+  for (const [id, entry] of Object.entries(manifest.assets ?? {})) {
+    const kind = entry.kind ?? 'other';
+    // The first of each kind in the manifest's own order, so the same build
+    // asks for the same file every run.
+    if (!first.has(kind)) first.set(kind, id);
+  }
+  for (const [kind, id] of first) requiredAssetKinds.push([kind, id]);
+} catch (error) {
+  if (EXPECT_ASSETS) {
+    console.log(`problem: no manifest to read asset kinds from: ${error.message}`);
+    process.exitCode = 1;
+  }
+}
 // Exported assets sit below a content-hash directory; the manifest itself
 // deliberately does not. Match the logical ID at the end of either shape.
 const fetched = (asset) =>

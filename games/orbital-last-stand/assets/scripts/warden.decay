@@ -97,8 +97,12 @@ script Warden {
 
         for hit in Physics.sensor_entered() {
             if hit == player {
+                // The worst single touch this frame, not the sum of them. The
+                // ship gets invulnerability after a hit, so being inside a
+                // crowd of thirty is one hit — adding them up made a late
+                // wave lethal on the frame it arrived, whatever the hull.
                 Game.set("player_damage_taken",
-                         Game.get("player_damage_taken", 0.0) + this.touch_damage);
+                         max(Game.get("player_damage_taken", 0.0), this.touch_damage));
                 continue;
             }
             this.hp -= Game.get("damage", 1.0);

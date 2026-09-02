@@ -148,7 +148,10 @@ script Director {
         if Game.get("cores", 0.0) >= Game.get("next_level", 4.0) {
             let level = Game.get("level", 1.0) + 1.0;
             Game.set("level", level);
-            Game.set("next_level", Game.get("next_level", 4.0) + 3.0 + level);
+            // Multiplied rather than added, so ten minutes is a handful of
+            // choices that matter rather than a hundred that do not. Adding a
+            // constant is a curve the player outgrows by the third minute.
+            Game.set("next_level", Game.get("next_level", 4.0) * 1.6 + 6.0);
             Game.set("run_state", 2.0);
             return;
         }
@@ -158,6 +161,13 @@ script Director {
             send_boss();
         }
 
+        // Nothing new arrives while the Warden is alive. The ship fires at
+        // whatever is nearest, so a boss behind a crowd is a boss that never
+        // gets shot — and a fight nobody can reach is not a fight.
+        if Game.get("boss_hp", 0.0) > 0.0 {
+            return;
+        }
+
         this.next_wave -= dt;
         if this.next_wave <= 0.0 {
             this.wave += 1.0;
@@ -165,12 +175,18 @@ script Director {
             send_wave(this.wave);
             // Waves come closer together as the run goes on, down to a floor
             // that keeps the late game dense rather than impossible.
-            this.next_wave = max(1.6, this.wave_gap - this.wave * 0.12);
+            this.next_wave = max(2.2, this.wave_gap - this.wave * 0.05);
         }
     }
 
     fn end_run() {
         Game.set("run_state", 4.0);
+        // Cleared here as well as when a run begins, because the Warden's own
+        // script is about to be despawned with everything else and will not
+        // get to say it is gone. A stale boss reading is what stops the next
+        // run's waves.
+        Game.set("boss_hp", 0.0);
+        Game.set("boss_max", 0.0);
         let score = Game.get("score", 0.0);
         if score > Save.number("best_score", 0.0) {
             Save.set_number("best_score", score);
@@ -183,7 +199,7 @@ script Director {
     // Three behaviours, mixed by how far the run has got. A drifter is the
     // whole of the first minute; chargers arrive next; splitters last.
     fn send_wave(wave: f32) {
-        let budget = min(3.0 + wave * 1.4, 34.0);
+        let budget = min(5.0 + wave * 2.2, 80.0);
         var made: f32 = 0.0;
         while made < budget {
             let roll = Random.value();

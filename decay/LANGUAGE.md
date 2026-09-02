@@ -426,8 +426,9 @@ A binding needs a type, an initializer, or both.
 
 ### Loops
 
-`while` is the only loop. There is no `for`, no `loop`, and no iteration over
-anything, because there is nothing yet to iterate.
+`while` and `for`. There is no `loop`, and `for` walks a collection rather than
+a range — see [Collections](#collections) — because a collection is the only
+thing there is to iterate.
 
 ```rust
 var i: f32 = 0.0;

@@ -33,6 +33,8 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Game saves | ✅ | ➖ | 🟡 |
 | Effects | ✅ | 🟡 | 🟡 |
 | Static web export | ✅ | ➖ | ➖ |
+| Prefabs in a shipped build | ✅ | ➖ | ➖ |
+| Showing and hiding a screen | ✅ | ✅ | ✅ |
 | Project fonts | ✅ | ✅ | ❌ |
 | Perspective camera | ✅ | 🟡 | ❌ |
 | Orthographic camera | ✅ | 🟡 | ❌ |

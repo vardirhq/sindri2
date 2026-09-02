@@ -78,17 +78,17 @@ The statuses mean:
 | Fixed-step update and lifecycle | Fixed-step simulation, capped frame time, pause/resume, native/browser hosts | **Ready** |
 | 2D world rendering and layering | Textured/tinted/layered sprites, animation, cameras, screen images and text | **Ready** for sprite-based art |
 | Procedural vector shapes and glow effects | No general shape/primitive or particle authoring system | **Partial**; bake sprites or add a render feature |
-| High-volume entity lifetime | Core world supports safe spawn/despawn and has measured storage scaling; scripts now spawn within a bounded per-pass budget | **Partial**; the churn itself is not yet measured from Decay |
+| High-volume entity lifetime | Measured from Decay: 26,072 spawn/despawn cycles and 228 concurrent entities over ten minutes at 18% of the frame budget | **Ready**; see `docs/orbital-last-stand-evidence.md` |
 | Spawn enemies, bullets, pickups, and hazards from Decay | `World.spawn` takes a typed prefab reference and answers with a generation-checked entity | **Ready** |
-| Reusable enemy/projectile definitions | Prefabs: versioned single-root scene fragments, validated and canonical; no editor authoring yet | **Partial**; the format and spawn path work, making one still means writing the file |
+| Reusable enemy/projectile definitions | Prefabs, now carried into builds: the manifest has a kind for them and the export walks a prefab's own scripts into the prefabs those spawn | **Partial**; they ship and spawn, but making one still means writing the file |
 | Query groups of enemies/projectiles | `Array<T>` is a Decay value, and `World.with_tag` answers with a bounded, ordered, active-only group | **Ready** |
 | Timed procedural behavior | Stateful update scripts, bounded loops, spawning, collections, and a seeded stream | **Ready** |
 | Seeded random waves and module offers | Host-owned PCG stream, replayable from a seed on every host, with `value`/`range`/`int`/`pick`/`seed` in Decay | **Ready** |
 | Circle/sensor collision gameplay | `ScenePhysics2d` drives the runtime from authored components; Decay has velocity, impulse, and per-entity collision/sensor event queries | **Ready** |
-| Mouse and touch movement | Unified `Pointer` plus raw `Touch` in Decay, routed through the editor Game view in its own pixels | **Ready** |
+| Mouse and touch movement | Unified `Pointer` plus raw `Touch`, in viewport pixels and in overlay units, routed through the editor Game view in its own pixels | **Ready** |
 | Runtime HUD values | Templated text a script fills, and fill bars | **Ready** |
-| Interactive menus and modal flows | Buttons, hit-testing, layer-ordered focus, row/column layout, safe area, and screens as entity subtrees | **Ready** except scroll and web accessibility |
-| Upgrade/build data | Exported scalar fields exist | **Missing** for collections, catalog queries, weighted choices, and loadout data |
+| Interactive menus and modal flows | Buttons, hit-testing, layer-ordered focus, row/column layout, safe area, screens as entity subtrees, and `World.set_active` so a script can actually show one | **Ready** except scroll and web accessibility |
+| Upgrade/build data | A catalog is entities: each card carries its own words, numbers and tag, the chooser asks `World.with_tag` and switches three on, and each card applies its own effect | **Ready**; no engine concept of an upgrade was needed |
 | Sprite animation | Runtime/editor animation works | **Partial**; Decay cannot select or control clips |
 | Audio | Native, browser, and silent backends plus Decay playback calls | **Ready**, with host-side clip gathering still manual |
 | Persistent progression | Versioned key/value saves with file, browser, memory and damaged backends, and a `Save` namespace in Decay | **Ready** |
@@ -350,7 +350,35 @@ Audio clip gathering and animation control should join the vertical slice when
 their consumers are reached; they should not block the first moving,
 shooting, spawning prototype.
 
-## Acceptance test: the ten-minute run
+## Acceptance test: the ten-minute run — passed
+
+`games/orbital-last-stand` passes all twelve, without game-specific engine
+patches. It is a scene, eight prefabs, and fifteen Decay scripts; there is no
+Rust in it but a harness that assembles the same public pieces a host does.
+
+| # | Where it is checked |
+| --- | --- |
+| 1 | The scene opens in the editor, and `it_compiles_and_runs.rs` opens the same project the editor does |
+| 2 | `a_run_starts_from_the_title_screen` |
+| 3 | `the_ship_answers_the_keyboard_and_the_pointer` |
+| 4 | `ten_minutes_hold_together` — 26,072 spawn/kill cycles |
+| 5 | `enemies_arrive_die_and_leave_something_behind`, `the_warden_arrives_and_changes_as_it_is_fought` |
+| 6 | `an_upgrade_pauses_the_run_and_changes_it` |
+| 7 | `the_hud_says_what_is_happening` |
+| 8 | Authored `sindri.audio.source` for the theme; `Audio.play` for the rest |
+| 9 | `what_a_run_earns_outlives_it` |
+| 10 | The editor's Play runs the same loop; CI runs the exported build in Chromium |
+| 11 | `it_exports.rs`, and `smoke.mjs` against the exported directory in CI |
+| 12 | `docs/orbital-last-stand-evidence.md` |
+
+Building it found five more gaps, all closed as general capabilities:
+prefabs never reached a build, scripts on switched-off entities were never
+exported, a script could not show or hide a screen, a script could not tell
+what the pointer was pointing at, and a bullet could not be aimed on the frame
+it was fired. A sixth was a script still running on an entity another script
+had despawned.
+
+What follows is the original statement of the test.
 
 Sindri should not claim this vertical slice is supported until a project can
 demonstrate all of the following without game-specific engine patches:

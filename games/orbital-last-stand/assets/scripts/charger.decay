@@ -20,7 +20,10 @@ script Charger {
     var dash_y: f32 = 0.0;
 
     fn start() {
-        this.hp = this.health;
+        // Tougher as the run goes on. Without this the player's upgrades
+        // outrun the enemies and a late wave evaporates on arrival, which
+        // makes a ten-minute run emptier than its first minute.
+        this.hp = this.health * (1.0 + Game.get("elapsed", 0.0) * 0.022);
     }
 
     fn update(dt: f32) {
@@ -72,8 +75,12 @@ script Charger {
 
         for hit in Physics.sensor_entered() {
             if hit == player {
+                // The worst single touch this frame, not the sum of them. The
+                // ship gets invulnerability after a hit, so being inside a
+                // crowd of thirty is one hit — adding them up made a late
+                // wave lethal on the frame it arrived, whatever the hull.
                 Game.set("player_damage_taken",
-                         Game.get("player_damage_taken", 0.0) + this.touch_damage);
+                         max(Game.get("player_damage_taken", 0.0), this.touch_damage));
                 continue;
             }
             this.hp -= Game.get("damage", 1.0);

@@ -23,7 +23,8 @@ script HostileShot {
             return;
         }
         for hit in Physics.sensor_entered() {
-            Game.set("player_damage_taken", Game.get("player_damage_taken", 0.0) + this.damage);
+            Game.set("player_damage_taken",
+                     max(Game.get("player_damage_taken", 0.0), this.damage));
             World.despawn(this.entity);
             return;
         }
