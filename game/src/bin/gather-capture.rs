@@ -31,6 +31,7 @@ use sindri_scene::{CameraView, SceneRuntime};
 #[cfg(not(target_arch = "wasm32"))]
 const WIDTH: u32 = 960;
 /// The same size the screen UI is laid out against, as the capture draws it.
+#[cfg(not(target_arch = "wasm32"))]
 const VIEWPORT: (f32, f32) = (960.0, 600.0);
 #[cfg(not(target_arch = "wasm32"))]
 const HEIGHT: u32 = 600;
