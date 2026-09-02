@@ -28,6 +28,22 @@ use sindri_decay::{
 };
 use sindri_platform::InputState;
 
+/// What one editor frame gives the scripts in it.
+///
+/// Bundled for the same reason the engine's `ScriptFrame` is: every capability
+/// Play grows adds a parameter, and a list of eight is one nobody reads.
+pub struct EditorFrame<'a> {
+    pub input: &'a InputState,
+    /// The physics Play is stepping, so a script can drive a body and be told
+    /// what it touched. `None` while the scene is at rest, which is when
+    /// nothing is stepping and a `Physics.*` call should say so rather than
+    /// answer about a simulation nobody is running.
+    pub physics: Option<Physics2d<'a>>,
+    pub screen_ui: &'a sindri_scene::ScreenUi,
+    pub random: &'a mut sindri_core::Rng,
+    pub delta_seconds: f32,
+}
+
 /// Scripts are small and few, so one worker is enough and sixteen waiting is
 /// more than a scene the editor can open will name.
 const QUEUE: AssetLoadQueueConfig = AssetLoadQueueConfig::new(1, 16);
@@ -237,24 +253,24 @@ impl SceneScripts {
         )
     }
 
-    /// Moves every script in the world on by `delta_seconds`.
-    ///
-    /// `physics` is the world Play is stepping, so a script can drive a body
-    /// and be told what it touched. `None` while the scene is at rest, which is
-    /// when nothing is stepping and a `Physics.*` call should say so rather
-    /// than answer about a simulation nobody is running.
+    /// Moves every script in the world on by one frame.
     pub fn advance(
         &mut self,
         world: &mut World,
         components: &ComponentSchemaRegistry,
-        input: &InputState,
-        physics: Option<Physics2d<'_>>,
-        screen_ui: &sindri_scene::ScreenUi,
-        delta_seconds: f32,
+        frame: EditorFrame<'_>,
     ) -> ScriptReport {
+        let EditorFrame {
+            input,
+            physics,
+            screen_ui,
+            random,
+            delta_seconds,
+        } = frame;
         let mut frame = ScriptFrame::new(&self.sources, input, delta_seconds)
             .with_prefabs(&self.prefabs)
-            .with_screen_ui(screen_ui);
+            .with_screen_ui(screen_ui)
+            .with_random(random);
         if let Some(physics) = physics {
             frame = frame.with_physics(physics);
         }

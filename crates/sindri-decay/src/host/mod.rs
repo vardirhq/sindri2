@@ -14,6 +14,7 @@ mod call;
 mod convert;
 mod map;
 mod physics;
+mod random;
 mod ui;
 
 use std::collections::BTreeSet;
@@ -29,9 +30,9 @@ use crate::{
     surface::{
         FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, Handle, HostFunction, INPUT,
         INPUT_QUERIES, InputQuery, Leaf, PHYSICS, PHYSICS_CALLS, POINTER, POINTER_QUERIES,
-        POINTER_VALUES, PRINT, PointerQuery, PointerValue, TIME, TIME_VALUES, TOUCH, TOUCH_CALLS,
-        TOUCH_COUNT, TimeValue, TouchCall, UI, UI_CALLS, WORLD, WORLD_CALLS, follow_mut, handle,
-        leaf, leaf_through_reference,
+        POINTER_VALUES, PRINT, PointerQuery, PointerValue, RANDOM, RANDOM_CALLS, TIME, TIME_VALUES,
+        TOUCH, TOUCH_CALLS, TOUCH_COUNT, TimeValue, TouchCall, UI, UI_CALLS, WORLD, WORLD_CALLS,
+        follow_mut, handle, leaf, leaf_through_reference,
     },
 };
 
@@ -80,6 +81,11 @@ pub struct WorldHost<'a> {
     spawning: Spawning<'a>,
     /// The physics a script may read and drive, when the host runs any.
     physics: Option<crate::Physics2d<'a>>,
+    /// The run's random stream, when the host is running one.
+    ///
+    /// Mutable because drawing a number is what advances it: a stream a script
+    /// could read without moving would hand out the same number for ever.
+    random: Option<&'a mut sindri_core::Rng>,
     /// Where the screen elements are and what the pointer is doing to them.
     ///
     /// Read-only: hover and click are answers about this frame, computed by the
@@ -330,6 +336,13 @@ impl Host for WorldHost<'_> {
         }
 
         if let [namespace, name] = parts.as_slice()
+            && *namespace == RANDOM
+            && let Some((_, call)) = RANDOM_CALLS.iter().find(|(known, _)| known == name)
+        {
+            return self.random_call(*call, path, args).map(Some);
+        }
+
+        if let [namespace, name] = parts.as_slice()
             && *namespace == GRID
             && let Some((_, call)) = GRID_CALLS.iter().find(|(known, _)| known == name)
         {
@@ -375,16 +388,32 @@ impl Host for WorldHost<'_> {
     }
 }
 
+/// Everything a script can reach beyond the world and the frame.
+///
+/// Bundled because the list had reached eight and every capability the scripting
+/// surface grows adds another. `crate::HostServices` is this plus the audio
+/// queue, which is the wrapper's business rather than this host's.
+pub struct WorldServices<'a> {
+    pub spawning: Spawning<'a>,
+    pub physics: Option<crate::Physics2d<'a>>,
+    pub screen_ui: Option<&'a sindri_scene::ScreenUi>,
+    pub random: Option<&'a mut sindri_core::Rng>,
+}
+
 impl<'a> WorldHost<'a> {
     pub fn new(
         world: &'a mut World,
         entity: EntityId,
         context: ScriptContext<'a>,
         blackboard: &'a mut Blackboard,
-        spawning: Spawning<'a>,
-        physics: Option<crate::Physics2d<'a>>,
-        screen_ui: Option<&'a sindri_scene::ScreenUi>,
+        services: WorldServices<'a>,
     ) -> Self {
+        let WorldServices {
+            spawning,
+            physics,
+            screen_ui,
+            random,
+        } = services;
         Self {
             world,
             entity,
@@ -393,6 +422,7 @@ impl<'a> WorldHost<'a> {
             spawning,
             physics,
             screen_ui,
+            random,
             printed: Vec::new(),
         }
     }

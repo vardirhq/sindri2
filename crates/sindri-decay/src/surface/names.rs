@@ -33,6 +33,7 @@ pub(crate) const GRID: &str = "Grid";
 /// the backend unreplaceable one script at a time.
 pub(crate) const PHYSICS: &str = "Physics";
 pub(crate) const UI: &str = "Ui";
+pub(crate) const RANDOM: &str = "Random";
 
 /// The type of a value that names another entity.
 pub(crate) const ENTITY: &str = "Entity";

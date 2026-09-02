@@ -262,13 +262,16 @@ impl EditorApp {
         let report = self.scripts.advance(
             &mut self.world,
             &components,
-            self.input.state(),
-            Some(sindri_decay::Physics2d {
-                world: physics,
-                events,
-            }),
-            &self.screen_ui,
-            delta,
+            crate::scripts::EditorFrame {
+                input: self.input.state(),
+                physics: Some(sindri_decay::Physics2d {
+                    world: physics,
+                    events,
+                }),
+                screen_ui: &self.screen_ui,
+                random: &mut self.random,
+                delta_seconds: delta,
+            },
         );
 
         for message in report.printed {
@@ -323,6 +326,11 @@ impl EditorApp {
         // than on resume, so pausing and carrying on does not move the point
         // stop returns to.
         self.play_snapshot = Some(self.world.clone());
+        // The same seed for every fresh start, so pressing Play twice gives the
+        // same run twice and a bug found once can be found again. Resuming from
+        // a pause deliberately does not touch it: that would replay numbers the
+        // scene has already acted on.
+        self.random = sindri_core::Rng::default();
         if let Err(error) = self.lifecycle.start() {
             self.report(error.to_string());
         }

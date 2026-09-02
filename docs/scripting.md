@@ -275,6 +275,75 @@ asks once per frame is fine; a script that asks once per bullet per frame is
 quadratic, and the operation budget will eventually say so in a way that names
 the script rather than the pattern. Ask once and hold the answer for the frame.
 
+### Numbers a run can be replayed from
+
+| Call | Returns |
+| --- | --- |
+| `Random.value()` | `f32` in `[0, 1)` |
+| `Random.range(min, max)` | `f32` in `[min, max)` |
+| `Random.int(min, max)` | a whole `f32`, both ends included |
+| `Random.pick(group)` | `Entity` |
+| `Random.seed(value)` | nothing |
+
+```rust
+script Spawner {
+    fn update(dt: f32) {
+        if this.due(dt) {
+            let enemy = World.spawn(this.enemy);
+            enemy.transform.position.x = Random.range(-8.0, 8.0);
+            enemy.transform.position.y = Random.range(-4.5, 4.5);
+        }
+    }
+}
+```
+
+**The stream is the host's, and a seed completely determines it.** The same seed
+and the same sequence of calls give the same numbers in the editor, in a native
+build, and in a browser — which is what makes a run replayable from a number a
+player can share.
+
+What that does *not* promise is that adding a call somewhere leaves the rest
+alone. There is one stream and everything shares it, so a number drawn early
+shifts every number after it. That is the honest cost of a single stream, and it
+is why a run's *seed* is worth storing while a frame's numbers are not.
+
+**`int` includes both ends**, because "a number from 1 to 6" means six outcomes
+to everyone who is not writing the loop themselves. It is drawn without modulo
+bias: the naive remainder makes the first few values slightly more likely, which
+nobody notices on a die and which becomes a drop table that feels wrong over a
+long run.
+
+**`pick` exists because Decay has no indexing.** Without it a script cannot
+choose from a group at all, and choosing from a group — a target, a module
+offer, a spawn point — is most of what a game wants randomness for:
+
+```rust
+let enemies = World.with_tag(this.enemy);
+if enemies.len > 0.0 {
+    let target = Random.pick(enemies);
+}
+```
+
+That guard is required: picking from nothing is refused rather than answered
+with an entity that is not there, which would only move the same problem one
+call further away.
+
+**A range that runs backwards is refused**, because a spawner that never spawns
+anywhere is worth hearing about. So is `int(1.2, 1.8)`, which has no whole number
+to give.
+
+**The engine never asks the platform for entropy.** It has no way to be
+genuinely random and deliberately does not pretend otherwise: a host that seeds
+nothing gets a fixed stream, so a run is repeatable rather than arbitrary. A game
+that wants a different run each time calls `Random.seed` with something it knows
+— a counter it saved, the moment the person pressed Start. `Random.seed` restarts
+the one stream every script shares, which is what a run seed is for and why it
+belongs at the start of a run rather than in the middle of one.
+
+**This is not a source of secrets.** Anyone who can see a handful of outputs can
+work out the state and predict the rest, which is fine for waves and drops and
+disqualifying for anything else.
+
 ### Screen elements
 
 | Call | Returns |

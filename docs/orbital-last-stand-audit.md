@@ -33,7 +33,7 @@ Decay, gameplay collision access, persistence, particles or equivalent effect
 rendering, and a product export pipeline.
 
 **Spawning, reusable definitions, collections, queries, pointer/touch input,
-gameplay collision and the screen UI are now done.** `docs/prefabs.md`, `docs/scripting.md`,
+gameplay collision, the screen UI and seeded randomness are now done.** `docs/prefabs.md`, `docs/scripting.md`,
 `docs/physics.md` and `decay/LANGUAGE.md` are the contracts; the rest of the
 list stands.
 
@@ -81,8 +81,8 @@ The statuses mean:
 | Spawn enemies, bullets, pickups, and hazards from Decay | `World.spawn` takes a typed prefab reference and answers with a generation-checked entity | **Ready** |
 | Reusable enemy/projectile definitions | Prefabs: versioned single-root scene fragments, validated and canonical; no editor authoring yet | **Partial**; the format and spawn path work, making one still means writing the file |
 | Query groups of enemies/projectiles | `Array<T>` is a Decay value, and `World.with_tag` answers with a bounded, ordered, active-only group | **Ready** |
-| Timed procedural behavior | Stateful update scripts, bounded loops, spawning, and collections exist | **Partial**; still blocked by randomness |
-| Seeded random waves and module offers | Host-owned seeded randomness is planned, not implemented | **Missing** |
+| Timed procedural behavior | Stateful update scripts, bounded loops, spawning, collections, and a seeded stream | **Ready** |
+| Seeded random waves and module offers | Host-owned PCG stream, replayable from a seed on every host, with `value`/`range`/`int`/`pick`/`seed` in Decay | **Ready** |
 | Circle/sensor collision gameplay | `ScenePhysics2d` drives the runtime from authored components; Decay has velocity, impulse, and per-entity collision/sensor event queries | **Ready** |
 | Mouse and touch movement | Unified `Pointer` plus raw `Touch` in Decay, routed through the editor Game view in its own pixels | **Ready** |
 | Runtime HUD values | Templated text a script fills, and fill bars | **Ready** |
@@ -303,7 +303,8 @@ possible, not by subsystem familiarity.
    `docs/scripting.md` on `Physics` and `docs/physics.md` on the step order
 5. ~~**Dynamic text plus a minimal interactive screen UI**~~ — done; see
    `docs/scripting.md` on `Ui` and `Pointer.over_ui`
-6. **Host-owned seeded randomness**
+6. ~~**Host-owned seeded randomness**~~ — done; see `docs/scripting.md` on
+   `Random`
 7. **Game persistence boundary**
 8. **Measured particle/effect path**
 9. **Complete editor Play application loop**

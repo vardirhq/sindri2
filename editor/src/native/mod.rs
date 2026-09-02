@@ -257,6 +257,13 @@ struct EditorApp {
     /// Recomputed every frame from the world, so a button moved in the
     /// inspector is pressable where it now is rather than where it was.
     screen_ui: ScreenUi,
+    /// The run's random stream.
+    ///
+    /// Put back to its seed every time Play starts, so pressing Play twice
+    /// gives the same run twice. That is what makes a bug found in Play a bug
+    /// that can be found again, and it is the opposite of what a shipped game
+    /// wants — which is why a game seeds itself instead.
+    random: sindri_core::Rng,
     /// Where the Game view was drawn last frame, in window points.
     ///
     /// Kept because scripts advance before the layout runs, so the rectangle a
@@ -425,6 +432,7 @@ impl EditorApp {
             game_view_rect: None,
             physics: ScenePhysics2d::top_down().expect("zero gravity is finite"),
             screen_ui: ScreenUi::default(),
+            random: sindri_core::Rng::default(),
             animations: SpriteAnimations::new(),
             scripts: SceneScripts::for_scene(None),
             input: EditorInput::default(),

@@ -29,6 +29,7 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Pathfinding | ✅ | ✅ | ✅ |
 | Text | ✅ | ✅ | 🟡 |
 | UI buttons and layout | ✅ | 🟡 | 🟡 |
+| Seeded randomness | ✅ | ➖ | 🟡 |
 | Project fonts | ✅ | ✅ | ❌ |
 | Perspective camera | ✅ | 🟡 | ❌ |
 | Orthographic camera | ✅ | 🟡 | ❌ |

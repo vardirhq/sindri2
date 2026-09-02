@@ -61,6 +61,8 @@ pub struct HostServices<'a> {
     pub physics: Option<crate::Physics2d<'a>>,
     /// Where the screen elements are and what the pointer is doing to them.
     pub screen_ui: Option<&'a sindri_scene::ScreenUi>,
+    /// The run's random stream, when the host is running one.
+    pub random: Option<&'a mut sindri_core::Rng>,
     /// What the script asked to be played, in order.
     pub audio: &'a mut Vec<AudioCommand>,
 }
@@ -77,11 +79,21 @@ impl<'a> WorldHost<'a> {
             spawning,
             physics,
             screen_ui,
+            random,
             audio,
         } = services;
         Self {
             inner: crate::host::WorldHost::new(
-                world, entity, context, blackboard, spawning, physics, screen_ui,
+                world,
+                entity,
+                context,
+                blackboard,
+                crate::host::WorldServices {
+                    spawning,
+                    physics,
+                    screen_ui,
+                    random,
+                },
             ),
             audio,
         }
@@ -247,6 +259,7 @@ mod tests {
                 spawning: spawning(&prefabs, &started, &mut spawned),
                 physics: None,
                 screen_ui: None,
+                random: None,
                 audio: &mut queue,
             },
         );
@@ -313,6 +326,7 @@ mod tests {
                 spawning: spawning(&prefabs, &started, &mut spawned),
                 physics: None,
                 screen_ui: None,
+                random: None,
                 audio: &mut queue,
             },
         );

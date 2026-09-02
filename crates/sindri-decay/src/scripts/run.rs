@@ -42,6 +42,8 @@ pub(super) struct TickWorld<'a> {
     pub(super) physics: Option<Physics2d<'a>>,
     /// Where the screen elements are and what the pointer is doing to them.
     pub(super) screen_ui: Option<&'a sindri_scene::ScreenUi>,
+    /// The run's random stream, when the host is running one.
+    pub(super) random: Option<&'a mut sindri_core::Rng>,
 }
 
 pub(super) fn tick(
@@ -105,6 +107,9 @@ pub(super) fn tick(
                     events: physics.events,
                 }),
                 screen_ui: at.screen_ui,
+                // Reborrowed per tick like physics: one stream, shared by every
+                // script in the pass, so a run's numbers are the run's.
+                random: at.random.as_deref_mut(),
                 audio: &mut *at.audio,
             },
         ),

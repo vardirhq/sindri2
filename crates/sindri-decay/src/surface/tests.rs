@@ -200,6 +200,7 @@ fn the_host_answers_every_path_the_analyzer_accepts() {
     let started = std::collections::BTreeSet::new();
     let mut spawned = Vec::new();
     let screen_ui = sindri_scene::ScreenUi::new();
+    let mut random = sindri_core::Rng::default();
     let mut physics = physics_world();
     let events: Vec<sindri_physics::PhysicsEvent2d> = Vec::new();
     let environment = environment();
@@ -236,6 +237,7 @@ fn the_host_answers_every_path_the_analyzer_accepts() {
                         events: &events,
                     }),
                     screen_ui: Some(&screen_ui),
+                    random: Some(&mut random),
                     audio: &mut audio,
                 },
             );
@@ -259,6 +261,7 @@ fn the_host_answers_every_path_the_analyzer_accepts() {
                         events: &events,
                     }),
                     screen_ui: Some(&screen_ui),
+                    random: Some(&mut random),
                     audio: &mut audio,
                 },
             );
@@ -286,6 +289,7 @@ fn the_host_answers_every_global_the_analyzer_describes() {
     let started = std::collections::BTreeSet::new();
     let mut spawned = Vec::new();
     let screen_ui = sindri_scene::ScreenUi::new();
+    let mut random = sindri_core::Rng::default();
     let mut physics = physics_world();
     let events: Vec<sindri_physics::PhysicsEvent2d> = Vec::new();
     let environment = environment();
@@ -329,6 +333,7 @@ fn the_host_answers_every_global_the_analyzer_describes() {
                         events: &events,
                     }),
                     screen_ui: Some(&screen_ui),
+                    random: Some(&mut random),
                     audio: &mut audio,
                 },
             );
@@ -388,6 +393,12 @@ fn arguments_for(
             // A prefab value is the asset ID the scene authored, which is what
             // the host resolves against what it loaded.
             Type::Named(named) if named == PREFAB => Value::String(SPARE_PREFAB.to_owned()),
+            // Never empty: a call that chooses from a group is right to refuse
+            // an empty one, and a fixture that handed it nothing would be
+            // testing that refusal rather than the call.
+            Type::Array(_) => Value::Array(std::rc::Rc::new(vec![Value::Reference(
+                grid_roles[2].to_bits(),
+            )])),
             _ => Value::Number(1.0),
         })
         .collect()
@@ -432,6 +443,7 @@ fn every_described_function_is_one_the_host_performs() {
     // Empty rather than absent: a `Ui.is_*` query on a host with no screen UI
     // is refused, and that would look like a host that does not know the call.
     let screen_ui = sindri_scene::ScreenUi::new();
+    let mut random = sindri_core::Rng::default();
     let environment = environment();
 
     for (name, symbol) in environment.globals() {
@@ -452,6 +464,7 @@ fn every_described_function_is_one_the_host_performs() {
                 },
                 physics: None,
                 screen_ui: Some(&screen_ui),
+                random: Some(&mut random),
                 audio: &mut audio,
             },
         );

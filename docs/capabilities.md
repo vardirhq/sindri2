@@ -185,6 +185,35 @@ without reading the payload. No game yet plays a scene whose bodies move —
 separate feature-track slices in `docs/physics.md` rather than things this
 foundation pretends to have completed.
 
+### Randomness
+
+`sindri_core::Rng` is a **PCG-XSH-RR 64/32** generator written out rather than
+depended on. Every general-purpose crate reaches the operating system for a
+seed, which on `wasm32-unknown-unknown` means `getrandom` and a target that
+refuses to compile without an opt-in — and more to the point, entropy is the
+opposite of what this is for. A run that cannot be replayed from its seed is not
+seeded at all.
+
+Everything in it is integer arithmetic and the one division is by a power of
+two, which is what makes a seed mean the same thing on every host. Fractions are
+built from the top 24 bits, so `[0, 1)` is never `1.0`; bounded integers reject
+the draws that would make the low values slightly more likely, because modulo
+bias on a drop table over a long run is exactly the kind of wrongness that gets
+blamed on the game design. Seeding takes two steps around the state, so
+neighbouring seeds do not produce neighbouring first outputs.
+
+The engine never asks the platform for entropy and does not pretend to: a host
+that seeds nothing gets a fixed stream. The editor puts the stream back to its
+seed on every fresh Play, so pressing Play twice gives the same run twice and a
+bug found once can be found again; resuming from a pause deliberately does not,
+since that would replay numbers the scene has already acted on. A game that
+wants variety calls `Random.seed` with something it knows.
+
+One stream is shared by every script, so the seed determines a run but a number
+drawn early shifts every number after it. That is stated rather than hidden, and
+it is why a run's seed is worth storing while a frame's numbers are not. It is
+not a source of secrets: a handful of outputs reveals the state.
+
 ### Screen UI
 
 `sindri.ui.image` and `sindri.ui.text` draw against the viewport. Text is a
@@ -839,6 +868,12 @@ error with a line number. Reaching through a stale or null reference is reported
 rather than silently ignored. Verified in the game: the orbs used to compare
 against a position the player published to the shared board, and now ask the
 player directly, with the picture unchanged.
+
+**And a script can draw numbers a run can be replayed from.** `Random.value`,
+`range`, `int`, `pick` and `seed` read the host's stream, which a seed
+completely determines: the same seed and the same sequence of calls give the
+same numbers in the editor, in a native build, and in a browser. Exercised in
+`crates/sindri-decay/tests/a_script_draws_a_number.rs`.
 
 **And a script can change what the screen says, and read what was clicked.**
 `Ui.set_text`, `set_number`, `set_numbers` and `set_fill` write into the element

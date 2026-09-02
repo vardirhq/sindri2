@@ -8,6 +8,35 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **Numbers a run can be replayed from.** `sindri_core::Rng` is a PCG-XSH-RR
+  64/32 generator written out rather than depended on. Every general-purpose
+  crate reaches the operating system for a seed, which on
+  `wasm32-unknown-unknown` means `getrandom` and a target that refuses to
+  compile — and more to the point, entropy is the opposite of what this is for.
+  A run that cannot be replayed from its seed is not seeded at all.
+
+  Integer arithmetic throughout, with the one division by a power of two, so a
+  seed means the same thing in the editor, in a native build, and in a browser.
+  Fractions come from the top 24 bits, so `[0, 1)` is never `1.0`. Bounded
+  integers reject the draws that would make low values slightly more likely,
+  because modulo bias on a drop table over a long run is the kind of wrongness
+  that gets blamed on the game design.
+
+  Decay gained `Random`: `value`, `range`, `int` (both ends included, because
+  "a number from 1 to 6" means six outcomes), `pick`, and `seed`. `pick` exists
+  because Decay has no indexing — without it a script cannot choose from a group
+  at all, and choosing from a group is most of what a game wants randomness for.
+  Picking from nothing is refused rather than answered with an entity that is
+  not there.
+
+  Editor Play puts the stream back to its seed on every fresh start, so pressing
+  Play twice gives the same run twice; resuming from a pause deliberately does
+  not, since that would replay numbers the scene has already acted on.
+
+  One stream is shared by every script, so a number drawn early shifts every
+  number after it. That is documented rather than hidden — it is why a run's seed
+  is worth storing while a frame's numbers are not.
+
 - **A HUD a script can change, and buttons a person can press.** Screen text and
   images rendered, and no script could touch either — the audit called the first
   half "Decay cannot change text content" and the second "missing as a runtime

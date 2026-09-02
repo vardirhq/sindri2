@@ -68,6 +68,12 @@ pub struct ScriptFrame<'a> {
     /// never respond because nothing is laying them out should be heard about
     /// on the first frame, not mistaken for a person who has not clicked yet.
     pub screen_ui: Option<&'a sindri_scene::ScreenUi>,
+    /// The run's random stream, when the host is running one.
+    ///
+    /// `None` for a host that seeds nothing, and then `Random.value` says so
+    /// rather than handing out the same number for ever — a game whose waves
+    /// never vary should hear about it on the first frame.
+    pub random: Option<&'a mut sindri_core::Rng>,
     pub delta_seconds: f32,
 }
 
@@ -82,6 +88,7 @@ impl<'a> ScriptFrame<'a> {
             input,
             physics: None,
             screen_ui: None,
+            random: None,
             delta_seconds,
         }
     }
@@ -97,6 +104,13 @@ impl<'a> ScriptFrame<'a> {
     #[must_use]
     pub const fn with_screen_ui(mut self, screen_ui: &'a sindri_scene::ScreenUi) -> Self {
         self.screen_ui = Some(screen_ui);
+        self
+    }
+
+    /// The same frame, with the run's random stream.
+    #[must_use]
+    pub fn with_random(mut self, random: &'a mut sindri_core::Rng) -> Self {
+        self.random = Some(random);
         self
     }
 
@@ -216,6 +230,7 @@ impl Scripts {
             input,
             physics,
             screen_ui,
+            random,
             delta_seconds,
         } = frame;
         let mut report = ScriptReport::default();
@@ -251,6 +266,7 @@ impl Scripts {
             input,
             physics,
             screen_ui,
+            random,
             started: BTreeSet::new(),
             spawned: Vec::new(),
         };

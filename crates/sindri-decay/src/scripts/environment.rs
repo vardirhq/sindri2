@@ -14,9 +14,9 @@ use crate::{
     surface::{
         ENTITY, FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, GridCall, HostFunction,
         INPUT, INPUT_QUERIES, Node, PHYSICS, PHYSICS_CALLS, POINTER, POINTER_QUERIES,
-        POINTER_VALUES, PREFAB, PRINT, PhysicsCall, PointerValue, THIS, THROUGH_REFERENCE, TIME,
-        TIME_VALUES, TOUCH, TOUCH_CALLS, TOUCH_COUNT, UI, UI_CALLS, UiCall, WORLD, WORLD_CALLS,
-        WorldCall,
+        POINTER_VALUES, PREFAB, PRINT, PhysicsCall, PointerValue, RANDOM, RANDOM_CALLS, RandomCall,
+        THIS, THROUGH_REFERENCE, TIME, TIME_VALUES, TOUCH, TOUCH_CALLS, TOUCH_COUNT, UI, UI_CALLS,
+        UiCall, WORLD, WORLD_CALLS, WorldCall,
     },
 };
 
@@ -110,6 +110,7 @@ pub fn environment() -> Environment {
     add_pointer_surface(&mut environment);
     add_physics_surface(&mut environment);
     add_ui_surface(&mut environment);
+    add_random_surface(&mut environment);
     add_grid_surface(&mut environment);
     add_audio_surface(&mut environment);
 
@@ -257,6 +258,31 @@ pub(super) fn add_ui_surface(environment: &mut Environment) {
     }
     environment.add_type(UI, ui);
     environment.add_value(UI, Type::Named(UI.to_owned()));
+}
+
+/// What a script can draw from the run's stream.
+pub(super) fn add_random_surface(environment: &mut Environment) {
+    let mut random = HostType::new();
+    for (name, call) in RANDOM_CALLS {
+        random = random.with_function(
+            *name,
+            FunctionType {
+                params: match call {
+                    RandomCall::Value => Vec::new(),
+                    RandomCall::Range | RandomCall::Int => vec![Type::F32, Type::F32],
+                    RandomCall::Pick => vec![Type::array_of(Type::Named(ENTITY.to_owned()))],
+                    RandomCall::Seed => vec![Type::F32],
+                },
+                return_type: match call {
+                    RandomCall::Value | RandomCall::Range | RandomCall::Int => Type::F32,
+                    RandomCall::Pick => Type::Named(ENTITY.to_owned()),
+                    RandomCall::Seed => Type::Unit,
+                },
+            },
+        );
+    }
+    environment.add_type(RANDOM, random);
+    environment.add_value(RANDOM, Type::Named(RANDOM.to_owned()));
 }
 
 pub(super) fn add_grid_surface(environment: &mut Environment) {

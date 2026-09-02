@@ -47,6 +47,12 @@ pub struct Session {
     physics: ScenePhysics2d,
     /// Where the screen elements are and what the pointer is doing to them.
     screen_ui: ScreenUi,
+    /// The run's random stream.
+    ///
+    /// A fixed seed, because the engine has no entropy to offer and will not
+    /// pretend otherwise. A game that wants a different run each time calls
+    /// `Random.seed` with something it knows.
+    random: sindri_core::Rng,
     pending_audio: Vec<AudioCommand>,
     autoplay_started: bool,
 }
@@ -73,6 +79,7 @@ impl Session {
             animations: SpriteAnimations::new(),
             physics: ScenePhysics2d::top_down().expect("zero gravity is finite"),
             screen_ui: ScreenUi::default(),
+            random: sindri_core::Rng::default(),
             pending_audio: Vec::new(),
             autoplay_started: false,
         }
@@ -114,6 +121,7 @@ impl Session {
             ScriptFrame::new(&self.sources, input, delta_seconds)
                 .with_prefabs(&self.prefabs)
                 .with_screen_ui(&self.screen_ui)
+                .with_random(&mut self.random)
                 .with_physics(sindri_decay::Physics2d {
                     world: physics,
                     events,

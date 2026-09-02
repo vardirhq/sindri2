@@ -342,6 +342,41 @@ pub(crate) const UI_CALLS: &[(&str, UiCall)] = &[
     ("is_held", UiCall::Held),
 ];
 
+/// What a script can draw from the run's stream.
+///
+/// One stream, shared by every script, owned by the host. Same seed and same
+/// sequence of calls means the same numbers on every host — which is what makes
+/// a run replayable, and also means a number taken early shifts every number
+/// after it.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum RandomCall {
+    /// A fraction in `[0, 1)`.
+    Value,
+    /// A number in `[min, max)`.
+    Range,
+    /// A whole number from `min` to `max`, both included.
+    ///
+    /// Inclusive because "a number from 1 to 6" means six outcomes to everyone
+    /// who is not writing the loop themselves.
+    Int,
+    /// One of the entities in a collection.
+    ///
+    /// Decay has no indexing, so without this a script cannot choose from a
+    /// group at all — and choosing from a group is most of what a game wants
+    /// randomness for.
+    Pick,
+    /// Puts the run's stream back to the start of a seed.
+    Seed,
+}
+
+pub(crate) const RANDOM_CALLS: &[(&str, RandomCall)] = &[
+    ("value", RandomCall::Value),
+    ("range", RandomCall::Range),
+    ("int", RandomCall::Int),
+    ("pick", RandomCall::Pick),
+    ("seed", RandomCall::Seed),
+];
+
 /// What a script can ask about the frame it is in.
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum TimeValue {

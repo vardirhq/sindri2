@@ -11,6 +11,7 @@ mod entity;
 mod lifecycle;
 mod migration;
 mod prefab;
+mod random;
 mod scene;
 mod sheet;
 mod tags;
@@ -32,6 +33,7 @@ pub use entity::EntityId;
 pub use lifecycle::{EngineLifecycle, EngineState, LifecycleError};
 pub use migration::{SceneMigrationError, SceneMigrationStep, SceneMigrator};
 pub use prefab::{PREFAB_FORMAT_VERSION, PrefabDocument, PrefabError, PrefabJsonError};
+pub use random::Rng;
 pub use scene::{
     SCENE_FORMAT_VERSION, SceneDocument, SceneEntity, SceneEntityId, SceneError, SceneJsonError,
     SceneMetadata,
