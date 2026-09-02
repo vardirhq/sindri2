@@ -12,6 +12,7 @@ use serde::Deserialize;
 use sindri_core::{SceneComponent, SpriteRef, SpriteRefError};
 
 use super::opaque_white;
+use super::ui_text_template;
 
 /// Where a UI element's origin sits inside the viewport.
 ///
@@ -100,6 +101,105 @@ pub struct UiImageComponent {
     /// The explicit override on draw order within the overlay.
     #[serde(default)]
     pub layer: i32,
+    /// How much of the element is drawn, in `[0, 1]`, and from which edge.
+    ///
+    /// This is what makes a health bar a bar rather than a picture of one. A
+    /// script sets the fraction with `Ui.set_fill`; the element keeps its
+    /// authored rect and draws a part of it, so the empty part of the bar is
+    /// wherever the full one was rather than the bar shrinking towards its
+    /// middle.
+    ///
+    /// It clips the image with it: a bar at a third shows the left third of its
+    /// texture, not the whole texture squashed. A stretched picture would make
+    /// a segmented or lettered bar wrong, and a filling bar is the only reason
+    /// this field exists.
+    #[serde(default)]
+    pub fill: UiFill,
+}
+
+/// How much of an element is drawn, and which way it empties.
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+pub struct UiFill {
+    /// The fraction drawn, clamped to `[0, 1]` when it is read.
+    #[serde(default = "full")]
+    pub amount: f32,
+    /// The edge the drawn part keeps.
+    #[serde(default)]
+    pub from: UiFillEdge,
+}
+
+impl Default for UiFill {
+    fn default() -> Self {
+        Self {
+            amount: 1.0,
+            from: UiFillEdge::default(),
+        }
+    }
+}
+
+const fn full() -> f32 {
+    1.0
+}
+
+impl UiFill {
+    /// The fraction, made usable: clamped, and with a NaN read as empty.
+    ///
+    /// Empty rather than full for a NaN, so a bar driven by a broken
+    /// calculation reads as obviously wrong instead of as perfect health.
+    #[must_use]
+    pub fn fraction(self) -> f32 {
+        if self.amount.is_nan() {
+            0.0
+        } else {
+            self.amount.clamp(0.0, 1.0)
+        }
+    }
+
+    /// The drawn rect within the element's own unit square, as
+    /// `(offset, scale)` per axis, with the origin at the element's centre.
+    ///
+    /// Returned rather than applied here because the same numbers drive both
+    /// the quad and the texture coordinates, and computing them twice is how
+    /// the two drift apart.
+    #[must_use]
+    pub fn sub_rect(self) -> ([f32; 2], [f32; 2]) {
+        let kept = self.fraction();
+        let shift = (1.0 - kept) / 2.0;
+        match self.from {
+            UiFillEdge::Left => ([-shift, 0.0], [kept, 1.0]),
+            UiFillEdge::Right => ([shift, 0.0], [kept, 1.0]),
+            UiFillEdge::Bottom => ([0.0, -shift], [1.0, kept]),
+            UiFillEdge::Top => ([0.0, shift], [1.0, kept]),
+        }
+    }
+}
+
+/// The edge a partly-filled element keeps.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum UiFillEdge {
+    /// Empties rightwards, which is what a health bar does.
+    #[default]
+    Left,
+    Right,
+    Bottom,
+    Top,
+}
+
+impl UiFillEdge {
+    /// Every edge, in the order a chooser should offer them.
+    pub const ALL: [Self; 4] = [Self::Left, Self::Right, Self::Bottom, Self::Top];
+
+    /// The name this edge is stored under.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Left => "left",
+            Self::Right => "right",
+            Self::Bottom => "bottom",
+            Self::Top => "top",
+        }
+    }
 }
 
 impl UiImageComponent {
@@ -124,6 +224,12 @@ impl SceneComponent for UiImageComponent {
 /// the browser: a host binds the bytes at that reference before drawing.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct UiTextComponent {
+    /// The words, with `{}` where a script's numbers go.
+    ///
+    /// A template rather than a finished string, because Decay has no string
+    /// concatenation and a HUD that cannot show a number is not a HUD. See
+    /// `ui_text_template` for why the scene owns the words and the script owns
+    /// the numbers.
     pub text: String,
     pub font: String,
     #[serde(default = "default_font_size")]
@@ -136,6 +242,31 @@ pub struct UiTextComponent {
     pub anchor: UiAnchor,
     #[serde(default)]
     pub layer: i32,
+    /// What fills the template's slots, left to right.
+    ///
+    /// Authored values are a designer's preview — a scene opens showing
+    /// `Score: 1200` rather than a row of braces — and a script overwrites them
+    /// with `Ui.set_number`. Slots past the end read as zero.
+    #[serde(default)]
+    pub values: Vec<f32>,
+}
+
+impl UiTextComponent {
+    /// The words as they should be drawn: the template with its slots filled.
+    ///
+    /// Everything that draws text goes through this rather than reading `text`,
+    /// so a HUD looks the same in the editor viewport, a capture, and the
+    /// browser without each of them remembering to format.
+    #[must_use]
+    pub fn resolved(&self) -> String {
+        ui_text_template::fill(&self.text, &self.values)
+    }
+
+    /// How many numbers this component's template asks for.
+    #[must_use]
+    pub fn slot_count(&self) -> usize {
+        ui_text_template::slot_count(&self.text)
+    }
 }
 
 const fn default_font_size() -> f32 {

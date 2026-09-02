@@ -44,10 +44,23 @@ fn prefabs() -> PrefabSources {
 fn subjects(world: &mut World, nth: usize) -> [sindri_core::EntityId; 4] {
     let spare = world.spawn(EntityData {
         transform_3d: Some(Transform3D::default()),
-        components: [(
-            "sindri.script".to_owned(),
-            serde_json::json!({ "source": "scripts/spare.decay", "script": "Spare" }),
-        )]
+        // The spare carries a screen element as well as a script, because the
+        // `Ui.*` calls act on one and a host that refused for want of a
+        // component would look like a host that does not know the call.
+        components: [
+            (
+                "sindri.script".to_owned(),
+                serde_json::json!({ "source": "scripts/spare.decay", "script": "Spare" }),
+            ),
+            (
+                "sindri.ui.text".to_owned(),
+                serde_json::json!({ "text": "{}", "font": "font.ttf" }),
+            ),
+            (
+                "sindri.ui.image".to_owned(),
+                serde_json::json!({ "texture": "bar.png" }),
+            ),
+        ]
         .into_iter()
         .collect(),
         ..EntityData::default()

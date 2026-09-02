@@ -283,6 +283,36 @@ impl PhysicsCall {
     }
 }
 
+/// What a script can change about a screen element.
+///
+/// Every one writes into the payload the entity already carries, so a HUD's
+/// state lives in the world rather than in a table beside it.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum UiCall {
+    // Named for what each one is about rather than for the `set_` its call
+    // wears, so the queries this namespace grows sit beside them evenly.
+    /// Replaces the words, template and all.
+    ///
+    /// For swapping one authored string for another — a warning appearing, a
+    /// label changing with the mode. A script can only pass a literal, because
+    /// Decay has no way to build a string, which is exactly why the numbers go
+    /// through the calls below instead.
+    Text,
+    /// Fills the template's one slot.
+    Number,
+    /// Fills its first two, which is what `45/100` needs.
+    Numbers,
+    /// How much of a bar is drawn, in `[0, 1]`.
+    Fill,
+}
+
+pub(crate) const UI_CALLS: &[(&str, UiCall)] = &[
+    ("set_text", UiCall::Text),
+    ("set_number", UiCall::Number),
+    ("set_numbers", UiCall::Numbers),
+    ("set_fill", UiCall::Fill),
+];
+
 /// What a script can ask about the frame it is in.
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum TimeValue {

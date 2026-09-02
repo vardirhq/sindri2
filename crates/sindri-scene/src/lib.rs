@@ -22,7 +22,7 @@ pub use camera_math::camera_rotation_from_look_at;
 pub use components::{
     CameraComponent, GridNavigationComponent, GridOccupantComponent, GridWallDocument,
     MeshComponent, MeshPrimitive, SpriteComponent, TileProjection, TilemapComponent, TilemapError,
-    UiAnchor, UiImageComponent, UiTextComponent,
+    UiAnchor, UiFill, UiFillEdge, UiImageComponent, UiTextComponent, ui_text_template,
 };
 pub use extract::{
     CameraView, OverlayPlacement, OverlayView, SceneExtractError, SceneExtractor, ViewCamera,

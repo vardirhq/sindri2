@@ -38,6 +38,31 @@ impl UvRect {
         height: 1.0,
     };
 
+    /// The part of this rect a quad's sub-area covers.
+    ///
+    /// `offset` and `scale` describe an area inside a unit quad centred on its
+    /// own origin, with `+Y` up, which is how a quad is built. Texture
+    /// coordinates run the other way vertically, and this is the one place that
+    /// flip is written down — a caller that did the arithmetic itself would be
+    /// a second place for it to be wrong.
+    ///
+    /// `None` for an empty area, because nothing is not a rect: a bar filled to
+    /// zero draws no quad at all rather than a degenerate one.
+    #[must_use]
+    pub fn part(self, offset: [f32; 2], scale: [f32; 2]) -> Option<Self> {
+        if scale[0] <= 0.0 || scale[1] <= 0.0 {
+            return None;
+        }
+        Some(Self {
+            x: self.width.mul_add(0.5 + offset[0] - scale[0] / 2.0, self.x),
+            y: self
+                .height
+                .mul_add(0.5 - offset[1] - scale[1] / 2.0, self.y),
+            width: self.width * scale[0],
+            height: self.height * scale[1],
+        })
+    }
+
     /// A rect covering part of a texture.
     ///
     /// Refuses anything that is not a positive area inside the image. Clamping
@@ -265,5 +290,48 @@ mod tests {
             UvRect::cell(0, 0, 0, 4),
             Err(UvRectError::EmptyGrid { .. })
         ));
+    }
+}
+
+#[cfg(test)]
+mod part_tests {
+    use super::UvRect;
+
+    #[test]
+    fn the_whole_quad_is_the_whole_rect() {
+        let part = UvRect::FULL.part([0.0, 0.0], [1.0, 1.0]).expect("an area");
+        assert_eq!(part, UvRect::FULL);
+    }
+
+    /// A bar filled to a third keeps its left third, and so does its texture.
+    #[test]
+    fn keeping_the_left_of_a_quad_keeps_the_left_of_the_texture() {
+        let part = UvRect::FULL
+            .part([-1.0 / 3.0, 0.0], [1.0 / 3.0, 1.0])
+            .expect("an area");
+        assert!((part.x()).abs() < 1.0e-5, "{part:?}");
+        assert!((part.width() - 1.0 / 3.0).abs() < 1.0e-5, "{part:?}");
+    }
+
+    /// `+Y` is up on a quad and down in a texture, which is the flip this
+    /// method exists to own.
+    #[test]
+    fn the_top_of_a_quad_is_the_start_of_the_texture() {
+        let part = UvRect::FULL.part([0.0, 0.25], [1.0, 0.5]).expect("an area");
+        assert!(part.y().abs() < 1.0e-5, "{part:?}");
+        assert!((part.height() - 0.5).abs() < 1.0e-5, "{part:?}");
+    }
+
+    #[test]
+    fn a_part_of_a_sheet_frame_stays_inside_that_frame() {
+        let frame = UvRect::new(0.5, 0.0, 0.5, 1.0).expect("a frame");
+        let part = frame.part([-0.25, 0.0], [0.5, 1.0]).expect("an area");
+        assert!((part.x() - 0.5).abs() < 1.0e-5, "{part:?}");
+        assert!((part.width() - 0.25).abs() < 1.0e-5, "{part:?}");
+    }
+
+    #[test]
+    fn nothing_is_not_a_rect() {
+        assert!(UvRect::FULL.part([0.0, 0.0], [0.0, 1.0]).is_none());
     }
 }

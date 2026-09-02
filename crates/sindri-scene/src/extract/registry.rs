@@ -79,7 +79,11 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
             "texture": PROCEDURAL_TEXTURES[0].reference,
             "anchor": "center",
             "tint": [1.0, 1.0, 1.0, 1.0],
-            "layer": 0
+            "layer": 0,
+            // Full, and emptying rightwards: an element added to a scene
+            // should appear whole, and a bar that a script never drives is
+            // a picture, which is what this component was before.
+            "fill": { "amount": 1.0, "from": "left" }
         }),
     )?;
     // Fields but no default: an animation with no sheet and no clips is a
@@ -105,7 +109,10 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
             "line_height": 30.0,
             "color": [1.0, 1.0, 1.0, 1.0],
             "anchor": "center",
-            "layer": 0
+            "layer": 0,
+            // No preview numbers: a template with no slots needs none, and
+            // the editor's field row is where a designer adds them.
+            "values": []
         }),
     )?;
     // A one-by-one map of one empty cell: the smallest tilemap that is

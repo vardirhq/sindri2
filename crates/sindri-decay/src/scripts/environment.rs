@@ -15,7 +15,8 @@ use crate::{
         ENTITY, FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, GridCall, HostFunction,
         INPUT, INPUT_QUERIES, Node, PHYSICS, PHYSICS_CALLS, POINTER, POINTER_QUERIES,
         POINTER_VALUES, PREFAB, PRINT, PhysicsCall, PointerValue, THIS, THROUGH_REFERENCE, TIME,
-        TIME_VALUES, TOUCH, TOUCH_CALLS, TOUCH_COUNT, WORLD, WORLD_CALLS, WorldCall,
+        TIME_VALUES, TOUCH, TOUCH_CALLS, TOUCH_COUNT, UI, UI_CALLS, UiCall, WORLD, WORLD_CALLS,
+        WorldCall,
     },
 };
 
@@ -104,6 +105,24 @@ pub fn environment() -> Environment {
     environment.add_type(TIME, time);
     environment.add_value(TIME, Type::Named(TIME.to_owned()));
 
+    add_world_surface(&mut environment);
+
+    add_pointer_surface(&mut environment);
+    add_physics_surface(&mut environment);
+    add_ui_surface(&mut environment);
+    add_grid_surface(&mut environment);
+    add_audio_surface(&mut environment);
+
+    environment
+}
+
+/// What a script can do to the world it is in: find, spawn, despawn, reparent,
+/// and write an exported field on another script.
+///
+/// Its own function like every other namespace, rather than inline in
+/// `environment`, so that adding a call does not grow one function towards the
+/// limit the others were split out to stay under.
+pub(super) fn add_world_surface(environment: &mut Environment) {
     let mut world = HostType::new();
     for (name, call) in WORLD_CALLS {
         world = world.with_function(
@@ -140,13 +159,6 @@ pub fn environment() -> Environment {
     }
     environment.add_type(WORLD, world);
     environment.add_value(WORLD, Type::Named(WORLD.to_owned()));
-
-    add_pointer_surface(&mut environment);
-    add_physics_surface(&mut environment);
-    add_grid_surface(&mut environment);
-    add_audio_surface(&mut environment);
-
-    environment
 }
 
 /// Where the person is pointing, and the fingers behind it.
@@ -215,6 +227,31 @@ pub(super) fn add_physics_surface(environment: &mut Environment) {
     }
     environment.add_type(PHYSICS, physics);
     environment.add_value(PHYSICS, Type::Named(PHYSICS.to_owned()));
+}
+
+/// What a script can change about a screen element.
+///
+/// The words stay in the scene and the numbers come from here: Decay cannot
+/// build a string, so a HUD's template is authored and a script fills its
+/// slots.
+pub(super) fn add_ui_surface(environment: &mut Environment) {
+    let entity = || Type::Named(ENTITY.to_owned());
+    let mut ui = HostType::new();
+    for (name, call) in UI_CALLS {
+        ui = ui.with_function(
+            *name,
+            FunctionType {
+                params: match call {
+                    UiCall::Text => vec![entity(), Type::String],
+                    UiCall::Numbers => vec![entity(), Type::F32, Type::F32],
+                    UiCall::Number | UiCall::Fill => vec![entity(), Type::F32],
+                },
+                return_type: Type::Unit,
+            },
+        );
+    }
+    environment.add_type(UI, ui);
+    environment.add_value(UI, Type::Named(UI.to_owned()));
 }
 
 pub(super) fn add_grid_surface(environment: &mut Environment) {

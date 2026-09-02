@@ -14,6 +14,7 @@ mod call;
 mod convert;
 mod map;
 mod physics;
+mod ui;
 
 use std::collections::BTreeSet;
 
@@ -29,8 +30,8 @@ use crate::{
         FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, Handle, HostFunction, INPUT,
         INPUT_QUERIES, InputQuery, Leaf, PHYSICS, PHYSICS_CALLS, POINTER, POINTER_QUERIES,
         POINTER_VALUES, PRINT, PointerQuery, PointerValue, TIME, TIME_VALUES, TOUCH, TOUCH_CALLS,
-        TOUCH_COUNT, TimeValue, TouchCall, WORLD, WORLD_CALLS, follow_mut, handle, leaf,
-        leaf_through_reference,
+        TOUCH_COUNT, TimeValue, TouchCall, UI, UI_CALLS, WORLD, WORLD_CALLS, follow_mut, handle,
+        leaf, leaf_through_reference,
     },
 };
 
@@ -313,6 +314,13 @@ impl Host for WorldHost<'_> {
             && let Some((_, call)) = PHYSICS_CALLS.iter().find(|(known, _)| known == name)
         {
             return self.physics_call(*call, path, args).map(Some);
+        }
+
+        if let [namespace, name] = parts.as_slice()
+            && *namespace == UI
+            && let Some((_, call)) = UI_CALLS.iter().find(|(known, _)| known == name)
+        {
+            return self.ui_call(*call, path, args).map(Some);
         }
 
         if let [namespace, name] = parts.as_slice()

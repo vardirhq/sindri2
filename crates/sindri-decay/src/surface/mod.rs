@@ -27,12 +27,13 @@ mod tests;
 pub(crate) use call::{
     FUNCTIONS, GAME_CALLS, GRID_CALLS, GameCall, GridCall, HostFunction, INPUT_QUERIES, InputQuery,
     PHYSICS_CALLS, POINTER_QUERIES, POINTER_VALUES, PRINT, PhysicsCall, PointerQuery, PointerValue,
-    TIME_VALUES, TOUCH_CALLS, TOUCH_COUNT, TimeValue, TouchCall, WORLD_CALLS, WorldCall,
+    TIME_VALUES, TOUCH_CALLS, TOUCH_COUNT, TimeValue, TouchCall, UI_CALLS, UiCall, WORLD_CALLS,
+    WorldCall,
 };
 pub(crate) use member::{SPRITE_MEMBERS, TRANSFORM_MEMBERS, UI_IMAGE_MEMBERS};
 pub(crate) use names::{
     ENTITY, GAME, GRID, INPUT, PHYSICS, POINTER, PREFAB, SPRITE, TILEMAP_COMPONENT, TIME, TOUCH,
-    TRANSFORM, UI_IMAGE, WORLD,
+    TRANSFORM, UI, UI_IMAGE, WORLD,
 };
 
 use serde_json::Value as Json;

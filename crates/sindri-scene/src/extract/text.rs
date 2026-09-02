@@ -54,7 +54,7 @@ impl SceneExtractor {
                 .entry(text.layer)
                 .or_default()
                 .push(TextInstance::new(
-                    text.text,
+                    text.resolved(),
                     text.font,
                     position,
                     text.font_size,

@@ -15,13 +15,14 @@ mod mesh;
 mod sprite;
 mod tilemap;
 mod ui;
+pub mod ui_text_template;
 
 pub use camera::CameraComponent;
 pub use grid::{GridNavigationComponent, GridOccupantComponent, GridWallDocument};
 pub use mesh::{MeshComponent, MeshPrimitive};
 pub use sprite::SpriteComponent;
 pub use tilemap::{TileProjection, TilemapComponent, TilemapError};
-pub use ui::{UiAnchor, UiImageComponent, UiTextComponent};
+pub use ui::{UiAnchor, UiFill, UiFillEdge, UiImageComponent, UiTextComponent};
 
 /// The tint a component that does not name one draws with.
 ///

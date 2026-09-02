@@ -275,6 +275,69 @@ asks once per frame is fine; a script that asks once per bullet per frame is
 quadratic, and the operation budget will eventually say so in a way that names
 the script rather than the pattern. Ask once and hold the answer for the frame.
 
+### Screen elements
+
+| Call | Returns |
+| --- | --- |
+| `Ui.set_text(entity, "words")` | nothing |
+| `Ui.set_number(entity, value)` | nothing |
+| `Ui.set_numbers(entity, first, second)` | nothing |
+| `Ui.set_fill(entity, amount)` | nothing |
+
+**The scene owns the words and the script owns the numbers.** Decay has no
+string concatenation, no interpolation and no formatting library — `+` is
+numeric addition and `decay/LANGUAGE.md` says why. A script therefore cannot
+build `"Score: 1200"`, and a HUD that cannot show a number is not a HUD.
+
+So a `sindri.ui.text` component authors a **template**, and a script fills its
+slots:
+
+```rust
+// The scene:  text = "Score: {}"
+Ui.set_number(this.score_label, 1200.0);     // Score: 1200
+
+// The scene:  text = "{}/{}"
+Ui.set_numbers(this.health_label, 45.0, 100.0);   // 45/100
+```
+
+This is the better half of the trade rather than a consolation. The words stay
+in the scene file, where they can be read, reviewed, and one day translated —
+not assembled inside a script where none of that is possible.
+
+In a template, `{}` prints as few decimals as the value needs, up to three
+(`1200`, `1.5`); `{.2}` prints exactly two (`1.50`), for any count up to six;
+and a doubled brace is a literal one, either way round. A lone `}` is simply
+itself: text is content, and refusing to draw a label over a stray brace helps
+nobody.
+
+A slot no script has filled yet reads as `0`, so a scoreboard that has not been
+written to shows a score of nothing. A value that is not a number prints `NaN`,
+because a HUD saying so is telling the truth about a gameplay bug. Anything that
+is not a slot — `{.x}`, `{9}` — is drawn exactly as written, so a designer who
+typed it wrong sees it and fixes it rather than watching it vanish.
+
+`set_text` replaces the template itself, for swapping one authored string for
+another: a warning appearing, a label changing with the mode. It takes a
+literal, because a literal is the only string a script has.
+
+**`set_fill` is what makes a bar a bar.** A `sindri.ui.image` keeps its authored
+rect and draws a fraction of it, from the edge the scene names — so the empty
+part of the bar is where the full one was, rather than the bar closing towards
+its middle:
+
+```rust
+Ui.set_fill(this.health_bar, hp / max_hp);
+```
+
+It clips the texture with the quad, so a segmented or lettered bar stays
+correct instead of being squashed. A bar filled to zero draws nothing at all.
+Which edge it empties towards is authored rather than set here: that is a
+decision about how the bar reads, not a per-frame gameplay value.
+
+**An entity that is not the kind of element the call needs is named**, rather
+than the call quietly doing nothing — a HUD that stops updating because a script
+points at the wrong element is the failure that survives a play-test.
+
 ### Bodies, and what they touched
 
 | Call | Returns |
