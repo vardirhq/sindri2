@@ -57,31 +57,22 @@ const server = createServer(async (request, response) => {
 await new Promise((done) => server.listen(0, done));
 const port = server.address().port;
 
+const gpuArgs =
+  EXPECT_FAILURE === 'webgpu'
+    ? ['--disable-webgpu', '--disable-gpu']
+    : [
+        '--enable-unsafe-webgpu',
+        '--enable-features=Vulkan',
+        '--use-angle=vulkan',
+        '--use-vulkan=swiftshader',
+        '--enable-gpu',
+        '--ignore-gpu-blocklist',
+      ];
 const browser = await chromium.launch({
   executablePath: process.env.CHROME_PATH || undefined,
-  args: [
-    '--enable-unsafe-webgpu',
-    '--enable-features=Vulkan',
-    '--use-angle=vulkan',
-    '--use-vulkan=swiftshader',
-    '--enable-gpu',
-    '--ignore-gpu-blocklist',
-    '--no-sandbox',
-  ],
+  args: [...gpuArgs, '--no-sandbox'],
 });
 const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
-
-if (EXPECT_FAILURE === 'webgpu') {
-  await page.addInitScript(() => {
-    // Chromium's WebGPU exposure has changed shape across releases. Shadow the
-    // property on the actual Navigator object: changing Navigator.prototype
-    // does not reliably hide the instance's GPU supplement in newer builds.
-    Object.defineProperty(navigator, 'gpu', {
-      configurable: true,
-      value: undefined,
-    });
-  });
-}
 
 // The interface existing is not the same as WebGPU working. Chrome on Android
 // exposes `navigator.gpu` more widely than its drivers can serve, and a page
