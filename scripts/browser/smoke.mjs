@@ -127,6 +127,11 @@ page.on('console', (message) => {
   if (message.type() === 'error') problems.push(message.text());
 });
 page.on('pageerror', (error) => problems.push(String(error.message)));
+page.on('response', (response) => {
+  if (!response.ok()) {
+    problems.push(`HTTP ${response.status()} ${new URL(response.url()).pathname}`);
+  }
+});
 page.on('request', (request) => {
   const path = new URL(request.url()).pathname;
   const marker = `${BASE}assets/`;
