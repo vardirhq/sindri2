@@ -73,9 +73,12 @@ const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
 
 if (EXPECT_FAILURE === 'webgpu') {
   await page.addInitScript(() => {
-    Object.defineProperty(Navigator.prototype, 'gpu', {
+    // Chromium's WebGPU exposure has changed shape across releases. Shadow the
+    // property on the actual Navigator object: changing Navigator.prototype
+    // does not reliably hide the instance's GPU supplement in newer builds.
+    Object.defineProperty(navigator, 'gpu', {
       configurable: true,
-      get: () => undefined,
+      value: undefined,
     });
   });
 }
