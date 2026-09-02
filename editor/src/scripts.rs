@@ -42,6 +42,7 @@ pub struct EditorFrame<'a> {
     pub screen_ui: &'a sindri_scene::ScreenUi,
     pub random: &'a mut sindri_core::Rng,
     pub saves: &'a mut sindri_core::SaveStore,
+    pub effects: &'a mut sindri_scene::Effects2d,
     pub delta_seconds: f32,
 }
 
@@ -267,13 +268,15 @@ impl SceneScripts {
             screen_ui,
             random,
             saves,
+            effects,
             delta_seconds,
         } = frame;
         let mut frame = ScriptFrame::new(&self.sources, input, delta_seconds)
             .with_prefabs(&self.prefabs)
             .with_screen_ui(screen_ui)
             .with_random(random)
-            .with_saves(saves);
+            .with_saves(saves)
+            .with_effects(effects);
         if let Some(physics) = physics {
             frame = frame.with_physics(physics);
         }

@@ -422,6 +422,28 @@ pub(crate) const SAVE_CALLS: &[(&str, SaveCall)] = &[
     ("is_from_newer", SaveCall::IsFromNewer),
 ];
 
+/// Short-lived visual flecks a script can throw.
+///
+/// What a burst looks like is authored on the entity as `sindri.effect.burst`,
+/// because how many, how fast, how big and what colour are a designer's numbers
+/// and a call that named all of them would be one nobody could read.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum EffectsCall {
+    /// Throws the entity's authored burst at the entity's own position.
+    Burst,
+    /// Throws it somewhere else, which is what an explosion where something
+    /// used to be needs.
+    BurstAt,
+    /// How many flecks are alive.
+    Live,
+}
+
+pub(crate) const EFFECTS_CALLS: &[(&str, EffectsCall)] = &[
+    ("burst", EffectsCall::Burst),
+    ("burst_at", EffectsCall::BurstAt),
+    ("live", EffectsCall::Live),
+];
+
 /// What a script can ask about the frame it is in.
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum TimeValue {

@@ -23,6 +23,7 @@ pub(super) struct SceneSource<'a> {
     pub(super) scene: &'a SceneExtractor,
     pub(super) world: &'a World,
     pub(super) animations: &'a SpriteAnimations,
+    pub(super) effects: &'a sindri_scene::Effects2d,
     pub(super) textures: &'a SceneTextures,
 }
 

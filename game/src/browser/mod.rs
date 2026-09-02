@@ -17,7 +17,7 @@ use sindri_render::{
     DepthTarget, FrameRenderers, FrameTarget, SpriteBatchRenderer, TextRenderer, Texture2D,
     TextureRegistry, TexturedCubeRenderer, Viewport, encode_prepared_frame,
 };
-use sindri_scene::{CameraView, SceneExtractor, TextureBindings};
+use sindri_scene::{CameraView, SceneExtractor, SceneRuntime, TextureBindings};
 
 use self::loader::{BrowserProjectAssets, BrowserProjectLoader};
 use crate::assets::{TEXTURE_IDS, extractor};
@@ -279,7 +279,9 @@ impl DesktopApp for BrowserGatherApp {
             Viewport::new(context.width(), context.height()),
             CameraView::default(),
             &self.bindings,
-            engine.game().animations(),
+            SceneRuntime::default()
+                .with_animations(engine.game().animations())
+                .with_effects(engine.game().effects()),
         )?;
         let mut encoder =
             context

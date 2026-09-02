@@ -26,6 +26,7 @@ use crate::components::{
     CameraComponent, GridNavigationComponent, GridOccupantComponent, MeshComponent,
     SpriteComponent, TilemapComponent, UiImageComponent, UiTextComponent,
 };
+use crate::effects::EffectBurstComponent;
 use crate::physics::{Collider2dComponent, RigidBody2dComponent};
 use crate::screen_ui::{UiButtonComponent, UiLayoutComponent};
 use crate::textures::PROCEDURAL_TEXTURES;
@@ -98,6 +99,23 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
     components.register_with_default::<UiLayoutComponent>(
         "UI Layout",
         serde_json::json!({ "direction": "column", "spacing": 0.25 }),
+    )?;
+    // A visible burst, because one that threw nothing would look like a
+    // component that does not work.
+    components.register_with_default::<EffectBurstComponent>(
+        "Effect Burst",
+        serde_json::json!({
+            "texture": PROCEDURAL_TEXTURES[0].reference,
+            "count": 12,
+            "speed": 4.0,
+            "spread": 0.5,
+            "lifetime": 0.5,
+            "size": 0.1,
+            "tint": [1.0, 1.0, 1.0, 1.0],
+            "fade": true,
+            "drag": 0.25,
+            "layer": 0
+        }),
     )?;
     // Fields but no default: an animation with no sheet and no clips is a
     // component that does nothing, and one with an invented sheet would

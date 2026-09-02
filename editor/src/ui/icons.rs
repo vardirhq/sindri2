@@ -18,6 +18,7 @@ pub const UI_ELEMENT: MaterialIcon = icons::ICON_WEB_ASSET;
 pub const TEXT: MaterialIcon = icons::ICON_TITLE;
 pub const BUTTON: MaterialIcon = icons::ICON_SMART_BUTTON;
 pub const LAYOUT: MaterialIcon = icons::ICON_VIEW_COLUMN;
+pub const EFFECT: MaterialIcon = icons::ICON_AUTO_AWESOME;
 pub const SCRIPT: MaterialIcon = icons::ICON_CODE;
 pub const ANIMATION: MaterialIcon = icons::ICON_PLAY_ARROW;
 pub const TILEMAP: MaterialIcon = icons::ICON_GRID_VIEW;

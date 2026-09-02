@@ -6,6 +6,7 @@
 //! and one `push_` call here.
 
 mod camera;
+mod effects;
 mod mesh;
 mod registry;
 mod sprite;
@@ -26,6 +27,7 @@ use sindri_render::{
 };
 use thiserror::Error;
 
+use crate::Effects2d;
 use crate::{AnimationError, SpriteAnimations, TextureBindings, TilemapError};
 
 pub use camera::view::{CameraView, WorldProjection};
@@ -140,24 +142,30 @@ impl SceneExtractor {
         view: CameraView,
         textures: &TextureBindings,
     ) -> Result<PreparedFrame, SceneExtractError> {
-        self.extract_animated(world, viewport, view, textures, &SpriteAnimations::new())
+        self.extract_animated(world, viewport, view, textures, SceneRuntime::default())
     }
 
-    /// Extracts every drawable in `world`, with each animated sprite showing the
-    /// frame `animations` has it on.
+    /// Extracts every drawable in `world`, with the runtime state that decides
+    /// what some of them look like.
     pub fn extract_animated(
         &self,
         world: &World,
         viewport: Viewport,
         view: CameraView,
         textures: &TextureBindings,
-        animations: &SpriteAnimations,
+        runtime: SceneRuntime<'_>,
     ) -> Result<PreparedFrame, SceneExtractError> {
+        let SceneRuntime {
+            animations,
+            effects,
+        } = runtime;
         let aspect = viewport.aspect_ratio()?;
         let cameras = self.resolve_cameras(world, aspect, view)?;
         let mut frame = ExtractedFrame::new(viewport, ClearOperations::default());
         self.push_meshes(world, &cameras, textures, &mut frame)?;
-        self.push_images(world, &cameras, textures, animations, &mut frame)?;
+        let resting = SpriteAnimations::new();
+        let animations = animations.unwrap_or(&resting);
+        self.push_images(world, &cameras, textures, animations, effects, &mut frame)?;
         self.push_text(world, viewport, &cameras, &mut frame)?;
         Ok(frame.prepare()?)
     }
@@ -173,8 +181,12 @@ impl SceneExtractor {
         viewport: Viewport,
         world_camera: ViewCamera,
         textures: &TextureBindings,
-        animations: &SpriteAnimations,
+        runtime: SceneRuntime<'_>,
     ) -> Result<PreparedFrame, SceneExtractError> {
+        let SceneRuntime {
+            animations,
+            effects,
+        } = runtime;
         let aspect = viewport.aspect_ratio()?;
         let mut cameras = resolved_screen_overlay(aspect);
         cameras.world = Some(ResolvedCamera {
@@ -185,8 +197,40 @@ impl SceneExtractor {
 
         let mut frame = ExtractedFrame::new(viewport, ClearOperations::default());
         self.push_meshes(world, &cameras, textures, &mut frame)?;
-        self.push_images(world, &cameras, textures, animations, &mut frame)?;
+        let resting = SpriteAnimations::new();
+        let animations = animations.unwrap_or(&resting);
+        self.push_images(world, &cameras, textures, animations, effects, &mut frame)?;
         self.push_text(world, viewport, &cameras, &mut frame)?;
         Ok(frame.prepare()?)
+    }
+}
+
+/// The runtime state that decides what some drawables look like.
+///
+/// Bundled rather than passed one by one: each of these is state a host keeps
+/// beside the world, and every one the engine grows would otherwise be another
+/// parameter on every extraction entry point. A caller that plays no animations
+/// and throws no flecks passes the default.
+#[derive(Clone, Copy, Default)]
+pub struct SceneRuntime<'a> {
+    /// Where each animated sprite has got to.
+    pub animations: Option<&'a SpriteAnimations>,
+    /// The live flecks, when a host is running any.
+    pub effects: Option<&'a Effects2d>,
+}
+
+impl<'a> SceneRuntime<'a> {
+    /// The runtime with animations playing.
+    #[must_use]
+    pub const fn with_animations(mut self, animations: &'a SpriteAnimations) -> Self {
+        self.animations = Some(animations);
+        self
+    }
+
+    /// The runtime with a fleck pool to draw.
+    #[must_use]
+    pub const fn with_effects(mut self, effects: &'a Effects2d) -> Self {
+        self.effects = Some(effects);
+        self
     }
 }

@@ -12,11 +12,12 @@ use crate::{
     ScriptComponent,
     audio_host::AUDIO,
     surface::{
-        ENTITY, FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, GridCall, HostFunction,
-        INPUT, INPUT_QUERIES, Node, PHYSICS, PHYSICS_CALLS, POINTER, POINTER_QUERIES,
-        POINTER_VALUES, PREFAB, PRINT, PhysicsCall, PointerValue, RANDOM, RANDOM_CALLS, RandomCall,
-        SAVE, SAVE_CALLS, SaveCall, THIS, THROUGH_REFERENCE, TIME, TIME_VALUES, TOUCH, TOUCH_CALLS,
-        TOUCH_COUNT, UI, UI_CALLS, UiCall, WORLD, WORLD_CALLS, WorldCall,
+        EFFECTS, EFFECTS_CALLS, ENTITY, EffectsCall, FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS,
+        GameCall, GridCall, HostFunction, INPUT, INPUT_QUERIES, Node, PHYSICS, PHYSICS_CALLS,
+        POINTER, POINTER_QUERIES, POINTER_VALUES, PREFAB, PRINT, PhysicsCall, PointerValue, RANDOM,
+        RANDOM_CALLS, RandomCall, SAVE, SAVE_CALLS, SaveCall, THIS, THROUGH_REFERENCE, TIME,
+        TIME_VALUES, TOUCH, TOUCH_CALLS, TOUCH_COUNT, UI, UI_CALLS, UiCall, WORLD, WORLD_CALLS,
+        WorldCall,
     },
 };
 
@@ -112,6 +113,7 @@ pub fn environment() -> Environment {
     add_ui_surface(&mut environment);
     add_random_surface(&mut environment);
     add_save_surface(&mut environment);
+    add_effects_surface(&mut environment);
     add_grid_surface(&mut environment);
     add_audio_surface(&mut environment);
 
@@ -313,6 +315,30 @@ pub(super) fn add_save_surface(environment: &mut Environment) {
     }
     environment.add_type(SAVE, save);
     environment.add_value(SAVE, Type::Named(SAVE.to_owned()));
+}
+
+/// Short-lived visual flecks a script can throw.
+pub(super) fn add_effects_surface(environment: &mut Environment) {
+    let mut effects = HostType::new();
+    for (name, call) in EFFECTS_CALLS {
+        effects = effects.with_function(
+            *name,
+            FunctionType {
+                params: match call {
+                    EffectsCall::Burst => vec![Type::Named(ENTITY.to_owned())],
+                    EffectsCall::BurstAt => {
+                        vec![Type::Named(ENTITY.to_owned()), Type::F32, Type::F32]
+                    }
+                    EffectsCall::Live => Vec::new(),
+                },
+                // How many flecks were made, which is fewer than asked for when
+                // the pool is full. A game can watch it and turn itself down.
+                return_type: Type::F32,
+            },
+        );
+    }
+    environment.add_type(EFFECTS, effects);
+    environment.add_value(EFFECTS, Type::Named(EFFECTS.to_owned()));
 }
 
 pub(super) fn add_grid_surface(environment: &mut Environment) {

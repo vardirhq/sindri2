@@ -81,6 +81,11 @@ pub struct ScriptFrame<'a> {
     /// persists should be heard about on the first frame, not after someone has
     /// played for an hour.
     pub saves: Option<&'a mut sindri_core::SaveStore>,
+    /// The fleck pool, when the host is running one.
+    ///
+    /// `None` for a host that draws none, and then `Effects.burst` says so
+    /// rather than throwing flecks nobody will ever see.
+    pub effects: Option<&'a mut sindri_scene::Effects2d>,
     pub delta_seconds: f32,
 }
 
@@ -97,6 +102,7 @@ impl<'a> ScriptFrame<'a> {
             screen_ui: None,
             random: None,
             saves: None,
+            effects: None,
             delta_seconds,
         }
     }
@@ -126,6 +132,13 @@ impl<'a> ScriptFrame<'a> {
     #[must_use]
     pub fn with_saves(mut self, saves: &'a mut sindri_core::SaveStore) -> Self {
         self.saves = Some(saves);
+        self
+    }
+
+    /// The same frame, with the fleck pool a script may throw into.
+    #[must_use]
+    pub fn with_effects(mut self, effects: &'a mut sindri_scene::Effects2d) -> Self {
+        self.effects = Some(effects);
         self
     }
 
@@ -247,6 +260,7 @@ impl Scripts {
             screen_ui,
             random,
             saves,
+            effects,
             delta_seconds,
         } = frame;
         let mut report = ScriptReport::default();
@@ -284,6 +298,7 @@ impl Scripts {
             screen_ui,
             random,
             saves,
+            effects,
             started: BTreeSet::new(),
             spawned: Vec::new(),
         };

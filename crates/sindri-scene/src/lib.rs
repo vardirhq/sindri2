@@ -10,6 +10,7 @@ mod animation;
 mod audio;
 mod camera_math;
 mod components;
+pub(crate) mod effects;
 mod extract;
 mod navigation;
 mod physics;
@@ -25,9 +26,10 @@ pub use components::{
     MeshComponent, MeshPrimitive, SpriteComponent, TileProjection, TilemapComponent, TilemapError,
     UiAnchor, UiFill, UiFillEdge, UiImageComponent, UiTextComponent, ui_text_template,
 };
+pub use effects::{EffectBurstComponent, Effects2d, Fleck};
 pub use extract::{
-    CameraView, OverlayPlacement, OverlayView, SceneExtractError, SceneExtractor, ViewCamera,
-    WorldProjection, overlay_for_viewport,
+    CameraView, OverlayPlacement, OverlayView, SceneExtractError, SceneExtractor, SceneRuntime,
+    ViewCamera, WorldProjection, overlay_for_viewport,
 };
 pub use navigation::{GridNavigationError, GridPlacement, WorldGridNavigation};
 pub use physics::{Collider2dComponent, RigidBody2dComponent, RigidBodyKind};

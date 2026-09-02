@@ -8,6 +8,42 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **Flecks that are not entities.** The audit asked for a pooled effect path and
+  said to measure both approaches before choosing one. `docs/effect-scaling.md`
+  is that measurement, and `cargo run --release -p sindri-scene --example
+  effect_scaling` reproduces it.
+
+  An entity per fleck costs 5.25 ms a frame at 8,000 of them — a third of a
+  60 Hz budget — against 0.018 ms for the same population as plain values.
+  Extraction is 95% of that, and over half of *it* is `serde_json` turning each
+  entity's stored payload back into a struct, once per entity, every frame.
+
+  So `Effects2d` holds flecks as plain values. A fleck has no identity a script
+  can hold, no components, no place in the hierarchy, and nothing can collide
+  with it — everything an entity is for, given up, because the alternative costs
+  a third of a frame. What a burst looks like is authored as
+  `sindri.effect.burst`, since count, speed, spread, lifetime and colour are a
+  designer's numbers and a call naming all of them would be unreadable.
+
+  Flecks draw their directions from **their own random stream**, never the run's:
+  a fleck drawn from the gameplay stream would shift every number after it, so
+  turning an explosion up would change which enemies spawned.
+
+  The pool is bounded; past capacity the oldest fleck makes way for the newest,
+  because the newest action is the one someone is looking at. `Effects.burst`
+  answers with how many flecks it actually made, so a game can see it should turn
+  itself down. Bursts batch with ordinary sprites by layer and texture, so one
+  burst is one draw call rather than a second rendering path.
+
+  Not built, and recorded as such: an instanced primitive renderer and custom
+  materials, neither of which has a consumer; and the per-frame payload re-parse,
+  which every ordinary sprite pays too and which needs a change to the component
+  model rather than an effect system.
+
+- **`SceneRuntime` bundles what a host keeps beside the world.** Animations and
+  the fleck pool both decide what a drawable looks like, and each would otherwise
+  be another parameter on every extraction entry point.
+
 - **A game can remember things between runs.** `SaveStore` and `SaveDocument` in
   `sindri-core`, a `SaveBackend` trait in `sindri-platform` with file, browser,
   memory and deliberately-damaged implementations, and a `Save` namespace in

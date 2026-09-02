@@ -273,6 +273,11 @@ struct EditorApp {
     /// ask for. Where a real save belongs is the shipped host's decision, and
     /// `docs/scripting.md` says so.
     saves: sindri_core::SaveStore,
+    /// The live flecks a played scene has thrown.
+    ///
+    /// Cleared when Play stops, because a fleck outliving the run that threw it
+    /// would be a scene at rest that is still moving.
+    effects: sindri_scene::Effects2d,
     /// Where the Game view was drawn last frame, in window points.
     ///
     /// Kept because scripts advance before the layout runs, so the rectangle a
@@ -443,6 +448,7 @@ impl EditorApp {
             screen_ui: ScreenUi::default(),
             random: sindri_core::Rng::default(),
             saves: sindri_core::SaveStore::default(),
+            effects: sindri_scene::Effects2d::default(),
             animations: SpriteAnimations::new(),
             scripts: SceneScripts::for_scene(None),
             input: EditorInput::default(),

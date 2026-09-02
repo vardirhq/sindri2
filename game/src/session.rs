@@ -58,6 +58,8 @@ pub struct Session {
     /// Held in memory and written on a cadence rather than on every change: how
     /// often someone's storage is touched is a decision about their machine.
     saves: sindri_core::SaveStore,
+    /// The live flecks a script has thrown.
+    effects: sindri_scene::Effects2d,
     since_written: f32,
     /// Where the save actually goes.
     ///
@@ -93,6 +95,7 @@ impl Session {
             screen_ui: ScreenUi::default(),
             random: sindri_core::Rng::default(),
             saves: sindri_core::SaveStore::default(),
+            effects: sindri_scene::Effects2d::default(),
             since_written: 0.0,
             save_backend: Box::new(sindri_platform::MemorySaves::new()),
             pending_audio: Vec::new(),
@@ -129,6 +132,10 @@ impl Session {
                 down: input.pointer_down(sindri_platform::MouseButton::Left),
             },
         )?;
+        // Before the scripts, so a fleck thrown this frame is drawn where it
+        // was thrown rather than one frame along.
+        self.effects
+            .advance(std::time::Duration::from_secs_f32(delta_seconds));
         let (physics, events) = self.physics.for_scripts();
         let report = self.scripts.advance(
             world,
@@ -138,6 +145,7 @@ impl Session {
                 .with_screen_ui(&self.screen_ui)
                 .with_random(&mut self.random)
                 .with_saves(&mut self.saves)
+                .with_effects(&mut self.effects)
                 .with_physics(sindri_decay::Physics2d {
                     world: physics,
                     events,
@@ -215,6 +223,11 @@ impl Session {
     #[must_use]
     pub const fn animations(&self) -> &SpriteAnimations {
         &self.animations
+    }
+
+    /// The live flecks, for whatever draws the frame.
+    pub const fn effects(&self) -> &sindri_scene::Effects2d {
+        &self.effects
     }
 }
 

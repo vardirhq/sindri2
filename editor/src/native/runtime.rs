@@ -230,6 +230,10 @@ impl EditorApp {
         if delta == 0.0 {
             return;
         }
+        // Flecks move before scripts, so one thrown this frame is drawn where
+        // it was thrown rather than one frame along.
+        self.effects
+            .advance(std::time::Duration::from_secs_f32(delta));
         // Physics first, so a script observes the events of the step that just
         // happened and its writes take effect on the next one. `docs/physics.md`
         // fixes that order: consumers run after the step publishes.
@@ -271,6 +275,7 @@ impl EditorApp {
                 screen_ui: &self.screen_ui,
                 random: &mut self.random,
                 saves: &mut self.saves,
+                effects: &mut self.effects,
                 delta_seconds: delta,
             },
         );
@@ -365,6 +370,9 @@ impl EditorApp {
     /// not an action the author took, so it was never on the history, and
     /// putting the world back does not change what undo means.
     pub(super) fn stop_playback(&mut self) {
+        // A fleck outliving the run that threw it would be a scene at rest that
+        // is still moving.
+        self.effects.clear();
         if let Err(error) = self.lifecycle.stop() {
             self.report(error.to_string());
         }

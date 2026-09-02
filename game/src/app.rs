@@ -16,7 +16,7 @@ use sindri_render::{
 };
 use sindri_scene::SceneExtractor;
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_scene::{CameraView, TextureBindings};
+use sindri_scene::{CameraView, SceneRuntime, TextureBindings};
 
 use crate::assets::{bind_audio, bind_fonts, bind_textures, extractor, world};
 use crate::error::GatherError;
@@ -102,7 +102,9 @@ impl DesktopApp for GatherApp {
             Viewport::new(context.width(), context.height()),
             CameraView::default(),
             &self.bindings,
-            self.engine.game().animations(),
+            SceneRuntime::default()
+                .with_animations(self.engine.game().animations())
+                .with_effects(self.engine.game().effects()),
         )?;
         let mut encoder =
             context

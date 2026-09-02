@@ -9,7 +9,7 @@ use sindri_render::{
     FrameRenderers, FrameTarget, SpriteBatchRenderer, TextRenderer, TexturedCubeRenderer, Viewport,
     ViewportTarget, encode_prepared_frame,
 };
-use sindri_scene::CameraView;
+use sindri_scene::{CameraView, SceneRuntime};
 
 use super::camera::{EditorCamera, camera_for};
 use super::frame::physical_viewport_dimension;
@@ -102,7 +102,9 @@ impl RuntimeViewport {
                 Viewport::new(self.target.width(), self.target.height()),
                 camera,
                 source.textures.bindings(),
-                source.animations,
+                SceneRuntime::default()
+                    .with_animations(source.animations)
+                    .with_effects(source.effects),
             )
             .map_err(|error| error.to_string())?;
         let mut encoder =
@@ -247,6 +249,7 @@ impl EditorApp {
                     scene: &self.scene,
                     world: &self.world,
                     animations: &self.animations,
+                    effects: &self.effects,
                     textures: &self.textures,
                 },
                 (

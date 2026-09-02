@@ -12,9 +12,9 @@ use decay_ir::Path;
 use decay_runtime::{RuntimeError, Value};
 
 use crate::surface::{
-    GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, INPUT, INPUT_QUERIES, InputQuery, PHYSICS,
-    PHYSICS_CALLS, POINTER, POINTER_QUERIES, PointerQuery, RANDOM, RANDOM_CALLS, SAVE, SAVE_CALLS,
-    TOUCH, TOUCH_CALLS, UI, UI_CALLS, WORLD, WORLD_CALLS,
+    EFFECTS, EFFECTS_CALLS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, INPUT, INPUT_QUERIES,
+    InputQuery, PHYSICS, PHYSICS_CALLS, POINTER, POINTER_QUERIES, PointerQuery, RANDOM,
+    RANDOM_CALLS, SAVE, SAVE_CALLS, TOUCH, TOUCH_CALLS, UI, UI_CALLS, WORLD, WORLD_CALLS,
 };
 
 use super::WorldHost;
@@ -43,6 +43,7 @@ impl WorldHost<'_> {
             UI => named(UI_CALLS, name).map(|call| self.ui_call(call, path, args)),
             RANDOM => named(RANDOM_CALLS, name).map(|call| self.random_call(call, path, args)),
             SAVE => named(SAVE_CALLS, name).map(|call| self.save_call(call, path, args)),
+            EFFECTS => named(EFFECTS_CALLS, name).map(|call| self.effects_call(call, path, args)),
             GRID => named(GRID_CALLS, name).map(|call| self.grid_call(call, path, args)),
             TOUCH => named(TOUCH_CALLS, name).map(|call| self.touch_call(call, path, args)),
             POINTER => {

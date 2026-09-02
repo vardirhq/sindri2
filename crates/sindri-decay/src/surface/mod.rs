@@ -25,15 +25,16 @@ pub(super) mod names;
 mod tests;
 
 pub(crate) use call::{
-    FUNCTIONS, GAME_CALLS, GRID_CALLS, GameCall, GridCall, HostFunction, INPUT_QUERIES, InputQuery,
-    PHYSICS_CALLS, POINTER_QUERIES, POINTER_VALUES, PRINT, PhysicsCall, PointerQuery, PointerValue,
-    RANDOM_CALLS, RandomCall, SAVE_CALLS, SaveCall, TIME_VALUES, TOUCH_CALLS, TOUCH_COUNT,
-    TimeValue, TouchCall, UI_CALLS, UiCall, WORLD_CALLS, WorldCall,
+    EFFECTS_CALLS, EffectsCall, FUNCTIONS, GAME_CALLS, GRID_CALLS, GameCall, GridCall,
+    HostFunction, INPUT_QUERIES, InputQuery, PHYSICS_CALLS, POINTER_QUERIES, POINTER_VALUES, PRINT,
+    PhysicsCall, PointerQuery, PointerValue, RANDOM_CALLS, RandomCall, SAVE_CALLS, SaveCall,
+    TIME_VALUES, TOUCH_CALLS, TOUCH_COUNT, TimeValue, TouchCall, UI_CALLS, UiCall, WORLD_CALLS,
+    WorldCall,
 };
 pub(crate) use member::{SPRITE_MEMBERS, TRANSFORM_MEMBERS, UI_IMAGE_MEMBERS};
 pub(crate) use names::{
-    ENTITY, GAME, GRID, INPUT, PHYSICS, POINTER, PREFAB, RANDOM, SAVE, SPRITE, TILEMAP_COMPONENT,
-    TIME, TOUCH, TRANSFORM, UI, UI_IMAGE, WORLD,
+    EFFECTS, ENTITY, GAME, GRID, INPUT, PHYSICS, POINTER, PREFAB, RANDOM, SAVE, SPRITE,
+    TILEMAP_COMPONENT, TIME, TOUCH, TRANSFORM, UI, UI_IMAGE, WORLD,
 };
 
 use serde_json::Value as Json;

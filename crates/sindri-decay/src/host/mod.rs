@@ -13,6 +13,7 @@
 mod call;
 mod convert;
 mod dispatch;
+mod effects;
 mod map;
 mod physics;
 mod random;
@@ -83,6 +84,8 @@ pub struct WorldHost<'a> {
     physics: Option<crate::Physics2d<'a>>,
     /// What the game remembers, when the host is keeping a save.
     saves: Option<&'a mut sindri_core::SaveStore>,
+    /// The fleck pool, when the host is running one.
+    effects: Option<&'a mut sindri_scene::Effects2d>,
     /// The run's random stream, when the host is running one.
     ///
     /// Mutable because drawing a number is what advances it: a stream a script
@@ -306,6 +309,8 @@ pub struct WorldServices<'a> {
     pub spawning: Spawning<'a>,
     /// What the game remembers, when the host is keeping a save.
     pub saves: Option<&'a mut sindri_core::SaveStore>,
+    /// The fleck pool, when the host is running one.
+    pub effects: Option<&'a mut sindri_scene::Effects2d>,
     pub physics: Option<crate::Physics2d<'a>>,
     pub screen_ui: Option<&'a sindri_scene::ScreenUi>,
     pub random: Option<&'a mut sindri_core::Rng>,
@@ -322,6 +327,7 @@ impl<'a> WorldHost<'a> {
         let WorldServices {
             spawning,
             saves,
+            effects,
             physics,
             screen_ui,
             random,
@@ -336,6 +342,7 @@ impl<'a> WorldHost<'a> {
             screen_ui,
             random,
             saves,
+            effects,
             printed: Vec::new(),
         }
     }

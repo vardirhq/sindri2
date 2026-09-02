@@ -120,6 +120,11 @@ const KNOWN: &[Known] = &[
         icon: icons::LAYOUT,
     },
     Known {
+        type_name: "sindri.effect.burst",
+        family: Family::Rendering,
+        icon: icons::EFFECT,
+    },
+    Known {
         type_name: "sindri.physics2d.rigid_body",
         family: Family::Physics,
         icon: icons::PHYSICS,

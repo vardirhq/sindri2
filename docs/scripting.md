@@ -275,6 +275,63 @@ asks once per frame is fine; a script that asks once per bullet per frame is
 quadratic, and the operation budget will eventually say so in a way that names
 the script rather than the pattern. Ask once and hold the answer for the frame.
 
+### Flecks that are not entities
+
+| Call | Returns |
+| --- | --- |
+| `Effects.burst(entity)` | `f32` — how many flecks were made |
+| `Effects.burst_at(entity, x, y)` | `f32` |
+| `Effects.live()` | `f32` |
+
+```rust
+script Bullet {
+    fn update(dt: f32) {
+        for hit in Physics.sensor_entered() {
+            Effects.burst(this.entity);
+            World.despawn(hit);
+            World.despawn(this.entity);
+        }
+    }
+}
+```
+
+**A fleck is not an entity.** It has no identity a script can hold, no
+components, no place in the hierarchy, and nothing can collide with it. That is
+the entire trade, and it was made on a measurement rather than a hunch:
+`docs/effect-scaling.md` puts eight thousand flecks-as-entities at 5.25 ms a
+frame — a third of a 60 Hz budget — against 0.018 ms for the same population as
+plain values. Over half the entity cost was re-reading each one's component
+payload, every entity, every frame.
+
+**What a burst looks like is authored, not argued.** How many, how fast, how big,
+what colour and how long are a designer's numbers, and a call that named all of
+them would be one nobody could read. An entity carries `sindri.effect.burst`, and
+a script fires it:
+
+```rust
+// The scene: count 24, speed 6, spread 0.6, lifetime 0.4, tint orange.
+Effects.burst_at(this.explosion, enemy.transform.position.x,
+                 enemy.transform.position.y);
+```
+
+`burst` throws at the entity's own position, which is read at the moment of the
+call — so the usual shape, firing a burst and then despawning what fired it,
+works. `burst_at` throws somewhere else, which is what an explosion where
+something *used to be* needs.
+
+**Flecks draw their own random directions from their own stream**, never the
+run's. A fleck drawn from the gameplay stream would shift every number after it,
+so turning an explosion up would change which enemies spawned — and a seeded run
+has to mean the same run whatever it looked like.
+
+**The pool is bounded and says when it overflows.** Past its capacity the oldest
+fleck makes way for the newest, because the newest action is the one someone is
+looking at. `burst` answers with how many flecks it actually made, so a game that
+wants to turn itself down can see that it should.
+
+**A host running no effects refuses these**, rather than accepting flecks nobody
+will ever see.
+
 ### What a game remembers
 
 | Call | Returns |

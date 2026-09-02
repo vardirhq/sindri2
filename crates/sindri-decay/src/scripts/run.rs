@@ -46,6 +46,8 @@ pub(super) struct TickWorld<'a> {
     pub(super) random: Option<&'a mut sindri_core::Rng>,
     /// What the game remembers, when the host is keeping a save.
     pub(super) saves: Option<&'a mut sindri_core::SaveStore>,
+    /// The fleck pool, when the host is running one.
+    pub(super) effects: Option<&'a mut sindri_scene::Effects2d>,
 }
 
 pub(super) fn tick(
@@ -113,6 +115,7 @@ pub(super) fn tick(
                 // script in the pass, so a run's numbers are the run's.
                 random: at.random.as_deref_mut(),
                 saves: at.saves.as_deref_mut(),
+                effects: at.effects.as_deref_mut(),
                 audio: &mut *at.audio,
             },
         ),

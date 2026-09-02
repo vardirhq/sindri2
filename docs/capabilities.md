@@ -185,6 +185,26 @@ without reading the payload. No game yet plays a scene whose bodies move —
 separate feature-track slices in `docs/physics.md` rather than things this
 foundation pretends to have completed.
 
+### Effects
+
+`Effects2d` holds short-lived visual flecks as plain values in one array. A
+fleck has no identity a script can hold, no components, no place in the
+hierarchy, and nothing can collide with it — everything an entity is *for* is
+given up, and `docs/effect-scaling.md` is why: 8,000 flecks-as-entities cost
+5.25 ms a frame, a third of a 60 Hz budget, against 0.018 ms pooled. Over half
+the entity cost was `serde_json` re-reading each one's payload, every entity,
+every frame.
+
+What a burst looks like is authored on the entity as `sindri.effect.burst` —
+count, speed, spread, lifetime, size, tint, fade, drag — because those are a
+designer's numbers and a call naming all of them would be unreadable. Flecks
+draw their directions from a stream of their own, never the run's, so turning an
+explosion up cannot change which enemies spawn. The pool is bounded, the oldest
+fleck makes way for the newest, and overflow is counted rather than hidden.
+
+They batch with ordinary sprites by layer and texture, so a burst is one draw
+call rather than a second rendering path.
+
 ### Game saves
 
 `sindri_core::SaveStore` is a flat, versioned key/value document. Flat because
@@ -903,6 +923,11 @@ error with a line number. Reaching through a stale or null reference is reported
 rather than silently ignored. Verified in the game: the orbs used to compare
 against a position the player published to the shared board, and now ask the
 player directly, with the picture unchanged.
+
+**And a script can throw flecks that are not entities.** `Effects.burst`,
+`burst_at` and `live` put short-lived visual motes into a pool, with what a
+burst looks like authored on the entity as `sindri.effect.burst`. Exercised in
+`crates/sindri-decay/tests/a_script_throws_flecks.rs`.
 
 **And a game can remember things between runs.** `Save.number`, `set_number`,
 `flag`, `set_flag`, `has`, `clear`, and three questions that tell a first run

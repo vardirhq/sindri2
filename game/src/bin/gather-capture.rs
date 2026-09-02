@@ -26,7 +26,7 @@ use sindri_render::{
     TexturedCubeRenderer, Viewport, encode_prepared_frame,
 };
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_scene::CameraView;
+use sindri_scene::{CameraView, SceneRuntime};
 
 #[cfg(not(target_arch = "wasm32"))]
 const WIDTH: u32 = 960;
@@ -77,7 +77,9 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
         Viewport::new(WIDTH, HEIGHT),
         CameraView::default(),
         &bindings,
-        session.animations(),
+        SceneRuntime::default()
+            .with_animations(session.animations())
+            .with_effects(session.effects()),
     )?;
 
     let mut encoder = gpu

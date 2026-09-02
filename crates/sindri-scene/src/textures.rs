@@ -306,6 +306,7 @@ fn sprite_references(world: &World) -> BTreeSet<SpriteRef> {
 /// it holds this list against the schema registry, so a component whose payload
 /// carries a texture has to be named here or fail the build.
 pub const TEXTURE_NAMING_COMPONENTS: &[&str] = &[
+    crate::effects::EffectBurstComponent::TYPE_NAME,
     MeshComponent::TYPE_NAME,
     SpriteComponent::TYPE_NAME,
     TilemapComponent::TYPE_NAME,

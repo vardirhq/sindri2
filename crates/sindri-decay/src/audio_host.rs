@@ -65,6 +65,8 @@ pub struct HostServices<'a> {
     pub random: Option<&'a mut sindri_core::Rng>,
     /// What the game remembers, when the host is keeping a save.
     pub saves: Option<&'a mut sindri_core::SaveStore>,
+    /// The fleck pool, when the host is running one.
+    pub effects: Option<&'a mut sindri_scene::Effects2d>,
     /// What the script asked to be played, in order.
     pub audio: &'a mut Vec<AudioCommand>,
 }
@@ -83,6 +85,7 @@ impl<'a> WorldHost<'a> {
             screen_ui,
             random,
             saves,
+            effects,
             audio,
         } = services;
         Self {
@@ -94,6 +97,7 @@ impl<'a> WorldHost<'a> {
                 crate::host::WorldServices {
                     spawning,
                     saves,
+                    effects,
                     physics,
                     screen_ui,
                     random,
@@ -265,6 +269,7 @@ mod tests {
                 screen_ui: None,
                 random: None,
                 saves: None,
+                effects: None,
                 audio: &mut queue,
             },
         );
@@ -333,6 +338,7 @@ mod tests {
                 screen_ui: None,
                 random: None,
                 saves: None,
+                effects: None,
                 audio: &mut queue,
             },
         );

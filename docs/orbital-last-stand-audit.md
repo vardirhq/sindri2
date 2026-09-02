@@ -33,8 +33,8 @@ Decay, gameplay collision access, persistence, particles or equivalent effect
 rendering, and a product export pipeline.
 
 **Spawning, reusable definitions, collections, queries, pointer/touch input,
-gameplay collision, the screen UI, seeded randomness and persistence are now
-done.** `docs/prefabs.md`, `docs/scripting.md`,
+gameplay collision, the screen UI, seeded randomness, persistence and effects
+are now done.** `docs/prefabs.md`, `docs/scripting.md`,
 `docs/physics.md` and `decay/LANGUAGE.md` are the contracts; the rest of the
 list stands.
 
@@ -268,7 +268,20 @@ The first contract should support:
 
 Editor preferences are not game saves and should remain separate.
 
-### 7. Effects and rendering
+### 7. Effects and rendering — measured, and a pooled path built
+
+Both approaches were measured before either was chosen; `docs/effect-scaling.md`
+records the numbers and the decision. An entity per fleck costs a third of a
+60 Hz frame at 8,000 of them, and over half of that is re-reading each payload
+through `serde_json` every frame. The pooled path costs 0.1% of the same frame,
+so that is what was built: `Effects2d`, `sindri.effect.burst`, and the `Effects`
+namespace.
+
+The instanced primitive renderer and custom materials were not built — flecks
+batch with ordinary sprites by layer and texture, which is one draw call for a
+burst, and neither of the other two has a consumer yet. The payload re-parse is
+worth fixing on its own and is recorded as such: it costs every ordinary sprite
+too. What follows is the original statement of the requirement.
 
 Orbital Last Stand uses many short-lived particles, rings, telegraphs, trails,
 and color flashes. Creating a full world entity for every visual fleck may be
@@ -315,7 +328,7 @@ possible, not by subsystem familiarity.
 6. ~~**Host-owned seeded randomness**~~ — done; see `docs/scripting.md` on
    `Random`
 7. ~~**Game persistence boundary**~~ — done; see `docs/scripting.md` on `Save`
-8. **Measured particle/effect path**
+8. ~~**Measured particle/effect path**~~ — done; see `docs/effect-scaling.md`
 9. **Complete editor Play application loop**
 10. **Static-web project export with gathered assets**
 

@@ -35,6 +35,7 @@ pub(crate) const PHYSICS: &str = "Physics";
 pub(crate) const UI: &str = "Ui";
 pub(crate) const RANDOM: &str = "Random";
 pub(crate) const SAVE: &str = "Save";
+pub(crate) const EFFECTS: &str = "Effects";
 
 /// The type of a value that names another entity.
 pub(crate) const ENTITY: &str = "Entity";
