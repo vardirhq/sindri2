@@ -49,19 +49,39 @@ pub struct WorldHost<'a> {
     audio: &'a mut Vec<AudioCommand>,
 }
 
+/// Everything a script can reach beyond the world and the frame.
+///
+/// Bundled for the same reason `ScriptFrame` is one level up: the list had
+/// reached eight and every capability the scripting surface grows adds another.
+/// A caller with no physics and no screen UI leaves two fields out rather than
+/// passing two `None`s in the right positions.
+pub struct HostServices<'a> {
+    pub spawning: Spawning<'a>,
+    /// The physics a script may read and drive, when the host runs any.
+    pub physics: Option<crate::Physics2d<'a>>,
+    /// Where the screen elements are and what the pointer is doing to them.
+    pub screen_ui: Option<&'a sindri_scene::ScreenUi>,
+    /// What the script asked to be played, in order.
+    pub audio: &'a mut Vec<AudioCommand>,
+}
+
 impl<'a> WorldHost<'a> {
     pub fn new(
         world: &'a mut sindri_core::World,
         entity: sindri_core::EntityId,
         context: ScriptContext<'a>,
         blackboard: &'a mut Blackboard,
-        spawning: Spawning<'a>,
-        physics: Option<crate::Physics2d<'a>>,
-        audio: &'a mut Vec<AudioCommand>,
+        services: HostServices<'a>,
     ) -> Self {
+        let HostServices {
+            spawning,
+            physics,
+            screen_ui,
+            audio,
+        } = services;
         Self {
             inner: crate::host::WorldHost::new(
-                world, entity, context, blackboard, spawning, physics,
+                world, entity, context, blackboard, spawning, physics, screen_ui,
             ),
             audio,
         }
@@ -223,9 +243,12 @@ mod tests {
                 elapsed_seconds: 0.0,
             },
             &mut board,
-            spawning(&prefabs, &started, &mut spawned),
-            None,
-            &mut queue,
+            crate::HostServices {
+                spawning: spawning(&prefabs, &started, &mut spawned),
+                physics: None,
+                screen_ui: None,
+                audio: &mut queue,
+            },
         );
         host.call(
             None,
@@ -286,9 +309,12 @@ mod tests {
                 elapsed_seconds: 0.0,
             },
             &mut board,
-            spawning(&prefabs, &started, &mut spawned),
-            None,
-            &mut queue,
+            crate::HostServices {
+                spawning: spawning(&prefabs, &started, &mut spawned),
+                physics: None,
+                screen_ui: None,
+                audio: &mut queue,
+            },
         );
         let error = host
             .call(

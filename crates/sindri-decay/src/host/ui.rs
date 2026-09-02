@@ -28,6 +28,22 @@ impl WorldHost<'_> {
         args: &[Value],
     ) -> Result<Value, RuntimeError> {
         let entity = self.entity_argument(path, args, 0, "the element")?;
+        if call.is_query() {
+            // A menu whose buttons never respond because nothing is laying them
+            // out should be heard about on the first frame, not mistaken for a
+            // person who has not clicked yet.
+            let Some(screen) = self.screen_ui else {
+                return Err(RuntimeError::Host(format!(
+                    "{}: this host is not laying out any screen UI",
+                    path.dotted()
+                )));
+            };
+            return Ok(Value::Bool(match call {
+                UiCall::Hovered => screen.is_hovered(entity),
+                UiCall::Pressed => screen.is_pressed(entity),
+                _ => screen.is_held(entity),
+            }));
+        }
         match call {
             UiCall::Text => {
                 let Some(Value::String(text)) = args.get(1) else {
@@ -71,6 +87,8 @@ impl WorldHost<'_> {
                 payload["fill"]["amount"] = json!(amount);
                 Ok(Value::Unit)
             }
+            // Answered above, before the entity was even resolved to a payload.
+            UiCall::Hovered | UiCall::Pressed | UiCall::Held => unreachable!("handled as a query"),
         }
     }
 

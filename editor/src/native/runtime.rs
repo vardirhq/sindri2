@@ -211,6 +211,12 @@ impl EditorApp {
         // Game view then reports no rectangle rather than the last one it had,
         // and a script sees the pointer leave rather than sticking where the
         // view used to be.
+        // Kept before the rectangle is forgotten: the screen UI is laid out in
+        // the Game view's own pixels, which is the same viewport a script's
+        // pointer coordinates are already in.
+        let view_size = self
+            .game_view_rect
+            .map(|rect| (rect.width(), rect.height()));
         self.game_view_rect = None;
 
         // Compiled whatever the transport says, so a broken script reports at
@@ -234,6 +240,24 @@ impl EditorApp {
         ) {
             self.console.error(format!("Physics: {error}"));
         }
+        // No safe area: a desktop window has no notch. A host that has one — a
+        // browser on a phone — reports it, and the same scene moves its
+        // anchored elements in without being edited.
+        let (view_width, view_height) = view_size.unwrap_or((0.0, 0.0));
+        let input_state = self.input.state();
+        if let Err(error) = self.screen_ui.update(
+            &self.world,
+            &components,
+            sindri_scene::ScreenExtent::new(view_width, view_height),
+            sindri_scene::PointerFrame {
+                position: input_state.pointer_position(),
+                pressed: input_state.pointer_pressed(sindri_platform::MouseButton::Left),
+                released: input_state.pointer_released(sindri_platform::MouseButton::Left),
+                down: input_state.pointer_down(sindri_platform::MouseButton::Left),
+            },
+        ) {
+            self.console.error(format!("Screen UI: {error}"));
+        }
         let (physics, events) = self.physics.for_scripts();
         let report = self.scripts.advance(
             &mut self.world,
@@ -243,6 +267,7 @@ impl EditorApp {
                 world: physics,
                 events,
             }),
+            &self.screen_ui,
             delta,
         );
 

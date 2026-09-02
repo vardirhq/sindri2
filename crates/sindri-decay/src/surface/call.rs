@@ -88,12 +88,21 @@ pub(crate) enum PointerValue {
     /// answer, and a game drawing a cursor or testing a button needs to know
     /// before it reads a position that would otherwise be the last one.
     Inside,
+    /// Whether a screen element is taking the pointer this frame.
+    ///
+    /// The engine does not silently withhold input from gameplay when a menu is
+    /// up: which scripts are gameplay is not something a host can know, and a
+    /// rule that guesses is one that will guess wrong. So a gameplay script
+    /// asks, in one line, and the answer is why a click on a pause button does
+    /// not also fire the gun behind it.
+    OverUi,
 }
 
 pub(crate) const POINTER_VALUES: &[(&str, PointerValue)] = &[
     ("x", PointerValue::X),
     ("y", PointerValue::Y),
     ("inside", PointerValue::Inside),
+    ("over_ui", PointerValue::OverUi),
 ];
 
 /// A question about the fingers specifically.
@@ -304,6 +313,23 @@ pub(crate) enum UiCall {
     Numbers,
     /// How much of a bar is drawn, in `[0, 1]`.
     Fill,
+    /// Whether the pointer is over this element.
+    Hovered,
+    /// Whether this element was clicked during this frame.
+    ///
+    /// A click is a press and a release on the same element, so sliding off
+    /// before letting go changes a person's mind — the behaviour every
+    /// platform's buttons already have.
+    Pressed,
+    /// Whether the pointer is being held down on this element.
+    Held,
+}
+
+impl UiCall {
+    /// Whether this asks about the pointer rather than changing the element.
+    pub(crate) const fn is_query(self) -> bool {
+        matches!(self, Self::Hovered | Self::Pressed | Self::Held)
+    }
 }
 
 pub(crate) const UI_CALLS: &[(&str, UiCall)] = &[
@@ -311,6 +337,9 @@ pub(crate) const UI_CALLS: &[(&str, UiCall)] = &[
     ("set_number", UiCall::Number),
     ("set_numbers", UiCall::Numbers),
     ("set_fill", UiCall::Fill),
+    ("is_hovered", UiCall::Hovered),
+    ("is_pressed", UiCall::Pressed),
+    ("is_held", UiCall::Held),
 ];
 
 /// What a script can ask about the frame it is in.

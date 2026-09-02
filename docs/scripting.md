@@ -283,6 +283,9 @@ the script rather than the pattern. Ask once and hold the answer for the frame.
 | `Ui.set_number(entity, value)` | nothing |
 | `Ui.set_numbers(entity, first, second)` | nothing |
 | `Ui.set_fill(entity, amount)` | nothing |
+| `Ui.is_hovered(entity)` | `bool` |
+| `Ui.is_pressed(entity)` | `bool` |
+| `Ui.is_held(entity)` | `bool` |
 
 **The scene owns the words and the script owns the numbers.** Decay has no
 string concatenation, no interpolation and no formatting library — `+` is
@@ -334,9 +337,95 @@ correct instead of being squashed. A bar filled to zero draws nothing at all.
 Which edge it empties towards is authored rather than set here: that is a
 decision about how the bar reads, not a per-frame gameplay value.
 
+### Buttons, screens, and who gets the click
+
+A `sindri.ui.button` makes an element pressable. Its rect is the entity's own
+transform — the same one that already decides where it draws — so a button on an
+entity that draws something is immediately pressable, and a button on a bare
+entity is a hit area with no art.
+
+```rust
+script StartButton {
+    fn update(dt: f32) {
+        if Ui.is_pressed(this.entity) {
+            World.set_property(this.menu, "showing", false);
+            World.set_property(this.game, "running", true);
+        }
+    }
+}
+```
+
+**`is_pressed` is a click, not a press:** the pointer went down on this element
+and came up on it. Sliding off before letting go is how a person changes their
+mind, and it keeps working here for the same reason it does everywhere else.
+`is_held` is the in-between state, for a button that should look pushed while
+it is. Both are answers about *this* frame, computed before any script ran.
+
+**A disabled entity is not hit-tested**, and neither is anything under a
+disabled parent — `World.is_active` already governs a subtree. That is also all
+a *screen* is: a menu, a pause overlay and a HUD are entities with children, and
+showing one is switching it on. There is no screen stack, because the engine
+already had the mechanism and a second one would be a second answer to the same
+question.
+
+**When elements overlap, the top one takes the click** — highest layer first,
+which is the order the overlay draws in. A modal is a modal because it is on a
+higher layer, not because it declared itself one.
+
+**Nothing is silently taken away from gameplay.** An engine that withheld input
+from "gameplay scripts" while a menu was up would have to know which scripts
+those are, and a rule that guesses will guess wrong. So a gameplay script asks:
+
+```rust
+fn update(dt: f32) {
+    if Pointer.just_pressed("Left") && !Pointer.over_ui {
+        this.fire();
+    }
+}
+```
+
+That one line is why a click on a pause button does not also fire the gun
+behind it.
+
+### Rows and columns
+
+A `sindri.ui.layout` on a parent places its children along an axis — `row` or
+`column`, with a spacing in overlay units. Three buttons could be authored as
+three offsets; what cannot be authored is what happens when one is switched off.
+A hand-placed row leaves a hole, and everything below a hidden entry is in the
+wrong place. A layout counts only the children that are actually there, so a
+menu that loses an entry **closes up around its own middle**.
+
+There is no scroll region. Nothing being built against this engine has a list
+longer than a screen, and a scroll invented before something needs one would
+have to decide about clipping, momentum, and where a drag stops being a press —
+none of which has an answer yet.
+
+### Screens that fit any screen
+
+The overlay is authored in normalized units: two tall, centred on the origin,
+running out to the aspect ratio either side. A corner-anchored element is in
+that corner on a portrait phone and a wide desktop window alike, which is
+responsive layout without a single breakpoint.
+
+The one thing a designer cannot author around is the **safe area** — a notch, a
+rounded corner, a home indicator — because it is not in the scene, it is in the
+hardware the scene happens to be running on. A host reports it in pixels and
+anchored elements move in from their own edge; a centred element stays centred,
+because the screen does not shrink, the edges come in.
+
+**Accessible labels are authored but not yet surfaced.** A button carries a
+`label`, stored beside the thing it names in the file a designer edits. Nothing
+reads it yet: there is no DOM to expose it to until a project can be exported to
+the web, and inventing a second accessibility path before then would be building
+the wrong one.
+
 **An entity that is not the kind of element the call needs is named**, rather
 than the call quietly doing nothing — a HUD that stops updating because a script
-points at the wrong element is the failure that survives a play-test.
+points at the wrong element is the failure that survives a play-test. A host
+laying out no screen UI refuses `Ui.is_pressed` for the same reason: a menu whose
+buttons never respond should be heard about on the first frame, not mistaken for
+a person who has not clicked yet.
 
 ### Bodies, and what they touched
 
@@ -482,6 +571,7 @@ operating system's key repeat is not a second press.
 | `Pointer.x` | `f32` |
 | `Pointer.y` | `f32` |
 | `Pointer.inside` | `bool` |
+| `Pointer.over_ui` | `bool` |
 
 | Call | Returns |
 | --- | --- |

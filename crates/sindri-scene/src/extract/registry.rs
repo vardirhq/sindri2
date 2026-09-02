@@ -27,6 +27,7 @@ use crate::components::{
     SpriteComponent, TilemapComponent, UiImageComponent, UiTextComponent,
 };
 use crate::physics::{Collider2dComponent, RigidBody2dComponent};
+use crate::screen_ui::{UiButtonComponent, UiLayoutComponent};
 use crate::textures::PROCEDURAL_TEXTURES;
 
 use super::SceneExtractError;
@@ -85,6 +86,18 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
             // a picture, which is what this component was before.
             "fill": { "amount": 1.0, "from": "left" }
         }),
+    )?;
+    // A button is a hit area: its rect is the entity's transform, so one
+    // added to an entity that already draws something is immediately
+    // pressable, and one on a bare entity is a hit area with no art.
+    components.register_with_default::<UiButtonComponent>(
+        "UI Button",
+        serde_json::json!({ "label": "" }),
+    )?;
+    // A column, because a menu reads downwards.
+    components.register_with_default::<UiLayoutComponent>(
+        "UI Layout",
+        serde_json::json!({ "direction": "column", "spacing": 0.25 }),
     )?;
     // Fields but no default: an animation with no sheet and no clips is a
     // component that does nothing, and one with an invented sheet would

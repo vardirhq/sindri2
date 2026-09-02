@@ -14,6 +14,7 @@ mod extract;
 mod navigation;
 mod physics;
 mod physics_sync;
+pub(crate) mod screen_ui;
 mod textures;
 
 pub use animation::{AnimationClip, AnimationError, SpriteAnimationComponent, SpriteAnimations};
@@ -31,6 +32,10 @@ pub use extract::{
 pub use navigation::{GridNavigationError, GridPlacement, WorldGridNavigation};
 pub use physics::{Collider2dComponent, RigidBody2dComponent, RigidBodyKind};
 pub use physics_sync::{PhysicsSyncError, ScenePhysics2d};
+pub use screen_ui::{
+    PointerFrame, SafeArea, ScreenExtent, ScreenRect, ScreenUi, UiButtonComponent, UiDirection,
+    UiLayoutComponent,
+};
 pub use textures::{
     FONT_NAMING_COMPONENTS, PROCEDURAL_TEXTURES, ProceduralTexture, SheetBindError,
     TEXTURE_NAMING_COMPONENTS, TextureBindings, referenced_fonts, referenced_sheets,

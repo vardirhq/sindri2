@@ -33,7 +33,7 @@ mod report;
 mod scripts;
 mod surface;
 
-pub use audio_host::{AudioCommand, WorldHost};
+pub use audio_host::{AudioCommand, HostServices, WorldHost};
 pub use blackboard::Blackboard;
 pub use component::ScriptComponent;
 /// A value a Decay script holds, re-exported so a host can name one without

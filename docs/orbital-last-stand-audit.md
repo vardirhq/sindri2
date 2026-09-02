@@ -32,8 +32,8 @@ collection/query access, dynamic interactive UI, pointer/touch access from
 Decay, gameplay collision access, persistence, particles or equivalent effect
 rendering, and a product export pipeline.
 
-**Spawning, reusable definitions, collections, queries, pointer/touch input and
-gameplay collision are now done.** `docs/prefabs.md`, `docs/scripting.md`,
+**Spawning, reusable definitions, collections, queries, pointer/touch input,
+gameplay collision and the screen UI are now done.** `docs/prefabs.md`, `docs/scripting.md`,
 `docs/physics.md` and `decay/LANGUAGE.md` are the contracts; the rest of the
 list stands.
 
@@ -85,8 +85,8 @@ The statuses mean:
 | Seeded random waves and module offers | Host-owned seeded randomness is planned, not implemented | **Missing** |
 | Circle/sensor collision gameplay | `ScenePhysics2d` drives the runtime from authored components; Decay has velocity, impulse, and per-entity collision/sensor event queries | **Ready** |
 | Mouse and touch movement | Unified `Pointer` plus raw `Touch` in Decay, routed through the editor Game view in its own pixels | **Ready** |
-| Runtime HUD values | Screen text and images render | **Partial**; Decay cannot change text content |
-| Interactive menus and modal flows | Anchored screen image/text components exist | **Missing** as a runtime button, focus, layout, and navigation system |
+| Runtime HUD values | Templated text a script fills, and fill bars | **Ready** |
+| Interactive menus and modal flows | Buttons, hit-testing, layer-ordered focus, row/column layout, safe area, and screens as entity subtrees | **Ready** except scroll and web accessibility |
 | Upgrade/build data | Exported scalar fields exist | **Missing** for collections, catalog queries, weighted choices, and loadout data |
 | Sprite animation | Runtime/editor animation works | **Partial**; Decay cannot select or control clips |
 | Audio | Native, browser, and silent backends plus Decay playback calls | **Ready**, with host-side clip gathering still manual |
@@ -200,7 +200,20 @@ For this workload, the first vertical slice must cover:
 Manual distance checks may still be a valid gameplay tool, but they require a
 typed query surface and must not force all games through physics.
 
-### 4. Runtime UI
+### 4. Runtime UI — done, except two named gaps
+
+Delivered as templated text, fill bars, `sindri.ui.button`, `sindri.ui.layout`,
+the `ScreenUi` runtime and the `Ui` namespace. Of the list below, every item is
+met except **scroll** — no consumer, and it would have to answer questions about
+clipping, momentum and drag-versus-press that nothing has yet asked — and **web
+accessibility**, where a button's `label` is authored but nothing reads it until
+the export slice gives it a DOM.
+
+Screen navigation needed no new mechanism: a screen is an entity with children,
+showing one is switching it on, and `World.is_active` already governs a subtree.
+Modal focus is layer order plus `Pointer.over_ui`, because an engine that
+withheld input from "gameplay scripts" would have to know which scripts those
+are. What follows is the original statement of the requirement.
 
 The current screen-image/text foundation is rendering, not yet a UI product.
 This game needs:
@@ -288,7 +301,8 @@ possible, not by subsystem familiarity.
    `docs/scripting.md` on `Pointer` and `Touch`
 4. ~~**Typed 2D collision access and event delivery**~~ — done; see
    `docs/scripting.md` on `Physics` and `docs/physics.md` on the step order
-5. **Dynamic text plus a minimal interactive screen UI**
+5. ~~**Dynamic text plus a minimal interactive screen UI**~~ — done; see
+   `docs/scripting.md` on `Ui` and `Pointer.over_ui`
 6. **Host-owned seeded randomness**
 7. **Game persistence boundary**
 8. **Measured particle/effect path**

@@ -174,7 +174,7 @@ fn the_wisp_routes_around_the_authored_wall() {
 
     let mut session = Session::new(extractor.components().clone());
     session
-        .step(&mut world, &InputState::default(), 0.33)
+        .step(&mut world, &InputState::default(), (960.0, 600.0), 0.33)
         .expect("the pathfinding script steps");
 
     let after = WorldGridNavigation::from_world(&world, floor)

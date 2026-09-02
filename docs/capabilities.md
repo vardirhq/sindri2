@@ -185,6 +185,44 @@ without reading the payload. No game yet plays a scene whose bodies move —
 separate feature-track slices in `docs/physics.md` rather than things this
 foundation pretends to have completed.
 
+### Screen UI
+
+`sindri.ui.image` and `sindri.ui.text` draw against the viewport. Text is a
+**template**: the words carry `{}` slots and a script supplies the numbers, so a
+HUD updates without Decay needing string concatenation it deliberately does not
+have. An image carries a **fill** fraction and the edge it empties from, which is
+what makes a bar a bar rather than a picture of one.
+
+`sindri.ui.button` makes an element pressable, its rect being the entity's own
+transform. `ScreenUi` is the runtime beside the world: it lays every element out,
+hit-tests the pointer, and answers hover, click and hold. A click is a press and
+a release on the same element, so sliding off before letting go changes a
+person's mind. Overlapping elements are resolved by layer, so a modal is a modal
+because it is on top. A disabled entity — or one under a disabled parent — is not
+hit-tested, which is also what a *screen* is: a menu is an entity with children,
+and showing it is switching it on. No screen stack was added, because the engine
+already had the mechanism.
+
+Nothing is silently withheld from gameplay while a menu is up: which scripts are
+gameplay is not something a host can know. `Pointer.over_ui` is the one line a
+gameplay script writes instead.
+
+`sindri.ui.layout` places a parent's active children in a row or column. Three
+buttons could be authored as three offsets; what cannot be authored is a menu
+closing up around an entry that was switched off.
+
+The overlay is authored in normalized units — two tall, centred, running out to
+the aspect ratio — so one authored scene is responsive across a portrait phone
+and a wide desktop window without a breakpoint. A **safe area** takes a notch or
+a home indicator off the edges, moving anchored elements in while leaving centred
+ones where they are; the editor reports none, because a desktop window has no
+notch.
+
+What is not built: no scroll region, and no accessibility surface. A button
+carries a `label`, authored beside the thing it names, but nothing reads it —
+there is no DOM to expose it to until a project can be exported to the web, and
+a second accessibility path invented before then would be the wrong one.
+
 ### Grid geometry
 
 `sindri-grid` provides renderer-independent signed cell coordinates, continuous
@@ -801,6 +839,15 @@ error with a line number. Reaching through a stale or null reference is reported
 rather than silently ignored. Verified in the game: the orbs used to compare
 against a position the player published to the shared board, and now ask the
 player directly, with the picture unchanged.
+
+**And a script can change what the screen says, and read what was clicked.**
+`Ui.set_text`, `set_number`, `set_numbers` and `set_fill` write into the element
+the entity already carries; `is_hovered`, `is_pressed` and `is_held` answer about
+the pointer. The scene owns the words and the script owns the numbers, because
+Decay has no way to build a string — a designer authors `"Score: {}"` and a
+script fills the slot. Exercised in
+`crates/sindri-decay/tests/a_script_drives_a_hud.rs` and
+`a_script_reads_a_button.rs`.
 
 **And a script can drive a body and be told what it touched.**
 `Physics.set_velocity`, `apply_impulse` and `velocity_x`/`_y` act on an entity's

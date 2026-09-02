@@ -52,6 +52,14 @@ pub struct FrameContext<'a> {
     /// Audio is a platform service rather than simulation state. A headless host
     /// supplies a silent recorder; desktop and browser hosts supply real output.
     pub audio: &'a mut dyn AudioBackend,
+    /// The drawing surface's size in physical pixels.
+    ///
+    /// A fixed update needs it: anything laid out against the screen rather
+    /// than in the world — a HUD, a menu, a button being hit-tested — has to
+    /// know the shape it is being laid out on, and that shape is the host's to
+    /// report. `[0, 0]` until a host says otherwise, which a headless one never
+    /// does.
+    pub viewport: [u32; 2],
 }
 
 /// Gameplay logic driven by a host.
@@ -99,6 +107,8 @@ pub struct EngineHost<G: Game, A: AudioBackend = SilentAudioBackend> {
     input: InputState,
     audio: A,
     game: G,
+    /// The drawing surface's size, as the host last reported it.
+    viewport: [u32; 2],
 }
 
 impl<G: Game> EngineHost<G, SilentAudioBackend> {
@@ -123,7 +133,25 @@ impl<G: Game, A: AudioBackend> EngineHost<G, A> {
             input: InputState::default(),
             audio,
             game,
+            // Nothing until a host reports one: a headless run never draws, and
+            // a zero extent says so honestly rather than inventing a window.
+            viewport: [0, 0],
         })
+    }
+
+    /// Tells the host how big the drawing surface is, in physical pixels.
+    ///
+    /// Called when the surface is created and whenever it changes shape. A
+    /// fixed update reads it through [`FrameContext::viewport`], because
+    /// anything laid out against the screen has to know the screen.
+    pub const fn set_viewport(&mut self, width: u32, height: u32) {
+        self.viewport = [width, height];
+    }
+
+    /// The drawing surface's size, as last reported.
+    #[must_use]
+    pub const fn viewport(&self) -> [u32; 2] {
+        self.viewport
     }
 
     pub const fn game(&self) -> &G {
@@ -253,6 +281,7 @@ impl<G: Game, A: AudioBackend> EngineHost<G, A> {
             input: &self.input,
             time,
             audio: &mut self.audio,
+            viewport: self.viewport,
         };
         let outcome = match phase {
             FramePhase::Start => self.game.start(&mut context),

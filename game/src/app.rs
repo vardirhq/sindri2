@@ -82,6 +82,9 @@ impl DesktopApp for GatherApp {
     fn resize(&mut self, context: &AppContext<'_>) -> Result<(), Self::Error> {
         self.depth
             .resize(context.device(), context.width(), context.height());
+        // The screen UI is laid out against this, so a window that changes
+        // shape moves the HUD with it rather than a frame later.
+        self.engine.set_viewport(context.width(), context.height());
         Ok(())
     }
 

@@ -169,7 +169,7 @@ pub(super) fn add_pointer_surface(environment: &mut Environment) {
             *name,
             match value {
                 PointerValue::X | PointerValue::Y => Type::F32,
-                PointerValue::Inside => Type::Bool,
+                PointerValue::Inside | PointerValue::OverUi => Type::Bool,
             },
         );
     }
@@ -245,8 +245,13 @@ pub(super) fn add_ui_surface(environment: &mut Environment) {
                     UiCall::Text => vec![entity(), Type::String],
                     UiCall::Numbers => vec![entity(), Type::F32, Type::F32],
                     UiCall::Number | UiCall::Fill => vec![entity(), Type::F32],
+                    _ => vec![entity()],
                 },
-                return_type: Type::Unit,
+                return_type: if call.is_query() {
+                    Type::Bool
+                } else {
+                    Type::Unit
+                },
             },
         );
     }

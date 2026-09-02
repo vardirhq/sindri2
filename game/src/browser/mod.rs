@@ -43,6 +43,8 @@ pub(super) struct BrowserGatherApp {
     cubes: TexturedCubeRenderer,
     sprites: SpriteBatchRenderer,
     text: TextRenderer,
+    /// The drawing surface's size, kept because the engine is built later.
+    viewport: [u32; 2],
     page_visible: bool,
     platform_suspended: bool,
     paused_for_page: bool,
@@ -100,6 +102,7 @@ impl BrowserGatherApp {
         )?;
         *engine.world_mut() = World::from_scene(&project.scene)?.world;
         engine.start()?;
+        engine.set_viewport(self.viewport[0], self.viewport[1]);
         self.engine = Some(engine);
         self.sync_page_lifecycle()?;
         log::info!(
@@ -175,6 +178,10 @@ impl DesktopApp for BrowserGatherApp {
             cubes: TexturedCubeRenderer::new(context.device(), context.format()),
             sprites: SpriteBatchRenderer::new(context.device(), context.format()),
             text: TextRenderer::new(context.device(), context.queue(), context.format()),
+            // Remembered because the engine does not exist yet: the project
+            // loads asynchronously, and a resize that arrives before it must
+            // not be the one size nobody ever hears about.
+            viewport: [context.width(), context.height()],
             page_visible: true,
             platform_suspended: false,
             paused_for_page: false,
@@ -224,6 +231,12 @@ impl DesktopApp for BrowserGatherApp {
     fn resize(&mut self, context: &AppContext<'_>) -> Result<(), Self::Error> {
         self.depth
             .resize(context.device(), context.width(), context.height());
+        // A browser window changes shape constantly — a phone rotating, a tab
+        // resizing — and the screen UI is laid out against this.
+        self.viewport = [context.width(), context.height()];
+        if let Some(engine) = self.engine.as_mut() {
+            engine.set_viewport(context.width(), context.height());
+        }
         Ok(())
     }
 

@@ -80,6 +80,12 @@ pub struct WorldHost<'a> {
     spawning: Spawning<'a>,
     /// The physics a script may read and drive, when the host runs any.
     physics: Option<crate::Physics2d<'a>>,
+    /// Where the screen elements are and what the pointer is doing to them.
+    ///
+    /// Read-only: hover and click are answers about this frame, computed by the
+    /// host before scripts ran. A script that could change them would be
+    /// deciding what the person did.
+    screen_ui: Option<&'a sindri_scene::ScreenUi>,
     /// What the script said, in order. Drained by the caller after the call.
     printed: Vec<String>,
 }
@@ -377,6 +383,7 @@ impl<'a> WorldHost<'a> {
         blackboard: &'a mut Blackboard,
         spawning: Spawning<'a>,
         physics: Option<crate::Physics2d<'a>>,
+        screen_ui: Option<&'a sindri_scene::ScreenUi>,
     ) -> Self {
         Self {
             world,
@@ -385,6 +392,7 @@ impl<'a> WorldHost<'a> {
             blackboard,
             spawning,
             physics,
+            screen_ui,
             printed: Vec::new(),
         }
     }
@@ -456,6 +464,13 @@ impl<'a> WorldHost<'a> {
         let position = self.context.input.pointer_position();
         match value {
             PointerValue::Inside => Value::Bool(position.is_some()),
+            // False with no screen UI running, rather than an error: a host
+            // with no UI has no element to take the pointer, which is a true
+            // answer rather than a missing one.
+            PointerValue::OverUi => Value::Bool(
+                self.screen_ui
+                    .is_some_and(sindri_scene::ScreenUi::captures_pointer),
+            ),
             PointerValue::X => Value::Number(f64::from(position.unwrap_or([0.0, 0.0])[0])),
             PointerValue::Y => Value::Number(f64::from(position.unwrap_or([0.0, 0.0])[1])),
         }

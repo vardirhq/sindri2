@@ -61,6 +61,13 @@ pub struct ScriptFrame<'a> {
     /// authored a collider — and then a script calling `Physics.*` is told so
     /// rather than quietly doing nothing.
     pub physics: Option<Physics2d<'a>>,
+    /// Where the screen elements are and what the pointer is doing to them.
+    ///
+    /// `None` for a host that draws no UI, and then `Ui.is_pressed` says so
+    /// rather than answering that nothing was clicked — a menu whose buttons
+    /// never respond because nothing is laying them out should be heard about
+    /// on the first frame, not mistaken for a person who has not clicked yet.
+    pub screen_ui: Option<&'a sindri_scene::ScreenUi>,
     pub delta_seconds: f32,
 }
 
@@ -74,6 +81,7 @@ impl<'a> ScriptFrame<'a> {
             prefabs: PrefabSources::none(),
             input,
             physics: None,
+            screen_ui: None,
             delta_seconds,
         }
     }
@@ -82,6 +90,13 @@ impl<'a> ScriptFrame<'a> {
     #[must_use]
     pub fn with_prefabs(mut self, prefabs: &'a PrefabSources) -> Self {
         self.prefabs = prefabs;
+        self
+    }
+
+    /// The same frame, with the screen elements a script may ask about.
+    #[must_use]
+    pub const fn with_screen_ui(mut self, screen_ui: &'a sindri_scene::ScreenUi) -> Self {
+        self.screen_ui = Some(screen_ui);
         self
     }
 
@@ -200,6 +215,7 @@ impl Scripts {
             prefabs,
             input,
             physics,
+            screen_ui,
             delta_seconds,
         } = frame;
         let mut report = ScriptReport::default();
@@ -234,6 +250,7 @@ impl Scripts {
             prefabs,
             input,
             physics,
+            screen_ui,
             started: BTreeSet::new(),
             spawned: Vec::new(),
         };

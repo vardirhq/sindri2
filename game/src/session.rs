@@ -11,7 +11,9 @@ use sindri_decay::{AudioCommand, PrefabSources, ScriptFrame, ScriptSources, Scri
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_platform::NativeAudioBackend;
 use sindri_platform::{AudioBackend, AudioError, FrameContext, Game, InputState, PlaybackSettings};
-use sindri_scene::{AudioSourceComponent, ScenePhysics2d, SpriteAnimations};
+use sindri_scene::{
+    AudioSourceComponent, PointerFrame, ScenePhysics2d, ScreenExtent, ScreenUi, SpriteAnimations,
+};
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::assets::sources;
@@ -43,6 +45,8 @@ pub struct Session {
     /// which costs nothing for a scene with none and means a scene that grows
     /// one needs no change here. No gravity: Gather is seen from above.
     physics: ScenePhysics2d,
+    /// Where the screen elements are and what the pointer is doing to them.
+    screen_ui: ScreenUi,
     pending_audio: Vec<AudioCommand>,
     autoplay_started: bool,
 }
@@ -68,6 +72,7 @@ impl Session {
             components,
             animations: SpriteAnimations::new(),
             physics: ScenePhysics2d::top_down().expect("zero gravity is finite"),
+            screen_ui: ScreenUi::default(),
             pending_audio: Vec::new(),
             autoplay_started: false,
         }
@@ -78,6 +83,7 @@ impl Session {
         &mut self,
         world: &mut World,
         input: &InputState,
+        viewport: (f32, f32),
         delta_seconds: f32,
     ) -> Result<(), GatherError> {
         // Physics first, so a script observes the events of the step that just
@@ -88,12 +94,26 @@ impl Session {
             &self.components,
             std::time::Duration::from_secs_f32(delta_seconds),
         )?;
+        // No safe area yet: reading a device's insets is the browser host's to
+        // report, and it does not yet. The scene needs no change when it does.
+        self.screen_ui.update(
+            world,
+            &self.components,
+            ScreenExtent::new(viewport.0, viewport.1),
+            PointerFrame {
+                position: input.pointer_position(),
+                pressed: input.pointer_pressed(sindri_platform::MouseButton::Left),
+                released: input.pointer_released(sindri_platform::MouseButton::Left),
+                down: input.pointer_down(sindri_platform::MouseButton::Left),
+            },
+        )?;
         let (physics, events) = self.physics.for_scripts();
         let report = self.scripts.advance(
             world,
             &self.components,
             ScriptFrame::new(&self.sources, input, delta_seconds)
                 .with_prefabs(&self.prefabs)
+                .with_screen_ui(&self.screen_ui)
                 .with_physics(sindri_decay::Physics2d {
                     world: physics,
                     events,
@@ -179,9 +199,12 @@ impl Game for Session {
 
     fn fixed_update(&mut self, context: &mut FrameContext<'_>) -> Result<(), Self::Error> {
         self.start_autoplay(context.world, context.audio)?;
+        #[allow(clippy::cast_precision_loss)]
+        let viewport = (context.viewport[0] as f32, context.viewport[1] as f32);
         self.step(
             context.world,
             context.input,
+            viewport,
             context.time.delta.as_secs_f32(),
         )?;
         self.flush_audio(context.audio)

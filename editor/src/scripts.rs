@@ -249,10 +249,12 @@ impl SceneScripts {
         components: &ComponentSchemaRegistry,
         input: &InputState,
         physics: Option<Physics2d<'_>>,
+        screen_ui: &sindri_scene::ScreenUi,
         delta_seconds: f32,
     ) -> ScriptReport {
-        let mut frame =
-            ScriptFrame::new(&self.sources, input, delta_seconds).with_prefabs(&self.prefabs);
+        let mut frame = ScriptFrame::new(&self.sources, input, delta_seconds)
+            .with_prefabs(&self.prefabs)
+            .with_screen_ui(screen_ui);
         if let Some(physics) = physics {
             frame = frame.with_physics(physics);
         }

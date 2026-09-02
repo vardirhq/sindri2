@@ -8,6 +8,49 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **A HUD a script can change, and buttons a person can press.** Screen text and
+  images rendered, and no script could touch either — the audit called the first
+  half "Decay cannot change text content" and the second "missing as a runtime
+  button, focus, layout and navigation system".
+
+  Text is now a **template**. Decay has no string concatenation and
+  `decay/LANGUAGE.md` says so deliberately, so the scene owns the words and the
+  script owns the numbers: a designer authors `"Score: {}"` and a script calls
+  `Ui.set_number`. The words stay in the file where they can be read, reviewed
+  and one day translated. `sindri.ui.image` gained a fill fraction and the edge
+  it empties from, which is what makes a bar a bar rather than a picture of one.
+
+  `sindri.ui.button` makes an element pressable, its rect being the entity's own
+  transform. `ScreenUi` lays every element out and hit-tests the pointer, and
+  `Ui.is_hovered`/`is_pressed`/`is_held` answer about this frame. A click is a
+  press and a release on the same element, so sliding off before letting go
+  changes a person's mind. Overlapping elements resolve by layer, so a modal is
+  a modal because it is on top.
+
+  **Screens needed no new mechanism.** A menu is an entity with children, showing
+  one is switching it on, and `World.is_active` already governed a subtree — so
+  there is no screen stack. `sindri.ui.layout` places a parent's active children
+  in a row or column, which matters for the one thing anchors cannot do: a menu
+  that loses an entry closes up around its middle instead of leaving a hole.
+
+  **Nothing is silently withheld from gameplay** while a menu is up: which
+  scripts are gameplay is not something a host can know, and a rule that guesses
+  will guess wrong. `Pointer.over_ui` is the one line a gameplay script writes,
+  and it is why a click on a pause button does not also fire the gun.
+
+  The overlay is normalized — two tall, centred, running out to the aspect ratio
+  — so one authored scene is responsive from a portrait phone to a wide desktop
+  window with no breakpoint. A **safe area** takes a notch off the edges, moving
+  anchored elements in while leaving centred ones alone.
+
+- **`FrameContext` carries the viewport.** A fixed update had no idea what shape
+  the screen was, which is not something a game laying out a HUD can not know.
+  Desktop and browser hosts report it on resize.
+
+- **`HostServices` bundles what a script can reach.** The host constructor had
+  reached eight arguments; a caller with no physics and no screen UI now leaves
+  two fields out rather than passing two `None`s in the right positions.
+
 - **Physics reaches a game.** Rapier2D ran, and nothing could get at it: masks,
   shapes, bodies and events all existed, with no way to author a scene that used
   them and no Decay access at all. `ScenePhysics2d` is the join — it builds the

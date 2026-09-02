@@ -199,6 +199,7 @@ fn the_host_answers_every_path_the_analyzer_accepts() {
     let prefabs = prefabs();
     let started = std::collections::BTreeSet::new();
     let mut spawned = Vec::new();
+    let screen_ui = sindri_scene::ScreenUi::new();
     let mut physics = physics_world();
     let events: Vec<sindri_physics::PhysicsEvent2d> = Vec::new();
     let environment = environment();
@@ -224,16 +225,19 @@ fn the_host_answers_every_path_the_analyzer_accepts() {
                 entity,
                 context(&input),
                 &mut board,
-                Spawning {
-                    prefabs: &prefabs,
-                    started: &started,
-                    spawned: &mut spawned,
+                crate::HostServices {
+                    spawning: Spawning {
+                        prefabs: &prefabs,
+                        started: &started,
+                        spawned: &mut spawned,
+                    },
+                    physics: Some(crate::Physics2d {
+                        world: &mut physics,
+                        events: &events,
+                    }),
+                    screen_ui: Some(&screen_ui),
+                    audio: &mut audio,
                 },
-                Some(crate::Physics2d {
-                    world: &mut physics,
-                    events: &events,
-                }),
-                &mut audio,
             );
             assert!(
                 matches!(host.load(None, &path), Ok(Some(Value::Number(_)))),
@@ -244,16 +248,19 @@ fn the_host_answers_every_path_the_analyzer_accepts() {
                 entity,
                 context(&input),
                 &mut board,
-                Spawning {
-                    prefabs: &prefabs,
-                    started: &started,
-                    spawned: &mut spawned,
+                crate::HostServices {
+                    spawning: Spawning {
+                        prefabs: &prefabs,
+                        started: &started,
+                        spawned: &mut spawned,
+                    },
+                    physics: Some(crate::Physics2d {
+                        world: &mut physics,
+                        events: &events,
+                    }),
+                    screen_ui: Some(&screen_ui),
+                    audio: &mut audio,
                 },
-                Some(crate::Physics2d {
-                    world: &mut physics,
-                    events: &events,
-                }),
-                &mut audio,
             );
             assert_eq!(
                 host.store(None, &path, Value::Number(1.0)),
@@ -278,6 +285,7 @@ fn the_host_answers_every_global_the_analyzer_describes() {
     let prefabs = prefabs();
     let started = std::collections::BTreeSet::new();
     let mut spawned = Vec::new();
+    let screen_ui = sindri_scene::ScreenUi::new();
     let mut physics = physics_world();
     let events: Vec<sindri_physics::PhysicsEvent2d> = Vec::new();
     let environment = environment();
@@ -310,16 +318,19 @@ fn the_host_answers_every_global_the_analyzer_describes() {
                 entity,
                 context(&input),
                 &mut board,
-                Spawning {
-                    prefabs: &prefabs,
-                    started: &started,
-                    spawned: &mut spawned,
+                crate::HostServices {
+                    spawning: Spawning {
+                        prefabs: &prefabs,
+                        started: &started,
+                        spawned: &mut spawned,
+                    },
+                    physics: Some(crate::Physics2d {
+                        world: &mut physics,
+                        events: &events,
+                    }),
+                    screen_ui: Some(&screen_ui),
+                    audio: &mut audio,
                 },
-                Some(crate::Physics2d {
-                    world: &mut physics,
-                    events: &events,
-                }),
-                &mut audio,
             );
             match member {
                 ExternalSymbol::Value(_) => assert!(
@@ -418,6 +429,9 @@ fn every_described_function_is_one_the_host_performs() {
     let prefabs = prefabs();
     let started = std::collections::BTreeSet::new();
     let mut spawned = Vec::new();
+    // Empty rather than absent: a `Ui.is_*` query on a host with no screen UI
+    // is refused, and that would look like a host that does not know the call.
+    let screen_ui = sindri_scene::ScreenUi::new();
     let environment = environment();
 
     for (name, symbol) in environment.globals() {
@@ -430,13 +444,16 @@ fn every_described_function_is_one_the_host_performs() {
             entity,
             context(&input),
             &mut board,
-            Spawning {
-                prefabs: &prefabs,
-                started: &started,
-                spawned: &mut spawned,
+            crate::HostServices {
+                spawning: Spawning {
+                    prefabs: &prefabs,
+                    started: &started,
+                    spawned: &mut spawned,
+                },
+                physics: None,
+                screen_ui: Some(&screen_ui),
+                audio: &mut audio,
             },
-            None,
-            &mut audio,
         );
         assert!(
             matches!(

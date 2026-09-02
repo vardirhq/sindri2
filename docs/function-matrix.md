@@ -27,7 +27,8 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Entity footprints | ✅ | ✅ | ✅ |
 | Occupancy | ✅ | ✅ | ✅ |
 | Pathfinding | ✅ | ✅ | ✅ |
-| Text | 🟡 | ✅ | ❌ |
+| Text | ✅ | ✅ | 🟡 |
+| UI buttons and layout | ✅ | 🟡 | 🟡 |
 | Project fonts | ✅ | ✅ | ❌ |
 | Perspective camera | ✅ | 🟡 | ❌ |
 | Orthographic camera | ✅ | 🟡 | ❌ |

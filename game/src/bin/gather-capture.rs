@@ -30,6 +30,8 @@ use sindri_scene::CameraView;
 
 #[cfg(not(target_arch = "wasm32"))]
 const WIDTH: u32 = 960;
+/// The same size the screen UI is laid out against, as the capture draws it.
+const VIEWPORT: (f32, f32) = (960.0, 600.0);
 #[cfg(not(target_arch = "wasm32"))]
 const HEIGHT: u32 = 600;
 /// The run the picture is of: hold these keys for that many fixed steps.
@@ -67,7 +69,7 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
             held.apply(InputEvent::KeyPressed(*key));
         }
         for _ in 0..*steps {
-            session.step(&mut world, &held, STEP_SECONDS)?;
+            session.step(&mut world, &held, VIEWPORT, STEP_SECONDS)?;
         }
     }
     let prepared = scene.extract_animated(

@@ -14,7 +14,7 @@ use sindri_core::{CommandHistory, EngineLifecycle, EntityId, SceneComponent, Tra
 use sindri_decay::ScriptComponent;
 use sindri_scene::{
     AudioSourceComponent, CameraComponent, GridNavigationComponent, GridOccupantComponent,
-    SceneExtractor, ScenePhysics2d, SpriteAnimations, SpriteComponent, UiImageComponent,
+    SceneExtractor, ScenePhysics2d, ScreenUi, SpriteAnimations, SpriteComponent, UiImageComponent,
     UiTextComponent,
 };
 
@@ -252,6 +252,11 @@ struct EditorApp {
     /// scene-level setting is a project-format field that arrives with the
     /// feature that reads it. `docs/physics.md` has the open item.
     physics: ScenePhysics2d,
+    /// Where the screen elements are and what the pointer is doing to them.
+    ///
+    /// Recomputed every frame from the world, so a button moved in the
+    /// inspector is pressable where it now is rather than where it was.
+    screen_ui: ScreenUi,
     /// Where the Game view was drawn last frame, in window points.
     ///
     /// Kept because scripts advance before the layout runs, so the rectangle a
@@ -419,6 +424,7 @@ impl EditorApp {
             game_viewport,
             game_view_rect: None,
             physics: ScenePhysics2d::top_down().expect("zero gravity is finite"),
+            screen_ui: ScreenUi::default(),
             animations: SpriteAnimations::new(),
             scripts: SceneScripts::for_scene(None),
             input: EditorInput::default(),

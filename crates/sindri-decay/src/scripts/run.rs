@@ -40,6 +40,8 @@ pub(super) struct TickWorld<'a> {
     pub(super) spawned: Vec<EntityId>,
     /// The physics a script may read and drive, when the host runs any.
     pub(super) physics: Option<Physics2d<'a>>,
+    /// Where the screen elements are and what the pointer is doing to them.
+    pub(super) screen_ui: Option<&'a sindri_scene::ScreenUi>,
 }
 
 pub(super) fn tick(
@@ -88,20 +90,23 @@ pub(super) fn tick(
             entity,
             context,
             &mut *at.blackboard,
-            Spawning {
-                prefabs: at.prefabs,
-                started: &at.started,
-                spawned: &mut at.spawned,
+            crate::HostServices {
+                spawning: Spawning {
+                    prefabs: at.prefabs,
+                    started: &at.started,
+                    spawned: &mut at.spawned,
+                },
+                // Reborrowed per tick rather than moved: every script in the
+                // pass reads the same frame's events and drives the same world,
+                // and one taking physics away from the rest would make which
+                // script ran first decide what the others could do.
+                physics: at.physics.as_mut().map(|physics| Physics2d {
+                    world: &mut *physics.world,
+                    events: physics.events,
+                }),
+                screen_ui: at.screen_ui,
+                audio: &mut *at.audio,
             },
-            // Reborrowed per tick rather than moved: every script in the pass
-            // reads the same frame's events and drives the same world, and one
-            // taking physics away from the rest would make which script ran
-            // first decide what the others could do.
-            at.physics.as_mut().map(|physics| Physics2d {
-                world: &mut *physics.world,
-                events: physics.events,
-            }),
-            &mut *at.audio,
         ),
     );
 
