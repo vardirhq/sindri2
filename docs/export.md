@@ -3,7 +3,7 @@
 ```bash
 cargo run -p sindri-export --bin sindri-export -- game dist --base /sindri2/
 wasm-pack build game --target web --out-dir pkg
-cp -R game/pkg dist/pkg
+cp -R game/pkg/. dist/pkg/
 ```
 
 The export writes the project; `wasm-pack` writes the host. They are separate on
