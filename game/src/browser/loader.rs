@@ -204,16 +204,6 @@ pub(super) fn request_kind<D: AssetDecoder>(
     Ok(())
 }
 
-pub(super) fn request<D: AssetDecoder>(
-    loader: &mut AssetLoader<D>,
-    ids: &[&str],
-) -> Result<(), GatherError> {
-    for id in ids {
-        loader.request(AssetId::new(*id)?)?;
-    }
-    Ok(())
-}
-
 pub(super) fn poll_loader<D: AssetDecoder>(loader: &mut AssetLoader<D>) -> Result<(), GatherError> {
     for outcome in loader.poll() {
         if let AssetLoadOutcome::Failed(error) = outcome {
