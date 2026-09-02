@@ -32,6 +32,7 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Seeded randomness | ✅ | ➖ | 🟡 |
 | Game saves | ✅ | ➖ | 🟡 |
 | Effects | ✅ | 🟡 | 🟡 |
+| Static web export | ✅ | ➖ | ➖ |
 | Project fonts | ✅ | ✅ | ❌ |
 | Perspective camera | ✅ | 🟡 | ❌ |
 | Orthographic camera | ✅ | 🟡 | ❌ |

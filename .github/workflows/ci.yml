@@ -145,19 +145,23 @@ jobs:
           npx --prefix scripts/browser playwright install --with-deps chromium
           wasm-pack build examples/cube --target web --out-dir pkg
           wasm-pack build game --target web --out-dir pkg
-          cargo run --quiet --package sindri-assets --example manifest -- game/assets \
-            > game/assets/sindri.manifest.json
+          # Everything below runs against the *exported* directory rather than
+          # the source tree. That is the point: what CI proves is what a
+          # deployment would serve, page and manifest and hashed assets and all.
+          cargo run --quiet --package sindri-export --bin sindri-export -- \
+            game target/dist/gather --base /sindri2/
+          cp -R game/pkg target/dist/gather/pkg
           node scripts/browser/smoke.mjs examples/cube target/render-artifacts/browser-cube.png
           SINDRI_EXPECT_ASSETS=1 SINDRI_BASE_PATH=/sindri2/ \
-            node scripts/browser/smoke.mjs game target/render-artifacts/browser-gather.png
+            node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-gather.png
           SINDRI_EXPECT_FAILURE=webgpu \
-            node scripts/browser/smoke.mjs game target/render-artifacts/browser-no-webgpu.png
+            node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-no-webgpu.png
           SINDRI_EXPECT_FAILURE=canvas \
-            node scripts/browser/smoke.mjs game target/render-artifacts/browser-no-canvas.png
+            node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-no-canvas.png
           SINDRI_EXPECT_FAILURE=adapter \
-            node scripts/browser/smoke.mjs game target/render-artifacts/browser-no-adapter.png
+            node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-no-adapter.png
           SINDRI_EXPECT_FAILURE=device \
-            node scripts/browser/smoke.mjs game target/render-artifacts/browser-no-device.png
+            node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-no-device.png
       - name: Upload browser captures
         if: always()
         uses: actions/upload-artifact@v4

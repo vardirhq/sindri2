@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <!-- Everything below resolves against this, which is what lets one build be
+       served from a domain root or from a GitHub Pages project subpath without
+       a single path in the page changing. -->
+  <base href="{{base}}">
+  <title>{{name}}</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #12161f; color: #f2f5fb; }
+    /* The canvas keeps the game's own aspect and sits in the middle, rather
+       than stretching, because a game stretched to a window is a game whose
+       author's framing was thrown away. */
+    body { display: grid; place-items: center; font-family: system-ui, sans-serif; }
+    canvas { display: block; max-width: 100vw; max-height: 100vh; }
+    #sindri-error {
+      display: none;
+      box-sizing: border-box;
+      max-width: 42rem;
+      margin: 2rem;
+      padding: 1.25rem 1.5rem;
+      border: 1px solid #505b72;
+      border-radius: .75rem;
+      background: #1b2230;
+      line-height: 1.5;
+    }
+    #sindri-error[data-visible="true"] { display: block; }
+    #sindri-error strong { display: block; margin-bottom: .35rem; }
+  </style>
+</head>
+<body>
+  <canvas id="sindri-canvas"></canvas>
+  <div id="sindri-error" role="alert" aria-live="assertive"></div>
+  <script type="module">
+    import init from "./pkg/{{host}}.js";
+
+    const canvas = document.querySelector("#sindri-canvas");
+    const errorBox = document.querySelector("#sindri-error");
+    const fail = (title, detail) => {
+      canvas?.remove();
+      errorBox.dataset.visible = "true";
+      errorBox.innerHTML = `<strong>${title}</strong>${detail}`;
+    };
+
+    // Startup does not finish when `init()` resolves: winit hands the loop to
+    // the page and returns, so an adapter, device, surface, or asset failure
+    // happens afterwards with nobody to return it to. The engine announces
+    // those on `window`, and this is what turns them into something a player
+    // can read instead of a blank canvas and a console line nobody opens.
+    addEventListener("sindri:failed", (event) => {
+      const detail = String(event.detail ?? "The engine reported a failure.");
+      // The whole thing goes to the console for whoever is debugging. A wgpu
+      // error carries the JavaScript error it wrapped, stack and all, and a
+      // player handed a wasm backtrace has been told nothing — so the page
+      // shows the first line, which is the part written for a human.
+      console.error(detail);
+      const summary = detail.split("\n")[0].trim();
+      fail("{{name}} stopped", summary.length > 200 ? `${summary.slice(0, 200)}…` : summary);
+    });
+
+    const WEBGPU_MISSING =
+      "{{name}} requires a browser and device with WebGPU enabled. Update your browser or check its graphics/WebGPU settings.";
+
+    if (!(canvas instanceof HTMLCanvasElement)) {
+      fail("{{name}} could not start", "The page is missing the #sindri-canvas canvas Sindri was configured to use.");
+    } else if (!navigator.gpu) {
+      fail("WebGPU is unavailable", WEBGPU_MISSING);
+    } else if (!(await navigator.gpu.requestAdapter().catch(() => null))) {
+      // `navigator.gpu` existing is not the same as WebGPU working. Chrome on
+      // Android exposes the interface more widely than its drivers can serve,
+      // so asking for an actual adapter is the difference between telling a
+      // player their device cannot run this and showing them nothing at all.
+      fail("WebGPU is unavailable", WEBGPU_MISSING);
+    } else {
+      try {
+        await init();
+      } catch (error) {
+        console.error(error);
+        fail("{{name}} could not start", String(error?.message ?? error));
+      }
+    }
+  </script>
+</body>
+</html>

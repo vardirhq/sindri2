@@ -11,6 +11,8 @@ pub enum GatherError {
     Scene(#[from] sindri_scene::SceneExtractError),
     #[error(transparent)]
     Physics(#[from] sindri_scene::PhysicsSyncError),
+    #[error("the manifest records no scene, so there is nothing to open")]
+    MissingScene,
     #[error(transparent)]
     Document(#[from] sindri_core::SceneError),
     #[error(transparent)]

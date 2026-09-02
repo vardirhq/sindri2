@@ -92,7 +92,7 @@ The statuses mean:
 | Sprite animation | Runtime/editor animation works | **Partial**; Decay cannot select or control clips |
 | Audio | Native, browser, and silent backends plus Decay playback calls | **Ready**, with host-side clip gathering still manual |
 | Persistent progression | Versioned key/value saves with file, browser, memory and damaged backends, and a `Save` namespace in Decay | **Ready** |
-| Browser release | Gather proves a hand-built WASM/WebGPU Pages host | **Partial**; no general project export and browser asset fetching is not exercised |
+| Browser release | `sindri-export` gathers a project from its scene into a content-hashed static directory; the browser host reads the manifest rather than a compiled-in asset list | **Ready** |
 | Full editor playtest | Play runs the shipped fixed-step loop — effects, physics, screen UI, scripts and animations at the fixed rate — with single-step and exactly-once input edges | **Ready** |
 | Mobile/browser fallback | WebGPU browser host exists, and touch reaches gameplay on every host | **Partial**; no WebGL fallback |
 
@@ -295,7 +295,19 @@ wasteful. The port should measure both approaches before choosing:
 The acceptance target is readable high-volume combat, not reproducing Canvas 2D
 calls one for one.
 
-### 8. Export and browser delivery
+### 8. Export and browser delivery — done
+
+Delivered as `sindri-export` and `docs/export.md`. Every requirement below is
+met: the export walks the scene for what ships, writes a content-hashed
+directory beside an uncached manifest, generates the page with the base path
+baked in, and CI runs the browser smoke test against the exported directory
+rather than the source tree.
+
+The piece that made this possible was `AssetKind` in the manifest. The browser
+host carried a list of asset IDs per kind, compiled in — so adding a texture
+meant editing Rust and a project the host had never heard of could not be
+exported. It reads the manifest now. What follows is the original statement of
+the requirement.
 
 The Gather host proves the runtime path, but a normal project still needs a
 repeatable export.
@@ -331,7 +343,8 @@ possible, not by subsystem familiarity.
 8. ~~**Measured particle/effect path**~~ — done; see `docs/effect-scaling.md`
 9. ~~**Complete editor Play application loop**~~ — done; Play runs the shipped
    fixed-step loop
-10. **Static-web project export with gathered assets**
+10. ~~**Static-web project export with gathered assets**~~ — done; see
+    `docs/export.md`
 
 Audio clip gathering and animation control should join the vertical slice when
 their consumers are reached; they should not block the first moving,

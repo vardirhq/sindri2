@@ -8,6 +8,37 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **A project can be exported to a static web directory.** `sindri-export`
+  walks a scene for what it references — textures, fonts, scripts, sheets,
+  audio — and writes a directory a static host can serve. An asset that stopped
+  being used stops being carried, and one that started being used cannot be
+  forgotten.
+
+  The layout is what makes caching safe: `assets/manifest.json` is small and
+  must never be cached, and it names an `assets/<content hash>/` directory that
+  can be cached for ever. A changed asset cannot land in a directory anyone has
+  already cached, and an unchanged build keeps its name so a re-deploy
+  re-downloads nothing. Exporting again removes the previous build.
+
+  `--base` bakes the deployment path into `<base href>`, with the trailing slash
+  the export adds — `<base href="/repo">` resolves `pkg/host.js` against the
+  site root and 404s, which is the whole GitHub Pages subpath problem.
+
+  `[assets] include` in `sindri.toml` carries what a scene cannot name: a script
+  plays a clip by a string inside a program, and no walk of a scene can see one.
+
+- **`AssetKind` in the manifest.** The browser host carried a list of asset IDs
+  per kind, compiled in — so adding a texture meant editing Rust, and a project
+  the host crate had never heard of could not be exported at all. The manifest
+  says what a project is made of, and the host reads it.
+
+### Fixed
+
+- **Scripts were not being gathered by the export**, because `sindri.script` is
+  not a builtin component — scripting is a layer above the scene, and a host
+  registers it. The export would have shipped a game with no code in it and
+  looked like it had worked. Caught by a test that asks for every kind.
+
 - **Editor Play runs the loop a shipped game runs.** It stepped once per
   *rendered* frame, so a scene was simulated as fast as the machine happened to
   draw — a play-test was evidence about the editor, not about the game. It now

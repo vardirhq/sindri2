@@ -8,15 +8,14 @@
 use std::collections::BTreeMap;
 
 use sindri_assets::{
-    AssetDecoder, AssetLoadOutcome, AssetLoadQueueConfig, AssetLoader, AssetManifest, AudioAsset,
-    AudioAssetDecoder, FetchAssetSource, FontAsset, FontAssetDecoder, MANIFEST_FILE_NAME,
-    SceneAssetDecoder, SpriteSheetAssetDecoder, TextAssetDecoder, TextureAsset,
+    AssetDecoder, AssetKind, AssetLoadOutcome, AssetLoadQueueConfig, AssetLoader, AssetManifest,
+    AudioAsset, AudioAssetDecoder, FetchAssetSource, FontAsset, FontAssetDecoder,
+    MANIFEST_FILE_NAME, SceneAssetDecoder, SpriteSheetAssetDecoder, TextAssetDecoder, TextureAsset,
     TextureAssetDecoder,
 };
 use sindri_core::{AssetId, SceneDocument, SpriteSheetDocument};
 use sindri_decay::ScriptSources;
 
-use crate::assets::{AUDIO_IDS, FONT_IDS, SCENE_ID, SCRIPT_IDS, SHEET_IDS, TEXTURE_IDS};
 use crate::error::GatherError;
 
 pub(super) struct BrowserProjectAssets {
@@ -84,11 +83,22 @@ pub(super) struct ProjectLoaders {
     fonts: AssetLoader<FontAssetDecoder>,
     audio: AssetLoader<AudioAssetDecoder>,
     sheets: AssetLoader<SpriteSheetAssetDecoder>,
+    /// Kept, because what was asked for is also what has to be collected.
+    manifest: AssetManifest,
 }
 
 impl ProjectLoaders {
     pub(super) fn new(manifest: AssetManifest) -> Result<Self, GatherError> {
-        let source = FetchAssetSource::new("assets")?;
+        // Where the export put the assets, which the manifest names because it
+        // is the one file that is never cached. A project served straight from
+        // a source tree says nothing, and then the assets sit beside the
+        // manifest as they always have.
+        let root = if manifest.content_root().is_empty() {
+            "assets".to_owned()
+        } else {
+            format!("assets/{}", manifest.content_root())
+        };
+        let source = FetchAssetSource::new(&root)?;
         let config = AssetLoadQueueConfig::default();
         let mut scene = AssetLoader::new(source.clone(), config, SceneAssetDecoder)?
             .with_manifest(manifest.clone());
@@ -100,15 +110,21 @@ impl ProjectLoaders {
             .with_manifest(manifest.clone());
         let mut audio = AssetLoader::new(source.clone(), config, AudioAssetDecoder)?
             .with_manifest(manifest.clone());
-        let mut sheets =
-            AssetLoader::new(source, config, SpriteSheetAssetDecoder)?.with_manifest(manifest);
+        let mut sheets = AssetLoader::new(source, config, SpriteSheetAssetDecoder)?
+            .with_manifest(manifest.clone());
 
-        request(&mut scene, &[SCENE_ID])?;
-        request(&mut scripts, SCRIPT_IDS)?;
-        request(&mut textures, TEXTURE_IDS)?;
-        request(&mut fonts, FONT_IDS)?;
-        request(&mut audio, AUDIO_IDS)?;
-        request(&mut sheets, SHEET_IDS)?;
+        // From the manifest rather than from a list compiled into this binary.
+        // Those lists were the thing that made a project's host something
+        // somebody had to hand-write: adding a texture meant editing Rust, and
+        // an export could not exist for a project this crate had never heard
+        // of. The manifest says what a project is made of, so the host does not
+        // have to be told.
+        request_kind(&mut scene, &manifest, AssetKind::Scene)?;
+        request_kind(&mut scripts, &manifest, AssetKind::Script)?;
+        request_kind(&mut textures, &manifest, AssetKind::Texture)?;
+        request_kind(&mut fonts, &manifest, AssetKind::Font)?;
+        request_kind(&mut audio, &manifest, AssetKind::Audio)?;
+        request_kind(&mut sheets, &manifest, AssetKind::Sheet)?;
 
         Ok(Self {
             scene,
@@ -117,6 +133,7 @@ impl ProjectLoaders {
             fonts,
             audio,
             sheets,
+            manifest,
         })
     }
 
@@ -139,24 +156,30 @@ impl ProjectLoaders {
             return Ok(None);
         }
 
-        let scene = loaded(&self.scene, SCENE_ID)?;
+        let ids = |kind| {
+            self.manifest
+                .ids_of(kind)
+                .map(|id| id.as_str().to_owned())
+                .collect::<Vec<String>>()
+        };
+        let scene_ids = ids(AssetKind::Scene);
+        let Some(scene_id) = scene_ids.first() else {
+            return Err(GatherError::MissingScene);
+        };
+        let scene = loaded(&self.scene, scene_id)?;
         let mut scripts = ScriptSources::new();
-        for id in SCRIPT_IDS {
-            scripts.insert(*id, loaded(&self.scripts, id)?);
+        for id in ids(AssetKind::Script) {
+            let source = loaded(&self.scripts, &id)?;
+            scripts.insert(id, source);
         }
-        let textures = loaded_many(&self.textures, TEXTURE_IDS)?;
-        let fonts = loaded_many(&self.fonts, FONT_IDS)?;
-        let audio = loaded_many(&self.audio, AUDIO_IDS)?;
-        let sheets = loaded_many(&self.sheets, SHEET_IDS)?
+        let textures = loaded_many(&self.textures, &ids(AssetKind::Texture))?;
+        let fonts = loaded_many(&self.fonts, &ids(AssetKind::Font))?;
+        let audio = loaded_many(&self.audio, &ids(AssetKind::Audio))?;
+        let sheets = loaded_many(&self.sheets, &ids(AssetKind::Sheet))?
             .into_iter()
             .map(|(id, sheet)| (id.as_str().to_owned(), sheet))
             .collect();
-        let asset_count = 1
-            + SCRIPT_IDS.len()
-            + TEXTURE_IDS.len()
-            + FONT_IDS.len()
-            + AUDIO_IDS.len()
-            + SHEET_IDS.len();
+        let asset_count = self.manifest.len();
         Ok(Some(BrowserProjectAssets {
             scene,
             scripts,
@@ -167,6 +190,18 @@ impl ProjectLoaders {
             asset_count,
         }))
     }
+}
+
+/// Asks for every asset the manifest records of one kind.
+pub(super) fn request_kind<D: AssetDecoder>(
+    loader: &mut AssetLoader<D>,
+    manifest: &AssetManifest,
+    kind: AssetKind,
+) -> Result<(), GatherError> {
+    for id in manifest.ids_of(kind) {
+        loader.request(id.clone())?;
+    }
+    Ok(())
 }
 
 pub(super) fn request<D: AssetDecoder>(
@@ -202,7 +237,7 @@ where
 
 pub(super) fn loaded_many<D>(
     loader: &AssetLoader<D>,
-    ids: &[&str],
+    ids: &[String],
 ) -> Result<Vec<(AssetId, D::Asset)>, GatherError>
 where
     D: AssetDecoder,
@@ -210,7 +245,7 @@ where
 {
     ids.iter()
         .map(|id| {
-            let asset_id = AssetId::new(*id)?;
+            let asset_id = AssetId::new(id.clone())?;
             let asset = loader.get(&asset_id).cloned().ok_or_else(|| {
                 GatherError::BrowserAsset(format!("'{asset_id}' completed without a value"))
             })?;

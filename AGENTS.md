@@ -60,6 +60,7 @@ Do not casually change the crate graph. The intended in-workspace direction is:
 ```text
 sindri-core       -> (nothing in-workspace)
 sindri-grid       -> (nothing in-workspace)
+sindri-export     -> sindri-assets + sindri-core + sindri-decay + sindri-scene
 sindri-platform   -> sindri-core
 sindri-desktop    -> sindri-platform + sindri-gpu
 sindri-assets     -> sindri-core

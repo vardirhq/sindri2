@@ -32,8 +32,8 @@ pub use fetch::FetchAssetSource;
 pub use filesystem::FileSystemAssetSource;
 pub use loader::{AssetLoadOutcome, AssetLoader, AssetLoaderError};
 pub use manifest::{
-    AssetManifest, ContentHash, MANIFEST_FILE_NAME, MANIFEST_FORMAT_VERSION, ManifestEntry,
-    ManifestError,
+    AssetKind, AssetManifest, ContentHash, MANIFEST_FILE_NAME, MANIFEST_FORMAT_VERSION,
+    ManifestEntry, ManifestError,
 };
 pub use memory::MemoryAssetSource;
 pub use queue::{
