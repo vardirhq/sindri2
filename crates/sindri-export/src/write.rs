@@ -3,11 +3,11 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use sindri_assets::{AssetManifest, ContentHash};
+use sindri_assets::{AssetManifest, ContentHash, MANIFEST_FILE_NAME};
 use sindri_core::AssetId;
 
 use crate::gather::ProjectExport;
-use crate::{HOST_DIRECTORY, MANIFEST_PATH, page_for};
+use crate::{HOST_DIRECTORY, page_for};
 
 /// What an export produced.
 #[derive(Debug)]
@@ -58,7 +58,7 @@ impl ProjectExport {
         // Beside the hashed directory rather than inside it, because this is
         // the one file a browser must always re-fetch: it is how the browser
         // learns which directory to look in.
-        let manifest_path = root.join(MANIFEST_PATH);
+        let manifest_path = assets_root.join(MANIFEST_FILE_NAME);
         if let Some(parent) = manifest_path.parent() {
             create(parent)?;
         }

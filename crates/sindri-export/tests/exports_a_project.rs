@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use sindri_assets::{AssetKind, AssetManifest};
+use sindri_assets::{AssetKind, AssetManifest, MANIFEST_FILE_NAME};
 use sindri_export::ProjectExport;
 
 /// Gather, which is the one complete project in the repository.
@@ -34,7 +34,7 @@ fn exported(name: &str, base: &str) -> (Scratch, AssetManifest) {
     let scratch = Scratch::new(name);
     let project = ProjectExport::gather(&gather()).expect("Gather gathers");
     project.write(&scratch.0, base).expect("Gather exports");
-    let text = std::fs::read_to_string(scratch.0.join("assets/manifest.json"))
+    let text = std::fs::read_to_string(scratch.0.join("assets").join(MANIFEST_FILE_NAME))
         .expect("a manifest is written");
     let manifest = AssetManifest::from_json(&text).expect("the manifest reads");
     (scratch, manifest)
@@ -94,7 +94,7 @@ fn every_promised_file_is_there_and_is_what_was_promised() {
 #[test]
 fn the_manifest_sits_outside_the_hashed_directory() {
     let (scratch, manifest) = exported("layout", "/");
-    assert!(scratch.0.join("assets/manifest.json").is_file());
+    assert!(scratch.0.join("assets").join(MANIFEST_FILE_NAME).is_file());
     assert!(
         !scratch
             .0

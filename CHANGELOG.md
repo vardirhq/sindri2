@@ -14,7 +14,7 @@ All notable changes to Sindri Next will be documented here.
   being used stops being carried, and one that started being used cannot be
   forgotten.
 
-  The layout is what makes caching safe: `assets/manifest.json` is small and
+  The layout is what makes caching safe: `assets/sindri.manifest.json` is small and
   must never be cached, and it names an `assets/<content hash>/` directory that
   can be cached for ever. A changed asset cannot land in a directory anyone has
   already cached, and an unchanged build keeps its name so a re-deploy
