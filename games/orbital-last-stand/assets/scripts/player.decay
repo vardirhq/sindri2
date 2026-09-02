@@ -1,0 +1,156 @@
+// The ship. Moves on the keyboard or towards the pointer, and fires itself at
+// whatever is nearest — the reference game aims for you, and a twin-stick
+// control the phone cannot offer would be a control the phone cannot offer.
+script Player {
+    @export let bullet: Prefab;
+    @export let arena: f32 = 8.0;
+    @export let invulnerable_for: f32 = 0.9;
+    /// How much world the camera frames from top to bottom.
+    @export let view_height: f32 = 18.0;
+
+    // Found by the name the scene gave them. An entity cannot be an
+    // authored property — a runtime handle is not a scene ID and
+    // `docs/scripting.md` says why — so a script that needs to name
+    // another entity looks it up once and keeps it.
+    var hurt: Entity = null;
+
+
+    var cooldown: f32 = 0.0;
+    var mercy: f32 = 0.0;
+    var was_hit: f32 = 0.0;
+
+    fn start() {
+        this.hurt = World.find("PlayerHurt");
+    }
+
+    fn update(dt: f32) {
+        if Game.get("player_reset", 0.0) > 0.0 {
+            Game.set("player_reset", 0.0);
+            this.transform.position.x = 0.0;
+            this.transform.position.y = 0.0;
+            this.mercy = 0.0;
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+        }
+        if Game.get("run_state", 0.0) != 1.0 {
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+            return;
+        }
+
+        move(dt);
+        take_hits();
+        shoot(dt);
+
+        if this.mercy > 0.0 {
+            this.mercy -= dt;
+            // Blinking while it cannot be hurt, so the rule is visible rather
+            // than something the player has to infer from not dying.
+            this.sprite.tint.a = 0.45;
+        } else {
+            this.sprite.tint.a = 1.0;
+        }
+    }
+
+    fn move(dt: f32) {
+        let speed = Game.get("move_speed", 5.2);
+        var dx: f32 = Input.axis("A", "D") + Input.axis("ArrowLeft", "ArrowRight");
+        var dy: f32 = Input.axis("S", "W") + Input.axis("ArrowDown", "ArrowUp");
+
+        // A held pointer steers, which is the whole of the touch control: the
+        // ship goes where the finger is and stops when it gets there. The four
+        // pixels of deadzone are the game's tuning, not the engine's.
+        if dx == 0.0 && dy == 0.0 && Pointer.inside && Pointer.is_down("Left") && !Pointer.over_ui {
+            // The overlay is two tall; this camera frames `view_height` world
+            // units over the same span, so the conversion is a multiplication
+            // the game owns because the game authored the camera.
+            let half = this.view_height * 0.5;
+            let to_x = Pointer.overlay_x * half - this.transform.position.x;
+            let to_y = Pointer.overlay_y * half - this.transform.position.y;
+            let far = sqrt(to_x * to_x + to_y * to_y);
+            if far > 0.12 {
+                dx = to_x / far;
+                dy = to_y / far;
+            }
+        }
+
+        let length = sqrt(dx * dx + dy * dy);
+        if length > 1.0 {
+            dx /= length;
+            dy /= length;
+        }
+        Physics.set_velocity(this.entity, dx * speed, dy * speed);
+
+        // The arena is a circle, so the wall is one too.
+        let x = this.transform.position.x;
+        let y = this.transform.position.y;
+        let out = sqrt(x * x + y * y);
+        if out > this.arena {
+            this.transform.position.x = x / out * this.arena;
+            this.transform.position.y = y / out * this.arena;
+        }
+    }
+
+    // The enemy that touched the ship reports what it costs, because a charger
+    // costs more than a drifter and only the charger knows that. It arrives on
+    // the board rather than through the collision, since an event names the
+    // other half of a pair and not what that half is worth.
+    fn take_hits() {
+        let damage = Game.get("player_damage_taken", 0.0);
+        if damage > 0.0 {
+            Game.set("player_damage_taken", 0.0);
+            if this.mercy <= 0.0 {
+                Game.set("hp", Game.get("hp", 1.0) - damage);
+                this.mercy = this.invulnerable_for;
+                Effects.burst(this.hurt);
+                Audio.play("audio/hurt.wav", 0.5);
+            }
+        }
+    }
+
+    fn shoot(dt: f32) {
+        this.cooldown -= dt;
+        if this.cooldown > 0.0 {
+            return;
+        }
+        let target = nearest();
+        if target == null {
+            return;
+        }
+        this.cooldown = Game.get("fire_gap", 0.42);
+
+        let to_x = target.transform.position.x - this.transform.position.x;
+        let to_y = target.transform.position.y - this.transform.position.y;
+        let far = sqrt(to_x * to_x + to_y * to_y);
+        if far <= 0.0 {
+            return;
+        }
+
+        let shot = World.spawn(this.bullet);
+        shot.transform.position.x = this.transform.position.x;
+        shot.transform.position.y = this.transform.position.y;
+        World.set_property(shot, "dir_x", to_x / far);
+        World.set_property(shot, "dir_y", to_y / far);
+        World.set_property(shot, "damage", Game.get("damage", 1.0));
+        World.set_property(shot, "pierce", Game.get("pierce", 0.0));
+        Audio.play("audio/shot.wav", 0.18);
+    }
+
+    // Asked once a frame and held, because one call walks every entity in the
+    // world and asking per bullet would be quadratic.
+    fn nearest() -> Entity {
+        var best: Entity = null;
+        var best_distance: f32 = 0.0;
+        for enemy in World.with_tag("enemy") {
+            if !World.exists(enemy) {
+                continue;
+            }
+            let dx = enemy.transform.position.x - this.transform.position.x;
+            let dy = enemy.transform.position.y - this.transform.position.y;
+            let distance = dx * dx + dy * dy;
+            if best == null || distance < best_distance {
+                best = enemy;
+                best_distance = distance;
+            }
+        }
+        return best;
+    }
+}

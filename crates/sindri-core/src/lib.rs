@@ -33,7 +33,9 @@ pub use engine::{EngineCore, EngineError, EngineFrame};
 pub use entity::EntityId;
 pub use lifecycle::{EngineLifecycle, EngineState, LifecycleError};
 pub use migration::{SceneMigrationError, SceneMigrationStep, SceneMigrator};
-pub use prefab::{PREFAB_FORMAT_VERSION, PrefabDocument, PrefabError, PrefabJsonError};
+pub use prefab::{
+    PREFAB_FORMAT_VERSION, PREFAB_SUFFIX, PrefabDocument, PrefabError, PrefabJsonError,
+};
 pub use random::Rng;
 pub use save::{SAVE_FORMAT_VERSION, SaveDocument, SaveReadError, SaveState, SaveStore, SaveValue};
 pub use scene::{

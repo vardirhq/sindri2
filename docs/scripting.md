@@ -124,6 +124,8 @@ table above lists, reaching the same numbers.
 | `World.set_parent(entity, parent)` | nothing |
 | `World.set_property(entity, name, value)` | nothing |
 | `World.with_tag(tag)` | `Array<Entity>` |
+| `World.set_active(entity, on)` | nothing |
+| `World.is_active(entity)` | `bool` |
 
 An `Entity` is opaque. A script can hold one in a `var` or a field, pass it,
 compare it, and reach through it to the same transform and sprite paths it
@@ -568,9 +570,16 @@ it is. Both are answers about *this* frame, computed before any script ran.
 **A disabled entity is not hit-tested**, and neither is anything under a
 disabled parent — `World.is_active` already governs a subtree. That is also all
 a *screen* is: a menu, a pause overlay and a HUD are entities with children, and
-showing one is switching it on. There is no screen stack, because the engine
-already had the mechanism and a second one would be a second answer to the same
-question.
+showing one is `World.set_active(this.menu, false)`. There is no screen stack,
+because the engine already had the mechanism and a second one would be a second
+answer to the same question.
+
+The switch is written on the entity named and not down through its children,
+which is what makes switching a screen back on restore the entries that were
+off on their own account — a locked menu row stays locked. `is_active` answers
+the same question the engine asks before drawing or stepping anything: false
+for an entity switched off, for anything under one, and for a handle the world
+no longer holds.
 
 **When elements overlap, the top one takes the click** — highest layer first,
 which is the order the overlay draws in. A modal is a modal because it is on a
@@ -774,6 +783,8 @@ operating system's key repeat is not a second press.
 | --- | --- |
 | `Pointer.x` | `f32` |
 | `Pointer.y` | `f32` |
+| `Pointer.overlay_x` | `f32` |
+| `Pointer.overlay_y` | `f32` |
 | `Pointer.inside` | `bool` |
 | `Pointer.over_ui` | `bool` |
 
@@ -835,6 +846,26 @@ viewport**, which is the same thing on every host: the window on native and in
 the browser, and the Game view's own rectangle in the editor. A script reading
 `Pointer.x` gets the same meaning in editor Play as in the real build, which is
 what makes playtesting in the editor worth anything.
+
+**`overlay_x` and `overlay_y` are the same point in the overlay's units** — two
+tall, centred on the origin, running out to the aspect ratio either side. They
+exist because `x` and `y` are viewport *pixels*, and how many pixels tall a
+window is is not something a scene knows: a script could say where the pointer
+was on the screen and not what it was pointing at.
+
+They stop at the overlay rather than going on to the world, because going on
+means a camera, and a script that could ask a camera anything would be a script
+the renderer answers to. A scene authored its own camera and knows how much
+world it frames, so the conversion is a multiplication the game owns:
+
+```rust
+// The camera frames `view_height` world units from top to bottom.
+let world_x = Pointer.overlay_x * this.view_height * 0.5;
+let world_y = Pointer.overlay_y * this.view_height * 0.5;
+```
+
+A host laying out no UI has no overlay, and these read zero for the same reason
+a position read while the pointer is outside does.
 
 `Touch` is the raw fingers, for a game that wants more than "where is the person
 pointing" — a second finger, or a pinch. `Touch.count` is how many are down, and

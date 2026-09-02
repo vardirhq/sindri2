@@ -1,0 +1,41 @@
+// What the run came to, and the only place a best score is read.
+script Result {
+
+    // Found by the name the scene gave them. An entity cannot be an
+    // authored property — a runtime handle is not a scene ID and
+    // `docs/scripting.md` says why — so a script that needs to name
+    // another entity looks it up once and keeps it.
+    var score: Entity = null;
+    var best: Entity = null;
+    var kills: Entity = null;
+    var survived: Entity = null;
+
+
+    var shown: bool = false;
+
+    fn start() {
+        this.score = World.find("ResultScore");
+        this.best = World.find("ResultBest");
+        this.kills = World.find("ResultKills");
+        this.survived = World.find("ResultTime");
+    }
+
+    fn update(dt: f32) {
+        let over = Game.get("run_state", 0.0) == 4.0;
+        if !over {
+            this.shown = false;
+            return;
+        }
+        if this.shown {
+            return;
+        }
+        this.shown = true;
+
+        Ui.set_number(this.score, Game.get("score", 0.0));
+        Ui.set_number(this.kills, Game.get("kills", 0.0));
+        Ui.set_number(this.best, Save.number("best_score", 0.0));
+        let elapsed = Game.get("elapsed", 0.0);
+        let minutes = (elapsed - elapsed % 60.0) / 60.0;
+        Ui.set_numbers(this.survived, minutes, elapsed % 60.0);
+    }
+}

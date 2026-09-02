@@ -1,0 +1,174 @@
+// The Warden: three phases, each a different problem.
+//
+//   1  ring volleys from a distance   — above two thirds health
+//   2  charges, and fires while it moves — above one third
+//   3  both, faster, and it summons    — below one third
+//
+// The phases are health thresholds rather than a timer, so a player who does
+// more damage sees the fight change sooner. That is what makes it a fight
+// rather than a wait.
+script Warden {
+    @export let health: f32 = 120.0;
+    @export let worth: f32 = 40.0;
+    @export let touch_damage: f32 = 2.0;
+    @export let ring_shots: f32 = 12.0;
+    @export let volley_gap: f32 = 2.4;
+    @export let approach: f32 = 0.9;
+    @export let dash_speed: f32 = 7.0;
+    @export let shot: Prefab;
+    @export let minion: Prefab;
+    @export let core: Prefab;
+
+    var hp: f32 = 0.0;
+    var phase: f32 = 1.0;
+    var until_volley: f32 = 0.0;
+    var until_summon: f32 = 0.0;
+    var dash_timer: f32 = 0.0;
+
+    fn start() {
+        this.hp = this.health;
+        this.until_volley = 1.2;
+        this.until_summon = 6.0;
+        Game.set("boss_max", this.health);
+        Game.set("boss_hp", this.health);
+    }
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 1.0 {
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+            return;
+        }
+        let player = World.find("Player");
+        if player == null {
+            return;
+        }
+
+        let share = this.hp / this.health;
+        if share <= 0.34 {
+            this.phase = 3.0;
+        } else if share <= 0.67 {
+            this.phase = 2.0;
+        } else {
+            this.phase = 1.0;
+        }
+        // Reddening as it goes, so the phase is legible without a label.
+        this.sprite.tint.g = 0.35 + share * 0.65;
+        this.sprite.tint.b = 0.35 + share * 0.65;
+
+        let dx = player.transform.position.x - this.transform.position.x;
+        let dy = player.transform.position.y - this.transform.position.y;
+        let far = sqrt(dx * dx + dy * dy);
+
+        if this.phase == 1.0 {
+            // Keeps its distance and shoots: a ranged problem.
+            hold_at(dx, dy, far, 6.5);
+        } else {
+            this.dash_timer -= dt;
+            if this.dash_timer <= 0.0 && far > 0.001 {
+                Physics.set_velocity(this.entity, dx / far * this.dash_speed,
+                                     dy / far * this.dash_speed);
+                this.dash_timer = 2.2;
+            } else if far > 0.001 {
+                Physics.set_velocity(this.entity, dx / far * this.approach,
+                                     dy / far * this.approach);
+            }
+        }
+
+        this.until_volley -= dt;
+        if this.until_volley <= 0.0 {
+            fire_ring();
+            let quicker = 1.0;
+            if this.phase == 3.0 {
+                this.until_volley = this.volley_gap * 0.5;
+            } else if this.phase == 2.0 {
+                this.until_volley = this.volley_gap * 0.75;
+            } else {
+                this.until_volley = this.volley_gap * quicker;
+            }
+        }
+
+        if this.phase == 3.0 {
+            this.until_summon -= dt;
+            if this.until_summon <= 0.0 {
+                summon();
+                this.until_summon = 7.0;
+            }
+        }
+
+        for hit in Physics.sensor_entered() {
+            if hit == player {
+                Game.set("player_damage_taken",
+                         Game.get("player_damage_taken", 0.0) + this.touch_damage);
+                continue;
+            }
+            this.hp -= Game.get("damage", 1.0);
+        }
+        Game.set("boss_hp", max(this.hp, 0.0));
+        if this.hp <= 0.0 {
+            die();
+        }
+    }
+
+    fn hold_at(dx: f32, dy: f32, far: f32, want: f32) {
+        if far <= 0.001 {
+            return;
+        }
+        var pace: f32 = this.approach;
+        if far < want {
+            pace = -this.approach;
+        }
+        Physics.set_velocity(this.entity, dx / far * pace, dy / far * pace);
+    }
+
+    // A ring rather than an aimed shot: it fills the space instead of asking
+    // the player to dodge one line, and it is the pattern a bullet-hell reads.
+    fn fire_ring() {
+        var made: f32 = 0.0;
+        var count: f32 = this.ring_shots;
+        if this.phase == 3.0 {
+            count = this.ring_shots * 1.5;
+        }
+        Audio.play("audio/boss.wav", 0.4);
+        while made < count {
+            let angle = made / count * 6.2831853 + Random.range(0.0, 0.35);
+            let bolt = World.spawn(this.shot);
+            bolt.transform.position.x = this.transform.position.x + cos(angle) * 0.8;
+            bolt.transform.position.y = this.transform.position.y + sin(angle) * 0.8;
+            World.set_property(bolt, "dir_x", cos(angle));
+            World.set_property(bolt, "dir_y", sin(angle));
+            made += 1.0;
+        }
+    }
+
+    fn summon() {
+        var made: f32 = 0.0;
+        while made < 3.0 {
+            let angle = Random.range(0.0, 6.2831853);
+            let helper = World.spawn(this.minion);
+            helper.transform.position.x = this.transform.position.x + cos(angle) * 2.0;
+            helper.transform.position.y = this.transform.position.y + sin(angle) * 2.0;
+            made += 1.0;
+        }
+    }
+
+    fn die() {
+        Effects.burst(this.entity);
+        Audio.play("audio/kill.wav", 0.6);
+        Game.set("kills", Game.get("kills", 0.0) + 1.0);
+        Game.set("score", Game.get("score", 0.0) + this.worth * 10.0);
+        Game.set("boss_hp", 0.0);
+        Game.set("boss_max", 0.0);
+        Save.set_flag("beat_warden", true);
+
+        var made: f32 = 0.0;
+        while made < 8.0 {
+            let angle = made / 8.0 * 6.2831853;
+            let drop = World.spawn(this.core);
+            drop.transform.position.x = this.transform.position.x + cos(angle) * 1.2;
+            drop.transform.position.y = this.transform.position.y + sin(angle) * 1.2;
+            World.set_property(drop, "worth", 5.0);
+            made += 1.0;
+        }
+        World.despawn(this.entity);
+    }
+}

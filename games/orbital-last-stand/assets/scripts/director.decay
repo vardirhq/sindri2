@@ -1,0 +1,216 @@
+// The run itself: what state it is in, what is spawning, and when it ends.
+//
+// Every other script asks this one what is happening by reading "run_state"
+// off the shared board rather than being told, because a script that has to be
+// told is a script the director has to keep a list of.
+//
+//   0  the title screen        3  paused
+//   1  playing                 4  over
+//   2  choosing an upgrade
+script Director {
+
+    @export let drifter: Prefab;
+    @export let charger: Prefab;
+    @export let splitter: Prefab;
+    @export let warden: Prefab;
+
+    // The shape of the ten minutes. A wave every `wave_gap` seconds, each one
+    // bigger than the last, with the boss at `boss_at` and the run ending when
+    // it dies or the player does.
+    @export let wave_gap: f32 = 6.0;
+    @export let boss_at: f32 = 180.0;
+    @export let arena: f32 = 7.5;
+
+    // Found by the name the scene gave them. An entity cannot be an
+    // authored property — a runtime handle is not a scene ID and
+    // `docs/scripting.md` says why — so a script that needs to name
+    // another entity looks it up once and keeps it.
+    var title: Entity = null;
+    var hud: Entity = null;
+    var pause_screen: Entity = null;
+    var result_screen: Entity = null;
+
+
+    var elapsed: f32 = 0.0;
+    var next_wave: f32 = 0.0;
+    var wave: f32 = 0.0;
+    var boss_sent: bool = false;
+    var was_state: f32 = -1.0;
+
+    fn start() {
+        this.title = World.find("Title");
+        this.hud = World.find("Hud");
+        this.pause_screen = World.find("Pause");
+        this.result_screen = World.find("Result");
+        Game.set("run_state", 0.0);
+        show_only_title();
+    }
+
+    fn show_only_title() {
+        World.set_active(this.title, true);
+        World.set_active(this.hud, false);
+        World.set_active(this.pause_screen, false);
+        World.set_active(this.result_screen, false);
+    }
+
+    // A run starts from a seed so it can be replayed, and the seed is the one
+    // thing about a run worth storing: the numbers it produces are not.
+    fn begin() {
+        let seed = Save.number("runs", 0.0) + 1.0;
+        Save.set_number("runs", seed);
+        Random.seed(seed);
+
+        this.elapsed = 0.0;
+        this.next_wave = 1.0;
+        this.wave = 0.0;
+        this.boss_sent = false;
+
+        Game.set("score", 0.0);
+        Game.set("kills", 0.0);
+        Game.set("cores", 0.0);
+        Game.set("level", 1.0);
+        Game.set("next_level", 4.0);
+        Game.set("wave", 0.0);
+        Game.set("elapsed", 0.0);
+        Game.set("boss_hp", 0.0);
+        Game.set("boss_max", 0.0);
+        Game.set("damage", 1.0);
+        Game.set("fire_gap", 0.42);
+        Game.set("move_speed", 5.2);
+        Game.set("magnet", 2.2);
+        Game.set("pierce", 0.0);
+        Game.set("max_hp", 5.0);
+        Game.set("hp", 5.0);
+        Game.set("player_reset", 1.0);
+
+        clear_tag("enemy");
+        clear_tag("bullet");
+        clear_tag("core");
+        clear_tag("hostile_shot");
+
+        World.set_active(this.title, false);
+        World.set_active(this.hud, true);
+        World.set_active(this.result_screen, false);
+        Game.set("run_state", 1.0);
+    }
+
+    fn clear_tag(tag: String) {
+        for entity in World.with_tag(tag) {
+            World.despawn(entity);
+        }
+    }
+
+    fn update(dt: f32) {
+        let state = Game.get("run_state", 0.0);
+        if state != this.was_state {
+            this.was_state = state;
+            World.set_active(this.pause_screen, state == 3.0);
+            World.set_active(this.result_screen, state == 4.0);
+        }
+
+        if state == 0.0 {
+            if Game.get("request_start", 0.0) > 0.0 {
+                Game.set("request_start", 0.0);
+                begin();
+            }
+            return;
+        }
+        if state == 4.0 {
+            if Game.get("request_start", 0.0) > 0.0 {
+                Game.set("request_start", 0.0);
+                begin();
+            }
+            return;
+        }
+
+        // Pause is the player's, so it is read in every state a run can be
+        // paused from and in no state it cannot.
+        if Input.just_pressed("Escape") {
+            if state == 1.0 {
+                Game.set("run_state", 3.0);
+            } else if state == 3.0 {
+                Game.set("run_state", 1.0);
+            }
+        }
+        if state != 1.0 {
+            return;
+        }
+
+        if Game.get("hp", 1.0) <= 0.0 {
+            end_run();
+            return;
+        }
+
+        this.elapsed += dt;
+        Game.set("elapsed", this.elapsed);
+
+        // Enough cores buys a choice, and the choice is what pauses the run.
+        if Game.get("cores", 0.0) >= Game.get("next_level", 4.0) {
+            let level = Game.get("level", 1.0) + 1.0;
+            Game.set("level", level);
+            Game.set("next_level", Game.get("next_level", 4.0) + 3.0 + level);
+            Game.set("run_state", 2.0);
+            return;
+        }
+
+        if !this.boss_sent && this.elapsed >= this.boss_at {
+            this.boss_sent = true;
+            send_boss();
+        }
+
+        this.next_wave -= dt;
+        if this.next_wave <= 0.0 {
+            this.wave += 1.0;
+            Game.set("wave", this.wave);
+            send_wave(this.wave);
+            // Waves come closer together as the run goes on, down to a floor
+            // that keeps the late game dense rather than impossible.
+            this.next_wave = max(1.6, this.wave_gap - this.wave * 0.12);
+        }
+    }
+
+    fn end_run() {
+        Game.set("run_state", 4.0);
+        let score = Game.get("score", 0.0);
+        if score > Save.number("best_score", 0.0) {
+            Save.set_number("best_score", score);
+        }
+        Save.set_number("total_kills", Save.number("total_kills", 0.0) + Game.get("kills", 0.0));
+        clear_tag("enemy");
+        clear_tag("hostile_shot");
+    }
+
+    // Three behaviours, mixed by how far the run has got. A drifter is the
+    // whole of the first minute; chargers arrive next; splitters last.
+    fn send_wave(wave: f32) {
+        let budget = min(3.0 + wave * 1.4, 34.0);
+        var made: f32 = 0.0;
+        while made < budget {
+            let roll = Random.value();
+            if wave >= 8.0 && roll > 0.82 {
+                place(World.spawn(this.splitter));
+            } else if wave >= 4.0 && roll > 0.55 {
+                place(World.spawn(this.charger));
+            } else {
+                place(World.spawn(this.drifter));
+            }
+            made += 1.0;
+        }
+    }
+
+    fn send_boss() {
+        let boss = World.spawn(this.warden);
+        boss.transform.position.x = 0.0;
+        boss.transform.position.y = this.arena;
+        Game.set("boss_max", 120.0);
+        Game.set("boss_hp", 120.0);
+    }
+
+    // Around the edge rather than on top of the player, which is the one place
+    // an enemy appearing is unfair rather than difficult.
+    fn place(enemy: Entity) {
+        let angle = Random.range(0.0, 6.2831853);
+        enemy.transform.position.x = cos(angle) * this.arena;
+        enemy.transform.position.y = sin(angle) * this.arena;
+    }
+}

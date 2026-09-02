@@ -103,6 +103,18 @@ impl Session {
         }
     }
 
+    /// The prefabs this project's scripts can spawn.
+    ///
+    /// A build had no way to be given any, so `World.spawn` in a shipped game
+    /// answered that the prefab was missing while the same scene spawned
+    /// correctly in the editor. A project whose enemies are prefabs is every
+    /// project that spawns anything.
+    #[must_use]
+    pub fn with_prefabs(mut self, prefabs: PrefabSources) -> Self {
+        self.prefabs = prefabs;
+        self
+    }
+
     /// One fixed step: the scripts run, then the animations move.
     pub fn step(
         &mut self,

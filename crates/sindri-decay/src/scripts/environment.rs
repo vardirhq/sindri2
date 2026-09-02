@@ -135,8 +135,11 @@ pub(super) fn add_world_surface(environment: &mut Environment) {
                 params: match call {
                     WorldCall::Find | WorldCall::WithTag => vec![Type::String],
                     WorldCall::Spawn => vec![Type::Named(PREFAB.to_owned())],
-                    WorldCall::Despawn | WorldCall::Exists => {
+                    WorldCall::Despawn | WorldCall::Exists | WorldCall::IsActive => {
                         vec![Type::Named(ENTITY.to_owned())]
+                    }
+                    WorldCall::SetActive => {
+                        vec![Type::Named(ENTITY.to_owned()), Type::Bool]
                     }
                     WorldCall::SetParent => vec![
                         Type::Named(ENTITY.to_owned()),
@@ -153,10 +156,11 @@ pub(super) fn add_world_surface(environment: &mut Environment) {
                 return_type: match call {
                     WorldCall::Find | WorldCall::Spawn => Type::Named(ENTITY.to_owned()),
                     WorldCall::WithTag => Type::array_of(Type::Named(ENTITY.to_owned())),
-                    WorldCall::Despawn | WorldCall::SetParent | WorldCall::SetProperty => {
-                        Type::Unit
-                    }
-                    WorldCall::Exists => Type::Bool,
+                    WorldCall::Despawn
+                    | WorldCall::SetParent
+                    | WorldCall::SetProperty
+                    | WorldCall::SetActive => Type::Unit,
+                    WorldCall::Exists | WorldCall::IsActive => Type::Bool,
                 },
             },
         );
@@ -172,7 +176,10 @@ pub(super) fn add_pointer_surface(environment: &mut Environment) {
         pointer = pointer.with_value(
             *name,
             match value {
-                PointerValue::X | PointerValue::Y => Type::F32,
+                PointerValue::X
+                | PointerValue::Y
+                | PointerValue::OverlayX
+                | PointerValue::OverlayY => Type::F32,
                 PointerValue::Inside | PointerValue::OverUi => Type::Bool,
             },
         );

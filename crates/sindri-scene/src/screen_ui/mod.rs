@@ -81,6 +81,14 @@ pub struct ScreenUi {
     pressing: Option<EntityId>,
     /// The button a click completed on this frame.
     clicked: Option<EntityId>,
+    /// Where the pointer is, in the overlay's own units.
+    ///
+    /// Computed here because this is where it is already computed: hit-testing
+    /// a button needs the pointer in the space the buttons are laid out in. A
+    /// gameplay script aiming at a point in the world needs the same number,
+    /// and had no way to get it — `Pointer.x` is viewport pixels, and how many
+    /// pixels tall the window is is not something the scene knows.
+    pointer_overlay: Option<[f32; 2]>,
 }
 
 /// One element's box, and how it sorts against the others.
@@ -113,6 +121,18 @@ impl ScreenUi {
         self.rects = placements;
         self.read_pointer(extent, pointer);
         Ok(())
+    }
+
+    /// Where the pointer is in overlay units, or `None` when it is not over
+    /// the viewport at all.
+    ///
+    /// The overlay is two tall and centred on the origin, running out to the
+    /// aspect ratio either side — so a scene that authored its camera knows
+    /// what these numbers are worth in world units, and the engine does not
+    /// have to guess at a camera on a script's behalf.
+    #[must_use]
+    pub const fn pointer_overlay(&self) -> Option<[f32; 2]> {
+        self.pointer_overlay
     }
 
     /// The topmost pressable element under the pointer, if any.
@@ -253,9 +273,11 @@ impl ScreenUi {
     /// Hover and click, from where the pointer is and what it is doing.
     fn read_pointer(&mut self, extent: ScreenExtent, pointer: PointerFrame) {
         self.clicked = None;
-        self.hovered = pointer
+        self.pointer_overlay = pointer
             .position
-            .and_then(|position| extent.pointer(position))
+            .and_then(|position| extent.pointer(position));
+        self.hovered = self
+            .pointer_overlay
             .and_then(|point| self.topmost_at(point));
 
         if pointer.pressed {

@@ -10,17 +10,18 @@ use std::collections::BTreeMap;
 use sindri_assets::{
     AssetDecoder, AssetKind, AssetLoadOutcome, AssetLoadQueueConfig, AssetLoader, AssetManifest,
     AudioAsset, AudioAssetDecoder, FetchAssetSource, FontAsset, FontAssetDecoder,
-    MANIFEST_FILE_NAME, SceneAssetDecoder, SpriteSheetAssetDecoder, TextAssetDecoder, TextureAsset,
-    TextureAssetDecoder,
+    MANIFEST_FILE_NAME, PrefabAssetDecoder, SceneAssetDecoder, SpriteSheetAssetDecoder,
+    TextAssetDecoder, TextureAsset, TextureAssetDecoder,
 };
 use sindri_core::{AssetId, SceneDocument, SpriteSheetDocument};
-use sindri_decay::ScriptSources;
+use sindri_decay::{PrefabSources, ScriptSources};
 
 use crate::error::GatherError;
 
 pub(super) struct BrowserProjectAssets {
     pub(super) scene: SceneDocument,
     pub(super) scripts: ScriptSources,
+    pub(super) prefabs: PrefabSources,
     pub(super) textures: Vec<(AssetId, TextureAsset)>,
     pub(super) fonts: Vec<(AssetId, FontAsset)>,
     pub(super) audio: Vec<(AssetId, AudioAsset)>,
@@ -83,6 +84,7 @@ pub(super) struct ProjectLoaders {
     fonts: AssetLoader<FontAssetDecoder>,
     audio: AssetLoader<AudioAssetDecoder>,
     sheets: AssetLoader<SpriteSheetAssetDecoder>,
+    prefabs: AssetLoader<PrefabAssetDecoder>,
     /// Kept, because what was asked for is also what has to be collected.
     manifest: AssetManifest,
 }
@@ -110,8 +112,10 @@ impl ProjectLoaders {
             .with_manifest(manifest.clone());
         let mut audio = AssetLoader::new(source.clone(), config, AudioAssetDecoder)?
             .with_manifest(manifest.clone());
-        let mut sheets = AssetLoader::new(source, config, SpriteSheetAssetDecoder)?
+        let mut sheets = AssetLoader::new(source.clone(), config, SpriteSheetAssetDecoder)?
             .with_manifest(manifest.clone());
+        let mut prefabs =
+            AssetLoader::new(source, config, PrefabAssetDecoder)?.with_manifest(manifest.clone());
 
         // From the manifest rather than from a list compiled into this binary.
         // Those lists were the thing that made a project's host something
@@ -125,10 +129,12 @@ impl ProjectLoaders {
         request_kind(&mut fonts, &manifest, AssetKind::Font)?;
         request_kind(&mut audio, &manifest, AssetKind::Audio)?;
         request_kind(&mut sheets, &manifest, AssetKind::Sheet)?;
+        request_kind(&mut prefabs, &manifest, AssetKind::Prefab)?;
 
         Ok(Self {
             scene,
             scripts,
+            prefabs,
             textures,
             fonts,
             audio,
@@ -144,6 +150,7 @@ impl ProjectLoaders {
         poll_loader(&mut self.fonts)?;
         poll_loader(&mut self.audio)?;
         poll_loader(&mut self.sheets)?;
+        poll_loader(&mut self.prefabs)?;
 
         if self.scene.outstanding()
             + self.scripts.outstanding()
@@ -151,6 +158,7 @@ impl ProjectLoaders {
             + self.fonts.outstanding()
             + self.audio.outstanding()
             + self.sheets.outstanding()
+            + self.prefabs.outstanding()
             != 0
         {
             return Ok(None);
@@ -172,6 +180,11 @@ impl ProjectLoaders {
             let source = loaded(&self.scripts, &id)?;
             scripts.insert(id, source);
         }
+        let mut prefabs = PrefabSources::new();
+        for id in ids(AssetKind::Prefab) {
+            let prefab = loaded(&self.prefabs, &id)?;
+            prefabs.insert(id, prefab);
+        }
         let textures = loaded_many(&self.textures, &ids(AssetKind::Texture))?;
         let fonts = loaded_many(&self.fonts, &ids(AssetKind::Font))?;
         let audio = loaded_many(&self.audio, &ids(AssetKind::Audio))?;
@@ -183,6 +196,7 @@ impl ProjectLoaders {
         Ok(Some(BrowserProjectAssets {
             scene,
             scripts,
+            prefabs,
             textures,
             fonts,
             audio,

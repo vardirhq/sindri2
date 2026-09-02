@@ -17,6 +17,7 @@ members = [
     "examples/triangle",
     "examples/cube",
     "game",
+    "games/orbital-last-stand",
 ]
 # Decay is its own workspace, and a path dependency alone does not keep it that
 # way: cargo makes the path dependencies of a member into members too, which

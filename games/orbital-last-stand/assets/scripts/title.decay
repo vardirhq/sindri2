@@ -1,0 +1,25 @@
+// The title screen, which is the one place a damaged save is worth mentioning:
+// before anything writes over it.
+script Title {
+
+    // Found by the name the scene gave them. An entity cannot be an
+    // authored property — a runtime handle is not a scene ID and
+    // `docs/scripting.md` says why — so a script that needs to name
+    // another entity looks it up once and keeps it.
+    var best: Entity = null;
+    var notice: Entity = null;
+
+
+    fn start() {
+        this.best = World.find("TitleBest");
+        this.notice = World.find("TitleNotice");
+        World.set_active(this.notice, Save.is_damaged());
+    }
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 0.0 {
+            return;
+        }
+        Ui.set_number(this.best, Save.number("best_score", 0.0));
+    }
+}

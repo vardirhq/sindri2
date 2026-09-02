@@ -19,4 +19,6 @@ mod document;
 #[cfg(test)]
 mod tests;
 
-pub use document::{PREFAB_FORMAT_VERSION, PrefabDocument, PrefabError, PrefabJsonError};
+pub use document::{
+    PREFAB_FORMAT_VERSION, PREFAB_SUFFIX, PrefabDocument, PrefabError, PrefabJsonError,
+};

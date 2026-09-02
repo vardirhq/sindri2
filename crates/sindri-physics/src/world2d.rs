@@ -30,6 +30,20 @@ pub struct PhysicsWorld2d {
     backend: r2::PhysicsWorld,
     bodies: HashMap<EntityId, BodyRecord2d>,
     collider_entities: HashMap<r2::ColliderHandle, EntityId>,
+    /// Velocities set on a body that does not exist yet.
+    ///
+    /// A script spawns a bullet and sets its velocity in the same pass — which
+    /// is the shape `docs/scripting.md` documents and the reason spawned
+    /// scripts start in the pass that made them. But a body is built when the
+    /// scene next synchronizes, which is the *following* frame, so the set
+    /// arrived before there was anything to set. Refusing it would make the
+    /// documented shape impossible; dropping it would make a bullet sit still.
+    /// So it is kept, and applied when the body arrives.
+    ///
+    /// Only ever holds entities that were asked about between a spawn and the
+    /// next synchronize: anything still here after that never had a body
+    /// authored, and is discarded by `forget_pending`.
+    pending_velocity: HashMap<EntityId, [f32; 2]>,
 }
 
 impl PhysicsWorld2d {
@@ -41,6 +55,7 @@ impl PhysicsWorld2d {
             backend,
             bodies: HashMap::new(),
             collider_entities: HashMap::new(),
+            pending_velocity: HashMap::new(),
         })
     }
 
@@ -68,7 +83,42 @@ impl PhysicsWorld2d {
             },
         );
         self.collider_entities.insert(collider_handle, entity);
+        // What a script asked for before this existed.
+        if let Some(velocity) = self.pending_velocity.remove(&entity)
+            && matches!(
+                body.kind,
+                RigidBodyKind::Dynamic | RigidBodyKind::KinematicVelocity
+            )
+        {
+            self.backend.bodies[body_handle]
+                .set_linvel(r2::Vector::new(velocity[0], velocity[1]), true);
+        }
         Ok(())
+    }
+
+    /// Remembers a velocity for a body that has not been built yet.
+    ///
+    /// For the one caller that knows the entity is real and authored physics —
+    /// the scripting host, which can see the components on it — and would
+    /// otherwise have to refuse the frame a bullet is spawned on. Everything
+    /// else should use `set_linear_velocity` and hear about a body that is not
+    /// there.
+    pub fn remember_linear_velocity(
+        &mut self,
+        entity: EntityId,
+        velocity: [f32; 2],
+    ) -> Result<(), PhysicsError> {
+        finite2("linear_velocity", velocity)?;
+        self.pending_velocity.insert(entity, velocity);
+        Ok(())
+    }
+
+    /// Drops anything remembered for an entity that never got a body.
+    ///
+    /// Called once a synchronize has had its chance to build them, so a
+    /// mistaken write cannot sit in the map for the rest of the run.
+    pub fn forget_pending(&mut self) {
+        self.pending_velocity.clear();
     }
 
     /// Inserts an entity with no authored rigid-body as static collision

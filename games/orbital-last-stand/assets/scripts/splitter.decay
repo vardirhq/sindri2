@@ -1,0 +1,68 @@
+// Dies into more of itself. The third behaviour, and the one that makes a
+// crowded late run rather than a fast one: killing it costs you space.
+script Splitter {
+    @export let speed: f32 = 1.1;
+    @export let health: f32 = 6.0;
+    @export let worth: f32 = 3.0;
+    @export let shards: f32 = 4.0;
+    @export let touch_damage: f32 = 1.0;
+    @export let shard: Prefab;
+    @export let core: Prefab;
+
+    var hp: f32 = 0.0;
+
+    fn start() {
+        this.hp = this.health;
+    }
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 1.0 {
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+            return;
+        }
+        let player = World.find("Player");
+        if player == null {
+            return;
+        }
+        let dx = player.transform.position.x - this.transform.position.x;
+        let dy = player.transform.position.y - this.transform.position.y;
+        let far = sqrt(dx * dx + dy * dy);
+        if far > 0.001 {
+            Physics.set_velocity(this.entity, dx / far * this.speed, dy / far * this.speed);
+        }
+
+        for hit in Physics.sensor_entered() {
+            if hit == player {
+                Game.set("player_damage_taken",
+                         Game.get("player_damage_taken", 0.0) + this.touch_damage);
+                continue;
+            }
+            this.hp -= Game.get("damage", 1.0);
+        }
+        if this.hp <= 0.0 {
+            die();
+        }
+    }
+
+    fn die() {
+        Effects.burst(this.entity);
+        Audio.play("audio/kill.wav", 0.34);
+        Game.set("kills", Game.get("kills", 0.0) + 1.0);
+        Game.set("score", Game.get("score", 0.0) + this.worth * 10.0);
+
+        var made: f32 = 0.0;
+        while made < this.shards {
+            let angle = made / this.shards * 6.2831853;
+            let piece = World.spawn(this.shard);
+            piece.transform.position.x = this.transform.position.x + cos(angle) * 0.5;
+            piece.transform.position.y = this.transform.position.y + sin(angle) * 0.5;
+            made += 1.0;
+        }
+
+        let drop = World.spawn(this.core);
+        drop.transform.position.x = this.transform.position.x;
+        drop.transform.position.y = this.transform.position.y;
+        World.set_property(drop, "worth", this.worth);
+        World.despawn(this.entity);
+    }
+}

@@ -12,6 +12,13 @@ use sindri_physics::PhysicsEventKind;
 
 use crate::surface::PhysicsCall;
 
+/// The component that says an entity takes part in physics.
+///
+/// Spelled here because this is the engine, not a script: `docs/scripting.md`
+/// keeps component names out of Decay, and a host asking what an entity is made
+/// of is the reason it can.
+const COLLIDER: &str = "sindri.physics2d.collider";
+
 use super::WorldHost;
 use super::convert::number;
 
@@ -26,6 +33,14 @@ impl WorldHost<'_> {
             return self.physics_events(call, path);
         }
         let entity = self.entity_argument(path, args, 0, "the body")?;
+        // Whether the entity authored physics at all, asked before the physics
+        // world is borrowed. A body that is authored but not yet built is the
+        // ordinary case on the frame a prefab was spawned, and it is the only
+        // case a set is allowed to arrive early for.
+        let authored = self
+            .world
+            .get(entity)
+            .is_some_and(|data| data.components.contains_key(COLLIDER));
         let Some(physics) = self.physics.as_mut() else {
             return Err(no_physics(path));
         };
@@ -51,7 +66,18 @@ impl WorldHost<'_> {
                 #[allow(clippy::cast_possible_truncation)]
                 let value = [x as f32, y as f32];
                 let outcome = if matches!(call, PhysicsCall::SetVelocity) {
-                    physics.world.set_linear_velocity(entity, value)
+                    match physics.world.set_linear_velocity(entity, value) {
+                        // Spawned this pass: the body is built when the scene
+                        // next synchronizes, and this is what it starts with.
+                        // Without this a bullet could not be aimed on the frame
+                        // it was fired, which is the shape `docs/scripting.md`
+                        // documents and the reason a spawned script starts in
+                        // the pass that made it.
+                        Err(sindri_physics::PhysicsError::MissingEntity(_)) if authored => {
+                            physics.world.remember_linear_velocity(entity, value)
+                        }
+                        other => other,
+                    }
                 } else {
                     physics.world.apply_impulse(entity, value)
                 };

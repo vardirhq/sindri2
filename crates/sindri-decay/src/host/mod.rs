@@ -423,6 +423,20 @@ impl<'a> WorldHost<'a> {
             ),
             PointerValue::X => Value::Number(f64::from(position.unwrap_or([0.0, 0.0])[0])),
             PointerValue::Y => Value::Number(f64::from(position.unwrap_or([0.0, 0.0])[1])),
+            // Zero with no screen UI running, for the same reason a position
+            // read while the pointer is outside reads zero: the overlay is
+            // where the UI is laid out, and a host laying out none has no
+            // overlay to answer about. A script that cares asks `inside`.
+            PointerValue::OverlayX => Value::Number(f64::from(
+                self.screen_ui
+                    .and_then(sindri_scene::ScreenUi::pointer_overlay)
+                    .unwrap_or([0.0, 0.0])[0],
+            )),
+            PointerValue::OverlayY => Value::Number(f64::from(
+                self.screen_ui
+                    .and_then(sindri_scene::ScreenUi::pointer_overlay)
+                    .unwrap_or([0.0, 0.0])[1],
+            )),
         }
     }
 

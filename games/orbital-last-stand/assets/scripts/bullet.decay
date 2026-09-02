@@ -1,0 +1,40 @@
+// What the ship fires. It carries its own damage rather than reading it when
+// it lands, so an upgrade taken mid-flight does not retroactively change a shot
+// already in the air.
+script Bullet {
+    @export let speed: f32 = 9.0;
+    @export let life: f32 = 1.6;
+    @export let dir_x: f32 = 0.0;
+    @export let dir_y: f32 = 1.0;
+    @export let damage: f32 = 1.0;
+    @export let pierce: f32 = 0.0;
+
+    var age: f32 = 0.0;
+    var spent: f32 = 0.0;
+
+    fn start() {
+        Physics.set_velocity(this.entity, this.dir_x * this.speed, this.dir_y * this.speed);
+    }
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 1.0 {
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+            return;
+        }
+        this.age += dt;
+        if this.age >= this.life {
+            World.despawn(this.entity);
+            return;
+        }
+
+        // Started, not touching: a piercing shot hits each target once without
+        // keeping a list of what it has already hit.
+        for hit in Physics.sensor_entered() {
+            this.spent += 1.0;
+            Effects.burst(this.entity);
+        }
+        if this.spent > this.pierce {
+            World.despawn(this.entity);
+        }
+    }
+}

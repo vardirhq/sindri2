@@ -1,0 +1,19 @@
+format_version = 1
+
+[project]
+name = "Orbital Last Stand"
+main_scene = "assets/orbital.scene.json"
+
+# What the scene does not name. Every clip below is played by a script at the
+# moment it happens — `Audio.play("audio/kill.wav", 0.3)` is a string inside a
+# program, and no walk of a scene can see one.
+[assets]
+include = [
+  "audio/shot.wav",
+  "audio/kill.wav",
+  "audio/core.wav",
+  "audio/hurt.wav",
+  "audio/click.wav",
+  "audio/upgrade.wav",
+  "audio/boss.wav",
+]
