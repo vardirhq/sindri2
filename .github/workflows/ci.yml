@@ -157,11 +157,11 @@ jobs:
           node scripts/browser/smoke.mjs examples/cube target/render-artifacts/browser-cube.png
           SINDRI_EXPECT_ASSETS=1 SINDRI_BASE_PATH=/sindri2/ \
             node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-gather.png
-          SINDRI_EXPECT_FAILURE=canvas \
+          SINDRI_EXPECT_FAILURE=canvas SINDRI_BASE_PATH=/sindri2/ \
             node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-no-canvas.png
-          SINDRI_EXPECT_FAILURE=adapter \
+          SINDRI_EXPECT_FAILURE=adapter SINDRI_BASE_PATH=/sindri2/ \
             node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-no-adapter.png
-          SINDRI_EXPECT_FAILURE=device \
+          SINDRI_EXPECT_FAILURE=device SINDRI_BASE_PATH=/sindri2/ \
             node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-no-device.png
       - name: Upload browser captures
         if: always()
