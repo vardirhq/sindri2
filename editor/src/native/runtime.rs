@@ -2,7 +2,7 @@
 
 use eframe::egui::{self, Color32, Response, RichText, Stroke, Vec2};
 use egui_material_icons::MaterialIcon;
-use sindri_core::{EngineLifecycle, EngineState, FixedStepConfig};
+use sindri_core::{ComponentSchemaRegistry, EngineLifecycle, EngineState, FixedStepConfig};
 use sindri_decay::ScriptFailure;
 use sindri_scene::SpriteAnimations;
 
@@ -191,7 +191,12 @@ impl EditorApp {
     /// script that will not compile should say so when the scene opens rather
     /// than waiting for someone to press Play. What the transport changes is
     /// how much time a frame is worth, so a scene at rest runs nothing.
-    pub(super) fn advance_scripts(&mut self, context: &egui::Context) {
+    pub(super) fn advance_play(&mut self, context: &egui::Context) {
+        if self.lifecycle.state() == EngineState::Running {
+            // Nothing else asks for a frame while the pointer is still, so
+            // without this a played scene runs only as fast as the mouse moves.
+            context.request_repaint();
+        }
         let notes = self.scripts.poll();
         self.record_script_notes(notes);
 
@@ -227,21 +232,44 @@ impl EditorApp {
             self.record_script_failure(&failure);
         }
 
-        if delta == 0.0 {
-            return;
-        }
-        // Flecks move before scripts, so one thrown this frame is drawn where
-        // it was thrown rather than one frame along.
-        self.effects
+        // The same loop a shipped game runs, for the reason Play exists: a
+        // scene that behaves differently here than in the build is a scene
+        // nobody can trust a play-test of. `EngineCore` steps a fixed clock and
+        // runs gameplay a whole number of times per frame; so does this.
+        let steps = self
+            .clock
             .advance(std::time::Duration::from_secs_f32(delta));
-        // Physics first, so a script observes the events of the step that just
+        for step in 0..steps.fixed_steps {
+            self.fixed_step(&components, steps.fixed_delta, view_size);
+            if step == 0 {
+                // An edge belongs to one step. Spending it here rather than per
+                // rendered frame is what keeps a 30 Hz display from firing a
+                // button twice and a 144 Hz one from losing the click entirely.
+                self.input.spend();
+            }
+        }
+        if steps.fixed_steps == 0 && self.lifecycle.state() != EngineState::Running {
+            // Nothing is going to consume them, and a scene at rest should not
+            // accumulate a frame's worth of releases for ever.
+            self.input.spend();
+        }
+    }
+
+    /// One fixed step: everything gameplay does, in the order the engine fixes.
+    fn fixed_step(
+        &mut self,
+        components: &ComponentSchemaRegistry,
+        fixed_delta: std::time::Duration,
+        view_size: Option<(f32, f32)>,
+    ) {
+        let delta = fixed_delta.as_secs_f32();
+        // Flecks move before scripts, so one thrown this step is drawn where it
+        // was thrown rather than one step along.
+        self.effects.advance(fixed_delta);
+        // Physics next, so a script observes the events of the step that just
         // happened and its writes take effect on the next one. `docs/physics.md`
         // fixes that order: consumers run after the step publishes.
-        if let Err(error) = self.physics.step(
-            &mut self.world,
-            &components,
-            std::time::Duration::from_secs_f32(delta),
-        ) {
+        if let Err(error) = self.physics.step(&mut self.world, components, fixed_delta) {
             self.console.error(format!("Physics: {error}"));
         }
         // No safe area: a desktop window has no notch. A host that has one — a
@@ -251,7 +279,7 @@ impl EditorApp {
         let input_state = self.input.state();
         if let Err(error) = self.screen_ui.update(
             &self.world,
-            &components,
+            components,
             sindri_scene::ScreenExtent::new(view_width, view_height),
             sindri_scene::PointerFrame {
                 position: input_state.pointer_position(),
@@ -265,7 +293,7 @@ impl EditorApp {
         let (physics, events) = self.physics.for_scripts();
         let report = self.scripts.advance(
             &mut self.world,
-            &components,
+            components,
             crate::scripts::EditorFrame {
                 input: self.input.state(),
                 physics: Some(sindri_decay::Physics2d {
@@ -279,6 +307,12 @@ impl EditorApp {
                 delta_seconds: delta,
             },
         );
+        // Animations move with gameplay rather than with the display, because a
+        // clip that advanced per rendered frame would play at a different speed
+        // in the editor than in the build.
+        if let Err(error) = self.animations.advance(&self.world, components, delta) {
+            self.console.error(format!("Sprite animation: {error}"));
+        }
 
         for message in report.printed {
             // Named by entity, because "moving" is not something an author can
@@ -358,6 +392,31 @@ impl EditorApp {
         }
     }
 
+    /// Runs exactly one fixed step of a held scene.
+    ///
+    /// Only while paused, because that is the only time it means anything: a
+    /// running scene is already stepping, and a stopped one has nothing to
+    /// step. What it is for is the bug that happens in one frame and is gone
+    /// before anyone can look at it — the whole reason a debugger has a step
+    /// button.
+    ///
+    /// It runs the same body a played frame runs, so a scene single-stepped
+    /// sixty times is a scene that played for a second.
+    pub(super) fn single_step(&mut self, context: &egui::Context) {
+        if self.lifecycle.state() != EngineState::Paused {
+            return;
+        }
+        let components = self.scene.components().clone();
+        let view_size = self
+            .game_view_rect
+            .map(|rect| (rect.width(), rect.height()));
+        // Read now, because a step taken from a keyboard shortcut has input
+        // that a paused frame never delivered.
+        let _ = context;
+        self.fixed_step(&components, self.clock.fixed_delta(), view_size);
+        self.input.spend();
+    }
+
     /// Ends a play session, putting back what playing changed.
     ///
     /// Scripts write to the world, so the world is part of what playing
@@ -384,32 +443,5 @@ impl EditorApp {
             self.world = snapshot;
         }
         self.scripts.restart();
-    }
-
-    /// Moves every animated sprite on by whatever this frame is worth.
-    ///
-    /// Called every frame rather than only while playing, so a scene at rest
-    /// shows its clips' first frames and a clip that cannot be played says so
-    /// without anyone pressing Play. What the transport changes is how much time
-    /// a frame is worth, which is [`animation_delta`].
-    pub(super) fn advance_animations(&mut self, context: &egui::Context) {
-        if self.lifecycle.state() == EngineState::Running {
-            // Nothing else asks for a frame while the pointer is still, so
-            // without this an animation plays only as fast as the mouse moves.
-            context.request_repaint();
-        }
-        let delta = animation_delta(
-            self.lifecycle.state(),
-            context.input(|input| input.stable_dt),
-        );
-        if let Err(error) = self
-            .animations
-            .advance(&self.world, self.scene.components(), delta)
-        {
-            // Collapsed by the console the same way a render failure is: a
-            // broken clip fails every frame, and one entry with a count says
-            // more than sixty a second.
-            self.console.error(error.to_string());
-        }
     }
 }

@@ -93,7 +93,7 @@ The statuses mean:
 | Audio | Native, browser, and silent backends plus Decay playback calls | **Ready**, with host-side clip gathering still manual |
 | Persistent progression | Versioned key/value saves with file, browser, memory and damaged backends, and a `Save` namespace in Decay | **Ready** |
 | Browser release | Gather proves a hand-built WASM/WebGPU Pages host | **Partial**; no general project export and browser asset fetching is not exercised |
-| Full editor playtest | Scripts and animation run in editor Play | **Partial**; not the complete application/game loop |
+| Full editor playtest | Play runs the shipped fixed-step loop — effects, physics, screen UI, scripts and animations at the fixed rate — with single-step and exactly-once input edges | **Ready** |
 | Mobile/browser fallback | WebGPU browser host exists, and touch reaches gameplay on every host | **Partial**; no WebGL fallback |
 
 ## What can be built now
@@ -329,7 +329,8 @@ possible, not by subsystem familiarity.
    `Random`
 7. ~~**Game persistence boundary**~~ — done; see `docs/scripting.md` on `Save`
 8. ~~**Measured particle/effect path**~~ — done; see `docs/effect-scaling.md`
-9. **Complete editor Play application loop**
+9. ~~**Complete editor Play application loop**~~ — done; Play runs the shipped
+   fixed-step loop
 10. **Static-web project export with gathered assets**
 
 Audio clip gathering and animation control should join the vertical slice when

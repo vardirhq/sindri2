@@ -273,6 +273,13 @@ struct EditorApp {
     /// ask for. Where a real save belongs is the shipped host's decision, and
     /// `docs/scripting.md` says so.
     saves: sindri_core::SaveStore,
+    /// The fixed-step clock Play runs on.
+    ///
+    /// The same one a shipped game uses, so a scene steps the same number of
+    /// times per second here as it does in the build. Without it a scene
+    /// simulated as fast as the editor happened to redraw, which made a
+    /// play-test evidence about the editor rather than about the game.
+    clock: sindri_core::FixedStepClock,
     /// The live flecks a played scene has thrown.
     ///
     /// Cleared when Play stops, because a fleck outliving the run that threw it
@@ -449,6 +456,8 @@ impl EditorApp {
             random: sindri_core::Rng::default(),
             saves: sindri_core::SaveStore::default(),
             effects: sindri_scene::Effects2d::default(),
+            clock: sindri_core::FixedStepClock::new(sindri_core::FixedStepConfig::default())
+                .expect("the default fixed-step configuration is valid"),
             animations: SpriteAnimations::new(),
             scripts: SceneScripts::for_scene(None),
             input: EditorInput::default(),

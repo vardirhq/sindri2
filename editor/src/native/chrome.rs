@@ -159,6 +159,19 @@ impl EditorApp {
         {
             self.toggle_pause();
         }
+        // Only lit while held, because a step is the one thing a paused scene
+        // can do and a running one cannot.
+        if transport_icon(
+            ui,
+            icons::STEP,
+            false,
+            transport == Transport::Paused,
+            "Run one fixed step",
+        )
+        .clicked()
+        {
+            self.single_step(ui.ctx());
+        }
         ui.add_space(4.0);
         // What the editor is doing, in a word, so the state is read rather than
         // inferred from which control looks lit.

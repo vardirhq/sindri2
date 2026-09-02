@@ -115,3 +115,88 @@ fn nothing_may_be_authored_while_the_scene_is_playing() {
         );
     }
 }
+
+/// Play runs the same fixed-step loop a shipped game runs.
+///
+/// A scene that behaves differently in the editor than in the build is a scene
+/// nobody can trust a play-test of, and before this the editor stepped once per
+/// *rendered* frame — so a scene simulated as fast as the machine happened to
+/// draw.
+mod fixed_stepping {
+    use sindri_core::{FixedStepClock, FixedStepConfig};
+    use std::time::Duration;
+
+    fn clock() -> FixedStepClock {
+        FixedStepClock::new(FixedStepConfig::default()).expect("the default config is valid")
+    }
+
+    /// The number of steps a second is the same however fast the display is.
+    #[test]
+    fn a_second_is_the_same_number_of_steps_at_any_frame_rate() {
+        for (label, frame, frames) in [
+            ("30 Hz", Duration::from_micros(33_333), 30_u32),
+            ("60 Hz", Duration::from_micros(16_667), 60),
+            ("144 Hz", Duration::from_micros(6_944), 144),
+        ] {
+            let mut clock = clock();
+            let mut steps = 0;
+            for _ in 0..frames {
+                steps += clock.advance(frame).fixed_steps;
+            }
+            // A default step of 1/60 s, so a second is sixty of them, give or
+            // take what the last partial step has not earned yet.
+            assert!(
+                (59..=61).contains(&steps),
+                "{label} ran {steps} steps in a second"
+            );
+        }
+    }
+
+    /// A slow frame earns several steps rather than one long one.
+    #[test]
+    fn a_slow_frame_earns_several_steps() {
+        let mut clock = clock();
+        let steps = clock.advance(Duration::from_millis(50)).fixed_steps;
+        assert!(steps >= 2, "a 50 ms frame ran {steps} step(s)");
+    }
+
+    /// A fast frame earns none, and the leftover is carried rather than lost.
+    #[test]
+    fn a_fast_frame_earns_none_and_nothing_is_lost() {
+        let mut clock = clock();
+        // A step is 1/60 s, so four 4 ms frames are 16 ms and still short of it.
+        let quick = Duration::from_millis(4);
+        for frame in 0..4 {
+            assert_eq!(
+                clock.advance(quick).fixed_steps,
+                0,
+                "frame {frame} earned a step it had not paid for"
+            );
+        }
+        assert_eq!(
+            clock.advance(quick).fixed_steps,
+            1,
+            "five quick frames did not add up to a step"
+        );
+    }
+
+    /// A step taken by hand is the same length a frame would have handed out,
+    /// so a scene single-stepped sixty times is a scene that played a second.
+    #[test]
+    fn a_hand_taken_step_is_the_same_length() {
+        let clock = clock();
+        assert_eq!(clock.fixed_delta(), FixedStepConfig::default().step);
+    }
+
+    /// A frame long enough to bankrupt the simulation is capped rather than
+    /// spiralling: a machine that stalled must not then run a thousand steps.
+    #[test]
+    fn a_stalled_frame_does_not_run_away() {
+        let mut clock = clock();
+        let steps = clock.advance(Duration::from_secs(30)).fixed_steps;
+        assert!(
+            steps <= FixedStepConfig::default().max_steps_per_frame,
+            "a stall ran {steps} steps"
+        );
+    }
+}

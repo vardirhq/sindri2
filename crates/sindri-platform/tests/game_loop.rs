@@ -322,3 +322,103 @@ fn a_long_stall_cannot_spiral_the_simulation() {
     // 30s of debugger pause must not become 3000 catch-up steps.
     assert_eq!(host.game().fixed_updates, config().max_steps_per_frame);
 }
+
+/// A game that counts the fixed steps where a key looked newly pressed.
+///
+/// The distinction the counter draws is the whole point: a key going down is
+/// one event, and gameplay running twice on it fires a weapon twice.
+#[derive(Default)]
+struct EdgeCounter {
+    pressed: u32,
+    held: u32,
+    steps: u32,
+}
+
+impl Game for EdgeCounter {
+    type Error = PlayerError;
+
+    fn fixed_update(&mut self, context: &mut FrameContext<'_>) -> Result<(), Self::Error> {
+        self.steps += 1;
+        if context.input.key_pressed(Key::Space) {
+            self.pressed += 1;
+        }
+        if context.input.key_down(Key::Space) {
+            self.held += 1;
+        }
+        Ok(())
+    }
+}
+
+/// A 30 Hz display driving a 100 Hz simulation earns several steps a frame,
+/// which is exactly when the old behaviour fired a button once per step.
+#[test]
+fn a_press_reaches_exactly_one_fixed_step() {
+    let mut host = EngineHost::new(EdgeCounter::default(), config()).expect("the host starts");
+    host.start().expect("the game starts");
+    host.queue_input(InputEvent::KeyPressed(Key::Space));
+
+    // One frame worth three steps at a 10 ms fixed step.
+    host.advance(Duration::from_millis(30))
+        .expect("the frame advances");
+    assert_eq!(host.game().steps, 3, "the frame did not earn three steps");
+    assert_eq!(
+        host.game().pressed,
+        1,
+        "one press reached {} fixed steps",
+        host.game().pressed
+    );
+    assert_eq!(host.game().held, 3, "a held key stopped being held");
+}
+
+/// At 144 Hz most frames earn no fixed step at all, so an edge cleared at the
+/// end of every frame would be dropped on the floor.
+#[test]
+fn a_press_survives_a_frame_that_earned_no_fixed_step() {
+    let mut host = EngineHost::new(EdgeCounter::default(), config()).expect("the host starts");
+    host.start().expect("the game starts");
+    host.queue_input(InputEvent::KeyPressed(Key::Space));
+
+    // Two frames too short to earn a step, then one that does.
+    host.advance(Duration::from_millis(3))
+        .expect("the frame advances");
+    host.advance(Duration::from_millis(3))
+        .expect("the frame advances");
+    assert_eq!(host.game().steps, 0, "a short frame ran a step");
+    host.advance(Duration::from_millis(5))
+        .expect("the frame advances");
+
+    assert_eq!(host.game().steps, 1);
+    assert_eq!(
+        host.game().pressed,
+        1,
+        "the press was lost before a step saw it"
+    );
+}
+
+/// The release is an edge too, and it must land exactly once as well.
+#[test]
+fn a_release_reaches_exactly_one_fixed_step() {
+    #[derive(Default)]
+    struct Releases(u32);
+
+    impl Game for Releases {
+        type Error = PlayerError;
+
+        fn fixed_update(&mut self, context: &mut FrameContext<'_>) -> Result<(), Self::Error> {
+            if context.input.key_released(Key::Space) {
+                self.0 += 1;
+            }
+            Ok(())
+        }
+    }
+
+    let mut host = EngineHost::new(Releases::default(), config()).expect("the host starts");
+    host.start().expect("the game starts");
+    host.queue_input(InputEvent::KeyPressed(Key::Space));
+    host.advance(Duration::from_millis(10))
+        .expect("the frame advances");
+    host.queue_input(InputEvent::KeyReleased(Key::Space));
+    host.advance(Duration::from_millis(40))
+        .expect("the frame advances");
+    assert_eq!(host.game().0, 1);
+}

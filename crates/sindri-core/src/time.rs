@@ -183,6 +183,15 @@ impl FixedStepClock {
         self.scale = scale;
     }
 
+    /// How long one fixed step is.
+    ///
+    /// Named to match [`FrameSteps::fixed_delta`], because it is the same
+    /// duration: a caller taking one step by hand — a debugger's step button —
+    /// needs the number a whole frame would have handed it.
+    pub const fn fixed_delta(&self) -> Duration {
+        self.config.step
+    }
+
     pub const fn elapsed(&self) -> Duration {
         self.elapsed
     }

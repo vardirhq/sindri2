@@ -97,6 +97,18 @@ impl EditorInput {
         &self.state
     }
 
+    /// Spends this frame's edges and accumulated motion.
+    ///
+    /// Not done per rendered frame, because a rendered frame does not always
+    /// run a fixed step — at 144 Hz most do not — and an edge cleared before a
+    /// step saw it is a click that never reached the game. What is held stays
+    /// held; it is the *going down* that is spent, once, by the step that acted
+    /// on it. Motion follows the same rule: two frames of dragging between
+    /// steps should sum rather than lose the first.
+    pub fn spend(&mut self) {
+        self.state.begin_frame();
+    }
+
     /// Reads this frame's keyboard and pointer.
     ///
     /// `listening` is false when nothing should be hearing the input — the
@@ -113,7 +125,6 @@ impl EditorInput {
     /// someone is dragging the splitter, and a pointer position that lags a
     /// resize by a frame is not something a game can notice.
     pub fn update(&mut self, context: &egui::Context, listening: bool, view: Option<egui::Rect>) {
-        self.state.begin_frame();
         if !listening {
             // The same path a host takes when its window loses focus, which is
             // exactly this situation: input is going somewhere else.

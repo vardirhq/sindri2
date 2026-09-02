@@ -241,19 +241,32 @@ impl<G: Game, A: AudioBackend> EngineHost<G, A> {
     /// recoverable error cannot leave a press to be seen a second time.
     pub fn advance(&mut self, real_delta: Duration) -> Result<FrameSteps, HostError<G::Error>> {
         let steps = self.engine.advance(real_delta)?.time;
-        let result = self.run_frame(steps);
-        self.input.begin_frame();
-        result.map(|()| steps)
+        self.run_frame(steps).map(|()| steps)
     }
 
+    /// Runs the fixed steps this frame earned, then the frame itself.
+    ///
+    /// **An edge is consumed by exactly one fixed step.** A key going down is
+    /// one event, and gameplay runs in the fixed step, so the edge is cleared
+    /// once a step has seen it — otherwise a frame that earned two steps would
+    /// fire a button twice, which is what a 30 Hz display does to a 60 Hz
+    /// simulation.
+    ///
+    /// And it survives a frame that earned none. At 144 Hz most frames run no
+    /// fixed step at all, so clearing at the end of every frame would drop most
+    /// clicks on the floor. What is held still reads as held throughout; it is
+    /// only the edge that is spent.
     fn run_frame(&mut self, steps: FrameSteps) -> Result<(), HostError<G::Error>> {
-        for _ in 0..steps.fixed_steps {
+        for step in 0..steps.fixed_steps {
             self.call(
                 FramePhase::FixedUpdate,
                 steps.fixed_delta,
                 steps.real_delta,
                 steps.interpolation_alpha,
             )?;
+            if step == 0 {
+                self.input.begin_frame();
+            }
         }
         self.call(
             FramePhase::Update,

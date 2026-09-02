@@ -8,6 +8,34 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **Editor Play runs the loop a shipped game runs.** It stepped once per
+  *rendered* frame, so a scene was simulated as fast as the machine happened to
+  draw — a play-test was evidence about the editor, not about the game. It now
+  owns a `FixedStepClock` and runs gameplay a whole number of times per frame,
+  in the order the engine fixes: effects, physics, screen UI, scripts,
+  animations. Animations moved into the fixed step with everything else, because
+  a clip advancing per rendered frame played at a different speed in the editor
+  than in the build.
+
+- **A held scene can be stepped once.** What it is for is the bug that happens
+  in one frame and is gone before anyone can look at it.
+
+### Fixed
+
+- **An input edge reached every fixed step in a frame instead of one.** A key
+  going down is one event, and gameplay runs in the fixed step — so a 30 Hz
+  display driving a 60 Hz simulation fired every button twice. The edge is now
+  spent by the first step that sees it.
+
+  It also used to be cleared at the end of every frame, which at 144 Hz — where
+  most frames earn no fixed step at all — dropped most clicks before gameplay
+  saw them. Edges now survive until a step consumes them. Accumulated pointer
+  motion follows the same rule, so two frames of dragging between steps sum
+  rather than losing the first.
+
+  This was wrong in the shipped host as well as the editor. Three tests cover
+  it, and all three fail against the old behaviour.
+
 - **Flecks that are not entities.** The audit asked for a pooled effect path and
   said to measure both approaches before choosing one. `docs/effect-scaling.md`
   is that measurement, and `cargo run --release -p sindri-scene --example

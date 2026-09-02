@@ -185,6 +185,30 @@ without reading the payload. No game yet plays a scene whose bodies move —
 separate feature-track slices in `docs/physics.md` rather than things this
 foundation pretends to have completed.
 
+### Editor Play
+
+Play runs **the same fixed-step loop a shipped game runs**. The editor owns a
+`FixedStepClock`, advances it with the real frame delta, and runs gameplay a
+whole number of times per frame — effects, physics, screen UI, scripts and
+animations, in that order, at the fixed rate. Before this it stepped once per
+*rendered* frame, so a scene was simulated as fast as the machine happened to
+draw and a play-test was evidence about the editor rather than about the game.
+
+**An edge belongs to exactly one fixed step.** A key going down is one event and
+gameplay runs in the fixed step, so the edge is spent once a step has seen it —
+a 30 Hz display driving a 60 Hz simulation earns two steps a frame and would
+otherwise fire a button twice. It also survives a frame that earned no step at
+all, which at 144 Hz is most of them, so a click is never dropped before
+gameplay sees it. Accumulated pointer motion follows the same rule: two frames
+of dragging between steps sum rather than losing the first. This was wrong in
+the shipped host too, and is now covered by tests in
+`crates/sindri-platform/tests/game_loop.rs`.
+
+**A held scene can be stepped once**, which is what a debugger's step button is
+for: the bug that happens in one frame and is gone before anyone can look at it.
+It runs the same body a played frame runs, so a scene stepped sixty times is a
+scene that played for a second.
+
 ### Effects
 
 `Effects2d` holds short-lived visual flecks as plain values in one array. A
