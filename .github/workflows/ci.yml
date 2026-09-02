@@ -165,7 +165,7 @@ jobs:
             node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-no-device.png
       - name: Upload browser captures
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: browser-captures
           path: |
