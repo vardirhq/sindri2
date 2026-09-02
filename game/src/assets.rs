@@ -29,41 +29,12 @@ use sindri_scene::TextureBindings;
 use crate::error::GatherError;
 
 #[cfg(target_arch = "wasm32")]
-pub(crate) const SCENE_ID: &str = "gather.scene.json";
-
-#[cfg(target_arch = "wasm32")]
-pub(crate) const SCRIPT_IDS: &[&str] = &[
-    "scripts/player.decay",
-    "scripts/wisp.decay",
-    "scripts/orb.decay",
-    "scripts/pip.decay",
-    "scripts/banner.decay",
-];
-
-#[cfg(target_arch = "wasm32")]
 pub(crate) const TEXTURE_IDS: &[&str] = &[
     "textures/tiles.png",
     "textures/orb.png",
     "textures/player.png",
     "textures/pip.png",
     "textures/banner.png",
-];
-
-#[cfg(target_arch = "wasm32")]
-pub(crate) const FONT_IDS: &[&str] = &["fonts/Inter.ttf"];
-
-#[cfg(target_arch = "wasm32")]
-pub(crate) const AUDIO_IDS: &[&str] = &[
-    "audio/background.wav",
-    "audio/pickup.wav",
-    "audio/victory.wav",
-];
-
-#[cfg(target_arch = "wasm32")]
-pub(crate) const SHEET_IDS: &[&str] = &[
-    "textures/tiles.sheet.json",
-    "textures/pip.sheet.json",
-    "textures/player.sheet.json",
 ];
 
 /// The scene and scripts are embedded only in native builds.

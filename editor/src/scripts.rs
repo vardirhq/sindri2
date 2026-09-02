@@ -21,11 +21,30 @@ use sindri_assets::{
     AssetLoadOutcome, AssetLoadQueueConfig, AssetLoader, AssetWatch, FileSystemAssetSource,
     TextAssetDecoder,
 };
-use sindri_core::{AssetId, AssetStatus, ComponentSchemaRegistry, World};
+use sindri_core::{AssetId, AssetStatus, ComponentSchemaRegistry, PrefabDocument, World};
 use sindri_decay::{
-    ScriptExport, ScriptFailure, ScriptReport, ScriptSources, Scripts, referenced_sources,
+    Physics2d, PrefabSources, ScriptExport, ScriptFailure, ScriptFrame, ScriptReport,
+    ScriptSources, Scripts, referenced_sources,
 };
 use sindri_platform::InputState;
+
+/// What one editor frame gives the scripts in it.
+///
+/// Bundled for the same reason the engine's `ScriptFrame` is: every capability
+/// Play grows adds a parameter, and a list of eight is one nobody reads.
+pub struct EditorFrame<'a> {
+    pub input: &'a InputState,
+    /// The physics Play is stepping, so a script can drive a body and be told
+    /// what it touched. `None` while the scene is at rest, which is when
+    /// nothing is stepping and a `Physics.*` call should say so rather than
+    /// answer about a simulation nobody is running.
+    pub physics: Option<Physics2d<'a>>,
+    pub screen_ui: &'a sindri_scene::ScreenUi,
+    pub random: &'a mut sindri_core::Rng,
+    pub saves: &'a mut sindri_core::SaveStore,
+    pub effects: &'a mut sindri_scene::Effects2d,
+    pub delta_seconds: f32,
+}
 
 /// Scripts are small and few, so one worker is enough and sixteen waiting is
 /// more than a scene the editor can open will name.
@@ -51,6 +70,13 @@ pub struct SceneScripts {
     watch: Option<AssetWatch>,
     last_examined: Instant,
     sources: ScriptSources,
+    /// The prefabs the scene's scripts can spawn.
+    ///
+    /// Loaded through the same text loader as the scripts, because a prefab is
+    /// a JSON document and the pipeline has no reason to know more than that.
+    /// A document that will not parse is reported once, here, rather than on
+    /// the frame a script spawns it.
+    prefabs: PrefabSources,
     scripts: Scripts,
 }
 
@@ -64,6 +90,7 @@ impl SceneScripts {
             watch: root.map(AssetWatch::new),
             last_examined: Instant::now(),
             sources: ScriptSources::new(),
+            prefabs: PrefabSources::new(),
             scripts: Scripts::new(),
         }
     }
@@ -75,7 +102,12 @@ impl SceneScripts {
         components: &ComponentSchemaRegistry,
     ) -> Vec<ScriptNote> {
         let mut notes = Vec::new();
-        let referenced = referenced_sources(world, components);
+        let mut referenced = referenced_sources(world, components);
+        // Prefabs are named by the *declared type* of a script's exported
+        // fields, so they only become visible once the script has compiled.
+        // Asking every frame is what makes a prefab authored a moment ago load
+        // a moment later rather than at the next scene open.
+        referenced.extend(self.scripts.referenced_prefabs(world, components));
         let wanted: BTreeSet<AssetId> = referenced
             .iter()
             .filter_map(|reference| AssetId::new(reference.clone()).ok())
@@ -85,6 +117,7 @@ impl SceneScripts {
             loader: Some(loader),
             watch,
             sources,
+            prefabs,
             ..
         } = self
         else {
@@ -101,12 +134,13 @@ impl SceneScripts {
         // the file it used to be.
         for released in loader.retain(&wanted) {
             sources.remove(released.as_str());
+            prefabs.remove(released.as_str());
         }
         if let Some(watch) = watch.as_mut() {
             watch.retain(&wanted);
         }
         for id in &wanted {
-            if sources.get(id.as_str()).is_some() {
+            if sources.get(id.as_str()).is_some() || prefabs.get(id.as_str()).is_some() {
                 continue;
             }
             if let Err(error) = loader.request(id.clone()) {
@@ -132,6 +166,7 @@ impl SceneScripts {
             loader: Some(loader),
             watch,
             sources,
+            prefabs,
             ..
         } = self
         else {
@@ -143,8 +178,19 @@ impl SceneScripts {
                     let Some(text) = loader.get(&id) else {
                         continue;
                     };
-                    let again = sources.get(id.as_str()).is_some();
-                    sources.insert(id.as_str(), text.clone());
+                    let again =
+                        sources.get(id.as_str()).is_some() || prefabs.get(id.as_str()).is_some();
+                    if is_prefab(id.as_str()) {
+                        match PrefabDocument::from_json(text) {
+                            Ok(prefab) => prefabs.insert(id.as_str(), prefab),
+                            Err(error) => {
+                                notes.push(ScriptNote::Failed(format!("{id}: {error}")));
+                                continue;
+                            }
+                        }
+                    } else {
+                        sources.insert(id.as_str(), text.clone());
+                    }
                     notes.push(if again {
                         ScriptNote::Reloaded(format!("Reloaded {id}"))
                     } else {
@@ -209,16 +255,32 @@ impl SceneScripts {
         )
     }
 
-    /// Moves every script in the world on by `delta_seconds`.
+    /// Moves every script in the world on by one frame.
     pub fn advance(
         &mut self,
         world: &mut World,
         components: &ComponentSchemaRegistry,
-        input: &InputState,
-        delta_seconds: f32,
+        frame: EditorFrame<'_>,
     ) -> ScriptReport {
-        self.scripts
-            .advance(world, components, &self.sources, input, delta_seconds)
+        let EditorFrame {
+            input,
+            physics,
+            screen_ui,
+            random,
+            saves,
+            effects,
+            delta_seconds,
+        } = frame;
+        let mut frame = ScriptFrame::new(&self.sources, input, delta_seconds)
+            .with_prefabs(&self.prefabs)
+            .with_screen_ui(screen_ui)
+            .with_random(random)
+            .with_saves(saves)
+            .with_effects(effects);
+        if let Some(physics) = physics {
+            frame = frame.with_physics(physics);
+        }
+        self.scripts.advance(world, components, frame)
     }
 
     /// What one script declares it wants authored, for the inspector to draw.
@@ -273,6 +335,18 @@ impl SceneScripts {
 fn root_of(scene: Option<&Path>) -> Option<PathBuf> {
     scene.and_then(Path::parent).map(Path::to_path_buf)
 }
+
+/// Whether a delivered asset is a prefab rather than a script.
+///
+/// By suffix, because both arrive as text and the loader has no reason to know
+/// the difference. `PREFAB_SUFFIX` is the same convention scenes use, and it is
+/// what the editor writes when it makes one.
+fn is_prefab(id: &str) -> bool {
+    id.ends_with(PREFAB_SUFFIX)
+}
+
+/// What a prefab file is called.
+pub const PREFAB_SUFFIX: &str = ".prefab.json";
 
 #[cfg(test)]
 mod tests {

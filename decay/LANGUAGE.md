@@ -104,11 +104,11 @@ identifiers, and no raw identifiers.
 ### Keywords
 
 ```text
-script  component  fn  let  var  if  else  while  break  continue
-return  true  false  null
+script  component  fn  let  var  if  else  while  for  in  break
+continue  return  true  false  null
 ```
 
-All fourteen are reserved. There are no contextual keywords.
+All sixteen are reserved. There are no contextual keywords.
 
 ### Number literals
 
@@ -159,15 +159,16 @@ field        = ( "let" | "var" ) IDENT [ ":" type ] [ "=" expr ] ";" ;
 function     = "fn" IDENT "(" [ params ] ")" [ "->" type ] block ;
 params       = param { "," param } ;
 param        = IDENT [ ":" type ] ;
-type         = IDENT ;
+type         = IDENT [ "<" type ">" ] ;
 
 block        = "{" { stmt } "}" ;
-stmt         = binding | return | if | while | break | continue
+stmt         = binding | return | if | while | for | break | continue
              | block | expr ";" ;
 binding      = ( "let" | "var" ) IDENT [ ":" type ] [ "=" expr ] ";" ;
 return       = "return" [ expr ] ";" ;
 if           = "if" expr block [ "else" ( block | if ) ] ;
 while        = "while" expr block ;
+for          = "for" IDENT "in" expr block ;
 break        = "break" ";" ;
 continue     = "continue" ";" ;
 
@@ -175,7 +176,7 @@ expr         = assign ;
 assign       = binary [ ( "=" | "+=" | "-=" | "*=" | "/=" | "%=" ) assign ] ;
 binary       = unary { binop unary } ;         (* see the precedence table *)
 unary        = [ "-" | "!" ] unary | postfix ;
-postfix      = primary { "." IDENT | "(" [ args ] ")" } ;
+postfix      = primary { "." IDENT | "[" expr "]" | "(" [ args ] ")" } ;
 args         = expr { "," expr } ;
 primary      = IDENT | NUMBER | STRING | "true" | "false" | "null"
              | "(" expr ")" ;
@@ -203,6 +204,7 @@ diagnostic.
 | `bool` | `true` or `false` |
 | `String` or `string` | Text |
 | `unit` or `void` | No value; the default return type |
+| `Array<T>` | Several `T`, in a fixed order |
 | anything else | A **named host type**, opaque to Decay |
 
 There is no `i32`, no `u32`, no `f64`, and no integer type of any kind. `7` and
@@ -260,6 +262,41 @@ whether the thing behind one is alive, and against Sindri that is
 This is what a reference is *for*: it is the difference between a script that
 can only describe itself and one that can say something about another thing in
 the world. `docs/scripting.md` records what Sindri makes of it.
+
+### Collections
+
+`Array<T>` is the one type that holds more than one value, and the one type
+that takes a type argument. It is not user-definable and there is no literal
+for one: **a collection only ever comes from the host.**
+
+```rust
+let enemies: Array<Entity> = World.with_tag(this.enemy);
+let count: f32 = enemies.len;
+let first: Entity = enemies[0.0];
+for enemy in enemies {
+    enemy.transform.position.y -= 1.0;
+}
+```
+
+That is the whole of it. There is no way to build, grow, shrink, sort, or write
+into one, and a `for` binding is immutable because an element is what the
+collection holds at that position rather than a place to put something. The
+absence is deliberate: a collection nothing can grow is a collection whose size
+the host decided, which is what lets a host bound one.
+
+`.len` is a property of the value, not a global `len(x)`. Decay has no modules,
+so every global name added is one a script can no longer use for its own — and
+`len` stays available as an ordinary name because of it.
+
+**Indices are the one numeric type.** There is no integer type, so a whole
+number is a property of the *value*, checked where the value is: `items[1.5]`,
+`items[-1.0]`, and `items[7.0]` on a collection of three are three different
+runtime errors, each naming what was wrong. Introducing an integer type for
+indexing alone would rewrite every signature in the language and at the host
+boundary; `docs/decay-direction.md` records that trade.
+
+A `for` walks the collection it was given, not the name it came from:
+reassigning that name inside the loop does not change what is being walked.
 
 ---
 
@@ -556,20 +593,27 @@ Things that are true and that most readers — human or model — will guess wro
 8. **A loop can be stopped by its budget.** A script that runs too long fails
    with `OperationBudgetExceeded` rather than hanging, and that failure is
    reported like any other.
+9. **`for` only walks a collection.** There are no ranges, so `for i in 0..3`
+   is a parse error rather than a loop.
+10. **A collection index is a float like every other number**, and a fractional
+    one is refused rather than rounded.
 
 ## What does not exist
 
 Do not write these. They are not unimplemented corners; they are absent from the
 grammar, and every one of them is a parse error or a diagnostic.
 
-**Control flow:** `for`, `loop`, `match`, ternaries, labelled blocks, `break` or
-`continue` with a label or a value.
+**Control flow:** `loop`, `match`, ternaries, labelled blocks, `break` or
+`continue` with a label or a value. `for … in` exists and walks a collection;
+there is nothing else to walk and no range to walk over.
 
-**Data:** arrays, lists, maps, dictionaries, tuples, structs, enums, indexing
-(`a[0]`), ranges (`0..3`), `Option`, `Result`, `?`.
+**Data:** array literals, lists, maps, dictionaries, tuples, structs, enums,
+ranges (`0..3`), `Option`, `Result`, `?`. `Array<T>` exists and is indexable,
+but only the host makes one; see "Collections".
 
 **Functions:** closures, lambdas, function values, default arguments, named
-arguments, variadics, generics, overloading, methods, `impl`, traits.
+arguments, variadics, generics beyond `Array<T>`, overloading, methods, `impl`,
+traits.
 
 **Types:** integers, `f64`, unsigned types, characters, type aliases, casts,
 inference beyond a binding's own initializer, nullable types, user-defined types
@@ -579,7 +623,8 @@ beyond `script` and `component`.
 files. One file is one compilation unit and cannot refer to another.
 
 **Standard library:** `print`, `math.*`, string methods, formatting,
-interpolation, conversion functions, collections, iteration, time, randomness.
+interpolation, conversion functions, collection *operations* — no `push`,
+`map`, `filter`, `sort` — time, randomness.
 
 **Other:** operator overloading, macros, attributes other than `@export`, block
 comments, doc comments, `const`, `static`, exceptions, `try`, `panic`,
@@ -603,7 +648,8 @@ locals, a non-`bool` `if` condition, and wrong argument counts.
 compilation and no warning level — everything reported is fatal.
 
 Runtime failures are values, not panics: `UnknownPath`, `Immutable`,
-`FunctionNotFound`, `Arity`, `InvalidBinary`, `CallDepthExceeded`,
+`FunctionNotFound`, `Arity`, `InvalidBinary`, `NotACollection`,
+`IndexNotANumber`, `IndexNotWhole`, `IndexOutOfRange`, `CallDepthExceeded`,
 `OperationBudgetExceeded`, and others.
 The host decides what to do with them; `sindri-decay` reports them per entity and
 keeps running every other script.

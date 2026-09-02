@@ -8,7 +8,7 @@
 use decay_ir::Path;
 use decay_runtime::{Host, RuntimeError, Value};
 
-use crate::{Blackboard, ScriptContext};
+use crate::{Blackboard, ScriptContext, host::Spawning};
 
 pub(crate) const AUDIO: &str = "Audio";
 
@@ -49,16 +49,60 @@ pub struct WorldHost<'a> {
     audio: &'a mut Vec<AudioCommand>,
 }
 
+/// Everything a script can reach beyond the world and the frame.
+///
+/// Bundled for the same reason `ScriptFrame` is one level up: the list had
+/// reached eight and every capability the scripting surface grows adds another.
+/// A caller with no physics and no screen UI leaves two fields out rather than
+/// passing two `None`s in the right positions.
+pub struct HostServices<'a> {
+    pub spawning: Spawning<'a>,
+    /// The physics a script may read and drive, when the host runs any.
+    pub physics: Option<crate::Physics2d<'a>>,
+    /// Where the screen elements are and what the pointer is doing to them.
+    pub screen_ui: Option<&'a sindri_scene::ScreenUi>,
+    /// The run's random stream, when the host is running one.
+    pub random: Option<&'a mut sindri_core::Rng>,
+    /// What the game remembers, when the host is keeping a save.
+    pub saves: Option<&'a mut sindri_core::SaveStore>,
+    /// The fleck pool, when the host is running one.
+    pub effects: Option<&'a mut sindri_scene::Effects2d>,
+    /// What the script asked to be played, in order.
+    pub audio: &'a mut Vec<AudioCommand>,
+}
+
 impl<'a> WorldHost<'a> {
     pub fn new(
         world: &'a mut sindri_core::World,
         entity: sindri_core::EntityId,
         context: ScriptContext<'a>,
         blackboard: &'a mut Blackboard,
-        audio: &'a mut Vec<AudioCommand>,
+        services: HostServices<'a>,
     ) -> Self {
+        let HostServices {
+            spawning,
+            physics,
+            screen_ui,
+            random,
+            saves,
+            effects,
+            audio,
+        } = services;
         Self {
-            inner: crate::host::WorldHost::new(world, entity, context, blackboard),
+            inner: crate::host::WorldHost::new(
+                world,
+                entity,
+                context,
+                blackboard,
+                crate::host::WorldServices {
+                    spawning,
+                    saves,
+                    effects,
+                    physics,
+                    screen_ui,
+                    random,
+                },
+            ),
             audio,
         }
     }
@@ -175,7 +219,32 @@ mod tests {
     use sindri_platform::InputState;
 
     use super::{AudioCommand, WorldHost};
-    use crate::{Blackboard, ScriptContext};
+    use crate::{Blackboard, ScriptContext, host::Spawning};
+
+    /// A spawning context for a test that is not about spawning.
+    fn nothing_to_spawn() -> (
+        crate::PrefabSources,
+        std::collections::BTreeSet<sindri_core::EntityId>,
+        Vec<sindri_core::EntityId>,
+    ) {
+        (
+            crate::PrefabSources::new(),
+            std::collections::BTreeSet::new(),
+            Vec::new(),
+        )
+    }
+
+    fn spawning<'a>(
+        prefabs: &'a crate::PrefabSources,
+        started: &'a std::collections::BTreeSet<sindri_core::EntityId>,
+        spawned: &'a mut Vec<sindri_core::EntityId>,
+    ) -> Spawning<'a> {
+        Spawning {
+            prefabs,
+            started,
+            spawned,
+        }
+    }
 
     #[test]
     fn audio_call_emits_intent_without_a_device() {
@@ -184,6 +253,7 @@ mod tests {
         let input = InputState::default();
         let mut board = Blackboard::new();
         let mut queue = Vec::new();
+        let (prefabs, started, mut spawned) = nothing_to_spawn();
         let mut host = WorldHost::new(
             &mut world,
             entity,
@@ -193,7 +263,15 @@ mod tests {
                 elapsed_seconds: 0.0,
             },
             &mut board,
-            &mut queue,
+            crate::HostServices {
+                spawning: spawning(&prefabs, &started, &mut spawned),
+                physics: None,
+                screen_ui: None,
+                random: None,
+                saves: None,
+                effects: None,
+                audio: &mut queue,
+            },
         );
         host.call(
             None,
@@ -244,6 +322,7 @@ mod tests {
         let input = InputState::default();
         let mut board = Blackboard::new();
         let mut queue = Vec::new();
+        let (prefabs, started, mut spawned) = nothing_to_spawn();
         let mut host = WorldHost::new(
             &mut world,
             entity,
@@ -253,7 +332,15 @@ mod tests {
                 elapsed_seconds: 0.0,
             },
             &mut board,
-            &mut queue,
+            crate::HostServices {
+                spawning: spawning(&prefabs, &started, &mut spawned),
+                physics: None,
+                screen_ui: None,
+                random: None,
+                saves: None,
+                effects: None,
+                audio: &mut queue,
+            },
         );
         let error = host
             .call(

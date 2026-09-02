@@ -18,7 +18,7 @@
 //! Conflating the two is what made `sindri.ui.text` inspect as two rows when it
 //! has seven.
 
-use sindri_core::ComponentSchemaRegistry;
+use sindri_core::{ComponentSchemaRegistry, TagsComponent};
 
 use crate::animation::SpriteAnimationComponent;
 use crate::audio::AudioSourceComponent;
@@ -26,7 +26,9 @@ use crate::components::{
     CameraComponent, GridNavigationComponent, GridOccupantComponent, MeshComponent,
     SpriteComponent, TilemapComponent, UiImageComponent, UiTextComponent,
 };
+use crate::effects::EffectBurstComponent;
 use crate::physics::{Collider2dComponent, RigidBody2dComponent};
+use crate::screen_ui::{UiButtonComponent, UiLayoutComponent};
 use crate::textures::PROCEDURAL_TEXTURES;
 
 use super::SceneExtractError;
@@ -79,6 +81,39 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
             "texture": PROCEDURAL_TEXTURES[0].reference,
             "anchor": "center",
             "tint": [1.0, 1.0, 1.0, 1.0],
+            "layer": 0,
+            // Full, and emptying rightwards: an element added to a scene
+            // should appear whole, and a bar that a script never drives is
+            // a picture, which is what this component was before.
+            "fill": { "amount": 1.0, "from": "left" }
+        }),
+    )?;
+    // A button is a hit area: its rect is the entity's transform, so one
+    // added to an entity that already draws something is immediately
+    // pressable, and one on a bare entity is a hit area with no art.
+    components.register_with_default::<UiButtonComponent>(
+        "UI Button",
+        serde_json::json!({ "label": "" }),
+    )?;
+    // A column, because a menu reads downwards.
+    components.register_with_default::<UiLayoutComponent>(
+        "UI Layout",
+        serde_json::json!({ "direction": "column", "spacing": 0.25 }),
+    )?;
+    // A visible burst, because one that threw nothing would look like a
+    // component that does not work.
+    components.register_with_default::<EffectBurstComponent>(
+        "Effect Burst",
+        serde_json::json!({
+            "texture": PROCEDURAL_TEXTURES[0].reference,
+            "count": 12,
+            "speed": 4.0,
+            "spread": 0.5,
+            "lifetime": 0.5,
+            "size": 0.1,
+            "tint": [1.0, 1.0, 1.0, 1.0],
+            "fade": true,
+            "drag": 0.25,
             "layer": 0
         }),
     )?;
@@ -105,7 +140,10 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
             "line_height": 30.0,
             "color": [1.0, 1.0, 1.0, 1.0],
             "anchor": "center",
-            "layer": 0
+            "layer": 0,
+            // No preview numbers: a template with no slots needs none, and
+            // the editor's field row is where a designer adds them.
+            "values": []
         }),
     )?;
     // A one-by-one map of one empty cell: the smallest tilemap that is
@@ -131,6 +169,10 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
 /// Everything else a scene carries: how it navigates, how it collides, and what
 /// it sounds like.
 fn register_gameplay(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
+    // A fresh set of tags is empty rather than invented: the engine has no
+    // opinion about what an entity is, and a tag it made up would be one a
+    // query silently answered with.
+    components.register_with_default::<TagsComponent>("Tags", serde_json::json!({ "tags": [] }))?;
     components.register_with_default::<GridNavigationComponent>(
         "Grid Navigation",
         serde_json::json!({ "walls": [] }),

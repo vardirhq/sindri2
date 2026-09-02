@@ -32,7 +32,12 @@ pub enum Family {
     Physics,
     /// What ties something to a grid.
     Grid,
-    /// What says what an entity *does* rather than what it is.
+    /// What an entity does, and what it answers to.
+    ///
+    /// Gameplay rather than presentation: the script that drives it, the clip
+    /// it plays, the sound it makes, and the tags a script finds it by. A tag
+    /// is not a behaviour, but it exists for the same reader — nothing else
+    /// asks what an entity is tagged.
     Behaviour,
 }
 
@@ -105,6 +110,21 @@ const KNOWN: &[Known] = &[
         icon: icons::TEXT,
     },
     Known {
+        type_name: "sindri.ui.button",
+        family: Family::Ui,
+        icon: icons::BUTTON,
+    },
+    Known {
+        type_name: "sindri.ui.layout",
+        family: Family::Ui,
+        icon: icons::LAYOUT,
+    },
+    Known {
+        type_name: "sindri.effect.burst",
+        family: Family::Rendering,
+        icon: icons::EFFECT,
+    },
+    Known {
         type_name: "sindri.physics2d.rigid_body",
         family: Family::Physics,
         icon: icons::PHYSICS,
@@ -138,6 +158,11 @@ const KNOWN: &[Known] = &[
         type_name: "sindri.audio.source",
         family: Family::Behaviour,
         icon: icons::AUDIO,
+    },
+    Known {
+        type_name: "sindri.tags",
+        family: Family::Behaviour,
+        icon: icons::LABEL,
     },
 ];
 

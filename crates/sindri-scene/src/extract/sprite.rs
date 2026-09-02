@@ -57,6 +57,7 @@ impl SceneExtractor {
         cameras: &ResolvedCameras,
         textures: &TextureBindings,
         animations: &SpriteAnimations,
+        effects: Option<&crate::Effects2d>,
         frame: &mut ExtractedFrame,
     ) -> Result<(), SceneExtractError> {
         let mut batches: SpriteBatches = BTreeMap::new();
@@ -64,6 +65,9 @@ impl SceneExtractor {
         self.push_world_sprites(world, cameras, textures, animations, &resting, &mut batches)?;
         self.push_ui_images(world, cameras, textures, animations, &resting, &mut batches)?;
         self.push_tilemaps(world, cameras, textures, &mut batches)?;
+        // Into the same batches as everything else, so a burst merges with what
+        // is already on its layer instead of costing a draw call.
+        Self::push_effects(effects, cameras, textures, &mut batches)?;
         Self::flush_batches(batches, cameras, frame)
     }
 

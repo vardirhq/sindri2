@@ -12,9 +12,12 @@ use crate::{
     ScriptComponent,
     audio_host::AUDIO,
     surface::{
-        ENTITY, FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, GridCall, HostFunction,
-        INPUT, INPUT_QUERIES, Node, PRINT, THIS, THROUGH_REFERENCE, TIME, TIME_VALUES, WORLD,
-        WORLD_CALLS, WorldCall,
+        EFFECTS, EFFECTS_CALLS, ENTITY, EffectsCall, FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS,
+        GameCall, GridCall, HostFunction, INPUT, INPUT_QUERIES, Node, PHYSICS, PHYSICS_CALLS,
+        POINTER, POINTER_QUERIES, POINTER_VALUES, PREFAB, PRINT, PhysicsCall, PointerValue, RANDOM,
+        RANDOM_CALLS, RandomCall, SAVE, SAVE_CALLS, SaveCall, THIS, THROUGH_REFERENCE, TIME,
+        TIME_VALUES, TOUCH, TOUCH_CALLS, TOUCH_COUNT, UI, UI_CALLS, UiCall, WORLD, WORLD_CALLS,
+        WorldCall,
     },
 };
 
@@ -103,20 +106,56 @@ pub fn environment() -> Environment {
     environment.add_type(TIME, time);
     environment.add_value(TIME, Type::Named(TIME.to_owned()));
 
+    add_world_surface(&mut environment);
+
+    add_pointer_surface(&mut environment);
+    add_physics_surface(&mut environment);
+    add_ui_surface(&mut environment);
+    add_random_surface(&mut environment);
+    add_save_surface(&mut environment);
+    add_effects_surface(&mut environment);
+    add_grid_surface(&mut environment);
+    add_audio_surface(&mut environment);
+
+    environment
+}
+
+/// What a script can do to the world it is in: find, spawn, despawn, reparent,
+/// and write an exported field on another script.
+///
+/// Its own function like every other namespace, rather than inline in
+/// `environment`, so that adding a call does not grow one function towards the
+/// limit the others were split out to stay under.
+pub(super) fn add_world_surface(environment: &mut Environment) {
     let mut world = HostType::new();
     for (name, call) in WORLD_CALLS {
         world = world.with_function(
             *name,
             FunctionType {
                 params: match call {
-                    WorldCall::Find => vec![Type::String],
+                    WorldCall::Find | WorldCall::WithTag => vec![Type::String],
+                    WorldCall::Spawn => vec![Type::Named(PREFAB.to_owned())],
                     WorldCall::Despawn | WorldCall::Exists => {
                         vec![Type::Named(ENTITY.to_owned())]
                     }
+                    WorldCall::SetParent => vec![
+                        Type::Named(ENTITY.to_owned()),
+                        Type::Named(ENTITY.to_owned()),
+                    ],
+                    // The value is `Unknown` because an exported field may be a
+                    // number, a truth, or text, and Decay has no union. The
+                    // host checks what it was given, and the instance refuses a
+                    // value the field cannot hold when it is built.
+                    WorldCall::SetProperty => {
+                        vec![Type::Named(ENTITY.to_owned()), Type::String, Type::Unknown]
+                    }
                 },
                 return_type: match call {
-                    WorldCall::Find => Type::Named(ENTITY.to_owned()),
-                    WorldCall::Despawn => Type::Unit,
+                    WorldCall::Find | WorldCall::Spawn => Type::Named(ENTITY.to_owned()),
+                    WorldCall::WithTag => Type::array_of(Type::Named(ENTITY.to_owned())),
+                    WorldCall::Despawn | WorldCall::SetParent | WorldCall::SetProperty => {
+                        Type::Unit
+                    }
                     WorldCall::Exists => Type::Bool,
                 },
             },
@@ -124,11 +163,182 @@ pub fn environment() -> Environment {
     }
     environment.add_type(WORLD, world);
     environment.add_value(WORLD, Type::Named(WORLD.to_owned()));
+}
 
-    add_grid_surface(&mut environment);
-    add_audio_surface(&mut environment);
+/// Where the person is pointing, and the fingers behind it.
+pub(super) fn add_pointer_surface(environment: &mut Environment) {
+    let mut pointer = HostType::new();
+    for (name, value) in POINTER_VALUES {
+        pointer = pointer.with_value(
+            *name,
+            match value {
+                PointerValue::X | PointerValue::Y => Type::F32,
+                PointerValue::Inside | PointerValue::OverUi => Type::Bool,
+            },
+        );
+    }
+    for (name, _) in POINTER_QUERIES {
+        pointer = pointer.with_function(
+            *name,
+            FunctionType {
+                params: vec![Type::String],
+                return_type: Type::Bool,
+            },
+        );
+    }
+    environment.add_type(POINTER, pointer);
+    environment.add_value(POINTER, Type::Named(POINTER.to_owned()));
 
-    environment
+    let mut touch = HostType::new().with_value(TOUCH_COUNT, Type::F32);
+    for (name, _) in TOUCH_CALLS {
+        touch = touch.with_function(
+            *name,
+            FunctionType {
+                params: vec![Type::F32],
+                return_type: Type::F32,
+            },
+        );
+    }
+    environment.add_type(TOUCH, touch);
+    environment.add_value(TOUCH, Type::Named(TOUCH.to_owned()));
+}
+
+/// What a script can do to a body, and ask about what it touched.
+pub(super) fn add_physics_surface(environment: &mut Environment) {
+    let entity = || Type::Named(ENTITY.to_owned());
+    let mut physics = HostType::new();
+    for (name, call) in PHYSICS_CALLS {
+        physics = physics.with_function(
+            *name,
+            FunctionType {
+                params: match call {
+                    PhysicsCall::VelocityX | PhysicsCall::VelocityY => vec![entity()],
+                    PhysicsCall::SetVelocity | PhysicsCall::ApplyImpulse => {
+                        vec![entity(), Type::F32, Type::F32]
+                    }
+                    // An event query is about the entity the script is on, so
+                    // it takes nothing: an event is about a pair, and the pair
+                    // a script cares about is the one it is half of.
+                    _ => Vec::new(),
+                },
+                return_type: match call {
+                    PhysicsCall::VelocityX | PhysicsCall::VelocityY => Type::F32,
+                    PhysicsCall::SetVelocity | PhysicsCall::ApplyImpulse => Type::Unit,
+                    _ => Type::array_of(entity()),
+                },
+            },
+        );
+    }
+    environment.add_type(PHYSICS, physics);
+    environment.add_value(PHYSICS, Type::Named(PHYSICS.to_owned()));
+}
+
+/// What a script can change about a screen element.
+///
+/// The words stay in the scene and the numbers come from here: Decay cannot
+/// build a string, so a HUD's template is authored and a script fills its
+/// slots.
+pub(super) fn add_ui_surface(environment: &mut Environment) {
+    let entity = || Type::Named(ENTITY.to_owned());
+    let mut ui = HostType::new();
+    for (name, call) in UI_CALLS {
+        ui = ui.with_function(
+            *name,
+            FunctionType {
+                params: match call {
+                    UiCall::Text => vec![entity(), Type::String],
+                    UiCall::Numbers => vec![entity(), Type::F32, Type::F32],
+                    UiCall::Number | UiCall::Fill => vec![entity(), Type::F32],
+                    _ => vec![entity()],
+                },
+                return_type: if call.is_query() {
+                    Type::Bool
+                } else {
+                    Type::Unit
+                },
+            },
+        );
+    }
+    environment.add_type(UI, ui);
+    environment.add_value(UI, Type::Named(UI.to_owned()));
+}
+
+/// What a script can draw from the run's stream.
+pub(super) fn add_random_surface(environment: &mut Environment) {
+    let mut random = HostType::new();
+    for (name, call) in RANDOM_CALLS {
+        random = random.with_function(
+            *name,
+            FunctionType {
+                params: match call {
+                    RandomCall::Value => Vec::new(),
+                    RandomCall::Range | RandomCall::Int => vec![Type::F32, Type::F32],
+                    RandomCall::Pick => vec![Type::array_of(Type::Named(ENTITY.to_owned()))],
+                    RandomCall::Seed => vec![Type::F32],
+                },
+                return_type: match call {
+                    RandomCall::Value | RandomCall::Range | RandomCall::Int => Type::F32,
+                    RandomCall::Pick => Type::Named(ENTITY.to_owned()),
+                    RandomCall::Seed => Type::Unit,
+                },
+            },
+        );
+    }
+    environment.add_type(RANDOM, random);
+    environment.add_value(RANDOM, Type::Named(RANDOM.to_owned()));
+}
+
+/// What a game remembers between runs.
+pub(super) fn add_save_surface(environment: &mut Environment) {
+    let mut save = HostType::new();
+    for (name, call) in SAVE_CALLS {
+        save = save.with_function(
+            *name,
+            FunctionType {
+                params: match call {
+                    SaveCall::Number | SaveCall::SetNumber => vec![Type::String, Type::F32],
+                    SaveCall::Flag | SaveCall::SetFlag => vec![Type::String, Type::Bool],
+                    SaveCall::Has => vec![Type::String],
+                    _ => Vec::new(),
+                },
+                return_type: match call {
+                    SaveCall::Number => Type::F32,
+                    SaveCall::Flag
+                    | SaveCall::Has
+                    | SaveCall::IsNew
+                    | SaveCall::IsDamaged
+                    | SaveCall::IsFromNewer => Type::Bool,
+                    SaveCall::SetNumber | SaveCall::SetFlag | SaveCall::Clear => Type::Unit,
+                },
+            },
+        );
+    }
+    environment.add_type(SAVE, save);
+    environment.add_value(SAVE, Type::Named(SAVE.to_owned()));
+}
+
+/// Short-lived visual flecks a script can throw.
+pub(super) fn add_effects_surface(environment: &mut Environment) {
+    let mut effects = HostType::new();
+    for (name, call) in EFFECTS_CALLS {
+        effects = effects.with_function(
+            *name,
+            FunctionType {
+                params: match call {
+                    EffectsCall::Burst => vec![Type::Named(ENTITY.to_owned())],
+                    EffectsCall::BurstAt => {
+                        vec![Type::Named(ENTITY.to_owned()), Type::F32, Type::F32]
+                    }
+                    EffectsCall::Live => Vec::new(),
+                },
+                // How many flecks were made, which is fewer than asked for when
+                // the pool is full. A game can watch it and turn itself down.
+                return_type: Type::F32,
+            },
+        );
+    }
+    environment.add_type(EFFECTS, effects);
+    environment.add_value(EFFECTS, Type::Named(EFFECTS.to_owned()));
 }
 
 pub(super) fn add_grid_surface(environment: &mut Environment) {

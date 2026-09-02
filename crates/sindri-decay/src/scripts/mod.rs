@@ -17,18 +17,158 @@ use decay_runtime::{ScriptInstance, Value};
 use sindri_core::{ComponentSchemaRegistry, EntityId, World};
 use sindri_platform::InputState;
 
-use self::run::{ensure_compiled, tick};
+use self::run::{TickWorld, ensure_compiled, tick};
 use crate::{
-    Blackboard, ScriptComponent, ScriptExport, ScriptFailure, ScriptMessage, ScriptReport,
-    audio_host::AudioCommand, exports::exports_of,
+    Blackboard, Physics2d, PrefabSources, ScriptComponent, ScriptExport, ScriptFailure,
+    ScriptMessage, ScriptReport, audio_host::AudioCommand, exports::exports_of, surface::PREFAB,
 };
 
 pub use environment::{environment, referenced_sources};
 pub use sources::ScriptSources;
 
+/// How many times a pass will start what the previous round spawned.
+///
+/// A script started by a spawn may spawn in turn, and settling that in one
+/// frame is what makes "a bullet moves on the frame it is fired" true for a
+/// bullet fired by something that was itself just created. A cascade that does
+/// not settle is a bug in the scripts, and it is reported with the round count
+/// rather than being run until the frame is gone.
+const SPAWN_ROUNDS: usize = 8;
+
+/// How many entities one pass of scripts may create.
+///
+/// Decay's operation budget already stops a loop that never ends, but it stops
+/// it after a million instructions — long after a spawn loop with a mistaken
+/// bound has put a hundred thousand entities in the world and taken the editor
+/// with it. This is the same protection stated in the units the mistake is
+/// made in.
+pub(crate) const SPAWN_LIMIT_PER_PASS: usize = 4096;
+
+/// Everything one pass of scripts needs from the frame around it.
+///
+/// A struct rather than parameters, because the list had reached six and every
+/// capability the scripting surface grows adds another: the input, the prefabs
+/// it may spawn, the physics it may drive. A caller that does not offer one of
+/// them says so by leaving a field out of the literal rather than by passing
+/// something empty in the right position.
+pub struct ScriptFrame<'a> {
+    pub sources: &'a ScriptSources,
+    pub prefabs: &'a PrefabSources,
+    pub input: &'a InputState,
+    /// The physics a script may read and drive, when the host runs any.
+    ///
+    /// `None` for a host with no physics — a headless test, a scene that never
+    /// authored a collider — and then a script calling `Physics.*` is told so
+    /// rather than quietly doing nothing.
+    pub physics: Option<Physics2d<'a>>,
+    /// Where the screen elements are and what the pointer is doing to them.
+    ///
+    /// `None` for a host that draws no UI, and then `Ui.is_pressed` says so
+    /// rather than answering that nothing was clicked — a menu whose buttons
+    /// never respond because nothing is laying them out should be heard about
+    /// on the first frame, not mistaken for a person who has not clicked yet.
+    pub screen_ui: Option<&'a sindri_scene::ScreenUi>,
+    /// The run's random stream, when the host is running one.
+    ///
+    /// `None` for a host that seeds nothing, and then `Random.value` says so
+    /// rather than handing out the same number for ever — a game whose waves
+    /// never vary should hear about it on the first frame.
+    pub random: Option<&'a mut sindri_core::Rng>,
+    /// What the game remembers, when the host is keeping a save.
+    ///
+    /// `None` for a host that keeps none, and then `Save.*` says so rather than
+    /// accepting writes that go nowhere — a game whose progress silently never
+    /// persists should be heard about on the first frame, not after someone has
+    /// played for an hour.
+    pub saves: Option<&'a mut sindri_core::SaveStore>,
+    /// The fleck pool, when the host is running one.
+    ///
+    /// `None` for a host that draws none, and then `Effects.burst` says so
+    /// rather than throwing flecks nobody will ever see.
+    pub effects: Option<&'a mut sindri_scene::Effects2d>,
+    pub delta_seconds: f32,
+}
+
+impl<'a> ScriptFrame<'a> {
+    /// A frame with sources and nothing else, for a caller that only runs
+    /// scripts.
+    #[must_use]
+    pub fn new(sources: &'a ScriptSources, input: &'a InputState, delta_seconds: f32) -> Self {
+        Self {
+            sources,
+            prefabs: PrefabSources::none(),
+            input,
+            physics: None,
+            screen_ui: None,
+            random: None,
+            saves: None,
+            effects: None,
+            delta_seconds,
+        }
+    }
+
+    /// The same frame, with prefabs a script may spawn.
+    #[must_use]
+    pub fn with_prefabs(mut self, prefabs: &'a PrefabSources) -> Self {
+        self.prefabs = prefabs;
+        self
+    }
+
+    /// The same frame, with the screen elements a script may ask about.
+    #[must_use]
+    pub const fn with_screen_ui(mut self, screen_ui: &'a sindri_scene::ScreenUi) -> Self {
+        self.screen_ui = Some(screen_ui);
+        self
+    }
+
+    /// The same frame, with the run's random stream.
+    #[must_use]
+    pub fn with_random(mut self, random: &'a mut sindri_core::Rng) -> Self {
+        self.random = Some(random);
+        self
+    }
+
+    /// The same frame, with what the game remembers.
+    #[must_use]
+    pub fn with_saves(mut self, saves: &'a mut sindri_core::SaveStore) -> Self {
+        self.saves = Some(saves);
+        self
+    }
+
+    /// The same frame, with the fleck pool a script may throw into.
+    #[must_use]
+    pub fn with_effects(mut self, effects: &'a mut sindri_scene::Effects2d) -> Self {
+        self.effects = Some(effects);
+        self
+    }
+
+    /// The same frame, with physics a script may read and drive.
+    #[must_use]
+    pub fn with_physics(mut self, physics: Physics2d<'a>) -> Self {
+        self.physics = Some(physics);
+        self
+    }
+}
+
 struct Compiled {
     source: String,
     program: IrProgram,
+}
+
+/// Files one tick's outcome into the report.
+fn collect(
+    report: &mut ScriptReport,
+    entity: EntityId,
+    outcome: Result<Vec<String>, ScriptFailure>,
+) {
+    match outcome {
+        Ok(printed) => report.printed.extend(
+            printed
+                .into_iter()
+                .map(|message| ScriptMessage { entity, message }),
+        ),
+        Err(failure) => report.failures.push(failure),
+    }
 }
 
 struct Running {
@@ -91,14 +231,38 @@ impl Scripts {
         failures
     }
 
+    /// Runs one pass of every enabled script, then starts what that pass
+    /// spawned.
+    ///
+    /// A spawned entity's script starts **in the same pass**, so a bullet
+    /// created during an update moves during that update rather than standing
+    /// still for a frame. It cannot start during the call that created it:
+    /// building an instance runs the container's field initializers, which is
+    /// Decay code, and the world is already lent to the call in progress.
+    /// So spawning creates the entity now and starting it happens after —
+    /// which is also why `World.set_property` is the way a spawner authors a
+    /// starting value, and why it is refused once an instance exists.
+    ///
+    /// A script started this way may spawn in turn. Those rounds are bounded:
+    /// a cascade that does not settle is stopped and reported rather than
+    /// taking the frame with it.
     pub fn advance(
         &mut self,
         world: &mut World,
         components: &ComponentSchemaRegistry,
-        sources: &ScriptSources,
-        input: &InputState,
-        delta_seconds: f32,
+        frame: ScriptFrame<'_>,
     ) -> ScriptReport {
+        let ScriptFrame {
+            sources,
+            prefabs,
+            input,
+            physics,
+            screen_ui,
+            random,
+            saves,
+            effects,
+            delta_seconds,
+        } = frame;
         let mut report = ScriptReport::default();
         if !delta_seconds.is_finite() || delta_seconds < 0.0 {
             report.failures.push(ScriptFailure::BadDelta(delta_seconds));
@@ -121,6 +285,24 @@ impl Scripts {
             blackboard,
             audio,
         } = self;
+        let mut at = TickWorld {
+            programs,
+            running,
+            blackboard,
+            audio,
+            world,
+            sources,
+            prefabs,
+            input,
+            physics,
+            screen_ui,
+            random,
+            saves,
+            effects,
+            started: BTreeSet::new(),
+            spawned: Vec::new(),
+        };
+        at.started.extend(at.running.keys().copied());
         let mut live = BTreeSet::new();
 
         for (entity, component) in scripted {
@@ -128,30 +310,97 @@ impl Scripts {
                 continue;
             }
             live.insert(entity);
-
-            match tick(
-                programs,
-                running,
-                blackboard,
-                audio,
-                world,
-                sources,
-                input,
+            collect(
+                &mut report,
                 entity,
-                &component,
-                delta_seconds,
-            ) {
-                Ok(printed) => report.printed.extend(
-                    printed
-                        .into_iter()
-                        .map(|message| ScriptMessage { entity, message }),
-                ),
-                Err(failure) => report.failures.push(failure),
-            }
+                tick(&mut at, entity, &component, delta_seconds),
+            );
         }
 
-        running.retain(|entity, _| live.contains(entity));
+        Self::start_spawned(&mut report, &mut live, &mut at, components, delta_seconds);
+
+        at.running.retain(|entity, _| live.contains(entity));
         report
+    }
+
+    /// Starts the scripts on entities this pass created, and on entities those
+    /// created, until nothing new appears.
+    fn start_spawned(
+        report: &mut ScriptReport,
+        live: &mut BTreeSet<EntityId>,
+        at: &mut TickWorld<'_>,
+        components: &ComponentSchemaRegistry,
+        delta_seconds: f32,
+    ) {
+        let mut pending: Vec<EntityId> = std::mem::take(&mut at.spawned);
+        for round in 0..SPAWN_ROUNDS {
+            if pending.is_empty() {
+                return;
+            }
+            for entity in std::mem::take(&mut pending) {
+                // Read through the registry rather than the payload, so a
+                // spawned script is validated exactly as an authored one is.
+                let component = match components.get::<ScriptComponent>(&*at.world, entity) {
+                    Ok(Some(component)) => component,
+                    Ok(None) => continue,
+                    Err(error) => {
+                        report
+                            .failures
+                            .push(ScriptFailure::Registry(error.to_string()));
+                        continue;
+                    }
+                };
+                if !component.enabled {
+                    continue;
+                }
+                live.insert(entity);
+                collect(report, entity, tick(at, entity, &component, delta_seconds));
+            }
+            pending = std::mem::take(&mut at.spawned);
+            if !pending.is_empty() && round + 1 == SPAWN_ROUNDS {
+                report.failures.push(ScriptFailure::SpawnCascade {
+                    rounds: SPAWN_ROUNDS,
+                    pending: pending.len(),
+                });
+            }
+        }
+    }
+
+    /// Every prefab asset the world's scripts could spawn.
+    ///
+    /// Found through the *declared* type of each `@export` field rather than by
+    /// looking for strings that resemble asset IDs: a field declared `Prefab`
+    /// is a prefab reference, and one declared `String` is text however much it
+    /// looks like a path. That distinction is the whole reason `World.spawn`
+    /// refuses text — it is what lets a host load a scene's prefabs before the
+    /// first frame instead of discovering them when a script spawns.
+    ///
+    /// Empty for a source that has not compiled yet, because the declared types
+    /// are not known until it has. A host asks again once it has.
+    pub fn referenced_prefabs(
+        &self,
+        world: &World,
+        components: &ComponentSchemaRegistry,
+    ) -> BTreeSet<String> {
+        let mut referenced = BTreeSet::new();
+        for (_, component) in components
+            .query::<ScriptComponent>(world)
+            .unwrap_or_default()
+        {
+            let Some(exports) = self.exports(&component.source, &component.script) else {
+                continue;
+            };
+            for export in exports {
+                if export.type_name.as_deref() != Some(PREFAB) {
+                    continue;
+                }
+                if let Some(serde_json::Value::String(id)) = component.properties.get(&export.name)
+                {
+                    referenced.insert(id.clone());
+                }
+            }
+        }
+        referenced
     }
 
     #[must_use]

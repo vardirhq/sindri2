@@ -27,11 +27,13 @@ mod component;
 mod error;
 mod exports;
 mod host;
+mod physics;
+mod prefabs;
 mod report;
 mod scripts;
 mod surface;
 
-pub use audio_host::{AudioCommand, WorldHost};
+pub use audio_host::{AudioCommand, HostServices, WorldHost};
 pub use blackboard::Blackboard;
 pub use component::ScriptComponent;
 /// A value a Decay script holds, re-exported so a host can name one without
@@ -39,6 +41,10 @@ pub use component::ScriptComponent;
 pub use decay_runtime::Value as ScriptValue;
 pub use error::ScriptFailure;
 pub use exports::ScriptExport;
-pub use host::ScriptContext;
+pub use host::{ScriptContext, Spawning};
+pub use physics::Physics2d;
+pub use prefabs::PrefabSources;
 pub use report::{ScriptMessage, ScriptReport};
-pub use scripts::{ScriptSources, Scripts, environment, referenced_sources};
+pub use scripts::{ScriptFrame, ScriptSources, Scripts, environment, referenced_sources};
+
+pub(crate) use scripts::SPAWN_LIMIT_PER_PASS;

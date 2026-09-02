@@ -1,6 +1,6 @@
 //! What stops a script, and what it says about why.
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum RuntimeError {
     /// A path was rooted at something the script holds that is not a reference,
     /// so there is nothing for the rest of the path to be about.
@@ -21,6 +21,20 @@ pub enum RuntimeError {
     InvalidUnary,
     InvalidBinary,
     ExpectedBool,
+    /// Something that is not a collection was indexed, walked, or asked for
+    /// its length. Named by what it actually is, because "not a collection" on
+    /// its own does not say which value was wrong.
+    NotACollection(String),
+    /// An index that is not a number at all.
+    IndexNotANumber(String),
+    /// An index that is a number and not a position: fractional, negative, or
+    /// not finite. Decay has one numeric type, so this is a property of the
+    /// value rather than of its type, and it is checked where the value is.
+    IndexNotWhole(f64),
+    IndexOutOfRange {
+        index: usize,
+        length: usize,
+    },
     InvalidJump(usize),
     /// A script called deeper than [`Runtime::call_depth_limit`] allows.
     ///

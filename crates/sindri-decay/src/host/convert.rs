@@ -2,7 +2,7 @@
 
 use decay_ir::Path;
 use decay_runtime::{RuntimeError, Value};
-use sindri_platform::Key;
+use sindri_platform::{Key, MouseButton};
 
 use crate::surface::Seg;
 
@@ -39,6 +39,21 @@ pub(super) fn key(path: &Path, value: Option<&Value>) -> Result<Key, RuntimeErro
     // reason nobody can see.
     Key::from_name(name)
         .ok_or_else(|| RuntimeError::Host(format!("there is no key called `{name}`")))
+}
+
+/// A button name from a script, resolved to the button it names.
+///
+/// Refused rather than treated as never-pressed, for the reason a key name is:
+/// a control that silently does nothing cannot be reproduced.
+pub(super) fn button(path: &Path, value: Option<&Value>) -> Result<MouseButton, RuntimeError> {
+    let Some(Value::String(name)) = value else {
+        return Err(RuntimeError::Host(format!(
+            "{} takes a button name, and the script gave {value:?}",
+            path.dotted()
+        )));
+    };
+    MouseButton::from_name(name)
+        .ok_or_else(|| RuntimeError::Host(format!("there is no pointer button called `{name}`")))
 }
 
 pub(super) fn describe(pointer: &[Seg]) -> String {

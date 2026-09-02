@@ -149,7 +149,16 @@ impl Parser<'_> {
     }
 
     pub(super) fn parse_type(&mut self) -> Option<TypeRef> {
-        self.expect_identifier("expected type name")
-            .map(|(name, span)| TypeRef { name, span })
+        let (name, span) = self.expect_identifier("expected type name")?;
+        if self.consume_simple(&TokenKind::Less).is_none() {
+            return Some(TypeRef::plain(name, span));
+        }
+        let argument = self.parse_type()?;
+        let end = self.expect_simple(&TokenKind::Greater, "expected `>` after type argument")?;
+        Some(TypeRef {
+            name,
+            argument: Some(Box::new(argument)),
+            span: span.join(end),
+        })
     }
 }

@@ -37,7 +37,7 @@ fn advancing_time_moves_a_sprite_through_its_sheet() {
                 VIEWPORT,
                 CameraView::default(),
                 &bindings,
-                &animations,
+                sindri_scene::SceneRuntime::default().with_animations(&animations),
             )
             .expect("the animated scene extracts");
         seen.push(only_instance_rect(&frame));
@@ -136,7 +136,7 @@ fn an_animation_with_no_clip_playing_draws_nothing_of_its_own() {
             VIEWPORT,
             CameraView::default(),
             &animated_bindings(),
-            &animations,
+            sindri_scene::SceneRuntime::default().with_animations(&animations),
         )
         .expect("the scene extracts");
     assert_eq!(only_instance_rect(&frame), UvRect::FULL);
@@ -217,7 +217,7 @@ fn a_clip_naming_a_sprite_the_sheet_lacks_is_reported() {
             VIEWPORT,
             CameraView::default(),
             &bindings,
-            &animations,
+            sindri_scene::SceneRuntime::default().with_animations(&animations),
         )
         .expect("an unresolved frame still draws");
     assert!(

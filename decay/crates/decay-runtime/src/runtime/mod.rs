@@ -16,6 +16,24 @@ use crate::host::Host;
 use crate::instance::Slot;
 use crate::value::{Value, apply_binary, apply_unary};
 
+/// What a value is, for an error that has to say which one was wrong.
+///
+/// Its kind rather than its contents: an error naming "a number" is what an
+/// author needs, and printing the number would put a script's data in a
+/// diagnostic for no gain.
+fn describe(value: &Value) -> String {
+    match value {
+        Value::Number(_) => "a number",
+        Value::String(_) => "text",
+        Value::Bool(_) => "a truth",
+        Value::Reference(_) => "an entity",
+        Value::Array(_) => "a collection",
+        Value::Null => "null",
+        Value::Unit => "nothing",
+    }
+    .to_owned()
+}
+
 /// How deep Decay calls may nest before [`RuntimeError::CallDepthExceeded`].
 ///
 /// Far past anything gameplay needs, and far short of what overflows the host's
@@ -51,6 +69,18 @@ pub(super) struct Frame {
     /// duplicate, not a shadow.
     scopes: Vec<HashMap<String, Slot>>,
     stack: Vec<Value>,
+    /// The collections a `for` is part way through, innermost last.
+    ///
+    /// Beside the value stack rather than on it, so no value a script could
+    /// hold ever represents "part way through a loop" — there is no cursor to
+    /// bind to a name, print, or pass to a host.
+    walks: Vec<Walk>,
+}
+
+/// One `for` in progress.
+struct Walk {
+    over: std::rc::Rc<Vec<Value>>,
+    next: usize,
 }
 
 impl Frame {
@@ -58,6 +88,7 @@ impl Frame {
         Self {
             scopes: vec![locals],
             stack: Vec::new(),
+            walks: Vec::new(),
         }
     }
 
@@ -139,6 +170,127 @@ impl<'a, H: Host> Runtime<'a, H> {
         self.host
     }
 
+    /// The element an index names, refusing every way an index can be wrong.
+    ///
+    /// There is no integer type, so "a whole number" is a runtime property of
+    /// the value rather than a static property of its type. Each failure is
+    /// named separately because they are different mistakes: `items[1.5]` is a
+    /// calculation that should have rounded, and `items[9]` on a collection of
+    /// three is a loop bound that is wrong.
+    fn element_at(object: &Value, index: &Value) -> Result<Value, RuntimeError> {
+        let values = object
+            .elements()
+            .ok_or_else(|| RuntimeError::NotACollection(describe(object)))?;
+        let Value::Number(number) = index else {
+            return Err(RuntimeError::IndexNotANumber(describe(index)));
+        };
+        if !number.is_finite() || number.fract() != 0.0 || *number < 0.0 {
+            return Err(RuntimeError::IndexNotWhole(*number));
+        }
+        // Guarded above: finite, non-negative, and whole.
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let position = *number as usize;
+        values
+            .get(position)
+            .cloned()
+            .ok_or(RuntimeError::IndexOutOfRange {
+                index: position,
+                length: values.len(),
+            })
+    }
+
+    /// One call: the container's own function, a call through a reference, or
+    /// the host's.
+    fn perform_call(
+        &mut self,
+        container: &IrContainer,
+        fields: &mut HashMap<String, Slot>,
+        frame: &mut Frame,
+        callee: &decay_ir::Path,
+        argument_count: usize,
+    ) -> Result<Value, RuntimeError> {
+        let mut args = Vec::with_capacity(argument_count);
+        for _ in 0..argument_count {
+            args.push(frame.stack.pop().ok_or(RuntimeError::StackUnderflow)?);
+        }
+        args.reverse();
+        if callee.0.len() == 1
+            && container
+                .functions
+                .iter()
+                .any(|function| function.name == callee.0[0])
+        {
+            return self.call_in_container(container, fields, &callee.0[0], args);
+        }
+        if let Some((subject, rest)) = Self::subject_path(fields, frame, callee)? {
+            return self
+                .host
+                .call(Some(subject), &rest, &args)?
+                .ok_or_else(|| RuntimeError::FunctionNotFound(rest.dotted()));
+        }
+        self.host
+            .call(None, callee, &args)?
+            .ok_or_else(|| RuntimeError::FunctionNotFound(callee.dotted()))
+    }
+
+    /// The instructions that work on a collection.
+    ///
+    /// Their own function because they are the one group that shares a failure
+    /// vocabulary, and because the evaluation loop is easier to read as a list
+    /// of what an instruction *is* than as a list of what each one does.
+    ///
+    /// Answers with a jump target when the instruction takes one, which only
+    /// the exhaustion of a walk does.
+    fn step_collection(
+        frame: &mut Frame,
+        instruction: &Instruction,
+        length: usize,
+    ) -> Result<Option<usize>, RuntimeError> {
+        match instruction {
+            Instruction::Index => {
+                let index = frame.stack.pop().ok_or(RuntimeError::StackUnderflow)?;
+                let object = frame.stack.pop().ok_or(RuntimeError::StackUnderflow)?;
+                frame.stack.push(Self::element_at(&object, &index)?);
+            }
+            Instruction::Length => {
+                let object = frame.stack.pop().ok_or(RuntimeError::StackUnderflow)?;
+                let values = object
+                    .elements()
+                    .ok_or_else(|| RuntimeError::NotACollection(describe(&object)))?;
+                // `usize` to `f64` is exact for every length a collection can
+                // reach here, and a host bounds those far below the point
+                // where it would not be.
+                #[allow(clippy::cast_precision_loss)]
+                frame.stack.push(Value::Number(values.len() as f64));
+            }
+            Instruction::IterBegin => {
+                let object = frame.stack.pop().ok_or(RuntimeError::StackUnderflow)?;
+                let over = object
+                    .elements()
+                    .ok_or_else(|| RuntimeError::NotACollection(describe(&object)))?
+                    .clone();
+                frame.walks.push(Walk { over, next: 0 });
+            }
+            Instruction::IterNext(target) => {
+                let walk = frame.walks.last_mut().ok_or(RuntimeError::StackUnderflow)?;
+                let Some(value) = walk.over.get(walk.next).cloned() else {
+                    frame.walks.pop();
+                    if *target > length {
+                        return Err(RuntimeError::InvalidJump(*target));
+                    }
+                    return Ok(Some(*target));
+                };
+                walk.next += 1;
+                frame.stack.push(value);
+            }
+            Instruction::IterEnd => {
+                frame.walks.pop().ok_or(RuntimeError::StackUnderflow)?;
+            }
+            _ => unreachable!("only the collection instructions reach here"),
+        }
+        Ok(None)
+    }
+
     pub(super) fn execute_instructions(
         &mut self,
         container: &IrContainer,
@@ -184,28 +336,8 @@ impl<'a, H: Host> Runtime<'a, H> {
                     callee,
                     argument_count,
                 } => {
-                    let mut args = Vec::with_capacity(*argument_count);
-                    for _ in 0..*argument_count {
-                        args.push(frame.stack.pop().ok_or(RuntimeError::StackUnderflow)?);
-                    }
-                    args.reverse();
-                    let result = if callee.0.len() == 1
-                        && container
-                            .functions
-                            .iter()
-                            .any(|function| function.name == callee.0[0])
-                    {
-                        self.call_in_container(container, fields, &callee.0[0], args)?
-                    } else if let Some((subject, rest)) = Self::subject_path(fields, frame, callee)?
-                    {
-                        self.host
-                            .call(Some(subject), &rest, &args)?
-                            .ok_or_else(|| RuntimeError::FunctionNotFound(rest.dotted()))?
-                    } else if let Some(value) = self.host.call(None, callee, &args)? {
-                        value
-                    } else {
-                        return Err(RuntimeError::FunctionNotFound(callee.dotted()));
-                    };
+                    let result =
+                        self.perform_call(container, fields, frame, callee, *argument_count)?;
                     frame.stack.push(result);
                 }
                 Instruction::Pop => {
@@ -232,6 +364,18 @@ impl<'a, H: Host> Runtime<'a, H> {
                     }
                     ip = *target;
                     continue;
+                }
+                Instruction::Index
+                | Instruction::Length
+                | Instruction::IterBegin
+                | Instruction::IterNext(_)
+                | Instruction::IterEnd => {
+                    if let Some(target) =
+                        Self::step_collection(frame, &instructions[ip], instructions.len())?
+                    {
+                        ip = target;
+                        continue;
+                    }
                 }
                 Instruction::ScopeEnter => frame.scopes.push(HashMap::new()),
                 Instruction::ScopeExit => {

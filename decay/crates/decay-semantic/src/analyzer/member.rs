@@ -2,7 +2,7 @@
 
 use decay_syntax::{Expr, Span};
 
-use crate::diagnostic::container_function_message;
+use crate::diagnostic::{ValueMember, container_function_message};
 use crate::environment::ExternalSymbol;
 use crate::types::Type;
 
@@ -19,6 +19,11 @@ impl Analyzer<'_, '_> {
     /// reject scripts that were working against the other half.
     pub(super) fn member_type(&mut self, object: &Expr, field: &str, span: Span) -> Type {
         let object_type = self.expr_type(object);
+        // A collection's length belongs to the value, not to a path the host
+        // could answer, so the lowering is told which member read this was.
+        if matches!(object_type, Type::Array(_)) && field == crate::types::LENGTH {
+            self.value_members.insert(span, ValueMember::Length);
+        }
         match self.member_symbol(&object_type, field) {
             Some(MemberLookup::Found(ExternalSymbol::Value(ty))) => ty,
             // A function reached without calling it. Decay has no function
@@ -54,6 +59,16 @@ impl Analyzer<'_, '_> {
     /// `None` means "nothing is known about this type", which is not the same
     /// as "this type has no such member" and must not be reported as one.
     pub(super) fn member_symbol(&self, object_type: &Type, field: &str) -> Option<MemberLookup> {
+        // A collection's one member. Not a global `len(x)`: Decay has no
+        // modules, so every global name added is one a script can no longer
+        // use for its own, and a length is a property of the value anyway.
+        if let Type::Array(_) = object_type {
+            return Some(if field == crate::types::LENGTH {
+                MemberLookup::Found(ExternalSymbol::Value(Type::F32))
+            } else {
+                MemberLookup::Missing
+            });
+        }
         let described = match object_type {
             Type::Named(name) if self.is_container(name) => {
                 // `this` is two things: the script's own state, and the entity

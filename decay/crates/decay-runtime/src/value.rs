@@ -1,5 +1,7 @@
 //! What a Decay expression evaluates to, and the arithmetic over it.
 
+use std::rc::Rc;
+
 use decay_ir::Constant;
 use decay_syntax::{BinaryOp, UnaryOp};
 
@@ -23,8 +25,33 @@ pub enum Value {
     /// An absent reference is [`Value::Null`], not a reserved number, for the
     /// same reason an empty tile is null: every number is a real reference.
     Reference(u64),
+    /// Several values, in a fixed order, that the host handed back.
+    ///
+    /// Shared rather than copied, because a collection is passed around by
+    /// scripts that only ever read it: there is no literal for one, no way to
+    /// grow, shrink, or write into one, and nothing that mutates one after the
+    /// host built it. Immutability is what makes sharing safe, and sharing is
+    /// what keeps `for enemy in enemies` from copying the whole thing.
+    Array(Rc<Vec<Value>>),
     Null,
     Unit,
+}
+
+impl Value {
+    /// The elements, for a value that holds several.
+    #[must_use]
+    pub fn elements(&self) -> Option<&Rc<Vec<Self>>> {
+        match self {
+            Self::Array(values) => Some(values),
+            _ => None,
+        }
+    }
+
+    /// A collection of these values.
+    #[must_use]
+    pub fn array(values: Vec<Self>) -> Self {
+        Self::Array(Rc::new(values))
+    }
 }
 
 impl From<&Constant> for Value {

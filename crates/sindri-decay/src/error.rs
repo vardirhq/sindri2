@@ -34,6 +34,11 @@ pub enum ScriptFailure {
         property: String,
         reason: String,
     },
+    #[error(
+        "scripts kept spawning after {rounds} rounds of starting what the last \
+         round made; {pending} entities were left unstarted"
+    )]
+    SpawnCascade { rounds: usize, pending: usize },
     #[error("entity {entity:?} failed in {script}.{function}: {error}")]
     Runtime {
         entity: EntityId,
@@ -52,7 +57,10 @@ impl ScriptFailure {
     /// turns it into a selection.
     pub const fn entity(&self) -> Option<EntityId> {
         match self {
-            Self::BadDelta(_) | Self::Registry(_) | Self::Compile { .. } => None,
+            Self::BadDelta(_)
+            | Self::Registry(_)
+            | Self::SpawnCascade { .. }
+            | Self::Compile { .. } => None,
             Self::MissingSource { entity, .. }
             | Self::UnknownScript { entity, .. }
             | Self::Property { entity, .. }

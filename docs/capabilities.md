@@ -62,6 +62,14 @@ see `docs/2d-model.md`.
 Entity storage was measured at 1k, 10k, and 100k entities before considering an
 archetype ECS; `docs/entity-scaling.md` records why one is not warranted.
 
+A **prefab** is an authored reusable entity definition: a single-root scene
+fragment in the same document shape a scene uses, sharing its entity rules,
+component payloads, versioning, and canonical serialization. `World::spawn_prefab`
+creates the whole subtree or none of it, and answers with the root, every entity
+made, and which authored identity each became. Instances carry no `source_id`,
+because a prefab's identities name entities inside the prefab and two instances
+would collide on every one. `docs/prefabs.md` is the contract.
+
 ### Scenes
 
 Scenes are versioned JSON documents with stable authored IDs kept separate from
@@ -89,11 +97,27 @@ whether the world and the file still agree — including after undoing back to i
 
 ### Input
 
-Keyboard and pointer input arrive as platform-independent events and accumulate
-into an `InputState` that answers held, pressed-this-frame, and
+Keyboard, mouse, and touch input arrive as platform-independent events and
+accumulate into an `InputState` that answers held, pressed-this-frame, and
 released-this-frame for keys and mouse buttons, plus pointer position, pointer
 delta, scroll delta, and window focus. `axis(negative, positive)` returns -1, 0, or 1 and gives zero
 when both are held, so opposed movement keys cannot resolve by event order.
+
+Touch is held beside the mouse rather than folded into it, because they are
+different facts: a mouse has one position and is always somewhere, while fingers
+arrive and leave and there may be several. Fingers are bounded at ten, ordered
+by the id their host gave them so one keeps its place while it stays down, and
+let go of when a window loses focus — a finger cannot be reported as lifted once
+the window has stopped hearing about it. What *unifies* the two is a separate
+question and is answered where a game reads it: `pointer_position` is the mouse
+if there is one and the first finger otherwise, and `pointer_down(Left)` is the
+left button or any finger.
+
+The editor routes all of it through the Game view during Play, in **that view's
+own pixels**, so a script reads the same position there as in the real build.
+A pointer outside the view is reported as gone rather than clamped to its edge,
+because a game told the person is pointing at somewhere they are not is worse
+than a game told they are not pointing at all.
 
 ### Audio
 
@@ -142,13 +166,170 @@ shape of the later 3D slice, but no 3D runtime behavior is claimed yet.
 
 `sindri.physics2d.rigid_body` and `sindri.physics2d.collider` are registered
 scene components with defaults the engine accepts, so a scene authors bodies and
-colliders and the editor's generic component inspector adds and edits them. What
-the editor does not have is physics-specific authoring: no collider outline in
-the viewport, no handles for a shape, and nothing that shows a body's kind
-without reading the payload. Decay access and Gather use are still missing
-entirely, so nothing yet plays a scene whose bodies move. Those remain separate
-feature-track slices in `docs/physics.md` rather than things this foundation
-pretends to have completed.
+colliders and the editor's generic component inspector adds and edits them.
+
+`ScenePhysics2d` is what joins the two halves. It builds the simulation from
+those components, keeps it in step as entities are spawned, switched off, and
+despawned — a body outliving its entity would collide on behalf of nothing — and
+writes what physics decided back into the transforms the renderer reads, leaving
+the authored Z and the 3D scale alone. A body whose authored values have not
+changed is left as it is rather than rebuilt, because rebuilding one discards the
+velocity and contacts the simulation owns. Editor Play and the game session both
+step it once per fixed update, before scripts run, so a script observes the
+events of the step that just happened.
+
+What the editor does not have is physics-specific authoring: no collider outline
+in the viewport, no handles for a shape, and nothing that shows a body's kind
+without reading the payload. No game yet plays a scene whose bodies move —
+`games/orbital-last-stand` is where that proof will come from. Both remain
+separate feature-track slices in `docs/physics.md` rather than things this
+foundation pretends to have completed.
+
+### Editor Play
+
+Play runs **the same fixed-step loop a shipped game runs**. The editor owns a
+`FixedStepClock`, advances it with the real frame delta, and runs gameplay a
+whole number of times per frame — effects, physics, screen UI, scripts and
+animations, in that order, at the fixed rate. Before this it stepped once per
+*rendered* frame, so a scene was simulated as fast as the machine happened to
+draw and a play-test was evidence about the editor rather than about the game.
+
+**An edge belongs to exactly one fixed step.** A key going down is one event and
+gameplay runs in the fixed step, so the edge is spent once a step has seen it —
+a 30 Hz display driving a 60 Hz simulation earns two steps a frame and would
+otherwise fire a button twice. It also survives a frame that earned no step at
+all, which at 144 Hz is most of them, so a click is never dropped before
+gameplay sees it. Accumulated pointer motion follows the same rule: two frames
+of dragging between steps sum rather than losing the first. This was wrong in
+the shipped host too, and is now covered by tests in
+`crates/sindri-platform/tests/game_loop.rs`.
+
+**A held scene can be stepped once**, which is what a debugger's step button is
+for: the bug that happens in one frame and is gone before anyone can look at it.
+It runs the same body a played frame runs, so a scene stepped sixty times is a
+scene that played for a second.
+
+### Effects
+
+`Effects2d` holds short-lived visual flecks as plain values in one array. A
+fleck has no identity a script can hold, no components, no place in the
+hierarchy, and nothing can collide with it — everything an entity is *for* is
+given up, and `docs/effect-scaling.md` is why: 8,000 flecks-as-entities cost
+5.25 ms a frame, a third of a 60 Hz budget, against 0.018 ms pooled. Over half
+the entity cost was `serde_json` re-reading each one's payload, every entity,
+every frame.
+
+What a burst looks like is authored on the entity as `sindri.effect.burst` —
+count, speed, spread, lifetime, size, tint, fade, drag — because those are a
+designer's numbers and a call naming all of them would be unreadable. Flecks
+draw their directions from a stream of their own, never the run's, so turning an
+explosion up cannot change which enemies spawn. The pool is bounded, the oldest
+fleck makes way for the newest, and overflow is counted rather than hidden.
+
+They batch with ordinary sprites by layer and texture, so a burst is one draw
+call rather than a second rendering path.
+
+### Game saves
+
+`sindri_core::SaveStore` is a flat, versioned key/value document. Flat because
+Decay holds numbers, truths and text and nothing else: a structure a script could
+not build is a structure nothing could write, and the file stays something a
+person can read and repair. Ordered keys, so the same saved state is the same
+bytes and a save can be diffed.
+
+Three absences are distinguished, because they call for different things: a
+first run starts cheerfully, a **damaged** save is worth telling someone about
+before their progress is written over, and one written by a **newer** build is
+reported without being read — a reader that guessed at a format it does not know
+would corrupt it the moment it wrote back.
+
+`sindri_platform::SaveBackend` is where the bytes go. `MemorySaves` is the
+default so a headless run and a test have somewhere to write without choosing a
+path; `DamagedSaves` exists so the unreadable path can be proven without
+corrupting a real file; `FileSaves` writes beside the target and renames over it,
+because a save half written is a save destroyed at the exact moment someone's
+machine lost power mid-run; `BrowserSaves` uses `localStorage`, chosen over every
+larger browser store because the alternatives are asynchronous and a game should
+not have to ask whether its progress has landed yet.
+
+Nothing in Decay writes to storage. The store is in memory, marked dirty on
+change, and the host writes it out on a cadence and before it stops — how often
+someone's disk is touched is a decision about their machine. Writing the same
+value again is not a change, so a game storing its volume every frame does not
+keep a disk busy.
+
+Editor Play keeps a save in memory for the editor's lifetime and never writes it
+to disk: `Save.*` calls work and round-trip inside a session so persistence can
+be play-tested, but putting a file into someone's project because they pressed
+Play would be a side effect they did not ask for. Editor preferences are a
+separate thing and stay separate.
+
+### Randomness
+
+`sindri_core::Rng` is a **PCG-XSH-RR 64/32** generator written out rather than
+depended on. Every general-purpose crate reaches the operating system for a
+seed, which on `wasm32-unknown-unknown` means `getrandom` and a target that
+refuses to compile without an opt-in — and more to the point, entropy is the
+opposite of what this is for. A run that cannot be replayed from its seed is not
+seeded at all.
+
+Everything in it is integer arithmetic and the one division is by a power of
+two, which is what makes a seed mean the same thing on every host. Fractions are
+built from the top 24 bits, so `[0, 1)` is never `1.0`; bounded integers reject
+the draws that would make the low values slightly more likely, because modulo
+bias on a drop table over a long run is exactly the kind of wrongness that gets
+blamed on the game design. Seeding takes two steps around the state, so
+neighbouring seeds do not produce neighbouring first outputs.
+
+The engine never asks the platform for entropy and does not pretend to: a host
+that seeds nothing gets a fixed stream. The editor puts the stream back to its
+seed on every fresh Play, so pressing Play twice gives the same run twice and a
+bug found once can be found again; resuming from a pause deliberately does not,
+since that would replay numbers the scene has already acted on. A game that
+wants variety calls `Random.seed` with something it knows.
+
+One stream is shared by every script, so the seed determines a run but a number
+drawn early shifts every number after it. That is stated rather than hidden, and
+it is why a run's seed is worth storing while a frame's numbers are not. It is
+not a source of secrets: a handful of outputs reveals the state.
+
+### Screen UI
+
+`sindri.ui.image` and `sindri.ui.text` draw against the viewport. Text is a
+**template**: the words carry `{}` slots and a script supplies the numbers, so a
+HUD updates without Decay needing string concatenation it deliberately does not
+have. An image carries a **fill** fraction and the edge it empties from, which is
+what makes a bar a bar rather than a picture of one.
+
+`sindri.ui.button` makes an element pressable, its rect being the entity's own
+transform. `ScreenUi` is the runtime beside the world: it lays every element out,
+hit-tests the pointer, and answers hover, click and hold. A click is a press and
+a release on the same element, so sliding off before letting go changes a
+person's mind. Overlapping elements are resolved by layer, so a modal is a modal
+because it is on top. A disabled entity — or one under a disabled parent — is not
+hit-tested, which is also what a *screen* is: a menu is an entity with children,
+and showing it is switching it on. No screen stack was added, because the engine
+already had the mechanism.
+
+Nothing is silently withheld from gameplay while a menu is up: which scripts are
+gameplay is not something a host can know. `Pointer.over_ui` is the one line a
+gameplay script writes instead.
+
+`sindri.ui.layout` places a parent's active children in a row or column. Three
+buttons could be authored as three offsets; what cannot be authored is a menu
+closing up around an entry that was switched off.
+
+The overlay is authored in normalized units — two tall, centred, running out to
+the aspect ratio — so one authored scene is responsive across a portrait phone
+and a wide desktop window without a breakpoint. A **safe area** takes a notch or
+a home indicator off the edges, moving anchored elements in while leaving centred
+ones where they are; the editor reports none, because a desktop window has no
+notch.
+
+What is not built: no scroll region, and no accessibility surface. A button
+carries a `label`, authored beside the thing it names, but nothing reads it —
+there is no DOM to expose it to until a project can be exported to the web, and
+a second accessibility path invented before then would be the wrong one.
 
 ### Grid geometry
 
@@ -666,8 +847,12 @@ settings gear.
   but no editor, Decay, or Gather pathfinding integration yet
 - No optional TypeScript embedding SDK; browser games currently expose narrow
   application entry points and run their gameplay in Decay
-- No spawning from a script. Cross-entity lookup, access, existence checks, and
-  despawning work through generation-checked entity references; see below
+- No editor authoring of prefabs. The format, the spawn path, and the Decay
+  surface all work, but making a prefab means writing the file: nothing turns a
+  selected entity into one, and a `Prefab` field draws as the string it is
+  stored as rather than as an asset picker
+- No prefab instance link. A spawned entity does not remember what it came
+  from, so editing a prefab does not update instances of it in an open scene
 - Hot reload covers assets, not the scene file: editing a scene on disk while it
   is open is not noticed
 - No deterministic system ordering
@@ -763,6 +948,74 @@ rather than silently ignored. Verified in the game: the orbs used to compare
 against a position the player published to the shared board, and now ask the
 player directly, with the picture unchanged.
 
+**And a script can throw flecks that are not entities.** `Effects.burst`,
+`burst_at` and `live` put short-lived visual motes into a pool, with what a
+burst looks like authored on the entity as `sindri.effect.burst`. Exercised in
+`crates/sindri-decay/tests/a_script_throws_flecks.rs`.
+
+**And a game can remember things between runs.** `Save.number`, `set_number`,
+`flag`, `set_flag`, `has`, `clear`, and three questions that tell a first run
+from a damaged save from one a newer build wrote. Exercised in
+`crates/sindri-decay/tests/a_script_remembers.rs`.
+
+**And a script can draw numbers a run can be replayed from.** `Random.value`,
+`range`, `int`, `pick` and `seed` read the host's stream, which a seed
+completely determines: the same seed and the same sequence of calls give the
+same numbers in the editor, in a native build, and in a browser. Exercised in
+`crates/sindri-decay/tests/a_script_draws_a_number.rs`.
+
+**And a script can change what the screen says, and read what was clicked.**
+`Ui.set_text`, `set_number`, `set_numbers` and `set_fill` write into the element
+the entity already carries; `is_hovered`, `is_pressed` and `is_held` answer about
+the pointer. The scene owns the words and the script owns the numbers, because
+Decay has no way to build a string — a designer authors `"Score: {}"` and a
+script fills the slot. Exercised in
+`crates/sindri-decay/tests/a_script_drives_a_hud.rs` and
+`a_script_reads_a_button.rs`.
+
+**And a script can drive a body and be told what it touched.**
+`Physics.set_velocity`, `apply_impulse` and `velocity_x`/`_y` act on an entity's
+body; `collision_started`, `collision_stopped`, `sensor_entered` and
+`sensor_exited` answer with the entities this one touched during the last step,
+as an `Array<Entity>`. An event is about a pair, so the answer names the other
+half — whichever side of the event this entity was on. Despawning either half
+from inside the answer is safe. A host running no physics refuses the call
+rather than reporting a velocity of zero for a body that does not exist.
+Exercised in `crates/sindri-decay/tests/a_script_drives_a_body.rs`.
+
+**And a script can tell where the person is pointing.** `Pointer.x`,
+`Pointer.y` and `Pointer.inside` read the position and whether there is one;
+`Pointer.is_down`, `just_pressed` and `just_released` take a button name.
+`Touch.count`, `Touch.x` and `Touch.y` reach the individual fingers. A button
+name nothing answers to is refused exactly as a key name is, and asking for a
+finger that is not down is refused rather than answered with zero, which would
+read as a finger in the corner of the screen. Exercised in
+`crates/sindri-decay/tests/a_script_reads_the_pointer.rs`.
+
+**And a script can ask about several.** `World.with_tag` answers with an
+`Array<Entity>` — every active entity carrying an authored `sindri.tags` tag,
+in deterministic world order, bounded at 8192 and refused rather than truncated
+past it. A tag says what an entity *is*, which is the question a game that makes
+its enemies as it goes actually has: they have no authored names for `find` to
+match, and asking by component type would put `sindri.sprite` in gameplay code.
+The answer is a snapshot of handles, so an entity despawned mid-walk leaves one
+that `World.exists` answers false for. Exercised in
+`crates/sindri-decay/tests/a_script_asks_for_a_group.rs`.
+
+**And a script can make one.** `World.spawn` takes a typed `Prefab` — an asset
+reference the scene authored into an `@export` field, not a string in the
+source, which is what lets the editor resolve it and load the document before
+the frame that needs it — and answers with a generation-checked reference to the
+new root. Overrides are the ordinary writes through that reference;
+`World.set_parent` moves it, and `World.set_property` authors a per-instance
+starting value that reaches the spawned script before its first callback. A
+spawned script starts within the same pass, so a bullet fired during an update
+moves during that update. Both the cascade that allows and the number of
+entities one pass may create are bounded and reported rather than run.
+Exercised in `crates/sindri-decay/tests/a_script_makes_an_entity.rs`. Not yet
+exercised as gameplay: `games/orbital-last-stand` is the project that will,
+and until it does this is a working surface rather than a proven capability.
+
 The board is still there and still earns its place, for facts that belong to the
 game rather than to an entity — the score, whether the game is won.
 
@@ -799,17 +1052,20 @@ the README.
 
 ### Not yet
 
-- No `for`, no iteration, and nothing to iterate — `while` exists, bounded by an
-  operation budget alongside the call-depth limit
-- No arrays, maps, closures, or first-class functions
+- No ranges, so `for` walks a collection and nothing else. `while` and `for` are
+  both bounded by the operation budget alongside the call-depth limit
+- No array literals, no `push`, and no way to write into an element:
+  `Array<T>` exists, and only a host makes one. No maps, closures, or
+  first-class functions
+- No query by more than one tag at a time, and no measured cost for a query at
+  combat density
 - No standard library; not even `math`
-- **No spawning.** Creating an entity means saying what to create and the engine
-  has no prefab to say it with, so this is blocked on the engine rather than on
-  the language. Finding, reaching, and despawning exist
 - Despawning is not undoable — no script write is, and play mode restores from a
   snapshot, so routing it through `WorldCommand` stays open
-- No mouse, and no general component surface beyond `sindri.sprite`; tilemaps
-  are available only through the deliberately narrow `Grid` coordinate API
+- No general component surface beyond `sindri.sprite`; tilemaps are available
+  only through the deliberately narrow `Grid` coordinate API
+- No scroll wheel, and no gamepad. The platform tracks scroll; nothing has
+  needed it from a script yet
 - No LSP, no formatter, no debugger, no syntax highlighting anywhere
 - No script state migration across a reload: a changed file recompiles, and the
   running instance keeps whatever fields it had

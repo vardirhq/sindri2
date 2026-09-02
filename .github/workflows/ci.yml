@@ -131,9 +131,12 @@ jobs:
       # project asset tree plus a manifest generated from those exact bytes,
       # and the browser must request every asset category over HTTP under a
       # non-root base path before the test accepts the rendered game. The same
-      # harness then takes away the canvas, WebGPU, an adapter, and a device in
-      # turn, so every way startup can fail has to be shown to a player rather
-      # than living only in a developer console. The device case is the one the
+      # harness then takes away the canvas and an adapter, and forces a device
+      # failure, so startup failures have to be shown to a player rather than
+      # living only in a developer console. The missing-WebGPU interface guard
+      # is asserted directly in the exporter's page-template test because
+      # Chromium no longer lets test code reliably hide its Navigator supplement.
+      # The device case is the one the
       # page cannot check for itself: it fails after `init()` has resolved, and
       # a phone showing nothing but a blank canvas is what that looked like
       # before the engine started announcing it.
@@ -145,19 +148,21 @@ jobs:
           npx --prefix scripts/browser playwright install --with-deps chromium
           wasm-pack build examples/cube --target web --out-dir pkg
           wasm-pack build game --target web --out-dir pkg
-          cargo run --quiet --package sindri-assets --example manifest -- game/assets \
-            > game/assets/sindri.manifest.json
+          # Everything below runs against the *exported* directory rather than
+          # the source tree. That is the point: what CI proves is what a
+          # deployment would serve, page and manifest and hashed assets and all.
+          cargo run --quiet --package sindri-export --bin sindri-export -- \
+            game target/dist/gather --base /sindri2/
+          cp -R game/pkg/. target/dist/gather/pkg/
           node scripts/browser/smoke.mjs examples/cube target/render-artifacts/browser-cube.png
           SINDRI_EXPECT_ASSETS=1 SINDRI_BASE_PATH=/sindri2/ \
-            node scripts/browser/smoke.mjs game target/render-artifacts/browser-gather.png
-          SINDRI_EXPECT_FAILURE=webgpu \
-            node scripts/browser/smoke.mjs game target/render-artifacts/browser-no-webgpu.png
-          SINDRI_EXPECT_FAILURE=canvas \
-            node scripts/browser/smoke.mjs game target/render-artifacts/browser-no-canvas.png
-          SINDRI_EXPECT_FAILURE=adapter \
-            node scripts/browser/smoke.mjs game target/render-artifacts/browser-no-adapter.png
-          SINDRI_EXPECT_FAILURE=device \
-            node scripts/browser/smoke.mjs game target/render-artifacts/browser-no-device.png
+            node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-gather.png
+          SINDRI_EXPECT_FAILURE=canvas SINDRI_BASE_PATH=/sindri2/ \
+            node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-no-canvas.png
+          SINDRI_EXPECT_FAILURE=adapter SINDRI_BASE_PATH=/sindri2/ \
+            node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-no-adapter.png
+          SINDRI_EXPECT_FAILURE=device SINDRI_BASE_PATH=/sindri2/ \
+            node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-no-device.png
       - name: Upload browser captures
         if: always()
         uses: actions/upload-artifact@v4
@@ -166,7 +171,6 @@ jobs:
           path: |
             target/render-artifacts/browser-cube.png
             target/render-artifacts/browser-gather.png
-            target/render-artifacts/browser-no-webgpu.png
             target/render-artifacts/browser-no-canvas.png
             target/render-artifacts/browser-no-adapter.png
             target/render-artifacts/browser-no-device.png

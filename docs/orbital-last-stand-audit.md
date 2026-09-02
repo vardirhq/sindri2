@@ -10,11 +10,11 @@ useful because it stresses a different part of a 2D engine than Gather: high
 entity churn, procedural combat patterns, touch input, interactive screen UI,
 persistent progression, and a complete static-web release.
 
-This audit reflects Sindri `main` at commit
-`b381cb1a3801511c4fa13e887526823cdf7a5bfa`. When capabilities change, update
-the relevant status here rather than treating this as a permanent verdict.
-`docs/capabilities.md` remains the source of truth for what Sindri demonstrably
-does.
+This audit was written against Sindri `main` at commit
+`b381cb1a3801511c4fa13e887526823cdf7a5bfa`, and its statuses are updated as the
+gaps close rather than left as a permanent verdict. The work closing them is
+planned in `docs/orbital-last-stand-plan.md`; `docs/capabilities.md` remains the
+source of truth for what Sindri demonstrably does.
 
 ## Executive finding
 
@@ -27,10 +27,16 @@ prove that a user can make this game *in Sindri*. The complete current game
 would require several engine and authoring capabilities to be implemented as
 part of the port.
 
-The decisive gaps are script-side spawning, reusable spawn definitions,
+The decisive gaps were script-side spawning, reusable spawn definitions,
 collection/query access, dynamic interactive UI, pointer/touch access from
 Decay, gameplay collision access, persistence, particles or equivalent effect
 rendering, and a product export pipeline.
+
+**Spawning, reusable definitions, collections, queries, pointer/touch input,
+gameplay collision, the screen UI, seeded randomness, persistence and effects
+are now done.** `docs/prefabs.md`, `docs/scripting.md`,
+`docs/physics.md` and `decay/LANGUAGE.md` are the contracts; the rest of the
+list stands.
 
 ## What the reference game exercises
 
@@ -72,23 +78,23 @@ The statuses mean:
 | Fixed-step update and lifecycle | Fixed-step simulation, capped frame time, pause/resume, native/browser hosts | **Ready** |
 | 2D world rendering and layering | Textured/tinted/layered sprites, animation, cameras, screen images and text | **Ready** for sprite-based art |
 | Procedural vector shapes and glow effects | No general shape/primitive or particle authoring system | **Partial**; bake sprites or add a render feature |
-| High-volume entity lifetime | Core world supports safe spawn/despawn and has measured storage scaling | **Rust escape hatch** |
-| Spawn enemies, bullets, pickups, and hazards from Decay | Decay can find and despawn, but cannot spawn | **Missing** |
-| Reusable enemy/projectile definitions | No prefab or equivalent spawn contract | **Missing** |
-| Query groups of enemies/projectiles | Decay has safe references but no general query or collection surface; arrays are unfinished | **Missing** |
-| Timed procedural behavior | Stateful update scripts and bounded `while` loops exist | **Partial**; blocked by spawning, collections, and randomness |
-| Seeded random waves and module offers | Host-owned seeded randomness is planned, not implemented | **Missing** |
-| Circle/sensor collision gameplay | Rapier2D runtime, masks, shapes, and events exist | **Partial**; no Decay access or exercised game integration |
-| Mouse and touch movement | Platform input tracks pointer state | **Partial**; Decay exposes keyboard only and touch has no gameplay contract |
-| Runtime HUD values | Screen text and images render | **Partial**; Decay cannot change text content |
-| Interactive menus and modal flows | Anchored screen image/text components exist | **Missing** as a runtime button, focus, layout, and navigation system |
+| High-volume entity lifetime | Core world supports safe spawn/despawn and has measured storage scaling; scripts now spawn within a bounded per-pass budget | **Partial**; the churn itself is not yet measured from Decay |
+| Spawn enemies, bullets, pickups, and hazards from Decay | `World.spawn` takes a typed prefab reference and answers with a generation-checked entity | **Ready** |
+| Reusable enemy/projectile definitions | Prefabs: versioned single-root scene fragments, validated and canonical; no editor authoring yet | **Partial**; the format and spawn path work, making one still means writing the file |
+| Query groups of enemies/projectiles | `Array<T>` is a Decay value, and `World.with_tag` answers with a bounded, ordered, active-only group | **Ready** |
+| Timed procedural behavior | Stateful update scripts, bounded loops, spawning, collections, and a seeded stream | **Ready** |
+| Seeded random waves and module offers | Host-owned PCG stream, replayable from a seed on every host, with `value`/`range`/`int`/`pick`/`seed` in Decay | **Ready** |
+| Circle/sensor collision gameplay | `ScenePhysics2d` drives the runtime from authored components; Decay has velocity, impulse, and per-entity collision/sensor event queries | **Ready** |
+| Mouse and touch movement | Unified `Pointer` plus raw `Touch` in Decay, routed through the editor Game view in its own pixels | **Ready** |
+| Runtime HUD values | Templated text a script fills, and fill bars | **Ready** |
+| Interactive menus and modal flows | Buttons, hit-testing, layer-ordered focus, row/column layout, safe area, and screens as entity subtrees | **Ready** except scroll and web accessibility |
 | Upgrade/build data | Exported scalar fields exist | **Missing** for collections, catalog queries, weighted choices, and loadout data |
 | Sprite animation | Runtime/editor animation works | **Partial**; Decay cannot select or control clips |
 | Audio | Native, browser, and silent backends plus Decay playback calls | **Ready**, with host-side clip gathering still manual |
-| Persistent progression | Editor preferences persist, but there is no game save/storage API | **Missing** |
-| Browser release | Gather proves a hand-built WASM/WebGPU Pages host | **Partial**; no general project export and browser asset fetching is not exercised |
-| Full editor playtest | Scripts and animation run in editor Play | **Partial**; not the complete application/game loop |
-| Mobile/browser fallback | WebGPU browser host exists | **Partial**; no WebGL fallback and mobile touch authoring is absent |
+| Persistent progression | Versioned key/value saves with file, browser, memory and damaged backends, and a `Save` namespace in Decay | **Ready** |
+| Browser release | `sindri-export` gathers a project from its scene into a content-hashed static directory; the browser host reads the manifest rather than a compiled-in asset list | **Ready** |
+| Full editor playtest | Play runs the shipped fixed-step loop — effects, physics, screen UI, scripts and animations at the fixed rate — with single-step and exactly-once input edges | **Ready** |
+| Mobile/browser fallback | WebGPU browser host exists, and touch reaches gameplay on every host | **Partial**; no WebGL fallback |
 
 ## What can be built now
 
@@ -111,15 +117,21 @@ the game.
 
 ### An editor + Decay implementation
 
-This is not currently feasible without changing Sindri. The first enemy cannot
-be created dynamically from a script, and even pre-authoring a large pool would
-not solve querying, randomized reuse, dynamic UI, touch input, or persistence.
-Pre-placing everything would be a workaround that teaches the engine the wrong
-lesson.
+Not yet, but the first two blockers are gone: a script can create an enemy from
+an authored prefab, and it can ask the world for all of them at once. What
+remains in the way is randomness, dynamic UI, touch input, collision from Decay,
+and persistence. Pre-placing everything
+would still be a workaround that teaches the engine the wrong lesson, and it is
+still not what this audit is asking for.
 
 ## Gaps this game would expose
 
-### 1. Spawn contract and reusable definitions
+### 1. Spawn contract and reusable definitions — done
+
+Delivered as **prefabs**: `docs/prefabs.md` for the format, `docs/scripting.md`
+for the scripting surface. Every requirement below is met, except that making a
+prefab still means writing the file — the editor cannot yet produce one from a
+selection. What follows is the original statement of the requirement.
 
 Decay needs a typed way to request an entity from an authored reusable
 definition. The engine should decide whether that definition is called a prefab,
@@ -136,7 +148,14 @@ Required behavior:
 - report missing or incompatible definitions as typed errors
 - make lifetime and script cancellation deterministic
 
-### 2. Queries and collections
+### 2. Queries and collections — done
+
+Delivered as `Array<T>` in the language and `World.with_tag` on the Sindri
+surface. Every requirement below is met except querying by typed component,
+which was deliberately not built: spelling `sindri.sprite` in a script puts
+engine internals in gameplay code and makes every enemy that happens to have a
+sprite an enemy. A tag says what an entity *is*, and that is the only way to
+ask. What follows is the original statement of the requirement.
 
 A bullet-heavy game cannot retain an individual authored reference to every
 target. It needs bounded, typed access to groups.
@@ -152,7 +171,19 @@ A minimal useful slice would include:
 This should build on the collection work already described in the Decay
 roadmap, not introduce an Orbital-specific enemy list.
 
-### 3. Gameplay collision surface
+### 3. Gameplay collision surface — done
+
+Delivered as `ScenePhysics2d` on the scene side and the `Physics` namespace in
+Decay. Every requirement below is met except the instrumentation, which is the
+measured-performance work the effects slice carries: circle and box colliders,
+sensors and masks, velocity and kinematic movement, deterministic events, and
+safe destruction from one. Piercing without duplicate hits falls out of
+`collision_started` rather than needing a feature — an event that fires when
+contact *begins* fires once per target.
+
+Manual distance checks remain a valid gameplay tool: `World.with_tag` plus
+transform reads is a loop a script can write, and nothing forces a game through
+physics. What follows is the original statement of the requirement.
 
 The Rapier2D foundation is useful, but the feature is not complete until scripts
 can drive bodies and consume collision/sensor events.
@@ -170,7 +201,20 @@ For this workload, the first vertical slice must cover:
 Manual distance checks may still be a valid gameplay tool, but they require a
 typed query surface and must not force all games through physics.
 
-### 4. Runtime UI
+### 4. Runtime UI — done, except two named gaps
+
+Delivered as templated text, fill bars, `sindri.ui.button`, `sindri.ui.layout`,
+the `ScreenUi` runtime and the `Ui` namespace. Of the list below, every item is
+met except **scroll** — no consumer, and it would have to answer questions about
+clipping, momentum and drag-versus-press that nothing has yet asked — and **web
+accessibility**, where a button's `label` is authored but nothing reads it until
+the export slice gives it a DOM.
+
+Screen navigation needed no new mechanism: a screen is an entity with children,
+showing one is switching it on, and `World.is_active` already governs a subtree.
+Modal focus is layer order plus `Pointer.over_ui`, because an engine that
+withheld input from "gameplay scripts" would have to know which scripts those
+are. What follows is the original statement of the requirement.
 
 The current screen-image/text foundation is rendering, not yet a UI product.
 This game needs:
@@ -187,14 +231,29 @@ This game needs:
 A complete retained-mode UI system is not required before starting. A small,
 coherent screen UI slice is.
 
-### 5. Input parity
+### 5. Input parity — done
+
+Delivered as the `Pointer` and `Touch` namespaces. Every requirement below is
+met. The one thing deliberately not built is the normalized drag: the reference
+game's deadzone and radius are tuning, and baking one game's numbers into an
+engine is how an engine acquires a genre — a script records where the pointer
+went down and subtracts, which is four lines. What follows is the original
+statement of the requirement.
 
 Decay should receive pointer position, button edges, and a normalized
 touch/drag abstraction through the same input state the host already owns.
 Editor Game view routing, browser pointer capture, focus loss, and viewport
 coordinates must agree. A mobile game cannot rely on keyboard-only script input.
 
-### 6. Persistence
+### 6. Persistence — done
+
+Delivered as `SaveStore` and `SaveDocument` in `sindri-core`, the `SaveBackend`
+trait with file, browser, memory and deliberately-damaged implementations in
+`sindri-platform`, and the `Save` namespace in Decay. Every requirement below is
+met. One choice worth naming: a flat key/value document rather than slots, since
+Decay can express numbers, truths and text and nothing else — `settings.volume`
+and `progress.best_wave` are keys, and the file stays readable and repairable.
+What follows is the original statement of the requirement.
 
 The game needs a versioned, game-owned save API for settings and progression.
 
@@ -209,7 +268,20 @@ The first contract should support:
 
 Editor preferences are not game saves and should remain separate.
 
-### 7. Effects and rendering
+### 7. Effects and rendering — measured, and a pooled path built
+
+Both approaches were measured before either was chosen; `docs/effect-scaling.md`
+records the numbers and the decision. An entity per fleck costs a third of a
+60 Hz frame at 8,000 of them, and over half of that is re-reading each payload
+through `serde_json` every frame. The pooled path costs 0.1% of the same frame,
+so that is what was built: `Effects2d`, `sindri.effect.burst`, and the `Effects`
+namespace.
+
+The instanced primitive renderer and custom materials were not built — flecks
+batch with ordinary sprites by layer and texture, which is one draw call for a
+burst, and neither of the other two has a consumer yet. The payload re-parse is
+worth fixing on its own and is recorded as such: it costs every ordinary sprite
+too. What follows is the original statement of the requirement.
 
 Orbital Last Stand uses many short-lived particles, rings, telegraphs, trails,
 and color flashes. Creating a full world entity for every visual fleck may be
@@ -223,7 +295,19 @@ wasteful. The port should measure both approaches before choosing:
 The acceptance target is readable high-volume combat, not reproducing Canvas 2D
 calls one for one.
 
-### 8. Export and browser delivery
+### 8. Export and browser delivery — done
+
+Delivered as `sindri-export` and `docs/export.md`. Every requirement below is
+met: the export walks the scene for what ships, writes a content-hashed
+directory beside an uncached manifest, generates the page with the base path
+baked in, and CI runs the browser smoke test against the exported directory
+rather than the source tree.
+
+The piece that made this possible was `AssetKind` in the manifest. The browser
+host carried a list of asset IDs per kind, compiled in — so adding a texture
+meant editing Rust and a project the host had never heard of could not be
+exported. It reads the manifest now. What follows is the original statement of
+the requirement.
 
 The Gather host proves the runtime path, but a normal project still needs a
 repeatable export.
@@ -243,16 +327,24 @@ A usable slice should:
 This is ordered by the earliest point at which a genuine playable slice becomes
 possible, not by subsystem familiarity.
 
-1. **Reusable spawn definitions + typed Decay spawning**
-2. **Bounded entity queries and the first Decay collection**
-3. **Pointer/touch input through Decay and Game view**
-4. **Typed 2D collision access and event delivery**
-5. **Dynamic text plus a minimal interactive screen UI**
-6. **Host-owned seeded randomness**
-7. **Game persistence boundary**
-8. **Measured particle/effect path**
-9. **Complete editor Play application loop**
-10. **Static-web project export with gathered assets**
+1. ~~**Reusable spawn definitions + typed Decay spawning**~~ — done; see
+   `docs/prefabs.md`
+2. ~~**Bounded entity queries and the first Decay collection**~~ — done; see
+   `decay/LANGUAGE.md` on `Array<T>` and `docs/scripting.md` on `World.with_tag`
+3. ~~**Pointer/touch input through Decay and Game view**~~ — done; see
+   `docs/scripting.md` on `Pointer` and `Touch`
+4. ~~**Typed 2D collision access and event delivery**~~ — done; see
+   `docs/scripting.md` on `Physics` and `docs/physics.md` on the step order
+5. ~~**Dynamic text plus a minimal interactive screen UI**~~ — done; see
+   `docs/scripting.md` on `Ui` and `Pointer.over_ui`
+6. ~~**Host-owned seeded randomness**~~ — done; see `docs/scripting.md` on
+   `Random`
+7. ~~**Game persistence boundary**~~ — done; see `docs/scripting.md` on `Save`
+8. ~~**Measured particle/effect path**~~ — done; see `docs/effect-scaling.md`
+9. ~~**Complete editor Play application loop**~~ — done; Play runs the shipped
+   fixed-step loop
+10. ~~**Static-web project export with gathered assets**~~ — done; see
+    `docs/export.md`
 
 Audio clip gathering and animation control should join the vertical slice when
 their consumers are reached; they should not block the first moving,

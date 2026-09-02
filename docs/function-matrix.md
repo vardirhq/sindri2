@@ -9,6 +9,10 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Function | Engine | Editor | Script |
 | --- | :---: | :---: | :---: |
 | Entities | ✅ | ✅ | 🟡 |
+| Prefabs | ✅ | ❌ | 🟡 |
+| Tags | ✅ | ✅ | 🟡 |
+| Entity queries | ✅ | — | 🟡 |
+| Collections | — | — | 🟡 |
 | Hierarchy / parenting | ✅ | ✅ | 🟡 |
 | Transform / position | ✅ | ✅ | 🟡 |
 | Rotation / scale | ✅ | ✅ | 🟡 |
@@ -23,13 +27,19 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Entity footprints | ✅ | ✅ | ✅ |
 | Occupancy | ✅ | ✅ | ✅ |
 | Pathfinding | ✅ | ✅ | ✅ |
-| Text | 🟡 | ✅ | ❌ |
+| Text | ✅ | ✅ | 🟡 |
+| UI buttons and layout | ✅ | 🟡 | 🟡 |
+| Seeded randomness | ✅ | ➖ | 🟡 |
+| Game saves | ✅ | ➖ | 🟡 |
+| Effects | ✅ | 🟡 | 🟡 |
+| Static web export | ✅ | ➖ | ➖ |
 | Project fonts | ✅ | ✅ | ❌ |
 | Perspective camera | ✅ | 🟡 | ❌ |
 | Orthographic camera | ✅ | 🟡 | ❌ |
 | Pixel snapping | ✅ | 🟡 | ❌ |
 | Keyboard input | ✅ | 🟡 | ✅ |
-| Pointer / mouse input | ✅ | 🟡 | ❌ |
+| Pointer / mouse input | ✅ | ✅ | 🟡 |
+| Touch input | ✅ | ✅ | 🟡 |
 | Audio playback | ✅ | 🟡 | ✅ |
 | Audio looping | ✅ | 🟡 | ✅ |
 | Audio pause / resume | ✅ | 🟡 | ✅ |
@@ -48,14 +58,17 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Materials | ❌ | ❌ | ❌ |
 | Lighting | ❌ | ❌ | ❌ |
 | glTF import | ❌ | ❌ | ❌ |
-| 2D physics | ✅ | 🟡 | ❌ |
-| 2D collision | ✅ | ❌ | ❌ |
+| 2D physics | ✅ | 🟡 | 🟡 |
+| 2D collision | ✅ | 🟡 | 🟡 |
 | 3D physics | ❌ | ❌ | ❌ |
 | 3D collision | ❌ | ❌ | ❌ |
 | Project management | 🟡 | 🟡 | — |
 | Game export | 🟡 | ❌ | — |
 
 A checkmark means the function is implemented and exercised on that surface,
-not merely represented by a type, API, schema, or editor control. Keep this
+not merely represented by a type, API, schema, or editor control. For a gameplay
+capability, exercised means a game uses it: spawning, reparenting, prefabs,
+queries, pointer input and physics all work and are covered by tests, and stay
+🟡 until `games/orbital-last-stand` plays with them. Keep this
 file intentionally short: detailed caveats belong in `capabilities.md`, while
 cross-surface gaps belong in `feature-integration-matrix.md`.

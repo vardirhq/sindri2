@@ -9,6 +9,7 @@ mod audio;
 mod clock;
 mod host;
 mod input;
+mod saves;
 
 #[cfg(target_arch = "wasm32")]
 pub use audio::BrowserAudioBackend;
@@ -23,6 +24,11 @@ pub use clock::SystemClock;
 pub use clock::{Clock, FrameTimer, ManualClock};
 pub use host::{EngineHost, FrameContext, FramePhase, FrameTime, Game, HostError};
 pub use input::{InputEvent, InputState, Key, MouseButton};
+#[cfg(target_arch = "wasm32")]
+pub use saves::BrowserSaves;
+#[cfg(not(target_arch = "wasm32"))]
+pub use saves::FileSaves;
+pub use saves::{DamagedSaves, MemorySaves, SaveBackend, SaveWriteError};
 
 pub mod prelude {
     pub use crate::{

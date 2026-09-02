@@ -104,9 +104,71 @@ impl<'de> Deserialize<'de> for ContentHash {
     }
 }
 
+/// What an asset is, so a host can load it without being told in advance.
+///
+/// The manifest carries this because the alternative is a list of asset IDs
+/// compiled into the host, one per kind, maintained by hand — which is exactly
+/// what stops a project being exported without someone editing Rust. A host
+/// that reads kinds from the manifest can open any project.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AssetKind {
+    /// The scene document itself.
+    Scene,
+    /// A Decay source file.
+    Script,
+    Texture,
+    /// A sprite sheet describing how a texture is cut up.
+    Sheet,
+    Font,
+    Audio,
+    /// Something the engine does not decode: read as bytes, or not at all.
+    ///
+    /// A project may ship a file for its own reasons, and a manifest that could
+    /// not describe one would force it to be lied about as some other kind.
+    Other,
+}
+
+impl AssetKind {
+    /// Every kind, in the order a host should load them.
+    ///
+    /// The scene first, because everything else is referenced from it.
+    pub const ALL: [Self; 7] = [
+        Self::Scene,
+        Self::Sheet,
+        Self::Script,
+        Self::Texture,
+        Self::Font,
+        Self::Audio,
+        Self::Other,
+    ];
+
+    /// The name this kind is stored under.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Scene => "scene",
+            Self::Script => "script",
+            Self::Texture => "texture",
+            Self::Sheet => "sheet",
+            Self::Font => "font",
+            Self::Audio => "audio",
+            Self::Other => "other",
+        }
+    }
+}
+
 /// One asset, as the manifest records it.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ManifestEntry {
+    /// What kind of thing this is.
+    ///
+    /// Defaulted, and left out when it is `Other`, because `Other` is the
+    /// absence of a statement rather than one: a manifest written before kinds
+    /// existed says nothing about them, and one that has nothing to say should
+    /// read the same as it always did.
+    #[serde(default = "other_kind", skip_serializing_if = "is_other")]
+    pub kind: AssetKind,
     /// How many bytes the asset is.
     ///
     /// Redundant against the hash, and worth carrying anyway: it is what a build
@@ -114,6 +176,18 @@ pub struct ManifestEntry {
     /// truncated response before anything hashes a megabyte to say the same.
     pub bytes: u64,
     pub hash: ContentHash,
+}
+
+const fn other_kind() -> AssetKind {
+    AssetKind::Other
+}
+
+// `serde` hands a reference to `skip_serializing_if`, and clippy would rather a
+// one-byte enum were copied. Both are satisfied by taking the reference and
+// immediately not keeping it.
+#[allow(clippy::trivially_copy_pass_by_ref)]
+fn is_other(kind: &AssetKind) -> bool {
+    matches!(*kind, AssetKind::Other)
 }
 
 /// Every asset a project ships.
@@ -124,6 +198,15 @@ pub struct ManifestEntry {
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct AssetManifest {
     format_version: u32,
+    /// The directory the assets live in, relative to wherever the manifest is.
+    ///
+    /// Empty for a project whose assets sit beside it, which is what a
+    /// hand-written manifest and every existing one means. An export names a
+    /// directory here, and names it after what the assets hash to — so the
+    /// manifest is the one file that must never be cached and everything it
+    /// points at can be cached for ever.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    content_root: String,
     assets: BTreeMap<AssetId, ManifestEntry>,
 }
 
@@ -131,6 +214,7 @@ impl Default for AssetManifest {
     fn default() -> Self {
         Self {
             format_version: MANIFEST_FORMAT_VERSION,
+            content_root: String::new(),
             assets: BTreeMap::new(),
         }
     }
@@ -145,11 +229,32 @@ impl AssetManifest {
         self.format_version
     }
 
+    /// Where the assets live, relative to the manifest.
+    pub fn content_root(&self) -> &str {
+        &self.content_root
+    }
+
+    /// Says where the assets live.
+    pub fn set_content_root(&mut self, root: impl Into<String>) {
+        self.content_root = root.into();
+    }
+
     /// Records what an asset is, returning what it was recorded as before.
     pub fn insert(&mut self, id: AssetId, bytes: &[u8]) -> Option<ManifestEntry> {
+        self.insert_as(id, AssetKind::Other, bytes)
+    }
+
+    /// Records what an asset is, and what kind of thing it is.
+    pub fn insert_as(
+        &mut self,
+        id: AssetId,
+        kind: AssetKind,
+        bytes: &[u8],
+    ) -> Option<ManifestEntry> {
         self.assets.insert(
             id,
             ManifestEntry {
+                kind,
                 bytes: bytes.len() as u64,
                 hash: ContentHash::of(bytes),
             },
@@ -170,6 +275,18 @@ impl AssetManifest {
 
     pub fn assets(&self) -> impl ExactSizeIterator<Item = (&AssetId, &ManifestEntry)> {
         self.assets.iter()
+    }
+
+    /// Every asset of one kind, in the manifest's own order.
+    ///
+    /// This is what lets a host open a project it was not compiled against: it
+    /// asks the manifest what textures there are rather than being handed a
+    /// list by whoever wrote the game.
+    pub fn ids_of(&self, kind: AssetKind) -> impl Iterator<Item = &AssetId> {
+        self.assets
+            .iter()
+            .filter(move |(_, entry)| entry.kind == kind)
+            .map(|(id, _)| id)
     }
 
     /// Checks bytes that arrived against what was promised.

@@ -71,15 +71,6 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
 
-if (EXPECT_FAILURE === 'webgpu') {
-  await page.addInitScript(() => {
-    Object.defineProperty(Navigator.prototype, 'gpu', {
-      configurable: true,
-      get: () => undefined,
-    });
-  });
-}
-
 // The interface existing is not the same as WebGPU working. Chrome on Android
 // exposes `navigator.gpu` more widely than its drivers can serve, and a page
 // that only checks for the interface starts anyway and fails where nobody can
@@ -127,6 +118,11 @@ page.on('console', (message) => {
   if (message.type() === 'error') problems.push(message.text());
 });
 page.on('pageerror', (error) => problems.push(String(error.message)));
+page.on('response', (response) => {
+  if (!response.ok()) {
+    problems.push(`HTTP ${response.status()} ${new URL(response.url()).pathname}`);
+  }
+});
 page.on('request', (request) => {
   const path = new URL(request.url()).pathname;
   const marker = `${BASE}assets/`;
@@ -140,7 +136,6 @@ if (EXPECT_FAILURE) {
   const message = await page.locator('#sindri-error').innerText();
   const expected = {
     canvas: 'missing the #sindri-canvas',
-    webgpu: 'WebGPU is unavailable',
     adapter: 'WebGPU is unavailable',
     // Not the message's wording, which belongs to wgpu: what matters is that a
     // failure raised after startup finished arrived on the page at all.
@@ -193,8 +188,12 @@ const requiredAssetKinds = [
   ['font', 'fonts/Inter.ttf'],
   ['audio', 'audio/background.wav'],
 ];
+// Exported assets sit below a content-hash directory; the manifest itself
+// deliberately does not. Match the logical ID at the end of either shape.
+const fetched = (asset) =>
+  [...fetchedAssets].some((path) => path === asset || path.endsWith(`/${asset}`));
 const missingAssets = EXPECT_ASSETS
-  ? requiredAssetKinds.filter(([, asset]) => !fetchedAssets.has(asset))
+  ? requiredAssetKinds.filter(([, asset]) => !fetched(asset))
   : [];
 
 console.log(`webgpu: ${webgpu ? 'yes' : 'no'}`);

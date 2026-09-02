@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 
-use decay_syntax::{Block, Span, Stmt};
+use decay_syntax::{Block, Expr, Span, Stmt};
 
 use crate::types::Type;
 
@@ -38,7 +38,7 @@ impl Analyzer<'_, '_> {
                 let initializer_type = initializer
                     .as_ref()
                     .map_or(Type::Unknown, |expr| self.expr_type(expr));
-                let declared_type = ty.as_ref().map(Type::from_ref);
+                let declared_type = ty.as_ref().map(|ty| self.resolve_type(ty));
 
                 if declared_type.is_none() && initializer.is_none() {
                     self.error(
@@ -109,6 +109,13 @@ impl Analyzer<'_, '_> {
                 self.analyze_block(body, true);
                 self.loop_depth -= 1;
             }
+            Stmt::For {
+                name,
+                name_span,
+                iterable,
+                body,
+                ..
+            } => self.analyze_for(name, *name_span, iterable, body),
             Stmt::Break { span } => {
                 if self.loop_depth == 0 {
                     self.error(*span, "`break` outside of a loop".to_owned());
@@ -121,6 +128,46 @@ impl Analyzer<'_, '_> {
             }
             Stmt::Block(block) => self.analyze_block(block, true),
         }
+    }
+
+    /// `for name in items { ... }`.
+    fn analyze_for(&mut self, name: &str, name_span: Span, iterable: &Expr, body: &Block) {
+        let iterable_type = self.expr_type(iterable);
+        let element = match &iterable_type {
+            Type::Array(element) => (**element).clone(),
+            Type::Unknown => Type::Unknown,
+            other => {
+                self.error(
+                    iterable.span,
+                    format!(
+                        "`for` needs something to walk, and `{}` holds one value",
+                        other.display_name()
+                    ),
+                );
+                Type::Unknown
+            }
+        };
+        // The binding lives in a scope of its own, so the body may
+        // declare a local of the same name in a nested block without
+        // colliding with it, and the name is gone after the loop.
+        self.scopes.push(HashMap::new());
+        self.define_local(
+            name,
+            Symbol {
+                ty: element,
+                // Immutable: an element is what the collection holds at
+                // that position, not a place to put something. There is
+                // no way to write back through one, so a `var` here
+                // would promise something the language cannot do.
+                mutable: false,
+                function: None,
+            },
+            name_span,
+        );
+        self.loop_depth += 1;
+        self.analyze_block(body, true);
+        self.loop_depth -= 1;
+        self.scopes.pop();
     }
 
     pub(super) fn define_local(&mut self, name: &str, symbol: Symbol, span: Span) {

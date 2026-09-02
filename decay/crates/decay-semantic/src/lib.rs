@@ -20,7 +20,7 @@ use decay_syntax::parse;
 
 use analyzer::Analyzer;
 
-pub use diagnostic::{Analysis, Diagnostic, DiagnosticPhase};
+pub use diagnostic::{Analysis, Diagnostic, DiagnosticPhase, ValueMember, ValueMembers};
 pub use environment::{Environment, ExternalSymbol};
 pub use types::{FunctionType, HostType, Type};
 
@@ -29,6 +29,8 @@ pub fn analyze(source: &str) -> Analysis {
     analyze_with_environment(source, &Environment::default())
 }
 
+// See `ValueMembers` for why the analysis carries a map of a zero-sized value.
+#[allow(clippy::zero_sized_map_values)]
 #[must_use]
 pub fn analyze_with_environment(source: &str, environment: &Environment) -> Analysis {
     let parsed = parse(source);
@@ -44,11 +46,13 @@ pub fn analyze_with_environment(source: &str, environment: &Environment) -> Anal
         })
         .collect::<Vec<_>>();
 
-    let mut analyzer = Analyzer::new(source, environment, &mut diagnostics);
+    let mut value_members = ValueMembers::new();
+    let mut analyzer = Analyzer::new(source, environment, &mut diagnostics, &mut value_members);
     analyzer.analyze_program(&parsed.program);
 
     Analysis {
         program: parsed.program,
         diagnostics,
+        value_members,
     }
 }

@@ -12,20 +12,28 @@
 
 mod call;
 mod convert;
+mod dispatch;
+mod effects;
 mod map;
+mod physics;
+mod random;
+mod save;
+mod ui;
+
+use std::collections::BTreeSet;
 
 use decay_ir::Path;
 use decay_runtime::{Host, RuntimeError, Value};
 use sindri_core::{EntityId, Transform3D, World};
 use sindri_platform::InputState;
 
-use self::convert::{as_f32, describe, key, number};
+use self::convert::{as_f32, describe, number};
 use crate::{
-    Blackboard,
+    Blackboard, PrefabSources,
     surface::{
-        FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, Handle, HostFunction, INPUT,
-        INPUT_QUERIES, InputQuery, Leaf, PRINT, TIME, TIME_VALUES, TimeValue, WORLD, WORLD_CALLS,
-        follow_mut, handle, leaf, leaf_through_reference,
+        FUNCTIONS, Handle, HostFunction, Leaf, POINTER, POINTER_VALUES, PRINT, PointerValue, TIME,
+        TIME_VALUES, TOUCH, TOUCH_COUNT, TimeValue, TouchCall, follow_mut, handle, leaf,
+        leaf_through_reference,
     },
 };
 
@@ -40,6 +48,26 @@ pub struct ScriptContext<'a> {
     pub elapsed_seconds: f32,
 }
 
+/// What `World.spawn` needs, and where what it makes is recorded.
+///
+/// Grouped rather than three more parameters, because they are one thing: the
+/// prefabs a spawn may name, the instances that already exist, and the list the
+/// runner reads back to know what to start.
+pub struct Spawning<'a> {
+    /// What `World.spawn` can name.
+    pub prefabs: &'a PrefabSources,
+    /// Which entities already have a script instance.
+    ///
+    /// A snapshot taken before the pass rather than the live map, which is
+    /// borrowed by the runner for the length of the call. Stale only in the
+    /// safe direction: an entity spawned during the pass is genuinely not
+    /// running yet, because instantiating one would mean executing Decay from
+    /// inside a host call.
+    pub started: &'a BTreeSet<EntityId>,
+    /// What this pass has created, for the runner to start.
+    pub spawned: &'a mut Vec<EntityId>,
+}
+
 /// The world, seen through one entity's script.
 ///
 /// Borrowed for the length of a single script call rather than held, because a
@@ -50,6 +78,25 @@ pub struct WorldHost<'a> {
     context: ScriptContext<'a>,
     /// The notes every script in the world shares.
     blackboard: &'a mut Blackboard,
+    /// What spawning needs, and what it produced.
+    spawning: Spawning<'a>,
+    /// The physics a script may read and drive, when the host runs any.
+    physics: Option<crate::Physics2d<'a>>,
+    /// What the game remembers, when the host is keeping a save.
+    saves: Option<&'a mut sindri_core::SaveStore>,
+    /// The fleck pool, when the host is running one.
+    effects: Option<&'a mut sindri_scene::Effects2d>,
+    /// The run's random stream, when the host is running one.
+    ///
+    /// Mutable because drawing a number is what advances it: a stream a script
+    /// could read without moving would hand out the same number for ever.
+    random: Option<&'a mut sindri_core::Rng>,
+    /// Where the screen elements are and what the pointer is doing to them.
+    ///
+    /// Read-only: hover and click are answers about this frame, computed by the
+    /// host before scripts ran. A script that could change them would be
+    /// deciding what the person did.
+    screen_ui: Option<&'a sindri_scene::ScreenUi>,
     /// What the script said, in order. Drained by the caller after the call.
     printed: Vec<String>,
 }
@@ -73,6 +120,25 @@ impl Host for WorldHost<'_> {
                         TimeValue::Elapsed => self.context.elapsed_seconds,
                     }))
                 }));
+        }
+
+        // Where the person is pointing, and how many fingers are down. Facts
+        // about the frame like `Time.delta`, and never about a subject: a
+        // reference cannot be asked where the mouse is.
+        if subject.is_none()
+            && let [namespace, name] = parts.as_slice()
+        {
+            if *namespace == POINTER
+                && let Some((_, value)) = POINTER_VALUES.iter().find(|(known, _)| known == name)
+            {
+                return Ok(Some(self.pointer_value(*value)));
+            }
+            if *namespace == TOUCH && *name == TOUCH_COUNT {
+                // `usize` to `f64` is exact for every count a hand can produce,
+                // and the platform bounds it to ten regardless.
+                #[allow(clippy::cast_precision_loss)]
+                return Ok(Some(Value::Number(self.context.input.touch_count() as f64)));
+            }
         }
 
         let Some(under) = Self::addressed(subject, path) else {
@@ -220,7 +286,87 @@ impl Host for WorldHost<'_> {
         }
         let parts: Vec<&str> = path.0.iter().map(String::as_str).collect();
 
-        if let [name] = parts.as_slice() {
+        if let Some(value) = self.bare_call(&parts, path, args)? {
+            return Ok(Some(value));
+        }
+
+        if let [namespace, name] = parts.as_slice()
+            && let Some(result) = self.namespaced_call(namespace, name, path, args)
+        {
+            return result.map(Some);
+        }
+
+        Ok(None)
+    }
+}
+
+/// Everything a script can reach beyond the world and the frame.
+///
+/// Bundled because the list had reached eight and every capability the scripting
+/// surface grows adds another. `crate::HostServices` is this plus the audio
+/// queue, which is the wrapper's business rather than this host's.
+pub struct WorldServices<'a> {
+    pub spawning: Spawning<'a>,
+    /// What the game remembers, when the host is keeping a save.
+    pub saves: Option<&'a mut sindri_core::SaveStore>,
+    /// The fleck pool, when the host is running one.
+    pub effects: Option<&'a mut sindri_scene::Effects2d>,
+    pub physics: Option<crate::Physics2d<'a>>,
+    pub screen_ui: Option<&'a sindri_scene::ScreenUi>,
+    pub random: Option<&'a mut sindri_core::Rng>,
+}
+
+impl<'a> WorldHost<'a> {
+    pub fn new(
+        world: &'a mut World,
+        entity: EntityId,
+        context: ScriptContext<'a>,
+        blackboard: &'a mut Blackboard,
+        services: WorldServices<'a>,
+    ) -> Self {
+        let WorldServices {
+            spawning,
+            saves,
+            effects,
+            physics,
+            screen_ui,
+            random,
+        } = services;
+        Self {
+            world,
+            entity,
+            context,
+            blackboard,
+            spawning,
+            physics,
+            screen_ui,
+            random,
+            saves,
+            effects,
+            printed: Vec::new(),
+        }
+    }
+
+    /// Everything the script printed during the call.
+    pub fn take_printed(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.printed)
+    }
+
+    /// `print` and the maths, which are the only calls with no namespace.
+    ///
+    /// Their own function because the dispatch that follows them is one arm per
+    /// namespace, and a reader looking for `World.spawn` should not have to
+    /// scroll past the argument handling for `min`.
+    fn bare_call(
+        &mut self,
+        parts: &[&str],
+        path: &Path,
+        args: &[Value],
+    ) -> Result<Option<Value>, RuntimeError> {
+        let [name] = parts else {
+            return Ok(None);
+        };
+        {
             if *name == PRINT {
                 self.printed.push(match args.first() {
                     Some(Value::String(text)) => text.clone(),
@@ -232,6 +378,11 @@ impl Host for WorldHost<'_> {
                     // the packing is the host's business, and printing it
                     // would invite a script to depend on it.
                     Some(Value::Reference(_)) => "entity".to_owned(),
+                    // How many, not what: printing a collection of two
+                    // thousand entities into the console is not what anyone
+                    // reaching for `print` wanted, and the elements are
+                    // reachable one at a time anyway.
+                    Some(Value::Array(values)) => format!("{} entries", values.len()),
                 });
                 return Ok(Some(Value::Unit));
             }
@@ -249,88 +400,62 @@ impl Host for WorldHost<'_> {
                 })));
             }
         }
-
-        if let [namespace, name] = parts.as_slice()
-            && *namespace == GAME
-            && let Some((_, call)) = GAME_CALLS.iter().find(|(known, _)| known == name)
-        {
-            let note = match args.first() {
-                Some(Value::String(note)) => note.clone(),
-                other => {
-                    return Err(RuntimeError::Host(format!(
-                        "{} names its note with text, and the script gave {other:?}",
-                        path.dotted()
-                    )));
-                }
-            };
-            let value = |index: usize| -> Result<f64, RuntimeError> {
-                args.get(index)
-                    .ok_or_else(|| {
-                        RuntimeError::Host(format!("{} wants more arguments", path.dotted()))
-                    })
-                    .and_then(|value| number(path, value))
-            };
-            return Ok(Some(match call {
-                GameCall::Get => Value::Number(self.blackboard.get(&note, value(1)?)),
-                GameCall::Set => {
-                    self.blackboard.set(note, value(1)?);
-                    Value::Unit
-                }
-            }));
-        }
-
-        if let [namespace, name] = parts.as_slice()
-            && *namespace == WORLD
-            && let Some((_, call)) = WORLD_CALLS.iter().find(|(known, _)| known == name)
-        {
-            return self.world_call(*call, path, args).map(Some);
-        }
-
-        if let [namespace, name] = parts.as_slice()
-            && *namespace == GRID
-            && let Some((_, call)) = GRID_CALLS.iter().find(|(known, _)| known == name)
-        {
-            return self.grid_call(*call, path, args).map(Some);
-        }
-
-        if let [namespace, name] = parts.as_slice()
-            && *namespace == INPUT
-            && let Some((_, query)) = INPUT_QUERIES.iter().find(|(known, _)| known == name)
-        {
-            let input = self.context.input;
-            return Ok(Some(match query {
-                InputQuery::Axis => Value::Number(f64::from(
-                    input.axis(key(path, args.first())?, key(path, args.get(1))?),
-                )),
-                InputQuery::Down => Value::Bool(input.key_down(key(path, args.first())?)),
-                InputQuery::Pressed => Value::Bool(input.key_pressed(key(path, args.first())?)),
-                InputQuery::Released => Value::Bool(input.key_released(key(path, args.first())?)),
-            }));
-        }
-
         Ok(None)
     }
-}
 
-impl<'a> WorldHost<'a> {
-    pub fn new(
-        world: &'a mut World,
-        entity: EntityId,
-        context: ScriptContext<'a>,
-        blackboard: &'a mut Blackboard,
-    ) -> Self {
-        Self {
-            world,
-            entity,
-            context,
-            blackboard,
-            printed: Vec::new(),
+    /// One of the numbers a script reads about the pointer.
+    ///
+    /// A pointer that is not there reads as zero rather than as an error,
+    /// because "the mouse left the window" is an ordinary thing that happens
+    /// mid-frame and not a mistake in a script. `Pointer.inside` is how a
+    /// script that cares asks, and it has to be asked *before* the position is
+    /// believed.
+    fn pointer_value(&self, value: PointerValue) -> Value {
+        let position = self.context.input.pointer_position();
+        match value {
+            PointerValue::Inside => Value::Bool(position.is_some()),
+            // False with no screen UI running, rather than an error: a host
+            // with no UI has no element to take the pointer, which is a true
+            // answer rather than a missing one.
+            PointerValue::OverUi => Value::Bool(
+                self.screen_ui
+                    .is_some_and(sindri_scene::ScreenUi::captures_pointer),
+            ),
+            PointerValue::X => Value::Number(f64::from(position.unwrap_or([0.0, 0.0])[0])),
+            PointerValue::Y => Value::Number(f64::from(position.unwrap_or([0.0, 0.0])[1])),
         }
     }
 
-    /// Everything the script printed during the call.
-    pub fn take_printed(&mut self) -> Vec<String> {
-        std::mem::take(&mut self.printed)
+    /// Where one finger is.
+    fn touch_call(
+        &self,
+        call: TouchCall,
+        path: &Path,
+        args: &[Value],
+    ) -> Result<Value, RuntimeError> {
+        let index = number(path, args.first().unwrap_or(&Value::Null))?;
+        if !index.is_finite() || index.fract() != 0.0 || index < 0.0 {
+            return Err(RuntimeError::Host(format!(
+                "{} takes which finger, counting from zero, and the script gave {index}",
+                path.dotted()
+            )));
+        }
+        // Guarded above: finite, non-negative, and whole.
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let position = self.context.input.touch_at(index as usize).ok_or_else(|| {
+            // Named rather than answered with zero: a script reading finger
+            // three when two are down has a bound that is wrong, and a zero
+            // would read as a finger in the corner of the screen.
+            RuntimeError::Host(format!(
+                "{} was asked for finger {index}, and {} are down",
+                path.dotted(),
+                self.context.input.touch_count()
+            ))
+        })?;
+        Ok(Value::Number(f64::from(match call {
+            TouchCall::X => position[0],
+            TouchCall::Y => position[1],
+        })))
     }
 
     pub(super) fn transform_of(&self, entity: EntityId) -> Option<Transform3D> {

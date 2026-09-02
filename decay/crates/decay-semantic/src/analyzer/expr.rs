@@ -32,6 +32,32 @@ impl Analyzer<'_, '_> {
             ExprKind::Assign { target, op, value } => self.assignment_type(target, *op, value),
             ExprKind::Member { object, field } => self.member_type(object, field, expr.span),
             ExprKind::Call { callee, args } => self.call_type(callee, args, expr.span),
+            ExprKind::Index { object, index } => self.index_type(object, index),
+        }
+    }
+
+    /// The type of `items[index]`.
+    ///
+    /// Indexing something that is not a collection is an error naming what it
+    /// actually is, rather than a runtime failure with a number in it. The
+    /// index is the language's one numeric type: there is no integer type, and
+    /// `docs/decay-direction.md` records why introducing one for this alone
+    /// would be the wrong trade. A fractional or out-of-range index is refused
+    /// when it runs, where the value is known.
+    pub(super) fn index_type(&mut self, object: &Expr, index: &Expr) -> Type {
+        let object_type = self.expr_type(object);
+        let index_type = self.expr_type(index);
+        self.require_type(&index_type, &Type::F32, index.span);
+        match &object_type {
+            Type::Array(element) => (**element).clone(),
+            Type::Unknown => Type::Unknown,
+            other => {
+                self.error(
+                    object.span,
+                    format!("`{}` cannot be indexed", other.display_name()),
+                );
+                Type::Unknown
+            }
         }
     }
 

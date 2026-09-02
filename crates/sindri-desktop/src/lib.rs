@@ -21,7 +21,7 @@ pub use host::{AppContext, DesktopApp, DesktopError, Flow, WindowConfig, run};
 use sindri_platform::{InputEvent, Key, MouseButton};
 use winit::{
     dpi::PhysicalPosition,
-    event::{ElementState, MouseScrollDelta, WindowEvent},
+    event::{ElementState, MouseScrollDelta, TouchPhase, WindowEvent},
     keyboard::{KeyCode, PhysicalKey},
 };
 
@@ -48,6 +48,9 @@ pub fn input_event(event: &WindowEvent, scale_factor: f64) -> Option<InputEvent>
         WindowEvent::CursorMoved { position, .. } => Some(pointer_moved(*position, scale_factor)),
         WindowEvent::CursorLeft { .. } => Some(InputEvent::PointerLeft),
         WindowEvent::MouseWheel { delta, .. } => Some(scrolled(*delta, scale_factor)),
+        WindowEvent::Touch(touch) => {
+            Some(touched(touch.phase, touch.id, touch.location, scale_factor))
+        }
         WindowEvent::Focused(focused) => Some(InputEvent::FocusChanged(*focused)),
         _ => None,
     }
@@ -85,6 +88,37 @@ pub fn pointer_moved(position: PhysicalPosition<f64>, scale_factor: f64) -> Inpu
     InputEvent::PointerMoved {
         x: logical.x,
         y: logical.y,
+    }
+}
+
+/// Translates one finger's arrival, movement, or departure.
+///
+/// A cancelled touch is an ended one: the finger is gone either way, and a
+/// game that had to tell them apart would be a game that leaves a finger down
+/// when the system takes over the gesture.
+/// Takes the parts rather than the `Touch`, for the reason the module header
+/// gives about `KeyEvent`: a `winit` event carrying a `DeviceId` cannot be
+/// constructed off a real window, so the decision lives somewhere a test can
+/// reach it.
+pub fn touched(
+    phase: TouchPhase,
+    id: u64,
+    location: PhysicalPosition<f64>,
+    scale_factor: f64,
+) -> InputEvent {
+    let logical = location.to_logical::<f32>(scale_factor);
+    match phase {
+        TouchPhase::Started => InputEvent::TouchStarted {
+            id,
+            x: logical.x,
+            y: logical.y,
+        },
+        TouchPhase::Moved => InputEvent::TouchMoved {
+            id,
+            x: logical.x,
+            y: logical.y,
+        },
+        TouchPhase::Ended | TouchPhase::Cancelled => InputEvent::TouchEnded { id },
     }
 }
 
@@ -181,6 +215,7 @@ pub fn mouse_button(button: winit::event::MouseButton) -> Option<MouseButton> {
 #[cfg(test)]
 mod tests {
     use winit::dpi::PhysicalPosition;
+    use winit::event::TouchPhase;
 
     use super::*;
 
@@ -313,5 +348,34 @@ mod tests {
         );
         assert_eq!(input_event(&WindowEvent::RedrawRequested, 1.0), None);
         assert_eq!(input_event(&WindowEvent::CloseRequested, 1.0), None);
+    }
+
+    #[test]
+    fn a_finger_is_reported_in_logical_pixels() {
+        assert_eq!(
+            touched(
+                TouchPhase::Started,
+                3,
+                PhysicalPosition::new(200.0, 100.0),
+                2.0
+            ),
+            InputEvent::TouchStarted {
+                id: 3,
+                x: 100.0,
+                y: 50.0
+            }
+        );
+    }
+
+    /// A finger is gone either way, and a game that had to tell the two apart
+    /// would be a game that leaves one down when the system takes the gesture.
+    #[test]
+    fn a_cancelled_finger_is_an_ended_one() {
+        for phase in [TouchPhase::Ended, TouchPhase::Cancelled] {
+            assert_eq!(
+                touched(phase, 1, PhysicalPosition::new(0.0, 0.0), 1.0),
+                InputEvent::TouchEnded { id: 1 }
+            );
+        }
     }
 }

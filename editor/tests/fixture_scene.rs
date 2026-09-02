@@ -316,7 +316,7 @@ fn the_fixtures_animation_draws_a_different_frame_as_time_passes() {
                 VIEWPORT,
                 CameraView::default(),
                 &textures,
-                &animations,
+                sindri_scene::SceneRuntime::default().with_animations(&animations),
             )
             .expect("the fixture extracts");
         let rects: Vec<UvRect> = frame

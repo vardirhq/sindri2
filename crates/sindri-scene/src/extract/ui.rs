@@ -60,12 +60,26 @@ impl SceneExtractor {
             .overlay
             .expect("every resolved view includes screen-space projection");
         for (entity, image) in images {
+            // A bar filled to nothing draws nothing. Skipping here rather than
+            // pushing a zero-area quad keeps the empty case out of the renderer
+            // entirely, which is where a degenerate rect would be a problem.
+            let (fill_offset, fill_scale) = image.fill.sub_rect();
+            let Some(uv) = drawn_rect(entity, &image.reference()?, textures, animations, resting)
+                .part(fill_offset, fill_scale)
+            else {
+                continue;
+            };
             let reference = image.reference()?;
             let transform = world
                 .get(entity)
                 .and_then(|data| data.transform_3d)
                 .unwrap_or_default();
-            let model = ui_matrix(transform, image.anchor, extent);
+            // The fill shrinks the quad within the element's authored rect, so
+            // the drawn part keeps the edge it fills from instead of the bar
+            // closing towards its middle.
+            let model = ui_matrix(transform, image.anchor, extent)
+                * Mat4::from_translation(glam::Vec3::new(fill_offset[0], fill_offset[1], 0.0))
+                * Mat4::from_scale(glam::Vec3::new(fill_scale[0], fill_scale[1], 1.0));
             // Drawn flat against the overlay, but the Z still says how far back
             // in the stack it sits, so the distance is measured against the
             // authored Z rather than the flattened one.
@@ -84,9 +98,7 @@ impl SceneExtractor {
                 .or_default()
                 .push((
                     order,
-                    SpriteInstance::new(model, image.tint).with_uv_rect(drawn_rect(
-                        entity, &reference, textures, animations, resting,
-                    )),
+                    SpriteInstance::new(model, image.tint).with_uv_rect(uv),
                 ));
         }
         Ok(())

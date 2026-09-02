@@ -14,7 +14,8 @@ use sindri_core::{CommandHistory, EngineLifecycle, EntityId, SceneComponent, Tra
 use sindri_decay::ScriptComponent;
 use sindri_scene::{
     AudioSourceComponent, CameraComponent, GridNavigationComponent, GridOccupantComponent,
-    SceneExtractor, SpriteAnimations, SpriteComponent, UiImageComponent, UiTextComponent,
+    SceneExtractor, ScenePhysics2d, ScreenUi, SpriteAnimations, SpriteComponent, UiImageComponent,
+    UiTextComponent,
 };
 
 use crate::audition::Audition;
@@ -245,6 +246,53 @@ struct EditorApp {
     textured_revision: u64,
     scene_viewport: RuntimeViewport,
     game_viewport: RuntimeViewport,
+    /// The physics Play steps, and the bodies a scene's colliders became.
+    ///
+    /// No gravity: the engine has no opinion about which way is down, and a
+    /// scene-level setting is a project-format field that arrives with the
+    /// feature that reads it. `docs/physics.md` has the open item.
+    physics: ScenePhysics2d,
+    /// Where the screen elements are and what the pointer is doing to them.
+    ///
+    /// Recomputed every frame from the world, so a button moved in the
+    /// inspector is pressable where it now is rather than where it was.
+    screen_ui: ScreenUi,
+    /// The run's random stream.
+    ///
+    /// Put back to its seed every time Play starts, so pressing Play twice
+    /// gives the same run twice. That is what makes a bug found in Play a bug
+    /// that can be found again, and it is the opposite of what a shipped game
+    /// wants — which is why a game seeds itself instead.
+    random: sindri_core::Rng,
+    /// What a played scene remembers.
+    ///
+    /// Kept in memory for as long as the editor is open, and never written to
+    /// disk. A script's `Save.*` calls work and round-trip inside a session, so
+    /// persistence can be play-tested; putting a file into someone's project
+    /// directory because they pressed Play would be a side effect they did not
+    /// ask for. Where a real save belongs is the shipped host's decision, and
+    /// `docs/scripting.md` says so.
+    saves: sindri_core::SaveStore,
+    /// The fixed-step clock Play runs on.
+    ///
+    /// The same one a shipped game uses, so a scene steps the same number of
+    /// times per second here as it does in the build. Without it a scene
+    /// simulated as fast as the editor happened to redraw, which made a
+    /// play-test evidence about the editor rather than about the game.
+    clock: sindri_core::FixedStepClock,
+    /// The live flecks a played scene has thrown.
+    ///
+    /// Cleared when Play stops, because a fleck outliving the run that threw it
+    /// would be a scene at rest that is still moving.
+    effects: sindri_scene::Effects2d,
+    /// Where the Game view was drawn last frame, in window points.
+    ///
+    /// Kept because scripts advance before the layout runs, so the rectangle a
+    /// pointer is made relative to is the previous frame's. `None` until the
+    /// view has been drawn once, and while the workspace is showing the Scene
+    /// view instead — a pointer has nowhere to be when the game is not on
+    /// screen.
+    game_view_rect: Option<egui::Rect>,
     /// Where each animated sprite has got to.
     ///
     /// Runtime state, so it lives here rather than in the world: an animation
@@ -307,13 +355,13 @@ struct EditorApp {
 }
 
 impl EditorApp {
-    fn new(context: &eframe::CreationContext<'_>) -> Self {
-        crate::ui::theme::install(&context.egui_ctx);
-        let preferences = Preferences::load(context.storage);
-        let scene = scene_extractor();
-        // What this launch is about, before anything is loaded: a scene, a
-        // project, or a question. Only the first of those opens a file here —
-        // opening a project needs the editor that this is building.
+    /// What this launch opens, before anything else is built.
+    ///
+    /// Its own step because deciding is one thing and constructing is another,
+    /// and the constructor had grown past what a reader can hold.
+    fn opening(preferences: &Preferences) -> (Launch, SceneFile, Option<String>) {
+        // Only a scene opens a file here — opening a project needs the editor
+        // that this is building.
         let decided = launch::decide(
             std::env::args().nth(1).as_deref(),
             preferences.recent_projects.most_recent(),
@@ -326,6 +374,14 @@ impl EditorApp {
                 None,
             ),
         };
+        (decided, file, open_error)
+    }
+
+    fn new(context: &eframe::CreationContext<'_>) -> Self {
+        crate::ui::theme::install(&context.egui_ctx);
+        let preferences = Preferences::load(context.storage);
+        let scene = scene_extractor();
+        let (decided, file, open_error) = Self::opening(&preferences);
         // A scene that will not load must not take the editor down with it.
         // This used to unwrap, so a file that parsed and then failed validation
         // killed the process before the window existed — and the failure it
@@ -394,6 +450,14 @@ impl EditorApp {
             textured_revision: 0,
             scene_viewport,
             game_viewport,
+            game_view_rect: None,
+            physics: ScenePhysics2d::top_down().expect("zero gravity is finite"),
+            screen_ui: ScreenUi::default(),
+            random: sindri_core::Rng::default(),
+            saves: sindri_core::SaveStore::default(),
+            effects: sindri_scene::Effects2d::default(),
+            clock: sindri_core::FixedStepClock::new(sindri_core::FixedStepConfig::default())
+                .expect("the default fixed-step configuration is valid"),
             animations: SpriteAnimations::new(),
             scripts: SceneScripts::for_scene(None),
             input: EditorInput::default(),

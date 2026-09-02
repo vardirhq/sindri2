@@ -9,7 +9,7 @@ use sindri_render::{
     FrameRenderers, FrameTarget, SpriteBatchRenderer, TextRenderer, TexturedCubeRenderer, Viewport,
     ViewportTarget, encode_prepared_frame,
 };
-use sindri_scene::CameraView;
+use sindri_scene::{CameraView, SceneRuntime};
 
 use super::camera::{EditorCamera, camera_for};
 use super::frame::physical_viewport_dimension;
@@ -102,7 +102,9 @@ impl RuntimeViewport {
                 Viewport::new(self.target.width(), self.target.height()),
                 camera,
                 source.textures.bindings(),
-                source.animations,
+                SceneRuntime::default()
+                    .with_animations(source.animations)
+                    .with_effects(source.effects),
             )
             .map_err(|error| error.to_string())?;
         let mut encoder =
@@ -195,6 +197,14 @@ impl EditorApp {
         let context = ui.ctx().clone();
         let editing = tab == WorkspaceTab::Scene;
         let (rect, response) = ui.allocate_exact_size(ui.available_size(), viewport_sense());
+        // Only the Game view records one. The Scene view must not clear it:
+        // the two-by-three workspace draws the Game view first, so clearing
+        // here would throw away the rectangle that was just recorded.
+        // Forgetting a view that stopped being drawn is `advance_scripts`'s
+        // job, once per frame.
+        if !editing {
+            self.game_view_rect = Some(rect);
+        }
         let painting = editing && self.tilemap_tool.brush().is_some();
         let camera_before_input = self.scene_camera();
         let gizmo_owned = if editing && !painting {
@@ -239,6 +249,7 @@ impl EditorApp {
                     scene: &self.scene,
                     world: &self.world,
                     animations: &self.animations,
+                    effects: &self.effects,
                     textures: &self.textures,
                 },
                 (

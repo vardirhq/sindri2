@@ -141,8 +141,7 @@ impl eframe::App for EditorApp {
             .textures
             .poll(&state.device, &state.queue, &mut self.renderers.text);
         self.record_texture_notes(arrived);
-        self.advance_animations(ui.ctx());
-        self.advance_scripts(ui.ctx());
+        self.advance_play(ui.ctx());
         self.update_title(ui.ctx());
         self.handle_close_request(ui.ctx());
         self.handle_shortcuts(ui.ctx());

@@ -118,6 +118,20 @@ impl Parser<'_> {
                 };
                 continue;
             }
+            if self.consume_simple(&TokenKind::LeftBracket).is_some() {
+                let index = self.parse_expression()?;
+                let end =
+                    self.expect_simple(&TokenKind::RightBracket, "expected `]` after index")?;
+                let span = expr.span.join(end);
+                expr = Expr {
+                    kind: ExprKind::Index {
+                        object: Box::new(expr),
+                        index: Box::new(index),
+                    },
+                    span,
+                };
+                continue;
+            }
             if self.consume_simple(&TokenKind::LeftParen).is_some() {
                 let mut args = Vec::new();
                 if !self.at(&TokenKind::RightParen) {

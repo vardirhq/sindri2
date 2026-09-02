@@ -16,7 +16,7 @@ use sindri_render::{
 };
 use sindri_scene::SceneExtractor;
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_scene::{CameraView, TextureBindings};
+use sindri_scene::{CameraView, SceneRuntime, TextureBindings};
 
 use crate::assets::{bind_audio, bind_fonts, bind_textures, extractor, world};
 use crate::error::GatherError;
@@ -45,11 +45,15 @@ impl DesktopApp for GatherApp {
         let mut audio = gather_audio_backend()?;
         bind_audio(&mut audio)?;
 
-        let mut engine = EngineHost::new_with_audio(
-            Session::new(scene.components().clone()),
-            FixedStepConfig::default(),
-            audio,
-        )?;
+        let mut session = Session::new(scene.components().clone());
+        // Beside the executable rather than in an application data directory:
+        // Gather is a demonstration that gets run from a checkout, and a save
+        // buried in a per-user folder is one nobody can find to delete. A real
+        // game names a path its platform expects.
+        session.keep_saves_in(Box::new(sindri_platform::FileSaves::at(
+            std::path::Path::new("gather-save.json"),
+        )));
+        let mut engine = EngineHost::new_with_audio(session, FixedStepConfig::default(), audio)?;
         *engine.world_mut() = world()?;
         engine.start()?;
 
@@ -82,6 +86,9 @@ impl DesktopApp for GatherApp {
     fn resize(&mut self, context: &AppContext<'_>) -> Result<(), Self::Error> {
         self.depth
             .resize(context.device(), context.width(), context.height());
+        // The screen UI is laid out against this, so a window that changes
+        // shape moves the HUD with it rather than a frame later.
+        self.engine.set_viewport(context.width(), context.height());
         Ok(())
     }
 
@@ -95,7 +102,9 @@ impl DesktopApp for GatherApp {
             Viewport::new(context.width(), context.height()),
             CameraView::default(),
             &self.bindings,
-            self.engine.game().animations(),
+            SceneRuntime::default()
+                .with_animations(self.engine.game().animations())
+                .with_effects(self.engine.game().effects()),
         )?;
         let mut encoder =
             context

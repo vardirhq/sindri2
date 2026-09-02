@@ -10,7 +10,7 @@ use serde_json::{Value, json};
 use sindri_core::{
     ComponentSchemaRegistry, EntityData, EntityId, SceneComponent, Transform3D, World,
 };
-use sindri_decay::{ScriptComponent, ScriptSources, Scripts};
+use sindri_decay::{ScriptComponent, ScriptFrame, ScriptSources, Scripts};
 use sindri_platform::{InputEvent, InputState, Key};
 
 const SPRITE: &str = "sindri.sprite";
@@ -97,8 +97,11 @@ fn a_script_reads_the_keyboard_and_moves() {
         (vec![], 0.0),
     ] {
         let (mut world, entity, sources) = world(source);
-        let report =
-            Scripts::new().advance(&mut world, &registry(), &sources, &holding(&keys), 0.5);
+        let report = Scripts::new().advance(
+            &mut world,
+            &registry(),
+            ScriptFrame::new(&sources, &holding(&keys), 0.5),
+        );
         assert!(report.is_quiet(), "{report:?}");
         assert!(
             (position(&world, entity)[0] - expected).abs() < 1.0e-5,
@@ -128,12 +131,20 @@ fn a_script_can_tell_a_press_from_a_hold() {
 
     let mut input = InputState::default();
     input.apply(InputEvent::KeyPressed(Key::Space));
-    scripts.advance(&mut world, &registry(), &sources, &input, 0.5);
+    scripts.advance(
+        &mut world,
+        &registry(),
+        ScriptFrame::new(&sources, &input, 0.5),
+    );
     assert!((position(&world, entity)[1] - 1.0).abs() < 1.0e-5);
 
     // The next frame: still held, but no longer newly pressed.
     input.begin_frame();
-    scripts.advance(&mut world, &registry(), &sources, &input, 0.5);
+    scripts.advance(
+        &mut world,
+        &registry(),
+        ScriptFrame::new(&sources, &input, 0.5),
+    );
     assert!(
         (position(&world, entity)[1] - 1.0).abs() < 1.0e-5,
         "holding the key is not pressing it again"
@@ -153,9 +164,7 @@ fn a_key_name_that_names_no_key_is_refused() {
     let report = Scripts::new().advance(
         &mut world,
         &registry(),
-        &sources,
-        &InputState::default(),
-        0.5,
+        ScriptFrame::new(&sources, &InputState::default(), 0.5),
     );
     assert!(
         format!("{:?}", report.failures).contains("no key called `Jump`"),
@@ -172,9 +181,17 @@ fn a_script_can_ask_how_long_it_has_been_running() {
     let mut scripts = Scripts::new();
     let input = InputState::default();
 
-    scripts.advance(&mut world, &registry(), &sources, &input, 0.25);
+    scripts.advance(
+        &mut world,
+        &registry(),
+        ScriptFrame::new(&sources, &input, 0.25),
+    );
     assert!((position(&world, entity)[0] - 0.25).abs() < 1.0e-5);
-    scripts.advance(&mut world, &registry(), &sources, &input, 0.25);
+    scripts.advance(
+        &mut world,
+        &registry(),
+        ScriptFrame::new(&sources, &input, 0.25),
+    );
     assert!(
         (position(&world, entity)[0] - 0.5).abs() < 1.0e-5,
         "elapsed accumulates"
@@ -195,9 +212,7 @@ fn a_script_can_change_its_sprite() {
     let report = Scripts::new().advance(
         &mut world,
         &registry(),
-        &sources,
-        &InputState::default(),
-        0.5,
+        ScriptFrame::new(&sources, &InputState::default(), 0.5),
     );
     assert!(report.is_quiet(), "{report:?}");
 
@@ -235,9 +250,7 @@ fn writing_a_sprite_an_entity_does_not_have_says_so() {
     let report = Scripts::new().advance(
         &mut world,
         &registry(),
-        &sources,
-        &InputState::default(),
-        0.5,
+        ScriptFrame::new(&sources, &InputState::default(), 0.5),
     );
     assert!(
         format!("{:?}", report.failures).contains("has none"),
@@ -254,9 +267,7 @@ fn a_script_can_print() {
     let report = Scripts::new().advance(
         &mut world,
         &registry(),
-        &sources,
-        &InputState::default(),
-        0.5,
+        ScriptFrame::new(&sources, &InputState::default(), 0.5),
     );
 
     assert!(report.failures.is_empty(), "{report:?}");
@@ -299,9 +310,7 @@ fn a_script_declares_what_it_wants_authored() {
     scripts.advance(
         &mut world,
         &registry(),
-        &sources,
-        &InputState::default(),
-        0.5,
+        ScriptFrame::new(&sources, &InputState::default(), 0.5),
     );
 
     let exports = scripts
@@ -383,9 +392,7 @@ fn one_script_can_leave_a_number_for_another() {
     let report = scripts.advance(
         &mut world,
         &registry(),
-        &sources,
-        &InputState::default(),
-        0.5,
+        ScriptFrame::new(&sources, &InputState::default(), 0.5),
     );
     assert!(report.is_quiet(), "{report:?}");
     assert!((position(&world, writer)[0] - 7.0).abs() < 1.0e-5);
@@ -405,9 +412,7 @@ fn an_unwritten_note_reads_as_the_fallback() {
     let report = Scripts::new().advance(
         &mut world,
         &registry(),
-        &sources,
-        &InputState::default(),
-        0.5,
+        ScriptFrame::new(&sources, &InputState::default(), 0.5),
     );
     assert!(report.is_quiet(), "{report:?}");
     assert!((position(&world, entity)[0] - 42.0).abs() < 1.0e-5);
@@ -422,8 +427,16 @@ fn the_board_is_cleared_with_the_instances() {
     );
     let mut scripts = Scripts::new();
     let input = InputState::default();
-    scripts.advance(&mut world, &registry(), &sources, &input, 0.5);
-    scripts.advance(&mut world, &registry(), &sources, &input, 0.5);
+    scripts.advance(
+        &mut world,
+        &registry(),
+        ScriptFrame::new(&sources, &input, 0.5),
+    );
+    scripts.advance(
+        &mut world,
+        &registry(),
+        ScriptFrame::new(&sources, &input, 0.5),
+    );
     assert!((scripts.blackboard().get("score", 0.0) - 2.0).abs() < 1.0e-9);
 
     scripts.clear();

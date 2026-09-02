@@ -1,6 +1,6 @@
 //! What a scene file holds, and what it refuses to hold.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -9,6 +9,7 @@ use crate::{SceneMigrator, Transform3D};
 
 use super::canonical::collapse_scalar_arrays;
 use super::error::{SceneError, SceneJsonError};
+use super::graph::validate_entities;
 
 pub const SCENE_FORMAT_VERSION: u32 = 8;
 
@@ -149,81 +150,7 @@ impl SceneDocument {
             });
         }
 
-        if self
-            .entities
-            .iter()
-            .any(|entity| entity.id.as_str().trim().is_empty())
-        {
-            return Err(SceneError::EmptyEntityId);
-        }
-
-        let ids: HashSet<_> = self.entities.iter().map(|entity| &entity.id).collect();
-        if ids.len() != self.entities.len() {
-            return Err(SceneError::DuplicateEntityId);
-        }
-
-        for entity in &self.entities {
-            if let Some(transform) = &entity.transform_3d
-                && !transform_3d_is_finite(transform)
-            {
-                return Err(SceneError::NonFiniteTransform(entity.id.clone()));
-            }
-
-            if let Some(parent) = &entity.parent {
-                if parent == &entity.id {
-                    return Err(SceneError::HierarchyCycle(entity.id.clone()));
-                }
-                if !ids.contains(parent) {
-                    return Err(SceneError::MissingParent {
-                        entity: entity.id.clone(),
-                        parent: parent.clone(),
-                    });
-                }
-            }
-        }
-
-        self.reject_hierarchy_cycles()
-    }
-
-    /// Rejects a scene where following parents does not always reach a root.
-    ///
-    /// Each entity used to walk its own ancestors, and each step of that walk
-    /// searched the whole entity list for the parent it named, so validating a
-    /// scene cost time proportional to its size squared: ten thousand entities
-    /// spent about 1.4 seconds here, and every load, save, and canonical
-    /// serialization pays it.
-    ///
-    /// Parents resolve through a map instead, and an entity proven to reach a
-    /// root is remembered, so a chain shared by many entities is walked once
-    /// rather than once per descendant.
-    fn reject_hierarchy_cycles(&self) -> Result<(), SceneError> {
-        let parents: HashMap<&SceneEntityId, Option<&SceneEntityId>> = self
-            .entities
-            .iter()
-            .map(|entity| (&entity.id, entity.parent.as_ref()))
-            .collect();
-
-        let mut grounded: HashSet<&SceneEntityId> = HashSet::with_capacity(self.entities.len());
-        let mut walked: HashSet<&SceneEntityId> = HashSet::new();
-        let mut path: Vec<&SceneEntityId> = Vec::new();
-
-        for entity in &self.entities {
-            walked.clear();
-            path.clear();
-            let mut cursor = Some(&entity.id);
-            while let Some(current) = cursor {
-                if grounded.contains(current) {
-                    break;
-                }
-                if !walked.insert(current) {
-                    return Err(SceneError::HierarchyCycle(entity.id.clone()));
-                }
-                path.push(current);
-                cursor = parents.get(current).copied().flatten();
-            }
-            grounded.extend(path.iter().copied());
-        }
-        Ok(())
+        validate_entities(&self.entities)
     }
 }
 
@@ -264,10 +191,4 @@ impl SceneEntity {
             editor: BTreeMap::new(),
         }
     }
-}
-
-fn transform_3d_is_finite(transform: &Transform3D) -> bool {
-    transform.position.iter().all(|value| value.is_finite())
-        && transform.rotation.iter().all(|value| value.is_finite())
-        && transform.scale.iter().all(|value| value.is_finite())
 }

@@ -1,12 +1,13 @@
 //! One function per expression form, and the instructions it becomes.
 
+use decay_semantic::ValueMember;
 use decay_syntax::{AssignOp, BinaryOp, Expr, ExprKind};
 
 use crate::ir::{Constant, Instruction, Path};
 
 use super::Lowerer;
 
-impl Lowerer {
+impl Lowerer<'_> {
     /// `&&` and `||`, as branches rather than as an operation over two values
     /// already evaluated.
     ///
@@ -22,6 +23,7 @@ impl Lowerer {
     /// that is not a `bool`, so testing each operand that is reached keeps the
     /// check `Instruction::Binary` used to perform on both.
     pub(super) fn lower_short_circuit(
+        &self,
         left: &Expr,
         op: BinaryOp,
         right: &Expr,
@@ -32,7 +34,7 @@ impl Lowerer {
         let mut to_false = Vec::new();
         let mut to_true = Vec::new();
 
-        Self::lower_expr(left, instructions);
+        self.lower_expr(left, instructions);
         if matches!(op, BinaryOp::And) {
             to_false.push(instructions.len());
             instructions.push(Instruction::JumpIfFalse(usize::MAX));
@@ -48,7 +50,7 @@ impl Lowerer {
             instructions[past] = Instruction::JumpIfFalse(right_start);
         }
 
-        Self::lower_expr(right, instructions);
+        self.lower_expr(right, instructions);
         to_false.push(instructions.len());
         instructions.push(Instruction::JumpIfFalse(usize::MAX));
 
@@ -70,7 +72,7 @@ impl Lowerer {
         instructions[to_end] = Instruction::Jump(end);
     }
 
-    pub(super) fn lower_expr(expr: &Expr, instructions: &mut Vec<Instruction>) {
+    pub(super) fn lower_expr(&self, expr: &Expr, instructions: &mut Vec<Instruction>) {
         match &expr.kind {
             ExprKind::Identifier(name) => {
                 instructions.push(Instruction::Load(Path(vec![name.clone()])));
@@ -83,17 +85,17 @@ impl Lowerer {
             }
             ExprKind::Bool(value) => instructions.push(Instruction::Push(Constant::Bool(*value))),
             ExprKind::Null => instructions.push(Instruction::Push(Constant::Null)),
-            ExprKind::Group(inner) => Self::lower_expr(inner, instructions),
+            ExprKind::Group(inner) => self.lower_expr(inner, instructions),
             ExprKind::Unary { op, expr } => {
-                Self::lower_expr(expr, instructions);
+                self.lower_expr(expr, instructions);
                 instructions.push(Instruction::Unary(*op));
             }
             ExprKind::Binary { left, op, right } => {
                 if matches!(op, BinaryOp::And | BinaryOp::Or) {
-                    Self::lower_short_circuit(left, *op, right, instructions);
+                    self.lower_short_circuit(left, *op, right, instructions);
                 } else {
-                    Self::lower_expr(left, instructions);
-                    Self::lower_expr(right, instructions);
+                    self.lower_expr(left, instructions);
+                    self.lower_expr(right, instructions);
                     instructions.push(Instruction::Binary(*op));
                 }
             }
@@ -101,10 +103,10 @@ impl Lowerer {
                 let path =
                     Self::path_from_expr(target).unwrap_or_else(|| Path(vec!["<invalid>".into()]));
                 if matches!(op, AssignOp::Assign) {
-                    Self::lower_expr(value, instructions);
+                    self.lower_expr(value, instructions);
                 } else {
                     instructions.push(Instruction::Load(path.clone()));
-                    Self::lower_expr(value, instructions);
+                    self.lower_expr(value, instructions);
                     let binary = match op {
                         AssignOp::Add => BinaryOp::Add,
                         AssignOp::Subtract => BinaryOp::Subtract,
@@ -117,14 +119,31 @@ impl Lowerer {
                 }
                 instructions.push(Instruction::Store(path));
             }
-            ExprKind::Member { .. } => {
-                let path = Self::path_from_expr(expr)
-                    .unwrap_or_else(|| Path(vec!["<invalid-member>".into()]));
-                instructions.push(Instruction::Load(path));
+            ExprKind::Member { object, .. } => {
+                // The analysis says whether this reads a property of a value or
+                // walks a path the host answers. Only it knows: both are
+                // spelled `a.b`, and telling them apart by the member's name
+                // would reserve that name against every host type there is.
+                match self.value_member(expr.span) {
+                    Some(ValueMember::Length) => {
+                        self.lower_expr(object, instructions);
+                        instructions.push(Instruction::Length);
+                    }
+                    None => {
+                        let path = Self::path_from_expr(expr)
+                            .unwrap_or_else(|| Path(vec!["<invalid-member>".into()]));
+                        instructions.push(Instruction::Load(path));
+                    }
+                }
+            }
+            ExprKind::Index { object, index } => {
+                self.lower_expr(object, instructions);
+                self.lower_expr(index, instructions);
+                instructions.push(Instruction::Index);
             }
             ExprKind::Call { callee, args } => {
                 for argument in args {
-                    Self::lower_expr(argument, instructions);
+                    self.lower_expr(argument, instructions);
                 }
                 let callee = Self::path_from_expr(callee)
                     .unwrap_or_else(|| Path(vec!["<invalid-call>".into()]));

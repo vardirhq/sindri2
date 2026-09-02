@@ -26,10 +26,13 @@ use sindri_render::{
     TexturedCubeRenderer, Viewport, encode_prepared_frame,
 };
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_scene::CameraView;
+use sindri_scene::{CameraView, SceneRuntime};
 
 #[cfg(not(target_arch = "wasm32"))]
 const WIDTH: u32 = 960;
+/// The same size the screen UI is laid out against, as the capture draws it.
+#[cfg(not(target_arch = "wasm32"))]
+const VIEWPORT: (f32, f32) = (960.0, 600.0);
 #[cfg(not(target_arch = "wasm32"))]
 const HEIGHT: u32 = 600;
 /// The run the picture is of: hold these keys for that many fixed steps.
@@ -67,7 +70,7 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
             held.apply(InputEvent::KeyPressed(*key));
         }
         for _ in 0..*steps {
-            session.step(&mut world, &held, STEP_SECONDS)?;
+            session.step(&mut world, &held, VIEWPORT, STEP_SECONDS)?;
         }
     }
     let prepared = scene.extract_animated(
@@ -75,7 +78,9 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
         Viewport::new(WIDTH, HEIGHT),
         CameraView::default(),
         &bindings,
-        session.animations(),
+        SceneRuntime::default()
+            .with_animations(session.animations())
+            .with_effects(session.effects()),
     )?;
 
     let mut encoder = gpu
