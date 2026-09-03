@@ -11,6 +11,9 @@ repository.workspace = true
 bytemuck.workspace = true
 glam.workspace = true
 glyphon.workspace = true
+# Held back, and unused: see the note in the workspace manifest. It is listed
+# here because this is the crate whose glyphon dependency pulls it in.
+tinyvec.workspace = true
 thiserror.workspace = true
 wgpu.workspace = true
 
