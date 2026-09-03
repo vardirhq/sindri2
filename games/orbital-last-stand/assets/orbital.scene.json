@@ -32,8 +32,8 @@
           "count": 6.0,
           "fill": [
             0.00152,
-            0.00518,
-            0.00368,
+            0.00212,
+            0.00439,
             1.0
           ],
           "stroke": [
@@ -79,7 +79,7 @@
       "components": {
         "sindri.ui.shape": {
           "kind": "grid",
-          "count": 34.0,
+          "count": 65.0,
           "fill": [
             0,
             0,
@@ -87,12 +87,12 @@
             0
           ],
           "stroke": [
-            0.00802,
-            0.02956,
-            0.02315,
+            0.00852,
+            0.0343,
+            0.02445,
             1.0
           ],
-          "stroke_width": 0.0008,
+          "stroke_width": 0.0005,
           "corner_radius": 0.0,
           "dashes": 0.0,
           "dash_duty": 0.5,
@@ -178,19 +178,19 @@
           "kind": "rect",
           "count": 6.0,
           "fill": [
-            0.00243,
-            0.00478,
-            0.007,
+            0.00335,
+            0.00561,
+            0.01444,
             1.0
           ],
           "stroke": [
-            0.04519,
-            0.09084,
-            0.11697,
+            0.10302,
+            0.10505,
+            0.113,
             1.0
           ],
-          "stroke_width": 0.012,
-          "corner_radius": 0.02,
+          "stroke_width": 0.01,
+          "corner_radius": 0.0,
           "dashes": 0.0,
           "dash_duty": 0.5,
           "sweep_start": 0.0,
@@ -227,12 +227,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            0.20156,
-            0.27468,
-            0.25415,
+            0.19807,
+            0.2384,
+            0.31399,
             1.0
           ],
-          "font": "fonts/NotoSansMono.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
@@ -244,7 +244,7 @@
           "wrap": "word",
           "line_align": "center",
           "case": "upper",
-          "letter_spacing": 0.00528,
+          "letter_spacing": 0.00495,
           "bold": false
         }
       }
@@ -275,12 +275,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
+            0.80695,
             0.85499,
-            0.90466,
-            0.87962,
+            0.92158,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
@@ -295,8 +295,8 @@
             "min": 0.028
           },
           "case": "as_written",
-          "letter_spacing": 0.0,
-          "bold": true
+          "letter_spacing": 0.00092,
+          "bold": false
         }
       }
     },
@@ -343,19 +343,19 @@
           "kind": "rect",
           "count": 6.0,
           "fill": [
-            0.00243,
-            0.00478,
-            0.007,
+            0.00335,
+            0.00561,
+            0.01444,
             1.0
           ],
           "stroke": [
-            0.04519,
-            0.09084,
-            0.11697,
+            0.10302,
+            0.10505,
+            0.113,
             1.0
           ],
-          "stroke_width": 0.012,
-          "corner_radius": 0.02,
+          "stroke_width": 0.01,
+          "corner_radius": 0.0,
           "dashes": 0.0,
           "dash_duty": 0.5,
           "sweep_start": 0.0,
@@ -392,12 +392,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            0.20156,
-            0.27468,
-            0.25415,
+            0.19807,
+            0.2384,
+            0.31399,
             1.0
           ],
-          "font": "fonts/NotoSansMono.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
@@ -409,7 +409,7 @@
           "wrap": "word",
           "line_align": "center",
           "case": "upper",
-          "letter_spacing": 0.00528,
+          "letter_spacing": 0.00495,
           "bold": false
         }
       }
@@ -440,12 +440,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
+            0.80695,
             0.85499,
-            0.90466,
-            0.87962,
+            0.92158,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
@@ -460,8 +460,8 @@
             "min": 0.028
           },
           "case": "as_written",
-          "letter_spacing": 0.0,
-          "bold": true
+          "letter_spacing": 0.00092,
+          "bold": false
         }
       }
     },
@@ -508,19 +508,19 @@
           "kind": "rect",
           "count": 6.0,
           "fill": [
-            0.00243,
-            0.00478,
-            0.007,
+            0.00335,
+            0.00561,
+            0.01444,
             1.0
           ],
           "stroke": [
-            0.04519,
-            0.09084,
-            0.11697,
+            0.10302,
+            0.10505,
+            0.113,
             1.0
           ],
-          "stroke_width": 0.012,
-          "corner_radius": 0.02,
+          "stroke_width": 0.01,
+          "corner_radius": 0.0,
           "dashes": 0.0,
           "dash_duty": 0.5,
           "sweep_start": 0.0,
@@ -557,12 +557,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            0.20156,
-            0.27468,
-            0.25415,
+            0.19807,
+            0.2384,
+            0.31399,
             1.0
           ],
-          "font": "fonts/NotoSansMono.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
@@ -574,7 +574,7 @@
           "wrap": "word",
           "line_align": "center",
           "case": "upper",
-          "letter_spacing": 0.00528,
+          "letter_spacing": 0.00495,
           "bold": false
         }
       }
@@ -605,12 +605,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
+            0.80695,
             0.85499,
-            0.90466,
-            0.87962,
+            0.92158,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
@@ -625,8 +625,8 @@
             "min": 0.028
           },
           "case": "as_written",
-          "letter_spacing": 0.0,
-          "bold": true
+          "letter_spacing": 0.00092,
+          "bold": false
         }
       }
     },
@@ -673,19 +673,19 @@
           "kind": "rect",
           "count": 6.0,
           "fill": [
-            0.00243,
-            0.00478,
-            0.007,
+            0.00335,
+            0.00561,
+            0.01444,
             1.0
           ],
           "stroke": [
-            0.04519,
-            0.09084,
-            0.11697,
+            0.10302,
+            0.10505,
+            0.113,
             1.0
           ],
-          "stroke_width": 0.012,
-          "corner_radius": 0.02,
+          "stroke_width": 0.01,
+          "corner_radius": 0.0,
           "dashes": 0.0,
           "dash_duty": 0.5,
           "sweep_start": 0.0,
@@ -722,12 +722,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            0.20156,
-            0.27468,
-            0.25415,
+            0.19807,
+            0.2384,
+            0.31399,
             1.0
           ],
-          "font": "fonts/NotoSansMono.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
@@ -739,7 +739,7 @@
           "wrap": "word",
           "line_align": "center",
           "case": "upper",
-          "letter_spacing": 0.00528,
+          "letter_spacing": 0.00495,
           "bold": false
         }
       }
@@ -770,12 +770,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
+            0.80695,
             0.85499,
-            0.90466,
-            0.87962,
+            0.92158,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
@@ -790,8 +790,8 @@
             "min": 0.028
           },
           "case": "as_written",
-          "letter_spacing": 0.0,
-          "bold": true
+          "letter_spacing": 0.00092,
+          "bold": false
         }
       }
     },
@@ -838,19 +838,19 @@
           "kind": "rect",
           "count": 6.0,
           "fill": [
-            0.00243,
-            0.00478,
-            0.007,
+            0.00335,
+            0.00561,
+            0.01444,
             1.0
           ],
           "stroke": [
-            0.04519,
-            0.09084,
-            0.11697,
+            0.10302,
+            0.10505,
+            0.113,
             1.0
           ],
-          "stroke_width": 0.012,
-          "corner_radius": 0.02,
+          "stroke_width": 0.01,
+          "corner_radius": 0.0,
           "dashes": 0.0,
           "dash_duty": 0.5,
           "sweep_start": 0.0,
@@ -887,12 +887,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            0.20156,
-            0.27468,
-            0.25415,
+            0.19807,
+            0.2384,
+            0.31399,
             1.0
           ],
-          "font": "fonts/NotoSansMono.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
@@ -904,7 +904,7 @@
           "wrap": "word",
           "line_align": "center",
           "case": "upper",
-          "letter_spacing": 0.00528,
+          "letter_spacing": 0.00495,
           "bold": false
         }
       }
@@ -935,12 +935,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
+            0.80695,
             0.85499,
-            0.90466,
-            0.87962,
+            0.92158,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
@@ -955,8 +955,8 @@
             "min": 0.028
           },
           "case": "as_written",
-          "letter_spacing": 0.0,
-          "bold": true
+          "letter_spacing": 0.00092,
+          "bold": false
         }
       }
     },
@@ -1003,19 +1003,19 @@
           "kind": "rect",
           "count": 6.0,
           "fill": [
-            0.00243,
-            0.00478,
-            0.007,
+            0.00335,
+            0.00561,
+            0.01444,
             1.0
           ],
           "stroke": [
-            0.04519,
-            0.09084,
-            0.11697,
+            0.10302,
+            0.10505,
+            0.113,
             1.0
           ],
-          "stroke_width": 0.012,
-          "corner_radius": 0.02,
+          "stroke_width": 0.01,
+          "corner_radius": 0.0,
           "dashes": 0.0,
           "dash_duty": 0.5,
           "sweep_start": 0.0,
@@ -1052,12 +1052,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            0.20156,
-            0.27468,
-            0.25415,
+            0.19807,
+            0.2384,
+            0.31399,
             1.0
           ],
-          "font": "fonts/NotoSansMono.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
@@ -1069,7 +1069,7 @@
           "wrap": "word",
           "line_align": "center",
           "case": "upper",
-          "letter_spacing": 0.00528,
+          "letter_spacing": 0.00495,
           "bold": false
         }
       }
@@ -1100,12 +1100,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
+            0.80695,
             0.85499,
-            0.90466,
-            0.87962,
+            0.92158,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
@@ -1120,8 +1120,8 @@
             "min": 0.028
           },
           "case": "as_written",
-          "letter_spacing": 0.0,
-          "bold": true
+          "letter_spacing": 0.00092,
+          "bold": false
         }
       }
     },
@@ -1275,9 +1275,9 @@
           "layer": 128,
           "texture": "textures/bar-back.png",
           "tint": [
-            0.00802,
-            0.01764,
-            0.0137,
+            0.10302,
+            0.10505,
+            0.113,
             1.0
           ]
         }
@@ -1350,11 +1350,11 @@
           "anchor": "top",
           "color": [
             1.0,
-            0.14413,
-            0.08866,
+            0.14703,
+            0.06848,
             1.0
           ],
-          "font": "fonts/NotoSansMono.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.032,
           "layer": 140,
           "line_height": 0.034,
@@ -1373,7 +1373,7 @@
             "softness": 0.005
           },
           "case": "upper",
-          "letter_spacing": 0.00512,
+          "letter_spacing": 0.0048,
           "bold": false
         }
       }
@@ -1404,12 +1404,12 @@
         "sindri.ui.text": {
           "anchor": "top",
           "color": [
+            0.80695,
             0.85499,
-            0.90466,
-            0.87962,
+            0.92158,
             1.0
           ],
-          "font": "fonts/NotoSansMono.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.075,
           "layer": 140,
           "line_height": 0.079,
@@ -1428,7 +1428,7 @@
             "softness": 0.005
           },
           "case": "upper",
-          "letter_spacing": 0.012,
+          "letter_spacing": 0.01125,
           "bold": false
         }
       }
@@ -1501,9 +1501,9 @@
           "layer": 128,
           "texture": "textures/bar-back.png",
           "tint": [
-            0.00802,
-            0.01764,
-            0.0137,
+            0.10302,
+            0.10505,
+            0.113,
             1.0
           ]
         }
@@ -1542,8 +1542,8 @@
           "texture": "textures/bar.png",
           "tint": [
             1.0,
-            0.14413,
-            0.08866,
+            0.14703,
+            0.06848,
             1.0
           ]
         }
@@ -1577,9 +1577,9 @@
           "layer": 128,
           "texture": "textures/bar-back.png",
           "tint": [
-            0.00802,
-            0.01764,
-            0.0137,
+            0.10302,
+            0.10505,
+            0.113,
             1.0
           ]
         }
@@ -1611,12 +1611,12 @@
         "sindri.ui.text": {
           "anchor": "bottom_left",
           "color": [
+            0.80695,
             0.85499,
-            0.90466,
-            0.87962,
+            0.92158,
             1.0
           ],
-          "font": "fonts/NotoSansMono.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.03,
           "layer": 140,
           "line_height": 0.0315,
@@ -1635,7 +1635,7 @@
             "softness": 0.005
           },
           "case": "upper",
-          "letter_spacing": 0.0048,
+          "letter_spacing": 0.0045,
           "bold": false
         }
       }
@@ -1667,11 +1667,11 @@
           "anchor": "top_right",
           "color": [
             0.20156,
-            1.0,
-            0.55201,
+            0.92158,
+            0.57758,
             1.0
           ],
-          "font": "fonts/NotoSansMono.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.028,
           "layer": 140,
           "line_height": 0.0294,
@@ -1690,7 +1690,7 @@
             "softness": 0.005
           },
           "case": "upper",
-          "letter_spacing": 0.00448,
+          "letter_spacing": 0.0042,
           "bold": false
         }
       }
@@ -1721,12 +1721,12 @@
         "sindri.ui.text": {
           "anchor": "top_right",
           "color": [
+            0.80695,
             0.85499,
-            0.90466,
-            0.87962,
+            0.92158,
             1.0
           ],
-          "font": "fonts/NotoSansMono.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.032,
           "layer": 140,
           "line_height": 0.0336,
@@ -1745,7 +1745,7 @@
             "softness": 0.005
           },
           "case": "upper",
-          "letter_spacing": 0.00512,
+          "letter_spacing": 0.0048,
           "bold": false
         }
       }
@@ -1777,11 +1777,11 @@
           "anchor": "top_left",
           "color": [
             0.20156,
-            1.0,
-            0.55201,
+            0.92158,
+            0.57758,
             1.0
           ],
-          "font": "fonts/NotoSansMono.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.028,
           "layer": 140,
           "line_height": 0.0294,
@@ -1800,7 +1800,7 @@
             "softness": 0.005
           },
           "case": "upper",
-          "letter_spacing": 0.00448,
+          "letter_spacing": 0.0042,
           "bold": false
         }
       }
@@ -1885,19 +1885,19 @@
           "kind": "rect",
           "count": 6.0,
           "fill": [
-            0.00212,
-            0.00368,
-            0.00304,
+            0.00335,
+            0.00561,
+            0.01444,
             1.0
           ],
           "stroke": [
-            0.04519,
-            0.09084,
-            0.11697,
+            0.10302,
+            0.10505,
+            0.113,
             1.0
           ],
-          "stroke_width": 0.004,
-          "corner_radius": 0.015,
+          "stroke_width": 0.003,
+          "corner_radius": 0.0,
           "dashes": 0.0,
           "dash_duty": 0.5,
           "sweep_start": 0.0,
@@ -1951,13 +1951,13 @@
             0
           ],
           "stroke": [
-            1.0,
-            0.14413,
-            0.08866,
+            0.35218,
+            0.05511,
+            0.03335,
             1.0
           ],
-          "stroke_width": 0.03,
-          "corner_radius": 0.06,
+          "stroke_width": 0.02,
+          "corner_radius": 0.0,
           "dashes": 0.0,
           "dash_duty": 0.5,
           "sweep_start": 0.0,
@@ -1995,18 +1995,18 @@
           "anchor": "center",
           "color": [
             1.0,
-            0.14413,
-            0.08866,
+            0.14703,
+            0.06848,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.05,
           "layer": 140,
           "line_height": 0.0525,
           "text": "GIVE UP",
           "case": "as_written",
-          "letter_spacing": 0.0,
-          "bold": true
+          "letter_spacing": 0.001,
+          "bold": false
         }
       }
     },
@@ -2047,9 +2047,9 @@
           "kind": "rect",
           "count": 6.0,
           "fill": [
-            0.08866,
-            0.67244,
-            0.35153,
+            0.20156,
+            0.92158,
+            0.57758,
             1.0
           ],
           "stroke": [
@@ -2097,18 +2097,18 @@
           "anchor": "center",
           "color": [
             0.00152,
-            0.00518,
-            0.00368,
+            0.00212,
+            0.00439,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.05,
           "layer": 140,
           "line_height": 0.0525,
           "text": "RESUME",
           "case": "as_written",
-          "letter_spacing": 0.0,
-          "bold": true
+          "letter_spacing": 0.001,
+          "bold": false
         }
       }
     },
@@ -2138,19 +2138,19 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
+            0.80695,
             0.85499,
-            0.90466,
-            0.87962,
+            0.92158,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.08,
           "layer": 140,
           "line_height": 0.084,
           "text": "Paused",
           "case": "as_written",
-          "letter_spacing": 0.0,
-          "bold": true
+          "letter_spacing": 0.0016,
+          "bold": false
         }
       }
     },
@@ -2349,9 +2349,9 @@
           "kind": "rect",
           "count": 6.0,
           "fill": [
-            0.08866,
-            0.67244,
-            0.35153,
+            0.20156,
+            0.92158,
+            0.57758,
             1.0
           ],
           "stroke": [
@@ -2399,18 +2399,18 @@
           "anchor": "center",
           "color": [
             0.00152,
-            0.00518,
-            0.00368,
+            0.00212,
+            0.00439,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.055,
           "layer": 140,
           "line_height": 0.05775,
           "text": "PLAY AGAIN",
           "case": "as_written",
-          "letter_spacing": 0.0,
-          "bold": true
+          "letter_spacing": 0.0011,
+          "bold": false
         }
       }
     },
@@ -2440,18 +2440,18 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
+            0.80695,
             0.85499,
-            0.90466,
-            0.87962,
+            0.92158,
             1.0
           ],
-          "font": "fonts/NotoSansMono.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.042,
           "layer": 140,
           "line_height": 0.0441,
           "text": "Best {}",
-          "case": "upper",
-          "letter_spacing": 0.00672,
+          "case": "as_written",
+          "letter_spacing": 0.00084,
           "bold": false
         }
       }
@@ -2483,19 +2483,19 @@
           "kind": "rect",
           "count": 6.0,
           "fill": [
-            0.00212,
-            0.00368,
-            0.00304,
+            0.00335,
+            0.00561,
+            0.01444,
             1.0
           ],
           "stroke": [
-            0.04519,
-            0.09084,
-            0.11697,
+            0.10302,
+            0.10505,
+            0.113,
             1.0
           ],
-          "stroke_width": 0.004,
-          "corner_radius": 0.015,
+          "stroke_width": 0.003,
+          "corner_radius": 0.0,
           "dashes": 0.0,
           "dash_duty": 0.5,
           "sweep_start": 0.0,
@@ -2532,18 +2532,18 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
+            0.80695,
             0.85499,
-            0.90466,
-            0.87962,
+            0.92158,
             1.0
           ],
-          "font": "fonts/NotoSansMono.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.042,
           "layer": 140,
           "line_height": 0.0441,
           "text": "Kills {}",
-          "case": "upper",
-          "letter_spacing": 0.00672,
+          "case": "as_written",
+          "letter_spacing": 0.00084,
           "bold": false
         }
       }
@@ -2574,18 +2574,18 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
+            0.80695,
             0.85499,
-            0.90466,
-            0.87962,
+            0.92158,
             1.0
           ],
-          "font": "fonts/NotoSansMono.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.058,
           "layer": 140,
           "line_height": 0.0609,
           "text": "Score {}",
-          "case": "upper",
-          "letter_spacing": 0.00928,
+          "case": "as_written",
+          "letter_spacing": 0.00116,
           "bold": false
         }
       }
@@ -2616,18 +2616,18 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
+            0.80695,
             0.85499,
-            0.90466,
-            0.87962,
+            0.92158,
             1.0
           ],
-          "font": "fonts/NotoSansMono.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.042,
           "layer": 140,
           "line_height": 0.0441,
           "text": "Survived {}:{.2}",
-          "case": "upper",
-          "letter_spacing": 0.00672,
+          "case": "as_written",
+          "letter_spacing": 0.00084,
           "bold": false
         }
       }
@@ -2658,19 +2658,19 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
+            0.80695,
             0.85499,
-            0.90466,
-            0.87962,
+            0.92158,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.085,
           "layer": 140,
           "line_height": 0.08925,
           "text": "Run over",
           "case": "as_written",
-          "letter_spacing": 0.0,
-          "bold": true
+          "letter_spacing": 0.0017,
+          "bold": false
         }
       }
     },
@@ -2729,19 +2729,19 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
+            0.80695,
             0.85499,
-            0.90466,
-            0.87962,
+            0.92158,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
           "text": "Best {}",
-          "case": "as_written",
-          "letter_spacing": 0.0,
-          "bold": true
+          "case": "upper",
+          "letter_spacing": 0.0069,
+          "bold": false
         }
       }
     },
@@ -2772,19 +2772,19 @@
           "kind": "rect",
           "count": 6.0,
           "fill": [
-            0.00212,
-            0.00368,
-            0.00304,
+            0.00335,
+            0.00561,
+            0.01444,
             1.0
           ],
           "stroke": [
-            0.04519,
-            0.09084,
-            0.11697,
+            0.10302,
+            0.10505,
+            0.113,
             1.0
           ],
-          "stroke_width": 0.004,
-          "corner_radius": 0.015,
+          "stroke_width": 0.003,
+          "corner_radius": 0.0,
           "dashes": 0.0,
           "dash_duty": 0.5,
           "sweep_start": 0.0,
@@ -2822,11 +2822,11 @@
           "anchor": "center",
           "color": [
             0.20156,
-            1.0,
-            0.55201,
+            0.92158,
+            0.57758,
             1.0
           ],
-          "font": "fonts/NotoSansMono.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.03,
           "layer": 140,
           "line_height": 0.0315,
@@ -2838,7 +2838,7 @@
           "wrap": "word",
           "line_align": "center",
           "case": "upper",
-          "letter_spacing": 0.0048,
+          "letter_spacing": 0.0045,
           "shadow": {
             "offset": [
               0.0,
@@ -2919,11 +2919,11 @@
           "anchor": "center",
           "color": [
             1.0,
-            0.14413,
-            0.08866,
+            0.14703,
+            0.06848,
             1.0
           ],
-          "font": "fonts/NotoSansMono.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.034,
           "layer": 140,
           "line_height": 0.0357,
@@ -2935,7 +2935,7 @@
           "wrap": "word",
           "line_align": "center",
           "case": "upper",
-          "letter_spacing": 0.00544,
+          "letter_spacing": 0.0051,
           "bold": false
         }
       },
@@ -2978,9 +2978,9 @@
           "kind": "rect",
           "count": 6.0,
           "fill": [
-            0.08866,
-            0.67244,
-            0.35153,
+            0.20156,
+            0.92158,
+            0.57758,
             1.0
           ],
           "stroke": [
@@ -3028,18 +3028,18 @@
           "anchor": "center",
           "color": [
             0.00152,
-            0.00518,
-            0.00368,
+            0.00212,
+            0.00439,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.06,
           "layer": 140,
           "line_height": 0.063,
           "text": "START",
           "case": "as_written",
-          "letter_spacing": 0.0,
-          "bold": true
+          "letter_spacing": 0.0012,
+          "bold": false
         }
       }
     },
@@ -3121,19 +3121,19 @@
           "kind": "rect",
           "count": 6.0,
           "fill": [
-            0.00212,
-            0.00368,
-            0.00304,
+            0.00335,
+            0.00561,
+            0.01444,
             1.0
           ],
           "stroke": [
-            0.04519,
-            0.09084,
-            0.11697,
+            0.10302,
+            0.10505,
+            0.113,
             1.0
           ],
-          "stroke_width": 0.004,
-          "corner_radius": 0.015,
+          "stroke_width": 0.003,
+          "corner_radius": 0.0,
           "dashes": 0.0,
           "dash_duty": 0.5,
           "sweep_start": 0.0,
@@ -3170,19 +3170,19 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
+            0.80695,
             0.85499,
-            0.90466,
-            0.87962,
+            0.92158,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.072,
           "layer": 140,
           "line_height": 0.0756,
           "text": "Choose a module",
           "case": "as_written",
-          "letter_spacing": 0.0,
-          "bold": true
+          "letter_spacing": 0.00144,
+          "bold": false
         }
       }
     }

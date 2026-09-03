@@ -11,9 +11,10 @@
 //! an example to draw anything at all.
 
 use crate::{
-    DepthTarget, DrawContext, FrameCommand, GlyphDrawError, GlyphRenderer, PreparedFrame,
-    ShapeDrawError, ShapeRenderer, SpriteBatchError, SpriteBatchRenderer, SpriteBatchStats,
-    TextError, TextRenderer, TextureRegistry, TexturedCubeRenderer, encode_clear,
+    Bloom, BloomSettings, DepthTarget, DrawContext, FrameCommand, FramePass, GlyphDrawError,
+    GlyphRenderer, PreparedFrame, RenderStage, ShapeDrawError, ShapeRenderer, SpriteBatchError,
+    SpriteBatchRenderer, SpriteBatchStats, TextError, TextRenderer, TextureRegistry,
+    TexturedCubeRenderer, encode_clear,
 };
 use thiserror::Error;
 
@@ -73,7 +74,158 @@ pub fn encode_prepared_frame(
     sprite_renderer.begin_submission();
     glyph_renderer.begin_submission();
     shape_renderer.begin_submission();
-    for pass in frame.passes() {
+    encode_passes(
+        &mut Renderers {
+            cube: cube_renderer,
+            sprites: sprite_renderer,
+            text: text_renderer,
+            glyphs: glyph_renderer,
+            shapes: shape_renderer,
+            textures,
+        },
+        device,
+        queue,
+        encoder,
+        target,
+        frame.passes().iter(),
+    )?;
+    Ok(sprite_renderer.stats())
+}
+
+/// Draws a frame with its world lit, and its interface drawn crisply on top.
+///
+/// The ordering is the whole point. A post-process glow applied to everything
+/// takes the interface with it: dark detail sitting inside a bright field —
+/// black lettering on a bright button — comes back grey, because the blur fills
+/// the letterforms in from the brightness all around them. Nothing tunable
+/// fixes that, because a flat bright fill is *brighter* than the thin strokes
+/// the glow exists for, so no threshold separates them.
+///
+/// So the world is drawn into the bloom's own target and lit, and the overlay
+/// is drawn afterwards straight onto the result. The game glows; the readings
+/// over it stay sharp.
+///
+/// `bloom` must have been sized to the same viewport as `depth`, and the
+/// renderers must have been built for the format `bloom` writes — the scene
+/// target and the final target share it, so the same pipelines serve both.
+pub fn encode_lit_frame(
+    renderers: FrameRenderers<'_>,
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    encoder: &mut wgpu::CommandEncoder,
+    target: FrameTarget<'_>,
+    frame: &PreparedFrame,
+    lighting: Lighting<'_>,
+) -> Result<SpriteBatchStats, FrameEncodeError> {
+    let Lighting { bloom, settings } = lighting;
+    let FrameRenderers {
+        cube: cube_renderer,
+        sprites: sprite_renderer,
+        text: text_renderer,
+        glyphs: glyph_renderer,
+        shapes: shape_renderer,
+        textures,
+    } = renderers;
+    let Some(scene) = bloom.scene_view().cloned() else {
+        // Never sized, so there is nowhere to draw the world. Falling back to
+        // an unlit frame beats drawing nothing at all.
+        return encode_prepared_frame(
+            FrameRenderers {
+                cube: cube_renderer,
+                sprites: sprite_renderer,
+                text: text_renderer,
+                glyphs: glyph_renderer,
+                shapes: shape_renderer,
+                textures,
+            },
+            device,
+            queue,
+            encoder,
+            target,
+            frame,
+        );
+    };
+    let scene_target = FrameTarget {
+        color: &scene,
+        depth: target.depth,
+    };
+    encode_clear(encoder, &scene, target.depth, frame.clear());
+    sprite_renderer.begin_submission();
+    glyph_renderer.begin_submission();
+    shape_renderer.begin_submission();
+
+    let mut borrowed = Renderers {
+        cube: cube_renderer,
+        sprites: sprite_renderer,
+        text: text_renderer,
+        glyphs: glyph_renderer,
+        shapes: shape_renderer,
+        textures,
+    };
+    let is_overlay = |pass: &&FramePass| pass.stage == RenderStage::Overlay;
+    encode_passes(
+        &mut borrowed,
+        device,
+        queue,
+        encoder,
+        scene_target,
+        frame.passes().iter().filter(|pass| !is_overlay(pass)),
+    )?;
+    bloom.resolve(device, queue, encoder, target.color, settings);
+    // Onto the composite, not over a cleared target: the lit world is already
+    // there and the interface goes on top of it.
+    encode_passes(
+        &mut borrowed,
+        device,
+        queue,
+        encoder,
+        target,
+        frame.passes().iter().filter(is_overlay),
+    )?;
+    Ok(borrowed.sprites.stats())
+}
+
+/// What lights a frame.
+///
+/// A pair rather than two parameters, because they always travel together and
+/// a call taking eight loose arguments is one where two of the same type can be
+/// swapped without the compiler minding.
+pub struct Lighting<'a> {
+    pub bloom: &'a mut Bloom,
+    pub settings: BloomSettings,
+}
+
+/// The renderers, borrowed for more than one target.
+///
+/// [`FrameRenderers`] owns its borrows for a single call; a frame drawn in two
+/// halves needs them twice, and this is what lets the second half have them.
+struct Renderers<'a, 'r> {
+    cube: &'a mut TexturedCubeRenderer,
+    sprites: &'a mut SpriteBatchRenderer,
+    text: &'a mut TextRenderer,
+    glyphs: &'a mut GlyphRenderer,
+    shapes: &'a mut ShapeRenderer,
+    textures: &'r TextureRegistry,
+}
+
+/// Draws some of a frame's passes to one target.
+fn encode_passes<'p>(
+    renderers: &mut Renderers<'_, '_>,
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    encoder: &mut wgpu::CommandEncoder,
+    target: FrameTarget<'_>,
+    passes: impl Iterator<Item = &'p FramePass>,
+) -> Result<(), FrameEncodeError> {
+    let Renderers {
+        cube: cube_renderer,
+        sprites: sprite_renderer,
+        text: text_renderer,
+        glyphs: glyph_renderer,
+        shapes: shape_renderer,
+        textures,
+    } = renderers;
+    for pass in passes {
         match &pass.command {
             FrameCommand::TexturedCube { model, texture } => cube_renderer.encode(
                 DrawContext {
@@ -141,7 +293,7 @@ pub fn encode_prepared_frame(
             )?,
         }
     }
-    Ok(sprite_renderer.stats())
+    Ok(())
 }
 
 #[derive(Debug, Error)]

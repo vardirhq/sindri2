@@ -28,7 +28,10 @@ pub use camera::{
 pub use color::{COLOR_TARGET_FORMAT, ColorSpaceError, require_srgb_target};
 pub use cube::CubeRenderer;
 pub use depth::DepthTarget;
-pub use encode::{FrameEncodeError, FrameRenderers, FrameTarget, encode_prepared_frame};
+pub use encode::{
+    FrameEncodeError, FrameRenderers, FrameTarget, Lighting, encode_lit_frame,
+    encode_prepared_frame,
+};
 pub use frame::{
     ClearOperations, ExtractedFrame, FrameCamera, FrameCommand, FramePass, FramePlanError,
     PreparedFrame, RenderLayer, RenderStage, Viewport,
