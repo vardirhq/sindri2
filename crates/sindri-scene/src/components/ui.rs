@@ -10,6 +10,7 @@
 
 use serde::Deserialize;
 use sindri_core::{SceneComponent, SpriteRef, SpriteRefError};
+use sindri_render::TextAlign;
 
 use super::opaque_white;
 use super::ui_text_template;
@@ -69,6 +70,32 @@ impl UiAnchor {
         }
     }
 
+    /// Which end of a string anchored here its position names.
+    ///
+    /// The same corner the anchor already means: a label anchored top-left
+    /// begins at that corner and runs right and down, and one anchored centre
+    /// is centred on it. Derived rather than authored, because an anchor that
+    /// meant one thing for an image and another for its words is the mismatch
+    /// this is fixing.
+    #[allow(clippy::missing_const_for_fn)]
+    #[must_use]
+    pub fn text_align(self) -> [TextAlign; 2] {
+        let [across, down] = self.unit_offset();
+        // Up is positive in the overlay and down the page is positive for a
+        // string, so the vertical pair is the other way round.
+        let horizontal = match across {
+            x if x < 0.0 => TextAlign::Start,
+            x if x > 0.0 => TextAlign::End,
+            _ => TextAlign::Middle,
+        };
+        let vertical = match down {
+            y if y > 0.0 => TextAlign::Start,
+            y if y < 0.0 => TextAlign::End,
+            _ => TextAlign::Middle,
+        };
+        [horizontal, vertical]
+    }
+
     /// The anchor as a fraction of the half-extent, in `[-1, 1]` per axis.
     #[must_use]
     pub const fn unit_offset(self) -> [f32; 2] {
@@ -83,6 +110,20 @@ impl UiAnchor {
             Self::BottomLeft => [-1.0, -1.0],
             Self::BottomRight => [1.0, -1.0],
         }
+    }
+}
+
+impl UiTextComponent {
+    /// This text in pixels, for a viewport that many pixels tall.
+    ///
+    /// The one place a share of the screen becomes a number a renderer can use.
+    /// It was worked out where the frame is built and again where the editor
+    /// decides what a click landed on, and the second copy is how a pick box
+    /// ends up somewhere the words are not.
+    #[must_use]
+    pub fn pixel_metrics(&self, viewport_height: f32) -> [f32; 2] {
+        let per_unit = viewport_height * 0.5;
+        [self.font_size * per_unit, self.line_height * per_unit]
     }
 }
 
@@ -292,4 +333,39 @@ const fn default_line_height() -> f32 {
 
 impl SceneComponent for UiTextComponent {
     const TYPE_NAME: &'static str = "sindri.ui.text";
+}
+
+#[cfg(test)]
+mod anchor_alignment_tests {
+    use super::{TextAlign, UiAnchor};
+
+    /// A label reads out of the corner it is anchored to, which is the corner
+    /// the anchor already meant for everything that is not text.
+    #[test]
+    fn an_anchor_says_which_end_of_a_string_its_position_names() {
+        for (anchor, expected) in [
+            (UiAnchor::Center, [TextAlign::Middle, TextAlign::Middle]),
+            (UiAnchor::Top, [TextAlign::Middle, TextAlign::Start]),
+            (UiAnchor::Bottom, [TextAlign::Middle, TextAlign::End]),
+            (UiAnchor::Left, [TextAlign::Start, TextAlign::Middle]),
+            (UiAnchor::Right, [TextAlign::End, TextAlign::Middle]),
+            (UiAnchor::TopLeft, [TextAlign::Start, TextAlign::Start]),
+            (UiAnchor::TopRight, [TextAlign::End, TextAlign::Start]),
+            (UiAnchor::BottomLeft, [TextAlign::Start, TextAlign::End]),
+            (UiAnchor::BottomRight, [TextAlign::End, TextAlign::End]),
+        ] {
+            assert_eq!(anchor.text_align(), expected, "{anchor:?}");
+        }
+    }
+
+    /// Up is positive in the overlay and down the page is positive for a
+    /// string, and getting that backwards puts every top-anchored label off
+    /// the top of the screen.
+    #[test]
+    fn the_vertical_pair_is_the_other_way_round_from_the_anchor() {
+        assert!((UiAnchor::Top.unit_offset()[1] - 1.0).abs() < f32::EPSILON);
+        assert_eq!(UiAnchor::Top.text_align()[1], TextAlign::Start);
+        assert!((UiAnchor::Bottom.unit_offset()[1] + 1.0).abs() < f32::EPSILON);
+        assert_eq!(UiAnchor::Bottom.text_align()[1], TextAlign::End);
+    }
 }

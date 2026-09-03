@@ -137,6 +137,28 @@ impl super::EditorApp {
     }
 }
 
+impl super::EditorApp {
+    /// The shape of the screen the game runs at, for the canvas in the Scene
+    /// view.
+    ///
+    /// The chosen device when there is one. Otherwise the Game view's own
+    /// shape, because that is the screen the project is being looked at on —
+    /// and a canvas that took the *Scene* panel's shape would change whenever
+    /// the splitter moved, which is the one thing it must not do.
+    pub(super) fn canvas_aspect(&self) -> f32 {
+        self.game_device
+            .aspect()
+            .or_else(|| {
+                self.game_view_rect
+                    .filter(|rect| rect.height() > 0.0)
+                    .map(|rect| rect.width() / rect.height())
+            })
+            // Nothing has drawn the game yet. Wide is the commonest shape and
+            // the least surprising thing to find a canvas at.
+            .unwrap_or(16.0 / 9.0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::DevicePreview;

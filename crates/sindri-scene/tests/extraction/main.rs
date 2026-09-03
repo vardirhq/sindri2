@@ -7,6 +7,7 @@
 mod animation;
 mod assets;
 mod cameras;
+mod canvas;
 mod passes;
 mod sprites;
 mod support;

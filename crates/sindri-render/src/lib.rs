@@ -36,7 +36,7 @@ pub use sprite_batch::{
     SpriteBatchError, SpriteBatchRenderer, SpriteBatchStats, SpriteDepth, SpriteInstance,
 };
 pub use target::{ViewportTarget, encode_clear, sampled_format};
-pub use text::{TextError, TextInstance, TextRenderer};
+pub use text::{TextAlign, TextError, TextInstance, TextRenderer, aligned_origin};
 pub use texture::{Texture2D, TextureError, TextureId, TextureRegistry};
 pub use textured_cube::{DrawContext, TexturedCubeRenderer};
 pub use transparency::{TransparentOrder, TransparentOrderError};

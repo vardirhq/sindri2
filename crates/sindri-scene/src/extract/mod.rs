@@ -14,8 +14,10 @@ mod text;
 mod tilemap;
 mod ui;
 
+pub use camera::view::UiCanvas;
+
 use camera::ResolvedCamera;
-use camera::view::{resolved_screen_overlay, safe_rotation};
+use camera::view::{place_overlay_in_scene, resolved_screen_overlay, safe_rotation};
 use glam::{Mat4, Vec3};
 use sindri_core::{
     ComponentRegistryError, ComponentSchemaRegistry, SceneComponent, SceneDocument, SpriteRefError,
@@ -31,7 +33,9 @@ use crate::Effects2d;
 use crate::{AnimationError, SpriteAnimations, TextureBindings, TilemapError};
 
 pub use camera::view::{CameraView, WorldProjection};
-pub use camera::{OverlayPlacement, OverlayView, ViewCamera, overlay_for_viewport};
+pub use camera::{
+    OverlayPlacement, OverlayView, ViewCamera, overlay_for_viewport, overlay_in_scene,
+};
 
 /// Turns a world into a frame the renderer can draw.
 ///
@@ -158,9 +162,13 @@ impl SceneExtractor {
         let SceneRuntime {
             animations,
             effects,
+            canvas,
         } = runtime;
         let aspect = viewport.aspect_ratio()?;
-        let cameras = self.resolve_cameras(world, aspect, view)?;
+        let mut cameras = self.resolve_cameras(world, aspect, view)?;
+        if let UiCanvas::InScene { aspect } = canvas {
+            place_overlay_in_scene(&mut cameras, aspect);
+        }
         let mut frame = ExtractedFrame::new(viewport, ClearOperations::default());
         self.push_meshes(world, &cameras, textures, &mut frame)?;
         let resting = SpriteAnimations::new();
@@ -186,6 +194,7 @@ impl SceneExtractor {
         let SceneRuntime {
             animations,
             effects,
+            canvas,
         } = runtime;
         let aspect = viewport.aspect_ratio()?;
         let mut cameras = resolved_screen_overlay(aspect);
@@ -194,6 +203,9 @@ impl SceneExtractor {
             view_projection: world_camera.view_projection,
             framed_half_height: world_camera.framed_half_height,
         });
+        if let UiCanvas::InScene { aspect } = canvas {
+            place_overlay_in_scene(&mut cameras, aspect);
+        }
 
         let mut frame = ExtractedFrame::new(viewport, ClearOperations::default());
         self.push_meshes(world, &cameras, textures, &mut frame)?;
@@ -217,6 +229,12 @@ pub struct SceneRuntime<'a> {
     pub animations: Option<&'a SpriteAnimations>,
     /// The live flecks, when a host is running any.
     pub effects: Option<&'a Effects2d>,
+    /// Where the UI overlay is: on the viewport, or in the scene.
+    ///
+    /// A game always wants it on the viewport, because there it *is* the
+    /// screen. An editor arranging one wants it in the scene, where panning and
+    /// zooming reach it.
+    pub canvas: UiCanvas,
 }
 
 impl<'a> SceneRuntime<'a> {
@@ -231,6 +249,14 @@ impl<'a> SceneRuntime<'a> {
     #[must_use]
     pub const fn with_effects(mut self, effects: &'a Effects2d) -> Self {
         self.effects = Some(effects);
+        self
+    }
+
+    /// The runtime drawing its UI as a rectangle in the scene rather than
+    /// across the viewport.
+    #[must_use]
+    pub const fn with_canvas(mut self, canvas: UiCanvas) -> Self {
+        self.canvas = canvas;
         self
     }
 }

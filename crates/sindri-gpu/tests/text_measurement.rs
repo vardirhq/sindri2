@@ -7,7 +7,7 @@
 //! the other tests that need one.
 
 use sindri_gpu::{GpuContext, GpuRequestOptions};
-use sindri_render::{TextInstance, TextRenderer, Viewport};
+use sindri_render::{TextAlign, TextInstance, TextRenderer, Viewport, aligned_origin};
 
 /// Set wherever a software adapter is installed on purpose. A GPU test that
 /// skips on the machine that exists to run it is a check that quietly stopped
@@ -52,8 +52,16 @@ fn renderer() -> Option<TextRenderer> {
 }
 
 fn instance(body: &str) -> TextInstance {
-    TextInstance::new(body, FONT, [0.0, 0.0], 24.0, 30.0, [1.0; 4])
-        .expect("a finite instance at the origin")
+    TextInstance::new(
+        body,
+        FONT,
+        [0.0, 0.0],
+        24.0,
+        30.0,
+        [1.0; 4],
+        [TextAlign::Start; 2],
+    )
+    .expect("a finite instance at the origin")
 }
 
 /// The three things a pick box has to get right: it is not empty, it grows with
@@ -111,7 +119,66 @@ fn an_unbound_face_measures_nothing() {
         24.0,
         30.0,
         [1.0; 4],
+        [TextAlign::Start; 2],
     )
     .expect("a finite instance at the origin");
     assert!(text.measure(&missing, VIEWPORT).is_none());
+}
+
+/// A centred label is centred on the point, not started at it.
+///
+/// This is the whole of what a screen looked like without it: every title,
+/// every button's word and every HUD reading had its top-left put at the point
+/// the scene asked for, so all of them ran off to the right of where they were
+/// meant to be. It is checked against a real measurement rather than a guessed
+/// width, because the guess is what made it look nearly right.
+#[test]
+fn a_centred_string_sits_on_its_point_rather_than_starting_at_it() {
+    let Some(mut text) = renderer() else {
+        return;
+    };
+    let at = [400.0_f32, 300.0_f32];
+    let centred = TextInstance::new(
+        "LAST STAND",
+        FONT,
+        at,
+        24.0,
+        30.0,
+        [1.0; 4],
+        [TextAlign::Middle; 2],
+    )
+    .expect("a finite instance");
+    let size = text
+        .measure(&centred, VIEWPORT)
+        .expect("a bound face measures");
+    assert!(size[0] > 0.0 && size[1] > 0.0, "{size:?}");
+
+    let origin = aligned_origin(&centred, size);
+    assert!(
+        (origin[0] - (at[0] - size[0] * 0.5)).abs() < 0.01,
+        "{origin:?}"
+    );
+    assert!(
+        (origin[1] - (at[1] - size[1] * 0.5)).abs() < 0.01,
+        "{origin:?}"
+    );
+    // And the string's middle really is the point it was given.
+    assert!((origin[0] + size[0] * 0.5 - at[0]).abs() < 0.01);
+
+    // A label anchored into a corner still begins where it was put, so a HUD
+    // reading in the top left does not walk off the edge.
+    let from_corner = TextInstance::new(
+        "Score 0",
+        FONT,
+        at,
+        24.0,
+        30.0,
+        [1.0; 4],
+        [TextAlign::Start; 2],
+    )
+    .expect("a finite instance");
+    let corner_size = text.measure(&from_corner, VIEWPORT).expect("measures");
+    let corner = aligned_origin(&from_corner, corner_size);
+    assert!((corner[0] - at[0]).abs() < f32::EPSILON, "{corner:?}");
+    assert!((corner[1] - at[1]).abs() < f32::EPSILON, "{corner:?}");
 }

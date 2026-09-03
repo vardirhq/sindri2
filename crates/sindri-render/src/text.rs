@@ -25,6 +25,66 @@ pub struct TextInstance {
     font_size: f32,
     line_height: f32,
     color: [f32; 4],
+    /// Which end of the string `position` names, across and then down.
+    align: [TextAlign; 2],
+}
+
+/// Where a string of this size actually starts, given the point it was told to
+/// sit at and which end of it that point names.
+///
+/// Its own function because it is the whole of the fix and the whole of what
+/// can be got wrong: a string is laid out from its top-left, and every overlay
+/// element around it is placed by its centre.
+#[must_use]
+pub fn aligned_origin(instance: &TextInstance, size: [f32; 2]) -> [f32; 2] {
+    let [across, down] = instance.align();
+    [
+        instance.position()[0] + across.offset(size[0]),
+        instance.position()[1] + down.offset(size[1]),
+    ]
+}
+
+/// How big a shaped string turned out, across and down.
+///
+/// The width is the longest line rather than the box it was shaped in, which is
+/// the viewport and would answer the same for every string in it.
+fn laid_out(buffer: &Buffer, line_height: f32) -> [f32; 2] {
+    let mut width = 0.0_f32;
+    let mut lines = 0.0_f32;
+    for run in buffer.layout_runs() {
+        width = width.max(run.line_w);
+        lines += 1.0;
+    }
+    [width, lines * line_height]
+}
+
+/// Which end of a string the point it was given belongs to.
+///
+/// A string is laid out from a corner, so a point alone does not say where it
+/// goes: a title told to sit at the middle of the screen had its *top-left*
+/// put there and ran off to the right. Every other overlay element is placed by
+/// its centre, so the anchor an author chose meant one thing for an image and
+/// something else for the words on it.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum TextAlign {
+    /// The point is where the string begins — its left edge, or its top.
+    #[default]
+    Start,
+    /// The point is the middle of the string.
+    Middle,
+    /// The point is where the string ends — its right edge, or its bottom.
+    End,
+}
+
+impl TextAlign {
+    /// How far back from the point a string of this size starts.
+    fn offset(self, size: f32) -> f32 {
+        match self {
+            Self::Start => 0.0,
+            Self::Middle => -size * 0.5,
+            Self::End => -size,
+        }
+    }
 }
 
 /// The smallest text that can put anything on a screen.
@@ -43,6 +103,7 @@ impl TextInstance {
         font_size: f32,
         line_height: f32,
         color: [f32; 4],
+        align: [TextAlign; 2],
     ) -> Result<Self, TextError> {
         if !position.into_iter().all(f32::is_finite) {
             return Err(TextError::NonFinitePosition(position));
@@ -70,7 +131,14 @@ impl TextInstance {
             font_size,
             line_height,
             color,
+            align,
         })
+    }
+
+    /// Which end of the string its position names, across and then down.
+    #[must_use]
+    pub const fn align(&self) -> [TextAlign; 2] {
+        self.align
     }
 
     pub fn text(&self) -> &str {
@@ -169,13 +237,7 @@ impl TextRenderer {
     pub fn measure(&mut self, instance: &TextInstance, viewport: Viewport) -> Option<[f32; 2]> {
         let family = self.fonts.get(instance.font()).cloned()?;
         let buffer = self.shape(instance, &family, viewport);
-        let mut width = 0.0_f32;
-        let mut lines = 0.0_f32;
-        for run in buffer.layout_runs() {
-            width = width.max(run.line_w);
-            lines += 1.0;
-        }
-        Some([width, lines * instance.line_height()])
+        Some(laid_out(&buffer, instance.line_height()))
     }
 
     /// One instance laid out, the only place that is decided.
@@ -239,21 +301,25 @@ impl TextRenderer {
         let areas = buffers
             .iter()
             .zip(resolved.iter())
-            .map(|(buffer, (instance, _))| TextArea {
-                buffer,
-                left: instance.position()[0],
-                top: instance.position()[1],
-                scale: 1.0,
-                bounds: TextBounds {
-                    left: i32::try_from(viewport.x).unwrap_or(i32::MAX),
-                    top: i32::try_from(viewport.y).unwrap_or(i32::MAX),
-                    right: i32::try_from(viewport.x.saturating_add(viewport.width))
-                        .unwrap_or(i32::MAX),
-                    bottom: i32::try_from(viewport.y.saturating_add(viewport.height))
-                        .unwrap_or(i32::MAX),
-                },
-                default_color: glyphon_color(instance.color()),
-                custom_glyphs: &[],
+            .map(|(buffer, (instance, _))| {
+                let [width, height] = laid_out(buffer, instance.line_height());
+                let [across, down] = instance.align();
+                TextArea {
+                    buffer,
+                    left: instance.position()[0] + across.offset(width),
+                    top: instance.position()[1] + down.offset(height),
+                    scale: 1.0,
+                    bounds: TextBounds {
+                        left: i32::try_from(viewport.x).unwrap_or(i32::MAX),
+                        top: i32::try_from(viewport.y).unwrap_or(i32::MAX),
+                        right: i32::try_from(viewport.x.saturating_add(viewport.width))
+                            .unwrap_or(i32::MAX),
+                        bottom: i32::try_from(viewport.y.saturating_add(viewport.height))
+                            .unwrap_or(i32::MAX),
+                    },
+                    default_color: glyphon_color(instance.color()),
+                    custom_glyphs: &[],
+                }
             });
         self.renderer
             .prepare(
@@ -322,17 +388,56 @@ pub enum TextError {
 
 #[cfg(test)]
 mod tests {
-    use super::{TextError, TextInstance};
+    use super::{TextAlign, TextError, TextInstance};
 
     #[test]
     fn text_instances_refuse_values_a_gpu_cannot_place() {
         assert!(matches!(
-            TextInstance::new("hello", "font.ttf", [0.0, 0.0], 0.0, 20.0, [1.0; 4]),
+            TextInstance::new(
+                "hello",
+                "font.ttf",
+                [0.0, 0.0],
+                0.0,
+                20.0,
+                [1.0; 4],
+                [TextAlign::Start; 2]
+            ),
             Err(TextError::InvalidFontSize(0.0))
         ));
         assert!(matches!(
-            TextInstance::new("hello", "font.ttf", [f32::NAN, 0.0], 16.0, 20.0, [1.0; 4]),
+            TextInstance::new(
+                "hello",
+                "font.ttf",
+                [f32::NAN, 0.0],
+                16.0,
+                20.0,
+                [1.0; 4],
+                [TextAlign::Start; 2]
+            ),
             Err(TextError::NonFinitePosition(_))
         ));
+    }
+}
+
+#[cfg(test)]
+mod alignment_tests {
+    use super::TextAlign;
+
+    /// The point a string is given is one of three places on it, and each one
+    /// puts the string somewhere different.
+    #[test]
+    fn an_alignment_says_how_far_back_a_string_starts() {
+        assert!((TextAlign::Start.offset(120.0) - 0.0).abs() < f32::EPSILON);
+        assert!((TextAlign::Middle.offset(120.0) + 60.0).abs() < f32::EPSILON);
+        assert!((TextAlign::End.offset(120.0) + 120.0).abs() < f32::EPSILON);
+    }
+
+    /// A string of no width sits at its point however it is aligned, so an
+    /// empty label does not jump about.
+    #[test]
+    fn nothing_is_in_the_same_place_whichever_end_it_is_measured_from() {
+        for align in [TextAlign::Start, TextAlign::Middle, TextAlign::End] {
+            assert!(align.offset(0.0).abs() < f32::EPSILON, "{align:?}");
+        }
     }
 }

@@ -9,7 +9,7 @@ use sindri_render::{
     FrameRenderers, FrameTarget, SpriteBatchRenderer, TextRenderer, TexturedCubeRenderer, Viewport,
     ViewportTarget, encode_prepared_frame,
 };
-use sindri_scene::{CameraView, SceneRuntime};
+use sindri_scene::{CameraView, SceneRuntime, UiCanvas};
 
 use super::camera::{EditorCamera, camera_for};
 use super::frame::physical_viewport_dimension;
@@ -93,6 +93,7 @@ impl RuntimeViewport {
         source: SceneSource<'_>,
         size: (u32, u32),
         camera: CameraView,
+        canvas: UiCanvas,
     ) -> Result<(), String> {
         self.resize(size.0, size.1);
         let prepared = source
@@ -104,7 +105,8 @@ impl RuntimeViewport {
                 source.textures.bindings(),
                 SceneRuntime::default()
                     .with_animations(source.animations)
-                    .with_effects(source.effects),
+                    .with_effects(source.effects)
+                    .with_canvas(canvas),
             )
             .map_err(|error| error.to_string())?;
         let mut encoder =
@@ -246,6 +248,9 @@ impl EditorApp {
         if editing {
             self.select_viewport_click(rect, &response, camera, painting || gizmo_owned);
         }
+        // Worked out before the viewport is borrowed: the canvas is a fact
+        // about the project's screen, not about the surface being drawn into.
+        let canvas = self.canvas_for(editing);
         let viewport = if editing {
             &mut self.scene_viewport
         } else {
@@ -266,6 +271,10 @@ impl EditorApp {
                     physical_viewport_dimension(rect.height(), scale),
                 ),
                 camera,
+                // The Scene view puts the UI in the world, where panning and
+                // zooming reach it; the Game view is the screen, so there the
+                // overlay is the screen.
+                canvas,
             )
             .err();
         // Two views can be live at once, and the first thing to go wrong is the
@@ -318,6 +327,7 @@ impl EditorApp {
         hover: Option<&TilemapHover>,
         painting: bool,
     ) {
+        self.paint_canvas_outline(ui, rect, camera);
         if let Some(hover) = hover {
             self.paint_tilemap_hover(ui, hover);
         }
@@ -363,5 +373,44 @@ impl EditorApp {
             self.problem(),
             axes,
         );
+    }
+}
+
+impl EditorApp {
+    /// Where this view puts the UI.
+    ///
+    /// The Scene view puts it in the world, where panning and zooming reach it.
+    /// The Game view *is* the screen, so there the overlay is the viewport and
+    /// no camera can move it — which is what makes a HUD a HUD.
+    fn canvas_for(&self, editing: bool) -> UiCanvas {
+        if editing {
+            UiCanvas::InScene {
+                aspect: self.canvas_aspect(),
+            }
+        } else {
+            UiCanvas::OnViewport
+        }
+    }
+
+    /// Draws the edge of the screen the UI is laid out on.
+    ///
+    /// Only in the Scene view, and only because the canvas is in the scene
+    /// there: in the Game view the canvas *is* the viewport and its edge is the
+    /// viewport's border, which is already drawn.
+    fn paint_canvas_outline(&self, ui: &egui::Ui, rect: Rect, camera: CameraView) {
+        let aspect = rect.width() / rect.height().max(1.0);
+        let Ok(Some(world)) = self
+            .scene
+            .world_camera_for_viewport(&self.world, aspect, camera)
+        else {
+            return;
+        };
+        let painter = ui.painter();
+        let stroke = egui::Stroke::new(1.0, crate::ui::theme::color::LINE);
+        for [start, end] in
+            super::camera::canvas_outline(rect, world.view_projection, self.canvas_aspect())
+        {
+            painter.line_segment([start, end], stroke);
+        }
     }
 }

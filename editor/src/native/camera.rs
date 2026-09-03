@@ -221,6 +221,35 @@ fn project_segment(rect: Rect, view_projection: Mat4, start: Vec3, end: Vec3) ->
     Some([project_clip(rect, start)?, project_clip(rect, end)?])
 }
 
+/// The canvas the UI is laid out on, as an outline in the Scene view.
+///
+/// Without it the overlay is a set of things floating at the origin with no
+/// visible edge, and "runs off the side of the screen" is not something a
+/// picture can show. The rectangle is where the screen's edges are, so an
+/// element outside it is outside the screen — which is the whole question a
+/// person is asking when they arrange one.
+pub(super) fn canvas_outline(rect: Rect, view_projection: Mat4, aspect: f32) -> Vec<[Pos2; 2]> {
+    let half_height = 1.0;
+    let half_width = half_height * aspect.max(f32::EPSILON);
+    let corners = [
+        Vec3::new(-half_width, -half_height, 0.0),
+        Vec3::new(half_width, -half_height, 0.0),
+        Vec3::new(half_width, half_height, 0.0),
+        Vec3::new(-half_width, half_height, 0.0),
+    ];
+    let mut lines = Vec::with_capacity(4);
+    for index in 0..4 {
+        let next = (index + 1) % 4;
+        lines.extend(project_segment(
+            rect,
+            view_projection,
+            corners[index],
+            corners[next],
+        ));
+    }
+    lines
+}
+
 /// One authored camera as it is drawn in the Scene view.
 ///
 /// `aspect` is the aspect the camera actually renders at — the Game view's —

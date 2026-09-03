@@ -371,3 +371,34 @@ drawn.
 
 It is not a preference and does not outlive the session. It is a thing to look
 through while arranging a screen, not a setting about the editor.
+
+## The UI is a canvas in the scene
+
+The overlay a UI element is laid out on is pinned to the viewport. In a game
+that is exactly right — it *is* the screen, and no camera can move it, which is
+why deleting a gameplay camera cannot lose a HUD. In the Scene view it was
+wrong in a way that is obvious the moment you try to work: panning and zooming
+moved the world and left the UI stuck to the glass, so there was no way to look
+closely at a menu, and no way to see that an element was off the edge.
+
+`UiCanvas` says which of the two an extraction wants. The Scene view asks for
+`InScene`, and the overlay becomes a rectangle in the world — two units tall,
+one overlay unit to one world unit, centred on the origin — drawn through
+whatever is looking at the scene. Pan and zoom reach it because they reach
+everything.
+
+Its shape is the **game's**, not the panel's: the chosen device preview, or the
+Game view's own shape when that is `Free`. A canvas that reshaped itself around
+the editor window would be a canvas that never showed what a player gets, and it
+would change every time the splitter moved.
+
+Three things follow from the canvas rather than being arranged separately, and
+all three ask the same functions the frame was drawn from:
+
+- **Its outline is drawn**, so the edge of the screen is visible. Without it the
+  overlay is things floating at the origin and "runs off the side" is not
+  something a picture can show.
+- **Clicking resolves through it**, so selecting a button means clicking where
+  the button is rather than where it would be if it were still on the viewport.
+- **A UI element's gizmo is on it**, so handles travel with the element when the
+  view is panned to it.

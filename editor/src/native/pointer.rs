@@ -6,7 +6,7 @@ use sindri_core::{CommandBuffer, EntityId, Transform3D, WorldCommand};
 use sindri_render::{TextInstance, Viewport};
 use sindri_scene::{
     CameraView, OverlayPlacement, OverlayView, UiAnchor, UiImageComponent, UiTextComponent,
-    ViewCamera, overlay_for_viewport,
+    ViewCamera, overlay_in_scene,
 };
 
 use crate::{
@@ -102,7 +102,13 @@ impl EditorApp {
         ];
         // The overlay is drawn over the world, so what is under the pointer
         // there wins. Asked first for that reason rather than as a fallback.
-        if let Some((overlay, placement)) = overlay_for_viewport(aspect) {
+        //
+        // Asked as a canvas in the scene, because that is how the Scene view
+        // draws it: a click has to be resolved through the same projection the
+        // picture was made with, or selecting a button means clicking where it
+        // would have been if it were stuck to the viewport.
+        {
+            let (overlay, placement) = overlay_in_scene(camera, self.canvas_aspect());
             let viewport = Viewport::new(
                 physical_viewport_dimension(rect.width(), scale),
                 physical_viewport_dimension(rect.height(), scale),
@@ -169,26 +175,32 @@ impl EditorApp {
                     .get(entity)
                     .and_then(|data| data.transform_3d)
                     .unwrap_or_default();
-                let origin = placement.text_origin(overlay, transform, text.anchor);
+                let anchored = placement.text_origin(overlay, transform, text.anchor);
                 let layer = text.layer;
+                // The same size and the same alignment the frame is drawn with,
+                // asked of the same functions: a box worked out a second way is
+                // a box that disagrees with the picture it is meant to be over.
+                let metrics = text.pixel_metrics(height);
                 let instance = TextInstance::new(
                     text.text,
                     text.font,
-                    [origin[0] * width, origin[1] * height],
-                    text.font_size,
-                    text.line_height,
+                    [anchored[0] * width, anchored[1] * height],
+                    metrics[0],
+                    metrics[1],
                     text.color,
+                    text.anchor.text_align(),
                 )
                 .ok()?;
                 let size = self.renderers.text.measure(&instance, viewport)?;
+                let [left, top] = sindri_render::aligned_origin(&instance, size);
                 Some(picking::TextTarget {
                     entity,
                     layer,
                     bounds: [
-                        origin[0],
-                        origin[1],
-                        origin[0] + size[0] / width,
-                        origin[1] + size[1] / height,
+                        left / width,
+                        top / height,
+                        (left + size[0]) / width,
+                        (top + size[1]) / height,
                     ],
                 })
             })
@@ -357,20 +369,22 @@ impl EditorApp {
         transform: Transform3D,
         camera: CameraView,
     ) -> Option<(ViewCamera, Anchoring)> {
+        let world = self
+            .scene
+            .world_camera_for_viewport(&self.world, aspect, camera)
+            .ok()
+            .flatten()?;
         if self.is_overlaid(entity) {
-            let (overlay, placement) = overlay_for_viewport(aspect)?;
+            // Through the canvas rather than the viewport, so a UI element's
+            // handles are on the canvas with it and move when it is panned to.
+            let (overlay, placement) = overlay_in_scene(world, self.canvas_aspect());
             let anchor = self.ui_anchor(entity);
             return Some((
                 as_view_camera(overlay),
                 Anchoring::on_overlay(placement.origin(transform, anchor)),
             ));
         }
-        let camera = self
-            .scene
-            .world_camera_for_viewport(&self.world, aspect, camera)
-            .ok()
-            .flatten()?;
-        Some((camera, Anchoring::in_world(transform)))
+        Some((world, Anchoring::in_world(transform)))
     }
 
     /// Which corner of the viewport a UI element is measured from.
