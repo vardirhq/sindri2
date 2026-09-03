@@ -9,6 +9,7 @@ mod frame;
 mod glyph;
 mod mesh;
 mod offscreen;
+mod shape;
 mod sprite;
 mod sprite_batch;
 mod target;
@@ -36,6 +37,7 @@ pub use glyph::{
 };
 pub use mesh::{ColoredVertex, MeshBuffers, TexturedVertex};
 pub use offscreen::{OffscreenError, OffscreenReadback, OffscreenTarget};
+pub use shape::{Shape, ShapeBlend, ShapeDrawError, ShapeInstance, ShapeRenderer};
 pub use sprite::{SpriteBlendMode, SpriteRenderer};
 pub use sprite_batch::{
     SpriteBatchError, SpriteBatchRenderer, SpriteBatchStats, SpriteDepth, SpriteInstance,

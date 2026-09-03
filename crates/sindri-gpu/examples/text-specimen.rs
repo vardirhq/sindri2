@@ -20,9 +20,9 @@ use sindri_gpu::{GpuContext, GpuRequestOptions};
 use sindri_render::{
     ClearOperations, DepthTarget, ExtractedFrame, FrameCamera, FrameCommand, FramePass,
     FrameRenderers, FrameTarget, GlyphRenderer, LineAlign, OffscreenTarget, RenderLayer,
-    RenderStage, SpriteBatchRenderer, TextAlign, TextCase, TextFit, TextInstance, TextRenderer,
-    TextShadow, TextStroke, TextStyle, TextWrap, TextureRegistry, TexturedCubeRenderer, Viewport,
-    encode_prepared_frame, orthographic_projection,
+    RenderStage, ShapeRenderer, SpriteBatchRenderer, TextAlign, TextCase, TextFit, TextInstance,
+    TextRenderer, TextShadow, TextStroke, TextStyle, TextWrap, TextureRegistry,
+    TexturedCubeRenderer, Viewport, encode_prepared_frame, orthographic_projection,
 };
 
 const FONT: &str = "fonts/Inter.ttf";
@@ -158,6 +158,7 @@ async fn run(path: &Path) -> Result<(), Box<dyn Error>> {
             sprites: &mut SpriteBatchRenderer::new(&gpu.device, OffscreenTarget::FORMAT),
             text: &mut text,
             glyphs: &mut GlyphRenderer::new(&gpu.device, OffscreenTarget::FORMAT),
+            shapes: &mut ShapeRenderer::new(&gpu.device, OffscreenTarget::FORMAT),
             textures: &TextureRegistry::new(&gpu.device, &gpu.queue),
         },
         &gpu.device,

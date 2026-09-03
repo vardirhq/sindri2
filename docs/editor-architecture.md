@@ -409,6 +409,48 @@ all three ask the same functions the frame was drawn from:
   A wrap width is otherwise a number in the inspector whose only reading is to
   retype it and look.
 
+### What a shape is
+
+A shape is a quad with a signed distance field evaluated in its fragment shader:
+`Shape::Rect`, `Ellipse`, `Polygon { sides }`, or `Grid { cells }`, each taking a
+fill, a stroke width, and — for the closed kinds — a dash count and an angular
+sweep. `ShapeRenderer` draws a batch through the pass's own camera, in one of two
+blend modes.
+
+Sprites cover what an artist drew. Shapes cover what the *game already knows*: an
+orbit whose radius is an upgrade, a cooldown arc that fills, a shockwave that
+expands, a grid under everything. Each of those is a number, and drawing it from
+a texture means re-exporting art whenever the number's range changes, or scaling
+one picture until its lines go soft. Evaluating it instead gives one antialiased
+line at any size, no atlas and no import step — and makes the modifiers compose:
+a ring is a circle with no fill, an arc is a ring with a sweep, a dashed ring is
+an arc with a duty cycle. None of those is a kind of its own.
+
+Two things are load-bearing and were both got wrong first time:
+
+- **The quad is grown past the shape.** A shape is inscribed in its quad, so a
+  polygon's vertices sit exactly on the edge — and a stroke centred on the
+  outline puts half its width outside, where there are no fragments. Unfixed,
+  every vertex is sliced flat, a rectangle loses half its stroke on all four
+  sides, and a circle gets four flat spots at the compass points. The vertex
+  shader expands the quad by half the stroke plus a little for the fade. This is
+  the same correction the glyph atlas makes with its field's spread, for exactly
+  the same reason.
+- **Polygons point up.** The fold in the polygon SDF measures to the nearest
+  *edge normal*, so aligning "up" with a normal puts a flat edge on top — an
+  upside-down triangle. Half a segment past that is a vertex.
+
+The shader writes premultiplied colour, which is what lets one shader serve both
+blend modes: premultiplied over is a normal composite, premultiplied added is
+light.
+
+It is not a general vector renderer. No paths, no béziers, no holes. A shape
+outside these kinds is still a sprite.
+
+`cargo run -p sindri-gpu --example shape-specimen` draws every kind, modifier and
+blend on one sheet, including a 15× size range on one instance — which is where
+a distance field earns its keep and a scaled texture visibly fails.
+
 ### What text is
 
 A glyph is a quad sampling a signed distance field. `GlyphAtlas` bakes each glyph

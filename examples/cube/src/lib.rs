@@ -7,8 +7,8 @@ use sindri_core::FixedStepConfig;
 use sindri_desktop::{AppContext, DesktopApp, Flow, WindowConfig};
 use sindri_platform::{EngineHost, FrameContext, Game, HostError, InputEvent, Key};
 use sindri_render::{
-    DepthTarget, FrameEncodeError, FrameRenderers, FrameTarget, GlyphRenderer, SpriteBatchRenderer,
-    TextRenderer, Texture2D, TextureRegistry, TexturedCubeRenderer, Viewport,
+    DepthTarget, FrameEncodeError, FrameRenderers, FrameTarget, GlyphRenderer, ShapeRenderer,
+    SpriteBatchRenderer, TextRenderer, Texture2D, TextureRegistry, TexturedCubeRenderer, Viewport,
     encode_prepared_frame,
 };
 use thiserror::Error;
@@ -63,6 +63,7 @@ struct CubeApp {
     sprite_renderer: SpriteBatchRenderer,
     text_renderer: TextRenderer,
     glyph_renderer: GlyphRenderer,
+    shape_renderer: ShapeRenderer,
     textures: TextureRegistry,
     bindings: TextureBindings,
 }
@@ -84,6 +85,7 @@ impl DesktopApp for CubeApp {
             sprite_renderer: SpriteBatchRenderer::new(context.device(), context.format()),
             text_renderer: TextRenderer::new(),
             glyph_renderer: GlyphRenderer::new(context.device(), context.format()),
+            shape_renderer: ShapeRenderer::new(context.device(), context.format()),
             textures,
             bindings,
         })
@@ -128,6 +130,7 @@ impl DesktopApp for CubeApp {
                 sprites: &mut self.sprite_renderer,
                 text: &mut self.text_renderer,
                 glyphs: &mut self.glyph_renderer,
+                shapes: &mut self.shape_renderer,
                 textures: &self.textures,
             },
             context.device(),

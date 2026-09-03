@@ -13,7 +13,7 @@ use sindri_cube::{DemoScene, demo_textures, verify_authored_colors};
 use sindri_gpu::{GpuContext, GpuRequestOptions};
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_render::{
-    DepthTarget, GlyphRenderer, OffscreenTarget, SpriteBatchRenderer, TextRenderer,
+    DepthTarget, GlyphRenderer, OffscreenTarget, ShapeRenderer, SpriteBatchRenderer, TextRenderer,
     TexturedCubeRenderer, Viewport,
 };
 #[cfg(not(target_arch = "wasm32"))]
@@ -34,6 +34,7 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
     let mut sprite_renderer = SpriteBatchRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
     let mut text_renderer = TextRenderer::new();
     let mut glyph_renderer = GlyphRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
+    let mut shape_renderer = ShapeRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
     let (textures, bindings) = demo_textures(&gpu.device, &gpu.queue);
     let (scene, world) = DemoScene::load()?;
     let prepared = scene.extract_frame(&world, Viewport::new(WIDTH, HEIGHT), &bindings)?;
@@ -49,6 +50,7 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
             sprites: &mut sprite_renderer,
             text: &mut text_renderer,
             glyphs: &mut glyph_renderer,
+            shapes: &mut shape_renderer,
             textures: &textures,
         },
         &gpu.device,

@@ -6,7 +6,7 @@ use eframe::{
 };
 use sindri_core::EngineState;
 use sindri_render::{
-    FrameRenderers, FrameTarget, GlyphRenderer, SpriteBatchRenderer, TextRenderer,
+    FrameRenderers, FrameTarget, GlyphRenderer, ShapeRenderer, SpriteBatchRenderer, TextRenderer,
     TexturedCubeRenderer, Viewport, ViewportTarget, encode_prepared_frame,
 };
 use sindri_scene::{CameraView, SceneRuntime, UiCanvas};
@@ -34,6 +34,7 @@ pub(super) struct SceneRenderers {
     pub(super) sprites: SpriteBatchRenderer,
     pub(super) text: TextRenderer,
     pub(super) glyphs: GlyphRenderer,
+    pub(super) shapes: ShapeRenderer,
 }
 
 impl SceneRenderers {
@@ -43,6 +44,7 @@ impl SceneRenderers {
             sprites: SpriteBatchRenderer::new(&render_state.device, ViewportTarget::FORMAT),
             text: TextRenderer::new(),
             glyphs: GlyphRenderer::new(&render_state.device, ViewportTarget::FORMAT),
+            shapes: ShapeRenderer::new(&render_state.device, ViewportTarget::FORMAT),
         }
     }
 }
@@ -119,6 +121,7 @@ impl RuntimeViewport {
                 sprites: &mut renderers.sprites,
                 text: &mut renderers.text,
                 glyphs: &mut renderers.glyphs,
+                shapes: &mut renderers.shapes,
                 textures: source.textures.registry(),
             },
             &self.render_state.device,

@@ -1,7 +1,7 @@
 use glam::Mat4;
 use thiserror::Error;
 
-use crate::{SpriteDepth, SpriteInstance, TextInstance, TextureId};
+use crate::{ShapeBlend, ShapeInstance, SpriteDepth, SpriteInstance, TextInstance, TextureId};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Viewport {
@@ -84,6 +84,16 @@ pub enum FrameCommand {
     /// Strings sharing one render stage and layer, shaped in one glyph pass.
     Text {
         instances: Vec<TextInstance>,
+    },
+    /// Shapes sharing one blend mode, evaluated in one pass.
+    ///
+    /// Batched by blend rather than by kind, because the kind is per instance
+    /// and costs a comparison in the shader, while the blend is baked into the
+    /// pipeline: a ring and a grid and a hexagon draw together, and paint and
+    /// light do not.
+    Shapes {
+        blend: ShapeBlend,
+        instances: Vec<ShapeInstance>,
     },
 }
 

@@ -11,8 +11,8 @@ use sindri_desktop::{AppContext, DesktopApp, Flow};
 use sindri_platform::{EngineHost, InputEvent, Key};
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_render::{
-    DepthTarget, FrameRenderers, FrameTarget, GlyphRenderer, SpriteBatchRenderer, TextRenderer,
-    TextureRegistry, TexturedCubeRenderer, Viewport, encode_prepared_frame,
+    DepthTarget, FrameRenderers, FrameTarget, GlyphRenderer, ShapeRenderer, SpriteBatchRenderer,
+    TextRenderer, TextureRegistry, TexturedCubeRenderer, Viewport, encode_prepared_frame,
 };
 use sindri_scene::SceneExtractor;
 #[cfg(not(target_arch = "wasm32"))]
@@ -34,6 +34,7 @@ pub(crate) struct GatherApp {
     sprites: SpriteBatchRenderer,
     text: TextRenderer,
     glyphs: GlyphRenderer,
+    shapes: ShapeRenderer,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -69,6 +70,7 @@ impl DesktopApp for GatherApp {
             cubes: TexturedCubeRenderer::new(context.device(), context.format()),
             sprites: SpriteBatchRenderer::new(context.device(), context.format()),
             glyphs: GlyphRenderer::new(context.device(), context.format()),
+            shapes: ShapeRenderer::new(context.device(), context.format()),
             text,
         })
     }
@@ -120,6 +122,7 @@ impl DesktopApp for GatherApp {
                 sprites: &mut self.sprites,
                 text: &mut self.text,
                 glyphs: &mut self.glyphs,
+                shapes: &mut self.shapes,
                 textures: &self.textures,
             },
             context.device(),

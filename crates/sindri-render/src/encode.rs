@@ -12,8 +12,8 @@
 
 use crate::{
     DepthTarget, DrawContext, FrameCommand, GlyphDrawError, GlyphRenderer, PreparedFrame,
-    SpriteBatchError, SpriteBatchRenderer, SpriteBatchStats, TextError, TextRenderer,
-    TextureRegistry, TexturedCubeRenderer, encode_clear,
+    ShapeDrawError, ShapeRenderer, SpriteBatchError, SpriteBatchRenderer, SpriteBatchStats,
+    TextError, TextRenderer, TextureRegistry, TexturedCubeRenderer, encode_clear,
 };
 use thiserror::Error;
 
@@ -34,6 +34,8 @@ pub struct FrameRenderers<'a> {
     /// jobs: one turns words into quads and needs no GPU to do it, the other
     /// puts quads on a screen and knows nothing about words.
     pub glyphs: &'a mut GlyphRenderer,
+    /// Draws evaluated shapes: rings, arcs, polygons, grids.
+    pub shapes: &'a mut ShapeRenderer,
     pub textures: &'a TextureRegistry,
 }
 
@@ -57,6 +59,7 @@ pub fn encode_prepared_frame(
         sprites: sprite_renderer,
         text: text_renderer,
         glyphs: glyph_renderer,
+        shapes: shape_renderer,
         textures,
     } = renderers;
     // Once, before anything draws. The frame owns what it starts as; a scene
@@ -69,6 +72,7 @@ pub fn encode_prepared_frame(
     // slot per batch per frame for as long as it ran.
     sprite_renderer.begin_submission();
     glyph_renderer.begin_submission();
+    shape_renderer.begin_submission();
     for pass in frame.passes() {
         match &pass.command {
             FrameCommand::TexturedCube { model, texture } => cube_renderer.encode(
@@ -122,6 +126,19 @@ pub fn encode_prepared_frame(
                     )?;
                 }
             }
+            // Shapes sample nothing, so unlike text there is nothing to fill
+            // before they draw and nothing to bind when they do: the pass hands
+            // its camera and its instances straight to the pipeline.
+            FrameCommand::Shapes { blend, instances } => shape_renderer.draw(
+                device,
+                queue,
+                encoder,
+                target.color,
+                target.depth,
+                *blend,
+                pass.camera.view_projection,
+                instances,
+            )?,
         }
     }
     Ok(sprite_renderer.stats())
@@ -135,4 +152,6 @@ pub enum FrameEncodeError {
     Text(#[from] TextError),
     #[error(transparent)]
     Glyphs(#[from] GlyphDrawError),
+    #[error(transparent)]
+    Shapes(#[from] ShapeDrawError),
 }
