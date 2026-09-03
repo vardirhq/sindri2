@@ -64,7 +64,7 @@ impl SceneExtractor {
                 .unwrap_or_default();
             // Overlay units into pixels, which is the one conversion between
             // what a scene says and what a renderer draws.
-            let metrics = text.pixel_metrics(height);
+            let metrics = text.pixel_metrics(view.pixels_per_unit(height));
             let fraction = placement.text_origin(view, transform, text.anchor);
             let position = [fraction[0] * width, fraction[1] * height];
             layers

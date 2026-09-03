@@ -114,16 +114,23 @@ impl UiAnchor {
 }
 
 impl UiTextComponent {
-    /// This text in pixels, for a viewport that many pixels tall.
+    /// This text in pixels, where one overlay unit is `pixels_per_unit` of
+    /// them.
     ///
     /// The one place a share of the screen becomes a number a renderer can use.
     /// It was worked out where the frame is built and again where the editor
     /// decides what a click landed on, and the second copy is how a pick box
     /// ends up somewhere the words are not.
+    ///
+    /// What a unit is worth comes from the projection — `OverlayView` measures
+    /// it — rather than from the viewport, so text on a canvas in the scene
+    /// grows when the view zooms in on it.
     #[must_use]
-    pub fn pixel_metrics(&self, viewport_height: f32) -> [f32; 2] {
-        let per_unit = viewport_height * 0.5;
-        [self.font_size * per_unit, self.line_height * per_unit]
+    pub fn pixel_metrics(&self, pixels_per_unit: f32) -> [f32; 2] {
+        [
+            self.font_size * pixels_per_unit,
+            self.line_height * pixels_per_unit,
+        ]
     }
 }
 

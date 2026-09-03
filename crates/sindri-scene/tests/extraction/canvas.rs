@@ -99,3 +99,46 @@ fn the_canvas_keeps_its_own_shape_when_the_panel_changes() {
         assert!(ndc.x.abs() < 1.0e-4 && ndc.y.abs() < 1.0e-4, "{ndc:?}");
     }
 }
+
+/// Text on a canvas in the scene grows when the view zooms in on it.
+///
+/// This is the half of "the UI is in the scene" that the projection alone did
+/// not fix: an element's *position* came from the projection and so followed
+/// the camera, while its size was worked out from the viewport and so did not.
+/// Zooming moved the words around without making them any bigger.
+#[test]
+fn zooming_in_on_a_canvas_makes_its_text_bigger() {
+    use sindri_scene::overlay_in_scene;
+
+    let scene = scene();
+    let extractor = SceneExtractor::new().unwrap();
+    let sized = |scale: f32| {
+        let view = CameraView {
+            projection: WorldProjection::Orthographic,
+            distance_scale: scale,
+            ..CameraView::default()
+        };
+        let world = extractor
+            .world_camera_for_viewport(&scene, 1.0, view)
+            .expect("a camera resolves")
+            .expect("there is one");
+        let (overlay, _) = overlay_in_scene(world, 1.0);
+        overlay.pixels_per_unit(1000.0)
+    };
+
+    let far = sized(2.0);
+    let near = sized(1.0);
+    assert!(
+        near > far * 1.5,
+        "a closer view should cover more pixels per unit: {near} against {far}"
+    );
+}
+
+/// On the viewport it is the viewport that decides, which is what makes a HUD
+/// the same size wherever the camera is.
+#[test]
+fn an_overlay_on_the_viewport_is_sized_by_the_viewport() {
+    let (overlay, _) = sindri_scene::overlay_for_viewport(1.6).expect("an overlay");
+    // The overlay is two units tall, so one unit is half the viewport.
+    assert!((overlay.pixels_per_unit(900.0) - 450.0).abs() < 1.0e-3);
+}

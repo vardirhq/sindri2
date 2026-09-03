@@ -6,7 +6,7 @@
 
 pub(super) mod view;
 
-use glam::{Mat4, Vec2, Vec3};
+use glam::{Mat4, Vec2, Vec3, Vec4};
 use sindri_core::{Transform3D, World};
 use sindri_render::{PerspectiveCamera, orthographic_projection, perspective_projection};
 
@@ -75,6 +75,40 @@ pub struct OverlayView {
     /// position is measured in these, so this is what turns a drag on screen
     /// into an offset from an anchor.
     pub framed_half_height: f32,
+}
+
+impl OverlayView {
+    /// How many pixels one overlay unit covers, as this view draws it.
+    ///
+    /// A text size is a share of the overlay, and this is what that share is
+    /// worth on the screen right now. Measured through the projection rather
+    /// than assumed from the viewport, because the two are only the same while
+    /// the overlay *is* the viewport: a canvas placed in the scene is seen
+    /// through the world camera, so zooming in makes one overlay unit cover
+    /// more pixels — and text that assumed the viewport stayed the size it was
+    /// while everything around it grew.
+    ///
+    /// Measured along Y at the canvas plane, which is the axis a font size is
+    /// quoted in.
+    #[must_use]
+    pub fn pixels_per_unit(&self, viewport_height: f32) -> f32 {
+        let at = |y: f32| {
+            let clip = self.view_projection * Vec4::new(0.0, y, 0.0, 1.0);
+            (clip.w.abs() > f32::EPSILON).then(|| clip.y / clip.w)
+        };
+        let Some((origin, up)) = at(0.0).zip(at(1.0)) else {
+            return viewport_height * 0.5;
+        };
+        let span = (up - origin).abs() * viewport_height * 0.5;
+        // A canvas seen edge-on spans nothing, and text asked to be nothing
+        // tall is refused further down. Falling back to the viewport keeps a
+        // degenerate view showing something rather than erroring.
+        if span.is_finite() && span > 0.0 {
+            span
+        } else {
+            viewport_height * 0.5
+        }
+    }
 }
 
 /// Where the overlay sits for a viewport of this shape.
