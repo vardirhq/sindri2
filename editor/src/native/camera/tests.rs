@@ -132,6 +132,7 @@ fn orthographic_visual_uses_transform_position() {
         vertical_size: 2.0,
         near: 0.1,
         far: 10.0,
+        fit: sindri_scene::CameraFit::Height,
     };
     let visual = camera_visual(
         entity,

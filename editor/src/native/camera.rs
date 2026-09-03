@@ -9,7 +9,7 @@ use std::f32::consts::TAU;
 use eframe::egui::{self, Color32, LayerId, Order, Painter, Pos2, Rect, Response, Shape, Stroke};
 use glam::{Mat4, Quat, Vec2 as GlamVec2, Vec3, Vec4};
 use sindri_core::{EntityId, SceneComponent, Transform3D};
-use sindri_scene::{CameraComponent, CameraView, ViewCamera, WorldProjection};
+use sindri_scene::{CameraComponent, CameraFit, CameraView, ViewCamera, WorldProjection};
 
 use crate::preferences::CameraProjection;
 use crate::selection::Selection;
@@ -117,8 +117,21 @@ fn perspective_corners(
     [plane(near), plane(far)]
 }
 
-fn orthographic_corners(vertical_size: f32, near: f32, far: f32, aspect: f32) -> [[Vec3; 4]; 2] {
-    let half_height = vertical_size * 0.5;
+fn orthographic_corners(
+    vertical_size: f32,
+    near: f32,
+    far: f32,
+    aspect: f32,
+    fit: CameraFit,
+) -> [[Vec3; 4]; 2] {
+    // The same choice the extractor makes, because a gizmo that drew a frustum
+    // the camera does not have would be worse than no gizmo: it is the picture
+    // an author trusts when deciding what is on screen.
+    let half = vertical_size * 0.5;
+    let half_height = match fit {
+        CameraFit::Shorter if aspect < 1.0 => half / aspect,
+        CameraFit::Shorter | CameraFit::Height => half,
+    };
     let half_width = half_height * aspect;
     let plane = |distance: f32| {
         [
@@ -265,7 +278,8 @@ fn camera_visual(
                 vertical_size,
                 near,
                 far,
-            } => orthographic_corners(vertical_size, near, far, aspect),
+                fit,
+            } => orthographic_corners(vertical_size, near, far, aspect, fit),
         };
         let world = |plane: [Vec3; 4]| plane.map(|corner| model.transform_point3(corner));
         let (near, far) = (world(corners[0]), world(corners[1]));

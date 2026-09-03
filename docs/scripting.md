@@ -614,12 +614,34 @@ longer than a screen, and a scroll invented before something needs one would
 have to decide about clipping, momentum, and where a drag stops being a press —
 none of which has an answer yet.
 
-### Screens that fit any screen
+### Screens that fit any screen, and text that fits with them
+
+A font size is in those units too — two is the whole height of the screen — so
+text scales with everything around it. It used to be pixels, which made it the
+one number on a screen element that did not follow the screen: a HUD authored
+on a desktop was unreadable on a phone, and a heading authored in the units the
+rest of the element uses drew nothing at all, because an eighth of a pixel is a
+positive number.
 
 The overlay is authored in normalized units: two tall, centred on the origin,
 running out to the aspect ratio either side. A corner-anchored element is in
 that corner on a portrait phone and a wide desktop window alike, which is
 responsive layout without a single breakpoint.
+
+**How wide "either side" is depends on the screen**, and that is the part worth
+designing for. A portrait phone gives about nine tenths of a unit across; a
+desktop window gives three and a half. An element that fits the narrow one fits
+both, which is why a layout is worth authoring against a phone first — and why
+three cards side by side is a landscape idea that does not survive being turned
+upright.
+
+A **world** camera has the same question, and `sindri.camera` answers it with
+`fit`. An orthographic camera framing `vertical_size` by `height` shows a fixed
+amount vertically and whatever the width happens to be, so turning a wide window
+tall takes the sides off the world. `"fit": "shorter"` makes the size a promise
+instead — *this much world is visible whichever way the screen is turned* — so
+an arena fills the height of a landscape window and the width of a portrait one
+and is never cut off by either.
 
 The one thing a designer cannot author around is the **safe area** — a notch, a
 rounded corner, a home indicator — because it is not in the scene, it is in the

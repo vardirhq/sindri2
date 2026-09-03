@@ -19,15 +19,15 @@ fn a_first_frame_reports_nothing() {
     assert!(notes.is_empty(), "{notes:#?}");
 }
 
-/// Every label has to be able to draw.
+/// Every label has to be a sensible share of the screen.
 ///
-/// A screen element's position and scale are in the overlay's units — two tall,
-/// centred on the origin — and its font size is not: that is in pixels. This
-/// whole scene was authored in overlay units, so every label was set to a
-/// fraction of a pixel, and the game shipped to a page that drew its buttons
-/// and none of its words. Nothing failed; there was simply nothing there.
+/// A screen element's position, scale and font size are all in the overlay's
+/// units — two tall, centred on the origin. They were not always: a font size
+/// used to be pixels, and a scene authored consistently in overlay units drew
+/// its buttons and none of its words, because an eighth of a pixel is a
+/// positive number. The unit is one now, and this is what keeps it one.
 #[test]
-fn every_label_is_big_enough_to_appear() {
+fn every_label_is_a_sensible_share_of_the_screen() {
     let text =
         std::fs::read_to_string(orbital_last_stand::project().join("assets/orbital.scene.json"))
             .expect("the scene reads");
@@ -41,14 +41,19 @@ fn every_label_is_big_enough_to_appear() {
         };
         labels += 1;
         let id = entity["id"].as_str().unwrap_or("?");
-        // The engine refuses anything under a pixel; a label a person is meant
-        // to read on a phone needs considerably more than one.
         for field in ["font_size", "line_height"] {
             let value = label[field].as_f64().unwrap_or(0.0);
+            // Two is the whole height of the screen. Anything past it is
+            // somebody typing a pixel count out of habit.
             assert!(
-                value >= 12.0,
-                "{id}: {field} is {value}, which is pixels — overlay units are what \
-                 the transform takes, not this"
+                value <= 2.0,
+                "{id}: {field} is {value}, which is taller than the screen — \
+                 this is in overlay units, not pixels"
+            );
+            // A hundredth of the screen is the smallest a person could read.
+            assert!(
+                value >= 0.02,
+                "{id}: {field} is {value}, too small a share of the screen to read"
             );
         }
     }

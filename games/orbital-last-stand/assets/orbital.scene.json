@@ -1,5 +1,5 @@
 {
-  "format_version": 8,
+  "format_version": 9,
   "metadata": {
     "name": "Orbital Last Stand"
   },
@@ -27,16 +27,18 @@
       },
       "components": {
         "sindri.camera": {
-          "projection": "orthographic",
-          "vertical_size": 18.0,
+          "far": 100.0,
           "near": 0.1,
-          "far": 100.0
+          "projection": "orthographic",
+          "vertical_size": 17.0,
+          "fit": "shorter"
         }
       }
     },
     {
-      "id": "music",
-      "name": "Music",
+      "id": "card-dmg",
+      "name": "Heavier Rounds",
+      "parent": "upgrade-row",
       "transform_3d": {
         "position": [
           0.0,
@@ -50,113 +52,49 @@
           1.0
         ],
         "scale": [
-          1.0,
-          1.0,
+          0.3864,
+          0.095,
           1.0
         ]
       },
       "components": {
-        "sindri.audio.source": {
-          "clip": "audio/theme.wav",
-          "looping": true,
-          "autoplay": true,
-          "volume": 0.3
-        }
-      }
-    },
-    {
-      "id": "player",
-      "name": "Player",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.42,
-          0.42,
-          1.0
-        ]
-      },
-      "components": {
+        "sindri.script": {
+          "properties": {
+            "amount": 1.0,
+            "effect": 0.0
+          },
+          "script": "UpgradeCard",
+          "source": "scripts/upgrade-card.decay"
+        },
         "sindri.tags": {
           "tags": [
-            "player"
+            "upgrade"
           ]
         },
-        "sindri.sprite": {
-          "texture": "textures/player.png",
-          "layer": 5,
+        "sindri.ui.button": {
+          "label": "Heavier Rounds"
+        },
+        "sindri.ui.image": {
+          "anchor": "center",
+          "layer": 110,
+          "texture": "textures/button.png",
           "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
+            1,
+            1,
+            1,
+            1
           ]
-        },
-        "sindri.physics2d.rigid_body": {
-          "kind": "dynamic",
-          "pose": {
-            "position": [
-              0.0,
-              0.0
-            ],
-            "rotation": 0.0
-          },
-          "linear_velocity": [
-            0.0,
-            0.0
-          ],
-          "angular_velocity": 0.0,
-          "gravity_scale": 0.0,
-          "linear_damping": 0.0,
-          "angular_damping": 0.0,
-          "lock_rotation": true
-        },
-        "sindri.physics2d.collider": {
-          "shape": {
-            "shape": "circle",
-            "radius": 0.5
-          },
-          "offset": [
-            0.0,
-            0.0
-          ],
-          "rotation": 0.0,
-          "sensor": true,
-          "layers": {
-            "memberships": 4,
-            "filter": 26
-          },
-          "friction": 0.0,
-          "restitution": 0.0
-        },
-        "sindri.script": {
-          "source": "scripts/player.decay",
-          "script": "Player",
-          "properties": {
-            "bullet": "prefabs/bullet.prefab.json",
-            "arena": 8.0,
-            "invulnerable_for": 0.9,
-            "view_height": 18.0
-          }
         }
       }
     },
     {
-      "id": "player-hurt",
-      "name": "PlayerHurt",
+      "id": "card-dmg-blurb",
+      "name": "Heavier Rounds Blurb",
+      "parent": "card-dmg",
       "transform_3d": {
         "position": [
           0.0,
-          0.0,
+          -0.038,
           0.0
         ],
         "rotation": [
@@ -172,29 +110,65 @@
         ]
       },
       "components": {
-        "sindri.effect.burst": {
-          "texture": "textures/fleck.png",
-          "count": 18,
-          "speed": 4.5,
-          "spread": 6.2831853,
-          "lifetime": 0.5,
-          "size": 0.09,
-          "tint": [
-            0.5,
-            0.9,
-            1.0,
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.72,
+            0.82,
+            0.95,
             1.0
           ],
-          "fade": true,
-          "drag": 1.6,
-          "layer": 6
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.032,
+          "layer": 140,
+          "line_height": 0.0416,
+          "text": "+1 damage"
         }
-      },
-      "parent": "player"
+      }
     },
     {
-      "id": "director",
-      "name": "Director",
+      "id": "card-dmg-name",
+      "name": "Heavier Rounds Name",
+      "parent": "card-dmg",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.022,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.044,
+          "layer": 140,
+          "line_height": 0.0572,
+          "text": "Heavier Rounds"
+        }
+      }
+    },
+    {
+      "id": "card-hull",
+      "name": "Plating",
+      "parent": "upgrade-row",
       "transform_3d": {
         "position": [
           0.0,
@@ -208,24 +182,636 @@
           1.0
         ],
         "scale": [
-          1.0,
-          1.0,
+          0.3864,
+          0.095,
           1.0
         ]
       },
       "components": {
         "sindri.script": {
-          "source": "scripts/director.decay",
-          "script": "Director",
           "properties": {
-            "drifter": "prefabs/drifter.prefab.json",
-            "charger": "prefabs/charger.prefab.json",
-            "splitter": "prefabs/splitter.prefab.json",
-            "warden": "prefabs/warden.prefab.json",
-            "wave_gap": 6.0,
-            "boss_at": 180.0,
-            "arena": 7.5
-          }
+            "amount": 2.0,
+            "effect": 4.0
+          },
+          "script": "UpgradeCard",
+          "source": "scripts/upgrade-card.decay"
+        },
+        "sindri.tags": {
+          "tags": [
+            "upgrade"
+          ]
+        },
+        "sindri.ui.button": {
+          "label": "Plating"
+        },
+        "sindri.ui.image": {
+          "anchor": "center",
+          "layer": 110,
+          "texture": "textures/button.png",
+          "tint": [
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "id": "card-hull-blurb",
+      "name": "Plating Blurb",
+      "parent": "card-hull",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.038,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.72,
+            0.82,
+            0.95,
+            1.0
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.032,
+          "layer": 140,
+          "line_height": 0.0416,
+          "text": "+2 hull, repaired"
+        }
+      }
+    },
+    {
+      "id": "card-hull-name",
+      "name": "Plating Name",
+      "parent": "card-hull",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.022,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.044,
+          "layer": 140,
+          "line_height": 0.0572,
+          "text": "Plating"
+        }
+      }
+    },
+    {
+      "id": "card-magnet",
+      "name": "Wider Field",
+      "parent": "upgrade-row",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.3864,
+          0.095,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "amount": 1.2,
+            "effect": 3.0
+          },
+          "script": "UpgradeCard",
+          "source": "scripts/upgrade-card.decay"
+        },
+        "sindri.tags": {
+          "tags": [
+            "upgrade"
+          ]
+        },
+        "sindri.ui.button": {
+          "label": "Wider Field"
+        },
+        "sindri.ui.image": {
+          "anchor": "center",
+          "layer": 110,
+          "texture": "textures/button.png",
+          "tint": [
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "id": "card-magnet-blurb",
+      "name": "Wider Field Blurb",
+      "parent": "card-magnet",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.038,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.72,
+            0.82,
+            0.95,
+            1.0
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.032,
+          "layer": 140,
+          "line_height": 0.0416,
+          "text": "+1.2 collection"
+        }
+      }
+    },
+    {
+      "id": "card-magnet-name",
+      "name": "Wider Field Name",
+      "parent": "card-magnet",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.022,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.044,
+          "layer": 140,
+          "line_height": 0.0572,
+          "text": "Wider Field"
+        }
+      }
+    },
+    {
+      "id": "card-pierce",
+      "name": "Lance Rounds",
+      "parent": "upgrade-row",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.3864,
+          0.095,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "amount": 1.0,
+            "effect": 5.0
+          },
+          "script": "UpgradeCard",
+          "source": "scripts/upgrade-card.decay"
+        },
+        "sindri.tags": {
+          "tags": [
+            "upgrade"
+          ]
+        },
+        "sindri.ui.button": {
+          "label": "Lance Rounds"
+        },
+        "sindri.ui.image": {
+          "anchor": "center",
+          "layer": 110,
+          "texture": "textures/button.png",
+          "tint": [
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "id": "card-pierce-blurb",
+      "name": "Lance Rounds Blurb",
+      "parent": "card-pierce",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.038,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.72,
+            0.82,
+            0.95,
+            1.0
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.032,
+          "layer": 140,
+          "line_height": 0.0416,
+          "text": "shots pierce 1 more"
+        }
+      }
+    },
+    {
+      "id": "card-pierce-name",
+      "name": "Lance Rounds Name",
+      "parent": "card-pierce",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.022,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.044,
+          "layer": 140,
+          "line_height": 0.0572,
+          "text": "Lance Rounds"
+        }
+      }
+    },
+    {
+      "id": "card-rate",
+      "name": "Faster Cycling",
+      "parent": "upgrade-row",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.3864,
+          0.095,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "amount": 0.05,
+            "effect": 1.0
+          },
+          "script": "UpgradeCard",
+          "source": "scripts/upgrade-card.decay"
+        },
+        "sindri.tags": {
+          "tags": [
+            "upgrade"
+          ]
+        },
+        "sindri.ui.button": {
+          "label": "Faster Cycling"
+        },
+        "sindri.ui.image": {
+          "anchor": "center",
+          "layer": 110,
+          "texture": "textures/button.png",
+          "tint": [
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "id": "card-rate-blurb",
+      "name": "Faster Cycling Blurb",
+      "parent": "card-rate",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.038,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.72,
+            0.82,
+            0.95,
+            1.0
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.032,
+          "layer": 140,
+          "line_height": 0.0416,
+          "text": "shoot more often"
+        }
+      }
+    },
+    {
+      "id": "card-rate-name",
+      "name": "Faster Cycling Name",
+      "parent": "card-rate",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.022,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.044,
+          "layer": 140,
+          "line_height": 0.0572,
+          "text": "Faster Cycling"
+        }
+      }
+    },
+    {
+      "id": "card-speed",
+      "name": "Trimmed Hull",
+      "parent": "upgrade-row",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.3864,
+          0.095,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "amount": 0.8,
+            "effect": 2.0
+          },
+          "script": "UpgradeCard",
+          "source": "scripts/upgrade-card.decay"
+        },
+        "sindri.tags": {
+          "tags": [
+            "upgrade"
+          ]
+        },
+        "sindri.ui.button": {
+          "label": "Trimmed Hull"
+        },
+        "sindri.ui.image": {
+          "anchor": "center",
+          "layer": 110,
+          "texture": "textures/button.png",
+          "tint": [
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "id": "card-speed-blurb",
+      "name": "Trimmed Hull Blurb",
+      "parent": "card-speed",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.038,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.72,
+            0.82,
+            0.95,
+            1.0
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.032,
+          "layer": 140,
+          "line_height": 0.0416,
+          "text": "+0.8 speed"
+        }
+      }
+    },
+    {
+      "id": "card-speed-name",
+      "name": "Trimmed Hull Name",
+      "parent": "card-speed",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.022,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.044,
+          "layer": 140,
+          "line_height": 0.0572,
+          "text": "Trimmed Hull"
         }
       }
     },
@@ -252,11 +838,48 @@
       },
       "components": {
         "sindri.script": {
-          "source": "scripts/upgrade-chooser.decay",
-          "script": "UpgradeChooser",
           "properties": {
             "offers": 3.0
-          }
+          },
+          "script": "UpgradeChooser",
+          "source": "scripts/upgrade-chooser.decay"
+        }
+      }
+    },
+    {
+      "id": "director",
+      "name": "Director",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "arena": 7.5,
+            "boss_at": 180.0,
+            "charger": "prefabs/charger.prefab.json",
+            "drifter": "prefabs/drifter.prefab.json",
+            "splitter": "prefabs/splitter.prefab.json",
+            "warden": "prefabs/warden.prefab.json",
+            "wave_gap": 6.0
+          },
+          "script": "Director",
+          "source": "scripts/director.decay"
         }
       }
     },
@@ -283,20 +906,21 @@
       },
       "components": {
         "sindri.script": {
-          "source": "scripts/hud.decay",
+          "properties": {},
           "script": "Hud",
-          "properties": {}
+          "source": "scripts/hud.decay"
         }
       },
       "disabled": true
     },
     {
-      "id": "hud-score",
-      "name": "Score",
+      "id": "hud-boss",
+      "name": "BossPanel",
+      "parent": "hud",
       "transform_3d": {
         "position": [
-          -1.55,
-          0.9,
+          0.0,
+          0.0,
           0.0
         ],
         "rotation": [
@@ -311,31 +935,16 @@
           1.0
         ]
       },
-      "components": {
-        "sindri.ui.text": {
-          "text": "Score {}",
-          "font": "fonts/Inter.ttf",
-          "font_size": 34.0,
-          "line_height": 42.0,
-          "color": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "anchor": "left",
-          "layer": 140
-        }
-      },
-      "parent": "hud"
+      "disabled": true
     },
     {
-      "id": "hud-wave",
-      "name": "Wave",
+      "id": "hud-boss-back",
+      "name": "BossBack",
+      "parent": "hud-boss",
       "transform_3d": {
         "position": [
-          -1.55,
-          0.8,
+          0.0,
+          -0.28,
           0.0
         ],
         "rotation": [
@@ -345,150 +954,33 @@
           1.0
         ],
         "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "Wave {}",
-          "font": "fonts/Inter.ttf",
-          "font_size": 26.0,
-          "line_height": 32.0,
-          "color": [
-            0.75,
-            0.85,
-            1.0,
-            1.0
-          ],
-          "anchor": "left",
-          "layer": 140
-        }
-      },
-      "parent": "hud"
-    },
-    {
-      "id": "hud-level",
-      "name": "Level",
-      "transform_3d": {
-        "position": [
-          -1.55,
-          0.72,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "Level {}",
-          "font": "fonts/Inter.ttf",
-          "font_size": 26.0,
-          "line_height": 32.0,
-          "color": [
-            0.75,
-            0.85,
-            1.0,
-            1.0
-          ],
-          "anchor": "left",
-          "layer": 140
-        }
-      },
-      "parent": "hud"
-    },
-    {
-      "id": "hud-clock",
-      "name": "Clock",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.9,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "{}:{.2}",
-          "font": "fonts/Inter.ttf",
-          "font_size": 34.0,
-          "line_height": 42.0,
-          "color": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "anchor": "center",
-          "layer": 140
-        }
-      },
-      "parent": "hud"
-    },
-    {
-      "id": "hud-hp-back",
-      "name": "HealthBack",
-      "transform_3d": {
-        "position": [
-          -1.55,
-          -0.9,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.62,
-          0.045,
+          0.42,
+          0.014,
           1.0
         ]
       },
       "components": {
         "sindri.ui.image": {
+          "anchor": "top",
+          "layer": 128,
           "texture": "textures/bar-back.png",
-          "anchor": "left",
           "tint": [
             1,
             1,
             1,
             0.85
-          ],
-          "layer": 128
+          ]
         }
-      },
-      "parent": "hud"
+      }
     },
     {
-      "id": "hud-hp",
-      "name": "Health",
+      "id": "hud-boss-bar",
+      "name": "BossBar",
+      "parent": "hud-boss",
       "transform_3d": {
         "position": [
-          -1.55,
-          -0.9,
+          0.0,
+          -0.28,
           0.0
         ],
         "rotation": [
@@ -498,177 +990,37 @@
           1.0
         ],
         "scale": [
-          0.62,
-          0.045,
+          0.42,
+          0.014,
           1.0
         ]
       },
       "components": {
         "sindri.ui.image": {
-          "texture": "textures/bar.png",
-          "anchor": "left",
-          "tint": [
-            0.45,
-            0.95,
-            0.65,
-            1.0
-          ],
-          "layer": 129,
+          "anchor": "top",
           "fill": {
             "amount": 1.0,
             "from": "left"
-          }
-        }
-      },
-      "parent": "hud"
-    },
-    {
-      "id": "hud-hp-text",
-      "name": "HealthText",
-      "transform_3d": {
-        "position": [
-          -1.55,
-          -0.8,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "{}/{}",
-          "font": "fonts/Inter.ttf",
-          "font_size": 24.0,
-          "line_height": 30.0,
-          "color": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "anchor": "left",
-          "layer": 140
-        }
-      },
-      "parent": "hud"
-    },
-    {
-      "id": "hud-cores-back",
-      "name": "CoresBack",
-      "transform_3d": {
-        "position": [
-          -1.55,
-          -0.97,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.62,
-          0.022,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.image": {
-          "texture": "textures/bar-back.png",
-          "anchor": "left",
-          "tint": [
-            1,
-            1,
-            1,
-            0.7
-          ],
-          "layer": 128
-        }
-      },
-      "parent": "hud"
-    },
-    {
-      "id": "hud-cores",
-      "name": "Cores",
-      "transform_3d": {
-        "position": [
-          -1.55,
-          -0.97,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.62,
-          0.022,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.image": {
-          "texture": "textures/bar.png",
-          "anchor": "left",
-          "tint": [
-            0.5,
-            0.8,
-            1.0,
-            1.0
-          ],
+          },
           "layer": 129,
-          "fill": {
-            "amount": 0.0,
-            "from": "left"
-          }
+          "texture": "textures/bar.png",
+          "tint": [
+            1.0,
+            0.35,
+            0.35,
+            1.0
+          ]
         }
-      },
-      "parent": "hud"
-    },
-    {
-      "id": "hud-boss",
-      "name": "BossPanel",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {},
-      "parent": "hud",
-      "disabled": true
+      }
     },
     {
       "id": "hud-boss-name",
       "name": "BossName",
+      "parent": "hud-boss",
       "transform_3d": {
         "position": [
           0.0,
-          0.72,
+          -0.22,
           0.0
         ],
         "rotation": [
@@ -685,29 +1037,29 @@
       },
       "components": {
         "sindri.ui.text": {
-          "text": "WARDEN",
-          "font": "fonts/Inter.ttf",
-          "font_size": 30.0,
-          "line_height": 38.0,
+          "anchor": "top",
           "color": [
             1.0,
             0.6,
             0.55,
             1.0
           ],
-          "anchor": "center",
-          "layer": 140
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.038,
+          "layer": 140,
+          "line_height": 0.0494,
+          "text": "WARDEN"
         }
-      },
-      "parent": "hud-boss"
+      }
     },
     {
-      "id": "hud-boss-back",
-      "name": "BossBack",
+      "id": "hud-clock",
+      "name": "Clock",
+      "parent": "hud",
       "transform_3d": {
         "position": [
           0.0,
-          0.64,
+          -0.05,
           0.0
         ],
         "rotation": [
@@ -717,138 +1069,188 @@
           1.0
         ],
         "scale": [
-          0.9,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "top",
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.05,
+          "layer": 140,
+          "line_height": 0.065,
+          "text": "{}:{.2}"
+        }
+      }
+    },
+    {
+      "id": "hud-cores",
+      "name": "Cores",
+      "parent": "hud",
+      "transform_3d": {
+        "position": [
           0.03,
+          0.055,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.42,
+          0.01,
           1.0
         ]
       },
       "components": {
         "sindri.ui.image": {
+          "anchor": "bottom_left",
+          "fill": {
+            "amount": 0.0,
+            "from": "left"
+          },
+          "layer": 129,
+          "texture": "textures/bar.png",
+          "tint": [
+            0.5,
+            0.8,
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    {
+      "id": "hud-cores-back",
+      "name": "CoresBack",
+      "parent": "hud",
+      "transform_3d": {
+        "position": [
+          0.03,
+          0.055,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.42,
+          0.01,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.image": {
+          "anchor": "bottom_left",
+          "layer": 128,
           "texture": "textures/bar-back.png",
-          "anchor": "center",
+          "tint": [
+            1,
+            1,
+            1,
+            0.7
+          ]
+        }
+      }
+    },
+    {
+      "id": "hud-hp",
+      "name": "Health",
+      "parent": "hud",
+      "transform_3d": {
+        "position": [
+          0.03,
+          0.1,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.42,
+          0.02,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.image": {
+          "anchor": "bottom_left",
+          "fill": {
+            "amount": 1.0,
+            "from": "left"
+          },
+          "layer": 129,
+          "texture": "textures/bar.png",
+          "tint": [
+            0.45,
+            0.95,
+            0.65,
+            1.0
+          ]
+        }
+      }
+    },
+    {
+      "id": "hud-hp-back",
+      "name": "HealthBack",
+      "parent": "hud",
+      "transform_3d": {
+        "position": [
+          0.03,
+          0.1,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.42,
+          0.02,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.image": {
+          "anchor": "bottom_left",
+          "layer": 128,
+          "texture": "textures/bar-back.png",
           "tint": [
             1,
             1,
             1,
             0.85
-          ],
-          "layer": 128
-        }
-      },
-      "parent": "hud-boss"
-    },
-    {
-      "id": "hud-boss-bar",
-      "name": "BossBar",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.64,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.9,
-          0.03,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.image": {
-          "texture": "textures/bar.png",
-          "anchor": "center",
-          "tint": [
-            1.0,
-            0.35,
-            0.35,
-            1.0
-          ],
-          "layer": 129,
-          "fill": {
-            "amount": 1.0,
-            "from": "left"
-          }
-        }
-      },
-      "parent": "hud-boss"
-    },
-    {
-      "id": "title",
-      "name": "Title",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.script": {
-          "source": "scripts/title.decay",
-          "script": "Title",
-          "properties": {}
+          ]
         }
       }
     },
     {
-      "id": "title-bg",
-      "name": "TitleBack",
+      "id": "hud-hp-text",
+      "name": "HealthText",
+      "parent": "hud",
       "transform_3d": {
         "position": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.55,
-          0.78,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.image": {
-          "texture": "textures/panel.png",
-          "anchor": "center",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            0.97
-          ],
-          "layer": 100
-        }
-      },
-      "parent": "title"
-    },
-    {
-      "id": "title-name",
-      "name": "TitleName",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.45,
+          0.03,
+          0.14,
           0.0
         ],
         "rotation": [
@@ -865,29 +1267,29 @@
       },
       "components": {
         "sindri.ui.text": {
-          "text": "ORBITAL LAST STAND",
-          "font": "fonts/Inter.ttf",
-          "font_size": 72.0,
-          "line_height": 90.0,
+          "anchor": "bottom_left",
           "color": [
             1,
             1,
             1,
             1
           ],
-          "anchor": "center",
-          "layer": 140
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.034,
+          "layer": 140,
+          "line_height": 0.0442,
+          "text": "{}/{}"
         }
-      },
-      "parent": "title"
+      }
     },
     {
-      "id": "title-hint",
-      "name": "TitleHint",
+      "id": "hud-level",
+      "name": "Level",
+      "parent": "hud",
       "transform_3d": {
         "position": [
-          0.0,
-          0.26,
+          0.03,
+          -0.19,
           0.0
         ],
         "rotation": [
@@ -904,154 +1306,29 @@
       },
       "components": {
         "sindri.ui.text": {
-          "text": "Move with WASD or hold to steer. You fire on your own.",
-          "font": "fonts/Inter.ttf",
-          "font_size": 26.0,
-          "line_height": 32.0,
+          "anchor": "top_left",
           "color": [
-            0.7,
-            0.8,
-            0.95,
-            1.0
-          ],
-          "anchor": "center",
-          "layer": 140
-        }
-      },
-      "parent": "title"
-    },
-    {
-      "id": "title-best",
-      "name": "TitleBest",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.16,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "Best {}",
-          "font": "fonts/Inter.ttf",
-          "font_size": 28.0,
-          "line_height": 35.0,
-          "color": [
-            0.7,
-            0.8,
-            0.95,
-            1.0
-          ],
-          "anchor": "center",
-          "layer": 140
-        }
-      },
-      "parent": "title"
-    },
-    {
-      "id": "title-notice",
-      "name": "TitleNotice",
-      "transform_3d": {
-        "position": [
-          0.0,
-          -0.45,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "Your saved progress could not be read.",
-          "font": "fonts/Inter.ttf",
-          "font_size": 24.0,
-          "line_height": 30.0,
-          "color": [
+            0.75,
+            0.85,
             1.0,
-            0.6,
-            0.5,
             1.0
           ],
-          "anchor": "center",
-          "layer": 140
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.034,
+          "layer": 140,
+          "line_height": 0.0442,
+          "text": "Level {}"
         }
-      },
-      "parent": "title",
-      "disabled": true
+      }
     },
     {
-      "id": "title-start",
-      "name": "TitleStart",
+      "id": "hud-score",
+      "name": "Score",
+      "parent": "hud",
       "transform_3d": {
         "position": [
-          0.0,
-          -0.1,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.55,
-          0.11,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.image": {
-          "texture": "textures/button.png",
-          "anchor": "center",
-          "tint": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "layer": 110
-        },
-        "sindri.ui.button": {
-          "label": "title-start"
-        },
-        "sindri.script": {
-          "source": "scripts/button.decay",
-          "script": "Button",
-          "properties": {
-            "action": 0.0
-          }
-        }
-      },
-      "parent": "title"
-    },
-    {
-      "id": "title-start-text",
-      "name": "TitleStartText",
-      "transform_3d": {
-        "position": [
-          0.0,
-          -0.115,
+          0.03,
+          -0.05,
           0.0
         ],
         "rotation": [
@@ -1068,21 +1345,89 @@
       },
       "components": {
         "sindri.ui.text": {
-          "text": "START",
-          "font": "fonts/Inter.ttf",
-          "font_size": 36.0,
-          "line_height": 45.0,
+          "anchor": "top_left",
           "color": [
             1,
             1,
             1,
             1
           ],
-          "anchor": "center",
-          "layer": 140
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.05,
+          "layer": 140,
+          "line_height": 0.065,
+          "text": "Score {}"
         }
+      }
+    },
+    {
+      "id": "hud-wave",
+      "name": "Wave",
+      "parent": "hud",
+      "transform_3d": {
+        "position": [
+          0.03,
+          -0.13,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
       },
-      "parent": "title"
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "top_left",
+          "color": [
+            0.75,
+            0.85,
+            1.0,
+            1.0
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.034,
+          "layer": 140,
+          "line_height": 0.0442,
+          "text": "Wave {}"
+        }
+      }
+    },
+    {
+      "id": "music",
+      "name": "Music",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.audio.source": {
+          "autoplay": true,
+          "clip": "audio/theme.wav",
+          "looping": true,
+          "volume": 0.3
+        }
+      }
     },
     {
       "id": "pause",
@@ -1105,12 +1450,12 @@
           1.0
         ]
       },
-      "components": {},
       "disabled": true
     },
     {
       "id": "pause-bg",
       "name": "PauseBack",
+      "parent": "pause",
       "transform_3d": {
         "position": [
           0.0,
@@ -1124,157 +1469,33 @@
           1.0
         ],
         "scale": [
-          1.05,
-          0.55,
+          0.42,
+          0.34,
           1.0
         ]
       },
       "components": {
         "sindri.ui.image": {
-          "texture": "textures/panel.png",
           "anchor": "center",
+          "layer": 100,
+          "texture": "textures/panel.png",
           "tint": [
             1.0,
             1.0,
             1.0,
             0.97
-          ],
-          "layer": 100
+          ]
         }
-      },
-      "parent": "pause"
-    },
-    {
-      "id": "pause-title",
-      "name": "PauseTitle",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.32,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "PAUSED",
-          "font": "fonts/Inter.ttf",
-          "font_size": 56.0,
-          "line_height": 70.0,
-          "color": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "anchor": "center",
-          "layer": 140
-        }
-      },
-      "parent": "pause"
-    },
-    {
-      "id": "pause-resume",
-      "name": "PauseResume",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.05,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.5,
-          0.1,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.image": {
-          "texture": "textures/button.png",
-          "anchor": "center",
-          "tint": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "layer": 110
-        },
-        "sindri.ui.button": {
-          "label": "pause-resume"
-        },
-        "sindri.script": {
-          "source": "scripts/button.decay",
-          "script": "Button",
-          "properties": {
-            "action": 2.0
-          }
-        }
-      },
-      "parent": "pause"
-    },
-    {
-      "id": "pause-resume-text",
-      "name": "PauseResumeText",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.035,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "RESUME",
-          "font": "fonts/Inter.ttf",
-          "font_size": 32.0,
-          "line_height": 40.0,
-          "color": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "anchor": "center",
-          "layer": 140
-        }
-      },
-      "parent": "pause"
+      }
     },
     {
       "id": "pause-quit",
       "name": "PauseQuit",
+      "parent": "pause",
       "transform_3d": {
         "position": [
           0.0,
-          -0.18,
+          -0.14,
           0.0
         ],
         "rotation": [
@@ -1284,43 +1505,43 @@
           1.0
         ],
         "scale": [
-          0.5,
-          0.1,
+          0.36119999999999997,
+          0.062,
           1.0
         ]
       },
       "components": {
+        "sindri.script": {
+          "properties": {
+            "action": 3.0
+          },
+          "script": "Button",
+          "source": "scripts/button.decay"
+        },
+        "sindri.ui.button": {
+          "label": "pause-quit"
+        },
         "sindri.ui.image": {
-          "texture": "textures/button.png",
           "anchor": "center",
+          "layer": 110,
+          "texture": "textures/button.png",
           "tint": [
             1,
             1,
             1,
             1
-          ],
-          "layer": 110
-        },
-        "sindri.ui.button": {
-          "label": "pause-quit"
-        },
-        "sindri.script": {
-          "source": "scripts/button.decay",
-          "script": "Button",
-          "properties": {
-            "action": 3.0
-          }
+          ]
         }
-      },
-      "parent": "pause"
+      }
     },
     {
       "id": "pause-quit-text",
       "name": "PauseQuitText",
+      "parent": "pause",
       "transform_3d": {
         "position": [
           0.0,
-          -0.195,
+          -0.159,
           0.0
         ],
         "rotation": [
@@ -1337,21 +1558,272 @@
       },
       "components": {
         "sindri.ui.text": {
-          "text": "GIVE UP",
-          "font": "fonts/Inter.ttf",
-          "font_size": 32.0,
-          "line_height": 40.0,
+          "anchor": "center",
           "color": [
             1,
             1,
             1,
             1
           ],
-          "anchor": "center",
-          "layer": 140
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.048,
+          "layer": 140,
+          "line_height": 0.0624,
+          "text": "GIVE UP"
         }
+      }
+    },
+    {
+      "id": "pause-resume",
+      "name": "PauseResume",
+      "parent": "pause",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.02,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.36119999999999997,
+          0.062,
+          1.0
+        ]
       },
-      "parent": "pause"
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "action": 2.0
+          },
+          "script": "Button",
+          "source": "scripts/button.decay"
+        },
+        "sindri.ui.button": {
+          "label": "pause-resume"
+        },
+        "sindri.ui.image": {
+          "anchor": "center",
+          "layer": 110,
+          "texture": "textures/button.png",
+          "tint": [
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "id": "pause-resume-text",
+      "name": "PauseResumeText",
+      "parent": "pause",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.001,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.048,
+          "layer": 140,
+          "line_height": 0.0624,
+          "text": "RESUME"
+        }
+      }
+    },
+    {
+      "id": "pause-title",
+      "name": "PauseTitle",
+      "parent": "pause",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.2,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.075,
+          "layer": 140,
+          "line_height": 0.0975,
+          "text": "PAUSED"
+        }
+      }
+    },
+    {
+      "id": "player",
+      "name": "Player",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.42,
+          0.42,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.physics2d.collider": {
+          "friction": 0.0,
+          "layers": {
+            "filter": 26,
+            "memberships": 4
+          },
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "restitution": 0.0,
+          "rotation": 0.0,
+          "sensor": true,
+          "shape": {
+            "radius": 0.5,
+            "shape": "circle"
+          }
+        },
+        "sindri.physics2d.rigid_body": {
+          "angular_damping": 0.0,
+          "angular_velocity": 0.0,
+          "gravity_scale": 0.0,
+          "kind": "dynamic",
+          "linear_damping": 0.0,
+          "linear_velocity": [
+            0.0,
+            0.0
+          ],
+          "lock_rotation": true,
+          "pose": {
+            "position": [
+              0.0,
+              0.0
+            ],
+            "rotation": 0.0
+          }
+        },
+        "sindri.script": {
+          "properties": {
+            "arena": 8.0,
+            "bullet": "prefabs/bullet.prefab.json",
+            "invulnerable_for": 0.9,
+            "view_height": 18.0
+          },
+          "script": "Player",
+          "source": "scripts/player.decay"
+        },
+        "sindri.sprite": {
+          "layer": 5,
+          "texture": "textures/player.png",
+          "tint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "sindri.tags": {
+          "tags": [
+            "player"
+          ]
+        }
+      }
+    },
+    {
+      "id": "player-hurt",
+      "name": "PlayerHurt",
+      "parent": "player",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.effect.burst": {
+          "count": 18,
+          "drag": 1.6,
+          "fade": true,
+          "layer": 6,
+          "lifetime": 0.5,
+          "size": 0.09,
+          "speed": 4.5,
+          "spread": 6.2831853,
+          "texture": "textures/fleck.png",
+          "tint": [
+            0.5,
+            0.9,
+            1.0,
+            1.0
+          ]
+        }
+      }
     },
     {
       "id": "result",
@@ -1376,247 +1848,17 @@
       },
       "components": {
         "sindri.script": {
-          "source": "scripts/result.decay",
+          "properties": {},
           "script": "Result",
-          "properties": {}
+          "source": "scripts/result.decay"
         }
       },
       "disabled": true
     },
     {
-      "id": "result-bg",
-      "name": "ResultBack",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.35,
-          0.72,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.image": {
-          "texture": "textures/panel.png",
-          "anchor": "center",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            0.97
-          ],
-          "layer": 100
-        }
-      },
-      "parent": "result"
-    },
-    {
-      "id": "result-title",
-      "name": "ResultTitle",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.5,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "RUN OVER",
-          "font": "fonts/Inter.ttf",
-          "font_size": 60.0,
-          "line_height": 75.0,
-          "color": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "anchor": "center",
-          "layer": 140
-        }
-      },
-      "parent": "result"
-    },
-    {
-      "id": "result-score",
-      "name": "ResultScore",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.3,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "Score {}",
-          "font": "fonts/Inter.ttf",
-          "font_size": 36.0,
-          "line_height": 45.0,
-          "color": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "anchor": "center",
-          "layer": 140
-        }
-      },
-      "parent": "result"
-    },
-    {
-      "id": "result-best",
-      "name": "ResultBest",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.2,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "Best {}",
-          "font": "fonts/Inter.ttf",
-          "font_size": 28.0,
-          "line_height": 35.0,
-          "color": [
-            0.7,
-            0.8,
-            0.95,
-            1.0
-          ],
-          "anchor": "center",
-          "layer": 140
-        }
-      },
-      "parent": "result"
-    },
-    {
-      "id": "result-kills",
-      "name": "ResultKills",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.12,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "Kills {}",
-          "font": "fonts/Inter.ttf",
-          "font_size": 28.0,
-          "line_height": 35.0,
-          "color": [
-            0.7,
-            0.8,
-            0.95,
-            1.0
-          ],
-          "anchor": "center",
-          "layer": 140
-        }
-      },
-      "parent": "result"
-    },
-    {
-      "id": "result-time",
-      "name": "ResultTime",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.04,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "Survived {}:{.2}",
-          "font": "fonts/Inter.ttf",
-          "font_size": 28.0,
-          "line_height": 35.0,
-          "color": [
-            0.7,
-            0.8,
-            0.95,
-            1.0
-          ],
-          "anchor": "center",
-          "layer": 140
-        }
-      },
-      "parent": "result"
-    },
-    {
       "id": "result-again",
       "name": "ResultAgain",
+      "parent": "result",
       "transform_3d": {
         "position": [
           0.0,
@@ -1630,43 +1872,43 @@
           1.0
         ],
         "scale": [
-          0.6,
-          0.11,
+          0.36119999999999997,
+          0.07,
           1.0
         ]
       },
       "components": {
+        "sindri.script": {
+          "properties": {
+            "action": 0.0
+          },
+          "script": "Button",
+          "source": "scripts/button.decay"
+        },
+        "sindri.ui.button": {
+          "label": "result-again"
+        },
         "sindri.ui.image": {
-          "texture": "textures/button.png",
           "anchor": "center",
+          "layer": 110,
+          "texture": "textures/button.png",
           "tint": [
             1,
             1,
             1,
             1
-          ],
-          "layer": 110
-        },
-        "sindri.ui.button": {
-          "label": "result-again"
-        },
-        "sindri.script": {
-          "source": "scripts/button.decay",
-          "script": "Button",
-          "properties": {
-            "action": 0.0
-          }
+          ]
         }
-      },
-      "parent": "result"
+      }
     },
     {
       "id": "result-again-text",
       "name": "ResultAgainText",
+      "parent": "result",
       "transform_3d": {
         "position": [
           0.0,
-          -0.215,
+          -0.222,
           0.0
         ],
         "rotation": [
@@ -1683,21 +1925,587 @@
       },
       "components": {
         "sindri.ui.text": {
-          "text": "PLAY AGAIN",
-          "font": "fonts/Inter.ttf",
-          "font_size": 34.0,
-          "line_height": 42.0,
+          "anchor": "center",
           "color": [
             1,
             1,
             1,
             1
           ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.052,
+          "layer": 140,
+          "line_height": 0.0676,
+          "text": "PLAY AGAIN"
+        }
+      }
+    },
+    {
+      "id": "result-best",
+      "name": "ResultBest",
+      "parent": "result",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.15,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
           "anchor": "center",
-          "layer": 140
+          "color": [
+            0.7,
+            0.8,
+            0.95,
+            1.0
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.04,
+          "layer": 140,
+          "line_height": 0.052,
+          "text": "Best {}"
+        }
+      }
+    },
+    {
+      "id": "result-bg",
+      "name": "ResultBack",
+      "parent": "result",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.05,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.42,
+          0.44,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.image": {
+          "anchor": "center",
+          "layer": 100,
+          "texture": "textures/panel.png",
+          "tint": [
+            1.0,
+            1.0,
+            1.0,
+            0.97
+          ]
+        }
+      }
+    },
+    {
+      "id": "result-kills",
+      "name": "ResultKills",
+      "parent": "result",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.08,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.7,
+            0.8,
+            0.95,
+            1.0
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.04,
+          "layer": 140,
+          "line_height": 0.052,
+          "text": "Kills {}"
+        }
+      }
+    },
+    {
+      "id": "result-score",
+      "name": "ResultScore",
+      "parent": "result",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.24,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.055,
+          "layer": 140,
+          "line_height": 0.0715,
+          "text": "Score {}"
+        }
+      }
+    },
+    {
+      "id": "result-time",
+      "name": "ResultTime",
+      "parent": "result",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.01,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.7,
+            0.8,
+            0.95,
+            1.0
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.04,
+          "layer": 140,
+          "line_height": 0.052,
+          "text": "Survived {}:{.2}"
+        }
+      }
+    },
+    {
+      "id": "result-title",
+      "name": "ResultTitle",
+      "parent": "result",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.38,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.078,
+          "layer": 140,
+          "line_height": 0.1014,
+          "text": "RUN OVER"
+        }
+      }
+    },
+    {
+      "id": "title",
+      "name": "Title",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {},
+          "script": "Title",
+          "source": "scripts/title.decay"
+        }
+      }
+    },
+    {
+      "id": "title-best",
+      "name": "TitleBest",
+      "parent": "title",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.05,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.7,
+            0.8,
+            0.95,
+            1.0
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.042,
+          "layer": 140,
+          "line_height": 0.0546,
+          "text": "Best {}"
+        }
+      }
+    },
+    {
+      "id": "title-bg",
+      "name": "TitleBack",
+      "parent": "title",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.1,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.42,
+          0.46,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.image": {
+          "anchor": "center",
+          "layer": 100,
+          "texture": "textures/panel.png",
+          "tint": [
+            1.0,
+            1.0,
+            1.0,
+            0.97
+          ]
+        }
+      }
+    },
+    {
+      "id": "title-hint",
+      "name": "TitleHint",
+      "parent": "title",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.78,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.7,
+            0.8,
+            0.95,
+            1.0
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.03,
+          "layer": 140,
+          "line_height": 0.039,
+          "text": "Move with WASD or hold to steer. You fire on your own."
+        }
+      }
+    },
+    {
+      "id": "title-name",
+      "name": "TitleName",
+      "parent": "title",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.44,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.085,
+          "layer": 140,
+          "line_height": 0.1105,
+          "text": "LAST STAND"
+        }
+      }
+    },
+    {
+      "id": "title-notice",
+      "name": "TitleNotice",
+      "parent": "title",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.1,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            1.0,
+            0.6,
+            0.5,
+            1.0
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.032,
+          "layer": 140,
+          "line_height": 0.0416,
+          "text": "Your saved progress could not be read."
         }
       },
-      "parent": "result"
+      "disabled": true
+    },
+    {
+      "id": "title-start",
+      "name": "TitleStart",
+      "parent": "title",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.55,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.42,
+          0.075,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "action": 0.0
+          },
+          "script": "Button",
+          "source": "scripts/button.decay"
+        },
+        "sindri.ui.button": {
+          "label": "title-start"
+        },
+        "sindri.ui.image": {
+          "anchor": "center",
+          "layer": 110,
+          "texture": "textures/button.png",
+          "tint": [
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "id": "title-start-text",
+      "name": "TitleStartText",
+      "parent": "title",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.572,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.058,
+          "layer": 140,
+          "line_height": 0.0754,
+          "text": "START"
+        }
+      }
+    },
+    {
+      "id": "upgrade-row",
+      "name": "UpgradeRow",
+      "parent": "upgrades",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.ui.layout": {
+          "direction": "column",
+          "spacing": 0.24
+        }
+      }
     },
     {
       "id": "upgrades",
@@ -1719,12 +2527,12 @@
           1.0,
           1.0
         ]
-      },
-      "components": {}
+      }
     },
     {
       "id": "upgrades-bg",
       "name": "UpgradeBack",
+      "parent": "upgrades",
       "transform_3d": {
         "position": [
           0.0,
@@ -1738,29 +2546,29 @@
           1.0
         ],
         "scale": [
-          1.65,
-          0.62,
+          0.42,
+          0.52,
           1.0
         ]
       },
       "components": {
         "sindri.ui.image": {
-          "texture": "textures/panel.png",
           "anchor": "center",
+          "layer": 100,
+          "texture": "textures/panel.png",
           "tint": [
             1.0,
             1.0,
             1.0,
             0.97
-          ],
-          "layer": 100
+          ]
         }
-      },
-      "parent": "upgrades"
+      }
     },
     {
       "id": "upgrades-title",
       "name": "UpgradeTitle",
+      "parent": "upgrades",
       "transform_3d": {
         "position": [
           0.0,
@@ -1781,830 +2589,20 @@
       },
       "components": {
         "sindri.ui.text": {
-          "text": "CHOOSE ONE",
-          "font": "fonts/Inter.ttf",
-          "font_size": 52.0,
-          "line_height": 65.0,
+          "anchor": "center",
           "color": [
             1,
             1,
             1,
             1
           ],
-          "anchor": "center",
-          "layer": 140
-        }
-      },
-      "parent": "upgrades"
-    },
-    {
-      "id": "upgrade-row",
-      "name": "UpgradeRow",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.layout": {
-          "direction": "row",
-          "spacing": 0.72
-        }
-      },
-      "parent": "upgrades"
-    },
-    {
-      "id": "card-dmg",
-      "name": "Heavier Rounds",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.62,
-          0.44,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.tags": {
-          "tags": [
-            "upgrade"
-          ]
-        },
-        "sindri.ui.image": {
-          "texture": "textures/button.png",
-          "anchor": "center",
-          "tint": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "layer": 110
-        },
-        "sindri.ui.button": {
-          "label": "Heavier Rounds"
-        },
-        "sindri.script": {
-          "source": "scripts/upgrade-card.decay",
-          "script": "UpgradeCard",
-          "properties": {
-            "effect": 0.0,
-            "amount": 1.0
-          }
-        }
-      },
-      "parent": "upgrade-row"
-    },
-    {
-      "id": "card-dmg-name",
-      "name": "Heavier Rounds Name",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.06,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "Heavier Rounds",
           "font": "fonts/Inter.ttf",
-          "font_size": 26.0,
-          "line_height": 32.0,
-          "color": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "anchor": "center",
-          "layer": 140
+          "font_size": 0.068,
+          "layer": 140,
+          "line_height": 0.0884,
+          "text": "CHOOSE ONE"
         }
-      },
-      "parent": "card-dmg"
-    },
-    {
-      "id": "card-dmg-blurb",
-      "name": "Heavier Rounds Blurb",
-      "transform_3d": {
-        "position": [
-          0.0,
-          -0.04,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "+1 damage",
-          "font": "fonts/Inter.ttf",
-          "font_size": 20.0,
-          "line_height": 25.0,
-          "color": [
-            0.72,
-            0.82,
-            0.95,
-            1.0
-          ],
-          "anchor": "center",
-          "layer": 140
-        }
-      },
-      "parent": "card-dmg"
-    },
-    {
-      "id": "card-rate",
-      "name": "Faster Cycling",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.62,
-          0.44,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.tags": {
-          "tags": [
-            "upgrade"
-          ]
-        },
-        "sindri.ui.image": {
-          "texture": "textures/button.png",
-          "anchor": "center",
-          "tint": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "layer": 110
-        },
-        "sindri.ui.button": {
-          "label": "Faster Cycling"
-        },
-        "sindri.script": {
-          "source": "scripts/upgrade-card.decay",
-          "script": "UpgradeCard",
-          "properties": {
-            "effect": 1.0,
-            "amount": 0.05
-          }
-        }
-      },
-      "parent": "upgrade-row"
-    },
-    {
-      "id": "card-rate-name",
-      "name": "Faster Cycling Name",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.06,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "Faster Cycling",
-          "font": "fonts/Inter.ttf",
-          "font_size": 26.0,
-          "line_height": 32.0,
-          "color": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "anchor": "center",
-          "layer": 140
-        }
-      },
-      "parent": "card-rate"
-    },
-    {
-      "id": "card-rate-blurb",
-      "name": "Faster Cycling Blurb",
-      "transform_3d": {
-        "position": [
-          0.0,
-          -0.04,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "shoot more often",
-          "font": "fonts/Inter.ttf",
-          "font_size": 20.0,
-          "line_height": 25.0,
-          "color": [
-            0.72,
-            0.82,
-            0.95,
-            1.0
-          ],
-          "anchor": "center",
-          "layer": 140
-        }
-      },
-      "parent": "card-rate"
-    },
-    {
-      "id": "card-speed",
-      "name": "Trimmed Hull",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.62,
-          0.44,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.tags": {
-          "tags": [
-            "upgrade"
-          ]
-        },
-        "sindri.ui.image": {
-          "texture": "textures/button.png",
-          "anchor": "center",
-          "tint": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "layer": 110
-        },
-        "sindri.ui.button": {
-          "label": "Trimmed Hull"
-        },
-        "sindri.script": {
-          "source": "scripts/upgrade-card.decay",
-          "script": "UpgradeCard",
-          "properties": {
-            "effect": 2.0,
-            "amount": 0.8
-          }
-        }
-      },
-      "parent": "upgrade-row"
-    },
-    {
-      "id": "card-speed-name",
-      "name": "Trimmed Hull Name",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.06,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "Trimmed Hull",
-          "font": "fonts/Inter.ttf",
-          "font_size": 26.0,
-          "line_height": 32.0,
-          "color": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "anchor": "center",
-          "layer": 140
-        }
-      },
-      "parent": "card-speed"
-    },
-    {
-      "id": "card-speed-blurb",
-      "name": "Trimmed Hull Blurb",
-      "transform_3d": {
-        "position": [
-          0.0,
-          -0.04,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "+0.8 speed",
-          "font": "fonts/Inter.ttf",
-          "font_size": 20.0,
-          "line_height": 25.0,
-          "color": [
-            0.72,
-            0.82,
-            0.95,
-            1.0
-          ],
-          "anchor": "center",
-          "layer": 140
-        }
-      },
-      "parent": "card-speed"
-    },
-    {
-      "id": "card-magnet",
-      "name": "Wider Field",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.62,
-          0.44,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.tags": {
-          "tags": [
-            "upgrade"
-          ]
-        },
-        "sindri.ui.image": {
-          "texture": "textures/button.png",
-          "anchor": "center",
-          "tint": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "layer": 110
-        },
-        "sindri.ui.button": {
-          "label": "Wider Field"
-        },
-        "sindri.script": {
-          "source": "scripts/upgrade-card.decay",
-          "script": "UpgradeCard",
-          "properties": {
-            "effect": 3.0,
-            "amount": 1.2
-          }
-        }
-      },
-      "parent": "upgrade-row"
-    },
-    {
-      "id": "card-magnet-name",
-      "name": "Wider Field Name",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.06,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "Wider Field",
-          "font": "fonts/Inter.ttf",
-          "font_size": 26.0,
-          "line_height": 32.0,
-          "color": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "anchor": "center",
-          "layer": 140
-        }
-      },
-      "parent": "card-magnet"
-    },
-    {
-      "id": "card-magnet-blurb",
-      "name": "Wider Field Blurb",
-      "transform_3d": {
-        "position": [
-          0.0,
-          -0.04,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "+1.2 collection",
-          "font": "fonts/Inter.ttf",
-          "font_size": 20.0,
-          "line_height": 25.0,
-          "color": [
-            0.72,
-            0.82,
-            0.95,
-            1.0
-          ],
-          "anchor": "center",
-          "layer": 140
-        }
-      },
-      "parent": "card-magnet"
-    },
-    {
-      "id": "card-hull",
-      "name": "Plating",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.62,
-          0.44,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.tags": {
-          "tags": [
-            "upgrade"
-          ]
-        },
-        "sindri.ui.image": {
-          "texture": "textures/button.png",
-          "anchor": "center",
-          "tint": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "layer": 110
-        },
-        "sindri.ui.button": {
-          "label": "Plating"
-        },
-        "sindri.script": {
-          "source": "scripts/upgrade-card.decay",
-          "script": "UpgradeCard",
-          "properties": {
-            "effect": 4.0,
-            "amount": 2.0
-          }
-        }
-      },
-      "parent": "upgrade-row"
-    },
-    {
-      "id": "card-hull-name",
-      "name": "Plating Name",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.06,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "Plating",
-          "font": "fonts/Inter.ttf",
-          "font_size": 26.0,
-          "line_height": 32.0,
-          "color": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "anchor": "center",
-          "layer": 140
-        }
-      },
-      "parent": "card-hull"
-    },
-    {
-      "id": "card-hull-blurb",
-      "name": "Plating Blurb",
-      "transform_3d": {
-        "position": [
-          0.0,
-          -0.04,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "+2 hull, repaired",
-          "font": "fonts/Inter.ttf",
-          "font_size": 20.0,
-          "line_height": 25.0,
-          "color": [
-            0.72,
-            0.82,
-            0.95,
-            1.0
-          ],
-          "anchor": "center",
-          "layer": 140
-        }
-      },
-      "parent": "card-hull"
-    },
-    {
-      "id": "card-pierce",
-      "name": "Lance Rounds",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.62,
-          0.44,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.tags": {
-          "tags": [
-            "upgrade"
-          ]
-        },
-        "sindri.ui.image": {
-          "texture": "textures/button.png",
-          "anchor": "center",
-          "tint": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "layer": 110
-        },
-        "sindri.ui.button": {
-          "label": "Lance Rounds"
-        },
-        "sindri.script": {
-          "source": "scripts/upgrade-card.decay",
-          "script": "UpgradeCard",
-          "properties": {
-            "effect": 5.0,
-            "amount": 1.0
-          }
-        }
-      },
-      "parent": "upgrade-row"
-    },
-    {
-      "id": "card-pierce-name",
-      "name": "Lance Rounds Name",
-      "transform_3d": {
-        "position": [
-          0.0,
-          0.06,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "Lance Rounds",
-          "font": "fonts/Inter.ttf",
-          "font_size": 26.0,
-          "line_height": 32.0,
-          "color": [
-            1,
-            1,
-            1,
-            1
-          ],
-          "anchor": "center",
-          "layer": 140
-        }
-      },
-      "parent": "card-pierce"
-    },
-    {
-      "id": "card-pierce-blurb",
-      "name": "Lance Rounds Blurb",
-      "transform_3d": {
-        "position": [
-          0.0,
-          -0.04,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "components": {
-        "sindri.ui.text": {
-          "text": "shots pierce 1 more",
-          "font": "fonts/Inter.ttf",
-          "font_size": 20.0,
-          "line_height": 25.0,
-          "color": [
-            0.72,
-            0.82,
-            0.95,
-            1.0
-          ],
-          "anchor": "center",
-          "layer": 140
-        }
-      },
-      "parent": "card-pierce"
+      }
     }
   ]
 }

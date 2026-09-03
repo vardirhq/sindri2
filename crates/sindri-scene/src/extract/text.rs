@@ -4,9 +4,15 @@ use std::collections::BTreeMap;
 
 use sindri_core::World;
 use sindri_render::{
-    ExtractedFrame, FrameCamera, FrameCommand, FramePass, RenderLayer, RenderStage, TextInstance,
-    Viewport,
+    ExtractedFrame, FrameCamera, FrameCommand, FramePass, RenderLayer, RenderStage, TextError,
+    TextInstance, Viewport,
 };
+
+/// How tall the overlay is in its own units.
+///
+/// Two, centred on the origin, whatever the viewport is — the same two a screen
+/// element's transform is placed in. A font size is a share of this.
+const OVERLAY_HEIGHT: f32 = 2.0;
 
 use crate::UiTextComponent;
 
@@ -44,6 +50,14 @@ impl SceneExtractor {
         let mut layers: BTreeMap<i32, Vec<TextInstance>> = BTreeMap::new();
 
         for (entity, text) in texts {
+            // Taller than the whole screen is not a size anyone wants; it is a
+            // pixel count typed where a share of the screen goes, which is the
+            // mistake this unit invites and the one worth naming.
+            if text.font_size > OVERLAY_HEIGHT {
+                return Err(SceneExtractError::Text(TextError::InvalidFontSize(
+                    text.font_size,
+                )));
+            }
             let transform = world
                 .get(entity)
                 .and_then(|data| data.transform_3d)
@@ -57,8 +71,14 @@ impl SceneExtractor {
                     text.resolved(),
                     text.font,
                     position,
-                    text.font_size,
-                    text.line_height,
+                    // Overlay units into pixels, which is the one conversion
+                    // between what a scene says and what a renderer draws. The
+                    // overlay is two tall however many pixels the viewport is,
+                    // so half the height is what one unit is worth — the same
+                    // ratio `ScreenExtent` uses to bring a safe area the other
+                    // way.
+                    text.font_size * height * 0.5,
+                    text.line_height * height * 0.5,
                     text.color,
                 )?);
         }

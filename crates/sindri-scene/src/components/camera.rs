@@ -24,7 +24,40 @@ pub enum CameraComponent {
         vertical_size: f32,
         near: f32,
         far: f32,
+        /// Which axis `vertical_size` measures.
+        ///
+        /// Defaulted, so every scene written before this keeps framing exactly
+        /// what it framed.
+        #[serde(default)]
+        fit: CameraFit,
     },
+}
+
+/// Which way round a camera frames what it was told to frame.
+///
+/// An orthographic camera says how much world it shows and the other axis
+/// follows the aspect ratio. Which axis is told is the whole question on a
+/// phone: a game framed by height shows a fixed amount vertically and whatever
+/// the width happens to be, so turning a wide window into a tall one takes the
+/// sides off the world — an arena that filled a desktop is cropped down its
+/// middle on a portrait screen, and the player is shooting at things nobody
+/// can see.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum CameraFit {
+    /// Frame the size vertically, and let the width follow the aspect.
+    ///
+    /// What every camera did before there was a choice, and the right answer
+    /// for a game that will only ever be wide.
+    #[default]
+    Height,
+    /// Frame the size on whichever axis is shorter.
+    ///
+    /// The size becomes a promise rather than a measurement: *this much world
+    /// is visible whichever way the screen is turned*. A square arena framed
+    /// this way fills the height of a landscape window and the width of a
+    /// portrait one, and is never cut off by either.
+    Shorter,
 }
 
 impl CameraComponent {

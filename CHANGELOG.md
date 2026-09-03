@@ -8,6 +8,29 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **Scene format 9: a font size is a share of the screen.** Everything else
+  about a screen element was already in the overlay's units — two tall, centred
+  — including the safe area, which is converted into them before anything is
+  placed. Text was the exception, and it was the one number that decides whether
+  a word can be read. A migration converts every existing scene, so what read
+  correctly at 720 pixels still does, and now keeps reading correctly at every
+  other size.
+
+- **`sindri.camera` gains `fit`.** An orthographic camera framed by height shows
+  a fixed amount vertically and whatever width follows, so turning a wide window
+  tall takes the sides off the world. `"fit": "shorter"` makes the size a promise
+  — this much world is visible whichever way the screen is turned. Defaulted to
+  the old behaviour, so no scene changes meaning.
+
+### Fixed
+
+- **A browser canvas was a letterbox.** The host asked for the window size its
+  project configured, which on a desktop is a window someone can drag and in a
+  browser is a fixed rectangle in the middle of a page — 960 by 540 on a phone
+  held upright, with the whole screen around it empty. A page *is* the window in
+  a browser, so the canvas is the page now, and follows it when it changes,
+  which is what rotating a phone is.
+
 - **A game.** `games/orbital-last-stand` is the second vertical-slice
   acceptance project the audit asked for, and it passes all twelve of its
   points: a scene, eight prefabs, and fifteen Decay scripts, with no Rust in it
