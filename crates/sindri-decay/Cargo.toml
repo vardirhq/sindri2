@@ -14,7 +14,13 @@ publish = false
 sindri-core = { path = "../sindri-core" }
 sindri-grid = { path = "../sindri-grid" }
 sindri-physics = { path = "../sindri-physics" }
-sindri-platform = { path = "../sindri-platform" }
+# Without the audio backend: Decay reads the input state and the key names and
+# emits typed playback *intent*, which the host drains — it never talks to a
+# device. Taking the default would put a sound card in the dependency tree of
+# everything that runs a script, `sindri-export` included, which is a build
+# that needs ALSA installed to read some JSON. A host that plays the intent
+# depends on `sindri-platform` itself and turns it back on.
+sindri-platform = { path = "../sindri-platform", default-features = false }
 sindri-scene = { path = "../sindri-scene" }
 decay-ir = { path = "../../decay/crates/decay-ir" }
 decay-runtime = { path = "../../decay/crates/decay-runtime" }

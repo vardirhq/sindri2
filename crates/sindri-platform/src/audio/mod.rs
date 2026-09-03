@@ -8,9 +8,14 @@ use thiserror::Error;
 
 // The backends are gated where they are declared rather than inside each file,
 // so a file is either compiled whole or not at all.
+//
+// The native one is behind `audio` as well as its target, because it is the
+// one that links a sound card: a tool that only reads the input state should
+// not need ALSA installed to build. `SilentAudioBackend` is always here, so a
+// build without the feature still has something that satisfies the boundary.
 #[cfg(target_arch = "wasm32")]
 mod browser;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "audio"))]
 mod native;
 mod silent;
 
@@ -19,7 +24,7 @@ mod tests;
 
 #[cfg(target_arch = "wasm32")]
 pub use browser::BrowserAudioBackend;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "audio"))]
 pub use native::NativeAudioBackend;
 pub use silent::SilentAudioBackend;
 
