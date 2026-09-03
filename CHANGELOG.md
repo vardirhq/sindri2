@@ -38,6 +38,13 @@ All notable changes to Sindri Next will be documented here.
 
 ### Fixed
 
+- **Text on a canvas in the scene did not scale with the view.** An element's
+  position came from the projection and so followed the camera; its size was
+  worked out from the viewport and so did not, which meant zooming moved the
+  words around without making them any bigger. What one overlay unit is worth in
+  pixels is measured through the projection now, and the editor's pick box is
+  measured the same way so a click does not drift as the view zooms.
+
 - **A browser canvas was a letterbox.** The host asked for the window size its
   project configured, which on a desktop is a window someone can drag and in a
   browser is a fixed rectangle in the middle of a page — 960 by 540 on a phone

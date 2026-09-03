@@ -180,7 +180,7 @@ impl EditorApp {
                 // The same size and the same alignment the frame is drawn with,
                 // asked of the same functions: a box worked out a second way is
                 // a box that disagrees with the picture it is meant to be over.
-                let metrics = text.pixel_metrics(height);
+                let metrics = text.pixel_metrics(overlay.pixels_per_unit(height));
                 let instance = TextInstance::new(
                     text.text,
                     text.font,
