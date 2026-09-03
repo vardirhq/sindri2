@@ -63,6 +63,29 @@ For a static host, that is one rule each:
 Exporting again removes the previous build's directory. Without that, every edit
 would leave a whole copy of the project behind.
 
+## Getting one onto GitHub Pages
+
+`.github/workflows/pages.yml` exports every project the site serves and copies
+the browser host in beside each one:
+
+```bash
+cargo run -p sindri-export --bin sindri-export -- \
+  games/orbital-last-stand target/pages/examples/orbital-last-stand \
+  --base /sindri2/examples/orbital-last-stand/
+cp -R game/pkg/. target/pages/examples/orbital-last-stand/pkg/
+```
+
+One host serves every project, because it reads the manifest rather than
+carrying a list of one game's assets. The `--base` is the route the project
+will be served from, which for a Pages project site includes the repository
+name.
+
+The site used to copy an asset directory and write its own manifest instead.
+That was a second answer to the question the export exists to answer, and the
+two disagreed: the hand-written manifest named no kinds, the host reads kinds
+to know what to ask for, and a project whose manifest names no scene is a
+project that does not open. Nothing assembles a build by hand any more.
+
 ## Deployment, and the subpath
 
 `--base` is where the export will be served from: `/` for a domain of its own,

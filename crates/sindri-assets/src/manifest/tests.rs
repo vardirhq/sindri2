@@ -150,3 +150,61 @@ fn a_directory_becomes_the_names_a_scene_would_write() {
         Ok(())
     );
 }
+
+/// A manifest is read by a host that asks for its assets *by kind*, so one
+/// that calls everything `Other` describes a project with no scene, no
+/// scripts, and no textures — and the host that reads it loads nothing at all.
+///
+/// This is not hypothetical: the site's pages were built from a directory scan
+/// that did exactly this, and the game it served stopped opening the moment
+/// the host started reading kinds.
+#[test]
+fn a_scanned_manifest_says_what_its_assets_are() {
+    let mut manifest = AssetManifest::new();
+    for (id, expected) in [
+        ("demo.scene.json", AssetKind::Scene),
+        ("scripts/player.decay", AssetKind::Script),
+        ("prefabs/bullet.prefab.json", AssetKind::Prefab),
+        ("textures/player.sheet.json", AssetKind::Sheet),
+        ("textures/player.png", AssetKind::Texture),
+        ("fonts/Inter.ttf", AssetKind::Font),
+        ("audio/theme.wav", AssetKind::Audio),
+        ("fonts/Inter-OFL.txt", AssetKind::Other),
+    ] {
+        manifest.insert(AssetId::new(id).expect("a usable id"), b"bytes");
+        assert_eq!(
+            AssetKind::for_id(id),
+            expected,
+            "{id} was taken for the wrong kind"
+        );
+    }
+
+    for kind in [
+        AssetKind::Scene,
+        AssetKind::Script,
+        AssetKind::Prefab,
+        AssetKind::Sheet,
+        AssetKind::Texture,
+        AssetKind::Font,
+        AssetKind::Audio,
+    ] {
+        assert!(
+            manifest.ids_of(kind).next().is_some(),
+            "a host asking for {} would be told there are none",
+            kind.as_str()
+        );
+    }
+}
+
+/// A prefab and a sheet both end in `.json`, and so does a scene.
+#[test]
+fn the_longer_name_wins_among_the_json_documents() {
+    assert_eq!(
+        AssetKind::for_id("a/b.prefab.json"),
+        AssetKind::Prefab,
+        "a prefab read as a sheet is a prefab nothing can spawn"
+    );
+    assert_eq!(AssetKind::for_id("a/b.sheet.json"), AssetKind::Sheet);
+    assert_eq!(AssetKind::for_id("a/b.scene.json"), AssetKind::Scene);
+    assert_eq!(AssetKind::for_id("a/b.json"), AssetKind::Other);
+}

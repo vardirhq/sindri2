@@ -152,6 +152,32 @@ impl AssetKind {
         Self::Other,
     ];
 
+    /// What a file is, from its name.
+    ///
+    /// The last resort, for the two callers that have nothing else to go on: a
+    /// directory scan, and an asset a project listed by hand. Everything found
+    /// by walking a scene already knows what it is, because the component that
+    /// named it says so — and that is the better answer wherever it is
+    /// available, since a texture called `notes.txt` is still a texture if a
+    /// sprite names it.
+    ///
+    /// An extension nobody recognises is `Other`, which is honest: the engine
+    /// will not decode it, and refusing to carry it would be worse.
+    #[must_use]
+    pub fn for_id(id: &str) -> Self {
+        match id.rsplit_once('.').map(|(_, extension)| extension) {
+            Some("wav" | "ogg" | "mp3" | "flac") => Self::Audio,
+            Some("png" | "jpg" | "jpeg") => Self::Texture,
+            Some("ttf" | "otf") => Self::Font,
+            Some("decay") => Self::Script,
+            // Both end in `.json`, so the longer name is tested first.
+            _ if id.ends_with(sindri_core::PREFAB_SUFFIX) => Self::Prefab,
+            _ if id.ends_with(".sheet.json") => Self::Sheet,
+            _ if id.ends_with(".scene.json") => Self::Scene,
+            _ => Self::Other,
+        }
+    }
+
     /// The name this kind is stored under.
     #[must_use]
     pub const fn as_str(self) -> &'static str {
@@ -250,8 +276,15 @@ impl AssetManifest {
     }
 
     /// Records what an asset is, returning what it was recorded as before.
+    /// Records an asset, taking it for whatever its name says it is.
+    ///
+    /// It used to record every asset as `Other`, which was harmless while
+    /// nothing read kinds and became a trap the moment a host asked for its
+    /// assets by kind: a manifest of nothing but `Other` describes a project
+    /// with no scene, and the host that read one loaded nothing at all.
     pub fn insert(&mut self, id: AssetId, bytes: &[u8]) -> Option<ManifestEntry> {
-        self.insert_as(id, AssetKind::Other, bytes)
+        let kind = AssetKind::for_id(id.as_str());
+        self.insert_as(id, kind, bytes)
     }
 
     /// Records what an asset is, and what kind of thing it is.
