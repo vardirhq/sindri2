@@ -24,7 +24,8 @@ pub use camera_math::camera_rotation_from_look_at;
 pub use components::{
     CameraComponent, CameraFit, GridNavigationComponent, GridOccupantComponent, GridWallDocument,
     MeshComponent, MeshPrimitive, SpriteComponent, TileProjection, TilemapComponent, TilemapError,
-    UiAnchor, UiFill, UiFillEdge, UiImageComponent, UiTextComponent, ui_text_template,
+    UiAnchor, UiFill, UiFillEdge, UiImageComponent, UiTextAutoSize, UiTextCase, UiTextComponent,
+    UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap, ui_text_template,
 };
 pub use effects::{EffectBurstComponent, Effects2d, Fleck};
 pub use extract::{
@@ -36,7 +37,7 @@ pub use physics::{Collider2dComponent, RigidBody2dComponent, RigidBodyKind};
 pub use physics_sync::{PhysicsSyncError, ScenePhysics2d};
 pub use screen_ui::{
     PointerFrame, SafeArea, ScreenExtent, ScreenRect, ScreenUi, UiButtonComponent, UiDirection,
-    UiLayoutComponent,
+    UiHierarchy, UiLayoutComponent, UiPlaced,
 };
 pub use textures::{
     FONT_NAMING_COMPONENTS, PROCEDURAL_TEXTURES, ProceduralTexture, SheetBindError,

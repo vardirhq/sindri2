@@ -7,20 +7,31 @@ rust-version.workspace = true
 license.workspace = true
 publish = false
 
-# No library and no binary. The game is its scene, its prefabs, and its Decay —
-# a project, not a crate. What lives here is the harness that plays it, which
-# assembles the same public pieces a host does and would fail if any of them
-# were private.
+# No game code. The game is its scene, its prefabs, and its Decay — a project,
+# not a crate. What lives here is the harness that plays it, which assembles the
+# same public pieces a host does and would fail if any of them were private, and
+# a binary that photographs the result so a claim about what is on screen can be
+# checked rather than asserted.
 [lib]
 path = "src/lib.rs"
 
 [dependencies]
+sindri-assets = { path = "../../crates/sindri-assets" }
+sindri-gpu = { path = "../../crates/sindri-gpu" }
+sindri-render = { path = "../../crates/sindri-render" }
+glam.workspace = true
+png = "0.18"
+pollster.workspace = true
+wgpu.workspace = true
 sindri-core = { path = "../../crates/sindri-core" }
 sindri-decay = { path = "../../crates/sindri-decay" }
 sindri-platform = { path = "../../crates/sindri-platform" }
 sindri-scene = { path = "../../crates/sindri-scene" }
 serde_json.workspace = true
 
+[[bin]]
+name = "orbital-capture"
+path = "src/bin/capture.rs"
+
 [dev-dependencies]
 sindri-export = { path = "../../crates/sindri-export" }
-sindri-assets = { path = "../../crates/sindri-assets" }

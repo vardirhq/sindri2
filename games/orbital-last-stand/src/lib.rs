@@ -242,6 +242,29 @@ impl Run {
             .map(|(entity, _)| entity)
     }
 
+    /// The extractor the harness loaded, for a caller that wants to draw a
+    /// frame rather than only step one.
+    #[must_use]
+    pub fn scene_extractor(&self) -> SceneExtractor {
+        SceneExtractor::new().expect("the components registered when the run opened")
+    }
+
+    /// Every texture the scene names, so a caller can load them off disk.
+    #[must_use]
+    pub fn referenced_textures(&self) -> Vec<String> {
+        sindri_scene::referenced_textures(&self.world)
+            .into_iter()
+            .collect()
+    }
+
+    /// Every font the scene names.
+    #[must_use]
+    pub fn referenced_fonts(&self) -> Vec<String> {
+        sindri_scene::referenced_fonts(&self.world)
+            .into_iter()
+            .collect()
+    }
+
     /// What a bar is filled to, as the scene now holds it.
     #[must_use]
     pub fn fill(&self, entity: sindri_core::EntityId) -> Option<f32> {

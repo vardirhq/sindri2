@@ -3,10 +3,9 @@
 use eframe::egui::{self, Pos2, Rect, Response};
 use glam::Vec2 as GlamVec2;
 use sindri_core::{CommandBuffer, EntityId, Transform3D, WorldCommand};
-use sindri_render::{TextInstance, Viewport};
 use sindri_scene::{
-    CameraView, OverlayPlacement, OverlayView, UiAnchor, UiImageComponent, UiTextComponent,
-    ViewCamera, overlay_in_scene,
+    CameraView, OverlayPlacement, OverlayView, UiAnchor, UiHierarchy, UiImageComponent, UiPlaced,
+    UiTextComponent, ViewCamera, overlay_in_scene,
 };
 
 use crate::{
@@ -17,7 +16,6 @@ use crate::{
 };
 
 use super::EditorApp;
-use super::frame::physical_viewport_dimension;
 use super::{UI_IMAGE_COMPONENT, UI_TEXT_COMPONENT};
 
 /// One tile under the Scene-view pointer, already projected back into the
@@ -75,15 +73,15 @@ impl EditorApp {
 
     /// Resolves a Scene-view point through the exact camera that drew it.
     ///
-    /// `scale` is the window's points-per-pixel, which matters here for one
-    /// reason: a string is laid out in physical pixels, so how much of the
-    /// viewport it covers depends on how many pixels the viewport has.
+    /// Nothing here depends on the window's pixel density. It used to: a string
+    /// was laid out in physical pixels, so what it covered depended on how many
+    /// the viewport had. Text is measured in the scene's own units now, and a
+    /// pick box in those units is the same box at any resolution.
     fn pick_viewport(
         &mut self,
         rect: Rect,
         pointer: Pos2,
         camera: CameraView,
-        scale: f32,
     ) -> Result<Option<EntityId>, String> {
         if !rect.contains(pointer) {
             return Ok(None);
@@ -109,11 +107,7 @@ impl EditorApp {
         // would have been if it were stuck to the viewport.
         {
             let (overlay, placement) = overlay_in_scene(camera, self.canvas_aspect());
-            let viewport = Viewport::new(
-                physical_viewport_dimension(rect.width(), scale),
-                physical_viewport_dimension(rect.height(), scale),
-            );
-            let texts = self.text_targets(viewport, overlay, &placement);
+            let texts = self.text_targets(overlay, &placement);
             if let Some(entity) = picking::pick_ui(
                 &self.world,
                 self.scene.components(),
@@ -140,17 +134,15 @@ impl EditorApp {
     ///
     /// Measured through the renderer that draws them rather than guessed from
     /// the font size and the character count, because what a string covers is
-    /// glyph layout — kerning, fallback, the wrap the viewport imposes — and a
-    /// box that is nearly right picks the wrong entity along its edges. It is
-    /// measured at the resolution the view is rendered at, so the fraction of
-    /// the viewport it works out to is the fraction the picture shows.
+    /// glyph layout — kerning and fallback — and a box that is nearly right
+    /// picks the wrong entity along its edges. Measured in overlay units and
+    /// then projected, which is exactly what the frame does with the quads.
     ///
     /// A string whose font never arrived measures to nothing and is left out,
     /// which is what the frame does with it too: an unbound face is not drawn,
     /// so there is nothing there to click.
     fn text_targets(
         &mut self,
-        viewport: Viewport,
         overlay: OverlayView,
         placement: &OverlayPlacement,
     ) -> Vec<picking::TextTarget> {
@@ -161,8 +153,9 @@ impl EditorApp {
         else {
             return Vec::new();
         };
-        let width = f32::from(u16::try_from(viewport.width).unwrap_or(u16::MAX)).max(1.0);
-        let height = f32::from(u16::try_from(viewport.height).unwrap_or(u16::MAX)).max(1.0);
+        let Ok(hierarchy) = UiHierarchy::of(&self.world, self.scene.components()) else {
+            return Vec::new();
+        };
         texts
             .into_iter()
             // A fully transparent string swallowing clicks is the bug the win
@@ -170,38 +163,36 @@ impl EditorApp {
             // there to look at.
             .filter(|(_, text)| picking::is_drawn(text.color))
             .filter_map(|(entity, text)| {
-                let transform = self
-                    .world
-                    .get(entity)
-                    .and_then(|data| data.transform_3d)
-                    .unwrap_or_default();
-                let anchored = placement.text_origin(overlay, transform, text.anchor);
                 let layer = text.layer;
-                // The same size and the same alignment the frame is drawn with,
-                // asked of the same functions: a box worked out a second way is
-                // a box that disagrees with the picture it is meant to be over.
-                let metrics = text.pixel_metrics(overlay.pixels_per_unit(height));
-                let instance = TextInstance::new(
-                    text.text,
-                    text.font,
-                    [anchored[0] * width, anchored[1] * height],
-                    metrics[0],
-                    metrics[1],
-                    text.color,
-                    text.anchor.text_align(),
-                )
-                .ok()?;
-                let size = self.renderers.text.measure(&instance, viewport)?;
-                let [left, top] = sindri_render::aligned_origin(&instance, size);
+                // The same options and the same measurement the frame is drawn
+                // with, asked of the same functions: a box worked out a second
+                // way is a box that disagrees with the picture it is over.
+                let instance = text
+                    .instance(
+                        placement
+                            .origin(hierarchy.placement_or(entity, text.anchor))
+                            .to_array(),
+                    )
+                    .ok()?;
+                let (centre, size) = self.renderers.text.rect(&instance)?;
+                // Overlay units into viewport fractions, through the projection
+                // the frame used. Text is measured in the scene's own units now,
+                // so the box follows a pan or a zoom without being remeasured.
+                let near = overlay.viewport_fraction(GlamVec2::new(
+                    centre[0] - size[0] * 0.5,
+                    centre[1] + size[1] * 0.5,
+                ));
+                let far = overlay.viewport_fraction(GlamVec2::new(
+                    centre[0] + size[0] * 0.5,
+                    centre[1] - size[1] * 0.5,
+                ));
+                if !near.iter().chain(far.iter()).all(|value| value.is_finite()) {
+                    return None;
+                }
                 Some(picking::TextTarget {
                     entity,
                     layer,
-                    bounds: [
-                        left / width,
-                        top / height,
-                        (left + size[0]) / width,
-                        (top + size[1]) / height,
-                    ],
+                    bounds: [near[0], near[1], far[0], far[1]],
                 })
             })
             .collect()
@@ -238,8 +229,7 @@ impl EditorApp {
         } else {
             Pick::Only
         };
-        let scale = response.ctx.pixels_per_point();
-        match self.pick_viewport(rect, pointer, camera, scale) {
+        match self.pick_viewport(rect, pointer, camera) {
             // Clicking empty space still clears, whatever is held: there is no
             // entity to add, and leaving the selection alone would make an
             // empty click mean nothing at all.
@@ -361,6 +351,42 @@ impl EditorApp {
             .collect()
     }
 
+    /// The rect the selected text element occupies, in overlay units.
+    ///
+    /// `None` unless one text element is selected and its face is loaded — a
+    /// string whose font never arrived has no measurable extent, and a guessed
+    /// one would put a handle around a box the words are not in.
+    ///
+    /// Measured rather than read off the component, because a box is only the
+    /// authored bounds where there are any: an unbounded label's rect is what its
+    /// words came out as, which nothing but the shaper knows.
+    pub(super) fn selected_text_rect(
+        &mut self,
+        camera: CameraView,
+    ) -> Option<([f32; 2], [f32; 2])> {
+        let entity = self.selection.primary()?;
+        let text = self
+            .scene
+            .components()
+            .get::<UiTextComponent>(&self.world, entity)
+            .ok()??;
+        let world = self
+            .scene
+            .world_camera(&self.world, camera)
+            .ok()
+            .flatten()?;
+        let (_, placement) = overlay_in_scene(world, self.canvas_aspect());
+        let hierarchy = UiHierarchy::of(&self.world, self.scene.components()).ok()?;
+        let instance = text
+            .instance(
+                placement
+                    .origin(hierarchy.placement_or(entity, text.anchor))
+                    .to_array(),
+            )
+            .ok()?;
+        self.renderers.text.rect(&instance)
+    }
+
     /// The camera an entity's handles are drawn through, and where they sit.
     fn gizmo_camera(
         &self,
@@ -378,10 +404,18 @@ impl EditorApp {
             // Through the canvas rather than the viewport, so a UI element's
             // handles are on the canvas with it and move when it is panned to.
             let (overlay, placement) = overlay_in_scene(world, self.canvas_aspect());
-            let anchor = self.ui_anchor(entity);
+            // Where the element actually ends up, parents and layout folded in,
+            // so a handle sits on the label rather than where the label would be
+            // if it were not on a card.
+            let placed = UiHierarchy::of(&self.world, self.scene.components())
+                .ok()
+                .map_or_else(
+                    || UiPlaced::at_anchor(self.ui_anchor(entity)),
+                    |hierarchy| hierarchy.placement_or(entity, self.ui_anchor(entity)),
+                );
             return Some((
                 as_view_camera(overlay),
-                Anchoring::on_overlay(placement.origin(transform, anchor)),
+                Anchoring::on_overlay(placement.origin(placed)),
             ));
         }
         Some((world, Anchoring::in_world(transform)))

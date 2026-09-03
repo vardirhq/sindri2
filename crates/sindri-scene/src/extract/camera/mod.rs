@@ -14,7 +14,8 @@ use self::view::{
     CameraView, OverlayExtent, WorldProjection, orbited_offset, panned_shift,
     resolved_screen_overlay, safe_rotation,
 };
-use crate::{CameraComponent, CameraFit, UiAnchor};
+use crate::screen_ui::UiPlaced;
+use crate::{CameraComponent, CameraFit};
 
 use super::ui::ui_matrix;
 
@@ -78,36 +79,21 @@ pub struct OverlayView {
 }
 
 impl OverlayView {
-    /// How many pixels one overlay unit covers, as this view draws it.
+    /// Where a point in overlay units lands on the viewport, as a fraction of
+    /// it across and down.
     ///
-    /// A text size is a share of the overlay, and this is what that share is
-    /// worth on the screen right now. Measured through the projection rather
-    /// than assumed from the viewport, because the two are only the same while
-    /// the overlay *is* the viewport: a canvas placed in the scene is seen
-    /// through the world camera, so zooming in makes one overlay unit cover
-    /// more pixels — and text that assumed the viewport stayed the size it was
-    /// while everything around it grew.
-    ///
-    /// Measured along Y at the canvas plane, which is the axis a font size is
-    /// quoted in.
+    /// The one bridge between the units a UI element is authored in and the
+    /// screen. It exists so that an editor hit-testing a click asks the same
+    /// projection the frame was drawn through, from the same function, rather
+    /// than keeping a second copy of a matrix multiply and a divide.
     #[must_use]
-    pub fn pixels_per_unit(&self, viewport_height: f32) -> f32 {
-        let at = |y: f32| {
-            let clip = self.view_projection * Vec4::new(0.0, y, 0.0, 1.0);
-            (clip.w.abs() > f32::EPSILON).then(|| clip.y / clip.w)
-        };
-        let Some((origin, up)) = at(0.0).zip(at(1.0)) else {
-            return viewport_height * 0.5;
-        };
-        let span = (up - origin).abs() * viewport_height * 0.5;
-        // A canvas seen edge-on spans nothing, and text asked to be nothing
-        // tall is refused further down. Falling back to the viewport keeps a
-        // degenerate view showing something rather than erroring.
-        if span.is_finite() && span > 0.0 {
-            span
-        } else {
-            viewport_height * 0.5
+    pub fn viewport_fraction(&self, point: Vec2) -> [f32; 2] {
+        let clip = self.view_projection * Vec4::new(point.x, point.y, 0.0, 1.0);
+        if clip.w.abs() <= f32::EPSILON {
+            return [f32::NAN; 2];
         }
+        let ndc = clip.truncate() / clip.w;
+        [(ndc.x + 1.0) * 0.5, (1.0 - ndc.y) * 0.5]
     }
 }
 
@@ -169,46 +155,30 @@ impl OverlayPlacement {
         Self { extent }
     }
 
-    /// The model matrix a UI element with this transform and anchor is drawn
-    /// with — the same one the frame uses, from the same function.
-    #[must_use]
-    pub fn place(&self, transform: Transform3D, anchor: UiAnchor) -> Mat4 {
-        ui_matrix(transform, anchor, self.extent)
-    }
-
-    /// Where a string's top-left lands, as a fraction of the viewport.
+    /// The model matrix an already-placed UI element is drawn with — the same
+    /// one the frame uses, from the same function.
     ///
-    /// Text is the one overlay element positioned in viewport pixels rather
-    /// than in overlay units: glyphon lays a string out from a point, and the
-    /// frame's text pass hands it this one. Answered as a fraction so a caller
-    /// can scale it by whichever resolution it is asking about — and so that
-    /// an editor hit-testing a click can ask the same question the frame asks,
-    /// from the same function, rather than keeping a second copy of two
-    /// projections and a divide.
+    /// `placed` comes from [`UiHierarchy`], which is what folds an element's
+    /// ancestors and its siblings' layout into one offset. A caller that has
+    /// only an anchor — a tool looking at one entity — can build a bare
+    /// [`UiPlaced::at_anchor`], and gets what an element with no parents has
+    /// always got.
     #[must_use]
-    pub fn text_origin(
-        &self,
-        view: OverlayView,
-        transform: Transform3D,
-        anchor: UiAnchor,
-    ) -> [f32; 2] {
-        let clip = view.view_projection * self.place(transform, anchor).w_axis;
-        let ndc = clip.truncate() / clip.w;
-        [(ndc.x + 1.0) * 0.5, (1.0 - ndc.y) * 0.5]
+    pub fn place(&self, placed: UiPlaced, transform: Transform3D) -> Mat4 {
+        ui_matrix(placed, transform, self.extent)
     }
 
     /// Where the element's own origin sits, in overlay units.
     ///
-    /// What a transform gizmo for a UI element is drawn at. Drawn at the raw
-    /// transform instead, it appears wherever that offset happens to point in
-    /// the world — for an element anchored top-centre with a small offset,
-    /// that is the middle of the viewport rather than the element.
+    /// What a transform gizmo for a UI element is drawn at, and where a string
+    /// is laid out from. Drawn at the raw transform instead, it appears wherever
+    /// that offset happens to point in the world — for an element anchored
+    /// top-centre with a small offset, that is the middle of the viewport rather
+    /// than the element.
     #[must_use]
-    pub fn origin(&self, transform: Transform3D, anchor: UiAnchor) -> Vec2 {
-        let unit = Vec2::from_array(anchor.unit_offset());
-        self.extent.center
-            + unit * self.extent.half_extent
-            + Vec2::from_array(transform.position_2d())
+    pub fn origin(&self, placed: UiPlaced) -> Vec2 {
+        let unit = Vec2::from_array(placed.anchor.unit_offset());
+        self.extent.center + unit * self.extent.half_extent + placed.offset
     }
 }
 

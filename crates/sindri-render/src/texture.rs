@@ -11,6 +11,23 @@ pub struct Texture2D {
     format: wgpu::TextureFormat,
 }
 
+/// How a texture's texels are read when a quad covers more or fewer pixels
+/// than the texture has texels.
+///
+/// A choice rather than a default because the two kinds of texture Sindri draws
+/// want opposite answers: pixel art has to stay crisp when it is magnified, and
+/// a glyph blown up from a baked em size has to stay smooth. Sampling is
+/// per-texture state, so this is where the answer belongs.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum TextureFilter {
+    /// Texels stay square when magnified. What sprite art wants.
+    #[default]
+    Nearest,
+    /// Texels blend when magnified, and the edges of the image do not wrap
+    /// round to the other side. What a glyph atlas wants.
+    Smooth,
+}
+
 impl Texture2D {
     pub fn from_rgba8(
         device: &wgpu::Device,
@@ -19,6 +36,28 @@ impl Texture2D {
         width: u32,
         height: u32,
         pixels: &[u8],
+    ) -> Result<Self, TextureError> {
+        Self::from_rgba8_filtered(
+            device,
+            queue,
+            label,
+            width,
+            height,
+            pixels,
+            TextureFilter::Nearest,
+        )
+    }
+
+    /// The same upload, saying how the result is sampled.
+    #[allow(clippy::too_many_arguments)]
+    pub fn from_rgba8_filtered(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        label: &str,
+        width: u32,
+        height: u32,
+        pixels: &[u8],
+        filter: TextureFilter,
     ) -> Result<Self, TextureError> {
         let expected = rgba_byte_len(width, height)?;
         if pixels.len() != expected {
@@ -50,12 +89,16 @@ impl Texture2D {
             pixels,
         );
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let (address_mode, mag_filter) = match filter {
+            TextureFilter::Nearest => (wgpu::AddressMode::Repeat, wgpu::FilterMode::Nearest),
+            TextureFilter::Smooth => (wgpu::AddressMode::ClampToEdge, wgpu::FilterMode::Linear),
+        };
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("Sindri texture sampler"),
-            address_mode_u: wgpu::AddressMode::Repeat,
-            address_mode_v: wgpu::AddressMode::Repeat,
-            address_mode_w: wgpu::AddressMode::Repeat,
-            mag_filter: wgpu::FilterMode::Nearest,
+            address_mode_u: address_mode,
+            address_mode_v: address_mode,
+            address_mode_w: address_mode,
+            mag_filter,
             min_filter: wgpu::FilterMode::Linear,
             mipmap_filter: wgpu::MipmapFilterMode::Nearest,
             ..Default::default()
@@ -130,7 +173,7 @@ fn rgba_byte_len(width: u32, height: u32) -> Result<usize, TextureError> {
         .ok_or(TextureError::DimensionsOverflow)
 }
 
-#[derive(Debug, Error, PartialEq, Eq)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 pub enum TextureError {
     #[error("texture width and height must both be non-zero")]
     InvalidDimensions,

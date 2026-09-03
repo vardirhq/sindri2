@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use sindri_core::World;
 use sindri_render::{
     ExtractedFrame, FrameCamera, FrameCommand, FramePass, RenderLayer, RenderStage, TextError,
-    TextInstance, Viewport,
+    TextInstance,
 };
 
 /// How tall the overlay is in its own units.
@@ -16,15 +16,17 @@ const OVERLAY_HEIGHT: f32 = 2.0;
 
 use crate::UiTextComponent;
 
-use super::camera::{OverlayPlacement, OverlayView, ResolvedCameras};
+use crate::screen_ui::UiHierarchy;
+
+use super::camera::{OverlayPlacement, ResolvedCameras};
 use super::{SceneExtractError, SceneExtractor};
 
 impl SceneExtractor {
     pub(super) fn push_text(
         &self,
         world: &World,
-        viewport: Viewport,
         cameras: &ResolvedCameras,
+        hierarchy: &UiHierarchy,
         frame: &mut ExtractedFrame,
     ) -> Result<(), SceneExtractError> {
         let texts = self.components.query::<UiTextComponent>(world)?;
@@ -41,12 +43,6 @@ impl SceneExtractor {
             .overlay_extent
             .expect("every resolved view includes screen-space extent");
         let placement = OverlayPlacement::new(extent);
-        let view = OverlayView {
-            view_projection: overlay.view_projection,
-            framed_half_height: overlay.framed_half_height,
-        };
-        let width = f32::from(u16::try_from(viewport.width)?);
-        let height = f32::from(u16::try_from(viewport.height)?);
         let mut layers: BTreeMap<i32, Vec<TextInstance>> = BTreeMap::new();
 
         for (entity, text) in texts {
@@ -58,27 +54,16 @@ impl SceneExtractor {
                     text.font_size,
                 )));
             }
-            let transform = world
-                .get(entity)
-                .and_then(|data| data.transform_3d)
-                .unwrap_or_default();
-            // Overlay units into pixels, which is the one conversion between
-            // what a scene says and what a renderer draws.
-            let metrics = text.pixel_metrics(view.pixels_per_unit(height));
-            let fraction = placement.text_origin(view, transform, text.anchor);
-            let position = [fraction[0] * width, fraction[1] * height];
+            // Overlay units the whole way through. Text used to be converted to
+            // viewport pixels here, because it was drawn by a pass that had no
+            // camera; now it is quads like everything else, so the frame carries
+            // the same units the scene authored and the pass's camera does the
+            // rest.
+            let position = placement.origin(hierarchy.placement_or(entity, text.anchor));
             layers
                 .entry(text.layer)
                 .or_default()
-                .push(TextInstance::new(
-                    text.resolved(),
-                    text.font,
-                    position,
-                    metrics[0],
-                    metrics[1],
-                    text.color,
-                    text.anchor.text_align(),
-                )?);
+                .push(text.instance(position.to_array())?);
         }
 
         for (layer, instances) in layers {

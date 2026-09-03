@@ -10,6 +10,7 @@
 //! so a menu, a pause overlay and a HUD are the same mechanism the rest of the
 //! engine already has, rather than a stack this module would have to own.
 
+mod hierarchy;
 mod layout;
 mod rect;
 
@@ -21,6 +22,7 @@ use sindri_core::{
     ComponentRegistryError, ComponentSchemaRegistry, EntityId, SceneComponent, World,
 };
 
+pub use hierarchy::{UiHierarchy, UiPlaced};
 pub use layout::{UiDirection, UiLayoutComponent};
 pub use rect::{SafeArea, ScreenExtent, ScreenRect};
 
@@ -181,7 +183,11 @@ impl ScreenUi {
         extent: ScreenExtent,
     ) -> Result<BTreeMap<EntityId, Element>, ComponentRegistryError> {
         let mut placements = BTreeMap::new();
-        let laid_out = Self::child_offsets(world, components)?;
+        // The same resolution the frame is drawn from. This used to fold in a
+        // parent's layout spacing and nothing else, so an element could be
+        // clickable somewhere it was never drawn — and a child of a panel was
+        // clickable against the screen rather than against the panel.
+        let hierarchy = UiHierarchy::of(world, components)?;
         for (entity, anchor, layer, pressable) in Self::elements(world, components)? {
             if !world.is_active(entity) {
                 continue;
@@ -189,19 +195,16 @@ impl ScreenUi {
             let Some(data) = world.get(entity) else {
                 continue;
             };
-            let transform = data.transform_3d.unwrap_or_default();
-            let origin = extent.anchor_origin(anchor.unit_offset());
-            let offset = laid_out.get(&entity).copied().unwrap_or([0.0, 0.0]);
-            let position = transform.position_2d();
-            let size = transform.scale_2d();
+            let placed = hierarchy.placement_or(entity, anchor);
+            let origin = extent.anchor_origin(placed.anchor.unit_offset());
+            // The element's own size, never its parents': `scale` is a size in
+            // overlay units here rather than a multiplier on a space.
+            let size = data.transform_3d.unwrap_or_default().scale_2d();
             placements.insert(
                 entity,
                 Element {
                     rect: ScreenRect {
-                        center: [
-                            origin[0] + position[0] + offset[0],
-                            origin[1] + position[1] + offset[1],
-                        ],
+                        center: [origin[0] + placed.offset.x, origin[1] + placed.offset.y],
                         size,
                     },
                     layer,
@@ -210,33 +213,6 @@ impl ScreenUi {
             );
         }
         Ok(placements)
-    }
-
-    /// What each laid-out child owes to its parent's layout.
-    ///
-    /// Only active children count, and only their index among the active ones,
-    /// which is what makes a menu close up around a hidden entry instead of
-    /// leaving a hole where it was.
-    fn child_offsets(
-        world: &World,
-        components: &ComponentSchemaRegistry,
-    ) -> Result<BTreeMap<EntityId, [f32; 2]>, ComponentRegistryError> {
-        let mut offsets = BTreeMap::new();
-        for (parent, layout) in components.query::<UiLayoutComponent>(world)? {
-            let Some(data) = world.get(parent) else {
-                continue;
-            };
-            let shown: Vec<EntityId> = data
-                .children
-                .iter()
-                .copied()
-                .filter(|child| world.is_active(*child))
-                .collect();
-            for (index, child) in shown.iter().enumerate() {
-                offsets.insert(*child, layout.offset(index, shown.len()));
-            }
-        }
-        Ok(offsets)
     }
 
     /// Every entity carrying a screen element, with what placing it needs.

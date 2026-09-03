@@ -29,7 +29,9 @@ use sindri_render::{
 };
 use thiserror::Error;
 
+use self::sprite::Shared;
 use crate::Effects2d;
+use crate::screen_ui::UiHierarchy;
 use crate::{AnimationError, SpriteAnimations, TextureBindings, TilemapError};
 
 pub use camera::view::{CameraView, WorldProjection};
@@ -173,8 +175,22 @@ impl SceneExtractor {
         self.push_meshes(world, &cameras, textures, &mut frame)?;
         let resting = SpriteAnimations::new();
         let animations = animations.unwrap_or(&resting);
-        self.push_images(world, &cameras, textures, animations, effects, &mut frame)?;
-        self.push_text(world, viewport, &cameras, &mut frame)?;
+        // Resolved once and shared: what is drawn, what is clickable and what
+        // the editor puts a handle on all have to agree about where a child of
+        // a panel is.
+        let hierarchy = UiHierarchy::of(world, &self.components)?;
+        self.push_images(
+            world,
+            &cameras,
+            Shared {
+                textures,
+                animations,
+                effects,
+                hierarchy: &hierarchy,
+            },
+            &mut frame,
+        )?;
+        self.push_text(world, &cameras, &hierarchy, &mut frame)?;
         Ok(frame.prepare()?)
     }
 
@@ -211,8 +227,22 @@ impl SceneExtractor {
         self.push_meshes(world, &cameras, textures, &mut frame)?;
         let resting = SpriteAnimations::new();
         let animations = animations.unwrap_or(&resting);
-        self.push_images(world, &cameras, textures, animations, effects, &mut frame)?;
-        self.push_text(world, viewport, &cameras, &mut frame)?;
+        // Resolved once and shared: what is drawn, what is clickable and what
+        // the editor puts a handle on all have to agree about where a child of
+        // a panel is.
+        let hierarchy = UiHierarchy::of(world, &self.components)?;
+        self.push_images(
+            world,
+            &cameras,
+            Shared {
+                textures,
+                animations,
+                effects,
+                hierarchy: &hierarchy,
+            },
+            &mut frame,
+        )?;
+        self.push_text(world, &cameras, &hierarchy, &mut frame)?;
         Ok(frame.prepare()?)
     }
 }

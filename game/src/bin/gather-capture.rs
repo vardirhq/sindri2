@@ -22,8 +22,8 @@ use sindri_gpu::{GpuContext, GpuRequestOptions};
 use sindri_platform::{InputEvent, InputState, Key};
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_render::{
-    DepthTarget, FrameRenderers, FrameTarget, OffscreenTarget, SpriteBatchRenderer, TextRenderer,
-    TexturedCubeRenderer, Viewport, encode_prepared_frame,
+    DepthTarget, FrameRenderers, FrameTarget, GlyphRenderer, OffscreenTarget, SpriteBatchRenderer,
+    TextRenderer, TexturedCubeRenderer, Viewport, encode_prepared_frame,
 };
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_scene::{CameraView, SceneRuntime};
@@ -54,7 +54,8 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
     let depth = DepthTarget::new(&gpu.device, WIDTH, HEIGHT);
     let mut cubes = TexturedCubeRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
     let mut sprites = SpriteBatchRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
-    let mut text = TextRenderer::new(&gpu.device, &gpu.queue, OffscreenTarget::FORMAT);
+    let mut text = TextRenderer::new();
+    let mut glyphs = GlyphRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
     bind_fonts(&mut text)?;
 
     let (textures, bindings) = sindri_gather::bind_textures(&gpu.device, &gpu.queue)?;
@@ -93,6 +94,7 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
             cube: &mut cubes,
             sprites: &mut sprites,
             text: &mut text,
+            glyphs: &mut glyphs,
             textures: &textures,
         },
         &gpu.device,

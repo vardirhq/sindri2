@@ -125,27 +125,7 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
         "Sprite Animation",
         serde_json::json!({ "clips": {}, "playing": null, "speed": 1.0 }),
     )?;
-    // Fields but no default: unlike a procedural texture, there is no
-    // honest font the engine can invent, and the editor's font picker
-    // supplies a project asset when text is added. The fields are still
-    // named, because they are what the component *is* — without them a
-    // panel showed two rows for a component with seven, and the same text
-    // authored by hand and added by a button were different components.
-    components.register_with_fields::<UiTextComponent>(
-        "UI Text",
-        serde_json::json!({
-            "text": "Text",
-            "font": "",
-            "font_size": 24.0,
-            "line_height": 30.0,
-            "color": [1.0, 1.0, 1.0, 1.0],
-            "anchor": "center",
-            "layer": 0,
-            // No preview numbers: a template with no slots needs none, and
-            // the editor's field row is where a designer adds them.
-            "values": []
-        }),
-    )?;
+    register_ui_text(components)?;
     // A one-by-one map of one empty cell: the smallest tilemap that is
     // still a valid one, so adding the component in the editor gives
     // something to paint into rather than something to repair.
@@ -161,6 +141,62 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
             "tiles": [null],
             "tint": [1.0, 1.0, 1.0, 1.0],
             "layer": 0
+        }),
+    )?;
+    Ok(())
+}
+
+/// `sindri.ui.text`, whose template is long enough to be its own function.
+///
+/// Long because the component is: a string, a face, a size, and then every
+/// option an engine's text carries — a box to wrap and fit in, spacing, weight
+/// and case, an outline, a shadow, a reveal. All of them are named here even
+/// though all of them default, because the template is what the component *is*,
+/// and a field missing from it is a row the panel cannot show and a thing an
+/// author cannot reach.
+fn register_ui_text(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
+    // Fields but no default: unlike a procedural texture, there is no
+    // honest font the engine can invent, and the editor's font picker
+    // supplies a project asset when text is added. The fields are still
+    // named, because they are what the component *is* — without them a
+    // panel showed two rows for a component with seven, and the same text
+    // authored by hand and added by a button were different components.
+    components.register_with_fields::<UiTextComponent>(
+        "UI Text",
+        serde_json::json!({
+            "text": "Text",
+            "font": "",
+            // A share of the overlay, which is what a size is here. These were
+            // 24 and 30 — the pixel counts this component used to hold — and
+            // stayed behind when the unit changed, so the blank the editor
+            // offered was a line twelve times taller than the screen.
+            "font_size": 0.0667,
+            "line_height": 0.0833,
+            "color": [1.0, 1.0, 1.0, 1.0],
+            "anchor": "center",
+            "layer": 0,
+            // No preview numbers: a template with no slots needs none, and
+            // the editor's field row is where a designer adds them.
+            "values": [],
+            // Every option below is off, and off is what text did before the
+            // option existed. They are named rather than left out because the
+            // template is what the component *is*: a field missing here is a
+            // row the panel cannot show and a thing an author cannot reach.
+            "bounds": [0.0, 0.0],
+            "wrap": "none",
+            "line_align": "follow",
+            "letter_spacing": 0.0,
+            "bold": false,
+            "italic": false,
+            "case": "as_written",
+            "visible": -1.0,
+            "outline": { "width": 0.0, "color": [0.0, 0.0, 0.0, 1.0] },
+            "shadow": {
+                "offset": [0.0, 0.0],
+                "color": [0.0, 0.0, 0.0, 1.0],
+                "softness": 0.0
+            },
+            "auto_size": { "enabled": false, "min": 0.02 }
         }),
     )?;
     Ok(())

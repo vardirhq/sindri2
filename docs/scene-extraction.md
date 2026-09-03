@@ -64,16 +64,68 @@ A game registers its own component types alongside these with `SceneExtractor::r
 ## Text
 
 `sindri.ui.text` is screen text. Its entity transform offsets one of the nine
-screen anchors, extraction projects that point into physical viewport pixels,
-and the resulting `TextInstance` carries content, font asset reference, font
-size, line height, colour, and layer. Strings on the same layer share one
-ordered text pass. No authored camera participates in that projection.
+screen anchors, and the resulting `TextInstance` carries content, font asset
+reference, font size, line height, colour, and layer — all of it in overlay
+units, the same two-unit-tall space every other UI element is placed in. Nothing
+between the scene and the renderer converts a size to pixels, so the same frame
+draws at any resolution.
+
+Beyond that it carries the options an engine's text carries, each defaulting to
+the behaviour text had before the option existed:
+
+| Field | What it does |
+| --- | --- |
+| `bounds` | The rect the words lay out in, in overlay units. Zero on an axis is unbounded there. With a box, the *box* is what the anchor places and the words sit inside it. |
+| `wrap` | `none`, `word`, or `glyph`. Needs a width to mean anything. |
+| `line_align` | `follow` (the anchor), `left`, `center`, `right`, or `justify`. |
+| `letter_spacing` | Extra space after each glyph, in overlay units. |
+| `bold`, `italic` | The face's own weight and slant, asked of the font. |
+| `case` | `as_written`, `upper`, `lower`, applied before shaping. |
+| `visible` | How many glyphs to draw. Negative draws all of them; a script counts it up for a typewriter. |
+| `outline` | A stroke width and colour. |
+| `shadow` | An offset, colour and softness. |
+| `auto_size` | Shrinks towards `min` until the words fit `bounds`. The authored `font_size` is the ceiling, so this only ever makes text smaller. |
+
+`UiTextComponent::instance` is the single place a stored component becomes a
+drawable one. The frame draws from it and so does the editor, when it decides
+what a click landed on and where to draw the box handle — built twice, the
+handle would be around a box the words are not in as soon as the two copies
+disagreed about one option.
+
+Strings on the same layer share one ordered pass, which the renderer turns into
+one distance-field quad per glyph and draws through that pass's own camera. Text
+is therefore geometry on whichever surface it was authored against: it pans,
+zooms and turns with a canvas placed in the scene.
 
 `referenced_fonts` is the load list for a world. A host validates those bytes
 with `FontAssetDecoder` and binds each logical reference to `TextRenderer`;
 unbound references draw nothing rather than falling back to an installed face.
 That asymmetry with missing textures is intentional: a checker can reveal a
 missing image, while substitute text can look correct but differ by platform.
+
+## UI hierarchy
+
+The overlay's rule is that an element's anchor picks a point on the viewport and
+its transform is an offset from that point. That is right for a HUD reading and,
+taken literally, means a hierarchy is not one — so `UiHierarchy` resolves each
+element's offset against its ancestors', folding in whatever a parent's
+`sindri.ui.layout` says about where it sits among its siblings.
+
+It is resolved once per extraction and shared by everything that has to agree
+about where an element is: the frame, `ScreenUi`'s hit-testing, the editor's
+picking, and the editor's handles. Before it, a label parented to a card was
+placed against the *screen*, so six cards' worth of labels landed on top of each
+other however far apart the cards were; and layout spacing reached hit-testing
+but never drawing, so an element could be clickable somewhere it was not drawn.
+
+Position and rotation compose; **size does not**. `scale` on a UI element is its
+size in overlay units, not a multiplier on a coordinate space, so inheriting it
+would make every child of a wide panel wide. That is also the line between this
+and a `RectTransform`: stretching a child with its parent is a different question
+and needs an anchor with two corners rather than one point. The anchor itself
+comes from the outermost ancestor that declares one, because a child
+re-anchoring against the screen is how a label leaves the card it is written on
+when the window changes shape.
 
 ## Textures
 

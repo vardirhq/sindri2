@@ -11,8 +11,9 @@
 //! an example to draw anything at all.
 
 use crate::{
-    DepthTarget, DrawContext, FrameCommand, PreparedFrame, SpriteBatchError, SpriteBatchRenderer,
-    SpriteBatchStats, TextError, TextRenderer, TextureRegistry, TexturedCubeRenderer, encode_clear,
+    DepthTarget, DrawContext, FrameCommand, GlyphDrawError, GlyphRenderer, PreparedFrame,
+    SpriteBatchError, SpriteBatchRenderer, SpriteBatchStats, TextError, TextRenderer,
+    TextureRegistry, TexturedCubeRenderer, encode_clear,
 };
 use thiserror::Error;
 
@@ -27,7 +28,12 @@ pub struct FrameTarget<'a> {
 pub struct FrameRenderers<'a> {
     pub cube: &'a mut TexturedCubeRenderer,
     pub sprites: &'a mut SpriteBatchRenderer,
+    /// Shapes strings and owns the glyph atlas.
     pub text: &'a mut TextRenderer,
+    /// Draws what the text renderer shaped. Two objects because they are two
+    /// jobs: one turns words into quads and needs no GPU to do it, the other
+    /// puts quads on a screen and knows nothing about words.
+    pub glyphs: &'a mut GlyphRenderer,
     pub textures: &'a TextureRegistry,
 }
 
@@ -50,6 +56,7 @@ pub fn encode_prepared_frame(
         cube: cube_renderer,
         sprites: sprite_renderer,
         text: text_renderer,
+        glyphs: glyph_renderer,
         textures,
     } = renderers;
     // Once, before anything draws. The frame owns what it starts as; a scene
@@ -61,6 +68,7 @@ pub fn encode_prepared_frame(
     // back at the start of every submission. Without it a host would allocate a
     // slot per batch per frame for as long as it ran.
     sprite_renderer.begin_submission();
+    glyph_renderer.begin_submission();
     for pass in frame.passes() {
         match &pass.command {
             FrameCommand::TexturedCube { model, texture } => cube_renderer.encode(
@@ -93,15 +101,26 @@ pub fn encode_prepared_frame(
                     instances,
                 )?;
             }
+            // Text is geometry, drawn through the same camera as the pass it
+            // belongs to. It keeps a command of its own because its quads
+            // sample a distance field rather than a picture — an edge found at
+            // the size it is drawn, an outline, a softened shadow — and because
+            // the atlas they sample is filled while the frame is being built,
+            // so it cannot have been in the registry beforehand.
             FrameCommand::Text { instances } => {
-                text_renderer.draw(
-                    device,
-                    queue,
-                    encoder,
-                    target.color,
-                    frame.viewport(),
-                    instances,
-                )?;
+                if let Some(quads) = text_renderer.quads(device, queue, instances)? {
+                    glyph_renderer.draw(
+                        device,
+                        queue,
+                        encoder,
+                        target.color,
+                        target.depth,
+                        quads.atlas,
+                        quads.generation,
+                        pass.camera.view_projection,
+                        &quads.instances,
+                    )?;
+                }
             }
         }
     }
@@ -114,4 +133,6 @@ pub enum FrameEncodeError {
     Sprites(#[from] SpriteBatchError),
     #[error(transparent)]
     Text(#[from] TextError),
+    #[error(transparent)]
+    Glyphs(#[from] GlyphDrawError),
 }

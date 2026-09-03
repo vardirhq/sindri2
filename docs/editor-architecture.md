@@ -402,21 +402,43 @@ all three ask the same functions the frame was drawn from:
   the button is rather than where it would be if it were still on the viewport.
 - **A UI element's gizmo is on it**, so handles travel with the element when the
   view is panned to it.
-- **Text is sized through it.** What one overlay unit is worth in pixels is
-  measured from the projection rather than assumed from the viewport, so zooming
-  in on a canvas makes the words on it bigger along with everything else.
+- **Text is drawn on it.** A string is one distance-field quad per glyph, in
+  overlay units, through the canvas's own camera — so the words pan, zoom and
+  turn with it like anything else drawn.
+- **A text element's box is drawn**, in the Scene view, for the selected entity.
+  A wrap width is otherwise a number in the inspector whose only reading is to
+  retype it and look.
 
-### What text still is not
+### What text is
 
-A glyph is drawn as a screen-aligned quad by a text pass of its own, at a pixel
-size worked out per frame. Sizing it through the projection makes it *scale*
-with the canvas, which is most of what was missing, but it is still not geometry
-on the canvas: it will not rotate with one, it cannot be occluded by anything,
-and it is re-rasterised as the zoom changes rather than drawn from a shape that
-has no resolution.
+A glyph is a quad sampling a signed distance field. `GlyphAtlas` bakes each glyph
+once at a fixed 64-pixel em — swash rasterises the coverage, an exact Euclidean
+distance transform turns it into a field with an eight-pixel spread — and packs
+it into a texture the renderer owns. `TextRenderer::quads` shapes a string with
+cosmic-text, scales the layout by `font_size / RASTER_EM`, and emits a
+`GlyphInstance` per glyph in the units the pass's camera draws; `GlyphRenderer`
+draws them through its own pipeline.
 
-The end state is the one Unity reached with TextMeshPro — a glyph is a quad in
-the mesh with a signed-distance-field texture, so text is an ordinary drawable
-that happens to be lettershaped. That is a real subsystem: a glyph atlas Sindri
-owns, an SDF shader, and text leaving its own render pass to become sprites. It
-is worth doing and it is not a refinement of what is here.
+The field is what makes one bake serve every size. A coverage mask is only
+correct at the size it was rasterised; a field says where the edge is, so the
+shader finds it exactly at whatever size the glyph is actually drawn — via
+`fwidth`, which is a screen-space derivative and therefore the real answer rather
+than an assumption. The same two thresholds give an outline (a stroke's width
+outside the edge) and a soft shadow (the same silhouette, one threshold wider),
+neither of which is a second texture or a second bake.
+
+Growing the atlas repacks it, which invalidates every rect handed out before the
+grow. `GlyphAtlas::fill` owns that invariant — it refills until nothing moves —
+and quads are built from `GlyphAtlas::placed`, which reads without baking. Both
+halves are load-bearing and both are tested: a bug here shows as one row of text
+rendering as a single stray letter while every row around it is perfect.
+
+Text left its own render pass entirely, which is what makes it geometry rather
+than something laid over the picture: it turns with a canvas the Scene view has
+orbited, it is sized by the projection rather than the viewport, and a window
+resize re-rasterises nothing.
+
+`cargo run -p sindri-gpu --example text-specimen` draws every option on one sheet.
+It is a specimen rather than a test because what an outline or an auto-fit *does*
+is a thing you look at, and an assertion that a number came back is not the same
+as knowing the words are where they should be.
