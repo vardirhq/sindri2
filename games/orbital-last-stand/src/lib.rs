@@ -324,10 +324,21 @@ impl Run {
         let entity = self
             .find(name)
             .unwrap_or_else(|| panic!("no entity named {name}"));
+        // A person clicks a thing they can see, and a screen switched on during
+        // a script pass is laid out by a later one — the pass that places
+        // elements has already run by the time the script showing them does. So
+        // this waits for the element to have a place on the screen rather than
+        // assuming how many frames that takes, which is a number that changes
+        // whenever a screen gains a layout.
+        let mut waited = 0;
+        while self.screen_ui.rect(entity).is_none() && waited < 8 {
+            self.step(1.0 / 60.0);
+            waited += 1;
+        }
         let rect = self
             .screen_ui
             .rect(entity)
-            .unwrap_or_else(|| panic!("{name} is not laid out"));
+            .unwrap_or_else(|| panic!("{name} never got a place on the screen"));
         let (width, height) = self.viewport;
         let half_width = width / height;
         self.input.apply(sindri_platform::InputEvent::PointerMoved {

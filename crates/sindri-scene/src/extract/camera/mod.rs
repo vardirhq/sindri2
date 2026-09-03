@@ -14,7 +14,7 @@ use self::view::{
     CameraView, OverlayExtent, WorldProjection, orbited_offset, panned_shift,
     resolved_screen_overlay, safe_rotation,
 };
-use crate::{CameraComponent, UiAnchor};
+use crate::{CameraComponent, CameraFit, UiAnchor};
 
 use super::ui::ui_matrix;
 
@@ -323,8 +323,17 @@ impl SceneExtractor {
                     vertical_size,
                     near,
                     far,
+                    fit,
                 } => {
-                    let half_height = vertical_size * 0.5;
+                    let half = vertical_size * 0.5;
+                    // Framing the shorter axis means the size lands on width
+                    // when the window is taller than it is wide, so the world
+                    // it promised is still all there when a phone is held
+                    // upright.
+                    let half_height = match fit {
+                        CameraFit::Shorter if aspect < 1.0 => half / aspect,
+                        CameraFit::Shorter | CameraFit::Height => half,
+                    };
                     let half_width = half_height * aspect;
                     ResolvedCamera {
                         view,

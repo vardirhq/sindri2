@@ -17,7 +17,7 @@ mod tilemap;
 mod ui;
 pub mod ui_text_template;
 
-pub use camera::CameraComponent;
+pub use camera::{CameraComponent, CameraFit};
 pub use grid::{GridNavigationComponent, GridOccupantComponent, GridWallDocument};
 pub use mesh::{MeshComponent, MeshPrimitive};
 pub use sprite::SpriteComponent;

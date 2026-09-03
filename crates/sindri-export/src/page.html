@@ -14,7 +14,10 @@
        than stretching, because a game stretched to a window is a game whose
        author's framing was thrown away. */
     body { display: grid; place-items: center; font-family: system-ui, sans-serif; }
-    canvas { display: block; max-width: 100vw; max-height: 100vh; }
+    /* The canvas is the page. The host sizes its surface to the window and
+       follows it, so this only has to stop the browser adding a scrollbar and
+       letting the element keep an intrinsic size it was born with. */
+    canvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
     #sindri-error {
       display: none;
       box-sizing: border-box;

@@ -26,11 +26,15 @@ script Warden {
     var dash_timer: f32 = 0.0;
 
     fn start() {
-        this.hp = this.health;
+        // Scaled by how far the run has got, exactly as the ordinary enemies
+        // are. A fixed pool made the Warden weaker than the wave before it: by
+        // the time it arrived the ship had spent twelve upgrades, and a boss
+        // that dies in two frames has no phases to show.
+        this.hp = this.health * (1.0 + Game.get("elapsed", 0.0) * 0.021);
         this.until_volley = 1.2;
         this.until_summon = 6.0;
-        Game.set("boss_max", this.health);
-        Game.set("boss_hp", this.health);
+        Game.set("boss_max", this.hp);
+        Game.set("boss_hp", this.hp);
     }
 
     fn update(dt: f32) {
@@ -43,7 +47,7 @@ script Warden {
             return;
         }
 
-        let share = this.hp / this.health;
+        let share = this.hp / max(Game.get("boss_max", 1.0), 1.0);
         if share <= 0.34 {
             this.phase = 3.0;
         } else if share <= 0.67 {

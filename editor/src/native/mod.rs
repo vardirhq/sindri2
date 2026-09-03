@@ -39,6 +39,7 @@ use crate::{
 mod camera;
 mod chrome;
 mod console_view;
+mod device;
 mod editing;
 mod frame;
 mod hierarchy;
@@ -293,6 +294,11 @@ struct EditorApp {
     /// view instead — a pointer has nowhere to be when the game is not on
     /// screen.
     game_view_rect: Option<egui::Rect>,
+    /// The screen shape the Game view is pretending to be.
+    ///
+    /// Not a preference that outlives the session: it is a thing to look
+    /// through while arranging a screen, not a setting about the editor.
+    game_device: device::DevicePreview,
     /// Where each animated sprite has got to.
     ///
     /// Runtime state, so it lives here rather than in the world: an animation
@@ -451,6 +457,7 @@ impl EditorApp {
             scene_viewport,
             game_viewport,
             game_view_rect: None,
+            game_device: device::DevicePreview::default(),
             physics: ScenePhysics2d::top_down().expect("zero gravity is finite"),
             screen_ui: ScreenUi::default(),
             random: sindri_core::Rng::default(),

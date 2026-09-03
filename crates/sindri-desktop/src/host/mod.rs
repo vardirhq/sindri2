@@ -12,6 +12,7 @@
 //! this file is the loop between them.
 
 mod app;
+mod page_size;
 mod startup;
 mod visibility;
 
@@ -20,6 +21,8 @@ use self::startup::{Startup, open_surface};
 pub use app::{AppContext, DesktopApp, DesktopError, Flow, WindowConfig};
 pub use startup::run;
 
+#[cfg(target_arch = "wasm32")]
+use self::page_size::PageSizeListener;
 #[cfg(target_arch = "wasm32")]
 use self::visibility::VisibilityListener;
 
@@ -68,6 +71,8 @@ struct Host<A: DesktopApp> {
     page_visible: bool,
     #[cfg(target_arch = "wasm32")]
     _visibility_listener: Option<VisibilityListener>,
+    #[cfg(target_arch = "wasm32")]
+    _page_size_listener: Option<PageSizeListener>,
 }
 
 impl<A: DesktopApp> Host<A> {
@@ -75,6 +80,8 @@ impl<A: DesktopApp> Host<A> {
         let proxy = event_loop.create_proxy();
         #[cfg(target_arch = "wasm32")]
         let visibility_listener = VisibilityListener::new(proxy.clone());
+        #[cfg(target_arch = "wasm32")]
+        let page_size_listener = PageSizeListener::new(proxy.clone());
         #[cfg(target_arch = "wasm32")]
         let page_visible = visibility_listener
             .as_ref()
@@ -91,6 +98,8 @@ impl<A: DesktopApp> Host<A> {
             page_visible,
             #[cfg(target_arch = "wasm32")]
             _visibility_listener: visibility_listener,
+            #[cfg(target_arch = "wasm32")]
+            _page_size_listener: page_size_listener,
         }
     }
 
@@ -137,6 +146,15 @@ impl<A: DesktopApp> Host<A> {
                 self.config.width,
                 self.config.height,
             ));
+
+        // In a browser the page *is* the window, so a project's requested size
+        // is the wrong answer to a question the page already answers. Asking
+        // for one there left a phone showing a 960 by 540 letterbox in the
+        // middle of an empty screen.
+        #[cfg(target_arch = "wasm32")]
+        if let Some((width, height)) = page_size::page_size() {
+            attributes = attributes.with_inner_size(winit::dpi::LogicalSize::new(width, height));
+        }
 
         #[cfg(target_arch = "wasm32")]
         if let Some(id) = &self.config.canvas_id {
@@ -288,6 +306,15 @@ impl<A: DesktopApp> ApplicationHandler<Startup> for Host<A> {
         let opened = match event {
             Startup::VisibilityChanged(visible) => {
                 self.set_visibility(event_loop, visible);
+                return;
+            }
+            Startup::PageResized(width, height) => {
+                if let Some(window) = &self.window {
+                    // Requested rather than set: the browser decides what a
+                    // canvas actually becomes, and winit reports the result
+                    // back through the ordinary resize path.
+                    let _ = window.request_inner_size(winit::dpi::LogicalSize::new(width, height));
+                }
                 return;
             }
             Startup::Opened(opened) => opened,

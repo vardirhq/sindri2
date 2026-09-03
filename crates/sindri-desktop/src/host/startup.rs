@@ -93,4 +93,11 @@ pub(super) enum Startup {
     Opened(Result<(GpuContext, WindowSurface), GpuError>),
     #[cfg(target_arch = "wasm32")]
     VisibilityChanged(bool),
+    /// The page changed size, which in a browser is the window changing size.
+    ///
+    /// Logical pixels, because that is what a window is asked for; the browser
+    /// applies the device's pixel ratio itself, so a phone gets the sharp
+    /// surface it deserves without anything here knowing what a phone is.
+    #[cfg(target_arch = "wasm32")]
+    PageResized(f64, f64),
 }

@@ -218,8 +218,6 @@ script Director {
         let boss = World.spawn(this.warden);
         boss.transform.position.x = 0.0;
         boss.transform.position.y = this.arena;
-        Game.set("boss_max", 120.0);
-        Game.set("boss_hp", 120.0);
     }
 
     // Around the edge rather than on top of the player, which is the one place

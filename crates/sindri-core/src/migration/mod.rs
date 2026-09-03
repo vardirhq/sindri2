@@ -19,6 +19,7 @@ use step::{
     camera::{move_camera_look_at_into_transform, remove_legacy_overlay_camera},
     namespace::namespace_components,
     sprites::{name_the_parts_of_a_sheet, sort_sprites_by_where_they_are},
+    text::size_text_in_overlay_units,
     transform::collapse_transform_2d,
     ui::split_the_screen_from_the_world,
 };
@@ -108,6 +109,9 @@ impl SceneMigrator {
             .expect("built-in steps are registered once and move forward");
         migrator
             .register(7, 8, split_the_screen_from_the_world)
+            .expect("built-in steps are registered once and move forward");
+        migrator
+            .register(8, 9, size_text_in_overlay_units)
             .expect("built-in steps are registered once and move forward");
         migrator
     }

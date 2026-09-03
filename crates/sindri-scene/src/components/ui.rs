@@ -232,6 +232,13 @@ pub struct UiTextComponent {
     /// the numbers.
     pub text: String,
     pub font: String,
+    /// How tall the text is, in the overlay's units.
+    ///
+    /// The same units the element's own transform uses: two is the full height
+    /// of the screen whatever the screen is, so a size here is a share of it
+    /// rather than a count of pixels. That is what makes a HUD authored on a
+    /// desktop readable on a phone — and it is what this field was not, which
+    /// cost a shipped build every word on its screen.
     #[serde(default = "default_font_size")]
     pub font_size: f32,
     #[serde(default = "default_line_height")]
@@ -269,12 +276,18 @@ impl UiTextComponent {
     }
 }
 
+/// A readable default, in the overlay's units.
+///
+/// Two units is the whole height of the screen, so this is a line a little over
+/// three per cent of it — the twenty-four pixels this used to be, on the seven
+/// hundred and twenty pixel screen it used to assume, and now that size on any
+/// screen rather than that many pixels on every one.
 const fn default_font_size() -> f32 {
-    24.0
+    0.0667
 }
 
 const fn default_line_height() -> f32 {
-    30.0
+    0.0833
 }
 
 impl SceneComponent for UiTextComponent {

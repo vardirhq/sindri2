@@ -11,7 +11,7 @@ use super::canonical::collapse_scalar_arrays;
 use super::error::{SceneError, SceneJsonError};
 use super::graph::validate_entities;
 
-pub const SCENE_FORMAT_VERSION: u32 = 8;
+pub const SCENE_FORMAT_VERSION: u32 = 9;
 
 /// A stable, project-authored entity identifier used only in serialized data.
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
