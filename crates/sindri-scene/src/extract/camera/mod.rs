@@ -91,6 +91,30 @@ pub fn overlay_for_viewport(aspect: f32) -> Option<(OverlayView, OverlayPlacemen
     ))
 }
 
+/// Where the overlay sits when it is a rectangle in the scene.
+///
+/// The same question [`overlay_for_viewport`] answers, for the other place an
+/// overlay can be. It takes the world camera because that is what a canvas in
+/// the scene is seen through — and it exists so that an editor resolving a
+/// click asks the same function the frame was drawn from, which is the only
+/// way the two cannot disagree about where a button is.
+#[must_use]
+pub fn overlay_in_scene(world: ViewCamera, aspect: f32) -> (OverlayView, OverlayPlacement) {
+    let half_height = 1.0;
+    (
+        OverlayView {
+            view_projection: world.view_projection,
+            framed_half_height: half_height,
+        },
+        OverlayPlacement {
+            extent: OverlayExtent {
+                center: Vec2::ZERO,
+                half_extent: Vec2::new(half_height * aspect.max(f32::EPSILON), half_height),
+            },
+        },
+    )
+}
+
 /// Where an anchored element lands on the overlay.
 ///
 /// A separate type from [`OverlayView`] because it answers a different

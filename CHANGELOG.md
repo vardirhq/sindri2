@@ -8,6 +8,12 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **The Scene view draws UI as a canvas in the scene.** The overlay is pinned to
+  the viewport, which is right for a game and wrong for a place you arrange one:
+  panning and zooming moved the world and left the UI stuck to the glass.
+  `UiCanvas::InScene` makes it a rectangle in the world at the game's shape, with
+  its edge drawn, its clicks resolved through it, and its gizmos on it.
+
 - **The Game view can be any screen.** A `Screen` picker draws it at a chosen
   shape — desktop, laptop, tablet, phone in either orientation — rather than at
   whatever shape the panel happens to be. The overlay is as wide as the aspect

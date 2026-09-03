@@ -64,6 +64,29 @@ pub(crate) struct OverlayExtent {
 /// at the viewport origin. The difference in format 7 is ownership, not the
 /// authored coordinates — the viewport derives this projection itself, so no
 /// camera entity is required to make UI exist.
+/// Where the overlay a UI element is laid out on actually lives.
+///
+/// A screen overlay is pinned to the viewport: it is the screen, and no camera
+/// can move it. That is right for a game and wrong for a Scene view, where the
+/// overlay is not the screen at all — it is a thing being arranged, and it sat
+/// stuck to the glass while panning and zooming moved the world out from under
+/// it. Placing it in the scene makes it a rectangle among the entities, which
+/// is what a person is trying to look at when they zoom in on a menu.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum UiCanvas {
+    /// The overlay is the viewport, at the viewport's own shape.
+    #[default]
+    OnViewport,
+    /// The overlay is a rectangle in the world, two units tall and this many
+    /// wide for each unit of height, seen through whatever is looking at the
+    /// scene.
+    ///
+    /// The shape is the *game's*, not the panel's — a canvas that changed shape
+    /// with the editor window would be a canvas that never showed what a player
+    /// gets.
+    InScene { aspect: f32 },
+}
+
 pub(crate) fn resolved_screen_overlay(aspect: f32) -> ResolvedCameras {
     let vertical_size = 2.0;
     let near = 0.0;
@@ -87,6 +110,32 @@ pub(crate) fn resolved_screen_overlay(aspect: f32) -> ResolvedCameras {
             half_extent: Vec2::new(half_height * aspect, half_height),
         }),
     }
+}
+
+/// Moves the overlay off the viewport and into the world.
+///
+/// One overlay unit is one world unit and the rectangle is centred on the
+/// origin, so the numbers a scene authors are the numbers the Scene view shows
+/// — a label at `0.44` is 0.44 of a unit above the middle of the canvas, and
+/// measuring it against the grid gives the same answer as reading the file.
+///
+/// The projection becomes the world camera's, which is the whole point: pan and
+/// zoom move the canvas because they move everything.
+pub(crate) fn place_overlay_in_scene(resolved: &mut ResolvedCameras, aspect: f32) {
+    let Some(world) = resolved.world else {
+        return;
+    };
+    let half_height = 1.0;
+    let half_extent = Vec2::new(half_height * aspect.max(f32::EPSILON), half_height);
+    resolved.overlay = Some(ResolvedCamera {
+        view: world.view,
+        view_projection: world.view_projection,
+        framed_half_height: half_height,
+    });
+    resolved.overlay_extent = Some(OverlayExtent {
+        center: Vec2::ZERO,
+        half_extent,
+    });
 }
 
 pub(crate) fn safe_rotation(transform: Transform3D) -> Quat {

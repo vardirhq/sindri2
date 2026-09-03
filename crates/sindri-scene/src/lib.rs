@@ -29,7 +29,7 @@ pub use components::{
 pub use effects::{EffectBurstComponent, Effects2d, Fleck};
 pub use extract::{
     CameraView, OverlayPlacement, OverlayView, SceneExtractError, SceneExtractor, SceneRuntime,
-    ViewCamera, WorldProjection, overlay_for_viewport,
+    UiCanvas, ViewCamera, WorldProjection, overlay_for_viewport, overlay_in_scene,
 };
 pub use navigation::{GridNavigationError, GridPlacement, WorldGridNavigation};
 pub use physics::{Collider2dComponent, RigidBody2dComponent, RigidBodyKind};
