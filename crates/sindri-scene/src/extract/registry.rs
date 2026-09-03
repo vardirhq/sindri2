@@ -24,7 +24,8 @@ use crate::animation::SpriteAnimationComponent;
 use crate::audio::AudioSourceComponent;
 use crate::components::{
     CameraComponent, GridNavigationComponent, GridOccupantComponent, MeshComponent,
-    SpriteComponent, TilemapComponent, UiImageComponent, UiTextComponent,
+    SpriteComponent, TilemapComponent, UiImageComponent, UiShapeBlend, UiShapeComponent,
+    UiShapeKind, UiTextComponent,
 };
 use crate::effects::EffectBurstComponent;
 use crate::physics::{Collider2dComponent, RigidBody2dComponent};
@@ -126,6 +127,29 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
         serde_json::json!({ "clips": {}, "playing": null, "speed": 1.0 }),
     )?;
     register_ui_text(components)?;
+    // A shape is drawn rather than painted, so its "art" is the numbers below
+    // and the blank has to be a shape you can see: a mint outlined rectangle,
+    // which is the panel border that most of a UI is made of. A default of
+    // nothing — no fill, no stroke — would add a component that draws
+    // absolutely nothing and read as a broken button.
+    components.register_with_default::<UiShapeComponent>(
+        "UI Shape",
+        serde_json::json!({
+            "kind": UiShapeKind::default().as_str(),
+            "count": 6.0,
+            "fill": [0.0, 0.0, 0.0, 0.0],
+            "stroke": [0.49, 1.0, 0.77, 1.0],
+            "stroke_width": 0.04,
+            "corner_radius": 0.0,
+            "dashes": 0.0,
+            "dash_duty": 0.5,
+            "sweep_start": 0.0,
+            "sweep_turns": 1.0,
+            "blend": UiShapeBlend::default().as_str(),
+            "anchor": "center",
+            "layer": 0
+        }),
+    )?;
     // A one-by-one map of one empty cell: the smallest tilemap that is
     // still a valid one, so adding the component in the editor gives
     // something to paint into rather than something to repair.

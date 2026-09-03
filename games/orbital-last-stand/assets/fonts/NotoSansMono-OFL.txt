@@ -1,0 +1,10 @@
+Noto Sans Mono is licensed under the SIL Open Font License, Version 1.1.
+
+The full licence text is at https://openfontlicense.org and ships with the
+upstream release. The terms that matter for vendoring it here: the font may be
+bundled and redistributed with software, may not be sold on its own, and this
+notice must travel with it.
+
+Vendored rather than asked of the system, for the same reason Inter is: a game
+that renders differently depending on which faces a machine happens to have
+installed is not one anyone can art-direct. Sindri binds no system font.

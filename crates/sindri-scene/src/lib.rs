@@ -24,8 +24,9 @@ pub use camera_math::camera_rotation_from_look_at;
 pub use components::{
     CameraComponent, CameraFit, GridNavigationComponent, GridOccupantComponent, GridWallDocument,
     MeshComponent, MeshPrimitive, SpriteComponent, TileProjection, TilemapComponent, TilemapError,
-    UiAnchor, UiFill, UiFillEdge, UiImageComponent, UiTextAutoSize, UiTextCase, UiTextComponent,
-    UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap, ui_text_template,
+    UiAnchor, UiFill, UiFillEdge, UiImageComponent, UiShapeBlend, UiShapeComponent, UiShapeKind,
+    UiTextAutoSize, UiTextCase, UiTextComponent, UiTextLineAlign, UiTextOutline, UiTextShadow,
+    UiTextWrap, ui_text_template,
 };
 pub use effects::{EffectBurstComponent, Effects2d, Fleck};
 pub use extract::{

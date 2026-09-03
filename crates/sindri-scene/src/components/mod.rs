@@ -15,6 +15,7 @@ mod mesh;
 mod sprite;
 mod tilemap;
 mod ui;
+mod ui_shape;
 mod ui_text_options;
 pub mod ui_text_template;
 
@@ -24,6 +25,7 @@ pub use mesh::{MeshComponent, MeshPrimitive};
 pub use sprite::SpriteComponent;
 pub use tilemap::{TileProjection, TilemapComponent, TilemapError};
 pub use ui::{UiAnchor, UiFill, UiFillEdge, UiImageComponent, UiTextComponent};
+pub use ui_shape::{UiShapeBlend, UiShapeComponent, UiShapeKind};
 pub use ui_text_options::{
     UiTextAutoSize, UiTextCase, UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap,
 };
@@ -32,6 +34,12 @@ pub use ui_text_options::{
 ///
 /// Shared rather than repeated per component so that "no tint" means the same
 /// thing everywhere it can be left out.
+/// Nothing at all: the default fill, because most of what a shape draws is an
+/// outline and a filled panel is the exception.
+pub(super) const fn transparent() -> [f32; 4] {
+    [0.0, 0.0, 0.0, 0.0]
+}
+
 pub(super) const fn opaque_white() -> [f32; 4] {
     [1.0, 1.0, 1.0, 1.0]
 }
