@@ -27,6 +27,13 @@ pub struct TextInstance {
     color: [f32; 4],
 }
 
+/// The smallest text that can put anything on a screen.
+///
+/// Pixels, because that is what a font size is here while the element carrying
+/// it is placed in overlay units — see `TextError::InvalidFontSize` for why
+/// that mismatch is worth an error rather than an empty screen.
+pub const MIN_TEXT_PIXELS: f32 = 1.0;
+
 impl TextInstance {
     pub fn new(
         text: impl Into<String>,
@@ -39,10 +46,16 @@ impl TextInstance {
         if !position.into_iter().all(f32::is_finite) {
             return Err(TextError::NonFinitePosition(position));
         }
-        if !font_size.is_finite() || font_size <= 0.0 {
+        // One pixel rather than zero, because the question is not whether the
+        // number is positive but whether it can draw. Everything else on a
+        // screen element is in the overlay's units — two tall, centred — and a
+        // size authored in those, `0.13` for a heading, is a positive number
+        // that renders nothing at all. A whole screen of labels can vanish
+        // that way and the only symptom is a page that looks empty.
+        if !font_size.is_finite() || font_size < MIN_TEXT_PIXELS {
             return Err(TextError::InvalidFontSize(font_size));
         }
-        if !line_height.is_finite() || line_height <= 0.0 {
+        if !line_height.is_finite() || line_height < MIN_TEXT_PIXELS {
             return Err(TextError::InvalidLineHeight(line_height));
         }
         if !color.into_iter().all(f32::is_finite) {
@@ -293,9 +306,13 @@ fn glyphon_color(color: [f32; 4]) -> Color {
 pub enum TextError {
     #[error("text position must be finite, got {0:?}")]
     NonFinitePosition([f32; 2]),
-    #[error("font size must be finite and greater than zero, got {0}")]
+    #[error(
+        "font size is in pixels and must be at least one to draw, got {0} — a \
+         screen element's position and scale are in overlay units, but its \
+         text is not"
+    )]
     InvalidFontSize(f32),
-    #[error("line height must be finite and greater than zero, got {0}")]
+    #[error("line height is in pixels and must be at least one to draw, got {0}")]
     InvalidLineHeight(f32),
     #[error("text color must be finite, got {0:?}")]
     NonFiniteColor([f32; 4]),
