@@ -62,6 +62,9 @@ impl SceneExtractor {
                 .get(entity)
                 .and_then(|data| data.transform_3d)
                 .unwrap_or_default();
+            // Overlay units into pixels, which is the one conversion between
+            // what a scene says and what a renderer draws.
+            let metrics = text.pixel_metrics(height);
             let fraction = placement.text_origin(view, transform, text.anchor);
             let position = [fraction[0] * width, fraction[1] * height];
             layers
@@ -71,15 +74,10 @@ impl SceneExtractor {
                     text.resolved(),
                     text.font,
                     position,
-                    // Overlay units into pixels, which is the one conversion
-                    // between what a scene says and what a renderer draws. The
-                    // overlay is two tall however many pixels the viewport is,
-                    // so half the height is what one unit is worth — the same
-                    // ratio `ScreenExtent` uses to bring a safe area the other
-                    // way.
-                    text.font_size * height * 0.5,
-                    text.line_height * height * 0.5,
+                    metrics[0],
+                    metrics[1],
                     text.color,
+                    text.anchor.text_align(),
                 )?);
         }
 

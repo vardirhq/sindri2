@@ -169,26 +169,32 @@ impl EditorApp {
                     .get(entity)
                     .and_then(|data| data.transform_3d)
                     .unwrap_or_default();
-                let origin = placement.text_origin(overlay, transform, text.anchor);
+                let anchored = placement.text_origin(overlay, transform, text.anchor);
                 let layer = text.layer;
+                // The same size and the same alignment the frame is drawn with,
+                // asked of the same functions: a box worked out a second way is
+                // a box that disagrees with the picture it is meant to be over.
+                let metrics = text.pixel_metrics(height);
                 let instance = TextInstance::new(
                     text.text,
                     text.font,
-                    [origin[0] * width, origin[1] * height],
-                    text.font_size,
-                    text.line_height,
+                    [anchored[0] * width, anchored[1] * height],
+                    metrics[0],
+                    metrics[1],
                     text.color,
+                    text.anchor.text_align(),
                 )
                 .ok()?;
                 let size = self.renderers.text.measure(&instance, viewport)?;
+                let [left, top] = sindri_render::aligned_origin(&instance, size);
                 Some(picking::TextTarget {
                     entity,
                     layer,
                     bounds: [
-                        origin[0],
-                        origin[1],
-                        origin[0] + size[0] / width,
-                        origin[1] + size[1] / height,
+                        left / width,
+                        top / height,
+                        (left + size[0]) / width,
+                        (top + size[1]) / height,
                     ],
                 })
             })
