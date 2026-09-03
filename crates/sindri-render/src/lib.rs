@@ -1,5 +1,6 @@
 //! Target-independent Sindri rendering building blocks.
 
+mod bloom;
 mod camera;
 mod color;
 mod cube;
@@ -20,6 +21,7 @@ mod transparency;
 mod triangle;
 mod uv_rect;
 
+pub use bloom::{Bloom, BloomSettings};
 pub use camera::{
     OrthographicCamera, PerspectiveCamera, look_at, orthographic_projection, perspective_projection,
 };

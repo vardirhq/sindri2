@@ -12,10 +12,11 @@ use std::{error::Error, fs, io::BufWriter, path::Path};
 use glam::{Mat4, Quat, Vec3};
 use sindri_gpu::{GpuContext, GpuRequestOptions};
 use sindri_render::{
-    ClearOperations, DepthTarget, ExtractedFrame, FrameCamera, FrameCommand, FramePass,
-    FrameRenderers, FrameTarget, GlyphRenderer, OffscreenTarget, RenderLayer, RenderStage, Shape,
-    ShapeBlend, ShapeInstance, ShapeRenderer, SpriteBatchRenderer, TextRenderer, TextureRegistry,
-    TexturedCubeRenderer, Viewport, encode_prepared_frame, orthographic_projection,
+    Bloom, BloomSettings, ClearOperations, DepthTarget, ExtractedFrame, FrameCamera, FrameCommand,
+    FramePass, FrameRenderers, FrameTarget, GlyphRenderer, OffscreenTarget, RenderLayer,
+    RenderStage, Shape, ShapeBlend, ShapeInstance, ShapeRenderer, SpriteBatchRenderer,
+    TextRenderer, TextureRegistry, TexturedCubeRenderer, Viewport, encode_prepared_frame,
+    orthographic_projection,
 };
 
 const WIDTH: u32 = 1100;
@@ -163,37 +164,11 @@ fn glow() -> Vec<ShapeInstance> {
     shapes
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
-    let path = std::env::args()
-        .nth(1)
-        .unwrap_or_else(|| "target/render-artifacts/shape-specimen.png".to_owned());
-    pollster::block_on(run(Path::new(&path)))
-}
-
-fn pass(command: FrameCommand, camera: FrameCamera) -> FramePass {
-    FramePass::new(RenderStage::Overlay, RenderLayer::OVERLAY, camera, command)
-}
-
-async fn run(path: &Path) -> Result<(), Box<dyn Error>> {
-    let instance = wgpu::Instance::default();
-    let gpu = GpuContext::request(&instance, None, &GpuRequestOptions::default()).await?;
-    let target = OffscreenTarget::new(&gpu.device, WIDTH, HEIGHT)?;
-    let depth = DepthTarget::new(&gpu.device, WIDTH, HEIGHT);
-
-    let aspect = f64::from(WIDTH) / f64::from(HEIGHT);
-    #[allow(clippy::cast_possible_truncation)]
-    let half_width = HALF_HEIGHT * aspect as f32;
-    let camera = FrameCamera {
-        view_projection: orthographic_projection(
-            -half_width,
-            half_width,
-            -HALF_HEIGHT,
-            HALF_HEIGHT,
-            -1.0,
-            1.0,
-        ),
-    };
-
+/// The whole sheet, as one frame.
+///
+/// Split out because the drawing is the interesting half and the device setup
+/// around it is not.
+fn sheet(camera: FrameCamera) -> ExtractedFrame {
     let mut frame = ExtractedFrame::new(
         Viewport::new(WIDTH, HEIGHT),
         // Black, because that is the ground this language is drawn on.
@@ -202,7 +177,6 @@ async fn run(path: &Path) -> Result<(), Box<dyn Error>> {
             depth: 1.0,
         },
     );
-    // The grid goes down first, under everything, as one instance.
     frame.push(pass(
         FrameCommand::Shapes {
             blend: ShapeBlend::Over,
@@ -229,6 +203,51 @@ async fn run(path: &Path) -> Result<(), Box<dyn Error>> {
         },
         camera,
     ));
+    frame
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let path = std::env::args()
+        .nth(1)
+        .unwrap_or_else(|| "target/render-artifacts/shape-specimen.png".to_owned());
+    pollster::block_on(run(Path::new(&path)))
+}
+
+fn pass(command: FrameCommand, camera: FrameCamera) -> FramePass {
+    FramePass::new(RenderStage::Overlay, RenderLayer::OVERLAY, camera, command)
+}
+
+async fn run(path: &Path) -> Result<(), Box<dyn Error>> {
+    let instance = wgpu::Instance::default();
+    let gpu = GpuContext::request(&instance, None, &GpuRequestOptions::default()).await?;
+    let target = OffscreenTarget::new(&gpu.device, WIDTH, HEIGHT)?;
+    let depth = DepthTarget::new(&gpu.device, WIDTH, HEIGHT);
+    // The sheet is drawn lit, because unlit is not what any of this is for: a
+    // stroke on black without bloom is a coloured line, and the point of the
+    // shapes is that they are a light source.
+    let mut bloom = Bloom::new(&gpu.device, OffscreenTarget::FORMAT);
+    bloom.resize(&gpu.device, WIDTH, HEIGHT);
+    let scene = bloom
+        .scene_view()
+        .expect("the chain was just sized")
+        .clone();
+
+    let aspect = f64::from(WIDTH) / f64::from(HEIGHT);
+    #[allow(clippy::cast_possible_truncation)]
+    let half_width = HALF_HEIGHT * aspect as f32;
+    let camera = FrameCamera {
+        view_projection: orthographic_projection(
+            -half_width,
+            half_width,
+            -HALF_HEIGHT,
+            HALF_HEIGHT,
+            -1.0,
+            1.0,
+        ),
+    };
+
+    let frame = sheet(camera);
+    // The grid goes down first, under everything, as one instance.
     let prepared = frame.prepare()?;
 
     let mut encoder = gpu
@@ -249,11 +268,18 @@ async fn run(path: &Path) -> Result<(), Box<dyn Error>> {
         &gpu.queue,
         &mut encoder,
         FrameTarget {
-            color: target.view(),
+            color: &scene,
             depth: &depth,
         },
         &prepared,
     )?;
+    bloom.resolve(
+        &gpu.device,
+        &gpu.queue,
+        &mut encoder,
+        target.view(),
+        BloomSettings::default(),
+    );
     let readback = target.copy_to_buffer(&gpu.device, &mut encoder)?;
     gpu.queue.submit([encoder.finish()]);
     let pixels = readback.read_rgba8(&gpu.device)?;

@@ -409,6 +409,38 @@ all three ask the same functions the frame was drawn from:
   A wrap width is otherwise a number in the inspector whose only reading is to
   retype it and look.
 
+### Bloom
+
+`Bloom` owns a scene target and a quarter-resolution ping-pong pair, and runs
+three kinds of pass over a full-screen triangle: keep what is brighter than a
+threshold, blur it one axis at a time, add it back over the scene. A host draws
+its frame into `bloom.scene_view()` instead of its surface, then calls
+`bloom.resolve(..., surface)`.
+
+It sits *outside* `encode_prepared_frame` rather than inside it, because it
+changes where a frame is drawn rather than how one is drawn. A host that does not
+want it keeps drawing straight to its surface and pays nothing.
+
+Three decisions worth keeping:
+
+- **The chain is float and linear; the scene and the output are sRGB.** The
+  repository's colour rule is that shaders work in linear and colour targets
+  re-encode on write — but the chain is not a picture anyone looks at. It is an
+  intermediate written and read eight or ten times a frame, and an sRGB one would
+  encode and decode at every step, losing the darks a glow is mostly made of, and
+  clamp anything brighter than white before it could spread.
+- **A quarter resolution is both cheaper and better.** The downsample is itself a
+  blur, and the taps that follow reach four times as far across the picture for
+  the same cost.
+- **The threshold is soft.** A hard cutoff makes a glow switch on and off as
+  something pulses across it, which reads as a flicker.
+
+The defaults were tuned by shooting the shape specimen at a spread of settings
+and looking at the results. Intensity is the one that matters: past about `0.5` a
+saturated stroke washes out towards white, because a colour already near the top
+of the 0-1 range has nowhere to go but grey when light is added to it. The coral
+loses its coral first, which is the tell.
+
 ### What a shape is
 
 A shape is a quad with a signed distance field evaluated in its fragment shader:

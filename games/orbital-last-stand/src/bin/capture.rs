@@ -18,9 +18,9 @@ use sindri_assets::{AssetBytes, AssetDecoder, FontAssetDecoder, TextureAssetDeco
 use sindri_core::{AssetId, SpriteSheetDocument, sheet_id_for};
 use sindri_gpu::{GpuContext, GpuRequestOptions};
 use sindri_render::{
-    DepthTarget, FrameRenderers, FrameTarget, GlyphRenderer, OffscreenTarget, ShapeRenderer,
-    SpriteBatchRenderer, TextRenderer, Texture2D, TextureRegistry, TexturedCubeRenderer, Viewport,
-    encode_prepared_frame,
+    Bloom, BloomSettings, DepthTarget, FrameRenderers, FrameTarget, GlyphRenderer, OffscreenTarget,
+    ShapeRenderer, SpriteBatchRenderer, TextRenderer, Texture2D, TextureRegistry,
+    TexturedCubeRenderer, Viewport, encode_prepared_frame,
 };
 use sindri_scene::{CameraView, SceneRuntime, TextureBindings, UiCanvas, WorldProjection};
 
@@ -137,6 +137,16 @@ async fn capture(
             .with_canvas(canvas),
     )?;
 
+    // Through the bloom chain, because the game is neon on black and unlit
+    // neon is just a coloured line. The capture is meant to show what the game
+    // looks like, so it draws it the way the game is drawn.
+    let mut bloom = Bloom::new(&gpu.device, OffscreenTarget::FORMAT);
+    bloom.resize(&gpu.device, width, height);
+    let scene = bloom
+        .scene_view()
+        .expect("the chain was just sized")
+        .clone();
+
     let mut encoder = gpu
         .device
         .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -155,11 +165,18 @@ async fn capture(
         &gpu.queue,
         &mut encoder,
         FrameTarget {
-            color: target.view(),
+            color: &scene,
             depth: &depth,
         },
         &prepared,
     )?;
+    bloom.resolve(
+        &gpu.device,
+        &gpu.queue,
+        &mut encoder,
+        target.view(),
+        BloomSettings::default(),
+    );
     let readback = target.copy_to_buffer(&gpu.device, &mut encoder)?;
     gpu.queue.submit([encoder.finish()]);
     let pixels = readback.read_rgba8(&gpu.device)?;
