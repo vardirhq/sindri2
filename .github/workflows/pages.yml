@@ -28,17 +28,28 @@ jobs:
         run: |
           cargo install wasm-pack --version 0.13.1 --locked
           python -m pip install --disable-pip-version-check 'Markdown==3.8.2'
-      - name: Build Gather for WebGPU
-        run: wasm-pack build game --target web --release --out-dir ../target/pages/examples/gather/pkg
+      - name: Build the browser host
+        run: wasm-pack build game --target web --release --out-dir pkg
       - name: Assemble Sindri site
         run: |
-          mkdir -p target/pages/assets target/pages/examples/gather/assets
+          mkdir -p target/pages/assets
           cp site/index.html target/pages/index.html
           cp site/site.css target/pages/assets/site.css
-          cp game/index.html target/pages/examples/gather/index.html
-          cp -R game/assets/. target/pages/examples/gather/assets/
-          cargo run --quiet --package sindri-assets --example manifest -- game/assets \
-            > target/pages/examples/gather/assets/sindri.manifest.json
+          # Both games are *exported* rather than assembled by hand. The export
+          # is what decides what a project ships, and a site that copied an
+          # asset directory instead was a second answer to that question --
+          # one that wrote a manifest naming no kinds, which the host reads to
+          # know what to ask for, so it shipped a game that loaded nothing.
+          for project in "game:gather" "games/orbital-last-stand:orbital-last-stand"; do
+            src="${project%%:*}"
+            route="${project##*:}"
+            cargo run --quiet --package sindri-export --bin sindri-export -- \
+              "$src" "target/pages/examples/$route" --base "/sindri2/examples/$route/"
+            # One host serves every project: it reads the manifest rather than
+            # carrying a list of one game's assets.
+            mkdir -p "target/pages/examples/$route/pkg"
+            cp -R game/pkg/. "target/pages/examples/$route/pkg/"
+          done
           python site/build_docs.py target/pages
           touch target/pages/.nojekyll
       - name: Verify assembled routes
@@ -46,9 +57,16 @@ jobs:
           test -f target/pages/index.html
           test -f target/pages/docs/scripting/index.html
           test -f target/pages/docs/language/index.html
-          test -f target/pages/examples/gather/index.html
-          test -f target/pages/examples/gather/pkg/sindri_gather.js
-          test -f target/pages/examples/gather/pkg/sindri_gather_bg.wasm
+          for route in gather orbital-last-stand; do
+            test -f "target/pages/examples/$route/index.html"
+            test -f "target/pages/examples/$route/assets/sindri.manifest.json"
+            test -f "target/pages/examples/$route/pkg/sindri_gather.js"
+            test -f "target/pages/examples/$route/pkg/sindri_gather_bg.wasm"
+            # A manifest that names no scene is a game that will not open, and
+            # it is what a hand-written one produced.
+            grep -q '"kind": "scene"' "target/pages/examples/$route/assets/sindri.manifest.json"
+          done
+          grep -q '"kind": "prefab"' target/pages/examples/orbital-last-stand/assets/sindri.manifest.json
       - uses: actions/configure-pages@v6
         with:
           enablement: true

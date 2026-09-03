@@ -2,10 +2,12 @@
   "format_version": 1,
   "assets": {
     "demo.scene.json": {
+      "kind": "scene",
       "bytes": 2958,
       "hash": "sha256:30bb6684f7975c33598c972dd81287adb7018f98c0bf881db358f63cbc1e5596"
     },
     "textures/badge.png": {
+      "kind": "texture",
       "bytes": 362,
       "hash": "sha256:cfcce5a427b228994ec8a9ff677161066773ba0f190acaef1e3b52f12cdcc348"
     }

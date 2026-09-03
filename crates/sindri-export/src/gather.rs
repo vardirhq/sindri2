@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 use sindri_assets::AssetKind;
-use sindri_core::{PREFAB_SUFFIX, PrefabDocument, SceneDocument, World};
+use sindri_core::{PrefabDocument, SceneDocument, World};
 use sindri_decay::{ScriptSources, Scripts};
 use sindri_scene::{SceneExtractor, referenced_fonts, referenced_textures};
 
@@ -192,7 +192,7 @@ impl ProjectExport {
 
         // What the scene cannot name.
         for id in &file.assets.include {
-            wanted.insert(id.clone(), kind_of(id));
+            wanted.insert(id.clone(), AssetKind::for_id(id));
         }
 
         for (id, kind) in wanted {
@@ -223,25 +223,6 @@ impl ProjectExport {
             .iter()
             .find(|asset| asset.kind == AssetKind::Scene)
             .map(|asset| asset.id.as_str())
-    }
-}
-
-/// What a file is, from its name.
-///
-/// Only used for assets a project listed by hand: everything found by walking
-/// the scene already knows what it is, because the component that named it says
-/// so. An extension nobody recognises ships as `Other`, which is honest — the
-/// engine will not decode it, and refusing to carry it would be worse.
-fn kind_of(id: &str) -> AssetKind {
-    match id.rsplit_once('.').map(|(_, extension)| extension) {
-        Some("wav" | "ogg" | "mp3" | "flac") => AssetKind::Audio,
-        Some("png" | "jpg" | "jpeg") => AssetKind::Texture,
-        Some("ttf" | "otf") => AssetKind::Font,
-        Some("decay") => AssetKind::Script,
-        // Both end in `.json`, so the longer name is tested first.
-        _ if id.ends_with(PREFAB_SUFFIX) => AssetKind::Prefab,
-        _ if id.ends_with(".sheet.json") => AssetKind::Sheet,
-        _ => AssetKind::Other,
     }
 }
 

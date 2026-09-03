@@ -42,6 +42,14 @@ All notable changes to Sindri Next will be documented here.
 
 ### Fixed
 
+- **The site served a game that could not open.** Pages built its manifest from
+  a directory scan that recorded every asset as `Other`. That was harmless
+  while nothing read kinds, and became a trap the moment the browser host
+  started asking for its assets by kind: a manifest naming no scene is a
+  project that does not load. The scan now takes a file for whatever its name
+  says it is, and the site is assembled by the export rather than by hand — one
+  answer to what a project ships, instead of two that disagreed.
+
 - **An export shipped a game with no menus.** Its walks were the runtime's, and
   the runtime's walks are active-only — correct for drawing and stepping, wrong
   for an export, whose question is not what is running but what a project could
