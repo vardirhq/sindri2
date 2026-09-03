@@ -56,8 +56,8 @@ script Warden {
             this.phase = 1.0;
         }
         // Reddening as it goes, so the phase is legible without a label.
-        this.sprite.tint.g = 0.35 + share * 0.65;
-        this.sprite.tint.b = 0.35 + share * 0.65;
+        this.shape.stroke.g = 0.35 + share * 0.65;
+        this.shape.stroke.b = 0.35 + share * 0.65;
 
         let dx = player.transform.position.x - this.transform.position.x;
         let dy = player.transform.position.y - this.transform.position.y;

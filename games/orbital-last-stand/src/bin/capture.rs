@@ -39,6 +39,13 @@ fn shot_for(name: &str) -> Shot {
             seconds: 12.0,
             click: Some("TitleStart"),
         },
+        // Mid-fight, before the first upgrade interrupts it. This is the shot
+        // that shows the cast, which "playing" at twelve seconds does not:
+        // by then the chooser is up and covering the field.
+        "combat" => Shot {
+            seconds: 5.0,
+            click: Some("TitleStart"),
+        },
         // The title screen, which is what a player sees first and what every
         // layout mistake shows up on.
         _ => Shot {

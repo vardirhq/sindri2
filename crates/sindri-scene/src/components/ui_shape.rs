@@ -89,9 +89,14 @@ impl UiShapeBlend {
     }
 }
 
-/// A shape drawn on the overlay.
+/// What a shape is and how it is drawn, without saying where.
+///
+/// Shared by the overlay and world components, which differ only in what places
+/// them: an anchor on a corner of the viewport, or a transform in the world.
+/// Written once because there are eleven fields here and two copies of them
+/// would drift within a release.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
-pub struct UiShapeComponent {
+pub struct ShapeGeometry {
     #[serde(default)]
     pub kind: UiShapeKind,
     /// How many sides a polygon has, or how many cells a grid is across.
@@ -133,9 +138,32 @@ pub struct UiShapeComponent {
     pub sweep_turns: f32,
     #[serde(default)]
     pub blend: UiShapeBlend,
+}
+
+/// A shape drawn on the overlay, anchored to a corner of the viewport.
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct UiShapeComponent {
+    #[serde(flatten)]
+    pub geometry: ShapeGeometry,
     #[serde(default)]
     pub anchor: UiAnchor,
     /// The explicit override on draw order within the overlay.
+    #[serde(default)]
+    pub layer: i32,
+}
+
+/// A shape drawn in the world, placed by its entity's transform.
+///
+/// The same drawing as [`UiShapeComponent`] through a different camera, which
+/// is the whole difference: this one is somewhere in the scene, is hidden by
+/// what is in front of it, and moves when the view does. It is what an enemy, a
+/// shockwave, an orbit ring and a pickup are, none of which should be a
+/// texture — each is a shape the game already knows the numbers for.
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct ShapeComponent {
+    #[serde(flatten)]
+    pub geometry: ShapeGeometry,
+    /// The explicit override on draw order, which beats distance.
     #[serde(default)]
     pub layer: i32,
 }
@@ -152,7 +180,7 @@ const fn full() -> f32 {
     1.0
 }
 
-impl UiShapeComponent {
+impl ShapeGeometry {
     /// The drawable this stored shape is.
     ///
     /// The single place a stored shape becomes a drawn one, so the frame, the
@@ -182,4 +210,8 @@ impl UiShapeComponent {
 
 impl sindri_core::SceneComponent for UiShapeComponent {
     const TYPE_NAME: &'static str = "sindri.ui.shape";
+}
+
+impl sindri_core::SceneComponent for ShapeComponent {
+    const TYPE_NAME: &'static str = "sindri.shape";
 }

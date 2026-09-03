@@ -3,7 +3,7 @@
 //! A new member is an entry in the list for its component, with the two
 //! accessors beside it. Adding one is a single visible edit.
 
-use super::names::{RGBA, SPRITE_COMPONENT, UI_IMAGE_COMPONENT, VEC3};
+use super::names::{RGBA, SHAPE_COMPONENT, SPRITE_COMPONENT, UI_IMAGE_COMPONENT, VEC3};
 use super::{Leaf, Node, Scalar, Seg, Vector};
 
 const POSITION: &[(&str, Node)] = &[
@@ -56,6 +56,97 @@ const UI_IMAGE_TINT: &[(&str, Node)] = &[
     ("g", tint(UI_IMAGE_COMPONENT, 1)),
     ("b", tint(UI_IMAGE_COMPONENT, 2)),
     ("a", tint(UI_IMAGE_COMPONENT, 3)),
+];
+
+/// One channel of a shape's fill.
+///
+/// Spelled out per field rather than taking the field name as a parameter: the
+/// pointer arrays are `'static` only because their contents are literals, and a
+/// parameter makes them a temporary that cannot outlive the call.
+const fn shape_fill(index: usize) -> Node {
+    Node::Leaf(Leaf::Component {
+        component: SHAPE_COMPONENT,
+        pointer: match index {
+            0 => &[Seg::Field("fill"), Seg::Index(0)],
+            1 => &[Seg::Field("fill"), Seg::Index(1)],
+            2 => &[Seg::Field("fill"), Seg::Index(2)],
+            _ => &[Seg::Field("fill"), Seg::Index(3)],
+        },
+    })
+}
+
+/// One channel of a shape's stroke.
+const fn shape_stroke(index: usize) -> Node {
+    Node::Leaf(Leaf::Component {
+        component: SHAPE_COMPONENT,
+        pointer: match index {
+            0 => &[Seg::Field("stroke"), Seg::Index(0)],
+            1 => &[Seg::Field("stroke"), Seg::Index(1)],
+            2 => &[Seg::Field("stroke"), Seg::Index(2)],
+            _ => &[Seg::Field("stroke"), Seg::Index(3)],
+        },
+    })
+}
+
+const SHAPE_FILL: &[(&str, Node)] = &[
+    ("r", shape_fill(0)),
+    ("g", shape_fill(1)),
+    ("b", shape_fill(2)),
+    ("a", shape_fill(3)),
+];
+
+const SHAPE_STROKE: &[(&str, Node)] = &[
+    ("r", shape_stroke(0)),
+    ("g", shape_stroke(1)),
+    ("b", shape_stroke(2)),
+    ("a", shape_stroke(3)),
+];
+
+/// A shape has two colours where a sprite has one, and two numbers a sprite
+/// has no equivalent of.
+///
+/// `sweep_turns` is the reason this is worth having at all: a cooldown ring, a
+/// charge meter and a boss's health arc are one float a script already holds,
+/// and drawing them from a sprite would need a frame of art per step.
+/// `stroke_width` is how something pulses without changing size.
+pub(crate) const SHAPE_MEMBERS: &[(&str, Node)] = &[
+    ("fill", Node::Group(RGBA, SHAPE_FILL)),
+    ("stroke", Node::Group(RGBA, SHAPE_STROKE)),
+    (
+        "stroke_width",
+        Node::Leaf(Leaf::Component {
+            component: SHAPE_COMPONENT,
+            pointer: &[Seg::Field("stroke_width")],
+        }),
+    ),
+    (
+        "sweep_turns",
+        Node::Leaf(Leaf::Component {
+            component: SHAPE_COMPONENT,
+            pointer: &[Seg::Field("sweep_turns")],
+        }),
+    ),
+    (
+        "sweep_start",
+        Node::Leaf(Leaf::Component {
+            component: SHAPE_COMPONENT,
+            pointer: &[Seg::Field("sweep_start")],
+        }),
+    ),
+    (
+        "dashes",
+        Node::Leaf(Leaf::Component {
+            component: SHAPE_COMPONENT,
+            pointer: &[Seg::Field("dashes")],
+        }),
+    ),
+    (
+        "layer",
+        Node::Leaf(Leaf::Component {
+            component: SHAPE_COMPONENT,
+            pointer: &[Seg::Field("layer")],
+        }),
+    ),
 ];
 
 pub(crate) const SPRITE_MEMBERS: &[(&str, Node)] = &[

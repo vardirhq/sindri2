@@ -31,10 +31,6 @@
             "enemy"
           ]
         },
-        "sindri.sprite": {
-          "texture": "textures/splitter.png",
-          "layer": 3
-        },
         "sindri.physics2d.rigid_body": {
           "kind": "dynamic",
           "pose": {
@@ -101,6 +97,30 @@
             "core": "prefabs/core.prefab.json",
             "shard": "prefabs/shard.prefab.json"
           }
+        },
+        "sindri.shape": {
+          "kind": "polygon",
+          "count": 4.0,
+          "fill": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "stroke": [
+            1.0,
+            0.20864,
+            0.50289,
+            1.0
+          ],
+          "stroke_width": 0.09,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "layer": 3
         }
       }
     }

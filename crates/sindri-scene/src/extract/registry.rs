@@ -23,7 +23,7 @@ use sindri_core::{ComponentSchemaRegistry, TagsComponent};
 use crate::animation::SpriteAnimationComponent;
 use crate::audio::AudioSourceComponent;
 use crate::components::{
-    CameraComponent, GridNavigationComponent, GridOccupantComponent, MeshComponent,
+    CameraComponent, GridNavigationComponent, GridOccupantComponent, MeshComponent, ShapeComponent,
     SpriteComponent, TilemapComponent, UiImageComponent, UiShapeBlend, UiShapeComponent,
     UiShapeKind, UiTextComponent,
 };
@@ -40,6 +40,53 @@ pub(super) fn builtin_components() -> Result<ComponentSchemaRegistry, SceneExtra
     register_drawables(&mut components)?;
     register_gameplay(&mut components)?;
     Ok(components)
+}
+
+/// The two shape components, whose blanks are long enough to be their own
+/// function.
+///
+/// Long because a shape is described entirely by numbers — there is no texture
+/// standing in for the look — and because a blank that drew nothing would read
+/// as a broken add rather than an empty one. Both default to a mint outline.
+fn register_shapes(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
+    // The same blank as the overlay shape, minus the anchor: a mint outline,
+    // because a shape whose default drew nothing would read as a broken add.
+    components.register_with_default::<ShapeComponent>(
+        "Shape",
+        serde_json::json!({
+            "kind": UiShapeKind::default().as_str(),
+            "count": 6.0,
+            "fill": [0.0, 0.0, 0.0, 0.0],
+            "stroke": [0.49, 1.0, 0.77, 1.0],
+            "stroke_width": 0.06,
+            "corner_radius": 0.0,
+            "dashes": 0.0,
+            "dash_duty": 0.5,
+            "sweep_start": 0.0,
+            "sweep_turns": 1.0,
+            "blend": UiShapeBlend::default().as_str(),
+            "layer": 0
+        }),
+    )?;
+    components.register_with_default::<UiShapeComponent>(
+        "UI Shape",
+        serde_json::json!({
+            "kind": UiShapeKind::default().as_str(),
+            "count": 6.0,
+            "fill": [0.0, 0.0, 0.0, 0.0],
+            "stroke": [0.49, 1.0, 0.77, 1.0],
+            "stroke_width": 0.04,
+            "corner_radius": 0.0,
+            "dashes": 0.0,
+            "dash_duty": 0.5,
+            "sweep_start": 0.0,
+            "sweep_turns": 1.0,
+            "blend": UiShapeBlend::default().as_str(),
+            "anchor": "center",
+            "layer": 0
+        }),
+    )?;
+    Ok(())
 }
 
 /// Everything a scene puts on the screen.
@@ -132,24 +179,7 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
     // which is the panel border that most of a UI is made of. A default of
     // nothing — no fill, no stroke — would add a component that draws
     // absolutely nothing and read as a broken button.
-    components.register_with_default::<UiShapeComponent>(
-        "UI Shape",
-        serde_json::json!({
-            "kind": UiShapeKind::default().as_str(),
-            "count": 6.0,
-            "fill": [0.0, 0.0, 0.0, 0.0],
-            "stroke": [0.49, 1.0, 0.77, 1.0],
-            "stroke_width": 0.04,
-            "corner_radius": 0.0,
-            "dashes": 0.0,
-            "dash_duty": 0.5,
-            "sweep_start": 0.0,
-            "sweep_turns": 1.0,
-            "blend": UiShapeBlend::default().as_str(),
-            "anchor": "center",
-            "layer": 0
-        }),
-    )?;
+    register_shapes(components)?;
     // A one-by-one map of one empty cell: the smallest tilemap that is
     // still a valid one, so adding the component in the editor gives
     // something to paint into rather than something to repair.

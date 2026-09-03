@@ -7,6 +7,7 @@ pub(crate) const VEC3: &str = "Vec3";
 pub(crate) const SPRITE: &str = "Sprite";
 
 pub(crate) const UI_IMAGE: &str = "UiImage";
+pub(crate) const SHAPE: &str = "Shape";
 
 pub(crate) const RGBA: &str = "Rgba";
 
@@ -61,6 +62,7 @@ pub(crate) const SPRITE_COMPONENT: &str = "sindri.sprite";
 /// a thing in the world are different components, and a script that writes a
 /// tint should say which of the two it means.
 pub(crate) const UI_IMAGE_COMPONENT: &str = "sindri.ui.image";
+pub(crate) const SHAPE_COMPONENT: &str = "sindri.shape";
 
 /// The component whose layout and entity transform define a gameplay grid.
 pub(crate) const TILEMAP_COMPONENT: &str = "sindri.tilemap";

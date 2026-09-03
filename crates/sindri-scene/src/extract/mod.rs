@@ -191,6 +191,7 @@ impl SceneExtractor {
             },
             &mut frame,
         )?;
+        self.push_world_shapes(world, &cameras, &mut frame)?;
         self.push_shapes(world, &cameras, &hierarchy, &mut frame)?;
         self.push_text(world, &cameras, &hierarchy, &mut frame)?;
         Ok(frame.prepare()?)
@@ -244,6 +245,7 @@ impl SceneExtractor {
             },
             &mut frame,
         )?;
+        self.push_world_shapes(world, &cameras, &mut frame)?;
         self.push_shapes(world, &cameras, &hierarchy, &mut frame)?;
         self.push_text(world, &cameras, &hierarchy, &mut frame)?;
         Ok(frame.prepare()?)

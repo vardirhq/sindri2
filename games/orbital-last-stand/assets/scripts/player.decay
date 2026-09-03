@@ -44,9 +44,9 @@ script Player {
             this.mercy -= dt;
             // Blinking while it cannot be hurt, so the rule is visible rather
             // than something the player has to infer from not dying.
-            this.sprite.tint.a = 0.45;
+            this.shape.stroke.a = 0.45;
         } else {
-            this.sprite.tint.a = 1.0;
+            this.shape.stroke.a = 1.0;
         }
     }
 

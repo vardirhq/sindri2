@@ -31,9 +31,9 @@ pub(crate) use call::{
     TIME_VALUES, TOUCH_CALLS, TOUCH_COUNT, TimeValue, TouchCall, UI_CALLS, UiCall, WORLD_CALLS,
     WorldCall,
 };
-pub(crate) use member::{SPRITE_MEMBERS, TRANSFORM_MEMBERS, UI_IMAGE_MEMBERS};
+pub(crate) use member::{SHAPE_MEMBERS, SPRITE_MEMBERS, TRANSFORM_MEMBERS, UI_IMAGE_MEMBERS};
 pub(crate) use names::{
-    EFFECTS, ENTITY, GAME, GRID, INPUT, PHYSICS, POINTER, PREFAB, RANDOM, SAVE, SPRITE,
+    EFFECTS, ENTITY, GAME, GRID, INPUT, PHYSICS, POINTER, PREFAB, RANDOM, SAVE, SHAPE, SPRITE,
     TILEMAP_COMPONENT, TIME, TOUCH, TRANSFORM, UI, UI_IMAGE, WORLD,
 };
 
@@ -142,6 +142,7 @@ pub(crate) const THIS: &[(&str, Node)] = &[
     ("transform", Node::Group(TRANSFORM, TRANSFORM_MEMBERS)),
     ("sprite", Node::Group(SPRITE, SPRITE_MEMBERS)),
     ("ui_image", Node::Group(UI_IMAGE, UI_IMAGE_MEMBERS)),
+    ("shape", Node::Group(SHAPE, SHAPE_MEMBERS)),
     ("entity", Node::Handle(Handle::Own)),
 ];
 
@@ -155,6 +156,7 @@ pub(crate) const THROUGH_REFERENCE: &[(&str, Node)] = &[
     ("transform", Node::Group(TRANSFORM, TRANSFORM_MEMBERS)),
     ("sprite", Node::Group(SPRITE, SPRITE_MEMBERS)),
     ("ui_image", Node::Group(UI_IMAGE, UI_IMAGE_MEMBERS)),
+    ("shape", Node::Group(SHAPE, SHAPE_MEMBERS)),
 ];
 
 /// Finds the leaf a path names, given the path's parts after `this`.

@@ -12,7 +12,7 @@
         "position": [
           0.0,
           0.0,
-          0.0
+          -10.0
         ],
         "rotation": [
           0.0,
@@ -21,13 +21,13 @@
           1.0
         ],
         "scale": [
-          4.0,
-          2.4,
+          60.0,
+          60.0,
           1.0
         ]
       },
       "components": {
-        "sindri.ui.shape": {
+        "sindri.shape": {
           "kind": "rect",
           "count": 6.0,
           "fill": [
@@ -49,7 +49,6 @@
           "sweep_start": 0.0,
           "sweep_turns": 1.0,
           "blend": "over",
-          "anchor": "center",
           "layer": -200
         }
       }
@@ -62,7 +61,7 @@
         "position": [
           0.0,
           0.0,
-          0.0
+          -10.0
         ],
         "rotation": [
           0.0,
@@ -71,15 +70,15 @@
           1.0
         ],
         "scale": [
-          4.0,
-          2.4,
+          60.0,
+          60.0,
           1.0
         ]
       },
       "components": {
-        "sindri.ui.shape": {
+        "sindri.shape": {
           "kind": "grid",
-          "count": 65.0,
+          "count": 52.0,
           "fill": [
             0,
             0,
@@ -92,14 +91,13 @@
             0.02445,
             1.0
           ],
-          "stroke_width": 0.0005,
+          "stroke_width": 0.0004,
           "corner_radius": 0.0,
           "dashes": 0.0,
           "dash_duty": 0.5,
           "sweep_start": 0.0,
           "sweep_turns": 1.0,
           "blend": "over",
-          "anchor": "center",
           "layer": -199
         }
       }
@@ -130,7 +128,7 @@
           "far": 100.0,
           "near": 0.1,
           "projection": "orthographic",
-          "vertical_size": 17.0,
+          "vertical_size": 11.0,
           "fit": "shorter"
         }
       }
@@ -2223,20 +2221,34 @@
           "script": "Player",
           "source": "scripts/player.decay"
         },
-        "sindri.sprite": {
-          "layer": 5,
-          "texture": "textures/player.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        },
         "sindri.tags": {
           "tags": [
             "player"
           ]
+        },
+        "sindri.shape": {
+          "kind": "polygon",
+          "count": 5.0,
+          "fill": [
+            0.20156,
+            0.92158,
+            0.57758,
+            0.12
+          ],
+          "stroke": [
+            0.45641,
+            1.0,
+            0.77582,
+            1.0
+          ],
+          "stroke_width": 0.1,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "layer": 5
         }
       }
     },

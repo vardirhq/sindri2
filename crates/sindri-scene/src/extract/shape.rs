@@ -13,12 +13,12 @@ use sindri_render::{
     ShapeInstance,
 };
 
-use crate::UiShapeComponent;
 use crate::screen_ui::UiHierarchy;
+use crate::{ShapeComponent, UiShapeComponent};
 
 use super::camera::ResolvedCameras;
 use super::ui::ui_matrix;
-use super::{SceneExtractError, SceneExtractor};
+use super::{SceneExtractError, SceneExtractor, transform_matrix};
 
 impl SceneExtractor {
     pub(super) fn push_shapes(
@@ -57,9 +57,9 @@ impl SceneExtractor {
             let placed = hierarchy.placement_or(entity, shape.anchor);
             let model = ui_matrix(placed, transform, extent);
             batches
-                .entry((shape.layer, shape.blend() == ShapeBlend::Add))
+                .entry((shape.layer, shape.geometry.blend() == ShapeBlend::Add))
                 .or_default()
-                .push(shape.instance(model));
+                .push(shape.geometry.instance(model));
         }
 
         for ((layer, additive), instances) in batches {
@@ -67,6 +67,61 @@ impl SceneExtractor {
                 RenderStage::Overlay,
                 RenderLayer(layer),
                 camera,
+                FrameCommand::Shapes {
+                    blend: if additive {
+                        ShapeBlend::Add
+                    } else {
+                        ShapeBlend::Over
+                    },
+                    instances,
+                },
+            ));
+        }
+        Ok(())
+    }
+}
+
+impl SceneExtractor {
+    /// `sindri.shape`, drawn in the world rather than on the overlay.
+    ///
+    /// Through the world camera and against the depth buffer, so a shape is
+    /// somewhere in the scene: hidden by what is in front of it, and moving
+    /// when the view does. Everything else about it is the overlay shape's
+    /// story — the same geometry, the same batching by blend and layer.
+    pub(super) fn push_world_shapes(
+        &self,
+        world: &World,
+        cameras: &ResolvedCameras,
+        frame: &mut ExtractedFrame,
+    ) -> Result<(), SceneExtractError> {
+        let shapes = self.components.query::<ShapeComponent>(world)?;
+        if shapes.is_empty() {
+            return Ok(());
+        }
+        let camera = cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?;
+
+        let mut batches: BTreeMap<(i32, bool), Vec<ShapeInstance>> = BTreeMap::new();
+        for (entity, shape) in shapes {
+            if !world.is_active(entity) {
+                continue;
+            }
+            let transform = world
+                .get(entity)
+                .and_then(|data| data.transform_3d)
+                .unwrap_or_default();
+            batches
+                .entry((shape.layer, shape.geometry.blend() == ShapeBlend::Add))
+                .or_default()
+                .push(shape.geometry.instance(transform_matrix(transform)));
+        }
+
+        for ((layer, additive), instances) in batches {
+            frame.push(FramePass::new(
+                RenderStage::Transparent2d,
+                RenderLayer(layer),
+                FrameCamera {
+                    view_projection: camera.view_projection,
+                },
                 FrameCommand::Shapes {
                     blend: if additive {
                         ShapeBlend::Add

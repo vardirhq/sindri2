@@ -25,7 +25,7 @@ pub use mesh::{MeshComponent, MeshPrimitive};
 pub use sprite::SpriteComponent;
 pub use tilemap::{TileProjection, TilemapComponent, TilemapError};
 pub use ui::{UiAnchor, UiFill, UiFillEdge, UiImageComponent, UiTextComponent};
-pub use ui_shape::{UiShapeBlend, UiShapeComponent, UiShapeKind};
+pub use ui_shape::{ShapeComponent, ShapeGeometry, UiShapeBlend, UiShapeComponent, UiShapeKind};
 pub use ui_text_options::{
     UiTextAutoSize, UiTextCase, UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap,
 };
