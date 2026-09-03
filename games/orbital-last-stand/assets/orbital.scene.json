@@ -315,8 +315,8 @@
         "sindri.ui.text": {
           "text": "Score {}",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.07,
-          "line_height": 1.2,
+          "font_size": 34.0,
+          "line_height": 42.0,
           "color": [
             1,
             1,
@@ -354,8 +354,8 @@
         "sindri.ui.text": {
           "text": "Wave {}",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.055,
-          "line_height": 1.2,
+          "font_size": 26.0,
+          "line_height": 32.0,
           "color": [
             0.75,
             0.85,
@@ -393,8 +393,8 @@
         "sindri.ui.text": {
           "text": "Level {}",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.055,
-          "line_height": 1.2,
+          "font_size": 26.0,
+          "line_height": 32.0,
           "color": [
             0.75,
             0.85,
@@ -432,8 +432,8 @@
         "sindri.ui.text": {
           "text": "{}:{.2}",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.07,
-          "line_height": 1.2,
+          "font_size": 34.0,
+          "line_height": 42.0,
           "color": [
             1,
             1,
@@ -547,8 +547,8 @@
         "sindri.ui.text": {
           "text": "{}/{}",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.05,
-          "line_height": 1.2,
+          "font_size": 24.0,
+          "line_height": 30.0,
           "color": [
             1,
             1,
@@ -687,8 +687,8 @@
         "sindri.ui.text": {
           "text": "WARDEN",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.06,
-          "line_height": 1.2,
+          "font_size": 30.0,
+          "line_height": 38.0,
           "color": [
             1.0,
             0.6,
@@ -822,8 +822,8 @@
           1.0
         ],
         "scale": [
-          3.6,
-          2.2,
+          1.55,
+          0.78,
           1.0
         ]
       },
@@ -832,10 +832,10 @@
           "texture": "textures/panel.png",
           "anchor": "center",
           "tint": [
-            1,
-            1,
-            1,
-            0.92
+            1.0,
+            1.0,
+            1.0,
+            0.97
           ],
           "layer": 100
         }
@@ -867,8 +867,8 @@
         "sindri.ui.text": {
           "text": "ORBITAL LAST STAND",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.13,
-          "line_height": 1.2,
+          "font_size": 72.0,
+          "line_height": 90.0,
           "color": [
             1,
             1,
@@ -906,8 +906,8 @@
         "sindri.ui.text": {
           "text": "Move with WASD or hold to steer. You fire on your own.",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.05,
-          "line_height": 1.2,
+          "font_size": 26.0,
+          "line_height": 32.0,
           "color": [
             0.7,
             0.8,
@@ -945,8 +945,8 @@
         "sindri.ui.text": {
           "text": "Best {}",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.055,
-          "line_height": 1.2,
+          "font_size": 28.0,
+          "line_height": 35.0,
           "color": [
             0.7,
             0.8,
@@ -984,8 +984,8 @@
         "sindri.ui.text": {
           "text": "Your saved progress could not be read.",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.05,
-          "line_height": 1.2,
+          "font_size": 24.0,
+          "line_height": 30.0,
           "color": [
             1.0,
             0.6,
@@ -1070,8 +1070,8 @@
         "sindri.ui.text": {
           "text": "START",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.07,
-          "line_height": 1.2,
+          "font_size": 36.0,
+          "line_height": 45.0,
           "color": [
             1,
             1,
@@ -1124,8 +1124,8 @@
           1.0
         ],
         "scale": [
-          2.4,
-          1.4,
+          1.05,
+          0.55,
           1.0
         ]
       },
@@ -1134,10 +1134,10 @@
           "texture": "textures/panel.png",
           "anchor": "center",
           "tint": [
-            1,
-            1,
-            1,
-            0.92
+            1.0,
+            1.0,
+            1.0,
+            0.97
           ],
           "layer": 100
         }
@@ -1169,8 +1169,8 @@
         "sindri.ui.text": {
           "text": "PAUSED",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.1,
-          "line_height": 1.2,
+          "font_size": 56.0,
+          "line_height": 70.0,
           "color": [
             1,
             1,
@@ -1254,8 +1254,8 @@
         "sindri.ui.text": {
           "text": "RESUME",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.06,
-          "line_height": 1.2,
+          "font_size": 32.0,
+          "line_height": 40.0,
           "color": [
             1,
             1,
@@ -1339,8 +1339,8 @@
         "sindri.ui.text": {
           "text": "GIVE UP",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.06,
-          "line_height": 1.2,
+          "font_size": 32.0,
+          "line_height": 40.0,
           "color": [
             1,
             1,
@@ -1399,8 +1399,8 @@
           1.0
         ],
         "scale": [
-          3.0,
-          1.8,
+          1.35,
+          0.72,
           1.0
         ]
       },
@@ -1409,10 +1409,10 @@
           "texture": "textures/panel.png",
           "anchor": "center",
           "tint": [
-            1,
-            1,
-            1,
-            0.94
+            1.0,
+            1.0,
+            1.0,
+            0.97
           ],
           "layer": 100
         }
@@ -1444,8 +1444,8 @@
         "sindri.ui.text": {
           "text": "RUN OVER",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.11,
-          "line_height": 1.2,
+          "font_size": 60.0,
+          "line_height": 75.0,
           "color": [
             1,
             1,
@@ -1483,8 +1483,8 @@
         "sindri.ui.text": {
           "text": "Score {}",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.07,
-          "line_height": 1.2,
+          "font_size": 36.0,
+          "line_height": 45.0,
           "color": [
             1,
             1,
@@ -1522,8 +1522,8 @@
         "sindri.ui.text": {
           "text": "Best {}",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.055,
-          "line_height": 1.2,
+          "font_size": 28.0,
+          "line_height": 35.0,
           "color": [
             0.7,
             0.8,
@@ -1561,8 +1561,8 @@
         "sindri.ui.text": {
           "text": "Kills {}",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.055,
-          "line_height": 1.2,
+          "font_size": 28.0,
+          "line_height": 35.0,
           "color": [
             0.7,
             0.8,
@@ -1600,8 +1600,8 @@
         "sindri.ui.text": {
           "text": "Survived {}:{.2}",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.055,
-          "line_height": 1.2,
+          "font_size": 28.0,
+          "line_height": 35.0,
           "color": [
             0.7,
             0.8,
@@ -1685,8 +1685,8 @@
         "sindri.ui.text": {
           "text": "PLAY AGAIN",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.065,
-          "line_height": 1.2,
+          "font_size": 34.0,
+          "line_height": 42.0,
           "color": [
             1,
             1,
@@ -1738,8 +1738,8 @@
           1.0
         ],
         "scale": [
-          3.4,
-          1.6,
+          1.65,
+          0.62,
           1.0
         ]
       },
@@ -1748,10 +1748,10 @@
           "texture": "textures/panel.png",
           "anchor": "center",
           "tint": [
-            1,
-            1,
-            1,
-            0.94
+            1.0,
+            1.0,
+            1.0,
+            0.97
           ],
           "layer": 100
         }
@@ -1783,8 +1783,8 @@
         "sindri.ui.text": {
           "text": "CHOOSE ONE",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.1,
-          "line_height": 1.2,
+          "font_size": 52.0,
+          "line_height": 65.0,
           "color": [
             1,
             1,
@@ -1903,8 +1903,8 @@
         "sindri.ui.text": {
           "text": "Heavier Rounds",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.05,
-          "line_height": 1.2,
+          "font_size": 26.0,
+          "line_height": 32.0,
           "color": [
             1,
             1,
@@ -1942,8 +1942,8 @@
         "sindri.ui.text": {
           "text": "+1 damage",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.04,
-          "line_height": 1.2,
+          "font_size": 20.0,
+          "line_height": 25.0,
           "color": [
             0.72,
             0.82,
@@ -2033,8 +2033,8 @@
         "sindri.ui.text": {
           "text": "Faster Cycling",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.05,
-          "line_height": 1.2,
+          "font_size": 26.0,
+          "line_height": 32.0,
           "color": [
             1,
             1,
@@ -2072,8 +2072,8 @@
         "sindri.ui.text": {
           "text": "shoot more often",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.04,
-          "line_height": 1.2,
+          "font_size": 20.0,
+          "line_height": 25.0,
           "color": [
             0.72,
             0.82,
@@ -2163,8 +2163,8 @@
         "sindri.ui.text": {
           "text": "Trimmed Hull",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.05,
-          "line_height": 1.2,
+          "font_size": 26.0,
+          "line_height": 32.0,
           "color": [
             1,
             1,
@@ -2202,8 +2202,8 @@
         "sindri.ui.text": {
           "text": "+0.8 speed",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.04,
-          "line_height": 1.2,
+          "font_size": 20.0,
+          "line_height": 25.0,
           "color": [
             0.72,
             0.82,
@@ -2293,8 +2293,8 @@
         "sindri.ui.text": {
           "text": "Wider Field",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.05,
-          "line_height": 1.2,
+          "font_size": 26.0,
+          "line_height": 32.0,
           "color": [
             1,
             1,
@@ -2332,8 +2332,8 @@
         "sindri.ui.text": {
           "text": "+1.2 collection",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.04,
-          "line_height": 1.2,
+          "font_size": 20.0,
+          "line_height": 25.0,
           "color": [
             0.72,
             0.82,
@@ -2423,8 +2423,8 @@
         "sindri.ui.text": {
           "text": "Plating",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.05,
-          "line_height": 1.2,
+          "font_size": 26.0,
+          "line_height": 32.0,
           "color": [
             1,
             1,
@@ -2462,8 +2462,8 @@
         "sindri.ui.text": {
           "text": "+2 hull, repaired",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.04,
-          "line_height": 1.2,
+          "font_size": 20.0,
+          "line_height": 25.0,
           "color": [
             0.72,
             0.82,
@@ -2553,8 +2553,8 @@
         "sindri.ui.text": {
           "text": "Lance Rounds",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.05,
-          "line_height": 1.2,
+          "font_size": 26.0,
+          "line_height": 32.0,
           "color": [
             1,
             1,
@@ -2592,8 +2592,8 @@
         "sindri.ui.text": {
           "text": "shots pierce 1 more",
           "font": "fonts/Inter.ttf",
-          "font_size": 0.04,
-          "line_height": 1.2,
+          "font_size": 20.0,
+          "line_height": 25.0,
           "color": [
             0.72,
             0.82,
