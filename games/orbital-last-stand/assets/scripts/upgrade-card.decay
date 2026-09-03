@@ -1,0 +1,50 @@
+// One offer on the upgrade screen, and the whole of what it does.
+//
+// The catalog is not a table in a script: it is these entities, authored in the
+// scene with their own words, their own numbers, and their own tag. The chooser
+// asks the world for everything tagged "upgrade" and switches three of them on,
+// so adding an upgrade is adding an entity — not editing the code that picks.
+//
+// A card applies its own effect because nothing else can: a script cannot call
+// into another script, so the entity that knows what it is worth is the entity
+// that has to spend it.
+script UpgradeCard {
+    /// What this card changes on the board.
+    ///   0  damage        3  magnet
+    ///   1  fire rate     4  maximum health, and heal by the same
+    ///   2  move speed    5  piercing
+    @export let effect: f32 = 0.0;
+    @export let amount: f32 = 1.0;
+
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 2.0 {
+            return;
+        }
+        if !Ui.is_pressed(this.entity) {
+            return;
+        }
+        apply();
+        Audio.play("audio/upgrade.wav", 0.4);
+        Game.set("run_state", 1.0);
+    }
+
+    fn apply() {
+        if this.effect == 0.0 {
+            Game.set("damage", Game.get("damage", 1.0) + this.amount);
+        } else if this.effect == 1.0 {
+            // A floor, because a fire rate that reaches zero is a script that
+            // spawns a bullet every frame for the rest of the run.
+            Game.set("fire_gap", max(0.06, Game.get("fire_gap", 0.42) - this.amount));
+        } else if this.effect == 2.0 {
+            Game.set("move_speed", Game.get("move_speed", 5.2) + this.amount);
+        } else if this.effect == 3.0 {
+            Game.set("magnet", Game.get("magnet", 2.2) + this.amount);
+        } else if this.effect == 4.0 {
+            Game.set("max_hp", Game.get("max_hp", 5.0) + this.amount);
+            Game.set("hp", Game.get("hp", 5.0) + this.amount);
+        } else {
+            Game.set("pierce", Game.get("pierce", 0.0) + this.amount);
+        }
+    }
+}

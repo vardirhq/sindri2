@@ -154,9 +154,18 @@ jobs:
           cargo run --quiet --package sindri-export --bin sindri-export -- \
             game target/dist/gather --base /sindri2/
           cp -R game/pkg/. target/dist/gather/pkg/
+          # The acceptance project, exported and served the same way. It is the
+          # one with prefabs — including prefabs only another prefab names —
+          # and with screens that are switched off until something shows them,
+          # so it is the build that proves those reach a browser.
+          cargo run --quiet --package sindri-export --bin sindri-export -- \
+            games/orbital-last-stand target/dist/orbital --base /sindri2/
+          cp -R game/pkg/. target/dist/orbital/pkg/
           node scripts/browser/smoke.mjs examples/cube target/render-artifacts/browser-cube.png
           SINDRI_EXPECT_ASSETS=1 SINDRI_BASE_PATH=/sindri2/ \
             node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-gather.png
+          SINDRI_EXPECT_ASSETS=1 SINDRI_BASE_PATH=/sindri2/ \
+            node scripts/browser/smoke.mjs target/dist/orbital target/render-artifacts/browser-orbital.png
           SINDRI_EXPECT_FAILURE=canvas SINDRI_BASE_PATH=/sindri2/ \
             node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-no-canvas.png
           SINDRI_EXPECT_FAILURE=adapter SINDRI_BASE_PATH=/sindri2/ \

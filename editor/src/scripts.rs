@@ -345,8 +345,7 @@ fn is_prefab(id: &str) -> bool {
     id.ends_with(PREFAB_SUFFIX)
 }
 
-/// What a prefab file is called.
-pub const PREFAB_SUFFIX: &str = ".prefab.json";
+pub use sindri_core::PREFAB_SUFFIX;
 
 #[cfg(test)]
 mod tests {

@@ -123,6 +123,10 @@ impl ScenePhysics2d {
             return Err(PhysicsSyncError::BadStep(delta));
         }
         self.synchronize(world, components)?;
+        // Anything a script set a velocity for that never got a body: it had
+        // its chance above, and keeping it would mean a mistaken write sitting
+        // in the map for the rest of the run.
+        self.world.forget_pending();
         self.events = self.world.step(delta)?;
         self.write_back(world);
         Ok(())

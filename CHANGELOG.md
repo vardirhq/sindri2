@@ -8,6 +8,66 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **A game.** `games/orbital-last-stand` is the second vertical-slice
+  acceptance project the audit asked for, and it passes all twelve of its
+  points: a scene, eight prefabs, and fifteen Decay scripts, with no Rust in it
+  but a harness that assembles the same public pieces a host does. Ten
+  simulated minutes run 26,072 kills and 228 concurrent entities at 18% of the
+  frame budget — `docs/orbital-last-stand-evidence.md`.
+
+  Its upgrade catalog is entities rather than a table: each card carries its
+  own words, numbers and tag, the chooser asks `World.with_tag("upgrade")` and
+  switches three on, and each card applies its own effect. Adding an upgrade is
+  adding an entity. No engine concept of an upgrade was needed, which was the
+  last thing the capability matrix still called **Missing**.
+
+- **Prefabs reach a build.** They were discovered, loaded and handed to scripts
+  by the editor and by nothing else, so `World.spawn` in a shipped game said
+  the prefab was missing while the same scene spawned correctly in the editor.
+  The manifest has `AssetKind::Prefab`, the export walks prefabs as documents —
+  including a prefab only another prefab's script names — and the browser host
+  loads them.
+
+- **`World.set_active` and `World.is_active`.** `docs/scripting.md` said a
+  screen is an entity with children and that showing one is switching it on.
+  That was true of the engine and not of Decay: a title screen could be
+  authored and never dismissed.
+
+- **`Pointer.overlay_x` and `Pointer.overlay_y`.** `Pointer.x` is viewport
+  pixels, and how many pixels tall a window is is not something a scene knows,
+  so a script could say where the pointer was and not what it was pointing at.
+  These are the same point in the overlay's units — where the UI is already
+  laid out and hit-tested. They stop at the overlay rather than going on to the
+  world, because going on means a camera.
+
+### Fixed
+
+- **An export shipped a game with no menus.** Its walks were the runtime's, and
+  the runtime's walks are active-only — correct for drawing and stepping, wrong
+  for an export, whose question is not what is running but what a project could
+  ever switch on.
+
+- **Scripts were not gathered by the export at all**, because `sindri.script`
+  is not a builtin component.
+
+- **A bullet could not be aimed on the frame it was fired.** A spawned script
+  starts in the pass that made it, and the documented example is a bullet
+  setting its own velocity in `start` — but a body is built when the scene next
+  synchronizes. A velocity set before the body exists is now remembered and
+  applied when it arrives.
+
+- **An entity despawned by another script still ran.** A director clearing the
+  field at the end of a run produced one dead-handle failure per enemy, none of
+  them a mistake in the game.
+
+- **The browser smoke test asked for one project's file names.** It would have
+  passed for a game with no prefabs, no scripts and no sound. It reads the
+  shipped manifest and requires one asset of every kind it names.
+
+- **`decay/LANGUAGE.md` said `while` was the only loop** and that there was
+  nothing to iterate, a hundred and fifty lines after documenting `for` over a
+  collection.
+
 - **A project can be exported to a static web directory.** `sindri-export`
   walks a scene for what it references — textures, fonts, scripts, sheets,
   audio — and writes a directory a static host can serve. An asset that stopped

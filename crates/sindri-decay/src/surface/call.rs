@@ -96,11 +96,24 @@ pub(crate) enum PointerValue {
     /// asks, in one line, and the answer is why a click on a pause button does
     /// not also fire the gun behind it.
     OverUi,
+    /// Where the pointer is in the overlay's own units, across and up.
+    ///
+    /// `x` and `y` are viewport pixels, and how many pixels tall a window is
+    /// is not something a scene knows — so a script could tell where the
+    /// pointer was on the screen and not what it was pointing at. The overlay
+    /// is two tall and centred on the origin, which is a space the scene
+    /// authored against, so a game that knows how much world its camera frames
+    /// can turn these into world coordinates and the engine does not have to
+    /// guess at a camera on a script's behalf.
+    OverlayX,
+    OverlayY,
 }
 
 pub(crate) const POINTER_VALUES: &[(&str, PointerValue)] = &[
     ("x", PointerValue::X),
     ("y", PointerValue::Y),
+    ("overlay_x", PointerValue::OverlayX),
+    ("overlay_y", PointerValue::OverlayY),
     ("inside", PointerValue::Inside),
     ("over_ui", PointerValue::OverUi),
 ];
@@ -203,6 +216,20 @@ pub(crate) enum WorldCall {
     /// Bounded, ordered, and a snapshot. See `docs/scripting.md` for what each
     /// of those costs and buys.
     WithTag,
+    /// Switches an entity — and everything under it — on or off.
+    ///
+    /// `docs/scripting.md` says a screen is an entity with children and that
+    /// showing one is switching it on. That was true of the engine and not of
+    /// Decay: a script could make and destroy entities but not hide one, so a
+    /// title screen could be authored and never dismissed, and the only way to
+    /// remove a menu was to despawn it and lose the ability to show it again.
+    SetActive,
+    /// Whether an entity takes part in the scene.
+    ///
+    /// The question `set_active` answers, which a script needs to toggle a
+    /// pause overlay rather than track a truth that the world already holds
+    /// and that something else may have changed.
+    IsActive,
 }
 
 pub(crate) const WORLD_CALLS: &[(&str, WorldCall)] = &[
@@ -213,6 +240,8 @@ pub(crate) const WORLD_CALLS: &[(&str, WorldCall)] = &[
     ("set_parent", WorldCall::SetParent),
     ("set_property", WorldCall::SetProperty),
     ("with_tag", WorldCall::WithTag),
+    ("set_active", WorldCall::SetActive),
+    ("is_active", WorldCall::IsActive),
 ];
 
 /// A conversion between an entity's world position and a tilemap's logical

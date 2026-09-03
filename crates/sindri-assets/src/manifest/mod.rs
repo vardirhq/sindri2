@@ -117,6 +117,14 @@ pub enum AssetKind {
     Scene,
     /// A Decay source file.
     Script,
+    /// A reusable entity definition a script can spawn.
+    ///
+    /// Separate from `Scene` because a host does different things with the
+    /// two: a scene is opened, and a prefab is held so that a script asking
+    /// for one gets it. A build that carried prefabs as scenes would open
+    /// several worlds; one that carried them as `Other` could not tell which
+    /// bytes to parse.
+    Prefab,
     Texture,
     /// A sprite sheet describing how a texture is cut up.
     Sheet,
@@ -133,8 +141,9 @@ impl AssetKind {
     /// Every kind, in the order a host should load them.
     ///
     /// The scene first, because everything else is referenced from it.
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 8] = [
         Self::Scene,
+        Self::Prefab,
         Self::Sheet,
         Self::Script,
         Self::Texture,
@@ -149,6 +158,7 @@ impl AssetKind {
         match self {
             Self::Scene => "scene",
             Self::Script => "script",
+            Self::Prefab => "prefab",
             Self::Texture => "texture",
             Self::Sheet => "sheet",
             Self::Font => "font",

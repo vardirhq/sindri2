@@ -95,7 +95,8 @@ impl BrowserGatherApp {
             ))?;
         }
 
-        let mut session = Session::with_sources(self.scene.components().clone(), project.scripts);
+        let mut session = Session::with_sources(self.scene.components().clone(), project.scripts)
+            .with_prefabs(project.prefabs);
         // A named key, because two games sharing an origin must not share a
         // save.
         session.keep_saves_in(Box::new(sindri_platform::BrowserSaves::under(

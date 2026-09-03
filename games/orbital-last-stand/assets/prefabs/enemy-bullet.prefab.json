@@ -1,0 +1,86 @@
+{
+  "format_version": 1,
+  "metadata": {
+    "name": "EnemyBullet"
+  },
+  "entities": [
+    {
+      "id": "enemy-bullet",
+      "name": "EnemyBullet",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.2,
+          0.2,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.tags": {
+          "tags": [
+            "hostile_shot"
+          ]
+        },
+        "sindri.sprite": {
+          "texture": "textures/shard.png",
+          "layer": 4
+        },
+        "sindri.physics2d.rigid_body": {
+          "kind": "dynamic",
+          "pose": {
+            "position": [
+              0.0,
+              0.0
+            ],
+            "rotation": 0.0
+          },
+          "linear_velocity": [
+            0.0,
+            0.0
+          ],
+          "angular_velocity": 0.0,
+          "gravity_scale": 0.0,
+          "linear_damping": 0.0,
+          "angular_damping": 0.0,
+          "lock_rotation": true
+        },
+        "sindri.physics2d.collider": {
+          "shape": {
+            "shape": "circle",
+            "radius": 0.5
+          },
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "rotation": 0.0,
+          "sensor": true,
+          "layers": {
+            "memberships": 1,
+            "filter": 4294967295
+          },
+          "friction": 0.0,
+          "restitution": 0.0
+        },
+        "sindri.script": {
+          "source": "scripts/hostile-shot.decay",
+          "script": "HostileShot",
+          "properties": {
+            "speed": 3.4,
+            "life": 5.0
+          }
+        }
+      }
+    }
+  ]
+}

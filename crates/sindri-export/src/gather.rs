@@ -1,11 +1,12 @@
 //! Working out what a project is made of.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 use sindri_assets::AssetKind;
-use sindri_core::{SceneDocument, World};
+use sindri_core::{PREFAB_SUFFIX, PrefabDocument, SceneDocument, World};
+use sindri_decay::{ScriptSources, Scripts};
 use sindri_scene::{SceneExtractor, referenced_fonts, referenced_textures};
 
 use crate::write::ExportError;
@@ -83,11 +84,12 @@ impl ProjectExport {
         components
             .register::<sindri_decay::ScriptComponent>("Script")
             .map_err(|error| ExportError::Project(format!("sindri.script: {error}")))?;
-        let world = World::from_scene(&document)
+        let mut world = World::from_scene(&document)
             .map_err(|error| {
                 ExportError::Project(format!("the main scene does not load: {error}"))
             })?
             .world;
+        everything_on(&mut world);
 
         let mut assets = vec![GatheredAsset {
             // A scene is named by its file, so two scenes in one project do not
@@ -100,24 +102,73 @@ impl ProjectExport {
         // Ordered and de-duplicated, because two entities naming one texture is
         // one download.
         let mut wanted: BTreeMap<String, AssetKind> = BTreeMap::new();
-        for reference in referenced_textures(&world) {
-            wanted.insert(reference, AssetKind::Texture);
-        }
-        for font in referenced_fonts(&world) {
-            wanted.insert(font, AssetKind::Font);
-        }
-        for source in sindri_decay::referenced_sources(&world, &components) {
-            wanted.insert(source, AssetKind::Script);
-        }
 
-        // Audio is named by a component like anything else, and was the one
-        // kind with no walker in the engine — a scene's music would have been
-        // left behind by an export that looked complete.
-        for (_, data) in world.entities() {
-            if let Some(payload) = data.components.get("sindri.audio.source")
-                && let Some(clip) = payload.get("clip").and_then(serde_json::Value::as_str)
-            {
-                wanted.insert(clip.to_owned(), AssetKind::Audio);
+        // A queue of documents rather than one, because a prefab is a document
+        // too and everything it names has to ship for the same reason the
+        // scene's does. The scene is the first; a prefab a script can spawn is
+        // the next; a prefab spawned by *that* prefab's script is the one
+        // after. A game whose every enemy is a prefab would otherwise export
+        // as an empty world that looked complete.
+        let mut pending = vec![world];
+        let mut sources = ScriptSources::new();
+        let mut scripts = Scripts::new();
+        let mut walked: BTreeSet<String> = BTreeSet::new();
+        while let Some(world) = pending.pop() {
+            for reference in referenced_textures(&world) {
+                wanted.insert(reference, AssetKind::Texture);
+            }
+            for font in referenced_fonts(&world) {
+                wanted.insert(font, AssetKind::Font);
+            }
+            // Audio is named by a component like anything else, and was the one
+            // kind with no walker in the engine — a scene's music would have
+            // been left behind by an export that looked complete.
+            for (_, data) in world.entities() {
+                if let Some(payload) = data.components.get("sindri.audio.source")
+                    && let Some(clip) = payload.get("clip").and_then(serde_json::Value::as_str)
+                {
+                    wanted.insert(clip.to_owned(), AssetKind::Audio);
+                }
+            }
+
+            // The scripts are read before they are asked about, because which
+            // prefabs a world can spawn is the *declared type* of a script's
+            // exported fields — which is not known until the script compiles.
+            // That is also why a prefab cannot be found by looking for strings
+            // that resemble paths: a field declared `String` is text however
+            // much it looks like one.
+            for source in sindri_decay::referenced_sources(&world, &components) {
+                wanted.insert(source.clone(), AssetKind::Script);
+                if sources.get(&source).is_none()
+                    && let Ok(text) = std::fs::read_to_string(resolve(project, &source))
+                {
+                    sources.insert(source, text);
+                }
+            }
+            // A script that does not compile is not an export failure here: it
+            // is reported where scripts are reported, and an export that
+            // refused would make a broken script un-shippable to the person
+            // trying to debug it in a build.
+            let _ = scripts.compile(&world, &components, &sources);
+
+            for id in scripts.referenced_prefabs(&world, &components) {
+                if !walked.insert(id.clone()) {
+                    continue;
+                }
+                wanted.insert(id.clone(), AssetKind::Prefab);
+                let text = std::fs::read_to_string(resolve(project, &id))
+                    .map_err(|error| ExportError::unreadable(&resolve(project, &id), &error))?;
+                let prefab = PrefabDocument::from_json(&text)
+                    .map_err(|error| ExportError::Project(format!("{id}: {error}")))?;
+                // Spawned into a world of its own so the same walkers answer
+                // for it. A prefab is a fragment of a scene, so what finds a
+                // scene's textures finds a prefab's.
+                let mut world = World::default();
+                world
+                    .spawn_prefab(&prefab)
+                    .map_err(|error| ExportError::Project(format!("{id}: {error}")))?;
+                everything_on(&mut world);
+                pending.push(world);
             }
         }
 
@@ -151,12 +202,7 @@ impl ProjectExport {
             if id.starts_with("sindri:") {
                 continue;
             }
-            let path = project.join("assets").join(&id);
-            let path = if path.exists() {
-                path
-            } else {
-                project.join(&id)
-            };
+            let path = resolve(project, &id);
             assets.push(GatheredAsset {
                 id: id.clone(),
                 kind,
@@ -192,8 +238,45 @@ fn kind_of(id: &str) -> AssetKind {
         Some("png" | "jpg" | "jpeg") => AssetKind::Texture,
         Some("ttf" | "otf") => AssetKind::Font,
         Some("decay") => AssetKind::Script,
+        // Both end in `.json`, so the longer name is tested first.
+        _ if id.ends_with(PREFAB_SUFFIX) => AssetKind::Prefab,
         _ if id.ends_with(".sheet.json") => AssetKind::Sheet,
         _ => AssetKind::Other,
+    }
+}
+
+/// Switches on every entity in a copy of a world about to be walked.
+///
+/// The walks are the runtime's, and the runtime's walks are active-only —
+/// correctly, because nothing switched off is drawn or stepped. An export is
+/// the other question: not what is running, but what this project could ever
+/// need. A scene's menus are switched off until something shows them, so an
+/// export that asked the runtime's question shipped a game with no pause
+/// screen and no way to notice until someone pressed Escape in a build.
+///
+/// Done to the export's own throwaway world, so nothing that is saved or
+/// played changes.
+fn everything_on(world: &mut World) {
+    let entities: Vec<_> = world.entities().map(|(entity, _)| entity).collect();
+    for entity in entities {
+        if let Some(data) = world.get_mut(entity) {
+            data.disabled = false;
+        }
+    }
+}
+
+/// Where a project keeps the file an asset ID names.
+///
+/// Under `assets/` normally, and at the project root for a project that lays
+/// itself out differently — the same two places the byte-reading loop looks,
+/// because a script found one way and read the other would be found and then
+/// not shipped.
+fn resolve(project: &Path, id: &str) -> PathBuf {
+    let path = project.join("assets").join(id);
+    if path.exists() {
+        path
+    } else {
+        project.join(id)
     }
 }
 

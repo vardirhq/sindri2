@@ -309,6 +309,15 @@ impl Scripts {
             if !component.enabled {
                 continue;
             }
+            // The pass walks the entities that were scripted when it began, and
+            // a script may despawn another before its turn comes. Running one
+            // on an entity that has since gone would mean every write it made
+            // reported a dead handle — a game clearing its enemies at the end
+            // of a run would produce one failure per enemy, none of them a
+            // mistake in the game. What a removed entity does is nothing.
+            if Self::lost(&at, entity) {
+                continue;
+            }
             live.insert(entity);
             collect(
                 &mut report,
@@ -321,6 +330,12 @@ impl Scripts {
 
         at.running.retain(|entity, _| live.contains(entity));
         report
+    }
+
+    /// Whether the world has stopped holding this entity part way through a
+    /// pass.
+    fn lost(at: &TickWorld<'_>, entity: EntityId) -> bool {
+        at.world.get(entity).is_none()
     }
 
     /// Starts the scripts on entities this pass created, and on entities those
@@ -439,6 +454,16 @@ impl Scripts {
     }
 
     #[must_use]
+    /// The board, to write on.
+    ///
+    /// For a host or a test standing in for a script — putting a run into a
+    /// state it would otherwise have to be played into, which is the
+    /// difference between a test that checks an ending and one that has to
+    /// reach it by luck.
+    pub const fn blackboard_mut(&mut self) -> &mut Blackboard {
+        &mut self.blackboard
+    }
+
     pub const fn blackboard(&self) -> &Blackboard {
         &self.blackboard
     }

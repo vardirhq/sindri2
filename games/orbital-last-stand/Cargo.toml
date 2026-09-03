@@ -1,0 +1,26 @@
+[package]
+name = "orbital-last-stand"
+description = "A vertical-slice acceptance project: a ten-minute action game, authored"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+# No library and no binary. The game is its scene, its prefabs, and its Decay —
+# a project, not a crate. What lives here is the harness that plays it, which
+# assembles the same public pieces a host does and would fail if any of them
+# were private.
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+sindri-core = { path = "../../crates/sindri-core" }
+sindri-decay = { path = "../../crates/sindri-decay" }
+sindri-platform = { path = "../../crates/sindri-platform" }
+sindri-scene = { path = "../../crates/sindri-scene" }
+serde_json.workspace = true
+
+[dev-dependencies]
+sindri-export = { path = "../../crates/sindri-export" }
+sindri-assets = { path = "../../crates/sindri-assets" }

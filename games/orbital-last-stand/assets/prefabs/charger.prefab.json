@@ -1,0 +1,115 @@
+{
+  "format_version": 1,
+  "metadata": {
+    "name": "Charger"
+  },
+  "entities": [
+    {
+      "id": "charger",
+      "name": "Charger",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.38,
+          0.38,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.tags": {
+          "tags": [
+            "enemy"
+          ]
+        },
+        "sindri.sprite": {
+          "texture": "textures/charger.png",
+          "layer": 3,
+          "tint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "sindri.physics2d.rigid_body": {
+          "kind": "dynamic",
+          "pose": {
+            "position": [
+              0.0,
+              0.0
+            ],
+            "rotation": 0.0
+          },
+          "linear_velocity": [
+            0.0,
+            0.0
+          ],
+          "angular_velocity": 0.0,
+          "gravity_scale": 0.0,
+          "linear_damping": 2.2,
+          "angular_damping": 0.0,
+          "lock_rotation": true
+        },
+        "sindri.physics2d.collider": {
+          "shape": {
+            "shape": "circle",
+            "radius": 0.5
+          },
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "rotation": 0.0,
+          "sensor": true,
+          "layers": {
+            "memberships": 1,
+            "filter": 4294967295
+          },
+          "friction": 0.0,
+          "restitution": 0.0
+        },
+        "sindri.effect.burst": {
+          "texture": "textures/fleck.png",
+          "count": 16,
+          "speed": 4.6,
+          "spread": 6.28,
+          "lifetime": 0.42,
+          "size": 0.07,
+          "tint": [
+            1.0,
+            0.7,
+            0.35,
+            1.0
+          ],
+          "fade": true,
+          "drag": 1.6,
+          "layer": 6
+        },
+        "sindri.script": {
+          "source": "scripts/charger.decay",
+          "script": "Charger",
+          "properties": {
+            "health": 4.0,
+            "worth": 2.0,
+            "approach": 1.2,
+            "wind_up": 0.75,
+            "dash_speed": 9.5,
+            "rest": 1.1,
+            "touch_damage": 1.0,
+            "core": "prefabs/core.prefab.json"
+          }
+        }
+      }
+    }
+  ]
+}

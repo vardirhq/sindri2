@@ -5,6 +5,7 @@
 //! changes.
 
 mod font;
+mod prefab;
 mod scene;
 mod sheet;
 mod text;
@@ -14,6 +15,7 @@ mod texture;
 mod tests;
 
 pub use font::{FontAsset, FontAssetDecoder};
+pub use prefab::PrefabAssetDecoder;
 pub use scene::SceneAssetDecoder;
 pub use sheet::SpriteSheetAssetDecoder;
 pub use text::TextAssetDecoder;

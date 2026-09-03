@@ -1,0 +1,46 @@
+// What a kill leaves behind. It falls towards the player once they are close
+// enough, which is what makes clearing a crowd feel like collecting one.
+script Core {
+    @export let worth: f32 = 1.0;
+    @export let pull: f32 = 7.0;
+    @export let reach: f32 = 2.2;
+    @export let life: f32 = 22.0;
+
+    var age: f32 = 0.0;
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 1.0 {
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+            return;
+        }
+        this.age += dt;
+        if this.age >= this.life {
+            World.despawn(this.entity);
+            return;
+        }
+        let player = World.find("Player");
+        if player == null {
+            return;
+        }
+
+        let dx = player.transform.position.x - this.transform.position.x;
+        let dy = player.transform.position.y - this.transform.position.y;
+        let far = sqrt(dx * dx + dy * dy);
+        // The magnet is an upgrade, so the reach is read every frame rather
+        // than fixed when the core was made.
+        let range = this.reach + Game.get("magnet", 2.2);
+        if far < range && far > 0.001 {
+            Physics.set_velocity(this.entity, dx / far * this.pull, dy / far * this.pull);
+        } else {
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+        }
+
+        for hit in Physics.sensor_entered() {
+            Game.set("cores", Game.get("cores", 0.0) + this.worth);
+            Game.set("score", Game.get("score", 0.0) + this.worth * 5.0);
+            Audio.play("audio/core.wav", 0.25);
+            World.despawn(this.entity);
+            return;
+        }
+    }
+}

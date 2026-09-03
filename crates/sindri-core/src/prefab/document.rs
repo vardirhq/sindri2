@@ -15,6 +15,13 @@ use crate::{SceneEntity, SceneEntityId, SceneError, SceneMetadata, SceneMigratio
 /// they are separate files with separate histories: a prefab gaining a
 /// document-level field is not a reason to step every scene in a project.
 pub const PREFAB_FORMAT_VERSION: u32 = 1;
+/// What a prefab file is called.
+///
+/// A prefab and a scene are both JSON documents of entities, and a host asks
+/// what a file is before it parses it. The name is the answer — it lives here,
+/// beside the document it names, because the export, the editor, and every
+/// host need it and none of them can depend on the others.
+pub const PREFAB_SUFFIX: &str = ".prefab.json";
 
 /// An authored reusable entity definition.
 ///

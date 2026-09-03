@@ -1,0 +1,71 @@
+// Offers three of whatever upgrades exist.
+//
+// It never names one. The catalog is every entity tagged "upgrade", so a card
+// added to the scene is offered without this script changing — which is what
+// "data-driven" has to mean if it is to mean anything.
+//
+// The catalog is read once, in `start`, and held. It has to be: `World.with_tag`
+// answers with active entities only, and a hidden card is not active — so a
+// chooser that asked while its screen was down would be asking about nothing.
+// Which also means this script owns the screen. Nothing else switches it off,
+// because anything that switched it off first would take the catalog with it.
+script UpgradeChooser {
+    @export let offers: f32 = 3.0;
+
+    var catalog: Array<Entity>;
+    var screen: Entity = null;
+    var showing: bool = false;
+
+    fn start() {
+        this.catalog = World.with_tag("upgrade");
+        this.screen = World.find("Upgrades");
+        hide();
+    }
+
+    fn hide() {
+        for card in this.catalog {
+            World.set_active(card, false);
+        }
+        World.set_active(this.screen, false);
+    }
+
+    fn update(dt: f32) {
+        let choosing = Game.get("run_state", 0.0) == 2.0;
+        if choosing == this.showing {
+            return;
+        }
+        this.showing = choosing;
+        if !choosing {
+            hide();
+            return;
+        }
+
+        for card in this.catalog {
+            World.set_active(card, false);
+        }
+        World.set_active(this.screen, true);
+
+        if this.catalog.len <= this.offers {
+            // Fewer cards than places: offer all of them rather than loop
+            // forever looking for a distinct one that does not exist.
+            for card in this.catalog {
+                World.set_active(card, true);
+            }
+            return;
+        }
+
+        var chosen: f32 = 0.0;
+        var tries: f32 = 0.0;
+        // Bounded rather than trusted: drawing until three distinct cards turn
+        // up is a loop whose length is luck, and luck is not a bound.
+        while chosen < this.offers && tries < 64.0 {
+            tries += 1.0;
+            let card = Random.pick(this.catalog);
+            if World.is_active(card) {
+                continue;
+            }
+            World.set_active(card, true);
+            chosen += 1.0;
+        }
+    }
+}

@@ -109,6 +109,27 @@ impl WorldHost<'_> {
             }
             WorldCall::SetProperty => self.set_property_call(path, args),
             WorldCall::WithTag => self.with_tag_call(path, args),
+            WorldCall::SetActive => {
+                let entity = self.entity_argument(path, args, 0, "the entity to switch")?;
+                let Some(Value::Bool(active)) = args.get(1) else {
+                    return Err(RuntimeError::Host(format!(
+                        "{} takes an entity and whether it is on",
+                        path.dotted()
+                    )));
+                };
+                // Written on the entity itself rather than down through its
+                // children, which is what makes switching a screen back on
+                // restore the children that were off on their own account.
+                let data = self.world.get_mut(entity).ok_or_else(|| {
+                    RuntimeError::Host(format!("{}: that entity is gone", path.dotted()))
+                })?;
+                data.disabled = !*active;
+                Ok(Value::Unit)
+            }
+            WorldCall::IsActive => {
+                let entity = self.entity_argument(path, args, 0, "the entity to ask about")?;
+                Ok(Value::Bool(self.world.is_active(entity)))
+            }
         }
     }
 

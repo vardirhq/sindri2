@@ -23,8 +23,8 @@ mod watch;
 pub use audio::{AudioAsset, AudioAssetDecoder, AudioFormat};
 pub use decode::{
     AssetCompletionApplyError, AssetDecodeError, AssetDecoder, DecodedAssetCompletion, FontAsset,
-    FontAssetDecoder, SceneAssetDecoder, SpriteSheetAssetDecoder, TextAssetDecoder, TextureAsset,
-    TextureAssetDecoder, decode_completion,
+    FontAssetDecoder, PrefabAssetDecoder, SceneAssetDecoder, SpriteSheetAssetDecoder,
+    TextAssetDecoder, TextureAsset, TextureAssetDecoder, decode_completion,
 };
 #[cfg(target_arch = "wasm32")]
 pub use fetch::FetchAssetSource;
