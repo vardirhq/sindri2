@@ -346,3 +346,28 @@ runtime and the headless capture load.
 
 A versioned editor/runtime protocol, and editing anything beyond names and
 transforms, remain explicit follow-up work.
+
+## Looking at the game the shape a player will
+
+The Game view draws at the shape of a screen rather than at the shape of the
+panel it is in. The panel is whatever the window and the splitter left it, which
+is a shape nobody plays on — and the overlay a scene is authored in is *as wide
+as the aspect ratio*, so the shape is not a cosmetic question. A menu arranged
+in a wide editor panel runs off the side of a phone, and until the view could be
+told to be a phone there was no way to find that out except by building for one
+and looking.
+
+`Screen` in the Game view's strip picks one. The list is short on purpose: a
+wide desktop, a squarer laptop, a tall phone, a phone turned sideways, a tablet
+— shapes that behave differently, rather than a catalogue of handsets that
+differ by a few pixels and tell a designer nothing. `Free` is the panel's own
+shape, and the default.
+
+The chosen shape is what the engine is handed, not a crop of a bigger render:
+the viewport, the overlay's aspect, and a camera's `fit` all resolve against it,
+so what is on screen is what would be on screen. It is also what the pointer is
+made relative to, so a button previewed at phone size is clicked where it is
+drawn.
+
+It is not a preference and does not outlive the session. It is a thing to look
+through while arranging a screen, not a setting about the editor.

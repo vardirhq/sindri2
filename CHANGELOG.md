@@ -8,6 +8,14 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **The Game view can be any screen.** A `Screen` picker draws it at a chosen
+  shape — desktop, laptop, tablet, phone in either orientation — rather than at
+  whatever shape the panel happens to be. The overlay is as wide as the aspect
+  ratio, so the shape decides the layout: a menu arranged in a wide editor panel
+  runs off the side of a phone, and there was no way to find that out without
+  building for one. The chosen shape is what the engine is handed, pointer
+  included, so a button previewed at phone size is clicked where it is drawn.
+
 - **Scene format 9: a font size is a share of the screen.** Everything else
   about a screen element was already in the overlay's units — two tall, centred
   — including the safe area, which is converted into them before anything is

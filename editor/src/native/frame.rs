@@ -40,7 +40,7 @@ pub(super) const fn workspace_icon(tab: WorkspaceTab) -> egui_material_icons::Ma
 /// arrangement both views are visible at once, so a control that selected one
 /// would do nothing — but it is the same workspace it would be in the tabbed
 /// arrangement, and it should be recognisably that.
-fn view_banner(ui: &mut egui::Ui, tab: WorkspaceTab) {
+fn view_banner(ui: &mut egui::Ui, tab: WorkspaceTab, note: &str) {
     tabs::strip(ui, |ui| {
         tabs::tab(
             ui,
@@ -53,7 +53,7 @@ fn view_banner(ui: &mut egui::Ui, tab: WorkspaceTab) {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.add_space(metric::GUTTER);
                 ui.label(
-                    egui::RichText::new("What the player would see")
+                    egui::RichText::new(note)
                         .size(text::NOTE)
                         .color(color::TEXT_FAINT),
                 );
@@ -76,10 +76,12 @@ impl EditorApp {
                     .resizable(true)
                     .frame(panel::viewport_frame())
                     .show(ui, |ui| {
-                        view_banner(ui, WorkspaceTab::Game);
+                        let note = self.game_device.note();
+                        view_banner(ui, WorkspaceTab::Game, &note);
+                        self.game_tools(ui);
                         self.render_view(ui, WorkspaceTab::Game);
                     });
-                view_banner(ui, WorkspaceTab::Scene);
+                view_banner(ui, WorkspaceTab::Scene, "");
                 self.scene_tools(ui, true);
                 self.render_view(ui, WorkspaceTab::Scene);
             });
@@ -108,7 +110,11 @@ impl EditorApp {
                 });
                 self.workspace_tab = chosen;
                 let tab = self.workspace_tab;
-                self.scene_tools(ui, tab == WorkspaceTab::Scene);
+                if tab == WorkspaceTab::Game {
+                    self.game_tools(ui);
+                } else {
+                    self.scene_tools(ui, true);
+                }
                 // Only the visible view is drawn: rendering the hidden one would
                 // spend a frame's GPU work on something nobody is looking at.
                 self.render_view(ui, tab);

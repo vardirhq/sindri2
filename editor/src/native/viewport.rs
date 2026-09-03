@@ -196,7 +196,16 @@ impl EditorApp {
     pub(super) fn render_view(&mut self, ui: &mut egui::Ui, tab: WorkspaceTab) {
         let context = ui.ctx().clone();
         let editing = tab == WorkspaceTab::Scene;
-        let (rect, response) = ui.allocate_exact_size(ui.available_size(), viewport_sense());
+        let (panel, response) = ui.allocate_exact_size(ui.available_size(), viewport_sense());
+        // The Game view is drawn at the shape of the screen it is standing in
+        // for, which is the panel's own unless someone chose otherwise. The
+        // Scene view is always the panel: it is a place to work, not a picture
+        // of a device.
+        let rect = if editing {
+            panel
+        } else {
+            self.game_device.fit(panel)
+        };
         // Only the Game view records one. The Scene view must not clear it:
         // the two-by-three workspace draws the Game view first, so clearing
         // here would throw away the rectangle that was just recorded.
@@ -278,6 +287,19 @@ impl EditorApp {
         if editing {
             self.paint_scene_chrome(ui, rect, camera, hover.as_ref(), painting);
         } else {
+            // The unused space is painted out rather than left showing the
+            // panel, so the shape being previewed reads as the screen and not
+            // as a window that failed to fill.
+            if rect != panel {
+                ui.painter()
+                    .rect_filled(panel, 0.0, crate::ui::theme::color::WELL);
+                ui.painter().image(
+                    viewport.texture_id,
+                    rect,
+                    Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+                    Color32::WHITE,
+                );
+            }
             paint_viewport_border(ui.painter(), rect, self.problem());
         }
         context.request_repaint();
