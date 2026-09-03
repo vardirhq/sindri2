@@ -13,7 +13,7 @@ mod saves;
 
 #[cfg(target_arch = "wasm32")]
 pub use audio::BrowserAudioBackend;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "audio"))]
 pub use audio::NativeAudioBackend;
 pub use audio::{
     AudioBackend, AudioClip, AudioError, AudioEvent, AudioVoiceId, PlaybackMode, PlaybackSettings,
