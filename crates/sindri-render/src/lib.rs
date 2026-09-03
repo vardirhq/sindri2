@@ -6,6 +6,7 @@ mod cube;
 mod depth;
 mod encode;
 mod frame;
+mod glyph;
 mod mesh;
 mod offscreen;
 mod sprite;
@@ -29,6 +30,7 @@ pub use frame::{
     ClearOperations, ExtractedFrame, FrameCamera, FrameCommand, FramePass, FramePlanError,
     PreparedFrame, RenderLayer, RenderStage, Viewport,
 };
+pub use glyph::{GlyphAtlas, GlyphSlot, RASTER_EM};
 pub use mesh::{ColoredVertex, MeshBuffers, TexturedVertex};
 pub use offscreen::{OffscreenError, OffscreenReadback, OffscreenTarget};
 pub use sprite::{SpriteBlendMode, SpriteRenderer};
@@ -36,8 +38,8 @@ pub use sprite_batch::{
     SpriteBatchError, SpriteBatchRenderer, SpriteBatchStats, SpriteDepth, SpriteInstance,
 };
 pub use target::{ViewportTarget, encode_clear, sampled_format};
-pub use text::{TextAlign, TextError, TextInstance, TextRenderer, aligned_origin};
-pub use texture::{Texture2D, TextureError, TextureId, TextureRegistry};
+pub use text::{GlyphQuads, TextAlign, TextError, TextInstance, TextRenderer, aligned_origin};
+pub use texture::{Texture2D, TextureError, TextureFilter, TextureId, TextureRegistry};
 pub use textured_cube::{DrawContext, TexturedCubeRenderer};
 pub use transparency::{TransparentOrder, TransparentOrderError};
 pub use triangle::TriangleRenderer;

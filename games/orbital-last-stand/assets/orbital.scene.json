@@ -52,8 +52,8 @@
           1.0
         ],
         "scale": [
-          0.3864,
-          0.095,
+          0.7896,
+          0.2,
           1.0
         ]
       },
@@ -94,7 +94,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          -0.038,
+          -0.035,
           0.0
         ],
         "rotation": [
@@ -119,9 +119,9 @@
             1.0
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.032,
+          "font_size": 0.033,
           "layer": 140,
-          "line_height": 0.0416,
+          "line_height": 0.03465,
           "text": "+1 damage"
         }
       }
@@ -133,7 +133,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          0.022,
+          0.035,
           0.0
         ],
         "rotation": [
@@ -158,9 +158,9 @@
             1
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.044,
+          "font_size": 0.046,
           "layer": 140,
-          "line_height": 0.0572,
+          "line_height": 0.0483,
           "text": "Heavier Rounds"
         }
       }
@@ -182,8 +182,8 @@
           1.0
         ],
         "scale": [
-          0.3864,
-          0.095,
+          0.7896,
+          0.2,
           1.0
         ]
       },
@@ -224,7 +224,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          -0.038,
+          -0.035,
           0.0
         ],
         "rotation": [
@@ -249,9 +249,9 @@
             1.0
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.032,
+          "font_size": 0.033,
           "layer": 140,
-          "line_height": 0.0416,
+          "line_height": 0.03465,
           "text": "+2 hull, repaired"
         }
       }
@@ -263,7 +263,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          0.022,
+          0.035,
           0.0
         ],
         "rotation": [
@@ -288,9 +288,9 @@
             1
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.044,
+          "font_size": 0.046,
           "layer": 140,
-          "line_height": 0.0572,
+          "line_height": 0.0483,
           "text": "Plating"
         }
       }
@@ -312,8 +312,8 @@
           1.0
         ],
         "scale": [
-          0.3864,
-          0.095,
+          0.7896,
+          0.2,
           1.0
         ]
       },
@@ -354,7 +354,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          -0.038,
+          -0.035,
           0.0
         ],
         "rotation": [
@@ -379,9 +379,9 @@
             1.0
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.032,
+          "font_size": 0.033,
           "layer": 140,
-          "line_height": 0.0416,
+          "line_height": 0.03465,
           "text": "+1.2 collection"
         }
       }
@@ -393,7 +393,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          0.022,
+          0.035,
           0.0
         ],
         "rotation": [
@@ -418,9 +418,9 @@
             1
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.044,
+          "font_size": 0.046,
           "layer": 140,
-          "line_height": 0.0572,
+          "line_height": 0.0483,
           "text": "Wider Field"
         }
       }
@@ -442,8 +442,8 @@
           1.0
         ],
         "scale": [
-          0.3864,
-          0.095,
+          0.7896,
+          0.2,
           1.0
         ]
       },
@@ -484,7 +484,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          -0.038,
+          -0.035,
           0.0
         ],
         "rotation": [
@@ -509,9 +509,9 @@
             1.0
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.032,
+          "font_size": 0.033,
           "layer": 140,
-          "line_height": 0.0416,
+          "line_height": 0.03465,
           "text": "shots pierce 1 more"
         }
       }
@@ -523,7 +523,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          0.022,
+          0.035,
           0.0
         ],
         "rotation": [
@@ -548,9 +548,9 @@
             1
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.044,
+          "font_size": 0.046,
           "layer": 140,
-          "line_height": 0.0572,
+          "line_height": 0.0483,
           "text": "Lance Rounds"
         }
       }
@@ -572,8 +572,8 @@
           1.0
         ],
         "scale": [
-          0.3864,
-          0.095,
+          0.7896,
+          0.2,
           1.0
         ]
       },
@@ -614,7 +614,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          -0.038,
+          -0.035,
           0.0
         ],
         "rotation": [
@@ -639,9 +639,9 @@
             1.0
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.032,
+          "font_size": 0.033,
           "layer": 140,
-          "line_height": 0.0416,
+          "line_height": 0.03465,
           "text": "shoot more often"
         }
       }
@@ -653,7 +653,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          0.022,
+          0.035,
           0.0
         ],
         "rotation": [
@@ -678,9 +678,9 @@
             1
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.044,
+          "font_size": 0.046,
           "layer": 140,
-          "line_height": 0.0572,
+          "line_height": 0.0483,
           "text": "Faster Cycling"
         }
       }
@@ -702,8 +702,8 @@
           1.0
         ],
         "scale": [
-          0.3864,
-          0.095,
+          0.7896,
+          0.2,
           1.0
         ]
       },
@@ -744,7 +744,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          -0.038,
+          -0.035,
           0.0
         ],
         "rotation": [
@@ -769,9 +769,9 @@
             1.0
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.032,
+          "font_size": 0.033,
           "layer": 140,
-          "line_height": 0.0416,
+          "line_height": 0.03465,
           "text": "+0.8 speed"
         }
       }
@@ -783,7 +783,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          0.022,
+          0.035,
           0.0
         ],
         "rotation": [
@@ -808,9 +808,9 @@
             1
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.044,
+          "font_size": 0.046,
           "layer": 140,
-          "line_height": 0.0572,
+          "line_height": 0.0483,
           "text": "Trimmed Hull"
         }
       }
@@ -944,7 +944,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          -0.28,
+          -0.33,
           0.0
         ],
         "rotation": [
@@ -954,8 +954,8 @@
           1.0
         ],
         "scale": [
-          0.42,
-          0.014,
+          0.84,
+          0.02,
           1.0
         ]
       },
@@ -980,7 +980,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          -0.28,
+          -0.33,
           0.0
         ],
         "rotation": [
@@ -990,8 +990,8 @@
           1.0
         ],
         "scale": [
-          0.42,
-          0.014,
+          0.84,
+          0.02,
           1.0
         ]
       },
@@ -1020,7 +1020,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          -0.22,
+          -0.26,
           0.0
         ],
         "rotation": [
@@ -1045,9 +1045,9 @@
             1.0
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.038,
+          "font_size": 0.04,
           "layer": 140,
-          "line_height": 0.0494,
+          "line_height": 0.042,
           "text": "WARDEN"
         }
       }
@@ -1059,7 +1059,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          -0.05,
+          -0.06,
           0.0
         ],
         "rotation": [
@@ -1084,9 +1084,9 @@
             1
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.05,
+          "font_size": 0.052,
           "layer": 140,
-          "line_height": 0.065,
+          "line_height": 0.0546,
           "text": "{}:{.2}"
         }
       }
@@ -1097,7 +1097,7 @@
       "parent": "hud",
       "transform_3d": {
         "position": [
-          0.03,
+          0.04,
           0.055,
           0.0
         ],
@@ -1108,8 +1108,8 @@
           1.0
         ],
         "scale": [
-          0.42,
-          0.01,
+          0.84,
+          0.014,
           1.0
         ]
       },
@@ -1137,7 +1137,7 @@
       "parent": "hud",
       "transform_3d": {
         "position": [
-          0.03,
+          0.04,
           0.055,
           0.0
         ],
@@ -1148,8 +1148,8 @@
           1.0
         ],
         "scale": [
-          0.42,
-          0.01,
+          0.84,
+          0.014,
           1.0
         ]
       },
@@ -1173,7 +1173,7 @@
       "parent": "hud",
       "transform_3d": {
         "position": [
-          0.03,
+          0.04,
           0.1,
           0.0
         ],
@@ -1184,8 +1184,8 @@
           1.0
         ],
         "scale": [
-          0.42,
-          0.02,
+          0.84,
+          0.028,
           1.0
         ]
       },
@@ -1213,7 +1213,7 @@
       "parent": "hud",
       "transform_3d": {
         "position": [
-          0.03,
+          0.04,
           0.1,
           0.0
         ],
@@ -1224,8 +1224,8 @@
           1.0
         ],
         "scale": [
-          0.42,
-          0.02,
+          0.84,
+          0.028,
           1.0
         ]
       },
@@ -1249,8 +1249,8 @@
       "parent": "hud",
       "transform_3d": {
         "position": [
-          0.03,
-          0.14,
+          0.04,
+          0.16,
           0.0
         ],
         "rotation": [
@@ -1275,9 +1275,9 @@
             1
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.034,
+          "font_size": 0.036,
           "layer": 140,
-          "line_height": 0.0442,
+          "line_height": 0.0378,
           "text": "{}/{}"
         }
       }
@@ -1288,8 +1288,8 @@
       "parent": "hud",
       "transform_3d": {
         "position": [
-          0.03,
-          -0.19,
+          0.04,
+          -0.21,
           0.0
         ],
         "rotation": [
@@ -1314,9 +1314,9 @@
             1.0
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.034,
+          "font_size": 0.036,
           "layer": 140,
-          "line_height": 0.0442,
+          "line_height": 0.0378,
           "text": "Level {}"
         }
       }
@@ -1327,8 +1327,8 @@
       "parent": "hud",
       "transform_3d": {
         "position": [
-          0.03,
-          -0.05,
+          0.04,
+          -0.06,
           0.0
         ],
         "rotation": [
@@ -1353,9 +1353,9 @@
             1
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.05,
+          "font_size": 0.052,
           "layer": 140,
-          "line_height": 0.065,
+          "line_height": 0.0546,
           "text": "Score {}"
         }
       }
@@ -1366,8 +1366,8 @@
       "parent": "hud",
       "transform_3d": {
         "position": [
-          0.03,
-          -0.13,
+          0.04,
+          -0.15,
           0.0
         ],
         "rotation": [
@@ -1392,9 +1392,9 @@
             1.0
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.034,
+          "font_size": 0.036,
           "layer": 140,
-          "line_height": 0.0442,
+          "line_height": 0.0378,
           "text": "Wave {}"
         }
       }
@@ -1469,8 +1469,8 @@
           1.0
         ],
         "scale": [
-          0.42,
-          0.34,
+          0.84,
+          0.4,
           1.0
         ]
       },
@@ -1495,7 +1495,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          -0.14,
+          -0.16,
           0.0
         ],
         "rotation": [
@@ -1505,8 +1505,8 @@
           1.0
         ],
         "scale": [
-          0.36119999999999997,
-          0.062,
+          0.7392,
+          0.1,
           1.0
         ]
       },
@@ -1541,7 +1541,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          -0.159,
+          -0.16,
           0.0
         ],
         "rotation": [
@@ -1566,9 +1566,9 @@
             1
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.048,
+          "font_size": 0.05,
           "layer": 140,
-          "line_height": 0.0624,
+          "line_height": 0.0525,
           "text": "GIVE UP"
         }
       }
@@ -1590,8 +1590,8 @@
           1.0
         ],
         "scale": [
-          0.36119999999999997,
-          0.062,
+          0.7392,
+          0.1,
           1.0
         ]
       },
@@ -1626,7 +1626,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          0.001,
+          0.02,
           0.0
         ],
         "rotation": [
@@ -1651,9 +1651,9 @@
             1
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.048,
+          "font_size": 0.05,
           "layer": 140,
-          "line_height": 0.0624,
+          "line_height": 0.0525,
           "text": "RESUME"
         }
       }
@@ -1665,7 +1665,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          0.2,
+          0.24,
           0.0
         ],
         "rotation": [
@@ -1690,9 +1690,9 @@
             1
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.075,
+          "font_size": 0.08,
           "layer": 140,
-          "line_height": 0.0975,
+          "line_height": 0.084,
           "text": "PAUSED"
         }
       }
@@ -1862,7 +1862,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          -0.2,
+          -0.22,
           0.0
         ],
         "rotation": [
@@ -1872,8 +1872,8 @@
           1.0
         ],
         "scale": [
-          0.36119999999999997,
-          0.07,
+          0.7392,
+          0.11,
           1.0
         ]
       },
@@ -1908,7 +1908,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          -0.222,
+          -0.22,
           0.0
         ],
         "rotation": [
@@ -1933,9 +1933,9 @@
             1
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.052,
+          "font_size": 0.055,
           "layer": 140,
-          "line_height": 0.0676,
+          "line_height": 0.05775,
           "text": "PLAY AGAIN"
         }
       }
@@ -1947,7 +1947,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          0.15,
+          0.16,
           0.0
         ],
         "rotation": [
@@ -1972,9 +1972,9 @@
             1.0
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.04,
+          "font_size": 0.042,
           "layer": 140,
-          "line_height": 0.052,
+          "line_height": 0.0441,
           "text": "Best {}"
         }
       }
@@ -1986,7 +1986,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          0.05,
+          0.04,
           0.0
         ],
         "rotation": [
@@ -1996,8 +1996,8 @@
           1.0
         ],
         "scale": [
-          0.42,
-          0.44,
+          0.84,
+          0.56,
           1.0
         ]
       },
@@ -2047,9 +2047,9 @@
             1.0
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.04,
+          "font_size": 0.042,
           "layer": 140,
-          "line_height": 0.052,
+          "line_height": 0.0441,
           "text": "Kills {}"
         }
       }
@@ -2061,7 +2061,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          0.24,
+          0.26,
           0.0
         ],
         "rotation": [
@@ -2086,9 +2086,9 @@
             1
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.055,
+          "font_size": 0.058,
           "layer": 140,
-          "line_height": 0.0715,
+          "line_height": 0.0609,
           "text": "Score {}"
         }
       }
@@ -2100,7 +2100,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          0.01,
+          0.0,
           0.0
         ],
         "rotation": [
@@ -2125,9 +2125,9 @@
             1.0
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.04,
+          "font_size": 0.042,
           "layer": 140,
-          "line_height": 0.052,
+          "line_height": 0.0441,
           "text": "Survived {}:{.2}"
         }
       }
@@ -2139,7 +2139,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          0.38,
+          0.42,
           0.0
         ],
         "rotation": [
@@ -2164,9 +2164,9 @@
             1
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.078,
+          "font_size": 0.085,
           "layer": 140,
-          "line_height": 0.1014,
+          "line_height": 0.08925,
           "text": "RUN OVER"
         }
       }
@@ -2207,7 +2207,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          0.05,
+          0.1,
           0.0
         ],
         "rotation": [
@@ -2232,9 +2232,9 @@
             1.0
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.042,
+          "font_size": 0.046,
           "layer": 140,
-          "line_height": 0.0546,
+          "line_height": 0.0483,
           "text": "Best {}"
         }
       }
@@ -2246,7 +2246,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          0.1,
+          0.06,
           0.0
         ],
         "rotation": [
@@ -2256,8 +2256,8 @@
           1.0
         ],
         "scale": [
-          0.42,
-          0.46,
+          0.84,
+          0.52,
           1.0
         ]
       },
@@ -2282,7 +2282,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          -0.78,
+          -0.8,
           0.0
         ],
         "rotation": [
@@ -2309,7 +2309,7 @@
           "font": "fonts/Inter.ttf",
           "font_size": 0.03,
           "layer": 140,
-          "line_height": 0.039,
+          "line_height": 0.0315,
           "text": "Move with WASD or hold to steer. You fire on your own."
         }
       }
@@ -2321,7 +2321,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          0.44,
+          0.46,
           0.0
         ],
         "rotation": [
@@ -2346,9 +2346,9 @@
             1
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.085,
+          "font_size": 0.095,
           "layer": 140,
-          "line_height": 0.1105,
+          "line_height": 0.09975,
           "text": "LAST STAND"
         }
       }
@@ -2360,7 +2360,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          -0.1,
+          -0.06,
           0.0
         ],
         "rotation": [
@@ -2385,9 +2385,9 @@
             1.0
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.032,
+          "font_size": 0.034,
           "layer": 140,
-          "line_height": 0.0416,
+          "line_height": 0.0357,
           "text": "Your saved progress could not be read."
         }
       },
@@ -2410,8 +2410,8 @@
           1.0
         ],
         "scale": [
-          0.42,
-          0.075,
+          0.84,
+          0.115,
           1.0
         ]
       },
@@ -2446,7 +2446,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          -0.572,
+          -0.55,
           0.0
         ],
         "rotation": [
@@ -2471,9 +2471,9 @@
             1
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.058,
+          "font_size": 0.06,
           "layer": 140,
-          "line_height": 0.0754,
+          "line_height": 0.063,
           "text": "START"
         }
       }
@@ -2503,7 +2503,7 @@
       "components": {
         "sindri.ui.layout": {
           "direction": "column",
-          "spacing": 0.24
+          "spacing": 0.3
         }
       }
     },
@@ -2546,8 +2546,8 @@
           1.0
         ],
         "scale": [
-          0.42,
-          0.52,
+          0.84,
+          0.66,
           1.0
         ]
       },
@@ -2572,7 +2572,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          0.42,
+          0.46,
           0.0
         ],
         "rotation": [
@@ -2597,9 +2597,9 @@
             1
           ],
           "font": "fonts/Inter.ttf",
-          "font_size": 0.068,
+          "font_size": 0.072,
           "layer": 140,
-          "line_height": 0.0884,
+          "line_height": 0.0756,
           "text": "CHOOSE ONE"
         }
       }

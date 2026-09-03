@@ -1,4 +1,4 @@
-//! Text, authored as a share of the screen and drawn in pixels.
+//! Text, authored as a share of the screen and drawn as geometry on it.
 
 use sindri_render::{FrameCommand, RenderStage};
 use sindri_scene::{CameraView, SceneExtractor, TextureBindings, referenced_fonts};
@@ -34,13 +34,16 @@ fn text_is_sized_as_a_share_of_the_viewport_without_a_camera() {
     assert_eq!(instances.len(), 1);
     assert_eq!(instances[0].text(), "Gather");
     assert_eq!(instances[0].font(), "fonts/Inter.ttf");
+    // Overlay units all the way to the renderer. The label is anchored top
+    // left, which is the corner at (-aspect, 1) — one, here, for a square
+    // viewport — and its transform is an offset from there.
     let [x, y] = instances[0].position();
-    assert!(close(x, 64.0) && close(y, 128.0));
-    // The overlay is two tall, so one of its units is worth half the
-    // viewport's height in pixels: an eighth of it on a 512-pixel-tall
-    // viewport is thirty-two.
-    assert!(close(instances[0].font_size(), 32.0));
-    assert!(close(instances[0].line_height(), 48.0));
+    assert!(close(x, -0.75) && close(y, 0.5), "{x} {y}");
+    // And the authored share is carried through untouched: nothing between the
+    // scene and the quads converts it to a pixel count, so the same frame draws
+    // at any resolution.
+    assert!(close(instances[0].font_size(), 0.125));
+    assert!(close(instances[0].line_height(), 0.1875));
     assert!(
         instances[0]
             .color()

@@ -1,22 +1,28 @@
-//! Screen-space text shaped and rasterised from project-owned font bytes.
+//! Text as geometry: strings shaped from project-owned font bytes and turned
+//! into one textured quad per glyph.
 //!
-//! Glyphon owns shaping, fallback and its glyph atlas. Sindri owns the stable
+//! Cosmic-text owns shaping, fallback and font matching. Sindri owns the stable
 //! boundary around it: a frame carries logical font references and immutable
-//! text instances, while a host binds bytes fetched through `sindri-assets`.
-//! No system font is part of that contract, which keeps native and browser
-//! output on the same face.
+//! text instances, while a host binds bytes fetched through `sindri-assets`. No
+//! system font is part of that contract, which keeps native and browser output
+//! on the same face.
+//!
+//! Everything here is measured in the units the pass's camera draws — overlay
+//! units for a HUD, world units for a canvas placed in the scene — and never in
+//! viewport pixels. That is the whole difference from the screen-space text pass
+//! this replaced: a string is now flat geometry on the surface it was authored
+//! against, so it pans, zooms and turns with that surface, and a viewport
+//! resizing does not re-rasterise a single glyph.
 
 use std::collections::BTreeMap;
 
-use glyphon::{
-    Attrs, Buffer, Cache, Color, Family, FontSystem, Metrics, Resolution, Shaping, SwashCache,
-    TextArea, TextAtlas, TextBounds, TextRenderer as GlyphonRenderer, Viewport as GlyphonViewport,
-};
+use glam::{Mat4, Vec3};
+use glyphon::{Attrs, Buffer, Family, FontSystem, Metrics, Shaping, SwashCache};
 use thiserror::Error;
 
-use crate::Viewport;
+use crate::{GlyphAtlas, RASTER_EM, SpriteInstance, Texture2D, TextureError};
 
-/// One laid-out string in physical viewport pixels.
+/// One laid-out string, in the units of the camera its pass is drawn through.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TextInstance {
     text: String,
@@ -32,22 +38,22 @@ pub struct TextInstance {
 /// Where a string of this size actually starts, given the point it was told to
 /// sit at and which end of it that point names.
 ///
-/// Its own function because it is the whole of the fix and the whole of what
-/// can be got wrong: a string is laid out from its top-left, and every overlay
-/// element around it is placed by its centre.
+/// Its own function because it is the whole of what can be got wrong: a string
+/// is laid out from its top-left, and every element around it is placed by its
+/// centre.
 #[must_use]
 pub fn aligned_origin(instance: &TextInstance, size: [f32; 2]) -> [f32; 2] {
     let [across, down] = instance.align();
     [
-        instance.position()[0] + across.offset(size[0]),
-        instance.position()[1] + down.offset(size[1]),
+        instance.position()[0] + across.start_after(size[0]),
+        instance.position()[1] + down.top_above(size[1]),
     ]
 }
 
-/// How big a shaped string turned out, across and down.
+/// How big a shaped string turned out, in raster pixels, across and down.
 ///
-/// The width is the longest line rather than the box it was shaped in, which is
-/// the viewport and would answer the same for every string in it.
+/// The width is the longest line rather than the box it was shaped in, which
+/// would answer the same for every string.
 fn laid_out(buffer: &Buffer, line_height: f32) -> [f32; 2] {
     let mut width = 0.0_f32;
     let mut lines = 0.0_f32;
@@ -61,10 +67,10 @@ fn laid_out(buffer: &Buffer, line_height: f32) -> [f32; 2] {
 /// Which end of a string the point it was given belongs to.
 ///
 /// A string is laid out from a corner, so a point alone does not say where it
-/// goes: a title told to sit at the middle of the screen had its *top-left*
-/// put there and ran off to the right. Every other overlay element is placed by
-/// its centre, so the anchor an author chose meant one thing for an image and
-/// something else for the words on it.
+/// goes: a title told to sit at the middle of the screen had its *top-left* put
+/// there and ran off to the right. Every other element is placed by its centre,
+/// so the anchor an author chose meant one thing for an image and something else
+/// for the words on it.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum TextAlign {
     /// The point is where the string begins — its left edge, or its top.
@@ -77,23 +83,29 @@ pub enum TextAlign {
 }
 
 impl TextAlign {
-    /// How far back from the point a string of this size starts.
-    fn offset(self, size: f32) -> f32 {
+    /// How far right of the point a string of this width starts.
+    fn start_after(self, width: f32) -> f32 {
         match self {
             Self::Start => 0.0,
-            Self::Middle => -size * 0.5,
-            Self::End => -size,
+            Self::Middle => -width * 0.5,
+            Self::End => -width,
+        }
+    }
+
+    /// How far *above* the point the top of a string of this height sits.
+    ///
+    /// Text is laid out downwards while the units it is placed in run upwards,
+    /// so this is the one place that flip lives. Reading it off `start_after`
+    /// with a minus sign is exactly the sort of thing that ends up written once
+    /// per caller and once wrong.
+    fn top_above(self, height: f32) -> f32 {
+        match self {
+            Self::Start => 0.0,
+            Self::Middle => height * 0.5,
+            Self::End => height,
         }
     }
 }
-
-/// The smallest text that can put anything on a screen.
-///
-/// A renderer is the one place that still speaks in pixels: a scene asks for a
-/// share of the screen, and this is where that share stops being able to be a
-/// glyph. Text is clamped up to it rather than refused, because reaching it
-/// means the window is small, which is a thing windows do.
-pub const MIN_TEXT_PIXELS: f32 = 1.0;
 
 impl TextInstance {
     pub fn new(
@@ -114,13 +126,6 @@ impl TextInstance {
         if !line_height.is_finite() || line_height <= 0.0 {
             return Err(TextError::InvalidLineHeight(line_height));
         }
-        // A size arrives here in pixels, worked out from a share of the screen
-        // — so one below a pixel means the window is tiny, not that the scene
-        // is wrong, and a window someone dragged small should shrink its text
-        // rather than stop the frame. The scene said what share of the screen
-        // it wanted; this is the floor at which that share stops being a glyph.
-        let font_size = font_size.max(MIN_TEXT_PIXELS);
-        let line_height = line_height.max(MIN_TEXT_PIXELS);
         if !color.into_iter().all(f32::is_finite) {
             return Err(TextError::NonFiniteColor(color));
         }
@@ -164,32 +169,48 @@ impl TextInstance {
     pub const fn color(&self) -> [f32; 4] {
         self.color
     }
+
+    /// How many of the units this string is placed in one raster pixel covers.
+    ///
+    /// Glyphs are baked once at [`RASTER_EM`] and every quad is a scaled copy,
+    /// so this single number is what turns a shaped layout into geometry.
+    fn units_per_raster_pixel(&self) -> f32 {
+        self.font_size / RASTER_EM
+    }
 }
 
-/// Glyph shaping, caching and rendering shared by every viewport.
+/// One glyph batch, ready to draw through the pass's own camera.
+pub struct GlyphQuads<'a> {
+    /// The atlas every quad in `instances` samples.
+    pub atlas: &'a Texture2D,
+    /// Which build of that atlas this is, for a renderer caching bind groups.
+    pub generation: u64,
+    pub instances: Vec<SpriteInstance>,
+}
+
+/// Glyph shaping, rasterisation and the atlas they land in, shared by every
+/// viewport.
 pub struct TextRenderer {
     font_system: FontSystem,
     swash_cache: SwashCache,
-    viewport: GlyphonViewport,
-    atlas: TextAtlas,
-    renderer: GlyphonRenderer,
+    atlas: GlyphAtlas,
     /// Logical asset reference to the family declared inside its bytes.
     fonts: BTreeMap<String, String>,
 }
 
+impl Default for TextRenderer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TextRenderer {
-    pub fn new(device: &wgpu::Device, queue: &wgpu::Queue, format: wgpu::TextureFormat) -> Self {
-        let cache = Cache::new(device);
-        let viewport = GlyphonViewport::new(device, &cache);
-        let mut atlas = TextAtlas::new(device, queue, &cache, format);
-        let renderer =
-            GlyphonRenderer::new(&mut atlas, device, wgpu::MultisampleState::default(), None);
+    #[must_use]
+    pub fn new() -> Self {
         Self {
             font_system: FontSystem::new(),
             swash_cache: SwashCache::new(),
-            viewport,
-            atlas,
-            renderer,
+            atlas: GlyphAtlas::new(),
             fonts: BTreeMap::new(),
         }
     }
@@ -217,27 +238,28 @@ impl TextRenderer {
         self.fonts.contains_key(reference)
     }
 
-    /// How much of the viewport one string covers, in physical pixels.
+    /// How much of its own units one string covers, across and down.
     ///
-    /// `None` for an unbound font, which is what [`Self::draw`] does with one
-    /// too: a string whose face never arrived is not drawn, so it covers
-    /// nothing and there is nothing to hit-test against.
+    /// `None` for an unbound font, which is what [`Self::quads`] does with one
+    /// too: a string whose face never arrived is not drawn, so it covers nothing
+    /// and there is nothing to hit-test against.
     ///
-    /// The width is the widest laid-out line rather than the box the text was
-    /// laid out *into*: glyphon is given the whole viewport to wrap in, so the
-    /// box is the viewport and would answer "yes" to every point in it. The
-    /// height is the lines it actually used.
+    /// The width is the widest laid-out line and the height is the lines it
+    /// actually used. Independent of any viewport, because the answer is a size
+    /// in the scene now rather than a rectangle on a screen — which is what lets
+    /// an editor's pick box be built once and stay right through a zoom.
     ///
     /// This exists because an editor cannot otherwise say where a string is.
-    /// Every other drawn thing has a size in the scene — a sprite has one, a UI
-    /// image has one — and a string's is decided by glyph layout inside this
-    /// module. A guessed box picks the wrong thing near its edges, which is
-    /// worse than not picking at all, so the answer comes from the same
-    /// shaping the frame is drawn from.
-    pub fn measure(&mut self, instance: &TextInstance, viewport: Viewport) -> Option<[f32; 2]> {
+    /// Every other drawn thing has a size in the scene; a string's is decided by
+    /// glyph layout inside this module, and a guessed box picks the wrong thing
+    /// near its edges. So the answer comes from the same shaping the frame is
+    /// drawn from.
+    pub fn measure(&mut self, instance: &TextInstance) -> Option<[f32; 2]> {
         let family = self.fonts.get(instance.font()).cloned()?;
-        let buffer = self.shape(instance, &family, viewport);
-        Some(laid_out(&buffer, instance.line_height()))
+        let scale = instance.units_per_raster_pixel();
+        let buffer = self.shape(instance, &family);
+        let [width, height] = laid_out(&buffer, instance.line_height() / scale);
+        Some([width * scale, height * scale])
     }
 
     /// One instance laid out, the only place that is decided.
@@ -245,14 +267,22 @@ impl TextRenderer {
     /// Shared by drawing and measuring rather than written twice, because two
     /// copies is exactly how a pick box ends up disagreeing with the picture it
     /// is meant to be over.
-    fn shape(&mut self, instance: &TextInstance, family: &str, viewport: Viewport) -> Buffer {
+    ///
+    /// Always shaped at [`RASTER_EM`], whatever size the instance asked for: the
+    /// atlas holds one baked copy of each glyph, and a string that shaped at its
+    /// own size would key glyphs that are not in it. The requested size is a
+    /// scale applied to the result.
+    fn shape(&mut self, instance: &TextInstance, family: &str) -> Buffer {
+        let scale = instance.units_per_raster_pixel();
         let mut buffer = Buffer::new(
             &mut self.font_system,
-            Metrics::new(instance.font_size(), instance.line_height()),
+            Metrics::new(RASTER_EM, instance.line_height() / scale),
         );
-        let width = f32::from(u16::try_from(viewport.width).unwrap_or(u16::MAX));
-        let height = f32::from(u16::try_from(viewport.height).unwrap_or(u16::MAX));
-        buffer.set_size(Some(width), Some(height));
+        // No wrap width. A string's box is not authored, and wrapping to the
+        // viewport was only ever meaningful while text was measured in it —
+        // a canvas in the scene has no viewport of its own to wrap to. Authored
+        // newlines still break lines.
+        buffer.set_size(None, None);
         buffer.set_text(
             instance.text(),
             &Attrs::new().family(Family::Name(family)),
@@ -263,28 +293,20 @@ impl TextRenderer {
         buffer
     }
 
-    /// Shapes and draws one ordered text pass into an existing frame target.
+    /// Shapes one ordered text pass into quads, and the atlas they sample.
     ///
     /// An unbound font skips its string. Asset diagnostics name it separately;
-    /// silently choosing a machine font here would make a browser and desktop
+    /// silently choosing a machine font here would make a browser and a desktop
     /// disagree while both appeared to work.
-    pub fn draw(
+    ///
+    /// `None` when nothing is drawn — every string had an unbound font, or none
+    /// of them put a mark anywhere.
+    pub fn quads(
         &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        encoder: &mut wgpu::CommandEncoder,
-        target: &wgpu::TextureView,
-        viewport: Viewport,
         instances: &[TextInstance],
-    ) -> Result<(), TextError> {
-        self.viewport.update(
-            queue,
-            Resolution {
-                width: viewport.width,
-                height: viewport.height,
-            },
-        );
-
+    ) -> Result<Option<GlyphQuads<'_>>, TextError> {
         let resolved: Vec<(&TextInstance, String)> = instances
             .iter()
             .filter_map(|instance| {
@@ -294,80 +316,81 @@ impl TextRenderer {
                     .map(|family| (instance, family))
             })
             .collect();
+        if resolved.is_empty() {
+            return Ok(None);
+        }
         let mut buffers = Vec::with_capacity(resolved.len());
         for (instance, family) in &resolved {
-            buffers.push(self.shape(instance, family, viewport));
+            buffers.push(self.shape(instance, family));
         }
-        let areas = buffers
-            .iter()
-            .zip(resolved.iter())
-            .map(|(buffer, (instance, _))| {
-                let [width, height] = laid_out(buffer, instance.line_height());
-                let [across, down] = instance.align();
-                TextArea {
-                    buffer,
-                    left: instance.position()[0] + across.offset(width),
-                    top: instance.position()[1] + down.offset(height),
-                    scale: 1.0,
-                    bounds: TextBounds {
-                        left: i32::try_from(viewport.x).unwrap_or(i32::MAX),
-                        top: i32::try_from(viewport.y).unwrap_or(i32::MAX),
-                        right: i32::try_from(viewport.x.saturating_add(viewport.width))
-                            .unwrap_or(i32::MAX),
-                        bottom: i32::try_from(viewport.y.saturating_add(viewport.height))
-                            .unwrap_or(i32::MAX),
-                    },
-                    default_color: glyphon_color(instance.color()),
-                    custom_glyphs: &[],
+
+        // Two passes over the glyphs, and the split is load bearing: the atlas
+        // may grow while it is being filled, and growing repacks it, so every
+        // rect handed out before that moment stops being where its glyph is.
+        // Filling it first and reading it after means one frame's quads all
+        // describe the same atlas.
+        for buffer in &buffers {
+            for run in buffer.layout_runs() {
+                for glyph in run.glyphs {
+                    let key = glyph.physical((0.0, 0.0), 1.0).cache_key;
+                    self.atlas
+                        .slot(&mut self.font_system, &mut self.swash_cache, key);
                 }
-            });
-        self.renderer
-            .prepare(
-                device,
-                queue,
-                &mut self.font_system,
-                &mut self.atlas,
-                &self.viewport,
-                areas,
-                &mut self.swash_cache,
-            )
-            .map_err(|error| TextError::Prepare(error.to_string()))?;
-
-        {
-            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Sindri text pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: target,
-                    depth_slice: None,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Load,
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: None,
-                timestamp_writes: None,
-                occlusion_query_set: None,
-                multiview_mask: None,
-            });
-            self.renderer
-                .render(&self.atlas, &self.viewport, &mut pass)
-                .map_err(|error| TextError::Render(error.to_string()))?;
+            }
         }
-        self.atlas.trim();
-        Ok(())
-    }
-}
 
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-fn glyphon_color(color: [f32; 4]) -> Color {
-    let channel = |value: f32| (value.clamp(0.0, 1.0) * 255.0).round() as u8;
-    Color::rgba(
-        channel(color[0]),
-        channel(color[1]),
-        channel(color[2]),
-        channel(color[3]),
-    )
+        let mut quads = Vec::new();
+        for (buffer, (instance, _)) in buffers.iter().zip(resolved.iter()) {
+            let scale = instance.units_per_raster_pixel();
+            let [width, height] = laid_out(buffer, instance.line_height() / scale);
+            let origin = aligned_origin(instance, [width * scale, height * scale]);
+            for run in buffer.layout_runs() {
+                for glyph in run.glyphs {
+                    let physical = glyph.physical((0.0, 0.0), 1.0);
+                    // Pen offsets within a shaped line, so a few hundred at
+                    // most and exact in an f32 many times over.
+                    #[allow(clippy::cast_precision_loss)]
+                    let (pen_x, pen_y) = (physical.x as f32, physical.y as f32);
+                    let Some(slot) = self.atlas.slot(
+                        &mut self.font_system,
+                        &mut self.swash_cache,
+                        physical.cache_key,
+                    ) else {
+                        continue;
+                    };
+                    // Raster pixels from the string's top-left corner, down and
+                    // to the right, which is the space cosmic-text lays out in.
+                    let left = pen_x + slot.offset[0];
+                    let top = run.line_y.round() + pen_y - slot.offset[1];
+                    let size = [slot.size[0] * scale, slot.size[1] * scale];
+                    let centre = [
+                        origin[0] + (left + slot.size[0] * 0.5) * scale,
+                        origin[1] - (top + slot.size[1] * 0.5) * scale,
+                    ];
+                    let model = Mat4::from_translation(Vec3::new(centre[0], centre[1], 0.0))
+                        * Mat4::from_scale(Vec3::new(size[0], size[1], 1.0));
+                    quads.push(SpriteInstance::new(model, instance.color()).with_uv_rect(slot.uv));
+                }
+            }
+        }
+        if quads.is_empty() {
+            return Ok(None);
+        }
+        let (atlas, generation) = self.atlas.texture(device, queue)?;
+        Ok(Some(GlyphQuads {
+            atlas,
+            generation,
+            instances: quads,
+        }))
+    }
+
+    /// How many distinct glyphs are baked into the atlas.
+    ///
+    /// A host's only window onto how much text has cost it.
+    #[must_use]
+    pub fn glyph_count(&self) -> usize {
+        self.atlas.glyph_count()
+    }
 }
 
 #[derive(Clone, Debug, Error, PartialEq)]
@@ -380,10 +403,8 @@ pub enum TextError {
     InvalidLineHeight(f32),
     #[error("text color must be finite, got {0:?}")]
     NonFiniteColor([f32; 4]),
-    #[error("could not prepare text: {0}")]
-    Prepare(String),
-    #[error("could not render text: {0}")]
-    Render(String),
+    #[error("could not build the glyph atlas: {0}")]
+    Atlas(#[from] TextureError),
 }
 
 #[cfg(test)]
@@ -398,7 +419,7 @@ mod tests {
                 "font.ttf",
                 [0.0, 0.0],
                 0.0,
-                20.0,
+                0.1,
                 [1.0; 4],
                 [TextAlign::Start; 2]
             ),
@@ -409,8 +430,8 @@ mod tests {
                 "hello",
                 "font.ttf",
                 [f32::NAN, 0.0],
-                16.0,
-                20.0,
+                0.06,
+                0.07,
                 [1.0; 4],
                 [TextAlign::Start; 2]
             ),
@@ -427,17 +448,27 @@ mod alignment_tests {
     /// puts the string somewhere different.
     #[test]
     fn an_alignment_says_how_far_back_a_string_starts() {
-        assert!((TextAlign::Start.offset(120.0) - 0.0).abs() < f32::EPSILON);
-        assert!((TextAlign::Middle.offset(120.0) + 60.0).abs() < f32::EPSILON);
-        assert!((TextAlign::End.offset(120.0) + 120.0).abs() < f32::EPSILON);
+        assert!((TextAlign::Start.start_after(1.2) - 0.0).abs() < f32::EPSILON);
+        assert!((TextAlign::Middle.start_after(1.2) + 0.6).abs() < f32::EPSILON);
+        assert!((TextAlign::End.start_after(1.2) + 1.2).abs() < f32::EPSILON);
     }
 
-    /// A string of no width sits at its point however it is aligned, so an
-    /// empty label does not jump about.
+    /// Down runs the other way from across, because layout goes down the page
+    /// and the units a string is placed in go up it.
+    #[test]
+    fn the_top_of_a_string_is_above_the_point_it_was_given() {
+        assert!((TextAlign::Start.top_above(1.2) - 0.0).abs() < f32::EPSILON);
+        assert!((TextAlign::Middle.top_above(1.2) - 0.6).abs() < f32::EPSILON);
+        assert!((TextAlign::End.top_above(1.2) - 1.2).abs() < f32::EPSILON);
+    }
+
+    /// A string of no size sits at its point however it is aligned, so an empty
+    /// label does not jump about.
     #[test]
     fn nothing_is_in_the_same_place_whichever_end_it_is_measured_from() {
         for align in [TextAlign::Start, TextAlign::Middle, TextAlign::End] {
-            assert!(align.offset(0.0).abs() < f32::EPSILON, "{align:?}");
+            assert!(align.start_after(0.0).abs() < f32::EPSILON, "{align:?}");
+            assert!(align.top_above(0.0).abs() < f32::EPSILON, "{align:?}");
         }
     }
 }

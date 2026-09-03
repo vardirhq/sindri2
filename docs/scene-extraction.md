@@ -64,10 +64,17 @@ A game registers its own component types alongside these with `SceneExtractor::r
 ## Text
 
 `sindri.ui.text` is screen text. Its entity transform offsets one of the nine
-screen anchors, extraction projects that point into physical viewport pixels,
-and the resulting `TextInstance` carries content, font asset reference, font
-size, line height, colour, and layer. Strings on the same layer share one
-ordered text pass. No authored camera participates in that projection.
+screen anchors, and the resulting `TextInstance` carries content, font asset
+reference, font size, line height, colour, and layer — all of it in overlay
+units, the same two-unit-tall space every other UI element is placed in. Nothing
+between the scene and the renderer converts a size to pixels, so the same frame
+draws at any resolution.
+
+Strings on the same layer share one ordered pass, which the renderer turns into
+one textured quad per glyph and draws through that pass's own camera. Text is
+therefore geometry on whichever surface it was authored against: it pans, zooms
+and turns with a canvas placed in the scene. No authored camera participates in
+resolving where the overlay *is*; the pass's camera is what draws it.
 
 `referenced_fonts` is the load list for a world. A host validates those bytes
 with `FontAssetDecoder` and binds each logical reference to `TextRenderer`;

@@ -80,7 +80,7 @@ impl DesktopApp for CubeApp {
             depth: DepthTarget::new(context.device(), context.width(), context.height()),
             cube_renderer: TexturedCubeRenderer::new(context.device(), context.format()),
             sprite_renderer: SpriteBatchRenderer::new(context.device(), context.format()),
-            text_renderer: TextRenderer::new(context.device(), context.queue(), context.format()),
+            text_renderer: TextRenderer::new(),
             textures,
             bindings,
         })

@@ -174,7 +174,7 @@ impl SceneExtractor {
         let resting = SpriteAnimations::new();
         let animations = animations.unwrap_or(&resting);
         self.push_images(world, &cameras, textures, animations, effects, &mut frame)?;
-        self.push_text(world, viewport, &cameras, &mut frame)?;
+        self.push_text(world, &cameras, &mut frame)?;
         Ok(frame.prepare()?)
     }
 
@@ -212,7 +212,7 @@ impl SceneExtractor {
         let resting = SpriteAnimations::new();
         let animations = animations.unwrap_or(&resting);
         self.push_images(world, &cameras, textures, animations, effects, &mut frame)?;
-        self.push_text(world, viewport, &cameras, &mut frame)?;
+        self.push_text(world, &cameras, &mut frame)?;
         Ok(frame.prepare()?)
     }
 }

@@ -402,21 +402,24 @@ all three ask the same functions the frame was drawn from:
   the button is rather than where it would be if it were still on the viewport.
 - **A UI element's gizmo is on it**, so handles travel with the element when the
   view is panned to it.
-- **Text is sized through it.** What one overlay unit is worth in pixels is
-  measured from the projection rather than assumed from the viewport, so zooming
-  in on a canvas makes the words on it bigger along with everything else.
+- **Text is drawn on it.** A string is one textured quad per glyph, in overlay
+  units, through the canvas's own camera — so the words pan, zoom and turn with
+  it like anything else drawn.
 
-### What text still is not
+### What text is
 
-A glyph is drawn as a screen-aligned quad by a text pass of its own, at a pixel
-size worked out per frame. Sizing it through the projection makes it *scale*
-with the canvas, which is most of what was missing, but it is still not geometry
-on the canvas: it will not rotate with one, it cannot be occluded by anything,
-and it is re-rasterised as the zoom changes rather than drawn from a shape that
-has no resolution.
+A glyph is a quad. `GlyphAtlas` rasterises each one once at a fixed 64-pixel em
+and packs it into a texture the renderer owns; `TextRenderer::quads` shapes a
+string with cosmic-text, scales the layout by `font_size / RASTER_EM`, and emits
+a `SpriteInstance` per glyph in the units the pass's camera draws. Encoding then
+sends those through the ordinary sprite pipeline. Text left its own render pass
+entirely, which is what makes it geometry rather than something laid over the
+picture: it turns with a canvas the Scene view has orbited, it is sized by the
+projection rather than the viewport, and a window resize re-rasterises nothing.
 
-The end state is the one Unity reached with TextMeshPro — a glyph is a quad in
-the mesh with a signed-distance-field texture, so text is an ordinary drawable
-that happens to be lettershaped. That is a real subsystem: a glyph atlas Sindri
-owns, an SDF shader, and text leaving its own render pass to become sprites. It
-is worth doing and it is not a refinement of what is here.
+The fixed bake is the one thing still to improve on. It is the trade a bitmap
+font makes — sharp at the size it was baked, progressively softer well away from
+it — and the end state is the one Unity reached with TextMeshPro: the same quads,
+sampling a signed distance field instead of a coverage mask. That changes what is
+*in* the atlas and what samples it, not where the quads are, so it lands behind
+this boundary without moving it.

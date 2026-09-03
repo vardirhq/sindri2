@@ -40,11 +40,7 @@ impl SceneRenderers {
         Self {
             cube: TexturedCubeRenderer::new(&render_state.device, ViewportTarget::FORMAT),
             sprites: SpriteBatchRenderer::new(&render_state.device, ViewportTarget::FORMAT),
-            text: TextRenderer::new(
-                &render_state.device,
-                &render_state.queue,
-                ViewportTarget::FORMAT,
-            ),
+            text: TextRenderer::new(),
         }
     }
 }

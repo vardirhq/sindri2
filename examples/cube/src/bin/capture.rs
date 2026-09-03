@@ -31,7 +31,7 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
     let depth = DepthTarget::new(&gpu.device, WIDTH, HEIGHT);
     let mut cube_renderer = TexturedCubeRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
     let mut sprite_renderer = SpriteBatchRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
-    let mut text_renderer = TextRenderer::new(&gpu.device, &gpu.queue, OffscreenTarget::FORMAT);
+    let mut text_renderer = TextRenderer::new();
     let (textures, bindings) = demo_textures(&gpu.device, &gpu.queue);
     let (scene, world) = DemoScene::load()?;
     let prepared = scene.extract_frame(&world, Viewport::new(WIDTH, HEIGHT), &bindings)?;

@@ -181,7 +181,7 @@ impl DesktopApp for BrowserGatherApp {
             depth: DepthTarget::new(context.device(), context.width(), context.height()),
             cubes: TexturedCubeRenderer::new(context.device(), context.format()),
             sprites: SpriteBatchRenderer::new(context.device(), context.format()),
-            text: TextRenderer::new(context.device(), context.queue(), context.format()),
+            text: TextRenderer::new(),
             // Remembered because the engine does not exist yet: the project
             // loads asynchronously, and a resize that arrives before it must
             // not be the one size nobody ever hears about.

@@ -12,7 +12,8 @@
 
 use crate::{
     DepthTarget, DrawContext, FrameCommand, PreparedFrame, SpriteBatchError, SpriteBatchRenderer,
-    SpriteBatchStats, TextError, TextRenderer, TextureRegistry, TexturedCubeRenderer, encode_clear,
+    SpriteBatchStats, SpriteDepth, TextError, TextRenderer, TextureRegistry, TexturedCubeRenderer,
+    encode_clear,
 };
 use thiserror::Error;
 
@@ -93,15 +94,26 @@ pub fn encode_prepared_frame(
                     instances,
                 )?;
             }
+            // Text is geometry: the same quad pipeline, through the same
+            // camera as the pass it belongs to. The only thing that makes it
+            // its own command is that the atlas its quads sample is filled
+            // while the frame is being drawn, so it cannot have been in the
+            // registry beforehand.
             FrameCommand::Text { instances } => {
-                text_renderer.draw(
-                    device,
-                    queue,
-                    encoder,
-                    target.color,
-                    frame.viewport(),
-                    instances,
-                )?;
+                if let Some(quads) = text_renderer.quads(device, queue, instances)? {
+                    sprite_renderer.draw_owned(
+                        device,
+                        queue,
+                        encoder,
+                        target.color,
+                        target.depth,
+                        quads.atlas,
+                        quads.generation,
+                        pass.camera.view_projection,
+                        SpriteDepth::Ignore,
+                        &quads.instances,
+                    )?;
+                }
             }
         }
     }

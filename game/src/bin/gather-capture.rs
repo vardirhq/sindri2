@@ -54,7 +54,7 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
     let depth = DepthTarget::new(&gpu.device, WIDTH, HEIGHT);
     let mut cubes = TexturedCubeRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
     let mut sprites = SpriteBatchRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
-    let mut text = TextRenderer::new(&gpu.device, &gpu.queue, OffscreenTarget::FORMAT);
+    let mut text = TextRenderer::new();
     bind_fonts(&mut text)?;
 
     let (textures, bindings) = sindri_gather::bind_textures(&gpu.device, &gpu.queue)?;

@@ -57,7 +57,7 @@ impl DesktopApp for GatherApp {
         *engine.world_mut() = world()?;
         engine.start()?;
 
-        let mut text = TextRenderer::new(context.device(), context.queue(), context.format());
+        let mut text = TextRenderer::new();
         bind_fonts(&mut text)?;
         Ok(Self {
             engine,

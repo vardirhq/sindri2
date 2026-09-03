@@ -106,13 +106,17 @@ fn the_canvas_keeps_its_own_shape_when_the_panel_changes() {
 /// not fix: an element's *position* came from the projection and so followed
 /// the camera, while its size was worked out from the viewport and so did not.
 /// Zooming moved the words around without making them any bigger.
+///
+/// Text is geometry now, so the check is the same one that would be made of any
+/// other quad: a fixed offset on the canvas covers more of the viewport when the
+/// camera is closer to it.
 #[test]
 fn zooming_in_on_a_canvas_makes_its_text_bigger() {
     use sindri_scene::overlay_in_scene;
 
     let scene = scene();
     let extractor = SceneExtractor::new().unwrap();
-    let sized = |scale: f32| {
+    let covered = |scale: f32| {
         let view = CameraView {
             projection: WorldProjection::Orthographic,
             distance_scale: scale,
@@ -123,14 +127,17 @@ fn zooming_in_on_a_canvas_makes_its_text_bigger() {
             .expect("a camera resolves")
             .expect("there is one");
         let (overlay, _) = overlay_in_scene(world, 1.0);
-        overlay.pixels_per_unit(1000.0)
+        // How much of the viewport one overlay unit of height covers, which is
+        // what a font size is a share of.
+        let at = |y: f32| overlay.viewport_fraction(glam::Vec2::new(0.0, y))[1];
+        (at(1.0) - at(0.0)).abs()
     };
 
-    let far = sized(2.0);
-    let near = sized(1.0);
+    let far = covered(2.0);
+    let near = covered(1.0);
     assert!(
         near > far * 1.5,
-        "a closer view should cover more pixels per unit: {near} against {far}"
+        "a closer view should cover more of the viewport per unit: {near} against {far}"
     );
 }
 
@@ -139,6 +146,10 @@ fn zooming_in_on_a_canvas_makes_its_text_bigger() {
 #[test]
 fn an_overlay_on_the_viewport_is_sized_by_the_viewport() {
     let (overlay, _) = sindri_scene::overlay_for_viewport(1.6).expect("an overlay");
-    // The overlay is two units tall, so one unit is half the viewport.
-    assert!((overlay.pixels_per_unit(900.0) - 450.0).abs() < 1.0e-3);
+    // The overlay is two units tall and centred on the origin, so its top edge
+    // is one unit up and lands exactly at the top of the viewport.
+    let top = overlay.viewport_fraction(glam::Vec2::new(0.0, 1.0));
+    assert!(top[1].abs() < 1.0e-3, "{top:?}");
+    let middle = overlay.viewport_fraction(glam::Vec2::ZERO);
+    assert!((middle[1] - 0.5).abs() < 1.0e-3, "{middle:?}");
 }

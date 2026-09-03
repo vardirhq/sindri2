@@ -416,19 +416,18 @@ fixing it, one that was worse than this section knew.
 matrix the frame draws them through, and a UI element's gizmo is drawn where the
 element is.
 
-UI text took a second pass, because a string is the one drawn thing with no size
-in the scene: what it covers is decided by glyph layout — kerning, fallback, the
-wrap the viewport imposes — inside the text renderer, and a box guessed from the
-font size and the character count picks the wrong entity along its edges, which
-is worse than not picking at all. So the box is not guessed. `TextRenderer`
-answers it (`TextRenderer::measure`), from the same shaping the frame is drawn
-with — one function now, shared by drawing and measuring, because two copies is
-exactly how a pick box ends up disagreeing with the picture it is over. Where the
-string starts comes from the same place for the same reason:
-`OverlayPlacement::text_origin` is what the frame's text pass positions with.
-The editor measures at the resolution the view renders at and hands `pick_ui` the
-boxes; picking itself stays free of the GPU and settles a string against an image
-by the layer rule two images already settle it by. Confirmed in the running
+UI text took a second pass, because a string is the one drawn thing with no
+authored size: what it covers is decided by glyph layout — kerning, fallback —
+inside the text renderer, and a box guessed from the font size and the character
+count picks the wrong entity along its edges, which is worse than not picking at
+all. So the box is not guessed. `TextRenderer` answers it
+(`TextRenderer::measure`), from the same shaping the frame is drawn with — one
+function, shared by drawing and measuring, because two copies is exactly how a
+pick box ends up disagreeing with the picture it is over. The answer is in
+overlay units, so the box is the same box at any resolution; the editor projects
+it with `OverlayView::viewport_fraction` — the same projection the frame used —
+and hands `pick_ui` the result. Picking itself stays free of the GPU and settles
+a string against an image by the layer rule two images already settle it by. Confirmed in the running
 editor: clicking the word GATHER selects `title`, and clicking the empty space
 beside it selects nothing.
 
