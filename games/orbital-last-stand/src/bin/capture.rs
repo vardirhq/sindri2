@@ -18,8 +18,9 @@ use sindri_assets::{AssetBytes, AssetDecoder, FontAssetDecoder, TextureAssetDeco
 use sindri_core::{AssetId, SpriteSheetDocument, sheet_id_for};
 use sindri_gpu::{GpuContext, GpuRequestOptions};
 use sindri_render::{
-    DepthTarget, FrameRenderers, FrameTarget, OffscreenTarget, SpriteBatchRenderer, TextRenderer,
-    Texture2D, TextureRegistry, TexturedCubeRenderer, Viewport, encode_prepared_frame,
+    DepthTarget, FrameRenderers, FrameTarget, GlyphRenderer, OffscreenTarget, SpriteBatchRenderer,
+    TextRenderer, Texture2D, TextureRegistry, TexturedCubeRenderer, Viewport,
+    encode_prepared_frame,
 };
 use sindri_scene::{CameraView, SceneRuntime, TextureBindings, UiCanvas, WorldProjection};
 
@@ -109,6 +110,7 @@ async fn capture(
     let mut cubes = TexturedCubeRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
     let mut sprites = SpriteBatchRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
     let mut text = TextRenderer::new();
+    let mut glyphs = GlyphRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
     let (textures, bindings) = bind(&run, &gpu.device, &gpu.queue, &mut text)?;
 
     let shot = shot_for(what);
@@ -144,6 +146,7 @@ async fn capture(
             cube: &mut cubes,
             sprites: &mut sprites,
             text: &mut text,
+            glyphs: &mut glyphs,
             textures: &textures,
         },
         &gpu.device,

@@ -3,7 +3,6 @@
 use eframe::egui::{self, Pos2, Rect, Response};
 use glam::Vec2 as GlamVec2;
 use sindri_core::{CommandBuffer, EntityId, Transform3D, WorldCommand};
-use sindri_render::TextInstance;
 use sindri_scene::{
     CameraView, OverlayPlacement, OverlayView, UiAnchor, UiImageComponent, UiTextComponent,
     ViewCamera, overlay_in_scene,
@@ -167,26 +166,24 @@ impl EditorApp {
                     .and_then(|data| data.transform_3d)
                     .unwrap_or_default();
                 let layer = text.layer;
-                // The same size and the same alignment the frame is drawn with,
-                // asked of the same functions: a box worked out a second way is
-                // a box that disagrees with the picture it is meant to be over.
-                let instance = TextInstance::new(
-                    text.text,
-                    text.font,
-                    placement.origin(transform, text.anchor).to_array(),
-                    text.font_size,
-                    text.line_height,
-                    text.color,
-                    text.anchor.text_align(),
-                )
-                .ok()?;
-                let size = self.renderers.text.measure(&instance)?;
-                let [left, top] = sindri_render::aligned_origin(&instance, size);
+                // The same options and the same measurement the frame is drawn
+                // with, asked of the same functions: a box worked out a second
+                // way is a box that disagrees with the picture it is over.
+                let instance = text
+                    .instance(placement.origin(transform, text.anchor).to_array())
+                    .ok()?;
+                let (centre, size) = self.renderers.text.rect(&instance)?;
                 // Overlay units into viewport fractions, through the projection
                 // the frame used. Text is measured in the scene's own units now,
                 // so the box follows a pan or a zoom without being remeasured.
-                let near = overlay.viewport_fraction(GlamVec2::new(left, top));
-                let far = overlay.viewport_fraction(GlamVec2::new(left + size[0], top - size[1]));
+                let near = overlay.viewport_fraction(GlamVec2::new(
+                    centre[0] - size[0] * 0.5,
+                    centre[1] + size[1] * 0.5,
+                ));
+                let far = overlay.viewport_fraction(GlamVec2::new(
+                    centre[0] + size[0] * 0.5,
+                    centre[1] - size[1] * 0.5,
+                ));
                 if !near.iter().chain(far.iter()).all(|value| value.is_finite()) {
                     return None;
                 }
@@ -350,6 +347,42 @@ impl EditorApp {
                 Some(rect.min + egui::vec2(at.x, at.y))
             })
             .collect()
+    }
+
+    /// The rect the selected text element occupies, in overlay units.
+    ///
+    /// `None` unless one text element is selected and its face is loaded — a
+    /// string whose font never arrived has no measurable extent, and a guessed
+    /// one would put a handle around a box the words are not in.
+    ///
+    /// Measured rather than read off the component, because a box is only the
+    /// authored bounds where there are any: an unbounded label's rect is what its
+    /// words came out as, which nothing but the shaper knows.
+    pub(super) fn selected_text_rect(
+        &mut self,
+        camera: CameraView,
+    ) -> Option<([f32; 2], [f32; 2])> {
+        let entity = self.selection.primary()?;
+        let text = self
+            .scene
+            .components()
+            .get::<UiTextComponent>(&self.world, entity)
+            .ok()??;
+        let transform = self
+            .world
+            .get(entity)
+            .and_then(|data| data.transform_3d)
+            .unwrap_or_default();
+        let world = self
+            .scene
+            .world_camera(&self.world, camera)
+            .ok()
+            .flatten()?;
+        let (_, placement) = overlay_in_scene(world, self.canvas_aspect());
+        let instance = text
+            .instance(placement.origin(transform, text.anchor).to_array())
+            .ok()?;
+        self.renderers.text.rect(&instance)
     }
 
     /// The camera an entity's handles are drawn through, and where they sit.

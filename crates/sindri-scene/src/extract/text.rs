@@ -64,15 +64,7 @@ impl SceneExtractor {
             layers
                 .entry(text.layer)
                 .or_default()
-                .push(TextInstance::new(
-                    text.resolved(),
-                    text.font,
-                    position.to_array(),
-                    text.font_size,
-                    text.line_height,
-                    text.color,
-                    text.anchor.text_align(),
-                )?);
+                .push(text.instance(position.to_array())?);
         }
 
         for (layer, instances) in layers {

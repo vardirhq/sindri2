@@ -13,7 +13,10 @@
 //! too, so picking one is a whole edit rather than half of one.
 
 use serde_json::{Map, Value};
-use sindri_scene::{CameraComponent, RigidBodyKind, TileProjection, UiAnchor};
+use sindri_scene::{
+    CameraComponent, RigidBodyKind, TileProjection, UiAnchor, UiTextCase, UiTextLineAlign,
+    UiTextWrap,
+};
 
 /// The field whose value decides what else a component holds.
 ///
@@ -52,6 +55,18 @@ pub fn choices(type_name: &str, key: &str) -> Option<Vec<&'static str>> {
         ("sindri.camera", "projection") => Some(CameraComponent::PROJECTIONS.to_vec()),
         ("sindri.ui.image" | "sindri.ui.text", "anchor") => {
             Some(UiAnchor::ALL.iter().map(|anchor| anchor.as_str()).collect())
+        }
+        ("sindri.ui.text", "wrap") => {
+            Some(UiTextWrap::ALL.iter().map(|mode| mode.as_str()).collect())
+        }
+        ("sindri.ui.text", "line_align") => Some(
+            UiTextLineAlign::ALL
+                .iter()
+                .map(|align| align.as_str())
+                .collect(),
+        ),
+        ("sindri.ui.text", "case") => {
+            Some(UiTextCase::ALL.iter().map(|case| case.as_str()).collect())
         }
         ("sindri.tilemap", "projection") => Some(
             TileProjection::ALL

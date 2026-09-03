@@ -94,9 +94,13 @@ pub fn axis_labels(key: &str, len: usize) -> Vec<String> {
     let spatial = ["X", "Y", "Z", "W"];
     let colour = ["R", "G", "B", "A"];
     let rect = ["X", "Y", "W", "H"];
+    let size = ["W", "H", "D", "?"];
     let names: &[&str; 4] = match key {
         "tint" | "color" | "colour" => &colour,
         "uv_rect" => &rect,
+        // A text box is a size rather than a place, and labelling it X and Y is
+        // how someone types a position into it.
+        "bounds" => &size,
         _ => &spatial,
     };
     (0..len)

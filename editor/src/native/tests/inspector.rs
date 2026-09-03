@@ -281,9 +281,24 @@ fn text_is_addable_only_when_the_project_has_a_font() {
     assert_eq!(payload["text"], "Text");
     // The whole component, not the two fields the editor used to write: a text
     // added here and one authored by hand are now the same component.
-    assert_eq!(payload["font_size"], 24.0);
+    //
+    // And the size is a share of the overlay, which is what a size is here. It
+    // was 24 — the pixel count this field used to hold — and stayed behind when
+    // the unit changed, so the blank the editor offered was a line twelve times
+    // taller than the screen. It passed validation and could not be drawn.
+    assert_eq!(payload["font_size"], 0.0667);
+    assert!(
+        payload["font_size"].as_f64().is_some_and(|size| size < 2.0),
+        "the blank has to be a size the overlay can actually draw"
+    );
     assert_eq!(payload["anchor"], "center");
     assert_eq!(payload["layer"], 0);
+    // Every option is present and off, so the panel shows the whole component
+    // rather than the handful of fields someone happened to write down.
+    assert_eq!(payload["wrap"], "none");
+    assert_eq!(payload["case"], "as_written");
+    assert_eq!(payload["visible"], -1.0);
+    assert_eq!(payload["auto_size"]["enabled"], false);
     components
         .validate_payload(UI_TEXT_COMPONENT, &payload)
         .unwrap();

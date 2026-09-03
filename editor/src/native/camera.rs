@@ -250,6 +250,37 @@ pub(super) fn canvas_outline(rect: Rect, view_projection: Mat4, aspect: f32) -> 
     lines
 }
 
+/// A rectangle lying on the canvas, as an outline in the Scene view.
+///
+/// What a text element's box is drawn as. Without it a wrap width is a number in
+/// the inspector and the only way to find out where it falls is to retype it and
+/// look — which is exactly the kind of authoring the editor audit was written to
+/// remove.
+pub(super) fn canvas_rect_outline(
+    rect: Rect,
+    view_projection: Mat4,
+    centre: [f32; 2],
+    size: [f32; 2],
+) -> Vec<[Pos2; 2]> {
+    let half = [size[0] * 0.5, size[1] * 0.5];
+    let corners = [
+        Vec3::new(centre[0] - half[0], centre[1] - half[1], 0.0),
+        Vec3::new(centre[0] + half[0], centre[1] - half[1], 0.0),
+        Vec3::new(centre[0] + half[0], centre[1] + half[1], 0.0),
+        Vec3::new(centre[0] - half[0], centre[1] + half[1], 0.0),
+    ];
+    let mut lines = Vec::with_capacity(4);
+    for index in 0..4 {
+        lines.extend(project_segment(
+            rect,
+            view_projection,
+            corners[index],
+            corners[(index + 1) % 4],
+        ));
+    }
+    lines
+}
+
 /// One authored camera as it is drawn in the Scene view.
 ///
 /// `aspect` is the aspect the camera actually renders at — the Game view's —

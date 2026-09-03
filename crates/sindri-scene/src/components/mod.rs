@@ -15,6 +15,7 @@ mod mesh;
 mod sprite;
 mod tilemap;
 mod ui;
+mod ui_text_options;
 pub mod ui_text_template;
 
 pub use camera::{CameraComponent, CameraFit};
@@ -23,6 +24,9 @@ pub use mesh::{MeshComponent, MeshPrimitive};
 pub use sprite::SpriteComponent;
 pub use tilemap::{TileProjection, TilemapComponent, TilemapError};
 pub use ui::{UiAnchor, UiFill, UiFillEdge, UiImageComponent, UiTextComponent};
+pub use ui_text_options::{
+    UiTextAutoSize, UiTextCase, UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap,
+};
 
 /// The tint a component that does not name one draws with.
 ///

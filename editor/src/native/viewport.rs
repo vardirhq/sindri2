@@ -6,8 +6,8 @@ use eframe::{
 };
 use sindri_core::EngineState;
 use sindri_render::{
-    FrameRenderers, FrameTarget, SpriteBatchRenderer, TextRenderer, TexturedCubeRenderer, Viewport,
-    ViewportTarget, encode_prepared_frame,
+    FrameRenderers, FrameTarget, GlyphRenderer, SpriteBatchRenderer, TextRenderer,
+    TexturedCubeRenderer, Viewport, ViewportTarget, encode_prepared_frame,
 };
 use sindri_scene::{CameraView, SceneRuntime, UiCanvas};
 
@@ -33,6 +33,7 @@ pub(super) struct SceneRenderers {
     pub(super) cube: TexturedCubeRenderer,
     pub(super) sprites: SpriteBatchRenderer,
     pub(super) text: TextRenderer,
+    pub(super) glyphs: GlyphRenderer,
 }
 
 impl SceneRenderers {
@@ -41,6 +42,7 @@ impl SceneRenderers {
             cube: TexturedCubeRenderer::new(&render_state.device, ViewportTarget::FORMAT),
             sprites: SpriteBatchRenderer::new(&render_state.device, ViewportTarget::FORMAT),
             text: TextRenderer::new(),
+            glyphs: GlyphRenderer::new(&render_state.device, ViewportTarget::FORMAT),
         }
     }
 }
@@ -116,6 +118,7 @@ impl RuntimeViewport {
                 cube: &mut renderers.cube,
                 sprites: &mut renderers.sprites,
                 text: &mut renderers.text,
+                glyphs: &mut renderers.glyphs,
                 textures: source.textures.registry(),
             },
             &self.render_state.device,
@@ -290,7 +293,10 @@ impl EditorApp {
             Color32::WHITE,
         );
         if editing {
-            self.paint_scene_chrome(ui, rect, camera, hover.as_ref(), painting);
+            // Measured before the chrome is drawn, because measuring a string
+            // shapes it and the painter takes only a shared borrow.
+            let text_rect = self.selected_text_rect(camera);
+            self.paint_scene_chrome(ui, rect, camera, hover.as_ref(), painting, text_rect);
         } else {
             // The unused space is painted out rather than left showing the
             // panel, so the shape being previewed reads as the screen and not
@@ -322,8 +328,12 @@ impl EditorApp {
         camera: CameraView,
         hover: Option<&TilemapHover>,
         painting: bool,
+        text_rect: Option<([f32; 2], [f32; 2])>,
     ) {
         self.paint_canvas_outline(ui, rect, camera);
+        if !painting && let Some((centre, size)) = text_rect {
+            self.paint_text_rect(ui, rect, camera, centre, size);
+        }
         if let Some(hover) = hover {
             self.paint_tilemap_hover(ui, hover);
         }
@@ -385,6 +395,36 @@ impl EditorApp {
             }
         } else {
             UiCanvas::OnViewport
+        }
+    }
+
+    /// Draws the box the selected text element is laid out in.
+    ///
+    /// The rect the words actually occupy, which is the authored bounds where
+    /// there are any and what the string came out as where there are not. It is
+    /// the one way to see what a wrap width does without retyping it and
+    /// looking.
+    fn paint_text_rect(
+        &self,
+        ui: &egui::Ui,
+        rect: Rect,
+        camera: CameraView,
+        centre: [f32; 2],
+        size: [f32; 2],
+    ) {
+        let aspect = rect.width() / rect.height().max(1.0);
+        let Ok(Some(world)) = self
+            .scene
+            .world_camera_for_viewport(&self.world, aspect, camera)
+        else {
+            return;
+        };
+        let painter = ui.painter();
+        let stroke = egui::Stroke::new(1.0, crate::ui::theme::color::FORGE_DIM);
+        for [start, end] in
+            super::camera::canvas_rect_outline(rect, world.view_projection, centre, size)
+        {
+            painter.line_segment([start, end], stroke);
         }
     }
 

@@ -70,11 +70,32 @@ units, the same two-unit-tall space every other UI element is placed in. Nothing
 between the scene and the renderer converts a size to pixels, so the same frame
 draws at any resolution.
 
+Beyond that it carries the options an engine's text carries, each defaulting to
+the behaviour text had before the option existed:
+
+| Field | What it does |
+| --- | --- |
+| `bounds` | The rect the words lay out in, in overlay units. Zero on an axis is unbounded there. With a box, the *box* is what the anchor places and the words sit inside it. |
+| `wrap` | `none`, `word`, or `glyph`. Needs a width to mean anything. |
+| `line_align` | `follow` (the anchor), `left`, `center`, `right`, or `justify`. |
+| `letter_spacing` | Extra space after each glyph, in overlay units. |
+| `bold`, `italic` | The face's own weight and slant, asked of the font. |
+| `case` | `as_written`, `upper`, `lower`, applied before shaping. |
+| `visible` | How many glyphs to draw. Negative draws all of them; a script counts it up for a typewriter. |
+| `outline` | A stroke width and colour. |
+| `shadow` | An offset, colour and softness. |
+| `auto_size` | Shrinks towards `min` until the words fit `bounds`. The authored `font_size` is the ceiling, so this only ever makes text smaller. |
+
+`UiTextComponent::instance` is the single place a stored component becomes a
+drawable one. The frame draws from it and so does the editor, when it decides
+what a click landed on and where to draw the box handle — built twice, the
+handle would be around a box the words are not in as soon as the two copies
+disagreed about one option.
+
 Strings on the same layer share one ordered pass, which the renderer turns into
-one textured quad per glyph and draws through that pass's own camera. Text is
-therefore geometry on whichever surface it was authored against: it pans, zooms
-and turns with a canvas placed in the scene. No authored camera participates in
-resolving where the overlay *is*; the pass's camera is what draws it.
+one distance-field quad per glyph and draws through that pass's own camera. Text
+is therefore geometry on whichever surface it was authored against: it pans,
+zooms and turns with a canvas placed in the scene.
 
 `referenced_fonts` is the load list for a world. A host validates those bytes
 with `FontAssetDecoder` and binds each logical reference to `TextRenderer`;

@@ -122,7 +122,13 @@
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
-          "text": "+1 damage"
+          "text": "+1 damage",
+          "bounds": [
+            0.7,
+            0.09
+          ],
+          "wrap": "word",
+          "line_align": "center"
         }
       }
     },
@@ -161,7 +167,16 @@
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
-          "text": "Heavier Rounds"
+          "text": "Heavier Rounds",
+          "bounds": [
+            0.7,
+            0.06
+          ],
+          "wrap": "none",
+          "auto_size": {
+            "enabled": true,
+            "min": 0.028
+          }
         }
       }
     },
@@ -252,7 +267,13 @@
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
-          "text": "+2 hull, repaired"
+          "text": "+2 hull, repaired",
+          "bounds": [
+            0.7,
+            0.09
+          ],
+          "wrap": "word",
+          "line_align": "center"
         }
       }
     },
@@ -291,7 +312,16 @@
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
-          "text": "Plating"
+          "text": "Plating",
+          "bounds": [
+            0.7,
+            0.06
+          ],
+          "wrap": "none",
+          "auto_size": {
+            "enabled": true,
+            "min": 0.028
+          }
         }
       }
     },
@@ -382,7 +412,13 @@
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
-          "text": "+1.2 collection"
+          "text": "+1.2 collection",
+          "bounds": [
+            0.7,
+            0.09
+          ],
+          "wrap": "word",
+          "line_align": "center"
         }
       }
     },
@@ -421,7 +457,16 @@
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
-          "text": "Wider Field"
+          "text": "Wider Field",
+          "bounds": [
+            0.7,
+            0.06
+          ],
+          "wrap": "none",
+          "auto_size": {
+            "enabled": true,
+            "min": 0.028
+          }
         }
       }
     },
@@ -512,7 +557,13 @@
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
-          "text": "shots pierce 1 more"
+          "text": "shots pierce 1 more",
+          "bounds": [
+            0.7,
+            0.09
+          ],
+          "wrap": "word",
+          "line_align": "center"
         }
       }
     },
@@ -551,7 +602,16 @@
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
-          "text": "Lance Rounds"
+          "text": "Lance Rounds",
+          "bounds": [
+            0.7,
+            0.06
+          ],
+          "wrap": "none",
+          "auto_size": {
+            "enabled": true,
+            "min": 0.028
+          }
         }
       }
     },
@@ -642,7 +702,13 @@
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
-          "text": "shoot more often"
+          "text": "shoot more often",
+          "bounds": [
+            0.7,
+            0.09
+          ],
+          "wrap": "word",
+          "line_align": "center"
         }
       }
     },
@@ -681,7 +747,16 @@
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
-          "text": "Faster Cycling"
+          "text": "Faster Cycling",
+          "bounds": [
+            0.7,
+            0.06
+          ],
+          "wrap": "none",
+          "auto_size": {
+            "enabled": true,
+            "min": 0.028
+          }
         }
       }
     },
@@ -772,7 +847,13 @@
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
-          "text": "+0.8 speed"
+          "text": "+0.8 speed",
+          "bounds": [
+            0.7,
+            0.09
+          ],
+          "wrap": "word",
+          "line_align": "center"
         }
       }
     },
@@ -811,7 +892,16 @@
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
-          "text": "Trimmed Hull"
+          "text": "Trimmed Hull",
+          "bounds": [
+            0.7,
+            0.06
+          ],
+          "wrap": "none",
+          "auto_size": {
+            "enabled": true,
+            "min": 0.028
+          }
         }
       }
     },
@@ -1048,7 +1138,20 @@
           "font_size": 0.04,
           "layer": 140,
           "line_height": 0.042,
-          "text": "WARDEN"
+          "text": "WARDEN",
+          "shadow": {
+            "offset": [
+              0.0,
+              -0.004
+            ],
+            "color": [
+              0.0,
+              0.0,
+              0.0,
+              0.65
+            ],
+            "softness": 0.004
+          }
         }
       }
     },
@@ -1087,7 +1190,20 @@
           "font_size": 0.052,
           "layer": 140,
           "line_height": 0.0546,
-          "text": "{}:{.2}"
+          "text": "{}:{.2}",
+          "shadow": {
+            "offset": [
+              0.0,
+              -0.004
+            ],
+            "color": [
+              0.0,
+              0.0,
+              0.0,
+              0.65
+            ],
+            "softness": 0.004
+          }
         }
       }
     },
@@ -1278,7 +1394,20 @@
           "font_size": 0.036,
           "layer": 140,
           "line_height": 0.0378,
-          "text": "{}/{}"
+          "text": "{}/{}",
+          "shadow": {
+            "offset": [
+              0.0,
+              -0.004
+            ],
+            "color": [
+              0.0,
+              0.0,
+              0.0,
+              0.65
+            ],
+            "softness": 0.004
+          }
         }
       }
     },
@@ -1317,7 +1446,20 @@
           "font_size": 0.036,
           "layer": 140,
           "line_height": 0.0378,
-          "text": "Level {}"
+          "text": "Level {}",
+          "shadow": {
+            "offset": [
+              0.0,
+              -0.004
+            ],
+            "color": [
+              0.0,
+              0.0,
+              0.0,
+              0.65
+            ],
+            "softness": 0.004
+          }
         }
       }
     },
@@ -1356,7 +1498,20 @@
           "font_size": 0.052,
           "layer": 140,
           "line_height": 0.0546,
-          "text": "Score {}"
+          "text": "Score {}",
+          "shadow": {
+            "offset": [
+              0.0,
+              -0.004
+            ],
+            "color": [
+              0.0,
+              0.0,
+              0.0,
+              0.65
+            ],
+            "softness": 0.004
+          }
         }
       }
     },
@@ -1395,7 +1550,20 @@
           "font_size": 0.036,
           "layer": 140,
           "line_height": 0.0378,
-          "text": "Wave {}"
+          "text": "Wave {}",
+          "shadow": {
+            "offset": [
+              0.0,
+              -0.004
+            ],
+            "color": [
+              0.0,
+              0.0,
+              0.0,
+              0.65
+            ],
+            "softness": 0.004
+          }
         }
       }
     },
@@ -2310,7 +2478,13 @@
           "font_size": 0.03,
           "layer": 140,
           "line_height": 0.0315,
-          "text": "Move with WASD or hold to steer. You fire on your own."
+          "text": "Move with WASD or hold to steer. You fire on your own.",
+          "bounds": [
+            0.84,
+            0.16
+          ],
+          "wrap": "word",
+          "line_align": "center"
         }
       }
     },
@@ -2349,7 +2523,21 @@
           "font_size": 0.095,
           "layer": 140,
           "line_height": 0.09975,
-          "text": "LAST STAND"
+          "text": "LAST STAND",
+          "letter_spacing": 0.004,
+          "shadow": {
+            "offset": [
+              0.0,
+              -0.008
+            ],
+            "color": [
+              0.0,
+              0.0,
+              0.0,
+              0.55
+            ],
+            "softness": 0.006
+          }
         }
       }
     },
@@ -2388,7 +2576,13 @@
           "font_size": 0.034,
           "layer": 140,
           "line_height": 0.0357,
-          "text": "Your saved progress could not be read."
+          "text": "Your saved progress could not be read.",
+          "bounds": [
+            0.84,
+            0.16
+          ],
+          "wrap": "word",
+          "line_align": "center"
         }
       },
       "disabled": true

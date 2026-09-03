@@ -23,21 +23,6 @@ use crate::{
 
 const SHADER: &str = include_str!("../sprite_batch.wgsl");
 
-/// Which texture a batch samples.
-///
-/// Almost every batch names one in the frame's registry. Glyph quads are the
-/// exception: their atlas belongs to the text renderer, which fills it as the
-/// frame is built and so cannot have handed it to a registry beforehand. Both
-/// kinds still need a cache key that changes when the texture behind it does,
-/// which is what this is — a registry handle carries a generation, and an
-/// atlas carries its build number.
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-enum BatchTexture {
-    Registry(TextureId),
-    /// A texture a renderer owns itself, named by which build of it this is.
-    Owned(u64),
-}
-
 const DEFAULT_CAPACITY: u32 = 64;
 
 const VERTICES: [TexturedVertex; 4] = [
@@ -64,7 +49,7 @@ struct Batch {
     capacity: u32,
     /// One bind group per texture used in this slot. Keyed per slot because a
     /// bind group names the uniform buffer it reads, and each slot has its own.
-    bind_groups: std::collections::HashMap<BatchTexture, wgpu::BindGroup>,
+    bind_groups: std::collections::HashMap<TextureId, wgpu::BindGroup>,
 }
 
 #[derive(Debug)]
@@ -211,81 +196,6 @@ impl SpriteBatchRenderer {
             return Ok(stats);
         }
 
-        self.encode_batch(
-            device,
-            queue,
-            encoder,
-            target,
-            depth_target,
-            registry.get(texture),
-            BatchTexture::Registry(texture),
-            view_projection,
-            depth,
-            instances,
-            instance_count,
-        )?;
-        Ok(stats)
-    }
-
-    /// Draws one batch against a texture the caller owns rather than one in the
-    /// registry.
-    ///
-    /// `build` names which version of that texture this is: a caller that
-    /// recreates it — a glyph atlas that grew — passes a different number, and
-    /// the bind group naming the old texture is not reused for the new one.
-    #[allow(clippy::too_many_arguments)]
-    pub fn draw_owned(
-        &mut self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        encoder: &mut wgpu::CommandEncoder,
-        target: &wgpu::TextureView,
-        depth_target: &DepthTarget,
-        texture: &crate::Texture2D,
-        build: u64,
-        view_projection: Mat4,
-        depth: SpriteDepth,
-        instances: &[SpriteInstance],
-    ) -> Result<SpriteBatchStats, SpriteBatchError> {
-        let instance_count =
-            u32::try_from(instances.len()).map_err(|_| SpriteBatchError::TooManyInstances)?;
-        let stats = SpriteBatchStats::for_sprite_count(instance_count);
-        if instance_count == 0 {
-            return Ok(stats);
-        }
-        self.encode_batch(
-            device,
-            queue,
-            encoder,
-            target,
-            depth_target,
-            texture,
-            BatchTexture::Owned(build),
-            view_projection,
-            depth,
-            instances,
-            instance_count,
-        )?;
-        Ok(stats)
-    }
-
-    /// The one place a batch is written and drawn, whoever owns its texture.
-    #[allow(clippy::too_many_arguments)]
-    fn encode_batch(
-        &mut self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        encoder: &mut wgpu::CommandEncoder,
-        target: &wgpu::TextureView,
-        depth_target: &DepthTarget,
-        resolved: &crate::Texture2D,
-        texture: BatchTexture,
-        view_projection: Mat4,
-        depth: SpriteDepth,
-        instances: &[SpriteInstance],
-        instance_count: u32,
-    ) -> Result<(), SpriteBatchError> {
-        let stats = SpriteBatchStats::for_sprite_count(instance_count);
         let slot = self.reserve(device, instance_count)?;
         {
             let batch = &self.batches[slot];
@@ -298,7 +208,7 @@ impl SpriteBatchRenderer {
             );
             queue.write_buffer(&batch.instances, 0, bytemuck::cast_slice(instances));
         }
-        self.bind_texture(device, resolved, slot, texture);
+        self.bind_texture(device, registry, slot, texture);
         self.stats = self.stats.and(stats);
 
         let batch = &self.batches[slot];
@@ -339,7 +249,7 @@ impl SpriteBatchRenderer {
         );
         pass.set_vertex_buffer(1, batch.instances.slice(..));
         self.mesh.draw_instances(&mut pass, 0..instance_count);
-        Ok(())
+        Ok(stats)
     }
 
     /// The slot this frame's next batch draws from, grown to hold `capacity`.
@@ -381,13 +291,14 @@ impl SpriteBatchRenderer {
     fn bind_texture(
         &mut self,
         device: &wgpu::Device,
-        resolved: &crate::Texture2D,
+        registry: &TextureRegistry,
         slot: usize,
-        texture: BatchTexture,
+        texture: TextureId,
     ) {
         if self.batches[slot].bind_groups.contains_key(&texture) {
             return;
         }
+        let resolved = registry.get(texture);
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Sindri sprite batch bind group"),
             layout: &self.bind_group_layout,

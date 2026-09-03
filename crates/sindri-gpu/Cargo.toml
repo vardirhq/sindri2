@@ -13,6 +13,7 @@ wgpu.workspace = true
 
 [dev-dependencies]
 glam.workspace = true
+png = "0.18"
 pollster.workspace = true
 sindri-render = { path = "../sindri-render" }
 

@@ -14,8 +14,8 @@ use sindri_core::{AssetId, EngineState, World, sheet_id_for};
 use sindri_desktop::{AppContext, DesktopApp, Flow};
 use sindri_platform::{AudioBackend, AudioClip, BrowserAudioBackend, EngineHost, InputEvent, Key};
 use sindri_render::{
-    DepthTarget, FrameRenderers, FrameTarget, SpriteBatchRenderer, TextRenderer, Texture2D,
-    TextureRegistry, TexturedCubeRenderer, Viewport, encode_prepared_frame,
+    DepthTarget, FrameRenderers, FrameTarget, GlyphRenderer, SpriteBatchRenderer, TextRenderer,
+    Texture2D, TextureRegistry, TexturedCubeRenderer, Viewport, encode_prepared_frame,
 };
 use sindri_scene::{CameraView, SceneExtractor, SceneRuntime, TextureBindings};
 
@@ -43,6 +43,7 @@ pub(super) struct BrowserGatherApp {
     cubes: TexturedCubeRenderer,
     sprites: SpriteBatchRenderer,
     text: TextRenderer,
+    glyphs: GlyphRenderer,
     /// The drawing surface's size, kept because the engine is built later.
     viewport: [u32; 2],
     page_visible: bool,
@@ -182,6 +183,7 @@ impl DesktopApp for BrowserGatherApp {
             cubes: TexturedCubeRenderer::new(context.device(), context.format()),
             sprites: SpriteBatchRenderer::new(context.device(), context.format()),
             text: TextRenderer::new(),
+            glyphs: GlyphRenderer::new(context.device(), context.format()),
             // Remembered because the engine does not exist yet: the project
             // loads asynchronously, and a resize that arrives before it must
             // not be the one size nobody ever hears about.
@@ -295,6 +297,7 @@ impl DesktopApp for BrowserGatherApp {
                 cube: &mut self.cubes,
                 sprites: &mut self.sprites,
                 text: &mut self.text,
+                glyphs: &mut self.glyphs,
                 textures: &self.textures,
             },
             context.device(),

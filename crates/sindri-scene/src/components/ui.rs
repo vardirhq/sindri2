@@ -10,9 +10,12 @@
 
 use serde::Deserialize;
 use sindri_core::{SceneComponent, SpriteRef, SpriteRefError};
-use sindri_render::TextAlign;
+use sindri_render::{TextAlign, TextError, TextFit, TextInstance, TextStyle};
 
 use super::opaque_white;
+use super::ui_text_options::{
+    UiTextAutoSize, UiTextCase, UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap,
+};
 use super::ui_text_template;
 
 /// Where a UI element's origin sits inside the viewport.
@@ -283,6 +286,46 @@ pub struct UiTextComponent {
     /// with `Ui.set_number`. Slots past the end read as zero.
     #[serde(default)]
     pub values: Vec<f32>,
+
+    /// The rect the words are laid out in, in the overlay's units.
+    ///
+    /// Zero on an axis means unbounded there, which is what a HUD reading wants:
+    /// a score has no box and should be neither wrapped nor shrunk to fit one.
+    /// A width is what wrapping needs; a height is what auto-sizing needs.
+    ///
+    /// Given a box, the box takes the place the words used to: it is placed by
+    /// the anchor, and the words sit inside it. That is what makes "top left,
+    /// box 0.8 wide" mean the same thing for a paragraph as for the panel behind
+    /// it.
+    #[serde(default)]
+    pub bounds: [f32; 2],
+    #[serde(default)]
+    pub wrap: UiTextWrap,
+    /// Where each line sits across the box, when that differs from where the
+    /// block sits.
+    #[serde(default)]
+    pub line_align: UiTextLineAlign,
+    /// Extra space after every glyph, in the overlay's units. Negative tightens.
+    #[serde(default)]
+    pub letter_spacing: f32,
+    /// The face's own bold, asked of the font rather than faked by thickening
+    /// the glyphs — a real bold has different letterforms.
+    #[serde(default)]
+    pub bold: bool,
+    #[serde(default)]
+    pub italic: bool,
+    #[serde(default)]
+    pub case: UiTextCase,
+    /// How many glyphs are drawn, for a reveal. Negative draws them all, which
+    /// is the default; a script counts it up for a typewriter.
+    #[serde(default = "draw_every_glyph")]
+    pub visible: f32,
+    #[serde(default)]
+    pub outline: UiTextOutline,
+    #[serde(default)]
+    pub shadow: UiTextShadow,
+    #[serde(default)]
+    pub auto_size: UiTextAutoSize,
 }
 
 impl UiTextComponent {
@@ -301,6 +344,79 @@ impl UiTextComponent {
     pub fn slot_count(&self) -> usize {
         ui_text_template::slot_count(&self.text)
     }
+
+    /// How many glyphs to draw, or `None` for all of them.
+    ///
+    /// Stored as a float so a script can drive it the way it drives every other
+    /// number — a typewriter is a count rising with time — and read back here so
+    /// that the rounding and the "all of them" case are decided once.
+    #[must_use]
+    pub fn visible_glyphs(&self) -> Option<usize> {
+        if self.visible.is_nan() || self.visible < 0.0 {
+            return None;
+        }
+        // Clamped so a script that ran a reveal counter away does not overflow
+        // the cast; no string has anything like this many glyphs, so the clamp
+        // means "all of them" wherever it bites.
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        Some(self.visible.floor().min(1.0e9) as usize)
+    }
+
+    /// The range of sizes this text may pick from, if it was told to fit.
+    ///
+    /// The authored size is the ceiling, so turning auto-size on can only ever
+    /// make text smaller — which is what keeps a short label from growing over
+    /// the art beside it.
+    #[must_use]
+    pub fn fit(&self) -> Option<TextFit> {
+        self.auto_size
+            .enabled
+            .then(|| TextFit::checked(self.auto_size.min, self.font_size))
+            .flatten()
+    }
+
+    /// The weight and slant asked of the face.
+    #[must_use]
+    pub const fn style(&self) -> TextStyle {
+        TextStyle {
+            bold: self.bold,
+            italic: self.italic,
+        }
+    }
+
+    /// This component as the renderer takes it, placed at `position`.
+    ///
+    /// The one place a stored text component becomes a drawable one. It matters
+    /// that there is only one: the frame draws from this, and so does the editor
+    /// when it works out what a click landed on and where to put a handle. Built
+    /// twice, the handle would be around a box the words are not in as soon as
+    /// the two copies disagreed about a single option — which, with this many
+    /// options, is a matter of time rather than luck.
+    pub fn instance(&self, position: [f32; 2]) -> Result<TextInstance, TextError> {
+        let mut instance = TextInstance::new(
+            self.resolved(),
+            &self.font,
+            position,
+            self.font_size,
+            self.line_height,
+            self.color,
+            self.anchor.text_align(),
+        )?
+        .in_box(self.bounds, self.wrap.wrap())
+        .with_line_align(self.line_align.line_align())
+        .with_letter_spacing(self.letter_spacing)
+        .with_style(self.style())
+        .with_case(self.case.case())
+        .with_outline(self.outline.stroke())
+        .with_shadow(self.shadow.shadow());
+        if let Some(glyphs) = self.visible_glyphs() {
+            instance = instance.with_visible_glyphs(glyphs);
+        }
+        if let Some(fit) = self.fit() {
+            instance = instance.fitted(fit);
+        }
+        Ok(instance)
+    }
 }
 
 /// A readable default, in the overlay's units.
@@ -315,6 +431,15 @@ const fn default_font_size() -> f32 {
 
 const fn default_line_height() -> f32 {
     0.0833
+}
+
+/// The reveal count that reveals everything.
+///
+/// Negative rather than a sentinel like zero, because zero is a real answer —
+/// the first frame of a typewriter, before the first letter — and a field whose
+/// "off" value is also a meaningful value cannot express it.
+const fn draw_every_glyph() -> f32 {
+    -1.0
 }
 
 impl SceneComponent for UiTextComponent {
