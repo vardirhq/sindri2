@@ -152,7 +152,13 @@ fn an_overlaid_gizmo_sits_on_the_overlay_and_offers_two_axes() {
         position: [0.0, -0.2, 0.0],
         ..Transform3D::default()
     };
-    let anchoring = Anchoring::on_overlay(placement.origin(transform, sindri_scene::UiAnchor::Top));
+    // The element's own offset from its anchor, as the hierarchy would resolve
+    // it for an element with no parents.
+    let placed = sindri_scene::UiPlaced {
+        offset: Vec2::from_array(transform.position_2d()),
+        ..sindri_scene::UiPlaced::at_anchor(sindri_scene::UiAnchor::Top)
+    };
+    let anchoring = Anchoring::on_overlay(placement.origin(placed));
 
     let overlaid = visual(
         GizmoMode::Translate,
@@ -215,7 +221,13 @@ fn dragging_an_overlaid_handle_moves_the_authored_offset() {
         position: [0.0, -0.2, 0.0],
         ..Transform3D::default()
     };
-    let anchoring = Anchoring::on_overlay(placement.origin(transform, sindri_scene::UiAnchor::Top));
+    // The element's own offset from its anchor, as the hierarchy would resolve
+    // it for an element with no parents.
+    let placed = sindri_scene::UiPlaced {
+        offset: Vec2::from_array(transform.position_2d()),
+        ..sindri_scene::UiPlaced::at_anchor(sindri_scene::UiAnchor::Top)
+    };
+    let anchoring = Anchoring::on_overlay(placement.origin(placed));
     let start = visual(
         GizmoMode::Translate,
         anchoring,

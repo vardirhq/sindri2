@@ -16,6 +16,8 @@ const OVERLAY_HEIGHT: f32 = 2.0;
 
 use crate::UiTextComponent;
 
+use crate::screen_ui::UiHierarchy;
+
 use super::camera::{OverlayPlacement, ResolvedCameras};
 use super::{SceneExtractError, SceneExtractor};
 
@@ -24,6 +26,7 @@ impl SceneExtractor {
         &self,
         world: &World,
         cameras: &ResolvedCameras,
+        hierarchy: &UiHierarchy,
         frame: &mut ExtractedFrame,
     ) -> Result<(), SceneExtractError> {
         let texts = self.components.query::<UiTextComponent>(world)?;
@@ -51,16 +54,12 @@ impl SceneExtractor {
                     text.font_size,
                 )));
             }
-            let transform = world
-                .get(entity)
-                .and_then(|data| data.transform_3d)
-                .unwrap_or_default();
             // Overlay units the whole way through. Text used to be converted to
             // viewport pixels here, because it was drawn by a pass that had no
             // camera; now it is quads like everything else, so the frame carries
             // the same units the scene authored and the pass's camera does the
             // rest.
-            let position = placement.origin(transform, text.anchor);
+            let position = placement.origin(hierarchy.placement_or(entity, text.anchor));
             layers
                 .entry(text.layer)
                 .or_default()

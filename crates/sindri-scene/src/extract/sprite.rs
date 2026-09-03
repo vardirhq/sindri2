@@ -14,6 +14,7 @@ use sindri_render::{
     SpriteInstance, TextureId, TransparentOrder, UvRect,
 };
 
+use crate::screen_ui::UiHierarchy;
 use crate::{SpriteAnimationComponent, SpriteAnimations, SpriteComponent, TextureBindings};
 
 use super::camera::ResolvedCameras;
@@ -49,21 +50,59 @@ pub(super) type SpriteBatches =
 /// than the clip's first frame.
 pub(super) type RestingSprites = BTreeMap<EntityId, String>;
 
+/// The runtime state a frame is drawn against, resolved once by the caller.
+///
+/// Separate from [`Drawing`] because it crosses the boundary between extraction
+/// and its caller, while `Drawing` only exists inside it.
+#[derive(Clone, Copy)]
+pub(super) struct Shared<'a> {
+    pub(super) textures: &'a TextureBindings,
+    pub(super) animations: &'a SpriteAnimations,
+    pub(super) effects: Option<&'a crate::Effects2d>,
+    pub(super) hierarchy: &'a UiHierarchy,
+}
+
+/// What every drawn image needs, other than the world it came from.
+///
+/// A bundle rather than six more parameters on each pusher: they all take the
+/// same set, and a list this long is one where a caller can transpose two
+/// references of the same type without the compiler minding.
+#[derive(Clone, Copy)]
+pub(super) struct Drawing<'a> {
+    pub(super) cameras: &'a ResolvedCameras,
+    pub(super) textures: &'a TextureBindings,
+    pub(super) animations: &'a SpriteAnimations,
+    pub(super) resting: &'a RestingSprites,
+    /// Where every UI element ends up once its parents have had their say.
+    pub(super) hierarchy: &'a UiHierarchy,
+}
+
 impl SceneExtractor {
     /// Draws every image the world holds: world sprites, tilemaps, and the UI.
     pub(super) fn push_images(
         &self,
         world: &World,
         cameras: &ResolvedCameras,
-        textures: &TextureBindings,
-        animations: &SpriteAnimations,
-        effects: Option<&crate::Effects2d>,
+        shared: Shared<'_>,
         frame: &mut ExtractedFrame,
     ) -> Result<(), SceneExtractError> {
+        let Shared {
+            textures,
+            animations,
+            effects,
+            hierarchy,
+        } = shared;
         let mut batches: SpriteBatches = BTreeMap::new();
         let resting = self.resting_sprites(world)?;
-        self.push_world_sprites(world, cameras, textures, animations, &resting, &mut batches)?;
-        self.push_ui_images(world, cameras, textures, animations, &resting, &mut batches)?;
+        let drawing = Drawing {
+            cameras,
+            textures,
+            animations,
+            resting: &resting,
+            hierarchy,
+        };
+        self.push_world_sprites(world, drawing, &mut batches)?;
+        self.push_ui_images(world, drawing, &mut batches)?;
         self.push_tilemaps(world, cameras, textures, &mut batches)?;
         // Into the same batches as everything else, so a burst merges with what
         // is already on its layer instead of costing a draw call.
@@ -87,12 +126,16 @@ impl SceneExtractor {
     fn push_world_sprites(
         &self,
         world: &World,
-        cameras: &ResolvedCameras,
-        textures: &TextureBindings,
-        animations: &SpriteAnimations,
-        resting: &RestingSprites,
+        drawing: Drawing<'_>,
         batches: &mut SpriteBatches,
     ) -> Result<(), SceneExtractError> {
+        let Drawing {
+            cameras,
+            textures,
+            animations,
+            resting,
+            ..
+        } = drawing;
         for (entity, sprite) in self.components.query::<SpriteComponent>(world)? {
             let reference = sprite.reference()?;
             let transform = world

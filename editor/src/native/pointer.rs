@@ -4,8 +4,8 @@ use eframe::egui::{self, Pos2, Rect, Response};
 use glam::Vec2 as GlamVec2;
 use sindri_core::{CommandBuffer, EntityId, Transform3D, WorldCommand};
 use sindri_scene::{
-    CameraView, OverlayPlacement, OverlayView, UiAnchor, UiImageComponent, UiTextComponent,
-    ViewCamera, overlay_in_scene,
+    CameraView, OverlayPlacement, OverlayView, UiAnchor, UiHierarchy, UiImageComponent, UiPlaced,
+    UiTextComponent, ViewCamera, overlay_in_scene,
 };
 
 use crate::{
@@ -153,6 +153,9 @@ impl EditorApp {
         else {
             return Vec::new();
         };
+        let Ok(hierarchy) = UiHierarchy::of(&self.world, self.scene.components()) else {
+            return Vec::new();
+        };
         texts
             .into_iter()
             // A fully transparent string swallowing clicks is the bug the win
@@ -160,17 +163,16 @@ impl EditorApp {
             // there to look at.
             .filter(|(_, text)| picking::is_drawn(text.color))
             .filter_map(|(entity, text)| {
-                let transform = self
-                    .world
-                    .get(entity)
-                    .and_then(|data| data.transform_3d)
-                    .unwrap_or_default();
                 let layer = text.layer;
                 // The same options and the same measurement the frame is drawn
                 // with, asked of the same functions: a box worked out a second
                 // way is a box that disagrees with the picture it is over.
                 let instance = text
-                    .instance(placement.origin(transform, text.anchor).to_array())
+                    .instance(
+                        placement
+                            .origin(hierarchy.placement_or(entity, text.anchor))
+                            .to_array(),
+                    )
                     .ok()?;
                 let (centre, size) = self.renderers.text.rect(&instance)?;
                 // Overlay units into viewport fractions, through the projection
@@ -368,19 +370,19 @@ impl EditorApp {
             .components()
             .get::<UiTextComponent>(&self.world, entity)
             .ok()??;
-        let transform = self
-            .world
-            .get(entity)
-            .and_then(|data| data.transform_3d)
-            .unwrap_or_default();
         let world = self
             .scene
             .world_camera(&self.world, camera)
             .ok()
             .flatten()?;
         let (_, placement) = overlay_in_scene(world, self.canvas_aspect());
+        let hierarchy = UiHierarchy::of(&self.world, self.scene.components()).ok()?;
         let instance = text
-            .instance(placement.origin(transform, text.anchor).to_array())
+            .instance(
+                placement
+                    .origin(hierarchy.placement_or(entity, text.anchor))
+                    .to_array(),
+            )
             .ok()?;
         self.renderers.text.rect(&instance)
     }
@@ -402,10 +404,18 @@ impl EditorApp {
             // Through the canvas rather than the viewport, so a UI element's
             // handles are on the canvas with it and move when it is panned to.
             let (overlay, placement) = overlay_in_scene(world, self.canvas_aspect());
-            let anchor = self.ui_anchor(entity);
+            // Where the element actually ends up, parents and layout folded in,
+            // so a handle sits on the label rather than where the label would be
+            // if it were not on a card.
+            let placed = UiHierarchy::of(&self.world, self.scene.components())
+                .ok()
+                .map_or_else(
+                    || UiPlaced::at_anchor(self.ui_anchor(entity)),
+                    |hierarchy| hierarchy.placement_or(entity, self.ui_anchor(entity)),
+                );
             return Some((
                 as_view_camera(overlay),
-                Anchoring::on_overlay(placement.origin(transform, anchor)),
+                Anchoring::on_overlay(placement.origin(placed)),
             ));
         }
         Some((world, Anchoring::in_world(transform)))

@@ -9,7 +9,7 @@ use glam::{Mat4, Quat, Vec3};
 use sindri_core::{ComponentRegistryError, ComponentSchemaRegistry, EntityId, Transform3D, World};
 use sindri_scene::{
     MeshComponent, MeshPrimitive, OverlayPlacement, OverlayView, SpriteComponent, TilemapComponent,
-    UiImageComponent,
+    UiHierarchy, UiImageComponent,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -106,12 +106,16 @@ pub fn pick_ui(
     let Some(ray) = RaySegment::through_viewport(overlay.view_projection, point) else {
         return Ok(None);
     };
+    // The same placement the frame drew from: an image parented to a panel is
+    // where the panel put it, not where its own offset from the screen would be.
+    let hierarchy = UiHierarchy::of(world, components)?;
     let images = components
         .query::<UiImageComponent>(world)?
         .into_iter()
         .filter(|(_, image)| is_drawn(image.tint))
         .filter_map(|(entity, image)| {
-            let model = placement.place(transform_of(world, entity), image.anchor);
+            let placed = hierarchy.placement_or(entity, image.anchor);
+            let model = placement.place(placed, transform_of(world, entity));
             plane_hit_model(ray, model, 0.5).map(|(depth, _)| Hit {
                 entity,
                 depth,

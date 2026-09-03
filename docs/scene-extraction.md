@@ -103,6 +103,30 @@ unbound references draw nothing rather than falling back to an installed face.
 That asymmetry with missing textures is intentional: a checker can reveal a
 missing image, while substitute text can look correct but differ by platform.
 
+## UI hierarchy
+
+The overlay's rule is that an element's anchor picks a point on the viewport and
+its transform is an offset from that point. That is right for a HUD reading and,
+taken literally, means a hierarchy is not one — so `UiHierarchy` resolves each
+element's offset against its ancestors', folding in whatever a parent's
+`sindri.ui.layout` says about where it sits among its siblings.
+
+It is resolved once per extraction and shared by everything that has to agree
+about where an element is: the frame, `ScreenUi`'s hit-testing, the editor's
+picking, and the editor's handles. Before it, a label parented to a card was
+placed against the *screen*, so six cards' worth of labels landed on top of each
+other however far apart the cards were; and layout spacing reached hit-testing
+but never drawing, so an element could be clickable somewhere it was not drawn.
+
+Position and rotation compose; **size does not**. `scale` on a UI element is its
+size in overlay units, not a multiplier on a coordinate space, so inheriting it
+would make every child of a wide panel wide. That is also the line between this
+and a `RectTransform`: stretching a child with its parent is a different question
+and needs an anchor with two corners rather than one point. The anchor itself
+comes from the outermost ancestor that declares one, because a child
+re-anchoring against the screen is how a label leaves the card it is written on
+when the window changes shape.
+
 ## Textures
 
 A scene names a texture; the renderer knows only handles. `TextureBindings` is where the two meet,

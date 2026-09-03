@@ -9,33 +9,36 @@ use glam::{Mat4, Vec2};
 use sindri_core::{Transform3D, World};
 use sindri_render::{SpriteInstance, TransparentOrder};
 
-use crate::{SpriteAnimations, TextureBindings, UiAnchor, UiImageComponent};
+use crate::UiImageComponent;
+use crate::screen_ui::UiPlaced;
 
-use super::camera::ResolvedCameras;
-use super::camera::view::{OverlayExtent, camera_distance, safe_rotation};
-use super::sprite::{DrawSpace, RestingSprites, SpriteBatches, drawn_rect};
+use super::camera::view::{OverlayExtent, camera_distance};
+use super::sprite::{DrawSpace, Drawing, SpriteBatches, drawn_rect};
 use super::{SceneExtractError, SceneExtractor};
 
-/// Where an anchored element lands, given the one transform.
+/// Where an already-placed element lands on this viewport.
 ///
-/// Only X and Y of the transform reach the overlay: a UI element is positioned
-/// against the viewport extent, and its Z orders it rather than placing it, so
-/// the matrix is flat. A world sprite has no such split — it goes through
-/// `transform_matrix`, the same one a mesh does, because it is in the same
-/// world a mesh is.
+/// `placed` is the element's offset and turn with its ancestors folded in —
+/// [`UiHierarchy`] resolves that once for everything, so a label on a card and
+/// the card agree about where the card is. What remains here is the part that
+/// depends on the viewport: which point the anchor names, and the element's own
+/// size.
 ///
-/// The whole rotation still reaches the overlay: a quad turned about X or Y
-/// foreshortens under the orthographic projection, which is a card flip rather
-/// than a mistake. Only the position and the scale are read two-dimensionally,
-/// and they are read through the transform's own 2D accessors so that this
-/// agrees with every other piece of code that means "in the plane".
-pub(super) fn ui_matrix(transform: Transform3D, anchor: UiAnchor, extent: OverlayExtent) -> Mat4 {
-    let unit = Vec2::from_array(anchor.unit_offset());
+/// Only X and Y reach the overlay: a UI element is positioned against the
+/// viewport extent, and its Z orders it rather than placing it, so the matrix is
+/// flat. A world sprite has no such split — it goes through `transform_matrix`,
+/// the same one a mesh does, because it is in the same world a mesh is.
+///
+/// The size is the element's own and is never inherited, because `scale` here is
+/// a size in overlay units rather than a multiplier on a coordinate space. See
+/// [`UiHierarchy`] for why that is the whole difference between this and a
+/// `RectTransform`.
+pub(super) fn ui_matrix(placed: UiPlaced, transform: Transform3D, extent: OverlayExtent) -> Mat4 {
+    let unit = Vec2::from_array(placed.anchor.unit_offset());
     let origin = extent.center + unit * extent.half_extent;
-    let position = origin + Vec2::from_array(transform.position_2d());
-    let rotation = safe_rotation(transform);
+    let position = origin + placed.offset;
     Mat4::from_translation(position.extend(0.0))
-        * Mat4::from_quat(rotation)
+        * Mat4::from_quat(placed.rotation)
         * Mat4::from_scale(Vec2::from_array(transform.scale_2d()).extend(1.0))
 }
 
@@ -43,12 +46,16 @@ impl SceneExtractor {
     pub(super) fn push_ui_images(
         &self,
         world: &World,
-        cameras: &ResolvedCameras,
-        textures: &TextureBindings,
-        animations: &SpriteAnimations,
-        resting: &RestingSprites,
+        drawing: Drawing<'_>,
         batches: &mut SpriteBatches,
     ) -> Result<(), SceneExtractError> {
+        let Drawing {
+            cameras,
+            textures,
+            animations,
+            resting,
+            hierarchy,
+        } = drawing;
         let images = self.components.query::<UiImageComponent>(world)?;
         if images.is_empty() {
             return Ok(());
@@ -77,7 +84,8 @@ impl SceneExtractor {
             // The fill shrinks the quad within the element's authored rect, so
             // the drawn part keeps the edge it fills from instead of the bar
             // closing towards its middle.
-            let model = ui_matrix(transform, image.anchor, extent)
+            let placed = hierarchy.placement_or(entity, image.anchor);
+            let model = ui_matrix(placed, transform, extent)
                 * Mat4::from_translation(glam::Vec3::new(fill_offset[0], fill_offset[1], 0.0))
                 * Mat4::from_scale(glam::Vec3::new(fill_scale[0], fill_scale[1], 1.0));
             // Drawn flat against the overlay, but the Z still says how far back

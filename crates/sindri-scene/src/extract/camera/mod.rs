@@ -14,7 +14,8 @@ use self::view::{
     CameraView, OverlayExtent, WorldProjection, orbited_offset, panned_shift,
     resolved_screen_overlay, safe_rotation,
 };
-use crate::{CameraComponent, CameraFit, UiAnchor};
+use crate::screen_ui::UiPlaced;
+use crate::{CameraComponent, CameraFit};
 
 use super::ui::ui_matrix;
 
@@ -154,25 +155,30 @@ impl OverlayPlacement {
         Self { extent }
     }
 
-    /// The model matrix a UI element with this transform and anchor is drawn
-    /// with — the same one the frame uses, from the same function.
+    /// The model matrix an already-placed UI element is drawn with — the same
+    /// one the frame uses, from the same function.
+    ///
+    /// `placed` comes from [`UiHierarchy`], which is what folds an element's
+    /// ancestors and its siblings' layout into one offset. A caller that has
+    /// only an anchor — a tool looking at one entity — can build a bare
+    /// [`UiPlaced::at_anchor`], and gets what an element with no parents has
+    /// always got.
     #[must_use]
-    pub fn place(&self, transform: Transform3D, anchor: UiAnchor) -> Mat4 {
-        ui_matrix(transform, anchor, self.extent)
+    pub fn place(&self, placed: UiPlaced, transform: Transform3D) -> Mat4 {
+        ui_matrix(placed, transform, self.extent)
     }
 
     /// Where the element's own origin sits, in overlay units.
     ///
-    /// What a transform gizmo for a UI element is drawn at. Drawn at the raw
-    /// transform instead, it appears wherever that offset happens to point in
-    /// the world — for an element anchored top-centre with a small offset,
-    /// that is the middle of the viewport rather than the element.
+    /// What a transform gizmo for a UI element is drawn at, and where a string
+    /// is laid out from. Drawn at the raw transform instead, it appears wherever
+    /// that offset happens to point in the world — for an element anchored
+    /// top-centre with a small offset, that is the middle of the viewport rather
+    /// than the element.
     #[must_use]
-    pub fn origin(&self, transform: Transform3D, anchor: UiAnchor) -> Vec2 {
-        let unit = Vec2::from_array(anchor.unit_offset());
-        self.extent.center
-            + unit * self.extent.half_extent
-            + Vec2::from_array(transform.position_2d())
+    pub fn origin(&self, placed: UiPlaced) -> Vec2 {
+        let unit = Vec2::from_array(placed.anchor.unit_offset());
+        self.extent.center + unit * self.extent.half_extent + placed.offset
     }
 }
 
