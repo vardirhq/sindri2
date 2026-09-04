@@ -58,18 +58,21 @@ impl PressId {
     }
 }
 
-/// Where a press is in its life.
+/// What state a press is in.
 ///
-/// A press is `Began` for exactly the frame it arrives and `Ended` for exactly
-/// the frame it leaves, so an edge is read once however many events a host sent
-/// in between. `Cancelled` is the system taking the interaction away -- a
-/// gesture claimed by the browser, a window losing focus mid-drag -- and is
-/// kept apart from `Ended` because a cancelled press should not complete a
-/// click, while an ended one is precisely how a click completes.
+/// Deliberately *not* a life story. Whether a press arrived this frame is a
+/// separate question -- [`Press::began_now`] -- because both can be true at
+/// once: a quick tap on a phone begins and ends inside one frame, and a single
+/// value that had to choose between saying "began" and "ended" would lose one
+/// of them. It lost "began", so a fast tap armed nothing and clicked nothing.
+///
+/// `Cancelled` is the system taking the interaction away -- a gesture claimed
+/// by the browser, a window losing focus mid-drag -- and is kept apart from
+/// `Ended` because a cancelled press must not complete a click, while an ended
+/// one is precisely how a click completes.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum PressPhase {
-    Began,
-    Held,
+    Live,
     Ended,
     Cancelled,
 }
@@ -78,7 +81,7 @@ impl PressPhase {
     /// Whether the press is still down.
     #[must_use]
     pub const fn is_live(self) -> bool {
-        matches!(self, Self::Began | Self::Held)
+        matches!(self, Self::Live)
     }
 
     /// Whether this is the last frame of the press, however it finished.
@@ -101,6 +104,7 @@ pub struct Press {
     position: [f32; 2],
     previous: [f32; 2],
     held_for: Duration,
+    began: bool,
 }
 
 impl Press {
@@ -112,11 +116,12 @@ impl Press {
     pub const fn began(id: PressId, at: [f32; 2]) -> Self {
         Self {
             id,
-            phase: PressPhase::Began,
+            phase: PressPhase::Live,
             origin: at,
             position: at,
             previous: at,
             held_for: Duration::ZERO,
+            began: true,
         }
     }
 
@@ -128,6 +133,17 @@ impl Press {
     #[must_use]
     pub const fn phase(&self) -> PressPhase {
         self.phase
+    }
+
+    /// Whether the press arrived this frame.
+    ///
+    /// Separate from the phase, and both may be true: a tap quick enough to
+    /// start and finish between two frames -- which is most taps on a phone --
+    /// began *and* ended, and anything arming on the one and completing on the
+    /// other has to see both in the same pass.
+    #[must_use]
+    pub const fn began_now(&self) -> bool {
+        self.began
     }
 
     /// Where the press began.
@@ -187,12 +203,10 @@ impl Press {
 
     /// Carries the press into the next frame.
     ///
-    /// The edge phases are spent here -- `Began` becomes `Held` -- and the
-    /// current position becomes the one deltas are measured from.
+    /// The arrival is spent here, and the current position becomes the one
+    /// deltas are measured from.
     pub const fn advance(&mut self, delta: Duration) {
-        if let PressPhase::Began = self.phase {
-            self.phase = PressPhase::Held;
-        }
+        self.began = false;
         self.previous = self.position;
         self.held_for = self.held_for.saturating_add(delta);
     }
@@ -237,12 +251,26 @@ mod tests {
     #[test]
     fn a_press_begins_once_however_long_it_is_held() {
         let mut press = Press::began(id(), [0.0, 0.0]);
-        assert_eq!(press.phase(), PressPhase::Began);
+        assert!(press.began_now());
 
         press.advance(Duration::from_millis(16));
-        assert_eq!(press.phase(), PressPhase::Held);
+        assert!(!press.began_now());
+        assert!(press.phase().is_live());
         press.advance(Duration::from_millis(16));
-        assert_eq!(press.phase(), PressPhase::Held);
+        assert!(!press.began_now());
+    }
+
+    #[test]
+    fn a_press_can_begin_and_end_in_the_same_frame() {
+        // Most taps on a phone do. A single value that had to choose between
+        // "began" and "ended" reported only the ending, so nothing ever armed
+        // and the tap clicked nothing.
+        let mut press = Press::began(id(), [3.0, 4.0]);
+        press.finish(PressPhase::Ended);
+
+        assert!(press.began_now(), "it did begin");
+        assert_eq!(press.phase(), PressPhase::Ended, "and it did end");
+        assert_at(press.position(), [3.0, 4.0]);
     }
 
     #[test]

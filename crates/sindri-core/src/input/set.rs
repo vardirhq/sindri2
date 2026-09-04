@@ -70,9 +70,11 @@ impl Presses {
     }
 
     /// Presses that arrived this frame.
+    ///
+    /// By arrival rather than by phase, because one that arrived and finished
+    /// in the same frame belongs in both this and [`Presses::ended`].
     pub fn began(&self) -> impl Iterator<Item = &Press> {
-        self.iter()
-            .filter(|press| press.phase() == PressPhase::Began)
+        self.iter().filter(|press| press.began_now())
     }
 
     /// Presses that finished this frame by being let go.
