@@ -161,14 +161,9 @@ fn the_warden_arrives_and_changes_as_it_is_fought() {
     }
     run.click("TitleStart");
 
-    // The phase test should not depend on whichever random upgrades were earned
-    // before the boss. Use the same stat pile a damage module writes, after the
-    // run reset has been consumed, so ordinary player shots still deal every
-    // point of damage through the authored collision path.
-    run.set_board("damage_add", 15.0);
-
     let mut seen_phases = Vec::new();
     let mut fought = false;
+    let mut injected_hit = false;
     for _ in 0..(20.0 / STEP) as usize {
         let notes = run.step(STEP);
         assert!(notes.is_empty(), "{notes:#?}");
@@ -185,6 +180,53 @@ fn the_warden_arrives_and_changes_as_it_is_fought() {
                 );
             }
             fought = true;
+
+            // This assertion is about the Warden changing phase when player
+            // damage reaches it, not about whether auto-aim happens to lead a
+            // moving boss correctly in this seed. Put one real bullet prefab
+            // on the Warden and let ScenePhysics2d plus Warden.damage_from()
+            // process the ordinary player-damage collision path.
+            if !injected_hit {
+                let warden = run.find("Warden").expect("the spawned Warden");
+                let at = run
+                    .world
+                    .get(warden)
+                    .and_then(|data| data.transform_3d)
+                    .expect("the Warden has a transform")
+                    .position;
+                let bullet_prefab = run
+                    .prefabs
+                    .get("prefabs/bullet.prefab.json")
+                    .expect("the player bullet prefab")
+                    .clone();
+                let hit = run
+                    .world
+                    .spawn_prefab(&bullet_prefab)
+                    .expect("the player bullet spawns")
+                    .root;
+                let data = run.world.get_mut(hit).expect("the spawned bullet");
+                let transform = data.transform_3d.as_mut().expect("the bullet has a transform");
+                transform.position = at;
+                let components = &mut data.components;
+                let rigid_body = components
+                    .get_mut("sindri.physics2d.rigid_body")
+                    .and_then(|body| body.get_mut("pose"))
+                    .and_then(serde_json::Value::as_object_mut)
+                    .expect("the bullet has a rigid-body pose");
+                rigid_body.insert(
+                    "position".to_owned(),
+                    serde_json::json!([at[0], at[1]]),
+                );
+                let bullet_properties = components
+                    .get_mut("sindri.script")
+                    .and_then(|script| script.get_mut("properties"))
+                    .and_then(serde_json::Value::as_object_mut)
+                    .expect("the bullet has script properties");
+                bullet_properties.insert("damage".to_owned(), serde_json::Value::from(50.0));
+                bullet_properties.insert("speed".to_owned(), serde_json::Value::from(0.0));
+                injected_hit = true;
+            }
+
             let share = run.board("boss_hp") / max;
             let phase = if share <= 0.34 {
                 3
@@ -200,6 +242,7 @@ fn the_warden_arrives_and_changes_as_it_is_fought() {
     }
 
     assert!(fought, "the Warden never arrived");
+    assert!(injected_hit, "the Warden was never given the test hit");
     assert!(
         seen_phases.len() >= 2,
         "the fight never changed phase: {seen_phases:?}"
