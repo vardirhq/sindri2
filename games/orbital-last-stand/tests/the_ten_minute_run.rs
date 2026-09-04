@@ -205,24 +205,21 @@ fn the_warden_arrives_and_changes_as_it_is_fought() {
                     .expect("the player bullet spawns")
                     .root;
                 let data = run.world.get_mut(hit).expect("the spawned bullet");
-                let transform = data.transform_3d.as_mut().expect("the bullet has a transform");
+                let transform = data
+                    .transform_3d
+                    .as_mut()
+                    .expect("the bullet has a transform");
                 transform.position = at;
-                let components = &mut data.components;
-                let rigid_body = components
-                    .get_mut("sindri.physics2d.rigid_body")
-                    .and_then(|body| body.get_mut("pose"))
-                    .and_then(serde_json::Value::as_object_mut)
-                    .expect("the bullet has a rigid-body pose");
-                rigid_body.insert(
-                    "position".to_owned(),
-                    serde_json::json!([at[0], at[1]]),
-                );
-                let bullet_properties = components
+                let bullet_properties = data
+                    .components
                     .get_mut("sindri.script")
                     .and_then(|script| script.get_mut("properties"))
                     .and_then(serde_json::Value::as_object_mut)
                     .expect("the bullet has script properties");
-                bullet_properties.insert("damage".to_owned(), serde_json::Value::from(50.0));
+                bullet_properties.insert(
+                    "damage".to_owned(),
+                    serde_json::Value::from(f64::from(max) * 0.5),
+                );
                 bullet_properties.insert("speed".to_owned(), serde_json::Value::from(0.0));
                 injected_hit = true;
             }
