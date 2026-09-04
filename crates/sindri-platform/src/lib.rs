@@ -23,7 +23,10 @@ pub use audio::{
 pub use clock::SystemClock;
 pub use clock::{Clock, FrameTimer, ManualClock};
 pub use host::{EngineHost, FrameContext, FramePhase, FrameTime, Game, HostError};
-pub use input::{InputEvent, InputState, Key, MouseButton};
+pub use input::{
+    ActionId, ActionKind, ActionMap, ActionMapError, ActionState, Actions, Binding, InputEvent,
+    InputState, Key, MouseButton, Source,
+};
 #[cfg(target_arch = "wasm32")]
 pub use saves::BrowserSaves;
 #[cfg(not(target_arch = "wasm32"))]
