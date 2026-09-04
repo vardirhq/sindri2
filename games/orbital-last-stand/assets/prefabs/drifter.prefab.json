@@ -90,7 +90,7 @@
           "script": "Drifter",
           "properties": {
             "speed": 1.5,
-            "health": 3.0,
+            "health": 2.0,
             "worth": 1.0,
             "touch_damage": 1.0,
             "core": "prefabs/core.prefab.json",
