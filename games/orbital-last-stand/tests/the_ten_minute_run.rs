@@ -161,6 +161,13 @@ fn the_warden_arrives_and_changes_as_it_is_fought() {
         }
         let max = run.board("boss_max");
         if max > 0.0 {
+            if !fought {
+                assert_eq!(
+                    run.count("enemy"),
+                    1,
+                    "the Warden should enter a cleared arena"
+                );
+            }
             fought = true;
             let share = run.board("boss_hp") / max;
             let phase = if share <= 0.34 {
