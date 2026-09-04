@@ -62,8 +62,8 @@
           "rotation": 0.0,
           "sensor": true,
           "layers": {
-            "memberships": 1,
-            "filter": 4294967295
+            "memberships": 16,
+            "filter": 4
           },
           "friction": 0.0,
           "restitution": 0.0

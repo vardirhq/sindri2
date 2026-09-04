@@ -141,6 +141,9 @@ pub(super) fn add_world_surface(environment: &mut Environment) {
                     WorldCall::SetActive => {
                         vec![Type::Named(ENTITY.to_owned()), Type::Bool]
                     }
+                    WorldCall::HasTag => {
+                        vec![Type::Named(ENTITY.to_owned()), Type::String]
+                    }
                     WorldCall::SetParent => vec![
                         Type::Named(ENTITY.to_owned()),
                         Type::Named(ENTITY.to_owned()),
@@ -152,6 +155,9 @@ pub(super) fn add_world_surface(environment: &mut Environment) {
                     WorldCall::SetProperty => {
                         vec![Type::Named(ENTITY.to_owned()), Type::String, Type::Unknown]
                     }
+                    WorldCall::PropertyNumber => {
+                        vec![Type::Named(ENTITY.to_owned()), Type::String, Type::F32]
+                    }
                 },
                 return_type: match call {
                     WorldCall::Find | WorldCall::Spawn => Type::Named(ENTITY.to_owned()),
@@ -160,7 +166,8 @@ pub(super) fn add_world_surface(environment: &mut Environment) {
                     | WorldCall::SetParent
                     | WorldCall::SetProperty
                     | WorldCall::SetActive => Type::Unit,
-                    WorldCall::Exists | WorldCall::IsActive => Type::Bool,
+                    WorldCall::Exists | WorldCall::IsActive | WorldCall::HasTag => Type::Bool,
+                    WorldCall::PropertyNumber => Type::F32,
                 },
             },
         );

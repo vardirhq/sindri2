@@ -8,6 +8,16 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **Orbital Last Stand's five weapon flags are real build-changing mechanics.**
+  Guidance rounds seek, arcs jump across targets, nova kills hit an area, gravity
+  anchors leave delayed mines, and prism impacts continue as piercing beams.
+  Each is authored from ordinary prefabs, collision masks and Decay rather than
+  an engine-owned weapon system. `World.property_number` lets a target read the
+  immutable damage carried by the projectile that touched it, while
+  `World.has_tag` classifies one collision handle without a full-world query.
+  The existing `shots`, `crit`, bullet-speed and bullet-size stats are wired
+  into firing as part of the same combat contract.
+
 - **The Scene view draws UI as a canvas in the scene.** The overlay is pinned to
   the viewport, which is right for a game and wrong for a place you arrange one:
   panning and zooming moved the world and left the UI stuck to the glass.

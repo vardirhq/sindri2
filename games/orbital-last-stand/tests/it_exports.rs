@@ -39,7 +39,12 @@ fn ids(manifest: &AssetManifest, kind: AssetKind) -> Vec<String> {
 fn every_prefab_ships() {
     let (_scratch, manifest) = exported("prefabs");
     let prefabs = ids(&manifest, AssetKind::Prefab);
-    assert_eq!(prefabs.len(), 8, "{prefabs:?}");
+    let authored = std::fs::read_dir(orbital_last_stand::project().join("assets/prefabs"))
+        .expect("the project's prefabs")
+        .filter_map(Result::ok)
+        .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "json"))
+        .count();
+    assert_eq!(prefabs.len(), authored, "{prefabs:?}");
 }
 
 /// The splitter's shards and the Warden's shots are named by *prefabs*, not by
@@ -72,7 +77,22 @@ fn what_is_switched_off_still_ships() {
             "{hidden} was left behind: {scripts:?}"
         );
     }
-    assert_eq!(scripts.len(), 15, "{scripts:?}");
+    // Counted from the project rather than written down. A literal here was a
+    // number that had to be edited every time a script was added, which makes
+    // it a chore rather than a check -- and a chore gets bumped to whatever the
+    // run reported, which is exactly how a missing script would have got in.
+    let authored: Vec<String> =
+        std::fs::read_dir(orbital_last_stand::project().join("assets/scripts"))
+            .expect("the project's scripts")
+            .filter_map(|entry| entry.ok())
+            .map(|entry| entry.file_name().to_string_lossy().into_owned())
+            .filter(|name| name.ends_with(".decay"))
+            .collect();
+    assert_eq!(
+        scripts.len(),
+        authored.len(),
+        "every authored script ships: authored {authored:?}, shipped {scripts:?}"
+    );
 }
 
 /// Every file the manifest promises is where it says, and is what it says.
@@ -121,5 +141,5 @@ fn the_exported_build_plays() {
     // Spawned from prefabs that only reached this directory because the export
     // followed a script's declared field types into them.
     assert!(run.board("kills") > 0.0, "nothing died in the build");
-    assert!(run.count("enemy") > 0, "nothing was spawned in the build");
+    assert!(run.board("wave") > 0.0, "no wave was spawned in the build");
 }

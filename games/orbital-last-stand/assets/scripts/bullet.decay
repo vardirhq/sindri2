@@ -8,12 +8,22 @@ script Bullet {
     @export let dir_y: f32 = 1.0;
     @export let damage: f32 = 1.0;
     @export let pierce: f32 = 0.0;
+    @export let missile: f32 = 0.0;
+    @export let arc: f32 = 0.0;
+    @export let nova: f32 = 0.0;
+    @export let beam: f32 = 0.0;
+    @export let arc_effect: Prefab;
+    @export let beam_effect: Prefab;
 
     var age: f32 = 0.0;
     var spent: f32 = 0.0;
+    var heading_x: f32 = 0.0;
+    var heading_y: f32 = 1.0;
 
     fn start() {
-        Physics.set_velocity(this.entity, this.dir_x * this.speed, this.dir_y * this.speed);
+        this.heading_x = this.dir_x;
+        this.heading_y = this.dir_y;
+        Physics.set_velocity(this.entity, this.heading_x * this.speed, this.heading_y * this.speed);
     }
 
     fn update(dt: f32) {
@@ -27,14 +37,64 @@ script Bullet {
             return;
         }
 
+        if this.missile > 0.0 {
+            seek(dt);
+        }
+
         // Started, not touching: a piercing shot hits each target once without
         // keeping a list of what it has already hit.
         for hit in Physics.sensor_entered() {
             this.spent += 1.0;
             Effects.burst(this.entity);
+            trigger_effects();
         }
         if this.spent > this.pierce {
             World.despawn(this.entity);
         }
+    }
+
+    fn seek(dt: f32) {
+        if Game.get("target_live", 0.0) <= 0.0 {
+            return;
+        }
+        let to_x = Game.get("target_x", this.transform.position.x) - this.transform.position.x;
+        let to_y = Game.get("target_y", this.transform.position.y) - this.transform.position.y;
+        let far = sqrt(to_x * to_x + to_y * to_y);
+        if far <= 0.0001 {
+            return;
+        }
+        let desired_x = to_x / far;
+        let desired_y = to_y / far;
+        let steer = min(1.0, dt * 5.0);
+        let next_x = this.heading_x * (1.0 - steer) + desired_x * steer;
+        let next_y = this.heading_y * (1.0 - steer) + desired_y * steer;
+        let length = sqrt(next_x * next_x + next_y * next_y);
+        if length > 0.001 {
+            this.heading_x = next_x / length;
+            this.heading_y = next_y / length;
+            Physics.set_velocity(this.entity, this.heading_x * this.speed, this.heading_y * this.speed);
+        }
+    }
+
+    fn trigger_effects() {
+        if this.arc > 0.0 {
+            spawn_effect(this.arc_effect, this.damage * 0.27);
+        }
+        if this.beam > 0.0 {
+            let beam = World.spawn(this.beam_effect);
+            beam.transform.position.x = this.transform.position.x;
+            beam.transform.position.y = this.transform.position.y;
+            beam.transform.rotation_z = atan2(this.heading_y, this.heading_x);
+            World.set_property(beam, "dir_x", this.heading_x);
+            World.set_property(beam, "dir_y", this.heading_y);
+            World.set_property(beam, "damage", this.damage * 0.23);
+        }
+    }
+
+    fn spawn_effect(effect: Prefab, damage: f32) {
+        let spawned = World.spawn(effect);
+        spawned.transform.position.x = this.transform.position.x;
+        spawned.transform.position.y = this.transform.position.y;
+        World.set_property(spawned, "damage", damage);
     }
 }

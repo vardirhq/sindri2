@@ -9,9 +9,9 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Function | Engine | Editor | Script |
 | --- | :---: | :---: | :---: |
 | Entities | ✅ | ✅ | 🟡 |
-| Prefabs | ✅ | ❌ | 🟡 |
-| Tags | ✅ | ✅ | 🟡 |
-| Entity queries | ✅ | — | 🟡 |
+| Prefabs | ✅ | ❌ | ✅ |
+| Tags | ✅ | ✅ | ✅ |
+| Entity queries | ✅ | — | ✅ |
 | Collections | — | — | 🟡 |
 | Hierarchy / parenting | ✅ | ✅ | 🟡 |
 | Transform / position | ✅ | ✅ | 🟡 |
@@ -60,8 +60,8 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Materials | ❌ | ❌ | ❌ |
 | Lighting | ❌ | ❌ | ❌ |
 | glTF import | ❌ | ❌ | ❌ |
-| 2D physics | ✅ | 🟡 | 🟡 |
-| 2D collision | ✅ | 🟡 | 🟡 |
+| 2D physics | ✅ | 🟡 | ✅ |
+| 2D collision | ✅ | 🟡 | ✅ |
 | 3D physics | ❌ | ❌ | ❌ |
 | 3D collision | ❌ | ❌ | ❌ |
 | Project management | 🟡 | 🟡 | — |

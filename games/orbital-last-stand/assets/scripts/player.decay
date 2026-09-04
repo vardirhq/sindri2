@@ -3,6 +3,7 @@
 // control the phone cannot offer would be a control the phone cannot offer.
 script Player {
     @export let bullet: Prefab;
+    @export let mine: Prefab;
     @export let arena: f32 = 8.0;
     @export let invulnerable_for: f32 = 0.9;
 
@@ -11,11 +12,13 @@ script Player {
     // `docs/scripting.md` says why — so a script that needs to name
     // another entity looks it up once and keeps it.
     var hurt: Entity = null;
+    var target: Entity = null;
 
 
     var cooldown: f32 = 0.0;
     var mercy: f32 = 0.0;
     var was_hit: f32 = 0.0;
+    var mine_cooldown: f32 = 0.0;
 
     fn start() {
         this.hurt = World.find("PlayerHurt");
@@ -36,7 +39,9 @@ script Player {
 
         move(dt);
         take_hits();
+        track_target();
         shoot(dt);
+        drop_mine(dt);
 
         if this.mercy > 0.0 {
             this.mercy -= dt;
@@ -103,7 +108,7 @@ script Player {
         if this.cooldown > 0.0 {
             return;
         }
-        let target = nearest();
+        let target = this.target;
         if target == null {
             return;
         }
@@ -116,18 +121,69 @@ script Player {
             return;
         }
 
-        let shot = World.spawn(this.bullet);
-        shot.transform.position.x = this.transform.position.x;
-        shot.transform.position.y = this.transform.position.y;
-        World.set_property(shot, "dir_x", to_x / far);
-        World.set_property(shot, "dir_y", to_y / far);
-        World.set_property(shot, "damage", Game.get("damage", 1.0));
-        World.set_property(shot, "pierce", Game.get("pierce", 0.0));
+        let forward_x = to_x / far;
+        let forward_y = to_y / far;
+        let count = max(1.0, Game.get("shots", 1.0));
+        var made: f32 = 0.0;
+        while made < count {
+            let spread = (made - (count - 1.0) * 0.5) * 0.16;
+            let aim_x = forward_x - forward_y * spread;
+            let aim_y = forward_y + forward_x * spread;
+            let aim_length = sqrt(aim_x * aim_x + aim_y * aim_y);
+            var damage = Game.get("damage", 1.0);
+            if Random.value() < Game.get("crit", 0.0) {
+                damage *= Game.get("crit_power", 2.0);
+            }
+
+            let shot = World.spawn(this.bullet);
+            shot.transform.position.x = this.transform.position.x;
+            shot.transform.position.y = this.transform.position.y;
+            let size = Game.get("bullet_size", 1.0);
+            shot.transform.scale.x *= size;
+            shot.transform.scale.y *= size;
+            World.set_property(shot, "dir_x", aim_x / aim_length);
+            World.set_property(shot, "dir_y", aim_y / aim_length);
+            World.set_property(shot, "speed", Game.get("bullet_speed", 9.0));
+            World.set_property(shot, "damage", damage);
+            World.set_property(shot, "pierce", Game.get("pierce", 0.0));
+            World.set_property(shot, "missile", Game.get("missile", 0.0));
+            World.set_property(shot, "arc", Game.get("arc", 0.0));
+            World.set_property(shot, "nova", Game.get("nova", 0.0));
+            World.set_property(shot, "beam", Game.get("beam", 0.0));
+            made += 1.0;
+        }
         Audio.play("audio/shot.wav", 0.18);
     }
 
+    fn track_target() {
+        this.target = nearest();
+        let target = this.target;
+        if target == null {
+            Game.set("target_live", 0.0);
+            return;
+        }
+        Game.set("target_live", 1.0);
+        Game.set("target_x", target.transform.position.x);
+        Game.set("target_y", target.transform.position.y);
+    }
+
+    fn drop_mine(dt: f32) {
+        if Game.get("mines", 0.0) <= 0.0 {
+            return;
+        }
+        this.mine_cooldown -= dt;
+        if this.mine_cooldown > 0.0 {
+            return;
+        }
+        this.mine_cooldown = 2.4;
+        let mine = World.spawn(this.mine);
+        mine.transform.position.x = this.transform.position.x;
+        mine.transform.position.y = this.transform.position.y;
+        World.set_property(mine, "damage", Game.get("damage", 1.0) * 0.65);
+    }
+
     // Asked once a frame and held, because one call walks every entity in the
-    // world and asking per bullet would be quadratic.
+    // world and asking per seeking bullet would be quadratic.
     fn nearest() -> Entity {
         var best: Entity = null;
         var best_distance: f32 = 0.0;

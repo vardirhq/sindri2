@@ -74,17 +74,16 @@ script Director {
         Game.set("elapsed", 0.0);
         Game.set("boss_hp", 0.0);
         Game.set("boss_max", 0.0);
-        Game.set("damage", 1.0);
-        Game.set("fire_gap", 0.42);
-        Game.set("move_speed", 5.2);
-        Game.set("magnet", 2.2);
-        Game.set("pierce", 0.0);
-        Game.set("max_hp", 5.0);
-        Game.set("hp", 5.0);
+        // The ship's numbers are not set here any more. `Stats` owns them,
+        // because they are derived from the modules taken and this script does
+        // not know what those are -- it only says the run has started over.
+        Game.set("stats_reset", 1.0);
         Game.set("player_reset", 1.0);
 
         clear_tag("enemy");
         clear_tag("bullet");
+        clear_tag("player_damage");
+        clear_tag("mine");
         clear_tag("core");
         clear_tag("hostile_shot");
 
@@ -193,6 +192,8 @@ script Director {
         }
         Save.set_number("total_kills", Save.number("total_kills", 0.0) + Game.get("kills", 0.0));
         clear_tag("enemy");
+        clear_tag("player_damage");
+        clear_tag("mine");
         clear_tag("hostile_shot");
     }
 

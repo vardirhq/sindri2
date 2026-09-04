@@ -108,7 +108,9 @@ impl WorldHost<'_> {
                 Ok(Value::Unit)
             }
             WorldCall::SetProperty => self.set_property_call(path, args),
+            WorldCall::PropertyNumber => self.property_number_call(path, args),
             WorldCall::WithTag => self.with_tag_call(path, args),
+            WorldCall::HasTag => self.has_tag_call(path, args),
             WorldCall::SetActive => {
                 let entity = self.entity_argument(path, args, 0, "the entity to switch")?;
                 let Some(Value::Bool(active)) = args.get(1) else {
@@ -176,6 +178,33 @@ impl WorldHost<'_> {
             found.push(Value::Reference(entity.to_bits()));
         }
         Ok(Value::array(found))
+    }
+
+    fn has_tag_call(&mut self, path: &Path, args: &[Value]) -> Result<Value, RuntimeError> {
+        let entity = self.entity_argument(path, args, 0, "the entity to inspect")?;
+        let Some(Value::String(tag)) = args.get(1) else {
+            return Err(RuntimeError::Host(format!(
+                "{} names a tag, as text",
+                path.dotted()
+            )));
+        };
+        if !self.world.is_active(entity) {
+            return Ok(Value::Bool(false));
+        }
+        let Some(data) = self.world.get(entity) else {
+            return Ok(Value::Bool(false));
+        };
+        let Some(payload) = data.components.get(TagsComponent::TYPE_NAME) else {
+            return Ok(Value::Bool(false));
+        };
+        let tags: TagsComponent = serde_json::from_value(payload.clone()).map_err(|error| {
+            RuntimeError::Host(format!(
+                "{}: the entity's {} could not be read: {error}",
+                path.dotted(),
+                TagsComponent::TYPE_NAME
+            ))
+        })?;
+        Ok(Value::Bool(tags.has(tag)))
     }
 
     /// Creates what a prefab describes, and answers with its root.
@@ -291,6 +320,37 @@ impl WorldHost<'_> {
         };
         properties.insert(property.clone(), value);
         Ok(Value::Unit)
+    }
+
+    /// Reads one numeric value from a script component's authored properties.
+    fn property_number_call(&mut self, path: &Path, args: &[Value]) -> Result<Value, RuntimeError> {
+        let entity = self.entity_argument(path, args, 0, "the entity to inspect")?;
+        let Some(Value::String(property)) = args.get(1) else {
+            return Err(RuntimeError::Host(format!(
+                "{} names the property, as text",
+                path.dotted()
+            )));
+        };
+        let Some(Value::Number(fallback)) = args.get(2) else {
+            return Err(RuntimeError::Host(format!(
+                "{} takes a numeric fallback",
+                path.dotted()
+            )));
+        };
+        let Some(data) = self.world.get(entity) else {
+            return Err(RuntimeError::Host(format!(
+                "{}'s entity no longer exists",
+                path.dotted()
+            )));
+        };
+        let value = data
+            .components
+            .get(ScriptComponent::TYPE_NAME)
+            .and_then(|payload| payload.get("properties"))
+            .and_then(|properties| properties.get(property))
+            .and_then(serde_json::Value::as_f64)
+            .unwrap_or(*fallback);
+        Ok(Value::Number(value))
     }
 
     /// Removes `entity` and everything under it.

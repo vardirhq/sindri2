@@ -19,6 +19,7 @@ pub(crate) const FUNCTIONS: &[(&str, HostFunction)] = &[
     ("sqrt", HostFunction::Unary(f64::sqrt)),
     ("sin", HostFunction::Unary(f64::sin)),
     ("cos", HostFunction::Unary(f64::cos)),
+    ("atan2", HostFunction::Binary(f64::atan2)),
     ("min", HostFunction::Binary(f64::min)),
     ("max", HostFunction::Binary(f64::max)),
 ];
@@ -228,6 +229,14 @@ pub(crate) enum WorldCall {
     /// change nothing a script could see, which is the silent no-op this whole
     /// surface is arranged to avoid.
     SetProperty,
+    /// Reads a numeric authored property from another entity's script.
+    ///
+    /// This is the other half of `set_property`: a projectile can carry the
+    /// damage it was spawned with, and the target it reaches can read that
+    /// value without routing a per-instance fact through the global board.
+    /// The fallback is required so an optional property and a misspelling do
+    /// not both silently become zero.
+    PropertyNumber,
     /// Every active entity carrying an authored tag, in world order.
     ///
     /// The answer to "a game cannot hold a reference to each of three hundred
@@ -241,6 +250,8 @@ pub(crate) enum WorldCall {
     /// Bounded, ordered, and a snapshot. See `docs/scripting.md` for what each
     /// of those costs and buys.
     WithTag,
+    /// Whether one active entity carries an authored tag.
+    HasTag,
     /// Switches an entity — and everything under it — on or off.
     ///
     /// `docs/scripting.md` says a screen is an entity with children and that
@@ -264,7 +275,9 @@ pub(crate) const WORLD_CALLS: &[(&str, WorldCall)] = &[
     ("spawn", WorldCall::Spawn),
     ("set_parent", WorldCall::SetParent),
     ("set_property", WorldCall::SetProperty),
+    ("property_number", WorldCall::PropertyNumber),
     ("with_tag", WorldCall::WithTag),
+    ("has_tag", WorldCall::HasTag),
     ("set_active", WorldCall::SetActive),
     ("is_active", WorldCall::IsActive),
 ];

@@ -12,9 +12,9 @@ cargo run -p sindri-export --bin sindri-export -- games/orbital-last-stand dist
 ## What it is made of
 
 ```text
-assets/orbital.scene.json    66 entities: the ship, the screens, the catalog
-assets/prefabs/              8 things that get spawned
-assets/scripts/              15 Decay scripts, and all of the game's rules
+assets/orbital.scene.json    69 entities: the ship, the screens, the catalog
+assets/prefabs/              12 things that get spawned
+assets/scripts/              20 Decay scripts, and all of the game's rules
 src/lib.rs                   a harness that plays it without a window
 ```
 
@@ -37,16 +37,23 @@ answers with *active* entities only, and a hidden card is not active. That is
 also why the chooser owns the upgrade screen: anything that switched the screen
 off before the catalog was read would take the catalog with it.
 
-**Damage flows through the shared board, not through the collision.** A
-collision event names the other half of a pair, not what that half is worth, so
-an enemy that touches the ship writes what it costs and the ship reads it. It
-writes the *worst* single touch rather than adding them up: the ship gets
-invulnerability frames after a hit, so being inside a crowd of thirty is one
-hit.
+**Damage belongs to the thing that deals it.** A spawned projectile carries its
+authored per-instance damage, and the enemy reads it from the entity named by
+the collision. That is what lets a critical round, a 27% arc and a 30% nova
+share collision code without racing through a global damage slot. Enemy touch
+damage still flows through the shared board because it is a message to the
+player, and only the worst single touch is kept: invulnerability makes a crowd
+one hit rather than thirty simultaneous ones.
+
+Five reference weapon flags are playable through the upgrade catalog. Guidance
+steers rounds, arc impacts jump, nova kills burst across an area, gravity
+anchors leave delayed mines, and prism impacts continue as piercing beams. The
+effects are ordinary authored prefabs and Decay scripts; no weapon kind was
+added to the engine.
 
 ## What is not here yet
 
-The audit's twelve points, and no more. The reference game is roughly 20,000
-lines across 66 modules, and the rest of it — expeditions, companions, the
-synergy catalog, hazards, sector routes, ships, contracts, the archive, the
-debrief — is parity work that has not started. See the plan for the order.
+The reference game is much larger. The enemy roster, ten-boss cadence,
+companions, the broader module and synergy catalog, hazards, sector routes,
+ships, contracts, archive and debrief remain parity work. See the handover and
+plan for the order.

@@ -1,0 +1,62 @@
+// A short-lived secondary round. It begins on an impact, skips the enemy at
+// that exact point, then crosses the next two nearest targets. The bright
+// diamond and burst at every hop make the chain readable without a bespoke
+// renderer.
+script Arc {
+    @export let speed: f32 = 14.0;
+    @export let life: f32 = 0.55;
+    @export let damage: f32 = 0.27;
+    @export let jumps: f32 = 2.0;
+
+    var age: f32 = 0.0;
+    var spent: f32 = 0.0;
+
+    fn start() {
+        retarget();
+    }
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 1.0 {
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+            return;
+        }
+        this.age += dt;
+        if this.age >= this.life {
+            World.despawn(this.entity);
+            return;
+        }
+        for hit in Physics.sensor_entered() {
+            this.spent += 1.0;
+            Effects.burst(this.entity);
+            if this.spent >= this.jumps {
+                World.despawn(this.entity);
+                return;
+            }
+            retarget();
+        }
+    }
+
+    fn retarget() {
+        var target: Entity = null;
+        var best: f32 = 0.0;
+        for enemy in World.with_tag("enemy") {
+            let dx = enemy.transform.position.x - this.transform.position.x;
+            let dy = enemy.transform.position.y - this.transform.position.y;
+            let distance = dx * dx + dy * dy;
+            // The impact that made the arc is centred on its first target.
+            if distance > 0.16 && (target == null || distance < best) {
+                target = enemy;
+                best = distance;
+            }
+        }
+        if target == null {
+            World.despawn(this.entity);
+            return;
+        }
+        let dx = target.transform.position.x - this.transform.position.x;
+        let dy = target.transform.position.y - this.transform.position.y;
+        let far = sqrt(dx * dx + dy * dy);
+        Physics.set_velocity(this.entity, dx / far * this.speed, dy / far * this.speed);
+        this.transform.rotation_z = atan2(dy, dx);
+    }
+}
