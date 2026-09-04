@@ -28,8 +28,13 @@
 //! bug cannot be written against this type: there is no state in which a live
 //! or just-ended press has no position.
 
+mod gesture;
 mod press;
 mod set;
 
+#[cfg(test)]
+mod gesture_tests;
+
+pub use gesture::{Gesture, GestureLimits, Gestures};
 pub use press::{PointerDevice, Press, PressId, PressPhase};
 pub use set::Presses;
