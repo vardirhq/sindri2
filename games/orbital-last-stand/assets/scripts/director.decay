@@ -14,26 +14,19 @@ script Director {
     @export let splitter: Prefab;
     @export let warden: Prefab;
 
-    // The shape of the ten minutes. A wave every `wave_gap` seconds, each one
-    // bigger than the last, with the boss at `boss_at` and the run ending when
-    // it dies or the player does.
-    @export let wave_gap: f32 = 6.0;
+    // The reference campaign does not batch enemies into numbered waves. It
+    // keeps a spawn clock ticking, tightens the interval as the run progresses,
+    // and lets the roster widen over time. Bosses are their own rhythm.
     @export let boss_at: f32 = 180.0;
     @export let arena: f32 = 7.5;
 
-    // Found by the name the scene gave them. An entity cannot be an
-    // authored property — a runtime handle is not a scene ID and
-    // `docs/scripting.md` says why — so a script that needs to name
-    // another entity looks it up once and keeps it.
     var title: Entity = null;
     var hud: Entity = null;
     var pause_screen: Entity = null;
     var result_screen: Entity = null;
 
-
     var elapsed: f32 = 0.0;
-    var next_wave: f32 = 0.0;
-    var wave: f32 = 0.0;
+    var spawn_timer: f32 = 0.0;
     var boss_sent: bool = false;
     var was_state: f32 = -1.0;
 
@@ -61,8 +54,7 @@ script Director {
         Random.seed(seed);
 
         this.elapsed = 0.0;
-        this.next_wave = 1.0;
-        this.wave = 0.0;
+        this.spawn_timer = 0.7;
         this.boss_sent = false;
 
         Game.set("score", 0.0);
@@ -70,13 +62,9 @@ script Director {
         Game.set("cores", 0.0);
         Game.set("level", 1.0);
         Game.set("next_level", 4.0);
-        Game.set("wave", 0.0);
         Game.set("elapsed", 0.0);
         Game.set("boss_hp", 0.0);
         Game.set("boss_max", 0.0);
-        // The ship's numbers are not set here any more. `Stats` owns them,
-        // because they are derived from the modules taken and this script does
-        // not know what those are -- it only says the run has started over.
         Game.set("stats_reset", 1.0);
         Game.set("player_reset", 1.0);
 
@@ -122,8 +110,6 @@ script Director {
             return;
         }
 
-        // Pause is the player's, so it is read in every state a run can be
-        // paused from and in no state it cannot.
         if Input.just_pressed("Escape") {
             if state == 1.0 {
                 Game.set("run_state", 3.0);
@@ -147,9 +133,6 @@ script Director {
         if Game.get("cores", 0.0) >= Game.get("next_level", 4.0) {
             let level = Game.get("level", 1.0) + 1.0;
             Game.set("level", level);
-            // Multiplied rather than added, so ten minutes is a handful of
-            // choices that matter rather than a hundred that do not. Adding a
-            // constant is a curve the player outgrows by the third minute.
             Game.set("next_level", Game.get("next_level", 4.0) * 1.6 + 6.0);
             Game.set("run_state", 2.0);
             return;
@@ -160,30 +143,25 @@ script Director {
             send_boss();
         }
 
-        // Nothing new arrives while the Warden is alive. The ship fires at
-        // whatever is nearest, so a boss behind a crowd is a boss that never
-        // gets shot — and a fight nobody can reach is not a fight.
+        // Normal Last Stand boss encounters are clean duels.
         if Game.get("boss_hp", 0.0) > 0.0 {
             return;
         }
 
-        this.next_wave -= dt;
-        if this.next_wave <= 0.0 {
-            this.wave += 1.0;
-            Game.set("wave", this.wave);
-            send_wave(this.wave);
-            // Waves come closer together as the run goes on, down to a floor
-            // that keeps the late game dense rather than impossible.
-            this.next_wave = max(2.2, this.wave_gap - this.wave * 0.05);
+        // The original campaign feeds enemies in continuously rather than in
+        // batches. Its base interval starts around 0.7 seconds and tightens as
+        // elapsed time rises. Keep the same shape here, but scale world-space
+        // pressure to this recreation's smaller arena and current three-enemy
+        // roster so the player is not buried before the catalog catches up.
+        this.spawn_timer -= dt;
+        if this.spawn_timer <= 0.0 {
+            spawn_one();
+            this.spawn_timer += max(0.34, 0.92 - this.elapsed * 0.0019);
         }
     }
 
     fn end_run() {
         Game.set("run_state", 4.0);
-        // Cleared here as well as when a run begins, because the Warden's own
-        // script is about to be despawned with everything else and will not
-        // get to say it is gone. A stale boss reading is what stops the next
-        // run's waves.
         Game.set("boss_hp", 0.0);
         Game.set("boss_max", 0.0);
         let score = Game.get("score", 0.0);
@@ -197,28 +175,22 @@ script Director {
         clear_tag("hostile_shot");
     }
 
-    // Three behaviours, mixed by how far the run has got. A drifter is the
-    // whole of the first minute; chargers arrive next; splitters last.
-    fn send_wave(wave: f32) {
-        let budget = min(5.0 + wave * 2.2, 80.0);
-        var made: f32 = 0.0;
-        while made < budget {
-            let roll = Random.value();
-            if wave >= 8.0 && roll > 0.82 {
-                place(World.spawn(this.splitter));
-            } else if wave >= 4.0 && roll > 0.55 {
-                place(World.spawn(this.charger));
-            } else {
-                place(World.spawn(this.drifter));
-            }
-            made += 1.0;
+    // Roster progression is time-based, like the reference archetype unlocks.
+    // Drifters begin the run, chargers join around 35 seconds, and splitters
+    // around 70 seconds. Those thresholds can expand naturally as parity adds
+    // the rest of the enemy catalog.
+    fn spawn_one() {
+        let roll = Random.value();
+        if this.elapsed >= 70.0 && roll > 0.78 {
+            place(World.spawn(this.splitter));
+        } else if this.elapsed >= 35.0 && roll > 0.58 {
+            place(World.spawn(this.charger));
+        } else {
+            place(World.spawn(this.drifter));
         }
     }
 
     fn send_boss() {
-        // Normal Last Stand boss encounters are clean duels: the reference
-        // clears regular enemies, and doing it here also prevents auto-aim from
-        // spending the opening of the fight on survivors from the prior wave.
         clear_tag("enemy");
         clear_tag("hostile_shot");
         let boss = World.spawn(this.warden);
