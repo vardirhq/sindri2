@@ -78,7 +78,13 @@ pub struct InputState {
     /// the next: a map that reordered would make a drag jump between fingers.
     touches: BTreeMap<u64, [f32; 2]>,
     touches_began: BTreeSet<u64>,
-    touches_ended: BTreeSet<u64>,
+    /// Fingers lifted this frame, and where each was when it went.
+    ///
+    /// The position is kept because a release is asked about in the frame it
+    /// happens, and by then the finger is out of `touches`. A mouse is still
+    /// wherever it was let go; without this a finger is nowhere, and every
+    /// press that ends -- which is every tap -- ends over no element at all.
+    touches_ended: BTreeMap<u64, [f32; 2]>,
     pointer_delta: [f32; 2],
     scroll_delta: [f32; 2],
     focused: bool,
@@ -96,7 +102,7 @@ impl Default for InputState {
             pointer: None,
             touches: BTreeMap::new(),
             touches_began: BTreeSet::new(),
-            touches_ended: BTreeSet::new(),
+            touches_ended: BTreeMap::new(),
             pointer_delta: [0.0, 0.0],
             scroll_delta: [0.0, 0.0],
             focused: true,
@@ -158,8 +164,8 @@ impl InputState {
                 }
             }
             InputEvent::TouchEnded { id } => {
-                if self.touches.remove(&id).is_some() {
-                    self.touches_ended.insert(id);
+                if let Some(position) = self.touches.remove(&id) {
+                    self.touches_ended.insert(id, position);
                 }
             }
             InputEvent::Scrolled { x, y } => {
@@ -198,8 +204,8 @@ impl InputState {
         }
         // A finger cannot be reported as lifted once the window has stopped
         // hearing about it, so one still down would stay down for ever.
-        for id in std::mem::take(&mut self.touches).into_keys() {
-            self.touches_ended.insert(id);
+        for (id, position) in std::mem::take(&mut self.touches) {
+            self.touches_ended.insert(id, position);
         }
     }
 
@@ -255,6 +261,10 @@ impl InputState {
     pub fn pointer_position(&self) -> Option<[f32; 2]> {
         self.pointer
             .or_else(|| self.touches.values().next().copied())
+            // A finger that lifted this frame is still the answer to "where is
+            // the pointer" for the rest of it, so a tap completes where it
+            // ended rather than nowhere.
+            .or_else(|| self.touches_ended.values().next().copied())
     }
 
     /// Whether the pointer is being pressed: this mouse button, or any finger.
@@ -322,6 +332,31 @@ mod tests {
 
     fn down(state: &mut InputState, id: u64, x: f32, y: f32) {
         state.apply(InputEvent::TouchStarted { id, x, y });
+    }
+
+    #[test]
+    fn a_tap_reports_where_the_finger_left() {
+        // The frame a finger lifts is the frame a press is completed, and
+        // completing one asks where the pointer is. A mouse is still wherever
+        // it was let go; a finger is gone. Reporting nothing there means a tap
+        // releases over no element, so it never lands on the one it began on
+        // -- which is every button on a touch device.
+        let mut state = InputState::default();
+        down(&mut state, 1, 10.0, 20.0);
+        assert_eq!(state.pointer_position(), Some([10.0, 20.0]));
+
+        state.begin_frame();
+        state.apply(InputEvent::TouchEnded { id: 1 });
+        assert!(state.pointer_released(MouseButton::Left));
+        assert_eq!(
+            state.pointer_position(),
+            Some([10.0, 20.0]),
+            "the release frame has to know where the finger was"
+        );
+
+        // And once the frame is over the finger really is gone.
+        state.begin_frame();
+        assert_eq!(state.pointer_position(), None);
     }
 
     #[test]

@@ -338,12 +338,12 @@ impl Run {
             .collect()
     }
 
-    /// Puts the pointer where an element is, in the pixels a host reports.
+    /// Where an element is, in the pixels a host reports.
     ///
     /// The overlay is two tall and centred on the origin; a host has already
-    /// done this conversion by the time a person has clicked anything, and the
+    /// done this conversion by the time a person has touched anything, and the
     /// harness has to do it too because it is standing in for one.
-    pub fn point_at(&mut self, name: &str) {
+    fn screen_point(&mut self, name: &str) -> (f32, f32) {
         let entity = self
             .find(name)
             .unwrap_or_else(|| panic!("no entity named {name}"));
@@ -364,10 +364,17 @@ impl Run {
             .unwrap_or_else(|| panic!("{name} never got a place on the screen"));
         let (width, height) = self.viewport;
         let half_width = width / height;
-        self.input.apply(sindri_platform::InputEvent::PointerMoved {
-            x: (rect.center[0] / half_width * 0.5 + 0.5) * width,
-            y: (0.5 - rect.center[1] * 0.5) * height,
-        });
+        (
+            (rect.center[0] / half_width * 0.5 + 0.5) * width,
+            (0.5 - rect.center[1] * 0.5) * height,
+        )
+    }
+
+    /// Puts the mouse pointer over an element.
+    fn point_at(&mut self, name: &str) {
+        let (x, y) = self.screen_point(name);
+        self.input
+            .apply(sindri_platform::InputEvent::PointerMoved { x, y });
     }
 
     /// Presses and releases on an element, which is what a click is.
@@ -385,6 +392,26 @@ impl Run {
         // One more, because a button leaves a number on the board and whoever
         // reads it may already have run this frame. A click landing on the
         // frame after it is made is what every script here expects.
+        self.step(1.0 / 60.0);
+    }
+
+    /// Taps an element with a finger, which is what a touch device sends.
+    ///
+    /// Not the same events as `click`, and worth its own path: a finger
+    /// carries its own position and then stops existing, where a mouse has a
+    /// position all along and keeps it after the button comes up. The audit
+    /// line this serves says "mouse or touch", and only the mouse half was
+    /// ever played.
+    pub fn tap(&mut self, name: &str) {
+        let (x, y) = self.screen_point(name);
+        self.input
+            .apply(sindri_platform::InputEvent::TouchStarted { id: 1, x, y });
+        self.step(1.0 / 60.0);
+        self.input
+            .apply(sindri_platform::InputEvent::TouchEnded { id: 1 });
+        self.step(1.0 / 60.0);
+        // As in `click`: the frame after is when whoever reads the board sees
+        // it.
         self.step(1.0 / 60.0);
     }
 
