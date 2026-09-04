@@ -134,6 +134,21 @@ fn the_exported_build_plays() {
     run.click("TitleStart");
     assert_eq!(run.board("run_state"), 1.0, "START should start the run");
 
+    // The exported build must preserve the same continuous pressure as the
+    // source project. The old batch director had already dropped roughly eight
+    // enemies by this point; one-at-a-time pressure has only produced one or two.
+    let notes = run.step(1.0 / 60.0);
+    assert!(notes.is_empty(), "{notes:#?}");
+    for _ in 0..66 {
+        let notes = run.step(1.0 / 60.0);
+        assert!(notes.is_empty(), "{notes:#?}");
+    }
+    let arrivals = run.count("enemy") + run.board("kills") as usize;
+    assert!(
+        (1..=2).contains(&arrivals),
+        "exported build batched {arrivals} early enemies"
+    );
+
     for _ in 0..900 {
         let notes = run.step(1.0 / 60.0);
         assert!(notes.is_empty(), "{notes:#?}");
@@ -141,5 +156,4 @@ fn the_exported_build_plays() {
     // Spawned from prefabs that only reached this directory because the export
     // followed a script's declared field types into them.
     assert!(run.board("kills") > 0.0, "nothing died in the build");
-    assert!(run.board("wave") > 0.0, "no wave was spawned in the build");
 }

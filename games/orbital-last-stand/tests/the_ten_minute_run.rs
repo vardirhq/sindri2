@@ -71,7 +71,7 @@ fn play_a_run(seconds: f32) -> Played {
         // the ship alive rather than pretending it survived: the acceptance
         // test is about the engine carrying the workload, not about whether
         // this balance is beatable. Topped up every step rather than at a
-        // threshold, because a late wave can take a full hull in one frame.
+        // threshold, because late pressure can take a full hull in one frame.
         run.set_board("hp", run.board("max_hp"));
     }
 
@@ -112,7 +112,6 @@ fn ten_minutes_hold_together() {
          \x20   steps            {}\n\
          \x20   kills            {}\n\
          \x20   score            {}\n\
-         \x20   waves            {}\n\
          \x20   upgrades taken   {}\n\
          \x20   peak entities    {}\n\
          \x20   peak flecks      {}\n\
@@ -121,7 +120,6 @@ fn ten_minutes_hold_together() {
         played.steps,
         played.run.board("kills"),
         played.run.board("score"),
-        played.run.board("wave"),
         played.upgrades_taken,
         played.peak_entities,
         played.peak_flecks,
@@ -143,28 +141,72 @@ fn ten_minutes_hold_together() {
 #[test]
 fn the_warden_arrives_and_changes_as_it_is_fought() {
     let mut run = Run::open().expect("the project opens");
+
+    // This test is about the Warden, not about surviving three minutes of the
+    // campaign first. Script exports are authored component data until the
+    // first script frame, so move only this test's boss clock forward without
+    // adding a gameplay-only test hook or changing the prefab being exercised.
+    let director = run.find("Director").expect("the Director");
+    let properties = run
+        .world
+        .get_mut(director)
+        .and_then(|data| data.components.get_mut("sindri.script"))
+        .and_then(|script| script.get_mut("properties"))
+        .and_then(serde_json::Value::as_object_mut)
+        .expect("the Director's authored script properties");
+    properties.insert("boss_at".to_owned(), serde_json::Value::from(2.0));
+
     for _ in 0..6 {
         run.step(STEP);
     }
     run.click("TitleStart");
 
-    // Straight to the boss rather than waiting three minutes for it: the
-    // director sends it on a clock, and what is being checked is the fight.
+    // Let the new-run reset finish before installing the deterministic build.
+    // Otherwise Stats sees `stats_reset` on the same frame that it sees these
+    // test values and correctly wipes them back to the base ship.
+    let notes = run.step(STEP);
+    assert!(notes.is_empty(), "{notes:#?}");
+    assert_eq!(run.board("stats_reset"), 0.0, "stats reset did not finish");
+
+    // Main used to reach this fight after taking whatever upgrades the first
+    // three minutes happened to offer. Continuous spawning deliberately changes
+    // that economy, so make the build explicit with the same board keys real
+    // modules write. Homing keeps this a boss-phase test rather than an
+    // accidental test of leading a moving target.
+    run.set_board("damage_add", 1.0);
+    run.set_board("fire_rate_add", 3.0);
+    run.set_board("bullet_speed_add", 3.0);
+    run.set_board("missile", 1.0);
+    let notes = run.step(STEP);
+    assert!(notes.is_empty(), "{notes:#?}");
+    assert!(run.board("damage") >= 1.9, "damage build was not derived");
+    assert!(
+        run.board("fire_rate") >= 5.3,
+        "fire-rate build was not derived"
+    );
+    assert!(
+        run.board("bullet_speed") >= 11.9,
+        "bullet-speed build was not derived"
+    );
+    assert_eq!(run.board("missile"), 1.0, "homing flag was not installed");
+
     let mut seen_phases = Vec::new();
     let mut fought = false;
-    for _ in 0..(200.0 / STEP) as usize {
+    for _ in 0..(20.0 / STEP) as usize {
         let notes = run.step(STEP);
         assert!(notes.is_empty(), "{notes:#?}");
-        if run.board("run_state") == 2.0 {
-            run.step(STEP);
-            let offers = run.active_named("upgrade");
-            run.click(&offers[0]);
-        }
         if run.board("hp") <= 1.0 {
             run.set_board("hp", run.board("max_hp"));
         }
         let max = run.board("boss_max");
         if max > 0.0 {
+            if !fought {
+                assert_eq!(
+                    run.count("enemy"),
+                    1,
+                    "the Warden should enter a cleared arena"
+                );
+            }
             fought = true;
             let share = run.board("boss_hp") / max;
             let phase = if share <= 0.34 {

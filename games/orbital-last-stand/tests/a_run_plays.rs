@@ -78,25 +78,50 @@ fn a_run_starts_from_a_tap() {
     assert_eq!(run.board("hp"), 5.0, "a run starts with a full hull");
 }
 
+/// The campaign feeds enemies in rather than dropping a numbered batch.
+///
+/// This is deliberately early in the run. The old director spawned roughly
+/// eight enemies together at the first wave boundary; continuous pressure has
+/// only had time for one or two arrivals here. Count both survivors and kills
+/// so better shooting cannot make the pacing test lie.
+#[test]
+fn enemies_arrive_continuously_instead_of_in_batches() {
+    let mut run = Run::open().expect("the project opens");
+    play(&mut run, 0.1);
+    run.click("TitleStart");
+    play(&mut run, STEP);
+    run.set_board("hp", 1000.0);
+
+    play(&mut run, 1.1);
+    let arrivals = run.count("enemy") + run.board("kills") as usize;
+    assert!(
+        (1..=2).contains(&arrivals),
+        "expected one-at-a-time pressure, but {arrivals} enemies had arrived"
+    );
+}
+
 /// 4. Spawn, update, collide, and despawn continuously.
-/// 5. Three enemy behaviours.
+/// 5. Three enemy behaviours widening over elapsed time.
 #[test]
 fn enemies_arrive_die_and_leave_something_behind() {
     let mut run = Run::open().expect("the project opens");
     play(&mut run, 0.1);
     run.click("TitleStart");
-    // This acceptance check isolates enemy spawning, deaths, and drops. Now
-    // that authored collision masks make contact damage real, keep its idle
-    // test ship alive long enough to observe the later enemy families.
+    // This acceptance check isolates enemy spawning, deaths, and drops. Keep
+    // its idle test ship alive long enough to observe the later enemy families.
     play(&mut run, STEP);
     run.set_board("hp", 1000.0);
 
     play_taking_upgrades(&mut run, 90.0);
     assert!(run.board("kills") > 20.0, "kills: {}", run.board("kills"));
     assert!(run.board("score") > 0.0, "nothing scored");
-    // Chargers appear from wave 4 and splitters from wave 8, so ninety seconds
-    // is past both.
-    assert!(run.board("wave") >= 8.0, "wave: {}", run.board("wave"));
+    // Progression is time-based now: chargers join at 35 seconds and splitters
+    // at 70, so this run has crossed both roster thresholds without a wave id.
+    assert!(
+        run.board("elapsed") >= 89.0,
+        "elapsed: {}",
+        run.board("elapsed")
+    );
 }
 
 /// 6. Pause combat for a data-driven upgrade choice and apply the result.

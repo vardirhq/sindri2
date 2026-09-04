@@ -10,7 +10,6 @@ script Hud {
     // `docs/scripting.md` says why — so a script that needs to name
     // another entity looks it up once and keeps it.
     var score: Entity = null;
-    var wave: Entity = null;
     var clock: Entity = null;
     var level: Entity = null;
     var health_bar: Entity = null;
@@ -19,10 +18,8 @@ script Hud {
     var boss_panel: Entity = null;
     var boss_bar: Entity = null;
 
-
     fn start() {
         this.score = World.find("Score");
-        this.wave = World.find("Wave");
         this.clock = World.find("Clock");
         this.level = World.find("Level");
         this.health_bar = World.find("Health");
@@ -30,11 +27,18 @@ script Hud {
         this.cores_bar = World.find("Cores");
         this.boss_panel = World.find("BossPanel");
         this.boss_bar = World.find("BossBar");
+
+        // The old scene still authors this label. Last Stand no longer has
+        // numbered waves, so keep it out of the runtime HUD until the scene is
+        // next rewritten by the editor.
+        let wave = World.find("Wave");
+        if wave != null {
+            World.set_active(wave, false);
+        }
     }
 
     fn update(dt: f32) {
         Ui.set_number(this.score, Game.get("score", 0.0));
-        Ui.set_number(this.wave, Game.get("wave", 0.0));
         Ui.set_number(this.level, Game.get("level", 1.0));
 
         let elapsed = Game.get("elapsed", 0.0);
