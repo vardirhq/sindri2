@@ -71,7 +71,7 @@ fn play_a_run(seconds: f32) -> Played {
         // the ship alive rather than pretending it survived: the acceptance
         // test is about the engine carrying the workload, not about whether
         // this balance is beatable. Topped up every step rather than at a
-        // threshold, because a late wave can take a full hull in one frame.
+        // threshold, because late pressure can take a full hull in one frame.
         run.set_board("hp", run.board("max_hp"));
     }
 
@@ -112,7 +112,6 @@ fn ten_minutes_hold_together() {
          \x20   steps            {}\n\
          \x20   kills            {}\n\
          \x20   score            {}\n\
-         \x20   waves            {}\n\
          \x20   upgrades taken   {}\n\
          \x20   peak entities    {}\n\
          \x20   peak flecks      {}\n\
@@ -121,7 +120,6 @@ fn ten_minutes_hold_together() {
         played.steps,
         played.run.board("kills"),
         played.run.board("score"),
-        played.run.board("wave"),
         played.upgrades_taken,
         played.peak_entities,
         played.peak_flecks,
@@ -148,8 +146,6 @@ fn the_warden_arrives_and_changes_as_it_is_fought() {
     }
     run.click("TitleStart");
 
-    // Straight to the boss rather than waiting three minutes for it: the
-    // director sends it on a clock, and what is being checked is the fight.
     let mut seen_phases = Vec::new();
     let mut fought = false;
     for _ in 0..(200.0 / STEP) as usize {
