@@ -55,6 +55,29 @@ fn a_run_starts_from_the_title_screen() {
     assert_eq!(run.board("hp"), 5.0, "a run starts with a full hull");
 }
 
+/// 2, again, with the other half of "mouse or touch".
+///
+/// Worth its own test because a finger is not a mouse with different events:
+/// it carries its own position and then ceases to exist, where a mouse is
+/// somewhere all along and stays there once the button is up. A tap used to do
+/// nothing at all on this screen -- the release was reported from nowhere, so
+/// it never landed on the element the press began on -- and every check in this
+/// file passed throughout, because every one of them clicked.
+#[test]
+fn a_run_starts_from_a_tap() {
+    let mut run = Run::open().expect("the project opens");
+    play(&mut run, 0.1);
+    assert_eq!(run.board("run_state"), 0.0, "the title should be showing");
+
+    run.tap("TitleStart");
+    assert_eq!(
+        run.board("run_state"),
+        1.0,
+        "a tap on START should start the run"
+    );
+    assert_eq!(run.board("hp"), 5.0, "a run starts with a full hull");
+}
+
 /// 4. Spawn, update, collide, and despawn continuously.
 /// 5. Three enemy behaviours.
 #[test]
