@@ -5,11 +5,15 @@
 //! events into [`InputEvent`]; nothing above this layer knows whether the
 //! input came from `winit`, the DOM, or a test.
 
+pub mod action;
 mod button;
 mod key;
 mod presses;
 mod state;
 
+pub use action::{
+    ActionId, ActionKind, ActionMap, ActionMapError, ActionState, Actions, Binding, Source,
+};
 pub use button::MouseButton;
 pub use key::Key;
 pub use state::{InputEvent, InputState};

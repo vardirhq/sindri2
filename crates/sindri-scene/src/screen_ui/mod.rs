@@ -247,9 +247,15 @@ impl ScreenUi {
             self.pressing = None;
             return;
         };
+        // Arming reads the arrival and completing reads the phase, rather than
+        // both reading one value: a tap quick enough to begin and end between
+        // two frames -- most taps on a phone -- is both at once, and matching
+        // on a single value saw only the ending and armed nothing.
+        if press.began_now() {
+            self.pressing = self.hovered;
+        }
         match press.phase() {
-            PressPhase::Began => self.pressing = self.hovered,
-            PressPhase::Held => {}
+            PressPhase::Live => {}
             PressPhase::Ended => {
                 // A click is a press and a release on the same element.
                 // Sliding off before letting go is how a person changes their

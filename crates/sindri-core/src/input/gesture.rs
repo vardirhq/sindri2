@@ -186,7 +186,7 @@ impl Gestures {
         }
 
         match press.phase() {
-            PressPhase::Began | PressPhase::Held => {
+            PressPhase::Live => {
                 if progress == Progress::Undecided && press.held_for() >= self.limits.long_press {
                     self.progress.insert(press.id(), Progress::LongPressed);
                     self.recognised.push(Gesture::LongPress {

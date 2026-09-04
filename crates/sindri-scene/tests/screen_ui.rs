@@ -164,6 +164,28 @@ fn a_click_is_a_press_and_a_release_on_the_same_button() {
     }
 }
 
+/// A quick tap: down and up inside one frame, which is what a real finger on a
+/// phone does at 60 Hz and what no test here has ever played.
+#[test]
+fn a_press_and_a_release_in_the_same_frame_is_still_a_click() {
+    let mut world = World::default();
+    let entity = button(&mut world, [0.0, 0.0], [0.5, 0.2]);
+    let components = registry();
+
+    for mut hand in [Hand::mouse(), Hand::finger()] {
+        let mut screen = ScreenUi::new();
+        hand.press([WIDTH / 2.0, HEIGHT / 2.0]);
+        hand.release();
+        screen
+            .update(&world, &components, extent(), &hand.presses)
+            .expect("registered");
+        assert!(
+            screen.is_pressed(entity),
+            "a fast tap is a click, not nothing"
+        );
+    }
+}
+
 /// Sliding off before letting go is how a person changes their mind.
 #[test]
 fn letting_go_somewhere_else_is_not_a_click() {

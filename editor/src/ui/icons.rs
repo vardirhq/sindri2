@@ -27,6 +27,12 @@ pub const GRID: MaterialIcon = icons::ICON_GRID_4X4;
 pub const PHYSICS: MaterialIcon = icons::ICON_BOLT;
 pub const COLLIDER: MaterialIcon = icons::ICON_CROP_SQUARE;
 pub const ENTITY: MaterialIcon = icons::ICON_DEPLOYED_CODE;
+/// A fragment of a scene, kept to be spawned again.
+///
+/// Deliberately not `ENTITY`: a prefab is the mould rather than a thing in the
+/// world, and a row that used the entity glyph would say the project contains
+/// entities it does not.
+pub const PREFAB: MaterialIcon = icons::ICON_DEPLOYED_CODE_UPDATE;
 pub const WORLD: MaterialIcon = icons::ICON_ACCOUNT_TREE;
 pub const FOLDER: MaterialIcon = icons::ICON_FOLDER;
 pub const SCENE: MaterialIcon = icons::ICON_DESCRIPTION;

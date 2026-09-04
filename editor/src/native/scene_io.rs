@@ -275,13 +275,26 @@ impl EditorApp {
     /// Asks again for whatever the world references, after an edit that could
     /// have changed it.
     pub(super) fn refresh_textures(&mut self) {
+        // Scripts are asked every frame, and textures only after an edit,
+        // because they answer to different clocks. A texture is named outright
+        // by a component, so nothing but an edit can change which are wanted.
+        // A *prefab* is named by the declared type of a compiled script's
+        // export, so which are wanted changes when a script finishes
+        // compiling -- frames after the scene opened, without touching the
+        // world at all.
+        //
+        // Behind the edit gate, the only ask that ever happened was the one on
+        // open, before any script had compiled, and no prefab was ever
+        // discovered: the acceptance project opened in the editor with every
+        // enemy missing and two hundred errors saying so, while the exported
+        // build of the same project played.
+        self.refresh_scripts();
         if self.textured_revision == self.history.revision() {
             return;
         }
         self.textured_revision = self.history.revision();
         let notes = self.textures.request(&self.world, &mut self.renderers.text);
         self.record_texture_notes(notes);
-        self.refresh_scripts();
     }
 
     /// Asks again for whatever scripts the world names, after an edit that

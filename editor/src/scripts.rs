@@ -305,6 +305,16 @@ impl SceneScripts {
     /// An instance belongs to the world it was started against, so a world that
     /// was reloaded or restored needs new ones. The text does not change when
     /// the world does, and re-fetching it would be a load for nothing.
+    /// Whether a prefab has been loaded and can be spawned.
+    ///
+    /// For anything checking what the editor actually has, rather than what it
+    /// meant to fetch: a prefab that was never loaded is an enemy that never
+    /// arrives, and the difference is invisible until something spawns one.
+    #[must_use]
+    pub fn has_prefab(&self, id: &str) -> bool {
+        self.prefabs.get(id).is_some()
+    }
+
     pub fn restart(&mut self) {
         self.scripts.clear();
     }
