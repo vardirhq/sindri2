@@ -9,6 +9,7 @@ import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
+import { imageStatistics } from './png.mjs';
 
 const ROOT = resolve(process.argv[2] ?? 'examples/cube');
 const SHOT = process.argv[3];
@@ -114,8 +115,15 @@ await page.addInitScript(() => {
 
 const problems = [];
 const fetchedAssets = new Set();
+// A shader that fails to compile is reported by the GPU implementation as a
+// console *warning*, not an error, and the page carries on and presents empty
+// frames. Collecting only errors is how a build whose every shape and glyph
+// pipeline was rejected still reported that the engine ran.
+const GPU_REJECTION = /error while parsing wgsl|is invalid|must only be called/i;
 page.on('console', (message) => {
-  if (message.type() === 'error') problems.push(message.text());
+  const text = message.text();
+  if (message.type() === 'error') problems.push(text);
+  else if (GPU_REJECTION.test(text)) problems.push(text.split('\n')[0]);
 });
 page.on('pageerror', (error) => problems.push(String(error.message)));
 page.on('response', (response) => {
@@ -170,6 +178,20 @@ const canvas = await page.evaluate(() => {
   const element = document.querySelector('canvas');
   return element ? { width: element.width, height: element.height } : null;
 });
+
+// What reached the canvas, rather than whether one exists. Every check above
+// passes on a page that starts the engine and then presents nothing: a
+// rejected pipeline draws no geometry and raises nothing the page can catch,
+// so the only evidence left is the picture.
+//
+// Read from a screenshot rather than from the canvas itself, because a WebGPU
+// canvas gives nothing back to `drawImage` -- the browser composites its
+// contents but does not keep them readable. The screenshot is what a player
+// sees, which is the thing in question anyway.
+const drawn = canvas
+  ? imageStatistics(await page.locator('canvas').screenshot())
+  : null;
+
 if (SHOT) await page.screenshot({ path: SHOT });
 await browser.close();
 server.close();
@@ -210,6 +232,15 @@ const missingAssets = EXPECT_ASSETS
   ? requiredAssetKinds.filter(([, asset]) => !fetched(asset))
   : [];
 
+// Deliberately loose. A game may legitimately be dark, and this is not a
+// likeness test -- it separates a drawn frame from an empty one. The build
+// that shipped every pipeline rejected measured 5 colours at a mean of 0.09;
+// the same build working measures hundreds at a mean above 10.
+const BLANK_COLOURS = 16;
+const BLANK_MEAN = 1;
+const blank =
+  drawn !== null && (drawn.colours < BLANK_COLOURS || drawn.mean < BLANK_MEAN);
+
 console.log(`webgpu: ${webgpu ? 'yes' : 'no'}`);
 console.log(`canvas: ${canvas ? `${canvas.width}x${canvas.height}` : 'none'}`);
 console.log(`base path: ${BASE}`);
@@ -219,12 +250,29 @@ console.log(
     : `audio: ${audio.length - refused.length}/${audio.length} playing`,
 );
 if (EXPECT_ASSETS) console.log(`assets fetched: ${fetchedAssets.size}`);
+console.log(
+  drawn === null
+    ? 'drawn: no canvas to read'
+    : `drawn: ${drawn.colours} colours, mean ${drawn.mean.toFixed(2)}`,
+);
+if (blank) {
+  console.log(
+    `problem: the canvas is blank (${drawn.colours} colours, mean ${drawn.mean.toFixed(2)}) -- the engine started but drew nothing`,
+  );
+}
 for (const [kind, asset] of missingAssets) {
   console.log(`problem: no HTTP ${kind} request for assets/${asset}`);
 }
 for (const record of refused) console.log(`problem: audio ${record.settled}`);
 for (const problem of problems) console.log(`problem: ${problem}`);
-if (!webgpu || !started || problems.length > 0 || refused.length > 0 || missingAssets.length > 0) {
+if (
+  !webgpu ||
+  !started ||
+  blank ||
+  problems.length > 0 ||
+  refused.length > 0 ||
+  missingAssets.length > 0
+) {
   console.log('the page did not start the engine');
   process.exit(1);
 }
