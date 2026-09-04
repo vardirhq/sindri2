@@ -5,6 +5,104 @@
   },
   "entities": [
     {
+      "id": "backdrop",
+      "name": "backdrop",
+      "parent": null,
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          -10.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          60.0,
+          60.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.00152,
+            0.00212,
+            0.00439,
+            1.0
+          ],
+          "stroke": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "stroke_width": 0.0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "layer": -200
+        }
+      }
+    },
+    {
+      "id": "backdrop-grid",
+      "name": "backdrop-grid",
+      "parent": null,
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          -10.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          60.0,
+          60.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.shape": {
+          "kind": "grid",
+          "count": 52.0,
+          "fill": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "stroke": [
+            0.00852,
+            0.0343,
+            0.02445,
+            1.0
+          ],
+          "stroke_width": 0.0004,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "layer": -199
+        }
+      }
+    },
+    {
       "id": "camera",
       "name": "Camera",
       "transform_3d": {
@@ -30,7 +128,7 @@
           "far": 100.0,
           "near": 0.1,
           "projection": "orthographic",
-          "vertical_size": 17.0,
+          "vertical_size": 11.0,
           "fit": "shorter"
         }
       }
@@ -74,16 +172,30 @@
         "sindri.ui.button": {
           "label": "Heavier Rounds"
         },
-        "sindri.ui.image": {
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.00335,
+            0.00561,
+            0.01444,
+            1.0
+          ],
+          "stroke": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ],
+          "stroke_width": 0.01,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
           "anchor": "center",
-          "layer": 110,
-          "texture": "textures/button.png",
-          "tint": [
-            1,
-            1,
-            1,
-            1
-          ]
+          "layer": 110
         }
       }
     },
@@ -113,12 +225,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            0.72,
-            0.82,
-            0.95,
+            0.19807,
+            0.2384,
+            0.31399,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
@@ -128,7 +240,10 @@
             0.09
           ],
           "wrap": "word",
-          "line_align": "center"
+          "line_align": "center",
+          "case": "upper",
+          "letter_spacing": 0.00495,
+          "bold": false
         }
       }
     },
@@ -158,12 +273,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            1,
-            1,
-            1,
-            1
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
@@ -176,7 +291,10 @@
           "auto_size": {
             "enabled": true,
             "min": 0.028
-          }
+          },
+          "case": "as_written",
+          "letter_spacing": 0.00092,
+          "bold": false
         }
       }
     },
@@ -219,16 +337,30 @@
         "sindri.ui.button": {
           "label": "Plating"
         },
-        "sindri.ui.image": {
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.00335,
+            0.00561,
+            0.01444,
+            1.0
+          ],
+          "stroke": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ],
+          "stroke_width": 0.01,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
           "anchor": "center",
-          "layer": 110,
-          "texture": "textures/button.png",
-          "tint": [
-            1,
-            1,
-            1,
-            1
-          ]
+          "layer": 110
         }
       }
     },
@@ -258,12 +390,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            0.72,
-            0.82,
-            0.95,
+            0.19807,
+            0.2384,
+            0.31399,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
@@ -273,7 +405,10 @@
             0.09
           ],
           "wrap": "word",
-          "line_align": "center"
+          "line_align": "center",
+          "case": "upper",
+          "letter_spacing": 0.00495,
+          "bold": false
         }
       }
     },
@@ -303,12 +438,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            1,
-            1,
-            1,
-            1
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
@@ -321,7 +456,10 @@
           "auto_size": {
             "enabled": true,
             "min": 0.028
-          }
+          },
+          "case": "as_written",
+          "letter_spacing": 0.00092,
+          "bold": false
         }
       }
     },
@@ -364,16 +502,30 @@
         "sindri.ui.button": {
           "label": "Wider Field"
         },
-        "sindri.ui.image": {
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.00335,
+            0.00561,
+            0.01444,
+            1.0
+          ],
+          "stroke": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ],
+          "stroke_width": 0.01,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
           "anchor": "center",
-          "layer": 110,
-          "texture": "textures/button.png",
-          "tint": [
-            1,
-            1,
-            1,
-            1
-          ]
+          "layer": 110
         }
       }
     },
@@ -403,12 +555,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            0.72,
-            0.82,
-            0.95,
+            0.19807,
+            0.2384,
+            0.31399,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
@@ -418,7 +570,10 @@
             0.09
           ],
           "wrap": "word",
-          "line_align": "center"
+          "line_align": "center",
+          "case": "upper",
+          "letter_spacing": 0.00495,
+          "bold": false
         }
       }
     },
@@ -448,12 +603,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            1,
-            1,
-            1,
-            1
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
@@ -466,7 +621,10 @@
           "auto_size": {
             "enabled": true,
             "min": 0.028
-          }
+          },
+          "case": "as_written",
+          "letter_spacing": 0.00092,
+          "bold": false
         }
       }
     },
@@ -509,16 +667,30 @@
         "sindri.ui.button": {
           "label": "Lance Rounds"
         },
-        "sindri.ui.image": {
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.00335,
+            0.00561,
+            0.01444,
+            1.0
+          ],
+          "stroke": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ],
+          "stroke_width": 0.01,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
           "anchor": "center",
-          "layer": 110,
-          "texture": "textures/button.png",
-          "tint": [
-            1,
-            1,
-            1,
-            1
-          ]
+          "layer": 110
         }
       }
     },
@@ -548,12 +720,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            0.72,
-            0.82,
-            0.95,
+            0.19807,
+            0.2384,
+            0.31399,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
@@ -563,7 +735,10 @@
             0.09
           ],
           "wrap": "word",
-          "line_align": "center"
+          "line_align": "center",
+          "case": "upper",
+          "letter_spacing": 0.00495,
+          "bold": false
         }
       }
     },
@@ -593,12 +768,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            1,
-            1,
-            1,
-            1
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
@@ -611,7 +786,10 @@
           "auto_size": {
             "enabled": true,
             "min": 0.028
-          }
+          },
+          "case": "as_written",
+          "letter_spacing": 0.00092,
+          "bold": false
         }
       }
     },
@@ -654,16 +832,30 @@
         "sindri.ui.button": {
           "label": "Faster Cycling"
         },
-        "sindri.ui.image": {
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.00335,
+            0.00561,
+            0.01444,
+            1.0
+          ],
+          "stroke": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ],
+          "stroke_width": 0.01,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
           "anchor": "center",
-          "layer": 110,
-          "texture": "textures/button.png",
-          "tint": [
-            1,
-            1,
-            1,
-            1
-          ]
+          "layer": 110
         }
       }
     },
@@ -693,12 +885,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            0.72,
-            0.82,
-            0.95,
+            0.19807,
+            0.2384,
+            0.31399,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
@@ -708,7 +900,10 @@
             0.09
           ],
           "wrap": "word",
-          "line_align": "center"
+          "line_align": "center",
+          "case": "upper",
+          "letter_spacing": 0.00495,
+          "bold": false
         }
       }
     },
@@ -738,12 +933,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            1,
-            1,
-            1,
-            1
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
@@ -756,7 +951,10 @@
           "auto_size": {
             "enabled": true,
             "min": 0.028
-          }
+          },
+          "case": "as_written",
+          "letter_spacing": 0.00092,
+          "bold": false
         }
       }
     },
@@ -799,16 +997,30 @@
         "sindri.ui.button": {
           "label": "Trimmed Hull"
         },
-        "sindri.ui.image": {
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.00335,
+            0.00561,
+            0.01444,
+            1.0
+          ],
+          "stroke": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ],
+          "stroke_width": 0.01,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
           "anchor": "center",
-          "layer": 110,
-          "texture": "textures/button.png",
-          "tint": [
-            1,
-            1,
-            1,
-            1
-          ]
+          "layer": 110
         }
       }
     },
@@ -838,12 +1050,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            0.72,
-            0.82,
-            0.95,
+            0.19807,
+            0.2384,
+            0.31399,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
@@ -853,7 +1065,10 @@
             0.09
           ],
           "wrap": "word",
-          "line_align": "center"
+          "line_align": "center",
+          "case": "upper",
+          "letter_spacing": 0.00495,
+          "bold": false
         }
       }
     },
@@ -883,12 +1098,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            1,
-            1,
-            1,
-            1
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
@@ -901,7 +1116,10 @@
           "auto_size": {
             "enabled": true,
             "min": 0.028
-          }
+          },
+          "case": "as_written",
+          "letter_spacing": 0.00092,
+          "bold": false
         }
       }
     },
@@ -1055,10 +1273,10 @@
           "layer": 128,
           "texture": "textures/bar-back.png",
           "tint": [
-            1,
-            1,
-            1,
-            0.85
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
           ]
         }
       }
@@ -1110,7 +1328,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          -0.26,
+          -0.125,
           0.0
         ],
         "rotation": [
@@ -1130,14 +1348,14 @@
           "anchor": "top",
           "color": [
             1.0,
-            0.6,
-            0.55,
+            0.14703,
+            0.06848,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
-          "font_size": 0.04,
+          "font": "fonts/IBMPlexMono-Regular.ttf",
+          "font_size": 0.032,
           "layer": 140,
-          "line_height": 0.042,
+          "line_height": 0.034,
           "text": "WARDEN",
           "shadow": {
             "offset": [
@@ -1148,10 +1366,13 @@
               0.0,
               0.0,
               0.0,
-              0.65
+              0.75
             ],
-            "softness": 0.004
-          }
+            "softness": 0.005
+          },
+          "case": "upper",
+          "letter_spacing": 0.0048,
+          "bold": false
         }
       }
     },
@@ -1162,7 +1383,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          -0.06,
+          -0.075,
           0.0
         ],
         "rotation": [
@@ -1181,15 +1402,15 @@
         "sindri.ui.text": {
           "anchor": "top",
           "color": [
-            1,
-            1,
-            1,
-            1
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
           ],
-          "font": "fonts/Inter.ttf",
-          "font_size": 0.052,
+          "font": "fonts/IBMPlexMono-Regular.ttf",
+          "font_size": 0.075,
           "layer": 140,
-          "line_height": 0.0546,
+          "line_height": 0.079,
           "text": "{}:{.2}",
           "shadow": {
             "offset": [
@@ -1200,10 +1421,13 @@
               0.0,
               0.0,
               0.0,
-              0.65
+              0.75
             ],
-            "softness": 0.004
-          }
+            "softness": 0.005
+          },
+          "case": "upper",
+          "letter_spacing": 0.01125,
+          "bold": false
         }
       }
     },
@@ -1275,10 +1499,10 @@
           "layer": 128,
           "texture": "textures/bar-back.png",
           "tint": [
-            1,
-            1,
-            1,
-            0.7
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
           ]
         }
       }
@@ -1315,9 +1539,9 @@
           "layer": 129,
           "texture": "textures/bar.png",
           "tint": [
-            0.45,
-            0.95,
-            0.65,
+            1.0,
+            0.14703,
+            0.06848,
             1.0
           ]
         }
@@ -1351,10 +1575,10 @@
           "layer": 128,
           "texture": "textures/bar-back.png",
           "tint": [
-            1,
-            1,
-            1,
-            0.85
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
           ]
         }
       }
@@ -1385,15 +1609,15 @@
         "sindri.ui.text": {
           "anchor": "bottom_left",
           "color": [
-            1,
-            1,
-            1,
-            1
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
           ],
-          "font": "fonts/Inter.ttf",
-          "font_size": 0.036,
+          "font": "fonts/IBMPlexMono-Regular.ttf",
+          "font_size": 0.03,
           "layer": 140,
-          "line_height": 0.0378,
+          "line_height": 0.0315,
           "text": "{}/{}",
           "shadow": {
             "offset": [
@@ -1404,10 +1628,13 @@
               0.0,
               0.0,
               0.0,
-              0.65
+              0.75
             ],
-            "softness": 0.004
-          }
+            "softness": 0.005
+          },
+          "case": "upper",
+          "letter_spacing": 0.0045,
+          "bold": false
         }
       }
     },
@@ -1417,8 +1644,8 @@
       "parent": "hud",
       "transform_3d": {
         "position": [
-          0.04,
-          -0.21,
+          -0.04,
+          -0.155,
           0.0
         ],
         "rotation": [
@@ -1435,17 +1662,17 @@
       },
       "components": {
         "sindri.ui.text": {
-          "anchor": "top_left",
+          "anchor": "top_right",
           "color": [
-            0.75,
-            0.85,
-            1.0,
+            0.20156,
+            0.92158,
+            0.57758,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
-          "font_size": 0.036,
+          "font": "fonts/IBMPlexMono-Regular.ttf",
+          "font_size": 0.028,
           "layer": 140,
-          "line_height": 0.0378,
+          "line_height": 0.0294,
           "text": "Level {}",
           "shadow": {
             "offset": [
@@ -1456,10 +1683,13 @@
               0.0,
               0.0,
               0.0,
-              0.65
+              0.75
             ],
-            "softness": 0.004
-          }
+            "softness": 0.005
+          },
+          "case": "upper",
+          "letter_spacing": 0.0042,
+          "bold": false
         }
       }
     },
@@ -1469,8 +1699,8 @@
       "parent": "hud",
       "transform_3d": {
         "position": [
-          0.04,
-          -0.06,
+          -0.04,
+          -0.2,
           0.0
         ],
         "rotation": [
@@ -1487,17 +1717,17 @@
       },
       "components": {
         "sindri.ui.text": {
-          "anchor": "top_left",
+          "anchor": "top_right",
           "color": [
-            1,
-            1,
-            1,
-            1
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
           ],
-          "font": "fonts/Inter.ttf",
-          "font_size": 0.052,
+          "font": "fonts/IBMPlexMono-Regular.ttf",
+          "font_size": 0.032,
           "layer": 140,
-          "line_height": 0.0546,
+          "line_height": 0.0336,
           "text": "Score {}",
           "shadow": {
             "offset": [
@@ -1508,10 +1738,13 @@
               0.0,
               0.0,
               0.0,
-              0.65
+              0.75
             ],
-            "softness": 0.004
-          }
+            "softness": 0.005
+          },
+          "case": "upper",
+          "letter_spacing": 0.0048,
+          "bold": false
         }
       }
     },
@@ -1522,7 +1755,7 @@
       "transform_3d": {
         "position": [
           0.04,
-          -0.15,
+          -0.155,
           0.0
         ],
         "rotation": [
@@ -1541,15 +1774,15 @@
         "sindri.ui.text": {
           "anchor": "top_left",
           "color": [
-            0.75,
-            0.85,
-            1.0,
+            0.20156,
+            0.92158,
+            0.57758,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
-          "font_size": 0.036,
+          "font": "fonts/IBMPlexMono-Regular.ttf",
+          "font_size": 0.028,
           "layer": 140,
-          "line_height": 0.0378,
+          "line_height": 0.0294,
           "text": "Wave {}",
           "shadow": {
             "offset": [
@@ -1560,10 +1793,13 @@
               0.0,
               0.0,
               0.0,
-              0.65
+              0.75
             ],
-            "softness": 0.004
-          }
+            "softness": 0.005
+          },
+          "case": "upper",
+          "letter_spacing": 0.0042,
+          "bold": false
         }
       }
     },
@@ -1643,16 +1879,30 @@
         ]
       },
       "components": {
-        "sindri.ui.image": {
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.00335,
+            0.00561,
+            0.01444,
+            1.0
+          ],
+          "stroke": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ],
+          "stroke_width": 0.003,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
           "anchor": "center",
-          "layer": 100,
-          "texture": "textures/panel.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            0.97
-          ]
+          "layer": 100
         }
       }
     },
@@ -1689,16 +1939,30 @@
         "sindri.ui.button": {
           "label": "pause-quit"
         },
-        "sindri.ui.image": {
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "stroke": [
+            0.35218,
+            0.05511,
+            0.03335,
+            1.0
+          ],
+          "stroke_width": 0.02,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
           "anchor": "center",
-          "layer": 110,
-          "texture": "textures/button.png",
-          "tint": [
-            1,
-            1,
-            1,
-            1
-          ]
+          "layer": 110
         }
       }
     },
@@ -1728,16 +1992,19 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            1,
-            1,
-            1,
-            1
+            1.0,
+            0.14703,
+            0.06848,
+            1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.05,
           "layer": 140,
           "line_height": 0.0525,
-          "text": "GIVE UP"
+          "text": "GIVE UP",
+          "case": "as_written",
+          "letter_spacing": 0.001,
+          "bold": false
         }
       }
     },
@@ -1774,16 +2041,30 @@
         "sindri.ui.button": {
           "label": "pause-resume"
         },
-        "sindri.ui.image": {
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.20156,
+            0.92158,
+            0.57758,
+            1.0
+          ],
+          "stroke": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "stroke_width": 0.0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
           "anchor": "center",
-          "layer": 110,
-          "texture": "textures/button.png",
-          "tint": [
-            1,
-            1,
-            1,
-            1
-          ]
+          "layer": 110
         }
       }
     },
@@ -1813,16 +2094,19 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            1,
-            1,
-            1,
-            1
+            0.00152,
+            0.00212,
+            0.00439,
+            1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.05,
           "layer": 140,
           "line_height": 0.0525,
-          "text": "RESUME"
+          "text": "RESUME",
+          "case": "as_written",
+          "letter_spacing": 0.001,
+          "bold": false
         }
       }
     },
@@ -1852,16 +2136,19 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            1,
-            1,
-            1,
-            1
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.08,
           "layer": 140,
           "line_height": 0.084,
-          "text": "PAUSED"
+          "text": "Paused",
+          "case": "as_written",
+          "letter_spacing": 0.0016,
+          "bold": false
         }
       }
     },
@@ -1934,20 +2221,34 @@
           "script": "Player",
           "source": "scripts/player.decay"
         },
-        "sindri.sprite": {
-          "layer": 5,
-          "texture": "textures/player.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        },
         "sindri.tags": {
           "tags": [
             "player"
           ]
+        },
+        "sindri.shape": {
+          "kind": "polygon",
+          "count": 5.0,
+          "fill": [
+            0.20156,
+            0.92158,
+            0.57758,
+            0.12
+          ],
+          "stroke": [
+            0.45641,
+            1.0,
+            0.77582,
+            1.0
+          ],
+          "stroke_width": 0.1,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "layer": 5
         }
       }
     },
@@ -2056,16 +2357,30 @@
         "sindri.ui.button": {
           "label": "result-again"
         },
-        "sindri.ui.image": {
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.20156,
+            0.92158,
+            0.57758,
+            1.0
+          ],
+          "stroke": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "stroke_width": 0.0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
           "anchor": "center",
-          "layer": 110,
-          "texture": "textures/button.png",
-          "tint": [
-            1,
-            1,
-            1,
-            1
-          ]
+          "layer": 110
         }
       }
     },
@@ -2095,16 +2410,19 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            1,
-            1,
-            1,
-            1
+            0.00152,
+            0.00212,
+            0.00439,
+            1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.055,
           "layer": 140,
           "line_height": 0.05775,
-          "text": "PLAY AGAIN"
+          "text": "PLAY AGAIN",
+          "case": "as_written",
+          "letter_spacing": 0.0011,
+          "bold": false
         }
       }
     },
@@ -2134,16 +2452,19 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            0.7,
-            0.8,
-            0.95,
+            0.80695,
+            0.85499,
+            0.92158,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.042,
           "layer": 140,
           "line_height": 0.0441,
-          "text": "Best {}"
+          "text": "Best {}",
+          "case": "as_written",
+          "letter_spacing": 0.00084,
+          "bold": false
         }
       }
     },
@@ -2170,16 +2491,30 @@
         ]
       },
       "components": {
-        "sindri.ui.image": {
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.00335,
+            0.00561,
+            0.01444,
+            1.0
+          ],
+          "stroke": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ],
+          "stroke_width": 0.003,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
           "anchor": "center",
-          "layer": 100,
-          "texture": "textures/panel.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            0.97
-          ]
+          "layer": 100
         }
       }
     },
@@ -2209,16 +2544,19 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            0.7,
-            0.8,
-            0.95,
+            0.80695,
+            0.85499,
+            0.92158,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.042,
           "layer": 140,
           "line_height": 0.0441,
-          "text": "Kills {}"
+          "text": "Kills {}",
+          "case": "as_written",
+          "letter_spacing": 0.00084,
+          "bold": false
         }
       }
     },
@@ -2248,16 +2586,19 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            1,
-            1,
-            1,
-            1
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.058,
           "layer": 140,
           "line_height": 0.0609,
-          "text": "Score {}"
+          "text": "Score {}",
+          "case": "as_written",
+          "letter_spacing": 0.00116,
+          "bold": false
         }
       }
     },
@@ -2287,16 +2628,19 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            0.7,
-            0.8,
-            0.95,
+            0.80695,
+            0.85499,
+            0.92158,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.042,
           "layer": 140,
           "line_height": 0.0441,
-          "text": "Survived {}:{.2}"
+          "text": "Survived {}:{.2}",
+          "case": "as_written",
+          "letter_spacing": 0.00084,
+          "bold": false
         }
       }
     },
@@ -2326,16 +2670,19 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            1,
-            1,
-            1,
-            1
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.085,
           "layer": 140,
           "line_height": 0.08925,
-          "text": "RUN OVER"
+          "text": "Run over",
+          "case": "as_written",
+          "letter_spacing": 0.0017,
+          "bold": false
         }
       }
     },
@@ -2394,16 +2741,19 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            0.7,
-            0.8,
-            0.95,
+            0.80695,
+            0.85499,
+            0.92158,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
-          "text": "Best {}"
+          "text": "Best {}",
+          "case": "upper",
+          "letter_spacing": 0.0069,
+          "bold": false
         }
       }
     },
@@ -2430,16 +2780,30 @@
         ]
       },
       "components": {
-        "sindri.ui.image": {
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.00335,
+            0.00561,
+            0.01444,
+            1.0
+          ],
+          "stroke": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ],
+          "stroke_width": 0.003,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
           "anchor": "center",
-          "layer": 100,
-          "texture": "textures/panel.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            0.97
-          ]
+          "layer": 100
         }
       }
     },
@@ -2469,12 +2833,12 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            0.7,
-            0.8,
-            0.95,
+            0.20156,
+            0.92158,
+            0.57758,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.03,
           "layer": 140,
           "line_height": 0.0315,
@@ -2484,18 +2848,34 @@
             0.16
           ],
           "wrap": "word",
-          "line_align": "center"
+          "line_align": "center",
+          "case": "upper",
+          "letter_spacing": 0.0045,
+          "shadow": {
+            "offset": [
+              0.0,
+              -0.004
+            ],
+            "color": [
+              0.0,
+              0.0,
+              0.0,
+              0.75
+            ],
+            "softness": 0.005
+          },
+          "bold": false
         }
       }
     },
     {
       "id": "title-name",
-      "name": "TitleName",
+      "name": "Logo",
       "parent": "title",
       "transform_3d": {
         "position": [
           0.0,
-          0.46,
+          0.52,
           0.0
         ],
         "rotation": [
@@ -2505,39 +2885,22 @@
           1.0
         ],
         "scale": [
-          1.0,
-          1.0,
+          0.86,
+          0.43,
           1.0
         ]
       },
       "components": {
-        "sindri.ui.text": {
+        "sindri.ui.image": {
+          "texture": "textures/logo.png",
           "anchor": "center",
-          "color": [
-            1,
-            1,
-            1,
-            1
+          "tint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
           ],
-          "font": "fonts/Inter.ttf",
-          "font_size": 0.095,
-          "layer": 140,
-          "line_height": 0.09975,
-          "text": "LAST STAND",
-          "letter_spacing": 0.004,
-          "shadow": {
-            "offset": [
-              0.0,
-              -0.008
-            ],
-            "color": [
-              0.0,
-              0.0,
-              0.0,
-              0.55
-            ],
-            "softness": 0.006
-          }
+          "layer": 140
         }
       }
     },
@@ -2568,11 +2931,11 @@
           "anchor": "center",
           "color": [
             1.0,
-            0.6,
-            0.5,
+            0.14703,
+            0.06848,
             1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.034,
           "layer": 140,
           "line_height": 0.0357,
@@ -2582,7 +2945,10 @@
             0.16
           ],
           "wrap": "word",
-          "line_align": "center"
+          "line_align": "center",
+          "case": "upper",
+          "letter_spacing": 0.0051,
+          "bold": false
         }
       },
       "disabled": true
@@ -2620,16 +2986,30 @@
         "sindri.ui.button": {
           "label": "title-start"
         },
-        "sindri.ui.image": {
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.20156,
+            0.92158,
+            0.57758,
+            1.0
+          ],
+          "stroke": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "stroke_width": 0.0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
           "anchor": "center",
-          "layer": 110,
-          "texture": "textures/button.png",
-          "tint": [
-            1,
-            1,
-            1,
-            1
-          ]
+          "layer": 110
         }
       }
     },
@@ -2659,16 +3039,19 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            1,
-            1,
-            1,
-            1
+            0.00152,
+            0.00212,
+            0.00439,
+            1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.06,
           "layer": 140,
           "line_height": 0.063,
-          "text": "START"
+          "text": "START",
+          "case": "as_written",
+          "letter_spacing": 0.0012,
+          "bold": false
         }
       }
     },
@@ -2746,16 +3129,30 @@
         ]
       },
       "components": {
-        "sindri.ui.image": {
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.00335,
+            0.00561,
+            0.01444,
+            1.0
+          ],
+          "stroke": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ],
+          "stroke_width": 0.003,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
           "anchor": "center",
-          "layer": 100,
-          "texture": "textures/panel.png",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            0.97
-          ]
+          "layer": 100
         }
       }
     },
@@ -2785,16 +3182,19 @@
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            1,
-            1,
-            1,
-            1
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
           ],
-          "font": "fonts/Inter.ttf",
+          "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.072,
           "layer": 140,
           "line_height": 0.0756,
-          "text": "CHOOSE ONE"
+          "text": "Choose a module",
+          "case": "as_written",
+          "letter_spacing": 0.00144,
+          "bold": false
         }
       }
     }

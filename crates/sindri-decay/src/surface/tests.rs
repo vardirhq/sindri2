@@ -182,6 +182,23 @@ fn world() -> (World, sindri_core::EntityId) {
         components: [
             (names::SPRITE_COMPONENT.to_owned(), image()),
             (names::UI_IMAGE_COMPONENT.to_owned(), image()),
+            (
+                names::SHAPE_COMPONENT.to_owned(),
+                serde_json::json!({
+                    "kind": "polygon",
+                    "count": 6.0,
+                    "fill": [0.0, 0.0, 0.0, 0.0],
+                    "stroke": [1.0, 1.0, 1.0, 1.0],
+                    "stroke_width": 0.05,
+                    "corner_radius": 0.0,
+                    "dashes": 0.0,
+                    "dash_duty": 0.5,
+                    "sweep_start": 0.0,
+                    "sweep_turns": 1.0,
+                    "blend": "over",
+                    "layer": 0
+                }),
+            ),
         ]
         .into_iter()
         .collect(),

@@ -76,12 +76,28 @@ interprets, and `WorldHost` is the only place that gives them a meaning.
 | `this.sprite.layer` | `f32` | yes | yes |
 | `this.ui_image.tint.{r,g,b,a}` | `f32` | yes | yes |
 | `this.ui_image.layer` | `f32` | yes | yes |
+| `this.shape.fill.{r,g,b,a}` | `f32` | yes | yes |
+| `this.shape.stroke.{r,g,b,a}` | `f32` | yes | yes |
+| `this.shape.stroke_width` | `f32` | yes | yes |
+| `this.shape.sweep_start` | `f32` | yes | yes |
+| `this.shape.sweep_turns` | `f32` | yes | yes |
+| `this.shape.dashes` | `f32` | yes | yes |
+| `this.shape.layer` | `f32` | yes | yes |
 
 `sprite` is the thing in the world and `ui_image` is the thing on the viewport:
 two components, so two paths. A script says which it means rather than writing
 a tint that lands wherever the entity happened to be drawn — and an entity is
 only ever one of the two, so on any given entity exactly one of these paths has
 anything behind it.
+
+`shape` is the world-space drawn shape, and it carries more than a tint because
+there is more to drive. A sprite has one colour; a shape has a fill and a
+stroke, and they animate separately — an enemy that flashes its outline without
+lighting up its interior is one write. `sweep_turns` is the reason the group is
+worth having at all: a cooldown ring, a charge meter and a boss's health arc are
+each a single float the script already holds, where drawing the same thing from
+a sprite would need a frame of art per step. `stroke_width` is how something
+pulses without changing size, and `dashes` is how a marker reads as scanning.
 
 Either path reaches into the entity's stored payload — `sindri.sprite` or
 `sindri.ui.image` — rather than through the typed view, because a component is a
@@ -114,6 +130,13 @@ table above lists, reaching the same numbers.
 | `this.entity.sprite.layer` | `f32` | yes | yes |
 | `this.entity.ui_image.tint.{r,g,b,a}` | `f32` | yes | yes |
 | `this.entity.ui_image.layer` | `f32` | yes | yes |
+| `this.entity.shape.fill.{r,g,b,a}` | `f32` | yes | yes |
+| `this.entity.shape.stroke.{r,g,b,a}` | `f32` | yes | yes |
+| `this.entity.shape.stroke_width` | `f32` | yes | yes |
+| `this.entity.shape.sweep_start` | `f32` | yes | yes |
+| `this.entity.shape.sweep_turns` | `f32` | yes | yes |
+| `this.entity.shape.dashes` | `f32` | yes | yes |
+| `this.entity.shape.layer` | `f32` | yes | yes |
 
 | Call | Returns |
 | --- | --- |

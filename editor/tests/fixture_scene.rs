@@ -324,7 +324,9 @@ fn the_fixtures_animation_draws_a_different_frame_as_time_passes() {
             .iter()
             .filter_map(|pass| match &pass.command {
                 FrameCommand::SpriteBatch { instances, .. } => Some(instances),
-                FrameCommand::TexturedCube { .. } | FrameCommand::Text { .. } => None,
+                FrameCommand::TexturedCube { .. }
+                | FrameCommand::Text { .. }
+                | FrameCommand::Shapes { .. } => None,
             })
             .flatten()
             .map(|instance: &SpriteInstance| instance.uv_rect())

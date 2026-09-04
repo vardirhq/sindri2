@@ -32,16 +32,6 @@
             "boss"
           ]
         },
-        "sindri.sprite": {
-          "texture": "textures/warden.png",
-          "layer": 3,
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ]
-        },
         "sindri.physics2d.rigid_body": {
           "kind": "dynamic",
           "pose": {
@@ -111,6 +101,30 @@
             "shot": "prefabs/enemy-bullet.prefab.json",
             "minion": "prefabs/drifter.prefab.json"
           }
+        },
+        "sindri.shape": {
+          "kind": "polygon",
+          "count": 6.0,
+          "fill": [
+            1.0,
+            0.14703,
+            0.06848,
+            0.08
+          ],
+          "stroke": [
+            1.0,
+            0.14703,
+            0.06848,
+            1.0
+          ],
+          "stroke_width": 0.06,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "layer": 3
         }
       }
     }

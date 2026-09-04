@@ -48,6 +48,20 @@ wgpu = "30"
 winit = "0.30.13"
 eframe = { version = "0.36.1", default-features = false, features = ["default_fonts", "persistence", "wayland", "wgpu", "x11"] }
 fontdb = { version = "0.23", default-features = false, features = ["std"] }
+# Not used by anything here, and held back on purpose.
+#
+# `tinyvec` arrives underneath glyphon (cosmic-text -> fontdb -> tinyvec), and
+# 1.13.0 does not compile: it calls `vec!` in a module that imports
+# `alloc::vec` as a module rather than the macro, so the build fails inside the
+# crate itself. This workspace does not commit a lockfile — see the note beside
+# `wildcards` in deny.toml — so every CI run resolves fresh and picked the
+# broken release the day it was published, on this branch and on main alike.
+#
+# `~1.12` takes patch releases and refuses the minor, which is the narrowest
+# thing that holds. Drop this the moment a fixed 1.13 exists; the only reason a
+# crate nothing calls is listed at all is that a version requirement has to be
+# attached to a real dependency to reach the resolver.
+tinyvec = "~1.12"
 glyphon = "0.12"
 js-sys = "0.3"
 sha2 = "0.11"

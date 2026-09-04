@@ -105,6 +105,16 @@ const KNOWN: &[Known] = &[
         icon: icons::UI_ELEMENT,
     },
     Known {
+        type_name: "sindri.shape",
+        family: Family::Rendering,
+        icon: icons::UI_ELEMENT,
+    },
+    Known {
+        type_name: "sindri.ui.shape",
+        family: Family::Ui,
+        icon: icons::UI_ELEMENT,
+    },
+    Known {
         type_name: "sindri.ui.text",
         family: Family::Ui,
         icon: icons::TEXT,

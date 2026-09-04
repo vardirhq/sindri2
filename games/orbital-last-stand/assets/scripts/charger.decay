@@ -52,8 +52,8 @@ script Charger {
             this.timer -= dt;
             // Brightening while it winds up, so the tell is visible rather than
             // something the player is expected to have memorised.
-            this.sprite.tint.r = 1.0;
-            this.sprite.tint.g = 0.35 + this.timer;
+            this.shape.stroke.r = 1.0;
+            this.shape.stroke.g = 0.35 + this.timer;
             if this.timer <= 0.0 {
                 this.phase = 2.0;
                 this.timer = 0.55;
@@ -63,7 +63,7 @@ script Charger {
                 }
             }
         } else {
-            this.sprite.tint.g = 1.0;
+            this.shape.stroke.g = 1.0;
             Physics.set_velocity(this.entity, this.dash_x * this.dash_speed,
                                  this.dash_y * this.dash_speed);
             this.timer -= dt;

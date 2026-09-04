@@ -18,9 +18,9 @@ use sindri_assets::{AssetBytes, AssetDecoder, FontAssetDecoder, TextureAssetDeco
 use sindri_core::{AssetId, SpriteSheetDocument, sheet_id_for};
 use sindri_gpu::{GpuContext, GpuRequestOptions};
 use sindri_render::{
-    DepthTarget, FrameRenderers, FrameTarget, GlyphRenderer, OffscreenTarget, SpriteBatchRenderer,
-    TextRenderer, Texture2D, TextureRegistry, TexturedCubeRenderer, Viewport,
-    encode_prepared_frame,
+    Bloom, BloomSettings, DepthTarget, FrameRenderers, FrameTarget, GlyphRenderer, Lighting,
+    OffscreenTarget, ShapeRenderer, SpriteBatchRenderer, TextRenderer, Texture2D, TextureRegistry,
+    TexturedCubeRenderer, Viewport, encode_lit_frame,
 };
 use sindri_scene::{CameraView, SceneRuntime, TextureBindings, UiCanvas, WorldProjection};
 
@@ -37,6 +37,13 @@ fn shot_for(name: &str) -> Shot {
         // A run in progress: enemies out, bullets flying, the HUD live.
         "playing" => Shot {
             seconds: 12.0,
+            click: Some("TitleStart"),
+        },
+        // Mid-fight, before the first upgrade interrupts it. This is the shot
+        // that shows the cast, which "playing" at twelve seconds does not:
+        // by then the chooser is up and covering the field.
+        "combat" => Shot {
+            seconds: 5.0,
             click: Some("TitleStart"),
         },
         // The title screen, which is what a player sees first and what every
@@ -111,6 +118,7 @@ async fn capture(
     let mut sprites = SpriteBatchRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
     let mut text = TextRenderer::new();
     let mut glyphs = GlyphRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
+    let mut shapes = ShapeRenderer::new(&gpu.device, OffscreenTarget::FORMAT);
     let (textures, bindings) = bind(&run, &gpu.device, &gpu.queue, &mut text)?;
 
     let shot = shot_for(what);
@@ -136,17 +144,23 @@ async fn capture(
             .with_canvas(canvas),
     )?;
 
+    // Through the bloom chain, because the game is neon on black and unlit
+    // neon is just a coloured line. The capture is meant to show what the game
+    // looks like, so it draws it the way the game is drawn.
+    let mut bloom = Bloom::new(&gpu.device, OffscreenTarget::FORMAT);
+    bloom.resize(&gpu.device, width, height);
     let mut encoder = gpu
         .device
         .create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Orbital capture encoder"),
         });
-    let stats = encode_prepared_frame(
+    let stats = encode_lit_frame(
         FrameRenderers {
             cube: &mut cubes,
             sprites: &mut sprites,
             text: &mut text,
             glyphs: &mut glyphs,
+            shapes: &mut shapes,
             textures: &textures,
         },
         &gpu.device,
@@ -157,6 +171,10 @@ async fn capture(
             depth: &depth,
         },
         &prepared,
+        Lighting {
+            bloom: &mut bloom,
+            settings: BloomSettings::default(),
+        },
     )?;
     let readback = target.copy_to_buffer(&gpu.device, &mut encoder)?;
     gpu.queue.submit([encoder.finish()]);
