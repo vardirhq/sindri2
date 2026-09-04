@@ -16,6 +16,9 @@ script Arc {
     }
 
     fn update(dt: f32) {
+        if !World.exists(this.entity) {
+            return;
+        }
         if Game.get("run_state", 0.0) != 1.0 {
             Physics.set_velocity(this.entity, 0.0, 0.0);
             return;
@@ -26,6 +29,9 @@ script Arc {
             return;
         }
         for hit in Physics.sensor_entered() {
+            if !World.exists(this.entity) {
+                return;
+            }
             this.spent += 1.0;
             Effects.burst(this.entity);
             if this.spent >= this.jumps {
