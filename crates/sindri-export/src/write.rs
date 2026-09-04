@@ -7,7 +7,7 @@ use sindri_assets::{AssetManifest, ContentHash, MANIFEST_FILE_NAME};
 use sindri_core::AssetId;
 
 use crate::gather::ProjectExport;
-use crate::{HOST_DIRECTORY, page_for};
+use crate::{HOST_DIRECTORY, HOST_MODULE, page_for_host};
 
 /// What an export produced.
 #[derive(Debug)]
@@ -27,6 +27,20 @@ impl ProjectExport {
     /// the page rather than guessed at run time, because a page that guessed
     /// would be a page that works locally and 404s once it is deployed.
     pub fn write(&self, root: &Path, base_path: &str) -> Result<WrittenExport, ExportError> {
+        self.write_for_build(root, base_path, "")
+    }
+
+    /// The same export, stamped with the build it came from.
+    ///
+    /// Separate from [`Self::write`] so the common case stays two arguments and
+    /// so an export with no id is written by a call that says so, rather than by
+    /// remembering to pass an empty string.
+    pub fn write_for_build(
+        &self,
+        root: &Path,
+        base_path: &str,
+        build: &str,
+    ) -> Result<WrittenExport, ExportError> {
         let content_root = self.content_hash();
         // Cleared first, because a hashed directory changes name with every
         // change and exporting twice would otherwise leave the old build
@@ -69,7 +83,7 @@ impl ProjectExport {
         std::fs::write(&manifest_path, &document)
             .map_err(|error| ExportError::unwritable(&manifest_path, &error))?;
 
-        let page = page_for(&self.name, base_path);
+        let page = page_for_host(&self.name, base_path, HOST_MODULE, build);
         let page_path = root.join("index.html");
         std::fs::write(&page_path, page)
             .map_err(|error| ExportError::unwritable(&page_path, &error))?;

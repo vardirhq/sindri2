@@ -43,8 +43,13 @@ jobs:
           for project in "game:gather" "games/orbital-last-stand:orbital-last-stand"; do
             src="${project%%:*}"
             route="${project##*:}"
+            # The commit is the build id: it versions the host's URL, so a
+            # returning device cannot run a cached host against fresh assets,
+            # and it is printed in the corner of the page so a fault report can
+            # name the build it came from.
             cargo run --quiet --package sindri-export --bin sindri-export -- \
-              "$src" "target/pages/examples/$route" --base "/sindri2/examples/$route/"
+              "$src" "target/pages/examples/$route" --base "/sindri2/examples/$route/" \
+              --build-id "${GITHUB_SHA:0:7}"
             # One host serves every project: it reads the manifest rather than
             # carrying a list of one game's assets.
             mkdir -p "target/pages/examples/$route/pkg"

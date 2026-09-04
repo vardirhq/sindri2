@@ -17,19 +17,22 @@ use sindri_export::ProjectExport;
 fn main() -> ExitCode {
     let mut args = std::env::args().skip(1);
     let Some(project) = args.next().map(PathBuf::from) else {
-        eprintln!("usage: sindri-export <project> [out] [--base /path/]");
+        eprintln!("usage: sindri-export <project> [out] [--base /path/] [--build-id <id>]");
         return ExitCode::FAILURE;
     };
     let mut out = PathBuf::from("dist");
     let mut base = "/".to_owned();
+    let mut build = String::new();
     let mut rest = args.collect::<Vec<_>>();
-    if let Some(at) = rest.iter().position(|value| value == "--base") {
-        if at + 1 >= rest.len() {
-            eprintln!("--base needs a path");
-            return ExitCode::FAILURE;
+    for (flag, target) in [("--base", &mut base), ("--build-id", &mut build)] {
+        if let Some(at) = rest.iter().position(|value| value == flag) {
+            if at + 1 >= rest.len() {
+                eprintln!("{flag} needs a value");
+                return ExitCode::FAILURE;
+            }
+            *target = rest.remove(at + 1);
+            rest.remove(at);
         }
-        base = rest.remove(at + 1);
-        rest.remove(at);
     }
     if let Some(first) = rest.first() {
         out = PathBuf::from(first);
@@ -42,7 +45,7 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    match gathered.write(&out, &base) {
+    match gathered.write_for_build(&out, &base, &build) {
         Ok(written) => {
             println!(
                 "{} → {}: {} asset(s), {} bytes, under assets/{}",
