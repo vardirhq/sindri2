@@ -24,8 +24,9 @@ pub use clock::SystemClock;
 pub use clock::{Clock, FrameTimer, ManualClock};
 pub use host::{EngineHost, FrameContext, FramePhase, FrameTime, Game, HostError};
 pub use input::{
-    ActionId, ActionKind, ActionMap, ActionMapError, ActionState, Actions, Binding, InputEvent,
-    InputState, Key, MouseButton, Source,
+    ACTIONS_FORMAT_VERSION, ACTIONS_SUFFIX, ActionId, ActionKind, ActionMap, ActionMapError,
+    ActionState, Actions, ActionsDocumentError, Binding, InputEvent, InputState, Key, MouseButton,
+    Source,
 };
 #[cfg(target_arch = "wasm32")]
 pub use saves::BrowserSaves;
