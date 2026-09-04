@@ -20,6 +20,11 @@ pub enum AssetKind {
     /// "File", because it is the thing a slicer edits.
     Sheet,
     Mesh,
+    /// A fragment of a scene that scripts spawn. Its own kind rather than
+    /// "File", because it is a thing the engine loads and the browser can say
+    /// so: listed as a plain file, the acceptance project's every enemy looked
+    /// like an unrecognised blob sitting in a folder.
+    Prefab,
     Script,
     Font,
     Audio,
@@ -36,6 +41,7 @@ impl AssetKind {
             Self::Sprite => "Sprite",
             Self::Sheet => "Sheet",
             Self::Mesh => "Mesh",
+            Self::Prefab => "Prefab",
             Self::Script => "Script",
             Self::Font => "Font",
             Self::Audio => "Audio",
@@ -64,6 +70,9 @@ impl AssetKind {
         }
         if lower.ends_with(SHEET_SUFFIX) {
             return Self::Sheet;
+        }
+        if lower.ends_with(sindri_core::PREFAB_SUFFIX) {
+            return Self::Prefab;
         }
         match lower.rsplit_once('.').map(|(_, extension)| extension) {
             Some("png" | "jpg" | "jpeg" | "webp" | "bmp" | "ktx2" | "dds") => Self::Texture,

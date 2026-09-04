@@ -113,6 +113,7 @@ pub(super) const fn asset_icon(kind: AssetKind) -> MaterialIcon {
         // image, and neither is the image.
         AssetKind::Sprite | AssetKind::Sheet => icons::TILEMAP,
         AssetKind::Mesh => icons::MESH,
+        AssetKind::Prefab => icons::PREFAB,
         AssetKind::Script => icons::SCRIPT,
         AssetKind::Audio => icons::AUDIO,
         AssetKind::Other => icons::FILE,

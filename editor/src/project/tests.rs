@@ -9,6 +9,7 @@ fn project() -> tempfile::TempDir {
     let root = directory.path();
     fs::write(root.join("demo.scene.json"), "{}").unwrap();
     fs::write(root.join("settings.json"), "{}").unwrap();
+    fs::write(root.join("drifter.prefab.json"), "{}").unwrap();
     fs::write(root.join(".hidden"), "").unwrap();
     fs::create_dir(root.join("textures")).unwrap();
     fs::write(root.join("textures/badge.png"), "").unwrap();
@@ -36,6 +37,7 @@ fn the_browser_reads_the_directory_the_scene_lives_in() {
         names(&tree.matching("")),
         [
             "demo.scene.json",
+            "drifter.prefab.json",
             "fonts",
             "Inter.ttf",
             "scripts",
@@ -88,6 +90,10 @@ fn a_row_knows_what_kind_of_file_it_is() {
     };
 
     assert_eq!(kind("demo.scene.json"), Some(AssetKind::Scene));
+    // Its own kind, not "File". Listed as a plain file, a project's prefabs
+    // look like blobs the editor does not understand -- which is how the
+    // acceptance project's every enemy appeared.
+    assert_eq!(kind("drifter.prefab.json"), Some(AssetKind::Prefab));
     assert_eq!(
         kind("settings.json"),
         Some(AssetKind::Other),
