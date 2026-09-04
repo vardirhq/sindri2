@@ -886,11 +886,24 @@ error — the mouse leaving mid-frame is an ordinary thing, not a mistake in a
 script — so a script that cares must ask `inside` *before* it believes a
 position.
 
-**Coordinates are logical pixels with the origin at the top left of the
+**Coordinates are viewport pixels with the origin at the top left of the
 viewport**, which is the same thing on every host: the window on native and in
 the browser, and the Game view's own rectangle in the editor. A script reading
 `Pointer.x` gets the same meaning in editor Play as in the real build, which is
 what makes playtesting in the editor worth anything.
+
+Viewport pixels are *physical* ones — the same pixels the surface is configured
+with and the same ones a screen element's hit rect is worked out in. This page
+used to say logical, and it was wrong in a way that only showed up off the
+desktop: on a device reporting three physical pixels per logical one, a position
+converted to logical is a third of the way to where the person actually pressed,
+so everything below the top third of a phone screen was unreachable. A scale
+factor of 1.0 makes the two spellings identical, which is why a desktop, and
+every test written on one, could not tell them apart.
+
+The practical consequence for a game: `x` and `y` are bigger numbers on a dense
+display than on a coarse one, for the same physical spot. A game comparing them
+against authored constants wants `overlay_x` and `overlay_y` instead.
 
 **`overlay_x` and `overlay_y` are the same point in the overlay's units** — two
 tall, centred on the origin, running out to the aspect ratio either side. They
