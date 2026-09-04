@@ -19,6 +19,9 @@ script Director {
     // and lets the roster widen over time. Bosses are their own rhythm.
     @export let boss_at: f32 = 180.0;
     @export let arena: f32 = 7.5;
+    // Kept only while the authored scene still carries this legacy property.
+    // Continuous pressure does not read it.
+    @export let wave_gap: f32 = 6.0;
 
     var title: Entity = null;
     var hud: Entity = null;
