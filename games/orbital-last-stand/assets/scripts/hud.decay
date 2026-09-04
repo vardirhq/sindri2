@@ -27,6 +27,14 @@ script Hud {
         this.cores_bar = World.find("Cores");
         this.boss_panel = World.find("BossPanel");
         this.boss_bar = World.find("BossBar");
+
+        // The old scene still authors this label. Last Stand no longer has
+        // numbered waves, so keep it out of the runtime HUD until the scene is
+        // next rewritten by the editor.
+        let wave = World.find("Wave");
+        if wave != null {
+            World.set_active(wave, false);
+        }
     }
 
     fn update(dt: f32) {
