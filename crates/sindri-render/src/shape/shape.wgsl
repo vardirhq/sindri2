@@ -123,19 +123,27 @@ fn grid_distance(p: vec2<f32>, cells: f32) -> f32 {
     return min(to_line.x, to_line.y) / n;
 }
 
+/// Where a point sits around the shape, from zero at the top and increasing
+/// clockwise, so an arc authored as "a quarter turn from the top" is what
+/// appears.
+fn outline_turn(p: vec2<f32>) -> f32 {
+    return fract((atan2(p.x, p.y) / TAU) + 1.0);
+}
+
 /// How much of the outline survives its sweep and its dashes, at this point.
 ///
 /// Both are angular, so both are answered from where the point sits around the
 /// shape. A shape with neither returns 1 and costs two comparisons.
-fn outline_pattern(p: vec2<f32>, pattern: vec4<f32>) -> f32 {
+///
+/// `t` and `turn_width` are measured by the caller rather than here, because
+/// this is reached under a branch and a derivative may only be taken in uniform
+/// control flow -- see the note in `fs_main`.
+fn outline_pattern(t: f32, turn_width: f32, pattern: vec4<f32>) -> f32 {
     let dashes = pattern.x;
     let turns = pattern.w;
     if dashes <= 0.0 && turns >= 1.0 {
         return 1.0;
     }
-    // Zero at the top and increasing clockwise, so an arc authored as "a
-    // quarter turn from the top" is what appears.
-    let t = fract((atan2(p.x, p.y) / TAU) + 1.0);
     var alive = 1.0;
     if turns < 1.0 {
         let travelled = fract(t - pattern.z + 1.0);
@@ -144,13 +152,15 @@ fn outline_pattern(p: vec2<f32>, pattern: vec4<f32>) -> f32 {
         }
     }
     if dashes > 0.0 {
-        let phase = t * dashes;
+        // One dash is `dashes` turns wide, so the phase advances that much
+        // faster than the turn it is measured from.
+        //
         // Clamped because `fract` turns over once per dash and its derivative
         // spikes at the seam; unclamped, one dash boundary per revolution
         // smears across the whole gap.
-        let soft = min(fwidth(phase), 0.25);
+        let soft = min(turn_width * dashes, 0.25);
         let duty = clamp(pattern.y, 0.0, 1.0);
-        alive = alive * smoothstep(duty + soft, duty - soft, fract(phase));
+        alive = alive * smoothstep(duty + soft, duty - soft, fract(t * dashes));
     }
     return alive;
 }
@@ -177,7 +187,18 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
     // The edge's own width on screen, so the antialiasing is a pixel wide
     // wherever the quad landed and however far the camera has zoomed.
+    //
+    // This and the turn below are the shader's two derivatives, and both are
+    // taken here, at the top of the function, because WGSL allows a derivative
+    // only in uniform control flow: a quad's fragments have to reach it
+    // together for the difference between them to mean anything. Taken inside
+    // the stroke branch instead -- which is where the dash pattern wants it --
+    // it is a validation error that a browser enforces and native does not, so
+    // the pipeline compiled here and was rejected there, leaving every shape
+    // undrawn.
     let soft = max(fwidth(distance), 1e-6);
+    let turn = outline_turn(p);
+    let turn_width = fwidth(turn);
 
     var color = vec4<f32>(0.0, 0.0, 0.0, 0.0);
     if closed {
@@ -192,7 +213,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         let half = width * 0.5;
         var edge = 1.0 - smoothstep(half - soft, half + soft, abs(distance));
         if closed {
-            edge = edge * outline_pattern(p, in.pattern);
+            edge = edge * outline_pattern(turn, turn_width, in.pattern);
         }
         let alpha = in.stroke.a * edge;
         // Over the fill rather than added to it, so a translucent stroke on a

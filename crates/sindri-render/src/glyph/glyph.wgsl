@@ -59,18 +59,25 @@ fn vs_main(input: VertexInput) -> VertexOutput {
 @fragment
 fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
     let sampled = textureSample(atlas_texture, atlas_sampler, input.uv);
-    // A colour glyph is a picture with no edge to find, so it is drawn as it is
-    // and the face colour only scales it.
-    if (input.shape.z > 0.5) {
-        return sampled * input.face;
-    }
-
     let distance = sampled.a;
     // How much of the field one pixel of the screen covers right now. This is
     // the whole reason the atlas can be one bake: the edge is found at whatever
     // size the glyph is actually being drawn, rather than blurred at the size it
     // was rasterised. Floored so a glyph seen edge-on cannot divide by nothing.
+    //
+    // Taken here, before the colour-glyph branch, because WGSL allows a
+    // derivative only in uniform control flow: neighbouring fragments in a quad
+    // have to reach it together for the difference between them to mean
+    // anything. Inside the branch it is a validation error, which a browser
+    // enforces and native does not -- so the pipeline compiled here and was
+    // rejected there, leaving every glyph undrawn.
     let pixel = max(fwidth(distance), 0.00001);
+
+    // A colour glyph is a picture with no edge to find, so it is drawn as it is
+    // and the face colour only scales it.
+    if (input.shape.z > 0.5) {
+        return sampled * input.face;
+    }
     let soften = pixel + input.shape.y;
 
     // Two thresholds. The face begins at the glyph's own edge; the outline
