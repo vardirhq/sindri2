@@ -206,7 +206,7 @@ impl Run {
         // At the end rather than the beginning, because an edge is delivered by
         // the step that follows the event: clearing at the top of a step would
         // wipe the press that had just been reported and never happened.
-        self.input.begin_frame();
+        self.input.begin_frame(step);
         notes
     }
 

@@ -298,7 +298,7 @@ fn a_drag_is_four_lines_of_gameplay() {
     advance(&mut scripts, &mut world, &sources, &input);
     assert!(position(&world, entity)[0].abs() < 1.0e-5, "no drag yet");
 
-    input.begin_frame();
+    input.begin_frame(std::time::Duration::from_millis(16));
     input.apply(InputEvent::TouchMoved {
         id: 1,
         x: 130.0,

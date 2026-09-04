@@ -265,7 +265,7 @@ impl<G: Game, A: AudioBackend> EngineHost<G, A> {
                 steps.interpolation_alpha,
             )?;
             if step == 0 {
-                self.input.begin_frame();
+                self.input.begin_frame(steps.fixed_delta);
             }
         }
         self.call(

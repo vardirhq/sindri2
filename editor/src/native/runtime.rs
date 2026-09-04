@@ -245,13 +245,13 @@ impl EditorApp {
                 // An edge belongs to one step. Spending it here rather than per
                 // rendered frame is what keeps a 30 Hz display from firing a
                 // button twice and a 144 Hz one from losing the click entirely.
-                self.input.spend();
+                self.input.spend(steps.fixed_delta);
             }
         }
         if steps.fixed_steps == 0 && self.lifecycle.state() != EngineState::Running {
             // Nothing is going to consume them, and a scene at rest should not
             // accumulate a frame's worth of releases for ever.
-            self.input.spend();
+            self.input.spend(std::time::Duration::from_secs_f32(delta));
         }
     }
 
@@ -414,7 +414,7 @@ impl EditorApp {
         // that a paused frame never delivered.
         let _ = context;
         self.fixed_step(&components, self.clock.fixed_delta(), view_size);
-        self.input.spend();
+        self.input.spend(self.clock.fixed_delta());
     }
 
     /// Ends a play session, putting back what playing changed.
