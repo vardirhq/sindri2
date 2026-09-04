@@ -59,10 +59,14 @@ run with ten bosses. We have 4 enemies, 6 modules, one boss, a 180s run.
 **The agreed plan**, in order. Mechanisms first, then content; visual polish
 interleaved so nothing ships looking placeholder:
 
-1. **Weapon flags.** `pierce`, `shots` and `crit` are already stats. The ones
+1. **Weapon flags — complete.** `pierce`, `shots` and `crit` are wired into
+   firing. The ones
    that make a build *feel* different are `missile` (seeking), `arc` (chain),
    `nova` (on-death burst), `mines`, `beam`. Reference spells these as `flags:`
-   entries in `module-catalog.js`.
+   entries in `module-catalog.js`. All five now have distinct authored Decay
+   behaviour and visible prefabs; the first five cards exercise them. The
+   general engine gaps this exposed became `World.property_number` and
+   `World.has_tag`, not weapon-specific host calls.
 2. **Enemy roster** toward fifteen kinds. See the rule below about tells.
 3. **Boss cadence.** 600-second run, a boss every 60 seconds, several distinct
    bosses. Currently `director.decay` has `boss_at: 180.0` and one warden.

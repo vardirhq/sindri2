@@ -135,7 +135,7 @@
     },
     {
       "id": "card-dmg",
-      "name": "Heavier Rounds",
+      "name": "Guidance Kernel",
       "parent": "upgrade-row",
       "transform_3d": {
         "position": [
@@ -161,6 +161,7 @@
             "add": 1.0,
             "add_key": "damage_add",
             "factor": 1.0,
+            "flag_key": "missile",
             "mul_key": "damage_mul"
           },
           "script": "Module",
@@ -172,7 +173,7 @@
           ]
         },
         "sindri.ui.button": {
-          "label": "Heavier Rounds"
+          "label": "Guidance Kernel"
         },
         "sindri.ui.shape": {
           "kind": "rect",
@@ -203,7 +204,7 @@
     },
     {
       "id": "card-dmg-blurb",
-      "name": "Heavier Rounds Blurb",
+      "name": "Guidance Kernel Blurb",
       "parent": "card-dmg",
       "transform_3d": {
         "position": [
@@ -236,7 +237,7 @@
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
-          "text": "+1 damage",
+          "text": "+1 damage, shots seek",
           "bounds": [
             0.7,
             0.09
@@ -251,7 +252,7 @@
     },
     {
       "id": "card-dmg-name",
-      "name": "Heavier Rounds Name",
+      "name": "Guidance Kernel Name",
       "parent": "card-dmg",
       "transform_3d": {
         "position": [
@@ -284,7 +285,7 @@
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
-          "text": "Heavier Rounds",
+          "text": "Guidance Kernel",
           "bounds": [
             0.7,
             0.06
@@ -302,7 +303,7 @@
     },
     {
       "id": "card-hull",
-      "name": "Plating",
+      "name": "Arc Imprint",
       "parent": "upgrade-row",
       "transform_3d": {
         "position": [
@@ -328,6 +329,7 @@
             "add": 2.0,
             "add_key": "max_hp_add",
             "factor": 1.0,
+            "flag_key": "arc",
             "mul_key": "max_hp_mul"
           },
           "script": "Module",
@@ -339,7 +341,7 @@
           ]
         },
         "sindri.ui.button": {
-          "label": "Plating"
+          "label": "Arc Imprint"
         },
         "sindri.ui.shape": {
           "kind": "rect",
@@ -370,7 +372,7 @@
     },
     {
       "id": "card-hull-blurb",
-      "name": "Plating Blurb",
+      "name": "Arc Imprint Blurb",
       "parent": "card-hull",
       "transform_3d": {
         "position": [
@@ -403,7 +405,7 @@
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
-          "text": "+2 hull, repaired",
+          "text": "+2 hull, impacts chain",
           "bounds": [
             0.7,
             0.09
@@ -418,7 +420,7 @@
     },
     {
       "id": "card-hull-name",
-      "name": "Plating Name",
+      "name": "Arc Imprint Name",
       "parent": "card-hull",
       "transform_3d": {
         "position": [
@@ -451,7 +453,7 @@
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
-          "text": "Plating",
+          "text": "Arc Imprint",
           "bounds": [
             0.7,
             0.06
@@ -469,7 +471,7 @@
     },
     {
       "id": "card-magnet",
-      "name": "Wider Field",
+      "name": "Nova Imprint",
       "parent": "upgrade-row",
       "transform_3d": {
         "position": [
@@ -495,6 +497,7 @@
             "add": 1.2,
             "add_key": "magnet_add",
             "factor": 1.0,
+            "flag_key": "nova",
             "mul_key": "magnet_mul"
           },
           "script": "Module",
@@ -506,7 +509,7 @@
           ]
         },
         "sindri.ui.button": {
-          "label": "Wider Field"
+          "label": "Nova Imprint"
         },
         "sindri.ui.shape": {
           "kind": "rect",
@@ -537,7 +540,7 @@
     },
     {
       "id": "card-magnet-blurb",
-      "name": "Wider Field Blurb",
+      "name": "Nova Imprint Blurb",
       "parent": "card-magnet",
       "transform_3d": {
         "position": [
@@ -570,7 +573,7 @@
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
-          "text": "+1.2 collection",
+          "text": "+1.2 collection, impact burst",
           "bounds": [
             0.7,
             0.09
@@ -585,7 +588,7 @@
     },
     {
       "id": "card-magnet-name",
-      "name": "Wider Field Name",
+      "name": "Nova Imprint Name",
       "parent": "card-magnet",
       "transform_3d": {
         "position": [
@@ -618,7 +621,7 @@
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
-          "text": "Wider Field",
+          "text": "Nova Imprint",
           "bounds": [
             0.7,
             0.06
@@ -636,7 +639,7 @@
     },
     {
       "id": "card-pierce",
-      "name": "Lance Rounds",
+      "name": "Gravity Anchor",
       "parent": "upgrade-row",
       "transform_3d": {
         "position": [
@@ -662,6 +665,7 @@
             "add": 1.0,
             "add_key": "pierce_add",
             "factor": 1.0,
+            "flag_key": "mines",
             "mul_key": "pierce_mul"
           },
           "script": "Module",
@@ -673,7 +677,7 @@
           ]
         },
         "sindri.ui.button": {
-          "label": "Lance Rounds"
+          "label": "Gravity Anchor"
         },
         "sindri.ui.shape": {
           "kind": "rect",
@@ -704,7 +708,7 @@
     },
     {
       "id": "card-pierce-blurb",
-      "name": "Lance Rounds Blurb",
+      "name": "Gravity Anchor Blurb",
       "parent": "card-pierce",
       "transform_3d": {
         "position": [
@@ -737,7 +741,7 @@
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
-          "text": "shots pierce 1 more",
+          "text": "+1 pierce, leaves mines",
           "bounds": [
             0.7,
             0.09
@@ -752,7 +756,7 @@
     },
     {
       "id": "card-pierce-name",
-      "name": "Lance Rounds Name",
+      "name": "Gravity Anchor Name",
       "parent": "card-pierce",
       "transform_3d": {
         "position": [
@@ -785,7 +789,7 @@
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
-          "text": "Lance Rounds",
+          "text": "Gravity Anchor",
           "bounds": [
             0.7,
             0.06
@@ -803,7 +807,7 @@
     },
     {
       "id": "card-rate",
-      "name": "Faster Cycling",
+      "name": "Prism Imprint",
       "parent": "upgrade-row",
       "transform_3d": {
         "position": [
@@ -829,6 +833,7 @@
             "add": 1.0,
             "add_key": "fire_rate_add",
             "factor": 1.0,
+            "flag_key": "beam",
             "mul_key": "fire_rate_mul"
           },
           "script": "Module",
@@ -840,7 +845,7 @@
           ]
         },
         "sindri.ui.button": {
-          "label": "Faster Cycling"
+          "label": "Prism Imprint"
         },
         "sindri.ui.shape": {
           "kind": "rect",
@@ -871,7 +876,7 @@
     },
     {
       "id": "card-rate-blurb",
-      "name": "Faster Cycling Blurb",
+      "name": "Prism Imprint Blurb",
       "parent": "card-rate",
       "transform_3d": {
         "position": [
@@ -904,7 +909,7 @@
           "font_size": 0.033,
           "layer": 140,
           "line_height": 0.03465,
-          "text": "shoot more often",
+          "text": "fire faster, impacts lance",
           "bounds": [
             0.7,
             0.09
@@ -919,7 +924,7 @@
     },
     {
       "id": "card-rate-name",
-      "name": "Faster Cycling Name",
+      "name": "Prism Imprint Name",
       "parent": "card-rate",
       "transform_3d": {
         "position": [
@@ -952,7 +957,7 @@
           "font_size": 0.046,
           "layer": 140,
           "line_height": 0.0483,
-          "text": "Faster Cycling",
+          "text": "Prism Imprint",
           "bounds": [
             0.7,
             0.06
@@ -2238,7 +2243,8 @@
           "properties": {
             "arena": 8.0,
             "bullet": "prefabs/bullet.prefab.json",
-            "invulnerable_for": 0.9
+            "invulnerable_for": 0.9,
+            "mine": "prefabs/mine.prefab.json"
           },
           "script": "Player",
           "source": "scripts/player.decay"

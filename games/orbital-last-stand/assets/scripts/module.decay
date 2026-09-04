@@ -17,6 +17,8 @@ script Module {
     @export let mul_key: String = "damage_mul";
     @export let add: f32 = 0.0;
     @export let factor: f32 = 1.0;
+    /// A weapon behaviour this module installs. `""` for a stat-only module.
+    @export let flag_key: String = "";
 
     fn update(dt: f32) {
         if Game.get("run_state", 0.0) != 2.0 {
@@ -39,6 +41,9 @@ script Module {
         }
         if this.factor != 1.0 {
             Game.set(this.mul_key, Game.get(this.mul_key, 1.0) * this.factor);
+        }
+        if this.flag_key != "" {
+            Game.set(this.flag_key, 1.0);
         }
     }
 }

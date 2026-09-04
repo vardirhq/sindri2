@@ -13,7 +13,7 @@
 use serde_json::json;
 use sindri_core::{
     ComponentSchemaRegistry, EntityData, PrefabDocument, SceneComponent, SceneEntity,
-    SceneEntityId, Transform3D, World,
+    SceneEntityId, TagsComponent, Transform3D, World,
 };
 use sindri_decay::{
     PrefabSources, ScriptComponent, ScriptFailure, ScriptFrame, ScriptReport, ScriptSources,
@@ -42,6 +42,10 @@ fn prefab(script: Option<&str>) -> PrefabDocument {
         transform_3d: Some(Transform3D::default()),
         ..SceneEntity::new(id("bullet"))
     };
+    root.components.insert(
+        TagsComponent::TYPE_NAME.to_owned(),
+        json!({ "tags": ["test_projectile"] }),
+    );
     if let Some(script) = script {
         root.components.insert(
             ScriptComponent::TYPE_NAME.to_owned(),
@@ -165,6 +169,43 @@ fn a_spawned_script_has_started_by_the_end_of_the_frame_that_made_it() {
         (position[0] - 1.0).abs() < 1.0e-5,
         "update did not run on the frame the bullet was made"
     );
+}
+
+#[test]
+fn another_script_can_read_a_spawned_numeric_property() {
+    let (mut world, sources, prefabs) = world(
+        r#"
+        script Spawner {
+            @export let bullet: Prefab;
+            fn start() {
+                let shot = World.spawn(this.bullet);
+                World.set_property(shot, "damage", 7.5);
+                this.transform.position.x = World.property_number(shot, "damage", 1.0);
+                this.transform.position.y = World.property_number(shot, "missing", 3.0);
+                if World.has_tag(shot, "test_projectile") {
+                    this.transform.position.z = 1.0;
+                }
+            }
+        }
+        "#,
+        Some(
+            r"
+            script Bullet {
+                @export let damage: f32 = 1.0;
+            }
+            ",
+        ),
+    );
+    let report = advance(&mut Scripts::new(), &mut world, &sources, &prefabs);
+    assert!(report.failures.is_empty(), "{:?}", report.failures);
+
+    let spawner = named(&world, "Spawner")[0]
+        .transform_3d
+        .expect("a transform")
+        .position;
+    assert!((spawner[0] - 7.5).abs() < 1.0e-5, "{spawner:?}");
+    assert!((spawner[1] - 3.0).abs() < 1.0e-5, "{spawner:?}");
+    assert!((spawner[2] - 1.0).abs() < 1.0e-5, "{spawner:?}");
 }
 
 #[test]

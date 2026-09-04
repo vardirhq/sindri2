@@ -1,0 +1,43 @@
+// Left in the ship's wake. A mine advertises its arming delay by filling in,
+// then turns a nearby enemy into an area hit rather than becoming a permanent
+// invisible damage collider.
+script Mine {
+    @export let damage: f32 = 0.65;
+    @export let arm_after: f32 = 0.35;
+    @export let life: f32 = 7.0;
+    @export let blast: Prefab;
+
+    var age: f32 = 0.0;
+    var tripped: bool = false;
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 1.0 {
+            return;
+        }
+        this.age += dt;
+        for enemy in Physics.sensor_entered() {
+            this.tripped = true;
+        }
+        if this.age < this.arm_after {
+            this.shape.fill.a = 0.2 + this.age / this.arm_after * 0.6;
+        } else {
+            this.shape.fill.a = 1.0;
+            if this.tripped {
+                detonate();
+                return;
+            }
+        }
+        if this.age >= this.life {
+            World.despawn(this.entity);
+        }
+    }
+
+    fn detonate() {
+        let wave = World.spawn(this.blast);
+        wave.transform.position.x = this.transform.position.x;
+        wave.transform.position.y = this.transform.position.y;
+        World.set_property(wave, "damage", this.damage);
+        Effects.burst(this.entity);
+        World.despawn(this.entity);
+    }
+}

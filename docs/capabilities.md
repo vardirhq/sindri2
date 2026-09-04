@@ -920,7 +920,7 @@ pixel.
 
 A script reaches its own transform's position, scale and Z rotation, its
 sprite's tint and layer, the keyboard, the frame's delta and its own elapsed
-time, logical grid position through an explicit tilemap entity, six maths
+time, logical grid position through an explicit tilemap entity, seven maths
 functions, and `print`. The whole table is in
 `docs/scripting.md`. Verified in the editor: holding an arrow key moves the
 fixture's cube, releasing stops it, Space recentres it and puts a line in the
@@ -1002,6 +1002,10 @@ The answer is a snapshot of handles, so an entity despawned mid-walk leaves one
 that `World.exists` answers false for. Exercised in
 `crates/sindri-decay/tests/a_script_asks_for_a_group.rs`.
 
+`World.has_tag` answers the same question for one entity without walking the
+world. Orbital Last Stand uses it on collision handles so dense projectile
+traffic does not become one full-world query per impact.
+
 **And a script can make one.** `World.spawn` takes a typed `Prefab` — an asset
 reference the scene authored into an `@export` field, not a string in the
 source, which is what lets the editor resolve it and load the document before
@@ -1009,12 +1013,16 @@ the frame that needs it — and answers with a generation-checked reference to t
 new root. Overrides are the ordinary writes through that reference;
 `World.set_parent` moves it, and `World.set_property` authors a per-instance
 starting value that reaches the spawned script before its first callback. A
+second entity can read a numeric authored value through
+`World.property_number`, with an explicit fallback and without reaching into
+the running script's private mutable state. Orbital Last Stand uses that seam
+for projectile-local damage: ordinary shots, criticals, arcs, novas, mines and
+beams all use the same collision path without a global damage race. A
 spawned script starts within the same pass, so a bullet fired during an update
 moves during that update. Both the cascade that allows and the number of
 entities one pass may create are bounded and reported rather than run.
-Exercised in `crates/sindri-decay/tests/a_script_makes_an_entity.rs`. Not yet
-exercised as gameplay: `games/orbital-last-stand` is the project that will,
-and until it does this is a working surface rather than a proven capability.
+Exercised in `crates/sindri-decay/tests/a_script_makes_an_entity.rs` and as
+gameplay in `games/orbital-last-stand`.
 
 The board is still there and still earns its place, for facts that belong to the
 game rather than to an entity — the score, whether the game is won.

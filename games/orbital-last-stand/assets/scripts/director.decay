@@ -82,6 +82,8 @@ script Director {
 
         clear_tag("enemy");
         clear_tag("bullet");
+        clear_tag("player_damage");
+        clear_tag("mine");
         clear_tag("core");
         clear_tag("hostile_shot");
 
@@ -190,6 +192,8 @@ script Director {
         }
         Save.set_number("total_kills", Save.number("total_kills", 0.0) + Game.get("kills", 0.0));
         clear_tag("enemy");
+        clear_tag("player_damage");
+        clear_tag("mine");
         clear_tag("hostile_shot");
     }
 

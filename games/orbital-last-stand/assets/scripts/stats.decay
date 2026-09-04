@@ -63,6 +63,11 @@ script Stats {
         clear("regen_add", "regen_mul");
         clear("magnet_add", "magnet_mul");
         clear("xp_gain_add", "xp_gain_mul");
+        Game.set("missile", 0.0);
+        Game.set("arc", 0.0);
+        Game.set("nova", 0.0);
+        Game.set("mines", 0.0);
+        Game.set("beam", 0.0);
 
         this.granted_hp = 0.0;
         derive();

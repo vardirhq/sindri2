@@ -62,8 +62,8 @@
           "rotation": 0.0,
           "sensor": true,
           "layers": {
-            "memberships": 1,
-            "filter": 4294967295
+            "memberships": 2,
+            "filter": 5
           },
           "friction": 0.0,
           "restitution": 0.0
@@ -93,7 +93,8 @@
             "health": 1.0,
             "worth": 1.0,
             "touch_damage": 1.0,
-            "core": "prefabs/core.prefab.json"
+            "core": "prefabs/core.prefab.json",
+            "death_burst": "prefabs/nova.prefab.json"
           }
         },
         "sindri.shape": {

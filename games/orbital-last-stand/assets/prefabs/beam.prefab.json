@@ -1,0 +1,15 @@
+{
+  "format_version": 1,
+  "metadata": { "name": "Beam" },
+  "entities": [{
+    "id": "beam", "name": "Beam",
+    "transform_3d": { "position": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.3, 0.10, 1.0] },
+    "components": {
+      "sindri.tags": { "tags": ["player_damage", "beam"] },
+      "sindri.physics2d.rigid_body": { "kind": "dynamic", "pose": { "position": [0.0, 0.0], "rotation": 0.0 }, "linear_velocity": [0.0, 0.0], "angular_velocity": 0.0, "gravity_scale": 0.0, "linear_damping": 0.0, "angular_damping": 0.0, "lock_rotation": true },
+      "sindri.physics2d.collider": { "shape": { "shape": "circle", "radius": 0.42 }, "offset": [0.0, 0.0], "rotation": 0.0, "sensor": true, "layers": { "memberships": 1, "filter": 2 }, "friction": 0.0, "restitution": 0.0 },
+      "sindri.script": { "source": "scripts/beam.decay", "script": "Beam", "properties": { "damage": 0.23, "dir_x": 1.0, "dir_y": 0.0, "life": 0.45, "speed": 18.0 } },
+      "sindri.shape": { "kind": "rect", "count": 4.0, "fill": [0.33, 0.92, 1.0, 1.0], "stroke": [0.8, 1.0, 1.0, 1.0], "stroke_width": 0.07, "corner_radius": 0.08, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "add", "layer": 6 }
+    }
+  }]
+}

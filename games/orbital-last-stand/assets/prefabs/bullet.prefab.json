@@ -28,7 +28,8 @@
       "components": {
         "sindri.tags": {
           "tags": [
-            "bullet"
+            "bullet",
+            "player_damage"
           ]
         },
         "sindri.physics2d.rigid_body": {
@@ -63,7 +64,7 @@
           "sensor": true,
           "layers": {
             "memberships": 1,
-            "filter": 4294967295
+            "filter": 2
           },
           "friction": 0.0,
           "restitution": 0.0
@@ -89,9 +90,15 @@
           "source": "scripts/bullet.decay",
           "script": "Bullet",
           "properties": {
+            "arc": 0.0,
+            "arc_effect": "prefabs/arc.prefab.json",
+            "beam": 0.0,
+            "beam_effect": "prefabs/beam.prefab.json",
             "speed": 9.0,
             "damage": 1.0,
             "life": 1.6,
+            "missile": 0.0,
+            "nova": 0.0,
             "pierce": 0.0
           }
         },

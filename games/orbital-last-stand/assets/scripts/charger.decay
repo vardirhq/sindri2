@@ -11,8 +11,10 @@ script Charger {
     @export let rest: f32 = 1.1;
     @export let touch_damage: f32 = 1.0;
     @export let core: Prefab;
+    @export let death_burst: Prefab;
 
     var hp: f32 = 0.0;
+    var death_burst_damage: f32 = 0.0;
     // 0 closing, 1 winding up, 2 dashing
     var phase: f32 = 0.0;
     var timer: f32 = 0.0;
@@ -83,14 +85,31 @@ script Charger {
                          max(Game.get("player_damage_taken", 0.0), this.touch_damage));
                 continue;
             }
-            this.hp -= Game.get("damage", 1.0);
+            if !World.exists(hit) {
+                continue;
+            }
+            if this.hp > 0.0 {
+                let damage = damage_from(hit);
+                this.hp -= damage;
+                if this.hp <= 0.0 && World.property_number(hit, "nova", 0.0) > 0.0 {
+                    this.death_burst_damage = damage * 0.3;
+                }
+            }
         }
         if this.hp <= 0.0 {
             die();
         }
     }
 
+    fn damage_from(hit: Entity) -> f32 {
+        if World.has_tag(hit, "player_damage") {
+            return World.property_number(hit, "damage", 0.0);
+        }
+        return 0.0;
+    }
+
     fn die() {
+        burst_on_death();
         Effects.burst(this.entity);
         Audio.play("audio/kill.wav", 0.3);
         Game.set("kills", Game.get("kills", 0.0) + 1.0);
@@ -100,5 +119,15 @@ script Charger {
         drop.transform.position.y = this.transform.position.y;
         World.set_property(drop, "worth", this.worth);
         World.despawn(this.entity);
+    }
+
+    fn burst_on_death() {
+        if this.death_burst_damage <= 0.0 {
+            return;
+        }
+        let wave = World.spawn(this.death_burst);
+        wave.transform.position.x = this.transform.position.x;
+        wave.transform.position.y = this.transform.position.y;
+        World.set_property(wave, "damage", this.death_burst_damage);
     }
 }

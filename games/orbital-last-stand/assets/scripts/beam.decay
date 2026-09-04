@@ -1,0 +1,27 @@
+// A narrow continuation through the impact point. It is a projectile rather
+// than a direct world query, so collision layers, pause, lifetime and damage
+// use the same general path as every other shot.
+script Beam {
+    @export let speed: f32 = 18.0;
+    @export let life: f32 = 0.45;
+    @export let dir_x: f32 = 1.0;
+    @export let dir_y: f32 = 0.0;
+    @export let damage: f32 = 0.23;
+
+    var age: f32 = 0.0;
+
+    fn start() {
+        Physics.set_velocity(this.entity, this.dir_x * this.speed, this.dir_y * this.speed);
+    }
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 1.0 {
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+            return;
+        }
+        this.age += dt;
+        if this.age >= this.life {
+            World.despawn(this.entity);
+        }
+    }
+}

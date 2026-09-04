@@ -146,7 +146,9 @@ table above lists, reaching the same numbers.
 | `World.spawn(prefab)` | `Entity` |
 | `World.set_parent(entity, parent)` | nothing |
 | `World.set_property(entity, name, value)` | nothing |
+| `World.property_number(entity, name, fallback)` | `f32` |
 | `World.with_tag(tag)` | `Array<Entity>` |
+| `World.has_tag(entity, tag)` | `bool` |
 | `World.set_active(entity, on)` | nothing |
 | `World.is_active(entity)` | `bool` |
 
@@ -231,6 +233,13 @@ It is also refused once that entity's script is running, because properties are
 applied when an instance is built and a later write would land in the payload
 and change nothing a script could see.
 
+`World.property_number` reads that authored starting value back. It does not
+reach into another running script's private mutable fields: it reads the
+property the scene or spawner supplied, which makes an immutable per-instance
+fact such as a projectile's damage available to the entity it hits. The
+fallback is required and is returned when the entity has no script, no property
+by that name, or a property that is not numeric.
+
 **A spawned script starts in the same pass.** A bullet created during an update
 moves during that update rather than standing still for a frame. It cannot start
 during the call that created it — building an instance runs the container's
@@ -254,6 +263,11 @@ a scene saved with the collision would refuse to load.
 A game that spawns hundreds of enemies cannot hold a reference to each of them.
 `World.with_tag` is how it asks for them all at once, and `Array<Entity>` — see
 `decay/LANGUAGE.md` — is what it gets back.
+
+`World.has_tag(entity, tag)` asks the corresponding question about one active
+entity without walking the world. Collision code should use it to distinguish a
+projectile from the other half of a contact; querying the whole projectile group
+once per collision would turn a dense combat frame into a quadratic walk.
 
 ```rust
 script Sweep {
@@ -1024,7 +1038,8 @@ concatenate, so a `print` that only took text could not report a value.
 
 ### Maths
 
-`abs`, `sqrt`, `sin`, `cos`, `min`, `max`. That is the entire standard library.
+`abs`, `sqrt`, `sin`, `cos`, `atan2`, `min`, `max`.
+That is the entire standard library.
 Decay has no modules and no imports, so each is a bare global name, and every one
 added is a name a script can no longer use for its own.
 
@@ -1147,4 +1162,3 @@ back does not change what undo means.
 - The script instance is created on first sight and lost when the world is
   reloaded. There is no state migration across a hot reload of the source: a
   changed file recompiles, and the running instance keeps its fields.
-

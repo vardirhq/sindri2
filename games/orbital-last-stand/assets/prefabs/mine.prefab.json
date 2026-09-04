@@ -1,0 +1,16 @@
+{
+  "format_version": 1,
+  "metadata": { "name": "Mine" },
+  "entities": [{
+    "id": "mine", "name": "Mine",
+    "transform_3d": { "position": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.42, 0.42, 1.0] },
+    "components": {
+      "sindri.tags": { "tags": ["mine"] },
+      "sindri.physics2d.rigid_body": { "kind": "static", "pose": { "position": [0.0, 0.0], "rotation": 0.0 }, "linear_velocity": [0.0, 0.0], "angular_velocity": 0.0, "gravity_scale": 0.0, "linear_damping": 0.0, "angular_damping": 0.0, "lock_rotation": true },
+      "sindri.physics2d.collider": { "shape": { "shape": "circle", "radius": 0.75 }, "offset": [0.0, 0.0], "rotation": 0.0, "sensor": true, "layers": { "memberships": 1, "filter": 2 }, "friction": 0.0, "restitution": 0.0 },
+      "sindri.effect.burst": { "texture": "textures/fleck.png", "count": 20, "speed": 5.0, "spread": 6.283185, "lifetime": 0.3, "size": 0.06, "tint": [0.83, 0.38, 1.0, 1.0], "fade": true, "drag": 1.8, "layer": 7 },
+      "sindri.script": { "source": "scripts/mine.decay", "script": "Mine", "properties": { "arm_after": 0.35, "blast": "prefabs/nova.prefab.json", "damage": 0.65, "life": 7.0 } },
+      "sindri.shape": { "kind": "polygon", "count": 6.0, "fill": [0.45, 0.08, 0.72, 0.2], "stroke": [0.84, 0.45, 1.0, 1.0], "stroke_width": 0.08, "corner_radius": 0.0, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "add", "layer": 4 }
+    }
+  }]
+}

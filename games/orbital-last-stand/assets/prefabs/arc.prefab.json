@@ -1,0 +1,16 @@
+{
+  "format_version": 1,
+  "metadata": { "name": "Arc" },
+  "entities": [{
+    "id": "arc", "name": "Arc",
+    "transform_3d": { "position": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.32, 0.12, 1.0] },
+    "components": {
+      "sindri.tags": { "tags": ["player_damage", "arc"] },
+      "sindri.physics2d.rigid_body": { "kind": "dynamic", "pose": { "position": [0.0, 0.0], "rotation": 0.0 }, "linear_velocity": [0.0, 0.0], "angular_velocity": 0.0, "gravity_scale": 0.0, "linear_damping": 0.0, "angular_damping": 0.0, "lock_rotation": true },
+      "sindri.physics2d.collider": { "shape": { "shape": "circle", "radius": 0.35 }, "offset": [0.0, 0.0], "rotation": 0.0, "sensor": true, "layers": { "memberships": 1, "filter": 2 }, "friction": 0.0, "restitution": 0.0 },
+      "sindri.effect.burst": { "texture": "textures/fleck.png", "count": 10, "speed": 4.5, "spread": 4.0, "lifetime": 0.18, "size": 0.045, "tint": [0.49, 0.92, 1.0, 1.0], "fade": true, "drag": 1.4, "layer": 7 },
+      "sindri.script": { "source": "scripts/arc.decay", "script": "Arc", "properties": { "damage": 0.27, "jumps": 2.0, "life": 0.55, "speed": 14.0 } },
+      "sindri.shape": { "kind": "polygon", "count": 4.0, "fill": [0.08, 0.65, 1.0, 1.0], "stroke": [0.62, 0.95, 1.0, 1.0], "stroke_width": 0.08, "corner_radius": 0.0, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "add", "layer": 6 }
+    }
+  }]
+}
