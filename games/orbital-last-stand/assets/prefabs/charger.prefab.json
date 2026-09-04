@@ -89,7 +89,7 @@
           "source": "scripts/charger.decay",
           "script": "Charger",
           "properties": {
-            "health": 4.0,
+            "health": 3.0,
             "worth": 2.0,
             "approach": 1.2,
             "wind_up": 0.75,

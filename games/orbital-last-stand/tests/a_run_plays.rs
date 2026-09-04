@@ -100,6 +100,33 @@ fn enemies_arrive_continuously_instead_of_in_batches() {
     );
 }
 
+/// Regular durability follows the reference game's opening shot counts.
+///
+/// Its base blaster deals 18 damage: the first three roster slots have 20, 52,
+/// and 24 health, which makes them two, three, and two non-critical hits. This
+/// project normalises a base hit to one damage, so preserve the ratios rather
+/// than copying numbers from a different scale.
+#[test]
+fn regular_enemies_keep_the_reference_shot_counts() {
+    let run = Run::open().expect("the project opens");
+    for (prefab, expected) in [
+        ("prefabs/drifter.prefab.json", 2.0),
+        ("prefabs/charger.prefab.json", 3.0),
+        ("prefabs/splitter.prefab.json", 2.0),
+    ] {
+        let health = run
+            .prefabs
+            .get(prefab)
+            .and_then(|document| document.root().ok())
+            .and_then(|root| root.components.get("sindri.script"))
+            .and_then(|script| script.get("properties"))
+            .and_then(|properties| properties.get("health"))
+            .and_then(serde_json::Value::as_f64)
+            .expect("a regular enemy authors its health");
+        assert_eq!(health, expected, "{prefab} changed its base shot count");
+    }
+}
+
 /// 4. Spawn, update, collide, and despawn continuously.
 /// 5. Three enemy behaviours widening over elapsed time.
 #[test]
