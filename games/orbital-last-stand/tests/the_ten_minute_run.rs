@@ -161,9 +161,30 @@ fn the_warden_arrives_and_changes_as_it_is_fought() {
     }
     run.click("TitleStart");
 
+    // Main used to reach this fight after taking whatever upgrades the first
+    // three minutes happened to offer. Continuous spawning deliberately changes
+    // that economy, so make the build explicit with the same board keys real
+    // modules write. Homing keeps this a boss-phase test rather than an
+    // accidental test of leading a moving target.
+    run.set_board("damage_add", 1.0);
+    run.set_board("fire_rate_add", 3.0);
+    run.set_board("bullet_speed_add", 3.0);
+    run.set_board("missile", 1.0);
+    let notes = run.step(STEP);
+    assert!(notes.is_empty(), "{notes:#?}");
+    assert!(run.board("damage") >= 1.9, "damage build was not derived");
+    assert!(
+        run.board("fire_rate") >= 5.3,
+        "fire-rate build was not derived"
+    );
+    assert!(
+        run.board("bullet_speed") >= 11.9,
+        "bullet-speed build was not derived"
+    );
+    assert_eq!(run.board("missile"), 1.0, "homing flag was not installed");
+
     let mut seen_phases = Vec::new();
     let mut fought = false;
-    let mut injected_hit = false;
     for _ in 0..(20.0 / STEP) as usize {
         let notes = run.step(STEP);
         assert!(notes.is_empty(), "{notes:#?}");
@@ -180,50 +201,6 @@ fn the_warden_arrives_and_changes_as_it_is_fought() {
                 );
             }
             fought = true;
-
-            // This assertion is about the Warden changing phase when player
-            // damage reaches it, not about whether auto-aim happens to lead a
-            // moving boss correctly in this seed. Put one real bullet prefab
-            // on the Warden and let ScenePhysics2d plus Warden.damage_from()
-            // process the ordinary player-damage collision path.
-            if !injected_hit {
-                let warden = run.find("Warden").expect("the spawned Warden");
-                let at = run
-                    .world
-                    .get(warden)
-                    .and_then(|data| data.transform_3d)
-                    .expect("the Warden has a transform")
-                    .position;
-                let bullet_prefab = run
-                    .prefabs
-                    .get("prefabs/bullet.prefab.json")
-                    .expect("the player bullet prefab")
-                    .clone();
-                let hit = run
-                    .world
-                    .spawn_prefab(&bullet_prefab)
-                    .expect("the player bullet spawns")
-                    .root;
-                let data = run.world.get_mut(hit).expect("the spawned bullet");
-                let transform = data
-                    .transform_3d
-                    .as_mut()
-                    .expect("the bullet has a transform");
-                transform.position = at;
-                let bullet_properties = data
-                    .components
-                    .get_mut("sindri.script")
-                    .and_then(|script| script.get_mut("properties"))
-                    .and_then(serde_json::Value::as_object_mut)
-                    .expect("the bullet has script properties");
-                bullet_properties.insert(
-                    "damage".to_owned(),
-                    serde_json::Value::from(f64::from(max) * 0.5),
-                );
-                bullet_properties.insert("speed".to_owned(), serde_json::Value::from(0.0));
-                injected_hit = true;
-            }
-
             let share = run.board("boss_hp") / max;
             let phase = if share <= 0.34 {
                 3
@@ -239,7 +216,6 @@ fn the_warden_arrives_and_changes_as_it_is_fought() {
     }
 
     assert!(fought, "the Warden never arrived");
-    assert!(injected_hit, "the Warden was never given the test hit");
     assert!(
         seen_phases.len() >= 2,
         "the fight never changed phase: {seen_phases:?}"
