@@ -19,31 +19,13 @@ use std::collections::BTreeMap;
 use crate::{UiAnchor, UiImageComponent, UiTextComponent};
 use serde::Deserialize;
 use sindri_core::{
-    ComponentRegistryError, ComponentSchemaRegistry, EntityId, SceneComponent, World,
+    ComponentRegistryError, ComponentSchemaRegistry, EntityId, PressPhase, Presses, SceneComponent,
+    World,
 };
 
 pub use hierarchy::{UiHierarchy, UiPlaced};
 pub use layout::{UiDirection, UiLayoutComponent};
 pub use rect::{SafeArea, ScreenExtent, ScreenRect};
-
-/// What the pointer is doing this frame, in the terms this module needs.
-///
-/// Plain values rather than the platform's input state, because `AGENTS.md`
-/// keeps `sindri-scene` off `sindri-platform`: the layer that derives renderer
-/// state from a scene has no business knowing what a mouse button is. A host
-/// fills this in from whatever it has — a mouse, a finger, a test.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct PointerFrame {
-    /// Where the pointer is, in viewport pixels, or `None` when it is not over
-    /// the viewport at all.
-    pub position: Option<[f32; 2]>,
-    /// Whether it went down during this frame.
-    pub pressed: bool,
-    /// Whether it came up during this frame.
-    pub released: bool,
-    /// Whether it is down now.
-    pub down: bool,
-}
 
 /// Something on the screen a person can press.
 ///
@@ -116,12 +98,12 @@ impl ScreenUi {
         world: &World,
         components: &ComponentSchemaRegistry,
         extent: ScreenExtent,
-        pointer: PointerFrame,
+        presses: &Presses,
     ) -> Result<(), ComponentRegistryError> {
         self.rects.clear();
         let placements = Self::place(world, components, extent)?;
         self.rects = placements;
-        self.read_pointer(extent, pointer);
+        self.read_presses(extent, presses);
         Ok(())
     }
 
@@ -246,32 +228,47 @@ impl ScreenUi {
             .collect())
     }
 
-    /// Hover and click, from where the pointer is and what it is doing.
-    fn read_pointer(&mut self, extent: ScreenExtent, pointer: PointerFrame) {
+    /// Hover and click, from the press the person is making.
+    fn read_presses(&mut self, extent: ScreenExtent, presses: &Presses) {
         self.clicked = None;
-        self.pointer_overlay = pointer
-            .position
+        // Where to test against: the press being made, or — for a device that
+        // rests somewhere, which a finger does not — where it is resting.
+        self.pointer_overlay = presses
+            .focus()
             .and_then(|position| extent.pointer(position));
         self.hovered = self
             .pointer_overlay
             .and_then(|point| self.topmost_at(point));
 
-        if pointer.pressed {
-            self.pressing = self.hovered;
-        }
-        if pointer.released {
-            // A click is a press and a release on the same element. Sliding off
-            // before letting go is how a person changes their mind, and it has
-            // to keep working here for the same reason it does everywhere else.
-            if self.pressing.is_some() && self.pressing == self.hovered {
-                self.clicked = self.pressing;
+        let Some(press) = presses.primary() else {
+            // Nothing is being pressed, so nothing is armed. A press that
+            // disappeared without ending — a browser swallowing it, a window
+            // losing focus — must not leave a button armed for ever.
+            self.pressing = None;
+            return;
+        };
+        match press.phase() {
+            PressPhase::Began => self.pressing = self.hovered,
+            PressPhase::Held => {}
+            PressPhase::Ended => {
+                // A click is a press and a release on the same element.
+                // Sliding off before letting go is how a person changes their
+                // mind, and it has to keep working here for the same reason it
+                // does everywhere else.
+                //
+                // This reads the press rather than the device, which is the
+                // whole point: on the frame a finger lifts it is out of the
+                // device's live set, and asking the device where the release
+                // happened answered "nowhere" — so the release never matched
+                // the element the press began on, and a tap never clicked
+                // anything.
+                if self.pressing.is_some() && self.pressing == self.hovered {
+                    self.clicked = self.pressing;
+                }
+                self.pressing = None;
             }
-            self.pressing = None;
-        }
-        // A pointer that left the window without a release — the browser
-        // swallowing it, focus lost — must not leave a button armed forever.
-        if !pointer.down {
-            self.pressing = None;
+            // Taken away rather than let go, so it completes nothing.
+            PressPhase::Cancelled => self.pressing = None,
         }
     }
 

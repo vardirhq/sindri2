@@ -8,6 +8,7 @@ mod command;
 mod component;
 mod engine;
 mod entity;
+mod input;
 mod lifecycle;
 mod migration;
 mod prefab;
@@ -31,6 +32,9 @@ pub use component::{
 };
 pub use engine::{EngineCore, EngineError, EngineFrame};
 pub use entity::EntityId;
+pub use input::{
+    Gesture, GestureLimits, Gestures, PointerDevice, Press, PressId, PressPhase, Presses,
+};
 pub use lifecycle::{EngineLifecycle, EngineState, LifecycleError};
 pub use migration::{SceneMigrationError, SceneMigrationStep, SceneMigrator};
 pub use prefab::{

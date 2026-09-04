@@ -19,9 +19,7 @@ use sindri_decay::{
     Physics2d, PrefabSources, ScriptComponent, ScriptFrame, ScriptSources, Scripts,
 };
 use sindri_platform::InputState;
-use sindri_scene::{
-    Effects2d, PointerFrame, SceneExtractor, ScenePhysics2d, ScreenExtent, ScreenUi,
-};
+use sindri_scene::{Effects2d, SceneExtractor, ScenePhysics2d, ScreenExtent, ScreenUi};
 
 /// Where the project is, from wherever the harness is being run.
 #[must_use]
@@ -168,16 +166,7 @@ impl Run {
             &self.world,
             &self.components,
             ScreenExtent::new(self.viewport.0, self.viewport.1),
-            PointerFrame {
-                position: self.input.pointer_position(),
-                pressed: self
-                    .input
-                    .pointer_pressed(sindri_platform::MouseButton::Left),
-                released: self
-                    .input
-                    .pointer_released(sindri_platform::MouseButton::Left),
-                down: self.input.pointer_down(sindri_platform::MouseButton::Left),
-            },
+            self.input.presses(),
         ) {
             notes.push(error.to_string());
         }
@@ -206,7 +195,7 @@ impl Run {
         // At the end rather than the beginning, because an edge is delivered by
         // the step that follows the event: clearing at the top of a step would
         // wipe the press that had just been reported and never happened.
-        self.input.begin_frame();
+        self.input.begin_frame(step);
         notes
     }
 

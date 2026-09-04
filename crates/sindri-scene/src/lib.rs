@@ -37,8 +37,8 @@ pub use navigation::{GridNavigationError, GridPlacement, WorldGridNavigation};
 pub use physics::{Collider2dComponent, RigidBody2dComponent, RigidBodyKind};
 pub use physics_sync::{PhysicsSyncError, ScenePhysics2d};
 pub use screen_ui::{
-    PointerFrame, SafeArea, ScreenExtent, ScreenRect, ScreenUi, UiButtonComponent, UiDirection,
-    UiHierarchy, UiLayoutComponent, UiPlaced,
+    SafeArea, ScreenExtent, ScreenRect, ScreenUi, UiButtonComponent, UiDirection, UiHierarchy,
+    UiLayoutComponent, UiPlaced,
 };
 pub use textures::{
     FONT_NAMING_COMPONENTS, PROCEDURAL_TEXTURES, ProceduralTexture, SheetBindError,

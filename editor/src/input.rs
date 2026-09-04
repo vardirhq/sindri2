@@ -105,8 +105,8 @@ impl EditorInput {
     /// held; it is the *going down* that is spent, once, by the step that acted
     /// on it. Motion follows the same rule: two frames of dragging between
     /// steps should sum rather than lose the first.
-    pub fn spend(&mut self) {
-        self.state.begin_frame();
+    pub fn spend(&mut self, delta: std::time::Duration) {
+        self.state.begin_frame(delta);
     }
 
     /// Reads this frame's keyboard and pointer.

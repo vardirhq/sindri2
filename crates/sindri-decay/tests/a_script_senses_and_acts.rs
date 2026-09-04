@@ -139,7 +139,7 @@ fn a_script_can_tell_a_press_from_a_hold() {
     assert!((position(&world, entity)[1] - 1.0).abs() < 1.0e-5);
 
     // The next frame: still held, but no longer newly pressed.
-    input.begin_frame();
+    input.begin_frame(std::time::Duration::from_millis(16));
     scripts.advance(
         &mut world,
         &registry(),

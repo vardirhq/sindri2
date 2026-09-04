@@ -2,6 +2,9 @@
 //! person is pointing.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::time::Duration;
+
+use sindri_core::Presses;
 
 use super::{Key, MouseButton};
 
@@ -88,6 +91,14 @@ pub struct InputState {
     pointer_delta: [f32; 2],
     scroll_delta: [f32; 2],
     focused: bool,
+    /// The same interactions, as presses rather than as devices.
+    ///
+    /// Built from the very same events as the fields above and kept beside
+    /// them while callers move across. The difference is not the data but the
+    /// shape: a press knows where it is for every frame of its life, where the
+    /// device fields lose a finger the instant it lifts -- see the header of
+    /// `sindri_core::input`.
+    presses: Presses,
 }
 
 impl Default for InputState {
@@ -106,6 +117,7 @@ impl Default for InputState {
             pointer_delta: [0.0, 0.0],
             scroll_delta: [0.0, 0.0],
             focused: true,
+            presses: Presses::default(),
         }
     }
 }
@@ -117,6 +129,10 @@ impl InputState {
     /// key repeat cannot make `key_pressed` fire more than once per physical
     /// press.
     pub fn apply(&mut self, event: InputEvent) {
+        // Before the device bookkeeping, because a button press is placed at
+        // where the pointer was *before* this event, and a move in the same
+        // event would otherwise have already shifted it.
+        super::presses::apply(&mut self.presses, event, self.pointer);
         match event {
             InputEvent::KeyPressed(key) => {
                 if self.keys_held.insert(key) {
@@ -184,7 +200,11 @@ impl InputState {
     }
 
     /// Clears edge state and per-frame deltas, keeping what is still held.
-    pub fn begin_frame(&mut self) {
+    ///
+    /// `delta` is how long the frame being spent was, which is what ages a
+    /// press. Measured rather than counted so that a long press is the same
+    /// length of time on a 60 Hz phone and a 144 Hz monitor.
+    pub fn begin_frame(&mut self, delta: Duration) {
         self.keys_pressed.clear();
         self.keys_released.clear();
         self.buttons_pressed.clear();
@@ -193,6 +213,7 @@ impl InputState {
         self.touches_ended.clear();
         self.pointer_delta = [0.0, 0.0];
         self.scroll_delta = [0.0, 0.0];
+        self.presses.advance(delta);
     }
 
     fn release_everything(&mut self) {
@@ -207,6 +228,16 @@ impl InputState {
         for (id, position) in std::mem::take(&mut self.touches) {
             self.touches_ended.insert(id, position);
         }
+    }
+
+    /// This frame's presses.
+    ///
+    /// The shape to read for anything that asks where an interaction is or was:
+    /// unlike the device accessors, a press here answers on every frame of its
+    /// life, the frame it ends included.
+    #[must_use]
+    pub const fn presses(&self) -> &Presses {
+        &self.presses
     }
 
     pub fn key_down(&self, key: Key) -> bool {
@@ -329,9 +360,89 @@ impl InputState {
 #[cfg(test)]
 mod tests {
     use super::{InputEvent, InputState, MouseButton};
+    use std::time::Duration;
 
     fn down(state: &mut InputState, id: u64, x: f32, y: f32) {
         state.apply(InputEvent::TouchStarted { id, x, y });
+    }
+
+    const FRAME: Duration = Duration::from_millis(16);
+
+    /// Positions are compared by nearness, not equality: they are arrived at
+    /// by arithmetic, and the repository lints exact float comparison for the
+    /// reason that arithmetic does not promise exact answers.
+    #[track_caller]
+    fn assert_at(actual: [f32; 2], expected: [f32; 2]) {
+        assert!(
+            (actual[0] - expected[0]).abs() < f32::EPSILON
+                && (actual[1] - expected[1]).abs() < f32::EPSILON,
+            "expected {expected:?}, got {actual:?}"
+        );
+    }
+
+    #[test]
+    fn a_tap_and_a_click_arrive_as_the_same_shape() {
+        // The point of the press model: one kind of thing, whatever made it.
+        // Every difference that used to leak into gameplay -- a finger with no
+        // position at release, a mouse that keeps one -- is settled here.
+        let mut touch = InputState::default();
+        touch.apply(InputEvent::TouchStarted {
+            id: 7,
+            x: 4.0,
+            y: 9.0,
+        });
+        let began = *touch.presses().primary().expect("a finger is a press");
+        assert_at(began.position(), [4.0, 9.0]);
+
+        let mut click = InputState::default();
+        click.apply(InputEvent::PointerMoved { x: 4.0, y: 9.0 });
+        click.apply(InputEvent::ButtonPressed(MouseButton::Left));
+        let pressed = *click.presses().primary().expect("a button is a press");
+        assert_at(pressed.position(), began.position());
+        assert_eq!(pressed.phase(), began.phase());
+
+        // And both end where they were, which is the fact a button needs.
+        touch.begin_frame(FRAME);
+        touch.apply(InputEvent::TouchEnded { id: 7 });
+        click.begin_frame(FRAME);
+        click.apply(InputEvent::ButtonReleased(MouseButton::Left));
+        assert_eq!(touch.presses().ended().count(), 1);
+        assert_eq!(click.presses().ended().count(), 1);
+        assert_at(touch.presses().focus().expect("a focus"), [4.0, 9.0]);
+        assert_at(click.presses().focus().expect("a focus"), [4.0, 9.0]);
+    }
+
+    #[test]
+    fn a_press_is_aged_by_the_frames_it_survives() {
+        let mut state = InputState::default();
+        state.apply(InputEvent::TouchStarted {
+            id: 1,
+            x: 0.0,
+            y: 0.0,
+        });
+        state.begin_frame(FRAME);
+        state.begin_frame(FRAME);
+        assert_eq!(
+            state.presses().primary().map(sindri_core::Press::held_for),
+            Some(FRAME * 2)
+        );
+    }
+
+    #[test]
+    fn losing_the_window_cancels_a_press_rather_than_completing_it() {
+        let mut state = InputState::default();
+        state.apply(InputEvent::TouchStarted {
+            id: 1,
+            x: 1.0,
+            y: 1.0,
+        });
+        state.begin_frame(FRAME);
+        state.apply(InputEvent::FocusChanged(false));
+        assert_eq!(
+            state.presses().ended().count(),
+            0,
+            "a window lost mid-drag must not click anything"
+        );
     }
 
     #[test]
@@ -345,7 +456,7 @@ mod tests {
         down(&mut state, 1, 10.0, 20.0);
         assert_eq!(state.pointer_position(), Some([10.0, 20.0]));
 
-        state.begin_frame();
+        state.begin_frame(FRAME);
         state.apply(InputEvent::TouchEnded { id: 1 });
         assert!(state.pointer_released(MouseButton::Left));
         assert_eq!(
@@ -355,7 +466,7 @@ mod tests {
         );
 
         // And once the frame is over the finger really is gone.
-        state.begin_frame();
+        state.begin_frame(FRAME);
         assert_eq!(state.pointer_position(), None);
     }
 
@@ -402,7 +513,7 @@ mod tests {
         // And as nothing else: a finger is not a right-click.
         assert!(!state.pointer_down(MouseButton::Right));
 
-        state.begin_frame();
+        state.begin_frame(FRAME);
         assert!(state.pointer_down(MouseButton::Left), "still held");
         assert!(
             !state.pointer_pressed(MouseButton::Left),
@@ -422,7 +533,7 @@ mod tests {
         let mut state = InputState::default();
         down(&mut state, 1, 0.0, 0.0);
         down(&mut state, 2, 1.0, 1.0);
-        state.begin_frame();
+        state.begin_frame(FRAME);
 
         state.apply(InputEvent::TouchEnded { id: 2 });
         assert!(!state.pointer_released(MouseButton::Left));
@@ -442,7 +553,7 @@ mod tests {
         assert_eq!(state.touch_at(0), Some([20.0, 0.0]));
         assert_eq!(state.touch_at(1), Some([90.0, 0.0]));
 
-        state.begin_frame();
+        state.begin_frame(FRAME);
         assert_eq!(state.touch_at(0), Some([20.0, 0.0]));
     }
 
