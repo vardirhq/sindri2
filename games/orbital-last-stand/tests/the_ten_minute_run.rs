@@ -161,6 +161,13 @@ fn the_warden_arrives_and_changes_as_it_is_fought() {
     }
     run.click("TitleStart");
 
+    // Let the new-run reset finish before installing the deterministic build.
+    // Otherwise Stats sees `stats_reset` on the same frame that it sees these
+    // test values and correctly wipes them back to the base ship.
+    let notes = run.step(STEP);
+    assert!(notes.is_empty(), "{notes:#?}");
+    assert_eq!(run.board("stats_reset"), 0.0, "stats reset did not finish");
+
     // Main used to reach this fight after taking whatever upgrades the first
     // three minutes happened to offer. Continuous spawning deliberately changes
     // that economy, so make the build explicit with the same board keys real
