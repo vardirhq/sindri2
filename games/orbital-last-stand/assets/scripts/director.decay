@@ -216,6 +216,11 @@ script Director {
     }
 
     fn send_boss() {
+        // Normal Last Stand boss encounters are clean duels: the reference
+        // clears regular enemies, and doing it here also prevents auto-aim from
+        // spending the opening of the fight on survivors from the prior wave.
+        clear_tag("enemy");
+        clear_tag("hostile_shot");
         let boss = World.spawn(this.warden);
         boss.transform.position.x = 0.0;
         boss.transform.position.y = this.arena;
