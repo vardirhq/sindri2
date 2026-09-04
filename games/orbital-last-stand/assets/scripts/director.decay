@@ -178,16 +178,26 @@ script Director {
         clear_tag("hostile_shot");
     }
 
-    // Roster progression is time-based, like the reference archetype unlocks.
-    // Drifters begin the run, chargers join around 35 seconds, and splitters
-    // around 70 seconds. Those thresholds can expand naturally as parity adds
-    // the rest of the enemy catalog.
+    // The reference chooses uniformly from the archetypes unlocked at the
+    // current elapsed time. With three authored enemies that means one choice
+    // at the start, two equal choices from 35 seconds, then three equal choices
+    // from 70 seconds onward.
     fn spawn_one() {
         let roll = Random.value();
-        if this.elapsed >= 70.0 && roll > 0.78 {
-            place(World.spawn(this.splitter));
-        } else if this.elapsed >= 35.0 && roll > 0.58 {
-            place(World.spawn(this.charger));
+        if this.elapsed >= 70.0 {
+            if roll < 0.3333333 {
+                place(World.spawn(this.drifter));
+            } else if roll < 0.6666667 {
+                place(World.spawn(this.charger));
+            } else {
+                place(World.spawn(this.splitter));
+            }
+        } else if this.elapsed >= 35.0 {
+            if roll < 0.5 {
+                place(World.spawn(this.drifter));
+            } else {
+                place(World.spawn(this.charger));
+            }
         } else {
             place(World.spawn(this.drifter));
         }
