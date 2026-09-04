@@ -190,7 +190,22 @@ impl EditorInput {
         // script reads them relative to the viewport, which is what every
         // other host reports and what makes a position mean the same thing in
         // editor Play as in the real build.
-        let local = |position: egui::Pos2| (position.x - view.min.x, position.y - view.min.y);
+        //
+        // Scaled to physical pixels, because that is the viewport's own space:
+        // the Game view is rendered at `physical_viewport_dimension`, and a
+        // screen element's hit rect comes from dividing a position by that. In
+        // points, a position is the scale factor too small, so on a display
+        // reporting anything but 1.0 every press in Play lands above and left
+        // of where the person actually pressed -- the same fault that stopped a
+        // phone from reaching a button, hidden here behind the 1.0 that an
+        // ordinary desktop and every test both report.
+        let scale = context.pixels_per_point();
+        let local = |position: egui::Pos2| {
+            (
+                (position.x - view.min.x) * scale,
+                (position.y - view.min.y) * scale,
+            )
+        };
 
         context.input(|input| {
             // A pointer over the inspector is not over the game. Reporting it
@@ -273,10 +288,30 @@ mod tests {
     /// Runs one editor frame carrying `events`, and answers with what a script
     /// would read.
     fn frame(events: Vec<egui::Event>, view: Option<egui::Rect>) -> EditorInput {
+        frame_at_scale(events, view, 1.0)
+    }
+
+    /// The same frame, on a display that reports `scale` physical pixels per
+    /// point -- which every laptop with a sharp screen does, and which no test
+    /// here used until a phone could not press a button.
+    fn frame_at_scale(
+        events: Vec<egui::Event>,
+        view: Option<egui::Rect>,
+        scale: f32,
+    ) -> EditorInput {
         let context = egui::Context::default();
         let mut input = EditorInput::default();
         let raw = egui::RawInput {
             events,
+            viewport_id: egui::ViewportId::ROOT,
+            viewports: std::iter::once((
+                egui::ViewportId::ROOT,
+                egui::ViewportInfo {
+                    native_pixels_per_point: Some(scale),
+                    ..Default::default()
+                },
+            ))
+            .collect(),
             ..egui::RawInput::default()
         };
         context.run_ui(raw, |_| {}).drop_without_applying_deltas();
@@ -304,6 +339,22 @@ mod tests {
             Some(view()),
         );
         assert_eq!(input.state().pointer_position(), Some([50.0, 50.0]));
+    }
+
+    /// The Game view is rendered at physical pixels, so a position has to be
+    /// reported in those or a press lands somewhere the person did not press.
+    ///
+    /// At 1.0 the two spaces are identical, which is why every test above this
+    /// one passed while the same mismatch made a phone unable to reach a
+    /// button: a scale factor of 1.0 cannot tell them apart.
+    #[test]
+    fn a_position_is_scaled_to_the_pixels_the_view_is_rendered_at() {
+        let input = frame_at_scale(
+            vec![egui::Event::PointerMoved(egui::pos2(150.0, 90.0))],
+            Some(view()),
+            2.0,
+        );
+        assert_eq!(input.state().pointer_position(), Some([100.0, 100.0]));
     }
 
     /// A pointer over the inspector is not over the game. Clamping it to the

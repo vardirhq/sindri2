@@ -45,12 +45,10 @@ pub fn input_event(event: &WindowEvent, scale_factor: f64) -> Option<InputEvent>
             keyboard_input(event.physical_key, event.state, event.repeat)
         }
         WindowEvent::MouseInput { state, button, .. } => mouse_input(*state, *button),
-        WindowEvent::CursorMoved { position, .. } => Some(pointer_moved(*position, scale_factor)),
+        WindowEvent::CursorMoved { position, .. } => Some(pointer_moved(*position)),
         WindowEvent::CursorLeft { .. } => Some(InputEvent::PointerLeft),
         WindowEvent::MouseWheel { delta, .. } => Some(scrolled(*delta, scale_factor)),
-        WindowEvent::Touch(touch) => {
-            Some(touched(touch.phase, touch.id, touch.location, scale_factor))
-        }
+        WindowEvent::Touch(touch) => Some(touched(touch.phase, touch.id, touch.location)),
         WindowEvent::Focused(focused) => Some(InputEvent::FocusChanged(*focused)),
         _ => None,
     }
@@ -83,11 +81,24 @@ pub fn mouse_input(state: ElementState, button: winit::event::MouseButton) -> Op
     })
 }
 
-pub fn pointer_moved(position: PhysicalPosition<f64>, scale_factor: f64) -> InputEvent {
-    let logical = position.to_logical::<f32>(scale_factor);
+/// Translates a pointer position into the space the viewport is measured in.
+///
+/// Physical pixels, unconverted, because that is what the viewport is: the
+/// surface is configured from `window.inner_size()`, which is physical, and a
+/// screen element's hit rect is worked out by dividing a position by that
+/// viewport. A position converted to logical pixels here is a position divided
+/// by the scale factor twice over, so on a device that reports 3.0 every tap
+/// lands in the top-left third of the screen and nothing below it can be
+/// touched at all.
+///
+/// This is why the phone could not press Start while the desktop was fine:
+/// a desktop scale factor is 1.0, which makes the two spaces identical and the
+/// fault invisible -- in the tests as much as in the running engine.
+#[allow(clippy::cast_possible_truncation)]
+pub const fn pointer_moved(position: PhysicalPosition<f64>) -> InputEvent {
     InputEvent::PointerMoved {
-        x: logical.x,
-        y: logical.y,
+        x: position.x as f32,
+        y: position.y as f32,
     }
 }
 
@@ -100,42 +111,36 @@ pub fn pointer_moved(position: PhysicalPosition<f64>, scale_factor: f64) -> Inpu
 /// gives about `KeyEvent`: a `winit` event carrying a `DeviceId` cannot be
 /// constructed off a real window, so the decision lives somewhere a test can
 /// reach it.
-pub fn touched(
-    phase: TouchPhase,
-    id: u64,
-    location: PhysicalPosition<f64>,
-    scale_factor: f64,
-) -> InputEvent {
-    let logical = location.to_logical::<f32>(scale_factor);
+#[allow(clippy::cast_possible_truncation)]
+pub const fn touched(phase: TouchPhase, id: u64, location: PhysicalPosition<f64>) -> InputEvent {
+    // Physical, for the reason `pointer_moved` gives at length: a finger and a
+    // mouse have to arrive in one space, and it has to be the viewport's.
+    let (x, y) = (location.x as f32, location.y as f32);
     match phase {
-        TouchPhase::Started => InputEvent::TouchStarted {
-            id,
-            x: logical.x,
-            y: logical.y,
-        },
-        TouchPhase::Moved => InputEvent::TouchMoved {
-            id,
-            x: logical.x,
-            y: logical.y,
-        },
+        TouchPhase::Started => InputEvent::TouchStarted { id, x, y },
+        TouchPhase::Moved => InputEvent::TouchMoved { id, x, y },
         TouchPhase::Ended | TouchPhase::Cancelled => InputEvent::TouchEnded { id },
     }
 }
 
 /// Normalises wheel lines and touchpad pixels to logical pixels.
+#[allow(clippy::cast_possible_truncation)]
 pub fn scrolled(delta: MouseScrollDelta, scale_factor: f64) -> InputEvent {
     match delta {
+        // A line is a number of lines whatever the display, so it becomes
+        // pixels of the space everything else is in: physical ones.
+        #[allow(clippy::cast_possible_truncation)]
         MouseScrollDelta::LineDelta(x, y) => InputEvent::Scrolled {
-            x: x * PIXELS_PER_SCROLL_LINE,
-            y: y * PIXELS_PER_SCROLL_LINE,
+            x: x * PIXELS_PER_SCROLL_LINE * scale_factor as f32,
+            y: y * PIXELS_PER_SCROLL_LINE * scale_factor as f32,
         },
-        MouseScrollDelta::PixelDelta(position) => {
-            let logical = position.to_logical::<f32>(scale_factor);
-            InputEvent::Scrolled {
-                x: logical.x,
-                y: logical.y,
-            }
-        }
+        // Already physical, and left that way: converting to logical here would
+        // make a trackpad scroll a third of its distance on the display that
+        // reports three, which is the same mismatch that made a tap miss.
+        MouseScrollDelta::PixelDelta(position) => InputEvent::Scrolled {
+            x: position.x as f32,
+            y: position.y as f32,
+        },
     }
 }
 
@@ -314,11 +319,18 @@ mod tests {
         );
     }
 
+    /// The space a position arrives in is the space the viewport is measured
+    /// in, and the viewport is physical.
+    ///
+    /// This test asserted the opposite, under the name
+    /// `pointer_positions_are_reported_in_logical_pixels`, and was green the
+    /// whole time a phone could not press a button: it picked a space without
+    /// checking which one the hit test divides by.
     #[test]
-    fn pointer_positions_are_reported_in_logical_pixels() {
+    fn a_position_arrives_in_the_space_the_viewport_is_measured_in() {
         assert_eq!(
-            pointer_moved(PhysicalPosition::new(200.0, 100.0), 2.0),
-            InputEvent::PointerMoved { x: 100.0, y: 50.0 }
+            pointer_moved(PhysicalPosition::new(200.0, 100.0)),
+            InputEvent::PointerMoved { x: 200.0, y: 100.0 }
         );
     }
 
@@ -336,7 +348,8 @@ mod tests {
                 MouseScrollDelta::PixelDelta(PhysicalPosition::new(0.0, 100.0)),
                 2.0
             ),
-            InputEvent::Scrolled { x: 0.0, y: 50.0 }
+            InputEvent::Scrolled { x: 0.0, y: 100.0 },
+            "a pixel delta is already in the space everything else is in"
         );
     }
 
@@ -351,19 +364,37 @@ mod tests {
     }
 
     #[test]
-    fn a_finger_is_reported_in_logical_pixels() {
+    fn a_finger_arrives_where_the_mouse_would() {
+        // The same space, or a game works with one and not the other -- and
+        // the one it fails with is the one on the device that has no mouse.
         assert_eq!(
-            touched(
-                TouchPhase::Started,
-                3,
-                PhysicalPosition::new(200.0, 100.0),
-                2.0
-            ),
+            touched(TouchPhase::Started, 3, PhysicalPosition::new(200.0, 100.0)),
             InputEvent::TouchStarted {
                 id: 3,
-                x: 100.0,
-                y: 50.0
+                x: 200.0,
+                y: 100.0
             }
+        );
+    }
+
+    /// What the fault actually looked like, at the scale factor a phone reports.
+    ///
+    /// A tap near the bottom of a tall screen has to stay near the bottom. Under
+    /// the old conversion it arrived a third of the way down, so every control
+    /// below that third was unreachable -- which is exactly the Start button
+    /// that could not be pressed.
+    #[test]
+    fn a_tap_at_the_bottom_of_a_phone_screen_stays_at_the_bottom() {
+        let screen = PhysicalPosition::new(540.0, 2000.0);
+        let InputEvent::TouchStarted { y, .. } = touched(TouchPhase::Started, 0, screen) else {
+            panic!("a started touch");
+        };
+        // Against the viewport it is divided by, which is the physical height.
+        let viewport_height = 2400.0_f32;
+        assert!(
+            y / viewport_height > 0.8,
+            "a tap at 2000 of 2400 arrived at {}% down the screen",
+            (y / viewport_height) * 100.0
         );
     }
 
@@ -373,7 +404,7 @@ mod tests {
     fn a_cancelled_finger_is_an_ended_one() {
         for phase in [TouchPhase::Ended, TouchPhase::Cancelled] {
             assert_eq!(
-                touched(phase, 1, PhysicalPosition::new(0.0, 0.0), 1.0),
+                touched(phase, 1, PhysicalPosition::new(0.0, 0.0)),
                 InputEvent::TouchEnded { id: 1 }
             );
         }
