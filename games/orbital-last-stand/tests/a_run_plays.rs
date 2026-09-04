@@ -222,3 +222,48 @@ fn what_a_run_earns_outlives_it() {
         "the best score did not survive"
     );
 }
+
+/// The property the stat block exists for.
+///
+/// A module contributes to an additive pile or a multiplicative one, and the
+/// ship is derived from both. So two players who took the same modules have the
+/// same ship whatever order the offers came in. Folded into a running total at
+/// the moment of picking, `+2 damage` then `x1.3` and `x1.3` then `+2` are
+/// different numbers, and nothing on the screen would ever explain why.
+#[test]
+fn the_same_modules_make_the_same_ship_in_either_order() {
+    // Applied directly to the piles rather than through the screen: which
+    // offers a run happens to show is up to the seed, and this is a claim about
+    // arithmetic rather than about what the chooser deals.
+    let ship = |flat_first: bool| {
+        let mut run = Run::open().expect("the project opens");
+        play(&mut run, 0.1);
+        run.click("TitleStart");
+        run.step(STEP);
+
+        let flat = |run: &mut Run| run.set_board("damage_add", run.board("damage_add") + 2.0);
+        let scale = |run: &mut Run| run.set_board("damage_mul", run.board("damage_mul") * 1.3);
+        if flat_first {
+            flat(&mut run);
+            scale(&mut run);
+        } else {
+            scale(&mut run);
+            flat(&mut run);
+        }
+        // One frame for `Stats` to derive from the piles.
+        run.step(STEP);
+        run.board("damage")
+    };
+
+    let flat_first = ship(true);
+    let scale_first = ship(false);
+    assert!(
+        (flat_first - scale_first).abs() < 1.0e-5,
+        "the same build came out as {flat_first} and {scale_first}"
+    );
+    // And it is the number the piles describe, not merely a consistent one.
+    assert!(
+        (flat_first - 3.9).abs() < 1.0e-5,
+        "(1 + 2) * 1.3 should be 3.9, and was {flat_first}"
+    );
+}

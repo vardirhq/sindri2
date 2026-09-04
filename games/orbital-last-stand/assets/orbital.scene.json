@@ -158,11 +158,13 @@
       "components": {
         "sindri.script": {
           "properties": {
-            "amount": 1.0,
-            "effect": 0.0
+            "add": 1.0,
+            "add_key": "damage_add",
+            "factor": 1.0,
+            "mul_key": "damage_mul"
           },
-          "script": "UpgradeCard",
-          "source": "scripts/upgrade-card.decay"
+          "script": "Module",
+          "source": "scripts/module.decay"
         },
         "sindri.tags": {
           "tags": [
@@ -323,11 +325,13 @@
       "components": {
         "sindri.script": {
           "properties": {
-            "amount": 2.0,
-            "effect": 4.0
+            "add": 2.0,
+            "add_key": "max_hp_add",
+            "factor": 1.0,
+            "mul_key": "max_hp_mul"
           },
-          "script": "UpgradeCard",
-          "source": "scripts/upgrade-card.decay"
+          "script": "Module",
+          "source": "scripts/module.decay"
         },
         "sindri.tags": {
           "tags": [
@@ -488,11 +492,13 @@
       "components": {
         "sindri.script": {
           "properties": {
-            "amount": 1.2,
-            "effect": 3.0
+            "add": 1.2,
+            "add_key": "magnet_add",
+            "factor": 1.0,
+            "mul_key": "magnet_mul"
           },
-          "script": "UpgradeCard",
-          "source": "scripts/upgrade-card.decay"
+          "script": "Module",
+          "source": "scripts/module.decay"
         },
         "sindri.tags": {
           "tags": [
@@ -653,11 +659,13 @@
       "components": {
         "sindri.script": {
           "properties": {
-            "amount": 1.0,
-            "effect": 5.0
+            "add": 1.0,
+            "add_key": "pierce_add",
+            "factor": 1.0,
+            "mul_key": "pierce_mul"
           },
-          "script": "UpgradeCard",
-          "source": "scripts/upgrade-card.decay"
+          "script": "Module",
+          "source": "scripts/module.decay"
         },
         "sindri.tags": {
           "tags": [
@@ -818,11 +826,13 @@
       "components": {
         "sindri.script": {
           "properties": {
-            "amount": 0.05,
-            "effect": 1.0
+            "add": 1.0,
+            "add_key": "fire_rate_add",
+            "factor": 1.0,
+            "mul_key": "fire_rate_mul"
           },
-          "script": "UpgradeCard",
-          "source": "scripts/upgrade-card.decay"
+          "script": "Module",
+          "source": "scripts/module.decay"
         },
         "sindri.tags": {
           "tags": [
@@ -983,11 +993,13 @@
       "components": {
         "sindri.script": {
           "properties": {
-            "amount": 0.8,
-            "effect": 2.0
+            "add": 0.8,
+            "add_key": "move_speed_add",
+            "factor": 1.0,
+            "mul_key": "move_speed_mul"
           },
-          "script": "UpgradeCard",
-          "source": "scripts/upgrade-card.decay"
+          "script": "Module",
+          "source": "scripts/module.decay"
         },
         "sindri.tags": {
           "tags": [
@@ -1151,6 +1163,17 @@
           },
           "script": "UpgradeChooser",
           "source": "scripts/upgrade-chooser.decay"
+        }
+      }
+    },
+    {
+      "id": "stats",
+      "name": "Stats",
+      "components": {
+        "sindri.script": {
+          "properties": {},
+          "script": "Stats",
+          "source": "scripts/stats.decay"
         }
       }
     },

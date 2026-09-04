@@ -1,0 +1,44 @@
+// One module on the upgrade screen, and the whole of what it does.
+//
+// It names two piles and contributes to them. It does not know which stat those
+// piles feed, what the base is, or what the ship ends up at -- which is exactly
+// why forty of these can exist without forty branches anywhere. The card that
+// knows what it is worth is still the entity that spends it, because a script
+// cannot call into another script; what changed is that what it is worth is now
+// data rather than an index into a comment.
+//
+// `add` and `factor` are both offered because the reference catalog needs both:
+// "+1 pierce" and "x1.28 damage" are different kinds of module, and a card that
+// could only do one of them would need a second script to do the other.
+script Module {
+    /// Where a flat contribution goes. `""` for a module that only multiplies.
+    @export let add_key: String = "damage_add";
+    /// Where a proportional one goes. `""` for a module that only adds.
+    @export let mul_key: String = "damage_mul";
+    @export let add: f32 = 0.0;
+    @export let factor: f32 = 1.0;
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 2.0 {
+            return;
+        }
+        if !Ui.is_pressed(this.entity) {
+            return;
+        }
+        apply();
+        Audio.play("audio/upgrade.wav", 0.4);
+        Game.set("run_state", 1.0);
+    }
+
+    fn apply() {
+        // Guarded rather than assumed: a module that only multiplies leaves the
+        // additive key empty, and writing to `""` would put a number on the
+        // board under a name nothing reads and nothing could ever clear.
+        if this.add != 0.0 {
+            Game.set(this.add_key, Game.get(this.add_key, 0.0) + this.add);
+        }
+        if this.factor != 1.0 {
+            Game.set(this.mul_key, Game.get(this.mul_key, 1.0) * this.factor);
+        }
+    }
+}

@@ -72,7 +72,22 @@ fn what_is_switched_off_still_ships() {
             "{hidden} was left behind: {scripts:?}"
         );
     }
-    assert_eq!(scripts.len(), 15, "{scripts:?}");
+    // Counted from the project rather than written down. A literal here was a
+    // number that had to be edited every time a script was added, which makes
+    // it a chore rather than a check -- and a chore gets bumped to whatever the
+    // run reported, which is exactly how a missing script would have got in.
+    let authored: Vec<String> =
+        std::fs::read_dir(orbital_last_stand::project().join("assets/scripts"))
+            .expect("the project's scripts")
+            .filter_map(|entry| entry.ok())
+            .map(|entry| entry.file_name().to_string_lossy().into_owned())
+            .filter(|name| name.ends_with(".decay"))
+            .collect();
+    assert_eq!(
+        scripts.len(),
+        authored.len(),
+        "every authored script ships: authored {authored:?}, shipped {scripts:?}"
+    );
 }
 
 /// Every file the manifest promises is where it says, and is what it says.

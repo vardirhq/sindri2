@@ -1,0 +1,116 @@
+// What the ship is currently worth, derived rather than remembered.
+//
+// A module does not change a stat. It adds to that stat's *additive* pile or
+// multiplies its *multiplicative* one, and this recomputes the number from the
+// base and those two piles. That is the whole reason the file exists, and it
+// buys three things that `Game.set("damage", damage + 1)` at the point of
+// picking cannot:
+//
+//   Order stops mattering. `+2 damage` then `x1.3`, and `x1.3` then `+2`, are
+//   the same build -- so two players who picked the same modules have the same
+//   ship. Folded in place they are 4.3 and 3.9, and nobody can see why.
+//
+//   A module can be shown before it is taken, or taken away again, because
+//   nothing has been destructively folded into a running total.
+//
+//   Every stat reads the same way, so a card becomes data -- two keys and two
+//   numbers -- instead of another branch in a table that is already six deep
+//   and would have to be forty.
+//
+// The keys are written out rather than built, because Decay has no way to join
+// two strings and inventing one for this would be a language feature bought to
+// save typing. Written out, they are also greppable.
+//
+// Polarity is normalised: every stat here is one where *more is better*,
+// including the ones the ship would rather have small. `fire_rate` is shots per
+// second and the gap is divided out below, so no module is ever `x0.84` meaning
+// faster. A catalog where some multipliers help and others hurt is a catalog
+// nobody can author confidently, and it is forty chances to get a sign wrong.
+script Stats {
+    /// The highest `max_hp` already granted, so a module that raises it heals
+    /// by what it added. Tracked here rather than by the card: the card knows
+    /// what it contributed, not what the stat came out at once everything else
+    /// had been folded in.
+    var granted_hp: f32 = 0.0;
+
+    fn start() {
+        wipe();
+    }
+
+    fn update(dt: f32) {
+        // The director starts a run through the board, because a script cannot
+        // call into another one.
+        if Game.get("stats_reset", 0.0) > 0.0 {
+            Game.set("stats_reset", 0.0);
+            wipe();
+        }
+        derive();
+    }
+
+    /// Back to a ship with no modules on it.
+    fn wipe() {
+        clear("damage_add", "damage_mul");
+        clear("fire_rate_add", "fire_rate_mul");
+        clear("bullet_speed_add", "bullet_speed_mul");
+        clear("bullet_size_add", "bullet_size_mul");
+        clear("shots_add", "shots_mul");
+        clear("pierce_add", "pierce_mul");
+        clear("crit_add", "crit_mul");
+        clear("crit_power_add", "crit_power_mul");
+        clear("move_speed_add", "move_speed_mul");
+        clear("max_hp_add", "max_hp_mul");
+        clear("armor_add", "armor_mul");
+        clear("regen_add", "regen_mul");
+        clear("magnet_add", "magnet_mul");
+        clear("xp_gain_add", "xp_gain_mul");
+
+        this.granted_hp = 0.0;
+        derive();
+        Game.set("hp", Game.get("max_hp", 5.0));
+        this.granted_hp = Game.get("max_hp", 5.0);
+    }
+
+    fn clear(add: String, mul: String) {
+        Game.set(add, 0.0);
+        Game.set(mul, 1.0);
+    }
+
+    /// One stat: its base, plus what was added, times what multiplied it.
+    fn stat(out: String, add: String, mul: String, base: f32) {
+        Game.set(out, (base + Game.get(add, 0.0)) * Game.get(mul, 1.0));
+    }
+
+    fn derive() {
+        stat("damage", "damage_add", "damage_mul", 1.0);
+        stat("fire_rate", "fire_rate_add", "fire_rate_mul", 2.38);
+        stat("bullet_speed", "bullet_speed_add", "bullet_speed_mul", 9.0);
+        stat("bullet_size", "bullet_size_add", "bullet_size_mul", 1.0);
+        stat("shots", "shots_add", "shots_mul", 1.0);
+        stat("pierce", "pierce_add", "pierce_mul", 0.0);
+        stat("crit", "crit_add", "crit_mul", 0.0);
+        // `crit_power`, not `crit_mult`: its multiplicative pile would have been
+        // `crit_mult_mul`, and a key that reads as a typo is a key someone
+        // eventually writes as one.
+        stat("crit_power", "crit_power_add", "crit_power_mul", 2.0);
+        stat("move_speed", "move_speed_add", "move_speed_mul", 5.2);
+        stat("max_hp", "max_hp_add", "max_hp_mul", 5.0);
+        stat("armor", "armor_add", "armor_mul", 0.0);
+        stat("regen", "regen_add", "regen_mul", 0.0);
+        stat("magnet", "magnet_add", "magnet_mul", 2.2);
+        stat("xp_gain", "xp_gain_add", "xp_gain_mul", 1.0);
+
+        // A bigger hull heals by what it added, or raising it would be a stat
+        // that reads better and a ship that is no harder to kill.
+        let ceiling = Game.get("max_hp", 5.0);
+        if ceiling > this.granted_hp {
+            Game.set("hp", Game.get("hp", 5.0) + ceiling - this.granted_hp);
+            this.granted_hp = ceiling;
+        }
+
+        // The one derived quantity that is not a stat: the ship fires on a gap
+        // and the catalog talks about a rate. Divided here so no module has to
+        // be written the wrong way round, and floored because a gap that
+        // reaches zero is a bullet every frame for the rest of the run.
+        Game.set("fire_gap", max(0.05, 1.0 / max(0.1, Game.get("fire_rate", 2.38))));
+    }
+}
