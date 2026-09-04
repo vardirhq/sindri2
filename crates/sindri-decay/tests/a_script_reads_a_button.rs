@@ -6,9 +6,8 @@ use sindri_core::{
 };
 use sindri_decay::{ScriptComponent, ScriptFrame, ScriptReport, ScriptSources, Scripts};
 use sindri_platform::{InputEvent, InputState, MouseButton};
-use sindri_scene::{
-    PointerFrame, SceneExtractor, ScreenExtent, ScreenUi, UiButtonComponent, UiImageComponent,
-};
+use sindri_scene::{SceneExtractor, ScreenExtent, ScreenUi, UiButtonComponent, UiImageComponent};
+use std::time::Duration;
 
 const WIDTH: f32 = 800.0;
 const HEIGHT: f32 = 600.0;
@@ -52,26 +51,42 @@ fn scripted_button(world: &mut World, script: &str) -> EntityId {
     })
 }
 
-/// The pointer at the middle of the screen, in whatever state.
-fn pointing(pressed: bool, released: bool, down: bool) -> (InputState, PointerFrame) {
-    let mut input = InputState::default();
-    input.apply(InputEvent::PointerMoved {
-        x: WIDTH / 2.0,
-        y: HEIGHT / 2.0,
-    });
-    if pressed {
-        input.apply(InputEvent::ButtonPressed(MouseButton::Left));
+/// A mouse at the middle of the screen, driven the way a host drives one.
+///
+/// One state carried across frames, because that is what a host has. This used
+/// to be a fresh state per frame with a hand-written pointer frame beside it,
+/// and the interface was read from the hand-written one -- so a release could
+/// be described on a frame where no press had ever happened, which is not a
+/// thing any device can do. Against real presses it is not expressible: a
+/// release with no press finishes nothing.
+struct Pointer {
+    input: InputState,
+}
+
+impl Pointer {
+    fn new() -> Self {
+        let mut input = InputState::default();
+        input.apply(InputEvent::PointerMoved {
+            x: WIDTH / 2.0,
+            y: HEIGHT / 2.0,
+        });
+        Self { input }
     }
-    if released {
-        input.apply(InputEvent::ButtonReleased(MouseButton::Left));
+
+    fn press(&mut self) {
+        self.input
+            .apply(InputEvent::ButtonPressed(MouseButton::Left));
     }
-    let frame = PointerFrame {
-        position: Some([WIDTH / 2.0, HEIGHT / 2.0]),
-        pressed,
-        released,
-        down,
-    };
-    (input, frame)
+
+    fn release(&mut self) {
+        self.input
+            .apply(InputEvent::ButtonReleased(MouseButton::Left));
+    }
+
+    /// Spends the frame's edges, as a host does between frames.
+    fn frame(&mut self) {
+        self.input.begin_frame(Duration::from_millis(16));
+    }
 }
 
 fn run(
@@ -79,7 +94,7 @@ fn run(
     world: &mut World,
     source: &str,
     screen: &mut ScreenUi,
-    state: &(InputState, PointerFrame),
+    state: &InputState,
 ) -> ScriptReport {
     let components = registry();
     screen
@@ -87,7 +102,7 @@ fn run(
             world,
             &components,
             ScreenExtent::new(WIDTH, HEIGHT),
-            state.1,
+            state.presses(),
         )
         .expect("registered");
     let mut sources = ScriptSources::new();
@@ -95,7 +110,7 @@ fn run(
     scripts.advance(
         world,
         &components,
-        ScriptFrame::new(&sources, &state.0, 1.0 / 60.0).with_screen_ui(screen),
+        ScriptFrame::new(&sources, state, 1.0 / 60.0).with_screen_ui(screen),
     )
 }
 
@@ -125,12 +140,14 @@ fn a_script_acts_on_a_click_and_only_once() {
     let mut screen = ScreenUi::new();
     let mut scripts = Scripts::new();
 
+    let mut pointer = Pointer::new();
+    pointer.press();
     let report = run(
         &mut scripts,
         &mut world,
         COUNTER,
         &mut screen,
-        &pointing(true, false, true),
+        &pointer.input,
     );
     assert!(report.failures.is_empty(), "{:?}", report.failures);
     assert!(
@@ -138,22 +155,25 @@ fn a_script_acts_on_a_click_and_only_once() {
         "a press is not a click"
     );
 
+    pointer.frame();
+    pointer.release();
     run(
         &mut scripts,
         &mut world,
         COUNTER,
         &mut screen,
-        &pointing(false, true, false),
+        &pointer.input,
     );
     assert!((clicks(&world, entity) - 1.0).abs() < 1.0e-5, "no click");
 
     // The frame after: the click is over, and must not fire again.
+    pointer.frame();
     run(
         &mut scripts,
         &mut world,
         COUNTER,
         &mut screen,
-        &pointing(false, false, false),
+        &pointer.input,
     );
     assert!(
         (clicks(&world, entity) - 1.0).abs() < 1.0e-5,
@@ -181,7 +201,7 @@ fn gameplay_can_tell_that_a_screen_element_took_the_pointer() {
         &mut world,
         source,
         &mut screen,
-        &pointing(false, false, false),
+        &Pointer::new().input,
     );
     assert!((clicks(&world, entity) - 1.0).abs() < 1.0e-5);
 }

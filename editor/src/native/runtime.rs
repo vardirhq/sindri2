@@ -281,12 +281,7 @@ impl EditorApp {
             &self.world,
             components,
             sindri_scene::ScreenExtent::new(view_width, view_height),
-            sindri_scene::PointerFrame {
-                position: input_state.pointer_position(),
-                pressed: input_state.pointer_pressed(sindri_platform::MouseButton::Left),
-                released: input_state.pointer_released(sindri_platform::MouseButton::Left),
-                down: input_state.pointer_down(sindri_platform::MouseButton::Left),
-            },
+            input_state.presses(),
         ) {
             self.console.error(format!("Screen UI: {error}"));
         }

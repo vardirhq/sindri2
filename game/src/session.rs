@@ -12,7 +12,7 @@ use sindri_decay::{AudioCommand, PrefabSources, ScriptFrame, ScriptSources, Scri
 use sindri_platform::NativeAudioBackend;
 use sindri_platform::{AudioBackend, AudioError, FrameContext, Game, InputState, PlaybackSettings};
 use sindri_scene::{
-    AudioSourceComponent, PointerFrame, ScenePhysics2d, ScreenExtent, ScreenUi, SpriteAnimations,
+    AudioSourceComponent, ScenePhysics2d, ScreenExtent, ScreenUi, SpriteAnimations,
 };
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -137,12 +137,7 @@ impl Session {
             world,
             &self.components,
             ScreenExtent::new(viewport.0, viewport.1),
-            PointerFrame {
-                position: input.pointer_position(),
-                pressed: input.pointer_pressed(sindri_platform::MouseButton::Left),
-                released: input.pointer_released(sindri_platform::MouseButton::Left),
-                down: input.pointer_down(sindri_platform::MouseButton::Left),
-            },
+            input.presses(),
         )?;
         // Before the scripts, so a fleck thrown this frame is drawn where it
         // was thrown rather than one frame along.
