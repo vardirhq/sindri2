@@ -11,6 +11,9 @@ mod key;
 mod presses;
 mod state;
 
+#[cfg(test)]
+mod state_tests;
+
 pub use action::{
     ACTIONS_FORMAT_VERSION, ACTIONS_SUFFIX, ActionId, ActionKind, ActionMap, ActionMapError,
     ActionState, Actions, ActionsDocumentError, Binding, Source,

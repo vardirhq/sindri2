@@ -15,9 +15,9 @@ use crate::{
         EFFECTS, EFFECTS_CALLS, ENTITY, EffectsCall, FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS,
         GameCall, GridCall, HostFunction, INPUT, INPUT_QUERIES, Node, PHYSICS, PHYSICS_CALLS,
         POINTER, POINTER_QUERIES, POINTER_VALUES, PREFAB, PRINT, PhysicsCall, PointerValue, RANDOM,
-        RANDOM_CALLS, RandomCall, SAVE, SAVE_CALLS, SaveCall, THIS, THROUGH_REFERENCE, TIME,
-        TIME_VALUES, TOUCH, TOUCH_CALLS, TOUCH_COUNT, UI, UI_CALLS, UiCall, WORLD, WORLD_CALLS,
-        WorldCall,
+        RANDOM_CALLS, RandomCall, SAVE, SAVE_CALLS, STICK, STICK_VALUES, SaveCall, StickValue,
+        THIS, THROUGH_REFERENCE, TIME, TIME_VALUES, TOUCH, TOUCH_CALLS, TOUCH_COUNT, UI, UI_CALLS,
+        UiCall, WORLD, WORLD_CALLS, WorldCall,
     },
 };
 
@@ -208,6 +208,21 @@ pub(super) fn add_pointer_surface(environment: &mut Environment) {
     }
     environment.add_type(TOUCH, touch);
     environment.add_value(TOUCH, Type::Named(TOUCH.to_owned()));
+
+    let mut stick = HostType::new();
+    for (name, value) in STICK_VALUES {
+        stick = stick.with_value(
+            *name,
+            match value {
+                StickValue::Held => Type::Bool,
+                StickValue::X | StickValue::Y | StickValue::AnchorX | StickValue::AnchorY => {
+                    Type::F32
+                }
+            },
+        );
+    }
+    environment.add_type(STICK, stick);
+    environment.add_value(STICK, Type::Named(STICK.to_owned()));
 }
 
 /// What a script can do to a body, and ask about what it touched.

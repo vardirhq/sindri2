@@ -31,9 +31,9 @@ use self::convert::{as_f32, describe, number};
 use crate::{
     Blackboard, PrefabSources,
     surface::{
-        FUNCTIONS, Handle, HostFunction, Leaf, POINTER, POINTER_VALUES, PRINT, PointerValue, TIME,
-        TIME_VALUES, TOUCH, TOUCH_COUNT, TimeValue, TouchCall, follow_mut, handle, leaf,
-        leaf_through_reference,
+        FUNCTIONS, Handle, HostFunction, Leaf, POINTER, POINTER_VALUES, PRINT, PointerValue, STICK,
+        STICK_VALUES, StickValue, TIME, TIME_VALUES, TOUCH, TOUCH_COUNT, TimeValue, TouchCall,
+        follow_mut, handle, leaf, leaf_through_reference,
     },
 };
 
@@ -132,6 +132,11 @@ impl Host for WorldHost<'_> {
                 && let Some((_, value)) = POINTER_VALUES.iter().find(|(known, _)| known == name)
             {
                 return Ok(Some(self.pointer_value(*value)));
+            }
+            if *namespace == STICK
+                && let Some((_, value)) = STICK_VALUES.iter().find(|(known, _)| known == name)
+            {
+                return Ok(Some(self.stick_value(*value)));
             }
             if *namespace == TOUCH && *name == TOUCH_COUNT {
                 // `usize` to `f64` is exact for every count a hand can produce,
@@ -410,6 +415,34 @@ impl<'a> WorldHost<'a> {
     /// mid-frame and not a mistake in a script. `Pointer.inside` is how a
     /// script that cares asks, and it has to be asked *before* the position is
     /// believed.
+    /// What the steering finger is asking for.
+    ///
+    /// The host computes it rather than the script, because anchoring, the
+    /// clamp past the radius and the dead zone are the same three decisions in
+    /// every game that has ever needed a stick -- and a script doing the
+    /// subtraction itself gets a slightly different feel and its own bugs.
+    fn stick_value(&self, value: StickValue) -> Value {
+        let stick = self.context.input.stick();
+        let pushed = stick.value();
+        match value {
+            StickValue::X => Value::Number(f64::from(pushed[0])),
+            StickValue::Y => Value::Number(f64::from(pushed[1])),
+            StickValue::Held => Value::Bool(stick.is_engaged()),
+            // Zero when nothing is holding it, like a pointer position read
+            // from outside the window: a script that cares asks `held` first.
+            StickValue::AnchorX => Value::Number(f64::from(
+                stick
+                    .anchor(self.context.input.presses())
+                    .unwrap_or([0.0, 0.0])[0],
+            )),
+            StickValue::AnchorY => Value::Number(f64::from(
+                stick
+                    .anchor(self.context.input.presses())
+                    .unwrap_or([0.0, 0.0])[1],
+            )),
+        }
+    }
+
     fn pointer_value(&self, value: PointerValue) -> Value {
         let position = self.context.input.pointer_position();
         match value {

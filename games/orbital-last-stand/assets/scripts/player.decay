@@ -5,8 +5,6 @@ script Player {
     @export let bullet: Prefab;
     @export let arena: f32 = 8.0;
     @export let invulnerable_for: f32 = 0.9;
-    /// How much world the camera frames from top to bottom.
-    @export let view_height: f32 = 18.0;
 
     // Found by the name the scene gave them. An entity cannot be an
     // authored property — a runtime handle is not a scene ID and
@@ -55,21 +53,15 @@ script Player {
         var dx: f32 = Input.axis("A", "D") + Input.axis("ArrowLeft", "ArrowRight");
         var dy: f32 = Input.axis("S", "W") + Input.axis("ArrowDown", "ArrowUp");
 
-        // A held pointer steers, which is the whole of the touch control: the
-        // ship goes where the finger is and stops when it gets there. The four
-        // pixels of deadzone are the game's tuning, not the engine's.
-        if dx == 0.0 && dy == 0.0 && Pointer.inside && Pointer.is_down("Left") && !Pointer.over_ui {
-            // The overlay is two tall; this camera frames `view_height` world
-            // units over the same span, so the conversion is a multiplication
-            // the game owns because the game authored the camera.
-            let half = this.view_height * 0.5;
-            let to_x = Pointer.overlay_x * half - this.transform.position.x;
-            let to_y = Pointer.overlay_y * half - this.transform.position.y;
-            let far = sqrt(to_x * to_x + to_y * to_y);
-            if far > 0.12 {
-                dx = to_x / far;
-                dy = to_y / far;
-            }
+        // A thumb is a stick: it anchors where it lands and the ship goes the
+        // way it is pulled, as hard as it is pulled. Steering towards the
+        // finger instead -- which this did -- makes the ship lunge the moment a
+        // thumb touches down, offers no way to ask for gently-left, and parks
+        // the hand over the part of the arena the player is trying to watch.
+        if dx == 0.0 && dy == 0.0 && Stick.held && !Pointer.over_ui {
+            dx = Stick.x;
+            // The screen's axes grow downward and the world's grow up.
+            dy = -Stick.y;
         }
 
         let length = sqrt(dx * dx + dy * dy);

@@ -31,6 +31,7 @@
 mod gesture;
 mod press;
 mod set;
+mod stick;
 
 #[cfg(test)]
 mod gesture_tests;
@@ -38,3 +39,4 @@ mod gesture_tests;
 pub use gesture::{Gesture, GestureLimits, Gestures};
 pub use press::{PointerDevice, Press, PressId, PressPhase};
 pub use set::Presses;
+pub use stick::{StickSettings, VirtualStick};

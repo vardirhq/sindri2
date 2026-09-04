@@ -118,6 +118,31 @@ pub(crate) const POINTER_VALUES: &[(&str, PointerValue)] = &[
     ("over_ui", PointerValue::OverUi),
 ];
 
+/// What a script reads from the steering stick.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum StickValue {
+    /// How far it is pushed, -1 to 1, in screen axes.
+    X,
+    Y,
+    /// Whether a finger is on it at all.
+    ///
+    /// Not the same as a zero reading, which is also what a thumb resting
+    /// inside the dead zone gives: a game drawing the control wants to show it
+    /// while it is held even when it is centred.
+    Held,
+    /// Where the thumb landed, for a game that draws the ring.
+    AnchorX,
+    AnchorY,
+}
+
+pub(crate) const STICK_VALUES: &[(&str, StickValue)] = &[
+    ("x", StickValue::X),
+    ("y", StickValue::Y),
+    ("held", StickValue::Held),
+    ("anchor_x", StickValue::AnchorX),
+    ("anchor_y", StickValue::AnchorY),
+];
+
 /// A question about the fingers specifically.
 ///
 /// Separate from `Pointer` because it answers something `Pointer` cannot: how
