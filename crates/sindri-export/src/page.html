@@ -31,13 +31,51 @@
     }
     #sindri-error[data-visible="true"] { display: block; }
     #sindri-error strong { display: block; margin-bottom: .35rem; }
+    /* Which build this is. Small and in a corner, because a player does not
+       need it and anyone reporting a fault does: "it still does not work" and
+       "it still does not work in build a1b2c3d" are different reports, and only
+       the second one can be acted on. */
+    #sindri-build {
+      position: fixed;
+      right: .5rem;
+      bottom: .35rem;
+      font: 11px/1 ui-monospace, monospace;
+      color: #7c88a1;
+      user-select: text;
+      pointer-events: auto;
+    }
+    /* What the page itself sees the finger do, for a device that cannot be
+       attached to a debugger. Off unless asked for by ?input-debug. */
+    #sindri-input {
+      display: none;
+      position: fixed;
+      left: 0;
+      top: 0;
+      max-height: 45vh;
+      overflow-y: auto;
+      margin: 0;
+      padding: .5rem .6rem;
+      font: 11px/1.35 ui-monospace, monospace;
+      color: #d8e2f5;
+      background: #0b0f17e8;
+      white-space: pre-wrap;
+    }
+    #sindri-input[data-visible="true"] { display: block; }
   </style>
 </head>
 <body>
   <canvas id="sindri-canvas"></canvas>
   <div id="sindri-error" role="alert" aria-live="assertive"></div>
+  <pre id="sindri-input"></pre>
+  <div id="sindri-build">{{build}}</div>
   <script type="module">
-    import init from "./pkg/{{host}}.js";
+    // The host is versioned in its URL, and the wasm it loads is named
+    // explicitly so the query reaches that too. Without this the one file
+    // holding the game's code is the one file a returning device may serve from
+    // its cache: the assets are content-addressed and always fresh, so a stale
+    // host runs new content and every symptom looks like a live bug in code
+    // that was already fixed.
+    import init from "./pkg/{{host}}.js{{cachebust}}";
 
     const canvas = document.querySelector("#sindri-canvas");
     const errorBox = document.querySelector("#sindri-error");
@@ -63,6 +101,39 @@
       fail("{{name}} stopped", summary.length > 200 ? `${summary.slice(0, 200)}…` : summary);
     });
 
+    // What the page sees, before winit or wasm is involved. Three fixes deep
+    // into "a tap does nothing on a phone", the unanswered question was whether
+    // the browser delivers touch to this canvas at all -- and that is a
+    // question the page can answer on the device, with no debugger attached.
+    if (new URLSearchParams(location.search).has("input-debug")) {
+      const log = document.querySelector("#sindri-input");
+      log.dataset.visible = "true";
+      const seen = new Map();
+      const lines = [];
+      const show = (text) => {
+        lines.push(text);
+        if (lines.length > 14) lines.shift();
+        log.textContent = `${[...seen].map(([k, n]) => `${k}:${n}`).join("  ")}\n${lines.join("\n")}`;
+      };
+      show(`build {{build}}`);
+      show(`touch-points ${navigator.maxTouchPoints ?? "?"}  ua-mobile ${navigator.userAgentData?.mobile ?? "?"}`);
+      for (const kind of ["touchstart", "touchmove", "touchend", "touchcancel",
+                          "pointerdown", "pointermove", "pointerup", "pointercancel",
+                          "mousedown", "mouseup", "click"]) {
+        // On the canvas, capturing, and passive: this reports what arrives and
+        // changes nothing about it, so turning the trace on cannot be what
+        // makes the input behave differently.
+        canvas?.addEventListener(kind, (event) => {
+          seen.set(kind, (seen.get(kind) ?? 0) + 1);
+          const at = event.touches?.[0] ?? event;
+          const where = at.clientX === undefined ? "" :
+            ` @${Math.round(at.clientX)},${Math.round(at.clientY)}`;
+          const type = event.pointerType ? ` ${event.pointerType}` : "";
+          show(`${kind}${type}${where}`);
+        }, { capture: true, passive: true });
+      }
+    }
+
     const WEBGPU_MISSING =
       "{{name}} requires a browser and device with WebGPU enabled. Update your browser or check its graphics/WebGPU settings.";
 
@@ -78,7 +149,7 @@
       fail("WebGPU is unavailable", WEBGPU_MISSING);
     } else {
       try {
-        await init();
+        await init({ module_or_path: "./pkg/{{host}}_bg.wasm{{cachebust}}" });
       } catch (error) {
         console.error(error);
         fail("{{name}} could not start", String(error?.message ?? error));

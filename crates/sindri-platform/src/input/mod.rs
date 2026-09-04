@@ -12,7 +12,8 @@ mod presses;
 mod state;
 
 pub use action::{
-    ActionId, ActionKind, ActionMap, ActionMapError, ActionState, Actions, Binding, Source,
+    ACTIONS_FORMAT_VERSION, ACTIONS_SUFFIX, ActionId, ActionKind, ActionMap, ActionMapError,
+    ActionState, Actions, ActionsDocumentError, Binding, Source,
 };
 pub use button::MouseButton;
 pub use key::Key;

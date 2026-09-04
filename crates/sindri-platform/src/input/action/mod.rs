@@ -21,9 +21,11 @@
 //! reason for the [`ActionId`] type.
 
 mod binding;
+mod document;
 mod map;
 mod state;
 
 pub use binding::{Binding, Source};
+pub use document::{ACTIONS_FORMAT_VERSION, ACTIONS_SUFFIX, ActionsDocumentError};
 pub use map::{ActionId, ActionKind, ActionMap, ActionMapError};
 pub use state::{ActionState, Actions};
