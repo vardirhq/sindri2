@@ -141,21 +141,37 @@ fn ten_minutes_hold_together() {
 #[test]
 fn the_warden_arrives_and_changes_as_it_is_fought() {
     let mut run = Run::open().expect("the project opens");
+
+    // This test is about the Warden, not about surviving three minutes of the
+    // campaign first. Script exports are authored component data until the
+    // first script frame, so move only this test's boss clock forward without
+    // adding a gameplay-only test hook or changing the prefab being exercised.
+    let director = run.find("Director").expect("the Director");
+    let properties = run
+        .world
+        .get_mut(director)
+        .and_then(|data| data.components.get_mut("sindri.script"))
+        .and_then(|script| script.get_mut("properties"))
+        .and_then(serde_json::Value::as_object_mut)
+        .expect("the Director's authored script properties");
+    properties.insert("boss_at".to_owned(), serde_json::Value::from(2.0));
+
     for _ in 0..6 {
         run.step(STEP);
     }
     run.click("TitleStart");
 
+    // The phase test should not depend on whichever random upgrades were earned
+    // before the boss. Use the same stat pile a damage module writes, after the
+    // run reset has been consumed, so ordinary player shots still deal every
+    // point of damage through the authored collision path.
+    run.set_board("damage_add", 15.0);
+
     let mut seen_phases = Vec::new();
     let mut fought = false;
-    for _ in 0..(200.0 / STEP) as usize {
+    for _ in 0..(20.0 / STEP) as usize {
         let notes = run.step(STEP);
         assert!(notes.is_empty(), "{notes:#?}");
-        if run.board("run_state") == 2.0 {
-            run.step(STEP);
-            let offers = run.active_named("upgrade");
-            run.click(&offers[0]);
-        }
         if run.board("hp") <= 1.0 {
             run.set_board("hp", run.board("max_hp"));
         }
