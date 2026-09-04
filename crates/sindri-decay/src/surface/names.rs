@@ -19,6 +19,16 @@ pub(crate) const POINTER: &str = "Pointer";
 /// The fingers, for a game that wants more than one.
 pub(crate) const TOUCH: &str = "Touch";
 
+/// A joystick made out of whichever finger is steering.
+///
+/// Its own namespace rather than more of `Pointer`, because it answers a
+/// different question. `Pointer` says where the person is pointing, which is an
+/// absolute place on the screen; a stick says which way and how hard they are
+/// pushing, which is relative to wherever they put their thumb down. A game
+/// that steers wants the second and gets the first only by doing the
+/// subtraction itself -- which is the arithmetic every mobile game rewrites.
+pub(crate) const STICK: &str = "Stick";
+
 pub(crate) const TIME: &str = "Time";
 
 pub(crate) const GAME: &str = "Game";

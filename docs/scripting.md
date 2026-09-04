@@ -932,12 +932,46 @@ finger keeps its place while it stays down, so a drag cannot jump from one
 finger to another. Asking for a finger that is not down is refused rather than
 answered with zero, which would read as a finger in the corner of the screen.
 
-**There is no drag abstraction, deliberately.** The reference game this surface
-was built for treats a touch as a drag with a four-pixel deadzone and a
-fifty-five-pixel radius, normalized to a unit vector. Those are *tuning*, and
-baking one game's numbers into an engine is how an engine acquires a genre. A
-script records where the pointer went down and subtracts each frame, which is
-four lines and belongs to the game.
+### Steering with a thumb
+
+| Path | Type |
+| --- | --- |
+| `Stick.x` | `f32` |
+| `Stick.y` | `f32` |
+| `Stick.held` | `bool` |
+| `Stick.anchor_x` | `f32` |
+| `Stick.anchor_y` | `f32` |
+
+`Stick` is a joystick made out of whichever finger is steering. It anchors
+where that finger landed, and `x`/`y` are how far it has been pulled from
+there — from -1 to 1, in screen axes, never longer than 1 no matter how far
+past the radius the thumb goes.
+
+This is a different question from `Pointer`, which is why it is a different
+namespace. `Pointer` says *where on the screen* the person is pointing, which is
+absolute. `Stick` says *which way and how hard* they are pushing, which is
+relative to wherever they put their thumb down. A game that steers wants the
+second, and steering towards `Pointer` instead gives the ship a lunge every time
+a thumb lands, no way to ask for gently-left, and a thumb parked over the part
+of the screen the player is trying to watch.
+
+`held` is not the same as a non-zero reading: a thumb resting inside the dead
+zone reads centred but is still holding the stick, which is what a game drawing
+the control needs to know. `anchor_x`/`anchor_y` are where the thumb landed, so
+a game that wants to draw the ring draws it from the same numbers the input came
+from rather than from a second guess at where the stick is.
+
+**This page used to say there was no drag abstraction, deliberately** — that a
+game's deadzone and radius are tuning, and that baking one game's numbers into
+an engine is how an engine acquires a genre. The principle stands and the
+conclusion did not. What is genre-specific is the *numbers*; what is not is the
+*shape* — anchor where it lands, clamp at the radius, rescale out of the dead
+zone, centre on release, and keep the press that started it so a second thumb
+cannot snatch the steering mid-turn. That shape is the same in every game that
+has ever had a stick, and "four lines that belong to the game" is four lines
+each game gets subtly wrong: this engine's own game shipped steering that
+followed the finger. So the shape is here and the numbers are authorable, which
+is what the original objection was actually asking for.
 
 ### The frame
 
