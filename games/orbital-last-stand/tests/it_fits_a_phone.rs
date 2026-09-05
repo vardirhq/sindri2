@@ -71,15 +71,16 @@ fn the_upgrade_cards_fit_a_phone() {
     }
     run.click("TitleStart");
 
-    let mut waited = 0;
-    while run.board("run_state") != 2.0 && waited < 7200 {
-        run.step(STEP);
-        waited += 1;
-    }
+    // This is a layout test, not a combat-balance test. Give the run exactly
+    // the authored XP requirement so the chooser is reached deterministically
+    // even when progression pacing changes.
+    run.set_board("cores", run.board("next_level"));
+    let notes = run.step(STEP);
+    assert!(notes.is_empty(), "{name}: {notes:#?}");
     assert_eq!(
         run.board("run_state"),
         2.0,
-        "{name}: no upgrade was ever offered"
+        "{name}: forced level-up did not offer an upgrade"
     );
     // Two frames: the chooser switches the cards on during a script pass, and
     // the pass that lays elements out has already run by then.
