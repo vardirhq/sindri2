@@ -88,8 +88,8 @@ fn an_offscreen_challenger_only_approaches() {
 fn the_director_authors_both_tier_one_prefabs() {
     let run = Run::open().expect("the project opens");
     let director = run.find("Director").expect("the director exists");
-    let properties = &run.world.get(director).expect("director").components["sindri.script"]
-        ["properties"];
+    let properties =
+        &run.world.get(director).expect("director").components["sindri.script"]["properties"];
     assert_eq!(
         properties["warden"].as_str(),
         Some("prefabs/warden.prefab.json")
