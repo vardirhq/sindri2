@@ -127,6 +127,99 @@ fn regular_enemies_keep_the_reference_shot_counts() {
     }
 }
 
+/// The original only lets combat begin once an enemy reaches the screen.
+///
+/// A portrait viewport is the sharp case: `fit: shorter` makes the authored
+/// camera size its width, so a target that is visible on desktop can still be
+/// outside the phone's sides. Partial visibility counts, just as it does in the
+/// reference game.
+#[test]
+fn the_ship_only_targets_enemies_that_are_visible() {
+    let mut run = isolated_run();
+    run.viewport = (390.0, 844.0);
+
+    let enemy = spawn_at(&mut run, "prefabs/drifter.prefab.json", [5.71, 0.0, 0.0]);
+    play(&mut run, STEP);
+    assert_eq!(
+        run.board("target_live"),
+        0.0,
+        "an enemy wholly outside the portrait view became a target"
+    );
+
+    run.world
+        .despawn_recursive(enemy)
+        .expect("the off-screen enemy despawns");
+    spawn_at(&mut run, "prefabs/drifter.prefab.json", [5.69, 0.0, 0.0]);
+    play(&mut run, STEP);
+    assert_eq!(
+        run.board("target_live"),
+        1.0,
+        "an enemy partially inside the edge did not become a target"
+    );
+}
+
+/// Off-screen enemies may approach, but the Warden cannot attack until one is
+/// visible.
+#[test]
+fn an_offscreen_warden_approaches_without_attacking() {
+    let mut run = isolated_run();
+    run.viewport = (390.0, 844.0);
+    let warden = spawn_at(&mut run, "prefabs/warden.prefab.json", [7.0, 0.0, 0.0]);
+
+    play(&mut run, 1.0);
+    assert_eq!(
+        run.count("hostile_shot"),
+        0,
+        "the off-screen Warden fired"
+    );
+    assert!(
+        run.world
+            .get(warden)
+            .and_then(|data| data.transform_3d)
+            .is_some_and(|transform| transform.position[0] < 7.0),
+        "the off-screen Warden should still approach"
+    );
+
+    run.world
+        .despawn_recursive(warden)
+        .expect("the off-screen Warden despawns");
+    spawn_at(&mut run, "prefabs/warden.prefab.json", [3.0, 0.0, 0.0]);
+    play(&mut run, 1.3);
+    assert!(
+        run.count("hostile_shot") > 0,
+        "the visible Warden never resumed its attack clock"
+    );
+}
+
+/// Collider radii are world units; they do not inherit the transform scale
+/// that sizes a rendered shape. The ship and hostile shot author their smaller
+/// collision geometry explicitly, so a visible gap is a real miss while an
+/// actual overlap still hurts.
+#[test]
+fn a_boss_shot_only_hurts_when_it_reaches_the_ship() {
+    let mut run = isolated_run();
+    let before = run.board("hp");
+
+    spawn_at(
+        &mut run,
+        "prefabs/enemy-bullet.prefab.json",
+        [0.4, 0.0, 0.0],
+    );
+    play(&mut run, 0.1);
+    assert_eq!(run.board("hp"), before, "a visible near-miss hurt the ship");
+
+    spawn_at(
+        &mut run,
+        "prefabs/enemy-bullet.prefab.json",
+        [0.2, 0.0, 0.0],
+    );
+    play(&mut run, 0.1);
+    assert!(
+        run.board("hp") < before,
+        "a hostile shot overlapping the ship did not hurt it"
+    );
+}
+
 /// A hit belongs to both entities even when the projectile's script runs first.
 ///
 /// Projectiles used to burst and immediately despawn on their own turn. An
@@ -203,6 +296,40 @@ fn spawn_at(run: &mut Run, prefab: &str, position: [f32; 3]) -> sindri_core::Ent
         .expect("the prefab root has a transform")
         .position = position;
     spawned
+}
+
+/// A running game without the campaign director's unrelated arrivals.
+fn isolated_run() -> Run {
+    let mut run = Run::open().expect("the project opens");
+    play(&mut run, 0.1);
+    run.click("TitleStart");
+    play(&mut run, STEP);
+    run.set_board("hp", 1000.0);
+    let director = run.find("Director").expect("the campaign director exists");
+    run.world
+        .get_mut(director)
+        .expect("the campaign director remains")
+        .disabled = true;
+
+    let enemies: Vec<_> = run
+        .world
+        .entities()
+        .filter_map(|(entity, _)| {
+            run.components
+                .get::<sindri_core::TagsComponent>(&run.world, entity)
+                .ok()
+                .flatten()
+                .is_some_and(|tags| tags.has("enemy"))
+                .then_some(entity)
+        })
+        .collect();
+    for enemy in enemies {
+        run.world
+            .despawn_recursive(enemy)
+            .expect("the opening enemy despawns");
+    }
+    play(&mut run, STEP);
+    run
 }
 
 /// 4. Spawn, update, collide, and despawn continuously.

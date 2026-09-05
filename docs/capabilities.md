@@ -324,7 +324,10 @@ the aspect ratio — so one authored scene is responsive across a portrait phone
 and a wide desktop window without a breakpoint. A **safe area** takes a notch or
 a home indicator off the edges, moving anchored elements in while leaving centred
 ones where they are; the editor reports none, because a desktop window has no
-notch.
+notch. Decay reads that same screen shape through `Viewport.aspect`, which lets
+a game combine the viewport with its authored camera framing for responsive
+world-space rules without exposing pixel dimensions or asking the host to pick
+a gameplay camera.
 
 What is not built: no scroll region, and no accessibility surface. A button
 carries a `label`, authored beside the thing it names, but nothing reads it —
@@ -351,9 +354,9 @@ world transforms, rejects conflicting or invalid placements as one incomplete
 snapshot, and exposes validated placement and wall-aware path queries.
 
 Decay can read an entity's continuous logical X/Y relative to a tilemap and
-place it back through the same projection and map transform. General
-camera/viewport conversion and typed Decay access to occupancy and paths remain
-missing.
+place it back through the same projection and map transform. It can also read
+the viewport aspect ratio; general camera conversion and direct typed camera
+access remain missing.
 
 `docs/feature-integration-matrix.md` tracks those counterparts explicitly rather
 than allowing the runtime type to make the broader feature look complete.

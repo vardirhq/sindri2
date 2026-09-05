@@ -53,6 +53,11 @@ impl SceneComponent for UiButtonComponent {
 /// Where every screen element is this frame, and what the pointer is doing.
 #[derive(Debug, Default)]
 pub struct ScreenUi {
+    /// Half the viewport in overlay units: `[aspect, 1]`.
+    ///
+    /// Kept with the other facts derived from the screen so a script can
+    /// author responsive world-space rules without learning viewport pixels.
+    viewport_half: [f32; 2],
     /// Every laid-out element, and whether it can be pressed.
     rects: BTreeMap<EntityId, Element>,
     /// The topmost button under the pointer.
@@ -100,6 +105,7 @@ impl ScreenUi {
         extent: ScreenExtent,
         presses: &Presses,
     ) -> Result<(), ComponentRegistryError> {
+        self.viewport_half = extent.half();
         self.rects.clear();
         let placements = Self::place(world, components, extent)?;
         self.rects = placements;
@@ -117,6 +123,20 @@ impl ScreenUi {
     #[must_use]
     pub const fn pointer_overlay(&self) -> Option<[f32; 2]> {
         self.pointer_overlay
+    }
+
+    /// The viewport width divided by its height.
+    ///
+    /// A screen not laid out yet answers one, the same finite square fallback
+    /// as [`ScreenExtent::new`] uses for a viewport with no area.
+    #[must_use]
+    pub fn viewport_aspect(&self) -> f32 {
+        let aspect = self.viewport_half[0];
+        if aspect > 0.0 {
+            aspect
+        } else {
+            1.0
+        }
     }
 
     /// The topmost pressable element under the pointer, if any.

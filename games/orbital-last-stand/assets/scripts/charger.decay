@@ -10,6 +10,7 @@ script Charger {
     @export let dash_speed: f32 = 9.5;
     @export let rest: f32 = 1.1;
     @export let touch_damage: f32 = 1.0;
+    @export let view_size: f32 = 11.0;
     @export let core: Prefab;
     @export let death_burst: Prefab;
 
@@ -40,12 +41,18 @@ script Charger {
         let dx = player.transform.position.x - this.transform.position.x;
         let dy = player.transform.position.y - this.transform.position.y;
         let far = sqrt(dx * dx + dy * dy);
+        let visible = is_visible();
+
+        if this.phase != 0.0 && !visible {
+            // A wind-up or dash is an attack, not ordinary approach movement.
+            this.phase = 0.0;
+        }
 
         if this.phase == 0.0 {
             if far > 0.001 {
                 Physics.set_velocity(this.entity, dx / far * this.approach, dy / far * this.approach);
             }
-            if far < 5.0 {
+            if far < 5.0 && visible {
                 this.phase = 1.0;
                 this.timer = this.wind_up;
             }
@@ -99,6 +106,22 @@ script Charger {
         if this.hp <= 0.0 {
             die();
         }
+    }
+
+    fn is_visible() -> bool {
+        let aspect = max(Viewport.aspect, 0.001);
+        var half_x: f32 = this.view_size * 0.5;
+        var half_y: f32 = this.view_size * 0.5;
+        if aspect >= 1.0 {
+            half_x *= aspect;
+        } else {
+            half_y /= aspect;
+        }
+        let radius = max(abs(this.transform.scale.x), abs(this.transform.scale.y)) * 0.5;
+        return this.transform.position.x + radius >= -half_x &&
+               this.transform.position.x - radius <= half_x &&
+               this.transform.position.y + radius >= -half_y &&
+               this.transform.position.y - radius <= half_y;
     }
 
     fn damage_from(hit: Entity) -> f32 {

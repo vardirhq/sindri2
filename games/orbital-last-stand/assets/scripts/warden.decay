@@ -15,6 +15,7 @@ script Warden {
     @export let volley_gap: f32 = 2.4;
     @export let approach: f32 = 0.9;
     @export let dash_speed: f32 = 7.0;
+    @export let view_size: f32 = 11.0;
     @export let shot: Prefab;
     @export let minion: Prefab;
     @export let core: Prefab;
@@ -64,10 +65,18 @@ script Warden {
         let dx = player.transform.position.x - this.transform.position.x;
         let dy = player.transform.position.y - this.transform.position.y;
         let far = sqrt(dx * dx + dy * dy);
+        let visible = is_visible();
 
         if this.phase == 1.0 {
             // Keeps its distance and shoots: a ranged problem.
             hold_at(dx, dy, far, 6.5);
+        } else if !visible {
+            // Off-screen enemies may close the distance, but do not begin or
+            // continue an attack aimed at the player until they can be seen.
+            if far > 0.001 {
+                Physics.set_velocity(this.entity, dx / far * this.approach,
+                                     dy / far * this.approach);
+            }
         } else {
             this.dash_timer -= dt;
             if this.dash_timer <= 0.0 && far > 0.001 {
@@ -80,8 +89,10 @@ script Warden {
             }
         }
 
-        this.until_volley -= dt;
-        if this.until_volley <= 0.0 {
+        if visible {
+            this.until_volley -= dt;
+        }
+        if visible && this.until_volley <= 0.0 {
             fire_ring();
             let quicker = 1.0;
             if this.phase == 3.0 {
@@ -93,7 +104,7 @@ script Warden {
             }
         }
 
-        if this.phase == 3.0 {
+        if this.phase == 3.0 && visible {
             this.until_summon -= dt;
             if this.until_summon <= 0.0 {
                 summon();
@@ -126,6 +137,22 @@ script Warden {
         if this.hp <= 0.0 {
             die();
         }
+    }
+
+    fn is_visible() -> bool {
+        let aspect = max(Viewport.aspect, 0.001);
+        var half_x: f32 = this.view_size * 0.5;
+        var half_y: f32 = this.view_size * 0.5;
+        if aspect >= 1.0 {
+            half_x *= aspect;
+        } else {
+            half_y /= aspect;
+        }
+        let radius = max(abs(this.transform.scale.x), abs(this.transform.scale.y)) * 0.5;
+        return this.transform.position.x + radius >= -half_x &&
+               this.transform.position.x - radius <= half_x &&
+               this.transform.position.y + radius >= -half_y &&
+               this.transform.position.y - radius <= half_y;
     }
 
     fn damage_from(hit: Entity) -> f32 {

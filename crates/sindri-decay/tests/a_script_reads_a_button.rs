@@ -114,6 +114,31 @@ fn run(
     )
 }
 
+#[test]
+fn a_script_reads_the_viewport_aspect() {
+    let source = r"
+script Reader {
+    fn update(dt: f32) {
+        this.transform.position.x = Viewport.aspect;
+    }
+}
+";
+    let mut world = World::default();
+    let reader = scripted_button(&mut world, "Reader");
+    let mut scripts = Scripts::new();
+    let mut screen = ScreenUi::new();
+    let input = InputState::default();
+
+    let report = run(&mut scripts, &mut world, source, &mut screen, &input);
+    assert!(report.failures.is_empty(), "{:?}", report.failures);
+    let read = world
+        .get(reader)
+        .and_then(|data| data.transform_3d)
+        .expect("the reader keeps its transform")
+        .position[0];
+    assert!((read - WIDTH / HEIGHT).abs() < 1.0e-5, "read {read}");
+}
+
 const COUNTER: &str = r"
 script Start {
     fn update(dt: f32) {

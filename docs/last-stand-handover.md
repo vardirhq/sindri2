@@ -56,6 +56,16 @@ run with ten bosses. We have 4 enemies, 6 modules, one boss, a 180s run.
 - `assets/scripts/module.decay` replaced `upgrade-card.decay`. A module is now
   two key names and two numbers, not a branch in an if/else.
 
+**Subsequent parity fixes:** the first three regular enemies preserve the
+reference game's two-, three-, and two-shot opening durability, and projectile
+damage survives until every collision recipient has read it. Combat visibility
+also follows the reference rule: player targeting ignores enemies wholly
+outside the camera view, while off-screen enemies may approach but do not begin
+shooting, summoning, winding up, or dashing. `Viewport.aspect` is the general
+Decay capability that lets the authored game compute its `fit: shorter` world
+bounds. Player and hostile-shot collider radii are authored in world units to
+match their rendered size; transform scale does not scale physics colliders.
+
 **The agreed plan**, in order. Mechanisms first, then content; visual polish
 interleaved so nothing ships looking placeholder:
 

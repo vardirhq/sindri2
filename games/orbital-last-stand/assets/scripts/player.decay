@@ -6,6 +6,7 @@ script Player {
     @export let mine: Prefab;
     @export let arena: f32 = 8.0;
     @export let invulnerable_for: f32 = 0.9;
+    @export let view_size: f32 = 11.0;
 
     // Found by the name the scene gave them. An entity cannot be an
     // authored property — a runtime handle is not a scene ID and
@@ -191,6 +192,9 @@ script Player {
             if !World.exists(enemy) {
                 continue;
             }
+            if !is_visible(enemy) {
+                continue;
+            }
             let dx = enemy.transform.position.x - this.transform.position.x;
             let dy = enemy.transform.position.y - this.transform.position.y;
             let distance = dx * dx + dy * dy;
@@ -200,5 +204,24 @@ script Player {
             }
         }
         return best;
+    }
+
+    // The camera frames `view_size` on the shorter viewport axis. Include the
+    // enemy's scaled half-size so something entering at the edge becomes a
+    // target when it becomes visible, rather than when its centre crosses it.
+    fn is_visible(enemy: Entity) -> bool {
+        let aspect = max(Viewport.aspect, 0.001);
+        var half_x: f32 = this.view_size * 0.5;
+        var half_y: f32 = this.view_size * 0.5;
+        if aspect >= 1.0 {
+            half_x *= aspect;
+        } else {
+            half_y /= aspect;
+        }
+        let radius = max(abs(enemy.transform.scale.x), abs(enemy.transform.scale.y)) * 0.5;
+        return enemy.transform.position.x + radius >= -half_x &&
+               enemy.transform.position.x - radius <= half_x &&
+               enemy.transform.position.y + radius >= -half_y &&
+               enemy.transform.position.y - radius <= half_y;
     }
 }

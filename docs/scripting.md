@@ -840,6 +840,15 @@ operating system's key repeat is not a second press.
 
 | Path | Type |
 | --- | --- |
+| `Viewport.aspect` | `f32` |
+
+`Viewport.aspect` is the viewport width divided by its height. It is a screen
+fact, not a camera: a scene that authored its camera can combine the aspect with
+that authored framing to decide which world positions are visible, without the
+host guessing which camera controls gameplay.
+
+| Path | Type |
+| --- | --- |
 | `Pointer.x` | `f32` |
 | `Pointer.y` | `f32` |
 | `Pointer.overlay_x` | `f32` |

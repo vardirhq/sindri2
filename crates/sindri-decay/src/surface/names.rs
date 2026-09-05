@@ -16,6 +16,9 @@ pub(crate) const INPUT: &str = "Input";
 /// Where the person is pointing, whatever they are pointing with.
 pub(crate) const POINTER: &str = "Pointer";
 
+/// Facts about the screen a game is being drawn into.
+pub(crate) const VIEWPORT: &str = "Viewport";
+
 /// The fingers, for a game that wants more than one.
 pub(crate) const TOUCH: &str = "Touch";
 
