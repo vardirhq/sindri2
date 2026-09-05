@@ -27,8 +27,8 @@ script EnemyMark {
             this.shape.stroke.b = 0.9608;
             this.shape.stroke.a = 1.0;
         } else if this.mode == 2.0 {
-            // Burrower: dashed full ring. The body already carries submerged
-            // opacity; this preserves the reference's distinct outer marker.
+            // Burrower: dashed full ring, hidden with the same 1.7/1.7 second
+            // submerged cycle as the parent enemy.
             this.transform.scale.x = 1.45;
             this.transform.scale.y = 1.45;
             this.shape.sweep_turns = 1.0;
@@ -37,7 +37,7 @@ script EnemyMark {
             this.shape.stroke.r = 1.0;
             this.shape.stroke.g = 0.8196;
             this.shape.stroke.b = 0.7373;
-            this.shape.stroke.a = 0.75;
+            this.shape.stroke.a = 0.2;
         } else if this.mode == 3.0 {
             // Phaser: pulsing outer triangle, rotated -0.2 rad locally.
             this.transform.scale.x = 1.55;
@@ -62,7 +62,11 @@ script EnemyMark {
 
     fn update(dt: f32) {
         this.clock += dt;
-        if this.mode == 3.0 {
+        if this.mode == 2.0 {
+            let cycle = this.clock % 3.4;
+            if cycle < 1.7 { this.shape.stroke.a = 0.2; }
+            else { this.shape.stroke.a = 0.75; }
+        } else if this.mode == 3.0 {
             this.shape.stroke.a = 0.35 + 0.25 * sin(this.clock * 12.0);
         } else if this.mode == 4.0 {
             this.shape.stroke.a = 0.1 + 0.025 * sin(this.clock * 4.0 + this.phase);
