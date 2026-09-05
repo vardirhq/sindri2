@@ -16,6 +16,8 @@ script Drifter {
     @export let drop_roll: Prefab;
     @export let elite_shell: Prefab;
     @export let elite_ring: Prefab;
+    @export let arc_mark: Prefab;
+    @export let phaser_mark: Prefab;
 
     var hp: f32 = 0.0;
     var death_burst_damage: f32 = 0.0;
@@ -32,6 +34,7 @@ script Drifter {
         this.phase_offset = Random.range(0.0, 6.2831853);
         this.transform.rotation_z = this.phase_offset;
         apply_reference_visual();
+        spawn_reference_mark();
         tint_elite();
         spawn_elite_visuals();
     }
@@ -267,6 +270,25 @@ script Drifter {
         this.shape.stroke.g = min(1.0, g + 0.18);
         this.shape.stroke.b = min(1.0, b + 0.18);
         this.shape.stroke.a = 1.0;
+    }
+
+    fn spawn_reference_mark() {
+        if this.kind == 8.0 {
+            spawn_arc_mark(1.0);
+        } else if this.kind == 11.0 {
+            spawn_arc_mark(2.0);
+        } else if this.kind == 12.0 {
+            spawn_arc_mark(0.0);
+        } else if this.kind == 14.0 {
+            let mark = World.spawn(this.phaser_mark);
+            World.set_parent(mark, this.entity);
+        }
+    }
+
+    fn spawn_arc_mark(mode: f32) {
+        let mark = World.spawn(this.arc_mark);
+        World.set_property(mark, "mode", mode);
+        World.set_parent(mark, this.entity);
     }
 
     fn spawn_elite_visuals() {
