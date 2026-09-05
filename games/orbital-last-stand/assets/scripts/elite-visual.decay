@@ -4,9 +4,9 @@ script EliteVisual {
     @export let mode: f32 = 0.0;
     @export let sides: f32 = 6.0;
     @export let trait: f32 = 0.0;
-    @export let phase: f32 = 0.0;
 
     var clock: f32 = 0.0;
+    var phase: f32 = 0.0;
 
     fn start() {
         this.shape.count = this.sides;
