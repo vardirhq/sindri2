@@ -47,16 +47,11 @@ fn elites_spawn_the_reference_counter_rotating_shell_and_pulse_ring() {
         })
         .map(|(entity, _)| entity)
         .expect("the forced elite spawned");
-    let enemy_sides = run.world.get(enemy).expect("the elite remains").components
-        ["sindri.shape"]["count"]
+    let enemy_data = run.world.get(enemy).expect("the elite remains");
+    let enemy_sides = enemy_data.components["sindri.shape"]["count"]
         .as_f64()
         .expect("the elite shape has a side count");
-    let children = run
-        .world
-        .get(enemy)
-        .expect("the elite remains")
-        .children
-        .clone();
+    let children = enemy_data.children.clone();
 
     let shell = children
         .iter()
@@ -86,37 +81,38 @@ fn elites_spawn_the_reference_counter_rotating_shell_and_pulse_ring() {
         Some(enemy_sides),
         "the shell must match the enemy silhouette"
     );
-    assert_eq!(run.world.get(ring).expect("the ring remains").parent, Some(enemy));
+    let ring_data = run.world.get(ring).expect("the ring remains");
+    assert_eq!(ring_data.parent, Some(enemy));
 
     let shell_rotation = shell_data
         .transform_3d
         .as_ref()
         .expect("the shell has a transform")
         .rotation;
-    let ring_alpha = run.world.get(ring).expect("the ring remains").components
-        ["sindri.shape"]["stroke"][3]
+    let ring_alpha = ring_data.components["sindri.shape"]["stroke"][3]
         .as_f64()
         .expect("the ring has an alpha");
 
     step(&mut run);
 
+    let next_shell_rotation = run
+        .world
+        .get(shell)
+        .expect("the shell remains")
+        .transform_3d
+        .as_ref()
+        .expect("the shell has a transform")
+        .rotation;
     assert_ne!(
-        run.world
-            .get(shell)
-            .expect("the shell remains")
-            .transform_3d
-            .as_ref()
-            .expect("the shell has a transform")
-            .rotation,
-        shell_rotation,
+        next_shell_rotation, shell_rotation,
         "the elite shell must rotate independently of its parent"
     );
+    let next_ring_alpha = run.world.get(ring).expect("the ring remains").components
+        ["sindri.shape"]["stroke"][3]
+        .as_f64()
+        .expect("the ring has an alpha");
     assert_ne!(
-        run.world.get(ring).expect("the ring remains").components["sindri.shape"]
-            ["stroke"][3]
-            .as_f64()
-            .expect("the ring has an alpha"),
-        ring_alpha,
+        next_ring_alpha, ring_alpha,
         "the reference elite ring must pulse"
     );
 }
