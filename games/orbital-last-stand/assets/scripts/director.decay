@@ -7,6 +7,7 @@ script Director {
     // hazard controller because the faithful roster no longer uses Splitter.
     @export let splitter: Prefab;
     @export let warden: Prefab;
+    @export let challenger: Prefab;
     @export let wave_gap: f32 = 6.0;
     @export let boss_at: f32 = 180.0;
     @export let first_boss_at: f32 = 60.0;
@@ -29,6 +30,8 @@ script Director {
     var spawn_timer: f32 = 0.0;
     var next_boss: f32 = 60.0;
     var boss_count: f32 = 0.0;
+    var last_boss: f32 = -1.0;
+    var previous_boss: f32 = -1.0;
     var was_state: f32 = -1.0;
 
     fn start() {
@@ -57,6 +60,8 @@ script Director {
         this.spawn_timer = 0.0;
         this.next_boss = this.first_boss_at;
         this.boss_count = 0.0;
+        this.last_boss = -1.0;
+        this.previous_boss = -1.0;
         Game.set("score", 0.0);
         Game.set("kills", 0.0);
         Game.set("cores", 0.0);
@@ -68,6 +73,7 @@ script Director {
         Game.set("boss_count", 0.0);
         Game.set("boss_hp", 0.0);
         Game.set("boss_max", 0.0);
+        Game.set("boss_kind", -1.0);
         Game.set("victory", 0.0);
         Game.set("nullified", 0.0);
         Game.set("elite_bonus", 0.0);
@@ -326,7 +332,28 @@ script Director {
     fn send_boss() {
         clear_tag("enemy");
         clear_tag("hostile_shot");
-        let boss = World.spawn(this.warden);
+        // Tier one mirrors the reference roster. Avoid either of the two most
+        // recent picks so four consecutive minute bosses cannot repeat.
+        var pick: f32 = Random.int(0.0, 3.0);
+        var attempts: f32 = 0.0;
+        while attempts < 8.0 && (pick == this.last_boss || pick == this.previous_boss) {
+            pick = Random.int(0.0, 3.0);
+            attempts += 1.0;
+        }
+        // A pathological random streak must not weaken the no-repeat rule.
+        while pick == this.last_boss || pick == this.previous_boss {
+            pick = (pick + 1.0) % 4.0;
+        }
+        this.previous_boss = this.last_boss;
+        this.last_boss = pick;
+
+        var boss: Entity = null;
+        if pick == 0.0 {
+            boss = World.spawn(this.warden);
+        } else {
+            boss = World.spawn(this.challenger);
+            World.set_property(boss, "kind", pick - 1.0);
+        }
         boss.transform.position.x = 0.0;
         boss.transform.position.y = this.arena;
     }
