@@ -59,14 +59,15 @@ elite and boss chances differ, missing hull improves the roll, and a
 120-kill pity guarantees a repair. Repair, arena-clearing pulse and eight-second
 overdrive pickups are ordinary authored prefabs too.
 
-Bosses arrive every minute from a non-repeating tier-one pool. Warden is joined
-by Harrower's telegraphed charges, Prism's refracted fans and safe-gap rings,
-and Singularity's rotating mixed-speed spirals. Like regular enemies, a boss
-outside the viewport may approach but cannot target or attack the ship.
+Bosses arrive every minute from a director that unlocks larger pools at 4:00
+and 8:00 while excluding its two most recent choices. All eleven reference
+bosses are present, from Harrower's telegraphed charges and Brood's summons to
+Spine's breakable armor and Leviathan's edge volleys. Like regular enemies, a
+boss outside the viewport may approach but cannot target or attack the ship.
 
 ## What is not here yet
 
-The reference game is much larger. The later boss tiers, companions, broader
+The reference game is much larger. Companions, the broader
 module and synergy catalog, sector routes, events, ships, contracts, archive
 and debrief remain parity work. See `docs/last-stand-reference-parity.md` for
 the implementation order.

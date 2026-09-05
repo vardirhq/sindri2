@@ -299,8 +299,8 @@ Legend: `DONE`, `PARTIAL`, `TODO`, `INTENTIONAL`.
 | Exact enemy unlock timestamps | DONE | all fifteen reference timestamps drive the growing pool |
 | Elite system | DONE | the post-105-second chance curve and all five stat traits are authored in Decay |
 | 60-second boss cadence | DONE | overdue encounters wait for the living Warden rather than stacking |
-| Tiered boss director | PARTIAL | tier-one rotation excludes the two most recent picks; later unlock tiers remain |
-| Full boss roster | PARTIAL | Warden, Harrower, Prism and Singularity are authored; seven later bosses remain |
+| Tiered boss director | DONE | 4:00 and 8:00 tiers expand the pool; the two most recent picks are excluded |
+| Full boss roster | DONE | all eleven reference bosses have distinct authored attacks and visuals |
 | Warden encounter | INTENTIONAL | Sindri version is a more elaborate three-phase interpretation, while targeting reference-like short TTK/readability |
 | Route choices | TODO | missing |
 | Random events | TODO | missing |
