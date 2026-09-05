@@ -14,6 +14,7 @@ script Core {
             return;
         }
         this.age += dt;
+        this.transform.rotation_z += dt * 2.0;
         if this.age >= this.life {
             World.despawn(this.entity);
             return;
