@@ -1,104 +1,125 @@
-// Dies into more of itself. The third behaviour, and the one that makes a
-// crowded late run rather than a fast one: killing it costs you space.
-script Splitter {
-    @export let speed: f32 = 1.1;
-    @export let health: f32 = 2.0;
-    @export let worth: f32 = 3.0;
-    @export let shards: f32 = 4.0;
-    @export let touch_damage: f32 = 1.0;
-    @export let shard: Prefab;
-    @export let core: Prefab;
-    @export let death_burst: Prefab;
+// Persistent Last Stand sector hazard controller.
+//
+// The scene already injects `prefabs/splitter.prefab.json` into Director. The
+// faithful enemy roster no longer uses that old non-reference enemy, so this
+// legacy asset slot now bootstraps hazards without rewriting the giant scene
+// document. The file name is compatibility; the runtime role is not.
+script Hazards {
+    @export let asteroid: Prefab;
+    @export let field: Prefab;
+    @export let beam: Prefab;
 
-    var hp: f32 = 0.0;
-    var death_burst_damage: f32 = 0.0;
-
-    fn start() {
-        // Splitting is already its durability mechanic, so the body follows
-        // the reference's two-hit third archetype and only scales after 3:00.
-        let late = max(0.0, Game.get("elapsed", 0.0) - 180.0);
-        this.hp = this.health * (1.0 + late * 0.0014);
-    }
+    var was_state: f32 = -1.0;
+    var was_sector: f32 = -1.0;
+    var beam_timer: f32 = 0.0;
+    var beam_axis: f32 = 1.0;
 
     fn update(dt: f32) {
-        if Game.get("run_state", 0.0) != 1.0 {
-            Physics.set_velocity(this.entity, 0.0, 0.0);
+        let state = Game.get("run_state", 0.0);
+        if state != 1.0 {
+            if this.was_state == 1.0 {
+                clear_hazards();
+            }
+            this.was_state = state;
+            this.was_sector = -1.0;
+            Game.set("nullified", 0.0);
             return;
-        }
-        let player = World.find("Player");
-        if player == null {
-            return;
-        }
-        let dx = player.transform.position.x - this.transform.position.x;
-        let dy = player.transform.position.y - this.transform.position.y;
-        let far = sqrt(dx * dx + dy * dy);
-        if far > 0.001 {
-            Physics.set_velocity(this.entity, dx / far * this.speed, dy / far * this.speed);
         }
 
-        for hit in Physics.sensor_entered() {
-            if hit == player {
-                // The worst single touch this frame, not the sum of them. The
-                // ship gets invulnerability after a hit, so being inside a
-                // crowd of thirty is one hit — adding them up made a late
-                // wave lethal on the frame it arrived, whatever the hull.
-                Game.set("player_damage_taken",
-                         max(Game.get("player_damage_taken", 0.0), this.touch_damage));
-                continue;
-            }
-            if !World.exists(hit) {
-                continue;
-            }
-            if this.hp > 0.0 {
-                let damage = damage_from(hit);
-                this.hp -= damage;
-                if this.hp <= 0.0 && World.property_number(hit, "nova", 0.0) > 0.0 {
-                    this.death_burst_damage = damage * 0.3;
-                }
-            }
+        if this.was_state != 1.0 {
+            clear_hazards();
+            this.was_sector = -1.0;
         }
-        if this.hp <= 0.0 {
-            die();
+        this.was_state = 1.0;
+
+        let sector = Game.get("sector", 1.0);
+        if sector != this.was_sector {
+            clear_hazards();
+            setup_sector(sector);
+            this.was_sector = sector;
+        }
+
+        if sector == 5.0 {
+            update_core(dt);
         }
     }
 
-    fn damage_from(hit: Entity) -> f32 {
-        if World.has_tag(hit, "player_damage") {
-            return World.property_number(hit, "damage", 0.0);
+    fn clear_hazards() {
+        Game.set("nullified", 0.0);
+        for hazard in World.with_tag("hazard") {
+            if World.exists(hazard) {
+                World.despawn(hazard);
+            }
         }
-        return 0.0;
     }
 
-    fn die() {
-        burst_on_death();
-        Effects.burst(this.entity);
-        Audio.play("audio/kill.wav", 0.34);
-        Game.set("kills", Game.get("kills", 0.0) + 1.0);
-        Game.set("score", Game.get("score", 0.0) + this.worth * 10.0);
+    fn setup_sector(sector: f32) {
+        if sector == 1.0 {
+            spawn_asteroids();
+        } else if sector == 2.0 {
+            spawn_flare(1.0);
+            spawn_flare(-1.0);
+        } else if sector == 3.0 {
+            spawn_gravity(-2.8, 1.2);
+            spawn_gravity(2.4, 0.2);
+            spawn_gravity(0.3, -2.4);
+        } else if sector == 4.0 {
+            let null = World.spawn(this.field);
+            null.transform.position.x = -2.3;
+            null.transform.position.y = 1.1;
+            World.set_property(null, "kind", 2.0);
+            World.set_property(null, "radius", 1.75);
+        } else if sector == 5.0 {
+            this.beam_timer = 0.0;
+            this.beam_axis = 1.0;
+        }
+    }
 
+    fn spawn_asteroids() {
         var made: f32 = 0.0;
-        while made < this.shards {
-            let angle = made / this.shards * 6.2831853;
-            let piece = World.spawn(this.shard);
-            piece.transform.position.x = this.transform.position.x + cos(angle) * 0.5;
-            piece.transform.position.y = this.transform.position.y + sin(angle) * 0.5;
+        while made < 7.0 {
+            let rock = World.spawn(this.asteroid);
+            let angle = Random.range(0.0, 6.2831853);
+            let radius = Random.range(2.4, 7.0);
+            rock.transform.position.x = cos(angle) * radius;
+            rock.transform.position.y = sin(angle) * min(radius, 4.8);
+            World.set_property(rock, "vx", Random.range(-0.35, 0.35));
+            World.set_property(rock, "vy", Random.range(0.2, 0.7));
             made += 1.0;
         }
-
-        let drop = World.spawn(this.core);
-        drop.transform.position.x = this.transform.position.x;
-        drop.transform.position.y = this.transform.position.y;
-        World.set_property(drop, "worth", this.worth);
-        World.despawn(this.entity);
     }
 
-    fn burst_on_death() {
-        if this.death_burst_damage <= 0.0 {
+    fn spawn_flare(side: f32) {
+        let flare = World.spawn(this.beam);
+        World.set_property(flare, "mode", 1.0);
+        World.set_property(flare, "side", side);
+    }
+
+    fn spawn_gravity(x: f32, y: f32) {
+        let gravity = World.spawn(this.field);
+        gravity.transform.position.x = x;
+        gravity.transform.position.y = y;
+        World.set_property(gravity, "kind", 1.0);
+        World.set_property(gravity, "radius", 1.8);
+    }
+
+    fn update_core(dt: f32) {
+        this.beam_timer -= dt;
+        if this.beam_timer > 0.0 {
             return;
         }
-        let wave = World.spawn(this.death_burst);
-        wave.transform.position.x = this.transform.position.x;
-        wave.transform.position.y = this.transform.position.y;
-        World.set_property(wave, "damage", this.death_burst_damage);
+        this.beam_timer = 3.1;
+        let pulse = World.spawn(this.beam);
+        World.set_property(pulse, "mode", 2.0);
+        World.set_property(pulse, "axis", this.beam_axis);
+        if this.beam_axis == 1.0 {
+            pulse.transform.position.x = Random.range(-3.3, 3.3);
+            pulse.transform.position.y = 0.0;
+            this.beam_axis = 0.0;
+        } else {
+            pulse.transform.position.x = 0.0;
+            pulse.transform.position.y = Random.range(-2.7, 2.7);
+            this.beam_axis = 1.0;
+        }
     }
 }
