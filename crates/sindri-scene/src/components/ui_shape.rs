@@ -31,8 +31,7 @@ pub enum UiShapeKind {
     Rect,
     /// An ellipse inscribed in the element — a circle in a square one.
     Ellipse,
-    /// A regular polygon with a vertex at the top, unless authored points
-    /// replace the generated vertices.
+    /// A regular polygon with a vertex at the top.
     Polygon,
     /// A lattice of lines. Takes a stroke and ignores a fill, having no inside.
     Grid,
@@ -94,19 +93,19 @@ impl UiShapeBlend {
 ///
 /// Shared by the overlay and world components, which differ only in what places
 /// them: an anchor on a corner of the viewport, or a transform in the world.
+/// Written once because there are eleven fields here and two copies of them
+/// would drift within a release.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct ShapeGeometry {
     #[serde(default)]
     pub kind: UiShapeKind,
-    /// How many sides a generated polygon has, or how many cells a grid is
-    /// across. Ignored by a polygon that carries three or more authored points.
+    /// How many sides a polygon has, or how many cells a grid is across.
+    ///
+    /// One number for both because a shape has only one, and a `sides` a grid
+    /// ignored beside a `cells` a polygon ignored is two fields that are each
+    /// wrong most of the time.
     #[serde(default = "default_count")]
     pub count: f32,
-    /// Optional authored polygon vertices in local shape space. A one-unit
-    /// shape spans -0.5 through 0.5. The renderer consumes at most eight; an
-    /// empty list preserves the regular-polygon behavior older scenes authored.
-    #[serde(default)]
-    pub points: Vec<[f32; 2]>,
     /// The colour inside. Transparent by default, because most of what this
     /// draws is an outline and a filled panel is the exception.
     #[serde(default = "transparent")]
@@ -195,16 +194,11 @@ impl ShapeGeometry {
             UiShapeKind::Polygon => Shape::Polygon { sides: self.count },
             UiShapeKind::Grid => Shape::Grid { cells: self.count },
         };
-        let instance = ShapeInstance::filled(model, kind, self.fill)
+        ShapeInstance::filled(model, kind, self.fill)
             .with_stroke(self.stroke_width.max(0.0), self.stroke)
             .with_corner_radius(self.corner_radius)
             .dashed(self.dashes.max(0.0), self.dash_duty)
-            .swept(self.sweep_start, self.sweep_turns);
-        if self.kind == UiShapeKind::Polygon {
-            instance.with_polygon_points(&self.points)
-        } else {
-            instance
-        }
+            .swept(self.sweep_start, self.sweep_turns)
     }
 
     /// Which renderer blend this shape's batch uses.
