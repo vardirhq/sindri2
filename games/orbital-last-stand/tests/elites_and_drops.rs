@@ -95,9 +95,8 @@ fn elite_timing_and_normal_drop_values_are_authored_from_the_reference() {
         .prefabs
         .get("prefabs/drop-roll.prefab.json")
         .expect("the drop resolver ships");
-    let properties =
-        &resolver.root().expect("the resolver has a root").components["sindri.script"]
-            ["properties"];
+    let properties = &resolver.root().expect("the resolver has a root").components["sindri.script"]
+        ["properties"];
     for (name, expected) in [
         ("regular_chance", 0.058),
         ("elite_chance", 0.26),
@@ -178,21 +177,13 @@ fn repair_pity_guarantees_and_collects_a_scaled_repair() {
     let mut run = isolated_run();
     run.set_board("hp", 1.0);
     run.set_board("kills_since_repair", 119.0);
-    spawn_at(
-        &mut run,
-        "prefabs/drop-roll.prefab.json",
-        [0.0, 0.0, 0.0],
-    );
+    spawn_at(&mut run, "prefabs/drop-roll.prefab.json", [0.0, 0.0, 0.0]);
 
     step(&mut run);
     assert_eq!(run.count("powerup"), 1, "the pity roll did not drop");
     assert_eq!(run.board("kills_since_repair"), 0.0);
     step(&mut run);
-    assert_eq!(
-        run.count("powerup"),
-        0,
-        "the repair was not collected"
-    );
+    assert_eq!(run.count("powerup"), 0, "the repair was not collected");
     assert!(
         (run.board("hp") - 2.8).abs() < 1.0e-5,
         "hp: {}",
@@ -208,16 +199,8 @@ fn pulse_clears_hostile_fire_and_overdrive_counts_down() {
         "prefabs/enemy-bullet.prefab.json",
         [3.0, 0.0, 0.0],
     );
-    spawn_at(
-        &mut run,
-        "prefabs/drifter.prefab.json",
-        [3.0, 0.0, 0.0],
-    );
-    let pulse = spawn_at(
-        &mut run,
-        "prefabs/powerup.prefab.json",
-        [0.0, 0.0, 0.0],
-    );
+    spawn_at(&mut run, "prefabs/drifter.prefab.json", [3.0, 0.0, 0.0]);
+    let pulse = spawn_at(&mut run, "prefabs/powerup.prefab.json", [0.0, 0.0, 0.0]);
     set_script_number(&mut run, pulse, "kind", 1.0);
 
     step(&mut run);
@@ -225,17 +208,10 @@ fn pulse_clears_hostile_fire_and_overdrive_counts_down() {
     step(&mut run);
     assert_eq!(run.count("enemy"), 0, "pulse did not damage the arena");
 
-    let overdrive = spawn_at(
-        &mut run,
-        "prefabs/powerup.prefab.json",
-        [0.0, 0.0, 0.0],
-    );
+    let overdrive = spawn_at(&mut run, "prefabs/powerup.prefab.json", [0.0, 0.0, 0.0]);
     set_script_number(&mut run, overdrive, "kind", 2.0);
     step(&mut run);
     assert_eq!(run.board("overdrive"), 8.0);
     step(&mut run);
-    assert!(
-        run.board("overdrive") < 8.0,
-        "overdrive did not count down"
-    );
+    assert!(run.board("overdrive") < 8.0, "overdrive did not count down");
 }
