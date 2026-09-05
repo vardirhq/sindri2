@@ -61,7 +61,8 @@
             "elite_shell": "prefabs/enemy-shell.prefab.json",
             "elite_ring": "prefabs/enemy-ring.prefab.json",
             "arc_mark": "prefabs/enemy-arc-mark.prefab.json",
-            "phaser_mark": "prefabs/phaser-mark.prefab.json"
+            "phaser_mark": "prefabs/phaser-mark.prefab.json",
+            "prong_mark": "prefabs/enemy-prong.prefab.json"
           }
         },
         "sindri.shape": {
