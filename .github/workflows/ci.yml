@@ -123,7 +123,7 @@ jobs:
       # The version has to match the wasm-bindgen the workspace resolves.
       - name: Test image decoding in the browser build
         run: |
-          cargo install wasm-bindgen-cli --version 0.2.127 --locked
+          cargo install wasm-bindgen-cli --version 0.2.128 --locked
           cargo test --package sindri-assets --target wasm32-unknown-unknown \
             --test decode_compatibility
       # Compiling for wasm32 says nothing about whether the engine runs. Gather
