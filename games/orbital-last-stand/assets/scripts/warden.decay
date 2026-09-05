@@ -1,12 +1,13 @@
 // The Warden: three phases, each a different problem.
 //
-//   1  ring volleys from a distance   — above two thirds health
-//   2  charges, and fires while it moves — above one third
-//   3  both, faster, and it summons    — below one third
+//   1  rotating ring volleys with a moving safe gap
+//   2  telegraphed charges followed by a close-range fan
+//   3  faster rings and charges, with occasional reinforcements
 //
 // The phases are health thresholds rather than a timer, so a player who does
-// more damage sees the fight change sooner. That is what makes it a fight
-// rather than a wait.
+// more damage sees the fight change sooner. The health curve is deliberately
+// boss-specific: challenge should come from patterns, not from waiting for a
+// normal-enemy scaling formula to finish multiplying the health bar.
 script Warden {
     @export let health: f32 = 120.0;
     @export let worth: f32 = 40.0;
@@ -24,18 +25,25 @@ script Warden {
     var hp: f32 = 0.0;
     var death_burst_damage: f32 = 0.0;
     var phase: f32 = 1.0;
+    var previous_phase: f32 = 1.0;
     var until_volley: f32 = 0.0;
     var until_summon: f32 = 0.0;
     var dash_timer: f32 = 0.0;
+    var dash_windup: f32 = 0.0;
+    var dash_time: f32 = 0.0;
+    var dash_x: f32 = 0.0;
+    var dash_y: f32 = 0.0;
+    var ring_offset: f32 = 0.0;
+    var phase_flash: f32 = 0.0;
 
     fn start() {
-        // Scaled by how far the run has got, exactly as the ordinary enemies
-        // are. A fixed pool made the Warden weaker than the wave before it: by
-        // the time it arrived the ship had spent twelve upgrades, and a boss
-        // that dies in two frames has no phases to show.
-        this.hp = this.health * (1.0 + Game.get("elapsed", 0.0) * 0.021);
+        // Boss durability rises much more gently than regular enemies. At the
+        // current 180-second encounter this is about 380 HP, enough to show all
+        // three phases without turning the first boss into a health sponge.
+        this.hp = this.health * (1.0 + Game.get("elapsed", 0.0) * 0.012);
         this.until_volley = 1.2;
-        this.until_summon = 6.0;
+        this.until_summon = 5.0;
+        this.dash_timer = 1.4;
         Game.set("boss_max", this.hp);
         Game.set("boss_hp", this.hp);
     }
@@ -51,16 +59,34 @@ script Warden {
         }
 
         let share = this.hp / max(Game.get("boss_max", 1.0), 1.0);
-        if share <= 0.34 {
+        if share <= 0.30 {
             this.phase = 3.0;
-        } else if share <= 0.67 {
+        } else if share <= 0.65 {
             this.phase = 2.0;
         } else {
             this.phase = 1.0;
         }
-        // Reddening as it goes, so the phase is legible without a label.
-        this.shape.stroke.g = 0.35 + share * 0.65;
-        this.shape.stroke.b = 0.35 + share * 0.65;
+        if this.phase != this.previous_phase {
+            this.previous_phase = this.phase;
+            this.phase_flash = 0.45;
+            this.until_volley = 0.35;
+            this.dash_timer = 0.7;
+            this.dash_windup = 0.0;
+            this.dash_time = 0.0;
+            Effects.burst(this.entity);
+            Audio.play("audio/boss.wav", 0.55);
+        }
+
+        // The body reddens as health falls, while transitions and dash windups
+        // flash bright enough to read as tells without adding a text prompt.
+        if this.phase_flash > 0.0 {
+            this.phase_flash -= dt;
+            this.shape.stroke.g = 1.0;
+            this.shape.stroke.b = 1.0;
+        } else {
+            this.shape.stroke.g = 0.28 + share * 0.72;
+            this.shape.stroke.b = 0.28 + share * 0.72;
+        }
 
         let dx = player.transform.position.x - this.transform.position.x;
         let dy = player.transform.position.y - this.transform.position.y;
@@ -68,7 +94,8 @@ script Warden {
         let visible = is_visible();
 
         if this.phase == 1.0 {
-            // Keeps its distance and shoots: a ranged problem.
+            // Phase one is positional: stay at range and find the moving gap in
+            // each rotating ring.
             hold_at(dx, dy, far, stand_off());
         } else if !visible {
             // Off-screen enemies may close the distance, but do not begin or
@@ -78,15 +105,7 @@ script Warden {
                                      dy / far * this.approach);
             }
         } else {
-            this.dash_timer -= dt;
-            if this.dash_timer <= 0.0 && far > 0.001 {
-                Physics.set_velocity(this.entity, dx / far * this.dash_speed,
-                                     dy / far * this.dash_speed);
-                this.dash_timer = 2.2;
-            } else if far > 0.001 {
-                Physics.set_velocity(this.entity, dx / far * this.approach,
-                                     dy / far * this.approach);
-            }
+            drive_charge(dt, dx, dy, far);
         }
 
         if visible {
@@ -94,13 +113,12 @@ script Warden {
         }
         if visible && this.until_volley <= 0.0 {
             fire_ring();
-            let quicker = 1.0;
             if this.phase == 3.0 {
-                this.until_volley = this.volley_gap * 0.5;
+                this.until_volley = this.volley_gap * 0.55;
             } else if this.phase == 2.0 {
-                this.until_volley = this.volley_gap * 0.75;
+                this.until_volley = this.volley_gap * 0.9;
             } else {
-                this.until_volley = this.volley_gap * quicker;
+                this.until_volley = this.volley_gap;
             }
         }
 
@@ -108,7 +126,7 @@ script Warden {
             this.until_summon -= dt;
             if this.until_summon <= 0.0 {
                 summon();
-                this.until_summon = 7.0;
+                this.until_summon = 7.5;
             }
         }
 
@@ -116,8 +134,7 @@ script Warden {
             if hit == player {
                 // The worst single touch this frame, not the sum of them. The
                 // ship gets invulnerability after a hit, so being inside a
-                // crowd of thirty is one hit — adding them up made a late
-                // wave lethal on the frame it arrived, whatever the hull.
+                // crowd is still one hit rather than instant deletion.
                 Game.set("player_damage_taken",
                          max(Game.get("player_damage_taken", 0.0), this.touch_damage));
                 continue;
@@ -139,24 +156,54 @@ script Warden {
         }
     }
 
+    fn drive_charge(dt: f32, dx: f32, dy: f32, far: f32) {
+        if this.dash_windup > 0.0 {
+            this.dash_windup -= dt;
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+            this.shape.stroke.g = 1.0;
+            this.shape.stroke.b = 1.0;
+            if this.dash_windup <= 0.0 {
+                this.dash_time = 0.34;
+                if this.phase == 3.0 {
+                    this.dash_time = 0.42;
+                }
+            }
+            return;
+        }
+        if this.dash_time > 0.0 {
+            this.dash_time -= dt;
+            Physics.set_velocity(this.entity, this.dash_x * this.dash_speed,
+                                 this.dash_y * this.dash_speed);
+            if this.dash_time <= 0.0 {
+                fire_fan();
+            }
+            return;
+        }
+
+        this.dash_timer -= dt;
+        if this.dash_timer <= 0.0 && far > 0.001 {
+            this.dash_x = dx / far;
+            this.dash_y = dy / far;
+            this.dash_windup = 0.58;
+            this.dash_timer = 2.5;
+            if this.phase == 3.0 {
+                this.dash_windup = 0.40;
+                this.dash_timer = 1.8;
+            }
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+            return;
+        }
+
+        if far > 0.001 {
+            Physics.set_velocity(this.entity, dx / far * this.approach,
+                                 dy / far * this.approach);
+        }
+    }
+
     /// How far out it may hold and still be on screen.
-    ///
-    /// Derived from the frame rather than authored as a number, because the two
-    /// have to agree and only one of them is visible in a diff. Holding at a
-    /// fixed 6.5 put it outside a frame whose shorter half is 5.5, and that is
-    /// a deadlock rather than a hard fight: a Warden nothing can see is one the
-    /// ship will not target, so it takes no damage, so it never leaves the
-    /// phase that parks it out there, and it does not shoot back either --
-    /// attacks are gated on being visible. The run simply stops.
-    ///
-    /// Aspect-dependent, which is why it survived being played: a portrait
-    /// phone stretches the short axis and the Warden is comfortably inside the
-    /// frame. It is square and landscape viewports that hide it.
     fn stand_off() -> f32 {
         let tightest = min(visible_half_x(), visible_half_y());
         let radius = max(abs(this.transform.scale.x), abs(this.transform.scale.y)) * 0.5;
-        // A whole radius inside the edge, so it is properly in view rather than
-        // straddling it, and never nearer than touching distance.
         return min(6.5, max(1.5, tightest - radius));
     }
 
@@ -204,29 +251,58 @@ script Warden {
         Physics.set_velocity(this.entity, dx / far * pace, dy / far * pace);
     }
 
-    // A ring rather than an aimed shot: it fills the space instead of asking
-    // the player to dodge one line, and it is the pattern a bullet-hell reads.
+    // Rings use more slots than bullets, leaving a two-slot safe wedge. The
+    // offset advances every volley, so the answer moves rather than becoming a
+    // single permanent camping spot.
     fn fire_ring() {
-        var made: f32 = 0.0;
-        var count: f32 = this.ring_shots;
-        if this.phase == 3.0 {
-            count = this.ring_shots * 1.5;
+        var slots: f32 = this.ring_shots;
+        var speed: f32 = 3.2;
+        if this.phase == 2.0 {
+            slots = this.ring_shots + 2.0;
+            speed = 3.6;
         }
+        if this.phase == 3.0 {
+            slots = this.ring_shots + 6.0;
+            speed = 4.0;
+        }
+
+        let bullets = slots - 2.0;
+        var made: f32 = 0.0;
         Audio.play("audio/boss.wav", 0.4);
-        while made < count {
-            let angle = made / count * 6.2831853 + Random.range(0.0, 0.35);
+        while made < bullets {
+            let angle = made / slots * 6.2831853 + this.ring_offset;
             let bolt = World.spawn(this.shot);
             bolt.transform.position.x = this.transform.position.x + cos(angle) * 0.8;
             bolt.transform.position.y = this.transform.position.y + sin(angle) * 0.8;
             World.set_property(bolt, "dir_x", cos(angle));
             World.set_property(bolt, "dir_y", sin(angle));
+            World.set_property(bolt, "speed", speed);
             made += 1.0;
         }
+        this.ring_offset += 0.52;
+    }
+
+    // A committed dash ends with a compact fan along its travel direction. It
+    // punishes standing directly in the lane without flooding the whole arena.
+    fn fire_fan() {
+        let base = atan2(this.dash_y, this.dash_x);
+        var made: f32 = -2.0;
+        while made <= 2.0 {
+            let angle = base + made * 0.18;
+            let bolt = World.spawn(this.shot);
+            bolt.transform.position.x = this.transform.position.x + cos(angle) * 0.7;
+            bolt.transform.position.y = this.transform.position.y + sin(angle) * 0.7;
+            World.set_property(bolt, "dir_x", cos(angle));
+            World.set_property(bolt, "dir_y", sin(angle));
+            World.set_property(bolt, "speed", 4.2);
+            made += 1.0;
+        }
+        Audio.play("audio/boss.wav", 0.45);
     }
 
     fn summon() {
         var made: f32 = 0.0;
-        while made < 3.0 {
+        while made < 2.0 {
             let angle = Random.range(0.0, 6.2831853);
             let helper = World.spawn(this.minion);
             helper.transform.position.x = this.transform.position.x + cos(angle) * 2.0;
