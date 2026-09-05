@@ -78,6 +78,7 @@ interprets, and `WorldHost` is the only place that gives them a meaning.
 | `this.ui_image.layer` | `f32` | yes | yes |
 | `this.shape.fill.{r,g,b,a}` | `f32` | yes | yes |
 | `this.shape.stroke.{r,g,b,a}` | `f32` | yes | yes |
+| `this.shape.count` | `f32` | yes | yes |
 | `this.shape.stroke_width` | `f32` | yes | yes |
 | `this.shape.sweep_start` | `f32` | yes | yes |
 | `this.shape.sweep_turns` | `f32` | yes | yes |
@@ -93,11 +94,14 @@ anything behind it.
 `shape` is the world-space drawn shape, and it carries more than a tint because
 there is more to drive. A sprite has one colour; a shape has a fill and a
 stroke, and they animate separately — an enemy that flashes its outline without
-lighting up its interior is one write. `sweep_turns` is the reason the group is
-worth having at all: a cooldown ring, a charge meter and a boss's health arc are
-each a single float the script already holds, where drawing the same thing from
-a sprite would need a frame of art per step. `stroke_width` is how something
-pulses without changing size, and `dashes` is how a marker reads as scanning.
+lighting up its interior is one write. `count` changes a polygon's authored side
+count at runtime, so one reusable shape can become a triangle, quad, hexagon, or
+other regular polygon without swapping assets. `sweep_turns` is the reason the
+group is worth having at all: a cooldown ring, a charge meter and a boss's
+health arc are each a single float the script already holds, where drawing the
+same thing from a sprite would need a frame of art per step. `stroke_width` is
+how something pulses without changing size, and `dashes` is how a marker reads
+as scanning.
 
 Either path reaches into the entity's stored payload — `sindri.sprite` or
 `sindri.ui.image` — rather than through the typed view, because a component is a
@@ -132,6 +136,7 @@ table above lists, reaching the same numbers.
 | `this.entity.ui_image.layer` | `f32` | yes | yes |
 | `this.entity.shape.fill.{r,g,b,a}` | `f32` | yes | yes |
 | `this.entity.shape.stroke.{r,g,b,a}` | `f32` | yes | yes |
+| `this.entity.shape.count` | `f32` | yes | yes |
 | `this.entity.shape.stroke_width` | `f32` | yes | yes |
 | `this.entity.shape.sweep_start` | `f32` | yes | yes |
 | `this.entity.shape.sweep_turns` | `f32` | yes | yes |
