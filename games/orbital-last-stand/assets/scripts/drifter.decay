@@ -19,14 +19,16 @@ script Drifter {
     var death_burst_damage: f32 = 0.0;
     var attack: f32 = 1.2;
     var clock: f32 = 0.0;
+    var phase_offset: f32 = 0.0;
     var burrow: f32 = 0.0;
 
     fn start() {
         let late = max(0.0, Game.get("elapsed", 0.0) - 180.0);
         this.hp = this.health * (1.0 + late * 0.0014);
         this.attack = Random.range(0.35, 1.1);
-        this.clock = Random.range(0.0, 6.2831853);
-        this.transform.rotation_z = this.clock;
+        this.clock = 0.0;
+        this.phase_offset = Random.range(0.0, 6.2831853);
+        this.transform.rotation_z = this.phase_offset;
         apply_reference_visual();
         tint_elite();
     }
@@ -36,9 +38,10 @@ script Drifter {
             Physics.set_velocity(this.entity, 0.0, 0.0);
             return;
         }
-        // The reference never lets the arena become visually still: ordinary
-        // enemies rotate continuously while their movement remains independent.
-        this.transform.rotation_z += dt * 0.6;
+        this.clock += dt;
+        // Physics owns translation but the reference owns the visual heading:
+        // every enemy spins at 0.6 rad/s with a per-instance phase offset.
+        this.transform.rotation_z = this.phase_offset + this.clock * 0.6;
         // Keep the elite fill present when an archetype animates its outline.
         // Spawn-time tinting makes the first frame correct; this makes the
         // treatment an invariant for the rest of the enemy's life.
@@ -58,7 +61,6 @@ script Drifter {
         let dx = player.transform.position.x - this.transform.position.x;
         let dy = player.transform.position.y - this.transform.position.y;
         let far = sqrt(dx * dx + dy * dy);
-        this.clock += dt;
 
         let visible = is_visible();
         if this.kind == 3.0 {
