@@ -57,20 +57,14 @@ fn elites_spawn_the_reference_counter_rotating_shell_and_pulse_ring() {
         .iter()
         .copied()
         .find(|child| {
-            run.world
-                .get(*child)
-                .and_then(|data| data.name.as_deref())
-                == Some("Enemy Shell")
+            run.world.get(*child).and_then(|data| data.name.as_deref()) == Some("Enemy Shell")
         })
         .expect("the elite has its polygon shell");
     let ring = children
         .iter()
         .copied()
         .find(|child| {
-            run.world
-                .get(*child)
-                .and_then(|data| data.name.as_deref())
-                == Some("Enemy Ring")
+            run.world.get(*child).and_then(|data| data.name.as_deref()) == Some("Enemy Ring")
         })
         .expect("the elite has its pulse ring");
 
@@ -107,8 +101,8 @@ fn elites_spawn_the_reference_counter_rotating_shell_and_pulse_ring() {
         next_shell_rotation, shell_rotation,
         "the elite shell must rotate independently of its parent"
     );
-    let next_ring_alpha = run.world.get(ring).expect("the ring remains").components
-        ["sindri.shape"]["stroke"][3]
+    let next_ring_alpha = run.world.get(ring).expect("the ring remains").components["sindri.shape"]
+        ["stroke"][3]
         .as_f64()
         .expect("the ring has an alpha");
     assert_ne!(
