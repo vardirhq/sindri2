@@ -16,6 +16,12 @@ on:
 permissions:
   contents: read
 
+# Superseded pull request runs are cancelled; pushes to main are not, because
+# each commit there is the only record of whether that commit was green.
+concurrency:
+  group: decay-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   check:
     name: Decay workspace

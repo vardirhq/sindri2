@@ -2,7 +2,7 @@
 # which `cargo test --target wasm32-unknown-unknown` invokes as the runner for
 # each test binary. Install it with:
 #
-#     cargo install wasm-bindgen-cli --version 0.2.127 --locked
+#     cargo install wasm-bindgen-cli --version 0.2.128 --locked
 #
 # The version has to match the `wasm-bindgen` the workspace resolves.
 [target.wasm32-unknown-unknown]
