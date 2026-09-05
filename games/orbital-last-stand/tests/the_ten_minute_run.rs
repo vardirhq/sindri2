@@ -153,10 +153,7 @@ fn the_warden_arrives_and_changes_as_it_is_fought() {
         .and_then(|script| script.get_mut("properties"))
         .and_then(serde_json::Value::as_object_mut)
         .expect("the Director's authored script properties");
-    properties.insert(
-        "first_boss_at".to_owned(),
-        serde_json::Value::from(2.0),
-    );
+    properties.insert("first_boss_at".to_owned(), serde_json::Value::from(2.0));
 
     for _ in 0..6 {
         run.step(STEP);
