@@ -17,6 +17,7 @@ script Bullet {
 
     var age: f32 = 0.0;
     var spent: f32 = 0.0;
+    var retiring: bool = false;
     var heading_x: f32 = 0.0;
     var heading_y: f32 = 1.0;
 
@@ -27,6 +28,14 @@ script Bullet {
     }
 
     fn update(dt: f32) {
+        // Collision events belong to both participants. Removing the shot on
+        // its turn made a later-running enemy see a dead handle and discard a
+        // hit whose burst had already played. Keep it readable for the rest of
+        // this script pass, then remove it on the following one.
+        if this.retiring {
+            World.despawn(this.entity);
+            return;
+        }
         if Game.get("run_state", 0.0) != 1.0 {
             Physics.set_velocity(this.entity, 0.0, 0.0);
             return;
@@ -49,7 +58,8 @@ script Bullet {
             trigger_effects();
         }
         if this.spent > this.pierce {
-            World.despawn(this.entity);
+            this.retiring = true;
+            Physics.set_velocity(this.entity, 0.0, 0.0);
         }
     }
 

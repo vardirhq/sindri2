@@ -48,6 +48,11 @@ All notable changes to Sindri Next will be documented here.
 
 ### Fixed
 
+- **Orbital Last Stand no longer loses projectile damage after showing an
+  impact.** Player bullets and secondary projectiles remain readable until the
+  full collision pass has consumed their hit, then retire on their next script
+  tick. Enemy durability therefore no longer depends on entity update order.
+
 - **Orbital Last Stand's opening enemies no longer become hidden bullet
   sponges.** Their base health now preserves the original game's two-, three-,
   and two-shot opening ratios, and the original's slight health scaling waits
