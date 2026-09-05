@@ -48,8 +48,7 @@ fn run(source: &str) -> (World, sindri_decay::ScriptReport) {
 
 #[test]
 fn a_script_writes_bounded_polygon_vertices_and_can_use_exp() {
-    let (world, report) = run(
-        r"
+    let (world, report) = run(r"
         script Hull {
             fn start() {
                 World.set_shape_point(0.0, 0.25, -0.5);
@@ -57,8 +56,7 @@ fn a_script_writes_bounded_polygon_vertices_and_can_use_exp() {
                 this.transform.position.x = exp(0.0);
             }
         }
-        ",
-    );
+        ");
     assert!(report.failures.is_empty(), "{:?}", report.failures);
     let (_, hull) = world
         .entities()
@@ -76,20 +74,20 @@ fn a_script_writes_bounded_polygon_vertices_and_can_use_exp() {
         ])
     );
     assert_eq!(
-        hull.transform_3d.expect("the hull has a transform").position[0],
+        hull.transform_3d
+            .expect("the hull has a transform")
+            .position[0],
         1.0
     );
 }
 
 #[test]
 fn an_authored_polygon_point_outside_the_renderer_limit_is_refused() {
-    let (_, report) = run(
-        r"
+    let (_, report) = run(r"
         script Hull {
             fn start() { World.set_shape_point(8.0, 0.0, 0.0); }
         }
-        ",
-    );
+        ");
     let message = report
         .failures
         .iter()
