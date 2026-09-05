@@ -340,13 +340,20 @@ fn enemies_arrive_die_and_leave_something_behind() {
     play(&mut run, STEP);
     run.set_board("hp", 1000.0);
 
-    play_taking_upgrades(&mut run, 90.0);
+    // Level-up choices pause the campaign clock. Elites are worth more salvage,
+    // so the reference economy creates more pauses than the old fixed wall-time
+    // budget assumed. Play until the time-based roster has actually advanced.
+    let mut wall_seconds = 0;
+    while run.board("elapsed") < 90.0 && wall_seconds < 120 {
+        play_taking_upgrades(&mut run, 1.0);
+        wall_seconds += 1;
+    }
     assert!(run.board("kills") > 20.0, "kills: {}", run.board("kills"));
     assert!(run.board("score") > 0.0, "nothing scored");
     // Progression is time-based now: chargers join at 35 seconds and splitters
     // at 70, so this run has crossed both roster thresholds without a wave id.
     assert!(
-        run.board("elapsed") >= 89.0,
+        run.board("elapsed") >= 90.0,
         "elapsed: {}",
         run.board("elapsed")
     );
