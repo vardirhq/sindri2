@@ -4,6 +4,8 @@ script EliteVisual {
     @export let mode: f32 = 0.0;
     @export let sides: f32 = 6.0;
     @export let trait: f32 = 0.0;
+    @export let identity_ring: Prefab;
+    @export let identity_crack: Prefab;
 
     var clock: f32 = 0.0;
     var phase: f32 = 0.0;
@@ -11,9 +13,12 @@ script EliteVisual {
     fn start() {
         this.shape.count = this.sides;
         // Reference enemies carry a random phase that offsets their ring pulse.
-        // These decorative children do not need to share gameplay state, so a
-        // per-instance phase preserves the same unsynchronised presentation.
-        if this.mode == 1.0 { this.phase = Random.range(0.0, 6.2831853); }
+        // Reuse that same phase for the trait-specific cue so the layers breathe
+        // together instead of spending another gameplay RNG draw.
+        if this.mode == 1.0 {
+            this.phase = Random.range(0.0, 6.2831853);
+            spawn_identity();
+        }
         apply_color();
     }
 
@@ -28,6 +33,39 @@ script EliteVisual {
         } else {
             this.shape.stroke.a = 0.4 + 0.25 * sin(this.clock * 7.0 + this.phase);
         }
+    }
+
+    fn spawn_identity() {
+        // Frenzied has no extra identity mark in the reference renderer beyond
+        // the generic elite shell/ring, so trait 1 intentionally stops here.
+        if this.trait == 1.0 { return; }
+        if this.trait == 0.0 {
+            var slot: f32 = 0.0;
+            while slot < 3.0 {
+                spawn_identity_ring(slot);
+                slot += 1.0;
+            }
+        } else if this.trait == 4.0 {
+            var slot: f32 = 0.0;
+            while slot < 3.0 {
+                let mark = World.spawn(this.identity_crack);
+                World.set_property(mark, "trait", this.trait);
+                World.set_property(mark, "index", slot);
+                World.set_property(mark, "phase", this.phase);
+                World.set_parent(mark, this.entity);
+                slot += 1.0;
+            }
+        } else {
+            spawn_identity_ring(0.0);
+        }
+    }
+
+    fn spawn_identity_ring(index: f32) {
+        let mark = World.spawn(this.identity_ring);
+        World.set_property(mark, "trait", this.trait);
+        World.set_property(mark, "index", index);
+        World.set_property(mark, "phase", this.phase);
+        World.set_parent(mark, this.entity);
     }
 
     fn apply_color() {
