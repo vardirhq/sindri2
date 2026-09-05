@@ -4,6 +4,7 @@ script EliteVisual {
     @export let mode: f32 = 0.0;
     @export let sides: f32 = 6.0;
     @export let trait: f32 = 0.0;
+    @export let phase: f32 = 0.0;
 
     var clock: f32 = 0.0;
 
@@ -16,12 +17,12 @@ script EliteVisual {
         this.clock += dt;
         apply_color();
         if this.mode == 0.0 {
-            // The parent rotates at +0.6 rad/s. -2.0 locally gives the
-            // reference elite shell's -1.4 rad/s world rotation.
-            this.transform.rotation_z = -this.clock * 2.0;
+            // The reference draws this inside the enemy's +0.6 rad/s rotated
+            // context, with an additional local -1.4 rad/s turn.
+            this.transform.rotation_z = -this.clock * 1.4;
             this.shape.stroke.a = 1.0;
         } else {
-            this.shape.stroke.a = 0.4 + 0.25 * sin(this.clock * 7.0);
+            this.shape.stroke.a = 0.4 + 0.25 * sin(this.clock * 7.0 + this.phase);
         }
     }
 
