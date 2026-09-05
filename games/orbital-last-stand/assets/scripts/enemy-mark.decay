@@ -5,6 +5,7 @@ script EnemyMark {
     @export let mode: f32 = 0.0;
 
     var clock: f32 = 0.0;
+    var phase: f32 = 0.0;
 
     fn start() {
         if this.mode == 0.0 {
@@ -37,7 +38,7 @@ script EnemyMark {
             this.shape.stroke.g = 0.8196;
             this.shape.stroke.b = 0.7373;
             this.shape.stroke.a = 0.75;
-        } else {
+        } else if this.mode == 3.0 {
             // Phaser: pulsing outer triangle, rotated -0.2 rad locally.
             this.transform.scale.x = 1.55;
             this.transform.scale.y = 1.55;
@@ -46,6 +47,16 @@ script EnemyMark {
             this.shape.stroke.r = 0.9451;
             this.shape.stroke.g = 0.8627;
             this.shape.stroke.b = 1.0;
+        } else {
+            // Bulwark: very faint support-radius ring. The original pulses
+            // around 0.1 alpha at 4 Hz, with each enemy offset independently.
+            this.phase = Random.range(0.0, 6.2831853);
+            this.transform.scale.x = 8.6;
+            this.transform.scale.y = 8.6;
+            this.shape.sweep_turns = 1.0;
+            this.shape.stroke.r = 1.0;
+            this.shape.stroke.g = 0.5490;
+            this.shape.stroke.b = 0.6275;
         }
     }
 
@@ -53,6 +64,8 @@ script EnemyMark {
         this.clock += dt;
         if this.mode == 3.0 {
             this.shape.stroke.a = 0.35 + 0.25 * sin(this.clock * 12.0);
+        } else if this.mode == 4.0 {
+            this.shape.stroke.a = 0.1 + 0.025 * sin(this.clock * 4.0 + this.phase);
         }
     }
 }
