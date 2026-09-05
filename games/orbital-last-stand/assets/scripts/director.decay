@@ -184,7 +184,7 @@ script Director {
     // before their first script pass.
     fn spawn_one() {
         let count = unlocked_count();
-        let slot = floor(Random.value() * count);
+        let slot = Random.int(0.0, count - 1.0);
         if slot == 2.0 {
             place(World.spawn(this.charger));
             return;
