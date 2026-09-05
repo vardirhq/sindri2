@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 25825)
-Total output lines: 1233
-
 # Changelog
 
 All notable changes to Sindri Next will be documented here.
@@ -644,7 +641,324 @@ All notable changes to Sindri Next will be documented here.
   project meant a file manager beside the window and the Refresh button
   afterwards. A row's menu does all five now, and the directory is re-read
   afterwards, so Refresh is for changes made outside the editor rather than for
-  it…5825 tokens truncated…y validation.
+  its own.
+
+  None of them go through the undo history, and that is not an oversight: the
+  history describes a world and these describe a directory, so undoing a delete
+  would mean holding the bytes of every removed file for as long as the session
+  lasts. What stands in for it is that each operation is checked before it runs
+  and refuses rather than overwrites; that nothing can name a path outside the
+  project, because a row hands over whatever was typed into it and `../secrets`
+  is a perfectly good string but not a file name; and that deleting — the one
+  with nothing behind it, and which takes a whole folder — asks first.
+
+  Renaming the open scene follows it, because the editor holds the path it saves
+  to and a rename it was not told about would write the scene back under its old
+  name and leave two of them on disk. A copy keeps the whole suffix that says
+  what kind of asset it is, since `file_stem` stops at the last dot and a
+  duplicated scene would otherwise become `level.scene copy.json`.
+- **An entity's stable ID is visible and editable**, and the scene has a panel
+  of its own. `source_id` is what the file keys an entity by, what a parent link
+  names, what sibling order is derived from and what `sindri.grid.occupant`
+  points at — and nothing showed it, so the editor could produce
+  `game-object-1` and nothing else while Gather's entities are `player`,
+  `floor`, `orb-1`. It is a field under the name now, and renaming one takes
+  every occupant that points at it along in the same transaction: a stable ID is
+  a reference, not a label, and renaming a grid without rewriting its occupants
+  leaves a scene that still opens with nothing on the board. An ID that is blank
+  or already taken is refused at the field rather than written and rejected.
+  With nothing selected, the inspector now shows the scene rather than a shrug:
+  its name — a real field that round-trips through a save and was shown nowhere
+  — its file, and how many entities it holds. Both are written once the edit is
+  finished rather than on every keystroke, and both go through the command
+  history, so the editor still knows when the document is unsaved.
+- **New Scene and Save As.** A scene file had to exist before the editor could
+  do anything with it, so the tool could only continue a project someone else
+  had started — and started somewhere the default scene is not, it opened
+  detached with Save disabled and no way to make a file to save into. New scene
+  (Ctrl+N) asks where the scene goes, writes it, and opens it through the
+  ordinary path, so a new scene proves it loads before anyone works in it. It
+  holds one world camera: a scene with none is legal and renders a black Game
+  view, and "why is the game view empty" is not the first question a new project
+  should raise. Save scene as… (Ctrl+Shift+S) is offered whether or not the
+  scene has a file, adopts the path only after the write succeeds, and takes the
+  project beside the scene, the remembered scene, the textures and the scripts
+  with it. A save box takes a name rather than an extension, so the suffix is
+  the editor's business: `level` is written as `level.scene.json`, which is what
+  the project browser lists as a scene and what reopening it finds.
+
+### Fixed
+
+- **A script failure named a handle nobody could look up.** It printed
+  `entity EntityId { index: 4, generation: 0 }`, which is what the runtime has
+  and not something anyone can find in a hierarchy. `ScriptFailure` says which
+  entity and what went wrong separately now, so the editor — which holds the
+  world — writes "Wisp: names script 'NoSuchContainer', which
+  'scripts/wisp.decay' does not declare", and the console row ends in that
+  entity's name as the way to it. The entity is carried on the entry rather than
+  read back out of the message: searching the text for something that looks like
+  a name would select the wrong entity the first time a message mentioned a word
+  that happened to be one.
+- **Add Component could break the scene in one click.** It offered Camera
+  whether or not the scene already had one, and a second authored world camera
+  is a hard extract error — both viewports go dark with "the scene contains more
+  than one authored world camera", and nothing says which two entities are now
+  the cameras. Camera is listed and disabled on a scene that already has one.
+- **A `.txt` file drew with the glyph the editor uses for an entity**, claiming
+  it is an object in the scene, and a font shared the image glyph with a
+  texture. Both have their own now.
+- **Nothing in the Scene view could be selected by clicking it.** The viewport
+  allocated its region with `Sense::drag()`, and egui sets a response's clicked
+  flag only for a widget whose sense includes clicks — so the panel's
+  `clicked_by` was always false, whatever the picking underneath decided. The
+  tile brush was half-dead the same way: it painted on a drag and ignored a
+  single click. The coupling between what the response senses and what the panel
+  asks it is stated in a test now, because it is invisible from both ends.
+- **A fully transparent element swallowed every click over it.** Found by
+  clicking Gather's player and selecting its win banner instead: the banner is
+  `tint` alpha zero, a third of the viewport wide, sitting in the middle of the
+  scene until the game says otherwise. A thing drawn as nothing is not a thing
+  to click, in the overlay or in the world.
+- **A UI element's gizmo appeared where it is not.** A UI element's position is
+  an offset from its anchor in overlay space, and the handle was drawn at the
+  entity's transform in world space — so selecting Gather's title and choosing
+  Move put one red arm in the bottom-left corner of the Scene view, mostly off
+  screen, while the text was at the top. The gizmo is told where its handles
+  belong now, separately from the transform it edits, so the pointer maths
+  happens against the drawn origin and the answer lands on the authored value. A
+  UI element is offered two arms rather than three: its Z orders it within the
+  overlay rather than placing it.
+
+### Changed
+
+- **The snap increments can be set, and are remembered.** The snap button's
+  tooltip named 0.5 units, 15° and 0.1 scale, and all three were constants
+  nothing could change — so a board laid out on quarter units was a board laid
+  out by hand. Right-clicking the button sets them. They live there rather than
+  in a preferences dialog because that is the control they belong to, and a
+  toolbar has no room for three number fields nobody usually touches. Zero is
+  allowed and means that one does not round, which is what the gizmo already did
+  with a zero step.
+- **The console filters by level.** All, Problems, or Errors, remembered across
+  launches because it is a reading preference rather than a state: someone
+  watching for a failure wants it filtered to failures for as long as they are
+  watching. A filter that hides everything says so, since an empty panel
+  otherwise reads as a console that stopped working.
+- **Delete and F2 act on whichever selection was made last.** The editor holds
+  two — an entity and an asset — and these keys always meant the entity, so the
+  project browser's menu could not honestly print them beside its own entries.
+  Choosing something is what says which the keys mean, which is what a selection
+  already communicates.
+- **Add Component says what it is not offering, and why.** Sprite Animation
+  needs a sliced sheet, Grid Occupant needs a grid, UI Text needs a font in the
+  project — and failing any of those, the entry was simply absent, leaving the
+  menu quietly shorter than the documentation. Every type the entity's space
+  accepts is listed now, disabled with the reason. The rule it replaces stands
+  where it belongs: a button that adds a component the engine then rejects is
+  worse than no button, and an entry that says why is neither of those.
+- **UI elements can be picked in the view that draws them.** Twelve of Gather's
+  twenty-two entities are UI, and none of them could be clicked: an anchor picks
+  a point on the viewport and the transform is an offset from it, so a world ray
+  through a world camera passes nowhere near them. UI images are picked in a
+  pass of their own, against the same overlay matrix the frame draws them
+  through, and — being drawn over the world — take precedence over it. UI text is
+  deliberately left to the hierarchy: what a string covers is decided by glyph
+  layout inside the text renderer.
+- **Duplicate, rename in place, and Delete, from the row they act on.** The
+  three verbs whose absence is felt on every entity after the first. Gather has
+  five Orbs, five Pips, and five Pip Sockets, each of which had to be built from
+  scratch; renaming meant selecting a row and finding the name field in another
+  panel; and Delete was one icon in a header. All three are on the hierarchy
+  row's own right-click menu and on a key: Ctrl+D, F2, and Delete or Backspace.
+  A rename happens in the row, focused as it appears, Enter to commit and Escape
+  to abandon. A duplicate takes the whole subtree, lands beside the original as
+  a sibling, earns a stable ID nothing else is using, and undoes in one step —
+  which needs the copy rehearsed against a clone of the world first, because
+  `WorldCommand::Spawn` names the handle it spawns at and `World::next_handle`
+  answers the same thing however many times it is asked.
+- **The editor answers a right-click.** There was not one `context_menu` call in
+  it, which is half of why the verbs above did not exist: an action that belongs
+  to *a specific thing* had nowhere to live. A hierarchy row and a project row
+  have menus now, both drawn through one primitive so a menu does not change
+  width with the name of whatever is selected and a destructive entry reads as
+  destructive. The project row's menu offers what the browser can already do —
+  open a scene, look inside a folder, slice an image — and the asset path a
+  component field wants, which until now had to be read off the row and typed
+  back in by hand.
+- **The unmodified shortcut keys belong to whatever is being typed into.** With
+  a text field now in the hierarchy, F while renaming would have framed the
+  camera and Backspace would have deleted the entity being named rather than a
+  letter of its name.
+- **The Project dock is a browser rather than a listing.** Its folders fold, so
+  a project with four asset directories is no longer a wall of every file in all
+  of them. Its folder pane navigates: choosing one lists that folder and nothing
+  else, and it used to be labels with no sense that selected nothing and
+  filtered nothing. And it has a selection of its own, marked with the band a
+  selected row wears — it used to mark only the open scene, so the scene file
+  was permanently lit and clicking anything else changed nothing visible. The
+  open scene keeps a quieter rule in the margin, because which scene is open and
+  which asset is selected are different facts. Every row answers a click now,
+  including the ones the editor can do nothing else with: what a row can do is
+  said on hover instead of by refusing to respond.
+
+
+- **A component added in the editor is the component the game uses.** The
+  registry recorded one payload per type and asked it two questions — what does
+  this component have, and what is a fresh one — so a type with no honest blank
+  had no answer to the first either. `sindri.ui.text` inspected as two rows for
+  a seven-field component, and a tilemap made in the editor had no `projection`
+  and could never be isometric. Those are now separate registrations: a field
+  template says what a component consists of, a default payload says what a
+  fresh one is, and a type may have the first without the second. Both are
+  checked against the field list serde will ask the type for, so a template that
+  drifts from its struct is a startup error rather than a missing row noticed a
+  release later.
+- **A script can be put on an entity.** `sindri.script` and
+  `sindri.audio.source` had no default payload and so were never offered by Add
+  Component — in an engine whose headline capability is scripting, and a
+  companion game that is thirteen script components. Both are offered now,
+  completed from the project beside the scene: the first `.decay` source that
+  declares a container, the first audio clip. A script arrives with its source,
+  its container, its typed `@export` fields, and `enabled`, which had never been
+  visible. Behind it, a component that says what an entity *does* no longer
+  decides where it *is*: a script on a fresh entity used to mark it a world
+  object and stop the menu offering UI Text, which made Gather's script-driven
+  HUD unbuildable.
+- **Play mode is read-only.** Saving while a scene was playing wrote the running
+  world to the file — the authored scene replaced by wherever the scripts had
+  pushed everything, marked as saved, with Stop then restoring a world the file
+  no longer held. Every other edit made while playing was discarded by Stop
+  without being mentioned, leaving undo describing changes the world no longer
+  contained. A running scene is not the document: the inspector, the hierarchy's
+  create and delete, the gizmo, the tile brush, undo, redo and the File menu all
+  stand down until it stops, each saying why. The viewport still orbits and
+  selects, and the inspector still shows the values changing.
+
+
+- **The editor draws itself from one design system instead of eleven opinions.**
+  Every panel used to pick its own greys, gaps, and font sizes by copying the
+  panel beside it, so the same idea was spelled differently in each one and
+  property values were right-aligned — no two rows in a component started at the
+  same place. `editor/src/ui/` now holds the tokens, the icon vocabulary, and
+  the controls built from both, and the panels are rewired onto it: a scene row
+  is a banded row with a selection rule and a guide per level of nesting, a
+  component is a heading that folds and carries its own actions, a transform
+  component is a well with its axis letter on a spine tinted the colour that
+  axis has in the viewport, and a panel with nothing in it says what it is for
+  rather than being blank. Scene and Game read as workspaces rather than as two
+  more tabs, the scene tools are grouped by what they do and scroll rather than
+  clip when the viewport is narrow, and destructive actions — Discard changes,
+  Remove component, Delete entity — are drawn as destructive. Every interaction
+  is the one it was: selection, drag-and-drop reparenting, the fold
+  preferences, the slicer, the tile brush, and the checked-command path behind
+  every inspector edit.
+- **A procedural texture stops being reported as a texture the project lacks.**
+  The inspector's asset picker was built from the scene's directory alone, and
+  `procedural:checkerboard` is deliberately not a file, so the fixture's own
+  cube was marked as naming something that does not exist. The picker offers
+  what the engine can draw, which is the project's images and the ones it
+  generates.
+
+
+- **A scene now has two kinds of entity, and they are spelled apart.** A sprite
+  is a thing in the world; a thing on the viewport is `sindri.ui.image`, and
+  `sindri.text` becomes `sindri.ui.text`. `sindri.sprite` loses the `space`
+  field that used to mean one component was really two — an anchor mattered on a
+  screen sprite and decided nothing on a world one — and `sindri.tilemap` loses
+  it too, because a map is in the world. Scene format 8 migrates every scene:
+  a screen sprite becomes a UI image with everything it drew with, a world
+  sprite keeps its name and loses the two fields that decided nothing, and a
+  screen-space tilemap stops the migration with a message rather than being
+  quietly relocated. Scripts follow: a HUD element writes
+  `this.ui_image.tint.a` where it used to write `this.sprite.tint.a`.
+- **The Scene view's authored-camera gizmo stops lying about the camera.** Its
+  frustum is drawn at the aspect the camera actually renders at — the Game
+  viewport's — so resizing the Scene view no longer reshapes it, and every line
+  is clipped against the near plane in clip space, so orbiting past a camera no
+  longer smears its frustum across the viewport. The frustum is drawn for the
+  selected camera only; an unselected one keeps its marker and a short forward
+  stub, which is also all a click selects.
+- **Play, pause, and stop are two controls and a word instead of four
+  controls.** There were a stop icon, a pause icon, a play icon, and an accent
+  button — and the accent button said "Stop" while running but paused when
+  pressed, as did the play icon beside it. Now one button enters and leaves play
+  mode and is labelled with what pressing it does, one icon holds and releases a
+  running scene, and the editor says whether it is Editing, Playing, or Paused.
+  Ctrl+P plays and stops; Ctrl+Shift+P pauses and resumes.
+- **The inspector shows what a component has, and edits it with controls that
+  know what it means.** Every field of a component is drawn whether or not this
+  instance wrote it down, so two of one component no longer show two different
+  sets of rows; a field left alone is still not written to the file. A field
+  whose value is one of a few names — a camera's projection, a UI anchor, a
+  tilemap's projection, a body's kind — is a menu rather than a text box, and
+  switching a camera's projection writes the fields that projection has instead
+  of producing a payload the schema refuses. A field naming a project file gets
+  a picker beside it, a tint gets a colour swatch, fields are ordered by what
+  they say about the component rather than alphabetically, and a row that is
+  only a readout says on hover why.
+- Rust source files are now capped at 600 lines, with 400 as the target, and
+  `scripts/check-file-size.py` enforces it in CI. Twenty-one files were over the
+  cap — the largest was the 4,714-line native editor — and each is now a
+  directory module named for what its parts do. No public API changed; every
+  `use sindri_core::…`, `sindri_scene::…`, and `decay_*::…` path is what it was.
+  `docs/module-layout.md` states the rule and how to satisfy it.
+- Decay's `&&` and `||` now short-circuit: the right operand is evaluated only
+  when the left does not already decide the answer. A guard such as
+  `held != null && World.exists(held)` protects the call to its right, which it
+  did not before. Both operators still require and produce `bool`.
+
+### Added
+
+- Browser startup failures now reach the player: the engine announces them on
+  `window` and the page shows them, instead of a blank canvas and a console line
+  nobody opens.
+- The browser page asks for a real WebGPU adapter before starting, rather than
+  trusting that `navigator.gpu` existing means WebGPU works.
+
+- End-to-end audio across assets, scene authoring, native/browser platform backends, typed Decay calls, editor discovery/component authoring, and Gather background/pickup/victory playback, with a silent backend for device-free tests.
+- Command-backed Scene-view translate, rotate, and scale gizmos with local/world
+  orientation, optional movement/angle/scale snapping, Z-lock-safe movement,
+  Q/W/E/R tool shortcuts, and one undo step per drag; transform rotation is now
+  editable as Euler degrees in the inspector while remaining quaternion-backed.
+- Authored `sindri.grid_navigation` walls and `sindri.grid_occupant`
+  footprints, with a world adapter that resolves stable grid references,
+  derives occupancy from transforms, validates complete placement, and runs
+  wall-aware whole-footprint paths.
+- Normalized renderer-independent wall edges in `sindri-grid`, with bounded
+  symmetric block/unblock queries and A* integration for cardinal, diagonal,
+  occupancy, and multi-cell footprint paths.
+- Deterministic renderer-independent A* pathfinding in `sindri-grid`, with
+  cardinal/eight-way movement, explicit corner-cutting policy, integer costs,
+  memoized passability, and whole-footprint occupancy paths.
+- Renderer-independent multi-cell footprints and bounded occupancy in
+  `sindri-grid`, with deterministic cells, atomic moves, and explicit placement
+  errors for conflicts, bounds, and coordinate overflow.
+- Typed Decay grid positioning through `Grid.position_x`, `position_y`, and
+  `place`, with Gather gameplay migrated from top-down world coordinates to the
+  exact logical space of its transformed isometric tilemap.
+- Shared tilemap/grid coordinates: `sindri.tilemap` now adapts `sindri-grid`
+  into upward world Y for both rendering and editor picking, while full map
+  transforms rotate and scale the grid itself instead of only its tile quads.
+- A dependency-free `sindri-grid` foundation with typed logical coordinates,
+  finite bounds, stable neighbour queries, validated orthogonal/isometric
+  projection, and exhaustive round-trip coverage across negative and positive
+  space.
+- A feature integration matrix tracking runtime, editor, Decay, and Gather
+  counterparts together so a feature added on one surface leaves its remaining
+  integrations visible.
+- Drag-and-drop hierarchy reparenting onto another GameObject or the World root, with legal-target feedback, cycle prevention through the world's existing checks, and one-step undo.
+- Unity-style editor hierarchy authoring: every GameObject can contain children, child-bearing rows collapse with restart-persistent state, filtered results retain their ancestor paths, and the create menu can add an empty root or child with a stable scene ID.
+- Scene-viewport entity selection for world sprites, filled tilemap cells, and meshes, using the rendered camera and geometry with layer-, depth-, and occlusion-aware overlap resolution.
+- Sprite-animation clip authoring in the native editor: add a valid animation from a sprite sheet, create, rename, and remove clips, arrange named frames, edit timing and looping, choose the runtime clip, and preview playback against the project texture without changing scene state.
+- Text authoring in the native editor: add `sindri.text` when a project font exists, edit multiline content, and choose among project-owned font assets without hand-editing scene JSON.
+- Screen-space `sindri.text` rendering through Glyphon, with anchored/layered frame extraction, validated project font assets shared by native and browser hosts, editor loading and hot reload, and a real Inter-rendered title in Gather.
+- GitHub Pages delivery for the WebAssembly/WebGPU Gather build from `main`.
+- World-space tilemap authoring in the native editor: a visual palette from the texture's sprite-sheet sidecar, overlap-preserving grid resizing, Scene-view paint and erase with projected cell feedback, editable render layers, and undoable drag strokes.
+- Initial Rust workspace with `sindri-core` and the public `sindri` facade.
+- Engine lifecycle and renderer-independent runtime host.
+- Capped fixed-step clock with pause and spiral-of-death protection.
+- Generation-checked entities, safe hierarchy operations, and recursive destruction.
+- Versioned scene documents with stable logical IDs and hierarchy validation.
 - Extensive checkable roadmap and architecture feasibility review.
 - CI checks for formatting, Clippy, tests, and the declared MSRV.
 - Shared `sindri-gpu` adapter/device negotiation and surface configuration policy.
