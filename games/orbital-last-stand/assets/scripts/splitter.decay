@@ -67,11 +67,11 @@ script Hazards {
             spawn_gravity(2.4, 0.2);
             spawn_gravity(0.3, -2.4);
         } else if sector == 4.0 {
-            let null = World.spawn(this.field);
-            null.transform.position.x = -2.3;
-            null.transform.position.y = 1.1;
-            World.set_property(null, "kind", 2.0);
-            World.set_property(null, "radius", 1.75);
+            let null_field = World.spawn(this.field);
+            null_field.transform.position.x = -2.3;
+            null_field.transform.position.y = 1.1;
+            World.set_property(null_field, "kind", 2.0);
+            World.set_property(null_field, "radius", 1.75);
         } else if sector == 5.0 {
             this.beam_timer = 0.0;
             this.beam_axis = 1.0;
