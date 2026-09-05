@@ -28,10 +28,15 @@ struct InstanceInput {
     @location(5) model_3: vec4<f32>,
     @location(6) fill: vec4<f32>,
     @location(7) stroke: vec4<f32>,
-    // kind, sides (or grid cells), stroke width, corner radius
+    // kind, sides (or grid cells), stroke width, corner radius / authored count
     @location(8) geometry: vec4<f32>,
     // dash count, dash duty, sweep start, sweep turns
     @location(9) pattern: vec4<f32>,
+    // Eight authored polygon vertices, packed two per attribute.
+    @location(10) points_0: vec4<f32>,
+    @location(11) points_1: vec4<f32>,
+    @location(12) points_2: vec4<f32>,
+    @location(13) points_3: vec4<f32>,
 };
 
 struct VertexOutput {
@@ -41,6 +46,10 @@ struct VertexOutput {
     @location(2) stroke: vec4<f32>,
     @location(3) geometry: vec4<f32>,
     @location(4) pattern: vec4<f32>,
+    @location(5) points_0: vec4<f32>,
+    @location(6) points_1: vec4<f32>,
+    @location(7) points_2: vec4<f32>,
+    @location(8) points_3: vec4<f32>,
 };
 
 const TAU: f32 = 6.283185307179586;
@@ -87,6 +96,10 @@ fn vs_main(vertex: VertexInput, instance: InstanceInput) -> VertexOutput {
     out.stroke = instance.stroke;
     out.geometry = instance.geometry;
     out.pattern = instance.pattern;
+    out.points_0 = instance.points_0;
+    out.points_1 = instance.points_1;
+    out.points_2 = instance.points_2;
+    out.points_3 = instance.points_3;
     return out;
 }
 
@@ -113,6 +126,42 @@ fn polygon_distance(p: vec2<f32>, sides: f32) -> f32 {
     let angle = atan2(p.y, p.x) - TAU * 0.25 + segment * 0.5;
     let folded = angle - segment * round(angle / segment);
     return length(p) * cos(folded) - 0.5 * cos(segment * 0.5);
+}
+
+/// Exact signed distance to an authored polygon with at most eight vertices.
+///
+/// The edge distance is ordinary point-to-segment distance. The ray crossing
+/// toggles `inside` for each edge crossing to the right of the sample, so the
+/// same calculation works for clockwise and counter-clockwise authored points.
+fn authored_polygon_distance(
+    p: vec2<f32>,
+    points: array<vec2<f32>, 8>,
+    count: u32,
+) -> f32 {
+    var nearest = 1.0e6;
+    var inside = false;
+    var previous = count - 1u;
+    for (var current = 0u; current < 8u; current += 1u) {
+        if current >= count {
+            break;
+        }
+        let a = points[previous];
+        let b = points[current];
+        let edge = b - a;
+        let from_a = p - a;
+        let edge_length_sq = max(dot(edge, edge), 1.0e-12);
+        let along = clamp(dot(from_a, edge) / edge_length_sq, 0.0, 1.0);
+        nearest = min(nearest, length(from_a - edge * along));
+
+        if (a.y > p.y) != (b.y > p.y) {
+            let crossing_x = a.x + (p.y - a.y) * (b.x - a.x) / (b.y - a.y);
+            if p.x < crossing_x {
+                inside = !inside;
+            }
+        }
+        previous = current;
+    }
+    return select(nearest, -nearest, inside);
 }
 
 /// Distance to the nearest line of a grid of `cells` across the quad.
@@ -175,7 +224,22 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     if kind == KIND_ELLIPSE {
         distance = length(p) - 0.5;
     } else if kind == KIND_POLYGON {
-        distance = polygon_distance(p, in.geometry.y);
+        let authored_count = u32(clamp(in.geometry.w, 0.0, 8.0) + 0.5);
+        if authored_count >= 3u {
+            let points = array<vec2<f32>, 8>(
+                in.points_0.xy,
+                in.points_0.zw,
+                in.points_1.xy,
+                in.points_1.zw,
+                in.points_2.xy,
+                in.points_2.zw,
+                in.points_3.xy,
+                in.points_3.zw,
+            );
+            distance = authored_polygon_distance(p, points, authored_count);
+        } else {
+            distance = polygon_distance(p, in.geometry.y);
+        }
     } else if kind == KIND_GRID {
         distance = grid_distance(p, in.geometry.y);
         // A grid is lines, not an enclosure: there is no inside to fill, and
