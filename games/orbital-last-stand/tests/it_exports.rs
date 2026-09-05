@@ -47,21 +47,24 @@ fn every_prefab_ships() {
     assert_eq!(prefabs.len(), authored, "{prefabs:?}");
 }
 
-/// The splitter's shards and the Warden's shots are named by *prefabs*, not by
-/// the scene: nothing in the scene mentions either. They ship because the walk
-/// follows a prefab's own scripts into the prefabs those can spawn.
+/// The sector controller's hazards and the Warden's shots are named by
+/// *prefabs*, not by the scene. They ship because the walk follows a prefab's
+/// own scripts into the prefabs those can spawn.
 #[test]
 fn a_prefab_only_another_prefab_names_ships() {
     let (_scratch, manifest) = exported("nested");
     let prefabs = ids(&manifest, AssetKind::Prefab);
-    assert!(
-        prefabs.iter().any(|id| id.contains("shard")),
-        "the splitter's shards were left behind: {prefabs:?}"
-    );
-    assert!(
-        prefabs.iter().any(|id| id.contains("enemy-bullet")),
-        "the Warden's shots were left behind: {prefabs:?}"
-    );
+    for nested in [
+        "prefabs/hazard-asteroid-large.prefab.json",
+        "prefabs/hazard-field.prefab.json",
+        "prefabs/hazard-beam.prefab.json",
+        "prefabs/enemy-bullet.prefab.json",
+    ] {
+        assert!(
+            prefabs.iter().any(|id| id == nested),
+            "{nested} was left behind: {prefabs:?}"
+        );
+    }
 }
 
 /// Every screen in this game is switched off until something shows it, and the
