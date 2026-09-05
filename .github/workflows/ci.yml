@@ -187,6 +187,15 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: wasm-pack@0.13.1
+      # Chromium is launched with `--use-angle=vulkan --use-vulkan=swiftshader`,
+      # so it needs the Vulkan loader on the machine. Playwright's own
+      # `install-deps` does not provide it, and without it the browser still
+      # reports `navigator.gpu` — `--enable-unsafe-webgpu` sees to that — and
+      # then draws nothing, which reads as an engine that started and rendered
+      # a blank frame rather than as a missing system library.
+      - uses: ./.github/actions/linux-deps
+        with:
+          packages: libvulkan1 mesa-vulkan-drivers
       # Chromium and its npm tree are the same bytes on every run and are worth
       # roughly a minute of it. The system libraries the browser links are not
       # cached — `install-deps` is apt — so they are installed either way.
