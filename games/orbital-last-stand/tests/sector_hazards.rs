@@ -51,18 +51,21 @@ fn the_five_sectors_swap_real_hazards() {
     );
 
     let field = run.find("Hazard Field").expect("the null field exists");
-    let field_position = run
-        .world
-        .get(field)
-        .and_then(|data| data.transform_3d)
-        .expect("the null field has a transform")
-        .position;
     let player = run.find("Player").expect("the player exists");
-    run.world
-        .get_mut(player)
-        .and_then(|data| data.transform_3d.as_mut())
+    let player_position = run
+        .world
+        .get(player)
+        .and_then(|data| data.transform_3d)
         .expect("the player has a transform")
-        .position = field_position;
+        .position;
+
+    // Physics owns the dynamic player's position, so move the non-physics
+    // field onto the player to exercise suppression deterministically.
+    run.world
+        .get_mut(field)
+        .and_then(|data| data.transform_3d.as_mut())
+        .expect("the null field has a transform")
+        .position = player_position;
     step(&mut run);
     assert_eq!(
         run.board("nullified"),
