@@ -17,6 +17,8 @@ script Charger {
     @export let core: Prefab;
     @export let death_burst: Prefab;
     @export let drop_roll: Prefab;
+    @export let elite_shell: Prefab;
+    @export let elite_ring: Prefab;
 
     var hp: f32 = 0.0;
     var death_burst_damage: f32 = 0.0;
@@ -41,6 +43,7 @@ script Charger {
         this.shape.stroke.g = 0.88;
         this.shape.stroke.b = 0.53;
         tint_elite();
+        spawn_elite_visuals();
     }
 
     fn update(dt: f32) {
@@ -149,6 +152,18 @@ script Charger {
             return World.property_number(hit, "damage", 0.0);
         }
         return 0.0;
+    }
+
+    fn spawn_elite_visuals() {
+        if this.elite <= 0.0 { return; }
+        let shell = World.spawn(this.elite_shell);
+        World.set_property(shell, "sides", this.shape.count);
+        World.set_property(shell, "trait", this.elite_trait);
+        World.set_parent(shell, this.entity);
+        let ring = World.spawn(this.elite_ring);
+        World.set_property(ring, "sides", this.shape.count);
+        World.set_property(ring, "trait", this.elite_trait);
+        World.set_parent(ring, this.entity);
     }
 
     fn tint_elite() {

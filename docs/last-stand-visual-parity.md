@@ -140,12 +140,20 @@ design on a phone is not sufficient.
 
 ## Current status
 
-The first slice introduces Decay access to a procedural polygon's `count`, then
-uses it in Orbital Last Stand to give all 15 regular archetypes the reference
+The first slice introduced Decay access to a procedural polygon's `count`, then
+used it in Orbital Last Stand to give all 15 regular archetypes the reference
 base side count and colour. Regular enemies and Dart receive the reference
 0.6-rad/s continuous rotation, and salvage receives its reference 2-rad/s spin.
 
-This is intentionally only the base layer. Secondary archetype marks, elite
-counter-rotating shells, the exact Strider hull, shield, backdrop, HUD, and full
-combat presentation remain open and should not be described as visually
+The second slice starts the layered enemy treatment. Every elite now spawns a
+silhouette-matched outer polygon and a larger pulse ring as decorative children.
+The shell applies the reference local `-time * 1.4` counter-rotation inside the
+enemy's own rotating transform, and the ring uses the reference 7 Hz,
+0.4-through-0.65 pulse range without becoming a collider, target, or
+independently destructible gameplay object.
+
+Step 2 is still incomplete: the trait-specific elite identity marks and the
+secondary archetype marks for Leech, Sentinel, Phaser, Anchor, Relay, Burrower,
+and Bulwark remain open. The exact Strider hull, shield, backdrop, HUD, and full
+combat presentation also remain open and should not be described as visually
 complete until capture comparison says so.
