@@ -61,7 +61,8 @@ script Director {
         Game.set("kills", 0.0);
         Game.set("cores", 0.0);
         Game.set("level", 1.0);
-        Game.set("next_level", 4.0);
+        Game.set("next_level", 35.0);
+        Game.set("module_pool", 0.0);
         Game.set("elapsed", 0.0);
         Game.set("sector", 1.0);
         Game.set("boss_count", 0.0);
@@ -137,10 +138,12 @@ script Director {
             end_run();
             return;
         }
-        if Game.get("cores", 0.0) >= Game.get("next_level", 4.0) {
+        if Game.get("cores", 0.0) >= Game.get("next_level", 35.0) {
             let level = Game.get("level", 1.0) + 1.0;
+            let threshold = Game.get("next_level", 35.0);
             Game.set("level", level);
-            Game.set("next_level", Game.get("next_level", 4.0) * 1.6 + 6.0);
+            Game.set("next_level", floor(threshold * 1.28 + 8.0));
+            publish_module_pool(level);
             Game.set("run_state", 2.0);
             return;
         }
@@ -161,6 +164,14 @@ script Director {
             spawn_one();
             this.spawn_timer += rate;
         }
+    }
+
+    fn publish_module_pool(level: f32) {
+        // 0 salvage, 1 boss relic, 2 Foundry Signal. The chooser consumes this
+        // without needing to know why a level belongs to a particular pool.
+        if level % 7.0 == 0.0 { Game.set("module_pool", 2.0); }
+        else if level % 5.0 == 0.0 { Game.set("module_pool", 1.0); }
+        else { Game.set("module_pool", 0.0); }
     }
 
     fn end_run() {
