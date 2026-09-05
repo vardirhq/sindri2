@@ -1,0 +1,38 @@
+{
+  "format_version": 1,
+  "metadata": {
+    "name": "Phaser Mark"
+  },
+  "entities": [
+    {
+      "id": "phaser-mark",
+      "name": "Phaser Mark",
+      "transform_3d": {
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, -0.0998334, 0.9950042],
+        "scale": [1.55, 1.55, 1.0]
+      },
+      "components": {
+        "sindri.script": {
+          "source": "scripts/phaser-visual.decay",
+          "script": "PhaserVisual",
+          "properties": {}
+        },
+        "sindri.shape": {
+          "kind": "polygon",
+          "count": 3.0,
+          "fill": [0.0, 0.0, 0.0, 0.0],
+          "stroke": [0.9451, 0.86275, 1.0, 0.6],
+          "stroke_width": 0.055,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "layer": 4
+        }
+      }
+    }
+  ]
+}
