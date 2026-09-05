@@ -159,6 +159,7 @@ pub(super) fn add_world_surface(environment: &mut Environment) {
                         Type::Named(ENTITY.to_owned()),
                         Type::Named(ENTITY.to_owned()),
                     ],
+                    WorldCall::SetShapePoint => vec![Type::F32, Type::F32, Type::F32],
                     // The value is `Unknown` because an exported field may be a
                     // number, a truth, or text, and Decay has no union. The
                     // host checks what it was given, and the instance refuses a
@@ -175,6 +176,7 @@ pub(super) fn add_world_surface(environment: &mut Environment) {
                     WorldCall::WithTag => Type::array_of(Type::Named(ENTITY.to_owned())),
                     WorldCall::Despawn
                     | WorldCall::SetParent
+                    | WorldCall::SetShapePoint
                     | WorldCall::SetProperty
                     | WorldCall::SetActive => Type::Unit,
                     WorldCall::Exists | WorldCall::IsActive | WorldCall::HasTag => Type::Bool,
