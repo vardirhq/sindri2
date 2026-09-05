@@ -33,6 +33,7 @@ script Player {
         }
 
         move(dt);
+        tick_overdrive(dt);
         take_hits();
         track_target();
         shoot(dt);
@@ -96,7 +97,12 @@ script Player {
         if target == null {
             return;
         }
-        this.cooldown = Game.get("fire_gap", 0.42);
+        let overdrive = Game.get("overdrive", 0.0);
+        if overdrive > 0.0 {
+            this.cooldown = Game.get("fire_gap", 0.42) * 0.55;
+        } else {
+            this.cooldown = Game.get("fire_gap", 0.42);
+        }
 
         let to_x = target.transform.position.x - this.transform.position.x;
         let to_y = target.transform.position.y - this.transform.position.y;
@@ -137,6 +143,11 @@ script Player {
             made += 1.0;
         }
         Audio.play("audio/shot.wav", 0.18);
+    }
+
+    fn tick_overdrive(dt: f32) {
+        let left = Game.get("overdrive", 0.0);
+        if left > 0.0 { Game.set("overdrive", max(0.0, left - dt)); }
     }
 
     fn track_target() {

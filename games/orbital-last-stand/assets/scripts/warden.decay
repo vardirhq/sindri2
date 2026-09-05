@@ -15,6 +15,7 @@ script Warden {
     @export let hazard_damage: f32 = 0.0;
     @export let shot: Prefab;
     @export let minion: Prefab;
+    @export let drop_roll: Prefab;
     @export let core: Prefab;
     @export let death_burst: Prefab;
 
@@ -317,6 +318,10 @@ script Warden {
             World.set_property(drop, "worth", 5.0);
             made += 1.0;
         }
+        let roll = World.spawn(this.drop_roll);
+        roll.transform.position.x = this.transform.position.x;
+        roll.transform.position.y = this.transform.position.y;
+        World.set_property(roll, "boss", 1.0);
         World.despawn(this.entity);
     }
 

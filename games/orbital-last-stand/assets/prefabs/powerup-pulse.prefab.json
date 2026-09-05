@@ -1,0 +1,18 @@
+{
+  "format_version": 1,
+  "metadata": { "name": "Powerup Pulse" },
+  "entities": [
+    {
+      "id": "powerup-pulse",
+      "name": "Powerup Pulse",
+      "transform_3d": { "position": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [16.0, 16.0, 1.0] },
+      "components": {
+        "sindri.tags": { "tags": ["player_damage", "pulse"] },
+        "sindri.physics2d.rigid_body": { "kind": "static", "pose": { "position": [0.0, 0.0], "rotation": 0.0 }, "linear_velocity": [0.0, 0.0], "angular_velocity": 0.0, "gravity_scale": 0.0, "linear_damping": 0.0, "angular_damping": 0.0, "lock_rotation": true },
+        "sindri.physics2d.collider": { "shape": { "shape": "circle", "radius": 16.0 }, "offset": [0.0, 0.0], "rotation": 0.0, "sensor": true, "layers": { "memberships": 1, "filter": 2 }, "friction": 0.0, "restitution": 0.0 },
+        "sindri.script": { "source": "scripts/nova.decay", "script": "Nova", "properties": { "damage": 4.0, "life": 0.18 } },
+        "sindri.shape": { "kind": "ellipse", "count": 6.0, "fill": [0.0, 0.0, 0.0, 0.0], "stroke": [0.34, 0.86, 1.0, 1.0], "stroke_width": 0.025, "corner_radius": 0.0, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "add", "layer": 8 }
+      }
+    }
+  ]
+}

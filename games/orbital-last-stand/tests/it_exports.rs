@@ -47,9 +47,9 @@ fn every_prefab_ships() {
     assert_eq!(prefabs.len(), authored, "{prefabs:?}");
 }
 
-/// The sector controller's hazards and the Warden's shots are named by
-/// *prefabs*, not by the scene. They ship because the walk follows a prefab's
-/// own scripts into the prefabs those can spawn.
+/// Hazards, hostile shots and the drop chain are named by *prefabs*, not by
+/// the scene. They ship because the walk follows a prefab's own scripts into
+/// the prefabs those can spawn.
 #[test]
 fn a_prefab_only_another_prefab_names_ships() {
     let (_scratch, manifest) = exported("nested");
@@ -59,6 +59,9 @@ fn a_prefab_only_another_prefab_names_ships() {
         "prefabs/hazard-field.prefab.json",
         "prefabs/hazard-beam.prefab.json",
         "prefabs/enemy-bullet.prefab.json",
+        "prefabs/drop-roll.prefab.json",
+        "prefabs/powerup.prefab.json",
+        "prefabs/powerup-pulse.prefab.json",
     ] {
         assert!(
             prefabs.iter().any(|id| id == nested),

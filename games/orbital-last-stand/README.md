@@ -13,8 +13,8 @@ cargo run -p sindri-export --bin sindri-export -- games/orbital-last-stand dist
 
 ```text
 assets/orbital.scene.json    69 entities: the ship, the screens, the catalog
-assets/prefabs/              12 things that get spawned
-assets/scripts/              20 Decay scripts, and all of the game's rules
+assets/prefabs/              19 things that get spawned
+assets/scripts/              25 Decay scripts, and all of the game's rules
 src/lib.rs                   a harness that plays it without a window
 ```
 
@@ -51,9 +51,17 @@ anchors leave delayed mines, and prism impacts continue as piercing beams. The
 effects are ordinary authored prefabs and Decay scripts; no weapon kind was
 added to the engine.
 
+The complete fifteen-enemy reference roster arrives on its original unlock
+timeline. After 1:45, regular spawns can become one of five visibly distinct
+elite traits with the reference chance curve and health, damage, speed and
+value multipliers. Defeated enemies feed the Normal drop economy: ordinary,
+elite and boss chances differ, missing hull improves the roll, and a
+120-kill pity guarantees a repair. Repair, arena-clearing pulse and eight-second
+overdrive pickups are ordinary authored prefabs too.
+
 ## What is not here yet
 
-The reference game is much larger. The enemy roster, ten-boss cadence,
-companions, the broader module and synergy catalog, hazards, sector routes,
-ships, contracts, archive and debrief remain parity work. See the handover and
-plan for the order.
+The reference game is much larger. The full boss roster, companions, broader
+module and synergy catalog, sector routes, events, ships, contracts, archive
+and debrief remain parity work. See `docs/last-stand-reference-parity.md` for
+the implementation order.

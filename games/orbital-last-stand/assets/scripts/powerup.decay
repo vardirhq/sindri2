@@ -1,0 +1,83 @@
+// A short-lived combat pickup from the reference powerup economy.
+// kind: 0 repair, 1 pulse, 2 overdrive.
+script Powerup {
+    @export let pulse: Prefab;
+    @export let kind: f32 = 0.0;
+    @export let value: f32 = 1.8;
+    @export let life: f32 = 17.0;
+    @export let attraction_radius: f32 = 4.2;
+    @export let attraction_speed: f32 = 4.2;
+
+    var age: f32 = 0.0;
+
+    fn start() {
+        if this.kind == 0.0 { tint(0.46, 1.0, 0.64); }
+        else if this.kind == 1.0 { tint(0.34, 0.86, 1.0); }
+        else { tint(1.0, 0.68, 0.24); }
+    }
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 1.0 {
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+            return;
+        }
+        this.age += dt;
+        if this.age >= this.life {
+            World.despawn(this.entity);
+            return;
+        }
+
+        this.shape.fill.a = 0.16 + (sin(this.age * 6.0) + 1.0) * 0.08;
+        let player = World.find("Player");
+        if player == null { return; }
+        attract(player);
+        for hit in Physics.sensor_entered() {
+            if hit == player {
+                collect();
+                return;
+            }
+        }
+    }
+
+    fn attract(player: Entity) {
+        let dx = player.transform.position.x - this.transform.position.x;
+        let dy = player.transform.position.y - this.transform.position.y;
+        let far = sqrt(dx * dx + dy * dy);
+        if far > this.attraction_radius || far <= 0.001 {
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+            return;
+        }
+        let strength = 0.45 + 0.55 * (1.0 - far / this.attraction_radius);
+        Physics.set_velocity(this.entity, dx / far * this.attraction_speed * strength,
+                             dy / far * this.attraction_speed * strength);
+    }
+
+    fn collect() {
+        if this.kind == 0.0 {
+            Game.set("hp", min(Game.get("max_hp", 5.0),
+                Game.get("hp", 5.0) + this.value));
+        } else if this.kind == 1.0 {
+            for shot in World.with_tag("hostile_shot") { World.despawn(shot); }
+            let damage = max(4.0, Game.get("damage", 1.0) * 4.0);
+            let wave = World.spawn(this.pulse);
+            let player = World.find("Player");
+            wave.transform.position.x = player.transform.position.x;
+            wave.transform.position.y = player.transform.position.y;
+            World.set_property(wave, "damage", damage);
+        } else {
+            Game.set("overdrive", max(Game.get("overdrive", 0.0), 8.0));
+        }
+        Effects.burst(this.entity);
+        Audio.play("audio/upgrade.wav", 0.4);
+        World.despawn(this.entity);
+    }
+
+    fn tint(r: f32, g: f32, b: f32) {
+        this.shape.stroke.r = r;
+        this.shape.stroke.g = g;
+        this.shape.stroke.b = b;
+        this.shape.fill.r = r;
+        this.shape.fill.g = g;
+        this.shape.fill.b = b;
+    }
+}

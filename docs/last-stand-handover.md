@@ -45,10 +45,11 @@ Plain JavaScript, canvas 2D, ~12k lines in `src/`. The files that matter:
 
 ## Where we are
 
-Counting honestly: reference has 15 enemy kinds, 8 ships, 160 modules, a 600s
-run with ten bosses. We have 4 enemies, 6 modules, one boss, a 180s run.
+The authoritative feature-by-feature status and measured reference values now
+live in `docs/last-stand-reference-parity.md`. Keep that document current rather
+than reconstructing the reference from this older handover.
 
-**Just landed** (PR #154, on branch `claude/orbital-last-stand-recreation-9sq1je`):
+**Foundation already in place:**
 
 - A stat block. `assets/scripts/stats.decay` derives fourteen stats from a base
   plus an *additive* pile and a *multiplicative* pile per stat. Modules
@@ -66,25 +67,11 @@ Decay capability that lets the authored game compute its `fit: shorter` world
 bounds. Player and hostile-shot collider radii are authored in world units to
 match their rendered size; transform scale does not scale physics colliders.
 
-**The agreed plan**, in order. Mechanisms first, then content; visual polish
-interleaved so nothing ships looking placeholder:
-
-1. **Weapon flags — complete.** `pierce`, `shots` and `crit` are wired into
-   firing. The ones
-   that make a build *feel* different are `missile` (seeking), `arc` (chain),
-   `nova` (on-death burst), `mines`, `beam`. Reference spells these as `flags:`
-   entries in `module-catalog.js`. All five now have distinct authored Decay
-   behaviour and visible prefabs; the first five cards exercise them. The
-   general engine gaps this exposed became `World.property_number` and
-   `World.has_tag`, not weapon-specific host calls.
-2. **Enemy roster** toward fifteen kinds. See the rule below about tells.
-3. **Boss cadence.** 600-second run, a boss every 60 seconds, several distinct
-   bosses. Currently `director.decay` has `boss_at: 180.0` and one warden.
-4. **Companions / orbitals.** Mechanically distinct and the best-looking thing
-   in the reference.
-5. **The catalog**, ~40 modules chosen so every mechanism above is exercised at
-   least twice. This is data entry once 1–4 exist, which is exactly why it is
-   last. Authoring it first would produce forty ways to spell "+12% damage".
+The campaign skeleton, complete fifteen-enemy roster, exact unlock pool and all
+five sector hazards are complete. Elites and the Normal combat-drop economy are
+the next completed slice. Continue with the implementation order in the parity
+document: XP/module progression, routes, events, boss roster/director, Black
+Signal, then the full-run balance pass.
 
 ## Rules that are not negotiable
 
@@ -101,9 +88,8 @@ scripts/check-file-size.py
 CI sets `RUSTFLAGS=-D warnings`, so warnings fail. If you touch `decay/`, that
 is a separate workspace with its own checks — they are listed in `AGENTS.md`.
 
-**Develop on `claude/orbital-last-stand-recreation-9sq1je`.** Push there. If
-its pull request has already merged, restart the branch from `origin/main`
-rather than stacking on merged history.
+**Start each parity slice from current `origin/main`.** The original recreation
+branch and its pull request have merged; do not stack new work on their history.
 
 **The 600-line file cap is enforced.** When a Rust file crosses it, split the
 tests out beside it: `gesture.rs` / `gesture_tests.rs` is the established

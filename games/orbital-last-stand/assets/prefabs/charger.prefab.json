@@ -97,7 +97,8 @@
             "rest": 1.1,
             "touch_damage": 1.0,
             "core": "prefabs/core.prefab.json",
-            "death_burst": "prefabs/nova.prefab.json"
+            "death_burst": "prefabs/nova.prefab.json",
+            "drop_roll": "prefabs/drop-roll.prefab.json"
           }
         },
         "sindri.shape": {

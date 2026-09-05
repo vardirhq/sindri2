@@ -1,0 +1,31 @@
+{
+  "format_version": 1,
+  "metadata": { "name": "Drop Roll" },
+  "entities": [
+    {
+      "id": "drop-roll",
+      "name": "Drop Roll",
+      "transform_3d": { "position": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+      "components": {
+        "sindri.tags": { "tags": ["drop_roll"] },
+        "sindri.script": {
+          "source": "scripts/drop-roll.decay",
+          "script": "DropRoll",
+          "properties": {
+            "powerup": "prefabs/powerup.prefab.json",
+            "regular_chance": 0.058,
+            "elite_chance": 0.26,
+            "boss_chance": 1.0,
+            "low_health_bonus": 0.055,
+            "repair_weight": 0.44,
+            "repair_bias": 0.26,
+            "pulse_weight": 0.24,
+            "pity_kills": 120.0,
+            "repair_flat": 1.4,
+            "repair_hull": 0.08
+          }
+        }
+      }
+    }
+  ]
+}
