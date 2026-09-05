@@ -132,11 +132,7 @@ impl ScreenUi {
     #[must_use]
     pub fn viewport_aspect(&self) -> f32 {
         let aspect = self.viewport_half[0];
-        if aspect > 0.0 {
-            aspect
-        } else {
-            1.0
-        }
+        if aspect > 0.0 { aspect } else { 1.0 }
     }
 
     /// The topmost pressable element under the pointer, if any.

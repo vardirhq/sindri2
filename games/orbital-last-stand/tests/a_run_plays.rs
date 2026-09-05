@@ -167,11 +167,7 @@ fn an_offscreen_warden_approaches_without_attacking() {
     let warden = spawn_at(&mut run, "prefabs/warden.prefab.json", [7.0, 0.0, 0.0]);
 
     play(&mut run, 1.0);
-    assert_eq!(
-        run.count("hostile_shot"),
-        0,
-        "the off-screen Warden fired"
-    );
+    assert_eq!(run.count("hostile_shot"), 0, "the off-screen Warden fired");
     assert!(
         run.world
             .get(warden)

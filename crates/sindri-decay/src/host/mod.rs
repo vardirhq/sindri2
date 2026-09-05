@@ -33,8 +33,7 @@ use crate::{
     surface::{
         FUNCTIONS, Handle, HostFunction, Leaf, POINTER, POINTER_VALUES, PRINT, PointerValue, STICK,
         STICK_VALUES, StickValue, TIME, TIME_VALUES, TOUCH, TOUCH_COUNT, TimeValue, TouchCall,
-        VIEWPORT, VIEWPORT_VALUES, ViewportValue, follow_mut, handle, leaf,
-        leaf_through_reference,
+        VIEWPORT, VIEWPORT_VALUES, ViewportValue, follow_mut, handle, leaf, leaf_through_reference,
     },
 };
 
