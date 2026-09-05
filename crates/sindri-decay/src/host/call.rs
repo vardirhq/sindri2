@@ -6,11 +6,9 @@
 
 use decay_ir::Path;
 use decay_runtime::{RuntimeError, Value};
-use sindri_core::{EntityId, SceneComponent};
+use sindri_core::{EntityId, SceneComponent, TagsComponent};
 use sindri_grid::GridPoint;
 use sindri_scene::ShapeComponent;
-
-use sindri_core::TagsComponent;
 
 use crate::ScriptComponent;
 use crate::surface::{GridCall, WorldCall};
@@ -274,7 +272,7 @@ impl WorldHost<'_> {
                 RuntimeError::Host(format!("{} needs a point index", path.dotted()))
             })?,
         )?;
-        if index.fract() != 0.0 || !(0.0..SHAPE_POINT_LIMIT as f64).contains(&index) {
+        if index.fract() != 0.0 || !(0.0..8.0).contains(&index) {
             return Err(RuntimeError::Host(format!(
                 "{} needs a whole point index from 0 through {}",
                 path.dotted(),
@@ -470,7 +468,7 @@ impl WorldHost<'_> {
             return Err(RuntimeError::Host(format!(
                 "{} needs an entity for {role}, and the script gave {value:?}",
                 path.dotted()
-            )));
+            ))
         };
         let entity = EntityId::from_bits(*bits);
         self.world.get(entity).ok_or_else(|| {
