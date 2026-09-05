@@ -1,21 +1,28 @@
-// Steers at the player and keeps going. The whole of the first minute, and the
-// shape every other enemy is a variation on.
+// Shared implementation for the non-charging Last Stand roster. `kind` is the
+// reference archetype index; keeping the common combat/death path here avoids
+// twelve scripts differing mostly by arithmetic.
 script Drifter {
+    @export let kind: f32 = 0.0;
     @export let speed: f32 = 1.5;
     @export let health: f32 = 2.0;
     @export let worth: f32 = 1.0;
     @export let touch_damage: f32 = 1.0;
     @export let core: Prefab;
     @export let death_burst: Prefab;
+    @export let shot: Prefab;
 
     var hp: f32 = 0.0;
     var death_burst_damage: f32 = 0.0;
+    var attack: f32 = 1.2;
+    var clock: f32 = 0.0;
+    var burrow: f32 = 0.0;
 
     fn start() {
-        // The reference does not scale regular health until three minutes in.
-        // A base shot deals one here, so this begins as a two-shot target.
         let late = max(0.0, Game.get("elapsed", 0.0) - 180.0);
         this.hp = this.health * (1.0 + late * 0.0014);
+        this.attack = Random.range(0.35, 1.1);
+        this.clock = Random.range(0.0, 6.2831853);
+        tint_kind();
     }
 
     fn update(dt: f32) {
@@ -27,30 +34,161 @@ script Drifter {
         if player == null {
             return;
         }
-
-        // Faster as the run goes on, which is the difficulty curve: the same
-        // enemy, arriving sooner and moving quicker.
-        let pace = this.speed * (1.0 + Game.get("elapsed", 0.0) * 0.0016);
         let dx = player.transform.position.x - this.transform.position.x;
         let dy = player.transform.position.y - this.transform.position.y;
         let far = sqrt(dx * dx + dy * dy);
-        if far > 0.001 {
-            Physics.set_velocity(this.entity, dx / far * pace, dy / far * pace);
+        this.clock += dt;
+
+        // Attacks are forbidden outside the viewport, matching the reference's
+        // targetability rule. Movement toward the arena remains allowed.
+        let visible = is_visible();
+        if this.kind == 3.0 {
+            steer_range(dx, dy, far, 4.2, 0.18);
+        } else if this.kind == 4.0 {
+            steer_range(dx, dy, far, 5.2, 0.72);
+        } else if this.kind == 5.0 {
+            steer_range(dx, dy, far, 5.6, 0.05);
+            if visible { radial_fire(dt, 2.65, 8.0, 3.1); }
+        } else if this.kind == 6.0 {
+            steer_range(dx, dy, far, 5.8, 0.58);
+            if visible { aimed_fire(dt, dx, dy, far, 1.95, 3.5); }
+        } else if this.kind == 7.0 {
+            wobble_chase(dx, dy, far, 1.35);
+        } else if this.kind == 8.0 {
+            steer_range(dx, dy, far, 5.4, 0.65);
+            if visible { aimed_fire(dt, dx, dy, far, 1.6, 3.7); }
+        } else if this.kind == 9.0 {
+            steer_range(dx, dy, far, 7.0, 0.12);
+            if visible { aimed_fire(dt, dx, dy, far, 2.1, 5.2); }
+        } else if this.kind == 10.0 {
+            steer_range(dx, dy, far, 5.8, 0.92);
+            if visible { paired_fire(dt, dx, dy, far, 1.75, 3.8); }
+        } else if this.kind == 11.0 {
+            burrow_move(dt, dx, dy, far);
+        } else if this.kind == 12.0 {
+            steer_range(dx, dy, far, 4.0, 0.82);
+            if visible { paired_fire(dt, dx, dy, far, 1.7, 4.0); }
+        } else if this.kind == 13.0 {
+            steer_range(dx, dy, far, 7.2, 0.08);
+            if visible { fan_fire(dt, dx, dy, far, 2.15, 4.0); }
+        } else if this.kind == 14.0 {
+            phaser_move(dt, dx, dy, far, player, visible);
+        } else {
+            chase(dx, dy, far, 1.0);
         }
 
+        receive_hits(player);
+        if this.hp <= 0.0 { die(); }
+    }
+
+    fn chase(dx: f32, dy: f32, far: f32, scale: f32) {
+        if far > 0.001 {
+            Physics.set_velocity(this.entity, dx / far * this.speed * scale,
+                                 dy / far * this.speed * scale);
+        }
+    }
+
+    fn wobble_chase(dx: f32, dy: f32, far: f32, scale: f32) {
+        if far <= 0.001 { return; }
+        let tangent = sin(this.clock * 5.0) * 0.42;
+        Physics.set_velocity(this.entity,
+            (dx / far - dy / far * tangent) * this.speed * scale,
+            (dy / far + dx / far * tangent) * this.speed * scale);
+    }
+
+    fn steer_range(dx: f32, dy: f32, far: f32, target: f32, tangent: f32) {
+        if far <= 0.001 { return; }
+        var radial: f32 = 0.0;
+        if far > target + 0.5 { radial = 1.0; }
+        if far < target - 0.5 { radial = -0.65; }
+        let nx = dx / far;
+        let ny = dy / far;
+        Physics.set_velocity(this.entity,
+            (nx * radial - ny * tangent) * this.speed,
+            (ny * radial + nx * tangent) * this.speed);
+    }
+
+    fn aimed_fire(dt: f32, dx: f32, dy: f32, far: f32, gap: f32, velocity: f32) {
+        this.attack -= dt;
+        if this.attack > 0.0 || far <= 0.001 { return; }
+        fire(dx / far, dy / far, velocity);
+        this.attack = gap;
+    }
+
+    fn paired_fire(dt: f32, dx: f32, dy: f32, far: f32, gap: f32, velocity: f32) {
+        this.attack -= dt;
+        if this.attack > 0.0 || far <= 0.001 { return; }
+        let a = atan2(dy, dx);
+        fire(cos(a - 0.18), sin(a - 0.18), velocity);
+        fire(cos(a + 0.18), sin(a + 0.18), velocity);
+        this.attack = gap;
+    }
+
+    fn fan_fire(dt: f32, dx: f32, dy: f32, far: f32, gap: f32, velocity: f32) {
+        this.attack -= dt;
+        if this.attack > 0.0 || far <= 0.001 { return; }
+        let base = atan2(dy, dx);
+        var slot: f32 = -2.0;
+        while slot <= 2.0 {
+            let a = base + slot * 0.16;
+            fire(cos(a), sin(a), velocity);
+            slot += 1.0;
+        }
+        this.attack = gap;
+    }
+
+    fn radial_fire(dt: f32, gap: f32, count: f32, velocity: f32) {
+        this.attack -= dt;
+        if this.attack > 0.0 { return; }
+        var slot: f32 = 0.0;
+        while slot < count {
+            let a = slot / count * 6.2831853 + this.clock * 0.12;
+            fire(cos(a), sin(a), velocity);
+            slot += 1.0;
+        }
+        this.attack = gap;
+    }
+
+    fn fire(nx: f32, ny: f32, velocity: f32) {
+        let bolt = World.spawn(this.shot);
+        bolt.transform.position.x = this.transform.position.x;
+        bolt.transform.position.y = this.transform.position.y;
+        bolt.transform.rotation_z = atan2(ny, nx);
+        World.set_property(bolt, "speed", velocity);
+    }
+
+    fn burrow_move(dt: f32, dx: f32, dy: f32, far: f32) {
+        this.burrow += dt;
+        if this.burrow >= 3.4 { this.burrow = 0.0; }
+        if this.burrow < 1.7 {
+            this.shape.stroke.a = 0.28;
+            chase(dx, dy, far, 1.55);
+        } else {
+            this.shape.stroke.a = 1.0;
+            chase(dx, dy, far, 0.82);
+        }
+    }
+
+    fn phaser_move(dt: f32, dx: f32, dy: f32, far: f32, player: Entity, visible: bool) {
+        wobble_chase(dx, dy, far, 1.05);
+        this.attack -= dt;
+        if this.attack > 0.0 || !visible { return; }
+        let a = Random.range(0.0, 6.2831853);
+        let r = Random.range(3.2, 5.0);
+        this.transform.position.x = player.transform.position.x + cos(a) * r;
+        this.transform.position.y = player.transform.position.y + sin(a) * r;
+        Effects.burst(this.entity);
+        this.attack = Random.range(2.7, 3.5);
+    }
+
+    fn receive_hits(player: Entity) {
         for hit in Physics.sensor_entered() {
             if hit == player {
-                // The worst single touch this frame, not the sum of them. The
-                // ship gets invulnerability after a hit, so being inside a
-                // crowd of thirty is one hit — adding them up made a late
-                // wave lethal on the frame it arrived, whatever the hull.
                 Game.set("player_damage_taken",
-                         max(Game.get("player_damage_taken", 0.0), this.touch_damage));
+                    max(Game.get("player_damage_taken", 0.0), this.touch_damage));
                 continue;
             }
-            if !World.exists(hit) {
-                continue;
-            }
+            if !World.exists(hit) { continue; }
             if this.hp > 0.0 {
                 let damage = damage_from(hit);
                 this.hp -= damage;
@@ -59,9 +197,25 @@ script Drifter {
                 }
             }
         }
-        if this.hp <= 0.0 {
-            die();
-        }
+    }
+
+    fn is_visible() -> bool {
+        let aspect = max(Viewport.aspect, 0.001);
+        var half_x: f32 = 5.5;
+        var half_y: f32 = 5.5;
+        if aspect >= 1.0 { half_x *= aspect; } else { half_y /= aspect; }
+        let radius = max(abs(this.transform.scale.x), abs(this.transform.scale.y)) * 0.5;
+        return this.transform.position.x + radius >= -half_x &&
+               this.transform.position.x - radius <= half_x &&
+               this.transform.position.y + radius >= -half_y &&
+               this.transform.position.y - radius <= half_y;
+    }
+
+    fn tint_kind() {
+        let hue = this.kind / 15.0;
+        this.shape.stroke.r = 0.25 + hue * 0.7;
+        this.shape.stroke.g = 0.9 - hue * 0.45;
+        this.shape.stroke.b = 1.0 - hue * 0.35;
     }
 
     fn damage_from(hit: Entity) -> f32 {
@@ -85,9 +239,7 @@ script Drifter {
     }
 
     fn burst_on_death() {
-        if this.death_burst_damage <= 0.0 {
-            return;
-        }
+        if this.death_burst_damage <= 0.0 { return; }
         let wave = World.spawn(this.death_burst);
         wave.transform.position.x = this.transform.position.x;
         wave.transform.position.y = this.transform.position.y;
