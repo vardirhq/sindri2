@@ -16,7 +16,12 @@ fn level_once(run: &mut Run) {
     run.set_board("cores", run.board("next_level"));
     let notes = run.step(STEP);
     assert!(notes.is_empty(), "{notes:#?}");
-    assert_eq!(run.board("run_state"), 2.0, "level-up did not pause the run");
+    assert_eq!(
+        run.board("run_state"),
+        2.0,
+        "level-up did not pause the run"
+    );
+    assert_eq!(run.board("cores"), 0.0, "spent XP was not consumed");
     run.set_board("run_state", 1.0);
     assert!(run.step(STEP).is_empty());
 }
