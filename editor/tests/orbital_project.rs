@@ -20,6 +20,12 @@ use sindri_editor::native::scene_extractor;
 use sindri_editor::scene_file::SceneFile;
 use sindri_editor::scripts::SceneScripts;
 
+const REQUIRED_PREFABS: [&str; 3] = [
+    "prefabs/drifter.prefab.json",
+    "prefabs/charger.prefab.json",
+    "prefabs/splitter.prefab.json",
+];
+
 /// The acceptance project's scene, from this crate's own directory.
 fn scene_path() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -51,7 +57,9 @@ fn opened() -> (SceneScripts, World, ComponentSchemaRegistry) {
         scripts.request(&world, &components);
         scripts.poll();
         let settled = scripts.compile(&world, &components).is_empty()
-            && scripts.has_prefab("prefabs/drifter.prefab.json");
+            && REQUIRED_PREFABS
+                .iter()
+                .all(|prefab| scripts.has_prefab(prefab));
         if settled {
             break;
         }
@@ -105,11 +113,7 @@ fn every_prefab_the_scripts_spawn_is_loaded() {
     // The director spawns these by name. A prefab that is not loaded is an
     // enemy that never arrives, which is what the editor showed.
     let (scripts, _world, _components) = opened();
-    for prefab in [
-        "prefabs/drifter.prefab.json",
-        "prefabs/charger.prefab.json",
-        "prefabs/splitter.prefab.json",
-    ] {
+    for prefab in REQUIRED_PREFABS {
         assert!(
             scripts.has_prefab(prefab),
             "the editor never loaded {prefab}"
