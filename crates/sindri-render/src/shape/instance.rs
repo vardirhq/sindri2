@@ -4,6 +4,14 @@ use glam::Mat4;
 
 use super::Shape;
 
+/// The most authored polygon vertices one shape carries to the fragment shader.
+///
+/// Eight keeps the complete shape instance within WebGPU's conservative vertex
+/// attribute limit while covering the silhouettes this renderer is for. More
+/// elaborate vector art remains a sprite rather than turning this into an SVG
+/// implementation by accident.
+pub const MAX_POLYGON_POINTS: usize = 8;
+
 /// A single shape quad: what it is, what fills it, and what strokes it.
 ///
 /// Every distance on it — stroke width, corner radius — is a fraction of the
@@ -15,14 +23,16 @@ pub struct ShapeInstance {
     model: [[f32; 4]; 4],
     fill: [f32; 4],
     stroke: [f32; 4],
-    /// kind, sides or grid cells, stroke width, corner radius.
+    /// kind, sides or grid cells, stroke width, corner radius or authored count.
     geometry: [f32; 4],
     /// dash count, dash duty, sweep start, sweep turns.
     pattern: [f32; 4],
+    /// Eight 2D vertices packed into four vec4 attributes.
+    points: [[f32; 4]; 4],
 }
 
 impl ShapeInstance {
-    const ATTRIBUTES: [wgpu::VertexAttribute; 8] = wgpu::vertex_attr_array![
+    const ATTRIBUTES: [wgpu::VertexAttribute; 12] = wgpu::vertex_attr_array![
         2 => Float32x4,
         3 => Float32x4,
         4 => Float32x4,
@@ -30,7 +40,11 @@ impl ShapeInstance {
         6 => Float32x4,
         7 => Float32x4,
         8 => Float32x4,
-        9 => Float32x4
+        9 => Float32x4,
+        10 => Float32x4,
+        11 => Float32x4,
+        12 => Float32x4,
+        13 => Float32x4
     ];
 
     /// A filled shape with no stroke.
@@ -50,6 +64,7 @@ impl ShapeInstance {
             // A full turn of undashed outline: the shape of "no pattern", so a
             // caller that never mentions dashes never pays for them.
             pattern: [0.0, 0.0, 0.0, 1.0],
+            points: [[0.0; 4]; 4],
         }
     }
 
@@ -57,6 +72,31 @@ impl ShapeInstance {
     #[must_use]
     pub fn stroked(model: Mat4, kind: Shape, width: f32, color: [f32; 4]) -> Self {
         Self::filled(model, kind, [0.0; 4]).with_stroke(width, color)
+    }
+
+    /// Replaces a regular polygon's generated vertices with authored ones.
+    ///
+    /// Points are in the same local shape space as every SDF here: a one-unit
+    /// shape spans -0.5 through 0.5. Fewer than three points leave the regular
+    /// polygon untouched; more than eight are deliberately truncated at the
+    /// renderer boundary rather than overflowing the WebGPU attribute budget.
+    #[must_use]
+    pub fn with_polygon_points(mut self, points: &[[f32; 2]]) -> Self {
+        let count = points.len().min(MAX_POLYGON_POINTS);
+        if count < 3 {
+            return self;
+        }
+        for (index, point) in points.iter().take(count).enumerate() {
+            let packed = index / 2;
+            let offset = (index % 2) * 2;
+            self.points[packed][offset] = point[0];
+            self.points[packed][offset + 1] = point[1];
+        }
+        #[allow(clippy::cast_precision_loss)]
+        {
+            self.geometry[3] = count as f32;
+        }
+        self
     }
 
     /// Draws a stroke of `width` — a fraction of the shape's size — on its edge.
@@ -68,10 +108,13 @@ impl ShapeInstance {
     }
 
     /// Rounds a rectangle's corners by a fraction of its size. Ignored by every
-    /// other kind, which has no corners to round.
+    /// other kind, which has no corners to round. For a polygon this slot holds
+    /// the authored point count instead.
     #[must_use]
     pub const fn with_corner_radius(mut self, radius: f32) -> Self {
-        self.geometry[3] = radius;
+        if self.geometry[0] < 1.5 || self.geometry[0] > 2.5 {
+            self.geometry[3] = radius;
+        }
         self
     }
 
@@ -137,7 +180,7 @@ pub(super) struct ShapeUniform {
 mod tests {
     use glam::Mat4;
 
-    use super::{Shape, ShapeInstance};
+    use super::{MAX_POLYGON_POINTS, Shape, ShapeInstance};
 
     const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 
@@ -201,5 +244,33 @@ mod tests {
             &[hex.geometry[0], hex.geometry[1]],
             &[Shape::Polygon { sides: 6.0 }.tag(), 6.0],
         );
+    }
+
+    #[test]
+    fn authored_polygon_points_are_packed_for_the_shader() {
+        let points = [
+            [0.0, -0.5],
+            [0.3, 0.3],
+            [0.1, 0.25],
+            [0.0, 0.4],
+            [-0.1, 0.25],
+            [-0.3, 0.3],
+        ];
+        let hull = ShapeInstance::filled(Mat4::IDENTITY, Shape::Polygon { sides: 6.0 }, RED)
+            .with_polygon_points(&points);
+        same(&[hull.geometry[3]], &[6.0]);
+        same(&hull.points[0], &[0.0, -0.5, 0.3, 0.3]);
+        same(&hull.points[1], &[0.1, 0.25, 0.0, 0.4]);
+        same(&hull.points[2], &[-0.1, 0.25, -0.3, 0.3]);
+    }
+
+    #[test]
+    fn authored_polygon_points_are_bounded_by_webgpu_attributes() {
+        let points = [[0.0, 0.0]; MAX_POLYGON_POINTS + 2];
+        let hull = ShapeInstance::filled(Mat4::IDENTITY, Shape::Polygon { sides: 6.0 }, RED)
+            .with_polygon_points(&points);
+        #[allow(clippy::cast_precision_loss)]
+        let expected = MAX_POLYGON_POINTS as f32;
+        same(&[hull.geometry[3]], &[expected]);
     }
 }
