@@ -168,10 +168,19 @@ Frenzied intentionally has no additional identity mark beyond the generic elite
 shell and pulse ring, matching the reference. The identity children reuse the
 pulse ring's existing phase instead of consuming another random draw.
 
-Step 2 is visually much closer to complete, but two corrections remain before it
-should be signed off: elite base bodies are still recoloured to the trait colour
-instead of preserving the archetype colour, and the generic elite pulse ring's
-phase is still generated inside the decorative child rather than propagated from
-the parent enemy. The exact Strider hull, shield, backdrop, HUD, and full combat
-presentation also remain open and should not be described as visually complete
-until capture comparison says so.
+The Strider slice now has a real exact-hull path instead of approximating the
+ship as a regular hexagon. Sindri's procedural shape renderer can carry up to
+eight authored polygon vertices, and Decay exposes the bounded
+`World.set_shape_point(index, x, y)` bridge. Orbital Last Stand writes the six
+reference Strider hull coordinates through that path, uses the reference hull
+and accent colours, and turns the ship toward movement with the same
+frame-rate-independent `1 - exp(-12 * dt)` response used by the reference.
+
+Step 3 is therefore **in progress**, not complete. Still open on the Strider are
+the internal chevron, canopy/pivot marks, two animated engine trails, and the
+rotating six-sided shield. Step 2 also retains two cleanup corrections before it
+is signed off: elite base bodies are still recoloured to the trait colour instead
+of preserving the archetype colour, and the generic elite pulse ring's phase is
+still generated inside the decorative child rather than propagated from the
+parent enemy. The backdrop, HUD, full combat presentation, and capture-based
+comparison remain open as later visual-parity steps.
