@@ -19,7 +19,9 @@
           "properties": {
             "mode": 1.0,
             "sides": 6.0,
-            "trait": 0.0
+            "trait": 0.0,
+            "identity_ring": "prefabs/elite-identity-ring.prefab.json",
+            "identity_crack": "prefabs/elite-identity-crack.prefab.json"
           }
         },
         "sindri.shape": {
