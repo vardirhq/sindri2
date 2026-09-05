@@ -57,7 +57,9 @@
             "core": "prefabs/core.prefab.json",
             "death_burst": "prefabs/nova.prefab.json",
             "shot": "prefabs/enemy-bullet.prefab.json",
-            "drop_roll": "prefabs/drop-roll.prefab.json"
+            "drop_roll": "prefabs/drop-roll.prefab.json",
+            "elite_shell": "prefabs/enemy-shell.prefab.json",
+            "elite_ring": "prefabs/enemy-ring.prefab.json"
           }
         },
         "sindri.shape": {
