@@ -88,8 +88,14 @@ script HazardField {
         let dx = player.transform.position.x - this.transform.position.x;
         let dy = player.transform.position.y - this.transform.position.y;
         let active = dx * dx + dy * dy < this.radius * this.radius;
-        Game.set("nullified", if active { 1.0 } else { 0.0 });
-        this.shape.stroke.a = if active { 1.0 } else { 0.65 };
-        this.shape.fill.a = if active { 0.18 } else { 0.08 };
+        if active {
+            Game.set("nullified", 1.0);
+            this.shape.stroke.a = 1.0;
+            this.shape.fill.a = 0.18;
+        } else {
+            Game.set("nullified", 0.0);
+            this.shape.stroke.a = 0.65;
+            this.shape.fill.a = 0.08;
+        }
     }
 }
