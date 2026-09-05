@@ -11,6 +11,7 @@ script Charger {
     @export let rest: f32 = 1.1;
     @export let touch_damage: f32 = 1.0;
     @export let view_size: f32 = 11.0;
+    @export let hazard_damage: f32 = 0.0;
     @export let core: Prefab;
     @export let death_burst: Prefab;
 
@@ -23,8 +24,6 @@ script Charger {
     var dash_y: f32 = 0.0;
 
     fn start() {
-        // The second reference archetype takes three base hits, and regular
-        // health does not begin its slight scaling until three minutes in.
         let late = max(0.0, Game.get("elapsed", 0.0) - 180.0);
         this.hp = this.health * (1.0 + late * 0.0014);
     }
@@ -33,6 +32,14 @@ script Charger {
         if Game.get("run_state", 0.0) != 1.0 {
             Physics.set_velocity(this.entity, 0.0, 0.0);
             return;
+        }
+        if this.hazard_damage > 0.0 {
+            this.hp -= this.hazard_damage;
+            this.hazard_damage = 0.0;
+            if this.hp <= 0.0 {
+                die();
+                return;
+            }
         }
         let player = World.find("Player");
         if player == null {
@@ -44,7 +51,6 @@ script Charger {
         let visible = is_visible();
 
         if this.phase != 0.0 && !visible {
-            // A wind-up or dash is an attack, not ordinary approach movement.
             this.phase = 0.0;
         }
 
@@ -59,8 +65,6 @@ script Charger {
         } else if this.phase == 1.0 {
             Physics.set_velocity(this.entity, 0.0, 0.0);
             this.timer -= dt;
-            // Brightening while it winds up, so the tell is visible rather than
-            // something the player is expected to have memorised.
             this.shape.stroke.r = 1.0;
             this.shape.stroke.g = 0.35 + this.timer;
             if this.timer <= 0.0 {
@@ -84,10 +88,6 @@ script Charger {
 
         for hit in Physics.sensor_entered() {
             if hit == player {
-                // The worst single touch this frame, not the sum of them. The
-                // ship gets invulnerability after a hit, so being inside a
-                // crowd of thirty is one hit — adding them up made a late
-                // wave lethal on the frame it arrived, whatever the hull.
                 Game.set("player_damage_taken",
                          max(Game.get("player_damage_taken", 0.0), this.touch_damage));
                 continue;
