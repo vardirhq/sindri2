@@ -19,6 +19,7 @@ pub(crate) const FUNCTIONS: &[(&str, HostFunction)] = &[
     ("sqrt", HostFunction::Unary(f64::sqrt)),
     ("sin", HostFunction::Unary(f64::sin)),
     ("cos", HostFunction::Unary(f64::cos)),
+    ("exp", HostFunction::Unary(f64::exp)),
     ("atan2", HostFunction::Binary(f64::atan2)),
     ("min", HostFunction::Binary(f64::min)),
     ("max", HostFunction::Binary(f64::max)),
@@ -224,6 +225,12 @@ pub(crate) enum WorldCall {
     /// Separate from `spawn` rather than an argument to it, because reparenting
     /// is a thing a script wants to do to entities it did not create.
     SetParent,
+    /// Replaces one vertex of the current script entity's world polygon.
+    ///
+    /// Points are local shape coordinates and the index is zero through seven.
+    /// The bounded call is enough to author compact procedural silhouettes
+    /// without giving Decay a general JSON escape hatch.
+    SetShapePoint,
     /// Authors an `@export` property on an entity whose script has not started.
     ///
     /// The one thing a spawner cannot do with the paths it already has. A
@@ -282,6 +289,7 @@ pub(crate) const WORLD_CALLS: &[(&str, WorldCall)] = &[
     ("exists", WorldCall::Exists),
     ("spawn", WorldCall::Spawn),
     ("set_parent", WorldCall::SetParent),
+    ("set_shape_point", WorldCall::SetShapePoint),
     ("set_property", WorldCall::SetProperty),
     ("property_number", WorldCall::PropertyNumber),
     ("with_tag", WorldCall::WithTag),

@@ -14,9 +14,27 @@ script Player {
     var mercy: f32 = 0.0;
     var was_hit: f32 = 0.0;
     var mine_cooldown: f32 = 0.0;
+    var facing: f32 = 1.5707963;
 
     fn start() {
         this.hurt = World.find("PlayerHurt");
+        // Reference Strider outline, uniformly scaled from its authored
+        // coordinates and Y-flipped from canvas space into Sindri world space.
+        World.set_shape_point(0.0, 0.0, 0.5);
+        World.set_shape_point(1.0, 0.304, -0.328);
+        World.set_shape_point(2.0, 0.1, -0.248);
+        World.set_shape_point(3.0, 0.0, -0.392);
+        World.set_shape_point(4.0, -0.1, -0.248);
+        World.set_shape_point(5.0, -0.304, -0.328);
+        this.shape.count = 6.0;
+        this.shape.fill.r = 0.470588;
+        this.shape.fill.g = 0.921569;
+        this.shape.fill.b = 1.0;
+        this.shape.fill.a = 1.0;
+        this.shape.stroke.r = 0.913725;
+        this.shape.stroke.g = 0.992157;
+        this.shape.stroke.b = 1.0;
+        this.transform.rotation_z = 0.0;
     }
 
     fn update(dt: f32) {
@@ -24,6 +42,8 @@ script Player {
             Game.set("player_reset", 0.0);
             this.transform.position.x = 0.0;
             this.transform.position.y = 0.0;
+            this.facing = 1.5707963;
+            this.transform.rotation_z = 0.0;
             this.mercy = 0.0;
             Physics.set_velocity(this.entity, 0.0, 0.0);
         }
@@ -57,6 +77,15 @@ script Player {
         }
 
         let length = sqrt(dx * dx + dy * dy);
+        if length >= 0.08 {
+            let desired = atan2(dy, dx);
+            let delta = atan2(sin(desired - this.facing), cos(desired - this.facing));
+            let blend = 1.0 - exp(-12.0 * max(0.0, dt));
+            this.facing += delta * blend;
+            // The authored hull points up at zero local rotation; facing is a
+            // mathematical world angle whose zero points right.
+            this.transform.rotation_z = this.facing - 1.5707963;
+        }
         if length > 1.0 {
             dx /= length;
             dy /= length;

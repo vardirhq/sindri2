@@ -388,8 +388,16 @@ validates and orders passes deterministically by stage, then layer, then
 insertion order; stage order is `Opaque3d`, `Transparent2d`, `Overlay`.
 
 What can actually be drawn: a triangle, a coloured cube, a textured cube with
-depth testing, and textured sprites with tint, anchor, and layer, sorted back to
-front by how far from the camera they are.
+depth testing, textured sprites with tint, anchor, and layer, and procedural 2D
+shapes. Rectangles, ellipses, grids, and regular polygons remain evaluated in the
+shape shader. A polygon may also carry up to eight explicit 2D vertices; those
+points travel in the same instanced payload and the shader measures against the
+actual authored edges, so an irregular hull remains crisp without becoming a
+texture. When no points are authored, regular polygons keep their existing path.
+The eight-point cap keeps the per-instance vertex attributes inside Sindri's
+conservative WebGPU limits. Orbital Last Stand exercises the capability with the
+Strider's exact six-point hull.
+
 **A sliced image says how it is cut, once.** A sheet document beside a texture —
 `textures/tiles.png` is sliced by `textures/tiles.sheet.json`, at a derived ID
 nothing has to declare — names the parts of it, either as a grid or as explicit
@@ -859,6 +867,9 @@ settings gear.
 - Hot reload covers assets, not the scene file: editing a scene on disk while it
   is open is not noticed
 - No deterministic system ordering
+- No dedicated editor authoring for irregular polygon vertices. The runtime and
+  Decay path work, but point handles and a purpose-built inspector are still
+  missing.
 
 ### Editor
 
@@ -923,8 +934,10 @@ pixel.
 
 A script reaches its own transform's position, scale and Z rotation, its
 sprite's tint and layer, the keyboard, the frame's delta and its own elapsed
-time, logical grid position through an explicit tilemap entity, seven maths
-functions, and `print`. The whole table is in
+time, logical grid position through an explicit tilemap entity, maths functions,
+and `print`. The maths host now includes `exp()` alongside `abs`, `sqrt`, `sin`,
+`cos`, `atan2`, `min`, and `max`; Orbital Last Stand uses it for the reference
+Strider's frame-rate-independent heading interpolation. The whole table is in
 `docs/scripting.md`. Verified in the editor: holding an arrow key moves the
 fixture's cube, releasing stops it, Space recentres it and puts a line in the
 console naming the entity that said it.
@@ -950,6 +963,15 @@ error with a line number. Reaching through a stale or null reference is reported
 rather than silently ignored. Verified in the game: the orbs used to compare
 against a position the player published to the shared board, and now ask the
 player directly, with the picture unchanged.
+
+**A script can author an irregular world-space polygon on itself.**
+`World.set_shape_point(index, x, y)` writes one of at most eight authored points
+on the current entity's `sindri.shape`. Non-integer and out-of-range indices are
+refused, as is a call on an entity with no shape. The narrow call is deliberate:
+it exposes the engine's bounded polygon capability without turning arbitrary
+component arrays into a dynamic mutation API. Orbital Last Stand uses it for the
+exact six-point Strider hull, and a dedicated Decay test covers both the write
+and its bounds.
 
 **And a script can throw flecks that are not entities.** `Effects.burst`,
 `burst_at` and `live` put short-lived visual motes into a pool, with what a

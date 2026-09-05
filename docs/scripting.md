@@ -103,6 +103,22 @@ same thing from a sprite would need a frame of art per step. `stroke_width` is
 how something pulses without changing size, and `dashes` is how a marker reads
 as scanning.
 
+An irregular polygon can carry up to eight authored 2D points. Those points are
+not exposed as a mutable array path; the bounded host call writes them instead:
+
+```rust
+World.set_shape_point(0, 0.0, 1.0);
+World.set_shape_point(1, 0.8, -0.6);
+World.set_shape_point(2, -0.8, -0.6);
+```
+
+`World.set_shape_point(index, x, y)` writes one vertex on the current script
+entity's `sindri.shape`. The index must be a whole number from 0 through 7. The
+bound is part of the renderer contract: eight points fit in the fixed
+per-instance payload while staying inside conservative WebGPU vertex-attribute
+limits. Calling it on an entity without a world-space shape is an error rather
+than a silent no-op.
+
 Either path reaches into the entity's stored payload — `sindri.sprite` or
 `sindri.ui.image` — rather than through the typed view, because a component is a
 `Deserialize`-only view over a payload and the payload is what gets written
@@ -150,12 +166,18 @@ table above lists, reaching the same numbers.
 | `World.despawn(entity)` | nothing |
 | `World.spawn(prefab)` | `Entity` |
 | `World.set_parent(entity, parent)` | nothing |
+| `World.set_shape_point(index, x, y)` | nothing |
 | `World.set_property(entity, name, value)` | nothing |
 | `World.property_number(entity, name, fallback)` | `f32` |
 | `World.with_tag(tag)` | `Array<Entity>` |
 | `World.has_tag(entity, tag)` | `bool` |
 | `World.set_active(entity, on)` | nothing |
 | `World.is_active(entity)` | `bool` |
+
+Unlike the other `World.*` calls in that table, `World.set_shape_point` acts on
+the current script entity and therefore takes no entity argument. That keeps the
+new capability narrow instead of introducing general mutation of arbitrary
+component arrays.
 
 An `Entity` is opaque. A script can hold one in a `var` or a field, pass it,
 compare it, and reach through it to the same transform and sprite paths it
@@ -1052,10 +1074,12 @@ concatenate, so a `print` that only took text could not report a value.
 
 ### Maths
 
-`abs`, `sqrt`, `sin`, `cos`, `atan2`, `min`, `max`.
+`abs`, `sqrt`, `sin`, `cos`, `exp`, `atan2`, `min`, `max`.
 That is the entire standard library.
 Decay has no modules and no imports, so each is a bare global name, and every one
-added is a name a script can no longer use for its own.
+added is a name a script can no longer use for its own. `exp` is what lets a
+script write frame-rate-independent interpolation such as
+`1 - exp(-speed * dt)` without inventing an approximation in gameplay code.
 
 ### Why this list can be trusted
 

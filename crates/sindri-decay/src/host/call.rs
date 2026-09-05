@@ -6,10 +6,9 @@
 
 use decay_ir::Path;
 use decay_runtime::{RuntimeError, Value};
-use sindri_core::{EntityId, SceneComponent};
+use sindri_core::{EntityId, SceneComponent, TagsComponent};
 use sindri_grid::GridPoint;
-
-use sindri_core::TagsComponent;
+use sindri_scene::ShapeComponent;
 
 use crate::ScriptComponent;
 use crate::surface::{GridCall, WorldCall};
@@ -24,6 +23,7 @@ use crate::surface::{GridCall, WorldCall};
 /// eight thousand enemies would be a game that quietly stopped hitting some of
 /// them.
 const QUERY_LIMIT: usize = 8192;
+const SHAPE_POINT_LIMIT: usize = 8;
 
 use super::WorldHost;
 use super::convert::number;
@@ -107,6 +107,7 @@ impl WorldHost<'_> {
                     .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
                 Ok(Value::Unit)
             }
+            WorldCall::SetShapePoint => self.set_shape_point_call(path, args),
             WorldCall::SetProperty => self.set_property_call(path, args),
             WorldCall::PropertyNumber => self.property_number_call(path, args),
             WorldCall::WithTag => self.with_tag_call(path, args),
@@ -257,6 +258,71 @@ impl WorldHost<'_> {
             .spawned
             .extend(created.entities.iter().copied());
         Ok(Value::Reference(created.root.to_bits()))
+    }
+
+    /// Writes one vertex of the current script entity's world-space polygon.
+    fn set_shape_point_call(&mut self, path: &Path, args: &[Value]) -> Result<Value, RuntimeError> {
+        let index = number(
+            path,
+            args.first().ok_or_else(|| {
+                RuntimeError::Host(format!("{} needs a point index", path.dotted()))
+            })?,
+        )?;
+        if index.fract() != 0.0 || !(0.0..8.0).contains(&index) {
+            return Err(RuntimeError::Host(format!(
+                "{} needs a whole point index from 0 through {}",
+                path.dotted(),
+                SHAPE_POINT_LIMIT - 1
+            )));
+        }
+        let x = number(
+            path,
+            args.get(1)
+                .ok_or_else(|| RuntimeError::Host(format!("{} needs X", path.dotted())))?,
+        )?;
+        let y = number(
+            path,
+            args.get(2)
+                .ok_or_else(|| RuntimeError::Host(format!("{} needs Y", path.dotted())))?,
+        )?;
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let index = index as usize;
+        let data = self.world.get_mut(self.entity).ok_or_else(|| {
+            RuntimeError::Host(format!("{}'s entity no longer exists", path.dotted()))
+        })?;
+        let payload = data
+            .components
+            .get_mut(ShapeComponent::TYPE_NAME)
+            .ok_or_else(|| {
+                RuntimeError::Host(format!(
+                    "{} needs a {} on the script entity",
+                    path.dotted(),
+                    ShapeComponent::TYPE_NAME
+                ))
+            })?;
+        let object = payload.as_object_mut().ok_or_else(|| {
+            RuntimeError::Host(format!(
+                "{}'s {} is not an object",
+                path.dotted(),
+                ShapeComponent::TYPE_NAME
+            ))
+        })?;
+        let points = object
+            .entry("points")
+            .or_insert_with(|| serde_json::Value::Array(Vec::new()))
+            .as_array_mut()
+            .ok_or_else(|| {
+                RuntimeError::Host(format!(
+                    "{}'s {} points are not an array",
+                    path.dotted(),
+                    ShapeComponent::TYPE_NAME
+                ))
+            })?;
+        while points.len() <= index {
+            points.push(serde_json::json!([0.0, 0.0]));
+        }
+        points[index] = serde_json::json!([x, y]);
+        Ok(Value::Unit)
     }
 
     /// Authors one `@export` property on an entity whose script has not started.

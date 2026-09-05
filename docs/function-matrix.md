@@ -17,6 +17,7 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Transform / position | ✅ | ✅ | 🟡 |
 | Rotation / scale | ✅ | ✅ | 🟡 |
 | 2D sprites | ✅ | ✅ | 🟡 |
+| Procedural 2D shapes | ✅ | 🟡 | ✅ |
 | UI images | ✅ | ✅ | 🟡 |
 | Sprite sheets | ✅ | ✅ | 🟡 |
 | Sprite animation | ✅ | ✅ | ❌ |
@@ -71,7 +72,7 @@ editor, and Decay scripting surface. For evidence and limitations, see
 A checkmark means the function is implemented and exercised on that surface,
 not merely represented by a type, API, schema, or editor control. For a gameplay
 capability, exercised means a game uses it: spawning, reparenting, prefabs,
-queries, pointer input and physics all work and are covered by tests, and stay
-🟡 until `games/orbital-last-stand` plays with them. Keep this
+queries, pointer input, procedural shapes and physics all work and are covered
+by tests, and stay 🟡 until `games/orbital-last-stand` plays with them. Keep this
 file intentionally short: detailed caveats belong in `capabilities.md`, while
 cross-surface gaps belong in `feature-integration-matrix.md`.

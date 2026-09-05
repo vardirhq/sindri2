@@ -7,18 +7,62 @@
 
 use std::collections::BTreeMap;
 
-use sindri_core::World;
+use sindri_core::{EntityId, World};
 use sindri_render::{
     ExtractedFrame, FrameCamera, FrameCommand, FramePass, RenderLayer, RenderStage, ShapeBlend,
     ShapeInstance,
 };
 
 use crate::screen_ui::UiHierarchy;
-use crate::{ShapeComponent, UiShapeComponent};
+use crate::{ShapeComponent, UiShapeComponent, UiShapeKind};
 
 use super::camera::ResolvedCameras;
 use super::ui::ui_matrix;
 use super::{SceneExtractError, SceneExtractor, transform_matrix};
+
+/// Optional authored vertices carried beside the typed shape fields.
+///
+/// `ShapeGeometry` deliberately remains the compact common shape schema. Custom
+/// polygon points are a bounded extension used only by polygon rendering, so an
+/// older scene with no `points` remains byte-for-byte the same and every other
+/// kind keeps the slot it already used for corner radius.
+fn authored_points(world: &World, entity: EntityId, component: &str) -> Vec<[f32; 2]> {
+    let Some(points) = world
+        .get(entity)
+        .and_then(|data| data.components.get(component))
+        .and_then(|payload| payload.get("points"))
+        .and_then(serde_json::Value::as_array)
+    else {
+        return Vec::new();
+    };
+    points
+        .iter()
+        .take(sindri_render::MAX_POLYGON_POINTS)
+        .filter_map(|point| {
+            let values = point.as_array()?;
+            let [x, y] = values.as_slice() else {
+                return None;
+            };
+            #[allow(clippy::cast_possible_truncation)]
+            Some([x.as_f64()? as f32, y.as_f64()? as f32])
+        })
+        .collect()
+}
+
+fn shape_instance(
+    world: &World,
+    entity: EntityId,
+    component: &str,
+    geometry: &crate::ShapeGeometry,
+    model: glam::Mat4,
+) -> ShapeInstance {
+    let instance = geometry.instance(model);
+    if geometry.kind != UiShapeKind::Polygon {
+        return instance;
+    }
+    let points = authored_points(world, entity, component);
+    instance.with_polygon_points(&points)
+}
 
 impl SceneExtractor {
     pub(super) fn push_shapes(
@@ -59,7 +103,13 @@ impl SceneExtractor {
             batches
                 .entry((shape.layer, shape.geometry.blend() == ShapeBlend::Add))
                 .or_default()
-                .push(shape.geometry.instance(model));
+                .push(shape_instance(
+                    world,
+                    entity,
+                    "sindri.ui.shape",
+                    &shape.geometry,
+                    model,
+                ));
         }
 
         for ((layer, additive), instances) in batches {
@@ -112,7 +162,13 @@ impl SceneExtractor {
             batches
                 .entry((shape.layer, shape.geometry.blend() == ShapeBlend::Add))
                 .or_default()
-                .push(shape.geometry.instance(transform_matrix(transform)));
+                .push(shape_instance(
+                    world,
+                    entity,
+                    "sindri.shape",
+                    &shape.geometry,
+                    transform_matrix(transform),
+                ));
         }
 
         for ((layer, additive), instances) in batches {

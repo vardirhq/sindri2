@@ -8,6 +8,13 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **Procedural 2D polygons can now use authored vertices.** `sindri.shape`
+  keeps the existing regular-polygon path, but can also carry up to eight explicit
+  2D points in the same instanced WebGPU renderer. Decay exposes the bounded
+  `World.set_shape_point(index, x, y)` call, and its math host gains `exp()` for
+  frame-rate-independent interpolation. Orbital Last Stand uses both to recreate
+  the Strider's exact six-point hull and reference movement-facing response.
+
 - **Orbital Last Stand now has reference elites and combat drops.** Regular
   enemies become eligible after 105 seconds using the original capped chance
   curve and one of five authored health, damage, speed and value traits. Normal
