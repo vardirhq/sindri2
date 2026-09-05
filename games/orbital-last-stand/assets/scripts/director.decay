@@ -3,6 +3,8 @@
 script Director {
     @export let drifter: Prefab;
     @export let charger: Prefab;
+    // Legacy scene property: this asset slot now contains the persistent sector
+    // hazard controller because the faithful roster no longer uses Splitter.
     @export let splitter: Prefab;
     @export let warden: Prefab;
     @export let wave_gap: f32 = 6.0;
@@ -17,6 +19,7 @@ script Director {
     var hud: Entity = null;
     var pause_screen: Entity = null;
     var result_screen: Entity = null;
+    var hazards: Entity = null;
     var elapsed: f32 = 0.0;
     var spawn_timer: f32 = 0.0;
     var next_boss: f32 = 60.0;
@@ -28,7 +31,9 @@ script Director {
         this.hud = World.find("Hud");
         this.pause_screen = World.find("Pause");
         this.result_screen = World.find("Result");
+        this.hazards = World.spawn(this.splitter);
         Game.set("run_state", 0.0);
+        Game.set("nullified", 0.0);
         show_only_title();
     }
 
@@ -58,6 +63,7 @@ script Director {
         Game.set("boss_hp", 0.0);
         Game.set("boss_max", 0.0);
         Game.set("victory", 0.0);
+        Game.set("nullified", 0.0);
         Game.set("stats_reset", 1.0);
         Game.set("player_reset", 1.0);
         clear_tag("enemy");
@@ -66,6 +72,7 @@ script Director {
         clear_tag("mine");
         clear_tag("core");
         clear_tag("hostile_shot");
+        clear_tag("hazard");
         World.set_active(this.title, false);
         World.set_active(this.hud, true);
         World.set_active(this.result_screen, false);
@@ -148,6 +155,7 @@ script Director {
         Game.set("run_state", 4.0);
         Game.set("boss_hp", 0.0);
         Game.set("boss_max", 0.0);
+        Game.set("nullified", 0.0);
         let score = Game.get("score", 0.0);
         if score > Save.number("best_score", 0.0) { Save.set_number("best_score", score); }
         Save.set_number("total_kills", Save.number("total_kills", 0.0) + Game.get("kills", 0.0));
@@ -155,6 +163,7 @@ script Director {
         clear_tag("player_damage");
         clear_tag("mine");
         clear_tag("hostile_shot");
+        clear_tag("hazard");
     }
 
     fn spawn_rate() -> f32 {
@@ -178,10 +187,6 @@ script Director {
         else { Game.set("sector", 1.0); }
     }
 
-    // Uniform selection from every archetype unlocked at this instant, exactly
-    // like the reference. Dart keeps its authored charge/wind-up prefab; the
-    // remaining archetypes share the roster script and receive their role data
-    // before their first script pass.
     fn spawn_one() {
         let count = unlocked_count();
         let slot = Random.int(0.0, count - 1.0);
@@ -213,9 +218,6 @@ script Director {
     fn spawn_roster(kind: f32) {
         let enemy = World.spawn(this.drifter);
         World.set_property(enemy, "kind", kind);
-        // Health is reference HP expressed in base-shot equivalents. This keeps
-        // relative toughness faithful without importing the reference's pixel/
-        // damage scale into Sindri's deliberately smaller numeric economy.
         if kind == 0.0 { configure(enemy, 1.5, 2.0, 1.0, 1.0); }
         else if kind == 1.0 { configure(enemy, 1.0, 3.0, 2.25, 1.5); }
         else if kind == 3.0 { configure(enemy, 0.82, 6.0, 3.75, 2.0); }
