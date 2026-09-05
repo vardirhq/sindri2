@@ -37,6 +37,9 @@ script Charger {
             Physics.set_velocity(this.entity, 0.0, 0.0);
             return;
         }
+        // Wind-up and dash animate the outline, but must not erase the elite
+        // fill that distinguishes the stronger variant throughout its life.
+        tint_elite();
         if this.hazard_damage > 0.0 {
             this.hp -= this.hazard_damage;
             this.hazard_damage = 0.0;

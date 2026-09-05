@@ -127,6 +127,9 @@ fn a_forced_elite_receives_one_complete_reference_trait() {
     }
     run.click("TitleStart");
     step(&mut run);
+    // Observe a normal live update as well as the spawn pass: elite treatment
+    // is a lifetime invariant, including archetype-specific animation.
+    step(&mut run);
 
     assert_eq!(run.board("elite_spawned"), 1.0);
     let enemy = run

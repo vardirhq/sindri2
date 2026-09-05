@@ -35,6 +35,10 @@ script Drifter {
             Physics.set_velocity(this.entity, 0.0, 0.0);
             return;
         }
+        // Keep the elite fill present when an archetype animates its outline.
+        // Spawn-time tinting makes the first frame correct; this makes the
+        // treatment an invariant for the rest of the enemy's life.
+        tint_elite();
         if this.hazard_damage > 0.0 {
             this.hp -= this.hazard_damage;
             this.hazard_damage = 0.0;
