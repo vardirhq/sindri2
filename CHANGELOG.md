@@ -8,6 +8,13 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **Decay scripts can read the viewport aspect ratio.** `Viewport.aspect`
+  exposes the screen's width divided by its height without exposing pixels or
+  guessing which authored camera owns gameplay. Orbital Last Stand combines it
+  with its `fit: shorter` camera framing to restore the original visibility
+  contract: the ship only targets enemies at least partly on-screen, while
+  off-screen Wardens and Chargers may approach but cannot begin attacks.
+
 - **Orbital Last Stand's five weapon flags are real build-changing mechanics.**
   Guidance rounds seek, arcs jump across targets, nova kills hit an area, gravity
   anchors leave delayed mines, and prism impacts continue as piercing beams.
@@ -52,6 +59,11 @@ All notable changes to Sindri Next will be documented here.
   impact.** Player bullets and secondary projectiles remain readable until the
   full collision pass has consumed their hit, then retire on their next script
   tick. Enemy durability therefore no longer depends on entity update order.
+
+- **Orbital Last Stand's ship is no longer hit through a visible gap.** The
+  player and hostile-shot colliders now author world-space radii matching their
+  rendered scale, with a small player-favouring margin, instead of both using
+  the unscaled half-unit default.
 
 - **Orbital Last Stand's opening enemies no longer become hidden bullet
   sponges.** Their base health now preserves the original game's two-, three-,

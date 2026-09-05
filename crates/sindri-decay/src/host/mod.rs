@@ -33,7 +33,7 @@ use crate::{
     surface::{
         FUNCTIONS, Handle, HostFunction, Leaf, POINTER, POINTER_VALUES, PRINT, PointerValue, STICK,
         STICK_VALUES, StickValue, TIME, TIME_VALUES, TOUCH, TOUCH_COUNT, TimeValue, TouchCall,
-        follow_mut, handle, leaf, leaf_through_reference,
+        VIEWPORT, VIEWPORT_VALUES, ViewportValue, follow_mut, handle, leaf, leaf_through_reference,
     },
 };
 
@@ -143,6 +143,15 @@ impl Host for WorldHost<'_> {
                 // and the platform bounds it to ten regardless.
                 #[allow(clippy::cast_precision_loss)]
                 return Ok(Some(Value::Number(self.context.input.touch_count() as f64)));
+            }
+            if *namespace == VIEWPORT
+                && let Some((_, value)) = VIEWPORT_VALUES.iter().find(|(known, _)| known == name)
+            {
+                return Ok(Some(Value::Number(f64::from(match value {
+                    ViewportValue::Aspect => self
+                        .screen_ui
+                        .map_or(1.0, sindri_scene::ScreenUi::viewport_aspect),
+                }))));
             }
         }
 

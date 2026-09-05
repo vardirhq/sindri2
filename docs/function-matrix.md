@@ -39,6 +39,7 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Perspective camera | ✅ | 🟡 | ❌ |
 | Orthographic camera | ✅ | 🟡 | ❌ |
 | Pixel snapping | ✅ | 🟡 | ❌ |
+| Viewport aspect | ✅ | ✅ | ✅ |
 | Keyboard input | ✅ | 🟡 | ✅ |
 | Pointer / mouse input | ✅ | ✅ | 🟡 |
 | Touch input | ✅ | ✅ | 🟡 |

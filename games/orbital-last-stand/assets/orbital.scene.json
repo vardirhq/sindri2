@@ -2216,7 +2216,7 @@
           "rotation": 0.0,
           "sensor": true,
           "shape": {
-            "radius": 0.5,
+            "radius": 0.16,
             "shape": "circle"
           }
         },

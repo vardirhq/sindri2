@@ -17,7 +17,7 @@ use crate::{
         POINTER, POINTER_QUERIES, POINTER_VALUES, PREFAB, PRINT, PhysicsCall, PointerValue, RANDOM,
         RANDOM_CALLS, RandomCall, SAVE, SAVE_CALLS, STICK, STICK_VALUES, SaveCall, StickValue,
         THIS, THROUGH_REFERENCE, TIME, TIME_VALUES, TOUCH, TOUCH_CALLS, TOUCH_COUNT, UI, UI_CALLS,
-        UiCall, WORLD, WORLD_CALLS, WorldCall,
+        UiCall, VIEWPORT, VIEWPORT_VALUES, WORLD, WORLD_CALLS, WorldCall,
     },
 };
 
@@ -109,6 +109,7 @@ pub fn environment() -> Environment {
     add_world_surface(&mut environment);
 
     add_pointer_surface(&mut environment);
+    add_viewport_surface(&mut environment);
     add_physics_surface(&mut environment);
     add_ui_surface(&mut environment);
     add_random_surface(&mut environment);
@@ -118,6 +119,16 @@ pub fn environment() -> Environment {
     add_audio_surface(&mut environment);
 
     environment
+}
+
+/// The shape of the screen the host is drawing into.
+pub(super) fn add_viewport_surface(environment: &mut Environment) {
+    let mut viewport = HostType::new();
+    for (name, _) in VIEWPORT_VALUES {
+        viewport = viewport.with_value(*name, Type::F32);
+    }
+    environment.add_type(VIEWPORT, viewport);
+    environment.add_value(VIEWPORT, Type::Named(VIEWPORT.to_owned()));
 }
 
 /// What a script can do to the world it is in: find, spawn, despawn, reparent,

@@ -119,6 +119,14 @@ pub(crate) const POINTER_VALUES: &[(&str, PointerValue)] = &[
     ("over_ui", PointerValue::OverUi),
 ];
 
+/// A value a script reads about the viewport it is running in.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum ViewportValue {
+    Aspect,
+}
+
+pub(crate) const VIEWPORT_VALUES: &[(&str, ViewportValue)] = &[("aspect", ViewportValue::Aspect)];
+
 /// What a script reads from the steering stick.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum StickValue {
