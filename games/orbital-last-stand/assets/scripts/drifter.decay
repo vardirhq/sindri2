@@ -26,7 +26,8 @@ script Drifter {
         this.hp = this.health * (1.0 + late * 0.0014);
         this.attack = Random.range(0.35, 1.1);
         this.clock = Random.range(0.0, 6.2831853);
-        tint_kind();
+        this.transform.rotation_z = this.clock;
+        apply_reference_visual();
         tint_elite();
     }
 
@@ -35,6 +36,9 @@ script Drifter {
             Physics.set_velocity(this.entity, 0.0, 0.0);
             return;
         }
+        // The reference never lets the arena become visually still: ordinary
+        // enemies rotate continuously while their movement remains independent.
+        this.transform.rotation_z += dt * 0.6;
         // Keep the elite fill present when an archetype animates its outline.
         // Spawn-time tinting makes the first frame correct; this makes the
         // treatment an invariant for the rest of the enemy's life.
@@ -177,15 +181,19 @@ script Drifter {
         if this.burrow >= 3.4 { this.burrow = 0.0; }
         if this.burrow < 1.7 {
             this.shape.stroke.a = 0.28;
+            this.shape.fill.a = 0.18;
             chase(dx, dy, far, 1.55);
         } else {
             this.shape.stroke.a = 1.0;
+            this.shape.fill.a = 0.92;
             chase(dx, dy, far, 0.82);
         }
     }
 
     fn phaser_move(dt: f32, dx: f32, dy: f32, far: f32, player: Entity, visible: bool) {
         wobble_chase(dx, dy, far, 1.05);
+        this.shape.stroke.a = 0.55 + sin(this.clock * 12.0) * 0.25;
+        this.shape.fill.a = 0.58 + sin(this.clock * 12.0) * 0.2;
         this.attack -= dt;
         if this.attack > 0.0 || !visible { return; }
         let a = Random.range(0.0, 6.2831853);
@@ -226,11 +234,34 @@ script Drifter {
                this.transform.position.y - radius <= half_y;
     }
 
-    fn tint_kind() {
-        let hue = this.kind / 15.0;
-        this.shape.stroke.r = 0.25 + hue * 0.7;
-        this.shape.stroke.g = 0.9 - hue * 0.45;
-        this.shape.stroke.b = 1.0 - hue * 0.35;
+    fn apply_reference_visual() {
+        // Reference renderer side counts, translated to our numeric roster order.
+        if this.kind == 0.0 { set_visual(5.0, 1.0, 0.51765, 0.37255); }
+        else if this.kind == 1.0 { set_visual(5.0, 1.0, 0.43529, 0.35294); }
+        else if this.kind == 3.0 { set_visual(6.0, 1.0, 0.37255, 0.45490); }
+        else if this.kind == 4.0 { set_visual(4.0, 0.84314, 0.42745, 1.0); }
+        else if this.kind == 5.0 { set_visual(6.0, 0.65490, 0.48627, 1.0); }
+        else if this.kind == 6.0 { set_visual(6.0, 0.45882, 0.84314, 1.0); }
+        else if this.kind == 7.0 { set_visual(3.0, 0.55294, 1.0, 0.81176); }
+        else if this.kind == 8.0 { set_visual(7.0, 0.38431, 0.95686, 0.81569); }
+        else if this.kind == 9.0 { set_visual(6.0, 1.0, 0.93725, 0.51373); }
+        else if this.kind == 10.0 { set_visual(7.0, 0.56863, 0.63529, 1.0); }
+        else if this.kind == 11.0 { set_visual(4.0, 1.0, 0.59608, 0.41961); }
+        else if this.kind == 12.0 { set_visual(5.0, 1.0, 0.44706, 0.71373); }
+        else if this.kind == 13.0 { set_visual(6.0, 0.39608, 0.94510, 1.0); }
+        else { set_visual(3.0, 0.84706, 0.62745, 1.0); }
+    }
+
+    fn set_visual(sides: f32, r: f32, g: f32, b: f32) {
+        this.shape.count = sides;
+        this.shape.fill.r = r;
+        this.shape.fill.g = g;
+        this.shape.fill.b = b;
+        this.shape.fill.a = 0.92;
+        this.shape.stroke.r = min(1.0, r + 0.18);
+        this.shape.stroke.g = min(1.0, g + 0.18);
+        this.shape.stroke.b = min(1.0, b + 0.18);
+        this.shape.stroke.a = 1.0;
     }
 
     fn tint_elite() {
