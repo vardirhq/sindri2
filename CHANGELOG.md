@@ -124,3 +124,175 @@ All notable changes to Sindri Next will be documented here.
   The manifest has `AssetKind::Prefab`, the export walks prefabs as documents —
   including a prefab only another prefab's script names — and the browser host
   loads them.
+
+- **`World.set_active` and `World.is_active`.** `docs/scripting.md` said a
+  screen is an entity with children and that showing one is switching it on.
+  That was true of the engine and not of Decay: a title screen could be
+  authored and never dismissed.
+
+- **`Pointer.overlay_x` and `Pointer.overlay_y`.** `Pointer.x` is viewport
+  pixels, and how many pixels tall a window is is not something a scene knows,
+  so a script could say where the pointer was and not what it was pointing at.
+  These are the same point in the overlay's units — where the UI is already
+  laid out and hit-tested. They stop at the overlay rather than going on to the
+  world, because going on means a camera.
+
+### Fixed
+
+- **The site served a game that could not open.** Pages built its manifest from
+  a directory scan that recorded every asset as `Other`. That was harmless
+  while nothing read kinds, and became a trap the moment the browser host
+  started asking for its assets by kind: a manifest naming no scene is a
+  project that does not load. The scan now takes a file for whatever its name
+  says it is, and the site is assembled by the export rather than by hand — one
+  answer to what a project ships, instead of two that disagreed.
+
+- **An export shipped a game with no menus.** Its walks were the runtime's, and
+  the runtime's walks are active-only — correct for drawing and stepping, wrong
+  for an export, whose question is not what is running but what a project could
+  ever switch on.
+
+- **Scripts were not gathered by the export at all**, because `sindri.script`
+  is not a builtin component.
+
+- **A bullet could not be aimed on the frame it was fired.** A spawned script
+  starts in the pass that made it, and the documented example is a bullet
+  setting its own velocity in `start` — but a body is built when the scene next
+  synchronizes. A velocity set before the body exists is now remembered and
+  applied when it arrives.
+
+- **An entity despawned by another script still ran.** A director clearing the
+  field at the end of a run produced one dead-handle failure per enemy, none of
+  them a mistake in the game.
+
+- **The browser smoke test asked for one project's file names.** It would have
+  passed for a game with no prefabs, no scripts and no sound. It reads the
+  shipped manifest and requires one asset of every kind it names.
+
+- **`decay/LANGUAGE.md` said `while` was the only loop** and that there was
+  nothing to iterate, a hundred and fifty lines after documenting `for` over a
+  collection.
+
+- **A project can be exported to a static web directory.** `sindri-export`
+  walks a scene for what it references — textures, fonts, scripts, sheets,
+  audio — and writes a directory a static host can serve. An asset that stopped
+  being used stops being carried, and one that started being used cannot be
+  forgotten.
+
+  The layout is what makes caching safe: `assets/sindri.manifest.json` is small and
+  must never be cached, and it names an `assets/<content hash>/` directory that
+  can be cached for ever. A changed asset cannot land in a directory anyone has
+  already cached, and an unchanged build keeps its name so a re-deploy
+  re-downloads nothing. Exporting again removes the previous build.
+
+  `--base` bakes the deployment path into `<base href>`, with the trailing slash
+  the export adds — `<base href="/repo">` resolves `pkg/host.js` against the
+  site root and 404s, which is the whole GitHub Pages subpath problem.
+
+  `[assets] include` in `sindri.toml` carries what a scene cannot name: a script
+  plays a clip by a string inside a program, and no walk of a scene can see one.
+
+- **`AssetKind` in the manifest.** The browser host carried a list of asset IDs
+  per kind, compiled in — so adding a texture meant editing Rust, and a project
+  the host crate had never heard of could not be exported at all. The manifest
+  says what a project is made of, and the host reads it.
+
+### Fixed
+
+- **Scripts were not being gathered by the export**, because `sindri.script` is
+  not a builtin component — scripting is a layer above the scene, and a host
+  registers it. The export would have shipped a game with no code in it and
+  looked like it had worked. Caught by a test that asks for every kind.
+
+- **Editor Play runs the loop a shipped game runs.** It stepped once per
+  *rendered* frame, so a scene was simulated as fast as the machine happened to
+  draw — a play-test was evidence about the editor, not about the game. It now
+  owns a `FixedStepClock` and runs gameplay a whole number of times per frame,
+  in the order the engine fixes: effects, physics, screen UI, scripts,
+  animations. Animations moved into the fixed step with everything else, because
+  a clip advancing per rendered frame played at a different speed in the editor
+  than in the build.
+
+- **A held scene can be stepped once.** What it is for is the bug that happens
+  in one frame and is gone before anyone can look at it.
+
+### Fixed
+
+- **An input edge reached every fixed step in a frame instead of one.** A key
+  going down is one event, and gameplay runs in the fixed step — so a 30 Hz
+  display driving a 60 Hz simulation fired every button twice. The edge is now
+  spent by the first step that sees it.
+
+  It also used to be cleared at the end of every frame, which at 144 Hz — where
+  most frames earn no fixed step at all — dropped most clicks before gameplay
+  saw them. Edges now survive until a step consumes them. Accumulated pointer
+  motion follows the same rule, so two frames of dragging between steps sum
+  rather than losing the first.
+
+  This was wrong in the shipped host as well as the editor. Three tests cover
+  it, and all three fail against the old behaviour.
+
+- **Flecks that are not entities.** The audit asked for a pooled effect path and
+  said to measure both approaches before choosing one. `docs/effect-scaling.md`
+  is that measurement, and `cargo run --release -p sindri-scene --example
+  effect_scaling` reproduces it.
+
+  An entity per fleck costs 5.25 ms a frame at 8,000 of them — a third of a
+  60 Hz budget — against 0.018 ms for the same population as plain values.
+  Extraction is 95% of that, and over half of *it* is `serde_json` turning each
+  entity's stored payload back into a struct, once per entity, every frame.
+
+  So `Effects2d` holds flecks as plain values. A fleck has no identity a script
+  can hold, no components, no place in the hierarchy, and nothing can collide
+  with it — everything an entity is for, given up, because the alternative costs
+  a third of a frame. What a burst looks like is authored as
+  `sindri.effect.burst`, since count, speed, spread, lifetime and colour are a
+  designer's numbers and a call naming all of them would be unreadable.
+
+  Flecks draw their directions from **their own random stream**, never the run's:
+  a fleck drawn from the gameplay stream would shift every number after it, so
+  turning an explosion up would change which enemies spawned.
+
+  The pool is bounded; past capacity the oldest fleck makes way for the newest,
+  because the newest action is the one someone is looking at. `Effects.burst`
+  answers with how many flecks it actually made, so a game can see it should turn
+  itself down. Bursts batch with ordinary sprites by layer and texture, so one
+  burst is one draw call rather than a second rendering path.
+
+  Not built, and recorded as such: an instanced primitive renderer and custom
+  materials, neither of which has a consumer; and the per-frame payload re-parse,
+  which every ordinary sprite pays too and which needs a change to the component
+  model rather than an effect system.
+
+- **`SceneRuntime` bundles what a host keeps beside the world.** Animations and
+  the fleck pool both decide what a drawable looks like, and each would otherwise
+  be another parameter on every extraction entry point.
+
+- **A game can remember things between runs.** `SaveStore` and `SaveDocument` in
+  `sindri-core`, a `SaveBackend` trait in `sindri-platform` with file, browser,
+  memory and deliberately-damaged implementations, and a `Save` namespace in
+  Decay.
+
+  The document is **flat** rather than a tree. Decay holds numbers, truths and
+  text and nothing else, so a structure a script could not build is a structure
+  nothing could write; `settings.volume` and `progress.best_wave` are keys, and
+  the file stays something a person can read and repair. Keys are ordered, so the
+  same state is the same bytes and a save can be diffed.
+
+  **Three absences, told apart.** A first run starts cheerfully; a save that was
+  there and would not parse is worth telling someone about *before* their
+  progress is written over; and one written by a newer build is reported without
+  being read, because a reader that guessed at a format it does not know would
+  corrupt it the moment it wrote back.
+
+  `FileSaves` writes beside the target and renames over it — a save half written
+  is a save destroyed, at the exact moment someone's machine lost power mid-run.
+  `BrowserSaves` uses `localStorage`, chosen over every larger browser store
+  because the alternatives are asynchronous and a game should not have to ask
+  whether its progress has landed yet.
+
+  **Nothing in Decay touches storage.** How often someone's disk is written is a
+  decision about their machine, so the store is in memory and the host writes it
+  out on a cadence and before it stops. Writing the same value again is not a
+  change. A NaN is not a number JSON can represent and is refused rather than
+  silently written as null.
