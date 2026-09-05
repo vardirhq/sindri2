@@ -7,6 +7,7 @@ script Drifter {
     @export let health: f32 = 2.0;
     @export let worth: f32 = 1.0;
     @export let touch_damage: f32 = 1.0;
+    @export let hazard_damage: f32 = 0.0;
     @export let core: Prefab;
     @export let death_burst: Prefab;
     @export let shot: Prefab;
@@ -30,6 +31,14 @@ script Drifter {
             Physics.set_velocity(this.entity, 0.0, 0.0);
             return;
         }
+        if this.hazard_damage > 0.0 {
+            this.hp -= this.hazard_damage;
+            this.hazard_damage = 0.0;
+            if this.hp <= 0.0 {
+                die();
+                return;
+            }
+        }
         let player = World.find("Player");
         if player == null {
             return;
@@ -39,8 +48,6 @@ script Drifter {
         let far = sqrt(dx * dx + dy * dy);
         this.clock += dt;
 
-        // Attacks are forbidden outside the viewport, matching the reference's
-        // targetability rule. Movement toward the arena remains allowed.
         let visible = is_visible();
         if this.kind == 3.0 {
             steer_range(dx, dy, far, 4.2, 0.18);
