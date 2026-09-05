@@ -4,12 +4,16 @@ script EliteVisual {
     @export let mode: f32 = 0.0;
     @export let sides: f32 = 6.0;
     @export let trait: f32 = 0.0;
-    @export let phase: f32 = 0.0;
 
     var clock: f32 = 0.0;
+    var phase: f32 = 0.0;
 
     fn start() {
         this.shape.count = this.sides;
+        // Reference enemies carry a random phase that offsets their ring pulse.
+        // These decorative children do not need to share gameplay state, so a
+        // per-instance phase preserves the same unsynchronised presentation.
+        if this.mode == 1.0 { this.phase = Random.range(0.0, 6.2831853); }
         apply_color();
     }
 
