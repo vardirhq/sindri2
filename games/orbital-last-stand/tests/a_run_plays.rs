@@ -345,6 +345,10 @@ fn enemies_arrive_die_and_leave_something_behind() {
     // budget assumed. Play until the time-based roster has actually advanced.
     let mut wall_seconds = 0;
     while run.board("elapsed") < 90.0 && wall_seconds < 120 {
+        // This is a spawning/death/drop observation, not a survival test. Late
+        // pressure can burn through even the old one-time 1,000-hull sentinel,
+        // ending the run and permanently freezing `elapsed` below the target.
+        run.set_board("hp", 1000.0);
         play_taking_upgrades(&mut run, 1.0);
         wall_seconds += 1;
     }
