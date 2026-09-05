@@ -191,7 +191,7 @@ jobs:
       # roughly a minute of it. The system libraries the browser links are not
       # cached — `install-deps` is apt — so they are installed either way.
       - name: Cache browser tooling
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cache/ms-playwright
