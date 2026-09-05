@@ -261,11 +261,7 @@ impl WorldHost<'_> {
     }
 
     /// Writes one vertex of the current script entity's world-space polygon.
-    fn set_shape_point_call(
-        &mut self,
-        path: &Path,
-        args: &[Value],
-    ) -> Result<Value, RuntimeError> {
+    fn set_shape_point_call(&mut self, path: &Path, args: &[Value]) -> Result<Value, RuntimeError> {
         let index = number(
             path,
             args.first().ok_or_else(|| {

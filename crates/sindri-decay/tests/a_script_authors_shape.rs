@@ -73,12 +73,11 @@ fn a_script_writes_bounded_polygon_vertices_and_can_use_exp() {
             [-0.25, 0.5]
         ])
     );
-    assert_eq!(
-        hull.transform_3d
-            .expect("the hull has a transform")
-            .position[0],
-        1.0
-    );
+    let x = hull
+        .transform_3d
+        .expect("the hull has a transform")
+        .position[0];
+    assert!((x - 1.0).abs() < f32::EPSILON, "exp(0) produced {x}");
 }
 
 #[test]
