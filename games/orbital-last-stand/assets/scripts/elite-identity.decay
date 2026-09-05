@@ -1,0 +1,67 @@
+// Trait-specific decorative marks for Last Stand elites. The parent owns all
+// gameplay; this child only reproduces the reference renderer's identity cue.
+script EliteIdentity {
+    @export let trait: f32 = 0.0;
+    @export let index: f32 = 0.0;
+
+    var clock: f32 = 0.0;
+    var phase: f32 = 0.0;
+
+    fn start() {
+        this.phase = Random.range(0.0, 6.2831853);
+        if this.trait == 0.0 {
+            // Armored: three offset partial rings.
+            this.transform.scale.x = 1.5 + this.index * 0.12;
+            this.transform.scale.y = 1.5 + this.index * 0.12;
+            this.transform.rotation_z = -0.8 + this.index * 0.7;
+            this.shape.sweep_turns = 0.207;
+            this.shape.stroke.r = 1.0;
+            this.shape.stroke.g = 0.953;
+            this.shape.stroke.b = 0.69;
+        } else if this.trait == 2.0 {
+            // Volatile: bright pulsing core.
+            this.transform.scale.x = 0.28;
+            this.transform.scale.y = 0.28;
+            this.shape.fill.r = 1.0;
+            this.shape.fill.g = 0.949;
+            this.shape.fill.b = 0.631;
+            this.shape.stroke.a = 0.0;
+        } else if this.trait == 3.0 {
+            // Vampiric: large breathing violet ring.
+            this.transform.scale.x = 1.85;
+            this.transform.scale.y = 1.85;
+            this.shape.stroke.r = 0.906;
+            this.shape.stroke.g = 0.631;
+            this.shape.stroke.b = 1.0;
+            this.shape.fill.a = 0.0;
+        } else {
+            // Splitter: one of three crack branches through the body.
+            this.transform.scale.x = 1.15;
+            this.transform.scale.y = 0.07;
+            this.transform.rotation_z = -0.9 + this.index * 1.05;
+            this.shape.fill.r = 0.729;
+            this.shape.fill.g = 1.0;
+            this.shape.fill.b = 0.922;
+            this.shape.fill.a = 0.5;
+            this.shape.stroke.a = 0.0;
+        }
+    }
+
+    fn update(dt: f32) {
+        this.clock += dt;
+        let pulse = 0.5 + 0.5 * sin(this.clock * 6.0 + this.phase);
+        if this.trait == 0.0 {
+            this.shape.stroke.a = 0.35 + 0.3 * pulse;
+        } else if this.trait == 2.0 {
+            let size = 0.24 + 0.12 * pulse;
+            this.transform.scale.x = size;
+            this.transform.scale.y = size;
+            this.shape.fill.a = 0.55 + 0.35 * pulse;
+        } else if this.trait == 3.0 {
+            let size = 1.75 + 0.3 * pulse;
+            this.transform.scale.x = size;
+            this.transform.scale.y = size;
+            this.shape.stroke.a = 0.18 + 0.22 * pulse;
+        }
+    }
+}
