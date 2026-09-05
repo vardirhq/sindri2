@@ -46,8 +46,10 @@ fn spawn_challenger(run: &mut Run, kind: f32, y: f32) -> EntityId {
     let entity = run.world.spawn_prefab(document).expect("boss spawns").root;
     let data = run.world.get_mut(entity).expect("boss remains");
     data.transform_3d.as_mut().expect("boss transform").position = [0.0, y, 0.0];
-    data.components["sindri.script"]["properties"]
-        .as_object_mut()
+    data.components
+        .get_mut("sindri.script")
+        .and_then(|script| script.get_mut("properties"))
+        .and_then(serde_json::Value::as_object_mut)
         .expect("script properties")
         .insert("kind".to_owned(), json!(kind));
     entity
