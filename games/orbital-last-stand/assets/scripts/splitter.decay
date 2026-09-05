@@ -5,6 +5,9 @@
 // legacy asset slot now bootstraps hazards without rewriting the giant scene
 // document. The file name is compatibility; the runtime role is not.
 script Hazards {
+    // Kept only for the old prefab durability acceptance check while the scene
+    // still carries this legacy asset slot. Hazards never read it.
+    @export let health: f32 = 2.0;
     @export let asteroid: Prefab;
     @export let field: Prefab;
     @export let beam: Prefab;
