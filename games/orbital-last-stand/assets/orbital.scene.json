@@ -1210,6 +1210,11 @@
             "boss_at": 180.0,
             "charger": "prefabs/charger.prefab.json",
             "drifter": "prefabs/drifter.prefab.json",
+            "elite_after": 105.0,
+            "elite_base": 0.025,
+            "elite_time_divisor": 3000.0,
+            "elite_bonus_scale": 0.65,
+            "elite_cap": 0.32,
             "splitter": "prefabs/splitter.prefab.json",
             "warden": "prefabs/warden.prefab.json",
             "wave_gap": 6.0

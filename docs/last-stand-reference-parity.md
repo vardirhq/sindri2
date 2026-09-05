@@ -291,14 +291,14 @@ Legend: `DONE`, `PARTIAL`, `TODO`, `INTENTIONAL`.
 | Continuous regular spawning | DONE | Sindri no longer has numbered wave batches |
 | Viewport combat rule | DONE | off-screen enemies may approach but do not attack/target; player does not target them |
 | Regular HP post-3:00 curve | DONE | current authored enemies use the reference 0.0014 curve |
-| 600-second victory | TODO | current run has no faithful timed victory yet |
-| Exact Normal spawn formula | TODO | current rate is intentionally gentler |
-| Five sector pressure values | TODO | not yet represented |
-| Five sector hazards | TODO | not yet represented |
-| 15 enemy archetypes | PARTIAL | currently Drifter, Charger and Splitter only |
-| Exact enemy unlock timestamps | PARTIAL | first three are currently 0/35/70 but semantics do not exactly match Scout/Brute/Dart |
-| Elite system | TODO | traits/probability missing |
-| 60-second boss cadence | TODO | current Director has a single Warden encounter |
+| 600-second victory | DONE | the timer clamps to 600 and ends the run before another gameplay pass |
+| Exact Normal spawn formula | DONE | campaign pressure uses the reference base curve, Normal multiplier and active sector |
+| Five sector pressure values | DONE | the Director publishes all five two-minute sectors and their pressure multipliers |
+| Five sector hazards | DONE | asteroids, edge flares, gravity wells, null field and telegraphed core beams are authored |
+| 15 enemy archetypes | DONE | the complete roster is selected uniformly from the unlocked pool |
+| Exact enemy unlock timestamps | DONE | all fifteen reference timestamps drive the growing pool |
+| Elite system | DONE | the post-105-second chance curve and all five stat traits are authored in Decay |
+| 60-second boss cadence | DONE | overdue encounters wait for the living Warden rather than stacking |
 | Tiered boss director | TODO | missing |
 | Full boss roster | TODO | only Warden currently authored |
 | Warden encounter | INTENTIONAL | Sindri version is a more elaborate three-phase interpretation, while targeting reference-like short TTK/readability |
@@ -308,7 +308,7 @@ Legend: `DONE`, `PARTIAL`, `TODO`, `INTENTIONAL`.
 | 160-module catalog | PARTIAL | mechanism work exists; full catalog missing |
 | Companion/foundry level cadence | TODO | missing |
 | Black Signal | TODO | missing |
-| Powerup/drop economy | TODO | missing |
+| Powerup/drop economy | DONE | Normal regular/elite/boss chances, missing-health bonus, repair pity, repair, pulse and overdrive are implemented; repair preserves the reference proportion on Sindri's normalized five-hull scale |
 | Adaptive boss scaling | TODO | missing |
 
 ## Implementation order

@@ -100,7 +100,8 @@
             "core": "prefabs/core.prefab.json",
             "death_burst": "prefabs/nova.prefab.json",
             "shot": "prefabs/enemy-bullet.prefab.json",
-            "minion": "prefabs/drifter.prefab.json"
+            "minion": "prefabs/drifter.prefab.json",
+            "drop_roll": "prefabs/drop-roll.prefab.json"
           }
         },
         "sindri.shape": {

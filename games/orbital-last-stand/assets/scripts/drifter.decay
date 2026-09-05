@@ -7,10 +7,13 @@ script Drifter {
     @export let health: f32 = 2.0;
     @export let worth: f32 = 1.0;
     @export let touch_damage: f32 = 1.0;
+    @export let elite: f32 = 0.0;
+    @export let elite_trait: f32 = 0.0;
     @export let hazard_damage: f32 = 0.0;
     @export let core: Prefab;
     @export let death_burst: Prefab;
     @export let shot: Prefab;
+    @export let drop_roll: Prefab;
 
     var hp: f32 = 0.0;
     var death_burst_damage: f32 = 0.0;
@@ -24,6 +27,7 @@ script Drifter {
         this.attack = Random.range(0.35, 1.1);
         this.clock = Random.range(0.0, 6.2831853);
         tint_kind();
+        tint_elite();
     }
 
     fn update(dt: f32) {
@@ -31,6 +35,10 @@ script Drifter {
             Physics.set_velocity(this.entity, 0.0, 0.0);
             return;
         }
+        // Keep the elite fill present when an archetype animates its outline.
+        // Spawn-time tinting makes the first frame correct; this makes the
+        // treatment an invariant for the rest of the enemy's life.
+        tint_elite();
         if this.hazard_damage > 0.0 {
             this.hp -= this.hazard_damage;
             this.hazard_damage = 0.0;
@@ -225,6 +233,25 @@ script Drifter {
         this.shape.stroke.b = 1.0 - hue * 0.35;
     }
 
+    fn tint_elite() {
+        if this.elite <= 0.0 { return; }
+        if this.elite_trait == 0.0 { elite_color(1.0, 0.91, 0.58); }
+        else if this.elite_trait == 1.0 { elite_color(1.0, 0.42, 0.45); }
+        else if this.elite_trait == 2.0 { elite_color(1.0, 0.69, 0.31); }
+        else if this.elite_trait == 3.0 { elite_color(0.84, 0.49, 1.0); }
+        else { elite_color(0.45, 1.0, 0.82); }
+    }
+
+    fn elite_color(r: f32, g: f32, b: f32) {
+        this.shape.stroke.r = r;
+        this.shape.stroke.g = g;
+        this.shape.stroke.b = b;
+        this.shape.fill.r = r;
+        this.shape.fill.g = g;
+        this.shape.fill.b = b;
+        this.shape.fill.a = 0.2;
+    }
+
     fn damage_from(hit: Entity) -> f32 {
         if World.has_tag(hit, "player_damage") {
             return World.property_number(hit, "damage", 0.0);
@@ -242,6 +269,10 @@ script Drifter {
         drop.transform.position.x = this.transform.position.x;
         drop.transform.position.y = this.transform.position.y;
         World.set_property(drop, "worth", this.worth);
+        let roll = World.spawn(this.drop_roll);
+        roll.transform.position.x = this.transform.position.x;
+        roll.transform.position.y = this.transform.position.y;
+        World.set_property(roll, "elite", this.elite);
         World.despawn(this.entity);
     }
 

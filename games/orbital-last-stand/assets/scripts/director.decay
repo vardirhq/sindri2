@@ -13,6 +13,11 @@ script Director {
     @export let boss_interval: f32 = 60.0;
     @export let run_limit: f32 = 600.0;
     @export let normal_spawn: f32 = 1.12;
+    @export let elite_after: f32 = 105.0;
+    @export let elite_base: f32 = 0.025;
+    @export let elite_time_divisor: f32 = 3000.0;
+    @export let elite_bonus_scale: f32 = 0.65;
+    @export let elite_cap: f32 = 0.32;
     @export let arena: f32 = 7.5;
 
     var title: Entity = null;
@@ -64,6 +69,11 @@ script Director {
         Game.set("boss_max", 0.0);
         Game.set("victory", 0.0);
         Game.set("nullified", 0.0);
+        Game.set("elite_bonus", 0.0);
+        Game.set("elite_spawned", 0.0);
+        Game.set("kills_since_repair", 0.0);
+        Game.set("powerups_dropped", 0.0);
+        Game.set("overdrive", 0.0);
         Game.set("stats_reset", 1.0);
         Game.set("player_reset", 1.0);
         clear_tag("enemy");
@@ -71,6 +81,8 @@ script Director {
         clear_tag("player_damage");
         clear_tag("mine");
         clear_tag("core");
+        clear_tag("powerup");
+        clear_tag("drop_roll");
         clear_tag("hostile_shot");
         clear_tag("hazard");
         World.set_active(this.title, false);
@@ -164,6 +176,8 @@ script Director {
         clear_tag("mine");
         clear_tag("hostile_shot");
         clear_tag("hazard");
+        clear_tag("powerup");
+        clear_tag("drop_roll");
     }
 
     fn spawn_rate() -> f32 {
@@ -191,7 +205,9 @@ script Director {
         let count = unlocked_count();
         let slot = Random.int(0.0, count - 1.0);
         if slot == 2.0 {
-            place(World.spawn(this.charger));
+            let enemy = World.spawn(this.charger);
+            make_elite(enemy, true);
+            place(enemy);
             return;
         }
         spawn_roster(slot);
@@ -232,6 +248,7 @@ script Director {
         else if kind == 12.0 { configure(enemy, 1.82, 6.0, 6.25, 1.6); }
         else if kind == 13.0 { configure(enemy, 0.92, 8.0, 7.75, 1.8); }
         else { configure(enemy, 2.02, 6.0, 7.25, 1.7); }
+        make_elite(enemy, false);
         place(enemy);
     }
 
@@ -240,6 +257,50 @@ script Director {
         World.set_property(enemy, "health", health);
         World.set_property(enemy, "worth", worth);
         World.set_property(enemy, "touch_damage", touch);
+    }
+
+    fn make_elite(enemy: Entity, charger_enemy: bool) {
+        if this.elapsed <= this.elite_after { return; }
+        let bonus = Game.get("elite_bonus", 0.0);
+        let chance = min(this.elite_cap,
+            this.elite_base + this.elapsed / this.elite_time_divisor +
+            bonus * this.elite_bonus_scale);
+        if Random.value() >= chance { return; }
+
+        let trait = Random.int(0.0, 4.0);
+        if trait == 0.0 {
+            scale_elite(enemy, trait, 2.35, 1.05, 0.88, 2.20, charger_enemy);
+        } else if trait == 1.0 {
+            scale_elite(enemy, trait, 1.55, 1.45, 1.38, 2.10, charger_enemy);
+        } else if trait == 2.0 {
+            scale_elite(enemy, trait, 1.65, 1.20, 1.08, 2.25, charger_enemy);
+        } else if trait == 3.0 {
+            scale_elite(enemy, trait, 1.85, 1.25, 1.06, 2.30, charger_enemy);
+        } else {
+            scale_elite(enemy, trait, 1.70, 1.12, 1.12, 2.25, charger_enemy);
+        }
+    }
+
+    fn scale_elite(enemy: Entity, trait: f32, hp: f32, damage: f32,
+                   speed: f32, value: f32, charger_enemy: bool) {
+        World.set_property(enemy, "elite", 1.0);
+        World.set_property(enemy, "elite_trait", trait);
+        World.set_property(enemy, "health",
+            World.property_number(enemy, "health", 1.0) * hp);
+        World.set_property(enemy, "touch_damage",
+            World.property_number(enemy, "touch_damage", 1.0) * damage);
+        World.set_property(enemy, "worth",
+            World.property_number(enemy, "worth", 1.0) * value);
+        if charger_enemy {
+            World.set_property(enemy, "approach",
+                World.property_number(enemy, "approach", 1.0) * speed);
+            World.set_property(enemy, "dash_speed",
+                World.property_number(enemy, "dash_speed", 1.0) * speed);
+        } else {
+            World.set_property(enemy, "speed",
+                World.property_number(enemy, "speed", 1.0) * speed);
+        }
+        Game.set("elite_spawned", Game.get("elite_spawned", 0.0) + 1.0);
     }
 
     fn send_boss() {

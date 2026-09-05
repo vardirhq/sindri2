@@ -8,6 +8,14 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **Orbital Last Stand now has reference elites and combat drops.** Regular
+  enemies become eligible after 105 seconds using the original capped chance
+  curve and one of five authored health, damage, speed and value traits. Normal
+  difficulty's regular, elite and boss drop chances, missing-hull bonus and
+  120-kill repair pity now produce repair, arena pulse and eight-second
+  overdrive pickups. The repair amount preserves the reference proportion on
+  the game's normalized five-hull scale.
+
 - **Decay scripts can read the viewport aspect ratio.** `Viewport.aspect`
   exposes the screen's width divided by its height without exposing pixels or
   guessing which authored camera owns gameplay. Orbital Last Stand combines it
