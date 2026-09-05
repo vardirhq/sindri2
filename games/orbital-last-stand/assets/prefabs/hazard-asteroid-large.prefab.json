@@ -1,0 +1,16 @@
+{
+  "format_version": 1,
+  "metadata": { "name": "Hazard Asteroid Large" },
+  "entities": [{
+    "id": "hazard-asteroid-large", "name": "Hazard Asteroid Large",
+    "transform_3d": { "position": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+    "components": {
+      "sindri.tags": { "tags": ["hazard"] },
+      "sindri.physics2d.rigid_body": { "kind": "dynamic", "pose": { "position": [0.0, 0.0], "rotation": 0.0 }, "linear_velocity": [0.0, 0.0], "angular_velocity": 0.0, "gravity_scale": 0.0, "linear_damping": 0.0, "angular_damping": 0.0, "lock_rotation": false },
+      "sindri.physics2d.collider": { "shape": { "shape": "circle", "radius": 0.5 }, "offset": [0.0, 0.0], "rotation": 0.0, "sensor": true, "layers": { "memberships": 8, "filter": 5 }, "friction": 0.0, "restitution": 0.0 },
+      "sindri.effect.burst": { "texture": "textures/fleck.png", "count": 18, "speed": 3.0, "spread": 6.28, "lifetime": 0.45, "size": 0.07, "tint": [0.65, 0.75, 0.8, 1.0], "fade": true, "drag": 1.5, "layer": 4 },
+      "sindri.script": { "source": "scripts/hazard-asteroid.decay", "script": "HazardAsteroid", "properties": { "health": 5.0, "impact_damage": 0.7, "vx": 0.0, "vy": 0.5, "child_count": 2.0, "child": "prefabs/hazard-asteroid-medium.prefab.json" } },
+      "sindri.shape": { "kind": "polygon", "count": 7.0, "fill": [0.025, 0.04, 0.055, 1.0], "stroke": [0.42, 0.55, 0.62, 1.0], "stroke_width": 0.06, "corner_radius": 0.0, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "over", "layer": 2 }
+    }
+  }]
+}
