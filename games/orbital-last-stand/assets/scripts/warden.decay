@@ -40,6 +40,7 @@ script Warden {
         this.dash_timer = 1.4;
         Game.set("boss_max", this.hp);
         Game.set("boss_hp", this.hp);
+        Game.set("boss_kind", 0.0);
     }
 
     fn update(dt: f32) {

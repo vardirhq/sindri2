@@ -1209,6 +1209,7 @@
             "arena": 7.5,
             "boss_at": 180.0,
             "charger": "prefabs/charger.prefab.json",
+            "challenger": "prefabs/challenger.prefab.json",
             "drifter": "prefabs/drifter.prefab.json",
             "elite_after": 105.0,
             "elite_base": 0.025,
