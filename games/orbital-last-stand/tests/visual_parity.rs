@@ -187,6 +187,10 @@ fn secondary_enemy_marks_are_authored_as_non_gameplay_children() {
     assert!(script.contains("this.shape.sweep_turns = 0.675"));
     assert!(script.contains("this.shape.sweep_turns = 0.75"));
     assert!(script.contains("this.shape.dashes = 9.0"));
+    assert!(script.contains("let cycle = this.clock % 3.4"));
+    assert!(script.contains("cycle < 1.7"));
+    assert!(script.contains("this.shape.stroke.a = 0.2"));
+    assert!(script.contains("this.shape.stroke.a = 0.75"));
     assert!(script.contains("sin(this.clock * 12.0)"));
     assert!(script.contains("sin(this.clock * 4.0 + this.phase)"));
 
