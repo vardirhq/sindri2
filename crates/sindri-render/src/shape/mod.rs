@@ -15,15 +15,15 @@
 //! dashed ring is an arc with a duty cycle. It is the same technique the glyphs
 //! use, and for the same reason.
 //!
-//! What it is not: a general vector renderer. There are no paths, no béziers and
-//! no fills with holes. The kinds here are the ones a game HUD and a
-//! twin-stick's cast of shapes are actually built from, and a shape outside them
-//! is still a sprite.
+//! What it is not: a general vector renderer. There are no béziers and no fills
+//! with holes. A polygon may replace its regular vertices with up to eight
+//! authored points, which covers compact gameplay silhouettes without turning
+//! every shape instance into an SVG document. Art beyond that remains a sprite.
 
 mod instance;
 mod render;
 
-pub use instance::ShapeInstance;
+pub use instance::{MAX_POLYGON_POINTS, ShapeInstance};
 pub use render::{ShapeBlend, ShapeDrawError, ShapeRenderer};
 
 /// What a shape is, before anything is done to it.
@@ -39,7 +39,8 @@ pub enum Shape {
     /// An ellipse inscribed in the quad — a circle in a square one.
     Ellipse,
     /// A regular polygon of this many sides, inscribed in the quad, with a
-    /// vertex at the top.
+    /// vertex at the top. An instance may replace those generated vertices with
+    /// a bounded authored point set.
     Polygon { sides: f32 },
     /// A lattice of this many cells across the quad, drawn as lines.
     ///
