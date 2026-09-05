@@ -102,16 +102,23 @@ const SHAPE_STROKE: &[(&str, Node)] = &[
     ("a", shape_stroke(3)),
 ];
 
-/// A shape has two colours where a sprite has one, and two numbers a sprite
-/// has no equivalent of.
+/// A shape has two colours where a sprite has one, and runtime geometry a
+/// sprite cannot provide.
 ///
-/// `sweep_turns` is the reason this is worth having at all: a cooldown ring, a
-/// charge meter and a boss's health arc are one float a script already holds,
-/// and drawing them from a sprite would need a frame of art per step.
-/// `stroke_width` is how something pulses without changing size.
+/// `count` lets gameplay choose a polygon silhouette without replacing the
+/// authored component. `sweep_turns` is what makes cooldown rings and charge
+/// meters one float instead of a sprite sheet. `stroke_width` is how something
+/// pulses without changing size.
 pub(crate) const SHAPE_MEMBERS: &[(&str, Node)] = &[
     ("fill", Node::Group(RGBA, SHAPE_FILL)),
     ("stroke", Node::Group(RGBA, SHAPE_STROKE)),
+    (
+        "count",
+        Node::Leaf(Leaf::Component {
+            component: SHAPE_COMPONENT,
+            pointer: &[Seg::Field("count")],
+        }),
+    ),
     (
         "stroke_width",
         Node::Leaf(Leaf::Component {
