@@ -142,10 +142,9 @@ fn ten_minutes_hold_together() {
 fn the_warden_arrives_and_changes_as_it_is_fought() {
     let mut run = Run::open().expect("the project opens");
 
-    // This test is about the Warden, not about surviving three minutes of the
-    // campaign first. Script exports are authored component data until the
-    // first script frame, so move only this test's boss clock forward without
-    // adding a gameplay-only test hook or changing the prefab being exercised.
+    // This test is about the Warden, not about surviving one campaign minute
+    // first. New campaign timing has a dedicated authored first-boss clock;
+    // shorten only that concern without changing gameplay code or the prefab.
     let director = run.find("Director").expect("the Director");
     let properties = run
         .world
@@ -154,7 +153,10 @@ fn the_warden_arrives_and_changes_as_it_is_fought() {
         .and_then(|script| script.get_mut("properties"))
         .and_then(serde_json::Value::as_object_mut)
         .expect("the Director's authored script properties");
-    properties.insert("boss_at".to_owned(), serde_json::Value::from(2.0));
+    properties.insert(
+        "first_boss_at".to_owned(),
+        serde_json::Value::from(2.0),
+    );
 
     for _ in 0..6 {
         run.step(STEP);
