@@ -18,7 +18,11 @@ fn the_five_sectors_swap_real_hazards() {
     run.set_board("hp", 1000.0);
 
     assert_eq!(run.board("sector"), 1.0);
-    assert_eq!(run.count("hazard"), 7, "Outer Drift starts with seven rocks");
+    assert_eq!(
+        run.count("hazard"),
+        7,
+        "Outer Drift starts with seven rocks"
+    );
 
     let director = run.find("Director").expect("the campaign director exists");
     run.world
@@ -32,11 +36,19 @@ fn the_five_sectors_swap_real_hazards() {
 
     run.set_board("sector", 3.0);
     step(&mut run);
-    assert_eq!(run.count("hazard"), 3, "Violet Wake owns three gravity wells");
+    assert_eq!(
+        run.count("hazard"),
+        3,
+        "Violet Wake owns three gravity wells"
+    );
 
     run.set_board("sector", 4.0);
     step(&mut run);
-    assert_eq!(run.count("hazard"), 1, "Null Lattice owns one roaming field");
+    assert_eq!(
+        run.count("hazard"),
+        1,
+        "Null Lattice owns one roaming field"
+    );
 
     let field = run.find("Hazard Field").expect("the null field exists");
     let field_position = run
@@ -52,10 +64,22 @@ fn the_five_sectors_swap_real_hazards() {
         .expect("the player has a transform")
         .position = field_position;
     step(&mut run);
-    assert_eq!(run.board("nullified"), 1.0, "the field should suppress weapons");
+    assert_eq!(
+        run.board("nullified"),
+        1.0,
+        "the field should suppress weapons"
+    );
 
     run.set_board("sector", 5.0);
     step(&mut run);
-    assert_eq!(run.board("nullified"), 0.0, "leaving Null Lattice restores weapons");
-    assert_eq!(run.count("hazard"), 1, "Core Approach immediately queues a beam");
+    assert_eq!(
+        run.board("nullified"),
+        0.0,
+        "leaving Null Lattice restores weapons"
+    );
+    assert_eq!(
+        run.count("hazard"),
+        1,
+        "Core Approach immediately queues a beam"
+    );
 }
