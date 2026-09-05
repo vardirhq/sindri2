@@ -155,12 +155,13 @@ Regular archetype secondary marks are now represented across the whole roster.
 Leech carries its 1.35-PI partial outer arc, Relay its three-quarter outer arc,
 Burrower a dashed full outer marker, Phaser the separately pulsing outer
 triangle, Sentinel three cyan-white radial prongs, Anchor four pale-violet arms,
-and Bulwark the large faint 4 Hz support-radius ring. These remain decorative
-children only: no tag, collider, targeting identity, or independent combat
-lifetime is added.
+and Bulwark the large faint 4 Hz support-radius ring. Burrower's outer marker
+also follows the reference submerged-state visibility exactly: alpha 0.2 for the
+first 1.7 seconds of its 3.4-second cycle, then 0.75 while surfaced. These remain
+decorative children only: no tag, collider, targeting identity, or independent
+combat lifetime is added.
 
-Step 2 is still incomplete. Trait-specific elite identity marks and the
-Burrower ring's exact submerged-state alpha coupling remain open. The exact
-Strider hull, shield, backdrop, HUD, and full combat presentation also remain
-open and should not be described as visually complete until capture comparison
-says so.
+Step 2 now has one remaining visual family: the trait-specific elite identity
+marks. The exact Strider hull, shield, backdrop, HUD, and full combat
+presentation also remain open and should not be described as visually complete
+until capture comparison says so.
