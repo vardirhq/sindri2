@@ -1,0 +1,42 @@
+{
+  "format_version": 1,
+  "metadata": {
+    "name": "Elite Identity Crack"
+  },
+  "entities": [
+    {
+      "id": "elite-identity-crack",
+      "name": "Elite Identity Crack",
+      "transform_3d": {
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "components": {
+        "sindri.script": {
+          "source": "scripts/elite-identity.decay",
+          "script": "EliteIdentity",
+          "properties": {
+            "trait": 4.0,
+            "index": 0.0,
+            "phase": 0.0
+          }
+        },
+        "sindri.shape": {
+          "kind": "rect",
+          "count": 4.0,
+          "fill": [0.729, 1.0, 0.922, 0.5],
+          "stroke": [0.0, 0.0, 0.0, 0.0],
+          "stroke_width": 0.0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "add",
+          "layer": 5
+        }
+      }
+    }
+  ]
+}
