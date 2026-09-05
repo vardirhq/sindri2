@@ -1,0 +1,70 @@
+// Destructible Outer Drift asteroid. Large and medium bodies split into the
+// next authored size; collider radii live in the prefabs so visuals and hits
+// stay honest instead of relying on transform scale.
+script HazardAsteroid {
+    @export let health: f32 = 5.0;
+    @export let impact_damage: f32 = 0.7;
+    @export let vx: f32 = 0.0;
+    @export let vy: f32 = 0.5;
+    @export let child_count: f32 = 2.0;
+    @export let child: Prefab;
+
+    var hp: f32 = 0.0;
+
+    fn start() {
+        this.hp = this.health;
+        Physics.set_velocity(this.entity, this.vx, this.vy);
+    }
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 1.0 || Game.get("sector", 0.0) != 1.0 {
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+            return;
+        }
+
+        wrap();
+        let player = World.find("Player");
+        for hit in Physics.sensor_entered() {
+            if hit == player {
+                Game.set("player_damage_taken",
+                         max(Game.get("player_damage_taken", 0.0), this.impact_damage));
+                continue;
+            }
+            if !World.exists(hit) {
+                continue;
+            }
+            if World.has_tag(hit, "player_damage") {
+                this.hp -= World.property_number(hit, "damage", 0.0);
+            }
+        }
+
+        if this.hp <= 0.0 {
+            split();
+            Effects.burst(this.entity);
+            World.despawn(this.entity);
+        }
+    }
+
+    fn wrap() {
+        if this.transform.position.x < -9.0 { this.transform.position.x = 9.0; }
+        else if this.transform.position.x > 9.0 { this.transform.position.x = -9.0; }
+        if this.transform.position.y < -6.5 { this.transform.position.y = 6.5; }
+        else if this.transform.position.y > 6.5 { this.transform.position.y = -6.5; }
+    }
+
+    fn split() {
+        if this.child_count <= 0.0 {
+            return;
+        }
+        var made: f32 = 0.0;
+        while made < this.child_count {
+            let angle = Random.range(0.0, 6.2831853);
+            let piece = World.spawn(this.child);
+            piece.transform.position.x = this.transform.position.x + cos(angle) * 0.35;
+            piece.transform.position.y = this.transform.position.y + sin(angle) * 0.35;
+            World.set_property(piece, "vx", Physics.velocity_x(this.entity) + cos(angle) * 0.8);
+            World.set_property(piece, "vy", Physics.velocity_y(this.entity) + sin(angle) * 0.8);
+            made += 1.0;
+        }
+    }
+}
