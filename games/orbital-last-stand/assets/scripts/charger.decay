@@ -29,6 +29,14 @@ script Charger {
     fn start() {
         let late = max(0.0, Game.get("elapsed", 0.0) - 180.0);
         this.hp = this.health * (1.0 + late * 0.0014);
+        this.transform.rotation_z = Random.range(0.0, 6.2831853);
+        this.shape.fill.r = 1.0;
+        this.shape.fill.g = 0.70196;
+        this.shape.fill.b = 0.35294;
+        this.shape.fill.a = 0.92;
+        this.shape.stroke.r = 1.0;
+        this.shape.stroke.g = 0.88;
+        this.shape.stroke.b = 0.53;
         tint_elite();
     }
 
@@ -37,6 +45,7 @@ script Charger {
             Physics.set_velocity(this.entity, 0.0, 0.0);
             return;
         }
+        this.transform.rotation_z += dt * 0.6;
         // Wind-up and dash animate the outline, but must not erase the elite
         // fill that distinguishes the stronger variant throughout its life.
         tint_elite();
