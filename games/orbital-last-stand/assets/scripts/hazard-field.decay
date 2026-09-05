@@ -1,0 +1,101 @@
+// Violet Wake gravity wells and the roaming Null Lattice weapon suppressor.
+// One authored field covers both because their difference is behaviour, not
+// lifecycle: gravity bends projectiles; null moves and suppresses the ship.
+script HazardField {
+    @export let kind: f32 = 1.0;
+    @export let radius: f32 = 1.8;
+    @export let pull: f32 = 2.1;
+    @export let roam_speed: f32 = 0.55;
+
+    var vx: f32 = 0.0;
+    var vy: f32 = 0.0;
+    var phase: f32 = 0.0;
+
+    fn start() {
+        this.phase = Random.range(0.0, 6.2831853);
+        if this.kind == 2.0 {
+            let angle = Random.range(0.35, 1.55);
+            this.vx = cos(angle) * this.roam_speed;
+            this.vy = sin(angle) * this.roam_speed;
+        }
+    }
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 1.0 {
+            return;
+        }
+        if this.kind == 1.0 {
+            bend("bullet", dt);
+            bend("hostile_shot", dt);
+            this.shape.stroke.a = 0.45 + sin(Game.get("elapsed", 0.0) * 2.0 + this.phase) * 0.15;
+        } else {
+            roam(dt);
+            suppress();
+        }
+    }
+
+    fn bend(tag: String, dt: f32) {
+        for shot in World.with_tag(tag) {
+            if !World.exists(shot) {
+                continue;
+            }
+            let dx = this.transform.position.x - shot.transform.position.x;
+            let dy = this.transform.position.y - shot.transform.position.y;
+            let distance = max(0.2, sqrt(dx * dx + dy * dy));
+            let reach = this.radius * 1.8;
+            if distance < reach {
+                let strength = (1.0 - distance / reach) * this.pull;
+                Physics.set_velocity(shot,
+                    Physics.velocity_x(shot) + dx / distance * strength * dt,
+                    Physics.velocity_y(shot) + dy / distance * strength * dt);
+            }
+        }
+    }
+
+    fn roam(dt: f32) {
+        this.phase += dt * 0.7;
+        this.vx += cos(this.phase) * sin(Game.get("elapsed", 0.0) * 0.38 + this.phase) * 0.08 * dt;
+        this.vy += sin(this.phase * 0.83) * sin(Game.get("elapsed", 0.0) * 0.38 + this.phase) * 0.08 * dt;
+        let speed = sqrt(this.vx * this.vx + this.vy * this.vy);
+        if speed > 0.62 {
+            this.vx = this.vx / speed * 0.62;
+            this.vy = this.vy / speed * 0.62;
+        }
+        this.transform.position.x += this.vx * dt;
+        this.transform.position.y += this.vy * dt;
+        if this.transform.position.x < -6.8 {
+            this.transform.position.x = -6.8;
+            this.vx = abs(this.vx);
+        } else if this.transform.position.x > 6.8 {
+            this.transform.position.x = 6.8;
+            this.vx = -abs(this.vx);
+        }
+        if this.transform.position.y < -4.4 {
+            this.transform.position.y = -4.4;
+            this.vy = abs(this.vy);
+        } else if this.transform.position.y > 4.4 {
+            this.transform.position.y = 4.4;
+            this.vy = -abs(this.vy);
+        }
+    }
+
+    fn suppress() {
+        let player = World.find("Player");
+        if player == null {
+            Game.set("nullified", 0.0);
+            return;
+        }
+        let dx = player.transform.position.x - this.transform.position.x;
+        let dy = player.transform.position.y - this.transform.position.y;
+        let active = dx * dx + dy * dy < this.radius * this.radius;
+        if active {
+            Game.set("nullified", 1.0);
+            this.shape.stroke.a = 1.0;
+            this.shape.fill.a = 0.18;
+        } else {
+            Game.set("nullified", 0.0);
+            this.shape.stroke.a = 0.65;
+            this.shape.fill.a = 0.08;
+        }
+    }
+}

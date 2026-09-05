@@ -3,11 +3,6 @@
 //   1  rotating ring volleys with a moving safe gap
 //   2  telegraphed charges followed by a close-range fan
 //   3  faster rings and charges, with occasional reinforcements
-//
-// The phases are health thresholds rather than a timer, so a player who does
-// more damage sees the fight change sooner. The health curve is deliberately
-// boss-specific: challenge should come from patterns, not from waiting for a
-// normal-enemy scaling formula to finish multiplying the health bar.
 script Warden {
     @export let health: f32 = 120.0;
     @export let worth: f32 = 40.0;
@@ -17,6 +12,7 @@ script Warden {
     @export let approach: f32 = 0.9;
     @export let dash_speed: f32 = 7.0;
     @export let view_size: f32 = 11.0;
+    @export let hazard_damage: f32 = 0.0;
     @export let shot: Prefab;
     @export let minion: Prefab;
     @export let core: Prefab;
@@ -37,9 +33,6 @@ script Warden {
     var phase_flash: f32 = 0.0;
 
     fn start() {
-        // Boss durability rises much more gently than regular enemies. At the
-        // current 180-second encounter this is about 380 HP, enough to show all
-        // three phases without turning the first boss into a health sponge.
         this.hp = this.health * (1.0 + Game.get("elapsed", 0.0) * 0.012);
         this.until_volley = 1.2;
         this.until_summon = 5.0;
@@ -52,6 +45,15 @@ script Warden {
         if Game.get("run_state", 0.0) != 1.0 {
             Physics.set_velocity(this.entity, 0.0, 0.0);
             return;
+        }
+        if this.hazard_damage > 0.0 {
+            this.hp -= this.hazard_damage;
+            this.hazard_damage = 0.0;
+            Game.set("boss_hp", max(this.hp, 0.0));
+            if this.hp <= 0.0 {
+                die();
+                return;
+            }
         }
         let player = World.find("Player");
         if player == null {
@@ -77,8 +79,6 @@ script Warden {
             Audio.play("audio/boss.wav", 0.55);
         }
 
-        // The body reddens as health falls, while transitions and dash windups
-        // flash bright enough to read as tells without adding a text prompt.
         if this.phase_flash > 0.0 {
             this.phase_flash -= dt;
             this.shape.stroke.g = 1.0;
@@ -94,12 +94,8 @@ script Warden {
         let visible = is_visible();
 
         if this.phase == 1.0 {
-            // Phase one is positional: stay at range and find the moving gap in
-            // each rotating ring.
             hold_at(dx, dy, far, stand_off());
         } else if !visible {
-            // Off-screen enemies may close the distance, but do not begin or
-            // continue an attack aimed at the player until they can be seen.
             if far > 0.001 {
                 Physics.set_velocity(this.entity, dx / far * this.approach,
                                      dy / far * this.approach);
@@ -132,9 +128,6 @@ script Warden {
 
         for hit in Physics.sensor_entered() {
             if hit == player {
-                // The worst single touch this frame, not the sum of them. The
-                // ship gets invulnerability after a hit, so being inside a
-                // crowd is still one hit rather than instant deletion.
                 Game.set("player_damage_taken",
                          max(Game.get("player_damage_taken", 0.0), this.touch_damage));
                 continue;
@@ -200,7 +193,6 @@ script Warden {
         }
     }
 
-    /// How far out it may hold and still be on screen.
     fn stand_off() -> f32 {
         let tightest = min(visible_half_x(), visible_half_y());
         let radius = max(abs(this.transform.scale.x), abs(this.transform.scale.y)) * 0.5;
@@ -251,9 +243,6 @@ script Warden {
         Physics.set_velocity(this.entity, dx / far * pace, dy / far * pace);
     }
 
-    // Rings use more slots than bullets, leaving a two-slot safe wedge. The
-    // offset advances every volley, so the answer moves rather than becoming a
-    // single permanent camping spot.
     fn fire_ring() {
         var slots: f32 = this.ring_shots;
         var speed: f32 = 3.2;
@@ -282,8 +271,6 @@ script Warden {
         this.ring_offset += 0.52;
     }
 
-    // A committed dash ends with a compact fan along its travel direction. It
-    // punishes standing directly in the lane without flooding the whole arena.
     fn fire_fan() {
         let base = atan2(this.dash_y, this.dash_x);
         var made: f32 = -2.0;

@@ -1,0 +1,113 @@
+// Ember Belt edge flares and Core Approach warning beams. Both are telegraphed
+// line hazards, so one script owns the shared readable-danger lifecycle.
+script HazardBeam {
+    // 1 = Ember Belt edge band, 2 = Core Approach pulse.
+    @export let mode: f32 = 2.0;
+    @export let axis: f32 = 1.0;
+    @export let side: f32 = 1.0;
+    @export let warning: f32 = 1.05;
+    @export let active_for: f32 = 0.55;
+    @export let player_dps: f32 = 4.5;
+    @export let enemy_dps: f32 = 1.7;
+
+    var warn_left: f32 = 0.0;
+    var active_left: f32 = 0.0;
+
+    fn start() {
+        this.warn_left = this.warning;
+        this.active_left = this.active_for;
+        if this.mode == 2.0 {
+            size_pulse();
+        }
+    }
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 1.0 {
+            return;
+        }
+        if this.mode == 1.0 {
+            update_flare(dt);
+        } else {
+            update_pulse(dt);
+        }
+    }
+
+    fn update_flare(dt: f32) {
+        let time = Game.get("elapsed", 0.0);
+        let intensity = (sin(time * 0.72) + 1.0) * 0.5;
+        let edge = 11.0 * (0.18 + 0.08 * sin(time * 0.21));
+        let safe = 5.5 - edge;
+        this.transform.position.y = this.side * (5.5 - edge * 0.5);
+        this.transform.scale.x = 22.0;
+        this.transform.scale.y = edge;
+        this.shape.fill.a = 0.03 + intensity * 0.13;
+        this.shape.stroke.a = 0.18 + intensity * 0.35;
+        if intensity <= 0.82 {
+            return;
+        }
+
+        let player = World.find("Player");
+        if player != null && abs(player.transform.position.y) > safe {
+            Game.set("hp", Game.get("hp", 0.0) - this.player_dps * 0.6 * dt);
+        }
+        damage_enemies_flare(safe, dt);
+    }
+
+    fn update_pulse(dt: f32) {
+        if this.warn_left > 0.0 {
+            this.warn_left -= dt;
+            this.shape.fill.a = 0.07;
+            this.shape.stroke.a = 0.85;
+            return;
+        }
+        this.active_left -= dt;
+        this.shape.fill.a = 0.5;
+        this.shape.stroke.a = 1.0;
+        damage_line(dt);
+        if this.active_left <= 0.0 {
+            World.despawn(this.entity);
+        }
+    }
+
+    fn size_pulse() {
+        if this.axis == 1.0 {
+            this.transform.scale.x = 0.36;
+            this.transform.scale.y = 16.0;
+        } else {
+            this.transform.scale.x = 20.0;
+            this.transform.scale.y = 0.36;
+        }
+    }
+
+    fn damage_line(dt: f32) {
+        let player = World.find("Player");
+        if player != null && line_distance(player) < 0.18 {
+            Game.set("hp", Game.get("hp", 0.0) - this.player_dps * dt);
+        }
+        for enemy in World.with_tag("enemy") {
+            if World.exists(enemy) && line_distance(enemy) < 0.18 {
+                add_enemy_damage(enemy, this.enemy_dps * dt);
+            }
+        }
+    }
+
+    fn damage_enemies_flare(safe: f32, dt: f32) {
+        for enemy in World.with_tag("enemy") {
+            if World.exists(enemy) && abs(enemy.transform.position.y) > safe {
+                add_enemy_damage(enemy, 0.6 * dt);
+            }
+        }
+    }
+
+    fn line_distance(entity: Entity) -> f32 {
+        if this.axis == 1.0 {
+            return abs(entity.transform.position.x - this.transform.position.x);
+        }
+        return abs(entity.transform.position.y - this.transform.position.y);
+    }
+
+    fn add_enemy_damage(enemy: Entity, amount: f32) {
+        let current = World.property_number(enemy, "hazard_damage", 0.0);
+        World.set_property(enemy, "hazard_damage", current + amount);
+    }
+}
