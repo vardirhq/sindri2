@@ -1,4 +1,4 @@
-use orbital_last_stand::Run;
+use orbital_last_stand::{project, Run};
 use serde_json::json;
 use sindri_core::EntityId;
 
@@ -109,4 +109,61 @@ fn elites_spawn_the_reference_counter_rotating_shell_and_pulse_ring() {
         next_ring_alpha, ring_alpha,
         "the reference elite ring must pulse"
     );
+}
+
+#[test]
+fn secondary_enemy_marks_are_authored_as_non_gameplay_children() {
+    let assets = project().join("assets");
+    let drifter: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(assets.join("prefabs/drifter.prefab.json"))
+            .expect("the drifter prefab exists"),
+    )
+    .expect("the drifter prefab is JSON");
+    let properties = &drifter["entities"][0]["components"]["sindri.script"]["properties"];
+    assert_eq!(
+        properties["arc_mark"].as_str(),
+        Some("prefabs/enemy-arc-mark.prefab.json")
+    );
+    assert_eq!(
+        properties["phaser_mark"].as_str(),
+        Some("prefabs/phaser-mark.prefab.json")
+    );
+
+    let arc: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(assets.join("prefabs/enemy-arc-mark.prefab.json"))
+            .expect("the arc mark prefab exists"),
+    )
+    .expect("the arc mark prefab is JSON");
+    let arc_entity = &arc["entities"][0];
+    assert_eq!(arc_entity["components"]["sindri.shape"]["kind"], "ellipse");
+    assert!(arc_entity["components"].get("sindri.tags").is_none());
+    assert!(arc_entity["components"].get("sindri.physics2d.collider").is_none());
+
+    let phaser: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(assets.join("prefabs/phaser-mark.prefab.json"))
+            .expect("the Phaser mark prefab exists"),
+    )
+    .expect("the Phaser mark prefab is JSON");
+    let phaser_entity = &phaser["entities"][0];
+    assert_eq!(
+        phaser_entity["components"]["sindri.shape"]["kind"],
+        "polygon"
+    );
+    assert_eq!(
+        phaser_entity["components"]["sindri.shape"]["count"].as_f64(),
+        Some(3.0)
+    );
+    assert!(phaser_entity["components"].get("sindri.tags").is_none());
+    assert!(
+        phaser_entity["components"]
+            .get("sindri.physics2d.collider")
+            .is_none()
+    );
+
+    let script = std::fs::read_to_string(assets.join("scripts/enemy-mark.decay"))
+        .expect("the secondary mark script exists");
+    assert!(script.contains("this.shape.sweep_turns = 0.675"));
+    assert!(script.contains("this.shape.sweep_turns = 0.75"));
+    assert!(script.contains("this.shape.dashes = 9.0"));
+    assert!(script.contains("sin(this.clock * 12.0)"));
 }
