@@ -147,10 +147,10 @@ base side count and colour. Regular enemies and Dart receive the reference
 
 The second slice starts the layered enemy treatment. Every elite now spawns a
 silhouette-matched outer polygon and a larger pulse ring as decorative children.
-Because the enemy itself rotates at +0.6 rad/s while the shell rotates at -2.0
-rad/s locally, the shell reaches the reference -1.4 rad/s world rotation. The
-ring uses the reference `0.4 + 0.25 * sin(time * 7 + phase)` alpha range without
-becoming a collider, target, or independently destructible entity.
+The shell applies the reference local `-time * 1.4` counter-rotation inside the
+enemy's own rotating transform, and the ring uses the reference 7 Hz,
+0.4-through-0.65 pulse range without becoming a collider, target, or
+independently destructible gameplay object.
 
 Step 2 is still incomplete: the trait-specific elite identity marks and the
 secondary archetype marks for Leech, Sentinel, Phaser, Anchor, Relay, Burrower,
