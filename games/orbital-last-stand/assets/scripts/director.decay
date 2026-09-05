@@ -14,26 +14,31 @@ script Director {
     @export let splitter: Prefab;
     @export let warden: Prefab;
 
-    // The reference campaign feeds enemies in continuously rather than in
-    // numbered batches. `wave_gap` stays exported only because the current
-    // authored scene still carries that legacy property; gameplay ignores it.
+    // These two legacy exports stay declared because the current authored scene
+    // still carries them. Gameplay no longer reads either value.
     @export let wave_gap: f32 = 6.0;
     @export let boss_at: f32 = 180.0;
+
+    // Reference Last Stand campaign constants. Keeping them authored makes the
+    // acceptance harness able to shorten one concern without inventing a test-
+    // only gameplay API.
+    @export let first_boss_at: f32 = 60.0;
+    @export let boss_interval: f32 = 60.0;
+    @export let run_limit: f32 = 600.0;
+    @export let normal_spawn: f32 = 1.12;
     @export let arena: f32 = 7.5;
 
-    // Found by the name the scene gave them. An entity cannot be an
-    // authored property — a runtime handle is not a scene ID and
-    // `docs/scripting.md` says why — so a script that needs to name
-    // another entity looks it up once and keeps it.
+    // Found by the name the scene gave them. An entity cannot be an authored
+    // property: a runtime handle is not a scene ID, so scripts look these up.
     var title: Entity = null;
     var hud: Entity = null;
     var pause_screen: Entity = null;
     var result_screen: Entity = null;
 
-
     var elapsed: f32 = 0.0;
     var spawn_timer: f32 = 0.0;
-    var boss_sent: bool = false;
+    var next_boss: f32 = 60.0;
+    var boss_count: f32 = 0.0;
     var was_state: f32 = -1.0;
 
     fn start() {
@@ -60,8 +65,11 @@ script Director {
         Random.seed(seed);
 
         this.elapsed = 0.0;
-        this.spawn_timer = 0.7;
-        this.boss_sent = false;
+        // Reference runtime begins at zero, so the first regular may enter on
+        // the first playing frame rather than waiting out one whole interval.
+        this.spawn_timer = 0.0;
+        this.next_boss = this.first_boss_at;
+        this.boss_count = 0.0;
 
         Game.set("score", 0.0);
         Game.set("kills", 0.0);
@@ -69,11 +77,13 @@ script Director {
         Game.set("level", 1.0);
         Game.set("next_level", 4.0);
         Game.set("elapsed", 0.0);
+        Game.set("sector", 1.0);
+        Game.set("boss_count", 0.0);
         Game.set("boss_hp", 0.0);
         Game.set("boss_max", 0.0);
-        // The ship's numbers are not set here any more. `Stats` owns them,
-        // because they are derived from the modules taken and this script does
-        // not know what those are -- it only says the run has started over.
+        Game.set("victory", 0.0);
+        // `Stats` and `Player` own their numbers; the Director only requests a
+        // clean run state.
         Game.set("stats_reset", 1.0);
         Game.set("player_reset", 1.0);
 
@@ -133,58 +143,64 @@ script Director {
         }
 
         if Game.get("hp", 1.0) <= 0.0 {
+            Game.set("victory", 0.0);
             end_run();
             return;
         }
 
         this.elapsed += dt;
         Game.set("elapsed", this.elapsed);
+        publish_sector();
+
+        // The reference wins immediately at 600 seconds before the remainder
+        // of that frame can spawn, attack or offer another choice.
+        if this.elapsed >= this.run_limit {
+            this.elapsed = this.run_limit;
+            Game.set("elapsed", this.run_limit);
+            Game.set("victory", 1.0);
+            end_run();
+            return;
+        }
 
         // Enough cores buys a choice, and the choice is what pauses the run.
+        // This economy is still provisional; the reference XP curve is the next
+        // progression-parity layer after the campaign skeleton.
         if Game.get("cores", 0.0) >= Game.get("next_level", 4.0) {
             let level = Game.get("level", 1.0) + 1.0;
             Game.set("level", level);
-            // Multiplied rather than added, so ten minutes is a handful of
-            // choices that matter rather than a hundred that do not. Adding a
-            // constant is a curve the player outgrows by the third minute.
             Game.set("next_level", Game.get("next_level", 4.0) * 1.6 + 6.0);
             Game.set("run_state", 2.0);
             return;
         }
 
-        if !this.boss_sent && this.elapsed >= this.boss_at {
-            this.boss_sent = true;
+        let boss_alive = Game.get("boss_hp", 0.0) > 0.0;
+        if !boss_alive && this.elapsed >= this.next_boss {
+            this.boss_count += 1.0;
+            Game.set("boss_count", this.boss_count);
+            this.next_boss += this.boss_interval;
             send_boss();
             // The Warden publishes boss_hp from its own start(), later in the
-            // script pass. Returning here prevents a regular spawn in the gap
-            // between clearing the arena and that blackboard write.
+            // script pass. Returning prevents a regular spawn in that gap.
             return;
         }
 
-        // Nothing new arrives while the Warden is alive. The ship fires at
-        // whatever is nearest, so a boss behind a crowd is a boss that never
-        // gets shot — and a fight nobody can reach is not a fight.
-        if Game.get("boss_hp", 0.0) > 0.0 {
+        // Normal reference Last Stand is a clean boss duel. If a boss survives
+        // beyond another scheduled minute, that boss opportunity remains due
+        // and is handled after the arena is boss-free again.
+        if boss_alive {
             return;
         }
 
-        // The reference tightens its spawn interval continuously. This version
-        // keeps that shape but starts gentler for the smaller arena and current
-        // three-enemy roster; later parity work can tune the pressure once the
-        // full roster and module economy are present.
         this.spawn_timer -= dt;
+        let rate = spawn_rate();
         while this.spawn_timer <= 0.0 {
             spawn_one();
-            this.spawn_timer += max(0.34, 0.92 - this.elapsed * 0.0019);
+            this.spawn_timer += rate;
         }
     }
 
     fn end_run() {
         Game.set("run_state", 4.0);
-        // Cleared here as well as when a run begins, because the Warden's own
-        // script is about to be despawned with everything else and will not
-        // get to say it is gone. A stale boss reading is what stops the next
-        // run's regular pressure.
         Game.set("boss_hp", 0.0);
         Game.set("boss_max", 0.0);
         let score = Game.get("score", 0.0);
@@ -198,10 +214,48 @@ script Director {
         clear_tag("hostile_shot");
     }
 
-    // The reference chooses uniformly from the archetypes unlocked at the
-    // current elapsed time. With three authored enemies that means one choice
-    // at the start, two equal choices from 35 seconds, then three equal choices
-    // from 70 seconds onward.
+    // Exact neutral Normal reference pressure for systems Sindri currently has:
+    // base timer curve / Normal difficulty spawn modifier / sector pressure.
+    // Event, route and boss-arena special pressure modifiers are intentionally
+    // absent until those systems exist rather than being faked here.
+    fn spawn_rate() -> f32 {
+        return max(0.085, 0.7 - this.elapsed * 0.00092) /
+               (this.normal_spawn * sector_pressure());
+    }
+
+    fn sector_pressure() -> f32 {
+        if this.elapsed >= 480.0 {
+            return 1.27;
+        }
+        if this.elapsed >= 360.0 {
+            return 1.18;
+        }
+        if this.elapsed >= 240.0 {
+            return 1.12;
+        }
+        if this.elapsed >= 120.0 {
+            return 1.07;
+        }
+        return 1.0;
+    }
+
+    fn publish_sector() {
+        if this.elapsed >= 480.0 {
+            Game.set("sector", 5.0);
+        } else if this.elapsed >= 360.0 {
+            Game.set("sector", 4.0);
+        } else if this.elapsed >= 240.0 {
+            Game.set("sector", 3.0);
+        } else if this.elapsed >= 120.0 {
+            Game.set("sector", 2.0);
+        } else {
+            Game.set("sector", 1.0);
+        }
+    }
+
+    // The reference chooses uniformly from archetypes unlocked at the current
+    // elapsed time. With only three authored enemies this preserves the first
+    // three unlock timestamps while the remaining twelve are implemented.
     fn spawn_one() {
         let roll = Random.value();
         if this.elapsed >= 70.0 {
@@ -224,9 +278,6 @@ script Director {
     }
 
     fn send_boss() {
-        // Normal Last Stand boss encounters are clean duels: the reference
-        // clears regular enemies, and doing it here also prevents auto-aim from
-        // spending the opening of the fight on survivors from prior pressure.
         clear_tag("enemy");
         clear_tag("hostile_shot");
         let boss = World.spawn(this.warden);
