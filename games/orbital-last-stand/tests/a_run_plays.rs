@@ -150,12 +150,18 @@ fn visible_base_hits_apply_in_either_script_order() {
             bullets.push(spawn_at(&mut run, "prefabs/bullet.prefab.json", at));
             bullets.push(spawn_at(&mut run, "prefabs/bullet.prefab.json", at));
             enemy = spawn_at(&mut run, "prefabs/drifter.prefab.json", at);
-            assert!(bullets[1].index() < enemy.index(), "the shots must run first");
+            assert!(
+                bullets[1].index() < enemy.index(),
+                "the shots must run first"
+            );
         } else {
             enemy = spawn_at(&mut run, "prefabs/drifter.prefab.json", at);
             bullets.push(spawn_at(&mut run, "prefabs/bullet.prefab.json", at));
             bullets.push(spawn_at(&mut run, "prefabs/bullet.prefab.json", at));
-            assert!(enemy.index() < bullets[0].index(), "the enemy must run first");
+            assert!(
+                enemy.index() < bullets[0].index(),
+                "the enemy must run first"
+            );
         }
 
         let notes = run.step(STEP);
@@ -165,14 +171,18 @@ fn visible_base_hits_apply_in_either_script_order() {
             "two visible base hits did not kill the drifter when projectiles_first={projectiles_first}"
         );
         assert!(
-            bullets.iter().all(|bullet| run.world.get(*bullet).is_some()),
+            bullets
+                .iter()
+                .all(|bullet| run.world.get(*bullet).is_some()),
             "spent shots must remain readable through the collision pass"
         );
 
         let notes = run.step(STEP);
         assert!(notes.is_empty(), "retirement pass: {notes:#?}");
         assert!(
-            bullets.iter().all(|bullet| run.world.get(*bullet).is_none()),
+            bullets
+                .iter()
+                .all(|bullet| run.world.get(*bullet).is_none()),
             "spent shots should retire on their following tick"
         );
     }
