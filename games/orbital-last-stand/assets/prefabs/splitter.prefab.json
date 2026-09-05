@@ -9,6 +9,7 @@
         "source": "scripts/splitter.decay",
         "script": "Hazards",
         "properties": {
+          "health": 2.0,
           "asteroid": "prefabs/hazard-asteroid-large.prefab.json",
           "field": "prefabs/hazard-field.prefab.json",
           "beam": "prefabs/hazard-beam.prefab.json"
