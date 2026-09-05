@@ -145,15 +145,21 @@ used it in Orbital Last Stand to give all 15 regular archetypes the reference
 base side count and colour. Regular enemies and Dart receive the reference
 0.6-rad/s continuous rotation, and salvage receives its reference 2-rad/s spin.
 
-The second slice starts the layered enemy treatment. Every elite now spawns a
-silhouette-matched outer polygon and a larger pulse ring as decorative children.
-The shell applies the reference local `-time * 1.4` counter-rotation inside the
-enemy's own rotating transform, and the ring uses the reference 7 Hz,
-0.4-through-0.65 pulse range without becoming a collider, target, or
-independently destructible gameplay object.
+The layered enemy treatment now gives every elite a silhouette-matched outer
+polygon and larger pulse ring as decorative children. The shell applies the
+reference local `-time * 1.4` counter-rotation inside the enemy's own rotating
+transform, while the ring uses the reference 7 Hz, 0.4-through-0.65 pulse range
+with per-instance phase so groups of elites do not pulse in lockstep.
 
-Step 2 is still incomplete: the trait-specific elite identity marks and the
-secondary archetype marks for Leech, Sentinel, Phaser, Anchor, Relay, Burrower,
-and Bulwark remain open. The exact Strider hull, shield, backdrop, HUD, and full
-combat presentation also remain open and should not be described as visually
-complete until capture comparison says so.
+Regular archetype secondary marks have also started landing. Leech now carries
+its 1.35-PI partial outer arc, Relay its three-quarter outer arc, Burrower a
+dashed full outer marker, and Phaser the separately pulsing outer triangle from
+the reference renderer. These are decorative children only: no tag, collider,
+targeting identity, or independent combat lifetime is added.
+
+Step 2 is still incomplete. Sentinel's three prongs, Anchor's four arms,
+Bulwark's support-radius treatment, trait-specific elite identity marks, and the
+Burrower ring's exact submerged-state alpha coupling remain open. The exact
+Strider hull, shield, backdrop, HUD, and full combat presentation also remain
+open and should not be described as visually complete until capture comparison
+says so.

@@ -59,7 +59,9 @@
             "shot": "prefabs/enemy-bullet.prefab.json",
             "drop_roll": "prefabs/drop-roll.prefab.json",
             "elite_shell": "prefabs/enemy-shell.prefab.json",
-            "elite_ring": "prefabs/enemy-ring.prefab.json"
+            "elite_ring": "prefabs/enemy-ring.prefab.json",
+            "arc_mark": "prefabs/enemy-arc-mark.prefab.json",
+            "phaser_mark": "prefabs/phaser-mark.prefab.json"
           }
         },
         "sindri.shape": {
