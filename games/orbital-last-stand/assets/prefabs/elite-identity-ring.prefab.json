@@ -1,42 +1,40 @@
 {
   "format_version": 1,
   "metadata": {
-    "name": "Enemy Ring"
+    "name": "Elite Identity Ring"
   },
   "entities": [
     {
-      "id": "enemy-ring",
-      "name": "Enemy Ring",
+      "id": "elite-identity-ring",
+      "name": "Elite Identity Ring",
       "transform_3d": {
         "position": [0.0, 0.0, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [1.6, 1.6, 1.0]
+        "scale": [1.0, 1.0, 1.0]
       },
       "components": {
         "sindri.script": {
-          "source": "scripts/elite-visual.decay",
-          "script": "EliteVisual",
+          "source": "scripts/elite-identity.decay",
+          "script": "EliteIdentity",
           "properties": {
-            "mode": 1.0,
-            "sides": 6.0,
             "trait": 0.0,
-            "identity_ring": "prefabs/elite-identity-ring.prefab.json",
-            "identity_crack": "prefabs/elite-identity-crack.prefab.json"
+            "index": 0.0,
+            "phase": 0.0
           }
         },
         "sindri.shape": {
           "kind": "ellipse",
           "count": 6.0,
           "fill": [0.0, 0.0, 0.0, 0.0],
-          "stroke": [1.0, 1.0, 1.0, 0.65],
-          "stroke_width": 0.055,
+          "stroke": [1.0, 1.0, 1.0, 0.5],
+          "stroke_width": 0.05,
           "corner_radius": 0.0,
           "dashes": 0.0,
           "dash_duty": 0.5,
           "sweep_start": 0.0,
           "sweep_turns": 1.0,
-          "blend": "over",
-          "layer": 4
+          "blend": "add",
+          "layer": 5
         }
       }
     }

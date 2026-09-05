@@ -151,7 +151,7 @@ reference local `-time * 1.4` counter-rotation inside the enemy's own rotating
 transform, while the ring uses the reference 7 Hz, 0.4-through-0.65 pulse range
 with per-instance phase so groups of elites do not pulse in lockstep.
 
-Regular archetype secondary marks are now represented across the whole roster.
+Regular archetype secondary marks are represented across the whole roster.
 Leech carries its 1.35-PI partial outer arc, Relay its three-quarter outer arc,
 Burrower a dashed full outer marker, Phaser the separately pulsing outer
 triangle, Sentinel three cyan-white radial prongs, Anchor four pale-violet arms,
@@ -161,7 +161,17 @@ first 1.7 seconds of its 3.4-second cycle, then 0.75 while surfaced. These remai
 decorative children only: no tag, collider, targeting identity, or independent
 combat lifetime is added.
 
-Step 2 now has one remaining visual family: the trait-specific elite identity
-marks. The exact Strider hull, shield, backdrop, HUD, and full combat
+Trait-specific elite identity cues are now authored from the reference renderer:
+Armored receives three offset pulsing arcs, Volatile a breathing bright core,
+Vampiric a large breathing violet ring, and Splitter three crack branches.
+Frenzied intentionally has no additional identity mark beyond the generic elite
+shell and pulse ring, matching the reference. The identity children reuse the
+pulse ring's existing phase instead of consuming another random draw.
+
+Step 2 is visually much closer to complete, but two corrections remain before it
+should be signed off: elite base bodies are still recoloured to the trait colour
+instead of preserving the archetype colour, and the generic elite pulse ring's
+phase is still generated inside the decorative child rather than propagated from
+the parent enemy. The exact Strider hull, shield, backdrop, HUD, and full combat
 presentation also remain open and should not be described as visually complete
 until capture comparison says so.
