@@ -14,6 +14,8 @@ script Drifter {
     @export let death_burst: Prefab;
     @export let shot: Prefab;
     @export let drop_roll: Prefab;
+    @export let elite_shell: Prefab;
+    @export let elite_ring: Prefab;
 
     var hp: f32 = 0.0;
     var death_burst_damage: f32 = 0.0;
@@ -31,6 +33,7 @@ script Drifter {
         this.transform.rotation_z = this.phase_offset;
         apply_reference_visual();
         tint_elite();
+        spawn_elite_visuals();
     }
 
     fn update(dt: f32) {
@@ -264,6 +267,18 @@ script Drifter {
         this.shape.stroke.g = min(1.0, g + 0.18);
         this.shape.stroke.b = min(1.0, b + 0.18);
         this.shape.stroke.a = 1.0;
+    }
+
+    fn spawn_elite_visuals() {
+        if this.elite <= 0.0 { return; }
+        let shell = World.spawn(this.elite_shell);
+        World.set_property(shell, "sides", this.shape.count);
+        World.set_property(shell, "trait", this.elite_trait);
+        World.set_parent(shell, this.entity);
+        let ring = World.spawn(this.elite_ring);
+        World.set_property(ring, "sides", this.shape.count);
+        World.set_property(ring, "trait", this.elite_trait);
+        World.set_parent(ring, this.entity);
     }
 
     fn tint_elite() {
