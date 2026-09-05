@@ -1,0 +1,13 @@
+{
+  "format_version": 1,
+  "metadata": { "name": "Hazard Field" },
+  "entities": [{
+    "id": "hazard-field", "name": "Hazard Field",
+    "transform_3d": { "position": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [3.6, 3.6, 1.0] },
+    "components": {
+      "sindri.tags": { "tags": ["hazard"] },
+      "sindri.script": { "source": "scripts/hazard-field.decay", "script": "HazardField", "properties": { "kind": 1.0, "radius": 1.8, "pull": 2.1, "roam_speed": 0.55 } },
+      "sindri.shape": { "kind": "ellipse", "count": 6.0, "fill": [0.05, 0.01, 0.12, 0.08], "stroke": [0.68, 0.42, 1.0, 0.7], "stroke_width": 0.035, "corner_radius": 0.0, "dashes": 12.0, "dash_duty": 0.45, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "add", "layer": 1 }
+    }
+  }]
+}
