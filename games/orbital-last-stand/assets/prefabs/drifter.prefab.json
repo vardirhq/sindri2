@@ -8,42 +8,16 @@
       "id": "drifter",
       "name": "Drifter",
       "transform_3d": {
-        "position": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.4,
-          0.4,
-          1.0
-        ]
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.4, 0.4, 1.0]
       },
       "components": {
-        "sindri.tags": {
-          "tags": [
-            "enemy"
-          ]
-        },
+        "sindri.tags": { "tags": ["enemy"] },
         "sindri.physics2d.rigid_body": {
           "kind": "dynamic",
-          "pose": {
-            "position": [
-              0.0,
-              0.0
-            ],
-            "rotation": 0.0
-          },
-          "linear_velocity": [
-            0.0,
-            0.0
-          ],
+          "pose": { "position": [0.0, 0.0], "rotation": 0.0 },
+          "linear_velocity": [0.0, 0.0],
           "angular_velocity": 0.0,
           "gravity_scale": 0.0,
           "linear_damping": 0.0,
@@ -51,20 +25,11 @@
           "lock_rotation": true
         },
         "sindri.physics2d.collider": {
-          "shape": {
-            "shape": "circle",
-            "radius": 0.5
-          },
-          "offset": [
-            0.0,
-            0.0
-          ],
+          "shape": { "shape": "circle", "radius": 0.5 },
+          "offset": [0.0, 0.0],
           "rotation": 0.0,
           "sensor": true,
-          "layers": {
-            "memberships": 2,
-            "filter": 5
-          },
+          "layers": { "memberships": 2, "filter": 5 },
           "friction": 0.0,
           "restitution": 0.0
         },
@@ -75,12 +40,7 @@
           "spread": 6.28,
           "lifetime": 0.42,
           "size": 0.07,
-          "tint": [
-            1.0,
-            0.45,
-            0.55,
-            1.0
-          ],
+          "tint": [1.0, 0.45, 0.55, 1.0],
           "fade": true,
           "drag": 1.6,
           "layer": 6
@@ -89,29 +49,21 @@
           "source": "scripts/drifter.decay",
           "script": "Drifter",
           "properties": {
+            "kind": 0.0,
             "speed": 1.5,
             "health": 2.0,
             "worth": 1.0,
             "touch_damage": 1.0,
             "core": "prefabs/core.prefab.json",
-            "death_burst": "prefabs/nova.prefab.json"
+            "death_burst": "prefabs/nova.prefab.json",
+            "shot": "prefabs/enemy-bullet.prefab.json"
           }
         },
         "sindri.shape": {
           "kind": "polygon",
           "count": 6.0,
-          "fill": [
-            0,
-            0,
-            0,
-            0
-          ],
-          "stroke": [
-            0.17465,
-            0.8388,
-            1.0,
-            1.0
-          ],
+          "fill": [0, 0, 0, 0],
+          "stroke": [0.17465, 0.8388, 1.0, 1.0],
           "stroke_width": 0.09,
           "corner_radius": 0.0,
           "dashes": 0.0,
