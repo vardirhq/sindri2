@@ -42,7 +42,9 @@ pub use glyph::{
 };
 pub use mesh::{ColoredVertex, MeshBuffers, TexturedVertex};
 pub use offscreen::{OffscreenError, OffscreenReadback, OffscreenTarget};
-pub use shape::{Shape, ShapeBlend, ShapeDrawError, ShapeInstance, ShapeRenderer};
+pub use shape::{
+    MAX_POLYGON_POINTS, Shape, ShapeBlend, ShapeDrawError, ShapeInstance, ShapeRenderer,
+};
 pub use sprite::{SpriteBlendMode, SpriteRenderer};
 pub use sprite_batch::{
     SpriteBatchError, SpriteBatchRenderer, SpriteBatchStats, SpriteDepth, SpriteInstance,
