@@ -1,0 +1,21 @@
+// Decorative radial line used by Sentinel and Anchor. The parent enemy owns
+// gameplay and motion; this child only reproduces the reference silhouette mark.
+script EnemyProng {
+    @export let mode: f32 = 0.0;
+
+    fn start() {
+        if this.mode == 0.0 {
+            // Sentinel: short cyan-white prongs outside the hull.
+            this.shape.fill.r = 0.8314;
+            this.shape.fill.g = 0.9843;
+            this.shape.fill.b = 1.0;
+            this.shape.fill.a = 1.0;
+        } else {
+            // Anchor: longer pale-violet arms crossing the outer hull.
+            this.shape.fill.r = 0.9176;
+            this.shape.fill.g = 0.8627;
+            this.shape.fill.b = 1.0;
+            this.shape.fill.a = 1.0;
+        }
+    }
+}
