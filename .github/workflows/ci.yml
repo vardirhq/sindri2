@@ -8,81 +8,90 @@ on:
 permissions:
   contents: read
 
+# A branch under review is pushed to several times in a row, and every push
+# used to start a fourteen-minute run that nobody was waiting for by the time
+# it finished. Superseded pull request runs are cancelled; main is not, because
+# each commit there is the only record of whether that commit was green.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -D warnings
+  # Incremental compilation caches state for a rebuild that never happens: each
+  # job compiles once and exits. It only inflates the target directory, which is
+  # then paid for again in cache upload and download time.
+  CARGO_INCREMENTAL: 0
+  # Nothing here debugs a CI binary interactively, and full debuginfo is the
+  # largest single contributor to both link time and cache size. Line tables
+  # keep panic backtraces pointing at real source lines, which is what a failing
+  # check is actually read for.
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_PROFILE_TEST_DEBUG: line-tables-only
 
 jobs:
-  quality:
-    name: Format, lint, and test
+  # Nothing here compiles anything, so it reports in well under a minute and
+  # catches the cheapest failures before a runner has spent four minutes on a
+  # build that a missing newline was going to fail anyway.
+  quick:
+    name: Format and file sizes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.95.0
         with:
-          components: clippy,rustfmt
-      - uses: Swatinem/rust-cache@v2
+          components: rustfmt
       - run: cargo fmt --all --check
-      # Before anything is compiled, because it needs nothing compiled and a
-      # file past the cap is the cheapest failure this job can report.
       - name: Check file sizes
         run: scripts/check-file-size.py
-      # Everything the rest of the job needs from the system, installed before
-      # clippy rather than before the tests. Clippy compiles the native
-      # dependency graph, so ALSA — which Rodio's CPAL backend links on Linux —
-      # has to be here already; and SINDRI_REQUIRE_GPU makes a missing adapter
-      # fail the GPU tests rather than skip them on the one machine installed to
-      # run them.
-      #
-      # The image does not name a mirror in its sources at all: it points them
-      # at a mirrorlist, and Azure's mirror is the first entry in it. When that
-      # mirror stops answering — 502 for an hour, then nothing — every index
-      # request is ignored, apt sits on the retries, and a step that takes
-      # fifteen seconds is still going when something kills it. Dropping that
-      # one entry leaves the public archive, which answered in about a second
-      # throughout, and costs the few seconds a mirror outside the datacentre
-      # does.
-      #
-      # The rest is about failing rather than hanging. apt waits on the dpkg
-      # lock forever by default and on a stalled download for a long time; the
-      # timeouts give up instead, and the step timeout turns whatever is left
-      # into a failure someone can read in two lines rather than a job nobody
-      # can tell apart from a slow one.
-      - name: Install native build and software Vulkan dependencies
-        env:
-          DEBIAN_FRONTEND: noninteractive
-        timeout-minutes: 5
-        run: |
-          mirrors=/etc/apt/apt-mirrors.txt
-          if [ -f "$mirrors" ]; then
-            sudo sed -i '/azure\.archive\.ubuntu\.com/d' "$mirrors"
-            # Never leave apt with no mirror at all, whatever the list held.
-            if ! grep -q . "$mirrors"; then
-              echo 'http://archive.ubuntu.com/ubuntu/' | sudo tee "$mirrors" > /dev/null
-            fi
-          fi
-          # An image that names the host directly rather than through a list.
-          for list in /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources; do
-            if [ -f "$list" ]; then
-              sudo sed -i 's|://azure.archive.ubuntu.com/|://archive.ubuntu.com/|g' "$list"
-            fi
-          done
-          # What apt was actually asked for, so the next mirror failure names
-          # itself instead of being inferred from what is missing.
-          cat "$mirrors" 2>/dev/null || true
-          grep -rhE '^(deb |URIs:)' /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null || true
-          apt_get() {
-            sudo apt-get -o DPkg::Lock::Timeout=120 -o Acquire::Retries=3 \
-              -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 "$@"
-          }
-          apt_get update
-          apt_get install --yes imagemagick libasound2-dev libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          # Pull request runs restore the cache main wrote and do not write one
+          # of their own. Every branch saving its own copy of a target directory
+          # this size evicts the entries the next run was going to restore, so
+          # the caching made runs slower rather than faster.
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      # Clippy compiles the native dependency graph, so ALSA — which Rodio's
+      # CPAL backend links on Linux — has to be present before it runs.
+      - uses: ./.github/actions/linux-deps
+        with:
+          packages: libasound2-dev
       - run: cargo clippy --workspace --all-targets --all-features
+
+  test:
+    name: Test and render captures
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      # SINDRI_REQUIRE_GPU makes a missing adapter fail the GPU tests rather
+      # than skip them on the one machine installed to run them, so the software
+      # Vulkan stack has to be here before the tests are.
+      - uses: ./.github/actions/linux-deps
+        with:
+          packages: imagemagick libasound2-dev libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
       - name: Test
         env:
           WGPU_BACKEND: vulkan
           SINDRI_REQUIRE_GPU: 1
         run: cargo test --workspace --all-features
+      # The captures stay in this job rather than a parallel one of their own:
+      # they run the same crates the tests just built, and a separate job would
+      # spend longer recompiling them than the captures take.
       - name: Capture native editor runtime viewport
         env:
           WGPU_BACKEND: vulkan
@@ -113,44 +122,95 @@ jobs:
             target/render-artifacts/gather.png
           if-no-files-found: error
           retention-days: 14
+
+  wasm:
+    name: Browser target
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      # Nothing in the wasm32 graph links ALSA — Rodio is a dependency only
+      # under `cfg(not(target_arch = "wasm32"))` — but this job used to share a
+      # runner that had it, and twenty seconds of apt is cheaper than finding
+      # out from a red build that something in the graph moved.
+      - uses: ./.github/actions/linux-deps
+        with:
+          packages: libasound2-dev
+      # Built from source, this took a minute and forty seconds of every run to
+      # produce a binary whose version is pinned anyway. The prebuilt release is
+      # the same artifact without the compile. The version still has to match
+      # the wasm-bindgen the workspace resolves.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen-cli@0.2.128
       - name: Check browser workspace
-        run: |
-          rustup target add wasm32-unknown-unknown
-          cargo check --workspace --all-features --target wasm32-unknown-unknown
+        run: cargo check --workspace --all-features --target wasm32-unknown-unknown
       # A texture that decodes natively and not in the browser build is the
       # failure the asset system's whole promise rests on, so the decode corpus
       # is run on the browser target too, in Node through wasm-bindgen's runner.
-      # The version has to match the wasm-bindgen the workspace resolves.
       - name: Test image decoding in the browser build
         run: |
-          cargo install wasm-bindgen-cli --version 0.2.128 --locked
           cargo test --package sindri-assets --target wasm32-unknown-unknown \
             --test decode_compatibility
-      # Compiling for wasm32 says nothing about whether the engine runs. Gather
-      # now makes this gate stricter still: its static site includes the actual
-      # project asset tree plus a manifest generated from those exact bytes,
-      # and the browser must request every asset category over HTTP under a
-      # non-root base path before the test accepts the rendered game. The same
-      # harness then takes away the canvas and an adapter, and forces a device
-      # failure, so startup failures have to be shown to a player rather than
-      # living only in a developer console. The missing-WebGPU interface guard
-      # is asserted directly in the exporter's page-template test because
-      # Chromium no longer lets test code reliably hide its Navigator supplement.
-      # The device case is the one the
-      # page cannot check for itself: it fails after `init()` has resolved, and
-      # a phone showing nothing but a blank canvas is what that looked like
-      # before the engine started announcing it.
-      - name: Run the engine in a browser
-        timeout-minutes: 12
+
+  # Compiling for wasm32 says nothing about whether the engine runs. Gather
+  # makes this gate stricter still: its static site includes the actual project
+  # asset tree plus a manifest generated from those exact bytes, and the browser
+  # must request every asset category over HTTP under a non-root base path
+  # before the test accepts the rendered game. The same harness then takes away
+  # the canvas and an adapter, and forces a device failure, so startup failures
+  # have to be shown to a player rather than living only in a developer console.
+  # The missing-WebGPU interface guard is asserted directly in the exporter's
+  # page-template test because Chromium no longer lets test code reliably hide
+  # its Navigator supplement. The device case is the one the page cannot check
+  # for itself: it fails after `init()` has resolved, and a phone showing
+  # nothing but a blank canvas is what that looked like before the engine
+  # started announcing it.
+  browser:
+    name: Run the engine in a browser
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-pack@0.13.1
+      # Chromium and its npm tree are the same bytes on every run and are worth
+      # roughly a minute of it. The system libraries the browser links are not
+      # cached — `install-deps` is apt — so they are installed either way.
+      - name: Cache browser tooling
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            scripts/browser/node_modules
+          key: playwright-${{ runner.os }}-${{ hashFiles('scripts/browser/package.json') }}
+      - name: Install browser tooling
         run: |
-          curl -fsSL https://rustwasm.github.io/wasm-pack/installer/init.sh | sh
           npm install --prefix scripts/browser
-          npx --prefix scripts/browser playwright install --with-deps chromium
+          npx --prefix scripts/browser playwright install-deps chromium
+          npx --prefix scripts/browser playwright install chromium
+      - name: Build the browser bundles
+        run: |
           wasm-pack build examples/cube --target web --out-dir pkg
           wasm-pack build game --target web --out-dir pkg
-          # Everything below runs against the *exported* directory rather than
-          # the source tree. That is the point: what CI proves is what a
-          # deployment would serve, page and manifest and hashed assets and all.
+      # Everything below runs against the *exported* directory rather than the
+      # source tree. That is the point: what CI proves is what a deployment
+      # would serve, page and manifest and hashed assets and all.
+      - name: Export the browser projects
+        run: |
           cargo run --quiet --package sindri-export --bin sindri-export -- \
             game target/dist/gather --base /sindri2/
           cp -R game/pkg/. target/dist/gather/pkg/
@@ -161,11 +221,15 @@ jobs:
           cargo run --quiet --package sindri-export --bin sindri-export -- \
             games/orbital-last-stand target/dist/orbital --base /sindri2/
           cp -R game/pkg/. target/dist/orbital/pkg/
+      - name: Smoke the rendered games
+        run: |
           node scripts/browser/smoke.mjs examples/cube target/render-artifacts/browser-cube.png
           SINDRI_EXPECT_ASSETS=1 SINDRI_BASE_PATH=/sindri2/ \
             node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-gather.png
           SINDRI_EXPECT_ASSETS=1 SINDRI_BASE_PATH=/sindri2/ \
             node scripts/browser/smoke.mjs target/dist/orbital target/render-artifacts/browser-orbital.png
+      - name: Smoke the startup failure paths
+        run: |
           SINDRI_EXPECT_FAILURE=canvas SINDRI_BASE_PATH=/sindri2/ \
             node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-no-canvas.png
           SINDRI_EXPECT_FAILURE=adapter SINDRI_BASE_PATH=/sindri2/ \

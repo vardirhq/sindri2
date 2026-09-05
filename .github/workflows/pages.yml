@@ -24,10 +24,13 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
+      # wasm-pack from its prebuilt release rather than a source build: the
+      # binary is identical and the compile was minutes of every deploy.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-pack@0.13.1
       - name: Install site tools
-        run: |
-          cargo install wasm-pack --version 0.13.1 --locked
-          python -m pip install --disable-pip-version-check 'Markdown==3.8.2'
+        run: python -m pip install --disable-pip-version-check 'Markdown==3.8.2'
       - name: Build the browser host
         run: wasm-pack build game --target web --release --out-dir pkg
       - name: Assemble Sindri site
