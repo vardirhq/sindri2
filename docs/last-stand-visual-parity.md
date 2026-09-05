@@ -151,14 +151,15 @@ reference local `-time * 1.4` counter-rotation inside the enemy's own rotating
 transform, while the ring uses the reference 7 Hz, 0.4-through-0.65 pulse range
 with per-instance phase so groups of elites do not pulse in lockstep.
 
-Regular archetype secondary marks have also started landing. Leech now carries
-its 1.35-PI partial outer arc, Relay its three-quarter outer arc, Burrower a
-dashed full outer marker, and Phaser the separately pulsing outer triangle from
-the reference renderer. These are decorative children only: no tag, collider,
-targeting identity, or independent combat lifetime is added.
+Regular archetype secondary marks are now represented across the whole roster.
+Leech carries its 1.35-PI partial outer arc, Relay its three-quarter outer arc,
+Burrower a dashed full outer marker, Phaser the separately pulsing outer
+triangle, Sentinel three cyan-white radial prongs, Anchor four pale-violet arms,
+and Bulwark the large faint 4 Hz support-radius ring. These remain decorative
+children only: no tag, collider, targeting identity, or independent combat
+lifetime is added.
 
-Step 2 is still incomplete. Sentinel's three prongs, Anchor's four arms,
-Bulwark's support-radius treatment, trait-specific elite identity marks, and the
+Step 2 is still incomplete. Trait-specific elite identity marks and the
 Burrower ring's exact submerged-state alpha coupling remain open. The exact
 Strider hull, shield, backdrop, HUD, and full combat presentation also remain
 open and should not be described as visually complete until capture comparison

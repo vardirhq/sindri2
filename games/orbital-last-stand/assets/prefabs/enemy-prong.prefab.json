@@ -1,0 +1,40 @@
+{
+  "format_version": 1,
+  "metadata": {
+    "name": "Enemy Prong"
+  },
+  "entities": [
+    {
+      "id": "enemy-prong",
+      "name": "Enemy Prong",
+      "transform_3d": {
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.55, 0.08, 1.0]
+      },
+      "components": {
+        "sindri.script": {
+          "source": "scripts/enemy-prong.decay",
+          "script": "EnemyProng",
+          "properties": {
+            "mode": 0.0
+          }
+        },
+        "sindri.shape": {
+          "kind": "rect",
+          "count": 4.0,
+          "fill": [0.8314, 0.9843, 1.0, 1.0],
+          "stroke": [0.0, 0.0, 0.0, 0.0],
+          "stroke_width": 0.0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "layer": 4
+        }
+      }
+    }
+  ]
+}

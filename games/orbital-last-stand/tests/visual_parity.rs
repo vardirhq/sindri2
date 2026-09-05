@@ -128,6 +128,10 @@ fn secondary_enemy_marks_are_authored_as_non_gameplay_children() {
         properties["phaser_mark"].as_str(),
         Some("prefabs/phaser-mark.prefab.json")
     );
+    assert_eq!(
+        properties["prong_mark"].as_str(),
+        Some("prefabs/enemy-prong.prefab.json")
+    );
 
     let arc: serde_json::Value = serde_json::from_str(
         &std::fs::read_to_string(assets.join("prefabs/enemy-arc-mark.prefab.json"))
@@ -164,10 +168,31 @@ fn secondary_enemy_marks_are_authored_as_non_gameplay_children() {
             .is_none()
     );
 
+    let prong: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(assets.join("prefabs/enemy-prong.prefab.json"))
+            .expect("the radial prong prefab exists"),
+    )
+    .expect("the radial prong prefab is JSON");
+    let prong_entity = &prong["entities"][0];
+    assert_eq!(prong_entity["components"]["sindri.shape"]["kind"], "rect");
+    assert!(prong_entity["components"].get("sindri.tags").is_none());
+    assert!(
+        prong_entity["components"]
+            .get("sindri.physics2d.collider")
+            .is_none()
+    );
+
     let script = std::fs::read_to_string(assets.join("scripts/enemy-mark.decay"))
         .expect("the secondary mark script exists");
     assert!(script.contains("this.shape.sweep_turns = 0.675"));
     assert!(script.contains("this.shape.sweep_turns = 0.75"));
     assert!(script.contains("this.shape.dashes = 9.0"));
     assert!(script.contains("sin(this.clock * 12.0)"));
+    assert!(script.contains("sin(this.clock * 4.0 + this.phase)"));
+
+    let drifter_script = std::fs::read_to_string(assets.join("scripts/drifter.decay"))
+        .expect("the shared enemy script exists");
+    assert!(drifter_script.contains("spawn_radial_prongs(1.0, 4.0)"));
+    assert!(drifter_script.contains("spawn_radial_prongs(0.0, 3.0)"));
+    assert!(drifter_script.contains("spawn_arc_mark(4.0)"));
 }
