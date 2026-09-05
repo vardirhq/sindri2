@@ -8,14 +8,8 @@ script Player {
     @export let invulnerable_for: f32 = 0.9;
     @export let view_size: f32 = 11.0;
 
-    // Found by the name the scene gave them. An entity cannot be an
-    // authored property — a runtime handle is not a scene ID and
-    // `docs/scripting.md` says why — so a script that needs to name
-    // another entity looks it up once and keeps it.
     var hurt: Entity = null;
     var target: Entity = null;
-
-
     var cooldown: f32 = 0.0;
     var mercy: f32 = 0.0;
     var was_hit: f32 = 0.0;
@@ -46,8 +40,6 @@ script Player {
 
         if this.mercy > 0.0 {
             this.mercy -= dt;
-            // Blinking while it cannot be hurt, so the rule is visible rather
-            // than something the player has to infer from not dying.
             this.shape.stroke.a = 0.45;
         } else {
             this.shape.stroke.a = 1.0;
@@ -58,15 +50,8 @@ script Player {
         let speed = Game.get("move_speed", 5.2);
         var dx: f32 = Input.axis("A", "D") + Input.axis("ArrowLeft", "ArrowRight");
         var dy: f32 = Input.axis("S", "W") + Input.axis("ArrowDown", "ArrowUp");
-
-        // A thumb is a stick: it anchors where it lands and the ship goes the
-        // way it is pulled, as hard as it is pulled. Steering towards the
-        // finger instead -- which this did -- makes the ship lunge the moment a
-        // thumb touches down, offers no way to ask for gently-left, and parks
-        // the hand over the part of the arena the player is trying to watch.
         if dx == 0.0 && dy == 0.0 && Stick.held && !Pointer.over_ui {
             dx = Stick.x;
-            // The screen's axes grow downward and the world's grow up.
             dy = -Stick.y;
         }
 
@@ -77,7 +62,6 @@ script Player {
         }
         Physics.set_velocity(this.entity, dx * speed, dy * speed);
 
-        // The arena is a circle, so the wall is one too.
         let x = this.transform.position.x;
         let y = this.transform.position.y;
         let out = sqrt(x * x + y * y);
@@ -87,10 +71,6 @@ script Player {
         }
     }
 
-    // The enemy that touched the ship reports what it costs, because a charger
-    // costs more than a drifter and only the charger knows that. It arrives on
-    // the board rather than through the collision, since an event names the
-    // other half of a pair and not what that half is worth.
     fn take_hits() {
         let damage = Game.get("player_damage_taken", 0.0);
         if damage > 0.0 {
@@ -106,6 +86,9 @@ script Player {
 
     fn shoot(dt: f32) {
         this.cooldown -= dt;
+        if Game.get("nullified", 0.0) > 0.0 {
+            return;
+        }
         if this.cooldown > 0.0 {
             return;
         }
@@ -169,6 +152,9 @@ script Player {
     }
 
     fn drop_mine(dt: f32) {
+        if Game.get("nullified", 0.0) > 0.0 {
+            return;
+        }
         if Game.get("mines", 0.0) <= 0.0 {
             return;
         }
@@ -183,8 +169,6 @@ script Player {
         World.set_property(mine, "damage", Game.get("damage", 1.0) * 0.65);
     }
 
-    // Asked once a frame and held, because one call walks every entity in the
-    // world and asking per seeking bullet would be quadratic.
     fn nearest() -> Entity {
         var best: Entity = null;
         var best_distance: f32 = 0.0;
@@ -206,9 +190,6 @@ script Player {
         return best;
     }
 
-    // The camera frames `view_size` on the shorter viewport axis. Include the
-    // enemy's scaled half-size so something entering at the edge becomes a
-    // target when it becomes visible, rather than when its centre crosses it.
     fn is_visible(enemy: Entity) -> bool {
         let aspect = max(Viewport.aspect, 0.001);
         var half_x: f32 = this.view_size * 0.5;
