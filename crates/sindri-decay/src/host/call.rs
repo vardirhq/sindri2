@@ -468,7 +468,7 @@ impl WorldHost<'_> {
             return Err(RuntimeError::Host(format!(
                 "{} needs an entity for {role}, and the script gave {value:?}",
                 path.dotted()
-            ))
+            )));
         };
         let entity = EntityId::from_bits(*bits);
         self.world.get(entity).ok_or_else(|| {
