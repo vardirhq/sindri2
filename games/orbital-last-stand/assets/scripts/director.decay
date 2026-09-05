@@ -141,8 +141,9 @@ script Director {
         if Game.get("cores", 0.0) >= Game.get("next_level", 35.0) {
             let level = Game.get("level", 1.0) + 1.0;
             let threshold = Game.get("next_level", 35.0);
+            Game.set("cores", Game.get("cores", 0.0) - threshold);
             Game.set("level", level);
-            Game.set("next_level", floor(threshold * 1.28 + 8.0));
+            Game.set("next_level", next_xp(threshold));
             publish_module_pool(level);
             Game.set("run_state", 2.0);
             return;
@@ -164,6 +165,14 @@ script Director {
             spawn_one();
             this.spawn_timer += rate;
         }
+    }
+
+    fn next_xp(threshold: f32) -> f32 {
+        // Reference: floor(threshold * 1.28 + 8). Decay has modulo but no
+        // floor builtin. 1.28 is exactly 32/25 for these integer thresholds,
+        // so remove the remainder before dividing instead of approximating.
+        let scaled = threshold * 32.0;
+        return (scaled - scaled % 25.0) / 25.0 + 8.0;
     }
 
     fn publish_module_pool(level: f32) {
