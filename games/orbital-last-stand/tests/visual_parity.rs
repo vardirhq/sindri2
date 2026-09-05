@@ -1,4 +1,4 @@
-use orbital_last_stand::{project, Run};
+use orbital_last_stand::{Run, project};
 use serde_json::json;
 use sindri_core::EntityId;
 
@@ -137,7 +137,11 @@ fn secondary_enemy_marks_are_authored_as_non_gameplay_children() {
     let arc_entity = &arc["entities"][0];
     assert_eq!(arc_entity["components"]["sindri.shape"]["kind"], "ellipse");
     assert!(arc_entity["components"].get("sindri.tags").is_none());
-    assert!(arc_entity["components"].get("sindri.physics2d.collider").is_none());
+    assert!(
+        arc_entity["components"]
+            .get("sindri.physics2d.collider")
+            .is_none()
+    );
 
     let phaser: serde_json::Value = serde_json::from_str(
         &std::fs::read_to_string(assets.join("prefabs/phaser-mark.prefab.json"))
