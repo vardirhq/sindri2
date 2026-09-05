@@ -4,14 +4,20 @@ script Nova {
     @export let damage: f32 = 0.3;
     @export let life: f32 = 0.13;
     var age: f32 = 0.0;
+    var retiring: bool = false;
 
     fn update(dt: f32) {
+        if this.retiring {
+            World.despawn(this.entity);
+            return;
+        }
         this.age += dt;
         this.shape.stroke.a = max(0.0, 1.0 - this.age / this.life);
         this.transform.scale.x += dt * 2.0;
         this.transform.scale.y += dt * 2.0;
         if this.age >= this.life {
-            World.despawn(this.entity);
+            // Do not invalidate a collision another script has yet to consume.
+            this.retiring = true;
         }
     }
 }

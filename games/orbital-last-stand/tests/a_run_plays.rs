@@ -127,6 +127,74 @@ fn regular_enemies_keep_the_reference_shot_counts() {
     }
 }
 
+/// A hit belongs to both entities even when the projectile's script runs first.
+///
+/// Projectiles used to burst and immediately despawn on their own turn. An
+/// enemy later in world order then received the same physics event with a dead
+/// handle and deliberately ignored it, making identical targets appear to have
+/// random durability. Exercise both orders because reused entity slots can
+/// produce either one during a real run.
+#[test]
+fn visible_base_hits_apply_in_either_script_order() {
+    for projectiles_first in [false, true] {
+        let mut run = Run::open().expect("the project opens");
+        play(&mut run, 0.1);
+        run.click("TitleStart");
+        play(&mut run, STEP);
+        run.set_board("hp", 1000.0);
+
+        let at = [40.0, 40.0, 0.0];
+        let mut bullets = Vec::new();
+        let enemy;
+        if projectiles_first {
+            bullets.push(spawn_at(&mut run, "prefabs/bullet.prefab.json", at));
+            bullets.push(spawn_at(&mut run, "prefabs/bullet.prefab.json", at));
+            enemy = spawn_at(&mut run, "prefabs/drifter.prefab.json", at);
+            assert!(bullets[1].index() < enemy.index(), "the shots must run first");
+        } else {
+            enemy = spawn_at(&mut run, "prefabs/drifter.prefab.json", at);
+            bullets.push(spawn_at(&mut run, "prefabs/bullet.prefab.json", at));
+            bullets.push(spawn_at(&mut run, "prefabs/bullet.prefab.json", at));
+            assert!(enemy.index() < bullets[0].index(), "the enemy must run first");
+        }
+
+        let notes = run.step(STEP);
+        assert!(notes.is_empty(), "collision pass: {notes:#?}");
+        assert!(
+            run.world.get(enemy).is_none(),
+            "two visible base hits did not kill the drifter when projectiles_first={projectiles_first}"
+        );
+        assert!(
+            bullets.iter().all(|bullet| run.world.get(*bullet).is_some()),
+            "spent shots must remain readable through the collision pass"
+        );
+
+        let notes = run.step(STEP);
+        assert!(notes.is_empty(), "retirement pass: {notes:#?}");
+        assert!(
+            bullets.iter().all(|bullet| run.world.get(*bullet).is_none()),
+            "spent shots should retire on their following tick"
+        );
+    }
+}
+
+fn spawn_at(run: &mut Run, prefab: &str, position: [f32; 3]) -> sindri_core::EntityId {
+    let document = run.prefabs.get(prefab).expect("the prefab is loaded");
+    let spawned = run
+        .world
+        .spawn_prefab(document)
+        .expect("the prefab spawns")
+        .root;
+    run.world
+        .get_mut(spawned)
+        .expect("the spawned root exists")
+        .transform_3d
+        .as_mut()
+        .expect("the prefab root has a transform")
+        .position = position;
+    spawned
+}
+
 /// 4. Spawn, update, collide, and despawn continuously.
 /// 5. Three enemy behaviours widening over elapsed time.
 #[test]

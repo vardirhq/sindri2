@@ -9,19 +9,27 @@ script Beam {
     @export let damage: f32 = 0.23;
 
     var age: f32 = 0.0;
+    var retiring: bool = false;
 
     fn start() {
         Physics.set_velocity(this.entity, this.dir_x * this.speed, this.dir_y * this.speed);
     }
 
     fn update(dt: f32) {
+        if this.retiring {
+            World.despawn(this.entity);
+            return;
+        }
         if Game.get("run_state", 0.0) != 1.0 {
             Physics.set_velocity(this.entity, 0.0, 0.0);
             return;
         }
         this.age += dt;
         if this.age >= this.life {
-            World.despawn(this.entity);
+            // Its final physics step may have produced a collision an enemy
+            // still needs to read later in this script pass.
+            this.retiring = true;
+            Physics.set_velocity(this.entity, 0.0, 0.0);
         }
     }
 }
