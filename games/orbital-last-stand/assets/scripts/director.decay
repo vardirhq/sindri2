@@ -1,40 +1,22 @@
-// The run itself: what state it is in, what is spawning, and when it ends.
-//
-// Every other script asks this one what is happening by reading "run_state"
-// off the shared board rather than being told, because a script that has to be
-// told is a script the director has to keep a list of.
-//
-//   0  the title screen        3  paused
-//   1  playing                 4  over
-//   2  choosing an upgrade
+// Owns Last Stand campaign timing and spawning. Reference details and deliberate
+// parity gaps live in docs/last-stand-reference-parity.md.
 script Director {
-
     @export let drifter: Prefab;
     @export let charger: Prefab;
     @export let splitter: Prefab;
     @export let warden: Prefab;
-
-    // These two legacy exports stay declared because the current authored scene
-    // still carries them. Gameplay no longer reads either value.
     @export let wave_gap: f32 = 6.0;
     @export let boss_at: f32 = 180.0;
-
-    // Reference Last Stand campaign constants. Keeping them authored makes the
-    // acceptance harness able to shorten one concern without inventing a test-
-    // only gameplay API.
     @export let first_boss_at: f32 = 60.0;
     @export let boss_interval: f32 = 60.0;
     @export let run_limit: f32 = 600.0;
     @export let normal_spawn: f32 = 1.12;
     @export let arena: f32 = 7.5;
 
-    // Found by the name the scene gave them. An entity cannot be an authored
-    // property: a runtime handle is not a scene ID, so scripts look these up.
     var title: Entity = null;
     var hud: Entity = null;
     var pause_screen: Entity = null;
     var result_screen: Entity = null;
-
     var elapsed: f32 = 0.0;
     var spawn_timer: f32 = 0.0;
     var next_boss: f32 = 60.0;
@@ -57,20 +39,14 @@ script Director {
         World.set_active(this.result_screen, false);
     }
 
-    // A run starts from a seed so it can be replayed, and the seed is the one
-    // thing about a run worth storing: the numbers it produces are not.
     fn begin() {
         let seed = Save.number("runs", 0.0) + 1.0;
         Save.set_number("runs", seed);
         Random.seed(seed);
-
         this.elapsed = 0.0;
-        // Reference runtime begins at zero, so the first regular may enter on
-        // the first playing frame rather than waiting out one whole interval.
         this.spawn_timer = 0.0;
         this.next_boss = this.first_boss_at;
         this.boss_count = 0.0;
-
         Game.set("score", 0.0);
         Game.set("kills", 0.0);
         Game.set("cores", 0.0);
@@ -82,18 +58,14 @@ script Director {
         Game.set("boss_hp", 0.0);
         Game.set("boss_max", 0.0);
         Game.set("victory", 0.0);
-        // `Stats` and `Player` own their numbers; the Director only requests a
-        // clean run state.
         Game.set("stats_reset", 1.0);
         Game.set("player_reset", 1.0);
-
         clear_tag("enemy");
         clear_tag("bullet");
         clear_tag("player_damage");
         clear_tag("mine");
         clear_tag("core");
         clear_tag("hostile_shot");
-
         World.set_active(this.title, false);
         World.set_active(this.hud, true);
         World.set_active(this.result_screen, false);
@@ -101,9 +73,7 @@ script Director {
     }
 
     fn clear_tag(tag: String) {
-        for entity in World.with_tag(tag) {
-            World.despawn(entity);
-        }
+        for entity in World.with_tag(tag) { World.despawn(entity); }
     }
 
     fn update(dt: f32) {
@@ -113,7 +83,6 @@ script Director {
             World.set_active(this.pause_screen, state == 3.0);
             World.set_active(this.result_screen, state == 4.0);
         }
-
         if state == 0.0 {
             if Game.get("request_start", 0.0) > 0.0 {
                 Game.set("request_start", 0.0);
@@ -128,20 +97,11 @@ script Director {
             }
             return;
         }
-
-        // Pause is the player's, so it is read in every state a run can be
-        // paused from and in no state it cannot.
         if Input.just_pressed("Escape") {
-            if state == 1.0 {
-                Game.set("run_state", 3.0);
-            } else if state == 3.0 {
-                Game.set("run_state", 1.0);
-            }
+            if state == 1.0 { Game.set("run_state", 3.0); }
+            else if state == 3.0 { Game.set("run_state", 1.0); }
         }
-        if state != 1.0 {
-            return;
-        }
-
+        if state != 1.0 { return; }
         if Game.get("hp", 1.0) <= 0.0 {
             Game.set("victory", 0.0);
             end_run();
@@ -151,9 +111,6 @@ script Director {
         this.elapsed += dt;
         Game.set("elapsed", this.elapsed);
         publish_sector();
-
-        // The reference wins immediately at 600 seconds before the remainder
-        // of that frame can spawn, attack or offer another choice.
         if this.elapsed >= this.run_limit {
             this.elapsed = this.run_limit;
             Game.set("elapsed", this.run_limit);
@@ -161,10 +118,6 @@ script Director {
             end_run();
             return;
         }
-
-        // Enough cores buys a choice, and the choice is what pauses the run.
-        // This economy is still provisional; the reference XP curve is the next
-        // progression-parity layer after the campaign skeleton.
         if Game.get("cores", 0.0) >= Game.get("next_level", 4.0) {
             let level = Game.get("level", 1.0) + 1.0;
             Game.set("level", level);
@@ -179,17 +132,9 @@ script Director {
             Game.set("boss_count", this.boss_count);
             this.next_boss += this.boss_interval;
             send_boss();
-            // The Warden publishes boss_hp from its own start(), later in the
-            // script pass. Returning prevents a regular spawn in that gap.
             return;
         }
-
-        // Normal reference Last Stand is a clean boss duel. If a boss survives
-        // beyond another scheduled minute, that boss opportunity remains due
-        // and is handled after the arena is boss-free again.
-        if boss_alive {
-            return;
-        }
+        if boss_alive { return; }
 
         this.spawn_timer -= dt;
         let rate = spawn_rate();
@@ -204,9 +149,7 @@ script Director {
         Game.set("boss_hp", 0.0);
         Game.set("boss_max", 0.0);
         let score = Game.get("score", 0.0);
-        if score > Save.number("best_score", 0.0) {
-            Save.set_number("best_score", score);
-        }
+        if score > Save.number("best_score", 0.0) { Save.set_number("best_score", score); }
         Save.set_number("total_kills", Save.number("total_kills", 0.0) + Game.get("kills", 0.0));
         clear_tag("enemy");
         clear_tag("player_damage");
@@ -214,67 +157,87 @@ script Director {
         clear_tag("hostile_shot");
     }
 
-    // Exact neutral Normal reference pressure for systems Sindri currently has:
-    // base timer curve / Normal difficulty spawn modifier / sector pressure.
-    // Event, route and boss-arena special pressure modifiers are intentionally
-    // absent until those systems exist rather than being faked here.
     fn spawn_rate() -> f32 {
         return max(0.085, 0.7 - this.elapsed * 0.00092) /
                (this.normal_spawn * sector_pressure());
     }
 
     fn sector_pressure() -> f32 {
-        if this.elapsed >= 480.0 {
-            return 1.27;
-        }
-        if this.elapsed >= 360.0 {
-            return 1.18;
-        }
-        if this.elapsed >= 240.0 {
-            return 1.12;
-        }
-        if this.elapsed >= 120.0 {
-            return 1.07;
-        }
+        if this.elapsed >= 480.0 { return 1.27; }
+        if this.elapsed >= 360.0 { return 1.18; }
+        if this.elapsed >= 240.0 { return 1.12; }
+        if this.elapsed >= 120.0 { return 1.07; }
         return 1.0;
     }
 
     fn publish_sector() {
-        if this.elapsed >= 480.0 {
-            Game.set("sector", 5.0);
-        } else if this.elapsed >= 360.0 {
-            Game.set("sector", 4.0);
-        } else if this.elapsed >= 240.0 {
-            Game.set("sector", 3.0);
-        } else if this.elapsed >= 120.0 {
-            Game.set("sector", 2.0);
-        } else {
-            Game.set("sector", 1.0);
-        }
+        if this.elapsed >= 480.0 { Game.set("sector", 5.0); }
+        else if this.elapsed >= 360.0 { Game.set("sector", 4.0); }
+        else if this.elapsed >= 240.0 { Game.set("sector", 3.0); }
+        else if this.elapsed >= 120.0 { Game.set("sector", 2.0); }
+        else { Game.set("sector", 1.0); }
     }
 
-    // The reference chooses uniformly from archetypes unlocked at the current
-    // elapsed time. With only three authored enemies this preserves the first
-    // three unlock timestamps while the remaining twelve are implemented.
+    // Uniform selection from every archetype unlocked at this instant, exactly
+    // like the reference. Dart keeps its authored charge/wind-up prefab; the
+    // remaining archetypes share the roster script and receive their role data
+    // before their first script pass.
     fn spawn_one() {
-        let roll = Random.value();
-        if this.elapsed >= 70.0 {
-            if roll < 0.3333333 {
-                place(World.spawn(this.drifter));
-            } else if roll < 0.6666667 {
-                place(World.spawn(this.charger));
-            } else {
-                place(World.spawn(this.splitter));
-            }
-        } else if this.elapsed >= 35.0 {
-            if roll < 0.5 {
-                place(World.spawn(this.drifter));
-            } else {
-                place(World.spawn(this.charger));
-            }
-        } else {
-            place(World.spawn(this.drifter));
+        let count = unlocked_count();
+        let slot = floor(Random.value() * count);
+        if slot == 2.0 {
+            place(World.spawn(this.charger));
+            return;
         }
+        spawn_roster(slot);
+    }
+
+    fn unlocked_count() -> f32 {
+        if this.elapsed >= 545.0 { return 15.0; }
+        if this.elapsed >= 505.0 { return 14.0; }
+        if this.elapsed >= 455.0 { return 13.0; }
+        if this.elapsed >= 430.0 { return 12.0; }
+        if this.elapsed >= 405.0 { return 11.0; }
+        if this.elapsed >= 335.0 { return 10.0; }
+        if this.elapsed >= 310.0 { return 9.0; }
+        if this.elapsed >= 285.0 { return 8.0; }
+        if this.elapsed >= 230.0 { return 7.0; }
+        if this.elapsed >= 190.0 { return 6.0; }
+        if this.elapsed >= 170.0 { return 5.0; }
+        if this.elapsed >= 120.0 { return 4.0; }
+        if this.elapsed >= 70.0 { return 3.0; }
+        if this.elapsed >= 35.0 { return 2.0; }
+        return 1.0;
+    }
+
+    fn spawn_roster(kind: f32) {
+        let enemy = World.spawn(this.drifter);
+        World.set_property(enemy, "kind", kind);
+        // Health is reference HP expressed in base-shot equivalents. This keeps
+        // relative toughness faithful without importing the reference's pixel/
+        // damage scale into Sindri's deliberately smaller numeric economy.
+        if kind == 0.0 { configure(enemy, 1.5, 2.0, 1.0, 1.0); }
+        else if kind == 1.0 { configure(enemy, 1.0, 3.0, 2.25, 1.5); }
+        else if kind == 3.0 { configure(enemy, 0.82, 6.0, 3.75, 2.0); }
+        else if kind == 4.0 { configure(enemy, 1.88, 3.0, 3.0, 1.2); }
+        else if kind == 5.0 { configure(enemy, 0.86, 7.0, 6.0, 1.6); }
+        else if kind == 6.0 { configure(enemy, 1.25, 4.0, 4.0, 1.4); }
+        else if kind == 7.0 { configure(enemy, 2.52, 2.0, 2.0, 0.7); }
+        else if kind == 8.0 { configure(enemy, 1.4, 5.0, 5.75, 1.3); }
+        else if kind == 9.0 { configure(enemy, 1.06, 4.0, 4.75, 1.3); }
+        else if kind == 10.0 { configure(enemy, 1.68, 5.0, 5.25, 1.5); }
+        else if kind == 11.0 { configure(enemy, 1.78, 7.0, 7.25, 1.9); }
+        else if kind == 12.0 { configure(enemy, 1.82, 6.0, 6.25, 1.6); }
+        else if kind == 13.0 { configure(enemy, 0.92, 8.0, 7.75, 1.8); }
+        else { configure(enemy, 2.02, 6.0, 7.25, 1.7); }
+        place(enemy);
+    }
+
+    fn configure(enemy: Entity, speed: f32, health: f32, worth: f32, touch: f32) {
+        World.set_property(enemy, "speed", speed);
+        World.set_property(enemy, "health", health);
+        World.set_property(enemy, "worth", worth);
+        World.set_property(enemy, "touch_damage", touch);
     }
 
     fn send_boss() {
@@ -285,8 +248,6 @@ script Director {
         boss.transform.position.y = this.arena;
     }
 
-    // Around the edge rather than on top of the player, which is the one place
-    // an enemy appearing is unfair rather than difficult.
     fn place(enemy: Entity) {
         let angle = Random.range(0.0, 6.2831853);
         enemy.transform.position.x = cos(angle) * this.arena;
