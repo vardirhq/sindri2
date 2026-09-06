@@ -332,17 +332,19 @@ script Director {
     fn send_boss() {
         clear_tag("enemy");
         clear_tag("hostile_shot");
-        // Tier one mirrors the reference roster. Avoid either of the two most
-        // recent picks so four consecutive minute bosses cannot repeat.
-        var pick: f32 = Random.int(0.0, 3.0);
+        // The reference expands from four bosses to nine at 4:00 and all
+        // eleven at 8:00. Avoid either of the two most recent eligible picks.
+        let boss_pool = eligible_boss_count();
+        Game.set("boss_pool", boss_pool);
+        var pick: f32 = Random.int(0.0, boss_pool - 1.0);
         var attempts: f32 = 0.0;
         while attempts < 8.0 && (pick == this.last_boss || pick == this.previous_boss) {
-            pick = Random.int(0.0, 3.0);
+            pick = Random.int(0.0, boss_pool - 1.0);
             attempts += 1.0;
         }
         // A pathological random streak must not weaken the no-repeat rule.
         while pick == this.last_boss || pick == this.previous_boss {
-            pick = (pick + 1.0) % 4.0;
+            pick = (pick + 1.0) % boss_pool;
         }
         this.previous_boss = this.last_boss;
         this.last_boss = pick;
@@ -356,6 +358,12 @@ script Director {
         }
         boss.transform.position.x = 0.0;
         boss.transform.position.y = this.arena;
+    }
+
+    fn eligible_boss_count() -> f32 {
+        if this.elapsed >= 480.0 { return 11.0; }
+        if this.elapsed >= 240.0 { return 9.0; }
+        return 4.0;
     }
 
     fn place(enemy: Entity) {

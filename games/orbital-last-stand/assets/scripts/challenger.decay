@@ -1,5 +1,6 @@
-// The remaining tier-one bosses from the reference game.
-// kind: 0 Harrower, 1 Prism, 2 Singularity.
+// The remaining bosses from the reference game.
+// 0 Harrower, 1 Prism, 2 Singularity, 3 Crown, 4 Brood, 5 Mirror,
+// 6 Architect, 7 Spine, 8 Leviathan, 9 Last Light.
 script Challenger {
     @export let kind: f32 = 0.0;
     @export let view_size: f32 = 11.0;
@@ -7,6 +8,7 @@ script Challenger {
     @export let core: Prefab;
     @export let drop_roll: Prefab;
     @export let death_burst: Prefab;
+    @export let minion: Prefab;
     @export let hazard_damage: f32 = 0.0;
 
     var health: f32 = 132.0;
@@ -56,7 +58,7 @@ script Challenger {
             this.speed = 0.95;
             this.shape.count = 7.0;
             tint(0.56, 0.91, 1.0);
-        } else {
+        } else if this.kind == 2.0 {
             // Singularity: slow, dense gravity-well spirals.
             this.health = 158.0;
             this.worth = 52.0;
@@ -64,6 +66,57 @@ script Challenger {
             this.speed = 0.82;
             this.shape.count = 12.0;
             tint(0.78, 0.49, 1.0);
+        } else if this.kind == 3.0 {
+            this.health = 184.0;
+            this.worth = 58.0;
+            this.touch_damage = 2.4;
+            this.speed = 0.92;
+            this.shape.count = 10.0;
+            tint(1.0, 0.88, 0.42);
+        } else if this.kind == 4.0 {
+            this.health = 198.0;
+            this.worth = 62.0;
+            this.touch_damage = 1.7;
+            this.speed = 0.96;
+            this.shape.count = 8.0;
+            tint(0.72, 1.0, 0.4);
+        } else if this.kind == 5.0 {
+            this.health = 211.0;
+            this.worth = 66.0;
+            this.touch_damage = 2.0;
+            this.speed = 1.05;
+            this.shape.count = 4.0;
+            tint(1.0, 0.55, 0.85);
+        } else if this.kind == 6.0 {
+            this.health = 228.0;
+            this.worth = 72.0;
+            this.touch_damage = 2.25;
+            this.speed = 0.88;
+            this.shape.count = 6.0;
+            tint(0.45, 0.96, 1.0);
+        } else if this.kind == 7.0 {
+            this.health = 224.0;
+            this.worth = 74.0;
+            this.touch_damage = 2.25;
+            this.speed = 1.0;
+            this.shape.count = 10.0;
+            tint(1.0, 0.5, 0.62);
+        } else if this.kind == 8.0 {
+            this.health = 234.0;
+            this.worth = 80.0;
+            this.touch_damage = 2.65;
+            this.speed = 0.68;
+            this.transform.scale.x = 2.35;
+            this.transform.scale.y = 2.35;
+            this.shape.count = 8.0;
+            tint(0.43, 1.0, 0.79);
+        } else {
+            this.health = 254.0;
+            this.worth = 86.0;
+            this.touch_damage = 2.65;
+            this.speed = 0.98;
+            this.shape.count = 16.0;
+            tint(1.0, 0.95, 0.6);
         }
     }
 
@@ -106,9 +159,31 @@ script Challenger {
         } else if this.kind == 1.0 {
             orbit(dx, dy, far, 5.2, 0.42);
             prism_attack(dt, dx, dy, far);
-        } else {
+        } else if this.kind == 2.0 {
             orbit(dx, dy, far, 4.2, 0.58);
             singularity_attack(dt);
+        } else if this.kind == 3.0 {
+            orbit(dx, dy, far, 4.7, 0.34);
+            crown_attack(dt);
+        } else if this.kind == 4.0 {
+            orbit(dx, dy, far, 5.0, 0.32);
+            brood_attack(dt, dx, dy, far);
+        } else if this.kind == 5.0 {
+            orbit(dx, dy, far, 4.8, mirror_tangent());
+            mirror_attack(dt, player);
+        } else if this.kind == 6.0 {
+            anchor_move(-3.7);
+            architect_attack(dt, player);
+        } else if this.kind == 7.0 {
+            update_spine_armor();
+            orbit(dx, dy, far, 4.5, 0.38);
+            spine_attack(dt);
+        } else if this.kind == 8.0 {
+            anchor_move(-4.2);
+            leviathan_attack(dt, player);
+        } else {
+            orbit(dx, dy, far, 4.4, 0.4);
+            last_light_attack(dt, player);
         }
 
         receive_hits(player);
@@ -119,7 +194,14 @@ script Challenger {
     fn rotation_speed() -> f32 {
         if this.kind == 0.0 { return 0.9; }
         if this.kind == 1.0 { return -0.55; }
-        return -1.05;
+        if this.kind == 2.0 { return -1.05; }
+        if this.kind == 3.0 { return 0.58; }
+        if this.kind == 4.0 { return -0.42; }
+        if this.kind == 5.0 { return 0.72; }
+        if this.kind == 6.0 { return 0.2; }
+        if this.kind == 7.0 { return -0.8; }
+        if this.kind == 8.0 { return 0.12; }
+        return -0.48;
     }
 
     fn update_phase(dt: f32) {
@@ -148,7 +230,14 @@ script Challenger {
     fn configure_color_only() {
         if this.kind == 0.0 { tint(1.0, 0.61, 0.36); }
         else if this.kind == 1.0 { tint(0.56, 0.91, 1.0); }
-        else { tint(0.78, 0.49, 1.0); }
+        else if this.kind == 2.0 { tint(0.78, 0.49, 1.0); }
+        else if this.kind == 3.0 { tint(1.0, 0.88, 0.42); }
+        else if this.kind == 4.0 { tint(0.72, 1.0, 0.4); }
+        else if this.kind == 5.0 { tint(1.0, 0.55, 0.85); }
+        else if this.kind == 6.0 { tint(0.45, 0.96, 1.0); }
+        else if this.kind == 7.0 { tint(1.0, 0.5, 0.62); }
+        else if this.kind == 8.0 { tint(0.43, 1.0, 0.79); }
+        else { tint(1.0, 0.95, 0.6); }
     }
 
     fn harrower_move(dt: f32, dx: f32, dy: f32, far: f32) {
@@ -210,6 +299,182 @@ script Challenger {
         } else {
             fire_ring(12.0, 2.65, 0.0);
             this.attack = 1.05;
+        }
+    }
+
+    fn crown_attack(dt: f32) {
+        this.attack -= dt;
+        if this.attack > 0.0 { return; }
+        var rings: f32 = 2.0;
+        if this.phase == 2.0 { rings = 3.0; }
+        var ring: f32 = 0.0;
+        while ring < rings {
+            var slot: f32 = 0.0;
+            while slot < 10.0 {
+                let angle = this.clock * 0.58 + slot / 10.0 * 6.2831853 + ring * 0.16;
+                fire_at(this.transform.position.x, this.transform.position.y,
+                        angle, 3.0 + ring * 1.15, 1.0);
+                slot += 1.0;
+            }
+            ring += 1.0;
+        }
+        if this.phase == 2.0 { this.attack = 0.62; }
+        else { this.attack = 0.95; }
+        Audio.play("audio/boss.wav", 0.42);
+    }
+
+    fn brood_attack(dt: f32, dx: f32, dy: f32, far: f32) {
+        this.attack -= dt;
+        this.special -= dt;
+        if this.attack <= 0.0 && far > 0.001 {
+            if this.phase == 2.0 { fire_fan(dx / far, dy / far, 5.0, 4.0); }
+            else { fire_fan(dx / far, dy / far, 3.0, 3.5); }
+            if this.phase == 2.0 { this.attack = 1.25; }
+            else { this.attack = 1.75; }
+        }
+        if this.special <= 0.0 {
+            var made: f32 = 0.0;
+            while made < 2.0 {
+                let angle = this.offset + made * 3.14159265;
+                let helper = World.spawn(this.minion);
+                helper.transform.position.x = this.transform.position.x + cos(angle) * 1.4;
+                helper.transform.position.y = this.transform.position.y + sin(angle) * 1.4;
+                made += 1.0;
+            }
+            Effects.burst(this.entity);
+            if this.phase == 2.0 { this.special = 3.7; }
+            else { this.special = 5.0; }
+        }
+    }
+
+    fn mirror_tangent() -> f32 {
+        if sin(this.clock * 0.7) > 0.0 { return 0.48; }
+        return -0.48;
+    }
+
+    fn mirror_attack(dt: f32, player: Entity) {
+        this.attack -= dt;
+        if this.attack > 0.0 { return; }
+        let px = player.transform.position.x;
+        let py = player.transform.position.y;
+        fire_origin_fan(this.transform.position.x, this.transform.position.y, px, py);
+        fire_origin_fan(-this.transform.position.x, -this.transform.position.y, px, py);
+        if this.phase == 2.0 { this.attack = 0.88; }
+        else { this.attack = 1.24; }
+        Audio.play("audio/boss.wav", 0.42);
+    }
+
+    fn fire_origin_fan(x: f32, y: f32, px: f32, py: f32) {
+        let aim = atan2(py - y, px - x);
+        var spread: f32 = 2.0;
+        if this.phase == 2.0 { spread = 3.0; }
+        var slot: f32 = -spread;
+        while slot <= spread {
+            fire_at(x, y, aim + slot * 0.19, 4.25, 1.0);
+            slot += 1.0;
+        }
+    }
+
+    fn anchor_move(target_y: f32) {
+        let dx = -this.transform.position.x;
+        let dy = target_y - this.transform.position.y;
+        let far = sqrt(dx * dx + dy * dy);
+        if far > 0.15 {
+            Physics.set_velocity(this.entity, dx / far * this.speed,
+                                 dy / far * this.speed);
+        } else {
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+        }
+    }
+
+    fn architect_attack(dt: f32, player: Entity) {
+        this.attack -= dt;
+        this.special -= dt;
+        if this.attack <= 0.0 {
+            fire_origin_fan(this.transform.position.x, this.transform.position.y,
+                            player.transform.position.x, player.transform.position.y);
+            if this.phase == 2.0 { this.attack = 1.9; }
+            else { this.attack = 2.7; }
+        }
+        if this.special <= 0.0 {
+            fire_cross(player.transform.position.x, player.transform.position.y);
+            if this.phase == 2.0 { this.special = 2.35; }
+            else { this.special = 3.1; }
+        }
+    }
+
+    fn fire_cross(x: f32, y: f32) {
+        var slot: f32 = 0.0;
+        while slot < 4.0 {
+            let angle = slot * 1.5707963;
+            fire_at(x - cos(angle) * 5.8, y - sin(angle) * 5.8,
+                    angle, 5.6, 1.2);
+            slot += 1.0;
+        }
+        Audio.play("audio/boss.wav", 0.48);
+    }
+
+    fn update_spine_armor() {
+        let share = this.hp / max(Game.get("boss_max", 1.0), 1.0);
+        if share > 0.8 { this.shape.count = 10.0; }
+        else if share > 0.6 { this.shape.count = 9.0; }
+        else if share > 0.4 { this.shape.count = 8.0; }
+        else if share > 0.2 { this.shape.count = 7.0; }
+        else { this.shape.count = 5.0; }
+    }
+
+    fn spine_attack(dt: f32) {
+        this.attack -= dt;
+        if this.attack > 0.0 { return; }
+        fire_ring(14.0, 3.55, 1.0);
+        if this.phase == 2.0 { this.attack = 0.68; }
+        else { this.attack = 1.0; }
+    }
+
+    fn leviathan_attack(dt: f32, player: Entity) {
+        this.attack -= dt;
+        this.special -= dt;
+        if this.attack <= 0.0 {
+            fire_edge_volley(player.transform.position.y);
+            if this.phase == 2.0 { this.attack = 1.05; }
+            else { this.attack = 1.45; }
+        }
+        if this.special <= 0.0 {
+            fire_cross(player.transform.position.x, player.transform.position.y);
+            if this.phase == 2.0 { this.special = 2.6; }
+            else { this.special = 3.5; }
+        }
+    }
+
+    fn fire_edge_volley(target_y: f32) {
+        var count: f32 = 3.0;
+        if this.phase == 2.0 { count = 4.0; }
+        var slot: f32 = 0.0;
+        while slot < count {
+            let y = target_y + (slot - (count - 1.0) * 0.5) * 1.05;
+            if sin(this.clock) < 0.0 {
+                fire_at(-visible_half_x() - 0.3, y, 0.0, 4.2, 1.0);
+            } else {
+                fire_at(visible_half_x() + 0.3, y, 3.14159265, 4.2, 1.0);
+            }
+            slot += 1.0;
+        }
+        Audio.play("audio/boss.wav", 0.46);
+    }
+
+    fn last_light_attack(dt: f32, player: Entity) {
+        this.attack -= dt;
+        this.special -= dt;
+        if this.attack <= 0.0 {
+            if this.phase == 2.0 { fire_ring(22.0, 4.1, 1.0); }
+            else { fire_ring(18.0, 3.75, 2.0); }
+            if this.phase == 2.0 { this.attack = 0.58; }
+            else { this.attack = 0.82; }
+        }
+        if this.special <= 0.0 {
+            fire_cross(player.transform.position.x, player.transform.position.y);
+            if this.phase == 2.0 { this.special = 2.15; }
+            else { this.special = 2.8; }
         }
     }
 
@@ -277,7 +542,13 @@ script Challenger {
                 Game.set("player_damage_taken",
                          max(Game.get("player_damage_taken", 0.0), this.touch_damage));
             } else if World.exists(hit) && World.has_tag(hit, "player_damage") {
-                let damage = World.property_number(hit, "damage", 0.0);
+                var damage: f32 = World.property_number(hit, "damage", 0.0);
+                if this.kind == 7.0 {
+                    let share = this.hp / max(Game.get("boss_max", 1.0), 1.0);
+                    if share > 0.6 { damage *= 0.72; }
+                    else if share > 0.4 { damage *= 0.82; }
+                    else if share > 0.2 { damage *= 0.92; }
+                }
                 this.hp -= damage;
                 if this.hp <= 0.0 && World.property_number(hit, "nova", 0.0) > 0.0 {
                     this.death_burst_damage = damage * 0.3;

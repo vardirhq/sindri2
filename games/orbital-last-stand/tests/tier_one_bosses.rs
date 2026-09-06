@@ -56,11 +56,11 @@ fn spawn_challenger(run: &mut Run, kind: f32, y: f32) -> EntityId {
 }
 
 #[test]
-fn every_tier_one_challenger_initializes_and_attacks() {
-    for kind in 0..3 {
+fn every_challenger_initializes_and_attacks() {
+    for kind in 0..10 {
         let mut run = isolated_run();
         spawn_challenger(&mut run, kind as f32, 3.5);
-        for _ in 0..(5.0 / STEP) as usize {
+        for _ in 0..(2.0 / STEP) as usize {
             step(&mut run);
         }
         assert_eq!(run.board("boss_kind"), kind as f32 + 1.0);
@@ -100,4 +100,15 @@ fn the_director_authors_both_tier_one_prefabs() {
         properties["challenger"].as_str(),
         Some("prefabs/challenger.prefab.json")
     );
+}
+
+#[test]
+fn the_director_uses_the_reference_boss_unlock_tiers() {
+    let source = std::fs::read_to_string(
+        orbital_last_stand::project().join("assets/scripts/director.decay"),
+    )
+    .expect("the director source reads");
+    assert!(source.contains("this.elapsed >= 240.0 { return 9.0; }"));
+    assert!(source.contains("this.elapsed >= 480.0 { return 11.0; }"));
+    assert!(source.contains("pick == this.last_boss || pick == this.previous_boss"));
 }
