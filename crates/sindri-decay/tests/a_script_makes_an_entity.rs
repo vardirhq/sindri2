@@ -132,7 +132,7 @@ fn a_script_creates_the_entity_a_prefab_describes() {
 #[test]
 fn spawn_child_attaches_the_prefab_and_starts_it_in_the_same_frame() {
     let (mut world, sources, prefabs) = world(
-        r"
+        r#"
         script Spawner {
             @export let bullet: Prefab;
             fn start() {
@@ -140,7 +140,7 @@ fn spawn_child_attaches_the_prefab_and_starts_it_in_the_same_frame() {
                 World.set_property(shot, "speed", 7.0);
             }
         }
-        ",
+        "#,
         Some(
             r"
         script Bullet {
