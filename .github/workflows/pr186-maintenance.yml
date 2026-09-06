@@ -6,7 +6,7 @@ on:
       - codex/last-stand-module-registry
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   generate:
@@ -20,14 +20,11 @@ jobs:
         run: cargo fmt --all
       - name: Regenerate capability documents
         run: cargo run -p sindri-capabilities -- --write
-      - name: Collect generated fixes
+      - name: Commit generated fixes and remove this workflow
         run: |
-          git diff --name-only > /tmp/changed-files.txt
-          tar -czf /tmp/pr186-maintenance.tar.gz -T /tmp/changed-files.txt
-          cat /tmp/changed-files.txt
-      - uses: actions/upload-artifact@v7
-        with:
-          name: pr186-maintenance
-          path: /tmp/pr186-maintenance.tar.gz
-          if-no-files-found: error
-          retention-days: 1
+          rm .github/workflows/pr186-maintenance.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Apply formatting and generated profile docs"
+          git push origin HEAD:codex/last-stand-module-registry
