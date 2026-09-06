@@ -4,23 +4,41 @@ script Showcase {
     @export let pulse: f32 = 0.0;
     @export let pulse_speed: f32 = 2.5;
     @export let phase: f32 = 0.0;
+    @export let bob_x: f32 = 0.0;
+    @export let bob_y: f32 = 0.0;
+    @export let bob_speed: f32 = 1.0;
+    @export let orbit_radius: f32 = 0.0;
+    @export let orbit_speed: f32 = 1.0;
 
     var age: f32 = 0.0;
     var base_x: f32 = 1.0;
     var base_y: f32 = 1.0;
+    var base_pos_x: f32 = 0.0;
+    var base_pos_y: f32 = 0.0;
 
     fn start() {
         this.base_x = this.transform.scale.x;
         this.base_y = this.transform.scale.y;
+        this.base_pos_x = this.transform.position.x;
+        this.base_pos_y = this.transform.position.y;
     }
 
     fn update(dt: f32) {
         this.age += dt;
         this.transform.rotation_z += this.spin * dt;
-        if this.pulse > 0.0 {
-            let amount = 1.0 + sin(this.age * this.pulse_speed + this.phase) * this.pulse;
-            this.transform.scale.x = this.base_x * amount;
-            this.transform.scale.y = this.base_y * amount;
-        }
+
+        let pulse_wave = sin(this.age * this.pulse_speed + this.phase);
+        let amount = 1.0 + pulse_wave * this.pulse;
+        this.transform.scale.x = this.base_x * amount;
+        this.transform.scale.y = this.base_y * amount;
+
+        let bob_angle = this.age * this.bob_speed + this.phase;
+        let orbit_angle = this.age * this.orbit_speed + this.phase;
+        this.transform.position.x = this.base_pos_x
+            + cos(bob_angle) * this.bob_x
+            + cos(orbit_angle) * this.orbit_radius;
+        this.transform.position.y = this.base_pos_y
+            + sin(bob_angle) * this.bob_y
+            + sin(orbit_angle) * this.orbit_radius;
     }
 }
