@@ -10,6 +10,22 @@ All notable changes to Sindri Next will be documented here.
 
 - Add editor wall/footprint authoring, typed Decay pathfinding, and a Gather Wisp that proves authored A* navigation end to end.
 
+### Fixed
+
+- **Enemies no longer appear in the middle of the arena.** Regular enemies,
+  elite chargers and bosses were placed on a fixed circle of radius 7.5, which
+  the camera is required to frame whole on every supported screen — so every
+  spawn was visible as it happened. Placement now follows the viewport: a
+  random direction walked out past the edge of what the camera shows, with the
+  authored arena radius as a floor, and a boss entering from just above the
+  top. Drops still appear where the thing that dropped them died.
+
+- **Shoving an asteroid no longer kills its script.** `HazardAsteroid` wrote
+  its authored drift back when a rock was knocked off the player, but declared
+  it `let`, so the shove failed with `Immutable("this.vx")` and the asteroid
+  stopped running. The two fields are `@export var`, which is what a value the
+  host authors and the script then changes has to be.
+
 ### Added
 
 - **The engine now writes down what it can do, for tools and agents.**
