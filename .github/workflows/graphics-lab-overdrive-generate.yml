@@ -1,0 +1,33 @@
+name: Generate Graphics Lab Overdrive
+
+on:
+  push:
+    branches: [codex/graphics-lab-overdrive]
+    paths:
+      - "scripts/generate-graphics-lab-scene.py"
+      - ".github/workflows/graphics-lab-overdrive-generate.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: codex/graphics-lab-overdrive
+      - name: Generate scene
+        run: python scripts/generate-graphics-lab-scene.py
+      - name: Commit generated scene and retire helper workflow
+        run: |
+          rm .github/workflows/graphics-lab-overdrive-generate.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add games/graphics-lab/assets/graphics-lab.scene.json .github/workflows/graphics-lab-overdrive-generate.yml
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Expand Graphics Lab composition"
+          git push origin HEAD:codex/graphics-lab-overdrive
