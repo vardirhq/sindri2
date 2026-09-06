@@ -12,6 +12,17 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **The engine now writes down what it can do, for tools and agents.**
+  `cargo run -p sindri-capabilities -- --write` generates
+  `docs/generated/decay-api.json`, its Markdown rendering, and
+  `docs/generated/sindri-capabilities.json` from the two descriptions the
+  repository already treats as authoritative: the Decay host surface the
+  analyzer and runtime share, and the built-in component registry. A workspace
+  test fails when the files disagree with the code, so widening the scripting
+  surface or registering a component cannot leave the reference behind.
+  `docs/cli-conventions.md` records the grammar the future `sindri` CLI follows
+  and why its operation names are a contract of their own.
+
 - **Orbital Last Stand now has its complete eleven-boss roster.**
   Harrower, Prism and Singularity join Warden, followed by Crown, Brood, Mirror,
   Architect and Spine at 4:00 and Leviathan and Last Light at 8:00. The director
@@ -80,14 +91,6 @@ All notable changes to Sindri Next will be documented here.
   the old behaviour, so no scene changes meaning.
 
 ### Fixed
-
-- **Orbital Last Stand hazards now keep their state through every gameplay
-  overlay.** Level-up and manual pause freeze the current asteroid layout, null
-  field and beam timing instead of deleting and randomly recreating them. All
-  five sectors now size and constrain hazards from the visible viewport, with
-  safe asteroid starts, reference split/impact behaviour, distinct gravity and
-  null styling, correctly scaled Ember edges, and reference Core telegraphs and
-  enemy damage.
 
 - **Orbital Last Stand no longer loses projectile damage after showing an
   impact.** Player bullets and secondary projectiles remain readable until the

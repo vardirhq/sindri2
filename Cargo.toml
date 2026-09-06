@@ -14,6 +14,7 @@ members = [
     "crates/sindri-render",
     "crates/sindri-scene",
     "tools/decay-lsp",
+    "tools/sindri-capabilities",
     "examples/triangle",
     "examples/cube",
     "game",

@@ -5,6 +5,11 @@ How a Decay script reaches a Sindri world, and what it is allowed to touch.
 This is the contract for `sindri-decay`. The language itself is documented in
 `decay/README.md`, and why it exists at all in `docs/decay-direction.md`.
 
+Every namespace, call, and member this build actually offers is written down,
+from the surface itself, in [`docs/generated/decay-api.md`](generated/decay-api.md)
+and its machine-readable twin `decay-api.json`. That is the list; this page is
+what the entries mean.
+
 ## The shape of it
 
 ```text

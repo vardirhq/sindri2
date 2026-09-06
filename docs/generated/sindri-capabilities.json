@@ -1,0 +1,545 @@
+{
+  "about": "Every component this engine build registers. `fields` is what the component has; `default_payload` is what a fresh one is, and is null for a type with no honest blank — one naming an asset the engine cannot invent. `addable` says whether a tool can add one without being given anything else.",
+  "components": [
+    {
+      "addable": false,
+      "default_payload": null,
+      "display_name": "Sprite Animation",
+      "fields": {
+        "clips": {},
+        "playing": null,
+        "speed": 1.0
+      },
+      "schema_version": 1,
+      "type_name": "sindri.animation.sprite"
+    },
+    {
+      "addable": false,
+      "default_payload": null,
+      "display_name": "Audio Source",
+      "fields": {
+        "autoplay": false,
+        "clip": "",
+        "looping": false,
+        "volume": 1.0
+      },
+      "schema_version": 1,
+      "type_name": "sindri.audio.source"
+    },
+    {
+      "addable": true,
+      "default_payload": {
+        "far": 100.0,
+        "near": 0.10000000149011612,
+        "projection": "perspective",
+        "vertical_fov_degrees": 60.0
+      },
+      "display_name": "Camera",
+      "fields": {
+        "far": 100.0,
+        "near": 0.10000000149011612,
+        "projection": "perspective",
+        "vertical_fov_degrees": 60.0
+      },
+      "schema_version": 1,
+      "type_name": "sindri.camera"
+    },
+    {
+      "addable": true,
+      "default_payload": {
+        "count": 12,
+        "drag": 0.25,
+        "fade": true,
+        "layer": 0,
+        "lifetime": 0.5,
+        "size": 0.1,
+        "speed": 4.0,
+        "spread": 0.5,
+        "texture": "procedural:checkerboard",
+        "tint": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "display_name": "Effect Burst",
+      "fields": {
+        "count": 12,
+        "drag": 0.25,
+        "fade": true,
+        "layer": 0,
+        "lifetime": 0.5,
+        "size": 0.1,
+        "speed": 4.0,
+        "spread": 0.5,
+        "texture": "procedural:checkerboard",
+        "tint": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "schema_version": 1,
+      "type_name": "sindri.effect.burst"
+    },
+    {
+      "addable": true,
+      "default_payload": {
+        "walls": []
+      },
+      "display_name": "Grid Navigation",
+      "fields": {
+        "walls": []
+      },
+      "schema_version": 1,
+      "type_name": "sindri.grid.navigation"
+    },
+    {
+      "addable": false,
+      "default_payload": null,
+      "display_name": "Grid Occupant",
+      "fields": {
+        "footprint": [
+          [
+            0,
+            0
+          ]
+        ],
+        "grid": ""
+      },
+      "schema_version": 1,
+      "type_name": "sindri.grid.occupant"
+    },
+    {
+      "addable": true,
+      "default_payload": {
+        "layer": 0,
+        "primitive": "cube",
+        "texture": "procedural:checkerboard"
+      },
+      "display_name": "Mesh",
+      "fields": {
+        "layer": 0,
+        "primitive": "cube",
+        "texture": "procedural:checkerboard"
+      },
+      "schema_version": 1,
+      "type_name": "sindri.mesh"
+    },
+    {
+      "addable": true,
+      "default_payload": {
+        "friction": 0.5,
+        "layers": {
+          "filter": 4294967295,
+          "memberships": 4294967295
+        },
+        "offset": [
+          0.0,
+          0.0
+        ],
+        "restitution": 0.0,
+        "rotation": 0.0,
+        "sensor": false,
+        "shape": {
+          "half_extents": [
+            0.5,
+            0.5
+          ],
+          "shape": "box"
+        }
+      },
+      "display_name": "Collider 2D",
+      "fields": {
+        "friction": 0.5,
+        "layers": {
+          "filter": 4294967295,
+          "memberships": 4294967295
+        },
+        "offset": [
+          0.0,
+          0.0
+        ],
+        "restitution": 0.0,
+        "rotation": 0.0,
+        "sensor": false,
+        "shape": {
+          "half_extents": [
+            0.5,
+            0.5
+          ],
+          "shape": "box"
+        }
+      },
+      "schema_version": 1,
+      "type_name": "sindri.physics2d.collider"
+    },
+    {
+      "addable": true,
+      "default_payload": {
+        "angular_damping": 0.0,
+        "angular_velocity": 0.0,
+        "gravity_scale": 1.0,
+        "kind": "dynamic",
+        "linear_damping": 0.0,
+        "linear_velocity": [
+          0.0,
+          0.0
+        ],
+        "lock_rotation": false,
+        "pose": {
+          "position": [
+            0.0,
+            0.0
+          ],
+          "rotation": 0.0
+        }
+      },
+      "display_name": "Rigid Body 2D",
+      "fields": {
+        "angular_damping": 0.0,
+        "angular_velocity": 0.0,
+        "gravity_scale": 1.0,
+        "kind": "dynamic",
+        "linear_damping": 0.0,
+        "linear_velocity": [
+          0.0,
+          0.0
+        ],
+        "lock_rotation": false,
+        "pose": {
+          "position": [
+            0.0,
+            0.0
+          ],
+          "rotation": 0.0
+        }
+      },
+      "schema_version": 1,
+      "type_name": "sindri.physics2d.rigid_body"
+    },
+    {
+      "addable": true,
+      "default_payload": {
+        "blend": "over",
+        "corner_radius": 0.0,
+        "count": 6.0,
+        "dash_duty": 0.5,
+        "dashes": 0.0,
+        "fill": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "kind": "rect",
+        "layer": 0,
+        "stroke": [
+          0.49,
+          1.0,
+          0.77,
+          1.0
+        ],
+        "stroke_width": 0.06,
+        "sweep_start": 0.0,
+        "sweep_turns": 1.0
+      },
+      "display_name": "Shape",
+      "fields": {
+        "blend": "over",
+        "corner_radius": 0.0,
+        "count": 6.0,
+        "dash_duty": 0.5,
+        "dashes": 0.0,
+        "fill": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "kind": "rect",
+        "layer": 0,
+        "stroke": [
+          0.49,
+          1.0,
+          0.77,
+          1.0
+        ],
+        "stroke_width": 0.06,
+        "sweep_start": 0.0,
+        "sweep_turns": 1.0
+      },
+      "schema_version": 1,
+      "type_name": "sindri.shape"
+    },
+    {
+      "addable": true,
+      "default_payload": {
+        "layer": 0,
+        "texture": "procedural:checkerboard",
+        "tint": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "display_name": "Sprite",
+      "fields": {
+        "layer": 0,
+        "texture": "procedural:checkerboard",
+        "tint": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "schema_version": 1,
+      "type_name": "sindri.sprite"
+    },
+    {
+      "addable": true,
+      "default_payload": {
+        "tags": []
+      },
+      "display_name": "Tags",
+      "fields": {
+        "tags": []
+      },
+      "schema_version": 1,
+      "type_name": "sindri.tags"
+    },
+    {
+      "addable": true,
+      "default_payload": {
+        "columns": 1,
+        "layer": 0,
+        "palette": [],
+        "projection": "orthogonal",
+        "rows": 1,
+        "texture": "procedural:checkerboard",
+        "tile_size": [
+          1.0,
+          1.0
+        ],
+        "tiles": [
+          null
+        ],
+        "tint": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "display_name": "Tilemap",
+      "fields": {
+        "columns": 1,
+        "layer": 0,
+        "palette": [],
+        "projection": "orthogonal",
+        "rows": 1,
+        "texture": "procedural:checkerboard",
+        "tile_size": [
+          1.0,
+          1.0
+        ],
+        "tiles": [
+          null
+        ],
+        "tint": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "schema_version": 1,
+      "type_name": "sindri.tilemap"
+    },
+    {
+      "addable": true,
+      "default_payload": {
+        "label": ""
+      },
+      "display_name": "UI Button",
+      "fields": {
+        "label": ""
+      },
+      "schema_version": 1,
+      "type_name": "sindri.ui.button"
+    },
+    {
+      "addable": true,
+      "default_payload": {
+        "anchor": "center",
+        "fill": {
+          "amount": 1.0,
+          "from": "left"
+        },
+        "layer": 0,
+        "texture": "procedural:checkerboard",
+        "tint": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "display_name": "UI Image",
+      "fields": {
+        "anchor": "center",
+        "fill": {
+          "amount": 1.0,
+          "from": "left"
+        },
+        "layer": 0,
+        "texture": "procedural:checkerboard",
+        "tint": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "schema_version": 1,
+      "type_name": "sindri.ui.image"
+    },
+    {
+      "addable": true,
+      "default_payload": {
+        "direction": "column",
+        "spacing": 0.25
+      },
+      "display_name": "UI Layout",
+      "fields": {
+        "direction": "column",
+        "spacing": 0.25
+      },
+      "schema_version": 1,
+      "type_name": "sindri.ui.layout"
+    },
+    {
+      "addable": true,
+      "default_payload": {
+        "anchor": "center",
+        "blend": "over",
+        "corner_radius": 0.0,
+        "count": 6.0,
+        "dash_duty": 0.5,
+        "dashes": 0.0,
+        "fill": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "kind": "rect",
+        "layer": 0,
+        "stroke": [
+          0.49,
+          1.0,
+          0.77,
+          1.0
+        ],
+        "stroke_width": 0.04,
+        "sweep_start": 0.0,
+        "sweep_turns": 1.0
+      },
+      "display_name": "UI Shape",
+      "fields": {
+        "anchor": "center",
+        "blend": "over",
+        "corner_radius": 0.0,
+        "count": 6.0,
+        "dash_duty": 0.5,
+        "dashes": 0.0,
+        "fill": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "kind": "rect",
+        "layer": 0,
+        "stroke": [
+          0.49,
+          1.0,
+          0.77,
+          1.0
+        ],
+        "stroke_width": 0.04,
+        "sweep_start": 0.0,
+        "sweep_turns": 1.0
+      },
+      "schema_version": 1,
+      "type_name": "sindri.ui.shape"
+    },
+    {
+      "addable": false,
+      "default_payload": null,
+      "display_name": "UI Text",
+      "fields": {
+        "anchor": "center",
+        "auto_size": {
+          "enabled": false,
+          "min": 0.02
+        },
+        "bold": false,
+        "bounds": [
+          0.0,
+          0.0
+        ],
+        "case": "as_written",
+        "color": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "font": "",
+        "font_size": 0.0667,
+        "italic": false,
+        "layer": 0,
+        "letter_spacing": 0.0,
+        "line_align": "follow",
+        "line_height": 0.0833,
+        "outline": {
+          "color": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "width": 0.0
+        },
+        "shadow": {
+          "color": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "softness": 0.0
+        },
+        "text": "Text",
+        "values": [],
+        "visible": -1.0,
+        "wrap": "none"
+      },
+      "schema_version": 1,
+      "type_name": "sindri.ui.text"
+    }
+  ],
+  "engine_version": "0.1.0",
+  "generated_by": "cargo run -p sindri-capabilities -- --write",
+  "scene_format_version": 9,
+  "schema_version": 1
+}

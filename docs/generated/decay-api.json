@@ -1,0 +1,1036 @@
+{
+  "about": "Every namespace, call, and member a Decay script may name, derived from the host surface the analyzer and the runtime share. Parameter names are not recorded; see docs/scripting.md for what each argument means.",
+  "engine_version": "0.1.0",
+  "generated_by": "cargo run -p sindri-capabilities -- --write",
+  "globals": [
+    {
+      "kind": "value",
+      "name": "Audio",
+      "type": "Audio"
+    },
+    {
+      "kind": "value",
+      "name": "Effects",
+      "type": "Effects"
+    },
+    {
+      "kind": "value",
+      "name": "Game",
+      "type": "Game"
+    },
+    {
+      "kind": "value",
+      "name": "Grid",
+      "type": "Grid"
+    },
+    {
+      "kind": "value",
+      "name": "Input",
+      "type": "Input"
+    },
+    {
+      "kind": "value",
+      "name": "Physics",
+      "type": "Physics"
+    },
+    {
+      "kind": "value",
+      "name": "Pointer",
+      "type": "Pointer"
+    },
+    {
+      "kind": "value",
+      "name": "Random",
+      "type": "Random"
+    },
+    {
+      "kind": "value",
+      "name": "Save",
+      "type": "Save"
+    },
+    {
+      "kind": "value",
+      "name": "Stick",
+      "type": "Stick"
+    },
+    {
+      "kind": "value",
+      "name": "Time",
+      "type": "Time"
+    },
+    {
+      "kind": "value",
+      "name": "Touch",
+      "type": "Touch"
+    },
+    {
+      "kind": "value",
+      "name": "Ui",
+      "type": "Ui"
+    },
+    {
+      "kind": "value",
+      "name": "Viewport",
+      "type": "Viewport"
+    },
+    {
+      "kind": "value",
+      "name": "World",
+      "type": "World"
+    },
+    {
+      "kind": "function",
+      "name": "abs",
+      "parameters": [
+        "f32"
+      ],
+      "returns": "f32"
+    },
+    {
+      "kind": "function",
+      "name": "atan2",
+      "parameters": [
+        "f32",
+        "f32"
+      ],
+      "returns": "f32"
+    },
+    {
+      "kind": "function",
+      "name": "cos",
+      "parameters": [
+        "f32"
+      ],
+      "returns": "f32"
+    },
+    {
+      "kind": "function",
+      "name": "exp",
+      "parameters": [
+        "f32"
+      ],
+      "returns": "f32"
+    },
+    {
+      "kind": "function",
+      "name": "max",
+      "parameters": [
+        "f32",
+        "f32"
+      ],
+      "returns": "f32"
+    },
+    {
+      "kind": "function",
+      "name": "min",
+      "parameters": [
+        "f32",
+        "f32"
+      ],
+      "returns": "f32"
+    },
+    {
+      "kind": "function",
+      "name": "print",
+      "parameters": [
+        "unknown"
+      ],
+      "returns": "unit"
+    },
+    {
+      "kind": "function",
+      "name": "sin",
+      "parameters": [
+        "f32"
+      ],
+      "returns": "f32"
+    },
+    {
+      "kind": "function",
+      "name": "sqrt",
+      "parameters": [
+        "f32"
+      ],
+      "returns": "f32"
+    }
+  ],
+  "schema_version": 1,
+  "this": [
+    {
+      "kind": "value",
+      "name": "entity",
+      "type": "Entity"
+    },
+    {
+      "kind": "value",
+      "name": "shape",
+      "type": "Shape"
+    },
+    {
+      "kind": "value",
+      "name": "sprite",
+      "type": "Sprite"
+    },
+    {
+      "kind": "value",
+      "name": "transform",
+      "type": "Transform"
+    },
+    {
+      "kind": "value",
+      "name": "ui_image",
+      "type": "UiImage"
+    }
+  ],
+  "types": [
+    {
+      "members": [
+        {
+          "kind": "function",
+          "name": "loop",
+          "parameters": [
+            "String",
+            "f32"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
+          "name": "pause_all",
+          "parameters": [],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
+          "name": "play",
+          "parameters": [
+            "String",
+            "f32"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
+          "name": "resume_all",
+          "parameters": [],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
+          "name": "stop_all",
+          "parameters": [],
+          "returns": "unit"
+        }
+      ],
+      "name": "Audio"
+    },
+    {
+      "members": [
+        {
+          "kind": "function",
+          "name": "burst",
+          "parameters": [
+            "Entity"
+          ],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "burst_at",
+          "parameters": [
+            "Entity",
+            "f32",
+            "f32"
+          ],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "live",
+          "parameters": [],
+          "returns": "f32"
+        }
+      ],
+      "name": "Effects"
+    },
+    {
+      "members": [
+        {
+          "kind": "value",
+          "name": "shape",
+          "type": "Shape"
+        },
+        {
+          "kind": "value",
+          "name": "sprite",
+          "type": "Sprite"
+        },
+        {
+          "kind": "value",
+          "name": "transform",
+          "type": "Transform"
+        },
+        {
+          "kind": "value",
+          "name": "ui_image",
+          "type": "UiImage"
+        }
+      ],
+      "name": "Entity"
+    },
+    {
+      "members": [
+        {
+          "kind": "function",
+          "name": "get",
+          "parameters": [
+            "String",
+            "f32"
+          ],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "set",
+          "parameters": [
+            "String",
+            "f32"
+          ],
+          "returns": "unit"
+        }
+      ],
+      "name": "Game"
+    },
+    {
+      "members": [
+        {
+          "kind": "function",
+          "name": "can_reach",
+          "parameters": [
+            "Entity",
+            "Entity",
+            "Entity"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "place",
+          "parameters": [
+            "Entity",
+            "Entity",
+            "f32",
+            "f32"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
+          "name": "position_x",
+          "parameters": [
+            "Entity",
+            "Entity"
+          ],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "position_y",
+          "parameters": [
+            "Entity",
+            "Entity"
+          ],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "step_toward",
+          "parameters": [
+            "Entity",
+            "Entity",
+            "Entity"
+          ],
+          "returns": "bool"
+        }
+      ],
+      "name": "Grid"
+    },
+    {
+      "members": [
+        {
+          "kind": "function",
+          "name": "axis",
+          "parameters": [
+            "String",
+            "String"
+          ],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "is_down",
+          "parameters": [
+            "String"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "just_pressed",
+          "parameters": [
+            "String"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "just_released",
+          "parameters": [
+            "String"
+          ],
+          "returns": "bool"
+        }
+      ],
+      "name": "Input"
+    },
+    {
+      "members": [
+        {
+          "kind": "function",
+          "name": "apply_impulse",
+          "parameters": [
+            "Entity",
+            "f32",
+            "f32"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
+          "name": "collision_started",
+          "parameters": [],
+          "returns": "Array<Entity>"
+        },
+        {
+          "kind": "function",
+          "name": "collision_stopped",
+          "parameters": [],
+          "returns": "Array<Entity>"
+        },
+        {
+          "kind": "function",
+          "name": "sensor_entered",
+          "parameters": [],
+          "returns": "Array<Entity>"
+        },
+        {
+          "kind": "function",
+          "name": "sensor_exited",
+          "parameters": [],
+          "returns": "Array<Entity>"
+        },
+        {
+          "kind": "function",
+          "name": "set_velocity",
+          "parameters": [
+            "Entity",
+            "f32",
+            "f32"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
+          "name": "velocity_x",
+          "parameters": [
+            "Entity"
+          ],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "velocity_y",
+          "parameters": [
+            "Entity"
+          ],
+          "returns": "f32"
+        }
+      ],
+      "name": "Physics"
+    },
+    {
+      "members": [
+        {
+          "kind": "value",
+          "name": "inside",
+          "type": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "is_down",
+          "parameters": [
+            "String"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "just_pressed",
+          "parameters": [
+            "String"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "just_released",
+          "parameters": [
+            "String"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "value",
+          "name": "over_ui",
+          "type": "bool"
+        },
+        {
+          "kind": "value",
+          "name": "overlay_x",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "overlay_y",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "x",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "y",
+          "type": "f32"
+        }
+      ],
+      "name": "Pointer"
+    },
+    {
+      "members": [
+        {
+          "kind": "function",
+          "name": "int",
+          "parameters": [
+            "f32",
+            "f32"
+          ],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "pick",
+          "parameters": [
+            "Array<Entity>"
+          ],
+          "returns": "Entity"
+        },
+        {
+          "kind": "function",
+          "name": "range",
+          "parameters": [
+            "f32",
+            "f32"
+          ],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "seed",
+          "parameters": [
+            "f32"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
+          "name": "value",
+          "parameters": [],
+          "returns": "f32"
+        }
+      ],
+      "name": "Random"
+    },
+    {
+      "members": [
+        {
+          "kind": "value",
+          "name": "a",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "b",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "g",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "r",
+          "type": "f32"
+        }
+      ],
+      "name": "Rgba"
+    },
+    {
+      "members": [
+        {
+          "kind": "function",
+          "name": "clear",
+          "parameters": [],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
+          "name": "flag",
+          "parameters": [
+            "String",
+            "bool"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "has",
+          "parameters": [
+            "String"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "is_damaged",
+          "parameters": [],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "is_from_newer",
+          "parameters": [],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "is_new",
+          "parameters": [],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "number",
+          "parameters": [
+            "String",
+            "f32"
+          ],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "set_flag",
+          "parameters": [
+            "String",
+            "bool"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
+          "name": "set_number",
+          "parameters": [
+            "String",
+            "f32"
+          ],
+          "returns": "unit"
+        }
+      ],
+      "name": "Save"
+    },
+    {
+      "members": [
+        {
+          "kind": "value",
+          "name": "count",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "dashes",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "fill",
+          "type": "Rgba"
+        },
+        {
+          "kind": "value",
+          "name": "layer",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "stroke",
+          "type": "Rgba"
+        },
+        {
+          "kind": "value",
+          "name": "stroke_width",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "sweep_start",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "sweep_turns",
+          "type": "f32"
+        }
+      ],
+      "name": "Shape"
+    },
+    {
+      "members": [
+        {
+          "kind": "value",
+          "name": "layer",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "tint",
+          "type": "Rgba"
+        }
+      ],
+      "name": "Sprite"
+    },
+    {
+      "members": [
+        {
+          "kind": "value",
+          "name": "anchor_x",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "anchor_y",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "held",
+          "type": "bool"
+        },
+        {
+          "kind": "value",
+          "name": "x",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "y",
+          "type": "f32"
+        }
+      ],
+      "name": "Stick"
+    },
+    {
+      "members": [
+        {
+          "kind": "value",
+          "name": "delta",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "elapsed",
+          "type": "f32"
+        }
+      ],
+      "name": "Time"
+    },
+    {
+      "members": [
+        {
+          "kind": "value",
+          "name": "count",
+          "type": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "x",
+          "parameters": [
+            "f32"
+          ],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "y",
+          "parameters": [
+            "f32"
+          ],
+          "returns": "f32"
+        }
+      ],
+      "name": "Touch"
+    },
+    {
+      "members": [
+        {
+          "kind": "value",
+          "name": "position",
+          "type": "Vec3"
+        },
+        {
+          "kind": "value",
+          "name": "rotation_z",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "scale",
+          "type": "Vec3"
+        }
+      ],
+      "name": "Transform"
+    },
+    {
+      "members": [
+        {
+          "kind": "function",
+          "name": "is_held",
+          "parameters": [
+            "Entity"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "is_hovered",
+          "parameters": [
+            "Entity"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "is_pressed",
+          "parameters": [
+            "Entity"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "set_fill",
+          "parameters": [
+            "Entity",
+            "f32"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
+          "name": "set_number",
+          "parameters": [
+            "Entity",
+            "f32"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
+          "name": "set_numbers",
+          "parameters": [
+            "Entity",
+            "f32",
+            "f32"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
+          "name": "set_text",
+          "parameters": [
+            "Entity",
+            "String"
+          ],
+          "returns": "unit"
+        }
+      ],
+      "name": "Ui"
+    },
+    {
+      "members": [
+        {
+          "kind": "value",
+          "name": "layer",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "tint",
+          "type": "Rgba"
+        }
+      ],
+      "name": "UiImage"
+    },
+    {
+      "members": [
+        {
+          "kind": "value",
+          "name": "x",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "y",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "z",
+          "type": "f32"
+        }
+      ],
+      "name": "Vec3"
+    },
+    {
+      "members": [
+        {
+          "kind": "value",
+          "name": "aspect",
+          "type": "f32"
+        }
+      ],
+      "name": "Viewport"
+    },
+    {
+      "members": [
+        {
+          "kind": "function",
+          "name": "despawn",
+          "parameters": [
+            "Entity"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
+          "name": "exists",
+          "parameters": [
+            "Entity"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "find",
+          "parameters": [
+            "String"
+          ],
+          "returns": "Entity"
+        },
+        {
+          "kind": "function",
+          "name": "has_tag",
+          "parameters": [
+            "Entity",
+            "String"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "is_active",
+          "parameters": [
+            "Entity"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "property_number",
+          "parameters": [
+            "Entity",
+            "String",
+            "f32"
+          ],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "set_active",
+          "parameters": [
+            "Entity",
+            "bool"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
+          "name": "set_parent",
+          "parameters": [
+            "Entity",
+            "Entity"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
+          "name": "set_property",
+          "parameters": [
+            "Entity",
+            "String",
+            "unknown"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
+          "name": "set_shape_point",
+          "parameters": [
+            "f32",
+            "f32",
+            "f32"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
+          "name": "spawn",
+          "parameters": [
+            "Prefab"
+          ],
+          "returns": "Entity"
+        },
+        {
+          "kind": "function",
+          "name": "with_tag",
+          "parameters": [
+            "String"
+          ],
+          "returns": "Array<Entity>"
+        }
+      ],
+      "name": "World"
+    }
+  ]
+}
