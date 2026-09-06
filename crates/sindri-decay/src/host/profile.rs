@@ -78,6 +78,7 @@ impl WorldHost<'_> {
 fn count(profile: &ProfileDocument, path: &Path, args: &[Value]) -> Result<f64, RuntimeError> {
     let collection = text(path, args, 1, "a collection name")?;
     let count = profile.count(collection);
+    // Authored profile collections are bounded by the asset itself, nowhere near f64's integer limit.
     #[allow(clippy::cast_precision_loss)]
     let count = count as f64;
     Ok(count)
