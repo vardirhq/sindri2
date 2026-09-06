@@ -39,7 +39,8 @@ fn elite_identity_marks_match_the_reference_trait_family() {
         .expect("the elite visual script exists");
     assert!(visual.contains("if this.trait == 1.0 { return; }"));
     assert!(visual.contains("while slot < 3.0"));
-    assert!(visual.contains("World.spawn(this.identity_crack)"));
+    assert!(visual.contains("World.spawn_child(this.identity_crack, this.entity)"));
+    assert!(visual.contains("World.spawn_child(this.identity_ring, this.entity)"));
     assert!(visual.contains("spawn_identity_ring(0.0)"));
 
     let identity = std::fs::read_to_string(assets.join("scripts/elite-identity.decay"))
