@@ -8,11 +8,20 @@ script HazardAsteroid {
     @export let vy: f32 = 0.5;
     @export let child_count: f32 = 2.0;
     @export let child: Prefab;
+    @export let view_size: f32 = 11.0;
 
     var hp: f32 = 0.0;
+    var spin: f32 = 0.0;
+    var phase: f32 = 0.0;
+    var age: f32 = 0.0;
+    var impact_cd: f32 = 0.0;
+    var hit_flash: f32 = 0.0;
 
     fn start() {
         this.hp = this.health;
+        this.spin = Random.range(-0.55, 0.55);
+        this.phase = Random.range(0.0, 6.2831853);
+        author_rock();
         Physics.set_velocity(this.entity, this.vx, this.vy);
     }
 
@@ -22,12 +31,24 @@ script HazardAsteroid {
             return;
         }
 
+        // Pausing sets the dynamic body to rest. Restore its authored drift
+        // when play resumes instead of leaving a preserved asteroid frozen.
+        Physics.set_velocity(this.entity, this.vx, this.vy);
+        this.age += dt;
+        this.impact_cd = max(0.0, this.impact_cd - dt);
+        this.hit_flash = max(0.0, this.hit_flash - dt);
+        this.transform.rotation_z = this.phase + this.age * this.spin;
+        update_damage_visual();
         wrap();
         let player = World.find("Player");
         for hit in Physics.sensor_entered() {
             if hit == player {
-                Game.set("player_damage_taken",
-                         max(Game.get("player_damage_taken", 0.0), this.impact_damage));
+                if this.impact_cd <= 0.0 {
+                    Game.set("player_damage_taken",
+                             max(Game.get("player_damage_taken", 0.0), this.impact_damage));
+                    this.impact_cd = 0.55;
+                    knock_from(player);
+                }
                 continue;
             }
             if !World.exists(hit) {
@@ -35,6 +56,7 @@ script HazardAsteroid {
             }
             if World.has_tag(hit, "player_damage") {
                 this.hp -= World.property_number(hit, "damage", 0.0);
+                this.hit_flash = 0.14;
             }
         }
 
@@ -46,25 +68,83 @@ script HazardAsteroid {
     }
 
     fn wrap() {
-        if this.transform.position.x < -9.0 { this.transform.position.x = 9.0; }
-        else if this.transform.position.x > 9.0 { this.transform.position.x = -9.0; }
-        if this.transform.position.y < -6.5 { this.transform.position.y = 6.5; }
-        else if this.transform.position.y > 6.5 { this.transform.position.y = -6.5; }
+        let edge_x = visible_half_x() + 1.2;
+        let edge_y = visible_half_y() + 1.2;
+        if this.transform.position.x < -edge_x { this.transform.position.x = edge_x; }
+        else if this.transform.position.x > edge_x { this.transform.position.x = -edge_x; }
+        if this.transform.position.y < -edge_y { this.transform.position.y = edge_y; }
+        else if this.transform.position.y > edge_y { this.transform.position.y = -edge_y; }
     }
 
     fn split() {
         if this.child_count <= 0.0 {
             return;
         }
+        var total: f32 = this.child_count;
+        if total > 2.0 { total = Random.int(2.0, 3.0); }
         var made: f32 = 0.0;
-        while made < this.child_count {
+        while made < total {
             let angle = Random.range(0.0, 6.2831853);
+            let speed = Random.range(0.43, 0.96);
             let piece = World.spawn(this.child);
             piece.transform.position.x = this.transform.position.x + cos(angle) * 0.35;
             piece.transform.position.y = this.transform.position.y + sin(angle) * 0.35;
-            World.set_property(piece, "vx", Physics.velocity_x(this.entity) + cos(angle) * 0.8);
-            World.set_property(piece, "vy", Physics.velocity_y(this.entity) + sin(angle) * 0.8);
+            World.set_property(piece, "vx", Physics.velocity_x(this.entity) + cos(angle) * speed);
+            World.set_property(piece, "vy", Physics.velocity_y(this.entity) + sin(angle) * speed);
             made += 1.0;
         }
+    }
+
+    fn author_rock() {
+        World.set_shape_point(0.0, 0.0, 0.50 * Random.range(0.84, 1.08));
+        World.set_shape_point(1.0, 0.39 * Random.range(0.82, 1.08),
+                              0.31 * Random.range(0.82, 1.08));
+        World.set_shape_point(2.0, 0.49 * Random.range(0.82, 1.08),
+                              -0.11 * Random.range(0.82, 1.08));
+        World.set_shape_point(3.0, 0.22 * Random.range(0.82, 1.08),
+                              -0.45 * Random.range(0.82, 1.08));
+        World.set_shape_point(4.0, -0.22 * Random.range(0.82, 1.08),
+                              -0.45 * Random.range(0.82, 1.08));
+        World.set_shape_point(5.0, -0.49 * Random.range(0.82, 1.08),
+                              -0.11 * Random.range(0.82, 1.08));
+        World.set_shape_point(6.0, -0.39 * Random.range(0.82, 1.08),
+                              0.31 * Random.range(0.82, 1.08));
+    }
+
+    fn update_damage_visual() {
+        let damage = 1.0 - this.hp / max(this.health, 0.001);
+        if this.hit_flash > 0.0 {
+            this.shape.stroke.r = 1.0;
+            this.shape.stroke.g = 1.0;
+            this.shape.stroke.b = 1.0;
+        } else {
+            this.shape.stroke.r = 0.47 + damage * 0.28;
+            this.shape.stroke.g = 0.58 + damage * 0.24;
+            this.shape.stroke.b = 0.65 + damage * 0.20;
+        }
+        this.shape.fill.r = 0.06 + damage * 0.08;
+        this.shape.fill.g = 0.10 + damage * 0.09;
+        this.shape.fill.b = 0.14 + damage * 0.08;
+    }
+
+    fn knock_from(player: Entity) {
+        if player == null { return; }
+        let dx = this.transform.position.x - player.transform.position.x;
+        let dy = this.transform.position.y - player.transform.position.y;
+        let far = max(0.1, sqrt(dx * dx + dy * dy));
+        this.vx += dx / far * 1.1;
+        this.vy += dy / far * 1.1;
+    }
+
+    fn visible_half_x() -> f32 {
+        let aspect = max(Viewport.aspect, 0.001);
+        if aspect >= 1.0 { return this.view_size * 0.5 * aspect; }
+        return this.view_size * 0.5;
+    }
+
+    fn visible_half_y() -> f32 {
+        let aspect = max(Viewport.aspect, 0.001);
+        if aspect >= 1.0 { return this.view_size * 0.5; }
+        return this.view_size * 0.5 / aspect;
     }
 }

@@ -6,6 +6,7 @@ script HazardField {
     @export let radius: f32 = 1.8;
     @export let pull: f32 = 2.1;
     @export let roam_speed: f32 = 0.55;
+    @export let view_size: f32 = 11.0;
 
     var vx: f32 = 0.0;
     var vy: f32 = 0.0;
@@ -13,10 +14,15 @@ script HazardField {
 
     fn start() {
         this.phase = Random.range(0.0, 6.2831853);
+        this.transform.scale.x = this.radius * 2.0;
+        this.transform.scale.y = this.radius * 2.0;
         if this.kind == 2.0 {
             let angle = Random.range(0.35, 1.55);
             this.vx = cos(angle) * this.roam_speed;
             this.vy = sin(angle) * this.roam_speed;
+            style_null();
+        } else {
+            style_gravity();
         }
     }
 
@@ -27,7 +33,12 @@ script HazardField {
         if this.kind == 1.0 {
             bend("bullet", dt);
             bend("hostile_shot", dt);
-            this.shape.stroke.a = 0.45 + sin(Game.get("elapsed", 0.0) * 2.0 + this.phase) * 0.15;
+            this.phase += dt * 0.45;
+            this.transform.rotation_z = this.phase;
+            let pulse = 1.0 + sin(Game.get("elapsed", 0.0) * 2.0 + this.phase) * 0.035;
+            this.transform.scale.x = this.radius * 2.0 * pulse;
+            this.transform.scale.y = this.radius * 2.0 * pulse;
+            this.shape.stroke.a = 0.58 + sin(Game.get("elapsed", 0.0) * 2.0 + this.phase) * 0.16;
         } else {
             roam(dt);
             suppress();
@@ -57,24 +68,27 @@ script HazardField {
         this.vx += cos(this.phase) * sin(Game.get("elapsed", 0.0) * 0.38 + this.phase) * 0.08 * dt;
         this.vy += sin(this.phase * 0.83) * sin(Game.get("elapsed", 0.0) * 0.38 + this.phase) * 0.08 * dt;
         let speed = sqrt(this.vx * this.vx + this.vy * this.vy);
-        if speed > 0.62 {
-            this.vx = this.vx / speed * 0.62;
-            this.vy = this.vy / speed * 0.62;
+        let speed_cap = this.roam_speed * 1.13;
+        if speed > speed_cap {
+            this.vx = this.vx / speed * speed_cap;
+            this.vy = this.vy / speed * speed_cap;
         }
         this.transform.position.x += this.vx * dt;
         this.transform.position.y += this.vy * dt;
-        if this.transform.position.x < -6.8 {
-            this.transform.position.x = -6.8;
+        let edge_x = max(0.0, visible_half_x() - this.radius);
+        let edge_y = max(0.0, visible_half_y() - this.radius);
+        if this.transform.position.x < -edge_x {
+            this.transform.position.x = -edge_x;
             this.vx = abs(this.vx);
-        } else if this.transform.position.x > 6.8 {
-            this.transform.position.x = 6.8;
+        } else if this.transform.position.x > edge_x {
+            this.transform.position.x = edge_x;
             this.vx = -abs(this.vx);
         }
-        if this.transform.position.y < -4.4 {
-            this.transform.position.y = -4.4;
+        if this.transform.position.y < -edge_y {
+            this.transform.position.y = -edge_y;
             this.vy = abs(this.vy);
-        } else if this.transform.position.y > 4.4 {
-            this.transform.position.y = 4.4;
+        } else if this.transform.position.y > edge_y {
+            this.transform.position.y = edge_y;
             this.vy = -abs(this.vy);
         }
     }
@@ -97,5 +111,41 @@ script HazardField {
             this.shape.stroke.a = 0.65;
             this.shape.fill.a = 0.08;
         }
+    }
+
+    fn style_gravity() {
+        this.shape.fill.r = 0.16;
+        this.shape.fill.g = 0.035;
+        this.shape.fill.b = 0.32;
+        this.shape.fill.a = 0.13;
+        this.shape.stroke.r = 0.72;
+        this.shape.stroke.g = 0.38;
+        this.shape.stroke.b = 1.0;
+        this.shape.stroke.a = 0.7;
+        this.shape.dashes = 18.0;
+    }
+
+    fn style_null() {
+        this.shape.fill.r = 0.07;
+        this.shape.fill.g = 0.62;
+        this.shape.fill.b = 0.48;
+        this.shape.fill.a = 0.08;
+        this.shape.stroke.r = 0.45;
+        this.shape.stroke.g = 0.96;
+        this.shape.stroke.b = 0.77;
+        this.shape.stroke.a = 0.65;
+        this.shape.dashes = 24.0;
+    }
+
+    fn visible_half_x() -> f32 {
+        let aspect = max(Viewport.aspect, 0.001);
+        if aspect >= 1.0 { return this.view_size * 0.5 * aspect; }
+        return this.view_size * 0.5;
+    }
+
+    fn visible_half_y() -> f32 {
+        let aspect = max(Viewport.aspect, 0.001);
+        if aspect >= 1.0 { return this.view_size * 0.5; }
+        return this.view_size * 0.5 / aspect;
     }
 }
