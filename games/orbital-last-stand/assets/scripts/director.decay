@@ -20,6 +20,12 @@ script Director {
     @export let elite_bonus_scale: f32 = 0.65;
     @export let elite_cap: f32 = 0.32;
     @export let arena: f32 = 7.5;
+    // What the camera frames, matching `sindri.camera.vertical_size` on the
+    // scene's camera and the same export every other script here carries.
+    @export let view_size: f32 = 11.0;
+    // How far past the visible edge something arrives, so a body with a radius
+    // is wholly outside the frame rather than clipping into it.
+    @export let spawn_margin: f32 = 1.4;
 
     var title: Entity = null;
     var hud: Entity = null;
@@ -356,8 +362,10 @@ script Director {
             boss = World.spawn(this.challenger);
             World.set_property(boss, "kind", pick - 1.0);
         }
+        // Above the frame, so the boss descends into view rather than
+        // materialising inside it.
         boss.transform.position.x = 0.0;
-        boss.transform.position.y = this.arena;
+        boss.transform.position.y = spawn_ring_y();
     }
 
     fn eligible_boss_count() -> f32 {
@@ -366,9 +374,48 @@ script Director {
         return 4.0;
     }
 
+    // Enemies arrive from outside the frame, never in front of the player.
+    //
+    // This used to be a circle of radius `arena`, which the camera is required
+    // to frame whole -- `it_fits_a_phone` asserts exactly that -- so every
+    // spawn landed somewhere on screen and enemies appeared out of nothing. A
+    // ring cannot be both inside the guaranteed-visible arena and outside the
+    // view, so placement follows the view instead: a random direction, walked
+    // out to the edge of the frame plus a margin.
+    //
+    // `arena` stays the floor, so a wide screen that shows less height than the
+    // authored arena still spawns no nearer than the reference distance.
     fn place(enemy: Entity) {
         let angle = Random.range(0.0, 6.2831853);
-        enemy.transform.position.x = cos(angle) * this.arena;
-        enemy.transform.position.y = sin(angle) * this.arena;
+        let dx = cos(angle);
+        let dy = sin(angle);
+        let ring_x = spawn_ring_x();
+        let ring_y = spawn_ring_y();
+        // Where that direction leaves the rectangle: the nearer of the two
+        // axis crossings. Guarded because a direction along one axis has no
+        // crossing on the other.
+        let reach = min(ring_x / max(abs(dx), 0.0001), ring_y / max(abs(dy), 0.0001));
+        enemy.transform.position.x = dx * reach;
+        enemy.transform.position.y = dy * reach;
+    }
+
+    fn spawn_ring_x() -> f32 {
+        return max(visible_half_x() + this.spawn_margin, this.arena);
+    }
+
+    fn spawn_ring_y() -> f32 {
+        return max(visible_half_y() + this.spawn_margin, this.arena);
+    }
+
+    fn visible_half_x() -> f32 {
+        let aspect = max(Viewport.aspect, 0.001);
+        if aspect >= 1.0 { return this.view_size * 0.5 * aspect; }
+        return this.view_size * 0.5;
+    }
+
+    fn visible_half_y() -> f32 {
+        let aspect = max(Viewport.aspect, 0.001);
+        if aspect >= 1.0 { return this.view_size * 0.5; }
+        return this.view_size * 0.5 / aspect;
     }
 }

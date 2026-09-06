@@ -4,8 +4,11 @@
 script HazardAsteroid {
     @export let health: f32 = 5.0;
     @export let impact_damage: f32 = 0.7;
-    @export let vx: f32 = 0.0;
-    @export let vy: f32 = 0.5;
+    // `var`, not `let`: the host authors the drift, and `knock_from` changes
+    // it when the rock is shoved off the player. As `let` that shove raised
+    // `Immutable("this.vx")` and killed the script mid-run.
+    @export var vx: f32 = 0.0;
+    @export var vy: f32 = 0.5;
     @export let child_count: f32 = 2.0;
     @export let child: Prefab;
     @export let view_size: f32 = 11.0;

@@ -62,6 +62,24 @@ rate = max(0.085, 0.7 - time * 0.00092)
 
 Normal difficulty uses `difficulty.spawn = 1.12`.
 
+### Where a spawn appears
+
+A regular enemy, an elite charger and a boss all arrive **outside the frame**,
+and this is a property of the viewport rather than of a fixed radius. The
+director walks a random direction out to the edge of what the camera shows plus
+`spawn_margin`, with the authored `arena` radius as a floor; a boss enters from
+directly above that edge.
+
+The earlier fixed ring of radius `arena` could not satisfy this and never did:
+`it_fits_a_phone` requires the camera to frame that whole radius on every
+supported screen, so part of the ring was always visible and enemies appeared
+out of nothing beside the player. `spawns_come_from_offscreen` checks the new
+rule on each screen shape.
+
+Drops are exempt by design — a core or a powerup belongs where the thing that
+dropped it died — as are sector hazards, which are the terrain a sector starts
+with rather than something arriving.
+
 Neutral Normal intervals, before event/route modifiers and while no boss suppresses regulars, are approximately:
 
 | Time | Sector pressure | Interval |
