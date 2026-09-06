@@ -84,7 +84,14 @@ impl WorldHost<'_> {
                 self.despawn(entity, path)?;
                 Ok(Value::Unit)
             }
-            WorldCall::Spawn => self.spawn_call(path, args),
+            WorldCall::Spawn => self.spawn_call(path, args, None),
+            WorldCall::SpawnChild => {
+                // Validate the parent before creating anything. A stale handle
+                // must not leave an orphaned prefab behind as the side effect of
+                // a call that reports failure.
+                let parent = self.entity_argument(path, args, 1, "the parent")?;
+                self.spawn_call(path, args, Some(parent))
+            }
             WorldCall::SetParent => {
                 let child = self.entity_argument(path, args, 0, "the entity to move")?;
                 let parent = match args.get(1) {
@@ -208,8 +215,14 @@ impl WorldHost<'_> {
         Ok(Value::Bool(tags.has(tag)))
     }
 
-    /// Creates what a prefab describes, and answers with its root.
-    fn spawn_call(&mut self, path: &Path, args: &[Value]) -> Result<Value, RuntimeError> {
+    /// Creates what a prefab describes, optionally attaches its root, and
+    /// answers with that root.
+    fn spawn_call(
+        &mut self,
+        path: &Path,
+        args: &[Value],
+        parent: Option<EntityId>,
+    ) -> Result<Value, RuntimeError> {
         let id = match args.first() {
             // A `Prefab` value is the asset ID the scene authored into an
             // `@export` field. Decay never sees it as text, and the script that
@@ -254,6 +267,13 @@ impl WorldHost<'_> {
             .world
             .spawn_prefab(&prefab)
             .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
+        if let Some(parent) = parent {
+            self.world
+                .set_parent(created.root, Some(parent))
+                .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
+        }
+        // Scheduling comes last: a child is already attached by the time the
+        // runner sees it as eligible for its first `start` callback.
         self.spawning
             .spawned
             .extend(created.entities.iter().copied());
