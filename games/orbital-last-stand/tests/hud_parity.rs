@@ -9,7 +9,10 @@ fn step(run: &mut Run) {
 
 fn ui_text<'a>(run: &'a Run, name: &str) -> &'a str {
     let entity = run.find(name).unwrap_or_else(|| panic!("{name} exists"));
-    run.world.get(entity).expect("the UI entity remains").components["sindri.ui.text"]["text"]
+    run.world
+        .get(entity)
+        .expect("the UI entity remains")
+        .components["sindri.ui.text"]["text"]
         .as_str()
         .expect("the UI entity carries text")
 }
@@ -32,21 +35,30 @@ fn the_run_hud_uses_the_reference_information_hierarchy() {
     let xp = run.find("Cores").expect("the XP bar exists");
     let health_text = run.find("HealthText").expect("the HP label exists");
     assert_eq!(
-        run.world.get(health).expect("health bar remains").transform_3d
+        run.world
+            .get(health)
+            .expect("health bar remains")
+            .transform_3d
             .as_ref()
             .expect("health bar has a transform")
             .position[1],
         1.76
     );
     assert_eq!(
-        run.world.get(xp).expect("XP bar remains").transform_3d
+        run.world
+            .get(xp)
+            .expect("XP bar remains")
+            .transform_3d
             .as_ref()
             .expect("XP bar has a transform")
             .position[1],
         1.71
     );
     assert_eq!(
-        run.world.get(health_text).expect("HP label remains").transform_3d
+        run.world
+            .get(health_text)
+            .expect("HP label remains")
+            .transform_3d
             .as_ref()
             .expect("HP label has a transform")
             .position[1],
