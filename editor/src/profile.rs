@@ -42,7 +42,7 @@ impl ProfileEditor {
     }
 
     pub fn adopt(&mut self, path: &Path) {
-        self.path = path.to_owned();
+        path.clone_into(&mut self.path);
     }
 
     pub fn save(&mut self) -> Result<(), String> {
