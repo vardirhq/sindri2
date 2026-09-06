@@ -20,9 +20,14 @@ impl WorldHost<'_> {
         Ok(match call {
             ProfileCall::Name => Value::String(profile.name.clone()),
             ProfileCall::Kind => Value::String(profile.profile_type.clone()),
-            ProfileCall::Number => Value::Number(
-                scalar(profile, path, args, Json::as_f64, 2, "a numeric fallback")?,
-            ),
+            ProfileCall::Number => Value::Number(scalar(
+                profile,
+                path,
+                args,
+                Json::as_f64,
+                2,
+                "a numeric fallback",
+            )?),
             ProfileCall::Text => Value::String(scalar_text(profile, path, args)?),
             ProfileCall::Flag => Value::Bool(scalar(
                 profile,
@@ -32,9 +37,7 @@ impl WorldHost<'_> {
                 2,
                 "a truth fallback",
             )?),
-            ProfileCall::Count => {
-                Value::Number(profile.count(text(path, args, 1, "a collection name")?) as f64)
-            }
+            ProfileCall::Count => Value::Number(count(profile, path, args)?),
             ProfileCall::NumberAt => Value::Number(item(
                 profile,
                 path,
@@ -70,6 +73,18 @@ impl WorldHost<'_> {
             RuntimeError::Host(format!("{} cannot find profile '{id}'", path.dotted()))
         })
     }
+}
+
+fn count(
+    profile: &ProfileDocument,
+    path: &Path,
+    args: &[Value],
+) -> Result<f64, RuntimeError> {
+    let collection = text(path, args, 1, "a collection name")?;
+    let count = profile.count(collection);
+    #[allow(clippy::cast_precision_loss)]
+    let count = count as f64;
+    Ok(count)
 }
 
 fn scalar<'a, T: Copy>(
@@ -190,13 +205,19 @@ fn text<'a>(
 ) -> Result<&'a str, RuntimeError> {
     match args.get(at) {
         Some(Value::String(value)) => Ok(value),
-        _ => Err(RuntimeError::Host(format!("{} takes {name}", path.dotted()))),
+        _ => Err(RuntimeError::Host(format!(
+            "{} takes {name}",
+            path.dotted()
+        ))),
     }
 }
 
 fn index(path: &Path, args: &[Value], at: usize) -> Result<usize, RuntimeError> {
     let Some(Value::Number(value)) = args.get(at) else {
-        return Err(RuntimeError::Host(format!("{} takes an index", path.dotted())));
+        return Err(RuntimeError::Host(format!(
+            "{} takes an index",
+            path.dotted()
+        )));
     };
     if !value.is_finite() || *value < 0.0 || value.fract() != 0.0 {
         return Err(RuntimeError::Host(format!(
