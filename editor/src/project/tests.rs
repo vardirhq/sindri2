@@ -10,6 +10,7 @@ fn project() -> tempfile::TempDir {
     fs::write(root.join("demo.scene.json"), "{}").unwrap();
     fs::write(root.join("settings.json"), "{}").unwrap();
     fs::write(root.join("drifter.prefab.json"), "{}").unwrap();
+    fs::write(root.join("weapon.profile.json"), "{}").unwrap();
     fs::write(root.join(".hidden"), "").unwrap();
     fs::create_dir(root.join("textures")).unwrap();
     fs::write(root.join("textures/badge.png"), "").unwrap();
@@ -47,6 +48,7 @@ fn the_browser_reads_the_directory_the_scene_lives_in() {
             "textures",
             "badge.png",
             "tiles.png",
+            "weapon.profile.json",
         ],
         "children follow their parent, and each level is sorted by name"
     );
