@@ -48,11 +48,10 @@ script EliteVisual {
         } else if this.trait == 4.0 {
             var slot: f32 = 0.0;
             while slot < 3.0 {
-                let mark = World.spawn(this.identity_crack);
+                let mark = World.spawn_child(this.identity_crack, this.entity);
                 World.set_property(mark, "trait", this.trait);
                 World.set_property(mark, "index", slot);
                 World.set_property(mark, "phase", this.phase);
-                World.set_parent(mark, this.entity);
                 slot += 1.0;
             }
         } else {
@@ -61,11 +60,10 @@ script EliteVisual {
     }
 
     fn spawn_identity_ring(index: f32) {
-        let mark = World.spawn(this.identity_ring);
+        let mark = World.spawn_child(this.identity_ring, this.entity);
         World.set_property(mark, "trait", this.trait);
         World.set_property(mark, "index", index);
         World.set_property(mark, "phase", this.phase);
-        World.set_parent(mark, this.entity);
     }
 
     fn apply_color() {
