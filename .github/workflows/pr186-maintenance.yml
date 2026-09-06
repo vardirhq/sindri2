@@ -1,0 +1,33 @@
+name: PR 186 maintenance
+
+on:
+  push:
+    branches:
+      - codex/last-stand-module-registry
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: rustfmt
+      - name: Format Rust sources
+        run: cargo fmt --all
+      - name: Regenerate capability documents
+        run: cargo run -p sindri-capabilities -- --write
+      - name: Collect generated fixes
+        run: |
+          git diff --name-only > /tmp/changed-files.txt
+          tar -czf /tmp/pr186-maintenance.tar.gz -T /tmp/changed-files.txt
+          cat /tmp/changed-files.txt
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pr186-maintenance
+          path: /tmp/pr186-maintenance.tar.gz
+          if-no-files-found: error
+          retention-days: 1
