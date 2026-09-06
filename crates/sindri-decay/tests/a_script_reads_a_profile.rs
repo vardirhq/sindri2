@@ -71,7 +71,10 @@ fn a_typed_profile_export_reads_scalars_and_records() {
     let board = scripts.blackboard();
     let close = |name: &str, expected: f64| {
         let actual = board.get(name, 0.0);
-        assert!((actual - expected).abs() < f64::EPSILON, "{name}: {actual}");
+        assert!(
+            (actual - expected).abs() < f64::EPSILON,
+            "{name}: expected {expected}, got {actual}"
+        );
     };
     close("weight", 2.0);
     close("count", 1.0);
