@@ -378,6 +378,7 @@ fn an_upgrade_pauses_the_run_and_changes_it() {
     // it arrives depends on how the run went.
     let mut waited = 0;
     while run.board("run_state") != 2.0 && waited < 3600 {
+        run.set_board("hp", 1000.0);
         run.step(STEP);
         waited += 1;
     }
