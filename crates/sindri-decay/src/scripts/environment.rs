@@ -228,7 +228,7 @@ pub(super) fn add_pointer_surface(environment: &mut Environment) {
             *name,
             FunctionType {
                 params: vec![Type::F32],
-                return_type: Type::Bool,
+                return_type: Type::F32,
             },
         );
     }
