@@ -38,12 +38,12 @@ jobs:
           mkdir -p target/pages/assets
           cp site/index.html target/pages/index.html
           cp site/site.css target/pages/assets/site.css
-          # Both games are *exported* rather than assembled by hand. The export
-          # is what decides what a project ships, and a site that copied an
-          # asset directory instead was a second answer to that question --
-          # one that wrote a manifest naming no kinds, which the host reads to
-          # know what to ask for, so it shipped a game that loaded nothing.
-          for project in "game:gather" "games/orbital-last-stand:orbital-last-stand"; do
+          # Every example is exported through the real project pipeline. This
+          # keeps Pages honest about exactly what desktop/browser exports ship.
+          for project in \
+            "game:gather" \
+            "games/orbital-last-stand:orbital-last-stand" \
+            "games/graphics-lab:graphics-lab"; do
             src="${project%%:*}"
             route="${project##*:}"
             # The commit is the build id: it versions the host's URL, so a
@@ -65,16 +65,15 @@ jobs:
           test -f target/pages/index.html
           test -f target/pages/docs/scripting/index.html
           test -f target/pages/docs/language/index.html
-          for route in gather orbital-last-stand; do
+          for route in gather orbital-last-stand graphics-lab; do
             test -f "target/pages/examples/$route/index.html"
             test -f "target/pages/examples/$route/assets/sindri.manifest.json"
             test -f "target/pages/examples/$route/pkg/sindri_gather.js"
             test -f "target/pages/examples/$route/pkg/sindri_gather_bg.wasm"
-            # A manifest that names no scene is a game that will not open, and
-            # it is what a hand-written one produced.
             grep -q '"kind": "scene"' "target/pages/examples/$route/assets/sindri.manifest.json"
           done
           grep -q '"kind": "prefab"' target/pages/examples/orbital-last-stand/assets/sindri.manifest.json
+          grep -q '"kind": "script"' target/pages/examples/graphics-lab/assets/sindri.manifest.json
       - uses: actions/configure-pages@v6
         with:
           enablement: true

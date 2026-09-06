@@ -1,0 +1,85 @@
+name: Graphics Lab
+
+on:
+  pull_request:
+    paths:
+      - "games/graphics-lab/**"
+      - "crates/sindri-scene/**"
+      - "crates/sindri-render/**"
+      - "crates/sindri-decay/**"
+      - "crates/sindri-export/**"
+      - "game/**"
+      - "scripts/browser/**"
+      - ".github/workflows/graphics-lab.yml"
+  push:
+    branches: [main]
+    paths:
+      - "games/graphics-lab/**"
+      - "crates/sindri-scene/**"
+      - "crates/sindri-render/**"
+      - "crates/sindri-decay/**"
+      - "crates/sindri-export/**"
+      - "game/**"
+      - "scripts/browser/**"
+      - ".github/workflows/graphics-lab.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    name: Render Graphics Lab
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-pack@0.13.1
+      - uses: ./.github/actions/linux-deps
+        with:
+          packages: libvulkan1 mesa-vulkan-drivers
+      - name: Cache browser tooling
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/ms-playwright
+            scripts/browser/node_modules
+          key: playwright-${{ runner.os }}-${{ hashFiles('scripts/browser/package.json') }}
+      - name: Install browser tooling
+        run: |
+          npm install --prefix scripts/browser
+          npx --prefix scripts/browser playwright install-deps chromium
+          npx --prefix scripts/browser playwright install chromium
+      - name: Build shared browser host
+        run: wasm-pack build game --target web --out-dir pkg
+      - name: Export Graphics Lab
+        run: |
+          cargo run --quiet --package sindri-export --bin sindri-export -- \
+            games/graphics-lab target/dist/graphics-lab --base /sindri2/examples/graphics-lab/
+          mkdir -p target/dist/graphics-lab/pkg
+          cp -R game/pkg/. target/dist/graphics-lab/pkg/
+          test -f target/dist/graphics-lab/assets/sindri.manifest.json
+          grep -q '"kind": "scene"' target/dist/graphics-lab/assets/sindri.manifest.json
+          grep -q '"kind": "script"' target/dist/graphics-lab/assets/sindri.manifest.json
+      - name: Smoke Graphics Lab in Chromium
+        run: |
+          mkdir -p target/render-artifacts
+          SINDRI_EXPECT_ASSETS=1 SINDRI_BASE_PATH=/sindri2/examples/graphics-lab/ \
+            node scripts/browser/smoke.mjs target/dist/graphics-lab \
+            target/render-artifacts/graphics-lab.png
+      - name: Upload Graphics Lab capture
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: graphics-lab-capture
+          path: target/render-artifacts/graphics-lab.png
+          if-no-files-found: warn
+          retention-days: 14
