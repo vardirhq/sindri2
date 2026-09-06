@@ -267,6 +267,31 @@ def build():
 
 def write():
     build()
+
+    # Only scene roots receive direct pointer hit tests. Their descendants
+    # inherit the resulting transform burst through hierarchy, so one tap
+    # animates the entire sculpture without every child competing for input.
+    interactions = {
+        "core": (1.85, 1.0),
+        "boss": (1.75, 2.0),
+        "ship": (1.55, 3.0),
+        "portal": (1.6, 4.0),
+        "singularity": (1.55, 5.0),
+        "asteroid-0": (1.0, 2.0),
+        "asteroid-1": (1.0, 3.0),
+        "asteroid-2": (1.0, 4.0),
+        "asteroid-3": (1.0, 5.0),
+    }
+    for entity in ENTITIES:
+        interaction = interactions.get(entity["id"])
+        if interaction is None:
+            continue
+        script_component = entity.get("components", {}).get("sindri.script")
+        if script_component is None:
+            continue
+        tap_radius, tap_mode = interaction
+        script_component["properties"]["tap_radius"] = tap_radius
+        script_component["properties"]["tap_mode"] = tap_mode
     lines = ["{", '  "format_version": 9,', '  "metadata": {"name": "Graphics Lab Overdrive"},', '  "entities": [']
     for index, entity in enumerate(ENTITIES):
         suffix = "," if index + 1 < len(ENTITIES) else ""

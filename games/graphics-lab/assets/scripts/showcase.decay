@@ -9,28 +9,70 @@ script Showcase {
     @export let bob_speed: f32 = 1.0;
     @export let orbit_radius: f32 = 0.0;
     @export let orbit_speed: f32 = 1.0;
+    @export let tap_radius: f32 = 0.0;
+    @export let tap_mode: f32 = 0.0;
 
     var age: f32 = 0.0;
     var base_x: f32 = 1.0;
     var base_y: f32 = 1.0;
     var base_pos_x: f32 = 0.0;
     var base_pos_y: f32 = 0.0;
+    var base_stroke: f32 = 0.0;
+    var base_fill_alpha: f32 = 0.0;
+    var tap_energy: f32 = 0.0;
+    var spin_impulse: f32 = 0.0;
 
     fn start() {
         this.base_x = this.transform.scale.x;
         this.base_y = this.transform.scale.y;
         this.base_pos_x = this.transform.position.x;
         this.base_pos_y = this.transform.position.y;
+        this.base_stroke = this.shape.stroke_width;
+        this.base_fill_alpha = this.shape.fill.a;
     }
 
     fn update(dt: f32) {
         this.age += dt;
-        this.transform.rotation_z += this.spin * dt;
+
+        if this.tap_radius > 0.0 && Pointer.just_pressed("Left") && Pointer.inside && !Pointer.over_ui {
+            // The Graphics Lab camera uses vertical_size 12 with fit=shorter.
+            // Pointer.overlay_* is two units tall, so the shorter viewport axis
+            // spans 12 world units on both portrait phones and landscape screens.
+            let world_scale = 6.0 / min(1.0, Viewport.aspect);
+            let pointer_x = Pointer.overlay_x * world_scale;
+            let pointer_y = Pointer.overlay_y * world_scale;
+            let dx = pointer_x - this.transform.position.x;
+            let dy = pointer_y - this.transform.position.y;
+            let distance = sqrt(dx * dx + dy * dy);
+
+            if distance <= this.tap_radius {
+                this.tap_energy = 1.0;
+                if this.tap_mode < 1.5 {
+                    this.spin_impulse = 4.5;
+                } else if this.tap_mode < 2.5 {
+                    this.spin_impulse = -6.0;
+                } else if this.tap_mode < 3.5 {
+                    this.spin_impulse = 3.2;
+                } else if this.tap_mode < 4.5 {
+                    this.spin_impulse = -4.2;
+                } else {
+                    this.spin_impulse = 7.0;
+                }
+            }
+        }
+
+        this.tap_energy *= exp(-3.4 * dt);
+        this.spin_impulse *= exp(-4.2 * dt);
+        this.transform.rotation_z += (this.spin + this.spin_impulse) * dt;
 
         let pulse_wave = sin(this.age * this.pulse_speed + this.phase);
-        let amount = 1.0 + pulse_wave * this.pulse;
+        let tap_wave = sin(this.age * 18.0 + this.phase) * this.tap_energy * 0.05;
+        let amount = 1.0 + pulse_wave * this.pulse + this.tap_energy * 0.18 + tap_wave;
         this.transform.scale.x = this.base_x * amount;
         this.transform.scale.y = this.base_y * amount;
+
+        this.shape.stroke_width = this.base_stroke * (1.0 + this.tap_energy * 3.0);
+        this.shape.fill.a = min(1.0, this.base_fill_alpha + this.tap_energy * 0.32);
 
         let bob_angle = this.age * this.bob_speed + this.phase;
         let orbit_angle = this.age * this.orbit_speed + this.phase;

@@ -72,7 +72,9 @@ jobs:
       - name: Smoke Graphics Lab in Chromium
         run: |
           mkdir -p target/render-artifacts
-          SINDRI_EXPECT_ASSETS=1 SINDRI_BASE_PATH=/sindri2/examples/graphics-lab/ \
+          SINDRI_EXPECT_ASSETS=1 \
+          SINDRI_EXPECT_ASSET_KINDS=scene,script \
+          SINDRI_BASE_PATH=/sindri2/examples/graphics-lab/ \
             node scripts/browser/smoke.mjs target/dist/graphics-lab \
             target/render-artifacts/graphics-lab.png
       - name: Upload Graphics Lab capture
