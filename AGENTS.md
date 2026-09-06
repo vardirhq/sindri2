@@ -43,6 +43,8 @@ These documents govern the work:
 - `docs/FEASIBILITY.md` — non-negotiable architectural decisions and risks.
 - `docs/dependency-policy.md` — dependency, licence, source, and MSRV policy.
 - `docs/decay-direction.md` — accepted Editor + Decay authoring direction.
+- `docs/cli-conventions.md` — the grammar and contracts the `sindri` CLI and
+  its generated capability documents follow.
 - `docs/project-format.md` — what a project is, and what `sindri.toml` holds.
 - `docs/scripting.md` and `decay/LANGUAGE.md` — scripting contracts.
 - `docs/capabilities.md` — detailed evidence for what actually works.
@@ -98,6 +100,10 @@ When a capability changes, update the relevant documentation in the same commit:
 - `docs/capabilities.md` for detailed evidence and limitations.
 - `docs/feature-integration-matrix.md` when cross-surface status changes.
 - The relevant subsystem contract in `docs/` when behaviour changes.
+- `docs/generated/` when the Decay host surface or a component registration
+  changes — regenerate with `cargo run -p sindri-capabilities -- --write`.
+  These files are never hand-edited, and a stale one fails the workspace
+  tests.
 - `CHANGELOG.md` for user-visible behaviour.
 - `ROADMAP.md` only when an item's real acceptance criteria are complete.
 

@@ -1,0 +1,20 @@
+[package]
+name = "sindri-capabilities"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+# Not publishable: it depends on `sindri-decay`, which depends on the Decay
+# crates, which are a separate workspace and are not published either.
+publish = false
+
+[dependencies]
+decay-semantic = { path = "../../decay/crates/decay-semantic" }
+sindri-core = { path = "../../crates/sindri-core" }
+sindri-decay = { path = "../../crates/sindri-decay" }
+sindri-scene = { path = "../../crates/sindri-scene" }
+serde_json.workspace = true
+
+[lints]
+workspace = true
