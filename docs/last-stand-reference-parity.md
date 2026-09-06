@@ -294,7 +294,7 @@ Legend: `DONE`, `PARTIAL`, `TODO`, `INTENTIONAL`.
 | 600-second victory | DONE | the timer clamps to 600 and ends the run before another gameplay pass |
 | Exact Normal spawn formula | DONE | campaign pressure uses the reference base curve, Normal multiplier and active sector |
 | Five sector pressure values | DONE | the Director publishes all five two-minute sectors and their pressure multipliers |
-| Five sector hazards | DONE | asteroids, edge flares, gravity wells, null field and telegraphed core beams are authored |
+| Five sector hazards | DONE | all hazard state freezes through overlays; viewport-aware asteroids, flares, gravity wells, null field and Core beams preserve the reference placement, timing, damage and visual identities |
 | 15 enemy archetypes | DONE | the complete roster is selected uniformly from the unlocked pool |
 | Exact enemy unlock timestamps | DONE | all fifteen reference timestamps drive the growing pool |
 | Elite system | DONE | the post-105-second chance curve and all five stat traits are authored in Decay |
