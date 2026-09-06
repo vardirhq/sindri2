@@ -64,10 +64,16 @@ refused rather than guessed at, exactly as a scene's is.
 
 ## Spawning one
 
-From Decay, `World.spawn(prefab)`. The full contract — that a prefab reference
-is a typed `Prefab` rather than text, how overrides work, when a spawned
-script's `start` runs, and what the bounds are — is in `docs/scripting.md`,
-because it is a statement about the scripting surface.
+From Decay, `World.spawn(prefab)` creates a root-level instance.
+`World.spawn_child(prefab, parent)` creates the same prefab and attaches its root
+to an existing entity before the spawned script can start. The prefab root's
+authored transform remains local to that parent, and the prefab's own descendants
+remain under its root. A stale parent is refused before anything is created.
+
+The full contract — that a prefab reference is a typed `Prefab` rather than text,
+how overrides work, when a spawned script's `start` runs, and what the bounds are
+— is in `docs/scripting.md`, because it is a statement about the scripting
+surface.
 
 From Rust, `World::spawn_prefab` returns a `SpawnedPrefab`: the root, every
 entity created, and which authored identity each became.
