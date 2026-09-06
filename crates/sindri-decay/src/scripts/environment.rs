@@ -14,11 +14,11 @@ use crate::{
     surface::{
         EFFECTS, EFFECTS_CALLS, ENTITY, EffectsCall, FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS,
         GameCall, GridCall, HostFunction, INPUT, INPUT_QUERIES, Node, PHYSICS, PHYSICS_CALLS,
-        POINTER, POINTER_QUERIES, POINTER_VALUES, PREFAB, PRINT, PROFILE, PROFILES, PROFILE_CALLS,
+        POINTER, POINTER_QUERIES, POINTER_VALUES, PREFAB, PRINT, PROFILE, PROFILE_CALLS, PROFILES,
         PhysicsCall, PointerValue, ProfileCall, RANDOM, RANDOM_CALLS, RandomCall, SAVE, SAVE_CALLS,
-        STICK, STICK_VALUES, SaveCall, StickValue,
-        THIS, THROUGH_REFERENCE, TIME, TIME_VALUES, TOUCH, TOUCH_CALLS, TOUCH_COUNT, UI, UI_CALLS,
-        UiCall, VIEWPORT, VIEWPORT_VALUES, WORLD, WORLD_CALLS, WorldCall,
+        STICK, STICK_VALUES, SaveCall, StickValue, THIS, THROUGH_REFERENCE, TIME, TIME_VALUES,
+        TOUCH, TOUCH_CALLS, TOUCH_COUNT, UI, UI_CALLS, UiCall, VIEWPORT, VIEWPORT_VALUES, WORLD,
+        WORLD_CALLS, WorldCall,
     },
 };
 
@@ -129,18 +129,12 @@ fn add_profile_surface(environment: &mut Environment) {
     for (name, call) in PROFILE_CALLS {
         let (params, return_type) = match call {
             ProfileCall::Name | ProfileCall::Kind => (vec![profile.clone()], Type::String),
-            ProfileCall::Number => (
-                vec![profile.clone(), Type::String, Type::F32],
-                Type::F32,
-            ),
+            ProfileCall::Number => (vec![profile.clone(), Type::String, Type::F32], Type::F32),
             ProfileCall::Text => (
                 vec![profile.clone(), Type::String, Type::String],
                 Type::String,
             ),
-            ProfileCall::Flag => (
-                vec![profile.clone(), Type::String, Type::Bool],
-                Type::Bool,
-            ),
+            ProfileCall::Flag => (vec![profile.clone(), Type::String, Type::Bool], Type::Bool),
             ProfileCall::Count => (vec![profile.clone(), Type::String], Type::F32),
             ProfileCall::NumberAt => (
                 vec![
@@ -163,7 +157,13 @@ fn add_profile_surface(environment: &mut Environment) {
                 Type::String,
             ),
             ProfileCall::FlagAt => (
-                vec![profile.clone(), Type::String, Type::F32, Type::String, Type::Bool],
+                vec![
+                    profile.clone(),
+                    Type::String,
+                    Type::F32,
+                    Type::String,
+                    Type::Bool,
+                ],
                 Type::Bool,
             ),
         };
