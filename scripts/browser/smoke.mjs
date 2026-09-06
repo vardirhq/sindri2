@@ -2,9 +2,10 @@
 //
 // Compiling wasm proves almost nothing about delivery. This check insists on a
 // configured canvas, settled audio promises, and — when SINDRI_EXPECT_ASSETS is
-// set — real HTTP requests for every kind of project asset Gather needs. It can
-// also deliberately remove a browser capability to prove the page fails in a
-// way a player can actually read.
+// set — real HTTP requests for project assets. Projects can narrow that check
+// with SINDRI_EXPECT_ASSET_KINDS; otherwise every manifest kind is required.
+// It can also deliberately remove a browser capability to prove the page fails
+// in a way a player can actually read.
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -14,6 +15,12 @@ import { imageStatistics } from './png.mjs';
 const ROOT = resolve(process.argv[2] ?? 'examples/cube');
 const SHOT = process.argv[3];
 const EXPECT_ASSETS = process.env.SINDRI_EXPECT_ASSETS === '1';
+const EXPECT_ASSET_KINDS = new Set(
+  (process.env.SINDRI_EXPECT_ASSET_KINDS ?? '')
+    .split(',')
+    .map((kind) => kind.trim())
+    .filter(Boolean),
+);
 const EXPECT_FAILURE = process.env.SINDRI_EXPECT_FAILURE || '';
 let BASE = process.env.SINDRI_BASE_PATH || '/';
 if (!BASE.startsWith('/')) BASE = `/${BASE}`;
@@ -201,10 +208,11 @@ const refused = audio.filter(
   (record) => record.settled !== 'played' || record.playedTo === 0,
 );
 
-// Read from the manifest the build actually shipped, rather than written down
-// here. A list here is a list of one project's file names: it passed for
-// Gather and would have passed for a game with no prefabs, no scripts and no
-// sound, because none of those were on it.
+// Read from the manifest the build actually shipped rather than hard-coding
+// file names. By default every kind is required, which keeps the original
+// broad delivery check. A focused demo can declare the kinds it is expected
+// to exercise without failing merely because its project also contains an
+// intentionally unused asset of some other kind.
 const requiredAssetKinds = [['manifest', 'sindri.manifest.json']];
 try {
   const manifest = JSON.parse(
@@ -213,11 +221,21 @@ try {
   const first = new Map();
   for (const [id, entry] of Object.entries(manifest.assets ?? {})) {
     const kind = entry.kind ?? 'other';
+    if (EXPECT_ASSET_KINDS.size > 0 && !EXPECT_ASSET_KINDS.has(kind)) continue;
     // The first of each kind in the manifest's own order, so the same build
     // asks for the same file every run.
     if (!first.has(kind)) first.set(kind, id);
   }
   for (const [kind, id] of first) requiredAssetKinds.push([kind, id]);
+
+  if (EXPECT_ASSET_KINDS.size > 0) {
+    for (const kind of EXPECT_ASSET_KINDS) {
+      if (!first.has(kind)) {
+        console.log(`problem: manifest has no ${kind} asset to verify`);
+        process.exitCode = 1;
+      }
+    }
+  }
 } catch (error) {
   if (EXPECT_ASSETS) {
     console.log(`problem: no manifest to read asset kinds from: ${error.message}`);
@@ -271,7 +289,8 @@ if (
   blank ||
   problems.length > 0 ||
   refused.length > 0 ||
-  missingAssets.length > 0
+  missingAssets.length > 0 ||
+  process.exitCode === 1
 ) {
   console.log('the page did not start the engine');
   process.exit(1);
