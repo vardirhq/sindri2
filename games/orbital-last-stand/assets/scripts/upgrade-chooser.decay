@@ -1,71 +1,458 @@
-// Offers three of whatever upgrades exist.
-//
-// It never names one. The catalog is every entity tagged "upgrade", so a card
-// added to the scene is offered without this script changing — which is what
-// "data-driven" has to mean if it is to mean anything.
-//
-// The catalog is read once, in `start`, and held. It has to be: `World.with_tag`
-// answers with active entities only, and a hidden card is not active — so a
-// chooser that asked while its screen was down would be asking about nothing.
-// Which also means this script owns the screen. Nothing else switches it off,
-// because anything that switched it off first would take the catalog with it.
+// Full Last Stand module chooser. The scene still owns four reusable card slots;
+// this script supplies the 160-item reference catalog, weighted pools and ownership.
 script UpgradeChooser {
     @export let offers: f32 = 3.0;
 
     var catalog: Array<Entity>;
     var screen: Entity = null;
+    var card0: Entity = null;
+    var card1: Entity = null;
+    var card2: Entity = null;
+    var card3: Entity = null;
+    var name0: Entity = null;
+    var name1: Entity = null;
+    var name2: Entity = null;
+    var name3: Entity = null;
+    var blurb0: Entity = null;
+    var blurb1: Entity = null;
+    var blurb2: Entity = null;
+    var blurb3: Entity = null;
     var showing: bool = false;
 
     fn start() {
         this.catalog = World.with_tag("upgrade");
         this.screen = World.find("Upgrades");
+        this.card0 = World.find("Guidance Kernel");
+        this.card1 = World.find("Arc Imprint");
+        this.card2 = World.find("Nova Imprint");
+        this.card3 = World.find("Gravity Anchor");
+        this.name0 = World.find("Guidance Kernel Name");
+        this.name1 = World.find("Arc Imprint Name");
+        this.name2 = World.find("Nova Imprint Name");
+        this.name3 = World.find("Gravity Anchor Name");
+        this.blurb0 = World.find("Guidance Kernel Blurb");
+        this.blurb1 = World.find("Arc Imprint Blurb");
+        this.blurb2 = World.find("Nova Imprint Blurb");
+        this.blurb3 = World.find("Gravity Anchor Blurb");
         hide();
     }
 
-    fn hide() {
-        for card in this.catalog {
-            World.set_active(card, false);
+    fn update(dt: f32) {
+        if Game.get("modules_reset", 0.0) > 0.0 {
+            Game.set("modules_reset", 0.0);
+            Game.set("owned_modules_0", 0.0);
+            Game.set("owned_modules_1", 0.0);
+            Game.set("owned_modules_2", 0.0);
+            Game.set("owned_modules_3", 0.0);
+            Game.set("black_modules_taken", 0.0);
+            Game.set("picked_module", -1.0);
         }
+        let choosing = Game.get("run_state", 0.0) == 2.0;
+        if choosing == this.showing { return; }
+        if this.showing && !choosing {
+            let picked = Game.get("picked_module", -1.0);
+            if picked >= 0.0 { mark_owned(picked); }
+            Game.set("picked_module", -1.0);
+        }
+        this.showing = choosing;
+        if !choosing { hide(); return; }
+        show();
+    }
+
+    fn hide() {
+        for card in this.catalog { World.set_active(card, false); }
         World.set_active(this.screen, false);
     }
 
-    fn update(dt: f32) {
-        let choosing = Game.get("run_state", 0.0) == 2.0;
-        if choosing == this.showing {
-            return;
-        }
-        this.showing = choosing;
-        if !choosing {
-            hide();
-            return;
-        }
-
-        for card in this.catalog {
-            World.set_active(card, false);
-        }
+    fn show() {
+        for card in this.catalog { World.set_active(card, false); }
         World.set_active(this.screen, true);
-
-        if this.catalog.len <= this.offers {
-            // Fewer cards than places: offer all of them rather than loop
-            // forever looking for a distinct one that does not exist.
-            for card in this.catalog {
-                World.set_active(card, true);
-            }
-            return;
+        let pool = Game.get("module_pool", 0.0);
+        let count = offer_count();
+        let first = choose(pool, -1.0, -1.0, -1.0);
+        let second = choose(pool, first, -1.0, -1.0);
+        let third = choose(pool, first, second, -1.0);
+        Game.set("offer_0", first);
+        Game.set("offer_1", second);
+        Game.set("offer_2", third);
+        paint(this.name0, this.blurb0, first);
+        paint(this.name1, this.blurb1, second);
+        paint(this.name2, this.blurb2, third);
+        World.set_active(this.card0, true);
+        World.set_active(this.card1, true);
+        World.set_active(this.card2, true);
+        if count > 3.0 {
+            let fourth = choose(pool, first, second, third);
+            Game.set("offer_3", fourth);
+            paint(this.name3, this.blurb3, fourth);
+            World.set_active(this.card3, true);
+        } else {
+            Game.set("offer_3", -1.0);
+            World.set_active(this.card3, false);
         }
+    }
 
-        var chosen: f32 = 0.0;
+    fn offer_count() -> f32 {
+        if Game.get("special_second_opinion", 0.0) > 0.0 { return 4.0; }
+        return this.offers;
+    }
+
+    fn choose(pool: f32, a: f32, b: f32, c: f32) -> f32 {
         var tries: f32 = 0.0;
-        // Bounded rather than trusted: drawing until three distinct cards turn
-        // up is a loop whose length is luck, and luck is not a bound.
-        while chosen < this.offers && tries < 64.0 {
+        while tries < 512.0 {
             tries += 1.0;
-            let card = Random.pick(this.catalog);
-            if World.is_active(card) {
-                continue;
-            }
-            World.set_active(card, true);
-            chosen += 1.0;
+            let id = Random.int(0.0, 159.0);
+            if id == a || id == b || id == c || owned(id) || !eligible(id, pool) { continue; }
+            if Random.value() <= rarity_weight(id) / 8.0 { return id; }
         }
+        var id: f32 = 0.0;
+        while id < 160.0 {
+            if id != a && id != b && id != c && !owned(id) && eligible(id, pool) { return id; }
+            id += 1.0;
+        }
+        return Random.int(0.0, 159.0);
+    }
+
+    fn eligible(id: f32, pool: f32) -> bool {
+        if pool == 3.0 {
+            if !is_black(id) { return false; }
+            if id == 139.0 && Game.get("black_modules_taken", 0.0) < 2.0 { return false; }
+            return true;
+        }
+        if is_black(id) { return false; }
+        if pool == 2.0 { return is_companion(id); }
+        if pool == 1.0 { return is_special(id) || id % 11.0 == 0.0; }
+        return !(is_special(id) && id > 129.0);
+    }
+
+    fn rarity_weight(id: f32) -> f32 {
+        if id == 139.0 { return 0.12; }
+        if is_special(id) {
+            if id > 129.0 { return 0.7; }
+            return 2.0;
+        }
+        if id % 11.0 == 0.0 { return 2.0; }
+        if id % 4.0 == 0.0 { return 5.0; }
+        return 8.0;
+    }
+
+    fn is_black(id: f32) -> bool {
+        return id == 90.0 || id == 91.0 || id == 92.0 || id == 93.0 || id == 101.0 || id == 110.0 || id == 111.0 || id == 113.0 || id == 114.0 || id == 131.0 || id == 139.0;
+    }
+
+    fn is_special(id: f32) -> bool {
+        return id == 90.0 || id == 91.0 || id == 92.0 || id == 93.0 || id == 94.0 || id == 95.0 || id == 96.0 || id == 97.0 || id == 98.0 || id == 99.0 || id == 100.0 || id == 101.0 ||
+               id == 102.0 || id == 103.0 || id == 104.0 || id == 105.0 || id == 106.0 || id == 107.0 || id == 108.0 || id == 109.0 || id == 110.0 || id == 111.0 || id == 112.0 || id == 113.0 ||
+               id == 114.0 || id == 115.0 || id == 116.0 || id == 117.0 || id == 118.0 || id == 119.0 || id == 120.0 || id == 121.0 || id == 122.0 || id == 123.0 || id == 124.0 || id == 125.0 ||
+               id == 126.0 || id == 127.0 || id == 128.0 || id == 129.0 || id == 130.0 || id == 131.0 || id == 132.0 || id == 133.0 || id == 134.0 || id == 135.0 || id == 136.0 || id == 137.0 ||
+               id == 138.0 || id == 139.0 || id == 140.0 || id == 141.0 || id == 142.0 || id == 150.0 || id == 151.0 || id == 152.0 || id == 153.0 || id == 154.0 || id == 155.0 || id == 156.0 ||
+               id == 157.0 || id == 158.0 || id == 159.0;
+    }
+
+    fn is_companion(id: f32) -> bool {
+        return id == 35.0 || id == 36.0 || id == 37.0 || id == 38.0 || id == 39.0 || id == 107.0 || id == 108.0 || id == 109.0 || id == 122.0 || id == 123.0 || id == 124.0 || id == 125.0 ||
+               id == 126.0 || id == 127.0 || id == 128.0 || id == 129.0 || id == 130.0 || id == 132.0 || id == 137.0 || id == 138.0 || id == 139.0 || id == 146.0 || id == 152.0 || id == 153.0 ||
+               id == 159.0;
+    }
+
+    fn owned(id: f32) -> bool {
+        let chunk = (id - id % 40.0) / 40.0;
+        let bit = id % 40.0;
+        let power = power2(bit);
+        var value: f32 = Game.get("owned_modules_0", 0.0);
+        if chunk == 1.0 { value = Game.get("owned_modules_1", 0.0); }
+        else if chunk == 2.0 { value = Game.get("owned_modules_2", 0.0); }
+        else if chunk == 3.0 { value = Game.get("owned_modules_3", 0.0); }
+        let whole = (value - value % power) / power;
+        return whole % 2.0 >= 1.0;
+    }
+
+    fn mark_owned(id: f32) {
+        if owned(id) { return; }
+        let chunk = (id - id % 40.0) / 40.0;
+        let power = power2(id % 40.0);
+        if chunk == 0.0 { Game.set("owned_modules_0", Game.get("owned_modules_0", 0.0) + power); }
+        else if chunk == 1.0 { Game.set("owned_modules_1", Game.get("owned_modules_1", 0.0) + power); }
+        else if chunk == 2.0 { Game.set("owned_modules_2", Game.get("owned_modules_2", 0.0) + power); }
+        else { Game.set("owned_modules_3", Game.get("owned_modules_3", 0.0) + power); }
+        if is_black(id) { Game.set("black_modules_taken", Game.get("black_modules_taken", 0.0) + 1.0); }
+    }
+
+    fn power2(bit: f32) -> f32 {
+        var value: f32 = 1.0;
+        var i: f32 = 0.0;
+        while i < bit { value *= 2.0; i += 1.0; }
+        return value;
+    }
+
+    fn paint(name: Entity, blurb: Entity, id: f32) {
+        Ui.set_text(name, module_name(id));
+        Ui.set_text(blurb, module_description(id));
+    }
+
+    fn module_name(id: f32) -> String {
+        if id == 0.0 { return "Hot Core"; }
+        if id == 1.0 { return "Cold Forge"; }
+        if id == 2.0 { return "Redline Coil"; }
+        if id == 3.0 { return "Pulse Divider"; }
+        if id == 4.0 { return "Rail Accelerator"; }
+        if id == 5.0 { return "Dense Slug"; }
+        if id == 6.0 { return "Split Bus"; }
+        if id == 7.0 { return "Trident Relay"; }
+        if id == 8.0 { return "Phase Jacket"; }
+        if id == 9.0 { return "Ghost Bore"; }
+        if id == 10.0 { return "Lucky Circuit"; }
+        if id == 11.0 { return "Loaded Die"; }
+        if id == 12.0 { return "Guidance Kernel"; }
+        if id == 13.0 { return "Arc Imprint"; }
+        if id == 14.0 { return "Nova Imprint"; }
+        if id == 15.0 { return "Gravity Anchor"; }
+        if id == 16.0 { return "Prism Imprint"; }
+        if id == 17.0 { return "Glass Reactor"; }
+        if id == 18.0 { return "Gyro Stabilizer"; }
+        if id == 19.0 { return "Ion Choke"; }
+        if id == 20.0 { return "Reinforced Hull"; }
+        if id == 21.0 { return "Titanium Ribs"; }
+        if id == 22.0 { return "Emergency Foam"; }
+        if id == 23.0 { return "Repair Nanites"; }
+        if id == 24.0 { return "Reactive Plating"; }
+        if id == 25.0 { return "Ablative Shell"; }
+        if id == 26.0 { return "Vector Thrusters"; }
+        if id == 27.0 { return "Afterburner"; }
+        if id == 28.0 { return "Slipstream"; }
+        if id == 29.0 { return "Gravity Well"; }
+        if id == 30.0 { return "Signal Harvest"; }
+        if id == 31.0 { return "Black Box"; }
+        if id == 32.0 { return "Combat Medic"; }
+        if id == 33.0 { return "Thin Skin"; }
+        if id == 34.0 { return "Heavy Frame"; }
+        if id == 35.0 { return "Razor Orbit"; }
+        if id == 36.0 { return "Aegis Halo"; }
+        if id == 37.0 { return "Ember Familiar"; }
+        if id == 38.0 { return "Void Wisp"; }
+        if id == 39.0 { return "Gundrone"; }
+        if id == 40.0 { return "Saw Moon"; }
+        if id == 41.0 { return "Needle Satellite"; }
+        if id == 42.0 { return "Halo Shard"; }
+        if id == 43.0 { return "Mirror Moon"; }
+        if id == 44.0 { return "Storm Sprite"; }
+        if id == 45.0 { return "Seeker Sprite"; }
+        if id == 46.0 { return "Nova Mote"; }
+        if id == 47.0 { return "Gravity Mote"; }
+        if id == 48.0 { return "Phase Drone"; }
+        if id == 49.0 { return "Fork Drone"; }
+        if id == 50.0 { return "Mercury Switch"; }
+        if id == 51.0 { return "Copper Heart"; }
+        if id == 52.0 { return "Ceramic Fuse"; }
+        if id == 53.0 { return "Blue Capacitor"; }
+        if id == 54.0 { return "Gold Capacitor"; }
+        if id == 55.0 { return "Fat Capacitor"; }
+        if id == 56.0 { return "Long Barrel"; }
+        if id == 57.0 { return "Short Barrel"; }
+        if id == 58.0 { return "Warped Lens"; }
+        if id == 59.0 { return "Dead Channel"; }
+        if id == 60.0 { return "Live Channel"; }
+        if id == 61.0 { return "Spare Bulkhead"; }
+        if id == 62.0 { return "Field Rations"; }
+        if id == 63.0 { return "Mag Clamp"; }
+        if id == 64.0 { return "Data Leech"; }
+        if id == 65.0 { return "Hot Wiring"; }
+        if id == 66.0 { return "Coolant Loop"; }
+        if id == 67.0 { return "Overpressure"; }
+        if id == 68.0 { return "Needle Rounds"; }
+        if id == 69.0 { return "Soft Rounds"; }
+        if id == 70.0 { return "Salvage Map"; }
+        if id == 71.0 { return "Combat Telemetry"; }
+        if id == 72.0 { return "Shock Mount"; }
+        if id == 73.0 { return "Drive Belt"; }
+        if id == 74.0 { return "Ballast"; }
+        if id == 75.0 { return "Razor Wire"; }
+        if id == 76.0 { return "Bright Powder"; }
+        if id == 77.0 { return "Dark Powder"; }
+        if id == 78.0 { return "Fast Clock"; }
+        if id == 79.0 { return "Slow Clock"; }
+        if id == 80.0 { return "Spare Reactor"; }
+        if id == 81.0 { return "Dirty Reactor"; }
+        if id == 82.0 { return "Clean Reactor"; }
+        if id == 83.0 { return "Twin Pump"; }
+        if id == 84.0 { return "Wide Nozzle"; }
+        if id == 85.0 { return "Pinpoint Nozzle"; }
+        if id == 86.0 { return "Hunter Array"; }
+        if id == 87.0 { return "Surveyor"; }
+        if id == 88.0 { return "Vacuum Scoop"; }
+        if id == 89.0 { return "Learning Core"; }
+        if id == 90.0 { return "Blood Battery"; }
+        if id == 91.0 { return "Revenge Relay"; }
+        if id == 92.0 { return "Last Bulkhead"; }
+        if id == 93.0 { return "Kill Switch"; }
+        if id == 94.0 { return "Scrap Feast"; }
+        if id == 95.0 { return "Critical Reboot"; }
+        if id == 96.0 { return "Phase Memory"; }
+        if id == 97.0 { return "Terminal Velocity"; }
+        if id == 98.0 { return "Big Bang Board"; }
+        if id == 99.0 { return "Echo Chamber"; }
+        if id == 100.0 { return "Fork Tax"; }
+        if id == 101.0 { return "Ghost Protocol"; }
+        if id == 102.0 { return "Arc Battery"; }
+        if id == 103.0 { return "Prism Mirror"; }
+        if id == 104.0 { return "Anchor Clock"; }
+        if id == 105.0 { return "Homing Instinct"; }
+        if id == 106.0 { return "Second Opinion"; }
+        if id == 107.0 { return "Orbital Foundry"; }
+        if id == 108.0 { return "Mutual Defense"; }
+        if id == 109.0 { return "Crowded Orbit"; }
+        if id == 110.0 { return "Black Sun"; }
+        if id == 111.0 { return "White Noise"; }
+        if id == 112.0 { return "Needle Storm"; }
+        if id == 113.0 { return "Glass Needle"; }
+        if id == 114.0 { return "Heavy Phase"; }
+        if id == 115.0 { return "Bright Ghost"; }
+        if id == 116.0 { return "Seeking Splitter"; }
+        if id == 117.0 { return "Storm Lens"; }
+        if id == 118.0 { return "Gravity Prism"; }
+        if id == 119.0 { return "Nova Guidance"; }
+        if id == 120.0 { return "Phase Anchor"; }
+        if id == 121.0 { return "Critical Arc"; }
+        if id == 122.0 { return "Razor Payload"; }
+        if id == 123.0 { return "Razor Velocity"; }
+        if id == 124.0 { return "Ember Arc"; }
+        if id == 125.0 { return "Wisp Anchor"; }
+        if id == 126.0 { return "Drone Fork"; }
+        if id == 127.0 { return "Aegis Nova"; }
+        if id == 128.0 { return "Familiar Guidance"; }
+        if id == 129.0 { return "Orbital Prism"; }
+        if id == 130.0 { return "Saint Elmo"; }
+        if id == 131.0 { return "Funeral Star"; }
+        if id == 132.0 { return "Choir Engine"; }
+        if id == 133.0 { return "Event Horizon Chip"; }
+        if id == 134.0 { return "Recursive Bus"; }
+        if id == 135.0 { return "Prism Rail"; }
+        if id == 136.0 { return "Critical Mass Cell"; }
+        if id == 137.0 { return "Guardian Network"; }
+        if id == 138.0 { return "Moon Court"; }
+        if id == 139.0 { return "Dead God Circuit"; }
+        if id == 140.0 { return "Rusted Key"; }
+        if id == 141.0 { return "Lucky Bolt"; }
+        if id == 142.0 { return "Warm Seat"; }
+        if id == 143.0 { return "Red Tape"; }
+        if id == 144.0 { return "Blue Tape"; }
+        if id == 145.0 { return "Green Tape"; }
+        if id == 146.0 { return "Wrecking Node"; }
+        if id == 147.0 { return "Tiny Magnet"; }
+        if id == 148.0 { return "Training Manual"; }
+        if id == 149.0 { return "Polished Casing"; }
+        if id == 150.0 { return "Constellation Engine"; }
+        if id == 151.0 { return "Reversal Chamber"; }
+        if id == 152.0 { return "Aegis Reservoir"; }
+        if id == 153.0 { return "Orbit Loom"; }
+        if id == 154.0 { return "Broadside Protocol"; }
+        if id == 155.0 { return "Grave Echo"; }
+        if id == 156.0 { return "Split Horizon"; }
+        if id == 157.0 { return "Devouring Moon"; }
+        if id == 158.0 { return "Pulse Heart"; }
+        if id == 159.0 { return "Execution Mark"; }
+        return "Unknown Module";
+    }
+
+    fn module_description(id: f32) -> String {
+        if id == 0.0 { return "Damage up."; }
+        if id == 2.0 { return "Fire rate up."; }
+        if id == 4.0 { return "Projectile speed up."; }
+        if id == 5.0 { return "Projectile mass and damage up."; }
+        if id == 6.0 { return "Adds one projectile."; }
+        if id == 7.0 { return "Adds two projectiles; damage down."; }
+        if id == 8.0 { return "Adds one pierce."; }
+        if id == 9.0 { return "Adds two pierce; smaller rounds."; }
+        if id == 10.0 { return "Critical chance up."; }
+        if id == 12.0 { return "Shots seek targets."; }
+        if id == 13.0 { return "Impacts chain electrical damage."; }
+        if id == 14.0 { return "Impacts burst."; }
+        if id == 15.0 { return "Drops gravity anchors."; }
+        if id == 16.0 { return "Impacts lance through targets."; }
+        if id == 35.0 { return "Adds a Razor orbital."; }
+        if id == 36.0 { return "Adds an Aegis orbital."; }
+        if id == 37.0 { return "Adds an Ember familiar."; }
+        if id == 38.0 { return "Adds a Void Wisp."; }
+        if id == 39.0 { return "Adds a Gundrone."; }
+        if id == 90.0 { return "Kills repair hull; elites and bosses feed the battery harder."; }
+        if id == 91.0 { return "Taking hull damage triggers four seconds of overdrive."; }
+        if id == 92.0 { return "Once per run, lethal damage leaves the ship at one hull."; }
+        if id == 93.0 { return "Weapon damage rises by 45% below 35% hull integrity."; }
+        if id == 94.0 { return "Every salvage gem yields 35% more experience."; }
+        if id == 95.0 { return "Level-ups repair 12% hull and purge nearby hostile fire."; }
+        if id == 96.0 { return "Piercing rounds gain 12% damage after every target."; }
+        if id == 97.0 { return "Projectile speed converts into up to 40% bonus damage."; }
+        if id == 98.0 { return "Nova impacts gain 35% radius and 20% damage."; }
+        if id == 99.0 { return "Every sixth volley echoes at 60% damage."; }
+        if id == 100.0 { return "Extra volley rounds recover 8% damage each, up to 32%."; }
+        if id == 101.0 { return "Incoming hits have a 12% chance to phase harmlessly."; }
+        if id == 102.0 { return "Arc discharges jump twice farther and hit 20% harder."; }
+        if id == 103.0 { return "Prism impacts fire a second beam backwards."; }
+        if id == 104.0 { return "Gravity anchors detonate 35% faster with larger collapse radius."; }
+        if id == 105.0 { return "Guided projectiles turn 80% faster."; }
+        if id == 106.0 { return "Last Stand transmissions offer four module choices."; }
+        if id == 107.0 { return "Fabricates one Razor orbital and one Gundrone."; }
+        if id == 108.0 { return "Each companion reduces incoming damage by 4%, up to 20%."; }
+        if id == 109.0 { return "Each companion increases weapon damage by 5%, up to 30%."; }
+        if id == 110.0 { return "A close-range gravity aura burns nearby hostiles."; }
+        if id == 111.0 { return "A defensive pulse erases nearby hostile fire every four seconds."; }
+        if id == 112.0 { return "Adds two compact rounds and accelerates the firing cycle."; }
+        if id == 113.0 { return "Critical needle rounds hit brutally hard at the cost of hull."; }
+        if id == 114.0 { return "Massive rounds pierce twice but travel more slowly."; }
+        if id == 115.0 { return "Fast phase rounds gain piercing and critical chance."; }
+        if id == 116.0 { return "Adds a split volley whose rounds independently seek targets."; }
+        if id == 117.0 { return "Completes the circuit required for Seeking Storm."; }
+        if id == 118.0 { return "Installs prism and gravity behavior in a single module."; }
+        if id == 119.0 { return "Guided rounds carry nova payloads into clustered targets."; }
+        if id == 120.0 { return "Piercing rounds leave gravity anchors after their final target."; }
+        if id == 121.0 { return "Critical hits overcharge chained arc damage."; }
+        if id == 122.0 { return "Razor orbitals scale with heavy payload behavior."; }
+        if id == 123.0 { return "Razor orbitals accelerate with projectile velocity."; }
+        if id == 124.0 { return "Ember familiars conduct arcs through their targets."; }
+        if id == 125.0 { return "Void wisps seed gravity anchors around their pulses."; }
+        if id == 126.0 { return "Gundrones inherit split-volley behavior."; }
+        if id == 127.0 { return "Aegis pulses carry nova behavior into nearby enemies."; }
+        if id == 128.0 { return "Familiars acquire farther targets and attack faster."; }
+        if id == 129.0 { return "Razor contacts refract prism damage through the formation."; }
+        if id == 130.0 { return "The Aegis field becomes an electrical conductor."; }
+        if id == 131.0 { return "Boss kills reinforce maximum hull and fully repair the ship."; }
+        if id == 132.0 { return "Completes the Ember, Wisp and arc circuit for Thunder Choir."; }
+        if id == 133.0 { return "Completes payload, nova, gravity and phase behavior."; }
+        if id == 134.0 { return "Completes fork, phase, guidance and arc behavior."; }
+        if id == 135.0 { return "Completes velocity, phase and prism behavior."; }
+        if id == 136.0 { return "Completes payload, critical and nova behavior."; }
+        if id == 137.0 { return "Completes Aegis, Gundrone and fork behavior."; }
+        if id == 138.0 { return "Completes Wisp, gravity, nova and payload behavior."; }
+        if id == 139.0 { return "Activates every apex transformation and an annihilation aura."; }
+        if id == 140.0 { return "Reveals hidden Null Chamber doors and makes them substantially more common."; }
+        if id == 141.0 { return "Module vaults reveal one additional pedestal."; }
+        if id == 142.0 { return "Scrap Exchange prices fall by 30% and Quiet Docks repair more hull."; }
+        if id == 146.0 { return "Adds a Wrecking Node."; }
+        if id == 150.0 { return "Expired rounds become stars; every three connect into a damaging constellation."; }
+        if id == 151.0 { return "Rounds reverse in flight, returning through the arena with more damage and piercing."; }
+        if id == 152.0 { return "Aegis stores intercepted hostile rounds and retaliates with captured energy."; }
+        if id == 153.0 { return "Companions weave damaging energy threads through the space between them."; }
+        if id == 154.0 { return "Friendly cannons periodically occupy both arena edges and fire across three lanes."; }
+        if id == 155.0 { return "Elites, bosses and every tenth kill leave temporary ghosts that fire for the ship."; }
+        if id == 156.0 { return "Friendly rounds leaving the arena wrap through the opposite edge once."; }
+        if id == 157.0 { return "A dark familiar consumes friendly rounds and releases a colossal lance."; }
+        if id == 158.0 { return "Periodically gathers nearby rounds into orbit before releasing them as a spiral."; }
+        if id == 159.0 { return "Marks one target for familiar focus; its death detonates the mark and passes it onward."; }
+        let kind = id % 15.0;
+        if kind == 0.0 { return "Damage up."; }
+        if kind == 1.0 { return "Fire rate up."; }
+        if kind == 2.0 { return "Projectile speed up."; }
+        if kind == 3.0 { return "Projectile mass up."; }
+        if kind == 4.0 { return "Hull integrity up."; }
+        if kind == 5.0 { return "Repairs hull."; }
+        if kind == 6.0 { return "Hull regeneration up."; }
+        if kind == 7.0 { return "Damage resistance up."; }
+        if kind == 8.0 { return "Movement speed up."; }
+        if kind == 9.0 { return "Salvage collection up."; }
+        if kind == 10.0 { return "Experience yield up."; }
+        if kind == 11.0 { return "Critical chance up."; }
+        if kind == 12.0 { return "Damage and projectile speed up."; }
+        if kind == 13.0 { return "Hull and armor up."; }
+        return "Fire rate and movement speed up.";
     }
 }
