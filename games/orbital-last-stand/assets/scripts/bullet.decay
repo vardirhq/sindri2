@@ -1,6 +1,6 @@
-// What the ship fires. It carries its own damage rather than reading it when
-// it lands, so an upgrade taken mid-flight does not retroactively change a shot
-// already in the air.
+// Friendly projectile and lightweight companion runtime. A module can alter
+// behavior without changing prefab identity, which keeps the 160-item catalog
+// out of the scene file.
 script Bullet {
     @export let speed: f32 = 9.0;
     @export let life: f32 = 1.6;
@@ -12,6 +12,9 @@ script Bullet {
     @export let arc: f32 = 0.0;
     @export let nova: f32 = 0.0;
     @export let beam: f32 = 0.0;
+    @export let crit_hit: f32 = 0.0;
+    @export let companion_kind: f32 = 0.0;
+    @export let companion_slot: f32 = 0.0;
     @export let arc_effect: Prefab;
     @export let beam_effect: Prefab;
 
@@ -20,42 +23,52 @@ script Bullet {
     var retiring: bool = false;
     var heading_x: f32 = 0.0;
     var heading_y: f32 = 1.0;
+    var reversed: bool = false;
+    var wrapped: bool = false;
+    var reservoir: f32 = 0.0;
 
     fn start() {
         this.heading_x = this.dir_x;
         this.heading_y = this.dir_y;
+        if this.companion_kind > 0.0 {
+            setup_companion_visual();
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+            return;
+        }
         Physics.set_velocity(this.entity, this.heading_x * this.speed, this.heading_y * this.speed);
     }
 
     fn update(dt: f32) {
-        // Collision events belong to both participants. Removing the shot on
-        // its turn made a later-running enemy see a dead handle and discard a
-        // hit whose burst had already played. Keep it readable for the rest of
-        // this script pass, then remove it on the following one.
-        if this.retiring {
-            World.despawn(this.entity);
-            return;
-        }
+        if this.retiring { World.despawn(this.entity); return; }
         if Game.get("run_state", 0.0) != 1.0 {
             Physics.set_velocity(this.entity, 0.0, 0.0);
             return;
         }
-        this.age += dt;
-        if this.age >= this.life {
-            World.despawn(this.entity);
+        if this.companion_kind > 0.0 {
+            update_companion(dt);
             return;
         }
 
-        if this.missile > 0.0 {
-            seek(dt);
+        this.age += dt;
+        if Game.get("special_reversal_chamber", 0.0) > 0.0 && !this.reversed && this.age >= this.life * 0.52 {
+            this.reversed = true;
+            this.heading_x = -this.heading_x;
+            this.heading_y = -this.heading_y;
+            Physics.set_velocity(this.entity, this.heading_x * this.speed, this.heading_y * this.speed);
         }
+        wrap_horizon();
+        if this.age >= this.life {
+            constellation();
+            World.despawn(this.entity);
+            return;
+        }
+        if this.missile > 0.0 { seek(dt); }
 
-        // Started, not touching: a piercing shot hits each target once without
-        // keeping a list of what it has already hit.
         for hit in Physics.sensor_entered() {
             this.spent += 1.0;
             Effects.burst(this.entity);
             trigger_effects();
+            phase_memory();
         }
         if this.spent > this.pierce {
             this.retiring = true;
@@ -64,18 +77,18 @@ script Bullet {
     }
 
     fn seek(dt: f32) {
-        if Game.get("target_live", 0.0) <= 0.0 {
-            return;
-        }
+        if Game.get("target_live", 0.0) <= 0.0 { return; }
         let to_x = Game.get("target_x", this.transform.position.x) - this.transform.position.x;
         let to_y = Game.get("target_y", this.transform.position.y) - this.transform.position.y;
         let far = sqrt(to_x * to_x + to_y * to_y);
-        if far <= 0.0001 {
-            return;
-        }
+        if far <= 0.0001 { return; }
         let desired_x = to_x / far;
         let desired_y = to_y / far;
-        let steer = min(1.0, dt * 5.0);
+        var turn: f32 = 5.0;
+        if Game.get("special_homing_instinct", 0.0) > 0.0 { turn *= 1.8; }
+        if Game.get("transform_storm", 0.0) > 0.0 { turn = max(turn, 8.0); }
+        if Game.get("transform_recursive", 0.0) > 0.0 { turn = max(turn, 9.0); }
+        let steer = min(1.0, dt * turn);
         let next_x = this.heading_x * (1.0 - steer) + desired_x * steer;
         let next_y = this.heading_y * (1.0 - steer) + desired_y * steer;
         let length = sqrt(next_x * next_x + next_y * next_y);
@@ -88,23 +101,129 @@ script Bullet {
 
     fn trigger_effects() {
         if this.arc > 0.0 {
-            spawn_effect(this.arc_effect, this.damage * 0.27);
+            var arc_damage: f32 = this.damage * 0.27;
+            var jumps: f32 = 2.0;
+            if Game.get("transform_storm", 0.0) > 0.0 { jumps = 4.0; }
+            if Game.get("special_arc_battery", 0.0) > 0.0 { jumps += 2.0; arc_damage *= 1.2; }
+            if Game.get("special_critical_arc", 0.0) > 0.0 && this.crit_hit > 0.0 { arc_damage *= 1.7; }
+            spawn_arc(arc_damage, jumps);
         }
         if this.beam > 0.0 {
-            let beam = World.spawn(this.beam_effect);
-            beam.transform.position.x = this.transform.position.x;
-            beam.transform.position.y = this.transform.position.y;
-            beam.transform.rotation_z = atan2(this.heading_y, this.heading_x);
-            World.set_property(beam, "dir_x", this.heading_x);
-            World.set_property(beam, "dir_y", this.heading_y);
-            World.set_property(beam, "damage", this.damage * 0.23);
+            var power: f32 = 0.23;
+            if Game.get("transform_rail_prism", 0.0) > 0.0 { power *= 1.45; }
+            spawn_beam(this.heading_x, this.heading_y, this.damage * power);
+            if Game.get("special_prism_mirror", 0.0) > 0.0 {
+                spawn_beam(-this.heading_x, -this.heading_y, this.damage * power);
+            }
+        }
+        if this.nova > 0.0 && (Game.get("transform_critical_mass", 0.0) > 0.0 && this.crit_hit > 0.0) {
+            spawn_arc(this.damage * 0.42, 3.0);
+        }
+        if Game.get("transform_recursive", 0.0) > 0.0 && this.spent > 0.0 {
+            spawn_arc(this.damage * 0.3, 2.0);
         }
     }
 
-    fn spawn_effect(effect: Prefab, damage: f32) {
-        let spawned = World.spawn(effect);
+    fn phase_memory() {
+        if Game.get("special_phase_memory", 0.0) <= 0.0 || this.spent <= 1.0 { return; }
+        spawn_arc(this.damage * 0.12 * (this.spent - 1.0), 1.0);
+    }
+
+    fn spawn_arc(amount: f32, jumps: f32) {
+        let spawned = World.spawn(this.arc_effect);
         spawned.transform.position.x = this.transform.position.x;
         spawned.transform.position.y = this.transform.position.y;
-        World.set_property(spawned, "damage", damage);
+        World.set_property(spawned, "damage", amount);
+        World.set_property(spawned, "jumps", jumps);
+    }
+
+    fn spawn_beam(dx: f32, dy: f32, amount: f32) {
+        let spawned = World.spawn(this.beam_effect);
+        spawned.transform.position.x = this.transform.position.x;
+        spawned.transform.position.y = this.transform.position.y;
+        spawned.transform.rotation_z = atan2(dy, dx);
+        World.set_property(spawned, "dir_x", dx);
+        World.set_property(spawned, "dir_y", dy);
+        World.set_property(spawned, "damage", amount);
+    }
+
+    fn wrap_horizon() {
+        if this.wrapped || Game.get("special_split_horizon", 0.0) <= 0.0 { return; }
+        let aspect = max(Viewport.aspect, 0.001);
+        var half_x: f32 = 5.5;
+        var half_y: f32 = 5.5;
+        if aspect >= 1.0 { half_x *= aspect; } else { half_y /= aspect; }
+        if this.transform.position.x > half_x { this.transform.position.x = -half_x; this.wrapped = true; }
+        else if this.transform.position.x < -half_x { this.transform.position.x = half_x; this.wrapped = true; }
+        else if this.transform.position.y > half_y { this.transform.position.y = -half_y; this.wrapped = true; }
+        else if this.transform.position.y < -half_y { this.transform.position.y = half_y; this.wrapped = true; }
+    }
+
+    fn constellation() {
+        if Game.get("special_constellation_engine", 0.0) <= 0.0 { return; }
+        let count = Game.get("constellation_count", 0.0) + 1.0;
+        if count >= 3.0 {
+            Game.set("constellation_count", 0.0);
+            spawn_beam(this.heading_x, this.heading_y, this.damage * 0.8);
+        } else { Game.set("constellation_count", count); }
+    }
+
+    fn setup_companion_visual() {
+        this.transform.scale.x *= 0.72;
+        this.transform.scale.y *= 0.72;
+        if this.companion_kind == 1.0 { set_shape(4.0, 1.0, 0.42, 0.45); }
+        else if this.companion_kind == 2.0 { set_shape(6.0, 0.48, 0.92, 1.0); }
+        else if this.companion_kind == 3.0 { set_shape(5.0, 1.0, 0.55, 0.28); }
+        else if this.companion_kind == 4.0 { set_shape(4.0, 0.72, 0.45, 1.0); }
+        else if this.companion_kind == 5.0 { set_shape(3.0, 0.55, 1.0, 0.82); }
+        else { set_shape(7.0, 1.0, 0.82, 0.32); }
+    }
+
+    fn set_shape(sides: f32, r: f32, g: f32, b: f32) {
+        this.shape.count = sides;
+        this.shape.fill.r = r; this.shape.fill.g = g; this.shape.fill.b = b; this.shape.fill.a = 0.65;
+        this.shape.stroke.r = min(1.0, r + 0.2); this.shape.stroke.g = min(1.0, g + 0.2); this.shape.stroke.b = min(1.0, b + 0.2);
+    }
+
+    fn update_companion(dt: f32) {
+        this.age += dt;
+        let player = World.find("Player");
+        if player == null { return; }
+        var radius: f32 = 1.35 + (this.companion_slot % 3.0) * 0.28;
+        var orbit_speed: f32 = 2.1;
+        if this.companion_kind == 6.0 { radius = 2.0; orbit_speed = 3.0; }
+        if Game.get("special_familiar_guidance", 0.0) > 0.0 && this.companion_kind >= 3.0 { orbit_speed *= 1.25; }
+        let angle = this.age * orbit_speed + this.companion_slot * 1.67 + this.companion_kind * 0.41;
+        this.transform.position.x = player.transform.position.x + cos(angle) * radius;
+        this.transform.position.y = player.transform.position.y + sin(angle) * radius;
+        this.transform.rotation_z = angle;
+        Physics.set_velocity(this.entity, 0.0, 0.0);
+
+        if this.companion_kind == 2.0 { shield_intercept(); }
+        for hit in Physics.sensor_entered() {
+            Effects.burst(this.entity);
+            trigger_effects();
+        }
+    }
+
+    fn shield_intercept() {
+        for hostile in World.with_tag("hostile_shot") {
+            if !World.exists(hostile) { continue; }
+            let dx = hostile.transform.position.x - this.transform.position.x;
+            let dy = hostile.transform.position.y - this.transform.position.y;
+            if dx * dx + dy * dy <= 0.35 {
+                World.despawn(hostile);
+                if Game.get("special_aegis_reservoir", 0.0) > 0.0 {
+                    this.reservoir += 1.0;
+                    if this.reservoir >= 3.0 {
+                        this.reservoir = 0.0;
+                        let tx = Game.get("target_x", this.transform.position.x + 1.0) - this.transform.position.x;
+                        let ty = Game.get("target_y", this.transform.position.y) - this.transform.position.y;
+                        let far = max(0.001, sqrt(tx * tx + ty * ty));
+                        spawn_beam(tx / far, ty / far, this.damage * 2.0);
+                    }
+                }
+            }
+        }
     }
 }
