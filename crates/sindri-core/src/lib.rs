@@ -12,6 +12,7 @@ mod input;
 mod lifecycle;
 mod migration;
 mod prefab;
+mod profile;
 mod random;
 mod save;
 mod scene;
@@ -41,6 +42,7 @@ pub use migration::{SceneMigrationError, SceneMigrationStep, SceneMigrator};
 pub use prefab::{
     PREFAB_FORMAT_VERSION, PREFAB_SUFFIX, PrefabDocument, PrefabError, PrefabJsonError,
 };
+pub use profile::{PROFILE_FORMAT_VERSION, PROFILE_SUFFIX, ProfileDocument, ProfileError};
 pub use random::Rng;
 pub use save::{SAVE_FORMAT_VERSION, SaveDocument, SaveReadError, SaveState, SaveStore, SaveValue};
 pub use scene::{
@@ -58,8 +60,8 @@ pub mod prelude {
     pub use crate::{
         AssetHandle, AssetId, AssetLoadErrorKind, AssetStatus, AssetStore, CommandBuffer,
         CommandHistory, ComponentSchemaRegistry, EngineCore, EngineLifecycle, EngineState,
-        EntityData, EntityId, FixedStepClock, FixedStepConfig, SceneComponent, SceneDocument,
-        SceneEntity, SceneEntityId, SceneMetadata, SceneMigrator, TimeScale, Transform3D,
-        UnknownComponentPolicy, WeakAssetHandle, World, WorldCommand,
+        EntityData, EntityId, FixedStepClock, FixedStepConfig, ProfileDocument, SceneComponent,
+        SceneDocument, SceneEntity, SceneEntityId, SceneMetadata, SceneMigrator, TimeScale,
+        Transform3D, UnknownComponentPolicy, WeakAssetHandle, World, WorldCommand,
     };
 }

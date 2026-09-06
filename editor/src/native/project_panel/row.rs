@@ -197,6 +197,7 @@ pub(crate) fn asset_row(
             AssetKind::Texture => "Click to slice this image into sprites",
             AssetKind::Folder => "Double-click to look inside this folder",
             AssetKind::Script | AssetKind::Sheet => "Click to read this file",
+            AssetKind::Profile => "Click to edit this reusable profile",
             AssetKind::Audio => "Click to hear this clip",
             AssetKind::Font => "Click to see this typeface",
             _ => entry.kind.label(),
@@ -265,6 +266,10 @@ pub(crate) fn row_menu(
         }
         if menu::item(ui, "New script here").clicked() {
             asked = Some(BrowserAction::NewScript(entry.path.clone()));
+            ui.close();
+        }
+        if menu::item(ui, "New profile here").clicked() {
+            asked = Some(BrowserAction::NewProfile(entry.path.clone()));
             ui.close();
         }
         if menu::item(ui, "Import files…").clicked() {

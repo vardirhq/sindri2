@@ -29,6 +29,7 @@ mod exports;
 mod host;
 mod physics;
 mod prefabs;
+mod profiles;
 mod report;
 mod scripts;
 mod surface;
@@ -44,6 +45,7 @@ pub use exports::ScriptExport;
 pub use host::{ScriptContext, Spawning};
 pub use physics::Physics2d;
 pub use prefabs::PrefabSources;
+pub use profiles::ProfileSources;
 pub use report::{ScriptMessage, ScriptReport};
 pub use scripts::{ScriptFrame, ScriptSources, Scripts, environment, referenced_sources};
 

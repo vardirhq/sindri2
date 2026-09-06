@@ -25,6 +25,8 @@ pub enum AssetKind {
     /// so: listed as a plain file, the acceptance project's every enemy looked
     /// like an unrecognised blob sitting in a folder.
     Prefab,
+    /// Reusable authored data, independent of scene entities.
+    Profile,
     Script,
     Font,
     Audio,
@@ -42,6 +44,7 @@ impl AssetKind {
             Self::Sheet => "Sheet",
             Self::Mesh => "Mesh",
             Self::Prefab => "Prefab",
+            Self::Profile => "Profile",
             Self::Script => "Script",
             Self::Font => "Font",
             Self::Audio => "Audio",
@@ -73,6 +76,9 @@ impl AssetKind {
         }
         if lower.ends_with(sindri_core::PREFAB_SUFFIX) {
             return Self::Prefab;
+        }
+        if lower.ends_with(sindri_core::PROFILE_SUFFIX) {
+            return Self::Profile;
         }
         match lower.rsplit_once('.').map(|(_, extension)| extension) {
             Some("png" | "jpg" | "jpeg" | "webp" | "bmp" | "ktx2" | "dds") => Self::Texture,

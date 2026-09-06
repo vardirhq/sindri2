@@ -57,6 +57,8 @@ pub struct WorldHost<'a> {
 /// passing two `None`s in the right positions.
 pub struct HostServices<'a> {
     pub spawning: Spawning<'a>,
+    /// Reusable authored data a typed `Profile` field may name.
+    pub profiles: &'a crate::ProfileSources,
     /// The physics a script may read and drive, when the host runs any.
     pub physics: Option<crate::Physics2d<'a>>,
     /// Where the screen elements are and what the pointer is doing to them.
@@ -81,6 +83,7 @@ impl<'a> WorldHost<'a> {
     ) -> Self {
         let HostServices {
             spawning,
+            profiles,
             physics,
             screen_ui,
             random,
@@ -96,6 +99,7 @@ impl<'a> WorldHost<'a> {
                 blackboard,
                 crate::host::WorldServices {
                     spawning,
+                    profiles,
                     saves,
                     effects,
                     physics,
@@ -264,6 +268,7 @@ mod tests {
             },
             &mut board,
             crate::HostServices {
+                profiles: crate::ProfileSources::none(),
                 spawning: spawning(&prefabs, &started, &mut spawned),
                 physics: None,
                 screen_ui: None,
@@ -333,6 +338,7 @@ mod tests {
             },
             &mut board,
             crate::HostServices {
+                profiles: crate::ProfileSources::none(),
                 spawning: spawning(&prefabs, &started, &mut spawned),
                 physics: None,
                 screen_ui: None,

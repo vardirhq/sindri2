@@ -10,6 +10,7 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | --- | :---: | :---: | :---: |
 | Entities | ✅ | ✅ | 🟡 |
 | Prefabs | ✅ | ❌ | ✅ |
+| Reusable data profiles | ✅ | ✅ | ✅ |
 | Tags | ✅ | ✅ | ✅ |
 | Entity queries | ✅ | — | ✅ |
 | Collections | — | — | 🟡 |
@@ -35,6 +36,7 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Effects | ✅ | 🟡 | 🟡 |
 | Static web export | ✅ | ➖ | ➖ |
 | Prefabs in a shipped build | ✅ | ➖ | ➖ |
+| Profiles in a shipped build | ✅ | ➖ | ➖ |
 | Showing and hiding a screen | ✅ | ✅ | ✅ |
 | Project fonts | ✅ | ✅ | ❌ |
 | Perspective camera | ✅ | 🟡 | ❌ |

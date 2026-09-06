@@ -54,6 +54,8 @@ pub(super) enum BrowserAction {
     NewFolder(PathBuf),
     /// Make a `.decay` script there.
     NewScript(PathBuf),
+    /// Make a reusable `.profile.json` data asset there.
+    NewProfile(PathBuf),
     /// Copy a file or folder beside itself.
     Duplicate(PathBuf),
     /// Ask before removing a file from disk. There is no undo for a disk
@@ -114,6 +116,7 @@ pub(super) const fn asset_icon(kind: AssetKind) -> MaterialIcon {
         AssetKind::Sprite | AssetKind::Sheet => icons::TILEMAP,
         AssetKind::Mesh => icons::MESH,
         AssetKind::Prefab => icons::PREFAB,
+        AssetKind::Profile => icons::FILE,
         AssetKind::Script => icons::SCRIPT,
         AssetKind::Audio => icons::AUDIO,
         AssetKind::Other => icons::FILE,
@@ -487,6 +490,7 @@ impl EditorApp {
             BrowserAction::CancelRename => self.asset_rename = None,
             BrowserAction::NewFolder(beside) => self.new_folder(&beside),
             BrowserAction::NewScript(beside) => self.new_script(&beside),
+            BrowserAction::NewProfile(beside) => self.new_profile(&beside),
             BrowserAction::Duplicate(path) => self.duplicate_asset(&path),
             BrowserAction::ConfirmDelete(path) => self.deleting = Some(path),
             BrowserAction::Import(into) => self.import_assets(&into),

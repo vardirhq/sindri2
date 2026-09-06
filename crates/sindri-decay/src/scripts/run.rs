@@ -8,7 +8,8 @@ use sindri_core::{EntityId, World};
 use sindri_platform::InputState;
 
 use crate::{
-    Blackboard, Physics2d, PrefabSources, ScriptComponent, ScriptContext, ScriptFailure, WorldHost,
+    Blackboard, Physics2d, PrefabSources, ProfileSources, ScriptComponent, ScriptContext,
+    ScriptFailure, WorldHost,
     audio_host::AudioCommand, host::Spawning,
 };
 
@@ -28,6 +29,7 @@ pub(super) struct TickWorld<'a> {
     pub(super) world: &'a mut World,
     pub(super) sources: &'a ScriptSources,
     pub(super) prefabs: &'a PrefabSources,
+    pub(super) profiles: &'a ProfileSources,
     pub(super) input: &'a InputState,
     /// Which entities have a script instance.
     ///
@@ -102,6 +104,7 @@ pub(super) fn tick(
                     started: &at.started,
                     spawned: &mut at.spawned,
                 },
+                profiles: at.profiles,
                 // Reborrowed per tick rather than moved: every script in the
                 // pass reads the same frame's events and drives the same world,
                 // and one taking physics away from the rest would make which

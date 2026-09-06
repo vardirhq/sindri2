@@ -170,6 +170,9 @@ impl ProjectExport {
                 everything_on(&mut world);
                 pending.push(world);
             }
+            for id in scripts.referenced_profiles(&world, &components) {
+                wanted.insert(id, AssetKind::Profile);
+            }
         }
 
         // A sheet is not named by anything: it is found beside its texture, and

@@ -89,6 +89,7 @@ script Director {
         Game.set("overdrive", 0.0);
         Game.set("stats_reset", 1.0);
         Game.set("player_reset", 1.0);
+        Game.set("modules_reset", 1.0);
         clear_tag("enemy");
         clear_tag("bullet");
         clear_tag("player_damage");

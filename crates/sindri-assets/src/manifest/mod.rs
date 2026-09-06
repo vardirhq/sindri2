@@ -125,6 +125,8 @@ pub enum AssetKind {
     /// several worlds; one that carried them as `Other` could not tell which
     /// bytes to parse.
     Prefab,
+    /// Reusable authored data that is not placed in the world.
+    Profile,
     Texture,
     /// A sprite sheet describing how a texture is cut up.
     Sheet,
@@ -141,9 +143,10 @@ impl AssetKind {
     /// Every kind, in the order a host should load them.
     ///
     /// The scene first, because everything else is referenced from it.
-    pub const ALL: [Self; 8] = [
+    pub const ALL: [Self; 9] = [
         Self::Scene,
         Self::Prefab,
+        Self::Profile,
         Self::Sheet,
         Self::Script,
         Self::Texture,
@@ -172,6 +175,7 @@ impl AssetKind {
             Some("decay") => Self::Script,
             // Both end in `.json`, so the longer name is tested first.
             _ if id.ends_with(sindri_core::PREFAB_SUFFIX) => Self::Prefab,
+            _ if id.ends_with(sindri_core::PROFILE_SUFFIX) => Self::Profile,
             _ if id.ends_with(".sheet.json") => Self::Sheet,
             _ if id.ends_with(".scene.json") => Self::Scene,
             _ => Self::Other,
@@ -185,6 +189,7 @@ impl AssetKind {
             Self::Scene => "scene",
             Self::Script => "script",
             Self::Prefab => "prefab",
+            Self::Profile => "profile",
             Self::Texture => "texture",
             Self::Sheet => "sheet",
             Self::Font => "font",

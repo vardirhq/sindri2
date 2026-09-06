@@ -132,6 +132,34 @@ fn rejects_structurally_invalid_scenes() {
 }
 
 #[test]
+fn decodes_and_validates_profiles() {
+    let bytes = br#"{
+        "format_version": 1,
+        "name": "Weapons",
+        "type": "module_catalog",
+        "values": {"modules": [{"name": "Hot Core"}]}
+    }"#
+    .to_vec();
+    let profile = ProfileAssetDecoder
+        .decode(AssetBytes::new(id("profiles/weapons.profile.json"), bytes))
+        .unwrap();
+    assert_eq!(profile.name, "Weapons");
+    assert_eq!(profile.count("modules"), 1);
+
+    let invalid = format!(
+        r#"{{"format_version": {}, "values": {{}}}}"#,
+        sindri_core::PROFILE_FORMAT_VERSION + 1
+    );
+    let error = ProfileAssetDecoder
+        .decode(AssetBytes::new(
+            id("profiles/future.profile.json"),
+            invalid.into_bytes(),
+        ))
+        .unwrap_err();
+    assert_eq!(error.kind(), AssetLoadErrorKind::InvalidData);
+}
+
+#[test]
 fn decoded_completion_applies_only_to_its_handle_generation() {
     let mut store = AssetStore::<SceneDocument>::default();
     let expired = store.request(id("scenes/room.json"));

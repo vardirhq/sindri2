@@ -30,6 +30,7 @@ pub(crate) struct FieldAssets<'a> {
     pub(crate) fonts: &'a [String],
     pub(crate) scripts: &'a [String],
     pub(crate) audio: &'a [String],
+    pub(crate) profiles: &'a [String],
 }
 
 /// The rows of one payload, indented under its heading.
@@ -166,7 +167,7 @@ fn choice_row(
 /// A reference the project cannot see is marked rather than silently accepted:
 /// the field turns to the editor's warning colour and says why on hover, which
 /// is the difference between a typo found here and a scene that will not load.
-fn asset_row(ui: &mut egui::Ui, key: &str, value: &mut Value, available: &[String]) {
+pub(super) fn asset_row(ui: &mut egui::Ui, key: &str, value: &mut Value, available: &[String]) {
     let mut typed = value.as_str().unwrap_or_default().to_owned();
     let known = typed.is_empty() || available.contains(&typed);
     let mut changed = false;

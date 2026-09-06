@@ -19,8 +19,9 @@ use sindri_platform::InputState;
 
 use self::run::{TickWorld, ensure_compiled, tick};
 use crate::{
-    Blackboard, Physics2d, PrefabSources, ScriptComponent, ScriptExport, ScriptFailure,
-    ScriptMessage, ScriptReport, audio_host::AudioCommand, exports::exports_of, surface::PREFAB,
+    Blackboard, Physics2d, PrefabSources, ProfileSources, ScriptComponent, ScriptExport,
+    ScriptFailure, ScriptMessage, ScriptReport, audio_host::AudioCommand, exports::exports_of,
+    surface::{PREFAB, PROFILE},
 };
 
 pub use environment::{environment, referenced_sources};
@@ -54,6 +55,7 @@ pub(crate) const SPAWN_LIMIT_PER_PASS: usize = 4096;
 pub struct ScriptFrame<'a> {
     pub sources: &'a ScriptSources,
     pub prefabs: &'a PrefabSources,
+    pub profiles: &'a ProfileSources,
     pub input: &'a InputState,
     /// The physics a script may read and drive, when the host runs any.
     ///
@@ -97,6 +99,7 @@ impl<'a> ScriptFrame<'a> {
         Self {
             sources,
             prefabs: PrefabSources::none(),
+            profiles: ProfileSources::none(),
             input,
             physics: None,
             screen_ui: None,
@@ -111,6 +114,13 @@ impl<'a> ScriptFrame<'a> {
     #[must_use]
     pub fn with_prefabs(mut self, prefabs: &'a PrefabSources) -> Self {
         self.prefabs = prefabs;
+        self
+    }
+
+    /// The same frame, with reusable profiles a script may read.
+    #[must_use]
+    pub fn with_profiles(mut self, profiles: &'a ProfileSources) -> Self {
+        self.profiles = profiles;
         self
     }
 
@@ -255,6 +265,7 @@ impl Scripts {
         let ScriptFrame {
             sources,
             prefabs,
+            profiles,
             input,
             physics,
             screen_ui,
@@ -293,6 +304,7 @@ impl Scripts {
             world,
             sources,
             prefabs,
+            profiles,
             input,
             physics,
             screen_ui,
@@ -407,6 +419,33 @@ impl Scripts {
             };
             for export in exports {
                 if export.type_name.as_deref() != Some(PREFAB) {
+                    continue;
+                }
+                if let Some(serde_json::Value::String(id)) = component.properties.get(&export.name)
+                {
+                    referenced.insert(id.clone());
+                }
+            }
+        }
+        referenced
+    }
+
+    /// Every reusable profile named by a typed `@export` field.
+    pub fn referenced_profiles(
+        &self,
+        world: &World,
+        components: &ComponentSchemaRegistry,
+    ) -> BTreeSet<String> {
+        let mut referenced = BTreeSet::new();
+        for (_, component) in components
+            .query::<ScriptComponent>(world)
+            .unwrap_or_default()
+        {
+            let Some(exports) = self.exports(&component.source, &component.script) else {
+                continue;
+            };
+            for export in exports {
+                if export.type_name.as_deref() != Some(PROFILE) {
                     continue;
                 }
                 if let Some(serde_json::Value::String(id)) = component.properties.get(&export.name)

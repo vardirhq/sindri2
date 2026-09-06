@@ -13,6 +13,8 @@ use sindri_core::EntityId;
 
 use crate::audition;
 use crate::preview::{self, TextPreview};
+use crate::profile::ProfileEditor;
+use crate::project::AssetKind;
 use crate::selection::Pick;
 use crate::slicer::Slicer;
 use crate::typeface;
@@ -69,6 +71,7 @@ impl EditorApp {
     pub(crate) fn show_nothing(&mut self) {
         self.slicer = None;
         self.preview = None;
+        self.profile = None;
         self.heard = None;
         // The font stays registered with egui until the panel stops showing
         // one, so a project font does not outlive the row that asked for it.
@@ -86,6 +89,7 @@ impl EditorApp {
                 .preview
                 .as_ref()
                 .is_some_and(|open| open.path() == path)
+            || self.profile.as_ref().is_some_and(|open| open.path() == path)
             || self.heard.as_deref() == Some(path)
             || self.shown_font.as_deref() == Some(path)
     }
@@ -111,7 +115,9 @@ impl EditorApp {
             return;
         }
         self.show_nothing();
-        if is_sliceable(path) {
+        if AssetKind::of_path(path) == AssetKind::Profile {
+            self.profile = Some(ProfileEditor::open(path));
+        } else if is_sliceable(path) {
             self.slicer = Some(Slicer::open(path));
         } else if preview::is_readable(path) {
             self.preview = Some(TextPreview::open(path));

@@ -114,6 +114,28 @@ impl EditorApp {
         }
     }
 
+    /// Makes a reusable profile and opens its structured inspector.
+    pub(super) fn new_profile(&mut self, beside: &Path) {
+        let Some(root) = self.project.root().map(Path::to_path_buf) else {
+            return;
+        };
+        let Some(parent) = directory_for(beside) else {
+            return;
+        };
+        let name = unused_name(&parent, "profile", sindri_core::PROFILE_SUFFIX);
+        let starter = sindri_core::ProfileDocument::default()
+            .to_canonical_json()
+            .expect("the default profile is valid");
+        match ops::create_file(&root, &parent, &name, &starter) {
+            Ok(path) => {
+                self.refresh_project();
+                self.select_asset(&path);
+                self.begin_asset_rename(&path);
+            }
+            Err(error) => self.report(error.to_string()),
+        }
+    }
+
     /// Copies a file or folder beside itself.
     pub(in crate::native) fn duplicate_asset(&mut self, path: &Path) {
         let Some(root) = self.project.root().map(Path::to_path_buf) else {
@@ -156,6 +178,11 @@ impl EditorApp {
                 {
                     self.preview = Some(crate::preview::TextPreview::open(&target));
                 }
+                if self.profile.as_ref().is_some_and(|open| open.path() == path)
+                    && let Some(profile) = self.profile.as_mut()
+                {
+                    profile.adopt(&target);
+                }
             }
             Err(error) => self.report(error.to_string()),
         }
@@ -185,6 +212,9 @@ impl EditorApp {
                     .is_some_and(|open| open.path() == path)
                 {
                     self.preview = None;
+                }
+                if self.profile.as_ref().is_some_and(|open| open.path() == path) {
+                    self.profile = None;
                 }
                 self.refresh_project();
                 self.console.info(format!("Deleted {}", named(path)));

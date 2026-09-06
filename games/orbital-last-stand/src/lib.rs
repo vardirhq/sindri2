@@ -16,7 +16,7 @@ use sindri_core::{
     ComponentSchemaRegistry, PREFAB_SUFFIX, PrefabDocument, Rng, SaveStore, SceneDocument, World,
 };
 use sindri_decay::{
-    Physics2d, PrefabSources, ScriptComponent, ScriptFrame, ScriptSources, Scripts,
+    Physics2d, PrefabSources, ProfileSources, ScriptComponent, ScriptFrame, ScriptSources, Scripts,
 };
 use sindri_platform::InputState;
 use sindri_scene::{Effects2d, SceneExtractor, ScenePhysics2d, ScreenExtent, ScreenUi};
@@ -34,6 +34,7 @@ pub struct Run {
     pub scripts: Scripts,
     pub sources: ScriptSources,
     pub prefabs: PrefabSources,
+    pub profiles: ProfileSources,
     pub physics: ScenePhysics2d,
     pub screen_ui: ScreenUi,
     pub effects: Effects2d,
@@ -133,6 +134,24 @@ impl Run {
                 prefabs.insert(format!("prefabs/{name}"), prefab);
             }
         }
+        let mut profiles = ProfileSources::new();
+        let profiles_dir = root.join("profiles");
+        if profiles_dir.exists() {
+            for entry in std::fs::read_dir(&profiles_dir).map_err(|e| e.to_string())? {
+                let path = entry.map_err(|e| e.to_string())?.path();
+                let name = path
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .into_owned();
+                if name.ends_with(sindri_core::PROFILE_SUFFIX) {
+                    let text = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+                    let profile = sindri_core::ProfileDocument::from_json(&text)
+                        .map_err(|e| format!("{name}: {e}"))?;
+                    profiles.insert(format!("profiles/{name}"), profile);
+                }
+            }
+        }
 
         Ok(Self {
             world,
@@ -140,6 +159,7 @@ impl Run {
             scripts: Scripts::new(),
             sources,
             prefabs,
+            profiles,
             physics: ScenePhysics2d::top_down().map_err(|e| e.to_string())?,
             screen_ui: ScreenUi::default(),
             effects: Effects2d::default(),
@@ -178,6 +198,7 @@ impl Run {
             &self.components,
             ScriptFrame::new(&self.sources, &self.input, delta)
                 .with_prefabs(&self.prefabs)
+                .with_profiles(&self.profiles)
                 .with_screen_ui(&self.screen_ui)
                 .with_random(&mut self.random)
                 .with_saves(&mut self.saves)

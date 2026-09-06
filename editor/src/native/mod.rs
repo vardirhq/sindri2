@@ -20,6 +20,7 @@ use sindri_scene::{
 
 use crate::audition::Audition;
 use crate::preview::TextPreview;
+use crate::profile::ProfileEditor;
 use crate::selection::Selection;
 use crate::typeface::Typeface;
 use crate::{
@@ -48,6 +49,7 @@ mod inspector_panel;
 mod overlay;
 mod pointer;
 mod preview_view;
+mod profile_view;
 mod project_open;
 mod project_panel;
 mod runtime;
@@ -174,6 +176,8 @@ struct EditorApp {
     /// "a file the inspector is showing instead of an entity", but what the
     /// panel does with them has nothing in common.
     preview: Option<TextPreview>,
+    /// A reusable data profile selected in the project browser.
+    profile: Option<ProfileEditor>,
     /// The clip the inspector is offering to play, and the device that plays it.
     heard: Option<PathBuf>,
     audition: Audition,
@@ -425,6 +429,7 @@ impl EditorApp {
             id_edit: None,
             scene_name_edit: None,
             preview: None,
+            profile: None,
             heard: None,
             audition: Audition::default(),
             shown_font: None,

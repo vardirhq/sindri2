@@ -94,6 +94,7 @@ fn a_row_knows_what_kind_of_file_it_is() {
     // look like blobs the editor does not understand -- which is how the
     // acceptance project's every enemy appeared.
     assert_eq!(kind("drifter.prefab.json"), Some(AssetKind::Prefab));
+    assert_eq!(kind("weapon.profile.json"), Some(AssetKind::Profile));
     assert_eq!(
         kind("settings.json"),
         Some(AssetKind::Other),

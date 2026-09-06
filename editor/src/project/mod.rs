@@ -358,6 +358,13 @@ impl ProjectTree {
             .collect()
     }
 
+    /// References to every reusable profile the browser can see.
+    pub fn profiles(&self) -> Vec<String> {
+        self.referenced(AssetKind::Profile)
+            .map(str::to_owned)
+            .collect()
+    }
+
     /// References to every Decay script the browser can see.
     ///
     /// Decay only: `.rs` and `.wgsl` are listed as scripts by the browser

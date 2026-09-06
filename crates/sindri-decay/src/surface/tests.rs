@@ -6,13 +6,13 @@
 use decay_ir::Path;
 use decay_runtime::{Host, Value};
 use decay_semantic::{Environment, ExternalSymbol, Type};
-use sindri_core::{EntityData, Transform3D, World};
+use sindri_core::{EntityData, ProfileDocument, Transform3D, World};
 use sindri_platform::InputState;
 
 use crate::surface::names;
 use crate::{
     PrefabSources, ScriptContext, Spawning, WorldHost, environment,
-    surface::{ENTITY, PREFAB},
+    surface::{ENTITY, PREFAB, PROFILE},
 };
 
 /// The prefab this module's calls spawn, and the document behind it.
@@ -22,6 +22,7 @@ use crate::{
 /// loaded is refused, which would prove nothing about whether the host knows
 /// the path.
 const SPARE_PREFAB: &str = "prefabs/spare.prefab.json";
+const SPARE_PROFILE: &str = "profiles/spare.profile.json";
 
 fn prefabs() -> PrefabSources {
     let mut prefabs = PrefabSources::new();
@@ -32,6 +33,19 @@ fn prefabs() -> PrefabSources {
         )),
     );
     prefabs
+}
+
+fn profiles() -> crate::ProfileSources {
+    let mut profiles = crate::ProfileSources::new();
+    let mut profile = ProfileDocument::default();
+    profile.name = "Spare".to_owned();
+    profile.profile_type = "surface_test".to_owned();
+    profile.values.insert(
+        "Space".to_owned(),
+        serde_json::json!([{"Space": 1.0}]),
+    );
+    profiles.insert(SPARE_PROFILE, profile);
+    profiles
 }
 
 /// The entities one described call is exercised against.
@@ -221,6 +235,7 @@ fn the_host_answers_every_path_the_analyzer_accepts() {
     let mut board = blackboard();
     let mut audio = Vec::new();
     let prefabs = prefabs();
+    let profiles = profiles();
     let started = std::collections::BTreeSet::new();
     let mut spawned = Vec::new();
     let screen_ui = sindri_scene::ScreenUi::new();
@@ -253,6 +268,7 @@ fn the_host_answers_every_path_the_analyzer_accepts() {
                 context(&input),
                 &mut board,
                 crate::HostServices {
+                    profiles: &profiles,
                     spawning: Spawning {
                         prefabs: &prefabs,
                         started: &started,
@@ -279,6 +295,7 @@ fn the_host_answers_every_path_the_analyzer_accepts() {
                 context(&input),
                 &mut board,
                 crate::HostServices {
+                    profiles: &profiles,
                     spawning: Spawning {
                         prefabs: &prefabs,
                         started: &started,
@@ -316,6 +333,7 @@ fn the_host_answers_every_global_the_analyzer_describes() {
     let mut board = blackboard();
     let mut audio = Vec::new();
     let prefabs = prefabs();
+    let profiles = profiles();
     let started = std::collections::BTreeSet::new();
     let mut spawned = Vec::new();
     let screen_ui = sindri_scene::ScreenUi::new();
@@ -355,6 +373,7 @@ fn the_host_answers_every_global_the_analyzer_describes() {
                 context(&input),
                 &mut board,
                 crate::HostServices {
+                    profiles: &profiles,
                     spawning: Spawning {
                         prefabs: &prefabs,
                         started: &started,
@@ -427,6 +446,7 @@ fn arguments_for(
             // A prefab value is the asset ID the scene authored, which is what
             // the host resolves against what it loaded.
             Type::Named(named) if named == PREFAB => Value::String(SPARE_PREFAB.to_owned()),
+            Type::Named(named) if named == PROFILE => Value::String(SPARE_PROFILE.to_owned()),
             // Never empty: a call that chooses from a group is right to refuse
             // an empty one, and a fixture that handed it nothing would be
             // testing that refusal rather than the call.
@@ -493,6 +513,7 @@ fn every_described_function_is_one_the_host_performs() {
             context(&input),
             &mut board,
             crate::HostServices {
+                profiles: crate::ProfileSources::none(),
                 spawning: Spawning {
                     prefabs: &prefabs,
                     started: &started,

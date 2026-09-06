@@ -5,7 +5,9 @@
 //! and hands what they did to the engine.
 
 use sindri_core::{ComponentSchemaRegistry, World};
-use sindri_decay::{AudioCommand, PrefabSources, ScriptFrame, ScriptSources, Scripts};
+use sindri_decay::{
+    AudioCommand, PrefabSources, ProfileSources, ScriptFrame, ScriptSources, Scripts,
+};
 
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(not(target_arch = "wasm32"))]
@@ -37,6 +39,7 @@ pub struct Session {
     /// for what it has just grown, and nothing it runs spawns. A host that does
     /// fills this the same way it fills the sources.
     prefabs: PrefabSources,
+    profiles: ProfileSources,
     components: ComponentSchemaRegistry,
     animations: SpriteAnimations,
     /// The physics the scripts may drive.
@@ -89,6 +92,7 @@ impl Session {
             scripts: Scripts::new(),
             sources,
             prefabs: PrefabSources::new(),
+            profiles: ProfileSources::new(),
             components,
             animations: SpriteAnimations::new(),
             physics: ScenePhysics2d::top_down().expect("zero gravity is finite"),
@@ -112,6 +116,12 @@ impl Session {
     #[must_use]
     pub fn with_prefabs(mut self, prefabs: PrefabSources) -> Self {
         self.prefabs = prefabs;
+        self
+    }
+
+    #[must_use]
+    pub fn with_profiles(mut self, profiles: ProfileSources) -> Self {
+        self.profiles = profiles;
         self
     }
 
@@ -149,6 +159,7 @@ impl Session {
             &self.components,
             ScriptFrame::new(&self.sources, input, delta_seconds)
                 .with_prefabs(&self.prefabs)
+                .with_profiles(&self.profiles)
                 .with_screen_ui(&self.screen_ui)
                 .with_random(&mut self.random)
                 .with_saves(&mut self.saves)

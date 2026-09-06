@@ -526,6 +526,13 @@ owns a device.
 text binds that project-owned face under the scene's logical asset reference,
 so native and browser builds never substitute different installed fonts.
 
+`ProfileDocument` is the reusable-data counterpart to a prefab: a versioned
+`.profile.json` asset with an author label, an optional game-defined type, and a
+nested JSON-shaped value payload. `ProfileAssetDecoder` validates it through the
+same native/browser loading path, and the manifest records it as `profile`.
+Unlike a prefab it creates no entity; many script components can hold the same
+logical profile reference and read one loaded document.
+
 On native, `AssetWatch` notices when the file behind a loaded asset changes and
 `AssetLoader::reload` loads it again, by polling modification time and length
 rather than subscribing to filesystem events.
@@ -802,6 +809,12 @@ frame.
   typefaces suits a score. The clip plays through the editor's own audio device
   rather than the scene's, so auditioning one needs no running world and cannot
   leave a voice behind in it
+- **Creates and edits reusable profiles.** A project-row menu makes a valid
+  `.profile.json`; selecting it opens a structured inspector for its name,
+  game-defined type, nested values, groups, and lists. List entries can be
+  appended, duplicated, and removed, and Save writes canonical profile JSON.
+  An exported Decay `Profile` field uses a project asset picker rather than a
+  free-form string.
 - A Console dock holding what the editor has actually said — every failure, what
   each scene turned out to be when it opened, and every texture it names that
   nothing has bound — bounded, with a repeated message collapsed into a count so
@@ -931,6 +944,13 @@ Sources load through `sindri-assets` and hot-reload from the same `AssetWatch`
 the textures use. Verified in the editor: the fixture's cube turns because
 `editor/assets/scripts/spin.decay` says so, and Stop restores the world to the
 pixel.
+
+An opaque exported `Profile` is resolved and loaded from the project in the
+same pass. `Profiles.number`/`text`/`flag` read scalar values;
+`Profiles.count` and the typed `*_at` calls read object records from top-level
+lists, always with explicit fallbacks. Orbital Last Stand exercises this by
+driving its 160-entry module registry, weighted pools, requirements, display
+copy, and generic effects from one profile rather than ID switchboards.
 
 A script reaches its own transform's position, scale and Z rotation, its
 sprite's tint and layer, the keyboard, the frame's delta and its own elapsed

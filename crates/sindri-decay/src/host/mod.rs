@@ -16,6 +16,7 @@ mod dispatch;
 mod effects;
 mod map;
 mod physics;
+mod profile;
 mod random;
 mod save;
 mod ui;
@@ -29,7 +30,7 @@ use sindri_platform::InputState;
 
 use self::convert::{as_f32, describe, number};
 use crate::{
-    Blackboard, PrefabSources,
+    Blackboard, PrefabSources, ProfileSources,
     surface::{
         FUNCTIONS, Handle, HostFunction, Leaf, POINTER, POINTER_VALUES, PRINT, PointerValue, STICK,
         STICK_VALUES, StickValue, TIME, TIME_VALUES, TOUCH, TOUCH_COUNT, TimeValue, TouchCall,
@@ -80,6 +81,7 @@ pub struct WorldHost<'a> {
     blackboard: &'a mut Blackboard,
     /// What spawning needs, and what it produced.
     spawning: Spawning<'a>,
+    profiles: &'a ProfileSources,
     /// The physics a script may read and drive, when the host runs any.
     physics: Option<crate::Physics2d<'a>>,
     /// What the game remembers, when the host is keeping a save.
@@ -321,6 +323,7 @@ impl Host for WorldHost<'_> {
 /// queue, which is the wrapper's business rather than this host's.
 pub struct WorldServices<'a> {
     pub spawning: Spawning<'a>,
+    pub profiles: &'a ProfileSources,
     /// What the game remembers, when the host is keeping a save.
     pub saves: Option<&'a mut sindri_core::SaveStore>,
     /// The fleck pool, when the host is running one.
@@ -340,6 +343,7 @@ impl<'a> WorldHost<'a> {
     ) -> Self {
         let WorldServices {
             spawning,
+            profiles,
             saves,
             effects,
             physics,
@@ -352,6 +356,7 @@ impl<'a> WorldHost<'a> {
             context,
             blackboard,
             spawning,
+            profiles,
             physics,
             screen_ui,
             random,
