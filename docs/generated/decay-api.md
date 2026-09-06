@@ -225,4 +225,5 @@ Names in scope without qualification. Decay has no imports, so each of these is 
 - `set_property(Entity, String, unknown)` → `unit`
 - `set_shape_point(f32, f32, f32)` → `unit`
 - `spawn(Prefab)` → `Entity`
+- `spawn_child(Prefab, Entity)` → `Entity`
 - `with_tag(String)` → `Array<Entity>`
