@@ -11,6 +11,8 @@ script HazardAsteroid {
     @export let view_size: f32 = 11.0;
 
     var hp: f32 = 0.0;
+    var drift_x: f32 = 0.0;
+    var drift_y: f32 = 0.0;
     var spin: f32 = 0.0;
     var phase: f32 = 0.0;
     var age: f32 = 0.0;
@@ -19,10 +21,12 @@ script HazardAsteroid {
 
     fn start() {
         this.hp = this.health;
+        this.drift_x = this.vx;
+        this.drift_y = this.vy;
         this.spin = Random.range(-0.55, 0.55);
         this.phase = Random.range(0.0, 6.2831853);
         author_rock();
-        Physics.set_velocity(this.entity, this.vx, this.vy);
+        Physics.set_velocity(this.entity, this.drift_x, this.drift_y);
     }
 
     fn update(dt: f32) {
@@ -37,7 +41,7 @@ script HazardAsteroid {
 
         // Pausing sets the dynamic body to rest. Restore its authored drift
         // when play resumes instead of leaving a preserved asteroid frozen.
-        Physics.set_velocity(this.entity, this.vx, this.vy);
+        Physics.set_velocity(this.entity, this.drift_x, this.drift_y);
         this.age += dt;
         this.impact_cd = max(0.0, this.impact_cd - dt);
         this.hit_flash = max(0.0, this.hit_flash - dt);
@@ -136,8 +140,8 @@ script HazardAsteroid {
         let dx = this.transform.position.x - player.transform.position.x;
         let dy = this.transform.position.y - player.transform.position.y;
         let far = max(0.1, sqrt(dx * dx + dy * dy));
-        this.vx += dx / far * 1.1;
-        this.vy += dy / far * 1.1;
+        this.drift_x += dx / far * 1.1;
+        this.drift_y += dy / far * 1.1;
     }
 
     fn visible_half_x() -> f32 {
