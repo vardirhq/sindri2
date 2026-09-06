@@ -130,6 +130,73 @@ fn a_script_creates_the_entity_a_prefab_describes() {
 }
 
 #[test]
+fn spawn_child_attaches_the_prefab_and_starts_it_in_the_same_frame() {
+    let (mut world, sources, prefabs) = world(
+        r#"
+        script Spawner {
+            @export let bullet: Prefab;
+            fn start() {
+                let shot = World.spawn_child(this.bullet, this.entity);
+                World.set_property(shot, "speed", 7.0);
+            }
+        }
+        "#,
+        Some(
+            r"
+        script Bullet {
+            @export let speed: f32 = 1.0;
+            fn start() { this.transform.position.x = this.speed; }
+        }
+        ",
+        ),
+    );
+    let report = advance(&mut Scripts::new(), &mut world, &sources, &prefabs);
+    assert!(report.failures.is_empty(), "{:?}", report.failures);
+
+    let (spawner, _) = world
+        .entities()
+        .find(|(_, data)| data.name.as_deref() == Some("Spawner"))
+        .expect("spawner remains");
+    let (_, bullet) = world
+        .entities()
+        .find(|(_, data)| data.name.as_deref() == Some("Bullet"))
+        .expect("child was spawned");
+    assert_eq!(bullet.parent, Some(spawner));
+    assert!(
+        (bullet.transform_3d.expect("a transform").position[0] - 7.0).abs() < 1.0e-5,
+        "the child script did not start in the same frame"
+    );
+}
+
+#[test]
+fn spawn_child_refuses_a_stale_parent_without_leaving_an_orphan() {
+    let (mut world, sources, prefabs) = world(
+        r"
+        script Spawner {
+            @export let bullet: Prefab;
+            fn start() {
+                let gone = World.spawn(this.bullet);
+                World.despawn(gone);
+                World.spawn_child(this.bullet, gone);
+            }
+        }
+        ",
+        None,
+    );
+    let report = advance(&mut Scripts::new(), &mut world, &sources, &prefabs);
+    let message = report
+        .failures
+        .iter()
+        .map(ToString::to_string)
+        .collect::<String>();
+    assert!(
+        message.contains("parent") && message.contains("no longer exists"),
+        "a stale parent should be named: {message}"
+    );
+    assert_eq!(world.len(), 1, "the failed child spawn left an orphan");
+}
+
+#[test]
 fn a_spawned_script_has_started_by_the_end_of_the_frame_that_made_it() {
     let (mut world, sources, prefabs) = world(
         r"

@@ -220,6 +220,13 @@ pub(crate) enum WorldCall {
     /// loaded is refused at the call: a spawn that silently produced nothing is
     /// a bug report nobody can reproduce.
     Spawn,
+    /// Creates a prefab and makes its root a local child before the spawned
+    /// script is eligible to start.
+    ///
+    /// This is the common attachment operation in one typed call. The prefab's
+    /// authored root transform stays local to the new parent, while any
+    /// descendants the prefab already contains remain under that root.
+    SpawnChild,
     /// Puts one entity under another, or at the root when given `null`.
     ///
     /// Separate from `spawn` rather than an argument to it, because reparenting
@@ -288,6 +295,7 @@ pub(crate) const WORLD_CALLS: &[(&str, WorldCall)] = &[
     ("despawn", WorldCall::Despawn),
     ("exists", WorldCall::Exists),
     ("spawn", WorldCall::Spawn),
+    ("spawn_child", WorldCall::SpawnChild),
     ("set_parent", WorldCall::SetParent),
     ("set_shape_point", WorldCall::SetShapePoint),
     ("set_property", WorldCall::SetProperty),

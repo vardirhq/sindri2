@@ -1023,6 +1023,15 @@
         },
         {
           "kind": "function",
+          "name": "spawn_child",
+          "parameters": [
+            "Prefab",
+            "Entity"
+          ],
+          "returns": "Entity"
+        },
+        {
+          "kind": "function",
           "name": "with_tag",
           "parameters": [
             "String"

@@ -170,6 +170,7 @@ table above lists, reaching the same numbers.
 | `World.exists(entity)` | `bool` |
 | `World.despawn(entity)` | nothing |
 | `World.spawn(prefab)` | `Entity` |
+| `World.spawn_child(prefab, parent)` | `Entity` |
 | `World.set_parent(entity, parent)` | nothing |
 | `World.set_shape_point(index, x, y)` | nothing |
 | `World.set_property(entity, name, value)` | nothing |
@@ -218,8 +219,10 @@ through `WorldCommand` as an open item rather than pretending it is done.
 ### Making one
 
 `World.spawn` creates the entities a prefab describes and answers with its root.
-A prefab is an authored reusable definition — one root and everything under it,
-in the same document shape a scene uses. `docs/prefabs.md` is what one is.
+`World.spawn_child` does the same thing while attaching that root to an existing
+parent before the spawned script is scheduled to start. A prefab is an authored
+reusable definition — one root and everything under it, in the same document
+shape a scene uses. `docs/prefabs.md` is what one is.
 
 **It takes a `Prefab`, not text.** A `Prefab` is opaque, like an `Entity`: a
 script cannot build one, and the only way to hold one is for the scene to have
@@ -251,7 +254,9 @@ an error saying so — not a spawn that quietly makes nothing.
 **Overrides are ordinary writes.** The call answers with a reference, and
 everything above is reachable through it: position, scale, rotation, tint,
 layer. `World.set_parent` puts it under something, or at the root when given
-`null`. Nothing here takes a bag of JSON.
+`null`. `World.spawn_child` is the one-step form when parenthood is part of the
+spawn itself; it validates the parent before creating anything, so a stale
+parent cannot leave an orphan behind. Nothing here takes a bag of JSON.
 
 **A starting value for a script is `World.set_property`.** It is the one thing
 the paths above cannot do: a script's own fields are not on the surface, because
@@ -279,6 +284,8 @@ field initializers, which is Decay code, and the world is already lent to the
 call in progress — so the pass finishes and then starts what it made. A script
 started that way may spawn in turn, and those rounds are bounded: a cascade that
 does not settle after eight is reported rather than taking the frame with it.
+`World.spawn_child` follows the same scheduling rule, with the useful guarantee
+that the parent link already exists by the time that `start()` runs.
 
 **Spawning is bounded.** One pass may create 4096 entities. Decay's operation
 budget already stops a loop that never ends, but it stops it after a million

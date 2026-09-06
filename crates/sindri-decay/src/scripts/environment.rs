@@ -146,6 +146,10 @@ pub(super) fn add_world_surface(environment: &mut Environment) {
                 params: match call {
                     WorldCall::Find | WorldCall::WithTag => vec![Type::String],
                     WorldCall::Spawn => vec![Type::Named(PREFAB.to_owned())],
+                    WorldCall::SpawnChild => vec![
+                        Type::Named(PREFAB.to_owned()),
+                        Type::Named(ENTITY.to_owned()),
+                    ],
                     WorldCall::Despawn | WorldCall::Exists | WorldCall::IsActive => {
                         vec![Type::Named(ENTITY.to_owned())]
                     }
@@ -172,7 +176,9 @@ pub(super) fn add_world_surface(environment: &mut Environment) {
                     }
                 },
                 return_type: match call {
-                    WorldCall::Find | WorldCall::Spawn => Type::Named(ENTITY.to_owned()),
+                    WorldCall::Find | WorldCall::Spawn | WorldCall::SpawnChild => {
+                        Type::Named(ENTITY.to_owned())
+                    }
                     WorldCall::WithTag => Type::array_of(Type::Named(ENTITY.to_owned())),
                     WorldCall::Despawn
                     | WorldCall::SetParent
