@@ -79,7 +79,10 @@ fn scalar<'a, T: Copy>(
     read: impl Fn(&'a Json) -> Option<T>,
     fallback: usize,
     fallback_name: &str,
-) -> Result<T, RuntimeError> {
+) -> Result<T, RuntimeError>
+where
+    Value: Fallback<T>,
+{
     let key = text(path, args, 1, "a value name")?;
     read_fallback(path, args, fallback, fallback_name, |fallback| {
         profile.value(key).and_then(&read).unwrap_or(fallback)
@@ -93,7 +96,10 @@ fn item<'a, T: Copy>(
     read: impl Fn(&'a Json) -> Option<T>,
     fallback: usize,
     fallback_name: &str,
-) -> Result<T, RuntimeError> {
+) -> Result<T, RuntimeError>
+where
+    Value: Fallback<T>,
+{
     let collection = text(path, args, 1, "a collection name")?;
     let index = index(path, args, 2)?;
     let key = text(path, args, 3, "a value name")?;
