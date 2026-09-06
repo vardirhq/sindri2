@@ -68,12 +68,17 @@ fn a_typed_profile_export_reads_scalars_and_records() {
     );
     assert!(report.failures.is_empty(), "{:?}", report.failures);
     assert!(scripts.is_running(entity));
-    assert_eq!(scripts.blackboard().get("weight", 0.0), 2.0);
-    assert_eq!(scripts.blackboard().get("count", 0.0), 1.0);
-    assert_eq!(scripts.blackboard().get("named", 0.0), 1.0);
-    assert_eq!(scripts.blackboard().get("profile_name", 0.0), 1.0);
-    assert_eq!(scripts.blackboard().get("kind", 0.0), 1.0);
-    assert_eq!(scripts.blackboard().get("theme", 0.0), 1.0);
-    assert_eq!(scripts.blackboard().get("threshold", 0.0), 3.5);
-    assert_eq!(scripts.blackboard().get("enabled", 0.0), 1.0);
+    let board = scripts.blackboard();
+    let close = |name: &str, expected: f64| {
+        let actual = board.get(name, 0.0);
+        assert!((actual - expected).abs() < f64::EPSILON, "{name}: {actual}");
+    };
+    close("weight", 2.0);
+    close("count", 1.0);
+    close("named", 1.0);
+    close("profile_name", 1.0);
+    close("kind", 1.0);
+    close("theme", 1.0);
+    close("threshold", 3.5);
+    close("enabled", 1.0);
 }
