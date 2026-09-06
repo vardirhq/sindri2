@@ -67,11 +67,12 @@ Decay capability that lets the authored game compute its `fit: shorter` world
 bounds. Player and hostile-shot collider radii are authored in world units to
 match their rendered size; transform scale does not scale physics colliders.
 
-The campaign skeleton, complete fifteen-enemy roster, exact unlock pool and all
-five sector hazards are complete. Elites and the Normal combat-drop economy are
-the next completed slice. Continue with the implementation order in the parity
-document: XP/module progression, routes, events, boss roster/director, Black
-Signal, then the full-run balance pass.
+The campaign skeleton, complete fifteen-enemy roster, exact unlock pool, all
+five sector hazards, elites, Normal combat drops, eleven-boss director, exact XP
+curve and the 160-module profile catalog are complete. The 19 synergy recipes
+are also profile-authored; their activation is generic, while the parity table
+tracks remaining effect fidelity. Continue with routes, events, Black Signal,
+adaptive boss scaling and the final full-run balance pass.
 
 ## Rules that are not negotiable
 

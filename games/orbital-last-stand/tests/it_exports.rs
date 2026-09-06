@@ -48,11 +48,14 @@ fn every_prefab_ships() {
 }
 
 #[test]
-fn the_module_profile_ships() {
+fn every_gameplay_profile_ships() {
     let (_scratch, manifest) = exported("profiles");
     assert_eq!(
         ids(&manifest, AssetKind::Profile),
-        ["profiles/module-catalog.profile.json"]
+        [
+            "profiles/module-catalog.profile.json",
+            "profiles/synergy-catalog.profile.json"
+        ]
     );
 }
 

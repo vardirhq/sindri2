@@ -1167,6 +1167,19 @@
       }
     },
     {
+      "id": "synergies",
+      "name": "Synergies",
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "catalog": "profiles/synergy-catalog.profile.json"
+          },
+          "script": "Synergies",
+          "source": "scripts/synergies.decay"
+        }
+      }
+    },
+    {
       "id": "director",
       "name": "Director",
       "transform_3d": {

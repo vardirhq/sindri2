@@ -4,6 +4,10 @@ All notable changes to Sindri Next will be documented here.
 
 ## [Unreleased]
 
+- Move Orbital Last Stand's 19 reference synergy recipes into a reusable
+  profile asset, evaluate them generically in Decay, and connect their core
+  projectile and companion interactions.
+
 - Fix Orbital Last Stand portrait movement bounds, preserve the ship's last
   heading, restore its animated shield/core/engine presentation, and keep
   asteroid orientation stable through gameplay overlays.

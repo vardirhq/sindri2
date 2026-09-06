@@ -105,7 +105,7 @@ script Bullet {
             var jumps: f32 = 2.0;
             if Game.get("transform_storm", 0.0) > 0.0 { jumps = 4.0; }
             if Game.get("special_arc_battery", 0.0) > 0.0 { jumps += 2.0; arc_damage *= 1.2; }
-            if Game.get("special_critical_arc", 0.0) > 0.0 && this.crit_hit > 0.0 { arc_damage *= 1.7; }
+            if (Game.get("special_critical_arc", 0.0) > 0.0 || Game.get("synergy_critical_conduction", 0.0) > 0.0) && this.crit_hit > 0.0 { arc_damage *= 1.7; }
             spawn_arc(arc_damage, jumps);
         }
         if this.beam > 0.0 {
@@ -193,6 +193,7 @@ script Bullet {
         var orbit_speed: f32 = 2.1;
         if this.companion_kind == 6.0 { radius = 2.0; orbit_speed = 3.0; }
         if Game.get("special_familiar_guidance", 0.0) > 0.0 && this.companion_kind >= 3.0 { orbit_speed *= 1.25; }
+        if Game.get("synergy_hunters_spark", 0.0) > 0.0 && this.companion_kind == 3.0 { orbit_speed *= 1.25; }
         let angle = this.age * orbit_speed + this.companion_slot * 1.67 + this.companion_kind * 0.41;
         this.transform.position.x = player.transform.position.x + cos(angle) * radius;
         this.transform.position.y = player.transform.position.y + sin(angle) * radius;

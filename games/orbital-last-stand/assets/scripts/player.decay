@@ -228,6 +228,7 @@ script Player {
 
     fn special_damage_multiplier() -> f32 {
         var factor: f32 = 1.0;
+        if Game.get("synergy_mass_driver", 0.0) > 0.0 { factor *= 1.22; }
         if Game.get("special_kill_switch", 0.0) > 0.0 && Game.get("hp", 1.0) / max(0.05, Game.get("max_hp", 5.0)) < 0.35 { factor *= 1.45; }
         if Game.get("special_terminal_velocity", 0.0) > 0.0 {
             factor *= 1.0 + min(0.4, max(0.0, Game.get("bullet_speed", 9.0) / 9.0 - 1.0) * 0.7);
@@ -282,9 +283,12 @@ script Player {
         World.set_property(companion, "companion_kind", kind);
         World.set_property(companion, "companion_slot", slot);
         World.set_property(companion, "life", 9999.0);
-        World.set_property(companion, "damage", Game.get("damage", 1.0) * companion_damage(kind));
+        var damage = Game.get("damage", 1.0) * companion_damage(kind);
+        if kind == 1.0 && Game.get("synergy_heavy_orbit", 0.0) > 0.0 { damage *= 1.22; }
+        World.set_property(companion, "damage", damage);
         World.set_property(companion, "pierce", 999.0);
         if kind == 3.0 || kind == 4.0 { World.set_property(companion, "arc", Game.get("arc", 0.0)); }
+        if kind == 2.0 && Game.get("synergy_static_aegis", 0.0) > 0.0 { World.set_property(companion, "arc", 1.0); }
         if kind == 2.0 || kind == 4.0 { World.set_property(companion, "nova", Game.get("nova", 0.0)); }
         if kind == 1.0 { World.set_property(companion, "beam", Game.get("beam", 0.0)); }
     }

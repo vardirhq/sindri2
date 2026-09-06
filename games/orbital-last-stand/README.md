@@ -12,9 +12,10 @@ cargo run -p sindri-export --bin sindri-export -- games/orbital-last-stand dist
 ## What it is made of
 
 ```text
-assets/orbital.scene.json    69 entities: the ship, the screens, the catalog
+assets/orbital.scene.json    74 entities: the ship, the screens, the catalog
 assets/prefabs/              19 things that get spawned
-assets/scripts/              25 Decay scripts, and all of the game's rules
+assets/profiles/             reusable module and synergy catalogs
+assets/scripts/              32 Decay scripts, and all of the game's rules
 src/lib.rs                   a harness that plays it without a window
 ```
 
@@ -26,16 +27,12 @@ them. If the game needed anything private, `src/lib.rs` could not be written.
 
 ## Two decisions worth knowing about
 
-**The upgrade catalog is entities, not a table.** Each card is an entity with
-its own words, its own numbers, and the tag `upgrade`; the chooser asks
-`World.with_tag("upgrade")` and switches three of them on, and each card
-applies its own effect because a script cannot call into another script.
-Adding an upgrade is adding an entity to the scene.
-
-The chooser reads its catalog once, in `start`, and holds it — `World.with_tag`
-answers with *active* entities only, and a hidden card is not active. That is
-also why the chooser owns the upgrade screen: anything that switched the screen
-off before the catalog was read would take the catalog with it.
+**The upgrade and synergy catalogs are profile assets, not script branches.**
+All 160 reference modules, their weighted pools and generic effects live in
+`module-catalog.profile.json`. The 19 reference synergy recipes live beside
+them in `synergy-catalog.profile.json`. The chooser, module interpreter and
+synergy evaluator hold typed `Profile` fields, so ordinary additions are data
+changes and the editor can author the same assets the runtime loads.
 
 **Damage belongs to the thing that deals it.** A spawned projectile carries its
 authored per-instance damage, and the enemy reads it from the entity named by
@@ -49,7 +46,9 @@ Five reference weapon flags are playable through the upgrade catalog. Guidance
 steers rounds, arc impacts jump, nova kills burst across an area, gravity
 anchors leave delayed mines, and prism impacts continue as piercing beams. The
 effects are ordinary authored prefabs and Decay scripts; no weapon kind was
-added to the engine.
+added to the engine. Six companion families and their Foundry Signal level pool
+are authored the same way. Synergy flags react to the derived build every frame;
+the core projectile and companion interactions consume them directly.
 
 The complete fifteen-enemy reference roster arrives on its original unlock
 timeline. After 1:45, regular spawns can become one of five visibly distinct
@@ -67,7 +66,6 @@ boss outside the viewport may approach but cannot target or attack the ship.
 
 ## What is not here yet
 
-The reference game is much larger. Companions, the broader
-module and synergy catalog, sector routes, events, ships, contracts, archive
-and debrief remain parity work. See `docs/last-stand-reference-parity.md` for
-the implementation order.
+The reference game is much larger. Full-fidelity effects for every synergy,
+sector routes, events, ships, contracts, archive and debrief remain parity work.
+See `docs/last-stand-reference-parity.md` for the implementation order.
