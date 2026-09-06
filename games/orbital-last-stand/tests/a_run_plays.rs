@@ -453,7 +453,7 @@ fn the_hud_says_what_is_happening() {
     let score = run.find("Score").expect("a score label");
     assert_eq!(
         run.text(score).as_deref(),
-        Some("Score {}"),
+        Some("SCORE {}"),
         "the template is authored"
     );
     assert!(
