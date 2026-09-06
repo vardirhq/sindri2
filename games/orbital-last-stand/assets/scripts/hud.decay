@@ -28,13 +28,15 @@ script Hud {
         this.boss_bar = World.find("BossBar");
         this.boss_name = World.find("BossName");
 
-        // The reference puts both progression bars at the top of the screen.
-        // Reuse the existing responsive elements instead of adding a second HUD
-        // system to the scene. Their anchors stay authored, while these offsets
-        // move the old lower-left bars into the same top information band.
-        this.health_bar.transform.position.y = 1.76;
-        this.cores_bar.transform.position.y = 1.71;
-        this.health_text.transform.position.y = 1.83;
+        // Entity fields are handles, not nested `this` surfaces. Bind each
+        // handle locally before mutating its transform, just like spawned
+        // entities elsewhere in the game do.
+        let health_bar = this.health_bar;
+        let cores_bar = this.cores_bar;
+        let health_text = this.health_text;
+        health_bar.transform.position.y = 1.76;
+        cores_bar.transform.position.y = 1.71;
+        health_text.transform.position.y = 1.83;
 
         Ui.set_text(this.health_text, "HP {}/{}");
         Ui.set_text(this.level, "LV {}");
