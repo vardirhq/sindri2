@@ -8,6 +8,17 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **The engine now writes down what it can do, for tools and agents.**
+  `cargo run -p sindri-capabilities -- --write` generates
+  `docs/generated/decay-api.json`, its Markdown rendering, and
+  `docs/generated/sindri-capabilities.json` from the two descriptions the
+  repository already treats as authoritative: the Decay host surface the
+  analyzer and runtime share, and the built-in component registry. A workspace
+  test fails when the files disagree with the code, so widening the scripting
+  surface or registering a component cannot leave the reference behind.
+  `docs/cli-conventions.md` records the grammar the future `sindri` CLI follows
+  and why its operation names are a contract of their own.
+
 - **Orbital Last Stand now has its complete eleven-boss roster.**
   Harrower, Prism and Singularity join Warden, followed by Crown, Brood, Mirror,
   Architect and Spine at 4:00 and Leviathan and Last Light at 8:00. The director
