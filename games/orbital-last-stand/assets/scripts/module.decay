@@ -1,49 +1,150 @@
-// One module on the upgrade screen, and the whole of what it does.
-//
-// It names two piles and contributes to them. It does not know which stat those
-// piles feed, what the base is, or what the ship ends up at -- which is exactly
-// why forty of these can exist without forty branches anywhere. The card that
-// knows what it is worth is still the entity that spends it, because a script
-// cannot call into another script; what changed is that what it is worth is now
-// data rather than an index into a comment.
-//
-// `add` and `factor` are both offered because the reference catalog needs both:
-// "+1 pierce" and "x1.28 damage" are different kinds of module, and a card that
-// could only do one of them would need a second script to do the other.
+// One of four reusable upgrade cards. The chooser writes a numeric module id;
+// this script applies the reference catalog entry behind that id.
 script Module {
-    /// Where a flat contribution goes. `""` for a module that only multiplies.
     @export let add_key: String = "damage_add";
-    /// Where a proportional one goes. `""` for a module that only adds.
     @export let mul_key: String = "damage_mul";
     @export let add: f32 = 0.0;
     @export let factor: f32 = 1.0;
-    /// A weapon behaviour this module installs. `""` for a stat-only module.
     @export let flag_key: String = "";
 
     fn update(dt: f32) {
-        if Game.get("run_state", 0.0) != 2.0 {
-            return;
-        }
-        if !Ui.is_pressed(this.entity) {
-            return;
-        }
-        apply();
+        if Game.get("run_state", 0.0) != 2.0 || !Ui.is_pressed(this.entity) { return; }
+        let id = offered_id();
+        if id < 0.0 { return; }
+        apply_id(id);
+        Game.set("picked_module", id);
         Audio.play("audio/upgrade.wav", 0.4);
         Game.set("run_state", 1.0);
     }
 
-    fn apply() {
-        // Guarded rather than assumed: a module that only multiplies leaves the
-        // additive key empty, and writing to `""` would put a number on the
-        // board under a name nothing reads and nothing could ever clear.
-        if this.add != 0.0 {
-            Game.set(this.add_key, Game.get(this.add_key, 0.0) + this.add);
-        }
-        if this.factor != 1.0 {
-            Game.set(this.mul_key, Game.get(this.mul_key, 1.0) * this.factor);
-        }
-        if this.flag_key != "" {
-            Game.set(this.flag_key, 1.0);
-        }
+    fn offered_id() -> f32 {
+        if this.flag_key == "missile" { return Game.get("offer_0", -1.0); }
+        if this.flag_key == "arc" { return Game.get("offer_1", -1.0); }
+        if this.flag_key == "nova" { return Game.get("offer_2", -1.0); }
+        if this.flag_key == "mines" { return Game.get("offer_3", -1.0); }
+        return -1.0;
     }
+
+    fn apply_id(id: f32) {
+        if apply_core(id) { return; }
+        if apply_special(id) { return; }
+        apply_template(id % 15.0);
+    }
+
+    fn apply_core(id: f32) -> bool {
+        if id == 0.0 { mul_damage(1.28); return true; }
+        if id == 2.0 { mul_fire_interval(0.84); return true; }
+        if id == 4.0 { mul_stat("bullet_speed_mul", 1.28); return true; }
+        if id == 5.0 { mul_stat("bullet_size_mul", 1.3); mul_damage(1.12); return true; }
+        if id == 6.0 { add_stat("shots_add", 1.0); return true; }
+        if id == 7.0 { add_stat("shots_add", 2.0); mul_damage(0.82); return true; }
+        if id == 8.0 { add_stat("pierce_add", 1.0); return true; }
+        if id == 9.0 { add_stat("pierce_add", 2.0); mul_stat("bullet_size_mul", 0.9); return true; }
+        if id == 10.0 { add_stat("crit_add", 0.1); return true; }
+        if id == 12.0 { enable("missile"); return true; }
+        if id == 13.0 { enable("arc"); return true; }
+        if id == 14.0 { enable("nova"); return true; }
+        if id == 15.0 { enable("mines"); return true; }
+        if id == 16.0 { enable("beam"); return true; }
+        if id == 35.0 { add_companion("comp_blade", 1.0); return true; }
+        if id == 36.0 { add_companion("comp_shield", 1.0); return true; }
+        if id == 37.0 { add_companion("comp_ember", 1.0); return true; }
+        if id == 38.0 { add_companion("comp_wisp", 1.0); return true; }
+        if id == 39.0 { add_companion("comp_drone", 1.0); return true; }
+        if id == 146.0 { add_companion("comp_wrecking", 1.0); return true; }
+        return false;
+    }
+
+    fn apply_special(id: f32) -> bool {
+        if id == 90.0 { enable("special_blood_battery"); mul_damage(1.06); return true; }
+        if id == 91.0 { enable("special_revenge_relay"); add_stat("armor_add", 0.02); return true; }
+        if id == 92.0 { enable("special_last_bulkhead"); add_stat("max_hp_add", 0.6); return true; }
+        if id == 93.0 { enable("special_kill_switch"); add_stat("crit_add", 0.04); return true; }
+        if id == 94.0 { enable("special_scrap_feast"); mul_stat("magnet_mul", 1.2); return true; }
+        if id == 95.0 { enable("special_critical_reboot"); add_stat("crit_add", 0.05); return true; }
+        if id == 96.0 { enable("special_phase_memory"); add_stat("pierce_add", 1.0); return true; }
+        if id == 97.0 { enable("special_terminal_velocity"); mul_stat("bullet_speed_mul", 1.2); return true; }
+        if id == 98.0 { enable("special_big_bang_board"); enable("nova"); return true; }
+        if id == 99.0 { enable("special_echo_chamber"); mul_fire_interval(0.95); return true; }
+        if id == 100.0 { enable("special_fork_tax"); add_stat("shots_add", 1.0); return true; }
+        if id == 101.0 { enable("special_ghost_protocol"); mul_stat("move_speed_mul", 1.06); return true; }
+        if id == 102.0 { enable("special_arc_battery"); enable("arc"); return true; }
+        if id == 103.0 { enable("special_prism_mirror"); enable("beam"); return true; }
+        if id == 104.0 { enable("special_anchor_clock"); enable("mines"); return true; }
+        if id == 105.0 { enable("special_homing_instinct"); enable("missile"); return true; }
+        if id == 106.0 { enable("special_second_opinion"); mul_stat("xp_gain_mul", 1.05); return true; }
+        if id == 107.0 { enable("special_orbital_foundry"); add_companion("comp_blade", 1.0); add_companion("comp_drone", 1.0); return true; }
+        if id == 108.0 { enable("special_mutual_defense"); add_companion("comp_shield", 1.0); return true; }
+        if id == 109.0 { enable("special_crowded_orbit"); add_companion("comp_blade", 1.0); return true; }
+        if id == 110.0 { enable("special_black_sun"); enable("mines"); return true; }
+        if id == 111.0 { enable("special_white_noise"); add_stat("armor_add", 0.03); return true; }
+        if id == 112.0 { enable("special_needle_storm"); add_stat("shots_add", 2.0); mul_damage(0.88); mul_stat("bullet_size_mul", 0.76); mul_fire_interval(0.88); return true; }
+        if id == 113.0 { enable("special_glass_needle"); mul_damage(1.24); add_stat("crit_add", 0.12); mul_stat("bullet_size_mul", 0.78); add_stat("max_hp_add", -0.9); return true; }
+        if id == 114.0 { enable("special_heavy_phase"); mul_damage(1.14); mul_stat("bullet_size_mul", 1.28); mul_stat("bullet_speed_mul", 0.86); add_stat("pierce_add", 2.0); return true; }
+        if id == 115.0 { enable("special_bright_ghost"); mul_stat("bullet_speed_mul", 1.16); add_stat("crit_add", 0.08); add_stat("pierce_add", 1.0); return true; }
+        if id == 116.0 { enable("special_seeking_splitter"); add_stat("shots_add", 1.0); enable("missile"); return true; }
+        if id == 117.0 { enable("special_storm_lens"); add_stat("shots_add", 1.0); enable("missile"); enable("arc"); enable("transform_storm"); return true; }
+        if id == 118.0 { enable("special_gravity_prism"); enable("mines"); enable("beam"); return true; }
+        if id == 119.0 { enable("special_nova_guidance"); enable("missile"); enable("nova"); return true; }
+        if id == 120.0 { enable("special_phase_anchor"); add_stat("pierce_add", 1.0); enable("mines"); return true; }
+        if id == 121.0 { enable("special_critical_arc"); add_stat("crit_add", 0.1); enable("arc"); return true; }
+        if id == 122.0 { enable("special_razor_payload"); mul_stat("bullet_size_mul", 1.18); add_companion("comp_blade", 1.0); return true; }
+        if id == 123.0 { enable("special_razor_velocity"); mul_stat("bullet_speed_mul", 1.18); add_companion("comp_blade", 1.0); return true; }
+        if id == 124.0 { enable("special_ember_arc"); enable("arc"); add_companion("comp_ember", 1.0); return true; }
+        if id == 125.0 { enable("special_wisp_anchor"); enable("mines"); add_companion("comp_wisp", 1.0); return true; }
+        if id == 126.0 { enable("special_drone_fork"); add_stat("shots_add", 1.0); add_companion("comp_drone", 1.0); return true; }
+        if id == 127.0 { enable("special_aegis_nova"); enable("nova"); add_companion("comp_shield", 1.0); return true; }
+        if id == 128.0 { enable("special_familiar_guidance"); enable("missile"); add_companion("comp_ember", 1.0); return true; }
+        if id == 129.0 { enable("special_orbital_prism"); mul_stat("bullet_speed_mul", 1.15); enable("beam"); add_companion("comp_blade", 1.0); enable("transform_razor_prism"); return true; }
+        if id == 130.0 { enable("special_saint_elmo"); enable("arc"); add_companion("comp_shield", 1.0); return true; }
+        if id == 131.0 { enable("special_funeral_star"); enable("nova"); add_stat("crit_add", 0.05); return true; }
+        if id == 132.0 { enable("special_choir_engine"); enable("arc"); add_companion("comp_ember", 1.0); add_companion("comp_wisp", 1.0); enable("transform_thunder_choir"); return true; }
+        if id == 133.0 { enable("special_event_horizon_chip"); mul_stat("bullet_size_mul", 1.16); add_stat("pierce_add", 1.0); enable("nova"); enable("mines"); enable("transform_horizon"); return true; }
+        if id == 134.0 { enable("special_recursive_bus"); add_stat("shots_add", 1.0); add_stat("pierce_add", 1.0); enable("missile"); enable("arc"); enable("transform_recursive"); return true; }
+        if id == 135.0 { enable("special_prism_rail"); mul_stat("bullet_speed_mul", 1.2); add_stat("pierce_add", 1.0); enable("beam"); enable("transform_rail_prism"); return true; }
+        if id == 136.0 { enable("special_critical_mass_cell"); mul_stat("bullet_size_mul", 1.18); add_stat("crit_add", 0.08); enable("nova"); enable("transform_critical_mass"); return true; }
+        if id == 137.0 { enable("special_guardian_network"); add_stat("shots_add", 1.0); add_companion("comp_shield", 1.0); add_companion("comp_drone", 1.0); enable("transform_guardian_swarm"); return true; }
+        if id == 138.0 { enable("special_moon_court"); mul_stat("bullet_size_mul", 1.16); enable("mines"); enable("nova"); add_companion("comp_wisp", 1.0); enable("transform_singularity_court"); return true; }
+        if id == 139.0 { enable("special_dead_god_circuit"); mul_damage(1.12); mul_fire_interval(0.92); enable("missile"); enable("arc"); enable("nova"); enable("mines"); enable("beam"); add_companion("comp_blade", 1.0); add_companion("comp_shield", 1.0); add_companion("comp_ember", 1.0); add_companion("comp_wisp", 1.0); add_companion("comp_drone", 1.0); add_companion("comp_wrecking", 1.0); enable("transform_storm"); enable("transform_horizon"); enable("transform_recursive"); enable("transform_rail_prism"); enable("transform_critical_mass"); enable("transform_thunder_choir"); enable("transform_razor_prism"); enable("transform_guardian_swarm"); enable("transform_singularity_court"); return true; }
+        if id == 140.0 { enable("special_rusted_key"); return true; }
+        if id == 141.0 { enable("special_lucky_bolt"); add_stat("crit_add", 0.04); return true; }
+        if id == 142.0 { enable("special_warm_seat"); return true; }
+        if id == 150.0 { enable("special_constellation_engine"); mul_damage(1.05); enable("beam"); return true; }
+        if id == 151.0 { enable("special_reversal_chamber"); mul_stat("bullet_speed_mul", 1.08); add_stat("pierce_add", 1.0); return true; }
+        if id == 152.0 { enable("special_aegis_reservoir"); add_companion("comp_shield", 1.0); return true; }
+        if id == 153.0 { enable("special_orbit_loom"); add_companion("comp_blade", 1.0); add_companion("comp_wisp", 1.0); return true; }
+        if id == 154.0 { enable("special_broadside_protocol"); mul_damage(1.08); mul_stat("bullet_size_mul", 1.08); return true; }
+        if id == 155.0 { enable("special_grave_echo"); add_stat("crit_add", 0.05); return true; }
+        if id == 156.0 { enable("special_split_horizon"); mul_stat("bullet_speed_mul", 1.1); return true; }
+        if id == 157.0 { enable("special_devouring_moon"); mul_stat("bullet_size_mul", 1.12); return true; }
+        if id == 158.0 { enable("special_pulse_heart"); mul_fire_interval(0.94); return true; }
+        if id == 159.0 { enable("special_execution_mark"); add_companion("comp_ember", 1.0); add_companion("comp_drone", 1.0); return true; }
+        return false;
+    }
+
+    fn apply_template(kind: f32) {
+        if kind == 0.0 { mul_damage(1.14); }
+        else if kind == 1.0 { mul_fire_interval(0.9); }
+        else if kind == 2.0 { mul_stat("bullet_speed_mul", 1.16); }
+        else if kind == 3.0 { mul_stat("bullet_size_mul", 1.16); }
+        else if kind == 4.0 { add_stat("max_hp_add", 0.9); }
+        else if kind == 5.0 { heal(1.2); }
+        else if kind == 6.0 { add_stat("regen_add", 0.009); }
+        else if kind == 7.0 { add_stat("armor_add", 0.045); }
+        else if kind == 8.0 { mul_stat("move_speed_mul", 1.1); }
+        else if kind == 9.0 { mul_stat("magnet_mul", 1.3); }
+        else if kind == 10.0 { mul_stat("xp_gain_mul", 1.12); }
+        else if kind == 11.0 { add_stat("crit_add", 0.05); }
+        else if kind == 12.0 { mul_damage(1.08); mul_stat("bullet_speed_mul", 1.1); }
+        else if kind == 13.0 { add_stat("max_hp_add", 0.6); add_stat("armor_add", 0.025); }
+        else { mul_fire_interval(0.94); mul_stat("move_speed_mul", 1.06); }
+    }
+
+    fn add_stat(key: String, amount: f32) { Game.set(key, Game.get(key, 0.0) + amount); }
+    fn mul_stat(key: String, factor: f32) { Game.set(key, Game.get(key, 1.0) * factor); }
+    fn mul_damage(factor: f32) { mul_stat("damage_mul", factor); }
+    fn mul_fire_interval(interval_factor: f32) { mul_stat("fire_rate_mul", 1.0 / interval_factor); }
+    fn enable(key: String) { Game.set(key, 1.0); }
+    fn add_companion(key: String, count: f32) { Game.set(key, Game.get(key, 0.0) + count); }
+    fn heal(amount: f32) { Game.set("hp", min(Game.get("max_hp", 5.0), Game.get("hp", 5.0) + amount)); }
 }
