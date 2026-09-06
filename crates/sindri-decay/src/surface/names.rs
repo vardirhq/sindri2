@@ -66,6 +66,12 @@ pub(crate) const ENTITY: &str = "Entity";
 /// is why `World.spawn` takes this and not text.
 pub(crate) const PREFAB: &str = "Prefab";
 
+/// The opaque type of a reusable authored profile asset.
+pub(crate) const PROFILE: &str = "Profile";
+
+/// Typed reads from profile assets.
+pub(crate) const PROFILES: &str = "Profiles";
+
 /// The component a sprite's fields live in.
 pub(crate) const SPRITE_COMPONENT: &str = "sindri.sprite";
 

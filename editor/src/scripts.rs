@@ -21,10 +21,12 @@ use sindri_assets::{
     AssetLoadOutcome, AssetLoadQueueConfig, AssetLoader, AssetWatch, FileSystemAssetSource,
     TextAssetDecoder,
 };
-use sindri_core::{AssetId, AssetStatus, ComponentSchemaRegistry, PrefabDocument, World};
+use sindri_core::{
+    AssetId, AssetStatus, ComponentSchemaRegistry, PrefabDocument, ProfileDocument, World,
+};
 use sindri_decay::{
-    Physics2d, PrefabSources, ScriptExport, ScriptFailure, ScriptFrame, ScriptReport,
-    ScriptSources, Scripts, referenced_sources,
+    Physics2d, PrefabSources, ProfileSources, ScriptExport, ScriptFailure, ScriptFrame,
+    ScriptReport, ScriptSources, Scripts, referenced_sources,
 };
 use sindri_platform::InputState;
 
@@ -77,6 +79,7 @@ pub struct SceneScripts {
     /// A document that will not parse is reported once, here, rather than on
     /// the frame a script spawns it.
     prefabs: PrefabSources,
+    profiles: ProfileSources,
     scripts: Scripts,
 }
 
@@ -91,6 +94,7 @@ impl SceneScripts {
             last_examined: Instant::now(),
             sources: ScriptSources::new(),
             prefabs: PrefabSources::new(),
+            profiles: ProfileSources::new(),
             scripts: Scripts::new(),
         }
     }
@@ -108,6 +112,7 @@ impl SceneScripts {
         // Asking every frame is what makes a prefab authored a moment ago load
         // a moment later rather than at the next scene open.
         referenced.extend(self.scripts.referenced_prefabs(world, components));
+        referenced.extend(self.scripts.referenced_profiles(world, components));
         let wanted: BTreeSet<AssetId> = referenced
             .iter()
             .filter_map(|reference| AssetId::new(reference.clone()).ok())
@@ -118,6 +123,7 @@ impl SceneScripts {
             watch,
             sources,
             prefabs,
+            profiles,
             ..
         } = self
         else {
@@ -135,12 +141,16 @@ impl SceneScripts {
         for released in loader.retain(&wanted) {
             sources.remove(released.as_str());
             prefabs.remove(released.as_str());
+            profiles.remove(released.as_str());
         }
         if let Some(watch) = watch.as_mut() {
             watch.retain(&wanted);
         }
         for id in &wanted {
-            if sources.get(id.as_str()).is_some() || prefabs.get(id.as_str()).is_some() {
+            if sources.get(id.as_str()).is_some()
+                || prefabs.get(id.as_str()).is_some()
+                || profiles.get(id.as_str()).is_some()
+            {
                 continue;
             }
             if let Err(error) = loader.request(id.clone()) {
@@ -167,6 +177,7 @@ impl SceneScripts {
             watch,
             sources,
             prefabs,
+            profiles,
             ..
         } = self
         else {
@@ -178,11 +189,20 @@ impl SceneScripts {
                     let Some(text) = loader.get(&id) else {
                         continue;
                     };
-                    let again =
-                        sources.get(id.as_str()).is_some() || prefabs.get(id.as_str()).is_some();
+                    let again = sources.get(id.as_str()).is_some()
+                        || prefabs.get(id.as_str()).is_some()
+                        || profiles.get(id.as_str()).is_some();
                     if is_prefab(id.as_str()) {
                         match PrefabDocument::from_json(text) {
                             Ok(prefab) => prefabs.insert(id.as_str(), prefab),
+                            Err(error) => {
+                                notes.push(ScriptNote::Failed(format!("{id}: {error}")));
+                                continue;
+                            }
+                        }
+                    } else if is_profile(id.as_str()) {
+                        match ProfileDocument::from_json(text) {
+                            Ok(profile) => profiles.insert(id.as_str(), profile),
                             Err(error) => {
                                 notes.push(ScriptNote::Failed(format!("{id}: {error}")));
                                 continue;
@@ -273,6 +293,7 @@ impl SceneScripts {
         } = frame;
         let mut frame = ScriptFrame::new(&self.sources, input, delta_seconds)
             .with_prefabs(&self.prefabs)
+            .with_profiles(&self.profiles)
             .with_screen_ui(screen_ui)
             .with_random(random)
             .with_saves(saves)
@@ -353,6 +374,10 @@ fn root_of(scene: Option<&Path>) -> Option<PathBuf> {
 /// what the editor writes when it makes one.
 fn is_prefab(id: &str) -> bool {
     id.ends_with(PREFAB_SUFFIX)
+}
+
+fn is_profile(id: &str) -> bool {
+    id.ends_with(sindri_core::PROFILE_SUFFIX)
 }
 
 pub use sindri_core::PREFAB_SUFFIX;

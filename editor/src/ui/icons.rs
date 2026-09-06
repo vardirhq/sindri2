@@ -71,6 +71,7 @@ pub const MORE: MaterialIcon = icons::ICON_MORE_HORIZ;
 pub const CLOSE: MaterialIcon = icons::ICON_CLOSE;
 pub const UNDO: MaterialIcon = icons::ICON_UNDO;
 pub const REDO: MaterialIcon = icons::ICON_REDO;
+pub const DUPLICATE: MaterialIcon = icons::ICON_CONTENT_COPY;
 pub const PAUSE: MaterialIcon = icons::ICON_PAUSE;
 pub const LIST_VIEW: MaterialIcon = icons::ICON_VIEW_LIST;
 pub const GRID_VIEW: MaterialIcon = icons::ICON_GRID_VIEW;

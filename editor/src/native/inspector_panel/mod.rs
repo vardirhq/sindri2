@@ -82,6 +82,7 @@ struct PanelContext {
     textures: Vec<String>,
     scripts: Vec<String>,
     audio: Vec<String>,
+    profiles: Vec<String>,
     /// The first `.decay` source the project holds that declares a script, and
     /// the first script it declares.
     ///
@@ -126,6 +127,7 @@ impl PanelContext {
             fonts: &self.fonts,
             scripts: &self.scripts,
             audio: &self.audio,
+            profiles: &self.profiles,
         }
     }
 }
@@ -370,6 +372,7 @@ impl EditorApp {
             textures: drawable_textures(&self.project),
             scripts,
             audio: self.project.audio(),
+            profiles: self.project.profiles(),
             animation_sprites: animation_texture
                 .as_deref()
                 .map(|texture| self.project.sprites_for_texture(texture))
@@ -393,12 +396,15 @@ impl EditorApp {
             .show(ui, |ui| {
                 let slicing = self.slicer.is_some();
                 let reading = self.preview.is_some();
+                let editing_profile = self.profile.is_some();
                 let hearing = self.heard.is_some();
                 let showing_font = self.shown_font.is_some();
                 let selected = self.selection.len();
                 panel::header(ui, icons::INSPECTOR, "Inspector", |ui| {
                     if slicing {
                         toolbar::chip(ui, "Slicing", color::FORGE);
+                    } else if editing_profile {
+                        toolbar::chip(ui, "Profile", color::FORGE);
                     } else if reading || hearing || showing_font {
                         toolbar::chip(ui, "Preview", color::TEXT_FAINT);
                     } else if selected > 1 {
@@ -416,6 +422,10 @@ impl EditorApp {
                 }
                 if slicing {
                     self.slicer_panel(ui);
+                    return;
+                }
+                if editing_profile {
+                    self.profile_panel(ui);
                     return;
                 }
                 if reading {

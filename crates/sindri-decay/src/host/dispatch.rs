@@ -13,8 +13,9 @@ use decay_runtime::{RuntimeError, Value};
 
 use crate::surface::{
     EFFECTS, EFFECTS_CALLS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, INPUT, INPUT_QUERIES,
-    InputQuery, PHYSICS, PHYSICS_CALLS, POINTER, POINTER_QUERIES, PointerQuery, RANDOM,
-    RANDOM_CALLS, SAVE, SAVE_CALLS, TOUCH, TOUCH_CALLS, UI, UI_CALLS, WORLD, WORLD_CALLS,
+    InputQuery, PHYSICS, PHYSICS_CALLS, POINTER, POINTER_QUERIES, PROFILE_CALLS, PROFILES,
+    PointerQuery, RANDOM, RANDOM_CALLS, SAVE, SAVE_CALLS, TOUCH, TOUCH_CALLS, UI, UI_CALLS, WORLD,
+    WORLD_CALLS,
 };
 
 use super::WorldHost;
@@ -39,6 +40,7 @@ impl WorldHost<'_> {
         match namespace {
             GAME => named(GAME_CALLS, name).map(|call| self.game_call(call, path, args)),
             WORLD => named(WORLD_CALLS, name).map(|call| self.world_call(call, path, args)),
+            PROFILES => named(PROFILE_CALLS, name).map(|call| self.profile_call(call, path, args)),
             PHYSICS => named(PHYSICS_CALLS, name).map(|call| self.physics_call(call, path, args)),
             UI => named(UI_CALLS, name).map(|call| self.ui_call(call, path, args)),
             RANDOM => named(RANDOM_CALLS, name).map(|call| self.random_call(call, path, args)),

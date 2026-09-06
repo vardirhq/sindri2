@@ -14,10 +14,11 @@ use crate::{
     surface::{
         EFFECTS, EFFECTS_CALLS, ENTITY, EffectsCall, FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS,
         GameCall, GridCall, HostFunction, INPUT, INPUT_QUERIES, Node, PHYSICS, PHYSICS_CALLS,
-        POINTER, POINTER_QUERIES, POINTER_VALUES, PREFAB, PRINT, PhysicsCall, PointerValue, RANDOM,
-        RANDOM_CALLS, RandomCall, SAVE, SAVE_CALLS, STICK, STICK_VALUES, SaveCall, StickValue,
-        THIS, THROUGH_REFERENCE, TIME, TIME_VALUES, TOUCH, TOUCH_CALLS, TOUCH_COUNT, UI, UI_CALLS,
-        UiCall, VIEWPORT, VIEWPORT_VALUES, WORLD, WORLD_CALLS, WorldCall,
+        POINTER, POINTER_QUERIES, POINTER_VALUES, PREFAB, PRINT, PROFILE, PROFILE_CALLS, PROFILES,
+        PhysicsCall, PointerValue, ProfileCall, RANDOM, RANDOM_CALLS, RandomCall, SAVE, SAVE_CALLS,
+        STICK, STICK_VALUES, SaveCall, StickValue, THIS, THROUGH_REFERENCE, TIME, TIME_VALUES,
+        TOUCH, TOUCH_CALLS, TOUCH_COUNT, UI, UI_CALLS, UiCall, VIEWPORT, VIEWPORT_VALUES, WORLD,
+        WORLD_CALLS, WorldCall,
     },
 };
 
@@ -107,6 +108,7 @@ pub fn environment() -> Environment {
     environment.add_value(TIME, Type::Named(TIME.to_owned()));
 
     add_world_surface(&mut environment);
+    add_profile_surface(&mut environment);
 
     add_pointer_surface(&mut environment);
     add_viewport_surface(&mut environment);
@@ -119,6 +121,63 @@ pub fn environment() -> Environment {
     add_audio_surface(&mut environment);
 
     environment
+}
+
+fn add_profile_surface(environment: &mut Environment) {
+    let profile = Type::Named(PROFILE.to_owned());
+    let mut profiles = HostType::new();
+    for (name, call) in PROFILE_CALLS {
+        let (params, return_type) = match call {
+            ProfileCall::Name | ProfileCall::Kind => (vec![profile.clone()], Type::String),
+            ProfileCall::Number => (vec![profile.clone(), Type::String, Type::F32], Type::F32),
+            ProfileCall::Text => (
+                vec![profile.clone(), Type::String, Type::String],
+                Type::String,
+            ),
+            ProfileCall::Flag => (vec![profile.clone(), Type::String, Type::Bool], Type::Bool),
+            ProfileCall::Count => (vec![profile.clone(), Type::String], Type::F32),
+            ProfileCall::NumberAt => (
+                vec![
+                    profile.clone(),
+                    Type::String,
+                    Type::F32,
+                    Type::String,
+                    Type::F32,
+                ],
+                Type::F32,
+            ),
+            ProfileCall::TextAt => (
+                vec![
+                    profile.clone(),
+                    Type::String,
+                    Type::F32,
+                    Type::String,
+                    Type::String,
+                ],
+                Type::String,
+            ),
+            ProfileCall::FlagAt => (
+                vec![
+                    profile.clone(),
+                    Type::String,
+                    Type::F32,
+                    Type::String,
+                    Type::Bool,
+                ],
+                Type::Bool,
+            ),
+        };
+        profiles = profiles.with_function(
+            *name,
+            FunctionType {
+                params,
+                return_type,
+            },
+        );
+    }
+    environment.add_type(PROFILE, HostType::new());
+    environment.add_type(PROFILES, profiles);
+    environment.add_value(PROFILES, Type::Named(PROFILES.to_owned()));
 }
 
 /// The shape of the screen the host is drawing into.

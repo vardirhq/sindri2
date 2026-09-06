@@ -28,6 +28,16 @@ All notable changes to Sindri Next will be documented here.
 
 ### Added
 
+- **Reusable profile assets across runtime, editor, Decay, and export.** A
+  versioned `.profile.json` is Sindri's ScriptableObject-like home for
+  game-owned data outside the scene. The editor creates and structurally edits
+  nested profiles and offers them in typed `Profile` field pickers; Decay reads
+  them through typed `Profiles.*` calls; native, browser, and static export hosts
+  load the same assets. Orbital Last Stand proves the path by moving all 160
+  module definitions, weighted pools, requirements, labels, and generic effects
+  into one reusable profile, so adding ordinary modules no longer grows either
+  gameplay script.
+
 - **The engine now writes down what it can do, for tools and agents.**
   `cargo run -p sindri-capabilities -- --write` generates
   `docs/generated/decay-api.json`, its Markdown rendering, and

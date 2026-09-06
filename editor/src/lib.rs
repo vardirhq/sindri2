@@ -42,6 +42,8 @@ pub mod preferences;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod preview;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod profile;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod project;
 /// The editor-only camera used by the Scene view.
 #[cfg(not(target_arch = "wasm32"))]

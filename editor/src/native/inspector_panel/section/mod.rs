@@ -91,7 +91,7 @@ pub(super) fn components_sections(
         // ordinary rows.
         if name == "sindri.script" {
             script_choice_row(ui, payload, scripts);
-            script_exports_section(ui, payload, scripts);
+            script_exports_section(ui, payload, scripts, assets.profiles);
         }
         if name == UI_TEXT_COMPONENT {
             text_section(ui, payload, assets.fonts);

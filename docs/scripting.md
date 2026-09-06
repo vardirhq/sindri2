@@ -64,6 +64,42 @@ this component exists to make visible.
 inspectable, and still saved — it simply does not tick, which is what an author
 wants while narrowing down which script is misbehaving.
 
+### Reusable profiles
+
+An exported `Profile` names reusable project data rather than an entity in the
+scene:
+
+```rust
+script Weapon {
+    @export let tuning: Profile;
+
+    fn start() {
+        let damage = Profiles.number(this.tuning, "damage", 1.0);
+    }
+}
+```
+
+The editor draws that field as a profile asset picker, hosts load the reference
+before the script runs, and export includes it in the build. `Profile` is opaque
+to Decay; typed reads are made through `Profiles`:
+
+| Call | Returns |
+| --- | --- |
+| `Profiles.name(profile)` | `String` |
+| `Profiles.kind(profile)` | `String` |
+| `Profiles.number(profile, key, fallback)` | `f32` |
+| `Profiles.text(profile, key, fallback)` | `String` |
+| `Profiles.flag(profile, key, fallback)` | `bool` |
+| `Profiles.count(profile, collection)` | `f32` |
+| `Profiles.number_at(profile, collection, index, key, fallback)` | `f32` |
+| `Profiles.text_at(profile, collection, index, key, fallback)` | `String` |
+| `Profiles.flag_at(profile, collection, index, key, fallback)` | `bool` |
+
+The `*_at` calls read fields from objects in a top-level list. A missing key,
+wrong value type, or out-of-range index returns the authored fallback; a missing
+profile reference is a host error. Profiles are read-only during gameplay. The
+document and editor contract are in [`profiles.md`](profiles.md).
+
 ## What a script can reach
 
 Everything, in one table. Decay knows paths, not engine concepts:

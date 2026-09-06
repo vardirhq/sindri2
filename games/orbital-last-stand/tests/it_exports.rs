@@ -47,6 +47,15 @@ fn every_prefab_ships() {
     assert_eq!(prefabs.len(), authored, "{prefabs:?}");
 }
 
+#[test]
+fn the_module_profile_ships() {
+    let (_scratch, manifest) = exported("profiles");
+    assert_eq!(
+        ids(&manifest, AssetKind::Profile),
+        ["profiles/module-catalog.profile.json"]
+    );
+}
+
 /// Hazards, hostile shots and the drop chain are named by *prefabs*, not by
 /// the scene. They ship because the walk follows a prefab's own scripts into
 /// the prefabs those can spawn.

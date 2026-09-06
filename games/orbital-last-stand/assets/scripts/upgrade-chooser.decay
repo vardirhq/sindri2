@@ -1,71 +1,157 @@
-// Offers three of whatever upgrades exist.
-//
-// It never names one. The catalog is every entity tagged "upgrade", so a card
-// added to the scene is offered without this script changing — which is what
-// "data-driven" has to mean if it is to mean anything.
-//
-// The catalog is read once, in `start`, and held. It has to be: `World.with_tag`
-// answers with active entities only, and a hidden card is not active — so a
-// chooser that asked while its screen was down would be asking about nothing.
-// Which also means this script owns the screen. Nothing else switches it off,
-// because anything that switched it off first would take the catalog with it.
+// A data-driven Last Stand module chooser. Adding a module changes the profile,
+// not this script: pools, rarity, requirements, text and ownership are data.
 script UpgradeChooser {
+    @export let catalog: Profile;
     @export let offers: f32 = 3.0;
 
-    var catalog: Array<Entity>;
+    var cards: Array<Entity>;
     var screen: Entity = null;
+    var card0: Entity = null;
+    var card1: Entity = null;
+    var card2: Entity = null;
+    var card3: Entity = null;
+    var name0: Entity = null;
+    var name1: Entity = null;
+    var name2: Entity = null;
+    var name3: Entity = null;
+    var blurb0: Entity = null;
+    var blurb1: Entity = null;
+    var blurb2: Entity = null;
+    var blurb3: Entity = null;
     var showing: bool = false;
 
     fn start() {
-        this.catalog = World.with_tag("upgrade");
+        this.cards = World.with_tag("upgrade");
         this.screen = World.find("Upgrades");
+        this.card0 = World.find("Guidance Kernel");
+        this.card1 = World.find("Arc Imprint");
+        this.card2 = World.find("Nova Imprint");
+        this.card3 = World.find("Gravity Anchor");
+        this.name0 = World.find("Guidance Kernel Name");
+        this.name1 = World.find("Arc Imprint Name");
+        this.name2 = World.find("Nova Imprint Name");
+        this.name3 = World.find("Gravity Anchor Name");
+        this.blurb0 = World.find("Guidance Kernel Blurb");
+        this.blurb1 = World.find("Arc Imprint Blurb");
+        this.blurb2 = World.find("Nova Imprint Blurb");
+        this.blurb3 = World.find("Gravity Anchor Blurb");
         hide();
     }
 
-    fn hide() {
-        for card in this.catalog {
-            World.set_active(card, false);
+    fn update(dt: f32) {
+        if Game.get("modules_reset", 0.0) > 0.0 {
+            Game.set("modules_reset", 0.0);
+            clear_owned();
+            Game.set("black_modules_taken", 0.0);
         }
+        let choosing = Game.get("run_state", 0.0) == 2.0;
+        if choosing == this.showing { return; }
+        this.showing = choosing;
+        if choosing { show(); }
+        else { hide(); }
+    }
+
+    fn clear_owned() {
+        var index: f32 = 0.0;
+        let count = Profiles.count(this.catalog, "modules");
+        while index < count {
+            Game.set(Profiles.text_at(this.catalog, "modules", index, "owned_key", ""), 0.0);
+            index += 1.0;
+        }
+    }
+
+    fn hide() {
+        for card in this.cards { World.set_active(card, false); }
         World.set_active(this.screen, false);
     }
 
-    fn update(dt: f32) {
-        let choosing = Game.get("run_state", 0.0) == 2.0;
-        if choosing == this.showing {
-            return;
-        }
-        this.showing = choosing;
-        if !choosing {
-            hide();
-            return;
-        }
-
-        for card in this.catalog {
-            World.set_active(card, false);
-        }
+    fn show() {
+        for card in this.cards { World.set_active(card, false); }
         World.set_active(this.screen, true);
-
-        if this.catalog.len <= this.offers {
-            // Fewer cards than places: offer all of them rather than loop
-            // forever looking for a distinct one that does not exist.
-            for card in this.catalog {
-                World.set_active(card, true);
-            }
-            return;
+        let pool = Game.get("module_pool", 0.0);
+        let first = choose(pool, -1.0, -1.0, -1.0);
+        let second = choose(pool, first, -1.0, -1.0);
+        let third = choose(pool, first, second, -1.0);
+        offer(0.0, this.card0, this.name0, this.blurb0, first);
+        offer(1.0, this.card1, this.name1, this.blurb1, second);
+        offer(2.0, this.card2, this.name2, this.blurb2, third);
+        if offer_count() > 3.0 {
+            let fourth = choose(pool, first, second, third);
+            offer(3.0, this.card3, this.name3, this.blurb3, fourth);
+        } else {
+            Game.set("offer_3", -1.0);
+            World.set_active(this.card3, false);
         }
+    }
 
-        var chosen: f32 = 0.0;
-        var tries: f32 = 0.0;
-        // Bounded rather than trusted: drawing until three distinct cards turn
-        // up is a loop whose length is luck, and luck is not a bound.
-        while chosen < this.offers && tries < 64.0 {
-            tries += 1.0;
-            let card = Random.pick(this.catalog);
-            if World.is_active(card) {
-                continue;
+    fn offer(slot: f32, card: Entity, name: Entity, blurb: Entity, index: f32) {
+        if slot == 0.0 { Game.set("offer_0", index); }
+        else if slot == 1.0 { Game.set("offer_1", index); }
+        else if slot == 2.0 { Game.set("offer_2", index); }
+        else { Game.set("offer_3", index); }
+        if index < 0.0 { World.set_active(card, false); return; }
+        Ui.set_text(name, Profiles.text_at(this.catalog, "modules", index, "name", "Unknown Module"));
+        Ui.set_text(blurb, Profiles.text_at(this.catalog, "modules", index, "description", ""));
+        World.set_active(card, true);
+    }
+
+    fn offer_count() -> f32 {
+        if Game.get("special_second_opinion", 0.0) > 0.0 { return 4.0; }
+        return this.offers;
+    }
+
+    fn choose(pool: f32, a: f32, b: f32, c: f32) -> f32 {
+        var total: f32 = 0.0;
+        var index: f32 = 0.0;
+        let count = Profiles.count(this.catalog, "modules");
+        while index < count {
+            if available(index, pool, a, b, c) {
+                total += Profiles.number_at(this.catalog, "modules", index, "weight", 1.0);
             }
-            World.set_active(card, true);
-            chosen += 1.0;
+            index += 1.0;
         }
+        if total <= 0.0 { return -1.0; }
+        var cursor = Random.range(0.0, total);
+        index = 0.0;
+        while index < count {
+            if available(index, pool, a, b, c) {
+                cursor -= Profiles.number_at(this.catalog, "modules", index, "weight", 1.0);
+                if cursor <= 0.0 { return index; }
+            }
+            index += 1.0;
+        }
+        return first_available(pool, a, b, c);
+    }
+
+    fn first_available(pool: f32, a: f32, b: f32, c: f32) -> f32 {
+        var index: f32 = 0.0;
+        let count = Profiles.count(this.catalog, "modules");
+        while index < count {
+            if available(index, pool, a, b, c) { return index; }
+            index += 1.0;
+        }
+        return -1.0;
+    }
+
+    fn available(index: f32, pool: f32, a: f32, b: f32, c: f32) -> bool {
+        if index == a || index == b || index == c { return false; }
+        let owned_key = Profiles.text_at(this.catalog, "modules", index, "owned_key", "");
+        if Game.get(owned_key, 0.0) > 0.0 { return false; }
+        let required = Profiles.text_at(this.catalog, "modules", index, "requires_key", "");
+        if required != "" {
+            let minimum = Profiles.number_at(this.catalog, "modules", index, "requires_min", 0.0);
+            if Game.get(required, 0.0) < minimum { return false; }
+        }
+        let mask = Profiles.number_at(this.catalog, "modules", index, "pool_mask", 0.0);
+        return has_pool(mask, pool);
+    }
+
+    fn has_pool(mask: f32, pool: f32) -> bool {
+        var bit: f32 = 1.0;
+        if pool == 1.0 { bit = 2.0; }
+        else if pool == 2.0 { bit = 4.0; }
+        else if pool == 3.0 { bit = 8.0; }
+        let whole = (mask - mask % bit) / bit;
+        return whole % 2.0 >= 1.0;
     }
 }

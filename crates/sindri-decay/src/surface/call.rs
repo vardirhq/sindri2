@@ -196,6 +196,32 @@ pub(crate) enum GameCall {
 pub(crate) const GAME_CALLS: &[(&str, GameCall)] =
     &[("get", GameCall::Get), ("set", GameCall::Set)];
 
+/// A typed read from reusable authored data.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum ProfileCall {
+    Name,
+    Kind,
+    Number,
+    Text,
+    Flag,
+    Count,
+    NumberAt,
+    TextAt,
+    FlagAt,
+}
+
+pub(crate) const PROFILE_CALLS: &[(&str, ProfileCall)] = &[
+    ("name", ProfileCall::Name),
+    ("kind", ProfileCall::Kind),
+    ("number", ProfileCall::Number),
+    ("text", ProfileCall::Text),
+    ("flag", ProfileCall::Flag),
+    ("count", ProfileCall::Count),
+    ("number_at", ProfileCall::NumberAt),
+    ("text_at", ProfileCall::TextAt),
+    ("flag_at", ProfileCall::FlagAt),
+];
+
 /// What a script can ask of the world it is in, as opposed to of one entity.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum WorldCall {

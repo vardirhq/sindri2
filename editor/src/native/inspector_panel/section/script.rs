@@ -70,6 +70,7 @@ pub(super) fn script_exports_section(
     ui: &mut egui::Ui,
     payload: &mut Value,
     scripts: &SceneScripts,
+    profiles: &[String],
 ) {
     let source = payload.get("source").and_then(Value::as_str).unwrap_or("");
     let script = payload.get("script").and_then(Value::as_str).unwrap_or("");
@@ -107,7 +108,11 @@ pub(super) fn script_exports_section(
         // Marked when the scene set it: a script export showing its default is
         // one the author has not touched, and the dot says so without a line of
         // prose under every row.
-        value_row(ui, &export.name, &mut value, 0.0, Authored::of(authored));
+        if export.type_name.as_deref() == Some("Profile") {
+            super::super::field::asset_row(ui, &export.name, &mut value, profiles);
+        } else {
+            value_row(ui, &export.name, &mut value, 0.0, Authored::of(authored));
+        }
         if value != before {
             // Setting a property is what puts it in the scene: a field left
             // alone stays absent, so a scene records the author's choices

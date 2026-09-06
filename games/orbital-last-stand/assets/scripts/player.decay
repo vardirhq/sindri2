@@ -1,6 +1,5 @@
-// The ship. Moves on the keyboard or towards the pointer, and fires itself at
-// whatever is nearest — the reference game aims for you, and a twin-stick
-// control the phone cannot offer would be a control the phone cannot offer.
+// The Strider. Movement stays simple; the module catalog is allowed to make the
+// weapon system gloriously unreasonable.
 script Player {
     @export let bullet: Prefab;
     @export let mine: Prefab;
@@ -12,14 +11,21 @@ script Player {
     var target: Entity = null;
     var cooldown: f32 = 0.0;
     var mercy: f32 = 0.0;
-    var was_hit: f32 = 0.0;
     var mine_cooldown: f32 = 0.0;
     var facing: f32 = 1.5707963;
+    var volley: f32 = 0.0;
+    var broadside: f32 = 2.5;
+    var pulse: f32 = 4.0;
+    var devour: f32 = 0.0;
+    var blade_spawned: f32 = 0.0;
+    var shield_spawned: f32 = 0.0;
+    var ember_spawned: f32 = 0.0;
+    var wisp_spawned: f32 = 0.0;
+    var drone_spawned: f32 = 0.0;
+    var wrecking_spawned: f32 = 0.0;
 
     fn start() {
         this.hurt = World.find("PlayerHurt");
-        // Reference Strider outline, uniformly scaled from its authored
-        // coordinates and Y-flipped from canvas space into Sindri world space.
         World.set_shape_point(0.0, 0.0, 0.5);
         World.set_shape_point(1.0, 0.304, -0.328);
         World.set_shape_point(2.0, 0.1, -0.248);
@@ -40,18 +46,10 @@ script Player {
     fn update(dt: f32) {
         if Game.get("player_reset", 0.0) > 0.0 {
             Game.set("player_reset", 0.0);
-            this.transform.position.x = 0.0;
-            this.transform.position.y = 0.0;
-            this.facing = 1.5707963;
-            this.transform.rotation_z = 0.0;
-            this.mercy = 0.0;
-            Game.set("shield_impact", 0.0);
-            Physics.set_velocity(this.entity, 0.0, 0.0);
+            reset_runtime();
         }
         if Game.get("run_state", 0.0) != 1.0 {
             Physics.set_velocity(this.entity, 0.0, 0.0);
-            // Locked physics bodies restore their authored angle before scripts.
-            // Keep the remembered heading visible behind pause/upgrade overlays.
             this.transform.rotation_z = this.facing - 1.5707963;
             return;
         }
@@ -60,8 +58,10 @@ script Player {
         tick_overdrive(dt);
         take_hits();
         track_target();
+        sync_companions();
         shoot(dt);
         drop_mine(dt);
+        special_attacks(dt);
 
         if this.mercy > 0.0 {
             this.mercy -= dt;
@@ -69,6 +69,28 @@ script Player {
         } else {
             this.shape.stroke.a = 1.0;
         }
+    }
+
+    fn reset_runtime() {
+        this.transform.position.x = 0.0;
+        this.transform.position.y = 0.0;
+        this.facing = 1.5707963;
+        this.transform.rotation_z = 0.0;
+        this.mercy = 0.0;
+        this.cooldown = 0.0;
+        this.mine_cooldown = 0.0;
+        this.volley = 0.0;
+        this.broadside = 2.5;
+        this.pulse = 4.0;
+        this.devour = 0.0;
+        this.blade_spawned = 0.0;
+        this.shield_spawned = 0.0;
+        this.ember_spawned = 0.0;
+        this.wisp_spawned = 0.0;
+        this.drone_spawned = 0.0;
+        this.wrecking_spawned = 0.0;
+        Game.set("shield_impact", 0.0);
+        Physics.set_velocity(this.entity, 0.0, 0.0);
     }
 
     fn move(dt: f32) {
@@ -79,7 +101,6 @@ script Player {
             dx = Stick.x;
             dy = -Stick.y;
         }
-
         let length = sqrt(dx * dx + dy * dy);
         if length >= 0.08 {
             let desired = atan2(dy, dx);
@@ -87,22 +108,10 @@ script Player {
             let blend = 1.0 - exp(-12.0 * max(0.0, dt));
             this.facing += delta * blend;
         }
-        if length > 1.0 {
-            dx /= length;
-            dy /= length;
-        }
-
-        // Physics owns the body's rotation and restores its locked zero angle
-        // before every script pass. Reapply the remembered heading even when
-        // there is no input, or an idle ship snaps back to pointing upward.
+        if length > 1.0 { dx /= length; dy /= length; }
         this.transform.rotation_z = this.facing - 1.5707963;
         Game.set("player_facing", this.facing);
         Game.set("player_thrust", min(1.0, length));
-
-        // The camera frames a rectangle. The previous circular `arena` both
-        // hid the ship beyond a portrait viewport's sides and stopped it far
-        // short of the top and bottom. Clamp the complete hull to the exact
-        // visible bounds, and cancel only velocity that pushes through them.
         let edge_x = max(0.0, visible_half_x() - this.edge_padding);
         let edge_y = max(0.0, visible_half_y() - this.edge_padding);
         var velocity_x: f32 = dx * speed;
@@ -125,77 +134,172 @@ script Player {
     }
 
     fn take_hits() {
-        let damage = Game.get("player_damage_taken", 0.0);
-        if damage > 0.0 {
-            Game.set("player_damage_taken", 0.0);
-            if this.mercy <= 0.0 {
-                Game.set("hp", Game.get("hp", 1.0) - damage);
-                Game.set("shield_impact", 1.0);
-                this.mercy = this.invulnerable_for;
-                Effects.burst(this.hurt);
-                Audio.play("audio/hurt.wav", 0.5);
-            }
+        let raw = Game.get("player_damage_taken", 0.0);
+        if raw <= 0.0 { return; }
+        Game.set("player_damage_taken", 0.0);
+        if this.mercy > 0.0 { return; }
+        if Game.get("special_ghost_protocol", 0.0) > 0.0 && Random.value() < 0.12 {
+            this.mercy = 0.18;
+            return;
         }
+        var damage: f32 = raw * (1.0 - Game.get("armor", 0.0));
+        if Game.get("special_mutual_defense", 0.0) > 0.0 {
+            damage *= 1.0 - min(0.2, companion_count() * 0.04);
+        }
+        let hp = Game.get("hp", 1.0);
+        if Game.get("special_last_bulkhead", 0.0) > 0.0 && Game.get("last_bulkhead_used", 0.0) <= 0.0 && damage >= hp {
+            damage = max(0.0, hp - 0.05);
+            Game.set("last_bulkhead_used", 1.0);
+            this.mercy = 2.0;
+        } else {
+            this.mercy = this.invulnerable_for;
+        }
+        Game.set("hp", hp - damage);
+        if damage > 0.0 && Game.get("special_revenge_relay", 0.0) > 0.0 {
+            Game.set("overdrive", max(4.0, Game.get("overdrive", 0.0)));
+        }
+        Game.set("shield_impact", 1.0);
+        Effects.burst(this.hurt);
+        Audio.play("audio/hurt.wav", 0.5);
     }
 
     fn shoot(dt: f32) {
         this.cooldown -= dt;
-        if Game.get("nullified", 0.0) > 0.0 {
-            return;
-        }
-        if this.cooldown > 0.0 {
-            return;
-        }
+        if Game.get("nullified", 0.0) > 0.0 || this.cooldown > 0.0 { return; }
         let target = this.target;
-        if target == null {
-            return;
-        }
-        let overdrive = Game.get("overdrive", 0.0);
-        if overdrive > 0.0 {
-            this.cooldown = Game.get("fire_gap", 0.42) * 0.55;
-        } else {
-            this.cooldown = Game.get("fire_gap", 0.42);
-        }
-
+        if target == null { return; }
+        if Game.get("overdrive", 0.0) > 0.0 { this.cooldown = Game.get("fire_gap", 0.42) * 0.55; }
+        else { this.cooldown = Game.get("fire_gap", 0.42); }
         let to_x = target.transform.position.x - this.transform.position.x;
         let to_y = target.transform.position.y - this.transform.position.y;
         let far = sqrt(to_x * to_x + to_y * to_y);
-        if far <= 0.0 {
-            return;
-        }
-
+        if far <= 0.0 { return; }
         let forward_x = to_x / far;
         let forward_y = to_y / far;
         let count = max(1.0, Game.get("shots", 1.0));
+        this.volley += 1.0;
+        let echo = Game.get("special_echo_chamber", 0.0) > 0.0 && this.volley % 6.0 == 0.0;
         var made: f32 = 0.0;
         while made < count {
             let spread = (made - (count - 1.0) * 0.5) * 0.16;
             let aim_x = forward_x - forward_y * spread;
             let aim_y = forward_y + forward_x * spread;
             let aim_length = sqrt(aim_x * aim_x + aim_y * aim_y);
-            var damage = Game.get("damage", 1.0);
-            if Random.value() < Game.get("crit", 0.0) {
-                damage *= Game.get("crit_power", 2.0);
+            var damage = Game.get("damage", 1.0) * special_damage_multiplier();
+            let crit = Random.value() < Game.get("crit", 0.0);
+            if crit { damage *= Game.get("crit_power", 2.0); }
+            fire_one(this.transform.position.x, this.transform.position.y, aim_x / aim_length, aim_y / aim_length, damage, crit, 1.0);
+            if echo {
+                let angle = atan2(aim_y, aim_x) + 0.12;
+                fire_one(this.transform.position.x, this.transform.position.y, cos(angle), sin(angle), damage * 0.6, false, 0.9);
             }
-
-            let shot = World.spawn(this.bullet);
-            shot.transform.position.x = this.transform.position.x;
-            shot.transform.position.y = this.transform.position.y;
-            let size = Game.get("bullet_size", 1.0);
-            shot.transform.scale.x *= size;
-            shot.transform.scale.y *= size;
-            World.set_property(shot, "dir_x", aim_x / aim_length);
-            World.set_property(shot, "dir_y", aim_y / aim_length);
-            World.set_property(shot, "speed", Game.get("bullet_speed", 9.0));
-            World.set_property(shot, "damage", damage);
-            World.set_property(shot, "pierce", Game.get("pierce", 0.0));
-            World.set_property(shot, "missile", Game.get("missile", 0.0));
-            World.set_property(shot, "arc", Game.get("arc", 0.0));
-            World.set_property(shot, "nova", Game.get("nova", 0.0));
-            World.set_property(shot, "beam", Game.get("beam", 0.0));
+            if Game.get("grave_echo_time", 0.0) > 0.0 {
+                let angle = atan2(aim_y, aim_x) - 0.14;
+                fire_one(this.transform.position.x, this.transform.position.y, cos(angle), sin(angle), damage * 0.5, false, 0.8);
+            }
+            this.devour += 1.0;
+            if Game.get("special_devouring_moon", 0.0) > 0.0 && this.devour >= 8.0 {
+                this.devour = 0.0;
+                fire_one(this.transform.position.x, this.transform.position.y, aim_x / aim_length, aim_y / aim_length, damage * 4.0, false, 1.8);
+            }
             made += 1.0;
         }
         Audio.play("audio/shot.wav", 0.18);
+    }
+
+    fn fire_one(x: f32, y: f32, dx: f32, dy: f32, damage: f32, crit: bool, size_scale: f32) {
+        let shot = World.spawn(this.bullet);
+        shot.transform.position.x = x;
+        shot.transform.position.y = y;
+        let size = Game.get("bullet_size", 1.0) * size_scale;
+        shot.transform.scale.x *= size;
+        shot.transform.scale.y *= size;
+        World.set_property(shot, "dir_x", dx);
+        World.set_property(shot, "dir_y", dy);
+        World.set_property(shot, "speed", Game.get("bullet_speed", 9.0));
+        World.set_property(shot, "damage", damage);
+        World.set_property(shot, "pierce", Game.get("pierce", 0.0));
+        World.set_property(shot, "missile", Game.get("missile", 0.0));
+        World.set_property(shot, "arc", Game.get("arc", 0.0));
+        World.set_property(shot, "nova", Game.get("nova", 0.0));
+        World.set_property(shot, "beam", Game.get("beam", 0.0));
+        World.set_property(shot, "crit_hit", if_number(crit));
+    }
+
+    fn special_damage_multiplier() -> f32 {
+        var factor: f32 = 1.0;
+        if Game.get("special_kill_switch", 0.0) > 0.0 && Game.get("hp", 1.0) / max(0.05, Game.get("max_hp", 5.0)) < 0.35 { factor *= 1.45; }
+        if Game.get("special_terminal_velocity", 0.0) > 0.0 {
+            factor *= 1.0 + min(0.4, max(0.0, Game.get("bullet_speed", 9.0) / 9.0 - 1.0) * 0.7);
+        }
+        if Game.get("special_fork_tax", 0.0) > 0.0 { factor *= 1.0 + min(0.32, max(0.0, Game.get("shots", 1.0) - 1.0) * 0.08); }
+        if Game.get("special_crowded_orbit", 0.0) > 0.0 { factor *= 1.0 + min(0.3, companion_count() * 0.05); }
+        return factor;
+    }
+
+    fn special_attacks(dt: f32) {
+        if Game.get("special_broadside_protocol", 0.0) > 0.0 {
+            this.broadside -= dt;
+            if this.broadside <= 0.0 {
+                this.broadside = 3.4;
+                let left = -visible_half_x() + 0.2;
+                let right = visible_half_x() - 0.2;
+                var lane: f32 = -1.0;
+                while lane <= 1.0 {
+                    fire_one(left, lane * visible_half_y() * 0.55, 1.0, 0.0, Game.get("damage", 1.0) * 0.72, false, 0.9);
+                    fire_one(right, lane * visible_half_y() * 0.55, -1.0, 0.0, Game.get("damage", 1.0) * 0.72, false, 0.9);
+                    lane += 1.0;
+                }
+            }
+        }
+        if Game.get("special_pulse_heart", 0.0) > 0.0 {
+            this.pulse -= dt;
+            if this.pulse <= 0.0 {
+                this.pulse = 4.8;
+                var slot: f32 = 0.0;
+                while slot < 10.0 {
+                    let angle = slot / 10.0 * 6.2831853 + Game.get("elapsed", 0.0) * 0.4;
+                    fire_one(this.transform.position.x, this.transform.position.y, cos(angle), sin(angle), Game.get("damage", 1.0) * 0.55, false, 0.75);
+                    slot += 1.0;
+                }
+            }
+        }
+    }
+
+    fn sync_companions() {
+        while this.blade_spawned < Game.get("comp_blade", 0.0) { spawn_companion(1.0, this.blade_spawned); this.blade_spawned += 1.0; }
+        while this.shield_spawned < Game.get("comp_shield", 0.0) { spawn_companion(2.0, this.shield_spawned); this.shield_spawned += 1.0; }
+        while this.ember_spawned < Game.get("comp_ember", 0.0) { spawn_companion(3.0, this.ember_spawned); this.ember_spawned += 1.0; }
+        while this.wisp_spawned < Game.get("comp_wisp", 0.0) { spawn_companion(4.0, this.wisp_spawned); this.wisp_spawned += 1.0; }
+        while this.drone_spawned < Game.get("comp_drone", 0.0) { spawn_companion(5.0, this.drone_spawned); this.drone_spawned += 1.0; }
+        while this.wrecking_spawned < Game.get("comp_wrecking", 0.0) { spawn_companion(6.0, this.wrecking_spawned); this.wrecking_spawned += 1.0; }
+    }
+
+    fn spawn_companion(kind: f32, slot: f32) {
+        let companion = World.spawn(this.bullet);
+        companion.transform.position.x = this.transform.position.x;
+        companion.transform.position.y = this.transform.position.y;
+        World.set_property(companion, "companion_kind", kind);
+        World.set_property(companion, "companion_slot", slot);
+        World.set_property(companion, "life", 9999.0);
+        World.set_property(companion, "damage", Game.get("damage", 1.0) * companion_damage(kind));
+        World.set_property(companion, "pierce", 999.0);
+        if kind == 3.0 || kind == 4.0 { World.set_property(companion, "arc", Game.get("arc", 0.0)); }
+        if kind == 2.0 || kind == 4.0 { World.set_property(companion, "nova", Game.get("nova", 0.0)); }
+        if kind == 1.0 { World.set_property(companion, "beam", Game.get("beam", 0.0)); }
+    }
+
+    fn companion_damage(kind: f32) -> f32 {
+        if kind == 1.0 { return 0.7; }
+        if kind == 2.0 { return 0.25; }
+        if kind == 3.0 { return 0.48; }
+        if kind == 4.0 { return 0.42; }
+        if kind == 5.0 { return 0.55; }
+        return 1.0;
+    }
+
+    fn companion_count() -> f32 {
+        return Game.get("comp_blade", 0.0) + Game.get("comp_shield", 0.0) + Game.get("comp_ember", 0.0) + Game.get("comp_wisp", 0.0) + Game.get("comp_drone", 0.0) + Game.get("comp_wrecking", 0.0);
     }
 
     fn tick_overdrive(dt: f32) {
@@ -216,16 +320,9 @@ script Player {
     }
 
     fn drop_mine(dt: f32) {
-        if Game.get("nullified", 0.0) > 0.0 {
-            return;
-        }
-        if Game.get("mines", 0.0) <= 0.0 {
-            return;
-        }
+        if Game.get("nullified", 0.0) > 0.0 || Game.get("mines", 0.0) <= 0.0 { return; }
         this.mine_cooldown -= dt;
-        if this.mine_cooldown > 0.0 {
-            return;
-        }
+        if this.mine_cooldown > 0.0 { return; }
         this.mine_cooldown = 2.4;
         let mine = World.spawn(this.mine);
         mine.transform.position.x = this.transform.position.x;
@@ -237,19 +334,11 @@ script Player {
         var best: Entity = null;
         var best_distance: f32 = 0.0;
         for enemy in World.with_tag("enemy") {
-            if !World.exists(enemy) {
-                continue;
-            }
-            if !is_visible(enemy) {
-                continue;
-            }
+            if !World.exists(enemy) || !is_visible(enemy) { continue; }
             let dx = enemy.transform.position.x - this.transform.position.x;
             let dy = enemy.transform.position.y - this.transform.position.y;
             let distance = dx * dx + dy * dy;
-            if best == null || distance < best_distance {
-                best = enemy;
-                best_distance = distance;
-            }
+            if best == null || distance < best_distance { best = enemy; best_distance = distance; }
         }
         return best;
     }
@@ -258,10 +347,8 @@ script Player {
         let half_x = visible_half_x();
         let half_y = visible_half_y();
         let radius = max(abs(enemy.transform.scale.x), abs(enemy.transform.scale.y)) * 0.5;
-        return enemy.transform.position.x + radius >= -half_x &&
-               enemy.transform.position.x - radius <= half_x &&
-               enemy.transform.position.y + radius >= -half_y &&
-               enemy.transform.position.y - radius <= half_y;
+        return enemy.transform.position.x + radius >= -half_x && enemy.transform.position.x - radius <= half_x &&
+               enemy.transform.position.y + radius >= -half_y && enemy.transform.position.y - radius <= half_y;
     }
 
     fn visible_half_x() -> f32 {
@@ -275,4 +362,6 @@ script Player {
         if aspect >= 1.0 { return this.view_size * 0.5; }
         return this.view_size * 0.5 / aspect;
     }
+
+    fn if_number(value: bool) -> f32 { if value { return 1.0; } return 0.0; }
 }

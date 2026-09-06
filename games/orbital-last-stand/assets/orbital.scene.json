@@ -158,11 +158,8 @@
       "components": {
         "sindri.script": {
           "properties": {
-            "add": 1.0,
-            "add_key": "damage_add",
-            "factor": 1.0,
-            "flag_key": "missile",
-            "mul_key": "damage_mul"
+            "catalog": "profiles/module-catalog.profile.json",
+            "slot": 0.0
           },
           "script": "Module",
           "source": "scripts/module.decay"
@@ -326,11 +323,8 @@
       "components": {
         "sindri.script": {
           "properties": {
-            "add": 2.0,
-            "add_key": "max_hp_add",
-            "factor": 1.0,
-            "flag_key": "arc",
-            "mul_key": "max_hp_mul"
+            "catalog": "profiles/module-catalog.profile.json",
+            "slot": 1.0
           },
           "script": "Module",
           "source": "scripts/module.decay"
@@ -494,11 +488,8 @@
       "components": {
         "sindri.script": {
           "properties": {
-            "add": 1.2,
-            "add_key": "magnet_add",
-            "factor": 1.0,
-            "flag_key": "nova",
-            "mul_key": "magnet_mul"
+            "catalog": "profiles/module-catalog.profile.json",
+            "slot": 2.0
           },
           "script": "Module",
           "source": "scripts/module.decay"
@@ -662,11 +653,8 @@
       "components": {
         "sindri.script": {
           "properties": {
-            "add": 1.0,
-            "add_key": "pierce_add",
-            "factor": 1.0,
-            "flag_key": "mines",
-            "mul_key": "pierce_mul"
+            "catalog": "profiles/module-catalog.profile.json",
+            "slot": 3.0
           },
           "script": "Module",
           "source": "scripts/module.decay"
@@ -830,11 +818,8 @@
       "components": {
         "sindri.script": {
           "properties": {
-            "add": 1.0,
-            "add_key": "fire_rate_add",
-            "factor": 1.0,
-            "flag_key": "beam",
-            "mul_key": "fire_rate_mul"
+            "catalog": "profiles/module-catalog.profile.json",
+            "slot": 4.0
           },
           "script": "Module",
           "source": "scripts/module.decay"
@@ -998,10 +983,8 @@
       "components": {
         "sindri.script": {
           "properties": {
-            "add": 0.8,
-            "add_key": "move_speed_add",
-            "factor": 1.0,
-            "mul_key": "move_speed_mul"
+            "catalog": "profiles/module-catalog.profile.json",
+            "slot": 5.0
           },
           "script": "Module",
           "source": "scripts/module.decay"
@@ -1164,6 +1147,7 @@
       "components": {
         "sindri.script": {
           "properties": {
+            "catalog": "profiles/module-catalog.profile.json",
             "offers": 3.0
           },
           "script": "UpgradeChooser",
