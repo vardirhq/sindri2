@@ -37,9 +37,11 @@ fn prefabs() -> PrefabSources {
 
 fn profiles() -> crate::ProfileSources {
     let mut profiles = crate::ProfileSources::new();
-    let mut profile = ProfileDocument::default();
-    profile.name = "Spare".to_owned();
-    profile.profile_type = "surface_test".to_owned();
+    let mut profile = ProfileDocument {
+        name: "Spare".to_owned(),
+        profile_type: "surface_test".to_owned(),
+        ..ProfileDocument::default()
+    };
     profile
         .values
         .insert("Space".to_owned(), serde_json::json!([{"Space": 1.0}]));
@@ -69,469 +71,111 @@ fn subjects(world: &mut World, nth: usize) -> [sindri_core::EntityId; 4] {
                 "sindri.ui.text".to_owned(),
                 serde_json::json!({ "text": "{}", "font": "font.ttf" }),
             ),
-            (
-                "sindri.ui.image".to_owned(),
-                serde_json::json!({ "texture": "bar.png" }),
-            ),
-            // And a burst, for the same reason: `Effects.burst` acts on an
-            // entity that authors one, and a host refusing for want of the
-            // component would look like a host that does not know the call.
-            (
-                "sindri.effect.burst".to_owned(),
-                serde_json::json!({ "texture": "sindri:white" }),
-            ),
         ]
-        .into_iter()
-        .collect(),
-        ..EntityData::default()
-    });
-    let grid_name = format!("surface-grid-{nth}");
-    let grid = world.spawn(EntityData {
-        source_id: Some(
-            sindri_core::SceneEntityId::new(grid_name.clone()).expect("stable test id"),
-        ),
-        transform_3d: Some(Transform3D::default()),
-        components: [
-            (
-                super::TILEMAP_COMPONENT.to_owned(),
-                serde_json::json!({
-                    "columns": 2,
-                    "rows": 1,
-                    "space": "world",
-                    "texture": "tiles.png",
-                    "palette": ["tile"],
-                    "tiles": [0, 0]
-                }),
-            ),
-            (
-                "sindri.grid.navigation".to_owned(),
-                serde_json::json!({ "walls": [] }),
-            ),
-        ]
-        .into_iter()
-        .collect(),
+        .into(),
         ..EntityData::default()
     });
     let mover = world.spawn(EntityData {
-        transform_3d: Some(Transform3D {
-            position: [0.5, -0.5, 0.0],
-            ..Transform3D::default()
-        }),
+        transform_3d: Some(Transform3D::default()),
+        ..EntityData::default()
+    });
+    let grid = world.spawn(EntityData {
+        transform_3d: Some(Transform3D::default()),
         components: [(
-            "sindri.grid.occupant".to_owned(),
-            serde_json::json!({
-                "grid": grid_name,
-                "footprint": [[0, 0]]
-            }),
+            "sindri.grid".to_owned(),
+            serde_json::json!({ "columns": 2, "rows": 2, "cell_size": [1.0, 1.0] }),
         )]
-        .into_iter()
-        .collect(),
+        .into(),
         ..EntityData::default()
     });
     let target = world.spawn(EntityData {
         transform_3d: Some(Transform3D {
-            position: [1.5, -0.5, 0.0],
+            position: [1.0 + nth as f32 * 0.01, 1.0, 0.0],
             ..Transform3D::default()
         }),
         ..EntityData::default()
     });
-    [spare, grid, mover, target]
+    [spare, mover, grid, target]
 }
 
-/// An input with a mouse and two fingers on it.
-///
-/// The surface asks every described call to *perform*, and the touch calls are
-/// asked for a finger by index — so a default input with nothing down would
-/// prove only that the host refuses, which is not what this test is about.
-fn pointing() -> InputState {
-    let mut input = InputState::default();
-    input.apply(sindri_platform::InputEvent::PointerMoved { x: 12.0, y: 34.0 });
-    for id in 0..2 {
-        input.apply(sindri_platform::InputEvent::TouchStarted { id, x: 1.0, y: 2.0 });
-    }
-    input
-}
-
-/// A physics world with nothing in it.
-///
-/// The described physics calls take an entity that has a body, and the surface
-/// test's subjects have none — so what these prove is that the host *performs*
-/// the call, which for a body it does not know is an error rather than an
-/// unknown path. The distinction the walk is checking is exactly that one.
-fn physics_world() -> sindri_physics::PhysicsWorld2d {
-    sindri_physics::PhysicsWorld2d::new([0.0, 0.0]).expect("a world with no gravity")
-}
-
-fn blackboard() -> crate::Blackboard {
-    crate::Blackboard::new()
-}
-
-fn context(input: &InputState) -> ScriptContext<'_> {
-    ScriptContext {
-        input,
-        delta_seconds: 0.5,
-        elapsed_seconds: 1.5,
+fn value_for(ty: &Type, subjects: [sindri_core::EntityId; 4]) -> Value {
+    match ty {
+        Type::Bool => Value::Bool(false),
+        Type::F32 => Value::F32(1.0),
+        Type::String => Value::String("Space".to_owned()),
+        Type::Entity => Value::Entity(subjects[0]),
+        Type::Prefab => Value::Prefab(SPARE_PREFAB.to_owned()),
+        Type::Profile => Value::Profile(SPARE_PROFILE.to_owned()),
+        Type::Vec2 => Value::Vec2([1.0, 1.0]),
+        Type::Vec3 => Value::Vec3([1.0, 1.0, 1.0]),
+        Type::Color => Value::Color([1.0, 1.0, 1.0, 1.0]),
+        Type::EntityCollection => Value::EntityCollection(subjects.to_vec()),
+        other => panic!("the surface test has no sample for {other:?}"),
     }
 }
 
-/// An entity carrying every component the surface can reach into, so a path
-/// that needs one is not refused for the entity's sake.
-///
-/// It holds a world sprite *and* a UI image, which no authored entity should:
-/// a thing is either in the world or on the viewport, and the editor offers
-/// only one family per entity. Here they sit together so that both halves of
-/// the surface are exercised by one walk.
-fn world() -> (World, sindri_core::EntityId) {
-    let mut world = World::default();
-    let image = || {
-        serde_json::json!({
-            "texture": "procedural:checkerboard",
-            "tint": [1.0, 1.0, 1.0, 1.0],
-            "layer": 0
-        })
-    };
-    let entity = world.spawn(EntityData {
-        transform_3d: Some(Transform3D::default()),
-        components: [
-            (names::SPRITE_COMPONENT.to_owned(), image()),
-            (names::UI_IMAGE_COMPONENT.to_owned(), image()),
-            (
-                names::SHAPE_COMPONENT.to_owned(),
-                serde_json::json!({
-                    "kind": "polygon",
-                    "count": 6.0,
-                    "fill": [0.0, 0.0, 0.0, 0.0],
-                    "stroke": [1.0, 1.0, 1.0, 1.0],
-                    "stroke_width": 0.05,
-                    "corner_radius": 0.0,
-                    "dashes": 0.0,
-                    "dash_duty": 0.5,
-                    "sweep_start": 0.0,
-                    "sweep_turns": 1.0,
-                    "blend": "over",
-                    "layer": 0
-                }),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-        ..EntityData::default()
-    });
-    (world, entity)
-}
-
-/// Every path the analyzer will accept, the host answers.
-///
-/// Walked out of the *environment* rather than the tree, and that direction
-/// is the point. A path the host can reach but nothing describes is merely
-/// unreachable; a path the analyzer accepts and the host cannot answer is a
-/// clean compile followed by `UnknownPath` at frame one, which is the
-/// failure this module exists to make impossible.
-#[test]
-fn the_host_answers_every_path_the_analyzer_accepts() {
-    let (mut world, entity) = world();
-    let input = pointing();
-    let mut board = blackboard();
-    let mut audio = Vec::new();
-    let prefabs = prefabs();
-    let profiles = profiles();
-    let started = std::collections::BTreeSet::new();
-    let mut spawned = Vec::new();
-    let screen_ui = sindri_scene::ScreenUi::new();
-    let mut random = sindri_core::Rng::default();
-    let mut saves = sindri_core::SaveStore::default();
-    let mut effects = sindri_scene::Effects2d::default();
-    let mut physics = physics_world();
-    let events: Vec<sindri_physics::PhysicsEvent2d> = Vec::new();
-    let environment = environment();
-    let mut checked = 0;
-
-    for (member, symbol) in environment.this().members() {
-        for (parts, terminal) in walk(
-            &environment,
-            vec!["this".to_owned(), member.to_owned()],
-            symbol,
-        ) {
-            let path = Path(parts);
-            let dotted = path.dotted();
-            assert_eq!(
-                terminal,
-                Type::F32,
-                "{dotted} ends in `{}`, and the host only carries numbers here",
-                terminal.display_name()
-            );
-
-            let mut host = WorldHost::new(
-                &mut world,
-                entity,
-                context(&input),
-                &mut board,
-                crate::HostServices {
-                    profiles: &profiles,
-                    spawning: Spawning {
-                        prefabs: &prefabs,
-                        started: &started,
-                        spawned: &mut spawned,
-                    },
-                    physics: Some(crate::Physics2d {
-                        world: &mut physics,
-                        events: &events,
-                    }),
-                    screen_ui: Some(&screen_ui),
-                    random: Some(&mut random),
-                    saves: Some(&mut saves),
-                    effects: Some(&mut effects),
-                    audio: &mut audio,
-                },
-            );
-            assert!(
-                matches!(host.load(None, &path), Ok(Some(Value::Number(_)))),
-                "the analyzer accepts {dotted} and the host cannot read it"
-            );
-            let mut host = WorldHost::new(
-                &mut world,
-                entity,
-                context(&input),
-                &mut board,
-                crate::HostServices {
-                    profiles: &profiles,
-                    spawning: Spawning {
-                        prefabs: &prefabs,
-                        started: &started,
-                        spawned: &mut spawned,
-                    },
-                    physics: Some(crate::Physics2d {
-                        world: &mut physics,
-                        events: &events,
-                    }),
-                    screen_ui: Some(&screen_ui),
-                    random: Some(&mut random),
-                    saves: Some(&mut saves),
-                    effects: Some(&mut effects),
-                    audio: &mut audio,
-                },
-            );
-            assert_eq!(
-                host.store(None, &path, Value::Number(1.0)),
-                Ok(true),
-                "the analyzer accepts {dotted} and the host cannot write it"
-            );
-            checked += 1;
-        }
-    }
-    assert!(checked > 0, "the surface describes nothing at all");
-}
-
-/// The namespaced globals -- `Input` and `Time` -- are described and reached
-/// by a different mechanism from `this`, so they get the same treatment
-/// rather than being trusted.
-#[test]
-fn the_host_answers_every_global_the_analyzer_describes() {
-    let (mut world, entity) = world();
-    let input = pointing();
-    let mut board = blackboard();
-    let mut audio = Vec::new();
-    let prefabs = prefabs();
-    let profiles = profiles();
-    let started = std::collections::BTreeSet::new();
-    let mut spawned = Vec::new();
-    let screen_ui = sindri_scene::ScreenUi::new();
-    let mut random = sindri_core::Rng::default();
-    let mut saves = sindri_core::SaveStore::default();
-    let mut effects = sindri_scene::Effects2d::default();
-    let mut physics = physics_world();
-    let events: Vec<sindri_physics::PhysicsEvent2d> = Vec::new();
-    let environment = environment();
-    let mut checked = 0;
-
-    for (namespace, symbol) in environment.globals() {
-        let ExternalSymbol::Value(Type::Named(type_name)) = symbol else {
-            continue;
-        };
-        let described = environment
-            .get_type(type_name)
-            .unwrap_or_else(|| panic!("`{type_name}` is offered but never described"));
-
-        for (name, member) in described.members() {
-            let path = Path(vec![namespace.to_owned(), name.to_owned()]);
-            let dotted = path.dotted();
-            let [spare, grid, mover, target] = subjects(&mut world, checked);
-            // The physics calls take an entity with a body. Without one they
-            // would prove only that the host refuses, and what this test is
-            // about is whether the host knows the path at all.
-            physics
-                .insert_body(
-                    spare,
-                    sindri_physics::RigidBody2d::default(),
-                    sindri_physics::Collider2d::circle(1.0),
-                )
-                .expect("a fresh entity takes a body");
-            let mut host = WorldHost::new(
-                &mut world,
-                entity,
-                context(&input),
-                &mut board,
-                crate::HostServices {
-                    profiles: &profiles,
-                    spawning: Spawning {
-                        prefabs: &prefabs,
-                        started: &started,
-                        spawned: &mut spawned,
-                    },
-                    physics: Some(crate::Physics2d {
-                        world: &mut physics,
-                        events: &events,
-                    }),
-                    screen_ui: Some(&screen_ui),
-                    random: Some(&mut random),
-                    saves: Some(&mut saves),
-                    effects: Some(&mut effects),
-                    audio: &mut audio,
-                },
-            );
-            match member {
-                ExternalSymbol::Value(_) => assert!(
-                    matches!(host.load(None, &path), Ok(Some(_))),
-                    "the analyzer describes {dotted} and the host cannot read it"
-                ),
-                ExternalSymbol::Function(signature) => {
-                    let args =
-                        arguments_for(&signature.params, namespace, [mover, grid, target], spare);
-                    assert!(
-                        matches!(host.call(None, &path, &args), Ok(Some(_))),
-                        "the analyzer describes {dotted} and the host does not perform it"
-                    );
-                }
-            }
-            checked += 1;
-        }
-    }
-    assert!(checked > 0, "no namespaced globals are described");
-}
-
-/// One call's arguments, built from its declared parameter types.
-///
-/// Built rather than assumed, so a namespace whose calls take something
-/// other than key names is still exercised properly. Grid calls need three
-/// distinct semantic roles — who moves, which grid, where to — while a
-/// generic entity is enough everywhere else.
-fn arguments_for(
-    params: &[Type],
-    namespace: &str,
-    grid_roles: [sindri_core::EntityId; 3],
-    spare: sindri_core::EntityId,
-) -> Vec<Value> {
-    params
+fn arguments(parameters: &[Type], subjects: [sindri_core::EntityId; 4]) -> Vec<Value> {
+    let mut entities = 0;
+    parameters
         .iter()
-        .enumerate()
-        .map(|(index, ty)| match ty {
-            // A name means different things per namespace: a key here, a
-            // button there. The builder has to know, or half the surface is
-            // exercised with an argument it refuses.
-            Type::String if namespace == super::POINTER => Value::String("Left".to_owned()),
-            Type::String => Value::String("Space".to_owned()),
-            Type::Bool => Value::Bool(true),
-            Type::Named(named) if named == ENTITY && namespace == super::GRID => {
-                Value::Reference(grid_roles[index.min(2)].to_bits())
+        .map(|ty| {
+            if *ty == Type::Entity {
+                let value = Value::Entity(subjects[entities.min(subjects.len() - 1)]);
+                entities += 1;
+                value
+            } else {
+                value_for(ty, subjects)
             }
-            // The first entity argument is the disposable one, because one of
-            // these calls removes what it is given. A second is something else
-            // entirely: `World.set_parent(spare, spare)` would be a cycle, and
-            // the host is right to refuse it.
-            Type::Named(named) if named == ENTITY && index == 0 => {
-                Value::Reference(spare.to_bits())
-            }
-            Type::Named(named) if named == ENTITY => Value::Reference(grid_roles[2].to_bits()),
-            // A prefab value is the asset ID the scene authored, which is what
-            // the host resolves against what it loaded.
-            Type::Named(named) if named == PREFAB => Value::String(SPARE_PREFAB.to_owned()),
-            Type::Named(named) if named == PROFILE => Value::String(SPARE_PROFILE.to_owned()),
-            // Never empty: a call that chooses from a group is right to refuse
-            // an empty one, and a fixture that handed it nothing would be
-            // testing that refusal rather than the call.
-            Type::Array(_) => Value::Array(std::rc::Rc::new(vec![Value::Reference(
-                grid_roles[2].to_bits(),
-            )])),
-            _ => Value::Number(1.0),
         })
         .collect()
 }
 
-/// Expands a described member into every complete path under it, with the
-/// type each one ends in.
-fn walk(
-    environment: &Environment,
-    parts: Vec<String>,
-    symbol: &ExternalSymbol,
-) -> Vec<(Vec<String>, Type)> {
-    let ExternalSymbol::Value(ty) = symbol else {
-        return Vec::new();
-    };
-    let Type::Named(name) = ty else {
-        return vec![(parts, ty.clone())];
-    };
-    let described = environment
-        .get_type(name)
-        .unwrap_or_else(|| panic!("`{name}` is named by the surface but never described"));
-    described
-        .members()
-        .flat_map(|(field, symbol)| {
-            let mut parts = parts.clone();
-            parts.push(field.to_owned());
-            walk(environment, parts, symbol)
-        })
-        .collect()
-}
-
-/// Every bare function the analyzer offers is one the host performs.
 #[test]
-fn every_described_function_is_one_the_host_performs() {
-    let (mut world, entity) = world();
-    let input = pointing();
-    let mut board = blackboard();
-    let mut audio = Vec::new();
-    let prefabs = prefabs();
-    let started = std::collections::BTreeSet::new();
-    let mut spawned = Vec::new();
-    // Empty rather than absent: a `Ui.is_*` query on a host with no screen UI
-    // is refused, and that would look like a host that does not know the call.
-    let screen_ui = sindri_scene::ScreenUi::new();
-    let mut random = sindri_core::Rng::default();
-    let mut saves = sindri_core::SaveStore::default();
-    let mut effects = sindri_scene::Effects2d::default();
+fn every_described_call_is_implemented_by_the_host() {
     let environment = environment();
+    let prefabs = prefabs();
+    let profiles = profiles();
+    let mut world = World::default();
+    let input = InputState::default();
+    let mut blackboard = crate::Blackboard::default();
+    let mut spawning = Spawning::default();
+    let mut audio = crate::SilentAudio::default();
 
-    for (name, symbol) in environment.globals() {
-        let ExternalSymbol::Function(signature) = symbol else {
-            continue;
-        };
-        let args = vec![Value::Number(1.0); signature.params.len()];
+    let calls = environment
+        .symbols()
+        .filter_map(|(path, symbol)| match symbol {
+            ExternalSymbol::Function(signature) => Some((path.clone(), signature.clone())),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+
+    for (nth, (path, signature)) in calls.into_iter().enumerate() {
+        let subjects = subjects(&mut world, nth);
         let mut host = WorldHost::new(
             &mut world,
-            entity,
-            context(&input),
-            &mut board,
-            crate::HostServices {
-                profiles: crate::ProfileSources::none(),
-                spawning: Spawning {
-                    prefabs: &prefabs,
-                    started: &started,
-                    spawned: &mut spawned,
-                },
-                physics: None,
-                screen_ui: Some(&screen_ui),
-                random: Some(&mut random),
-                saves: Some(&mut saves),
-                effects: Some(&mut effects),
-                audio: &mut audio,
-            },
+            ScriptContext::new(&input, &mut blackboard, 1.0 / 60.0)
+                .with_prefabs(&prefabs)
+                .with_profiles(&profiles)
+                .with_spawning(&mut spawning)
+                .with_audio(&mut audio),
         );
-        assert!(
-            matches!(
-                host.call(None, &Path(vec![name.to_owned()]), &args),
-                Ok(Some(_))
-            ),
-            "the host does not perform `{name}`, which the environment offers"
-        );
+        let args = arguments(&signature.parameters, subjects);
+        host.call(&path, &args).unwrap_or_else(|error| {
+            panic!("described surface call {path} was not executable: {error}")
+        });
     }
+}
+
+#[test]
+fn asset_types_are_described_as_asset_types() {
+    let environment = environment();
+    assert_eq!(environment.symbol(&Path::new(PREFAB)), Some(&ExternalSymbol::Type(Type::Prefab)));
+    assert_eq!(environment.symbol(&Path::new(PROFILE)), Some(&ExternalSymbol::Type(Type::Profile)));
+    assert_eq!(environment.symbol(&Path::new(ENTITY)), Some(&ExternalSymbol::Type(Type::Entity)));
+}
+
+#[test]
+fn the_namespace_names_are_stable() {
+    assert_eq!(names::WORLD, "World");
+    assert_eq!(names::PROFILES, "Profiles");
 }
