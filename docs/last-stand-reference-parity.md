@@ -324,9 +324,10 @@ Legend: `DONE`, `PARTIAL`, `TODO`, `INTENTIONAL`.
 | Warden encounter | INTENTIONAL | Sindri version is a more elaborate three-phase interpretation, while targeting reference-like short TTK/readability |
 | Route choices | TODO | missing |
 | Random events | TODO | missing |
-| Reference XP curve | TODO | Sindri currently uses a smaller core-count economy |
-| 160-module catalog | PARTIAL | mechanism work exists; full catalog missing |
-| Companion/foundry level cadence | TODO | missing |
+| Reference XP curve | DONE | exact 35, 52, 74... thresholds and overflow leveling are covered by the game suite |
+| 160-module catalog | DONE | definitions, weighted pools, requirements and generic effects are profile-authored; a test adds a 161st module without a script branch |
+| Companion/foundry level cadence | DONE | levels divisible by 7 use the companion pool before the level-5 relic rule; six companion families are playable |
+| 19 synergy recipes | PARTIAL | every reference combination is profile-authored and evaluated generically; core projectile/companion interactions consume the flags, while some deeper effect fidelity remains |
 | Black Signal | TODO | missing |
 | Powerup/drop economy | DONE | Normal regular/elite/boss chances, missing-health bonus, repair pity, repair, pulse and overdrive are implemented; repair preserves the reference proportion on Sindri's normalized five-hull scale |
 | Adaptive boss scaling | TODO | missing |
