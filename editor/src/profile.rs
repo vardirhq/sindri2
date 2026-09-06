@@ -46,11 +46,14 @@ impl ProfileEditor {
     }
 
     pub fn save(&mut self) -> Result<(), String> {
-        let document = self
-            .document
-            .as_ref()
-            .ok_or_else(|| self.error.clone().unwrap_or_else(|| "profile is unreadable".into()))?;
-        let json = document.to_canonical_json().map_err(|error| error.to_string())?;
+        let document = self.document.as_ref().ok_or_else(|| {
+            self.error
+                .clone()
+                .unwrap_or_else(|| "profile is unreadable".into())
+        })?;
+        let json = document
+            .to_canonical_json()
+            .map_err(|error| error.to_string())?;
         std::fs::write(&self.path, json).map_err(|error| error.to_string())?;
         self.dirty = false;
         Ok(())
@@ -65,7 +68,11 @@ mod tests {
     fn a_profile_edit_saves_back_to_its_own_asset() {
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("ship.profile.json");
-        std::fs::write(&path, ProfileDocument::default().to_canonical_json().unwrap()).unwrap();
+        std::fs::write(
+            &path,
+            ProfileDocument::default().to_canonical_json().unwrap(),
+        )
+        .unwrap();
         let mut editor = ProfileEditor::open(&path);
         editor.document.as_mut().unwrap().name = "Strider".into();
         editor.dirty = true;

@@ -20,7 +20,9 @@ use sindri_platform::InputState;
 use self::run::{TickWorld, ensure_compiled, tick};
 use crate::{
     Blackboard, Physics2d, PrefabSources, ProfileSources, ScriptComponent, ScriptExport,
-    ScriptFailure, ScriptMessage, ScriptReport, audio_host::AudioCommand, exports::exports_of,
+    ScriptFailure, ScriptMessage, ScriptReport,
+    audio_host::AudioCommand,
+    exports::exports_of,
     surface::{PREFAB, PROFILE},
 };
 

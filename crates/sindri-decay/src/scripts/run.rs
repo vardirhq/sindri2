@@ -9,8 +9,7 @@ use sindri_platform::InputState;
 
 use crate::{
     Blackboard, Physics2d, PrefabSources, ProfileSources, ScriptComponent, ScriptContext,
-    ScriptFailure, WorldHost,
-    audio_host::AudioCommand, host::Spawning,
+    ScriptFailure, WorldHost, audio_host::AudioCommand, host::Spawning,
 };
 
 use super::environment::environment;

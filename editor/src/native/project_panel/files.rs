@@ -178,7 +178,10 @@ impl EditorApp {
                 {
                     self.preview = Some(crate::preview::TextPreview::open(&target));
                 }
-                if self.profile.as_ref().is_some_and(|open| open.path() == path)
+                if self
+                    .profile
+                    .as_ref()
+                    .is_some_and(|open| open.path() == path)
                     && let Some(profile) = self.profile.as_mut()
                 {
                     profile.adopt(&target);
@@ -213,7 +216,11 @@ impl EditorApp {
                 {
                     self.preview = None;
                 }
-                if self.profile.as_ref().is_some_and(|open| open.path() == path) {
+                if self
+                    .profile
+                    .as_ref()
+                    .is_some_and(|open| open.path() == path)
+                {
                     self.profile = None;
                 }
                 self.refresh_project();

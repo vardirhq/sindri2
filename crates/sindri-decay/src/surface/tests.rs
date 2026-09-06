@@ -40,10 +40,9 @@ fn profiles() -> crate::ProfileSources {
     let mut profile = ProfileDocument::default();
     profile.name = "Spare".to_owned();
     profile.profile_type = "surface_test".to_owned();
-    profile.values.insert(
-        "Space".to_owned(),
-        serde_json::json!([{"Space": 1.0}]),
-    );
+    profile
+        .values
+        .insert("Space".to_owned(), serde_json::json!([{"Space": 1.0}]));
     profiles.insert(SPARE_PROFILE, profile);
     profiles
 }

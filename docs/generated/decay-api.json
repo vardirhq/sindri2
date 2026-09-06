@@ -40,6 +40,11 @@
     },
     {
       "kind": "value",
+      "name": "Profiles",
+      "type": "Profiles"
+    },
+    {
+      "kind": "value",
       "name": "Random",
       "type": "Random"
     },
@@ -516,6 +521,106 @@
         }
       ],
       "name": "Pointer"
+    },
+    {
+      "members": [],
+      "name": "Profile"
+    },
+    {
+      "members": [
+        {
+          "kind": "function",
+          "name": "count",
+          "parameters": [
+            "Profile",
+            "String"
+          ],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "flag",
+          "parameters": [
+            "Profile",
+            "String",
+            "bool"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "flag_at",
+          "parameters": [
+            "Profile",
+            "String",
+            "f32",
+            "String",
+            "bool"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "kind",
+          "parameters": [
+            "Profile"
+          ],
+          "returns": "String"
+        },
+        {
+          "kind": "function",
+          "name": "name",
+          "parameters": [
+            "Profile"
+          ],
+          "returns": "String"
+        },
+        {
+          "kind": "function",
+          "name": "number",
+          "parameters": [
+            "Profile",
+            "String",
+            "f32"
+          ],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "number_at",
+          "parameters": [
+            "Profile",
+            "String",
+            "f32",
+            "String",
+            "f32"
+          ],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "text",
+          "parameters": [
+            "Profile",
+            "String",
+            "String"
+          ],
+          "returns": "String"
+        },
+        {
+          "kind": "function",
+          "name": "text_at",
+          "parameters": [
+            "Profile",
+            "String",
+            "f32",
+            "String",
+            "String"
+          ],
+          "returns": "String"
+        }
+      ],
+      "name": "Profiles"
     },
     {
       "members": [

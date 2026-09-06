@@ -139,7 +139,11 @@ fn foundry_signal_only_offers_companion_modules() {
     run.set_board("run_state", 2.0);
     let notes = run.step(STEP);
     assert!(notes.is_empty(), "{notes:#?}");
-    let offers = [run.board("offer_0"), run.board("offer_1"), run.board("offer_2")];
+    let offers = [
+        run.board("offer_0"),
+        run.board("offer_1"),
+        run.board("offer_2"),
+    ];
     assert!(
         offers.iter().all(|id| is_companion(*id, &catalog)),
         "{offers:?}"

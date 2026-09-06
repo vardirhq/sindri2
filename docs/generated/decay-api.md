@@ -35,6 +35,7 @@ Names in scope without qualification. Decay has no imports, so each of these is 
 - `Input`: `Input`
 - `Physics`: `Physics`
 - `Pointer`: `Pointer`
+- `Profiles`: `Profiles`
 - `Random`: `Random`
 - `Save`: `Save`
 - `Stick`: `Stick`
@@ -118,6 +119,22 @@ Names in scope without qualification. Decay has no imports, so each of these is 
 - `overlay_y`: `f32`
 - `x`: `f32`
 - `y`: `f32`
+
+### `Profile`
+
+The host names this type but has not described its members.
+
+### `Profiles`
+
+- `count(Profile, String)` → `f32`
+- `flag(Profile, String, bool)` → `bool`
+- `flag_at(Profile, String, f32, String, bool)` → `bool`
+- `kind(Profile)` → `String`
+- `name(Profile)` → `String`
+- `number(Profile, String, f32)` → `f32`
+- `number_at(Profile, String, f32, String, f32)` → `f32`
+- `text(Profile, String, String)` → `String`
+- `text_at(Profile, String, f32, String, String)` → `String`
 
 ### `Random`
 

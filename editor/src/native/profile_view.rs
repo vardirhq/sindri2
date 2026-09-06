@@ -59,9 +59,7 @@ impl EditorApp {
                 changed |= object_editor(ui, &mut document.values, "values");
             });
         profile.dirty |= changed;
-        if save
-            && let Err(error) = profile.save()
-        {
+        if save && let Err(error) = profile.save() {
             profile.error = Some(error);
         }
     }
@@ -88,16 +86,14 @@ fn map_editor(ui: &mut egui::Ui, values: &mut Map<String, Value>, id: &str) -> b
     for key in keys {
         ui.push_id((id, &key), |ui| {
             let draft_id = ui.id().with("profile-key-draft");
-            let mut edited_key = ui.data_mut(|data| {
-                data.get_temp_mut_or(draft_id, key.clone()).clone()
-            });
+            let mut edited_key =
+                ui.data_mut(|data| data.get_temp_mut_or(draft_id, key.clone()).clone());
             let mut commit_key = false;
             ui.horizontal(|ui| {
-                let response = ui
-                    .add_sized(
-                        [150.0, metric::CONTROL_HEIGHT],
-                        egui::TextEdit::singleline(&mut edited_key),
-                    );
+                let response = ui.add_sized(
+                    [150.0, metric::CONTROL_HEIGHT],
+                    egui::TextEdit::singleline(&mut edited_key),
+                );
                 if response.changed() {
                     ui.data_mut(|data| data.insert_temp(draft_id, edited_key.clone()));
                 }
@@ -108,9 +104,7 @@ fn map_editor(ui: &mut egui::Ui, values: &mut Map<String, Value>, id: &str) -> b
             });
             if commit_key {
                 let edited_key = edited_key.trim().to_owned();
-                if edited_key != key
-                    && !edited_key.is_empty()
-                    && !values.contains_key(&edited_key)
+                if edited_key != key && !edited_key.is_empty() && !values.contains_key(&edited_key)
                 {
                     rename = Some((key.clone(), edited_key));
                 }

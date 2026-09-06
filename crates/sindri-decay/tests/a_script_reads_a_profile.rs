@@ -2,9 +2,7 @@ use std::collections::BTreeMap;
 
 use serde_json::json;
 use sindri_core::{ComponentSchemaRegistry, EntityData, ProfileDocument, SceneComponent, World};
-use sindri_decay::{
-    ProfileSources, ScriptComponent, ScriptFrame, ScriptSources, Scripts,
-};
+use sindri_decay::{ProfileSources, ScriptComponent, ScriptFrame, ScriptSources, Scripts};
 use sindri_platform::InputState;
 
 #[test]
@@ -66,8 +64,7 @@ fn a_typed_profile_export_reads_scalars_and_records() {
     let report = scripts.advance(
         &mut world,
         &components,
-        ScriptFrame::new(&sources, &InputState::default(), 1.0 / 60.0)
-            .with_profiles(&profiles),
+        ScriptFrame::new(&sources, &InputState::default(), 1.0 / 60.0).with_profiles(&profiles),
     );
     assert!(report.failures.is_empty(), "{:?}", report.failures);
     assert!(scripts.is_running(entity));

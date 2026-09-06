@@ -27,7 +27,7 @@ mod tests;
 pub(crate) use call::{
     EFFECTS_CALLS, EffectsCall, FUNCTIONS, GAME_CALLS, GRID_CALLS, GameCall, GridCall,
     HostFunction, INPUT_QUERIES, InputQuery, PHYSICS_CALLS, POINTER_QUERIES, POINTER_VALUES, PRINT,
-    PhysicsCall, PointerQuery, PointerValue, PROFILE_CALLS, ProfileCall, RANDOM_CALLS, RandomCall,
+    PROFILE_CALLS, PhysicsCall, PointerQuery, PointerValue, ProfileCall, RANDOM_CALLS, RandomCall,
     SAVE_CALLS, STICK_VALUES, SaveCall, StickValue, TIME_VALUES, TOUCH_CALLS, TOUCH_COUNT,
     TimeValue, TouchCall, UI_CALLS, UiCall, VIEWPORT_VALUES, ViewportValue, WORLD_CALLS, WorldCall,
 };

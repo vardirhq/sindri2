@@ -75,11 +75,7 @@ impl WorldHost<'_> {
     }
 }
 
-fn count(
-    profile: &ProfileDocument,
-    path: &Path,
-    args: &[Value],
-) -> Result<f64, RuntimeError> {
+fn count(profile: &ProfileDocument, path: &Path, args: &[Value]) -> Result<f64, RuntimeError> {
     let collection = text(path, args, 1, "a collection name")?;
     let count = profile.count(collection);
     #[allow(clippy::cast_precision_loss)]

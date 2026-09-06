@@ -89,7 +89,10 @@ impl EditorApp {
                 .preview
                 .as_ref()
                 .is_some_and(|open| open.path() == path)
-            || self.profile.as_ref().is_some_and(|open| open.path() == path)
+            || self
+                .profile
+                .as_ref()
+                .is_some_and(|open| open.path() == path)
             || self.heard.as_deref() == Some(path)
             || self.shown_font.as_deref() == Some(path)
     }
