@@ -1,0 +1,26 @@
+// Graphics Lab deliberately uses only engine-rendered shapes. No textures.
+script Showcase {
+    @export let spin: f32 = 0.0;
+    @export let pulse: f32 = 0.0;
+    @export let pulse_speed: f32 = 2.5;
+    @export let phase: f32 = 0.0;
+
+    var age: f32 = 0.0;
+    var base_x: f32 = 1.0;
+    var base_y: f32 = 1.0;
+
+    fn start() {
+        this.base_x = this.transform.scale.x;
+        this.base_y = this.transform.scale.y;
+    }
+
+    fn update(dt: f32) {
+        this.age += dt;
+        this.transform.rotation_z += this.spin * dt;
+        if this.pulse > 0.0 {
+            let amount = 1.0 + sin(this.age * this.pulse_speed + this.phase) * this.pulse;
+            this.transform.scale.x = this.base_x * amount;
+            this.transform.scale.y = this.base_y * amount;
+        }
+    }
+}
