@@ -369,6 +369,10 @@ fn an_upgrade_pauses_the_run_and_changes_it() {
     let mut run = Run::open().expect("the project opens");
     play(&mut run, 0.1);
     run.click("TitleStart");
+    // This checks progression, not whether an idle ship can survive enemies
+    // and Outer Drift long enough to reach its first upgrade.
+    play(&mut run, STEP);
+    run.set_board("hp", 1000.0);
 
     // Played until the first offer rather than for a fixed time, because when
     // it arrives depends on how the run went.
