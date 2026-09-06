@@ -23,7 +23,12 @@ impl AssetDecoder for ProfileAssetDecoder {
             )
         })?;
         ProfileDocument::from_json(text).map_err(|error| {
-            AssetDecodeError::new(id, "profile", AssetLoadErrorKind::InvalidData, error.to_string())
+            AssetDecodeError::new(
+                id,
+                "profile",
+                AssetLoadErrorKind::InvalidData,
+                error.to_string(),
+            )
         })
     }
 }
