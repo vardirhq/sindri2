@@ -28,6 +28,10 @@ script HazardAsteroid {
     fn update(dt: f32) {
         if Game.get("run_state", 0.0) != 1.0 || Game.get("sector", 0.0) != 1.0 {
             Physics.set_velocity(this.entity, 0.0, 0.0);
+            // Physics also restores the body's authored zero rotation. Keep
+            // the current authored phase visible through overlays so every
+            // rock does not appear to be replaced when gameplay resumes.
+            this.transform.rotation_z = this.phase + this.age * this.spin;
             return;
         }
 

@@ -290,11 +290,13 @@ Legend: `DONE`, `PARTIAL`, `TODO`, `INTENTIONAL`.
 | --- | --- | --- |
 | Continuous regular spawning | DONE | Sindri no longer has numbered wave batches |
 | Viewport combat rule | DONE | off-screen enemies may approach but do not attack/target; player does not target them |
+| Viewport movement bounds | DONE | the complete player hull clamps independently to the visible camera rectangle on desktop and portrait viewports |
+| Strider presentation | DONE | movement heading persists while idle; the ship carries a rotating hex shield, pulsing canopy core and twin reactive engine trails |
 | Regular HP post-3:00 curve | DONE | current authored enemies use the reference 0.0014 curve |
 | 600-second victory | DONE | the timer clamps to 600 and ends the run before another gameplay pass |
 | Exact Normal spawn formula | DONE | campaign pressure uses the reference base curve, Normal multiplier and active sector |
 | Five sector pressure values | DONE | the Director publishes all five two-minute sectors and their pressure multipliers |
-| Five sector hazards | DONE | all hazard state freezes through overlays; viewport-aware asteroids, flares, gravity wells, null field and Core beams preserve the reference placement, timing, damage and visual identities |
+| Five sector hazards | DONE | all hazard state, entity identity and orientation freeze through overlays; viewport-aware asteroids, flares, gravity wells, null field and Core beams preserve the reference placement, timing, damage and visual identities |
 | 15 enemy archetypes | DONE | the complete roster is selected uniformly from the unlocked pool |
 | Exact enemy unlock timestamps | DONE | all fifteen reference timestamps drive the growing pool |
 | Elite system | DONE | the post-105-second chance curve and all five stat traits are authored in Decay |
