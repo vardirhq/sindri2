@@ -34,7 +34,7 @@ script Showcase {
     fn update(dt: f32) {
         this.age += dt;
 
-        if this.tap_radius > 0.0 && Pointer.just_pressed() && Pointer.inside && !Pointer.over_ui {
+        if this.tap_radius > 0.0 && Pointer.just_pressed("Left") && Pointer.inside && !Pointer.over_ui {
             // The Graphics Lab camera uses vertical_size 12 with fit=shorter.
             // Pointer.overlay_* is two units tall, so the shorter viewport axis
             // spans 12 world units on both portrait phones and landscape screens.
