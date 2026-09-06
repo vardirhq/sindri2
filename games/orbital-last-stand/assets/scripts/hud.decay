@@ -1,40 +1,48 @@
 // Everything the run says about itself while it is running.
 //
-// The scene owns the words and this owns the numbers: each label authored a
-// template like "Score: {}", and filling a slot is the only thing a script can
-// do to text. That split is why the words are in a file a designer can read.
+// This deliberately mirrors the reference HUD's information hierarchy with the
+// scene elements Orbital already owns: HP and XP bars, timer + sector, level,
+// score, and a boss label/bar. The scene owns the typography and draw order;
+// this script owns live values, labels, and the compact responsive placement.
 script Hud {
-
-    // Found by the name the scene gave them. An entity cannot be an
-    // authored property — a runtime handle is not a scene ID and
-    // `docs/scripting.md` says why — so a script that needs to name
-    // another entity looks it up once and keeps it.
     var score: Entity = null;
     var clock: Entity = null;
     var level: Entity = null;
+    var sector: Entity = null;
     var health_bar: Entity = null;
     var health_text: Entity = null;
     var cores_bar: Entity = null;
     var boss_panel: Entity = null;
     var boss_bar: Entity = null;
+    var boss_name: Entity = null;
 
     fn start() {
         this.score = World.find("Score");
         this.clock = World.find("Clock");
         this.level = World.find("Level");
+        this.sector = World.find("Wave");
         this.health_bar = World.find("Health");
         this.health_text = World.find("HealthText");
         this.cores_bar = World.find("Cores");
         this.boss_panel = World.find("BossPanel");
         this.boss_bar = World.find("BossBar");
+        this.boss_name = World.find("BossName");
 
-        // The old scene still authors this label. Last Stand no longer has
-        // numbered waves, so keep it out of the runtime HUD until the scene is
-        // next rewritten by the editor.
-        let wave = World.find("Wave");
-        if wave != null {
-            World.set_active(wave, false);
-        }
+        // Entity fields are handles, not nested `this` surfaces. Bind each
+        // handle locally before mutating its transform, just like spawned
+        // entities elsewhere in the game do.
+        let health_bar = this.health_bar;
+        let cores_bar = this.cores_bar;
+        let health_text = this.health_text;
+        health_bar.transform.position.y = 1.76;
+        cores_bar.transform.position.y = 1.71;
+        health_text.transform.position.y = 1.83;
+
+        Ui.set_text(this.health_text, "HP {}/{}");
+        Ui.set_text(this.level, "LV {}");
+        Ui.set_text(this.score, "SCORE {}");
+        World.set_active(this.sector, true);
+        update_sector();
     }
 
     fn update(dt: f32) {
@@ -44,6 +52,7 @@ script Hud {
         let elapsed = Game.get("elapsed", 0.0);
         let minutes = (elapsed - elapsed % 60.0) / 60.0;
         Ui.set_numbers(this.clock, minutes, elapsed % 60.0);
+        update_sector();
 
         let hp = max(Game.get("hp", 0.0), 0.0);
         let max_hp = max(Game.get("max_hp", 1.0), 1.0);
@@ -54,12 +63,35 @@ script Hud {
         let needed = max(Game.get("next_level", 1.0), 1.0);
         Ui.set_fill(this.cores_bar, min(cores / needed, 1.0));
 
-        // The boss bar is a whole panel that is simply not there until there
-        // is a boss, which is what `set_active` is for.
         let boss_max = Game.get("boss_max", 0.0);
         World.set_active(this.boss_panel, boss_max > 0.0);
         if boss_max > 0.0 {
             Ui.set_fill(this.boss_bar, Game.get("boss_hp", 0.0) / boss_max);
+            update_boss_name();
         }
+    }
+
+    fn update_sector() {
+        let current = Game.get("sector", 1.0);
+        if current == 1.0 { Ui.set_text(this.sector, "OUTER DRIFT"); }
+        else if current == 2.0 { Ui.set_text(this.sector, "EMBER BELT"); }
+        else if current == 3.0 { Ui.set_text(this.sector, "VIOLET WAKE"); }
+        else if current == 4.0 { Ui.set_text(this.sector, "NULL LATTICE"); }
+        else { Ui.set_text(this.sector, "CORE APPROACH"); }
+    }
+
+    fn update_boss_name() {
+        let kind = Game.get("boss_kind", 0.0);
+        if kind == 0.0 { Ui.set_text(this.boss_name, "WARDEN"); }
+        else if kind == 1.0 { Ui.set_text(this.boss_name, "HARROWER"); }
+        else if kind == 2.0 { Ui.set_text(this.boss_name, "PRISM"); }
+        else if kind == 3.0 { Ui.set_text(this.boss_name, "SINGULARITY"); }
+        else if kind == 4.0 { Ui.set_text(this.boss_name, "CROWN"); }
+        else if kind == 5.0 { Ui.set_text(this.boss_name, "BROOD"); }
+        else if kind == 6.0 { Ui.set_text(this.boss_name, "MIRROR"); }
+        else if kind == 7.0 { Ui.set_text(this.boss_name, "ARCHITECT"); }
+        else if kind == 8.0 { Ui.set_text(this.boss_name, "SPINE"); }
+        else if kind == 9.0 { Ui.set_text(this.boss_name, "LEVIATHAN"); }
+        else { Ui.set_text(this.boss_name, "LAST LIGHT"); }
     }
 }
