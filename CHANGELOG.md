@@ -4,6 +4,10 @@ All notable changes to Sindri Next will be documented here.
 
 ## [Unreleased]
 
+- Fix Orbital Last Stand portrait movement bounds, preserve the ship's last
+  heading, restore its animated shield/core/engine presentation, and keep
+  asteroid orientation stable through gameplay overlays.
+
 - Add editor wall/footprint authoring, typed Decay pathfinding, and a Gather Wisp that proves authored A* navigation end to end.
 
 ### Added

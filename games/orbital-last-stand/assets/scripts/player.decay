@@ -4,9 +4,9 @@
 script Player {
     @export let bullet: Prefab;
     @export let mine: Prefab;
-    @export let arena: f32 = 8.0;
     @export let invulnerable_for: f32 = 0.9;
     @export let view_size: f32 = 11.0;
+    @export let edge_padding: f32 = 0.28;
 
     var hurt: Entity = null;
     var target: Entity = null;
@@ -45,10 +45,14 @@ script Player {
             this.facing = 1.5707963;
             this.transform.rotation_z = 0.0;
             this.mercy = 0.0;
+            Game.set("shield_impact", 0.0);
             Physics.set_velocity(this.entity, 0.0, 0.0);
         }
         if Game.get("run_state", 0.0) != 1.0 {
             Physics.set_velocity(this.entity, 0.0, 0.0);
+            // Locked physics bodies restore their authored angle before scripts.
+            // Keep the remembered heading visible behind pause/upgrade overlays.
+            this.transform.rotation_z = this.facing - 1.5707963;
             return;
         }
 
@@ -82,23 +86,42 @@ script Player {
             let delta = atan2(sin(desired - this.facing), cos(desired - this.facing));
             let blend = 1.0 - exp(-12.0 * max(0.0, dt));
             this.facing += delta * blend;
-            // The authored hull points up at zero local rotation; facing is a
-            // mathematical world angle whose zero points right.
-            this.transform.rotation_z = this.facing - 1.5707963;
         }
         if length > 1.0 {
             dx /= length;
             dy /= length;
         }
-        Physics.set_velocity(this.entity, dx * speed, dy * speed);
 
-        let x = this.transform.position.x;
-        let y = this.transform.position.y;
-        let out = sqrt(x * x + y * y);
-        if out > this.arena {
-            this.transform.position.x = x / out * this.arena;
-            this.transform.position.y = y / out * this.arena;
+        // Physics owns the body's rotation and restores its locked zero angle
+        // before every script pass. Reapply the remembered heading even when
+        // there is no input, or an idle ship snaps back to pointing upward.
+        this.transform.rotation_z = this.facing - 1.5707963;
+        Game.set("player_facing", this.facing);
+        Game.set("player_thrust", min(1.0, length));
+
+        // The camera frames a rectangle. The previous circular `arena` both
+        // hid the ship beyond a portrait viewport's sides and stopped it far
+        // short of the top and bottom. Clamp the complete hull to the exact
+        // visible bounds, and cancel only velocity that pushes through them.
+        let edge_x = max(0.0, visible_half_x() - this.edge_padding);
+        let edge_y = max(0.0, visible_half_y() - this.edge_padding);
+        var velocity_x: f32 = dx * speed;
+        var velocity_y: f32 = dy * speed;
+        if this.transform.position.x <= -edge_x {
+            this.transform.position.x = -edge_x;
+            if velocity_x < 0.0 { velocity_x = 0.0; }
+        } else if this.transform.position.x >= edge_x {
+            this.transform.position.x = edge_x;
+            if velocity_x > 0.0 { velocity_x = 0.0; }
         }
+        if this.transform.position.y <= -edge_y {
+            this.transform.position.y = -edge_y;
+            if velocity_y < 0.0 { velocity_y = 0.0; }
+        } else if this.transform.position.y >= edge_y {
+            this.transform.position.y = edge_y;
+            if velocity_y > 0.0 { velocity_y = 0.0; }
+        }
+        Physics.set_velocity(this.entity, velocity_x, velocity_y);
     }
 
     fn take_hits() {
@@ -107,6 +130,7 @@ script Player {
             Game.set("player_damage_taken", 0.0);
             if this.mercy <= 0.0 {
                 Game.set("hp", Game.get("hp", 1.0) - damage);
+                Game.set("shield_impact", 1.0);
                 this.mercy = this.invulnerable_for;
                 Effects.burst(this.hurt);
                 Audio.play("audio/hurt.wav", 0.5);
@@ -231,18 +255,24 @@ script Player {
     }
 
     fn is_visible(enemy: Entity) -> bool {
-        let aspect = max(Viewport.aspect, 0.001);
-        var half_x: f32 = this.view_size * 0.5;
-        var half_y: f32 = this.view_size * 0.5;
-        if aspect >= 1.0 {
-            half_x *= aspect;
-        } else {
-            half_y /= aspect;
-        }
+        let half_x = visible_half_x();
+        let half_y = visible_half_y();
         let radius = max(abs(enemy.transform.scale.x), abs(enemy.transform.scale.y)) * 0.5;
         return enemy.transform.position.x + radius >= -half_x &&
                enemy.transform.position.x - radius <= half_x &&
                enemy.transform.position.y + radius >= -half_y &&
                enemy.transform.position.y - radius <= half_y;
+    }
+
+    fn visible_half_x() -> f32 {
+        let aspect = max(Viewport.aspect, 0.001);
+        if aspect >= 1.0 { return this.view_size * 0.5 * aspect; }
+        return this.view_size * 0.5;
+    }
+
+    fn visible_half_y() -> f32 {
+        let aspect = max(Viewport.aspect, 0.001);
+        if aspect >= 1.0 { return this.view_size * 0.5; }
+        return this.view_size * 0.5 / aspect;
     }
 }

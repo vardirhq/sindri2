@@ -35,6 +35,19 @@ fn positions(run: &Run, entities: &[EntityId]) -> Vec<[f32; 3]> {
         .collect()
 }
 
+fn rotations(run: &Run, entities: &[EntityId]) -> Vec<f32> {
+    entities
+        .iter()
+        .map(|entity| {
+            run.world
+                .get(*entity)
+                .and_then(|data| data.transform_3d)
+                .expect("the hazard has a transform")
+                .rotation_z_radians()
+        })
+        .collect()
+}
+
 fn isolated_run() -> Run {
     let mut run = Run::open().expect("the project opens");
     for _ in 0..6 {
@@ -159,6 +172,7 @@ fn hazard_layout_survives_level_up_and_pause_overlays() {
         run.set_board("sector", sector as f32);
         step(&mut run);
         let before = tagged(&run, "hazard");
+        let before_rotations = rotations(&run, &before);
         assert!(!before.is_empty(), "sector {sector} created no hazard");
 
         // Physics runs before scripts, so the first paused frame may finish
@@ -168,6 +182,13 @@ fn hazard_layout_survives_level_up_and_pause_overlays() {
         let paused_ids = tagged(&run, "hazard");
         let paused_positions = positions(&run, &paused_ids);
         assert_eq!(paused_ids, before, "sector {sector} rebuilt for level-up");
+        if sector == 1 {
+            assert_eq!(
+                rotations(&run, &paused_ids),
+                before_rotations,
+                "asteroids snapped to authored angles when level-up opened"
+            );
+        }
         for _ in 0..8 {
             step(&mut run);
         }
