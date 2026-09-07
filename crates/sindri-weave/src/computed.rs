@@ -52,9 +52,32 @@ impl Length {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+enum ComputedValue {
+    Length(Option<Length>),
+    Raw,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct ComputedDeclaration {
+    authored: String,
+    value: ComputedValue,
+}
+
+impl ComputedDeclaration {
+    fn new(property: &str, authored: String) -> Self {
+        let value = if is_length_property(property) {
+            ComputedValue::Length(Length::parse(&authored))
+        } else {
+            ComputedValue::Raw
+        };
+        Self { authored, value }
+    }
+}
+
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(super) struct ComputedStyle {
-    declarations: BTreeMap<String, String>,
+    declarations: BTreeMap<String, ComputedDeclaration>,
 }
 
 impl ComputedStyle {
@@ -89,19 +112,61 @@ impl ComputedStyle {
         Self {
             declarations: winners
                 .into_iter()
-                .map(|(property, (_, _, value))| (property, value))
+                .map(|(property, (_, _, value))| {
+                    let computed = ComputedDeclaration::new(&property, value);
+                    (property, computed)
+                })
                 .collect(),
         }
     }
 
     #[must_use]
     pub(super) fn get(&self, property: &str) -> Option<&str> {
-        self.declarations.get(property).map(String::as_str)
+        self.declarations
+            .get(property)
+            .map(|declaration| declaration.authored.as_str())
     }
 
-    pub(super) fn into_declarations(self) -> btree_map::IntoIter<String, String> {
-        self.declarations.into_iter()
+    /// Returns an eagerly parsed length for a known length-valued property.
+    ///
+    /// `Err` preserves the authored spelling so the bridge can report a useful
+    /// `ApplyError` without parsing the same declaration again in every layout
+    /// phase that consumes it.
+    pub(super) fn length(&self, property: &str) -> Option<Result<Length, &str>> {
+        let declaration = self.declarations.get(property)?;
+        match declaration.value {
+            ComputedValue::Length(Some(length)) => Some(Ok(length)),
+            ComputedValue::Length(None) => Some(Err(declaration.authored.as_str())),
+            ComputedValue::Raw => None,
+        }
     }
+
+    pub(super) fn into_declarations(self) -> impl Iterator<Item = (String, String)> {
+        self.declarations
+            .into_iter()
+            .map(|(property, declaration)| (property, declaration.authored))
+    }
+}
+
+fn is_length_property(property: &str) -> bool {
+    matches!(
+        property,
+        "width"
+            | "height"
+            | "min-width"
+            | "max-width"
+            | "min-height"
+            | "max-height"
+            | "padding"
+            | "x"
+            | "y"
+            | "gap"
+            | "font-size"
+            | "line-height"
+            | "letter-spacing"
+            | "border-width"
+            | "border-radius"
+    )
 }
 
 #[cfg(test)]
@@ -172,6 +237,16 @@ mod tests {
 
         assert_eq!(style.get("width"), Some("300px"));
         assert_eq!(style.get("height"), Some("48px"));
+        assert_eq!(style.length("width"), Some(Ok(Length::Pixels(300.0))));
+    }
+
+    #[test]
+    fn invalid_known_lengths_are_kept_for_diagnostics() {
+        let stylesheet = parse("#panel { width: nope; }").expect("stylesheet parses");
+        let style = ComputedStyle::resolve(&stylesheet, "panel", &[], &[], DESKTOP);
+
+        assert_eq!(style.get("width"), Some("nope"));
+        assert_eq!(style.length("width"), Some(Err("nope")));
     }
 
     #[test]
