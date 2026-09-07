@@ -21,9 +21,11 @@ sindri-grid = { path = "../crates/sindri-grid" }
 sindri-platform = { path = "../crates/sindri-platform" }
 sindri-render = { path = "../crates/sindri-render" }
 sindri-scene = { path = "../crates/sindri-scene" }
+sindri-weave = { path = "../crates/sindri-weave" }
 log.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
+weave = { path = "../weave/crates/weave" }
 wgpu.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

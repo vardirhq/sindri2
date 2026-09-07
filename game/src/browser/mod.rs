@@ -19,6 +19,8 @@ use sindri_render::{
     encode_prepared_frame,
 };
 use sindri_scene::{CameraView, SceneExtractor, SceneRuntime, TextureBindings};
+use sindri_weave::PresentationWorld;
+use weave::{Stylesheet, Viewport as WeaveViewport};
 
 use self::loader::{BrowserProjectAssets, BrowserProjectLoader};
 use crate::assets::{TEXTURE_IDS, extractor};
@@ -51,9 +53,31 @@ pub(super) struct BrowserGatherApp {
     page_visible: bool,
     platform_suspended: bool,
     paused_for_page: bool,
+    stylesheets: Vec<Stylesheet>,
 }
 
 impl BrowserGatherApp {
+    #[allow(clippy::cast_precision_loss)]
+    fn weave_viewport(&self) -> WeaveViewport {
+        WeaveViewport {
+            width: self.viewport[0] as f32,
+            height: self.viewport[1] as f32,
+        }
+    }
+
+    fn apply_styles(&mut self) -> Result<(), GatherError> {
+        let viewport = self.weave_viewport();
+        let Some(engine) = &mut self.engine else {
+            return Ok(());
+        };
+        for stylesheet in &self.stylesheets {
+            let resolved = PresentationWorld::resolve(engine.world(), stylesheet, viewport)
+                .map_err(|error| GatherError::BrowserAsset(error.to_string()))?;
+            *engine.world_mut() = resolved.world().clone();
+        }
+        Ok(())
+    }
+
     fn install(
         &mut self,
         context: &AppContext<'_>,
@@ -106,11 +130,20 @@ impl BrowserGatherApp {
         session.keep_saves_in(Box::new(sindri_platform::BrowserSaves::under(
             "sindri.gather.save",
         )));
+        let mut world = World::from_scene(&project.scene)?.world;
+        for stylesheet in &project.stylesheets {
+            let resolved =
+                PresentationWorld::resolve(&world, stylesheet, self.weave_viewport())
+                    .map_err(|error| GatherError::BrowserAsset(error.to_string()))?;
+            world = resolved.world().clone();
+        }
+
         let mut engine =
             EngineHost::new_with_audio(session, sindri_core::FixedStepConfig::default(), audio)?;
-        *engine.world_mut() = World::from_scene(&project.scene)?.world;
+        *engine.world_mut() = world;
         engine.start()?;
         engine.set_viewport(self.viewport[0], self.viewport[1]);
+        self.stylesheets = project.stylesheets;
         self.engine = Some(engine);
         self.sync_page_lifecycle()?;
         log::info!(
@@ -195,6 +228,7 @@ impl DesktopApp for BrowserGatherApp {
             page_visible: true,
             platform_suspended: false,
             paused_for_page: false,
+            stylesheets: Vec::new(),
         })
     }
 
@@ -247,7 +281,7 @@ impl DesktopApp for BrowserGatherApp {
         if let Some(engine) = self.engine.as_mut() {
             engine.set_viewport(context.width(), context.height());
         }
-        Ok(())
+        self.apply_styles()
     }
 
     fn suspend(&mut self) -> Result<(), Self::Error> {

@@ -15,6 +15,7 @@ use sindri_assets::{
 };
 use sindri_core::{AssetId, SceneDocument, SpriteSheetDocument};
 use sindri_decay::{PrefabSources, ProfileSources, ScriptSources};
+use weave::Stylesheet;
 
 use crate::error::GatherError;
 
@@ -27,6 +28,7 @@ pub(super) struct BrowserProjectAssets {
     pub(super) fonts: Vec<(AssetId, FontAsset)>,
     pub(super) audio: Vec<(AssetId, AudioAsset)>,
     pub(super) sheets: BTreeMap<String, SpriteSheetDocument>,
+    pub(super) stylesheets: Vec<Stylesheet>,
     pub(super) asset_count: usize,
 }
 
@@ -87,6 +89,8 @@ pub(super) struct ProjectLoaders {
     sheets: AssetLoader<SpriteSheetAssetDecoder>,
     prefabs: AssetLoader<PrefabAssetDecoder>,
     profiles: AssetLoader<ProfileAssetDecoder>,
+    styles: AssetLoader<TextAssetDecoder>,
+    style_ids: Vec<String>,
     /// Kept, because what was asked for is also what has to be collected.
     manifest: AssetManifest,
 }
@@ -118,8 +122,10 @@ impl ProjectLoaders {
             .with_manifest(manifest.clone());
         let mut prefabs = AssetLoader::new(source.clone(), config, PrefabAssetDecoder)?
             .with_manifest(manifest.clone());
-        let mut profiles =
-            AssetLoader::new(source, config, ProfileAssetDecoder)?.with_manifest(manifest.clone());
+        let mut profiles = AssetLoader::new(source.clone(), config, ProfileAssetDecoder)?
+            .with_manifest(manifest.clone());
+        let mut styles =
+            AssetLoader::new(source, config, TextAssetDecoder)?.with_manifest(manifest.clone());
 
         // From the manifest rather than from a list compiled into this binary.
         // Those lists were the thing that made a project's host something
@@ -135,12 +141,22 @@ impl ProjectLoaders {
         request_kind(&mut sheets, &manifest, AssetKind::Sheet)?;
         request_kind(&mut prefabs, &manifest, AssetKind::Prefab)?;
         request_kind(&mut profiles, &manifest, AssetKind::Profile)?;
+        let style_ids = manifest
+            .ids_of(AssetKind::Other)
+            .filter(|id| id.as_str().ends_with(".weave"))
+            .map(|id| id.as_str().to_owned())
+            .collect::<Vec<_>>();
+        for id in &style_ids {
+            styles.request(AssetId::new(id.as_str())?)?;
+        }
 
         Ok(Self {
             scene,
             scripts,
             prefabs,
             profiles,
+            styles,
+            style_ids,
             textures,
             fonts,
             audio,
@@ -158,6 +174,7 @@ impl ProjectLoaders {
         poll_loader(&mut self.sheets)?;
         poll_loader(&mut self.prefabs)?;
         poll_loader(&mut self.profiles)?;
+        poll_loader(&mut self.styles)?;
 
         if self.scene.outstanding()
             + self.scripts.outstanding()
@@ -167,6 +184,7 @@ impl ProjectLoaders {
             + self.sheets.outstanding()
             + self.prefabs.outstanding()
             + self.profiles.outstanding()
+            + self.styles.outstanding()
             != 0
         {
             return Ok(None);
@@ -205,6 +223,15 @@ impl ProjectLoaders {
             .into_iter()
             .map(|(id, sheet)| (id.as_str().to_owned(), sheet))
             .collect();
+        let stylesheets = self
+            .style_ids
+            .iter()
+            .map(|id| {
+                let source = loaded(&self.styles, id)?;
+                weave::parse(&source)
+                    .map_err(|error| GatherError::BrowserAsset(format!("{id}: {error}")))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
         let asset_count = self.manifest.len();
         Ok(Some(BrowserProjectAssets {
             scene,
@@ -215,6 +242,7 @@ impl ProjectLoaders {
             fonts,
             audio,
             sheets,
+            stylesheets,
             asset_count,
         }))
     }
