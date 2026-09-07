@@ -47,7 +47,7 @@ impl PresentationWorld {
 }
 
 fn apply(world: &mut World, stylesheet: &Stylesheet, viewport: Viewport) -> Result<(), ApplyError> {
-    let entities: Vec<(EntityId, String, Vec<String>, Vec<String>)> = world
+    let mut entities: Vec<(EntityId, String, Vec<String>, Vec<String>)> = world
         .entities()
         .filter_map(|(entity, data)| {
             let id = data.source_id.as_ref()?.as_str().to_owned();
@@ -65,6 +65,9 @@ fn apply(world: &mut World, stylesheet: &Stylesheet, viewport: Viewport) -> Resu
             Some((entity, id, classes, component_types))
         })
         .collect();
+    // Percent sizes resolve against the final parent box, so parents must settle
+    // before their children regardless of scene insertion order.
+    entities.sort_by_key(|(entity, _, _, _)| hierarchy_depth(world, *entity));
 
     for (entity, id, classes, component_types) in entities {
         let classes: Vec<&str> = classes.iter().map(String::as_str).collect();
@@ -72,20 +75,108 @@ fn apply(world: &mut World, stylesheet: &Stylesheet, viewport: Viewport) -> Resu
         let computed = ComputedStyle::resolve(stylesheet, &id, &classes, &kinds, viewport);
 
         // Visual lengths such as border radius are relative to the final box,
-        // so settle both axes before translating any decoration.
-        for property in ["width", "height"] {
-            if let Some(value) = computed.get(property) {
-                apply_property(world, entity, &id, property, value, viewport)?;
-            }
-        }
+        // so settle both axes and their constraints before decoration.
+        apply_sizing(world, entity, &id, &computed, viewport)?;
         for (property, value) in computed.into_declarations() {
-            if !matches!(property.as_str(), "width" | "height") {
+            if !matches!(
+                property.as_str(),
+                "width"
+                    | "height"
+                    | "min-width"
+                    | "max-width"
+                    | "min-height"
+                    | "max-height"
+            ) {
                 apply_property(world, entity, &id, &property, &value, viewport)?;
             }
         }
     }
     Ok(())
 }
+const MAX_HIERARCHY_DEPTH: usize = 64;
+
+fn hierarchy_depth(world: &World, entity: EntityId) -> usize {
+    let mut depth = 0;
+    let mut current = entity;
+    while depth < MAX_HIERARCHY_DEPTH {
+        let Some(parent) = world.get(current).and_then(|data| data.parent) else {
+            break;
+        };
+        depth += 1;
+        current = parent;
+    }
+    depth
+}
+
+fn apply_sizing(
+    world: &mut World,
+    entity: EntityId,
+    id: &str,
+    style: &ComputedStyle,
+    viewport: Viewport,
+) -> Result<(), ApplyError> {
+    let viewport_size = [
+        2.0 * viewport.width / viewport.height.max(1.0),
+        2.0,
+    ];
+    let parent = world.get(entity).and_then(|data| data.parent);
+    let parent_size = parent
+        .and_then(|parent| world.get(parent))
+        .and_then(|data| data.transform_3d)
+        .map_or(viewport_size, Transform3D::scale_2d);
+    let current = world
+        .get(entity)
+        .and_then(|data| data.transform_3d)
+        .unwrap_or_default()
+        .scale_2d();
+    let mut resolved = current;
+
+    for axis in 0..2 {
+        let (size_name, min_name, max_name) = if axis == 0 {
+            ("width", "min-width", "max-width")
+        } else {
+            ("height", "min-height", "max-height")
+        };
+        let basis = parent_size[axis].abs();
+        let preferred = dimension(style, id, size_name, viewport, basis)?;
+        let minimum = dimension(style, id, min_name, viewport, basis)?;
+        let maximum = dimension(style, id, max_name, viewport, basis)?;
+
+        let mut size = preferred.unwrap_or(current[axis].abs());
+        if let Some(minimum) = minimum {
+            size = size.max(minimum);
+        }
+        if let Some(maximum) = maximum {
+            // CSS gives the minimum precedence when the constraints conflict.
+            size = size.min(maximum.max(minimum.unwrap_or(0.0)));
+        }
+        resolved[axis] = size;
+    }
+
+    let data = world.get_mut(entity).expect("entity came from this world");
+    let transform = data.transform_3d.get_or_insert_with(Transform3D::default);
+    transform.scale[0] = resolved[0];
+    transform.scale[1] = resolved[1];
+    Ok(())
+}
+
+fn dimension(
+    style: &ComputedStyle,
+    id: &str,
+    property: &str,
+    viewport: Viewport,
+    percent_basis: f32,
+) -> Result<Option<f32>, ApplyError> {
+    let Some(value) = style.get(property) else {
+        return Ok(None);
+    };
+    let resolved = Length::parse(value)
+        .and_then(|length| length.resolve(viewport, Some(percent_basis)))
+        .filter(|value| *value >= 0.0)
+        .ok_or_else(|| invalid(id, property, value))?;
+    Ok(Some(resolved))
+}
+
 fn apply_property(
     world: &mut World,
     entity: EntityId,
