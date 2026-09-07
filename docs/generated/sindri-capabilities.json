@@ -411,12 +411,16 @@
     {
       "addable": true,
       "default_payload": {
+        "align": "center",
         "direction": "column",
+        "justify": "center",
         "spacing": 0.25
       },
       "display_name": "UI Layout",
       "fields": {
+        "align": "center",
         "direction": "column",
+        "justify": "center",
         "spacing": 0.25
       },
       "schema_version": 1,
