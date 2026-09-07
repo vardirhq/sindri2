@@ -5,4 +5,4 @@ name = "Weave POC"
 main_scene = "assets/demo.scene.json"
 
 [assets]
-include = ["demo.weave"]
+include = ["demo.weave", "fonts/Fonts-OFL.txt"]
