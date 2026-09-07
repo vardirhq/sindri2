@@ -5,7 +5,7 @@
 //! computed style gives later layout work one stable input instead of teaching
 //! every property about selector specificity and source order.
 
-use std::collections::{BTreeMap, btree_map};
+use std::collections::BTreeMap;
 
 use weave::{Stylesheet, Viewport};
 
@@ -132,6 +132,7 @@ impl ComputedStyle {
     /// `Err` preserves the authored spelling so the bridge can report a useful
     /// `ApplyError` without parsing the same declaration again in every layout
     /// phase that consumes it.
+    #[cfg_attr(not(test), allow(dead_code))]
     pub(super) fn length(&self, property: &str) -> Option<Result<Length, &str>> {
         let declaration = self.declarations.get(property)?;
         match declaration.value {
