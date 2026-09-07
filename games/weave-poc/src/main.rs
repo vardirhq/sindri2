@@ -174,21 +174,11 @@ mod tests {
             "column"
         );
         assert_eq!(
-            string_field(
-                desktop.world(),
-                "hero-copy",
-                "sindri.ui.layout",
-                "align"
-            ),
+            string_field(desktop.world(), "hero-copy", "sindri.ui.layout", "align"),
             "start"
         );
         assert_eq!(
-            string_field(
-                mobile.world(),
-                "hero-copy",
-                "sindri.ui.layout",
-                "align"
-            ),
+            string_field(mobile.world(), "hero-copy", "sindri.ui.layout", "align"),
             "center"
         );
 
