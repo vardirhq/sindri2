@@ -48,8 +48,11 @@ pub(super) struct BrowserGatherApp {
     text: TextRenderer,
     glyphs: GlyphRenderer,
     shapes: ShapeRenderer,
-    /// The drawing surface's size, kept because the engine is built later.
+    /// The drawing surface's physical size, kept because the engine is built later.
     viewport: [u32; 2],
+    /// The page's logical size. Weave pixels and media queries use CSS-like pixels,
+    /// not the denser physical pixels of a high-DPI drawing surface.
+    layout_viewport: [f64; 2],
     page_visible: bool,
     platform_suspended: bool,
     paused_for_page: bool,
@@ -57,11 +60,11 @@ pub(super) struct BrowserGatherApp {
 }
 
 impl BrowserGatherApp {
-    #[allow(clippy::cast_precision_loss)]
+    #[allow(clippy::cast_possible_truncation)]
     fn weave_viewport(&self) -> WeaveViewport {
         WeaveViewport {
-            width: self.viewport[0] as f32,
-            height: self.viewport[1] as f32,
+            width: self.layout_viewport[0] as f32,
+            height: self.layout_viewport[1] as f32,
         }
     }
 
@@ -224,6 +227,7 @@ impl DesktopApp for BrowserGatherApp {
             // loads asynchronously, and a resize that arrives before it must
             // not be the one size nobody ever hears about.
             viewport: [context.width(), context.height()],
+            layout_viewport: [context.logical_width(), context.logical_height()],
             page_visible: true,
             platform_suspended: false,
             paused_for_page: false,
@@ -277,6 +281,7 @@ impl DesktopApp for BrowserGatherApp {
         // A browser window changes shape constantly — a phone rotating, a tab
         // resizing — and the screen UI is laid out against this.
         self.viewport = [context.width(), context.height()];
+        self.layout_viewport = [context.logical_width(), context.logical_height()];
         if let Some(engine) = self.engine.as_mut() {
             engine.set_viewport(context.width(), context.height());
         }
