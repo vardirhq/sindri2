@@ -251,9 +251,15 @@ mod tests {
     fn cross_axis_alignment_uses_child_bounds() {
         let mut column = layout(UiDirection::Column);
         column.align = UiAlign::Start;
-        assert_at(column.offset_in_box(0, 1, [4.0, 2.0], [1.0, 0.5]), [-1.5, 0.0]);
+        assert_at(
+            column.offset_in_box(0, 1, [4.0, 2.0], [1.0, 0.5]),
+            [-1.5, 0.0],
+        );
         column.align = UiAlign::End;
-        assert_at(column.offset_in_box(0, 1, [4.0, 2.0], [1.0, 0.5]), [1.5, 0.0]);
+        assert_at(
+            column.offset_in_box(0, 1, [4.0, 2.0], [1.0, 0.5]),
+            [1.5, 0.0],
+        );
     }
 
     #[test]
