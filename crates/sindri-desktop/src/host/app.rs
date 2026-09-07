@@ -67,6 +67,7 @@ pub enum Flow {
 pub struct AppContext<'a> {
     pub(super) gpu: &'a GpuContext,
     pub(super) surface: &'a WindowSurface,
+    pub(super) scale_factor: f64,
 }
 
 impl<'a> AppContext<'a> {
@@ -96,6 +97,21 @@ impl<'a> AppContext<'a> {
 
     pub const fn height(&self) -> u32 {
         self.surface.height()
+    }
+
+    /// The number of physical surface pixels in one logical window pixel.
+    pub const fn scale_factor(&self) -> f64 {
+        self.scale_factor
+    }
+
+    /// The drawing width in logical pixels, suitable for CSS-like layout.
+    pub fn logical_width(&self) -> f64 {
+        f64::from(self.width()) / self.scale_factor
+    }
+
+    /// The drawing height in logical pixels, suitable for CSS-like layout.
+    pub fn logical_height(&self) -> f64 {
+        f64::from(self.height()) / self.scale_factor
     }
 }
 
