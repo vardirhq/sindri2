@@ -1,5 +1,5 @@
 // Trait-specific decorative marks for Last Stand elites. Gameplay stays on the
-// enemy; these children only reproduce the reference renderer's identity cues.
+// enemy; these children are allowed to be visually shameless.
 script EliteIdentity {
     @export let trait: f32 = 0.0;
     @export let index: f32 = 0.0;
@@ -9,59 +9,58 @@ script EliteIdentity {
 
     fn start() {
         if this.trait == 0.0 {
-            // Armored: three offset partial arcs.
             this.transform.scale.x = 0.94 + this.index * 0.075;
             this.transform.scale.y = 0.94 + this.index * 0.075;
             this.transform.rotation_z = -0.8 + this.index * 0.7;
             this.shape.sweep_turns = 0.207;
-            this.shape.stroke.r = 1.0;
-            this.shape.stroke.g = 0.953;
-            this.shape.stroke.b = 0.69;
+            this.shape.stroke.r = 1.0; this.shape.stroke.g = 0.953; this.shape.stroke.b = 0.69;
             this.shape.fill.a = 0.0;
+            this.shape.dashes = 3.0 + this.index * 2.0;
         } else if this.trait == 2.0 {
-            // Volatile: bright pulsing core.
-            this.transform.scale.x = 0.16;
-            this.transform.scale.y = 0.16;
-            this.shape.fill.r = 1.0;
-            this.shape.fill.g = 0.949;
-            this.shape.fill.b = 0.631;
+            this.transform.scale.x = 0.16; this.transform.scale.y = 0.16;
+            this.shape.fill.r = 1.0; this.shape.fill.g = 0.949; this.shape.fill.b = 0.631;
             this.shape.stroke.a = 0.0;
         } else if this.trait == 3.0 {
-            // Vampiric: large breathing violet ring.
-            this.transform.scale.x = 1.16;
-            this.transform.scale.y = 1.16;
-            this.shape.stroke.r = 0.906;
-            this.shape.stroke.g = 0.631;
-            this.shape.stroke.b = 1.0;
+            this.transform.scale.x = 1.16; this.transform.scale.y = 1.16;
+            this.shape.stroke.r = 0.906; this.shape.stroke.g = 0.631; this.shape.stroke.b = 1.0;
             this.shape.fill.a = 0.0;
+            this.shape.dashes = 9.0;
         } else {
-            // Splitter: one of three pale crack branches through the body.
-            this.transform.scale.x = 0.72;
-            this.transform.scale.y = 0.045;
+            this.transform.scale.x = 0.72; this.transform.scale.y = 0.045;
             this.transform.rotation_z = -0.9 + this.index * 1.05;
-            this.shape.fill.r = 0.729;
-            this.shape.fill.g = 1.0;
-            this.shape.fill.b = 0.922;
-            this.shape.fill.a = 0.5;
-            this.shape.stroke.a = 0.0;
+            this.shape.fill.r = 0.729; this.shape.fill.g = 1.0; this.shape.fill.b = 0.922;
+            this.shape.fill.a = 0.5; this.shape.stroke.a = 0.0;
         }
     }
 
     fn update(dt: f32) {
         this.clock += dt;
-        let pulse = 0.5 + 0.5 * sin(this.clock * 6.0 + this.phase);
+        let pulse = 0.5 + 0.5 * sin(this.clock * 6.0 + this.phase + this.index * 1.7);
         if this.trait == 0.0 {
-            this.shape.stroke.a = 0.35 + 0.3 * pulse;
+            let size = 0.92 + this.index * 0.075 + pulse * 0.06;
+            this.transform.scale.x = size; this.transform.scale.y = size;
+            this.transform.rotation_z = -0.8 + this.index * 0.7 + this.clock * (0.35 + this.index * 0.18);
+            this.shape.sweep_start = this.clock * (0.08 + this.index * 0.035);
+            this.shape.stroke.a = 0.30 + 0.48 * pulse;
+            this.shape.stroke_width = 0.035 + pulse * 0.025;
         } else if this.trait == 2.0 {
-            let size = 0.15 + 0.075 * pulse;
-            this.transform.scale.x = size;
-            this.transform.scale.y = size;
-            this.shape.fill.a = 0.55 + 0.35 * pulse;
+            let size = 0.13 + 0.13 * pulse;
+            this.transform.scale.x = size; this.transform.scale.y = size;
+            this.transform.rotation_z = this.clock * 4.0;
+            this.shape.fill.a = 0.45 + 0.50 * pulse;
         } else if this.trait == 3.0 {
-            let size = 1.1 + 0.19 * pulse;
-            this.transform.scale.x = size;
-            this.transform.scale.y = size;
-            this.shape.stroke.a = 0.18 + 0.22 * pulse;
+            let size = 1.04 + 0.30 * pulse;
+            this.transform.scale.x = size; this.transform.scale.y = size;
+            this.transform.rotation_z = -this.clock * 0.85;
+            this.shape.sweep_start = this.clock * 0.12;
+            this.shape.stroke.a = 0.14 + 0.38 * pulse;
+            this.shape.stroke_width = 0.03 + pulse * 0.035;
+        } else {
+            let stretch = 0.64 + pulse * 0.22;
+            this.transform.scale.x = stretch;
+            this.transform.scale.y = 0.035 + pulse * 0.035;
+            this.transform.rotation_z = -0.9 + this.index * 1.05 + sin(this.clock * 3.0 + this.index) * 0.12;
+            this.shape.fill.a = 0.32 + pulse * 0.52;
         }
     }
 }

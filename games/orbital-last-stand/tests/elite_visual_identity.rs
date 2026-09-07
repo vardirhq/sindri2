@@ -46,7 +46,9 @@ fn elite_identity_marks_match_the_reference_trait_family() {
     let identity = std::fs::read_to_string(assets.join("scripts/elite-identity.decay"))
         .expect("the elite identity script exists");
     assert!(identity.contains("this.shape.sweep_turns = 0.207"));
-    assert!(identity.contains("this.shape.fill.a = 0.55 + 0.35 * pulse"));
-    assert!(identity.contains("this.shape.stroke.a = 0.18 + 0.22 * pulse"));
+    assert!(identity.contains("this.shape.fill.a = 0.45 + 0.50 * pulse"));
+    assert!(identity.contains("this.shape.stroke.a = 0.14 + 0.38 * pulse"));
     assert!(identity.contains("this.index * 1.05"));
+    assert!(identity.contains("this.shape.sweep_start = this.clock"));
+    assert!(!identity.contains("this.shape.dash_duty"));
 }
