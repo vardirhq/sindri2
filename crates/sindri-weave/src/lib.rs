@@ -43,97 +43,6 @@ impl PresentationWorld {
         &self.world
     }
 
-    #[test]
-    fn class_rules_style_shape_and_text_components() {
-        let document = SceneDocument::from_json(
-            r#"{
-                "format_version": 9,
-                "metadata": { "name": "weave-visuals" },
-                "entities": [{
-                    "id": "panel",
-                    "transform_3d": { "scale": [0.5, 0.5, 1.0] },
-                    "components": {
-                        "weave.style": { "classes": ["card"] },
-                        "sindri.ui.shape": {
-                            "kind": "rect",
-                            "fill": [0.0, 0.0, 0.0, 1.0],
-                            "anchor": "center"
-                        },
-                        "sindri.ui.text": {
-                            "text": "hello",
-                            "font": "fonts/test.ttf",
-                            "font_size": 0.05
-                        }
-                    }
-                }]
-            }"#,
-        )
-        .expect("scene parses");
-        let source = World::from_scene(&document).expect("scene loads").world;
-        let sheet = parse(
-            r#"
-                #panel { background: #abcdef; }
-                .card {
-                    width: 400px;
-                    height: 200px;
-                    background: #112233;
-                    color: #f8fafc;
-                    border-color: #445566;
-                    border-width: 5%;
-                    border-radius: 20%;
-                    font-weight: 700;
-                    text-transform: uppercase;
-                    text-align: center;
-                }
-            "#,
-        )
-        .expect("Weave parses");
-
-        let styled = PresentationWorld::resolve(
-            &source,
-            &sheet,
-            Viewport {
-                width: 1_200.0,
-                height: 800.0,
-            },
-        )
-        .expect("styles resolve");
-        let (_, entity) = styled.world().entities().next().expect("styled entity");
-        let transform = entity.transform_3d.expect("styled transform");
-        assert_eq!(transform.scale[0], 1.0);
-        assert_eq!(transform.scale[1], 0.5);
-
-        let shape = entity
-            .components
-            .get("sindri.ui.shape")
-            .expect("shape payload");
-        assert_color(
-            shape.get("fill").expect("fill"),
-            [171.0 / 255.0, 205.0 / 255.0, 239.0 / 255.0, 1.0],
-        );
-        assert_color(
-            shape.get("stroke").expect("stroke"),
-            [68.0 / 255.0, 85.0 / 255.0, 102.0 / 255.0, 1.0],
-        );
-        assert_eq!(shape["stroke_width"], 0.05);
-        assert_eq!(shape["corner_radius"], 0.2);
-
-        let text = entity
-            .components
-            .get("sindri.ui.text")
-            .expect("text payload");
-        assert_color(
-            text.get("color").expect("color"),
-            [248.0 / 255.0, 250.0 / 255.0, 252.0 / 255.0, 1.0],
-        );
-        assert_eq!(text["bold"], true);
-        assert_eq!(text["case"], "upper");
-        assert_eq!(text["line_align"], "center");
-
-        let source_entity = source.entities().next().expect("source entity").1;
-        assert_eq!(source_entity.components["sindri.ui.shape"]["fill"][0], 0.0);
-        assert!(source_entity.components["sindri.ui.text"].get("bold").is_none());
-    }
 }
 
 fn apply(world: &mut World, stylesheet: &Stylesheet, viewport: Viewport) -> Result<(), ApplyError> {
@@ -525,5 +434,96 @@ mod tests {
             .scale[0];
         assert_eq!(source_scale, before_scale);
         assert_ne!(styled_scale, source_scale);
+    }
+    #[test]
+    fn class_rules_style_shape_and_text_components() {
+        let document = SceneDocument::from_json(
+            r#"{
+                "format_version": 9,
+                "metadata": { "name": "weave-visuals" },
+                "entities": [{
+                    "id": "panel",
+                    "transform_3d": { "scale": [0.5, 0.5, 1.0] },
+                    "components": {
+                        "weave.style": { "classes": ["card"] },
+                        "sindri.ui.shape": {
+                            "kind": "rect",
+                            "fill": [0.0, 0.0, 0.0, 1.0],
+                            "anchor": "center"
+                        },
+                        "sindri.ui.text": {
+                            "text": "hello",
+                            "font": "fonts/test.ttf",
+                            "font_size": 0.05
+                        }
+                    }
+                }]
+            }"#,
+        )
+        .expect("scene parses");
+        let source = World::from_scene(&document).expect("scene loads").world;
+        let sheet = parse(
+            r#"
+                #panel { background: #abcdef; }
+                .card {
+                    width: 400px;
+                    height: 200px;
+                    background: #112233;
+                    color: #f8fafc;
+                    border-color: #445566;
+                    border-width: 5%;
+                    border-radius: 20%;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    text-align: center;
+                }
+            "#,
+        )
+        .expect("Weave parses");
+
+        let styled = PresentationWorld::resolve(
+            &source,
+            &sheet,
+            Viewport {
+                width: 1_200.0,
+                height: 800.0,
+            },
+        )
+        .expect("styles resolve");
+        let (_, entity) = styled.world().entities().next().expect("styled entity");
+        let transform = entity.transform_3d.expect("styled transform");
+        assert_eq!(transform.scale[0], 1.0);
+        assert_eq!(transform.scale[1], 0.5);
+
+        let shape = entity
+            .components
+            .get("sindri.ui.shape")
+            .expect("shape payload");
+        assert_color(
+            shape.get("fill").expect("fill"),
+            [171.0 / 255.0, 205.0 / 255.0, 239.0 / 255.0, 1.0],
+        );
+        assert_color(
+            shape.get("stroke").expect("stroke"),
+            [68.0 / 255.0, 85.0 / 255.0, 102.0 / 255.0, 1.0],
+        );
+        assert_eq!(shape["stroke_width"], 0.05);
+        assert_eq!(shape["corner_radius"], 0.2);
+
+        let text = entity
+            .components
+            .get("sindri.ui.text")
+            .expect("text payload");
+        assert_color(
+            text.get("color").expect("color"),
+            [248.0 / 255.0, 250.0 / 255.0, 252.0 / 255.0, 1.0],
+        );
+        assert_eq!(text["bold"], true);
+        assert_eq!(text["case"], "upper");
+        assert_eq!(text["line_align"], "center");
+
+        let source_entity = source.entities().next().expect("source entity").1;
+        assert_eq!(source_entity.components["sindri.ui.shape"]["fill"][0], 0.0);
+        assert!(source_entity.components["sindri.ui.text"].get("bold").is_none());
     }
 }
