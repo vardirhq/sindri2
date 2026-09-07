@@ -1,9 +1,20 @@
-// A restrained camera response driven by gameplay trauma. The offset decays
-// quickly and is deterministic, so impact reads without compromising aim.
+// Camera impact response plus the arena's low-frequency visual pulse. The grid
+// stays quiet enough to read bullets over it, but it is no longer a dead sheet.
 script CameraFx {
     var phase: f32 = 0.0;
+    var ambience: f32 = 0.0;
+    var grid: Entity = null;
+    var backdrop: Entity = null;
+
+    fn start() {
+        this.grid = World.find("backdrop-grid");
+        this.backdrop = World.find("backdrop");
+    }
 
     fn update(dt: f32) {
+        this.ambience += dt;
+        update_arena();
+
         if Game.get("run_state", 0.0) != 1.0 {
             this.transform.position.x = 0.0;
             this.transform.position.y = 0.0;
@@ -16,5 +27,33 @@ script CameraFx {
         this.transform.position.x = sin(this.phase) * strength;
         this.transform.position.y = cos(this.phase * 1.37) * strength;
         Game.set("screen_trauma", max(0.0, trauma - dt * 2.8));
+    }
+
+    fn update_arena() {
+        let grid = this.grid;
+        let backdrop = this.backdrop;
+        let pulse = 0.5 + 0.5 * sin(this.ambience * 0.72);
+        var boss_energy: f32 = 0.0;
+        let boss_max = max(1.0, Game.get("boss_max", 1.0));
+        let boss_hp = max(0.0, Game.get("boss_hp", 0.0));
+        if boss_hp > 0.0 {
+            boss_energy = 1.0 - min(1.0, boss_hp / boss_max);
+            boss_energy = 0.32 + boss_energy * 0.68;
+        }
+
+        if grid != null && World.exists(grid) {
+            grid.transform.rotation_z = sin(this.ambience * 0.11) * 0.012 + boss_energy * sin(this.ambience * 0.42) * 0.009;
+            grid.shape.stroke.r = 0.0085 + boss_energy * 0.12;
+            grid.shape.stroke.g = 0.034 + pulse * 0.012 + boss_energy * 0.035;
+            grid.shape.stroke.b = 0.024 + pulse * 0.010;
+            grid.shape.stroke.a = 0.72 + pulse * 0.18 + boss_energy * 0.10;
+            grid.shape.stroke_width = 0.00035 + pulse * 0.00010 + boss_energy * 0.00012;
+        }
+
+        if backdrop != null && World.exists(backdrop) {
+            backdrop.shape.fill.r = 0.0015 + boss_energy * 0.006;
+            backdrop.shape.fill.g = 0.0021 + pulse * 0.0012;
+            backdrop.shape.fill.b = 0.0044 + pulse * 0.0020 + boss_energy * 0.0015;
+        }
     }
 }
