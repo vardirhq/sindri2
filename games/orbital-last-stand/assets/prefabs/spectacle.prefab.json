@@ -1,0 +1,42 @@
+{
+  "format_version": 1,
+  "metadata": { "name": "Spectacle" },
+  "entities": [
+    {
+      "id": "spectacle",
+      "name": "Spectacle",
+      "transform_3d": {
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "components": {
+        "sindri.script": {
+          "source": "scripts/spectacle.decay",
+          "script": "Spectacle",
+          "properties": {
+            "duration": 0.32,
+            "end_size": 1.8,
+            "spin": 2.4,
+            "start_size": 0.35,
+            "style": 0.0
+          }
+        },
+        "sindri.shape": {
+          "kind": "ellipse",
+          "count": 6.0,
+          "fill": [0.34, 1.0, 0.72, 0.2],
+          "stroke": [0.34, 1.0, 0.72, 1.0],
+          "stroke_width": 0.08,
+          "corner_radius": 0.0,
+          "dashes": 5.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "add",
+          "layer": 8
+        }
+      }
+    }
+  ]
+}

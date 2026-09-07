@@ -12,10 +12,10 @@ cargo run -p sindri-export --bin sindri-export -- games/orbital-last-stand dist
 ## What it is made of
 
 ```text
-assets/orbital.scene.json    74 entities: the ship, the screens, the catalog
-assets/prefabs/              19 things that get spawned
+assets/orbital.scene.json    79 entities: the ship, screens, catalogs, FX palettes
+assets/prefabs/              28 things that get spawned
 assets/profiles/             reusable module and synergy catalogs
-assets/scripts/              32 Decay scripts, and all of the game's rules
+assets/scripts/              34 Decay scripts, and all of the game's rules
 src/lib.rs                   a harness that plays it without a window
 ```
 
@@ -49,6 +49,15 @@ effects are ordinary authored prefabs and Decay scripts; no weapon kind was
 added to the engine. Six companion families and their Foundry Signal level pool
 are authored the same way. Synergy flags react to the derived build every frame;
 the core projectile and companion interactions consume them directly.
+
+Combat presentation uses two complementary authored paths. Reusable additive
+shape prefabs provide muzzle flashes, impact rings, synergy reveals and nova
+waves; the fixed-size effect pool provides dense projectile, companion,
+hostile-fire and death flecks without growing the entity graph. Weapon families
+select their own mint, cyan, magenta, violet or gold vocabulary, while critical
+hits, mines, player damage and boss deaths feed a short deterministic camera
+trauma response. Run the `orbital-capture` binary with the `spectacle` shot to
+put every weapon proc and four companion families into one review frame.
 
 The complete fifteen-enemy reference roster arrives on its original unlock
 timeline. After 1:45, regular spawns can become one of five visibly distinct

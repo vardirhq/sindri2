@@ -1,0 +1,20 @@
+// A restrained camera response driven by gameplay trauma. The offset decays
+// quickly and is deterministic, so impact reads without compromising aim.
+script CameraFx {
+    var phase: f32 = 0.0;
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 1.0 {
+            this.transform.position.x = 0.0;
+            this.transform.position.y = 0.0;
+            Game.set("screen_trauma", 0.0);
+            return;
+        }
+        let trauma = max(0.0, Game.get("screen_trauma", 0.0));
+        this.phase += dt * 57.0;
+        let strength = trauma * trauma * 0.12;
+        this.transform.position.x = sin(this.phase) * strength;
+        this.transform.position.y = cos(this.phase * 1.37) * strength;
+        Game.set("screen_trauma", max(0.0, trauma - dt * 2.8));
+    }
+}

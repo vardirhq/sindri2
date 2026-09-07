@@ -104,6 +104,12 @@ jobs:
         env:
           WGPU_BACKEND: vulkan
         run: cargo run --package sindri-gather --bin gather-capture -- target/render-artifacts/gather.png
+      - name: Capture Last Stand spectacle on desktop and phone
+        env:
+          WGPU_BACKEND: vulkan
+        run: |
+          cargo run --package orbital-last-stand --bin orbital-capture -- target/render-artifacts/orbital-spectacle-desktop.png 1440 900 spectacle
+          cargo run --package orbital-last-stand --bin orbital-capture -- target/render-artifacts/orbital-spectacle-phone.png 390 844 spectacle
       # Both images render the same scene, so both are held to the same colours.
       # The editor screenshot went unexamined for a release while its viewport
       # sampled through a view that decoded a second time: everything else
@@ -120,6 +126,8 @@ jobs:
             target/render-artifacts/editor-runtime-viewport.png
             target/render-artifacts/scene-frame-pipeline.png
             target/render-artifacts/gather.png
+            target/render-artifacts/orbital-spectacle-desktop.png
+            target/render-artifacts/orbital-spectacle-phone.png
           if-no-files-found: error
           retention-days: 14
 

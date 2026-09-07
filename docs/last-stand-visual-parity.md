@@ -176,11 +176,26 @@ reference Strider hull coordinates through that path, uses the reference hull
 and accent colours, and turns the ship toward movement with the same
 frame-rate-independent `1 - exp(-12 * dt)` response used by the reference.
 
-Step 3 is therefore **in progress**, not complete. Still open on the Strider are
-the internal chevron, canopy/pivot marks, two animated engine trails, and the
-rotating six-sided shield. Step 2 also retains two cleanup corrections before it
-is signed off: elite base bodies are still recoloured to the trait colour instead
-of preserving the archetype colour, and the generic elite pulse ring's phase is
-still generated inside the decorative child rather than propagated from the
-parent enemy. The backdrop, HUD, full combat presentation, and capture-based
-comparison remain open as later visual-parity steps.
+The Strider presentation now layers the exact hull with its internal chevron,
+canopy, pivot, two engine flames and an independently rotating shield. Its
+heading follows movement rather than aim, engine length responds to thrust, and
+portrait bounds keep the complete authored silhouette visible.
+
+Step 5 has its first complete vocabulary pass. Friendly, hostile and companion
+projectiles leave palette-specific pooled trails; arcs, beams, mines and novas
+spin or pulse; impacts create reusable additive flares; nova waves and enemy
+deaths throw substantially denser fleck fields; critical hits, player damage and
+boss deaths feed a fast-decaying camera response. Newly activated synergies get
+three counter-scaled rings rather than changing a silent board flag.
+
+The split is intentional: large readable beats are ordinary shape prefabs and
+Decay scripts, while repeated trail samples use Sindri's fixed 8,192-fleck pool.
+Dense combat therefore does not create a trail entity per sample. The
+`spectacle` capture shot enables all five weapon flags, spread fire, frequent
+criticals and four companions for the same deterministic desktop/phone review.
+
+Remaining visual-parity work is concentrated in exact HUD/menu reconstruction,
+damage-number and directional-telegraph treatments, the selectable ship set,
+and a reference-versus-Sindri capture comparison on desktop and phone. The
+current capture path is ready for that comparison, but the layout should not be
+declared identical until those images have been reviewed together.

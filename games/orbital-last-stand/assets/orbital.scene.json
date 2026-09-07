@@ -130,6 +130,11 @@
           "projection": "orthographic",
           "vertical_size": 11.0,
           "fit": "shorter"
+        },
+        "sindri.script": {
+          "source": "scripts/camera-fx.decay",
+          "script": "CameraFx",
+          "properties": {}
         }
       }
     },
@@ -1172,7 +1177,8 @@
       "components": {
         "sindri.script": {
           "properties": {
-            "catalog": "profiles/synergy-catalog.profile.json"
+            "catalog": "profiles/synergy-catalog.profile.json",
+            "celebration": "prefabs/spectacle.prefab.json"
           },
           "script": "Synergies",
           "source": "scripts/synergies.decay"
@@ -2244,10 +2250,11 @@
         },
         "sindri.script": {
           "properties": {
-            "bullet": "prefabs/bullet.prefab.json",
-            "edge_padding": 0.28,
-            "invulnerable_for": 0.9,
-            "mine": "prefabs/mine.prefab.json"
+          "bullet": "prefabs/bullet.prefab.json",
+          "edge_padding": 0.28,
+          "invulnerable_for": 0.9,
+          "mine": "prefabs/mine.prefab.json",
+          "muzzle_fx": "prefabs/spectacle.prefab.json"
           },
           "script": "Player",
           "source": "scripts/player.decay"
@@ -3450,6 +3457,96 @@
           "case": "as_written",
           "letter_spacing": 0.00144,
           "bold": false
+        }
+      }
+    },
+    {
+      "id": "trail-mint",
+      "name": "TrailMint",
+      "components": {
+        "sindri.effect.burst": {
+          "texture": "textures/fleck.png",
+          "count": 2,
+          "speed": 0.3,
+          "spread": 0.18,
+          "lifetime": 0.24,
+          "size": 0.052,
+          "tint": [0.34, 1.0, 0.72, 0.9],
+          "fade": true,
+          "drag": 3.2,
+          "layer": 5
+        }
+      }
+    },
+    {
+      "id": "trail-cyan",
+      "name": "TrailCyan",
+      "components": {
+        "sindri.effect.burst": {
+          "texture": "textures/fleck.png",
+          "count": 2,
+          "speed": 0.42,
+          "spread": 0.2,
+          "lifetime": 0.28,
+          "size": 0.06,
+          "tint": [0.28, 0.92, 1.0, 0.92],
+          "fade": true,
+          "drag": 3.0,
+          "layer": 6
+        }
+      }
+    },
+    {
+      "id": "trail-magenta",
+      "name": "TrailMagenta",
+      "components": {
+        "sindri.effect.burst": {
+          "texture": "textures/fleck.png",
+          "count": 2,
+          "speed": 0.48,
+          "spread": 0.22,
+          "lifetime": 0.3,
+          "size": 0.064,
+          "tint": [1.0, 0.2, 0.72, 0.92],
+          "fade": true,
+          "drag": 2.8,
+          "layer": 6
+        }
+      }
+    },
+    {
+      "id": "trail-gold",
+      "name": "TrailGold",
+      "components": {
+        "sindri.effect.burst": {
+          "texture": "textures/fleck.png",
+          "count": 2,
+          "speed": 0.52,
+          "spread": 0.24,
+          "lifetime": 0.3,
+          "size": 0.062,
+          "tint": [1.0, 0.82, 0.28, 0.94],
+          "fade": true,
+          "drag": 2.8,
+          "layer": 6
+        }
+      }
+    },
+    {
+      "id": "trail-hostile",
+      "name": "TrailHostile",
+      "components": {
+        "sindri.effect.burst": {
+          "texture": "textures/fleck.png",
+          "count": 2,
+          "speed": 0.38,
+          "spread": 0.2,
+          "lifetime": 0.26,
+          "size": 0.058,
+          "tint": [1.0, 0.2, 0.18, 0.9],
+          "fade": true,
+          "drag": 3.0,
+          "layer": 5
         }
       }
     }

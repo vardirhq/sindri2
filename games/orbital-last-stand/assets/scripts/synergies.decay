@@ -2,6 +2,9 @@
 // recipe shape, so a new combination does not require a new Decay branch.
 script Synergies {
     @export let catalog: Profile;
+    @export let celebration: Prefab;
+
+    var previous_count: f32 = 0.0;
 
     fn update(dt: f32) {
         var index: f32 = 0.0;
@@ -12,6 +15,28 @@ script Synergies {
             index += 1.0;
         }
         Game.set("synergy_count", active_count);
+        if Game.get("run_state", 0.0) == 1.0 && active_count > this.previous_count {
+            celebrate(active_count - this.previous_count);
+        }
+        this.previous_count = active_count;
+    }
+
+    fn celebrate(unlocked: f32) {
+        let player = World.find("Player");
+        if player == null { return; }
+        var ring: f32 = 0.0;
+        while ring < 3.0 {
+            let flare = World.spawn(this.celebration);
+            flare.transform.position.x = player.transform.position.x;
+            flare.transform.position.y = player.transform.position.y;
+            World.set_property(flare, "style", 3.0 + ring % 2.0);
+            World.set_property(flare, "start_size", 0.35 + ring * 0.22);
+            World.set_property(flare, "end_size", 2.4 + ring * 0.85 + unlocked * 0.18);
+            World.set_property(flare, "duration", 0.55 + ring * 0.12);
+            World.set_property(flare, "spin", 3.0 + ring * 2.0);
+            ring += 1.0;
+        }
+        Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.58));
     }
 
     fn evaluate(index: f32) -> bool {

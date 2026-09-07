@@ -7,11 +7,15 @@ script Beam {
     @export let dir_x: f32 = 1.0;
     @export let dir_y: f32 = 0.0;
     @export let damage: f32 = 0.23;
+    @export let impact_fx: Prefab;
 
     var age: f32 = 0.0;
     var retiring: bool = false;
+    var trail: Entity = null;
+    var trail_clock: f32 = 0.0;
 
     fn start() {
+        this.trail = World.find("TrailCyan");
         Physics.set_velocity(this.entity, this.dir_x * this.speed, this.dir_y * this.speed);
     }
 
@@ -25,11 +29,28 @@ script Beam {
             return;
         }
         this.age += dt;
+        this.trail_clock -= dt;
+        this.transform.scale.y = 0.10 * (1.0 + sin(this.age * 28.0) * 0.28);
+        if this.trail != null && this.trail_clock <= 0.0 {
+            this.trail_clock = 0.018;
+            Effects.burst_at(this.trail, this.transform.position.x, this.transform.position.y);
+        }
+        for hit in Physics.sensor_entered() { flash(); }
         if this.age >= this.life {
             // Its final physics step may have produced a collision an enemy
             // still needs to read later in this script pass.
             this.retiring = true;
             Physics.set_velocity(this.entity, 0.0, 0.0);
         }
+    }
+
+    fn flash() {
+        let flare = World.spawn(this.impact_fx);
+        flare.transform.position.x = this.transform.position.x;
+        flare.transform.position.y = this.transform.position.y;
+        World.set_property(flare, "style", 1.0);
+        World.set_property(flare, "start_size", 0.18);
+        World.set_property(flare, "end_size", 0.9);
+        World.set_property(flare, "duration", 0.18);
     }
 }

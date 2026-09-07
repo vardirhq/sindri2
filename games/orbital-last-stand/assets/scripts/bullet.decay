@@ -17,6 +17,7 @@ script Bullet {
     @export let companion_slot: f32 = 0.0;
     @export let arc_effect: Prefab;
     @export let beam_effect: Prefab;
+    @export let impact_fx: Prefab;
 
     var age: f32 = 0.0;
     var spent: f32 = 0.0;
@@ -26,15 +27,27 @@ script Bullet {
     var reversed: bool = false;
     var wrapped: bool = false;
     var reservoir: f32 = 0.0;
+    var trail: Entity = null;
+    var trail_clock: f32 = 0.0;
+    var base_x: f32 = 1.0;
+    var base_y: f32 = 1.0;
+    var visual_style: f32 = 0.0;
 
     fn start() {
         this.heading_x = this.dir_x;
         this.heading_y = this.dir_y;
         if this.companion_kind > 0.0 {
             setup_companion_visual();
+            choose_trail();
+            this.base_x = this.transform.scale.x;
+            this.base_y = this.transform.scale.y;
             Physics.set_velocity(this.entity, 0.0, 0.0);
             return;
         }
+        choose_projectile_visual();
+        choose_trail();
+        this.base_x = this.transform.scale.x;
+        this.base_y = this.transform.scale.y;
         Physics.set_velocity(this.entity, this.heading_x * this.speed, this.heading_y * this.speed);
     }
 
@@ -50,6 +63,8 @@ script Bullet {
         }
 
         this.age += dt;
+        animate_visual(dt);
+        leave_trail(dt);
         if Game.get("special_reversal_chamber", 0.0) > 0.0 && !this.reversed && this.age >= this.life * 0.52 {
             this.reversed = true;
             this.heading_x = -this.heading_x;
@@ -67,6 +82,7 @@ script Bullet {
         for hit in Physics.sensor_entered() {
             this.spent += 1.0;
             Effects.burst(this.entity);
+            impact();
             trigger_effects();
             phase_memory();
         }
@@ -74,6 +90,51 @@ script Bullet {
             this.retiring = true;
             Physics.set_velocity(this.entity, 0.0, 0.0);
         }
+    }
+
+    fn choose_projectile_visual() {
+        if this.beam > 0.0 { this.visual_style = 1.0; }
+        else if this.nova > 0.0 { this.visual_style = 2.0; }
+        else if this.arc > 0.0 { this.visual_style = 3.0; }
+        else if this.missile > 0.0 { this.visual_style = 4.0; }
+        else { this.visual_style = 0.0; }
+    }
+
+    fn choose_trail() {
+        if this.visual_style == 1.0 || this.companion_kind == 4.0 { this.trail = World.find("TrailCyan"); }
+        else if this.visual_style == 2.0 || this.companion_kind == 3.0 { this.trail = World.find("TrailMagenta"); }
+        else if this.visual_style == 3.0 || this.companion_kind == 5.0 { this.trail = World.find("TrailGold"); }
+        else { this.trail = World.find("TrailMint"); }
+    }
+
+    fn animate_visual(dt: f32) {
+        this.transform.rotation_z += dt * (4.0 + this.visual_style * 1.2);
+        let pulse = 1.0 + sin(this.age * 18.0) * 0.16;
+        this.transform.scale.x = this.base_x * pulse;
+        this.transform.scale.y = this.base_y * pulse;
+    }
+
+    fn leave_trail(dt: f32) {
+        if this.trail == null { return; }
+        this.trail_clock -= dt;
+        if this.trail_clock > 0.0 { return; }
+        this.trail_clock = 0.025;
+        if this.companion_kind > 0.0 { this.trail_clock = 0.035; }
+        Effects.burst_at(this.trail, this.transform.position.x, this.transform.position.y);
+    }
+
+    fn impact() {
+        let flash = World.spawn(this.impact_fx);
+        flash.transform.position.x = this.transform.position.x;
+        flash.transform.position.y = this.transform.position.y;
+        World.set_property(flash, "style", this.visual_style);
+        var end_size: f32 = 1.05;
+        if this.crit_hit > 0.0 { end_size = 1.75; }
+        World.set_property(flash, "end_size", end_size);
+        World.set_property(flash, "spin", 4.0 + this.visual_style);
+        var trauma: f32 = 0.08;
+        if this.crit_hit > 0.0 { trauma = 0.36; }
+        Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), trauma));
     }
 
     fn seek(dt: f32) {
@@ -198,11 +259,14 @@ script Bullet {
         this.transform.position.x = player.transform.position.x + cos(angle) * radius;
         this.transform.position.y = player.transform.position.y + sin(angle) * radius;
         this.transform.rotation_z = angle;
+        animate_visual(dt);
+        leave_trail(dt);
         Physics.set_velocity(this.entity, 0.0, 0.0);
 
         if this.companion_kind == 2.0 { shield_intercept(); }
         for hit in Physics.sensor_entered() {
             Effects.burst(this.entity);
+            impact();
             trigger_effects();
         }
     }

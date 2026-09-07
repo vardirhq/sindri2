@@ -303,6 +303,7 @@ script Warden {
     fn die() {
         burst_on_death();
         Effects.burst(this.entity);
+        Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.9));
         Audio.play("audio/kill.wav", 0.6);
         Game.set("kills", Game.get("kills", 0.0) + 1.0);
         Game.set("score", Game.get("score", 0.0) + this.worth * 10.0);

@@ -4,6 +4,12 @@ All notable changes to Sindri Next will be documented here.
 
 ## [Unreleased]
 
+- Give Orbital Last Stand an authored combat-spectacle pass: pooled neon
+  projectile and companion trails, spinning/pulsing weapon geometry, reusable
+  additive impact flares, expanded nova and death bursts, synergy celebrations,
+  and fast-decaying camera trauma. A deterministic showcase capture assembles
+  every weapon and four companions for desktop and phone visual inspection.
+
 - Move Orbital Last Stand's 19 reference synergy recipes into a reusable
   profile asset, evaluate them generically in Decay, and connect their core
   projectile and companion interactions.
