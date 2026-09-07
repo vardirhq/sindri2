@@ -620,4 +620,112 @@ mod tests {
                 .is_none()
         );
     }
+
+    #[test]
+    fn percentages_and_constraints_use_the_final_parent_box() {
+        // Child first on purpose: resolution must follow hierarchy rather than
+        // relying on the order entities happened to be authored in.
+        let document = SceneDocument::from_json(
+            r#"{
+                "format_version": 9,
+                "metadata": { "name": "weave-sizing" },
+                "entities": [
+                    {
+                        "id": "child",
+                        "name": "child",
+                        "parent": "panel",
+                        "transform_3d": { "scale": [0.1, 0.1, 1.0] },
+                        "components": {
+                            "sindri.ui.shape": { "kind": "rect", "anchor": "center" }
+                        }
+                    },
+                    {
+                        "id": "panel",
+                        "name": "panel",
+                        "transform_3d": { "scale": [0.2, 0.2, 1.0] },
+                        "components": {
+                            "sindri.ui.shape": { "kind": "rect", "anchor": "center" }
+                        }
+                    }
+                ]
+            }"#,
+        )
+        .expect("scene parses");
+        let source = World::from_scene(&document).expect("scene loads").world;
+        let sheet = parse(
+            r#"
+                #panel {
+                    width: 50vw;
+                    min-width: 600px;
+                    max-width: 700px;
+                    height: 400px;
+                }
+                #child {
+                    width: 50%;
+                    height: 150%;
+                    max-height: 100%;
+                }
+            "#,
+        )
+        .expect("Weave parses");
+
+        let styled = PresentationWorld::resolve(
+            &source,
+            &sheet,
+            Viewport {
+                width: 1_200.0,
+                height: 800.0,
+            },
+        )
+        .expect("styles resolve");
+        let scale = |name: &str| {
+            styled
+                .world()
+                .entities()
+                .find(|(_, data)| data.name.as_deref() == Some(name))
+                .and_then(|(_, data)| data.transform_3d)
+                .expect("styled entity")
+                .scale_2d()
+        };
+
+        assert_eq!(scale("panel"), [1.5, 1.0]);
+        assert_eq!(scale("child"), [0.75, 1.0]);
+    }
+
+    #[test]
+    fn negative_sizes_are_rejected_with_the_authored_property() {
+        let document = SceneDocument::from_json(
+            r#"{
+                "format_version": 9,
+                "metadata": { "name": "weave-invalid-sizing" },
+                "entities": [{
+                    "id": "panel",
+                    "components": {
+                        "sindri.ui.shape": { "kind": "rect", "anchor": "center" }
+                    }
+                }]
+            }"#,
+        )
+        .expect("scene parses");
+        let source = World::from_scene(&document).expect("scene loads").world;
+        let sheet = parse("#panel { min-width: -10px; }").expect("Weave parses");
+
+        let error = PresentationWorld::resolve(
+            &source,
+            &sheet,
+            Viewport {
+                width: 1_200.0,
+                height: 800.0,
+            },
+        )
+        .expect_err("negative minimum is invalid");
+        assert_eq!(
+            error,
+            super::ApplyError::InvalidValue {
+                entity: "panel".into(),
+                property: "min-width".into(),
+                value: "-10px".into(),
+            }
+        );
+    }
 }
