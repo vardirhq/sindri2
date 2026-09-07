@@ -7,7 +7,7 @@
       "name": "Menu",
       "transform_3d": { "scale": [0.7, 0.8, 1.0] },
       "components": {
-        "sindri.ui.image": { "texture": "sindri:white", "anchor": "center" },
+        "sindri.ui.image": { "texture": "sindri:white", "anchor": "center", "tint": [0.055, 0.075, 0.12, 1.0], "layer": 1 },
         "sindri.ui.layout": { "direction": "column", "spacing": 0.2 }
       }
     },
@@ -17,7 +17,7 @@
       "parent": "menu",
       "transform_3d": { "scale": [0.5, 0.12, 1.0] },
       "components": {
-        "sindri.ui.image": { "texture": "sindri:white", "anchor": "center" },
+        "sindri.ui.image": { "texture": "sindri:white", "anchor": "center", "tint": [0.18, 0.78, 0.67, 1.0], "layer": 2 },
         "sindri.ui.button": { "label": "Play" }
       }
     },
@@ -27,7 +27,7 @@
       "parent": "menu",
       "transform_3d": { "scale": [0.5, 0.12, 1.0] },
       "components": {
-        "sindri.ui.image": { "texture": "sindri:white", "anchor": "center" },
+        "sindri.ui.image": { "texture": "sindri:white", "anchor": "center", "tint": [0.42, 0.32, 0.9, 1.0], "layer": 2 },
         "sindri.ui.button": { "label": "Quit" }
       }
     }

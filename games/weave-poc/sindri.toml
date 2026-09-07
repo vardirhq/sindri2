@@ -1,0 +1,8 @@
+format_version = 1
+
+[project]
+name = "Weave POC"
+main_scene = "assets/demo.scene.json"
+
+[assets]
+include = ["demo.weave"]
