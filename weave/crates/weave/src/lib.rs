@@ -34,6 +34,18 @@ pub struct Viewport {
     pub height: f32,
 }
 
+impl Selector {
+    /// CSS-like weight used when more than one matching rule writes a property.
+    #[must_use]
+    pub const fn specificity(&self) -> u8 {
+        match self {
+            Self::Type(_) => 0,
+            Self::Class(_) => 1,
+            Self::Id(_) => 2,
+        }
+    }
+}
+
 impl MediaCondition {
     #[must_use]
     pub fn matches(self, viewport: Viewport) -> bool {
@@ -228,6 +240,7 @@ mod tests {
             sheet.rules[0].selector,
             Selector::Class("menu-button".into())
         );
+        assert_eq!(sheet.rules[0].selector.specificity(), 1);
         assert!(sheet.rules[0].applies_with_classes(
             "play",
             &["menu-button", "primary"],
