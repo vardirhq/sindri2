@@ -237,13 +237,7 @@ fn apply_property(
                 "space-between" | "space_between" => "space_between",
                 _ => return Err(invalid(id, property, value)),
             };
-            set_component_field(
-                world,
-                entity,
-                "sindri.ui.layout",
-                "justify",
-                stored.into(),
-            );
+            set_component_field(world, entity, "sindri.ui.layout", "justify", stored.into());
         }
         "align-items" => {
             let stored = match value.trim() {
@@ -252,13 +246,7 @@ fn apply_property(
                 "end" => "end",
                 _ => return Err(invalid(id, property, value)),
             };
-            set_component_field(
-                world,
-                entity,
-                "sindri.ui.layout",
-                "align",
-                stored.into(),
-            );
+            set_component_field(world, entity, "sindri.ui.layout", "align", stored.into());
         }
         "gap" => {
             let resolved = length(value, viewport).ok_or_else(|| invalid(id, property, value))?;
