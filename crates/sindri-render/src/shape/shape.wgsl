@@ -104,9 +104,13 @@ fn vs_main(vertex: VertexInput, instance: InstanceInput) -> VertexOutput {
 }
 
 /// Distance to a rounded rectangle inscribed in the quad.
-fn rect_distance(p: vec2<f32>, radius: f32) -> f32 {
-    let r = clamp(radius, 0.0, 0.5);
-    let q = abs(p) - (vec2<f32>(0.5, 0.5) - vec2<f32>(r, r));
+fn rect_distance(p: vec2<f32>, radius: f32, aspect: vec2<f32>) -> f32 {
+    // Evaluate the rectangle in isotropic screen-distance space. The model is
+    // allowed to stretch its unit quad, but a corner radius and stroke width
+    // are fractions of the shorter axis and must stay circular and even.
+    let half_size = aspect * 0.5;
+    let r = clamp(radius, 0.0, min(half_size.x, half_size.y));
+    let q = abs(p * aspect) - (half_size - vec2<f32>(r, r));
     return length(max(q, vec2<f32>(0.0, 0.0))) + min(max(q.x, q.y), 0.0) - r;
 }
 
@@ -219,6 +223,22 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let kind = i32(in.geometry.x + 0.5);
     let p = in.local;
 
+    // Derivatives reveal how much screen space one local unit occupies after
+    // the complete model, camera, viewport, and parent transform. Normalising
+    // those spans by the shorter axis gives the rounded-rectangle SDF a square
+    // distance metric even when its quad is a very wide button.
+    //
+    // Keep these derivatives in uniform control flow. Browsers enforce that
+    // WGSL rule even where native backends happen to accept a branch-local one.
+    let local_units_per_pixel = vec2<f32>(
+        length(vec2<f32>(dpdx(p.x), dpdy(p.x))),
+        length(vec2<f32>(dpdx(p.y), dpdy(p.y))),
+    );
+    let pixels_per_local_unit =
+        vec2<f32>(1.0, 1.0) / max(local_units_per_pixel, vec2<f32>(1.0e-6));
+    let shortest_axis = max(min(pixels_per_local_unit.x, pixels_per_local_unit.y), 1.0e-6);
+    let rect_aspect = pixels_per_local_unit / shortest_axis;
+
     var distance: f32;
     var closed = true;
     if kind == KIND_ELLIPSE {
@@ -246,7 +266,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         // the distance is already unsigned.
         closed = false;
     } else {
-        distance = rect_distance(p, in.geometry.w);
+        distance = rect_distance(p, in.geometry.w, rect_aspect);
     }
 
     // The edge's own width on screen, so the antialiasing is a pixel wide
