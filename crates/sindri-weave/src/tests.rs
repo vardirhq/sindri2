@@ -304,8 +304,12 @@ fn layout_alignment_maps_to_the_generic_sindri_layout_component() {
     assert_eq!(layout["align"], "end");
     assert_number(&layout["spacing"], 0.06);
 
-    let source_layout = &source.entities().next().expect("source entity").1.components
-        ["sindri.ui.layout"];
+    let source_layout = &source
+        .entities()
+        .next()
+        .expect("source entity")
+        .1
+        .components["sindri.ui.layout"];
     assert!(source_layout.get("justify").is_none());
     assert!(source_layout.get("align").is_none());
 }
