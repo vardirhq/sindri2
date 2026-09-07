@@ -93,4 +93,88 @@ mod tests {
         assert!((mobile_width - ninety_vw).abs() < 1.0e-6);
         assert!((menu_width(&authored) - source_width).abs() <= f32::EPSILON);
     }
+
+    fn string_field<'a>(
+        world: &'a World,
+        id: &str,
+        component: &str,
+        field: &str,
+    ) -> &'a str {
+        world
+            .entities()
+            .find(|(_, data)| {
+                data.source_id
+                    .as_ref()
+                    .is_some_and(|source_id| source_id.as_str() == id)
+            })
+            .and_then(|(_, data)| data.components.get(component))
+            .and_then(|payload| payload.get(field))
+            .and_then(serde_json::Value::as_str)
+            .expect("string component field")
+    }
+
+    fn number_field(world: &World, id: &str, component: &str, field: &str) -> f64 {
+        world
+            .entities()
+            .find(|(_, data)| {
+                data.source_id
+                    .as_ref()
+                    .is_some_and(|source_id| source_id.as_str() == id)
+            })
+            .and_then(|(_, data)| data.components.get(component))
+            .and_then(|payload| payload.get(field))
+            .and_then(serde_json::Value::as_f64)
+            .expect("numeric component field")
+    }
+
+    #[test]
+    fn demo_resolves_labels_colors_and_responsive_type() {
+        let document = SceneDocument::from_json(SCENE).expect("scene parses");
+        let authored = World::from_scene(&document).expect("scene loads").world;
+        let stylesheet = parse(STYLE).expect("Weave parses");
+        let desktop = PresentationWorld::resolve(
+            &authored,
+            &stylesheet,
+            Viewport {
+                width: 1280.0,
+                height: 720.0,
+            },
+        )
+        .expect("desktop resolves");
+        let mobile = PresentationWorld::resolve(
+            &authored,
+            &stylesheet,
+            Viewport {
+                width: 390.0,
+                height: 844.0,
+            },
+        )
+        .expect("mobile resolves");
+
+        assert_eq!(
+            string_field(desktop.world(), "title", "sindri.ui.text", "text"),
+            "STYLE THE WORLD"
+        );
+        assert_eq!(
+            string_field(desktop.world(), "title", "sindri.ui.text", "font"),
+            "fonts/ChakraPetch-Regular.ttf"
+        );
+        assert_ne!(
+            desktop.world().entities().find_map(|(_, data)| {
+                (data.source_id.as_ref()?.as_str() == "play")
+                    .then(|| data.components["sindri.ui.shape"]["fill"].clone())
+            }),
+            desktop.world().entities().find_map(|(_, data)| {
+                (data.source_id.as_ref()?.as_str() == "source")
+                    .then(|| data.components["sindri.ui.shape"]["fill"].clone())
+            })
+        );
+
+        let desktop_size =
+            number_field(desktop.world(), "title", "sindri.ui.text", "font_size");
+        let mobile_size = number_field(mobile.world(), "title", "sindri.ui.text", "font_size");
+        assert!((desktop_size - 64.0 / 720.0).abs() < 1.0e-6);
+        assert!((mobile_size - 60.0 / 844.0).abs() < 1.0e-6);
+    }
+
 }
