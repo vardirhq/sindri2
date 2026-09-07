@@ -190,9 +190,9 @@ fn rotation_of(transform: Transform3D) -> Quat {
 /// hierarchy is keyed on it: an entity with a transform and no UI component is
 /// a group, and a group is placed but never drawn.
 ///
-/// A button counts even with no image or text of its own, because a hit area
-/// with no art is a legitimate thing to author — and because leaving it out is
-/// not "it gets no anchor", it is "it gets no *placement*", so a row of bare
+/// A button counts even with no art of its own, because a hit area with no art
+/// is a legitimate thing to author — and because leaving it out is not
+/// "it gets no anchor", it is "it gets no *placement*", so a row of bare
 /// buttons stops being laid out at all. The same set `ScreenUi::elements`
 /// collects, for the same reason.
 fn declared_anchors(
@@ -218,8 +218,8 @@ fn declared_anchors(
 ///
 /// Only active children count, which is what makes a menu close up around a
 /// hidden entry instead of leaving a hole where it was. Layouts resolve the
-/// whole sibling set together so optional edge gaps can account for actual box
-/// sizes rather than pretending every child is a point at its centre.
+/// whole sibling set together so edge spacing can account for actual box sizes
+/// rather than pretending every child is a point at its centre.
 fn layout_offsets(
     world: &World,
     components: &ComponentSchemaRegistry,
@@ -415,14 +415,14 @@ mod tests {
         );
     }
 
-    /// Edge gaps use box extents, not centre distance.
+    /// Edge spacing uses box extents, not centre distance.
     #[test]
-    fn layout_gap_keeps_tall_children_apart() {
+    fn layout_spacing_keeps_tall_children_apart() {
         let (world, extractor) = world(&format!(
             r#"{{ "id": "column", "name": "column",
                   "transform_3d": {{ "scale": [2.0, 3.0, 1.0] }},
                   "components": {{ "sindri.ui.layout": {{ "direction": "column",
-                      "gap": 0.2, "justify": "center", "align": "center" }} }} }},
+                      "spacing": 0.2, "justify": "center", "align": "center" }} }} }},
                {{ "id": "first", "name": "first", "parent": "column",
                   "transform_3d": {{ "scale": [1.0, 0.5, 1.0] }},
                   "components": {{ {IMAGE} }} }},
