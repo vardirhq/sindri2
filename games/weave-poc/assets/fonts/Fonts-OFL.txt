@@ -1,0 +1,13 @@
+Chakra Petch and IBM Plex Mono are licensed under the SIL Open Font License 1.1.
+
+Chakra Petch: Copyright (c) Cadson Demak.
+IBM Plex Mono: Copyright (c) IBM Corp.
+
+The full licence text is at https://openfontlicense.org. The terms that matter
+for vendoring them here: the fonts may be bundled and redistributed with
+software, may not be sold on their own, and this notice must travel with them.
+
+These are the two faces the reference game loads from Google Fonts. They are
+vendored rather than fetched, because Sindri binds no font it did not ship with:
+a game that renders differently depending on what a machine has installed, or on
+whether a CDN answered, is not one anyone can art-direct.
