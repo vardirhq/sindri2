@@ -59,7 +59,7 @@ mod tests {
     }
 
     #[test]
-    fn mobile_and_desktop_resolve_different_geometry_without_touching_source() {
+    fn portrait_and_landscape_resolve_different_geometry_without_touching_source() {
         let document = SceneDocument::from_json(SCENE).expect("scene parses");
         let authored = World::from_scene(&document).expect("scene loads").world;
         let source_width = menu_width(&authored);
@@ -77,16 +77,20 @@ mod tests {
         let mobile = PresentationWorld::resolve(
             &authored,
             &stylesheet,
+            // Wider than the old 700px cutoff on purpose: portrait layout is
+            // about the viewport's shape, not a guess at the device class.
             Viewport {
-                width: 390.0,
-                height: 844.0,
+                width: 980.0,
+                height: 1800.0,
             },
         )
-        .expect("mobile resolves");
+        .expect("portrait resolves");
 
         let desktop_width = menu_width(desktop.world());
         let mobile_width = menu_width(mobile.world());
         assert!((desktop_width - mobile_width).abs() > f32::EPSILON);
+        let ninety_vw = 0.9 * 2.0 * 980.0 / 1800.0;
+        assert!((mobile_width - ninety_vw).abs() < 1.0e-6);
         assert!((menu_width(&authored) - source_width).abs() <= f32::EPSILON);
     }
 }
