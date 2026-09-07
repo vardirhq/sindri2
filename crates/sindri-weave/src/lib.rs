@@ -42,7 +42,6 @@ impl PresentationWorld {
     pub const fn world(&self) -> &World {
         &self.world
     }
-
 }
 
 fn apply(world: &mut World, stylesheet: &Stylesheet, viewport: Viewport) -> Result<(), ApplyError> {
@@ -69,9 +68,12 @@ fn apply(world: &mut World, stylesheet: &Stylesheet, viewport: Viewport) -> Resu
         let classes: Vec<&str> = classes.iter().map(String::as_str).collect();
         let kinds: Vec<&str> = component_types.iter().map(String::as_str).collect();
         let mut declarations: BTreeMap<String, (u8, usize, String)> = BTreeMap::new();
-        for (source_order, rule) in stylesheet.rules.iter().enumerate().filter(|(_, rule)| {
-            rule.applies_with_classes(&id, &classes, &kinds, viewport)
-        }) {
+        for (source_order, rule) in stylesheet
+            .rules
+            .iter()
+            .enumerate()
+            .filter(|(_, rule)| rule.applies_with_classes(&id, &classes, &kinds, viewport))
+        {
             let specificity = rule.selector.specificity();
             for (property, value) in &rule.declarations {
                 let replace = declarations.get(property).is_none_or(
@@ -80,10 +82,8 @@ fn apply(world: &mut World, stylesheet: &Stylesheet, viewport: Viewport) -> Resu
                     },
                 );
                 if replace {
-                    declarations.insert(
-                        property.clone(),
-                        (specificity, source_order, value.clone()),
-                    );
+                    declarations
+                        .insert(property.clone(), (specificity, source_order, value.clone()));
                 }
             }
         }
@@ -202,8 +202,8 @@ fn apply_property(
             );
         }
         "border-width" | "border-radius" => {
-            let resolved =
-                size_fraction(world, entity, value, viewport).ok_or_else(|| invalid(id, property, value))?;
+            let resolved = size_fraction(world, entity, value, viewport)
+                .ok_or_else(|| invalid(id, property, value))?;
             let field = if property == "border-width" {
                 "stroke_width"
             } else {
@@ -261,12 +261,7 @@ fn set_component_field(
     object.insert(field.to_owned(), value);
 }
 
-fn size_fraction(
-    world: &World,
-    entity: EntityId,
-    value: &str,
-    viewport: Viewport,
-) -> Option<f32> {
+fn size_fraction(world: &World, entity: EntityId, value: &str, viewport: Viewport) -> Option<f32> {
     let value = value.trim();
     if let Some(percent) = value.strip_suffix('%') {
         return Some(percent.trim().parse::<f32>().ok()? / 100.0);
@@ -524,6 +519,10 @@ mod tests {
 
         let source_entity = source.entities().next().expect("source entity").1;
         assert_eq!(source_entity.components["sindri.ui.shape"]["fill"][0], 0.0);
-        assert!(source_entity.components["sindri.ui.text"].get("bold").is_none());
+        assert!(
+            source_entity.components["sindri.ui.text"]
+                .get("bold")
+                .is_none()
+        );
     }
 }
