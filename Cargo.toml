@@ -13,18 +13,20 @@ members = [
     "crates/sindri-platform",
     "crates/sindri-render",
     "crates/sindri-scene",
+    "crates/sindri-weave",
     "tools/decay-lsp",
     "tools/sindri-capabilities",
     "examples/triangle",
     "examples/cube",
     "game",
     "games/orbital-last-stand",
+    "games/weave-poc",
 ]
-# Decay is its own workspace, and a path dependency alone does not keep it that
-# way: cargo makes the path dependencies of a member into members too, which
-# silently gave the decay crates this workspace's version and lints instead of
-# their own. Excluding them is what actually holds the boundary.
-exclude = ["decay"]
+# Decay and Weave are their own workspaces, and a path dependency alone does not
+# keep them that way: cargo makes path dependencies of a member into members too,
+# which would silently give their crates this workspace's package/lint settings.
+# Excluding them is what actually holds the language boundaries.
+exclude = ["decay", "weave"]
 resolver = "3"
 
 [workspace.package]
