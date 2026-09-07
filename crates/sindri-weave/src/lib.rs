@@ -5,11 +5,13 @@
 //! ordinary Sindri transforms/component payloads on that clone, and lets the
 //! existing scene/render/input pipeline consume the result normally.
 
-use std::collections::BTreeMap;
-
 use sindri_core::{EntityId, Transform3D, World};
 use thiserror::Error;
 use weave::{Stylesheet, Viewport};
+
+mod computed;
+
+use computed::ComputedStyle;
 
 #[derive(Debug, Error, PartialEq)]
 pub enum ApplyError {
@@ -67,35 +69,16 @@ fn apply(world: &mut World, stylesheet: &Stylesheet, viewport: Viewport) -> Resu
     for (entity, id, classes, component_types) in entities {
         let classes: Vec<&str> = classes.iter().map(String::as_str).collect();
         let kinds: Vec<&str> = component_types.iter().map(String::as_str).collect();
-        let mut declarations: BTreeMap<String, (u8, usize, String)> = BTreeMap::new();
-        for (source_order, rule) in stylesheet
-            .rules
-            .iter()
-            .enumerate()
-            .filter(|(_, rule)| rule.applies_with_classes(&id, &classes, &kinds, viewport))
-        {
-            let specificity = rule.selector.specificity();
-            for (property, value) in &rule.declarations {
-                let replace = declarations.get(property).is_none_or(
-                    |(current_specificity, current_order, _)| {
-                        (specificity, source_order) >= (*current_specificity, *current_order)
-                    },
-                );
-                if replace {
-                    declarations
-                        .insert(property.clone(), (specificity, source_order, value.clone()));
-                }
-            }
-        }
+        let computed = ComputedStyle::resolve(stylesheet, &id, &classes, &kinds, viewport);
 
         // Visual lengths such as border radius are relative to the final box,
         // so settle both axes before translating any decoration.
         for property in ["width", "height"] {
-            if let Some((_, _, value)) = declarations.get(property) {
+            if let Some(value) = computed.get(property) {
                 apply_property(world, entity, &id, property, value, viewport)?;
             }
         }
-        for (property, (_, _, value)) in declarations {
+        for (property, value) in computed.into_declarations() {
             if !matches!(property.as_str(), "width" | "height") {
                 apply_property(world, entity, &id, &property, &value, viewport)?;
             }
