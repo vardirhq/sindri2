@@ -22,18 +22,18 @@ pub(super) enum Length {
 impl Length {
     pub(super) fn parse(value: &str) -> Option<Self> {
         let value = value.trim();
-        let (number, make): (&str, fn(f32) -> Self) =
-            if let Some(number) = value.strip_suffix('%') {
-                (number, Self::Percent)
-            } else if let Some(number) = value.strip_suffix("vw") {
-                (number, Self::ViewWidth)
-            } else if let Some(number) = value.strip_suffix("vh") {
-                (number, Self::ViewHeight)
-            } else if let Some(number) = value.strip_suffix("px") {
-                (number, Self::Pixels)
-            } else {
-                (value, Self::Overlay)
-            };
+        let (number, make): (&str, fn(f32) -> Self) = if let Some(number) = value.strip_suffix('%')
+        {
+            (number, Self::Percent)
+        } else if let Some(number) = value.strip_suffix("vw") {
+            (number, Self::ViewWidth)
+        } else if let Some(number) = value.strip_suffix("vh") {
+            (number, Self::ViewHeight)
+        } else if let Some(number) = value.strip_suffix("px") {
+            (number, Self::Pixels)
+        } else {
+            (value, Self::Overlay)
+        };
         let number = number.trim().parse::<f32>().ok()?;
         number.is_finite().then(|| make(number))
     }
@@ -67,26 +67,21 @@ impl ComputedStyle {
         viewport: Viewport,
     ) -> Self {
         let mut winners: BTreeMap<String, (u8, usize, String)> = BTreeMap::new();
-        for (source_order, rule) in stylesheet
-            .rules
-            .iter()
-            .enumerate()
-            .filter(|(_, rule)| {
+        for (source_order, rule) in
+            stylesheet.rules.iter().enumerate().filter(|(_, rule)| {
                 rule.applies_with_classes(id, classes, component_types, viewport)
             })
         {
             let specificity = rule.selector.specificity();
             for (property, value) in &rule.declarations {
-                let replace = winners.get(property).is_none_or(
-                    |(current_specificity, current_order, _)| {
-                        (specificity, source_order) >= (*current_specificity, *current_order)
-                    },
-                );
+                let replace =
+                    winners
+                        .get(property)
+                        .is_none_or(|(current_specificity, current_order, _)| {
+                            (specificity, source_order) >= (*current_specificity, *current_order)
+                        });
                 if replace {
-                    winners.insert(
-                        property.clone(),
-                        (specificity, source_order, value.clone()),
-                    );
+                    winners.insert(property.clone(), (specificity, source_order, value.clone()));
                 }
             }
         }
