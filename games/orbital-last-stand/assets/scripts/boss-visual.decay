@@ -33,7 +33,6 @@ script BossVisual {
             this.transform.scale.y = size;
             this.transform.rotation_z = this.clock * (0.55 + phase * 0.55) + this.phase_offset;
             this.shape.dashes = 6.0 + phase * 2.0;
-            this.shape.dash_duty = 0.32 + pulse * 0.18;
             this.shape.sweep_start = this.clock * (0.09 + phase * 0.04);
             this.shape.stroke.a = 0.30 + pulse * 0.28 + fury * 0.18;
             this.shape.stroke_width = 0.045 + phase * 0.012;
