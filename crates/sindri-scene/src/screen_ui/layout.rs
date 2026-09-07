@@ -157,21 +157,17 @@ impl UiLayoutComponent {
             .collect();
         let children_span: f32 = main_sizes.iter().sum();
         let requested_gap = self.spacing.max(0.0);
-        #[allow(clippy::cast_precision_loss)]
-        let packed_span = children_span
-            + requested_gap * child_sizes.len().saturating_sub(1) as f32;
 
         let actual_gap = if self.justify == UiJustify::SpaceBetween && child_sizes.len() > 1 {
             #[allow(clippy::cast_precision_loss)]
-            let distributed = (parent_main - children_span).max(0.0)
-                / child_sizes.len().saturating_sub(1) as f32;
+            let distributed =
+                (parent_main - children_span).max(0.0) / child_sizes.len().saturating_sub(1) as f32;
             distributed.max(requested_gap)
         } else {
             requested_gap
         };
         #[allow(clippy::cast_precision_loss)]
-        let actual_span = children_span
-            + actual_gap * child_sizes.len().saturating_sub(1) as f32;
+        let actual_span = children_span + actual_gap * child_sizes.len().saturating_sub(1) as f32;
 
         let mut cursor = match self.justify {
             UiJustify::Start | UiJustify::SpaceBetween => -parent_main / 2.0,
@@ -185,11 +181,7 @@ impl UiLayoutComponent {
             .map(|(child_size, child_main)| {
                 let logical_main = cursor + child_main / 2.0;
                 cursor += child_main + actual_gap;
-                self.finish_offset(
-                    logical_main,
-                    parent_cross,
-                    child_size[cross_axis].abs(),
-                )
+                self.finish_offset(logical_main, parent_cross, child_size[cross_axis].abs())
             })
             .collect()
     }
@@ -291,10 +283,7 @@ mod tests {
         let mut row = layout(UiDirection::Row);
         row.spacing = 0.1;
         row.justify = UiJustify::SpaceBetween;
-        let offsets = row.offsets_in_box(
-            [4.0, 2.0],
-            &[[1.0, 0.5], [0.5, 0.5], [1.0, 0.5]],
-        );
+        let offsets = row.offsets_in_box([4.0, 2.0], &[[1.0, 0.5], [0.5, 0.5], [1.0, 0.5]]);
         assert_at(offsets[0], [-1.5, 0.0]);
         assert_at(offsets[2], [1.5, 0.0]);
     }
