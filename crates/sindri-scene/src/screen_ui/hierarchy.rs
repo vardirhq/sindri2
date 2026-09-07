@@ -218,7 +218,8 @@ fn declared_anchors(
 ///
 /// Only active children count, and only their index among the active ones,
 /// which is what makes a menu close up around a hidden entry instead of leaving
-/// a hole where it was.
+/// a hole where it was. Box-aware placement also reads parent/child sizes so
+/// start/end alignment is resolved once for drawing, input, and editor handles.
 fn layout_offsets(
     world: &World,
     components: &ComponentSchemaRegistry,
@@ -228,6 +229,7 @@ fn layout_offsets(
         let Some(data) = world.get(parent) else {
             continue;
         };
+        let parent_size = data.transform_3d.unwrap_or_default().scale_2d();
         let shown: Vec<EntityId> = data
             .children
             .iter()
@@ -235,7 +237,15 @@ fn layout_offsets(
             .filter(|child| world.is_active(*child))
             .collect();
         for (index, child) in shown.iter().enumerate() {
-            offsets.insert(*child, Vec2::from_array(layout.offset(index, shown.len())));
+            let child_size = world
+                .get(*child)
+                .and_then(|data| data.transform_3d)
+                .unwrap_or_default()
+                .scale_2d();
+            offsets.insert(
+                *child,
+                Vec2::from_array(layout.offset_in_box(index, shown.len(), parent_size, child_size)),
+            );
         }
     }
     Ok(offsets)
@@ -380,6 +390,25 @@ mod tests {
         assert!(
             (first.y - second.y).abs() > 0.39,
             "a column of two at 0.4 spacing: {first:?} then {second:?}"
+        );
+    }
+
+    /// Main- and cross-axis placement use the final authored box sizes.
+    #[test]
+    fn layout_alignment_uses_parent_and_child_boxes() {
+        let (world, extractor) = world(&format!(
+            r#"{{ "id": "row", "name": "row",
+                  "transform_3d": {{ "scale": [4.0, 2.0, 1.0] }},
+                  "components": {{ "sindri.ui.layout": {{ "direction": "row",
+                      "spacing": 0.5, "justify": "start", "align": "end" }} }} }},
+               {{ "id": "first", "name": "first", "parent": "row",
+                  "transform_3d": {{ "scale": [1.0, 0.5, 1.0] }},
+                  "components": {{ {IMAGE} }} }}"#
+        ));
+        let first = placement(&world, &extractor, "first").offset;
+        assert!(
+            (first - Vec2::new(-1.5, -0.75)).length() < 1.0e-6,
+            "{first:?}"
         );
     }
 

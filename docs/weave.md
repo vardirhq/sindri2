@@ -53,6 +53,8 @@ second renderer or a parallel UI object model.
 | `x`, `y` | entity transform position |
 | `anchor` | UI image, shape, and text anchor |
 | `direction`, `gap` | `sindri.ui.layout` |
+| `justify-content` | main-axis distribution on `sindri.ui.layout` |
+| `align-items` | cross-axis alignment on `sindri.ui.layout` |
 | `background` | `sindri.ui.shape.fill` |
 | `border-color`, `border-width`, `border-radius` | shape stroke and corner fields |
 | `color` | `sindri.ui.text.color` |
@@ -60,6 +62,12 @@ second renderer or a parallel UI object model.
 | `font-weight` | text bold state |
 | `text-align` | text line alignment |
 | `text-transform` | text case |
+
+`justify-content` accepts `start`, `center`, `end`, and `space-between`.
+`align-items` accepts `start`, `center`, and `end`. The engine's generic UI
+layout owns the actual placement, so rendering, hit testing, and editor handles
+all consume the same resolved positions rather than learning Weave-specific
+rules.
 
 Colors accept `transparent`, `black`, `white`, and three-, four-, six-, or
 eight-digit sRGB hex notation; the bridge converts color channels to the renderer's
@@ -114,7 +122,7 @@ model intact.
 
 This is still intentionally smaller than browser CSS. It has no compound or
 descendant selectors, pseudo-states, variables, per-side padding, margin,
-accessibility mapping, editor inspector, or hot reload. Alignment and flexible
-sizing are the next layout gaps. The demo proves reusable classes, cascade
-behavior, responsive geometry, min/max constraints, uniform content padding,
-font metrics, fills, strokes, and rounded shapes on the native Sindri UI path.
+flexible growth/shrink, accessibility mapping, editor inspector, or hot reload.
+The demo proves reusable classes, cascade behavior, responsive geometry,
+min/max constraints, uniform content padding, main/cross-axis alignment, font
+metrics, fills, strokes, and rounded shapes on the native Sindri UI path.

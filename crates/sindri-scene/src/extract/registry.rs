@@ -143,10 +143,16 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
         "UI Button",
         serde_json::json!({ "label": "" }),
     )?;
-    // A column, because a menu reads downwards.
+    // A centred column preserves the layout behavior scenes had before
+    // alignment/distribution became authorable.
     components.register_with_default::<UiLayoutComponent>(
         "UI Layout",
-        serde_json::json!({ "direction": "column", "spacing": 0.25 }),
+        serde_json::json!({
+            "direction": "column",
+            "spacing": 0.25,
+            "justify": "center",
+            "align": "center"
+        }),
     )?;
     // A visible burst, because one that threw nothing would look like a
     // component that does not work.

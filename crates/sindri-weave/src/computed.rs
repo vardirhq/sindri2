@@ -132,7 +132,6 @@ impl ComputedStyle {
     /// `Err` preserves the authored spelling so the bridge can report a useful
     /// `ApplyError` without parsing the same declaration again in every layout
     /// phase that consumes it.
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(super) fn length(&self, property: &str) -> Option<Result<Length, &str>> {
         let declaration = self.declarations.get(property)?;
         match declaration.value {
