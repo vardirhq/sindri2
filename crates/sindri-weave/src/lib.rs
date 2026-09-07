@@ -13,6 +13,8 @@ mod computed;
 
 use computed::{ComputedStyle, Length};
 
+const RESOLVED_PADDING_FIELD: &str = "_resolved_padding";
+
 #[derive(Debug, Error, PartialEq)]
 pub enum ApplyError {
     #[error("entity `{entity}` has invalid `{property}` value `{value}`")]
@@ -65,8 +67,8 @@ fn apply(world: &mut World, stylesheet: &Stylesheet, viewport: Viewport) -> Resu
             Some((entity, id, classes, component_types))
         })
         .collect();
-    // Percent sizes resolve against the final parent box, so parents must settle
-    // before their children regardless of scene insertion order.
+    // Percent sizes and padding resolve against settled ancestor boxes, so
+    // parents must resolve before their children regardless of authoring order.
     entities.sort_by_key(|(entity, _, _, _)| hierarchy_depth(world, *entity));
 
     for (entity, id, classes, component_types) in entities {
@@ -88,6 +90,7 @@ fn apply(world: &mut World, stylesheet: &Stylesheet, viewport: Viewport) -> Resu
     }
     Ok(())
 }
+
 const MAX_HIERARCHY_DEPTH: usize = 64;
 
 fn hierarchy_depth(world: &World, entity: EntityId) -> usize {
@@ -116,6 +119,13 @@ fn apply_sizing(
         .and_then(|parent| world.get(parent))
         .and_then(|data| data.transform_3d)
         .map_or(viewport_size, Transform3D::scale_2d);
+    let parent_padding = parent
+        .and_then(|parent| resolved_padding(world, parent))
+        .unwrap_or(0.0);
+    let parent_content = [
+        (parent_size[0].abs() - 2.0 * parent_padding).max(0.0),
+        (parent_size[1].abs() - 2.0 * parent_padding).max(0.0),
+    ];
     let current = world
         .get(entity)
         .and_then(|data| data.transform_3d)
@@ -129,7 +139,7 @@ fn apply_sizing(
         } else {
             ("height", "min-height", "max-height")
         };
-        let basis = parent_size[axis].abs();
+        let basis = parent_content[axis];
         let preferred = dimension(style, id, size_name, viewport, basis)?;
         let minimum = dimension(style, id, min_name, viewport, basis)?;
         let maximum = dimension(style, id, max_name, viewport, basis)?;
@@ -228,6 +238,19 @@ fn apply_property(
                 resolved.into(),
             );
         }
+        "padding" => {
+            let scale = world
+                .get(entity)
+                .and_then(|data| data.transform_3d)
+                .unwrap_or_default()
+                .scale_2d();
+            let basis = scale[0].abs().min(scale[1].abs());
+            let resolved = Length::parse(value)
+                .and_then(|length| length.resolve(viewport, Some(basis)))
+                .filter(|value| *value >= 0.0)
+                .ok_or_else(|| invalid(id, property, value))?;
+            set_resolved_padding(world, entity, resolved);
+        }
         "font-size" | "line-height" | "letter-spacing" => {
             let resolved = length(value, viewport).ok_or_else(|| invalid(id, property, value))?;
             let field = match property {
@@ -325,6 +348,30 @@ fn set_component_field(
         return;
     };
     object.insert(field.to_owned(), value);
+}
+
+fn set_resolved_padding(world: &mut World, entity: EntityId, padding: f32) {
+    let Some(data) = world.get_mut(entity) else {
+        return;
+    };
+    let payload = data
+        .components
+        .entry("weave.style".to_owned())
+        .or_insert_with(|| serde_json::json!({}));
+    let Some(object) = payload.as_object_mut() else {
+        return;
+    };
+    object.insert(RESOLVED_PADDING_FIELD.to_owned(), padding.into());
+}
+
+fn resolved_padding(world: &World, entity: EntityId) -> Option<f32> {
+    world
+        .get(entity)?
+        .components
+        .get("weave.style")?
+        .get(RESOLVED_PADDING_FIELD)?
+        .as_f64()
+        .map(|value| value as f32)
 }
 
 fn size_fraction(world: &World, entity: EntityId, value: &str, viewport: Viewport) -> Option<f32> {
