@@ -89,8 +89,8 @@ mod tests {
         let desktop_width = menu_width(desktop.world());
         let mobile_width = menu_width(mobile.world());
         assert!((desktop_width - mobile_width).abs() > f32::EPSILON);
-        let ninety_vw = 0.9 * 2.0 * 980.0 / 1800.0;
-        assert!((mobile_width - ninety_vw).abs() < 1.0e-6);
+        let ninety_two_vw = 0.92 * 2.0 * 980.0 / 1800.0;
+        assert!((mobile_width - ninety_two_vw).abs() < 1.0e-6);
         assert!((menu_width(&authored) - source_width).abs() <= f32::EPSILON);
     }
 
@@ -148,7 +148,7 @@ mod tests {
 
         assert_eq!(
             string_field(desktop.world(), "title", "sindri.ui.text", "text"),
-            "STYLE THE WORLD"
+            "ONE SCENE. EVERY VIEWPORT."
         );
         assert_eq!(
             string_field(desktop.world(), "title", "sindri.ui.text", "font"),
@@ -165,9 +165,36 @@ mod tests {
             })
         );
 
+        assert_eq!(
+            string_field(desktop.world(), "hero", "sindri.ui.layout", "direction"),
+            "row"
+        );
+        assert_eq!(
+            string_field(mobile.world(), "hero", "sindri.ui.layout", "direction"),
+            "column"
+        );
+        assert_eq!(
+            string_field(
+                desktop.world(),
+                "hero-copy",
+                "sindri.ui.layout",
+                "align"
+            ),
+            "start"
+        );
+        assert_eq!(
+            string_field(
+                mobile.world(),
+                "hero-copy",
+                "sindri.ui.layout",
+                "align"
+            ),
+            "center"
+        );
+
         let desktop_size = number_field(desktop.world(), "title", "sindri.ui.text", "font_size");
         let mobile_size = number_field(mobile.world(), "title", "sindri.ui.text", "font_size");
-        assert!((desktop_size - 64.0 / 720.0).abs() < 1.0e-6);
-        assert!((mobile_size - 60.0 / 844.0).abs() < 1.0e-6);
+        assert!((desktop_size - 84.0 / 720.0).abs() < 1.0e-6);
+        assert!((mobile_size - 56.0 / 844.0).abs() < 1.0e-6);
     }
 }
