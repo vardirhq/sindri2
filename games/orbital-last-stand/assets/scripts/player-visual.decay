@@ -54,7 +54,6 @@ script PlayerVisual {
         this.transform.scale.y = size;
         this.transform.rotation_z = -this.clock * (1.5 + armor * 0.8 + overdrive * 1.8);
         this.shape.dashes = 6.0 + armor * 6.0;
-        this.shape.dash_duty = 0.42 + breath * 0.14;
         this.shape.sweep_start = this.clock * (0.08 + overdrive * 0.12);
         this.shape.fill.a = 0.025 + overdrive * 0.06 + impact * 0.14;
         this.shape.stroke.a = 0.42 + breath * 0.12 + armor * 0.16 + overdrive * 0.18 + impact * 0.24;
