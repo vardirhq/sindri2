@@ -293,6 +293,23 @@ drawn early shifts every number after it. That is stated rather than hidden, and
 it is why a run's seed is worth storing while a frame's numbers are not. It is
 not a source of secrets: a handful of outputs reveals the state.
 
+### Weave presentation styling
+
+The experimental Weave path resolves responsive presentation into a disposable
+clone of an authored world. ID, class, and component-type selectors style
+ordinary transforms, UI layouts, shapes, and text; CSS-like specificity and
+source order decide conflicts. Portrait, landscape, minimum-width, and
+maximum-width rules can react to the viewport without changing the scene.
+
+Weave is kept in its own workspace, while `sindri-weave` is the one-way bridge
+that knows the engine. `games/weave-poc` exercises the same scene, font, layout,
+shape, text, extraction, and WebGPU browser path as other Sindri content.
+`docs/weave.md` records the exact supported surface.
+
+This is not yet editor-authorable or a general CSS implementation. Compound
+selectors, states, variables, constraints, accessibility mapping, hot reload,
+and editor tooling remain absent.
+
 ### Screen UI
 
 `sindri.ui.image` and `sindri.ui.text` draw against the viewport. Text is a
