@@ -90,16 +90,21 @@ impl UiAlign {
 
 /// Places an entity's active children along one axis.
 ///
-/// Existing scenes default to centred placement, preserving the original layout
-/// behavior. The optional box-aware path lets responsive UI place that same line
-/// against the start/end of a parent or spread it across the available span.
+/// `spacing` is the original centre-to-centre distance and remains the default
+/// for existing scenes. `gap` is an edge-to-edge distance: when present the
+/// layout resolves the whole line from every child's box so differently sized
+/// children cannot overlap merely because the requested gap is smaller than
+/// either child.
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
 pub struct UiLayoutComponent {
     #[serde(default)]
     pub direction: UiDirection,
-    /// The distance between child centres in overlay units for packed layouts.
+    /// Legacy distance between child centres in overlay units.
     #[serde(default = "default_spacing")]
     pub spacing: f32,
+    /// Optional edge-to-edge distance between adjacent child boxes.
+    #[serde(default)]
+    pub gap: Option<f32>,
     #[serde(default)]
     pub justify: UiJustify,
     #[serde(default)]
@@ -121,8 +126,10 @@ impl UiLayoutComponent {
         self.offset_in_box(index, count, [0.0, 0.0], [0.0, 0.0])
     }
 
-    /// Placement relative to a parent box, using the child's own size at the
-    /// edges so `start`, `end`, and `space_between` do not push it outside.
+    /// Legacy placement relative to a parent box.
+    ///
+    /// This keeps the historical centre-spacing behavior for authored scenes
+    /// that do not opt into box-aware `gap` layout.
     #[must_use]
     pub fn offset_in_box(
         self,
@@ -170,6 +177,82 @@ impl UiLayoutComponent {
             UiJustify::SpaceBetween => 0.0,
         };
 
+        self.finish_offset(logical_main, parent_cross, child_cross)
+    }
+
+    /// Resolve every child together, using their actual boxes when `gap` is set.
+    ///
+    /// A CSS-like gap is space *between edges*, not between centres. Resolving
+    /// siblings as a group is therefore required for mixed child sizes and for
+    /// correct start/end/space-between placement.
+    #[must_use]
+    pub fn offsets_in_box(self, parent_size: [f32; 2], child_sizes: &[[f32; 2]]) -> Vec<[f32; 2]> {
+        let Some(gap) = self.gap else {
+            return child_sizes
+                .iter()
+                .enumerate()
+                .map(|(index, child_size)| {
+                    self.offset_in_box(index, child_sizes.len(), parent_size, *child_size)
+                })
+                .collect();
+        };
+        if child_sizes.is_empty() {
+            return Vec::new();
+        }
+
+        let main_axis = usize::from(self.direction == UiDirection::Column);
+        let cross_axis = 1 - main_axis;
+        let parent_main = parent_size[main_axis].abs();
+        let parent_cross = parent_size[cross_axis].abs();
+        let main_sizes: Vec<f32> = child_sizes
+            .iter()
+            .map(|size| size[main_axis].abs())
+            .collect();
+        let children_span: f32 = main_sizes.iter().sum();
+        let requested_gap = gap.max(0.0);
+        #[allow(clippy::cast_precision_loss)]
+        let gap_span = requested_gap * child_sizes.len().saturating_sub(1) as f32;
+        let packed_span = children_span + gap_span;
+
+        let actual_gap = if self.justify == UiJustify::SpaceBetween && child_sizes.len() > 1 {
+            #[allow(clippy::cast_precision_loss)]
+            let distributed = (parent_main - children_span).max(0.0)
+                / child_sizes.len().saturating_sub(1) as f32;
+            distributed.max(requested_gap)
+        } else {
+            requested_gap
+        };
+        #[allow(clippy::cast_precision_loss)]
+        let actual_span = children_span + actual_gap * child_sizes.len().saturating_sub(1) as f32;
+
+        let mut cursor = match self.justify {
+            UiJustify::Start | UiJustify::SpaceBetween => -parent_main / 2.0,
+            UiJustify::Center => -packed_span / 2.0,
+            UiJustify::End => parent_main / 2.0 - packed_span,
+        };
+        if self.justify == UiJustify::Center && actual_span != packed_span {
+            cursor = -actual_span / 2.0;
+        }
+        if self.justify == UiJustify::End && actual_span != packed_span {
+            cursor = parent_main / 2.0 - actual_span;
+        }
+
+        child_sizes
+            .iter()
+            .zip(main_sizes)
+            .map(|(child_size, child_main)| {
+                let logical_main = cursor + child_main / 2.0;
+                cursor += child_main + actual_gap;
+                self.finish_offset(
+                    logical_main,
+                    parent_cross,
+                    child_size[cross_axis].abs(),
+                )
+            })
+            .collect()
+    }
+
+    fn finish_offset(self, logical_main: f32, parent_cross: f32, child_cross: f32) -> [f32; 2] {
         let cross_edge = ((parent_cross - child_cross).max(0.0)) / 2.0;
         let logical_cross = match self.align {
             UiAlign::Start => -cross_edge,
@@ -201,6 +284,7 @@ mod tests {
         UiLayoutComponent {
             direction,
             spacing: 0.5,
+            gap: None,
             justify: UiJustify::Center,
             align: UiAlign::Center,
         }
@@ -267,5 +351,39 @@ mod tests {
         let column = layout(UiDirection::Column);
         assert_at(column.offset(0, 2), [0.0, 0.25]);
         assert_at(column.offset(1, 2), [0.0, -0.25]);
+    }
+
+    #[test]
+    fn box_gap_keeps_edges_apart_for_mixed_child_sizes() {
+        let mut row = layout(UiDirection::Row);
+        row.gap = Some(0.25);
+        let offsets = row.offsets_in_box([4.0, 2.0], &[[1.0, 0.5], [2.0, 0.5]]);
+        assert_at(offsets[0], [-1.125, 0.0]);
+        assert_at(offsets[1], [0.625, 0.0]);
+        let first_right = offsets[0][0] + 0.5;
+        let second_left = offsets[1][0] - 1.0;
+        assert!((second_left - first_right - 0.25).abs() < 1.0e-5);
+    }
+
+    #[test]
+    fn box_gap_column_stacks_children_without_overlap() {
+        let mut column = layout(UiDirection::Column);
+        column.gap = Some(0.2);
+        let offsets = column.offsets_in_box([2.0, 3.0], &[[1.0, 0.5], [1.0, 1.0]]);
+        assert_at(offsets[0], [0.0, 0.6]);
+        assert_at(offsets[1], [0.0, -0.35]);
+        let first_bottom = offsets[0][1] - 0.25;
+        let second_top = offsets[1][1] + 0.5;
+        assert!((first_bottom - second_top - 0.2).abs() < 1.0e-5);
+    }
+
+    #[test]
+    fn box_gap_space_between_uses_parent_edges_and_child_boxes() {
+        let mut row = layout(UiDirection::Row);
+        row.gap = Some(0.1);
+        row.justify = UiJustify::SpaceBetween;
+        let offsets = row.offsets_in_box([4.0, 2.0], &[[1.0, 0.5], [0.5, 0.5], [1.0, 0.5]]);
+        assert_at(offsets[0], [-1.5, 0.0]);
+        assert_at(offsets[2], [1.5, 0.0]);
     }
 }
