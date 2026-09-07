@@ -29,7 +29,6 @@ script EliteVisual {
             this.transform.scale.x = size;
             this.transform.scale.y = size;
             this.shape.dashes = 4.0 + this.trait * 2.0;
-            this.shape.dash_duty = 0.34 + pulse * 0.22;
             this.shape.sweep_start = this.clock * (0.08 + this.trait * 0.025);
             this.shape.stroke.a = 0.58 + pulse * 0.42;
             this.shape.stroke_width = 0.055 + pulse * 0.045;
@@ -39,7 +38,6 @@ script EliteVisual {
             this.transform.scale.y = size;
             this.transform.rotation_z = this.clock * (0.5 + this.trait * 0.21) + this.phase;
             this.shape.dashes = 8.0 + this.trait * 2.0;
-            this.shape.dash_duty = 0.28 + pulse * 0.20;
             this.shape.sweep_start = -this.clock * (0.09 + this.trait * 0.018);
             this.shape.stroke.a = 0.22 + 0.48 * pulse;
             this.shape.stroke_width = 0.035 + pulse * 0.035;
