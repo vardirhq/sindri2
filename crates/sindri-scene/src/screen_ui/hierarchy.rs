@@ -244,12 +244,7 @@ fn layout_offsets(
                 .scale_2d();
             offsets.insert(
                 *child,
-                Vec2::from_array(layout.offset_in_box(
-                    index,
-                    shown.len(),
-                    parent_size,
-                    child_size,
-                )),
+                Vec2::from_array(layout.offset_in_box(index, shown.len(), parent_size, child_size)),
             );
         }
     }
