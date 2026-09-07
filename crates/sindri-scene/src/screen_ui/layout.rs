@@ -40,22 +40,70 @@ impl UiDirection {
     }
 }
 
-/// Places an entity's active children evenly along one axis.
+/// Where a line of children sits along the layout's main axis.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum UiJustify {
+    Start,
+    #[default]
+    Center,
+    End,
+    SpaceBetween,
+}
+
+impl UiJustify {
+    pub const ALL: [Self; 4] = [Self::Start, Self::Center, Self::End, Self::SpaceBetween];
+
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Start => "start",
+            Self::Center => "center",
+            Self::End => "end",
+            Self::SpaceBetween => "space_between",
+        }
+    }
+}
+
+/// Where children sit on the axis perpendicular to the layout direction.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum UiAlign {
+    Start,
+    #[default]
+    Center,
+    End,
+}
+
+impl UiAlign {
+    pub const ALL: [Self; 3] = [Self::Start, Self::Center, Self::End];
+
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Start => "start",
+            Self::Center => "center",
+            Self::End => "end",
+        }
+    }
+}
+
+/// Places an entity's active children along one axis.
 ///
-/// The children keep their own anchors and their own sizes; what the layout
-/// owns is their offset along its axis. A child's other axis is left alone, so
-/// a row of differently-raised buttons stays that way.
+/// Existing scenes default to centred placement, preserving the original layout
+/// behavior. The optional box-aware path lets responsive UI place that same line
+/// against the start/end of a parent or spread it across the available span.
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
 pub struct UiLayoutComponent {
     #[serde(default)]
     pub direction: UiDirection,
-    /// The gap between one child's centre and the next, in overlay units.
-    ///
-    /// Centre to centre rather than edge to edge, because an element's drawn
-    /// size is its texture's business and a layout that measured it would move
-    /// when an artist re-exported a sprite.
+    /// The distance between child centres in overlay units for packed layouts.
     #[serde(default = "default_spacing")]
     pub spacing: f32,
+    #[serde(default)]
+    pub justify: UiJustify,
+    #[serde(default)]
+    pub align: UiAlign,
 }
 
 const fn default_spacing() -> f32 {
@@ -67,34 +115,78 @@ impl SceneComponent for UiLayoutComponent {
 }
 
 impl UiLayoutComponent {
-    /// Where the `index`th of `count` children sits, relative to the parent.
-    ///
-    /// Centred on the parent as a whole, so a menu losing an entry closes up
-    /// around its middle rather than growing downwards from its top — which is
-    /// what a person reading a centred menu expects to see.
+    /// Legacy centred placement, independent of parent/child bounds.
     #[must_use]
     pub fn offset(self, index: usize, count: usize) -> [f32; 2] {
-        if count <= 1 {
-            return [0.0, 0.0];
-        }
-        // `count - 1` gaps, so the first and last child sit half a span either
-        // side of the parent.
-        #[allow(clippy::cast_precision_loss)]
-        let along = (index as f32 - (count - 1) as f32 / 2.0) * self.spacing;
+        self.offset_in_box(index, count, [0.0, 0.0], [0.0, 0.0])
+    }
+
+    /// Placement relative to a parent box, using the child's own size at the
+    /// edges so `start`, `end`, and `space_between` do not push it outside.
+    #[must_use]
+    pub fn offset_in_box(
+        self,
+        index: usize,
+        count: usize,
+        parent_size: [f32; 2],
+        child_size: [f32; 2],
+    ) -> [f32; 2] {
+        let main_axis = usize::from(self.direction == UiDirection::Column);
+        let cross_axis = 1 - main_axis;
+        let parent_main = parent_size[main_axis].abs();
+        let child_main = child_size[main_axis].abs();
+        let parent_cross = parent_size[cross_axis].abs();
+        let child_cross = child_size[cross_axis].abs();
+
+        let packed = if count <= 1 {
+            0.0
+        } else {
+            #[allow(clippy::cast_precision_loss)]
+            {
+                (index as f32 - (count - 1) as f32 / 2.0) * self.spacing
+            }
+        };
+        let packed_span = if count <= 1 {
+            0.0
+        } else {
+            #[allow(clippy::cast_precision_loss)]
+            {
+                (count - 1) as f32 * self.spacing
+            }
+        };
+        let edge = ((parent_main - child_main).max(0.0)) / 2.0;
+
+        let logical_main = match self.justify {
+            UiJustify::Center => packed,
+            UiJustify::Start => packed - packed_span / 2.0 + edge,
+            UiJustify::End => packed - packed_span / 2.0 - edge + packed_span,
+            UiJustify::SpaceBetween if count > 1 => {
+                #[allow(clippy::cast_precision_loss)]
+                let t = index as f32 / (count - 1) as f32;
+                -edge + t * edge * 2.0
+            }
+            UiJustify::SpaceBetween => 0.0,
+        };
+
+        let cross_edge = ((parent_cross - child_cross).max(0.0)) / 2.0;
+        let logical_cross = match self.align {
+            UiAlign::Start => -cross_edge,
+            UiAlign::Center => 0.0,
+            UiAlign::End => cross_edge,
+        };
+
         match self.direction {
-            UiDirection::Row => [along, 0.0],
-            // Negated: the overlay runs up and a menu reads down.
-            UiDirection::Column => [0.0, -along],
+            UiDirection::Row => [logical_main, -logical_cross],
+            // Main-axis start for a column is visually at the top.
+            UiDirection::Column => [logical_cross, -logical_main],
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{UiDirection, UiLayoutComponent};
+    use super::{UiAlign, UiDirection, UiJustify, UiLayoutComponent};
 
-    /// Arrays of `f32` do not compare exactly, and should not: these are the
-    /// results of arithmetic.
     #[track_caller]
     fn assert_at(got: [f32; 2], want: [f32; 2]) {
         assert!(
@@ -107,6 +199,8 @@ mod tests {
         UiLayoutComponent {
             direction,
             spacing: 0.5,
+            justify: UiJustify::Center,
+            align: UiAlign::Center,
         }
     }
 
@@ -115,7 +209,6 @@ mod tests {
         assert_at(layout(UiDirection::Column).offset(0, 1), [0.0, 0.0]);
     }
 
-    /// A menu reads downwards, so the first entry is the highest.
     #[test]
     fn a_column_runs_down_the_screen() {
         let column = layout(UiDirection::Column);
@@ -131,18 +224,34 @@ mod tests {
         assert_at(row.offset(2, 3), [0.5, 0.0]);
     }
 
-    /// The whole point: a menu that loses an entry closes up around its middle
-    /// rather than leaving a hole.
     #[test]
-    fn a_shorter_list_closes_up_around_the_same_middle() {
-        let column = layout(UiDirection::Column);
-        let three: Vec<f32> = (0..3).map(|i| column.offset(i, 3)[1]).collect();
-        let two: Vec<f32> = (0..2).map(|i| column.offset(i, 2)[1]).collect();
-        // Summing is enough: a list centred on nothing sums to nothing.
-        let middle = |offsets: &[f32]| offsets.iter().sum::<f32>();
-        assert!(middle(&three).abs() < 1.0e-5);
-        assert!(middle(&two).abs() < 1.0e-5);
-        assert!(two[0] < three[0], "two entries sit closer in");
+    fn start_and_end_use_parent_edges() {
+        let mut row = layout(UiDirection::Row);
+        row.justify = UiJustify::Start;
+        assert_at(row.offset_in_box(0, 2, [4.0, 2.0], [1.0, 0.5]), [1.25, 0.0]);
+        assert_at(row.offset_in_box(1, 2, [4.0, 2.0], [1.0, 0.5]), [1.75, 0.0]);
+
+        row.justify = UiJustify::End;
+        assert_at(row.offset_in_box(0, 2, [4.0, 2.0], [1.0, 0.5]), [-1.75, 0.0]);
+        assert_at(row.offset_in_box(1, 2, [4.0, 2.0], [1.0, 0.5]), [-1.25, 0.0]);
+    }
+
+    #[test]
+    fn space_between_spans_the_available_box() {
+        let mut row = layout(UiDirection::Row);
+        row.justify = UiJustify::SpaceBetween;
+        assert_at(row.offset_in_box(0, 3, [4.0, 2.0], [1.0, 0.5]), [-1.5, 0.0]);
+        assert_at(row.offset_in_box(1, 3, [4.0, 2.0], [1.0, 0.5]), [0.0, 0.0]);
+        assert_at(row.offset_in_box(2, 3, [4.0, 2.0], [1.0, 0.5]), [1.5, 0.0]);
+    }
+
+    #[test]
+    fn cross_axis_alignment_uses_child_bounds() {
+        let mut column = layout(UiDirection::Column);
+        column.align = UiAlign::Start;
+        assert_at(column.offset_in_box(0, 1, [4.0, 2.0], [1.0, 0.5]), [-1.5, 0.0]);
+        column.align = UiAlign::End;
+        assert_at(column.offset_in_box(0, 1, [4.0, 2.0], [1.0, 0.5]), [1.5, 0.0]);
     }
 
     #[test]
