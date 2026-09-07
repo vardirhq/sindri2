@@ -1,0 +1,53 @@
+{
+  "format_version": 9,
+  "metadata": { "name": "Weave POC" },
+  "entities": [
+    {
+      "id": "menu",
+      "name": "Menu",
+      "components": {
+        "sindri.ui.image": { "texture": "sindri:white", "anchor": "center" },
+        "sindri.ui.layout": { "direction": "column", "spacing": 0.2 }
+      }
+    },
+    {
+      "id": "title",
+      "name": "Title",
+      "parent": "menu",
+      "transform_3d": { "scale": [0.6, 0.12, 1.0] },
+      "components": {
+        "sindri.ui.text": { "text": "WEAVE", "font": "fonts/placeholder.ttf", "font_size": 0.10, "anchor": "center" }
+      }
+    },
+    {
+      "id": "play",
+      "name": "Play",
+      "parent": "menu",
+      "transform_3d": { "scale": [0.5, 0.12, 1.0] },
+      "components": {
+        "sindri.ui.image": { "texture": "sindri:white", "anchor": "center" },
+        "sindri.ui.button": { "label": "Play" }
+      }
+    },
+    {
+      "id": "settings",
+      "name": "Settings",
+      "parent": "menu",
+      "transform_3d": { "scale": [0.5, 0.12, 1.0] },
+      "components": {
+        "sindri.ui.image": { "texture": "sindri:white", "anchor": "center" },
+        "sindri.ui.button": { "label": "Settings" }
+      }
+    },
+    {
+      "id": "quit",
+      "name": "Quit",
+      "parent": "menu",
+      "transform_3d": { "scale": [0.5, 0.12, 1.0] },
+      "components": {
+        "sindri.ui.image": { "texture": "sindri:white", "anchor": "center" },
+        "sindri.ui.button": { "label": "Quit" }
+      }
+    }
+  ]
+}
