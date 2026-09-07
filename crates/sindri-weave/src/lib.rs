@@ -314,7 +314,7 @@ const fn hex_digit(byte: u8) -> Option<u8> {
 }
 
 fn length(value: &str, viewport: Viewport) -> Option<f32> {
-    Some(Length::parse(value)?.resolve(viewport))
+    Length::parse(value)?.resolve(viewport, None)
 }
 
 fn anchor(value: &str) -> Option<&'static str> {
