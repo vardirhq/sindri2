@@ -190,9 +190,9 @@ fn rotation_of(transform: Transform3D) -> Quat {
 /// hierarchy is keyed on it: an entity with a transform and no UI component is
 /// a group, and a group is placed but never drawn.
 ///
-/// A button counts even with no image or text of its own, because a hit area
-/// with no art is a legitimate thing to author — and because leaving it out is
-/// not "it gets no anchor", it is "it gets no *placement*", so a row of bare
+/// A button counts even with no art of its own, because a hit area with no art
+/// is a legitimate thing to author — and because leaving it out is not
+/// "it gets no anchor", it is "it gets no *placement*", so a row of bare
 /// buttons stops being laid out at all. The same set `ScreenUi::elements`
 /// collects, for the same reason.
 fn declared_anchors(
@@ -216,10 +216,10 @@ fn declared_anchors(
 
 /// What each laid-out child owes to its parent's layout.
 ///
-/// Only active children count, and only their index among the active ones,
-/// which is what makes a menu close up around a hidden entry instead of leaving
-/// a hole where it was. Box-aware placement also reads parent/child sizes so
-/// start/end alignment is resolved once for drawing, input, and editor handles.
+/// Only active children count, which is what makes a menu close up around a
+/// hidden entry instead of leaving a hole where it was. Layouts resolve the
+/// whole sibling set together so edge spacing can account for actual box sizes
+/// rather than pretending every child is a point at its centre.
 fn layout_offsets(
     world: &World,
     components: &ComponentSchemaRegistry,
@@ -236,16 +236,19 @@ fn layout_offsets(
             .copied()
             .filter(|child| world.is_active(*child))
             .collect();
-        for (index, child) in shown.iter().enumerate() {
-            let child_size = world
-                .get(*child)
-                .and_then(|data| data.transform_3d)
-                .unwrap_or_default()
-                .scale_2d();
-            offsets.insert(
-                *child,
-                Vec2::from_array(layout.offset_in_box(index, shown.len(), parent_size, child_size)),
-            );
+        let child_sizes: Vec<[f32; 2]> = shown
+            .iter()
+            .map(|child| {
+                world
+                    .get(*child)
+                    .and_then(|data| data.transform_3d)
+                    .unwrap_or_default()
+                    .scale_2d()
+            })
+            .collect();
+        let resolved = layout.offsets_in_box(parent_size, &child_sizes);
+        for (child, offset) in shown.into_iter().zip(resolved) {
+            offsets.insert(child, Vec2::from_array(offset));
         }
     }
     Ok(offsets)
@@ -410,6 +413,28 @@ mod tests {
             (first - Vec2::new(-1.5, -0.75)).length() < 1.0e-6,
             "{first:?}"
         );
+    }
+
+    /// Edge spacing uses box extents, not centre distance.
+    #[test]
+    fn layout_spacing_keeps_tall_children_apart() {
+        let (world, extractor) = world(&format!(
+            r#"{{ "id": "column", "name": "column",
+                  "transform_3d": {{ "scale": [2.0, 3.0, 1.0] }},
+                  "components": {{ "sindri.ui.layout": {{ "direction": "column",
+                      "spacing": 0.2, "justify": "center", "align": "center" }} }} }},
+               {{ "id": "first", "name": "first", "parent": "column",
+                  "transform_3d": {{ "scale": [1.0, 0.5, 1.0] }},
+                  "components": {{ {IMAGE} }} }},
+               {{ "id": "second", "name": "second", "parent": "column",
+                  "transform_3d": {{ "scale": [1.0, 1.0, 1.0] }},
+                  "components": {{ {IMAGE} }} }}"#
+        ));
+        let first = placement(&world, &extractor, "first").offset;
+        let second = placement(&world, &extractor, "second").offset;
+        let first_bottom = first.y - 0.25;
+        let second_top = second.y + 0.5;
+        assert!((first_bottom - second_top - 0.2).abs() < 1.0e-6);
     }
 
     /// A button with no art of its own is still an element, and is still laid
