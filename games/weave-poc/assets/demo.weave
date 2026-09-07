@@ -170,7 +170,7 @@ sindri.ui.text {
     direction: row;
     gap: 16px;
     justify-content: space-between;
-    align-items: end;
+    align-items: center;
 }
 
 .feature-card {
@@ -208,103 +208,124 @@ sindri.ui.text {
 @media (orientation: portrait) {
     #menu {
         width: 92vw;
-        height: 800px;
-        padding: 28px;
-        gap: 18px;
-        justify-content: space-between;
+        height: 620px;
+        padding: 24px;
+        gap: 12px;
+        justify-content: center;
         align-items: center;
-        border-radius: 24px;
+        border-radius: 22px;
     }
 
     .topbar {
         width: 100%;
-        height: 46px;
+        height: 38px;
         justify-content: space-between;
         align-items: center;
     }
 
     .eyebrow {
         width: 58%;
-        font-size: 11px;
+        font-size: 10px;
         letter-spacing: 1px;
     }
 
     .viewport-badge {
-        width: 108px;
-        height: 32px;
+        width: 104px;
+        height: 30px;
     }
 
     .badge-label {
-        font-size: 9px;
+        font-size: 8px;
     }
 
     .hero {
         width: 100%;
-        height: 330px;
+        height: 260px;
         direction: column;
-        gap: 18px;
+        gap: 10px;
         justify-content: center;
         align-items: center;
     }
 
     .hero-copy {
         width: 100%;
-        height: 150px;
-        gap: 12px;
+        height: 112px;
+        gap: 6px;
         justify-content: center;
         align-items: center;
     }
 
     .title {
         width: 100%;
-        height: 70px;
+        height: 52px;
         font-size: 28px;
-        line-height: 32px;
+        line-height: 30px;
     }
 
     .subtitle {
-        width: 100%;
-        height: 64px;
-        font-size: 11px;
-        line-height: 16px;
+        width: 92%;
+        height: 42px;
+        font-size: 10px;
+        line-height: 14px;
     }
 
     .proof-card {
         width: 78vw;
-        height: 140px;
-        padding: 16px;
-        gap: 10px;
+        height: 118px;
+        padding: 12px;
+        gap: 6px;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .proof-kicker {
+        font-size: 10px;
     }
 
     .proof-title {
-        font-size: 17px;
+        font-size: 16px;
+        line-height: 19px;
+    }
+
+    .proof-body {
+        font-size: 10px;
+        line-height: 13px;
     }
 
     .actions {
         width: 100%;
-        height: 132px;
-        direction: column;
-        gap: 12px;
+        height: 58px;
+        direction: row;
+        gap: 10px;
         justify-content: center;
         align-items: center;
     }
 
     .menu-button {
-        width: 78vw;
-        height: 54px;
+        width: 37vw;
+        height: 48px;
+        border-radius: 12px;
+    }
+
+    .button-label {
+        font-size: 11px;
+        line-height: 14px;
     }
 
     .features {
-        width: 100%;
-        height: 70px;
+        width: 78vw;
+        height: 72px;
         gap: 8px;
         justify-content: space-between;
-        align-items: end;
+        align-items: center;
     }
 
     .feature-card {
-        width: 30%;
-        height: 58px;
+        width: 24vw;
+        height: 62px;
+        justify-content: center;
+        align-items: center;
+        border-radius: 12px;
     }
 
     .feature-label {
