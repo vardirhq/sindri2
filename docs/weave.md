@@ -60,7 +60,8 @@ second renderer or a parallel UI object model.
 | `text-transform` | text case |
 
 Colors accept `transparent`, `black`, `white`, and three-, four-, six-, or
-eight-digit hex notation. Font weight accepts `normal`, `400`, `bold`, or
+eight-digit sRGB hex notation; the bridge converts color channels to the renderer's
+linear space while leaving alpha unchanged. Font weight accepts `normal`, `400`, `bold`, or
 `700`. Text transform accepts `none`, `uppercase`, or `lowercase`.
 
 Unknown properties are currently ignored. Invalid values for known properties
