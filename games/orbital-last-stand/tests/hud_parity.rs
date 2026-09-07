@@ -84,7 +84,10 @@ fn health_hit_animation_keeps_the_bar_compact() {
         .as_ref()
         .expect("health bar has a transform")
         .scale[1];
-    assert!(base_height < 0.05, "health bar starts compact: {base_height}");
+    assert!(
+        base_height < 0.05,
+        "health bar starts compact: {base_height}"
+    );
 
     run.set_board("shield_impact", 1.0);
     step(&mut run);
