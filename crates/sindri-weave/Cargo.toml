@@ -6,7 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+serde_json.workspace = true
 sindri-core = { path = "../sindri-core" }
-sindri-scene = { path = "../sindri-scene" }
 thiserror.workspace = true
 weave = { path = "../../weave/crates/weave" }
