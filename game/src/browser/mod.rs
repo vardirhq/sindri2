@@ -132,9 +132,8 @@ impl BrowserGatherApp {
         )));
         let mut world = World::from_scene(&project.scene)?.world;
         for stylesheet in &project.stylesheets {
-            let resolved =
-                PresentationWorld::resolve(&world, stylesheet, self.weave_viewport())
-                    .map_err(|error| GatherError::BrowserAsset(error.to_string()))?;
+            let resolved = PresentationWorld::resolve(&world, stylesheet, self.weave_viewport())
+                .map_err(|error| GatherError::BrowserAsset(error.to_string()))?;
             world = resolved.world().clone();
         }
 
