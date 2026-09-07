@@ -141,6 +141,46 @@
           "layer": 6
         }
       }
+    },
+    {
+      "id": "warden-node-a",
+      "name": "Warden Phase Node A",
+      "parent": "warden",
+      "transform_3d": { "position": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.12, 0.12, 1.0] },
+      "components": {
+        "sindri.script": { "source": "scripts/boss-visual.decay", "script": "BossVisual", "properties": { "kind": 3.0, "phase_offset": 0.0 } },
+        "sindri.shape": { "kind": "polygon", "count": 4.0, "fill": [1.0, 0.32, 0.08, 0.65], "stroke": [1.0, 0.86, 0.48, 0.95], "stroke_width": 0.055, "corner_radius": 0.0, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "add", "layer": 6 }
+      }
+    },
+    {
+      "id": "warden-node-b",
+      "name": "Warden Phase Node B",
+      "parent": "warden",
+      "transform_3d": { "position": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.12, 0.12, 1.0] },
+      "components": {
+        "sindri.script": { "source": "scripts/boss-visual.decay", "script": "BossVisual", "properties": { "kind": 3.0, "phase_offset": 1.5707963 } },
+        "sindri.shape": { "kind": "polygon", "count": 4.0, "fill": [1.0, 0.32, 0.08, 0.65], "stroke": [1.0, 0.86, 0.48, 0.95], "stroke_width": 0.055, "corner_radius": 0.0, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "add", "layer": 6 }
+      }
+    },
+    {
+      "id": "warden-node-c",
+      "name": "Warden Phase Node C",
+      "parent": "warden",
+      "transform_3d": { "position": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.12, 0.12, 1.0] },
+      "components": {
+        "sindri.script": { "source": "scripts/boss-visual.decay", "script": "BossVisual", "properties": { "kind": 3.0, "phase_offset": 3.1415926 } },
+        "sindri.shape": { "kind": "polygon", "count": 4.0, "fill": [1.0, 0.32, 0.08, 0.65], "stroke": [1.0, 0.86, 0.48, 0.95], "stroke_width": 0.055, "corner_radius": 0.0, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "add", "layer": 6 }
+      }
+    },
+    {
+      "id": "warden-node-d",
+      "name": "Warden Phase Node D",
+      "parent": "warden",
+      "transform_3d": { "position": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [0.12, 0.12, 1.0] },
+      "components": {
+        "sindri.script": { "source": "scripts/boss-visual.decay", "script": "BossVisual", "properties": { "kind": 3.0, "phase_offset": 4.712389 } },
+        "sindri.shape": { "kind": "polygon", "count": 4.0, "fill": [1.0, 0.32, 0.08, 0.65], "stroke": [1.0, 0.86, 0.48, 0.95], "stroke_width": 0.055, "corner_radius": 0.0, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "add", "layer": 6 }
+      }
     }
   ]
 }
