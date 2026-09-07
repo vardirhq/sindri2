@@ -1,43 +1,143 @@
 #menu {
-    width: 620px;
-    height: 500px;
+    width: 1040px;
+    height: 700px;
+    padding: 44px;
     direction: column;
-    gap: 78px;
-    background: #111827;
-    border-color: #334155;
+    gap: 24px;
+    justify-content: space-between;
+    align-items: center;
+    background: #0b1220;
+    border-color: #263449;
     border-width: 2px;
-    border-radius: 24px;
+    border-radius: 28px;
 }
 
 sindri.ui.text {
     text-align: center;
 }
 
+.topbar {
+    width: 100%;
+    height: 52px;
+    direction: row;
+    justify-content: space-between;
+    align-items: center;
+}
+
 .eyebrow {
+    width: 420px;
     color: #5eead4;
     font-size: 15px;
     font-weight: 700;
     letter-spacing: 2px;
 }
 
+.viewport-badge {
+    width: 150px;
+    height: 38px;
+    direction: row;
+    justify-content: center;
+    align-items: center;
+    background: #122033;
+    border-color: #334155;
+    border-width: 1px;
+    border-radius: 19px;
+}
+
+.badge-label {
+    color: #a7f3d0;
+    font-size: 12px;
+    line-height: 14px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.hero {
+    width: 100%;
+    height: 280px;
+    direction: row;
+    gap: 32px;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.hero-copy {
+    width: 58%;
+    height: 240px;
+    direction: column;
+    gap: 22px;
+    justify-content: center;
+    align-items: start;
+}
+
 .title {
+    width: 100%;
+    height: 92px;
     color: #f8fafc;
-    font-size: 32px;
-    line-height: 38px;
+    font-size: 42px;
+    line-height: 48px;
     font-weight: 700;
     letter-spacing: 1px;
 }
 
 .subtitle {
+    width: 100%;
+    height: 82px;
     color: #94a3b8;
-    font-size: 15px;
-    line-height: 22px;
+    font-size: 16px;
+    line-height: 23px;
     letter-spacing: 1px;
 }
 
+.proof-card {
+    width: 34%;
+    height: 230px;
+    padding: 22px;
+    direction: column;
+    gap: 18px;
+    justify-content: center;
+    align-items: center;
+    background: #111c2d;
+    border-color: #3b4a63;
+    border-width: 1px;
+    border-radius: 22px;
+}
+
+.proof-kicker {
+    color: #c4b5fd;
+    font-size: 14px;
+    line-height: 16px;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+.proof-title {
+    color: #f8fafc;
+    font-size: 22px;
+    line-height: 26px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.proof-body {
+    color: #94a3b8;
+    font-size: 13px;
+    line-height: 18px;
+    letter-spacing: 1px;
+}
+
+.actions {
+    width: 100%;
+    height: 70px;
+    direction: row;
+    gap: 18px;
+    justify-content: start;
+    align-items: center;
+}
+
 .menu-button {
-    width: 400px;
-    height: 64px;
+    width: 240px;
+    height: 58px;
     border-width: 1px;
     border-radius: 14px;
 }
@@ -54,8 +154,8 @@ sindri.ui.text {
 
 .button-label {
     color: #f8fafc;
-    font-size: 18px;
-    line-height: 22px;
+    font-size: 16px;
+    line-height: 20px;
     font-weight: 700;
     letter-spacing: 1px;
 }
@@ -64,20 +164,151 @@ sindri.ui.text {
     color: #0f172a;
 }
 
+.features {
+    width: 100%;
+    height: 82px;
+    direction: row;
+    gap: 16px;
+    justify-content: space-between;
+    align-items: end;
+}
+
+.feature-card {
+    width: 30%;
+    height: 68px;
+    direction: column;
+    justify-content: center;
+    align-items: center;
+    background: #101a2a;
+    border-color: #29374d;
+    border-width: 1px;
+    border-radius: 14px;
+}
+
+.feature-start {
+    border-color: #2dd4bf;
+}
+
+.feature-center {
+    border-color: #60a5fa;
+}
+
+.feature-end {
+    border-color: #a78bfa;
+}
+
+.feature-label {
+    color: #dbeafe;
+    font-size: 13px;
+    line-height: 16px;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
 @media (orientation: portrait) {
     #menu {
-        width: 90vw;
-        height: 520px;
-        gap: 80px;
-        border-radius: 22px;
+        width: 92vw;
+        height: 800px;
+        padding: 28px;
+        gap: 18px;
+        justify-content: space-between;
+        align-items: center;
+        border-radius: 24px;
+    }
+
+    .topbar {
+        width: 100%;
+        height: 46px;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .eyebrow {
+        width: 58%;
+        font-size: 11px;
+        letter-spacing: 1px;
+    }
+
+    .viewport-badge {
+        width: 108px;
+        height: 32px;
+    }
+
+    .badge-label {
+        font-size: 9px;
+    }
+
+    .hero {
+        width: 100%;
+        height: 330px;
+        direction: column;
+        gap: 18px;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .hero-copy {
+        width: 100%;
+        height: 150px;
+        gap: 12px;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .title {
+        width: 100%;
+        height: 70px;
+        font-size: 28px;
+        line-height: 32px;
+    }
+
+    .subtitle {
+        width: 100%;
+        height: 64px;
+        font-size: 11px;
+        line-height: 16px;
+    }
+
+    .proof-card {
+        width: 78vw;
+        height: 140px;
+        padding: 16px;
+        gap: 10px;
+    }
+
+    .proof-title {
+        font-size: 17px;
+    }
+
+    .actions {
+        width: 100%;
+        height: 132px;
+        direction: column;
+        gap: 12px;
+        justify-content: center;
+        align-items: center;
     }
 
     .menu-button {
         width: 78vw;
-        height: 64px;
+        height: 54px;
     }
 
-    .title {
-        font-size: 30px;
+    .features {
+        width: 100%;
+        height: 70px;
+        gap: 8px;
+        justify-content: space-between;
+        align-items: end;
+    }
+
+    .feature-card {
+        width: 30%;
+        height: 58px;
+    }
+
+    .feature-label {
+        font-size: 10px;
+        letter-spacing: 1px;
     }
 }
