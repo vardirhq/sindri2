@@ -257,6 +257,60 @@ fn percentages_and_constraints_use_the_final_parent_box() {
 }
 
 #[test]
+fn layout_alignment_maps_to_the_generic_sindri_layout_component() {
+    let document = SceneDocument::from_json(
+        r#"{
+            "format_version": 9,
+            "metadata": { "name": "weave-layout" },
+            "entities": [{
+                "id": "hero",
+                "components": {
+                    "sindri.ui.layout": { "direction": "column", "spacing": 0.25 }
+                }
+            }]
+        }"#,
+    )
+    .expect("scene parses");
+    let source = World::from_scene(&document).expect("scene loads").world;
+    let sheet = parse(
+        r#"
+            #hero {
+                direction: row;
+                gap: 24px;
+                justify-content: space-between;
+                align-items: end;
+            }
+        "#,
+    )
+    .expect("Weave parses");
+
+    let styled = PresentationWorld::resolve(
+        &source,
+        &sheet,
+        Viewport {
+            width: 1_200.0,
+            height: 800.0,
+        },
+    )
+    .expect("styles resolve");
+    let (_, entity) = styled.world().entities().next().expect("styled entity");
+    let layout = entity
+        .components
+        .get("sindri.ui.layout")
+        .expect("layout payload");
+
+    assert_eq!(layout["direction"], "row");
+    assert_eq!(layout["justify"], "space_between");
+    assert_eq!(layout["align"], "end");
+    assert_number(&layout["spacing"], 0.06);
+
+    let source_layout = &source.entities().next().expect("source entity").1.components
+        ["sindri.ui.layout"];
+    assert!(source_layout.get("justify").is_none());
+    assert!(source_layout.get("align").is_none());
+}
+
+#[test]
 fn negative_sizes_are_rejected_with_the_authored_property() {
     let document = SceneDocument::from_json(
         r#"{
