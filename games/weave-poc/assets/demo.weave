@@ -10,7 +10,7 @@ sindri.ui.button {
     height: 56px;
 }
 
-@media (max-width: 700px) {
+@media (orientation: portrait) {
     #menu {
         width: 90vw;
         height: 70vh;
