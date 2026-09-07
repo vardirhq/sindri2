@@ -14,6 +14,10 @@ script Hud {
     var boss_bar: Entity = null;
     var boss_name: Entity = null;
 
+    var health_bar_scale_x: f32 = 1.0;
+    var health_bar_scale_y: f32 = 1.0;
+    var health_text_scale_x: f32 = 1.0;
+    var health_text_scale_y: f32 = 1.0;
     var boss_presence: f32 = 0.0;
     var boss_panel_y: f32 = 0.0;
     var boss_panel_scale_x: f32 = 1.0;
@@ -40,6 +44,10 @@ script Hud {
         health_bar.transform.position.y = 1.76;
         cores_bar.transform.position.y = 1.71;
         health_text.transform.position.y = 1.83;
+        this.health_bar_scale_x = health_bar.transform.scale.x;
+        this.health_bar_scale_y = health_bar.transform.scale.y;
+        this.health_text_scale_x = health_text.transform.scale.x;
+        this.health_text_scale_y = health_text.transform.scale.y;
 
         let boss_panel = this.boss_panel;
         this.boss_panel_y = boss_panel.transform.position.y;
@@ -80,9 +88,10 @@ script Hud {
         let impact = min(1.0, max(0.0, Game.get("shield_impact", 0.0)));
         let health_bar = this.health_bar;
         let health_text = this.health_text;
-        health_bar.transform.scale.y = 1.0 + impact * 0.16;
-        health_text.transform.scale.x = 1.0 + impact * 0.05;
-        health_text.transform.scale.y = 1.0 + impact * 0.05;
+        health_bar.transform.scale.x = this.health_bar_scale_x;
+        health_bar.transform.scale.y = this.health_bar_scale_y * (1.0 + impact * 0.16);
+        health_text.transform.scale.x = this.health_text_scale_x * (1.0 + impact * 0.05);
+        health_text.transform.scale.y = this.health_text_scale_y * (1.0 + impact * 0.05);
     }
 
     fn update_boss(dt: f32) {
