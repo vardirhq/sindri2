@@ -97,7 +97,10 @@ fn apply_property(
                 if let Some(payload) = data.components.get_mut(type_name)
                     && let Some(object) = payload.as_object_mut()
                 {
-                    object.insert("anchor".to_owned(), serde_json::Value::String(stored.to_owned()));
+                    object.insert(
+                        "anchor".to_owned(),
+                        serde_json::Value::String(stored.to_owned()),
+                    );
                 }
             }
         }
@@ -105,15 +108,33 @@ fn apply_property(
             if !matches!(value.trim(), "row" | "column") {
                 return Err(invalid(id, property, value));
             }
-            set_component_field(world, entity, "sindri.ui.layout", "direction", value.trim().into());
+            set_component_field(
+                world,
+                entity,
+                "sindri.ui.layout",
+                "direction",
+                value.trim().into(),
+            );
         }
         "gap" => {
             let resolved = length(value, viewport).ok_or_else(|| invalid(id, property, value))?;
-            set_component_field(world, entity, "sindri.ui.layout", "spacing", resolved.into());
+            set_component_field(
+                world,
+                entity,
+                "sindri.ui.layout",
+                "spacing",
+                resolved.into(),
+            );
         }
         "font-size" => {
             let resolved = length(value, viewport).ok_or_else(|| invalid(id, property, value))?;
-            set_component_field(world, entity, "sindri.ui.text", "font_size", resolved.into());
+            set_component_field(
+                world,
+                entity,
+                "sindri.ui.text",
+                "font_size",
+                resolved.into(),
+            );
         }
         // Unknown properties are ignored in this intentionally tiny POC. A real
         // language surface should diagnose them from a registered property table.
@@ -206,18 +227,44 @@ mod tests {
         .expect("scene parses");
         let source = World::from_scene(&document).expect("scene loads").world;
         let before = source.clone();
-        let sheet = parse("#panel { width: 420px; } @media (max-width: 700px) { #panel { width: 90vw; } }")
-            .expect("Weave parses");
+        let sheet =
+            parse("#panel { width: 420px; } @media (max-width: 700px) { #panel { width: 90vw; } }")
+                .expect("Weave parses");
         let styled = PresentationWorld::resolve(
             &source,
             &sheet,
-            Viewport { width: 390.0, height: 844.0 },
+            Viewport {
+                width: 390.0,
+                height: 844.0,
+            },
         )
         .expect("styles resolve");
 
-        let source_scale = source.entities().next().expect("source entity").1.transform_3d.expect("transform").scale[0];
-        let styled_scale = styled.world().entities().next().expect("styled entity").1.transform_3d.expect("transform").scale[0];
-        let before_scale = before.entities().next().expect("before entity").1.transform_3d.expect("transform").scale[0];
+        let source_scale = source
+            .entities()
+            .next()
+            .expect("source entity")
+            .1
+            .transform_3d
+            .expect("transform")
+            .scale[0];
+        let styled_scale = styled
+            .world()
+            .entities()
+            .next()
+            .expect("styled entity")
+            .1
+            .transform_3d
+            .expect("transform")
+            .scale[0];
+        let before_scale = before
+            .entities()
+            .next()
+            .expect("before entity")
+            .1
+            .transform_3d
+            .expect("transform")
+            .scale[0];
         assert_eq!(source_scale, before_scale);
         assert_ne!(styled_scale, source_scale);
     }

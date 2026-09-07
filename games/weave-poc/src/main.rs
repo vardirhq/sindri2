@@ -84,7 +84,9 @@ mod tests {
         )
         .expect("mobile resolves");
 
-        assert_ne!(menu_width(desktop.world()), menu_width(mobile.world()));
-        assert_eq!(menu_width(&authored), source_width);
+        let desktop_width = menu_width(desktop.world());
+        let mobile_width = menu_width(mobile.world());
+        assert!((desktop_width - mobile_width).abs() > f32::EPSILON);
+        assert!((menu_width(&authored) - source_width).abs() <= f32::EPSILON);
     }
 }
