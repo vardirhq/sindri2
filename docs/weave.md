@@ -48,6 +48,8 @@ second renderer or a parallel UI object model.
 | Weave property | Sindri target |
 | --- | --- |
 | `width`, `height` | entity transform scale |
+| `min-width`, `max-width`, `min-height`, `max-height` | constraints applied to final transform scale |
+| `padding` | content-box inset used when percentage-sized children resolve |
 | `x`, `y` | entity transform position |
 | `anchor` | UI image, shape, and text anchor |
 | `direction`, `gap` | `sindri.ui.layout` |
@@ -69,10 +71,17 @@ return an `ApplyError` naming the entity, property, and value.
 
 ## Lengths and responsive rules
 
-Lengths may be unitless overlay values, pixels, `vw`, or `vh`. Percentages
-are supported for border width and radius and are relative to the final box.
+Lengths may be unitless overlay values, pixels, `vw`, `vh`, or percentages.
+Percentage width, height, and min/max constraints resolve against the parent's
+final content box rather than the viewport. Uniform `padding` shrinks that
+content box for descendants, so `width: 100%` fills the padded interior instead
+of the parent's outer box. Percentage border width and radius remain relative to
+the final styled box.
+
 Sindri's overlay is two units tall, so the bridge resolves viewport-dependent
-units before ordinary scene extraction.
+units before ordinary scene extraction. Parent boxes settle before descendants,
+which keeps percentage sizing deterministic even when a child appears before its
+parent in authored scene order.
 
 Supported media conditions are:
 
@@ -89,18 +98,23 @@ Each condition wraps ordinary rules. Conditions cannot yet be combined.
 
 1. Load the authored scene into a normal `World`.
 2. Parse the project's `.weave` stylesheet.
-3. Resolve a `PresentationWorld` for the current viewport.
-4. Feed its ordinary transforms and component payloads into the existing
+3. Resolve selector matches and cascade winners into a computed style for each
+   entity.
+4. Resolve a `PresentationWorld` for the current viewport, settling ancestors
+   before descendants so constraints, padding, and percentages have a stable
+   basis.
+5. Feed its ordinary transforms and component payloads into the existing
    extraction, rendering, layout, and input paths.
-5. Resolve again from the authored world when the viewport changes.
+6. Resolve again from the authored world when the viewport changes.
 
 This keeps Weave reversible: removing the bridge leaves the engine and scene
 model intact.
 
 ## Current limits
 
-This is a deliberately narrow proof, not a complete CSS implementation. It has
-no compound or descendant selectors, pseudo-states, variables, padding,
-min/max constraints, accessibility mapping, editor inspector, or hot reload.
-The demo proves reusable classes, cascade behavior, responsive geometry, font
-metrics, fills, strokes, and rounded shapes on the native Sindri UI path.
+This is still intentionally smaller than browser CSS. It has no compound or
+descendant selectors, pseudo-states, variables, per-side padding, margin,
+accessibility mapping, editor inspector, or hot reload. Alignment and flexible
+sizing are the next layout gaps. The demo proves reusable classes, cascade
+behavior, responsive geometry, min/max constraints, uniform content padding,
+font metrics, fills, strokes, and rounded shapes on the native Sindri UI path.
