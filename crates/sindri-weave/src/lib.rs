@@ -80,12 +80,7 @@ fn apply(world: &mut World, stylesheet: &Stylesheet, viewport: Viewport) -> Resu
         for (property, value) in computed.into_declarations() {
             if !matches!(
                 property.as_str(),
-                "width"
-                    | "height"
-                    | "min-width"
-                    | "max-width"
-                    | "min-height"
-                    | "max-height"
+                "width" | "height" | "min-width" | "max-width" | "min-height" | "max-height"
             ) {
                 apply_property(world, entity, &id, &property, &value, viewport)?;
             }
@@ -115,10 +110,7 @@ fn apply_sizing(
     style: &ComputedStyle,
     viewport: Viewport,
 ) -> Result<(), ApplyError> {
-    let viewport_size = [
-        2.0 * viewport.width / viewport.height.max(1.0),
-        2.0,
-    ];
+    let viewport_size = [2.0 * viewport.width / viewport.height.max(1.0), 2.0];
     let parent = world.get(entity).and_then(|data| data.parent);
     let parent_size = parent
         .and_then(|parent| world.get(parent))
