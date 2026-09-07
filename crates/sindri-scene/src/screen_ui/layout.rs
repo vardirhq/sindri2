@@ -146,20 +146,22 @@ impl UiLayoutComponent {
                 (index as f32 - (count - 1) as f32 / 2.0) * self.spacing
             }
         };
-        let packed_span = if count <= 1 {
-            0.0
-        } else {
-            #[allow(clippy::cast_precision_loss)]
-            {
-                (count - 1) as f32 * self.spacing
-            }
-        };
         let edge = ((parent_main - child_main).max(0.0)) / 2.0;
 
         let logical_main = match self.justify {
             UiJustify::Center => packed,
-            UiJustify::Start => packed - packed_span / 2.0 + edge,
-            UiJustify::End => packed - packed_span / 2.0 - edge + packed_span,
+            UiJustify::Start => {
+                #[allow(clippy::cast_precision_loss)]
+                {
+                    -edge + index as f32 * self.spacing
+                }
+            }
+            UiJustify::End => {
+                #[allow(clippy::cast_precision_loss)]
+                {
+                    edge - (count.saturating_sub(1) - index) as f32 * self.spacing
+                }
+            }
             UiJustify::SpaceBetween if count > 1 => {
                 #[allow(clippy::cast_precision_loss)]
                 let t = index as f32 / (count - 1) as f32;
@@ -228,12 +230,12 @@ mod tests {
     fn start_and_end_use_parent_edges() {
         let mut row = layout(UiDirection::Row);
         row.justify = UiJustify::Start;
-        assert_at(row.offset_in_box(0, 2, [4.0, 2.0], [1.0, 0.5]), [1.25, 0.0]);
-        assert_at(row.offset_in_box(1, 2, [4.0, 2.0], [1.0, 0.5]), [1.75, 0.0]);
+        assert_at(row.offset_in_box(0, 2, [4.0, 2.0], [1.0, 0.5]), [-1.5, 0.0]);
+        assert_at(row.offset_in_box(1, 2, [4.0, 2.0], [1.0, 0.5]), [-1.0, 0.0]);
 
         row.justify = UiJustify::End;
-        assert_at(row.offset_in_box(0, 2, [4.0, 2.0], [1.0, 0.5]), [-1.75, 0.0]);
-        assert_at(row.offset_in_box(1, 2, [4.0, 2.0], [1.0, 0.5]), [-1.25, 0.0]);
+        assert_at(row.offset_in_box(0, 2, [4.0, 2.0], [1.0, 0.5]), [1.0, 0.0]);
+        assert_at(row.offset_in_box(1, 2, [4.0, 2.0], [1.0, 0.5]), [1.5, 0.0]);
     }
 
     #[test]
