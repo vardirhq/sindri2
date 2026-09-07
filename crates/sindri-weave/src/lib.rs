@@ -385,6 +385,11 @@ mod tests {
         }
     }
 
+    fn assert_number(actual: &serde_json::Value, expected: f64) {
+        let actual = actual.as_f64().expect("value is numeric");
+        assert!((actual - expected).abs() < 0.000_01);
+    }
+
     #[test]
     fn resolution_does_not_mutate_authored_world() {
         let document = SceneDocument::from_json(
@@ -526,8 +531,8 @@ mod tests {
                 1.0,
             ],
         );
-        assert_eq!(shape["stroke_width"], 0.05);
-        assert_eq!(shape["corner_radius"], 0.2);
+        assert_number(&shape["stroke_width"], 0.05);
+        assert_number(&shape["corner_radius"], 0.2);
 
         let text = entity
             .components
