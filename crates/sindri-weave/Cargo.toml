@@ -1,0 +1,16 @@
+[package]
+name = "sindri-weave"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+# The bridge depends on the independently versioned Weave workspace, so this
+# proof-of-concept package is intentionally not publishable.
+publish = false
+
+[dependencies]
+serde_json.workspace = true
+sindri-core = { path = "../sindri-core" }
+thiserror.workspace = true
+weave = { path = "../../weave/crates/weave" }
