@@ -1,0 +1,35 @@
+{
+  "format_version": 9,
+  "metadata": { "name": "Weave POC" },
+  "entities": [
+    {
+      "id": "menu",
+      "name": "Menu",
+      "transform_3d": { "scale": [0.7, 0.8, 1.0] },
+      "components": {
+        "sindri.ui.image": { "texture": "sindri:white", "anchor": "center" },
+        "sindri.ui.layout": { "direction": "column", "spacing": 0.2 }
+      }
+    },
+    {
+      "id": "play",
+      "name": "Play",
+      "parent": "menu",
+      "transform_3d": { "scale": [0.5, 0.12, 1.0] },
+      "components": {
+        "sindri.ui.image": { "texture": "sindri:white", "anchor": "center" },
+        "sindri.ui.button": { "label": "Play" }
+      }
+    },
+    {
+      "id": "quit",
+      "name": "Quit",
+      "parent": "menu",
+      "transform_3d": { "scale": [0.5, 0.12, 1.0] },
+      "components": {
+        "sindri.ui.image": { "texture": "sindri:white", "anchor": "center" },
+        "sindri.ui.button": { "label": "Quit" }
+      }
+    }
+  ]
+}
