@@ -11,7 +11,7 @@ use weave::{Stylesheet, Viewport};
 
 mod computed;
 
-use computed::ComputedStyle;
+use computed::{ComputedStyle, Length};
 
 #[derive(Debug, Error, PartialEq)]
 pub enum ApplyError {
@@ -314,20 +314,7 @@ const fn hex_digit(byte: u8) -> Option<u8> {
 }
 
 fn length(value: &str, viewport: Viewport) -> Option<f32> {
-    let value = value.trim();
-    if let Some(number) = value.strip_suffix("vw") {
-        let percent = number.trim().parse::<f32>().ok()?;
-        return Some((percent / 100.0) * 2.0 * viewport.width / viewport.height.max(1.0));
-    }
-    if let Some(number) = value.strip_suffix("vh") {
-        let percent = number.trim().parse::<f32>().ok()?;
-        return Some((percent / 100.0) * 2.0);
-    }
-    if let Some(number) = value.strip_suffix("px") {
-        let pixels = number.trim().parse::<f32>().ok()?;
-        return Some(pixels * 2.0 / viewport.height.max(1.0));
-    }
-    value.parse::<f32>().ok()
+    Some(Length::parse(value)?.resolve(viewport))
 }
 
 fn anchor(value: &str) -> Option<&'static str> {
