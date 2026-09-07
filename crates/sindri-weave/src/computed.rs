@@ -16,13 +16,16 @@ pub(super) enum Length {
     Pixels(f32),
     ViewWidth(f32),
     ViewHeight(f32),
+    Percent(f32),
 }
 
 impl Length {
     pub(super) fn parse(value: &str) -> Option<Self> {
         let value = value.trim();
         let (number, make): (&str, fn(f32) -> Self) =
-            if let Some(number) = value.strip_suffix("vw") {
+            if let Some(number) = value.strip_suffix('%') {
+                (number, Self::Percent)
+            } else if let Some(number) = value.strip_suffix("vw") {
                 (number, Self::ViewWidth)
             } else if let Some(number) = value.strip_suffix("vh") {
                 (number, Self::ViewHeight)
@@ -36,14 +39,15 @@ impl Length {
     }
 
     #[must_use]
-    pub(super) fn resolve(self, viewport: Viewport) -> f32 {
+    pub(super) fn resolve(self, viewport: Viewport, percent_basis: Option<f32>) -> Option<f32> {
         match self {
-            Self::Overlay(value) => value,
-            Self::Pixels(value) => value * 2.0 / viewport.height.max(1.0),
+            Self::Overlay(value) => Some(value),
+            Self::Pixels(value) => Some(value * 2.0 / viewport.height.max(1.0)),
             Self::ViewWidth(value) => {
-                (value / 100.0) * 2.0 * viewport.width / viewport.height.max(1.0)
+                Some((value / 100.0) * 2.0 * viewport.width / viewport.height.max(1.0))
             }
-            Self::ViewHeight(value) => (value / 100.0) * 2.0,
+            Self::ViewHeight(value) => Some((value / 100.0) * 2.0),
+            Self::Percent(value) => Some((value / 100.0) * percent_basis?),
         }
     }
 }
@@ -123,9 +127,26 @@ mod tests {
             height: 800.0,
         };
         assert_eq!(Length::parse("0.5"), Some(Length::Overlay(0.5)));
-        assert_eq!(Length::parse("200px").map(|value| value.resolve(viewport)), Some(0.5));
-        assert_eq!(Length::parse("10vw").map(|value| value.resolve(viewport)), Some(0.3));
-        assert_eq!(Length::parse("25vh").map(|value| value.resolve(viewport)), Some(0.5));
+        assert_eq!(
+            Length::parse("200px").and_then(|value| value.resolve(viewport, None)),
+            Some(0.5)
+        );
+        assert_eq!(
+            Length::parse("10vw").and_then(|value| value.resolve(viewport, None)),
+            Some(0.3)
+        );
+        assert_eq!(
+            Length::parse("25vh").and_then(|value| value.resolve(viewport, None)),
+            Some(0.5)
+        );
+        assert_eq!(
+            Length::parse("50%").and_then(|value| value.resolve(viewport, Some(0.8))),
+            Some(0.4)
+        );
+        assert_eq!(
+            Length::parse("50%").and_then(|value| value.resolve(viewport, None)),
+            None
+        );
     }
 
     #[test]
