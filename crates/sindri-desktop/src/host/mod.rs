@@ -170,11 +170,32 @@ impl<A: DesktopApp> Host<A> {
         attributes
     }
 
-    fn resize(&mut self, width: u32, height: u32) -> Result<(), A::Error> {
+    fn window_metrics(&self) -> (f64, [f64; 2]) {
         let scale_factor = self
             .window
             .as_ref()
             .map_or(1.0, |window| window.scale_factor());
+
+        // Winit's Web canvas scale factor does not reliably describe the CSS
+        // viewport on every mobile browser. The DOM owns that logical size, so
+        // use it directly instead of deriving it from the GPU surface.
+        #[cfg(target_arch = "wasm32")]
+        if let Some((width, height)) = page_size::page_size() {
+            return (scale_factor, [width, height]);
+        }
+
+        let logical_size = self.window.as_ref().map_or(
+            [f64::from(self.config.width), f64::from(self.config.height)],
+            |window| {
+                let size = window.inner_size().to_logical::<f64>(scale_factor);
+                [size.width, size.height]
+            },
+        );
+        (scale_factor, logical_size)
+    }
+
+    fn resize(&mut self, width: u32, height: u32) -> Result<(), A::Error> {
+        let (scale_factor, logical_size) = self.window_metrics();
         let State::Running(running) = &mut self.state else {
             return Ok(());
         };
@@ -183,6 +204,7 @@ impl<A: DesktopApp> Host<A> {
             gpu: &running.gpu,
             surface: &running.surface,
             scale_factor,
+            logical_size,
         };
         running.app.resize(&context)?;
         if let Some(window) = &self.window {
@@ -214,10 +236,7 @@ impl<A: DesktopApp> Host<A> {
 
     /// One frame: advance by real elapsed time, then draw if a texture arrives.
     fn frame(&mut self) -> Result<Flow, DesktopError<A::Error>> {
-        let scale_factor = self
-            .window
-            .as_ref()
-            .map_or(1.0, |window| window.scale_factor());
+        let (scale_factor, logical_size) = self.window_metrics();
         let State::Running(running) = &mut self.state else {
             return Ok(Flow::Continue);
         };
@@ -245,6 +264,7 @@ impl<A: DesktopApp> Host<A> {
             gpu: &running.gpu,
             surface: &running.surface,
             scale_factor,
+            logical_size,
         };
         running
             .app
@@ -344,15 +364,13 @@ impl<A: DesktopApp> ApplicationHandler<Startup> for Host<A> {
             gpu.capabilities.backend
         );
 
-        let scale_factor = self
-            .window
-            .as_ref()
-            .map_or(1.0, |window| window.scale_factor());
+        let (scale_factor, logical_size) = self.window_metrics();
         let mut app = {
             let context = AppContext {
                 gpu: &gpu,
                 surface: &surface,
                 scale_factor,
+                logical_size,
             };
             match A::create(&context) {
                 Ok(app) => app,
