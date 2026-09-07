@@ -4,6 +4,11 @@ All notable changes to Sindri Next will be documented here.
 
 ## [Unreleased]
 
+- Expand the isolated Weave presentation proof with reusable class selectors,
+  CSS-like specificity, responsive font and box metrics, shape fills, borders,
+  rounded corners, and text styling. The browser demo now explains itself with
+  a licensed project font and labelled controls instead of abstract bars.
+
 - Give Orbital Last Stand an authored combat-spectacle pass: pooled neon
   projectile and companion trails, spinning/pulsing weapon geometry, reusable
   additive impact flares, expanded nova and death bursts, synergy celebrations,

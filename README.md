@@ -12,6 +12,11 @@ Sindri Next is a from-the-foundation evolution of Sindri Engine. It is built aro
 companion game runs the same Rust engine, Decay scripts, scene, renderer, and
 project-owned font as its native build. It requires a browser with WebGPU.
 
+**[Open the Weave presentation POC](https://vardirhq.github.io/sindri2/examples/weave-poc/)** —
+an experimental responsive styling layer resolved into ordinary Sindri UI data.
+The supported contract and current limits are documented in
+[`docs/weave.md`](docs/weave.md).
+
 ## What Sindri is trying to be
 
 Sindri is deliberately small enough to understand and opinionated enough to build with.

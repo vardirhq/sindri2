@@ -22,6 +22,18 @@ const EXPECT_ASSET_KINDS = new Set(
     .filter(Boolean),
 );
 const EXPECT_FAILURE = process.env.SINDRI_EXPECT_FAILURE || '';
+const VIEWPORT = {
+  width: Number(process.env.SINDRI_VIEWPORT_WIDTH ?? 960),
+  height: Number(process.env.SINDRI_VIEWPORT_HEIGHT ?? 540),
+};
+if (
+  !Number.isInteger(VIEWPORT.width) ||
+  !Number.isInteger(VIEWPORT.height) ||
+  VIEWPORT.width <= 0 ||
+  VIEWPORT.height <= 0
+) {
+  throw new Error('SINDRI_VIEWPORT_WIDTH and SINDRI_VIEWPORT_HEIGHT must be positive integers');
+}
 let BASE = process.env.SINDRI_BASE_PATH || '/';
 if (!BASE.startsWith('/')) BASE = `/${BASE}`;
 if (!BASE.endsWith('/')) BASE += '/';
@@ -77,7 +89,7 @@ const browser = await chromium.launch({
     '--no-sandbox',
   ],
 });
-const page = await browser.newPage({ viewport: { width: 960, height: 540 } });
+const page = await browser.newPage({ viewport: VIEWPORT });
 
 // The interface existing is not the same as WebGPU working. Chrome on Android
 // exposes `navigator.gpu` more widely than its drivers can serve, and a page

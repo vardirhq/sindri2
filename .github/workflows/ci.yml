@@ -238,6 +238,11 @@ jobs:
           cargo run --quiet --package sindri-export --bin sindri-export -- \
             games/orbital-last-stand target/dist/orbital --base /sindri2/
           cp -R game/pkg/. target/dist/orbital/pkg/
+          # Weave uses the same generic browser host, but adds an Other asset
+          # that the host recognizes as a presentation stylesheet.
+          cargo run --quiet --package sindri-export --bin sindri-export -- \
+            games/weave-poc target/dist/weave --base /sindri2/examples/weave-poc/
+          cp -R game/pkg/. target/dist/weave/pkg/
       - name: Smoke the rendered games
         run: |
           node scripts/browser/smoke.mjs examples/cube target/render-artifacts/browser-cube.png
@@ -245,6 +250,10 @@ jobs:
             node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-gather.png
           SINDRI_EXPECT_ASSETS=1 SINDRI_BASE_PATH=/sindri2/ \
             node scripts/browser/smoke.mjs target/dist/orbital target/render-artifacts/browser-orbital.png
+          SINDRI_EXPECT_ASSETS=1 \
+            SINDRI_BASE_PATH=/sindri2/examples/weave-poc/ \
+            SINDRI_VIEWPORT_WIDTH=390 SINDRI_VIEWPORT_HEIGHT=844 \
+            node scripts/browser/smoke.mjs target/dist/weave target/render-artifacts/browser-weave-phone.png
       - name: Smoke the startup failure paths
         run: |
           SINDRI_EXPECT_FAILURE=canvas SINDRI_BASE_PATH=/sindri2/ \
@@ -262,6 +271,7 @@ jobs:
             target/render-artifacts/browser-cube.png
             target/render-artifacts/browser-gather.png
             target/render-artifacts/browser-orbital.png
+            target/render-artifacts/browser-weave-phone.png
             target/render-artifacts/browser-no-canvas.png
             target/render-artifacts/browser-no-adapter.png
             target/render-artifacts/browser-no-device.png

@@ -1,24 +1,83 @@
 #menu {
-    width: 420px;
-    height: 360px;
+    width: 620px;
+    height: 500px;
     direction: column;
-    gap: 72px;
+    gap: 78px;
+    background: #111827;
+    border-color: #334155;
+    border-width: 2px;
+    border-radius: 24px;
 }
 
-sindri.ui.button {
-    width: 280px;
-    height: 56px;
+sindri.ui.text {
+    text-align: center;
+}
+
+.eyebrow {
+    color: #5eead4;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+.title {
+    color: #f8fafc;
+    font-size: 32px;
+    line-height: 38px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.subtitle {
+    color: #94a3b8;
+    font-size: 15px;
+    line-height: 22px;
+    letter-spacing: 1px;
+}
+
+.menu-button {
+    width: 400px;
+    height: 64px;
+    border-width: 1px;
+    border-radius: 14px;
+}
+
+.primary {
+    background: #5eead4;
+    border-color: #99f6e4;
+}
+
+.secondary {
+    background: #8b5cf6;
+    border-color: #a78bfa;
+}
+
+.button-label {
+    color: #f8fafc;
+    font-size: 18px;
+    line-height: 22px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.primary-label {
+    color: #0f172a;
 }
 
 @media (orientation: portrait) {
     #menu {
         width: 90vw;
-        height: 70vh;
-        gap: 64px;
+        height: 520px;
+        gap: 80px;
+        border-radius: 22px;
     }
 
-    sindri.ui.button {
+    .menu-button {
         width: 78vw;
-        height: 60px;
+        height: 64px;
+    }
+
+    .title {
+        font-size: 30px;
     }
 }

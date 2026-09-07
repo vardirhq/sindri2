@@ -16,6 +16,7 @@ pub struct Rule {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Selector {
     Id(String),
+    Class(String),
     Type(String),
 }
 
@@ -33,6 +34,18 @@ pub struct Viewport {
     pub height: f32,
 }
 
+impl Selector {
+    /// CSS-like weight used when more than one matching rule writes a property.
+    #[must_use]
+    pub const fn specificity(&self) -> u8 {
+        match self {
+            Self::Type(_) => 0,
+            Self::Class(_) => 1,
+            Self::Id(_) => 2,
+        }
+    }
+}
+
 impl MediaCondition {
     #[must_use]
     pub fn matches(self, viewport: Viewport) -> bool {
@@ -48,8 +61,20 @@ impl MediaCondition {
 impl Rule {
     #[must_use]
     pub fn applies(&self, id: &str, component_types: &[&str], viewport: Viewport) -> bool {
+        self.applies_with_classes(id, &[], component_types, viewport)
+    }
+
+    #[must_use]
+    pub fn applies_with_classes(
+        &self,
+        id: &str,
+        classes: &[&str],
+        component_types: &[&str],
+        viewport: Viewport,
+    ) -> bool {
         let selector_matches = match &self.selector {
             Selector::Id(expected) => expected == id,
+            Selector::Class(expected) => classes.iter().any(|class| *class == expected),
             Selector::Type(expected) => component_types.iter().any(|kind| *kind == expected),
         };
         selector_matches
@@ -120,10 +145,13 @@ fn parse_rules(
             .ok_or_else(|| ParseError::MissingBlock(rest.trim().into()))?;
         let selector_text = rest[..open].trim();
         let (body, tail) = take_block(&rest[open + 1..])?;
-        let selector = selector_text.strip_prefix('#').map_or_else(
-            || Selector::Type(selector_text.to_owned()),
-            |id| Selector::Id(id.trim().to_owned()),
-        );
+        let selector = if let Some(id) = selector_text.strip_prefix('#') {
+            Selector::Id(id.trim().to_owned())
+        } else if let Some(class) = selector_text.strip_prefix('.') {
+            Selector::Class(class.trim().to_owned())
+        } else {
+            Selector::Type(selector_text.to_owned())
+        };
         let mut declarations = BTreeMap::new();
         for raw in body
             .split(';')
@@ -204,6 +232,34 @@ fn parse_media(query: &str) -> Result<MediaCondition, ParseError> {
 #[cfg(test)]
 mod tests {
     use super::{MediaCondition, Selector, Viewport, parse};
+
+    #[test]
+    fn class_rules_match_declared_classes() {
+        let sheet = parse(".menu-button { width: 280px; }").expect("valid Weave");
+        assert_eq!(
+            sheet.rules[0].selector,
+            Selector::Class("menu-button".into())
+        );
+        assert_eq!(sheet.rules[0].selector.specificity(), 1);
+        assert!(sheet.rules[0].applies_with_classes(
+            "play",
+            &["menu-button", "primary"],
+            &["sindri.ui.button"],
+            Viewport {
+                width: 1280.0,
+                height: 720.0,
+            }
+        ));
+        assert!(!sheet.rules[0].applies_with_classes(
+            "quit",
+            &["secondary"],
+            &["sindri.ui.button"],
+            Viewport {
+                width: 1280.0,
+                height: 720.0,
+            }
+        ));
+    }
 
     #[test]
     fn parses_responsive_rules() {

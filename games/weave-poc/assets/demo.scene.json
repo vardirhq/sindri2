@@ -7,28 +7,126 @@
       "name": "Menu",
       "transform_3d": { "scale": [0.7, 0.8, 1.0] },
       "components": {
-        "sindri.ui.shape": { "kind": "rect", "fill": [0.055, 0.075, 0.12, 1.0], "stroke": [0.12, 0.16, 0.24, 1.0], "stroke_width": 0.008, "corner_radius": 0.04, "anchor": "center", "layer": 1 },
+        "weave.style": { "classes": ["panel"] },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "fill": [0.0, 0.0, 0.0, 1.0],
+          "anchor": "center",
+          "layer": 1
+        },
         "sindri.ui.layout": { "direction": "column", "spacing": 0.2 }
       }
     },
     {
-      "id": "play",
-      "name": "Play",
+      "id": "eyebrow",
+      "name": "Eyebrow",
       "parent": "menu",
-      "transform_3d": { "scale": [0.5, 0.12, 1.0] },
       "components": {
-        "sindri.ui.shape": { "kind": "rect", "fill": [0.18, 0.78, 0.67, 1.0], "corner_radius": 0.12, "anchor": "center", "layer": 2 },
-        "sindri.ui.button": { "label": "Play" }
+        "weave.style": { "classes": ["eyebrow"] },
+        "sindri.ui.text": {
+          "text": "WEAVE / RESPONSIVE UI",
+          "font": "fonts/ChakraPetch-Regular.ttf",
+          "font_size": 0.05,
+          "bounds": [1.2, 0.1],
+          "anchor": "center",
+          "layer": 3
+        }
       }
     },
     {
-      "id": "quit",
-      "name": "Quit",
+      "id": "title",
+      "name": "Title",
+      "parent": "menu",
+      "components": {
+        "weave.style": { "classes": ["title"] },
+        "sindri.ui.text": {
+          "text": "STYLE THE WORLD",
+          "font": "fonts/ChakraPetch-Regular.ttf",
+          "font_size": 0.08,
+          "bounds": [1.3, 0.16],
+          "anchor": "center",
+          "layer": 3
+        }
+      }
+    },
+    {
+      "id": "subtitle",
+      "name": "Subtitle",
+      "parent": "menu",
+      "components": {
+        "weave.style": { "classes": ["subtitle"] },
+        "sindri.ui.text": {
+          "text": "ONE SCENE // EVERY VIEWPORT",
+          "font": "fonts/ChakraPetch-Regular.ttf",
+          "font_size": 0.04,
+          "bounds": [1.3, 0.1],
+          "anchor": "center",
+          "layer": 3
+        }
+      }
+    },
+    {
+      "id": "play",
+      "name": "Launch Demo",
       "parent": "menu",
       "transform_3d": { "scale": [0.5, 0.12, 1.0] },
       "components": {
-        "sindri.ui.shape": { "kind": "rect", "fill": [0.42, 0.32, 0.9, 1.0], "corner_radius": 0.12, "anchor": "center", "layer": 2 },
-        "sindri.ui.button": { "label": "Quit" }
+        "weave.style": { "classes": ["menu-button", "primary"] },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "fill": [0.0, 0.0, 0.0, 1.0],
+          "anchor": "center",
+          "layer": 2
+        },
+        "sindri.ui.button": { "label": "Launch demo" }
+      }
+    },
+    {
+      "id": "play-label",
+      "name": "Launch Demo Label",
+      "parent": "play",
+      "components": {
+        "weave.style": { "classes": ["button-label", "primary-label"] },
+        "sindri.ui.text": {
+          "text": "LAUNCH DEMO",
+          "font": "fonts/ChakraPetch-Regular.ttf",
+          "font_size": 0.05,
+          "bounds": [0.9, 0.12],
+          "anchor": "center",
+          "layer": 3
+        }
+      }
+    },
+    {
+      "id": "source",
+      "name": "View Source",
+      "parent": "menu",
+      "transform_3d": { "scale": [0.5, 0.12, 1.0] },
+      "components": {
+        "weave.style": { "classes": ["menu-button", "secondary"] },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "fill": [0.0, 0.0, 0.0, 1.0],
+          "anchor": "center",
+          "layer": 2
+        },
+        "sindri.ui.button": { "label": "View source" }
+      }
+    },
+    {
+      "id": "source-label",
+      "name": "View Source Label",
+      "parent": "source",
+      "components": {
+        "weave.style": { "classes": ["button-label"] },
+        "sindri.ui.text": {
+          "text": "VIEW SOURCE",
+          "font": "fonts/ChakraPetch-Regular.ttf",
+          "font_size": 0.05,
+          "bounds": [0.9, 0.12],
+          "anchor": "center",
+          "layer": 3
+        }
       }
     }
   ]
