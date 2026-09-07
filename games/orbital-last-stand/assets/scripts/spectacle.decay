@@ -1,0 +1,47 @@
+// One reusable, short-lived additive flare. Gameplay chooses a palette and
+// scale; this script supplies the expanding ring, spin, sweep and clean exit.
+script Spectacle {
+    @export let style: f32 = 0.0;
+    @export let duration: f32 = 0.32;
+    @export let start_size: f32 = 0.35;
+    @export let end_size: f32 = 1.8;
+    @export let spin: f32 = 2.4;
+
+    var age: f32 = 0.0;
+
+    fn start() {
+        tint();
+        this.transform.scale.x = this.start_size;
+        this.transform.scale.y = this.start_size;
+    }
+
+    fn update(dt: f32) {
+        this.age += dt;
+        let t = min(1.0, this.age / max(0.01, this.duration));
+        let eased = 1.0 - (1.0 - t) * (1.0 - t);
+        let size = this.start_size + (this.end_size - this.start_size) * eased;
+        this.transform.scale.x = size;
+        this.transform.scale.y = size;
+        this.transform.rotation_z += this.spin * dt;
+        this.shape.stroke.a = 1.0 - t;
+        this.shape.fill.a = (1.0 - t) * 0.2;
+        this.shape.dashes = 3.0 + t * 9.0;
+        this.shape.sweep_start = t * 0.35;
+        this.shape.sweep_turns = 1.0 - t * 0.18;
+        if this.age >= this.duration { World.despawn(this.entity); }
+    }
+
+    fn tint() {
+        if this.style == 1.0 { color(0.28, 0.92, 1.0); }
+        else if this.style == 2.0 { color(1.0, 0.2, 0.72); }
+        else if this.style == 3.0 { color(0.78, 0.42, 1.0); }
+        else if this.style == 4.0 { color(1.0, 0.82, 0.28); }
+        else if this.style == 5.0 { color(1.0, 0.25, 0.22); }
+        else { color(0.34, 1.0, 0.72); }
+    }
+
+    fn color(r: f32, g: f32, b: f32) {
+        this.shape.stroke.r = r; this.shape.stroke.g = g; this.shape.stroke.b = b;
+        this.shape.fill.r = r; this.shape.fill.g = g; this.shape.fill.b = b;
+    }
+}

@@ -70,11 +70,11 @@
         },
         "sindri.effect.burst": {
           "texture": "textures/fleck.png",
-          "count": 16,
-          "speed": 4.6,
-          "spread": 6.28,
-          "lifetime": 0.42,
-          "size": 0.07,
+          "count": 32,
+          "speed": 6.4,
+          "spread": 0.6,
+          "lifetime": 0.62,
+          "size": 0.1,
           "tint": [
             1.0,
             0.7,

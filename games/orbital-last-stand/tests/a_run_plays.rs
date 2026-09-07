@@ -395,6 +395,7 @@ fn an_upgrade_pauses_the_run_and_changes_it() {
         run.board("magnet"),
         run.board("max_hp"),
         run.board("pierce"),
+        run.board("picked_module"),
     );
     run.click(&offers[0]);
     let after = (
@@ -404,6 +405,7 @@ fn an_upgrade_pauses_the_run_and_changes_it() {
         run.board("magnet"),
         run.board("max_hp"),
         run.board("pierce"),
+        run.board("picked_module"),
     );
     assert_ne!(before, after, "the card {} changed nothing", offers[0]);
     assert_eq!(run.board("run_state"), 1.0, "the run should resume");

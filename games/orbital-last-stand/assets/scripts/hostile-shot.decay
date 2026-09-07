@@ -7,8 +7,11 @@ script HostileShot {
     @export let damage: f32 = 1.0;
 
     var age: f32 = 0.0;
+    var trail: Entity = null;
+    var trail_clock: f32 = 0.0;
 
     fn start() {
+        this.trail = World.find("TrailHostile");
         Physics.set_velocity(this.entity, this.dir_x * this.speed, this.dir_y * this.speed);
     }
 
@@ -18,6 +21,15 @@ script HostileShot {
             return;
         }
         this.age += dt;
+        this.transform.rotation_z += dt * 4.0;
+        let pulse = 1.0 + sin(this.age * 16.0) * 0.14;
+        this.transform.scale.x = 0.18 * pulse;
+        this.transform.scale.y = 0.18 * pulse;
+        this.trail_clock -= dt;
+        if this.trail != null && this.trail_clock <= 0.0 {
+            this.trail_clock = 0.035;
+            Effects.burst_at(this.trail, this.transform.position.x, this.transform.position.y);
+        }
         if this.age >= this.life {
             World.despawn(this.entity);
             return;

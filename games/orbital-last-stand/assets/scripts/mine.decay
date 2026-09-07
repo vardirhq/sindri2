@@ -8,10 +8,24 @@ script Mine {
 
     var age: f32 = 0.0;
     var tripped: bool = false;
+    var trail: Entity = null;
+    var spark_clock: f32 = 0.0;
+
+    fn start() {
+        this.trail = World.find("TrailMagenta");
+    }
 
     fn update(dt: f32) {
         if Game.get("run_state", 0.0) != 1.0 { return; }
         this.age += dt;
+        this.transform.rotation_z += dt * 1.8;
+        this.shape.dashes = 6.0;
+        this.shape.sweep_start = this.age * 0.22;
+        this.spark_clock -= dt;
+        if this.trail != null && this.spark_clock <= 0.0 {
+            this.spark_clock = 0.11;
+            Effects.burst_at(this.trail, this.transform.position.x, this.transform.position.y);
+        }
         for enemy in Physics.sensor_entered() { this.tripped = true; }
         var arm: f32 = this.arm_after;
         if Game.get("special_anchor_clock", 0.0) > 0.0 { arm *= 0.65; }
@@ -34,6 +48,7 @@ script Mine {
         }
         World.set_property(wave, "damage", this.damage);
         Effects.burst(this.entity);
+        Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.42));
         World.despawn(this.entity);
     }
 }

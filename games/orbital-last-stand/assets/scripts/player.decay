@@ -3,6 +3,7 @@
 script Player {
     @export let bullet: Prefab;
     @export let mine: Prefab;
+    @export let muzzle_fx: Prefab;
     @export let invulnerable_for: f32 = 0.9;
     @export let view_size: f32 = 11.0;
     @export let edge_padding: f32 = 0.28;
@@ -159,6 +160,7 @@ script Player {
             Game.set("overdrive", max(4.0, Game.get("overdrive", 0.0)));
         }
         Game.set("shield_impact", 1.0);
+        Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.72));
         Effects.burst(this.hurt);
         Audio.play("audio/hurt.wav", 0.5);
     }
@@ -204,7 +206,19 @@ script Player {
             }
             made += 1.0;
         }
+        muzzle_flash(forward_x, forward_y);
         Audio.play("audio/shot.wav", 0.18);
+    }
+
+    fn muzzle_flash(dx: f32, dy: f32) {
+        let flash = World.spawn(this.muzzle_fx);
+        flash.transform.position.x = this.transform.position.x + dx * 0.42;
+        flash.transform.position.y = this.transform.position.y + dy * 0.42;
+        World.set_property(flash, "style", if_number(Game.get("nova", 0.0) > 0.0) * 2.0);
+        World.set_property(flash, "start_size", 0.12);
+        World.set_property(flash, "end_size", 0.7 + min(0.45, Game.get("shots", 1.0) * 0.08));
+        World.set_property(flash, "duration", 0.14);
+        World.set_property(flash, "spin", 8.0);
     }
 
     fn fire_one(x: f32, y: f32, dx: f32, dy: f32, damage: f32, crit: bool, size_scale: f32) {

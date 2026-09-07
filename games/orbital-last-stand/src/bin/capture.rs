@@ -46,6 +46,12 @@ fn shot_for(name: &str) -> Shot {
             seconds: 5.0,
             click: Some("TitleStart"),
         },
+        // A deliberately excessive combat build used to inspect the complete
+        // effect vocabulary together: spread fire, every proc, and companions.
+        "spectacle" => Shot {
+            seconds: 5.0,
+            click: Some("TitleStart"),
+        },
         // The title screen, which is what a player sees first and what every
         // layout mistake shows up on.
         _ => Shot {
@@ -127,6 +133,19 @@ async fn capture(
     }
     if let Some(element) = shot.click {
         run.click(element);
+    }
+    if what == "spectacle" {
+        run.set_board("shots_add", 2.0);
+        run.set_board("fire_rate_add", 3.0);
+        run.set_board("crit_add", 0.5);
+        for weapon in ["missile", "arc", "nova", "mines", "beam"] {
+            run.set_board(weapon, 1.0);
+        }
+        for companion in ["comp_blade", "comp_shield", "comp_ember", "comp_wisp"] {
+            run.set_board(companion, 1.0);
+        }
+        run.set_board("companion_spawn_reset", 1.0);
+        run.set_board("hp", 1000.0);
     }
     let steps = (shot.seconds * 60.0) as usize;
     for step in 0..steps {

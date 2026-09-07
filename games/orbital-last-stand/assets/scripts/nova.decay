@@ -5,6 +5,15 @@ script Nova {
     @export let life: f32 = 0.13;
     var age: f32 = 0.0;
     var retiring: bool = false;
+    var initial_x: f32 = 1.0;
+    var initial_y: f32 = 1.0;
+
+    fn start() {
+        this.initial_x = this.transform.scale.x;
+        this.initial_y = this.transform.scale.y;
+        Effects.burst(this.entity);
+        Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.26));
+    }
 
     fn update(dt: f32) {
         if this.retiring {
@@ -12,9 +21,14 @@ script Nova {
             return;
         }
         this.age += dt;
-        this.shape.stroke.a = max(0.0, 1.0 - this.age / this.life);
-        this.transform.scale.x += dt * 2.0;
-        this.transform.scale.y += dt * 2.0;
+        let t = min(1.0, this.age / max(0.01, this.life));
+        this.shape.stroke.a = 1.0 - t;
+        this.shape.fill.a = (1.0 - t) * 0.12;
+        this.shape.dashes = 4.0 + t * 12.0;
+        this.shape.sweep_start = t * 0.4;
+        this.transform.scale.x = this.initial_x * (1.0 + t * 0.22);
+        this.transform.scale.y = this.initial_y * (1.0 + t * 0.22);
+        this.transform.rotation_z += dt * 3.2;
         if this.age >= this.life {
             // Do not invalidate a collision another script has yet to consume.
             this.retiring = true;
