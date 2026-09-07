@@ -1,0 +1,33 @@
+#menu {
+    width: 420px;
+    height: 320px;
+    anchor: center;
+    direction: column;
+    gap: 72px;
+}
+
+sindri.ui.button {
+    width: 280px;
+    height: 56px;
+}
+
+#title {
+    font-size: 42px;
+}
+
+@media (max-width: 700px) {
+    #menu {
+        width: 90vw;
+        height: 70vh;
+        gap: 64px;
+    }
+
+    sindri.ui.button {
+        width: 78vw;
+        height: 60px;
+    }
+
+    #title {
+        font-size: 36px;
+    }
+}
