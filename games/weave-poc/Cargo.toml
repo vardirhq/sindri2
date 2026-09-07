@@ -1,0 +1,12 @@
+[package]
+name = "weave-poc"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+sindri-core = { path = "../../crates/sindri-core" }
+sindri-scene = { path = "../../crates/sindri-scene" }
+sindri-weave = { path = "../../crates/sindri-weave" }
+weave = { path = "../../weave/crates/weave" }
