@@ -11,8 +11,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let stylesheet = parse(STYLE)?;
 
     for viewport in [
-        Viewport { width: 1280.0, height: 720.0 },
-        Viewport { width: 390.0, height: 844.0 },
+        Viewport {
+            width: 1280.0,
+            height: 720.0,
+        },
+        Viewport {
+            width: 390.0,
+            height: 844.0,
+        },
     ] {
         let styled = PresentationWorld::resolve(&authored, &stylesheet, viewport)?;
         println!("{}x{}", viewport.width, viewport.height);
@@ -20,7 +26,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let Some(id) = &data.source_id else { continue };
             let transform = data.transform_3d.unwrap_or_default();
             println!(
-                "  {id}: position=({:.3}, {:.3}) size=({:.3}, {:.3})",
+                "  {id:?}: position=({:.3}, {:.3}) size=({:.3}, {:.3})",
                 transform.position[0],
                 transform.position[1],
                 transform.scale[0],
@@ -42,7 +48,11 @@ mod tests {
     fn menu_width(world: &World) -> f32 {
         world
             .entities()
-            .find(|(_, data)| data.source_id.as_ref().is_some_and(|id| id.as_str() == "menu"))
+            .find(|(_, data)| {
+                data.source_id
+                    .as_ref()
+                    .is_some_and(|id| id.as_str() == "menu")
+            })
             .and_then(|(_, data)| data.transform_3d)
             .expect("menu transform")
             .scale[0]
@@ -58,13 +68,19 @@ mod tests {
         let desktop = PresentationWorld::resolve(
             &authored,
             &stylesheet,
-            Viewport { width: 1280.0, height: 720.0 },
+            Viewport {
+                width: 1280.0,
+                height: 720.0,
+            },
         )
         .expect("desktop resolves");
         let mobile = PresentationWorld::resolve(
             &authored,
             &stylesheet,
-            Viewport { width: 390.0, height: 844.0 },
+            Viewport {
+                width: 390.0,
+                height: 844.0,
+            },
         )
         .expect("mobile resolves");
 
