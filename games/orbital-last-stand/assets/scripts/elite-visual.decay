@@ -1,5 +1,5 @@
-// Decorative child used by elite enemies. The parent owns gameplay; this only
-// reproduces the reference's independently animated elite outline treatment.
+// Decorative child used by elite enemies. The parent owns gameplay; this layer
+// makes elites read instantly through motion, sweep, dashes and breathing scale.
 script EliteVisual {
     @export let mode: f32 = 0.0;
     @export let sides: f32 = 6.0;
@@ -12,39 +12,45 @@ script EliteVisual {
 
     fn start() {
         this.shape.count = this.sides;
-        // Reference enemies carry a random phase that offsets their ring pulse.
-        // Reuse that same phase for the trait-specific cue so the layers breathe
-        // together instead of spending another gameplay RNG draw.
-        if this.mode == 1.0 {
-            this.phase = Random.range(0.0, 6.2831853);
-            spawn_identity();
-        }
+        this.phase = Random.range(0.0, 6.2831853);
+        if this.mode == 1.0 { spawn_identity(); }
         apply_color();
     }
 
     fn update(dt: f32) {
         this.clock += dt;
         apply_color();
+        let pulse = 0.5 + 0.5 * sin(this.clock * (5.0 + this.trait * 0.75) + this.phase);
+
         if this.mode == 0.0 {
-            // The reference draws this inside the enemy's +0.6 rad/s rotated
-            // context, with an additional local -1.4 rad/s turn.
-            this.transform.rotation_z = -this.clock * 1.4;
-            this.shape.stroke.a = 1.0;
+            let speed = 1.2 + this.trait * 0.28;
+            this.transform.rotation_z = -this.clock * speed + this.phase;
+            let size = 1.28 + pulse * 0.14;
+            this.transform.scale.x = size;
+            this.transform.scale.y = size;
+            this.shape.dashes = 4.0 + this.trait * 2.0;
+            this.shape.dash_duty = 0.34 + pulse * 0.22;
+            this.shape.sweep_start = this.clock * (0.08 + this.trait * 0.025);
+            this.shape.stroke.a = 0.58 + pulse * 0.42;
+            this.shape.stroke_width = 0.055 + pulse * 0.045;
         } else {
-            this.shape.stroke.a = 0.4 + 0.25 * sin(this.clock * 7.0 + this.phase);
+            let size = 1.52 + pulse * 0.16;
+            this.transform.scale.x = size;
+            this.transform.scale.y = size;
+            this.transform.rotation_z = this.clock * (0.5 + this.trait * 0.21) + this.phase;
+            this.shape.dashes = 8.0 + this.trait * 2.0;
+            this.shape.dash_duty = 0.28 + pulse * 0.20;
+            this.shape.sweep_start = -this.clock * (0.09 + this.trait * 0.018);
+            this.shape.stroke.a = 0.22 + 0.48 * pulse;
+            this.shape.stroke_width = 0.035 + pulse * 0.035;
         }
     }
 
     fn spawn_identity() {
-        // Frenzied has no extra identity mark in the reference renderer beyond
-        // the generic elite shell/ring, so trait 1 intentionally stops here.
         if this.trait == 1.0 { return; }
         if this.trait == 0.0 {
             var slot: f32 = 0.0;
-            while slot < 3.0 {
-                spawn_identity_ring(slot);
-                slot += 1.0;
-            }
+            while slot < 3.0 { spawn_identity_ring(slot); slot += 1.0; }
         } else if this.trait == 4.0 {
             var slot: f32 = 0.0;
             while slot < 3.0 {
@@ -54,9 +60,7 @@ script EliteVisual {
                 World.set_property(mark, "phase", this.phase);
                 slot += 1.0;
             }
-        } else {
-            spawn_identity_ring(0.0);
-        }
+        } else { spawn_identity_ring(0.0); }
     }
 
     fn spawn_identity_ring(index: f32) {
