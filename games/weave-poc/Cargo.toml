@@ -11,5 +11,8 @@ sindri-core = { path = "../../crates/sindri-core" }
 sindri-weave = { path = "../../crates/sindri-weave" }
 weave = { path = "../../weave/crates/weave" }
 
+[dev-dependencies]
+serde_json.workspace = true
+
 [lints]
 workspace = true
