@@ -9,6 +9,45 @@ use std::collections::{BTreeMap, btree_map};
 
 use weave::{Stylesheet, Viewport};
 
+/// A length with its authored unit preserved until the viewport is known.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) enum Length {
+    Overlay(f32),
+    Pixels(f32),
+    ViewWidth(f32),
+    ViewHeight(f32),
+}
+
+impl Length {
+    pub(super) fn parse(value: &str) -> Option<Self> {
+        let value = value.trim();
+        let (number, make): (&str, fn(f32) -> Self) =
+            if let Some(number) = value.strip_suffix("vw") {
+                (number, Self::ViewWidth)
+            } else if let Some(number) = value.strip_suffix("vh") {
+                (number, Self::ViewHeight)
+            } else if let Some(number) = value.strip_suffix("px") {
+                (number, Self::Pixels)
+            } else {
+                (value, Self::Overlay)
+            };
+        let number = number.trim().parse::<f32>().ok()?;
+        number.is_finite().then(|| make(number))
+    }
+
+    #[must_use]
+    pub(super) fn resolve(self, viewport: Viewport) -> f32 {
+        match self {
+            Self::Overlay(value) => value,
+            Self::Pixels(value) => value * 2.0 / viewport.height.max(1.0),
+            Self::ViewWidth(value) => {
+                (value / 100.0) * 2.0 * viewport.width / viewport.height.max(1.0)
+            }
+            Self::ViewHeight(value) => (value / 100.0) * 2.0,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(super) struct ComputedStyle {
     declarations: BTreeMap<String, String>,
@@ -70,12 +109,30 @@ impl ComputedStyle {
 mod tests {
     use weave::{Viewport, parse};
 
-    use super::ComputedStyle;
+    use super::{ComputedStyle, Length};
 
     const DESKTOP: Viewport = Viewport {
         width: 1_440.0,
         height: 900.0,
     };
+
+    #[test]
+    fn lengths_keep_their_units_until_the_viewport_is_known() {
+        let viewport = Viewport {
+            width: 1_200.0,
+            height: 800.0,
+        };
+        assert_eq!(Length::parse("0.5"), Some(Length::Overlay(0.5)));
+        assert_eq!(Length::parse("200px").map(|value| value.resolve(viewport)), Some(0.5));
+        assert_eq!(Length::parse("10vw").map(|value| value.resolve(viewport)), Some(0.3));
+        assert_eq!(Length::parse("25vh").map(|value| value.resolve(viewport)), Some(0.5));
+    }
+
+    #[test]
+    fn non_finite_lengths_are_rejected() {
+        assert_eq!(Length::parse("NaNpx"), None);
+        assert_eq!(Length::parse("inf"), None);
+    }
 
     #[test]
     fn specificity_and_source_order_are_settled_once() {
