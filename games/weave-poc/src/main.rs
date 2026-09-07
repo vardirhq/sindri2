@@ -94,12 +94,7 @@ mod tests {
         assert!((menu_width(&authored) - source_width).abs() <= f32::EPSILON);
     }
 
-    fn string_field<'a>(
-        world: &'a World,
-        id: &str,
-        component: &str,
-        field: &str,
-    ) -> &'a str {
+    fn string_field<'a>(world: &'a World, id: &str, component: &str, field: &str) -> &'a str {
         world
             .entities()
             .find(|(_, data)| {
@@ -123,7 +118,7 @@ mod tests {
             })
             .and_then(|(_, data)| data.components.get(component))
             .and_then(|payload| payload.get(field))
-            .and_then(|value| value.as_f64())
+            .and_then(serde_json::Value::as_f64)
             .expect("numeric component field")
     }
 
@@ -170,11 +165,9 @@ mod tests {
             })
         );
 
-        let desktop_size =
-            number_field(desktop.world(), "title", "sindri.ui.text", "font_size");
+        let desktop_size = number_field(desktop.world(), "title", "sindri.ui.text", "font_size");
         let mobile_size = number_field(mobile.world(), "title", "sindri.ui.text", "font_size");
         assert!((desktop_size - 64.0 / 720.0).abs() < 1.0e-6);
         assert!((mobile_size - 60.0 / 844.0).abs() < 1.0e-6);
     }
-
 }
