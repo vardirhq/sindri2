@@ -67,6 +67,44 @@ fn the_run_hud_uses_the_reference_information_hierarchy() {
 }
 
 #[test]
+fn health_hit_animation_keeps_the_bar_compact() {
+    let mut run = Run::open().expect("the project opens");
+    for _ in 0..6 {
+        step(&mut run);
+    }
+    run.click("TitleStart");
+    step(&mut run);
+
+    let health = run.find("Health").expect("the health bar exists");
+    let base_height = run
+        .world
+        .get(health)
+        .expect("health bar remains")
+        .transform_3d
+        .as_ref()
+        .expect("health bar has a transform")
+        .scale[1];
+    assert!(base_height < 0.05, "health bar starts compact: {base_height}");
+
+    run.set_board("shield_impact", 1.0);
+    step(&mut run);
+    let hit_height = run
+        .world
+        .get(health)
+        .expect("health bar remains")
+        .transform_3d
+        .as_ref()
+        .expect("health bar has a transform")
+        .scale[1];
+
+    assert!(hit_height > base_height);
+    assert!(
+        hit_height < base_height * 1.2,
+        "hit pulse stays relative to the authored bar height: {hit_height}"
+    );
+}
+
+#[test]
 fn the_hud_names_every_reference_sector_and_boss() {
     let mut run = Run::open().expect("the project opens");
     for _ in 0..6 {
