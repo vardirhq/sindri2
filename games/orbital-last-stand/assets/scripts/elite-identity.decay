@@ -16,7 +16,6 @@ script EliteIdentity {
             this.shape.stroke.r = 1.0; this.shape.stroke.g = 0.953; this.shape.stroke.b = 0.69;
             this.shape.fill.a = 0.0;
             this.shape.dashes = 3.0 + this.index * 2.0;
-            this.shape.dash_duty = 0.55;
         } else if this.trait == 2.0 {
             this.transform.scale.x = 0.16; this.transform.scale.y = 0.16;
             this.shape.fill.r = 1.0; this.shape.fill.g = 0.949; this.shape.fill.b = 0.631;
@@ -26,7 +25,6 @@ script EliteIdentity {
             this.shape.stroke.r = 0.906; this.shape.stroke.g = 0.631; this.shape.stroke.b = 1.0;
             this.shape.fill.a = 0.0;
             this.shape.dashes = 9.0;
-            this.shape.dash_duty = 0.42;
         } else {
             this.transform.scale.x = 0.72; this.transform.scale.y = 0.045;
             this.transform.rotation_z = -0.9 + this.index * 1.05;
