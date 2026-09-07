@@ -136,7 +136,10 @@ fn class_rules_style_shape_and_text_components() {
     assert_eq!(transform.scale[0], 1.0);
     assert_eq!(transform.scale[1], 0.5);
 
-    let shape = entity.components.get("sindri.ui.shape").expect("shape payload");
+    let shape = entity
+        .components
+        .get("sindri.ui.shape")
+        .expect("shape payload");
     assert_color(
         shape.get("fill").expect("fill"),
         [
@@ -158,7 +161,10 @@ fn class_rules_style_shape_and_text_components() {
     assert_number(&shape["stroke_width"], 0.05);
     assert_number(&shape["corner_radius"], 0.2);
 
-    let text = entity.components.get("sindri.ui.text").expect("text payload");
+    let text = entity
+        .components
+        .get("sindri.ui.text")
+        .expect("text payload");
     assert_color(
         text.get("color").expect("color"),
         [
@@ -174,7 +180,11 @@ fn class_rules_style_shape_and_text_components() {
 
     let source_entity = source.entities().next().expect("source entity").1;
     assert_eq!(source_entity.components["sindri.ui.shape"]["fill"][0], 0.0);
-    assert!(source_entity.components["sindri.ui.text"].get("bold").is_none());
+    assert!(
+        source_entity.components["sindri.ui.text"]
+            .get("bold")
+            .is_none()
+    );
 }
 
 #[test]
