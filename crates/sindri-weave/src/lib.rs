@@ -169,13 +169,14 @@ fn dimension(
     viewport: Viewport,
     percent_basis: f32,
 ) -> Result<Option<f32>, ApplyError> {
-    let Some(value) = style.get(property) else {
+    let Some(value) = style.length(property) else {
         return Ok(None);
     };
-    let resolved = Length::parse(value)
-        .and_then(|length| length.resolve(viewport, Some(percent_basis)))
+    let resolved = value
+        .map_err(|authored| invalid(id, property, authored))?
+        .resolve(viewport, Some(percent_basis))
         .filter(|value| *value >= 0.0)
-        .ok_or_else(|| invalid(id, property, value))?;
+        .ok_or_else(|| invalid(id, property, style.get(property).unwrap_or_default()))?;
     Ok(Some(resolved))
 }
 
@@ -226,6 +227,37 @@ fn apply_property(
                 "sindri.ui.layout",
                 "direction",
                 value.trim().into(),
+            );
+        }
+        "justify-content" => {
+            let stored = match value.trim() {
+                "start" => "start",
+                "center" => "center",
+                "end" => "end",
+                "space-between" | "space_between" => "space_between",
+                _ => return Err(invalid(id, property, value)),
+            };
+            set_component_field(
+                world,
+                entity,
+                "sindri.ui.layout",
+                "justify",
+                stored.into(),
+            );
+        }
+        "align-items" => {
+            let stored = match value.trim() {
+                "start" => "start",
+                "center" => "center",
+                "end" => "end",
+                _ => return Err(invalid(id, property, value)),
+            };
+            set_component_field(
+                world,
+                entity,
+                "sindri.ui.layout",
+                "align",
+                stored.into(),
             );
         }
         "gap" => {
