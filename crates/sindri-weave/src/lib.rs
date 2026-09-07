@@ -304,7 +304,21 @@ fn color(value: &str) -> Option<[f32; 4]> {
         }
         _ => return None,
     };
-    Some(bytes.map(|channel| f32::from(channel) / 255.0))
+    Some([
+        srgb_channel(bytes[0]),
+        srgb_channel(bytes[1]),
+        srgb_channel(bytes[2]),
+        f32::from(bytes[3]) / 255.0,
+    ])
+}
+
+fn srgb_channel(byte: u8) -> f32 {
+    let encoded = f32::from(byte) / 255.0;
+    if encoded <= 0.040_45 {
+        encoded / 12.92
+    } else {
+        ((encoded + 0.055) / 1.055).powf(2.4)
+    }
 }
 
 const fn hex_digit(byte: u8) -> Option<u8> {
@@ -361,7 +375,7 @@ mod tests {
     use sindri_core::{SceneDocument, World};
     use weave::{Viewport, parse};
 
-    use super::PresentationWorld;
+    use super::{PresentationWorld, srgb_channel};
 
     fn assert_color(actual: &serde_json::Value, expected: [f64; 4]) {
         let channels = actual.as_array().expect("color is an array");
@@ -496,11 +510,21 @@ mod tests {
             .expect("shape payload");
         assert_color(
             shape.get("fill").expect("fill"),
-            [171.0 / 255.0, 205.0 / 255.0, 239.0 / 255.0, 1.0],
+            [
+                f64::from(srgb_channel(171)),
+                f64::from(srgb_channel(205)),
+                f64::from(srgb_channel(239)),
+                1.0,
+            ],
         );
         assert_color(
             shape.get("stroke").expect("stroke"),
-            [68.0 / 255.0, 85.0 / 255.0, 102.0 / 255.0, 1.0],
+            [
+                f64::from(srgb_channel(68)),
+                f64::from(srgb_channel(85)),
+                f64::from(srgb_channel(102)),
+                1.0,
+            ],
         );
         assert_eq!(shape["stroke_width"], 0.05);
         assert_eq!(shape["corner_radius"], 0.2);
@@ -511,7 +535,12 @@ mod tests {
             .expect("text payload");
         assert_color(
             text.get("color").expect("color"),
-            [248.0 / 255.0, 250.0 / 255.0, 252.0 / 255.0, 1.0],
+            [
+                f64::from(srgb_channel(248)),
+                f64::from(srgb_channel(250)),
+                f64::from(srgb_channel(252)),
+                1.0,
+            ],
         );
         assert_eq!(text["bold"], true);
         assert_eq!(text["case"], "upper");
