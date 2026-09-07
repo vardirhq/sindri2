@@ -109,7 +109,7 @@ mod tests {
             })
             .and_then(|(_, data)| data.components.get(component))
             .and_then(|payload| payload.get(field))
-            .and_then(serde_json::Value::as_str)
+            .and_then(|value| value.as_str())
             .expect("string component field")
     }
 
@@ -123,7 +123,7 @@ mod tests {
             })
             .and_then(|(_, data)| data.components.get(component))
             .and_then(|payload| payload.get(field))
-            .and_then(serde_json::Value::as_f64)
+            .and_then(|value| value.as_f64())
             .expect("numeric component field")
     }
 
