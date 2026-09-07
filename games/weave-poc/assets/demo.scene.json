@@ -4,7 +4,7 @@
   "entities": [
     {
       "id": "menu",
-      "name": "Menu",
+      "name": "Weave Showcase",
       "transform_3d": { "scale": [0.7, 0.8, 1.0] },
       "components": {
         "weave.style": { "classes": ["panel"] },
@@ -14,36 +14,123 @@
           "anchor": "center",
           "layer": 1
         },
-        "sindri.ui.layout": { "direction": "column", "spacing": 0.2 }
+        "sindri.ui.layout": {
+          "direction": "column",
+          "spacing": 0.2,
+          "justify": "center",
+          "align": "center"
+        }
+      }
+    },
+    {
+      "id": "topbar",
+      "name": "Top Bar",
+      "parent": "menu",
+      "transform_3d": { "scale": [1.2, 0.12, 1.0] },
+      "components": {
+        "weave.style": { "classes": ["topbar"] },
+        "sindri.ui.layout": {
+          "direction": "row",
+          "spacing": 0.1,
+          "justify": "center",
+          "align": "center"
+        }
       }
     },
     {
       "id": "eyebrow",
       "name": "Eyebrow",
-      "parent": "menu",
+      "parent": "topbar",
       "components": {
         "weave.style": { "classes": ["eyebrow"] },
         "sindri.ui.text": {
           "text": "WEAVE / RESPONSIVE UI",
           "font": "fonts/ChakraPetch-Regular.ttf",
           "font_size": 0.05,
-          "bounds": [1.2, 0.1],
+          "bounds": [0.7, 0.1],
           "anchor": "center",
           "layer": 3
         }
       }
     },
     {
+      "id": "viewport-badge",
+      "name": "Viewport Badge",
+      "parent": "topbar",
+      "transform_3d": { "scale": [0.28, 0.07, 1.0] },
+      "components": {
+        "weave.style": { "classes": ["viewport-badge"] },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "fill": [0.0, 0.0, 0.0, 1.0],
+          "anchor": "center",
+          "layer": 2
+        },
+        "sindri.ui.layout": {
+          "direction": "row",
+          "spacing": 0.0,
+          "justify": "center",
+          "align": "center"
+        }
+      }
+    },
+    {
+      "id": "viewport-badge-label",
+      "name": "Viewport Badge Label",
+      "parent": "viewport-badge",
+      "components": {
+        "weave.style": { "classes": ["badge-label"] },
+        "sindri.ui.text": {
+          "text": "LIVE LAYOUT",
+          "font": "fonts/ChakraPetch-Regular.ttf",
+          "font_size": 0.035,
+          "bounds": [0.25, 0.06],
+          "anchor": "center",
+          "layer": 3
+        }
+      }
+    },
+    {
+      "id": "hero",
+      "name": "Hero",
+      "parent": "menu",
+      "transform_3d": { "scale": [1.2, 0.55, 1.0] },
+      "components": {
+        "weave.style": { "classes": ["hero"] },
+        "sindri.ui.layout": {
+          "direction": "row",
+          "spacing": 0.15,
+          "justify": "center",
+          "align": "center"
+        }
+      }
+    },
+    {
+      "id": "hero-copy",
+      "name": "Hero Copy",
+      "parent": "hero",
+      "transform_3d": { "scale": [0.7, 0.5, 1.0] },
+      "components": {
+        "weave.style": { "classes": ["hero-copy"] },
+        "sindri.ui.layout": {
+          "direction": "column",
+          "spacing": 0.08,
+          "justify": "center",
+          "align": "center"
+        }
+      }
+    },
+    {
       "id": "title",
       "name": "Title",
-      "parent": "menu",
+      "parent": "hero-copy",
       "components": {
         "weave.style": { "classes": ["title"] },
         "sindri.ui.text": {
-          "text": "STYLE THE WORLD",
+          "text": "ONE SCENE. EVERY VIEWPORT.",
           "font": "fonts/ChakraPetch-Regular.ttf",
           "font_size": 0.08,
-          "bounds": [1.3, 0.16],
+          "bounds": [0.68, 0.18],
           "anchor": "center",
           "layer": 3
         }
@@ -52,23 +139,107 @@
     {
       "id": "subtitle",
       "name": "Subtitle",
-      "parent": "menu",
+      "parent": "hero-copy",
       "components": {
         "weave.style": { "classes": ["subtitle"] },
         "sindri.ui.text": {
-          "text": "ONE SCENE // EVERY VIEWPORT",
+          "text": "ALIGN, DISTRIBUTE, AND REFLOW WITHOUT DECAY CALCULATING PRESENTATION.",
           "font": "fonts/ChakraPetch-Regular.ttf",
           "font_size": 0.04,
-          "bounds": [1.3, 0.1],
+          "bounds": [0.68, 0.18],
           "anchor": "center",
           "layer": 3
         }
       }
     },
     {
+      "id": "proof",
+      "name": "Layout Proof",
+      "parent": "hero",
+      "transform_3d": { "scale": [0.38, 0.42, 1.0] },
+      "components": {
+        "weave.style": { "classes": ["proof-card"] },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "fill": [0.0, 0.0, 0.0, 1.0],
+          "anchor": "center",
+          "layer": 2
+        },
+        "sindri.ui.layout": {
+          "direction": "column",
+          "spacing": 0.05,
+          "justify": "center",
+          "align": "center"
+        }
+      }
+    },
+    {
+      "id": "proof-kicker",
+      "name": "Proof Kicker",
+      "parent": "proof",
+      "components": {
+        "weave.style": { "classes": ["proof-kicker"] },
+        "sindri.ui.text": {
+          "text": "#203",
+          "font": "fonts/ChakraPetch-Regular.ttf",
+          "font_size": 0.04,
+          "bounds": [0.3, 0.06],
+          "anchor": "center",
+          "layer": 3
+        }
+      }
+    },
+    {
+      "id": "proof-title",
+      "name": "Proof Title",
+      "parent": "proof",
+      "components": {
+        "weave.style": { "classes": ["proof-title"] },
+        "sindri.ui.text": {
+          "text": "SPACE BETWEEN",
+          "font": "fonts/ChakraPetch-Regular.ttf",
+          "font_size": 0.05,
+          "bounds": [0.32, 0.08],
+          "anchor": "center",
+          "layer": 3
+        }
+      }
+    },
+    {
+      "id": "proof-body",
+      "name": "Proof Body",
+      "parent": "proof",
+      "components": {
+        "weave.style": { "classes": ["proof-body"] },
+        "sindri.ui.text": {
+          "text": "START / CENTER / END",
+          "font": "fonts/ChakraPetch-Regular.ttf",
+          "font_size": 0.032,
+          "bounds": [0.32, 0.08],
+          "anchor": "center",
+          "layer": 3
+        }
+      }
+    },
+    {
+      "id": "actions",
+      "name": "Actions",
+      "parent": "menu",
+      "transform_3d": { "scale": [1.2, 0.15, 1.0] },
+      "components": {
+        "weave.style": { "classes": ["actions"] },
+        "sindri.ui.layout": {
+          "direction": "row",
+          "spacing": 0.12,
+          "justify": "center",
+          "align": "center"
+        }
+      }
+    },
+    {
       "id": "play",
       "name": "Launch Demo",
-      "parent": "menu",
+      "parent": "actions",
       "transform_3d": { "scale": [0.5, 0.12, 1.0] },
       "components": {
         "weave.style": { "classes": ["menu-button", "primary"] },
@@ -100,7 +271,7 @@
     {
       "id": "source",
       "name": "View Source",
-      "parent": "menu",
+      "parent": "actions",
       "transform_3d": { "scale": [0.5, 0.12, 1.0] },
       "components": {
         "weave.style": { "classes": ["menu-button", "secondary"] },
@@ -124,6 +295,132 @@
           "font": "fonts/ChakraPetch-Regular.ttf",
           "font_size": 0.05,
           "bounds": [0.9, 0.12],
+          "anchor": "center",
+          "layer": 3
+        }
+      }
+    },
+    {
+      "id": "features",
+      "name": "Feature Strip",
+      "parent": "menu",
+      "transform_3d": { "scale": [1.2, 0.2, 1.0] },
+      "components": {
+        "weave.style": { "classes": ["features"] },
+        "sindri.ui.layout": {
+          "direction": "row",
+          "spacing": 0.08,
+          "justify": "center",
+          "align": "center"
+        }
+      }
+    },
+    {
+      "id": "feature-start",
+      "name": "Start Feature",
+      "parent": "features",
+      "transform_3d": { "scale": [0.3, 0.14, 1.0] },
+      "components": {
+        "weave.style": { "classes": ["feature-card", "feature-start"] },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "fill": [0.0, 0.0, 0.0, 1.0],
+          "anchor": "center",
+          "layer": 2
+        },
+        "sindri.ui.layout": {
+          "direction": "column",
+          "spacing": 0.02,
+          "justify": "center",
+          "align": "center"
+        }
+      }
+    },
+    {
+      "id": "feature-start-label",
+      "name": "Start Feature Label",
+      "parent": "feature-start",
+      "components": {
+        "weave.style": { "classes": ["feature-label"] },
+        "sindri.ui.text": {
+          "text": "START",
+          "font": "fonts/ChakraPetch-Regular.ttf",
+          "font_size": 0.035,
+          "bounds": [0.25, 0.06],
+          "anchor": "center",
+          "layer": 3
+        }
+      }
+    },
+    {
+      "id": "feature-center",
+      "name": "Center Feature",
+      "parent": "features",
+      "transform_3d": { "scale": [0.3, 0.14, 1.0] },
+      "components": {
+        "weave.style": { "classes": ["feature-card", "feature-center"] },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "fill": [0.0, 0.0, 0.0, 1.0],
+          "anchor": "center",
+          "layer": 2
+        },
+        "sindri.ui.layout": {
+          "direction": "column",
+          "spacing": 0.02,
+          "justify": "center",
+          "align": "center"
+        }
+      }
+    },
+    {
+      "id": "feature-center-label",
+      "name": "Center Feature Label",
+      "parent": "feature-center",
+      "components": {
+        "weave.style": { "classes": ["feature-label"] },
+        "sindri.ui.text": {
+          "text": "CENTER",
+          "font": "fonts/ChakraPetch-Regular.ttf",
+          "font_size": 0.035,
+          "bounds": [0.25, 0.06],
+          "anchor": "center",
+          "layer": 3
+        }
+      }
+    },
+    {
+      "id": "feature-end",
+      "name": "End Feature",
+      "parent": "features",
+      "transform_3d": { "scale": [0.3, 0.14, 1.0] },
+      "components": {
+        "weave.style": { "classes": ["feature-card", "feature-end"] },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "fill": [0.0, 0.0, 0.0, 1.0],
+          "anchor": "center",
+          "layer": 2
+        },
+        "sindri.ui.layout": {
+          "direction": "column",
+          "spacing": 0.02,
+          "justify": "center",
+          "align": "center"
+        }
+      }
+    },
+    {
+      "id": "feature-end-label",
+      "name": "End Feature Label",
+      "parent": "feature-end",
+      "components": {
+        "weave.style": { "classes": ["feature-label"] },
+        "sindri.ui.text": {
+          "text": "END",
+          "font": "fonts/ChakraPetch-Regular.ttf",
+          "font_size": 0.035,
+          "bounds": [0.25, 0.06],
           "anchor": "center",
           "layer": 3
         }
