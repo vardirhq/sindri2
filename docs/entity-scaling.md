@@ -1,5 +1,9 @@
 # Entity scaling
 
+> **Measurement record:** these workloads informed the current world design.
+> Re-run the command below for current timings; absolute numbers are a build and
+> machine snapshot rather than a performance guarantee.
+
 `ROADMAP.md` gates the question of an archetype ECS on measuring 1k, 10k, and
 100k entity workloads. This is that measurement, and what it decided.
 
