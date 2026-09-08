@@ -210,7 +210,6 @@ Two consequences worth knowing:
   nominates what a project opens on, and a scene made inside a project that
   nominates nothing claims the empty place. The project's *name* still cannot
   be changed from the editor — a project is renamed by editing the file.
-- Nothing in the engine reads `sindri.toml`. It is editor metadata today. When
-  the runtime needs a project file — a window size, a starting scene for a
-  build — this is the file it should read, and moving the format into a crate is
-  the change that would make it one.
+- The runtime and exporter read the manifest's entry scene and asset policy,
+  but there is no broader runtime settings surface yet: window policy, host
+  module selection, and target-specific settings are not project fields.
