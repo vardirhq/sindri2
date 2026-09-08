@@ -321,11 +321,14 @@ fn apply_property(
             set_component_field(world, entity, "sindri.ui.shape", field, resolved.into());
         }
         "text-align" => {
-            let value = value.trim();
-            if !matches!(value, "left" | "center" | "right" | "justify") {
-                return Err(invalid(id, property, value));
-            }
-            set_component_field(world, entity, "sindri.ui.text", "line_align", value.into());
+            let stored = match value.trim() {
+                "start" | "left" => "left",
+                "center" => "center",
+                "end" | "right" => "right",
+                "justify" => "justify",
+                _ => return Err(invalid(id, property, value)),
+            };
+            set_component_field(world, entity, "sindri.ui.text", "line_align", stored.into());
         }
         "text-wrap" => {
             let stored = match value.trim() {
