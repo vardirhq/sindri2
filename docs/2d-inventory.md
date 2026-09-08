@@ -1,5 +1,9 @@
 # The legacy 2D inventory
 
+> **Historical source audit:** this inventories the legacy `sindri-engine` at
+> `77e0489` and records migration decisions. It is not a current Sindri Next
+> capability list; use `capabilities.md` and the integration matrices for that.
+
 What `vardirhq/sindri-engine` contains, subsystem by subsystem, and what should happen to each: **port**, **refactor**, **replace**, or **defer**. This is the gating item for the rest of Milestone 6 — every port below it depends on a decision recorded here.
 
 Read at `77e0489`, from the code rather than from memory of it. The legacy engine crate is 13,873 lines of Rust across 34 files, plus a 4,505-line Axum server, a 210-line Ollama client, a TypeScript/Tauri editor, and five examples.
