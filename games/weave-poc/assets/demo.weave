@@ -90,6 +90,7 @@ sindri.ui.text {
     font-size: 16px;
     line-height: 23px;
     letter-spacing: 1px;
+    text-wrap: word;
 }
 
 .proof-card {
