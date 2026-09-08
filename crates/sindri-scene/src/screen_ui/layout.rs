@@ -196,11 +196,8 @@ impl UiLayoutComponent {
                 if self.align == UiAlign::Stretch {
                     resolved_size[cross_axis] = parent_cross;
                 }
-                let offset = self.finish_offset(
-                    logical_main,
-                    parent_cross,
-                    resolved_size[cross_axis],
-                );
+                let offset =
+                    self.finish_offset(logical_main, parent_cross, resolved_size[cross_axis]);
                 UiLayoutBox {
                     offset,
                     size: resolved_size,
@@ -340,8 +337,8 @@ mod tests {
         let mut row = layout(UiDirection::Row);
         row.align = UiAlign::Stretch;
         let resolved = row.resolve_in_box([4.0, 2.0], &[[1.0, 0.5], [0.5, 1.0]]);
-        assert_eq!(resolved[0].size, [1.0, 2.0]);
-        assert_eq!(resolved[1].size, [0.5, 2.0]);
+        assert_at(resolved[0].size, [1.0, 2.0]);
+        assert_at(resolved[1].size, [0.5, 2.0]);
         assert_at(resolved[0].offset, [-0.5, 0.0]);
         assert_at(resolved[1].offset, [0.75, 0.0]);
     }
