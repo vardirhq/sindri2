@@ -102,7 +102,7 @@ fn a_project_is_named_by_its_manifest_rather_than_by_its_folder() {
     assert_eq!(
         Project::open(&root).expect("it opens").name(),
         "Gather",
-        "the game is called Gather even though the folder is called assets"
+        "the game is called Gather even though the folder is called `assets`"
     );
     assert_eq!(project.name(), "Gather");
 }
