@@ -104,7 +104,7 @@ desktop screen:
         height: 126vw;
         direction: column;
         gap: 3vw;
-        align-items: stretch;
+        align-items: center;
     }
 
     .upgrade-card {
@@ -182,6 +182,7 @@ problem from a scene or gameplay problem.
 Stop and add a generic Sindri UI primitive when a design genuinely requires:
 
 - intrinsic content sizing
+- cross-axis stretch or flexible growth
 - wrapped flex rows or a grid
 - scrolling or clipping
 - pseudo-state presentation
