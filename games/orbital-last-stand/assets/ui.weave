@@ -172,3 +172,242 @@
         y: -26vw;
     }
 }
+
+.overlay-panel {
+    x: 0px;
+    y: 0px;
+    anchor: center;
+    background: #07101f;
+    border-color: #26364d;
+    border-width: 2px;
+    border-radius: 24px;
+}
+
+.pause-panel {
+    width: 520px;
+    height: 410px;
+}
+
+.result-panel {
+    width: 580px;
+    height: 560px;
+}
+
+.overlay-title {
+    width: 460px;
+    height: 58px;
+    color: #f8fafc;
+    font-size: 42px;
+    line-height: 48px;
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+}
+
+.pause-title {
+    x: 0px;
+    y: 120px;
+    anchor: center;
+}
+
+.overlay-kicker {
+    width: 460px;
+    height: 28px;
+    color: #fb7185;
+    font-size: 18px;
+    line-height: 22px;
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+}
+
+.result-title {
+    x: 0px;
+    y: 205px;
+    anchor: center;
+}
+
+.result-score {
+    x: 0px;
+    y: 145px;
+    anchor: center;
+}
+
+.result-stat {
+    width: 420px;
+    height: 30px;
+    color: #cbd5e1;
+    font-size: 20px;
+    line-height: 24px;
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.result-best {
+    x: 0px;
+    y: 82px;
+    anchor: center;
+    color: #6ee7b7;
+}
+
+.result-kills {
+    x: 0px;
+    y: 34px;
+    anchor: center;
+}
+
+.result-time {
+    x: 0px;
+    y: -14px;
+    anchor: center;
+}
+
+.overlay-button {
+    width: 420px;
+    height: 64px;
+    x: 0px;
+    anchor: center;
+    border-width: 2px;
+    border-radius: 14px;
+}
+
+.overlay-primary {
+    background: #5eead4;
+    border-color: #99f6e4;
+}
+
+.overlay-danger {
+    background: transparent;
+    border-color: #fb7185;
+}
+
+.overlay-button-label {
+    width: 390px;
+    height: 28px;
+    x: 0px;
+    anchor: center;
+    font-size: 20px;
+    line-height: 24px;
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.overlay-primary-label {
+    color: #07101f;
+}
+
+.overlay-danger-label {
+    color: #fda4af;
+}
+
+#pause-resume,
+#pause-resume-text {
+    y: 18px;
+}
+
+#pause-quit,
+#pause-quit-text {
+    y: -76px;
+}
+
+#result-again,
+#result-again-text {
+    y: -185px;
+}
+
+@media (max-width: 700px) {
+    .pause-panel {
+        width: 88vw;
+        height: 104vw;
+        border-radius: 5vw;
+    }
+
+    .result-panel {
+        width: 90vw;
+        height: 128vw;
+        border-radius: 5vw;
+    }
+
+    .overlay-title {
+        width: 78vw;
+        height: 12vw;
+        font-size: 8vw;
+        line-height: 10vw;
+        letter-spacing: 0.6vw;
+    }
+
+    .pause-title {
+        y: 30vw;
+    }
+
+    .overlay-kicker {
+        width: 78vw;
+        height: 6vw;
+        font-size: 4vw;
+        line-height: 5vw;
+        letter-spacing: 0.8vw;
+    }
+
+    .result-title {
+        y: 48vw;
+    }
+
+    .result-score {
+        y: 34vw;
+    }
+
+    .result-stat {
+        width: 76vw;
+        height: 7vw;
+        font-size: 4.2vw;
+        line-height: 5.5vw;
+        letter-spacing: 0.4vw;
+    }
+
+    .result-best {
+        y: 20vw;
+    }
+
+    .result-kills {
+        y: 10vw;
+    }
+
+    .result-time {
+        y: 0vw;
+    }
+
+    .overlay-button {
+        width: 76vw;
+        height: 14vw;
+        border-radius: 3.5vw;
+    }
+
+    .overlay-button-label {
+        width: 70vw;
+        height: 6vw;
+        font-size: 4.4vw;
+        line-height: 5.5vw;
+        letter-spacing: 0.4vw;
+    }
+
+    #pause-resume,
+    #pause-resume-text {
+        y: 4vw;
+    }
+
+    #pause-quit,
+    #pause-quit-text {
+        y: -18vw;
+    }
+
+    #result-again,
+    #result-again-text {
+        y: -42vw;
+    }
+}
