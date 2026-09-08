@@ -1,5 +1,10 @@
 # Last Stand parity: where the work is, and how to continue it
 
+> **Snapshot:** historical handover from the early parity campaign. Keep its
+> design rules and traps, but use `games/orbital-last-stand/README.md`,
+> `last-stand-reference-parity.md`, `last-stand-visual-parity.md`, and
+> `capabilities.md` for current status.
+
 A handover for whoever picks this up next. It assumes you can read the
 repository but were not present for the decisions, so it says why as well as
 what — the *why* is the part that stops you undoing something on purpose.
