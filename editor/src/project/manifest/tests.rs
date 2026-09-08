@@ -70,6 +70,31 @@ fn what_is_written_is_what_comes_back() {
 }
 
 #[test]
+fn explicit_asset_includes_are_read_without_inventing_them_for_new_projects() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let root = directory.path();
+    std::fs::write(
+        root.join(MANIFEST_NAME),
+        "format_version = 1\n\n[project]\nname = \"Styled\"\n\n[assets]\ninclude = [\"ui.weave\", \"music/theme.ogg\"]\n",
+    )
+    .expect("a manifest");
+    let project = Project::open(root).expect("the manifest opens");
+    assert_eq!(
+        project.included_assets(),
+        ["ui.weave", "music/theme.ogg"],
+        "the editor must agree with export about which files are explicit roots"
+    );
+
+    let created_root = directory.path().join("fresh");
+    created(&created_root, "Fresh");
+    let text = std::fs::read_to_string(created_root.join(MANIFEST_NAME)).expect("the manifest");
+    assert!(
+        !text.contains("[assets]"),
+        "an empty optional table should not churn manifests that do not need it: {text}"
+    );
+}
+
+#[test]
 fn a_project_is_named_by_its_manifest_rather_than_by_its_folder() {
     let directory = tempfile::tempdir().expect("a temporary directory");
     let root = directory.path().join("assets");
