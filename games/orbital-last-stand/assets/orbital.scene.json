@@ -10,31 +10,31 @@
       "parent": null,
       "transform_3d": {
         "position": [
-          0,
-          0,
-          -10
+          0.0,
+          0.0,
+          -10.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          60,
-          60,
-          1
+          60.0,
+          60.0,
+          1.0
         ]
       },
       "components": {
         "sindri.shape": {
           "kind": "rect",
-          "count": 6,
+          "count": 6.0,
           "fill": [
             0.00152,
             0.00212,
             0.00439,
-            1
+            1.0
           ],
           "stroke": [
             0,
@@ -42,12 +42,12 @@
             0,
             0
           ],
-          "stroke_width": 0,
-          "corner_radius": 0,
-          "dashes": 0,
+          "stroke_width": 0.0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
           "dash_duty": 0.5,
-          "sweep_start": 0,
-          "sweep_turns": 1,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
           "blend": "over",
           "layer": -200
         }
@@ -59,26 +59,26 @@
       "parent": null,
       "transform_3d": {
         "position": [
-          0,
-          0,
-          -10
+          0.0,
+          0.0,
+          -10.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          60,
-          60,
-          1
+          60.0,
+          60.0,
+          1.0
         ]
       },
       "components": {
         "sindri.shape": {
           "kind": "grid",
-          "count": 52,
+          "count": 52.0,
           "fill": [
             0,
             0,
@@ -89,14 +89,14 @@
             0.00852,
             0.0343,
             0.02445,
-            1
+            1.0
           ],
           "stroke_width": 0.0004,
-          "corner_radius": 0,
-          "dashes": 0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
           "dash_duty": 0.5,
-          "sweep_start": 0,
-          "sweep_turns": 1,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
           "blend": "over",
           "layer": -199
         }
@@ -107,28 +107,28 @@
       "name": "Camera",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          10
+          0.0,
+          0.0,
+          10.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
         "sindri.camera": {
-          "far": 100,
+          "far": 100.0,
           "near": 0.1,
           "projection": "orthographic",
-          "vertical_size": 11,
+          "vertical_size": 11.0,
           "fit": "shorter"
         },
         "sindri.script": {
@@ -144,27 +144,27 @@
       "parent": "upgrade-row",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.7896,
           0.2,
-          1
+          1.0
         ]
       },
       "components": {
         "sindri.script": {
           "properties": {
             "catalog": "profiles/module-catalog.profile.json",
-            "slot": 0
+            "slot": 0.0
           },
           "script": "Module",
           "source": "scripts/module.decay"
@@ -179,25 +179,25 @@
         },
         "sindri.ui.shape": {
           "kind": "rect",
-          "count": 6,
+          "count": 6.0,
           "fill": [
             0.00335,
             0.00561,
             0.01444,
-            1
+            1.0
           ],
           "stroke": [
             0.10302,
             0.10505,
             0.113,
-            1
+            1.0
           ],
           "stroke_width": 0.01,
-          "corner_radius": 0,
-          "dashes": 0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
           "dash_duty": 0.5,
-          "sweep_start": 0,
-          "sweep_turns": 1,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
           "blend": "over",
           "anchor": "center",
           "layer": 110
@@ -210,20 +210,20 @@
       "parent": "card-dmg",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           -0.035,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -233,7 +233,7 @@
             0.19807,
             0.2384,
             0.31399,
-            1
+            1.0
           ],
           "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.033,
@@ -258,20 +258,20 @@
       "parent": "card-dmg",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           0.035,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -281,7 +281,7 @@
             0.80695,
             0.85499,
             0.92158,
-            1
+            1.0
           ],
           "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.046,
@@ -309,27 +309,27 @@
       "parent": "upgrade-row",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.7896,
           0.2,
-          1
+          1.0
         ]
       },
       "components": {
         "sindri.script": {
           "properties": {
             "catalog": "profiles/module-catalog.profile.json",
-            "slot": 1
+            "slot": 1.0
           },
           "script": "Module",
           "source": "scripts/module.decay"
@@ -344,25 +344,25 @@
         },
         "sindri.ui.shape": {
           "kind": "rect",
-          "count": 6,
+          "count": 6.0,
           "fill": [
             0.00335,
             0.00561,
             0.01444,
-            1
+            1.0
           ],
           "stroke": [
             0.10302,
             0.10505,
             0.113,
-            1
+            1.0
           ],
           "stroke_width": 0.01,
-          "corner_radius": 0,
-          "dashes": 0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
           "dash_duty": 0.5,
-          "sweep_start": 0,
-          "sweep_turns": 1,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
           "blend": "over",
           "anchor": "center",
           "layer": 110
@@ -375,20 +375,20 @@
       "parent": "card-hull",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           -0.035,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -398,7 +398,7 @@
             0.19807,
             0.2384,
             0.31399,
-            1
+            1.0
           ],
           "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.033,
@@ -423,20 +423,20 @@
       "parent": "card-hull",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           0.035,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -446,7 +446,7 @@
             0.80695,
             0.85499,
             0.92158,
-            1
+            1.0
           ],
           "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.046,
@@ -474,27 +474,27 @@
       "parent": "upgrade-row",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.7896,
           0.2,
-          1
+          1.0
         ]
       },
       "components": {
         "sindri.script": {
           "properties": {
             "catalog": "profiles/module-catalog.profile.json",
-            "slot": 2
+            "slot": 2.0
           },
           "script": "Module",
           "source": "scripts/module.decay"
@@ -509,25 +509,25 @@
         },
         "sindri.ui.shape": {
           "kind": "rect",
-          "count": 6,
+          "count": 6.0,
           "fill": [
             0.00335,
             0.00561,
             0.01444,
-            1
+            1.0
           ],
           "stroke": [
             0.10302,
             0.10505,
             0.113,
-            1
+            1.0
           ],
           "stroke_width": 0.01,
-          "corner_radius": 0,
-          "dashes": 0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
           "dash_duty": 0.5,
-          "sweep_start": 0,
-          "sweep_turns": 1,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
           "blend": "over",
           "anchor": "center",
           "layer": 110
@@ -540,20 +540,20 @@
       "parent": "card-magnet",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           -0.035,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -563,7 +563,7 @@
             0.19807,
             0.2384,
             0.31399,
-            1
+            1.0
           ],
           "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.033,
@@ -588,20 +588,20 @@
       "parent": "card-magnet",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           0.035,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -611,7 +611,7 @@
             0.80695,
             0.85499,
             0.92158,
-            1
+            1.0
           ],
           "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.046,
@@ -639,27 +639,27 @@
       "parent": "upgrade-row",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.7896,
           0.2,
-          1
+          1.0
         ]
       },
       "components": {
         "sindri.script": {
           "properties": {
             "catalog": "profiles/module-catalog.profile.json",
-            "slot": 3
+            "slot": 3.0
           },
           "script": "Module",
           "source": "scripts/module.decay"
@@ -674,25 +674,25 @@
         },
         "sindri.ui.shape": {
           "kind": "rect",
-          "count": 6,
+          "count": 6.0,
           "fill": [
             0.00335,
             0.00561,
             0.01444,
-            1
+            1.0
           ],
           "stroke": [
             0.10302,
             0.10505,
             0.113,
-            1
+            1.0
           ],
           "stroke_width": 0.01,
-          "corner_radius": 0,
-          "dashes": 0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
           "dash_duty": 0.5,
-          "sweep_start": 0,
-          "sweep_turns": 1,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
           "blend": "over",
           "anchor": "center",
           "layer": 110
@@ -705,20 +705,20 @@
       "parent": "card-pierce",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           -0.035,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -728,7 +728,7 @@
             0.19807,
             0.2384,
             0.31399,
-            1
+            1.0
           ],
           "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.033,
@@ -753,20 +753,20 @@
       "parent": "card-pierce",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           0.035,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -776,7 +776,7 @@
             0.80695,
             0.85499,
             0.92158,
-            1
+            1.0
           ],
           "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.046,
@@ -804,27 +804,27 @@
       "parent": "upgrade-row",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.7896,
           0.2,
-          1
+          1.0
         ]
       },
       "components": {
         "sindri.script": {
           "properties": {
             "catalog": "profiles/module-catalog.profile.json",
-            "slot": 4
+            "slot": 4.0
           },
           "script": "Module",
           "source": "scripts/module.decay"
@@ -839,25 +839,25 @@
         },
         "sindri.ui.shape": {
           "kind": "rect",
-          "count": 6,
+          "count": 6.0,
           "fill": [
             0.00335,
             0.00561,
             0.01444,
-            1
+            1.0
           ],
           "stroke": [
             0.10302,
             0.10505,
             0.113,
-            1
+            1.0
           ],
           "stroke_width": 0.01,
-          "corner_radius": 0,
-          "dashes": 0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
           "dash_duty": 0.5,
-          "sweep_start": 0,
-          "sweep_turns": 1,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
           "blend": "over",
           "anchor": "center",
           "layer": 110
@@ -870,20 +870,20 @@
       "parent": "card-rate",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           -0.035,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -893,7 +893,7 @@
             0.19807,
             0.2384,
             0.31399,
-            1
+            1.0
           ],
           "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.033,
@@ -918,20 +918,20 @@
       "parent": "card-rate",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           0.035,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -941,7 +941,7 @@
             0.80695,
             0.85499,
             0.92158,
-            1
+            1.0
           ],
           "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.046,
@@ -969,27 +969,27 @@
       "parent": "upgrade-row",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.7896,
           0.2,
-          1
+          1.0
         ]
       },
       "components": {
         "sindri.script": {
           "properties": {
             "catalog": "profiles/module-catalog.profile.json",
-            "slot": 5
+            "slot": 5.0
           },
           "script": "Module",
           "source": "scripts/module.decay"
@@ -1004,25 +1004,25 @@
         },
         "sindri.ui.shape": {
           "kind": "rect",
-          "count": 6,
+          "count": 6.0,
           "fill": [
             0.00335,
             0.00561,
             0.01444,
-            1
+            1.0
           ],
           "stroke": [
             0.10302,
             0.10505,
             0.113,
-            1
+            1.0
           ],
           "stroke_width": 0.01,
-          "corner_radius": 0,
-          "dashes": 0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
           "dash_duty": 0.5,
-          "sweep_start": 0,
-          "sweep_turns": 1,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
           "blend": "over",
           "anchor": "center",
           "layer": 110
@@ -1035,20 +1035,20 @@
       "parent": "card-speed",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           -0.035,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -1058,7 +1058,7 @@
             0.19807,
             0.2384,
             0.31399,
-            1
+            1.0
           ],
           "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.033,
@@ -1083,20 +1083,20 @@
       "parent": "card-speed",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           0.035,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -1106,7 +1106,7 @@
             0.80695,
             0.85499,
             0.92158,
-            1
+            1.0
           ],
           "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.046,
@@ -1133,27 +1133,27 @@
       "name": "UpgradeChooser",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
         "sindri.script": {
           "properties": {
             "catalog": "profiles/module-catalog.profile.json",
-            "offers": 3
+            "offers": 3.0
           },
           "script": "UpgradeChooser",
           "source": "scripts/upgrade-chooser.decay"
@@ -1190,38 +1190,38 @@
       "name": "Director",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
         "sindri.script": {
           "properties": {
             "arena": 7.5,
-            "boss_at": 180,
+            "boss_at": 180.0,
             "charger": "prefabs/charger.prefab.json",
             "challenger": "prefabs/challenger.prefab.json",
             "drifter": "prefabs/drifter.prefab.json",
-            "elite_after": 105,
+            "elite_after": 105.0,
             "elite_base": 0.025,
-            "elite_time_divisor": 3000,
+            "elite_time_divisor": 3000.0,
             "elite_bonus_scale": 0.65,
             "elite_cap": 0.32,
             "splitter": "prefabs/splitter.prefab.json",
             "warden": "prefabs/warden.prefab.json",
-            "wave_gap": 6
+            "wave_gap": 6.0
           },
           "script": "Director",
           "source": "scripts/director.decay"
@@ -1233,20 +1233,20 @@
       "name": "Hud",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -1254,11 +1254,6 @@
           "properties": {},
           "script": "Hud",
           "source": "scripts/hud.decay"
-        },
-        "weave.style": {
-          "classes": [
-            "hud-root"
-          ]
         }
       },
       "disabled": true
@@ -1269,30 +1264,23 @@
       "parent": "hud",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
-      "disabled": true,
-      "components": {
-        "weave.style": {
-          "classes": [
-            "hud-boss"
-          ]
-        }
-      }
+      "disabled": true
     },
     {
       "id": "hud-boss-back",
@@ -1300,23 +1288,26 @@
       "parent": "hud-boss",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           -0.33,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.84,
           0.02,
-          1
+          1.0
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["hud-meter","hud-boss-meter","meter-back"]
+        },
         "sindri.ui.image": {
           "anchor": "top",
           "layer": 128,
@@ -1325,14 +1316,7 @@
             0.10302,
             0.10505,
             0.113,
-            1
-          ]
-        },
-        "weave.style": {
-          "classes": [
-            "hud-meter",
-            "hud-boss-meter",
-            "meter-back"
+            1.0
           ]
         }
       }
@@ -1343,43 +1327,39 @@
       "parent": "hud-boss",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           -0.33,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.84,
           0.02,
-          1
+          1.0
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["hud-meter","hud-boss-meter","meter-fill"]
+        },
         "sindri.ui.image": {
           "anchor": "top",
           "fill": {
-            "amount": 1,
+            "amount": 1.0,
             "from": "left"
           },
           "layer": 129,
           "texture": "textures/bar.png",
           "tint": [
-            1,
+            1.0,
             0.35,
             0.35,
-            1
-          ]
-        },
-        "weave.style": {
-          "classes": [
-            "hud-meter",
-            "hud-boss-meter",
-            "meter-fill"
+            1.0
           ]
         }
       }
@@ -1390,30 +1370,33 @@
       "parent": "hud-boss",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           -0.125,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["hud-text","hud-boss-name"]
+        },
         "sindri.ui.text": {
           "anchor": "top",
           "color": [
-            1,
+            1.0,
             0.14703,
             0.06848,
-            1
+            1.0
           ],
           "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.032,
@@ -1422,13 +1405,13 @@
           "text": "WARDEN",
           "shadow": {
             "offset": [
-              0,
+              0.0,
               -0.004
             ],
             "color": [
-              0,
-              0,
-              0,
+              0.0,
+              0.0,
+              0.0,
               0.75
             ],
             "softness": 0.005
@@ -1436,12 +1419,6 @@
           "case": "upper",
           "letter_spacing": 0.0048,
           "bold": false
-        },
-        "weave.style": {
-          "classes": [
-            "hud-text",
-            "hud-boss-name"
-          ]
         }
       }
     },
@@ -1451,30 +1428,33 @@
       "parent": "hud",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           -0.075,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["hud-text","hud-clock"]
+        },
         "sindri.ui.text": {
           "anchor": "top",
           "color": [
             0.80695,
             0.85499,
             0.92158,
-            1
+            1.0
           ],
           "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.075,
@@ -1483,13 +1463,13 @@
           "text": "{}:{.2}",
           "shadow": {
             "offset": [
-              0,
+              0.0,
               -0.004
             ],
             "color": [
-              0,
-              0,
-              0,
+              0.0,
+              0.0,
+              0.0,
               0.75
             ],
             "softness": 0.005
@@ -1497,12 +1477,6 @@
           "case": "upper",
           "letter_spacing": 0.01125,
           "bold": false
-        },
-        "weave.style": {
-          "classes": [
-            "hud-text",
-            "hud-clock"
-          ]
         }
       }
     },
@@ -1514,25 +1488,28 @@
         "position": [
           0.04,
           0.055,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.84,
           0.014,
-          1
+          1.0
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["hud-meter","hud-player-meter","cores-meter","meter-fill"]
+        },
         "sindri.ui.image": {
           "anchor": "bottom_left",
           "fill": {
-            "amount": 0,
+            "amount": 0.0,
             "from": "left"
           },
           "layer": 129,
@@ -1540,16 +1517,8 @@
           "tint": [
             0.5,
             0.8,
-            1,
-            1
-          ]
-        },
-        "weave.style": {
-          "classes": [
-            "hud-meter",
-            "hud-player-meter",
-            "cores-meter",
-            "meter-fill"
+            1.0,
+            1.0
           ]
         }
       }
@@ -1562,21 +1531,24 @@
         "position": [
           0.04,
           0.055,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.84,
           0.014,
-          1
+          1.0
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["hud-meter","hud-player-meter","cores-meter","meter-back"]
+        },
         "sindri.ui.image": {
           "anchor": "bottom_left",
           "layer": 128,
@@ -1585,15 +1557,7 @@
             0.10302,
             0.10505,
             0.113,
-            1
-          ]
-        },
-        "weave.style": {
-          "classes": [
-            "hud-meter",
-            "hud-player-meter",
-            "cores-meter",
-            "meter-back"
+            1.0
           ]
         }
       }
@@ -1606,42 +1570,37 @@
         "position": [
           0.04,
           0.1,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.84,
           0.028,
-          1
+          1.0
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["hud-meter","hud-player-meter","health-meter","meter-fill"]
+        },
         "sindri.ui.image": {
           "anchor": "bottom_left",
           "fill": {
-            "amount": 1,
+            "amount": 1.0,
             "from": "left"
           },
           "layer": 129,
           "texture": "textures/bar.png",
           "tint": [
-            1,
+            1.0,
             0.14703,
             0.06848,
-            1
-          ]
-        },
-        "weave.style": {
-          "classes": [
-            "hud-meter",
-            "hud-player-meter",
-            "health-meter",
-            "meter-fill"
+            1.0
           ]
         }
       }
@@ -1654,21 +1613,24 @@
         "position": [
           0.04,
           0.1,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.84,
           0.028,
-          1
+          1.0
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["hud-meter","hud-player-meter","health-meter","meter-back"]
+        },
         "sindri.ui.image": {
           "anchor": "bottom_left",
           "layer": 128,
@@ -1677,15 +1639,7 @@
             0.10302,
             0.10505,
             0.113,
-            1
-          ]
-        },
-        "weave.style": {
-          "classes": [
-            "hud-meter",
-            "hud-player-meter",
-            "health-meter",
-            "meter-back"
+            1.0
           ]
         }
       }
@@ -1698,28 +1652,31 @@
         "position": [
           0.04,
           0.16,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["hud-text","hud-health-label"]
+        },
         "sindri.ui.text": {
           "anchor": "bottom_left",
           "color": [
             0.80695,
             0.85499,
             0.92158,
-            1
+            1.0
           ],
           "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.03,
@@ -1728,13 +1685,13 @@
           "text": "{}/{}",
           "shadow": {
             "offset": [
-              0,
+              0.0,
               -0.004
             ],
             "color": [
-              0,
-              0,
-              0,
+              0.0,
+              0.0,
+              0.0,
               0.75
             ],
             "softness": 0.005
@@ -1742,12 +1699,6 @@
           "case": "upper",
           "letter_spacing": 0.0045,
           "bold": false
-        },
-        "weave.style": {
-          "classes": [
-            "hud-text",
-            "hud-health-label"
-          ]
         }
       }
     },
@@ -1759,28 +1710,31 @@
         "position": [
           -0.04,
           -0.155,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["hud-text","hud-stat","hud-level"]
+        },
         "sindri.ui.text": {
           "anchor": "top_right",
           "color": [
             0.20156,
             0.92158,
             0.57758,
-            1
+            1.0
           ],
           "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.028,
@@ -1789,13 +1743,13 @@
           "text": "Level {}",
           "shadow": {
             "offset": [
-              0,
+              0.0,
               -0.004
             ],
             "color": [
-              0,
-              0,
-              0,
+              0.0,
+              0.0,
+              0.0,
               0.75
             ],
             "softness": 0.005
@@ -1803,13 +1757,6 @@
           "case": "upper",
           "letter_spacing": 0.0042,
           "bold": false
-        },
-        "weave.style": {
-          "classes": [
-            "hud-text",
-            "hud-stat",
-            "hud-level"
-          ]
         }
       }
     },
@@ -1821,28 +1768,31 @@
         "position": [
           -0.04,
           -0.2,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["hud-text","hud-stat","hud-score"]
+        },
         "sindri.ui.text": {
           "anchor": "top_right",
           "color": [
             0.80695,
             0.85499,
             0.92158,
-            1
+            1.0
           ],
           "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.032,
@@ -1851,13 +1801,13 @@
           "text": "Score {}",
           "shadow": {
             "offset": [
-              0,
+              0.0,
               -0.004
             ],
             "color": [
-              0,
-              0,
-              0,
+              0.0,
+              0.0,
+              0.0,
               0.75
             ],
             "softness": 0.005
@@ -1865,13 +1815,6 @@
           "case": "upper",
           "letter_spacing": 0.0048,
           "bold": false
-        },
-        "weave.style": {
-          "classes": [
-            "hud-text",
-            "hud-stat",
-            "hud-score"
-          ]
         }
       }
     },
@@ -1883,28 +1826,31 @@
         "position": [
           0.04,
           -0.155,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["hud-text","hud-stat","hud-wave"]
+        },
         "sindri.ui.text": {
           "anchor": "top_left",
           "color": [
             0.20156,
             0.92158,
             0.57758,
-            1
+            1.0
           ],
           "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.028,
@@ -1913,13 +1859,13 @@
           "text": "Wave {}",
           "shadow": {
             "offset": [
-              0,
+              0.0,
               -0.004
             ],
             "color": [
-              0,
-              0,
-              0,
+              0.0,
+              0.0,
+              0.0,
               0.75
             ],
             "softness": 0.005
@@ -1927,13 +1873,6 @@
           "case": "upper",
           "letter_spacing": 0.0042,
           "bold": false
-        },
-        "weave.style": {
-          "classes": [
-            "hud-text",
-            "hud-stat",
-            "hud-wave"
-          ]
         }
       }
     },
@@ -1942,20 +1881,20 @@
       "name": "Music",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -1972,20 +1911,20 @@
       "name": "Pause",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "disabled": true
@@ -1996,44 +1935,44 @@
       "parent": "pause",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.84,
           0.4,
-          1
+          1.0
         ]
       },
       "components": {
         "sindri.ui.shape": {
           "kind": "rect",
-          "count": 6,
+          "count": 6.0,
           "fill": [
             0.00335,
             0.00561,
             0.01444,
-            1
+            1.0
           ],
           "stroke": [
             0.10302,
             0.10505,
             0.113,
-            1
+            1.0
           ],
           "stroke_width": 0.003,
-          "corner_radius": 0,
-          "dashes": 0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
           "dash_duty": 0.5,
-          "sweep_start": 0,
-          "sweep_turns": 1,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
           "blend": "over",
           "anchor": "center",
           "layer": 100
@@ -2046,26 +1985,26 @@
       "parent": "pause",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           -0.16,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.7392,
           0.1,
-          1
+          1.0
         ]
       },
       "components": {
         "sindri.script": {
           "properties": {
-            "action": 3
+            "action": 3.0
           },
           "script": "Button",
           "source": "scripts/button.decay"
@@ -2075,7 +2014,7 @@
         },
         "sindri.ui.shape": {
           "kind": "rect",
-          "count": 6,
+          "count": 6.0,
           "fill": [
             0,
             0,
@@ -2086,14 +2025,14 @@
             0.35218,
             0.05511,
             0.03335,
-            1
+            1.0
           ],
           "stroke_width": 0.02,
-          "corner_radius": 0,
-          "dashes": 0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
           "dash_duty": 0.5,
-          "sweep_start": 0,
-          "sweep_turns": 1,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
           "blend": "over",
           "anchor": "center",
           "layer": 110
@@ -2106,30 +2045,30 @@
       "parent": "pause",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           -0.16,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            1,
+            1.0,
             0.14703,
             0.06848,
-            1
+            1.0
           ],
           "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.05,
@@ -2148,26 +2087,26 @@
       "parent": "pause",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           0.02,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.7392,
           0.1,
-          1
+          1.0
         ]
       },
       "components": {
         "sindri.script": {
           "properties": {
-            "action": 2
+            "action": 2.0
           },
           "script": "Button",
           "source": "scripts/button.decay"
@@ -2177,12 +2116,12 @@
         },
         "sindri.ui.shape": {
           "kind": "rect",
-          "count": 6,
+          "count": 6.0,
           "fill": [
             0.20156,
             0.92158,
             0.57758,
-            1
+            1.0
           ],
           "stroke": [
             0,
@@ -2190,12 +2129,12 @@
             0,
             0
           ],
-          "stroke_width": 0,
-          "corner_radius": 0,
-          "dashes": 0,
+          "stroke_width": 0.0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
           "dash_duty": 0.5,
-          "sweep_start": 0,
-          "sweep_turns": 1,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
           "blend": "over",
           "anchor": "center",
           "layer": 110
@@ -2208,20 +2147,20 @@
       "parent": "pause",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           0.02,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -2231,7 +2170,7 @@
             0.00152,
             0.00212,
             0.00439,
-            1
+            1.0
           ],
           "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.05,
@@ -2250,20 +2189,20 @@
       "parent": "pause",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           0.24,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -2273,7 +2212,7 @@
             0.80695,
             0.85499,
             0.92158,
-            1
+            1.0
           ],
           "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.08,
@@ -2291,35 +2230,35 @@
       "name": "Player",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.42,
           0.42,
-          1
+          1.0
         ]
       },
       "components": {
         "sindri.physics2d.collider": {
-          "friction": 0,
+          "friction": 0.0,
           "layers": {
             "filter": 26,
             "memberships": 4
           },
           "offset": [
-            0,
-            0
+            0.0,
+            0.0
           ],
-          "restitution": 0,
-          "rotation": 0,
+          "restitution": 0.0,
+          "rotation": 0.0,
           "sensor": true,
           "shape": {
             "radius": 0.16,
@@ -2327,31 +2266,31 @@
           }
         },
         "sindri.physics2d.rigid_body": {
-          "angular_damping": 0,
-          "angular_velocity": 0,
-          "gravity_scale": 0,
+          "angular_damping": 0.0,
+          "angular_velocity": 0.0,
+          "gravity_scale": 0.0,
           "kind": "dynamic",
-          "linear_damping": 0,
+          "linear_damping": 0.0,
           "linear_velocity": [
-            0,
-            0
+            0.0,
+            0.0
           ],
           "lock_rotation": true,
           "pose": {
             "position": [
-              0,
-              0
+              0.0,
+              0.0
             ],
-            "rotation": 0
+            "rotation": 0.0
           }
         },
         "sindri.script": {
           "properties": {
-            "bullet": "prefabs/bullet.prefab.json",
-            "edge_padding": 0.28,
-            "invulnerable_for": 0.9,
-            "mine": "prefabs/mine.prefab.json",
-            "muzzle_fx": "prefabs/spectacle.prefab.json"
+          "bullet": "prefabs/bullet.prefab.json",
+          "edge_padding": 0.28,
+          "invulnerable_for": 0.9,
+          "mine": "prefabs/mine.prefab.json",
+          "muzzle_fx": "prefabs/spectacle.prefab.json"
           },
           "script": "Player",
           "source": "scripts/player.decay"
@@ -2363,7 +2302,7 @@
         },
         "sindri.shape": {
           "kind": "polygon",
-          "count": 5,
+          "count": 5.0,
           "fill": [
             0.20156,
             0.92158,
@@ -2372,16 +2311,16 @@
           ],
           "stroke": [
             0.45641,
-            1,
+            1.0,
             0.77582,
-            1
+            1.0
           ],
           "stroke_width": 0.1,
-          "corner_radius": 0,
-          "dashes": 0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
           "dash_duty": 0.5,
-          "sweep_start": 0,
-          "sweep_turns": 1,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
           "blend": "over",
           "layer": 5
         }
@@ -2392,52 +2331,52 @@
       "name": "Player Shield",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.72,
           0.72,
-          1
+          1.0
         ]
       },
       "components": {
         "sindri.script": {
           "properties": {
-            "kind": 1,
-            "side": 0
+            "kind": 1.0,
+            "side": 0.0
           },
           "script": "PlayerVisual",
           "source": "scripts/player-visual.decay"
         },
         "sindri.shape": {
           "kind": "polygon",
-          "count": 6,
+          "count": 6.0,
           "fill": [
             0.47059,
             0.92157,
-            1,
-            0
+            1.0,
+            0.0
           ],
           "stroke": [
             0.47059,
             0.92157,
-            1,
+            1.0,
             0.5
           ],
           "stroke_width": 0.035,
-          "corner_radius": 0,
-          "dashes": 0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
           "dash_duty": 0.5,
-          "sweep_start": 0,
-          "sweep_turns": 1,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
           "blend": "add",
           "layer": 4
         }
@@ -2448,26 +2387,26 @@
       "name": "Player Engine Left",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
         "sindri.script": {
           "properties": {
-            "kind": 2,
+            "kind": 2.0,
             "side": -0.075
           },
           "script": "PlayerVisual",
@@ -2475,25 +2414,25 @@
         },
         "sindri.shape": {
           "kind": "polygon",
-          "count": 3,
+          "count": 3.0,
           "fill": [
             0.47059,
             0.92157,
-            1,
+            1.0,
             0.42
           ],
           "stroke": [
             0.91373,
             0.99216,
-            1,
+            1.0,
             0.2
           ],
           "stroke_width": 0.015,
-          "corner_radius": 0,
-          "dashes": 0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
           "dash_duty": 0.5,
-          "sweep_start": 0,
-          "sweep_turns": 1,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
           "blend": "add",
           "layer": 4
         }
@@ -2504,26 +2443,26 @@
       "name": "Player Engine Right",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
         "sindri.script": {
           "properties": {
-            "kind": 2,
+            "kind": 2.0,
             "side": 0.075
           },
           "script": "PlayerVisual",
@@ -2531,25 +2470,25 @@
         },
         "sindri.shape": {
           "kind": "polygon",
-          "count": 3,
+          "count": 3.0,
           "fill": [
             0.47059,
             0.92157,
-            1,
+            1.0,
             0.42
           ],
           "stroke": [
             0.91373,
             0.99216,
-            1,
+            1.0,
             0.2
           ],
           "stroke_width": 0.015,
-          "corner_radius": 0,
-          "dashes": 0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
           "dash_duty": 0.5,
-          "sweep_start": 0,
-          "sweep_turns": 1,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
           "blend": "add",
           "layer": 4
         }
@@ -2560,52 +2499,52 @@
       "name": "Player Core",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.095,
           0.095,
-          1
+          1.0
         ]
       },
       "components": {
         "sindri.script": {
           "properties": {
-            "kind": 3,
-            "side": 0
+            "kind": 3.0,
+            "side": 0.0
           },
           "script": "PlayerVisual",
           "source": "scripts/player-visual.decay"
         },
         "sindri.shape": {
           "kind": "ellipse",
-          "count": 6,
+          "count": 6.0,
           "fill": [
             0.91373,
             0.99216,
-            1,
+            1.0,
             0.88
           ],
           "stroke": [
             0.47059,
             0.92157,
-            1,
-            1
+            1.0,
+            1.0
           ],
           "stroke_width": 0.02,
-          "corner_radius": 0,
-          "dashes": 0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
           "dash_duty": 0.5,
-          "sweep_start": 0,
-          "sweep_turns": 1,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
           "blend": "add",
           "layer": 6
         }
@@ -2617,20 +2556,20 @@
       "parent": "player",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -2647,8 +2586,8 @@
           "tint": [
             0.5,
             0.9,
-            1,
-            1
+            1.0,
+            1.0
           ]
         }
       }
@@ -2658,20 +2597,20 @@
       "name": "Result",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -2689,26 +2628,26 @@
       "parent": "result",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           -0.22,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.7392,
           0.11,
-          1
+          1.0
         ]
       },
       "components": {
         "sindri.script": {
           "properties": {
-            "action": 0
+            "action": 0.0
           },
           "script": "Button",
           "source": "scripts/button.decay"
@@ -2718,12 +2657,12 @@
         },
         "sindri.ui.shape": {
           "kind": "rect",
-          "count": 6,
+          "count": 6.0,
           "fill": [
             0.20156,
             0.92158,
             0.57758,
-            1
+            1.0
           ],
           "stroke": [
             0,
@@ -2731,12 +2670,12 @@
             0,
             0
           ],
-          "stroke_width": 0,
-          "corner_radius": 0,
-          "dashes": 0,
+          "stroke_width": 0.0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
           "dash_duty": 0.5,
-          "sweep_start": 0,
-          "sweep_turns": 1,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
           "blend": "over",
           "anchor": "center",
           "layer": 110
@@ -2749,20 +2688,20 @@
       "parent": "result",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           -0.22,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -2772,7 +2711,7 @@
             0.00152,
             0.00212,
             0.00439,
-            1
+            1.0
           ],
           "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.055,
@@ -2791,20 +2730,20 @@
       "parent": "result",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           0.16,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -2814,7 +2753,7 @@
             0.80695,
             0.85499,
             0.92158,
-            1
+            1.0
           ],
           "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.042,
@@ -2833,44 +2772,44 @@
       "parent": "result",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           0.04,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.84,
           0.56,
-          1
+          1.0
         ]
       },
       "components": {
         "sindri.ui.shape": {
           "kind": "rect",
-          "count": 6,
+          "count": 6.0,
           "fill": [
             0.00335,
             0.00561,
             0.01444,
-            1
+            1.0
           ],
           "stroke": [
             0.10302,
             0.10505,
             0.113,
-            1
+            1.0
           ],
           "stroke_width": 0.003,
-          "corner_radius": 0,
-          "dashes": 0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
           "dash_duty": 0.5,
-          "sweep_start": 0,
-          "sweep_turns": 1,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
           "blend": "over",
           "anchor": "center",
           "layer": 100
@@ -2883,20 +2822,20 @@
       "parent": "result",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           0.08,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -2906,7 +2845,7 @@
             0.80695,
             0.85499,
             0.92158,
-            1
+            1.0
           ],
           "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.042,
@@ -2925,20 +2864,20 @@
       "parent": "result",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           0.26,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -2948,7 +2887,7 @@
             0.80695,
             0.85499,
             0.92158,
-            1
+            1.0
           ],
           "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.058,
@@ -2967,20 +2906,20 @@
       "parent": "result",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -2990,7 +2929,7 @@
             0.80695,
             0.85499,
             0.92158,
-            1
+            1.0
           ],
           "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.042,
@@ -3009,20 +2948,20 @@
       "parent": "result",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           0.42,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -3032,7 +2971,7 @@
             0.80695,
             0.85499,
             0.92158,
-            1
+            1.0
           ],
           "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.085,
@@ -3050,20 +2989,20 @@
       "name": "Title",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -3080,20 +3019,20 @@
       "parent": "title",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           0.1,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -3103,7 +3042,7 @@
             0.80695,
             0.85499,
             0.92158,
-            1
+            1.0
           ],
           "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.046,
@@ -3122,44 +3061,44 @@
       "parent": "title",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           0.06,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.84,
           0.52,
-          1
+          1.0
         ]
       },
       "components": {
         "sindri.ui.shape": {
           "kind": "rect",
-          "count": 6,
+          "count": 6.0,
           "fill": [
             0.00335,
             0.00561,
             0.01444,
-            1
+            1.0
           ],
           "stroke": [
             0.10302,
             0.10505,
             0.113,
-            1
+            1.0
           ],
           "stroke_width": 0.003,
-          "corner_radius": 0,
-          "dashes": 0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
           "dash_duty": 0.5,
-          "sweep_start": 0,
-          "sweep_turns": 1,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
           "blend": "over",
           "anchor": "center",
           "layer": 100
@@ -3172,20 +3111,20 @@
       "parent": "title",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           -0.8,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -3195,7 +3134,7 @@
             0.20156,
             0.92158,
             0.57758,
-            1
+            1.0
           ],
           "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.03,
@@ -3212,13 +3151,13 @@
           "letter_spacing": 0.0045,
           "shadow": {
             "offset": [
-              0,
+              0.0,
               -0.004
             ],
             "color": [
-              0,
-              0,
-              0,
+              0.0,
+              0.0,
+              0.0,
               0.75
             ],
             "softness": 0.005
@@ -3233,20 +3172,20 @@
       "parent": "title",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           0.52,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.86,
           0.43,
-          1
+          1.0
         ]
       },
       "components": {
@@ -3254,10 +3193,10 @@
           "texture": "textures/logo.png",
           "anchor": "center",
           "tint": [
-            1,
-            1,
-            1,
-            1
+            1.0,
+            1.0,
+            1.0,
+            1.0
           ],
           "layer": 140
         }
@@ -3269,30 +3208,30 @@
       "parent": "title",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           -0.06,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
-            1,
+            1.0,
             0.14703,
             0.06848,
-            1
+            1.0
           ],
           "font": "fonts/IBMPlexMono-Regular.ttf",
           "font_size": 0.034,
@@ -3318,26 +3257,26 @@
       "parent": "title",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           -0.55,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.84,
           0.115,
-          1
+          1.0
         ]
       },
       "components": {
         "sindri.script": {
           "properties": {
-            "action": 0
+            "action": 0.0
           },
           "script": "Button",
           "source": "scripts/button.decay"
@@ -3347,12 +3286,12 @@
         },
         "sindri.ui.shape": {
           "kind": "rect",
-          "count": 6,
+          "count": 6.0,
           "fill": [
             0.20156,
             0.92158,
             0.57758,
-            1
+            1.0
           ],
           "stroke": [
             0,
@@ -3360,12 +3299,12 @@
             0,
             0
           ],
-          "stroke_width": 0,
-          "corner_radius": 0,
-          "dashes": 0,
+          "stroke_width": 0.0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
           "dash_duty": 0.5,
-          "sweep_start": 0,
-          "sweep_turns": 1,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
           "blend": "over",
           "anchor": "center",
           "layer": 110
@@ -3378,20 +3317,20 @@
       "parent": "title",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           -0.55,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -3401,7 +3340,7 @@
             0.00152,
             0.00212,
             0.00439,
-            1
+            1.0
           ],
           "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.06,
@@ -3420,20 +3359,20 @@
       "parent": "upgrades",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           -0.04,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -3448,20 +3387,20 @@
       "name": "Upgrades",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       }
     },
@@ -3471,44 +3410,44 @@
       "parent": "upgrades",
       "transform_3d": {
         "position": [
-          0,
-          0,
-          0
+          0.0,
+          0.0,
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
           0.88,
           0.92,
-          1
+          1.0
         ]
       },
       "components": {
         "sindri.ui.shape": {
           "kind": "rect",
-          "count": 6,
+          "count": 6.0,
           "fill": [
             0.00335,
             0.00561,
             0.01444,
-            1
+            1.0
           ],
           "stroke": [
             0.10302,
             0.10505,
             0.113,
-            1
+            1.0
           ],
           "stroke_width": 0.003,
-          "corner_radius": 0,
-          "dashes": 0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
           "dash_duty": 0.5,
-          "sweep_start": 0,
-          "sweep_turns": 1,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
           "blend": "over",
           "anchor": "center",
           "layer": 100
@@ -3521,20 +3460,20 @@
       "parent": "upgrades",
       "transform_3d": {
         "position": [
-          0,
+          0.0,
           0.6,
-          0
+          0.0
         ],
         "rotation": [
-          0,
-          0,
-          0,
-          1
+          0.0,
+          0.0,
+          0.0,
+          1.0
         ],
         "scale": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
         ]
       },
       "components": {
@@ -3544,7 +3483,7 @@
             0.80695,
             0.85499,
             0.92158,
-            1
+            1.0
           ],
           "font": "fonts/ChakraPetch-Bold.ttf",
           "font_size": 0.072,
@@ -3568,12 +3507,7 @@
           "spread": 0.18,
           "lifetime": 0.24,
           "size": 0.052,
-          "tint": [
-            0.34,
-            1,
-            0.72,
-            0.9
-          ],
+          "tint": [0.34, 1.0, 0.72, 0.9],
           "fade": true,
           "drag": 3.2,
           "layer": 5
@@ -3591,14 +3525,9 @@
           "spread": 0.2,
           "lifetime": 0.28,
           "size": 0.06,
-          "tint": [
-            0.28,
-            0.92,
-            1,
-            0.92
-          ],
+          "tint": [0.28, 0.92, 1.0, 0.92],
           "fade": true,
-          "drag": 3,
+          "drag": 3.0,
           "layer": 6
         }
       }
@@ -3614,12 +3543,7 @@
           "spread": 0.22,
           "lifetime": 0.3,
           "size": 0.064,
-          "tint": [
-            1,
-            0.2,
-            0.72,
-            0.92
-          ],
+          "tint": [1.0, 0.2, 0.72, 0.92],
           "fade": true,
           "drag": 2.8,
           "layer": 6
@@ -3637,12 +3561,7 @@
           "spread": 0.24,
           "lifetime": 0.3,
           "size": 0.062,
-          "tint": [
-            1,
-            0.82,
-            0.28,
-            0.94
-          ],
+          "tint": [1.0, 0.82, 0.28, 0.94],
           "fade": true,
           "drag": 2.8,
           "layer": 6
@@ -3660,14 +3579,9 @@
           "spread": 0.2,
           "lifetime": 0.26,
           "size": 0.058,
-          "tint": [
-            1,
-            0.2,
-            0.18,
-            0.9
-          ],
+          "tint": [1.0, 0.2, 0.18, 0.9],
           "fade": true,
-          "drag": 3,
+          "drag": 3.0,
           "layer": 5
         }
       }
