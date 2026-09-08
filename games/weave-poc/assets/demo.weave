@@ -221,140 +221,140 @@ sindri.ui.text {
 @media (orientation: portrait) {
     #menu {
         width: 94vw;
-        height: 650px;
-        padding: 18px;
-        gap: 12px;
+        height: 128vw;
+        padding: 4vw;
+        gap: 3vw;
         justify-content: start;
         align-items: center;
-        border-radius: 22px;
+        border-radius: 5vw;
     }
 
     .topbar {
         width: 100%;
-        height: 36px;
+        height: 8vw;
         justify-content: space-between;
         align-items: center;
     }
 
     .eyebrow {
         width: 62%;
-        height: 16px;
-        font-size: 13px;
-        line-height: 16px;
-        letter-spacing: 1px;
+        height: 4vw;
+        font-size: 3.2vw;
+        line-height: 4vw;
+        letter-spacing: 0.25vw;
     }
 
     .viewport-badge {
-        width: 116px;
-        height: 34px;
+        width: 28vw;
+        height: 8vw;
     }
 
     .badge-label {
-        width: 100px;
-        height: 14px;
-        font-size: 11px;
-        line-height: 14px;
+        width: 24vw;
+        height: 3.5vw;
+        font-size: 2.8vw;
+        line-height: 3.5vw;
     }
 
     .hero {
         width: 100%;
-        height: 236px;
+        height: 48vw;
         direction: column;
-        gap: 12px;
+        gap: 3vw;
         justify-content: start;
         align-items: center;
     }
 
     .hero-copy {
         width: 100%;
-        height: 112px;
-        gap: 12px;
+        height: 22vw;
+        gap: 3vw;
         justify-content: start;
         align-items: center;
     }
 
     .title {
         width: 100%;
-        height: 52px;
-        font-size: 32px;
-        line-height: 36px;
+        height: 10vw;
+        font-size: 5vw;
+        line-height: 6vw;
     }
 
     .subtitle {
         width: 94%;
-        height: 48px;
-        font-size: 14px;
-        line-height: 18px;
+        height: 9vw;
+        font-size: 2.6vw;
+        line-height: 3.6vw;
     }
 
     .proof-card {
         width: 100%;
-        height: 112px;
-        padding: 12px;
-        gap: 6px;
+        height: 23vw;
+        padding: 3vw;
+        gap: 1.5vw;
         justify-content: center;
         align-items: center;
-        border-radius: 16px;
+        border-radius: 4vw;
     }
 
     .proof-kicker {
         width: 100%;
-        height: 14px;
-        font-size: 11px;
-        line-height: 14px;
+        height: 3vw;
+        font-size: 2.6vw;
+        line-height: 3vw;
     }
 
     .proof-title {
         width: 100%;
-        height: 28px;
-        font-size: 20px;
-        line-height: 24px;
+        height: 6vw;
+        font-size: 4.4vw;
+        line-height: 5.5vw;
     }
 
     .proof-body {
         width: 100%;
-        height: 24px;
-        font-size: 12px;
-        line-height: 16px;
+        height: 5vw;
+        font-size: 2.5vw;
+        line-height: 3.5vw;
     }
 
     .actions {
         width: 100%;
-        height: 102px;
+        height: 23vw;
         direction: column;
-        gap: 10px;
+        gap: 3vw;
         justify-content: start;
         align-items: center;
     }
 
     .menu-button {
         width: 100%;
-        height: 46px;
-        border-radius: 12px;
+        height: 10vw;
+        border-radius: 3vw;
     }
 
     .button-label {
-        width: 180px;
-        height: 18px;
-        font-size: 15px;
-        line-height: 18px;
+        width: 45vw;
+        height: 4vw;
+        font-size: 3.4vw;
+        line-height: 4vw;
     }
 
     .features {
         width: 100%;
-        height: 148px;
+        height: 32vw;
         direction: column;
-        gap: 8px;
+        gap: 2.5vw;
         justify-content: start;
         align-items: center;
     }
 
     .feature-card {
         width: 100%;
-        height: 44px;
-        padding: 12px;
+        height: 9vw;
+        padding: 3vw;
         justify-content: center;
-        border-radius: 12px;
+        border-radius: 3vw;
     }
 
     .feature-start {
@@ -370,10 +370,10 @@ sindri.ui.text {
     }
 
     .feature-label {
-        width: 92px;
-        height: 16px;
-        font-size: 13px;
-        line-height: 16px;
-        letter-spacing: 1px;
+        width: 22vw;
+        height: 4vw;
+        font-size: 3vw;
+        line-height: 4vw;
+        letter-spacing: 0.25vw;
     }
 }
