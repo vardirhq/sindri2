@@ -221,23 +221,23 @@ sindri.ui.text {
 @media (orientation: portrait) {
     #menu {
         width: 94vw;
-        height: 128vw;
+        height: 120vw;
         padding: 4vw;
-        gap: 3vw;
+        gap: 2.5vw;
         justify-content: start;
         align-items: center;
         border-radius: 5vw;
     }
 
     .topbar {
-        width: 100%;
+        width: 92%;
         height: 8vw;
         justify-content: space-between;
         align-items: center;
     }
 
     .eyebrow {
-        width: 62%;
+        width: 58%;
         height: 4vw;
         font-size: 3.2vw;
         line-height: 4vw;
@@ -245,7 +245,7 @@ sindri.ui.text {
     }
 
     .viewport-badge {
-        width: 28vw;
+        width: 26vw;
         height: 8vw;
     }
 
@@ -258,39 +258,39 @@ sindri.ui.text {
 
     .hero {
         width: 100%;
-        height: 48vw;
+        height: 44vw;
         direction: column;
-        gap: 3vw;
+        gap: 2.5vw;
         justify-content: start;
         align-items: center;
     }
 
     .hero-copy {
         width: 100%;
-        height: 22vw;
-        gap: 3vw;
+        height: 19vw;
+        gap: 2vw;
         justify-content: start;
         align-items: center;
     }
 
     .title {
         width: 100%;
-        height: 10vw;
-        font-size: 5vw;
-        line-height: 6vw;
+        height: 9vw;
+        font-size: 4.8vw;
+        line-height: 5.8vw;
     }
 
     .subtitle {
-        width: 94%;
-        height: 9vw;
-        font-size: 2.6vw;
-        line-height: 3.6vw;
+        width: 88%;
+        height: 8vw;
+        font-size: 2.5vw;
+        line-height: 3.5vw;
     }
 
     .proof-card {
-        width: 100%;
-        height: 23vw;
-        padding: 3vw;
+        width: 96%;
+        height: 22.5vw;
+        padding: 2.5vw;
         gap: 1.5vw;
         justify-content: center;
         align-items: center;
@@ -306,21 +306,21 @@ sindri.ui.text {
 
     .proof-title {
         width: 100%;
-        height: 6vw;
-        font-size: 4.4vw;
-        line-height: 5.5vw;
+        height: 5.5vw;
+        font-size: 4.2vw;
+        line-height: 5.2vw;
     }
 
     .proof-body {
         width: 100%;
-        height: 5vw;
-        font-size: 2.5vw;
+        height: 4.5vw;
+        font-size: 2.4vw;
         line-height: 3.5vw;
     }
 
     .actions {
         width: 100%;
-        height: 23vw;
+        height: 22vw;
         direction: column;
         gap: 3vw;
         justify-content: start;
@@ -328,8 +328,8 @@ sindri.ui.text {
     }
 
     .menu-button {
-        width: 100%;
-        height: 10vw;
+        width: 96%;
+        height: 9.5vw;
         border-radius: 3vw;
     }
 
@@ -342,16 +342,16 @@ sindri.ui.text {
 
     .features {
         width: 100%;
-        height: 32vw;
+        height: 30vw;
         direction: column;
-        gap: 2.5vw;
+        gap: 2.25vw;
         justify-content: start;
         align-items: center;
     }
 
     .feature-card {
-        width: 100%;
-        height: 9vw;
+        width: 96%;
+        height: 8.5vw;
         padding: 3vw;
         justify-content: center;
         border-radius: 3vw;
