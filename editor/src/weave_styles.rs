@@ -109,7 +109,10 @@ fn gather_sources(
     Ok(())
 }
 
-/// Where the exporter already looks for a logical asset ID.
+/// Resolves one logical asset ID exactly where project export does: under the
+/// conventional `assets/` directory first, and at the root for flatter project
+/// layouts. Editor presentation and a shipped build therefore read the same
+/// source for the same ID instead of merely agreeing about the language.
 fn resolve(project: &Path, id: &str) -> PathBuf {
     let in_assets = project.join("assets").join(id);
     if in_assets.exists() {
