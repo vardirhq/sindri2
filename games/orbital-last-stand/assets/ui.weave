@@ -642,7 +642,7 @@
         direction: column;
         gap: 3vw;
         justify-content: center;
-        align-items: stretch;
+        align-items: center;
     }
 
     .upgrade-card {
