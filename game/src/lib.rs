@@ -1,9 +1,9 @@
 //! Gather: the companion game.
 //!
-//! Five orbs on a floor, a thing you drive with the arrow keys, and a row of
-//! lamps that fills as you collect them. That is the whole game, and it is the
-//! first thing built with this engine that someone can lose interest in for the
-//! right reasons rather than the wrong ones.
+//! Five orbs on a floor, a thing you drive with a keyboard or touch stick, and
+//! a row of lamps that fills as you collect them. That is the whole game, and
+//! it is the first thing built with this engine that someone can lose interest
+//! in for the right reasons rather than the wrong ones.
 //!
 //! **There are no game rules in this file.** Moving, gathering, counting, and
 //! winning are Decay scripts in `assets/scripts/`; this is a window, a device,
@@ -30,9 +30,9 @@ mod session;
 
 // The crate's public surface: what `bin/`, `tests/`, and the browser host
 // reach for. Where an item lives inside the crate is not their business.
-pub use assets::extractor;
+pub use assets::{extractor, presented_world};
 #[cfg(not(target_arch = "wasm32"))]
-pub use assets::{AUDIO, FONTS, bind_fonts, bind_textures, sources, world};
+pub use assets::{AUDIO, FONTS, bind_fonts, bind_textures, sources, stylesheets, world};
 pub use error::GatherError;
 pub use session::Session;
 

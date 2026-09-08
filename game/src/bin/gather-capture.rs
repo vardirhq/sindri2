@@ -15,7 +15,7 @@
 use std::{error::Error, fs, io::BufWriter, path::Path};
 
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_gather::{Session, bind_fonts, extractor, world};
+use sindri_gather::{Session, bind_fonts, extractor, presented_world, stylesheets, world};
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_gpu::{GpuContext, GpuRequestOptions};
 #[cfg(not(target_arch = "wasm32"))]
@@ -75,8 +75,16 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
             session.step(&mut world, &held, VIEWPORT, STEP_SECONDS)?;
         }
     }
-    let prepared = scene.extract_animated(
+    let presented = presented_world(
         &world,
+        &stylesheets()?,
+        weave::Viewport {
+            width: VIEWPORT.0,
+            height: VIEWPORT.1,
+        },
+    )?;
+    let prepared = scene.extract_animated(
+        &presented,
         Viewport::new(WIDTH, HEIGHT),
         CameraView::default(),
         &bindings,

@@ -19,11 +19,10 @@ use sindri_render::{
     encode_prepared_frame,
 };
 use sindri_scene::{CameraView, SceneExtractor, SceneRuntime, TextureBindings};
-use sindri_weave::PresentationWorld;
 use weave::{Stylesheet, Viewport as WeaveViewport};
 
 use self::loader::{BrowserProjectAssets, BrowserProjectLoader};
-use crate::assets::{TEXTURE_IDS, extractor};
+use crate::assets::{TEXTURE_IDS, extractor, presented_world};
 use crate::error::GatherError;
 use crate::session::Session;
 
@@ -73,11 +72,7 @@ impl BrowserGatherApp {
         let Some(engine) = &mut self.engine else {
             return Ok(());
         };
-        for stylesheet in &self.stylesheets {
-            let resolved = PresentationWorld::resolve(engine.world(), stylesheet, viewport)
-                .map_err(|error| GatherError::BrowserAsset(error.to_string()))?;
-            *engine.world_mut() = resolved.world().clone();
-        }
+        *engine.world_mut() = presented_world(engine.world(), &self.stylesheets, viewport)?;
         Ok(())
     }
 
@@ -134,11 +129,7 @@ impl BrowserGatherApp {
             "sindri.gather.save",
         )));
         let mut world = World::from_scene(&project.scene)?.world;
-        for stylesheet in &project.stylesheets {
-            let resolved = PresentationWorld::resolve(&world, stylesheet, self.weave_viewport())
-                .map_err(|error| GatherError::BrowserAsset(error.to_string()))?;
-            world = resolved.world().clone();
-        }
+        world = presented_world(&world, &project.stylesheets, self.weave_viewport())?;
 
         let mut engine =
             EngineHost::new_with_audio(session, sindri_core::FixedStepConfig::default(), audio)?;

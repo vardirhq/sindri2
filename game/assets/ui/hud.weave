@@ -1,0 +1,49 @@
+#title {
+    width: 240px;
+    height: 42px;
+    x: 28px;
+    y: -24px;
+    anchor: top_left;
+    color: #f2b84b;
+    font-size: 30px;
+    line-height: 36px;
+    font-weight: 700;
+    letter-spacing: 5px;
+    text-align: start;
+}
+
+#pip-0 { width: 28px; height: 28px; x: -188px; y: -28px; anchor: top_right; }
+#pip-empty-0 { width: 28px; height: 28px; x: -188px; y: -28px; anchor: top_right; }
+#pip-1 { width: 28px; height: 28px; x: -150px; y: -28px; anchor: top_right; }
+#pip-empty-1 { width: 28px; height: 28px; x: -150px; y: -28px; anchor: top_right; }
+#pip-2 { width: 28px; height: 28px; x: -112px; y: -28px; anchor: top_right; }
+#pip-empty-2 { width: 28px; height: 28px; x: -112px; y: -28px; anchor: top_right; }
+#pip-3 { width: 28px; height: 28px; x: -74px; y: -28px; anchor: top_right; }
+#pip-empty-3 { width: 28px; height: 28px; x: -74px; y: -28px; anchor: top_right; }
+#pip-4 { width: 28px; height: 28px; x: -36px; y: -28px; anchor: top_right; }
+#pip-empty-4 { width: 28px; height: 28px; x: -36px; y: -28px; anchor: top_right; }
+
+@media (max-width: 700px) {
+    #title {
+        width: 74vw;
+        height: 11vw;
+        x: 0px;
+        y: -5vw;
+        anchor: top;
+        font-size: 7vw;
+        line-height: 9vw;
+        letter-spacing: 1vw;
+        text-align: center;
+    }
+
+    #pip-0 { width: 7vw; height: 7vw; x: -18vw; y: -18vw; anchor: top; }
+    #pip-empty-0 { width: 7vw; height: 7vw; x: -18vw; y: -18vw; anchor: top; }
+    #pip-1 { width: 7vw; height: 7vw; x: -9vw; y: -18vw; anchor: top; }
+    #pip-empty-1 { width: 7vw; height: 7vw; x: -9vw; y: -18vw; anchor: top; }
+    #pip-2 { width: 7vw; height: 7vw; x: 0px; y: -18vw; anchor: top; }
+    #pip-empty-2 { width: 7vw; height: 7vw; x: 0px; y: -18vw; anchor: top; }
+    #pip-3 { width: 7vw; height: 7vw; x: 9vw; y: -18vw; anchor: top; }
+    #pip-empty-3 { width: 7vw; height: 7vw; x: 9vw; y: -18vw; anchor: top; }
+    #pip-4 { width: 7vw; height: 7vw; x: 18vw; y: -18vw; anchor: top; }
+    #pip-empty-4 { width: 7vw; height: 7vw; x: 18vw; y: -18vw; anchor: top; }
+}

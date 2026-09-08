@@ -1,0 +1,14 @@
+#banner {
+    width: 460px;
+    height: 112px;
+    x: 0px;
+    y: 0px;
+    anchor: center;
+}
+
+@media (max-width: 700px) {
+    #banner {
+        width: 84vw;
+        height: 21vw;
+    }
+}

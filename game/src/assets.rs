@@ -14,7 +14,8 @@ use sindri_assets::{
     AssetBytes, AssetDecoder, AudioAssetDecoder, FontAssetDecoder, TextureAssetDecoder,
 };
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_core::{AssetId, SceneDocument, SpriteSheetDocument, World, sheet_id_for};
+use sindri_core::{AssetId, SceneDocument, SpriteSheetDocument, sheet_id_for};
+use sindri_core::World;
 use sindri_decay::ScriptComponent;
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_decay::ScriptSources;
@@ -27,6 +28,23 @@ use sindri_scene::SceneExtractor;
 use sindri_scene::TextureBindings;
 
 use crate::error::GatherError;
+
+/// The composed presentation sources embedded by the native game.
+#[cfg(not(target_arch = "wasm32"))]
+pub const WEAVE_SOURCES: &[(&str, &str)] = &[
+    (
+        "ui/gather.weave",
+        include_str!("../assets/ui/gather.weave"),
+    ),
+    (
+        "ui/hud.weave",
+        include_str!("../assets/ui/hud.weave"),
+    ),
+    (
+        "ui/completion.weave",
+        include_str!("../assets/ui/completion.weave"),
+    ),
+];
 
 #[cfg(target_arch = "wasm32")]
 pub(crate) const TEXTURE_IDS: &[&str] = &[
@@ -206,6 +224,34 @@ pub fn extractor() -> Result<SceneExtractor, GatherError> {
 pub fn world() -> Result<World, GatherError> {
     let document = SceneDocument::from_json(SCENE)?;
     Ok(World::from_scene(&document)?.world)
+}
+
+/// The native equivalent of the stylesheet graph the browser fetches.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn stylesheets() -> Result<Vec<weave::Stylesheet>, GatherError> {
+    let sources = WEAVE_SOURCES
+        .iter()
+        .map(|(id, source)| ((*id).to_owned(), (*source).to_owned()))
+        .collect();
+    let sheet = weave::compose("ui/gather.weave", &sources)
+        .map_err(|error| GatherError::Weave(error.to_string()))?;
+    Ok(vec![sheet])
+}
+
+/// Resolve presentation without changing the authored or gameplay world.
+pub fn presented_world(
+    authored: &World,
+    stylesheets: &[weave::Stylesheet],
+    viewport: weave::Viewport,
+) -> Result<World, GatherError> {
+    let mut world = authored.clone();
+    for stylesheet in stylesheets {
+        world = sindri_weave::PresentationWorld::resolve(&world, stylesheet, viewport)
+            .map_err(|error| GatherError::Weave(error.to_string()))?
+            .world()
+            .clone();
+    }
+    Ok(world)
 }
 
 /// The embedded native scripts, keyed by the IDs the scene names.
