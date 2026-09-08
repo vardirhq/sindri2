@@ -117,7 +117,7 @@ second renderer or a parallel UI object model.
 | `text-transform` | text case |
 
 `justify-content` accepts `start`, `center`, `end`, and `space-between`.
-`align-items` accepts `start`, `center`, `end`, and `stretch`. The engine's generic UI
+`align-items` accepts `start`, `center`, and `end`. The engine's generic UI
 layout owns the actual placement, so rendering, hit testing, and editor handles
 all consume the same resolved positions rather than learning Weave-specific
 rules.
