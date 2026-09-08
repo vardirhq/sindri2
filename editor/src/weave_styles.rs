@@ -9,17 +9,40 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant, SystemTime};
 
 use sindri_core::World;
 use sindri_weave::PresentationWorld;
 use weave::{Stylesheet, Viewport};
 
-use crate::project::Project;
+use crate::project::{MANIFEST_NAME, Project};
+
+const POLL_INTERVAL: Duration = Duration::from_millis(250);
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct FileStamp {
+    len: u64,
+    modified: Option<SystemTime>,
+}
 
 /// The composed stylesheets a project presents through.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct ProjectStyles {
     sheets: Vec<Stylesheet>,
+    root: Option<PathBuf>,
+    snapshot: BTreeMap<PathBuf, FileStamp>,
+    next_poll: Instant,
+}
+
+impl Default for ProjectStyles {
+    fn default() -> Self {
+        Self {
+            sheets: Vec::new(),
+            root: None,
+            snapshot: BTreeMap::new(),
+            next_poll: Instant::now(),
+        }
+    }
 }
 
 impl ProjectStyles {
@@ -29,35 +52,12 @@ impl ProjectStyles {
     /// presentation. A malformed or missing declared root is an error, because
     /// silently falling back there would make the editor disagree with export.
     pub fn load(project: &Project) -> Result<Self, String> {
-        let roots = project
-            .included_assets()
-            .iter()
-            .filter(|id| {
-                Path::new(id)
-                    .extension()
-                    .is_some_and(|extension| extension.eq_ignore_ascii_case("weave"))
-            })
-            .cloned()
-            .collect::<Vec<_>>();
-        if roots.is_empty() {
-            return Ok(Self::default());
-        }
-
-        let mut sources = BTreeMap::new();
-        let mut walked = BTreeSet::new();
-        for root in &roots {
-            gather_sources(project.root(), root, &mut sources, &mut walked)?;
-        }
-
-        // Compose only the manifest roots. `compose_all` over every source in
-        // the import graph would also return imported files as roots, which is
-        // exactly the double-application this loader exists to avoid.
-        let mut sheets = Vec::with_capacity(roots.len());
-        for root in roots {
-            sheets
-                .push(weave::compose(&root, &sources).map_err(|error| format!("{root}: {error}"))?);
-        }
-        Ok(Self { sheets })
+        Ok(Self {
+            sheets: load_sheets(project)?,
+            root: Some(project.root().to_path_buf()),
+            snapshot: watch_snapshot(project.root())?,
+            next_poll: Instant::now() + POLL_INTERVAL,
+        })
     }
 
     #[must_use]
@@ -68,6 +68,35 @@ impl ProjectStyles {
     #[must_use]
     pub fn len(&self) -> usize {
         self.sheets.len()
+    }
+
+    /// Rebuilds the composed styles when a manifest or stylesheet changed.
+    ///
+    /// The snapshot is acknowledged before parsing the replacement. A broken
+    /// save therefore reports once and keeps the last good presentation rather
+    /// than retrying and logging the same parser error every editor frame. A
+    /// later edit, deletion, or newly-created import changes the snapshot again
+    /// and gets another attempt.
+    pub fn poll_reload(&mut self) -> Result<bool, String> {
+        let Some(root) = self.root.clone() else {
+            return Ok(false);
+        };
+        let now = Instant::now();
+        if now < self.next_poll {
+            return Ok(false);
+        }
+        self.next_poll = now + POLL_INTERVAL;
+
+        let snapshot = watch_snapshot(&root)?;
+        if snapshot == self.snapshot {
+            return Ok(false);
+        }
+        self.snapshot = snapshot;
+
+        let project = Project::open(&root).map_err(|error| error.to_string())?;
+        let replacement = Self::load(&project)?;
+        *self = replacement;
+        Ok(true)
     }
 
     /// Resolves a disposable presented world for one viewport.
@@ -84,6 +113,34 @@ impl ProjectStyles {
         }
         Ok(world)
     }
+}
+
+fn load_sheets(project: &Project) -> Result<Vec<Stylesheet>, String> {
+    let roots = project
+        .included_assets()
+        .iter()
+        .filter(|id| {
+            Path::new(id)
+                .extension()
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("weave"))
+        })
+        .cloned()
+        .collect::<Vec<_>>();
+    if roots.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let mut sources = BTreeMap::new();
+    let mut walked = BTreeSet::new();
+    for root in &roots {
+        gather_sources(project.root(), root, &mut sources, &mut walked)?;
+    }
+
+    let mut sheets = Vec::with_capacity(roots.len());
+    for root in roots {
+        sheets.push(weave::compose(&root, &sources).map_err(|error| format!("{root}: {error}"))?);
+    }
+    Ok(sheets)
 }
 
 fn gather_sources(
@@ -109,6 +166,55 @@ fn gather_sources(
     Ok(())
 }
 
+fn watch_snapshot(root: &Path) -> Result<BTreeMap<PathBuf, FileStamp>, String> {
+    let mut snapshot = BTreeMap::new();
+    insert_stamp(&root.join(MANIFEST_NAME), &mut snapshot)?;
+    collect_weave_files(root, &mut snapshot)?;
+    Ok(snapshot)
+}
+
+fn collect_weave_files(
+    directory: &Path,
+    snapshot: &mut BTreeMap<PathBuf, FileStamp>,
+) -> Result<(), String> {
+    let entries = std::fs::read_dir(directory)
+        .map_err(|error| format!("{}: {error}", directory.display()))?;
+    for entry in entries {
+        let entry = entry.map_err(|error| format!("{}: {error}", directory.display()))?;
+        let path = entry.path();
+        let file_type = entry
+            .file_type()
+            .map_err(|error| format!("{}: {error}", path.display()))?;
+        if file_type.is_dir() {
+            let name = entry.file_name();
+            if name == ".git" || name == "target" {
+                continue;
+            }
+            collect_weave_files(&path, snapshot)?;
+        } else if file_type.is_file()
+            && path
+                .extension()
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("weave"))
+        {
+            insert_stamp(&path, snapshot)?;
+        }
+    }
+    Ok(())
+}
+
+fn insert_stamp(path: &Path, snapshot: &mut BTreeMap<PathBuf, FileStamp>) -> Result<(), String> {
+    let metadata =
+        std::fs::metadata(path).map_err(|error| format!("{}: {error}", path.display()))?;
+    snapshot.insert(
+        path.to_path_buf(),
+        FileStamp {
+            len: metadata.len(),
+            modified: metadata.modified().ok(),
+        },
+    );
+    Ok(())
+}
+
 /// Resolves one logical asset ID exactly where project export does: under the
 /// conventional `assets/` directory first, and at the root for flatter project
 /// layouts. Editor presentation and a shipped build therefore read the same
@@ -125,6 +231,7 @@ fn resolve(project: &Path, id: &str) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use std::fs;
+    use std::time::Instant;
 
     use serde_json::json;
     use sindri_core::{EntityData, SceneEntityId, Transform3D, World};
@@ -189,6 +296,24 @@ mod tests {
         let scale = data.transform_3d.expect("transform").scale_2d();
         assert!((scale[0] - 2.0).abs() < 1.0e-6, "50vw at 2:1 is 2.0");
         assert!((scale[1] - 0.5).abs() < 1.0e-6, "25vh is 0.5");
+    }
+
+    #[test]
+    fn imported_styles_reload_without_reopening_the_project() {
+        let directory = project_with_manifest(
+            "format_version = 1\n\n[project]\nname = \"Styled\"\n\n[assets]\ninclude = [\"ui.weave\"]\n",
+        );
+        let assets = directory.path().join("assets");
+        fs::create_dir_all(assets.join("ui")).expect("style directory");
+        fs::write(assets.join("ui.weave"), "@use \"ui/base.weave\";").expect("entry style");
+        let imported = assets.join("ui/base.weave");
+        fs::write(&imported, "#panel { width: 25vw; }").expect("imported style");
+
+        let project = Project::open(directory.path()).expect("project opens");
+        let mut styles = ProjectStyles::load(&project).expect("styles compose");
+        fs::write(&imported, "#panel { width: 75vw; }\n").expect("style changes");
+        styles.next_poll = Instant::now();
+        assert!(styles.poll_reload().expect("reload succeeds"));
     }
 
     #[test]

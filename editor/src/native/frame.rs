@@ -120,6 +120,24 @@ impl EditorApp {
                 self.render_view(ui, tab);
             });
     }
+
+    /// Picks up saved Weave changes before either viewport resolves presentation.
+    ///
+    /// `ProjectStyles` throttles the file-system poll itself. Keeping the call
+    /// here makes hot reload part of the editor frame rather than part of a
+    /// particular panel, so it works whether the stylesheet is being edited in
+    /// another application or merely sitting in the project browser.
+    fn refresh_styles(&mut self) {
+        match self.styles.poll_reload() {
+            Ok(true) => self.console.info("Reloaded Weave styles"),
+            Ok(false) => {}
+            Err(error) => {
+                let message = format!("Weave reload: {error}");
+                self.console.error(&message);
+                self.notice = Some(message);
+            }
+        }
+    }
 }
 
 impl eframe::App for EditorApp {
@@ -139,8 +157,9 @@ impl eframe::App for EditorApp {
             }
         }
         self.show_window(ui.ctx());
-        // Before anything is drawn, so a texture that arrived since the last
-        // frame is bound by the time this one extracts.
+        // Presentation and textures both refresh before extraction, so a saved
+        // asset change is visible in the frame that first notices it.
+        self.refresh_styles();
         self.refresh_textures();
         let state = self.render_state.clone();
         let arrived = self
