@@ -25,10 +25,7 @@ pub(super) const TYPE_NAME: &str = "weave.style";
 /// This surface owns only reusable `.class` roles. Keeping it outside the
 /// component registry preserves the runtime boundary: a project that never
 /// uses Weave still has no Weave component type in the engine.
-pub(super) fn weave_style_section(
-    ui: &mut egui::Ui,
-    components: &mut BTreeMap<String, Value>,
-) {
+pub(super) fn weave_style_section(ui: &mut egui::Ui, components: &mut BTreeMap<String, Value>) {
     let present = components.contains_key(TYPE_NAME);
     let mut remove_style = false;
     let open = section::component(
@@ -91,7 +88,9 @@ pub(super) fn weave_style_section(
             ui,
             "Classes",
             "invalid metadata",
-            Some("weave.style.classes must be an array; remove this section and add it again to repair it"),
+            Some(
+                "weave.style.classes must be an array; remove this section and add it again to repair it",
+            ),
         );
         return;
     };
