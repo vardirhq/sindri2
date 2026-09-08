@@ -30,9 +30,9 @@ mod session;
 
 // The crate's public surface: what `bin/`, `tests/`, and the browser host
 // reach for. Where an item lives inside the crate is not their business.
-pub use assets::{extractor, presented_world};
 #[cfg(not(target_arch = "wasm32"))]
 pub use assets::{AUDIO, FONTS, bind_fonts, bind_textures, sources, stylesheets, world};
+pub use assets::{extractor, presented_world};
 pub use error::GatherError;
 pub use session::Session;
 

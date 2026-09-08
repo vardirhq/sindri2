@@ -13,9 +13,9 @@
 use sindri_assets::{
     AssetBytes, AssetDecoder, AudioAssetDecoder, FontAssetDecoder, TextureAssetDecoder,
 };
+use sindri_core::World;
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_core::{AssetId, SceneDocument, SpriteSheetDocument, sheet_id_for};
-use sindri_core::World;
 use sindri_decay::ScriptComponent;
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_decay::ScriptSources;
@@ -32,14 +32,8 @@ use crate::error::GatherError;
 /// The composed presentation sources embedded by the native game.
 #[cfg(not(target_arch = "wasm32"))]
 pub const WEAVE_SOURCES: &[(&str, &str)] = &[
-    (
-        "ui/gather.weave",
-        include_str!("../assets/ui/gather.weave"),
-    ),
-    (
-        "ui/hud.weave",
-        include_str!("../assets/ui/hud.weave"),
-    ),
+    ("ui/gather.weave", include_str!("../assets/ui/gather.weave")),
+    ("ui/hud.weave", include_str!("../assets/ui/hud.weave")),
     (
         "ui/completion.weave",
         include_str!("../assets/ui/completion.weave"),

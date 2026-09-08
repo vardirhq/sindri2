@@ -78,7 +78,11 @@ fn weave_reflows_the_hud_for_a_phone() {
     .expect("phone presentation resolves");
     let title = authored
         .entities()
-        .find(|(_, data)| data.source_id.as_ref().is_some_and(|id| id.as_str() == "title"))
+        .find(|(_, data)| {
+            data.source_id
+                .as_ref()
+                .is_some_and(|id| id.as_str() == "title")
+        })
         .map(|(entity, _)| entity)
         .expect("Gather has a title");
 

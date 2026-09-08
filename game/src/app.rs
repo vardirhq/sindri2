@@ -100,6 +100,7 @@ impl DesktopApp for GatherApp {
         Ok(())
     }
 
+    #[allow(clippy::cast_precision_loss)]
     fn render(
         &mut self,
         context: &AppContext<'_>,
