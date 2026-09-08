@@ -161,6 +161,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["upgrade-card"]
+        },
         "sindri.script": {
           "properties": {
             "catalog": "profiles/module-catalog.profile.json",
@@ -227,6 +230,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["upgrade-card-copy"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -275,6 +281,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["upgrade-card-name"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -326,6 +335,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["upgrade-card"]
+        },
         "sindri.script": {
           "properties": {
             "catalog": "profiles/module-catalog.profile.json",
@@ -392,6 +404,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["upgrade-card-copy"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -440,6 +455,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["upgrade-card-name"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -491,6 +509,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["upgrade-card"]
+        },
         "sindri.script": {
           "properties": {
             "catalog": "profiles/module-catalog.profile.json",
@@ -557,6 +578,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["upgrade-card-copy"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -605,6 +629,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["upgrade-card-name"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -656,6 +683,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["upgrade-card"]
+        },
         "sindri.script": {
           "properties": {
             "catalog": "profiles/module-catalog.profile.json",
@@ -722,6 +752,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["upgrade-card-copy"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -770,6 +803,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["upgrade-card-name"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -821,6 +857,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["upgrade-card"]
+        },
         "sindri.script": {
           "properties": {
             "catalog": "profiles/module-catalog.profile.json",
@@ -887,6 +926,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["upgrade-card-copy"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -935,6 +977,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["upgrade-card-name"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -986,6 +1031,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["upgrade-card"]
+        },
         "sindri.script": {
           "properties": {
             "catalog": "profiles/module-catalog.profile.json",
@@ -1052,6 +1100,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["upgrade-card-copy"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -1100,6 +1151,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["upgrade-card-name"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -3078,6 +3132,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["title-meta"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -3120,6 +3177,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["title-panel"]
+        },
         "sindri.ui.shape": {
           "kind": "rect",
           "count": 6.0,
@@ -3170,6 +3230,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["title-copy"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -3231,6 +3294,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["title-logo"]
+        },
         "sindri.ui.image": {
           "texture": "textures/logo.png",
           "anchor": "center",
@@ -3267,6 +3333,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["title-copy","title-notice"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -3316,6 +3385,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["title-action","overlay-primary"]
+        },
         "sindri.script": {
           "properties": {
             "action": 0.0
@@ -3376,6 +3448,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["title-action-label","overlay-primary-label"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -3418,6 +3493,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["upgrade-grid"]
+        },
         "sindri.ui.layout": {
           "direction": "column",
           "spacing": 0.3
@@ -3469,6 +3547,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["upgrade-panel"]
+        },
         "sindri.ui.shape": {
           "kind": "rect",
           "count": 6.0,
@@ -3519,6 +3600,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["upgrade-heading"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
