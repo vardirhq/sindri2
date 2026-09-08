@@ -22,18 +22,20 @@ The browser proof lives at `games/weave-poc` and is deployed to
 - [`weave-migration.md`](weave-migration.md) is the step-by-step real-game
   migration guide and acceptance checklist.
 - `games/weave-poc/assets/demo.weave` is the smallest responsive example.
-- `games/orbital-last-stand/assets/ui.weave` is the production-oriented
-  migration example as Last Stand screens move onto Weave.
+- `games/orbital-last-stand/assets/ui.weave` is the production-oriented entry
+  stylesheet; it composes focused HUD, overlay, and screen styles with `@use`.
 
 ## Quick start
 
 1. Keep UI entities, hierarchy, components, initial content, and stable IDs in
    the scene.
 2. Add presentation classes with the opaque `weave.style` component.
-3. Add a `.weave` file to the project's `[assets].include` list.
-4. Style broad roles with classes and reserve ID rules for true exceptions.
-5. Add portrait or width media rules that recompose the hierarchy.
-6. Verify rendering and pointer hit testing at wide, narrow, and portrait sizes.
+3. Add one entry `.weave` file to the project's `[assets].include` list. Imported
+   stylesheets are discovered by the exporter.
+4. Split larger presentation surfaces with top-level `@use "...";` directives.
+5. Style broad roles with classes and reserve ID rules for true exceptions.
+6. Add portrait or width media rules that recompose the hierarchy.
+7. Verify rendering and pointer hit testing at wide, narrow, and portrait sizes.
 
 ```toml
 [assets]
@@ -41,6 +43,9 @@ include = ["ui/game.weave"]
 ```
 
 ```css
+@use "shared/theme.weave";
+@use "screens/menu.weave";
+
 .panel {
     width: 560px;
     padding: 24px;
@@ -63,6 +68,33 @@ include = ["ui/game.weave"]
 Weave owns presentation only. Decay should continue updating the same stable
 entity IDs with `Ui.set_text`, `Ui.set_number`, `Ui.set_numbers`, and
 `Ui.set_fill`.
+
+## Stylesheet composition
+
+`@use` is a deliberately small file-composition primitive, not a second module
+system. Directives must be top-level and appear before the first selector or
+media query:
+
+```css
+@use "shared/theme.weave";
+@use "hud/status.weave";
+```
+
+Paths are resolved relative to the importing stylesheet's asset ID and always
+use forward slashes. `.` and `..` are normalized, but an import may not escape
+the stylesheet root. Imported rules are inserted before the importing file's
+own rules, so ordinary Weave specificity and source order continue to determine
+the winner.
+
+The exporter follows the complete `@use` graph from an entry stylesheet in
+`[assets].include`, so imported files do not also need to be listed in
+`sindri.toml`. The browser host composes the fetched source graph and does not
+apply imported files a second time. Missing sources, malformed directives,
+root escapes, and circular imports are errors with the stylesheet path/import
+chain in the diagnostic.
+
+Independent `.weave` files may still be listed as separate roots. They are
+composed independently and applied in deterministic asset order.
 
 ## Selectors
 
@@ -158,7 +190,8 @@ Each condition wraps ordinary rules. Conditions cannot yet be combined.
 ## Runtime flow
 
 1. Load the authored scene into a normal `World`.
-2. Parse the project's `.weave` stylesheet.
+2. Load the project's `.weave` source graph and compose each independent entry
+   stylesheet.
 3. Resolve selector matches and cascade winners into a computed style for each
    entity.
 4. Resolve a `PresentationWorld` for the current viewport, settling ancestors
@@ -178,4 +211,5 @@ descendant selectors, pseudo-states, variables, per-side padding, margin,
 flexible growth/shrink, accessibility mapping, editor inspector, or hot reload.
 The demo proves reusable classes, cascade behavior, responsive geometry,
 min/max constraints, uniform content padding, main/cross-axis alignment, font
-metrics, fills, strokes, and rounded shapes on the native Sindri UI path.
+metrics, fills, strokes, rounded shapes, and composable stylesheet sources on
+the native Sindri UI path.
