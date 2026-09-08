@@ -36,7 +36,7 @@ use glam::{Quat, Vec2};
 use sindri_core::{ComponentRegistryError, ComponentSchemaRegistry, EntityId, Transform3D, World};
 
 use super::{UiButtonComponent, UiLayoutComponent};
-use crate::{UiAnchor, UiImageComponent, UiTextComponent};
+use crate::{UiAnchor, UiImageComponent, UiShapeComponent, UiTextComponent};
 
 /// How deep a parent chain is followed.
 ///
@@ -202,6 +202,9 @@ fn declared_anchors(
     let mut anchors = BTreeMap::new();
     for (entity, image) in components.query::<UiImageComponent>(world)? {
         anchors.insert(entity, image.anchor);
+    }
+    for (entity, shape) in components.query::<UiShapeComponent>(world)? {
+        anchors.entry(entity).or_insert(shape.anchor);
     }
     for (entity, text) in components.query::<UiTextComponent>(world)? {
         anchors.entry(entity).or_insert(text.anchor);
@@ -460,6 +463,27 @@ mod tests {
             (first.y - second.y).abs() > 0.49,
             "{first:?} then {second:?}"
         );
+    }
+
+    /// A shape-only card is an element in its own right, not merely a parent
+    /// whose children happen to draw.
+    ///
+    /// Omitting shapes from the element set made a proof card fall back to the
+    /// screen centre while its text children correctly followed the layout.
+    #[test]
+    fn a_shape_only_element_is_still_placed() {
+        let (world, extractor) = world(
+            r#"{ "id": "column", "name": "column",
+                 "transform_3d": { "scale": [2.0, 2.0, 1.0] },
+                 "components": { "sindri.ui.layout": { "direction": "column",
+                     "justify": "start", "align": "center" } } },
+               { "id": "card", "name": "card", "parent": "column",
+                 "transform_3d": { "scale": [1.0, 0.5, 1.0] },
+                 "components": { "sindri.ui.shape": { "kind": "rect",
+                     "fill": [1.0, 1.0, 1.0, 1.0], "anchor": "center" } } }"#,
+        );
+        let card = placement(&world, &extractor, "card");
+        assert!((card.offset - Vec2::new(0.0, 0.75)).length() < 1.0e-6);
     }
 
     /// An element with no parents is placed exactly where it always was.
