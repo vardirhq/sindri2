@@ -255,22 +255,7 @@ impl EditorApp {
         // viewport are facts about the project's screen, not about the GPU
         // surface being drawn into.
         let canvas = self.canvas_for(editing);
-        let presentation_viewport = self.presentation_viewport(editing, rect);
-        let presented = if self.styles.is_empty() {
-            None
-        } else {
-            match self.styles.resolve(&self.world, presentation_viewport) {
-                Ok(world) => Some(world),
-                Err(error) => {
-                    let failure = format!("Weave: {error}");
-                    self.console.error(&failure);
-                    if self.render_error.is_none() {
-                        self.render_error = Some(failure);
-                    }
-                    None
-                }
-            }
-        };
+        let presented = self.resolve_presentation(editing, rect);
         let source_world = presented.as_ref().unwrap_or(&self.world);
         let viewport_size = (
             physical_viewport_dimension(rect.width(), scale),
@@ -337,6 +322,31 @@ impl EditorApp {
             paint_viewport_border(ui.painter(), rect, self.problem());
         }
         context.request_repaint();
+    }
+
+    /// Resolves the authored world through the project's Weave presentation.
+    ///
+    /// Kept outside `render_view` because resolving presentation is one concern
+    /// of its own and because failures need the same console/render-error path
+    /// whichever viewport asked for them.
+    fn resolve_presentation(&mut self, editing: bool, rect: Rect) -> Option<sindri_core::World> {
+        if self.styles.is_empty() {
+            return None;
+        }
+        match self
+            .styles
+            .resolve(&self.world, self.presentation_viewport(editing, rect))
+        {
+            Ok(world) => Some(world),
+            Err(error) => {
+                let failure = format!("Weave: {error}");
+                self.console.error(&failure);
+                if self.render_error.is_none() {
+                    self.render_error = Some(failure);
+                }
+                None
+            }
+        }
     }
 
     /// The logical screen dimensions Weave resolves against.
