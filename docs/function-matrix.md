@@ -31,7 +31,7 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Pathfinding | ✅ | ✅ | ✅ |
 | Text | ✅ | ✅ | 🟡 |
 | UI buttons and layout | ✅ | ✅ | ✅ |
-| Weave responsive presentation | 🟡 | ❌ | — |
+| Weave responsive presentation | 🟡 | 🟡 | — |
 | Seeded randomness | ✅ | ✅ | ✅ |
 | Game saves | ✅ | 🟡 | ✅ |
 | Effects | ✅ | 🟡 | ✅ |
