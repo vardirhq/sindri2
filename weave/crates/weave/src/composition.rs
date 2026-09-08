@@ -211,7 +211,10 @@ fn locate_parse_error(source: &str, start: usize, error: &ParseError) -> (usize,
 fn line_column(source: &str, offset: usize) -> (usize, usize) {
     let prefix = &source[..offset.min(source.len())];
     let line = prefix.bytes().filter(|byte| *byte == b'\n').count() + 1;
-    let column = prefix.rsplit('\n').next().map_or(1, |tail| tail.chars().count() + 1);
+    let column = prefix
+        .rsplit('\n')
+        .next()
+        .map_or(1, |tail| tail.chars().count() + 1);
     (line, column)
 }
 
