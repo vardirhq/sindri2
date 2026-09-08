@@ -154,7 +154,7 @@ fn last_stand_upgrade_choices_recompose_on_phone() {
     );
     assert_eq!(
         string(phone.world(), "upgrade-row", "sindri.ui.layout", "align"),
-        "stretch"
+        "center"
     );
     assert_eq!(
         string(
