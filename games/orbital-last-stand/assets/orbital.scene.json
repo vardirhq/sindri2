@@ -1952,6 +1952,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["overlay-panel","pause-panel"]
+        },
         "sindri.ui.shape": {
           "kind": "rect",
           "count": 6.0,
@@ -2002,6 +2005,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["overlay-button","overlay-danger"]
+        },
         "sindri.script": {
           "properties": {
             "action": 3.0
@@ -2062,6 +2068,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["overlay-button-label","overlay-danger-label"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -2104,6 +2113,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["overlay-button","overlay-primary"]
+        },
         "sindri.script": {
           "properties": {
             "action": 2.0
@@ -2164,6 +2176,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["overlay-button-label","overlay-primary-label"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -2206,6 +2221,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["overlay-title","pause-title"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -2645,6 +2663,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["overlay-button","overlay-primary","result-action"]
+        },
         "sindri.script": {
           "properties": {
             "action": 0.0
@@ -2705,6 +2726,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["overlay-button-label","overlay-primary-label","result-action-label"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -2747,6 +2771,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["result-stat","result-best"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -2789,6 +2816,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["overlay-panel","result-panel"]
+        },
         "sindri.ui.shape": {
           "kind": "rect",
           "count": 6.0,
@@ -2839,6 +2869,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["result-stat","result-kills"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -2881,6 +2914,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["overlay-title","result-score"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -2923,6 +2959,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["result-stat","result-time"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
@@ -2965,6 +3004,9 @@
         ]
       },
       "components": {
+        "weave.style": {
+          "classes": ["overlay-kicker","result-title"]
+        },
         "sindri.ui.text": {
           "anchor": "center",
           "color": [
