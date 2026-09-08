@@ -45,17 +45,21 @@ mod tests {
 
     use super::{SCENE, STYLE};
 
-    fn menu_width(world: &World) -> f32 {
+    fn element_size(world: &World, id: &str) -> [f32; 2] {
         world
             .entities()
             .find(|(_, data)| {
                 data.source_id
                     .as_ref()
-                    .is_some_and(|id| id.as_str() == "menu")
+                    .is_some_and(|source_id| source_id.as_str() == id)
             })
             .and_then(|(_, data)| data.transform_3d)
-            .expect("menu transform")
-            .scale[0]
+            .expect("element transform")
+            .scale_2d()
+    }
+
+    fn menu_width(world: &World) -> f32 {
+        element_size(world, "menu")[0]
     }
 
     #[test]
@@ -91,6 +95,8 @@ mod tests {
         assert!((desktop_width - mobile_width).abs() > f32::EPSILON);
         let ninety_four_vw = 0.94 * 2.0 * 980.0 / 1800.0;
         assert!((mobile_width - ninety_four_vw).abs() < 1.0e-6);
+        let content_fit_height = 2.0 * 650.0 / 1800.0;
+        assert!((element_size(mobile.world(), "menu")[1] - content_fit_height).abs() < 1.0e-6);
         assert!((menu_width(&authored) - source_width).abs() <= f32::EPSILON);
     }
 
@@ -207,9 +213,22 @@ mod tests {
             "end"
         );
 
+        for (id, pixel_height) in [
+            ("proof-kicker", 14.0),
+            ("proof-title", 28.0),
+            ("proof-body", 24.0),
+            ("feature-start-label", 16.0),
+        ] {
+            let expected = 2.0 * pixel_height / 844.0;
+            assert!(
+                (element_size(mobile.world(), id)[1] - expected).abs() < 1.0e-6,
+                "{id} must have an explicit mobile layout box"
+            );
+        }
+
         let desktop_size = number_field(desktop.world(), "title", "sindri.ui.text", "font_size");
         let mobile_size = number_field(mobile.world(), "title", "sindri.ui.text", "font_size");
         assert!((desktop_size - 84.0 / 720.0).abs() < 1.0e-6);
-        assert!((mobile_size - 68.0 / 844.0).abs() < 1.0e-6);
+        assert!((mobile_size - 64.0 / 844.0).abs() < 1.0e-6);
     }
 }

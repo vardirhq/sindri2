@@ -180,7 +180,7 @@
       "components": {
         "weave.style": { "classes": ["proof-kicker"] },
         "sindri.ui.text": {
-          "text": "#203",
+          "text": "LAYOUT PROOF",
           "font": "fonts/ChakraPetch-Regular.ttf",
           "font_size": 0.04,
           "bounds": [0.3, 0.06],
@@ -212,7 +212,7 @@
       "components": {
         "weave.style": { "classes": ["proof-body"] },
         "sindri.ui.text": {
-          "text": "START / CENTER / END",
+          "text": "EDGES HOLD. THE GAP FLEXES.",
           "font": "fonts/ChakraPetch-Regular.ttf",
           "font_size": 0.032,
           "bounds": [0.32, 0.08],
