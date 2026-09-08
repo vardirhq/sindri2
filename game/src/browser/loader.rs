@@ -223,15 +223,16 @@ impl ProjectLoaders {
             .into_iter()
             .map(|(id, sheet)| (id.as_str().to_owned(), sheet))
             .collect();
-        let stylesheets = self
+        let style_sources = self
             .style_ids
             .iter()
-            .map(|id| {
-                let source = loaded(&self.styles, id)?;
-                weave::parse(&source)
-                    .map_err(|error| GatherError::BrowserAsset(format!("{id}: {error}")))
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+            .map(|id| loaded(&self.styles, id).map(|source| (id.clone(), source)))
+            .collect::<Result<BTreeMap<_, _>, _>>()?;
+        let stylesheets = weave::compose_all(&style_sources)
+            .map_err(|error| GatherError::BrowserAsset(error.to_string()))?
+            .into_iter()
+            .map(|(_, sheet)| sheet)
+            .collect();
         let asset_count = self.manifest.len();
         Ok(Some(BrowserProjectAssets {
             scene,
