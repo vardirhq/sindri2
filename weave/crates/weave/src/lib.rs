@@ -1,6 +1,10 @@
 use std::collections::BTreeMap;
 use thiserror::Error;
 
+mod composition;
+
+pub use composition::{ComposeError, compose, compose_all, imports, resolve_import};
+
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Stylesheet {
     pub rules: Vec<Rule>,
