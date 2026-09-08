@@ -64,19 +64,7 @@ pub(super) fn weave_style_section(ui: &mut egui::Ui, components: &mut BTreeMap<S
     ui.add_space(5.0);
 
     if !present {
-        ui.horizontal(|ui| {
-            ui.add_space(metric::GUTTER);
-            if ui
-                .button(
-                    egui::RichText::new("Add Weave classes")
-                        .size(text::BODY)
-                        .color(color::TEXT),
-                )
-                .clicked()
-            {
-                components.insert(TYPE_NAME.to_owned(), json!({ "classes": [] }));
-            }
-        });
+        add_style_button(ui, components);
         return;
     }
 
@@ -94,7 +82,26 @@ pub(super) fn weave_style_section(ui: &mut egui::Ui, components: &mut BTreeMap<S
         );
         return;
     };
+    class_rows(ui, classes);
+}
 
+fn add_style_button(ui: &mut egui::Ui, components: &mut BTreeMap<String, Value>) {
+    ui.horizontal(|ui| {
+        ui.add_space(metric::GUTTER);
+        if ui
+            .button(
+                egui::RichText::new("Add Weave classes")
+                    .size(text::BODY)
+                    .color(color::TEXT),
+            )
+            .clicked()
+        {
+            components.insert(TYPE_NAME.to_owned(), json!({ "classes": [] }));
+        }
+    });
+}
+
+fn class_rows(ui: &mut egui::Ui, classes: &mut Vec<Value>) {
     let mut remove_class = None;
     for (index, class) in classes.iter_mut().enumerate() {
         let mut value = class.as_str().unwrap_or_default().to_owned();
@@ -125,7 +132,10 @@ pub(super) fn weave_style_section(ui: &mut egui::Ui, components: &mut BTreeMap<S
     if let Some(index) = remove_class {
         classes.remove(index);
     }
+    add_class_button(ui, classes);
+}
 
+fn add_class_button(ui: &mut egui::Ui, classes: &mut Vec<Value>) {
     ui.horizontal(|ui| {
         ui.add_space(metric::GUTTER);
         if ui
