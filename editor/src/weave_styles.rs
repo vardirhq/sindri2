@@ -50,10 +50,8 @@ impl ProjectStyles {
         // exactly the double-application this loader exists to avoid.
         let mut sheets = Vec::with_capacity(roots.len());
         for root in roots {
-            sheets.push(
-                weave::compose(&root, &sources)
-                    .map_err(|error| format!("{root}: {error}"))?,
-            );
+            sheets
+                .push(weave::compose(&root, &sources).map_err(|error| format!("{root}: {error}"))?);
         }
         Ok(Self { sheets })
     }
@@ -94,14 +92,14 @@ fn gather_sources(
         return Ok(());
     }
     let path = resolve(project, id);
-    let source = std::fs::read_to_string(&path)
-        .map_err(|error| format!("{}: {error}", path.display()))?;
+    let source =
+        std::fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
     let imports = weave::imports(&source).map_err(|error| format!("{id}: {error}"))?;
     sources.insert(id.to_owned(), source);
 
     for reference in imports {
-        let dependency = weave::resolve_import(id, &reference)
-            .map_err(|error| format!("{id}: {error}"))?;
+        let dependency =
+            weave::resolve_import(id, &reference).map_err(|error| format!("{id}: {error}"))?;
         gather_sources(project, &dependency, sources, walked)?;
     }
     Ok(())
@@ -136,9 +134,8 @@ mod tests {
 
     #[test]
     fn no_weave_root_means_authored_presentation() {
-        let directory = project_with_manifest(
-            "format_version = 1\n\n[project]\nname = \"Plain\"\n",
-        );
+        let directory =
+            project_with_manifest("format_version = 1\n\n[project]\nname = \"Plain\"\n");
         let project = Project::open(directory.path()).expect("project opens");
         let styles = ProjectStyles::load(&project).expect("no style is valid");
         assert!(styles.is_empty());
@@ -156,11 +153,8 @@ mod tests {
             "@use \"ui/base.weave\";\n#panel { width: 50vw; }",
         )
         .expect("entry style");
-        fs::write(
-            assets.join("ui/base.weave"),
-            ".card { height: 25vh; }",
-        )
-        .expect("imported style");
+        fs::write(assets.join("ui/base.weave"), ".card { height: 25vh; }")
+            .expect("imported style");
 
         let project = Project::open(directory.path()).expect("project opens");
         let styles = ProjectStyles::load(&project).expect("styles compose");
