@@ -1,8 +1,13 @@
 # Orbital Last Stand: the recreation plan
 
+> **Status:** completed capability plan and continuing parity record. The ten
+> blocking engine slices below shipped; `last-stand-reference-parity.md` and
+> `last-stand-visual-parity.md` now track the remaining game-fidelity work.
+
 `docs/orbital-last-stand-audit.md` asked whether the reference game could be
-built in Sindri as Sindri exists. The answer was no. This document is the plan
-for making the answer yes, and the record of what that costs.
+built in Sindri as Sindri existed then. The answer was no. This document records
+the plan that made the answer yes, what that cost, and the parity work that
+continues beyond the original capability gate.
 
 The rule that governs every line of it: **the game is authored through the
 editor and Decay, and every gap that blocks it is closed as a general Sindri
