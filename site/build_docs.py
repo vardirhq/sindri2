@@ -16,6 +16,7 @@ OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "target/pages"
 REPOSITORY = "https://github.com/vardirhq/sindri2/blob/main"
 
 PAGES = [
+    ("documentation", "Documentation map", "docs/README.md", "ALL DOCS"),
     ("getting-started", "Getting started", "README.md", "START HERE"),
     ("project", "Projects", "docs/project-format.md", "PROJECT MODEL"),
     ("scenes", "Scenes & components", "docs/scene-extraction.md", "CORE MODEL"),
@@ -35,6 +36,7 @@ NAV = [
     (
         "Learn",
         [
+            ("documentation", "Documentation map"),
             ("getting-started", "Getting started"),
             ("project", "Projects"),
             ("scenes", "Scenes & components"),
@@ -140,7 +142,7 @@ TEMPLATE = """<!doctype html>
 <header class="nav">
 <a class="brand" href="../../"><span class="brandmark">S</span><span>Sindri</span><small>DOCS</small></a>
 <nav>
-<a href="../getting-started/">Docs</a>
+<a href="../documentation/">Docs</a>
 <a href="../scripting/">Decay</a>
 <a href="../weave/">Weave</a>
 <a href="../../examples/gather/">Gather</a>
