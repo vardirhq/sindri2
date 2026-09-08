@@ -36,13 +36,15 @@ pub fn imports(source: &str) -> Result<Vec<String>, ComposeError> {
 ///
 /// Asset ids always use forward slashes, regardless of host platform.
 pub fn resolve_import(source: &str, reference: &str) -> Result<String, ComposeError> {
-    let mut parts = source.rsplit_once('/').map_or_else(Vec::new, |(parent, _)| {
-        parent
-            .split('/')
-            .filter(|part| !part.is_empty())
-            .map(str::to_owned)
-            .collect::<Vec<_>>()
-    });
+    let mut parts = source
+        .rsplit_once('/')
+        .map_or_else(Vec::new, |(parent, _)| {
+            parent
+                .split('/')
+                .filter(|part| !part.is_empty())
+                .map(str::to_owned)
+                .collect::<Vec<_>>()
+        });
 
     let reference = reference.trim();
     if reference.is_empty() || reference.starts_with('/') {
@@ -273,9 +275,7 @@ mod tests {
 
         assert_eq!(
             compose("a.weave", &sources),
-            Err(ComposeError::Cycle(
-                "a.weave -> b.weave -> a.weave".into()
-            ))
+            Err(ComposeError::Cycle("a.weave -> b.weave -> a.weave".into()))
         );
     }
 
@@ -286,14 +286,8 @@ mod tests {
                 "ui.weave".into(),
                 "@use \"theme.weave\"; .button { width: 300px; }".into(),
             ),
-            (
-                "theme.weave".into(),
-                ".button { color: white; }".into(),
-            ),
-            (
-                "debug.weave".into(),
-                ".debug { color: white; }".into(),
-            ),
+            ("theme.weave".into(), ".button { color: white; }".into()),
+            ("debug.weave".into(), ".debug { color: white; }".into()),
         ]);
 
         let roots = compose_all(&sources).expect("roots compose");
