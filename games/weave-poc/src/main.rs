@@ -95,7 +95,7 @@ mod tests {
         assert!((desktop_width - mobile_width).abs() > f32::EPSILON);
         let ninety_four_vw = 0.94 * 2.0 * 980.0 / 1800.0;
         assert!((mobile_width - ninety_four_vw).abs() < 1.0e-6);
-        let content_fit_height = 2.0 * 1.28 * 980.0 / 1800.0;
+        let content_fit_height = 2.0 * 1.20 * 980.0 / 1800.0;
         assert!((element_size(mobile.world(), "menu")[1] - content_fit_height).abs() < 1.0e-6);
         assert!((menu_width(&authored) - source_width).abs() <= f32::EPSILON);
     }
@@ -215,8 +215,8 @@ mod tests {
 
         for (id, viewport_width_percent) in [
             ("proof-kicker", 3.0),
-            ("proof-title", 6.0),
-            ("proof-body", 5.0),
+            ("proof-title", 5.5),
+            ("proof-body", 4.5),
             ("feature-start-label", 4.0),
         ] {
             let expected = 2.0 * viewport_width_percent / 100.0 * 390.0 / 844.0;
@@ -229,6 +229,6 @@ mod tests {
         let desktop_size = number_field(desktop.world(), "title", "sindri.ui.text", "font_size");
         let mobile_size = number_field(mobile.world(), "title", "sindri.ui.text", "font_size");
         assert!((desktop_size - 84.0 / 720.0).abs() < 1.0e-6);
-        assert!((mobile_size - 2.0 * 0.05 * 390.0 / 844.0).abs() < 1.0e-6);
+        assert!((mobile_size - 2.0 * 0.048 * 390.0 / 844.0).abs() < 1.0e-6);
     }
 }
