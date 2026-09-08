@@ -10,6 +10,7 @@ use sindri_render::{
     TexturedCubeRenderer, Viewport, ViewportTarget, encode_prepared_frame,
 };
 use sindri_scene::{CameraView, SceneRuntime, UiCanvas};
+use weave::Viewport as WeaveViewport;
 
 use super::camera::{EditorCamera, camera_for};
 use super::frame::physical_viewport_dimension;
@@ -250,9 +251,16 @@ impl EditorApp {
         if editing {
             self.select_viewport_click(rect, &response, camera, painting || gizmo_owned);
         }
-        // Worked out before the viewport is borrowed: the canvas is a fact
-        // about the project's screen, not about the surface being drawn into.
+        // Worked out before the viewport is borrowed: the canvas and Weave
+        // viewport are facts about the project's screen, not about the GPU
+        // surface being drawn into.
         let canvas = self.canvas_for(editing);
+        let presented = self.resolve_presentation(editing, rect);
+        let source_world = presented.as_ref().unwrap_or(&self.world);
+        let viewport_size = (
+            physical_viewport_dimension(rect.width(), scale),
+            physical_viewport_dimension(rect.height(), scale),
+        );
         let viewport = if editing {
             &mut self.scene_viewport
         } else {
@@ -263,15 +271,12 @@ impl EditorApp {
                 &mut self.renderers,
                 SceneSource {
                     scene: &self.scene,
-                    world: &self.world,
+                    world: source_world,
                     animations: &self.animations,
                     effects: &self.effects,
                     textures: &self.textures,
                 },
-                (
-                    physical_viewport_dimension(rect.width(), scale),
-                    physical_viewport_dimension(rect.height(), scale),
-                ),
+                viewport_size,
                 camera,
                 // The Scene view puts the UI in the world, where panning and
                 // zooming reach it; the Game view is the screen, so there the
@@ -317,6 +322,54 @@ impl EditorApp {
             paint_viewport_border(ui.painter(), rect, self.problem());
         }
         context.request_repaint();
+    }
+
+    /// Resolves the authored world through the project's Weave presentation.
+    ///
+    /// Kept outside `render_view` because resolving presentation is one concern
+    /// of its own and because failures need the same console/render-error path
+    /// whichever viewport asked for them.
+    fn resolve_presentation(&mut self, editing: bool, rect: Rect) -> Option<sindri_core::World> {
+        if self.styles.is_empty() {
+            return None;
+        }
+        match self
+            .styles
+            .resolve(&self.world, self.presentation_viewport(editing, rect))
+        {
+            Ok(world) => Some(world),
+            Err(error) => {
+                let failure = format!("Weave: {error}");
+                self.console.error(&failure);
+                if self.render_error.is_none() {
+                    self.render_error = Some(failure);
+                }
+                None
+            }
+        }
+    }
+
+    /// The logical screen dimensions Weave resolves against.
+    ///
+    /// A named device uses its real logical size, not the number of editor
+    /// points its preview happened to fit into. In Free mode the Game view is
+    /// the screen. The Scene view follows that Game rectangle when one has been
+    /// drawn, so both views choose the same media queries while shown together.
+    fn presentation_viewport(&self, editing: bool, rect: Rect) -> WeaveViewport {
+        let (width, height) = self.game_device.size.unwrap_or_else(|| {
+            if editing {
+                self.game_view_rect
+                    .map_or((rect.width(), rect.height()), |game| {
+                        (game.width(), game.height())
+                    })
+            } else {
+                (rect.width(), rect.height())
+            }
+        });
+        WeaveViewport {
+            width: width.max(1.0),
+            height: height.max(1.0),
+        }
     }
 
     /// Everything the Scene view wears over the rendered frame.
