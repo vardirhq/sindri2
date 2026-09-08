@@ -10,6 +10,7 @@ pub(super) mod grid;
 pub(super) mod script;
 pub(super) mod text;
 pub(super) mod tilemap;
+pub(super) mod weave;
 
 use std::collections::BTreeMap;
 
@@ -22,6 +23,7 @@ use self::grid::{grid_navigation_section, grid_occupant_section};
 use self::script::{script_choice_row, script_exports_section};
 use self::text::text_section;
 use self::tilemap::tilemap_section;
+use self::weave::weave_style_section;
 use crate::inspector;
 use crate::ui::icons;
 use crate::ui::widgets::{
@@ -52,12 +54,23 @@ pub(super) fn components_sections(
         animation_texture,
         grids,
     } = *project;
+
+    // Weave metadata is deliberately not an engine component, so it gets its
+    // authoring surface here rather than a fake registry entry. The stable ID
+    // field above this list already authors `#id`; this owns reusable classes.
+    weave_style_section(ui, components);
+
     let grid_size = components
         .get(crate::tilemap::TYPE_NAME)
         .and_then(|payload| crate::tilemap::component(payload).ok())
         .map(|map| (map.columns, map.rows));
     let mut removed = None;
     for (name, payload) in components.iter_mut() {
+        // Drawn above as presentation metadata rather than as an opaque
+        // component with an uneditable array readout.
+        if name == weave::TYPE_NAME {
+            continue;
+        }
         let title = component_label(name);
         // The same icons the hierarchy gives these entities, so a row and its
         // component are recognisably the same thing.

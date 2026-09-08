@@ -77,3 +77,6 @@ pub mod typeface;
 /// The editor's design system: its tokens, its icons, and its controls.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ui;
+/// Project-declared Weave presentation used by Scene and Game previews.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod weave_styles;

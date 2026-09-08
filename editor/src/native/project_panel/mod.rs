@@ -118,6 +118,7 @@ pub(super) const fn asset_icon(kind: AssetKind) -> MaterialIcon {
         AssetKind::Prefab => icons::PREFAB,
         AssetKind::Profile | AssetKind::Other => icons::FILE,
         AssetKind::Script => icons::SCRIPT,
+        AssetKind::Stylesheet => icons::STYLESHEET,
         AssetKind::Audio => icons::AUDIO,
     }
 }

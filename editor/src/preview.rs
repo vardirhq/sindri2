@@ -90,7 +90,11 @@ impl TextPreview {
 pub fn is_readable(path: &Path) -> bool {
     matches!(
         AssetKind::of_path(path),
-        AssetKind::Script | AssetKind::Scene | AssetKind::Sheet | AssetKind::Other
+        AssetKind::Script
+            | AssetKind::Stylesheet
+            | AssetKind::Scene
+            | AssetKind::Sheet
+            | AssetKind::Other
     ) && !looks_binary(path)
 }
 

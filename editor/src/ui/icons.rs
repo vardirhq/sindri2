@@ -21,6 +21,8 @@ pub const LAYOUT: MaterialIcon = icons::ICON_VIEW_COLUMN;
 pub const STEP: MaterialIcon = icons::ICON_SKIP_NEXT;
 pub const EFFECT: MaterialIcon = icons::ICON_AUTO_AWESOME;
 pub const SCRIPT: MaterialIcon = icons::ICON_CODE;
+/// A Weave stylesheet, distinct from gameplay code.
+pub const STYLESHEET: MaterialIcon = icons::ICON_STYLE;
 pub const ANIMATION: MaterialIcon = icons::ICON_PLAY_ARROW;
 pub const TILEMAP: MaterialIcon = icons::ICON_GRID_VIEW;
 pub const GRID: MaterialIcon = icons::ICON_GRID_4X4;
