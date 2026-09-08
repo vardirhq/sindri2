@@ -11,12 +11,15 @@ and error.
 
 ## Project setup
 
-Add one or more `.weave` files to the project's asset set:
+Add one or more entry `.weave` files to the project's asset set:
 
 ```toml
 [assets]
 include = ["ui/game.weave"]
 ```
+
+Imported stylesheets do not also need to be listed. The exporter follows the
+entry file's `@use` graph and ships every referenced `.weave` source.
 
 The scene remains the source of entity identity, hierarchy, components, initial
 content, and gameplay bindings. Use `weave.style.classes` for reusable
@@ -30,6 +33,38 @@ presentation roles:
 
 Removing the stylesheet restores the authored presentation because Weave
 resolves a disposable copy of the world.
+
+## Stylesheet composition
+
+A stylesheet may import focused presentation files with top-level `@use`
+directives before the first rule or media query:
+
+```css
+@use "shared/theme.weave";
+@use "hud/status.weave";
+
+.screen {
+    width: 100%;
+}
+```
+
+Both single and double quoted paths are accepted. Import paths are resolved
+relative to the importing stylesheet asset ID, use forward slashes on every
+platform, and may contain `.` or `..` so long as they do not escape the
+stylesheet root.
+
+Imported rules are inserted before the importing file's own rules. Specificity
+and source order therefore behave exactly as though the imported rules had been
+written first in the entry stylesheet. A source imported more than once in one
+composition graph is emitted once.
+
+Multiple independent entry stylesheets remain supported. The runtime identifies
+which fetched `.weave` files are roots, composes each root, and does not apply an
+imported file a second time.
+
+Composition errors include malformed `@use` directives, missing source IDs,
+paths that escape the stylesheet root, and circular imports. A cycle reports the
+chain, for example `ui.weave -> shared.weave -> ui.weave`.
 
 ## Rule syntax
 
@@ -174,11 +209,12 @@ rule and override only what changes inside the media rule.
 
 ## Runtime behavior
 
-The bridge parses the stylesheet, computes cascade winners, then resolves a
-presentation world for the viewport. Parents settle before descendants so
-percentages, padding, and constraints have stable inputs. Rendering, pointer
-hit-testing, editor placement, and generic UI layout consume the resulting
-ordinary Sindri components.
+The host loads the complete `.weave` source graph, composes each independent
+entry stylesheet, computes cascade winners, then resolves a presentation world
+for the viewport. Parents settle before descendants so percentages, padding,
+and constraints have stable inputs. Rendering, pointer hit-testing, editor
+placement, and generic UI layout consume the resulting ordinary Sindri
+components.
 
 A viewport change resolves a fresh presentation world from the authored scene.
 Weave does not progressively mutate the previous resolved result.
@@ -195,6 +231,7 @@ Presentation changes do not require those bindings to change.
 ## Authoring guidance
 
 - Keep semantic identity in entity IDs and reusable appearance in classes.
+- Keep one small entry stylesheet and split large surfaces with `@use`.
 - Use scene parenting to describe layout ownership.
 - Give layout children explicit boxes.
 - Prefer content-driven authored dimensions over filling the viewport merely
