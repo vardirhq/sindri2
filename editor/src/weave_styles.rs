@@ -160,8 +160,7 @@ mod tests {
             "@use \"ui/base.weave\";\n#panel { width: 50vw; }",
         )
         .expect("entry style");
-        fs::write(assets.join("ui/base.weave"), ".card { height: 25vh; }")
-            .expect("imported style");
+        fs::write(assets.join("ui/base.weave"), ".card { height: 25vh; }").expect("imported style");
 
         let project = Project::open(directory.path()).expect("project opens");
         let styles = ProjectStyles::load(&project).expect("styles compose");
