@@ -9,6 +9,7 @@ main_scene = "assets/orbital.scene.json"
 # program, and no walk of a scene can see one.
 [assets]
 include = [
+  "ui.weave",
   "audio/shot.wav",
   "audio/kill.wav",
   "audio/core.wav",

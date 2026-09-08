@@ -12,6 +12,58 @@ world is never mutated.
 The browser proof lives at `games/weave-poc` and is deployed to
 `/sindri2/examples/weave-poc/`.
 
+## Documentation map
+
+- This page is the short conceptual guide.
+- [`weave-reference.md`](weave-reference.md) is the complete implemented
+  language reference, including diagnostics and unsupported CSS.
+- [`weave-poc.md`](weave-poc.md) records the architectural boundary and proof
+  strategy.
+- [`weave-migration.md`](weave-migration.md) is the step-by-step real-game
+  migration guide and acceptance checklist.
+- `games/weave-poc/assets/demo.weave` is the smallest responsive example.
+- `games/orbital-last-stand/assets/ui.weave` is the production-oriented
+  migration example as Last Stand screens move onto Weave.
+
+## Quick start
+
+1. Keep UI entities, hierarchy, components, initial content, and stable IDs in
+   the scene.
+2. Add presentation classes with the opaque `weave.style` component.
+3. Add a `.weave` file to the project's `[assets].include` list.
+4. Style broad roles with classes and reserve ID rules for true exceptions.
+5. Add portrait or width media rules that recompose the hierarchy.
+6. Verify rendering and pointer hit testing at wide, narrow, and portrait sizes.
+
+```toml
+[assets]
+include = ["ui/game.weave"]
+```
+
+```css
+.panel {
+    width: 560px;
+    padding: 24px;
+    direction: column;
+    gap: 16px;
+}
+
+.action {
+    width: 240px;
+    height: 52px;
+    border-radius: 12px;
+}
+
+@media (orientation: portrait) {
+    .panel { width: 92vw; }
+    .action { width: 100%; }
+}
+```
+
+Weave owns presentation only. Decay should continue updating the same stable
+entity IDs with `Ui.set_text`, `Ui.set_number`, `Ui.set_numbers`, and
+`Ui.set_fill`.
+
 ## Selectors
 
 A rule targets one entity at a time:
