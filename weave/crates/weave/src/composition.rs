@@ -14,9 +14,11 @@ pub enum ComposeError {
     EscapesRoot { from: String, reference: String },
     #[error("circular Weave imports: {0}")]
     Cycle(String),
-    #[error("{path}: {error}")]
+    #[error("{path}:{line}:{column}: {error}")]
     Parse {
         path: String,
+        line: usize,
+        column: usize,
         #[source]
         error: ParseError,
     },
@@ -89,9 +91,14 @@ pub fn compose(
     let mut stack = Vec::new();
     let mut emitted = BTreeSet::new();
     let expanded = expand(entry, sources, &mut stack, &mut emitted)?;
-    parse(&expanded).map_err(|error| ComposeError::Parse {
-        path: entry.to_owned(),
-        error,
+    parse(&expanded).map_err(|error| {
+        let (line, column) = locate_parse_error(&expanded, 0, &error);
+        ComposeError::Parse {
+            path: entry.to_owned(),
+            line,
+            column,
+            error,
+        }
     })
 }
 
@@ -155,6 +162,7 @@ fn expand(
         .get(id)
         .ok_or_else(|| ComposeError::MissingSource(id.to_owned()))?;
     let (references, body) = split_imports(source)?;
+    validate_source(id, source, body)?;
     stack.push(id.to_owned());
 
     let mut expanded = String::new();
@@ -170,6 +178,44 @@ fn expand(
     stack.pop();
     emitted.insert(id.to_owned());
     Ok(expanded)
+}
+
+fn validate_source(id: &str, source: &str, body: &str) -> Result<(), ComposeError> {
+    let body_offset = source.len().saturating_sub(body.len());
+    parse(body).map_err(|error| {
+        let (line, column) = locate_parse_error(source, body_offset, &error);
+        ComposeError::Parse {
+            path: id.to_owned(),
+            line,
+            column,
+            error,
+        }
+    })?;
+    Ok(())
+}
+
+fn locate_parse_error(source: &str, start: usize, error: &ParseError) -> (usize, usize) {
+    let needle = match error {
+        ParseError::MissingBlock(value)
+        | ParseError::MissingColon(value)
+        | ParseError::UnsupportedMedia(value)
+        | ParseError::InvalidMediaWidth(value) => Some(value.as_str()),
+        ParseError::MissingClose => None,
+    };
+    let offset = needle
+        .and_then(|needle| source.get(start..)?.find(needle).map(|found| start + found))
+        .unwrap_or_else(|| source.len().saturating_sub(1));
+    line_column(source, offset)
+}
+
+fn line_column(source: &str, offset: usize) -> (usize, usize) {
+    let prefix = &source[..offset.min(source.len())];
+    let line = prefix.bytes().filter(|byte| *byte == b'\n').count() + 1;
+    let column = prefix
+        .rsplit('\n')
+        .next()
+        .map_or(1, |tail| tail.chars().count() + 1);
+    (line, column)
 }
 
 fn split_imports(source: &str) -> Result<(Vec<String>, &str), ComposeError> {
@@ -263,6 +309,23 @@ mod tests {
         assert_eq!(
             resolve_import("panels/hud.weave", "../shared/theme.weave").unwrap(),
             "shared/theme.weave"
+        );
+    }
+
+    #[test]
+    fn imported_parse_errors_keep_their_file_and_location() {
+        let sources = BTreeMap::from([
+            ("ui.weave".into(), "@use \"shared/theme.weave\";".into()),
+            (
+                "shared/theme.weave".into(),
+                "\n\n.button { width 200px; }".into(),
+            ),
+        ]);
+
+        let error = compose("ui.weave", &sources).expect_err("invalid import must fail");
+        assert_eq!(
+            error.to_string(),
+            "shared/theme.weave:3:11: expected ':' in declaration `width 200px`"
         );
     }
 
