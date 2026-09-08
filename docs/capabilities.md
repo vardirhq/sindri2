@@ -139,9 +139,10 @@ looping background music has been observed playing in a real browser through
 `scripts/browser/smoke.mjs`, which fails if a clip a page asked for did not play.
 
 What audio does not do yet: nothing gathers the clips a scene names, the way
-`referenced_textures` and `referenced_fonts` do, so a host loads audio from its
-own list and the editor cannot load a scene's audio at all. The editor lists
-audio files and edits `sindri.audio.source`; it cannot play one.
+`referenced_textures` and `referenced_fonts` do, so dynamically named clips
+must be listed in the project's `[assets].include`. The editor lists audio
+files, edits `sindri.audio.source`, and can audition a selected clip through its
+own audio backend, but it does not preview a scene source in place.
 
 ### Physics
 
@@ -178,12 +179,12 @@ velocity and contacts the simulation owns. Editor Play and the game session both
 step it once per fixed update, before scripts run, so a script observes the
 events of the step that just happened.
 
-What the editor does not have is physics-specific authoring: no collider outline
-in the viewport, no handles for a shape, and nothing that shows a body's kind
-without reading the payload. No game yet plays a scene whose bodies move —
-`games/orbital-last-stand` is where that proof will come from. Both remain
-separate feature-track slices in `docs/physics.md` rather than things this
-foundation pretends to have completed.
+What the editor does not have is physics-specific viewport authoring: no
+collider outline and no handles for a shape. The generic inspector does expose
+the body and collider payloads, and editor Play steps them through the same
+fixed-update path as a build. `games/orbital-last-stand` is the end-to-end proof:
+player, enemies, projectiles, pickups, and effects use distinct masks and
+collision or sensor events continuously.
 
 ### Editor Play
 
@@ -295,20 +296,24 @@ not a source of secrets: a handful of outputs reveals the state.
 
 ### Weave presentation styling
 
-The experimental Weave path resolves responsive presentation into a disposable
-clone of an authored world. ID, class, and component-type selectors style
-ordinary transforms, UI layouts, shapes, and text; CSS-like specificity and
-source order decide conflicts. Portrait, landscape, minimum-width, and
-maximum-width rules can react to the viewport without changing the scene.
+Weave resolves responsive presentation into a disposable clone of an authored
+world. ID, class, and component-type selectors style ordinary transforms, UI
+layouts, shapes, text, and layout behavior; CSS-like specificity and source
+order decide conflicts. Portrait, landscape, minimum-width, and maximum-width
+rules react to the viewport without changing the scene. Percentage sizing,
+min/max constraints, padding, gaps, wrapping, alignment, and text wrapping cover
+the responsive composition used by the shipped examples.
 
 Weave is kept in its own workspace, while `sindri-weave` is the one-way bridge
-that knows the engine. `games/weave-poc` exercises the same scene, font, layout,
-shape, text, extraction, and WebGPU browser path as other Sindri content.
-`docs/weave.md` records the exact supported surface.
+that knows the engine. Stylesheets compose through `@use`; the exporter follows
+that graph, and the browser host applies independent roots in deterministic asset
+order. `games/weave-poc` is the focused responsive showcase, while Orbital Last
+Stand uses four composed Weave files for its production-oriented screen UI.
+`docs/weave.md` and `docs/weave-reference.md` record the supported surface.
 
 This is not yet editor-authorable or a general CSS implementation. Compound
-selectors, states, variables, constraints, accessibility mapping, hot reload,
-and editor tooling remain absent.
+selectors, pseudo-states, variables, intrinsic content sizing, accessibility
+mapping, hot reload, transitions, and editor tooling remain absent.
 
 ### Screen UI
 
@@ -347,9 +352,8 @@ world-space rules without exposing pixel dimensions or asking the host to pick
 a gameplay camera.
 
 What is not built: no scroll region, and no accessibility surface. A button
-carries a `label`, authored beside the thing it names, but nothing reads it —
-there is no DOM to expose it to until a project can be exported to the web, and
-a second accessibility path invented before then would be the wrong one.
+carries a `label`, authored beside the thing it names, but the static web export
+still renders through canvas/WebGPU and has no semantic DOM bridge to expose it.
 
 ### Grid geometry
 
@@ -875,71 +879,45 @@ settings gear.
 - **No reusable tileset asset model.** A tilemap has a component, renderer, and
   palette of named sprites from a sheet, but tile semantics such as terrain,
   collision, and reusable tile metadata do not exist
-- Text is currently a UI component only; world labels, wrapping/alignment
-  controls, and rich spans remain
+- World-space text, rich spans, and font fallback are missing. Screen text has
+  authored alignment and wrapping, including Weave-controlled wrapping
 - **One mesh primitive: `Cube`.** No quad, sphere, or glTF import
-- **No audio.** Now scheduled in `ROADMAP.md`; it previously had no item at all
-- Physics exists only as the masked 2D runtime foundation. No scene components,
-  editor authoring, Decay access, Gather integration, or exercised 3D runtime
-  exists yet
-- No particles or authored parallax system. Renderer-free footprints,
-  bounded occupancy, placement validation, symmetric wall edges, and
-  deterministic A* now have authored engine components and a world adapter,
-  but no editor, Decay, or Gather pathfinding integration yet
+- The exercised physics runtime is 2D. There is a Sindri-owned 3D data model but
+  no 3D simulation, authoring workflow, or gameplay proof
+- Effects are bounded, renderer-free runtime values driven from Decay; there is
+  no general authored particle/emitter system or authored parallax system
+- Grid walls, footprints, occupancy, and deterministic A* work through the
+  engine, inspector, Decay, and Gather. Viewport wall painting, per-path
+  policies/costs, and height authoring remain absent
 - No optional TypeScript embedding SDK; browser games currently expose narrow
   application entry points and run their gameplay in Decay
-- No editor authoring of prefabs. The format, the spawn path, and the Decay
-  surface all work, but making a prefab means writing the file: nothing turns a
-  selected entity into one, and a `Prefab` field draws as the string it is
-  stored as rather than as an asset picker
+- No editor authoring of prefabs. The format, spawn path, asset picker, and
+  Decay surface work, but creating a prefab still means writing its file
 - No prefab instance link. A spawned entity does not remember what it came
   from, so editing a prefab does not update instances of it in an open scene
 - Hot reload covers assets, not the scene file: editing a scene on disk while it
   is open is not noticed
-- No deterministic system ordering
-- No dedicated editor authoring for irregular polygon vertices. The runtime and
-  Decay path work, but point handles and a purpose-built inspector are still
-  missing.
+- The fixed session pipeline has an explicit order, but there is no extensible
+  scheduler or dependency graph for third-party systems
+- No dedicated viewport authoring for irregular polygon vertices. The runtime
+  and Decay path work, but point handles and a purpose-built inspector are still
+  missing
 
 ### Editor
 
-- **File operations on the project.** A row's menu makes a folder, renames in
-  place, copies beside itself, imports files from anywhere into the project, and
-  deletes — with the directory re-read afterwards, so Refresh is for changes made
-  outside the editor rather than for its own. None of them undo: the history
-  describes a world and these describe a directory. What stands in for it is
-  that each is checked before it runs and refuses rather than overwrites, that
-  nothing can name a path outside the project, and that deleting asks first.
-  Renaming the open scene follows it, so the next save does not write it back
-  under its old name
-- A component's fields come from the registry, so one added in the editor is the
-  same component the shipped scenes use. A type with no honest blank —
-  `sindri.ui.text`, `sindri.animation.sprite`, `sindri.grid.occupant`,
-  `sindri.audio.source` — is completed from the project beside the scene, and is
-  offered only when the project holds what it needs
-- Play mode is read-only. Nothing that writes to the world or the file is
-  available while a scene is running, because Stop restores the world as it was
-  when Play was pressed. Editing a running scene and keeping the changes is not
-  supported
-- No first-class project model or multi-scene workspace. The Project dock reads
-  the directory containing the open scene, folds its folders, scopes the listing
-  to one of them, marks both its own selection and the open scene, copies an
-  asset's path, and makes, renames, copies, imports and deletes files. Every
-  text file it lists opens in the inspector, read-only — a `.decay` script, a
-  scene, a sheet, a README — and a script can be made from a row's menu. The two
-  kinds that are not text have a preview of their own: a `.wav`, `.ogg` or
-  `.mp3` plays on demand through the editor's own audio device, and a `.ttf` or
-  `.otf` draws a sample in the face itself
-- Context menus exist on the two panels that list things — a hierarchy row and
-  a project row — and nowhere else. Empty space in either panel, a component
-  heading, a property row, the Scene view, and a console line all still ignore a
-  right-click, so the actions that belong there (paste, reset a field, frame
-  all, copy a message) do not exist
-- No copy/paste of entities or of components
-- No prefabs, no play-mode-against-a-copy, no build or export controls
+- Play mode is intentionally read-only. Stop restores the snapshot from Play;
+  editing a running scene and keeping those changes is not supported
+- The project model and manifest exist, but the editor opens one scene at a time
+  and has no project settings or multi-scene workspace
+- Context menus exist on hierarchy and project rows only. Empty panel space,
+  component/property rows, the Scene view, and console lines still lack their
+  natural context actions
+- No copy/paste of entities or components
+- No prefab creation or instance editing
+- No build/export controls; static web export is currently a CLI and CI workflow
 - No versioned editor protocol; the editor and runtime are one process
-- Cannot open or edit a Decay script's *source* — the project browser lists
-  `.decay` files as scripts, and opening one does nothing
+- Decay source opens as a read-only text preview. The editor cannot modify it;
+  editing, completion, and diagnostics live in the VS Code extension
 
 ---
 
@@ -1122,25 +1100,28 @@ the README.
 
 ### Not yet
 
-- No ranges, so `for` walks a collection and nothing else. `while` and `for` are
-  both bounded by the operation budget alongside the call-depth limit
-- No array literals, no `push`, and no way to write into an element:
-  `Array<T>` exists, and only a host makes one. No maps, closures, or
-  first-class functions
+- No ranges, so `for` walks a collection and nothing else. `while` and `for`
+  are both bounded by the operation budget alongside the call-depth limit
+- No array literals, `push`, or element assignment: `Array<T>` is a fixed host
+  snapshot. No maps, closures, or first-class functions
 - No query by more than one tag at a time, and no measured cost for a query at
   combat density
-- No standard library; not even `math`
+- The language has no built-in standard library. The Sindri host supplies
+  `print`, `math.*`, time, random, input, world, profiles, UI, physics, audio,
+  effects, and grid namespaces
 - Despawning is not undoable — no script write is, and play mode restores from a
   snapshot, so routing it through `WorldCommand` stays open
-- No general component surface beyond `sindri.sprite`; tilemaps are available
-  only through the deliberately narrow `Grid` coordinate API
-- No scroll wheel, and no gamepad. The platform tracks scroll; nothing has
+- There is no general dynamic component API. Purpose-built typed paths cover
+  sprites, shapes, UI, physics, audio, effects, profiles, and grid behavior
+- No scroll wheel or gamepad surface. The platform tracks scroll; nothing has
   needed it from a script yet
-- No LSP, no formatter, no debugger, no syntax highlighting anywhere
+- The VS Code extension provides highlighting, completion, and diagnostics
+  through `decay-lsp`, but there is no formatter or debugger
 - No script state migration across a reload: a changed file recompiles, and the
   running instance keeps whatever fields it had
-- Nothing has *fetched* an asset on the browser target: both callers embed
-  theirs, so `AssetLoader` and `UrlRoot` remain exercised only by tests
+- Static exports fetch a manifest and content-hashed assets through the browser
+  host. The lower-level `AssetLoader`/`UrlRoot` abstraction still lacks a
+  separate application-level browser exercise outside that export path
 - The only numeric type is spelled `f32` and every value it holds is an `f64`
 
 ---
@@ -1207,13 +1188,11 @@ every sprite batch after the first drew with the last batch's camera. See
 
 ### Not yet
 
-- Text draws the title from the shipped Inter asset, but the score remains a
-  row of lamps and winning remains a banner sprite until dynamic script-to-text
-  binding exists
-- No sound, because there is no audio
-- Browser asset fetching is not exercised: the playable web build embeds its
-  scene, scripts, sheets, textures, and font
-- No restart without relaunching, no menu, no pause
+- Gather deliberately presents progress as lamps and victory as a banner sprite;
+  it does not exercise a dynamic numeric score even though script-to-text
+  template binding now exists
+- No restart without relaunching, no menu, no pause. Those fuller product flows
+  are exercised by Orbital Last Stand instead
 
 ### Scripted pathfinding
 

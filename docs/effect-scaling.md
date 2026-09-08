@@ -1,5 +1,9 @@
 # Effect scaling
 
+> **Measurement record:** the command below reproduces the current benchmark;
+> absolute timings depend on build and machine. The architectural decision—use
+> bounded value flecks rather than an entity per transient sample—remains current.
+
 `docs/orbital-last-stand-audit.md` asks for a pooled effect path and says to
 **measure both approaches before choosing**. This is that measurement, and what
 it decided.

@@ -18,25 +18,22 @@ source of truth for what Sindri demonstrably does.
 
 ## Executive finding
 
-**Not faithfully through the intended editor + Decay workflow today.**
+**Yes. Orbital Last Stand is now built through the intended scene + Decay
+workflow and ships through Sindri's static-web export path.**
 
-A recognizable combat prototype could be written now by putting substantial
-game-specific logic in Rust and using Sindri for its world, renderer, input,
-audio, and browser host. That would prove those foundations, but it would not
-prove that a user can make this game *in Sindri*. The complete current game
-would require several engine and authoring capabilities to be implemented as
-part of the port.
+The original audit found decisive gaps in spawning, reusable definitions,
+collections and queries, dynamic interactive UI, pointer/touch input, gameplay
+collision, persistence, effects, and product export. Each closed as a general
+engine capability, and the game now exercises them together at its reference
+ten-minute workload. Its screen hierarchy is presented through composed Weave
+stylesheets across desktop and portrait viewports.
 
-The decisive gaps were script-side spawning, reusable spawn definitions,
-collection/query access, dynamic interactive UI, pointer/touch access from
-Decay, gameplay collision access, persistence, particles or equivalent effect
-rendering, and a product export pipeline.
-
-**Spawning, reusable definitions, collections, queries, pointer/touch input,
-gameplay collision, the screen UI, seeded randomness, persistence and effects
-are now done.** `docs/prefabs.md`, `docs/scripting.md`,
-`docs/physics.md` and `decay/LANGUAGE.md` are the contracts; the rest of the
-list stands.
+The remaining limitations are authoring and fidelity gaps, not blockers to the
+vertical slice: prefabs are still written rather than created in the editor;
+animation lacks a Decay control surface; UI has no scrolling or semantic web
+accessibility bridge; and visual/reference parity remains a rolling target.
+`docs/capabilities.md` is the current engine inventory, while the requirement
+sections below retain the original gaps and record how each was closed.
 
 ## What the reference game exercises
 
@@ -77,7 +74,7 @@ The statuses mean:
 |---|---|---|
 | Fixed-step update and lifecycle | Fixed-step simulation, capped frame time, pause/resume, native/browser hosts | **Ready** |
 | 2D world rendering and layering | Textured/tinted/layered sprites, animation, cameras, screen images and text | **Ready** for sprite-based art |
-| Procedural vector shapes and glow effects | No general shape/primitive or particle authoring system | **Partial**; bake sprites or add a render feature |
+| Procedural vector shapes and glow effects | Authored procedural shapes, bounded Decay shape mutation, layered glow treatment, and the pooled `Effects2d` fleck path | **Ready** for the game's current shape/effect vocabulary; no general material or emitter graph |
 | High-volume entity lifetime | Measured from Decay: 26,072 spawn/despawn cycles and 228 concurrent entities over ten minutes at 18% of the frame budget | **Ready**; see `docs/orbital-last-stand-evidence.md` |
 | Spawn enemies, bullets, pickups, and hazards from Decay | `World.spawn` takes a typed prefab reference and answers with a generation-checked entity | **Ready** |
 | Reusable enemy/projectile definitions | Prefabs, now carried into builds: the manifest has a kind for them and the export walks a prefab's own scripts into the prefabs those spawn | **Partial**; they ship and spawn, but making one still means writing the file |
@@ -87,7 +84,7 @@ The statuses mean:
 | Circle/sensor collision gameplay | `ScenePhysics2d` drives the runtime from authored components; Decay has velocity, impulse, and per-entity collision/sensor event queries | **Ready** |
 | Mouse and touch movement | Unified `Pointer` plus raw `Touch`, in viewport pixels and in overlay units, routed through the editor Game view in its own pixels | **Ready** |
 | Runtime HUD values | Templated text a script fills, and fill bars | **Ready** |
-| Interactive menus and modal flows | Buttons, hit-testing, layer-ordered focus, row/column layout, safe area, screens as entity subtrees, and `World.set_active` so a script can actually show one | **Ready** except scroll and web accessibility |
+| Interactive menus and modal flows | Buttons, hit-testing, layer-ordered focus, screen subtrees, `World.set_active`, and composed responsive Weave presentation | **Ready** except scroll and web accessibility |
 | Upgrade/build data | A catalog is entities: each card carries its own words, numbers and tag, the chooser asks `World.with_tag` and switches three on, and each card applies its own effect | **Ready**; no engine concept of an upgrade was needed |
 | Sprite animation | Runtime/editor animation works | **Partial**; Decay cannot select or control clips |
 | Audio | Native, browser, and silent backends plus Decay playback calls | **Ready**, with host-side clip gathering still manual |
@@ -96,33 +93,25 @@ The statuses mean:
 | Full editor playtest | Play runs the shipped fixed-step loop — effects, physics, screen UI, scripts and animations at the fixed rate — with single-step and exactly-once input edges | **Ready** |
 | Mobile/browser fallback | WebGPU browser host exists, and touch reaches gameplay on every host | **Partial**; no WebGL fallback |
 
-## What can be built now
+## What the implementation proves now
 
-### A Rust-authored prototype
+`games/orbital-last-stand/` is the editor + Decay implementation this audit
+asked for. It proves the combined authoring surface rather than a Rust escape
+hatch:
 
-A Rust game host could use Sindri today for:
+- prefab-backed spawning, bounded tag queries, collision/sensor events, seeded
+  randomness, profiles, and versioned saves run through typed Decay hosts;
+- scenes author gameplay components, screens, prefabs, profiles, and asset
+  references, while Weave owns responsive presentation;
+- editor Play runs the same ordered fixed-step systems used by a build;
+- the exporter gathers the scene graph and composed stylesheet graph into a
+  content-hashed static project;
+- the browser host fetches that manifest and its assets, then runs the same
+  Decay gameplay through WebGPU.
 
-- lifecycle and fixed-step timing
-- the world and safe entity handles
-- sprite, animation, text, camera, and layer extraction
-- keyboard and platform-level pointer input
-- audio requests
-- native and WebGPU presentation
-
-Game-specific Rust would still have to own spawning, pools or catalogs, queries,
-collision integration or manual collision, random selection, UI state,
-persistence, asset gathering, and the release host. This is technically
-feasible, but it is not evidence that the editor and Decay product are ready for
-the game.
-
-### An editor + Decay implementation
-
-Not yet, but the first two blockers are gone: a script can create an enemy from
-an authored prefab, and it can ask the world for all of them at once. What
-remains in the way is randomness, dynamic UI, touch input, collision from Decay,
-and persistence. Pre-placing everything
-would still be a workaround that teaches the engine the wrong lesson, and it is
-still not what this audit is asking for.
+The sections below keep the original requirements because they explain why each
+general capability exists. Their headings and status notes say what was
+delivered and what narrower follow-up remains.
 
 ## Gaps this game would expose
 

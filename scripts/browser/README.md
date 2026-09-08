@@ -1,5 +1,10 @@
 # Running the engine in a browser
 
+> **Historical first-run note.** This records the cube proof that found the
+> original browser-host failures. Current static exports fetch manifests and
+> content-hashed assets, and Gather, Orbital Last Stand, Graphics Lab, and Weave
+> run through the shared browser host; see `docs/export.md`.
+
 The engine compiled for `wasm32` for several releases, CI checked it every time,
 and nobody had ever loaded the page. Two things were broken the whole while, and
 neither is the kind of thing a compile check can find:
@@ -28,15 +33,14 @@ engine started".
 `CHROME_PATH` points it at a browser that is already installed, for environments
 that ship one rather than letting Playwright download it.
 
-## What this proves, and what it does not
+## What the first run proved
 
-Proven: the module instantiates, `run` executes, winit adopts the page's canvas,
-a WebGPU adapter and device open, the surface configures, and the frame pipeline
-draws — the cube example renders the same picture in a browser as it does
-natively, in the same colours.
+The module instantiated, `run` executed, winit adopted the page's canvas, a
+WebGPU adapter and device opened, the surface configured, and the frame pipeline
+drew the cube in the same colours as native.
 
-Not proven: **assets are never fetched.** The cube example embeds its texture
-with `include_bytes!`, so `AssetLoader`, `UrlRoot`, and the browser's fetch path
-are still untested — the decoder runs, the loader does not. Decay has still never
-executed in a browser either, since the cube runs no scripts. Both want an
-example that needs them.
+At that snapshot the cube still embedded its texture and ran no Decay. Those
+were real gaps then. They are closed by the shared project host and static
+export path: browser smoke tests now load the generated manifest and hashed
+assets, run Decay gameplay, verify audio promises, and exercise readable
+capability failures under the GitHub Pages subpath.

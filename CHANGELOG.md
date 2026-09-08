@@ -4,10 +4,12 @@ All notable changes to Sindri Next will be documented here.
 
 ## [Unreleased]
 
-- Expand the isolated Weave presentation proof with reusable class selectors,
-  CSS-like specificity, responsive font and box metrics, shape fills, borders,
-  rounded corners, and text styling. The browser demo now explains itself with
-  a licensed project font and labelled controls instead of abstract bars.
+- Expand Weave from an isolated presentation proof into composed responsive
+  project UI: `@use` stylesheet graphs, percentages, constraints, padding,
+  gaps, wrapping, alignment, viewport units, and text wrapping resolve into
+  ordinary Sindri UI state. The focused browser showcase documents the surface,
+  and Orbital Last Stand now uses four composed stylesheets across its HUD,
+  title, pause, result, upgrade, route, event, and campaign-overlay screens.
 
 - Give Orbital Last Stand an authored combat-spectacle pass: pooled neon
   projectile and companion trails, spinning/pulsing weapon geometry, reusable

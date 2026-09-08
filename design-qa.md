@@ -1,5 +1,9 @@
 # Editor design QA
 
+> **Snapshot:** visual QA for the named reference and CI capture. Use current CI
+> screenshots and `docs/capabilities.md` for the editor's present behavior; the
+> comparison method and recorded decisions remain useful.
+
 ## Visual contract
 
 - Direction: selected option 2, the viewport-first harbor workspace.

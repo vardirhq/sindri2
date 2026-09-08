@@ -194,8 +194,15 @@ Dense combat therefore does not create a trail entity per sample. The
 `spectacle` capture shot enables all five weapon flags, spread fire, frequent
 criticals and four companions for the same deterministic desktop/phone review.
 
-Remaining visual-parity work is concentrated in exact HUD/menu reconstruction,
-damage-number and directional-telegraph treatments, the selectable ship set,
-and a reference-versus-Sindri capture comparison on desktop and phone. The
-current capture path is ready for that comparison, but the layout should not be
-declared identical until those images have been reviewed together.
+The HUD, menu, pause, upgrade, route, event, result, and campaign-overlay
+presentation now runs through the project's composed Weave stylesheets. The
+same authored screen hierarchy reflows across desktop and portrait viewports;
+Decay still owns screen state, dynamic text, fill bars, and button behavior.
+This proves the responsive UI path without turning Sindri into a browser or
+moving gameplay into presentation rules.
+
+Remaining visual-parity work is concentrated in damage-number and
+directional-telegraph treatments, the selectable ship set, fine-grained UI
+composition parity, and a reference-versus-Sindri capture comparison on desktop
+and phone. The current capture path is ready for that comparison, but the layout
+should not be declared identical until those images have been reviewed together.

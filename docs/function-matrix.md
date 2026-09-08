@@ -9,7 +9,7 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Function | Engine | Editor | Script |
 | --- | :---: | :---: | :---: |
 | Entities | ✅ | ✅ | 🟡 |
-| Prefabs | ✅ | ❌ | ✅ |
+| Prefabs | ✅ | 🟡 | ✅ |
 | Reusable data profiles | ✅ | ✅ | ✅ |
 | Tags | ✅ | ✅ | ✅ |
 | Entity queries | ✅ | — | ✅ |
@@ -22,7 +22,7 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | UI images | ✅ | ✅ | 🟡 |
 | Sprite sheets | ✅ | ✅ | 🟡 |
 | Sprite animation | ✅ | ✅ | ❌ |
-| Tilemaps | ✅ | ✅ | ❌ |
+| Tilemaps | ✅ | ✅ | 🟡 |
 | Orthogonal grids | ✅ | ✅ | ✅ |
 | Isometric grids | ✅ | ✅ | ✅ |
 | Grid walls | ✅ | ✅ | ✅ |
@@ -30,15 +30,16 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Occupancy | ✅ | ✅ | ✅ |
 | Pathfinding | ✅ | ✅ | ✅ |
 | Text | ✅ | ✅ | 🟡 |
-| UI buttons and layout | ✅ | 🟡 | 🟡 |
-| Seeded randomness | ✅ | ➖ | 🟡 |
-| Game saves | ✅ | ➖ | 🟡 |
-| Effects | ✅ | 🟡 | 🟡 |
-| Static web export | ✅ | ➖ | ➖ |
-| Prefabs in a shipped build | ✅ | ➖ | ➖ |
-| Profiles in a shipped build | ✅ | ➖ | ➖ |
+| UI buttons and layout | ✅ | ✅ | ✅ |
+| Weave responsive presentation | 🟡 | ❌ | — |
+| Seeded randomness | ✅ | ✅ | ✅ |
+| Game saves | ✅ | 🟡 | ✅ |
+| Effects | ✅ | 🟡 | ✅ |
+| Static web export | ✅ | ❌ | — |
+| Prefabs in a shipped build | ✅ | — | — |
+| Profiles in a shipped build | ✅ | — | — |
 | Showing and hiding a screen | ✅ | ✅ | ✅ |
-| Project fonts | ✅ | ✅ | ❌ |
+| Project fonts | ✅ | ✅ | — |
 | Perspective camera | ✅ | 🟡 | ❌ |
 | Orthographic camera | ✅ | 🟡 | ❌ |
 | Pixel snapping | ✅ | 🟡 | ❌ |
@@ -50,12 +51,12 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Audio looping | ✅ | 🟡 | ✅ |
 | Audio pause / resume | ✅ | 🟡 | ✅ |
 | WAV / Ogg / MP3 | ✅ | 🟡 | ✅ |
-| Asset loading | ✅ | 🟡 | 🟡 |
+| Asset loading | ✅ | ✅ | 🟡 |
 | Asset manifests | ✅ | 🟡 | — |
 | Hot reload | ✅ | 🟡 | 🟡 |
 | Scene loading / saving | ✅ | ✅ | — |
 | Undo / redo | ✅ | ✅ | — |
-| Play / pause / stop | 🟡 | 🟡 | ✅ |
+| Play / pause / stop | ✅ | ✅ | ✅ |
 | Browser / WASM | ✅ | — | — |
 | Native desktop | ✅ | ✅ | — |
 | 3D rendering | 🟡 | 🟡 | ❌ |
@@ -68,13 +69,15 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | 2D collision | ✅ | 🟡 | ✅ |
 | 3D physics | ❌ | ❌ | ❌ |
 | 3D collision | ❌ | ❌ | ❌ |
-| Project management | 🟡 | 🟡 | — |
-| Game export | 🟡 | ❌ | — |
+| Project management | ✅ | 🟡 | — |
+| Game export | ✅ | ❌ | — |
 
 A checkmark means the function is implemented and exercised on that surface,
 not merely represented by a type, API, schema, or editor control. For a gameplay
-capability, exercised means a game uses it: spawning, reparenting, prefabs,
-queries, pointer input, procedural shapes and physics all work and are covered
-by tests, and stay 🟡 until `games/orbital-last-stand` plays with them. Keep this
-file intentionally short: detailed caveats belong in `capabilities.md`, while
+capability, exercised means a game uses it. Gather proves established engine
+features; Orbital Last Stand has now exercised spawning, prefabs, profiles,
+queries, pointer input, procedural shapes, physics, audio, persistence, effects,
+export, and responsive Weave presentation. A 🟡 entry therefore names a real
+remaining limitation, not merely missing game evidence. Keep this file
+intentionally short: detailed caveats belong in `capabilities.md`, while
 cross-surface gaps belong in `feature-integration-matrix.md`.
