@@ -174,12 +174,32 @@ mod tests {
             "column"
         );
         assert_eq!(
+            string_field(mobile.world(), "actions", "sindri.ui.layout", "direction"),
+            "column"
+        );
+        assert_eq!(
+            string_field(mobile.world(), "features", "sindri.ui.layout", "direction"),
+            "column"
+        );
+        assert_eq!(
             string_field(desktop.world(), "hero-copy", "sindri.ui.layout", "align"),
             "start"
         );
         assert_eq!(
             string_field(mobile.world(), "hero-copy", "sindri.ui.layout", "align"),
             "center"
+        );
+        assert_eq!(
+            string_field(mobile.world(), "feature-start", "sindri.ui.layout", "align"),
+            "start"
+        );
+        assert_eq!(
+            string_field(mobile.world(), "feature-center", "sindri.ui.layout", "align"),
+            "center"
+        );
+        assert_eq!(
+            string_field(mobile.world(), "feature-end", "sindri.ui.layout", "align"),
+            "end"
         );
 
         let desktop_size = number_field(desktop.world(), "title", "sindri.ui.text", "font_size");
