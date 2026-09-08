@@ -4,7 +4,7 @@
     padding: 44px;
     direction: column;
     gap: 24px;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     background: #0b1220;
     border-color: #263449;
@@ -54,25 +54,25 @@ sindri.ui.text {
 
 .hero {
     width: 100%;
-    height: 280px;
+    height: 286px;
     direction: row;
-    gap: 32px;
+    gap: 30px;
     justify-content: space-between;
     align-items: center;
 }
 
 .hero-copy {
     width: 58%;
-    height: 240px;
+    height: 246px;
     direction: column;
-    gap: 22px;
+    gap: 18px;
     justify-content: center;
     align-items: start;
 }
 
 .title {
     width: 100%;
-    height: 92px;
+    height: 98px;
     color: #f8fafc;
     font-size: 42px;
     line-height: 48px;
@@ -82,7 +82,7 @@ sindri.ui.text {
 
 .subtitle {
     width: 100%;
-    height: 82px;
+    height: 78px;
     color: #94a3b8;
     font-size: 16px;
     line-height: 23px;
@@ -94,7 +94,7 @@ sindri.ui.text {
     height: 230px;
     padding: 22px;
     direction: column;
-    gap: 18px;
+    gap: 16px;
     justify-content: center;
     align-items: center;
     background: #111c2d;
@@ -128,16 +128,16 @@ sindri.ui.text {
 
 .actions {
     width: 100%;
-    height: 70px;
+    height: 62px;
     direction: row;
-    gap: 18px;
+    gap: 16px;
     justify-content: start;
     align-items: center;
 }
 
 .menu-button {
-    width: 240px;
-    height: 58px;
+    width: 220px;
+    height: 54px;
     border-width: 1px;
     border-radius: 14px;
 }
@@ -166,16 +166,16 @@ sindri.ui.text {
 
 .features {
     width: 100%;
-    height: 82px;
+    height: 92px;
     direction: row;
-    gap: 16px;
+    gap: 14px;
     justify-content: space-between;
     align-items: center;
 }
 
 .feature-card {
-    width: 30%;
-    height: 68px;
+    width: 31%;
+    height: 76px;
     direction: column;
     justify-content: center;
     align-items: center;
@@ -208,7 +208,7 @@ sindri.ui.text {
 @media (orientation: portrait) {
     #menu {
         width: 92vw;
-        height: 620px;
+        height: 700px;
         padding: 24px;
         gap: 12px;
         justify-content: center;
@@ -218,83 +218,87 @@ sindri.ui.text {
 
     .topbar {
         width: 100%;
-        height: 38px;
+        height: 42px;
         justify-content: space-between;
         align-items: center;
     }
 
     .eyebrow {
-        width: 58%;
+        width: 62%;
         font-size: 10px;
+        line-height: 12px;
         letter-spacing: 1px;
     }
 
     .viewport-badge {
-        width: 104px;
+        width: 106px;
         height: 30px;
     }
 
     .badge-label {
         font-size: 8px;
+        line-height: 10px;
     }
 
     .hero {
         width: 100%;
-        height: 260px;
+        height: 360px;
         direction: column;
-        gap: 10px;
+        gap: 14px;
         justify-content: center;
         align-items: center;
     }
 
     .hero-copy {
         width: 100%;
-        height: 112px;
-        gap: 6px;
+        height: 170px;
+        gap: 10px;
         justify-content: center;
         align-items: center;
     }
 
     .title {
         width: 100%;
-        height: 52px;
-        font-size: 28px;
-        line-height: 30px;
+        height: 82px;
+        font-size: 29px;
+        line-height: 32px;
     }
 
     .subtitle {
-        width: 92%;
-        height: 42px;
-        font-size: 10px;
-        line-height: 14px;
+        width: 88%;
+        height: 60px;
+        font-size: 11px;
+        line-height: 15px;
     }
 
     .proof-card {
-        width: 78vw;
-        height: 118px;
-        padding: 12px;
-        gap: 6px;
+        width: 100%;
+        height: 152px;
+        padding: 14px;
+        gap: 8px;
         justify-content: center;
         align-items: center;
+        border-radius: 16px;
     }
 
     .proof-kicker {
         font-size: 10px;
+        line-height: 12px;
     }
 
     .proof-title {
-        font-size: 16px;
-        line-height: 19px;
+        font-size: 17px;
+        line-height: 20px;
     }
 
     .proof-body {
         font-size: 10px;
-        line-height: 13px;
+        line-height: 14px;
     }
 
     .actions {
         width: 100%;
-        height: 58px;
+        height: 56px;
         direction: row;
         gap: 10px;
         justify-content: center;
@@ -302,7 +306,7 @@ sindri.ui.text {
     }
 
     .menu-button {
-        width: 37vw;
+        width: 42%;
         height: 48px;
         border-radius: 12px;
     }
@@ -313,23 +317,24 @@ sindri.ui.text {
     }
 
     .features {
-        width: 78vw;
-        height: 72px;
+        width: 100%;
+        height: 94px;
         gap: 8px;
         justify-content: space-between;
         align-items: center;
     }
 
     .feature-card {
-        width: 24vw;
-        height: 62px;
+        width: 31%;
+        height: 76px;
         justify-content: center;
         align-items: center;
         border-radius: 12px;
     }
 
     .feature-label {
-        font-size: 10px;
+        font-size: 9px;
+        line-height: 11px;
         letter-spacing: 1px;
     }
 }
