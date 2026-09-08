@@ -102,3 +102,67 @@ fn last_stand_dynamic_hud_components_survive_presentation_resolution() {
         0.0
     );
 }
+
+fn string<'a>(world: &'a World, id: &str, component: &str, field: &str) -> &'a str {
+    entity(world, id).components[component][field]
+        .as_str()
+        .expect("string component field")
+}
+
+#[test]
+fn last_stand_upgrade_choices_recompose_on_phone() {
+    let document = SceneDocument::from_json(SCENE).expect("Last Stand scene parses");
+    let authored = World::from_scene(&document).expect("Last Stand scene loads").world;
+    let stylesheet = parse(STYLE).expect("Last Stand Weave parses");
+
+    let desktop = PresentationWorld::resolve(
+        &authored,
+        &stylesheet,
+        Viewport {
+            width: 1280.0,
+            height: 720.0,
+        },
+    )
+    .expect("desktop upgrades resolve");
+    let phone = PresentationWorld::resolve(
+        &authored,
+        &stylesheet,
+        Viewport {
+            width: 390.0,
+            height: 844.0,
+        },
+    )
+    .expect("phone upgrades resolve");
+
+    assert_eq!(
+        string(
+            desktop.world(),
+            "upgrade-row",
+            "sindri.ui.layout",
+            "direction"
+        ),
+        "row"
+    );
+    assert_eq!(
+        string(
+            phone.world(),
+            "upgrade-row",
+            "sindri.ui.layout",
+            "direction"
+        ),
+        "column"
+    );
+    assert_eq!(
+        string(phone.world(), "upgrade-row", "sindri.ui.layout", "align"),
+        "stretch"
+    );
+    assert_eq!(
+        string(
+            phone.world(),
+            "title-hint",
+            "sindri.ui.text",
+            "wrap"
+        ),
+        "word"
+    );
+}
