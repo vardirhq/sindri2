@@ -1,5 +1,9 @@
 # Editor authoring audit
 
+> **Snapshot:** Gather authoring audit at `4dd70b4` and its recorded fixes. The
+> current answer is yes; use `capabilities.md` and the integration matrices for
+> remaining editor limitations.
+
 Can Gather be built in the editor, as of `4dd70b4`?
 
 **No.** Four things stop it outright, one of them writes over your scene file,
