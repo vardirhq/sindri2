@@ -8,12 +8,11 @@
 //! name, nothing to list on a welcome screen, and no way to tell a project
 //! apart from any other folder with a `.scene.json` in it.
 //!
-//! So a project is a directory containing `sindri.toml`. The file is
-//! deliberately almost empty: a format version, a name, and which scene to open.
-//! `PROJECT_OVERVIEW.md` sketches a larger schema — window size, feature flags,
-//! asset roots — and warns against designing it before features require it.
-//! Every field here is read by something today, and the next one arrives with
-//! the feature that needs it rather than ahead of it.
+//! So a project is a directory containing `sindri.toml`. The manifest grows only
+//! when a feature has a host-level setting to read. Its explicit asset include
+//! list is one such setting: export already uses it for files a scene cannot
+//! name, and the editor now uses the same roots to distinguish a Weave entry
+//! stylesheet from one imported beneath it.
 //!
 //! Kept apart from the drawing so that "what is a project, and what does making
 //! one do to a directory" is a question a test can ask with a temporary folder
@@ -120,7 +119,7 @@ pub struct ProjectSection {
     /// called "Gather" while living in a folder called `assets`, and so renaming
     /// a checkout does not rename the game.
     pub name: String,
-    /// The scene opening this project opens, relative to the project root.
+    /// The scene opening this project should open, relative to the project root.
     ///
     /// Optional because a project can legitimately have no obvious first scene —
     /// a library of prefabs, a project mid-restructure — and inventing one would
@@ -129,7 +128,7 @@ pub struct ProjectSection {
     pub main_scene: Option<String>,
 }
 
-/// Explicit project assets that are not necessarily named by scene components.
+/// What a project asks hosts to carry even when its scene cannot name it.
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct AssetsSection {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
