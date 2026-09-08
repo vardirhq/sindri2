@@ -4,7 +4,7 @@ Sindri's asset foundation separates stable authored identity from platform-speci
 
 ## Logical identity
 
-`AssetId` is a validated, serializable, relative identifier such as `textures/player.png`. It is not a filesystem path or URL. A later asset-source layer will resolve the same ID against the editor, a packaged native game, or an HTTP origin.
+`AssetId` is a validated, serializable, relative identifier such as `textures/player.png`. It is not a filesystem path or URL. The asset-source layer resolves the same ID against editor/native files, in-memory content, or an HTTP origin.
 
 IDs use `/` separators and reject absolute paths, empty or dot segments, backslashes, control characters, query strings, and fragments. Validation happens during construction and deserialization so invalid identifiers cannot enter scene or project data unnoticed.
 
@@ -98,7 +98,7 @@ case explicitly, because nothing in the sprite's reference reveals it.
 
 ## Driving all of it
 
-Everything above was in place for a release and had no caller. The demo's badge was `include_bytes!`, the editor bound two textures a demo crate handed it, and the only stage with a user was the decoder. The reason is visible in the shape: loading one asset correctly is six steps in a particular order — request a handle, enqueue it, move the entry to loading, drain, decode, apply against the handle that is still current — and each one fails quietly rather than loudly when it is skipped.
+Everything above was in place for a release and had no caller. Before `AssetLoader` landed, the demo's badge was `include_bytes!`, the editor bound two textures a demo crate handed it, and the only stage with a user was the decoder. The reason is visible in the shape: loading one asset correctly is six steps in a particular order — request a handle, enqueue it, move the entry to loading, drain, decode, apply against the handle that is still current — and each one fails quietly rather than loudly when it is skipped.
 
 `AssetLoader<D>` is those six steps written once. It owns a store, a queue, and a decoder; `request` is idempotent, so a scene naming one texture from twenty entities costs one load; `poll` drains, decodes, applies, and reports each asset as ready or failed exactly once. A completion whose handle generation has been superseded is dropped in silence, because the replacement is still coming. A failure is an answer: asking again does not retry, and `retry` says so explicitly.
 
@@ -142,4 +142,4 @@ An asset the manifest does not mention loads normally. A manifest is a statement
 
 ## Deliberate boundaries
 
-GPU upload stays outside. A loader that owned a device could not be tested without one, and the host is the only thing that has one: it reads a ready `TextureAsset` and puts it on the GPU itself. Fallback assets, final root/URL rules, hot reload, and a content-hashed manifest remain for the rest of the asset-system milestone. Keeping storage, source, scheduling, decoding, and GPU upload separate is what lets native and WebAssembly hosts share the same ownership and error semantics.
+GPU upload stays outside. A loader that owned a device could not be tested without one, and the host is the only thing that has one: it reads a ready `TextureAsset` and puts it on the GPU itself. Fallback/error assets, root and URL rules, native hot reload, manifests, and the static exporter's content-hashed asset layout now sit on top of this separation. GPU upload remains host-owned. Keeping storage, source, scheduling, decoding, and upload separate is what lets native and WebAssembly hosts share the same ownership and error semantics.
