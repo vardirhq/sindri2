@@ -32,7 +32,11 @@ impl ProjectStyles {
         let roots = project
             .included_assets()
             .iter()
-            .filter(|id| id.ends_with(".weave"))
+            .filter(|id| {
+                Path::new(id)
+                    .extension()
+                    .is_some_and(|extension| extension.eq_ignore_ascii_case("weave"))
+            })
             .cloned()
             .collect::<Vec<_>>();
         if roots.is_empty() {
