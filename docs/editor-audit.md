@@ -1,5 +1,10 @@
 # Editor audit
 
+> **Snapshot:** control-by-control audit at `5661ea6`. The selection failure and
+> follow-up findings are retained as evidence of what the audit discovered, not
+> as a description of the current editor. Use `capabilities.md` for current
+> behavior.
+
 What the editor actually does, control by control, as of `5661ea6`.
 
 **The finding that mattered: the editor could not edit anything.** Every path
