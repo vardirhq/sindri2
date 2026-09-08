@@ -10,13 +10,13 @@ pub enum ComposeError {
     MissingSource(String),
     #[error("invalid @use directive `{0}`")]
     InvalidUse(String),
-    #[error("Weave import `{reference}` from `{source}` escapes the stylesheet root")]
-    EscapesRoot { source: String, reference: String },
+    #[error("Weave import `{reference}` from `{from}` escapes the stylesheet root")]
+    EscapesRoot { from: String, reference: String },
     #[error("circular Weave imports: {0}")]
     Cycle(String),
-    #[error("{source}: {error}")]
+    #[error("{path}: {error}")]
     Parse {
-        source: String,
+        path: String,
         #[source]
         error: ParseError,
     },
@@ -36,20 +36,18 @@ pub fn imports(source: &str) -> Result<Vec<String>, ComposeError> {
 ///
 /// Asset ids always use forward slashes, regardless of host platform.
 pub fn resolve_import(source: &str, reference: &str) -> Result<String, ComposeError> {
-    let mut parts = source
-        .rsplit_once('/')
-        .map_or_else(Vec::new, |(parent, _)| {
-            parent
-                .split('/')
-                .filter(|part| !part.is_empty())
-                .map(str::to_owned)
-                .collect::<Vec<_>>()
-        });
+    let mut parts = source.rsplit_once('/').map_or_else(Vec::new, |(parent, _)| {
+        parent
+            .split('/')
+            .filter(|part| !part.is_empty())
+            .map(str::to_owned)
+            .collect::<Vec<_>>()
+    });
 
     let reference = reference.trim();
     if reference.is_empty() || reference.starts_with('/') {
         return Err(ComposeError::EscapesRoot {
-            source: source.to_owned(),
+            from: source.to_owned(),
             reference: reference.to_owned(),
         });
     }
@@ -60,7 +58,7 @@ pub fn resolve_import(source: &str, reference: &str) -> Result<String, ComposeEr
             ".." => {
                 if parts.pop().is_none() {
                     return Err(ComposeError::EscapesRoot {
-                        source: source.to_owned(),
+                        from: source.to_owned(),
                         reference: reference.to_owned(),
                     });
                 }
@@ -71,7 +69,7 @@ pub fn resolve_import(source: &str, reference: &str) -> Result<String, ComposeEr
 
     if parts.is_empty() {
         return Err(ComposeError::EscapesRoot {
-            source: source.to_owned(),
+            from: source.to_owned(),
             reference: reference.to_owned(),
         });
     }
@@ -90,7 +88,7 @@ pub fn compose(
     let mut emitted = BTreeSet::new();
     let expanded = expand(entry, sources, &mut stack, &mut emitted)?;
     parse(&expanded).map_err(|error| ComposeError::Parse {
-        source: entry.to_owned(),
+        path: entry.to_owned(),
         error,
     })
 }
@@ -121,7 +119,13 @@ pub fn compose_all(
         // A graph with no roots is necessarily cyclic (or references only
         // within a cycle). Composing one source produces the useful cycle
         // diagnostic instead of silently returning no stylesheets.
-        roots.push(sources.keys().next().expect("source map is non-empty").clone());
+        roots.push(
+            sources
+                .keys()
+                .next()
+                .expect("source map is non-empty")
+                .clone(),
+        );
     }
 
     roots
@@ -204,9 +208,10 @@ fn split_imports(source: &str) -> Result<(Vec<String>, &str), ComposeError> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
     use super::{ComposeError, compose, compose_all, imports, resolve_import};
     use crate::{Selector, Viewport};
-    use std::collections::BTreeMap;
 
     #[test]
     fn imports_are_composed_before_local_rules() {
@@ -253,7 +258,10 @@ mod tests {
 
         let sheet = compose("ui.weave", &sources).expect("nested styles compose");
         assert_eq!(sheet.rules.len(), 2);
-        assert_eq!(resolve_import("panels/hud.weave", "../shared/theme.weave").unwrap(), "shared/theme.weave");
+        assert_eq!(
+            resolve_import("panels/hud.weave", "../shared/theme.weave").unwrap(),
+            "shared/theme.weave"
+        );
     }
 
     #[test]
@@ -282,7 +290,10 @@ mod tests {
                 "theme.weave".into(),
                 ".button { color: white; }".into(),
             ),
-            ("debug.weave".into(), ".debug { color: white; }".into()),
+            (
+                "debug.weave".into(),
+                ".debug { color: white; }".into(),
+            ),
         ]);
 
         let roots = compose_all(&sources).expect("roots compose");
@@ -294,7 +305,13 @@ mod tests {
 
     #[test]
     fn use_directives_must_be_complete_and_top_level() {
-        assert_eq!(imports("@use theme.weave;"), Err(ComposeError::InvalidUse("@use theme.weave;".into())));
-        assert_eq!(imports("@use \"theme.weave\"; .x { width: 1px; }"), Ok(vec!["theme.weave".into()]));
+        assert_eq!(
+            imports("@use theme.weave;"),
+            Err(ComposeError::InvalidUse("@use theme.weave;".into()))
+        );
+        assert_eq!(
+            imports("@use \"theme.weave\"; .x { width: 1px; }"),
+            Ok(vec!["theme.weave".into()])
+        );
     }
 }
