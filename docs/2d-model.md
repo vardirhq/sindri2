@@ -1,5 +1,10 @@
 # How Sindri does 2D
 
+> **Design record:** the shared 2D/3D transform direction remains current, but
+> statements below about what the implementation has “today” describe the
+> pre-migration state in which this decision was made. Use `capabilities.md` for
+> current behavior.
+
 2D is not a separate world. There is one world, one transform, and one set of
 spatial rules; a 2D game is one that keeps everything on a plane and points a
 camera at it.
