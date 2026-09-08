@@ -154,7 +154,7 @@
     letter-spacing: 1px;
 }
 
-@media (max-width: 700px) {
+@media (orientation: portrait) {
     .title-panel {
         width: 92vw;
         height: 142vw;
