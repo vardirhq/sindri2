@@ -117,6 +117,7 @@ fn class_rules_style_shape_and_text_components() {
                 font-weight: 700;
                 text-transform: uppercase;
                 text-align: center;
+                text-wrap: word;
             }
         "#,
     )
@@ -177,6 +178,7 @@ fn class_rules_style_shape_and_text_components() {
     assert_eq!(text["bold"], true);
     assert_eq!(text["case"], "upper");
     assert_eq!(text["line_align"], "center");
+    assert_eq!(text["wrap"], "word");
 
     let source_entity = source.entities().next().expect("source entity").1;
     assert_eq!(source_entity.components["sindri.ui.shape"]["fill"][0], 0.0);
