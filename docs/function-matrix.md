@@ -9,7 +9,7 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Function | Engine | Editor | Script |
 | --- | :---: | :---: | :---: |
 | Entities | ✅ | ✅ | 🟡 |
-| Prefabs | ✅ | ❌ | ✅ |
+| Prefabs | ✅ | 🟡 | ✅ |
 | Reusable data profiles | ✅ | ✅ | ✅ |
 | Tags | ✅ | ✅ | ✅ |
 | Entity queries | ✅ | — | ✅ |
@@ -22,7 +22,7 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | UI images | ✅ | ✅ | 🟡 |
 | Sprite sheets | ✅ | ✅ | 🟡 |
 | Sprite animation | ✅ | ✅ | ❌ |
-| Tilemaps | ✅ | ✅ | ❌ |
+| Tilemaps | ✅ | ✅ | 🟡 |
 | Orthogonal grids | ✅ | ✅ | ✅ |
 | Isometric grids | ✅ | ✅ | ✅ |
 | Grid walls | ✅ | ✅ | ✅ |
@@ -30,16 +30,16 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Occupancy | ✅ | ✅ | ✅ |
 | Pathfinding | ✅ | ✅ | ✅ |
 | Text | ✅ | ✅ | 🟡 |
-| UI buttons and layout | ✅ | 🟡 | 🟡 |
+| UI buttons and layout | ✅ | ✅ | ✅ |
 | Weave responsive presentation | 🟡 | ❌ | — |
-| Seeded randomness | ✅ | ➖ | 🟡 |
-| Game saves | ✅ | ➖ | 🟡 |
-| Effects | ✅ | 🟡 | 🟡 |
-| Static web export | ✅ | ➖ | ➖ |
-| Prefabs in a shipped build | ✅ | ➖ | ➖ |
-| Profiles in a shipped build | ✅ | ➖ | ➖ |
+| Seeded randomness | ✅ | ✅ | ✅ |
+| Game saves | ✅ | 🟡 | ✅ |
+| Effects | ✅ | 🟡 | ✅ |
+| Static web export | ✅ | ❌ | — |
+| Prefabs in a shipped build | ✅ | — | — |
+| Profiles in a shipped build | ✅ | — | — |
 | Showing and hiding a screen | ✅ | ✅ | ✅ |
-| Project fonts | ✅ | ✅ | ❌ |
+| Project fonts | ✅ | ✅ | — |
 | Perspective camera | ✅ | 🟡 | ❌ |
 | Orthographic camera | ✅ | 🟡 | ❌ |
 | Pixel snapping | ✅ | 🟡 | ❌ |
@@ -51,12 +51,12 @@ editor, and Decay scripting surface. For evidence and limitations, see
 | Audio looping | ✅ | 🟡 | ✅ |
 | Audio pause / resume | ✅ | 🟡 | ✅ |
 | WAV / Ogg / MP3 | ✅ | 🟡 | ✅ |
-| Asset loading | ✅ | 🟡 | 🟡 |
+| Asset loading | ✅ | ✅ | 🟡 |
 | Asset manifests | ✅ | 🟡 | — |
 | Hot reload | ✅ | 🟡 | 🟡 |
 | Scene loading / saving | ✅ | ✅ | — |
 | Undo / redo | ✅ | ✅ | — |
-| Play / pause / stop | 🟡 | 🟡 | ✅ |
+| Play / pause / stop | ✅ | ✅ | ✅ |
 | Browser / WASM | ✅ | — | — |
 | Native desktop | ✅ | ✅ | — |
 | 3D rendering | 🟡 | 🟡 | ❌ |
