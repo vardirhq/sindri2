@@ -327,6 +327,15 @@ fn apply_property(
             }
             set_component_field(world, entity, "sindri.ui.text", "line_align", value.into());
         }
+        "text-wrap" => {
+            let stored = match value.trim() {
+                "none" | "nowrap" => "none",
+                "wrap" | "word" => "word",
+                "glyph" => "glyph",
+                _ => return Err(invalid(id, property, value)),
+            };
+            set_component_field(world, entity, "sindri.ui.text", "wrap", stored.into());
+        }
         "text-transform" => {
             let stored = match value.trim() {
                 "none" => "as_written",
