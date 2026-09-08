@@ -12,10 +12,15 @@ Sindri Next is a from-the-foundation evolution of Sindri Engine. It is built aro
 companion game runs the same Rust engine, Decay scripts, scene, renderer, and
 project-owned font as its native build. It requires a browser with WebGPU.
 
-**[Open the Weave presentation POC](https://vardirhq.github.io/sindri2/examples/weave-poc/)** —
-an experimental responsive styling layer resolved into ordinary Sindri UI data.
-The supported contract and current limits are documented in
-[`docs/weave.md`](docs/weave.md).
+**[Play Orbital Last Stand](https://vardirhq.github.io/sindri2/examples/orbital-last-stand/)** —
+the forcing-function game built from an authored scene, reusable prefabs and
+profiles, Decay gameplay, physics, audio, persistence, effects, and responsive
+Weave UI.
+
+**[Open the Weave responsive UI showcase](https://vardirhq.github.io/sindri2/examples/weave-poc/)** —
+one scene recomposed for desktop and portrait viewports through presentation
+rules that resolve into ordinary Sindri UI data. The language, migration guide,
+and current limits are documented in [`docs/weave.md`](docs/weave.md).
 
 ## What Sindri is trying to be
 
@@ -37,7 +42,7 @@ Decay is Sindri's gameplay scripting language. The language itself is engine-agn
 ```rust
 script Player {
     @export
-    var speed: f32 = 6.0;
+    let speed: f32 = 6.0;
 
     fn update(dt: f32) {
         let movement = Input.axis("ArrowLeft", "ArrowRight");
@@ -51,15 +56,22 @@ script Player {
 }
 ```
 
-A script can currently read and write its transform and sprite properties, read keyboard input and frame time, place entities in a tilemap's logical grid, call a small maths standard library, and print to the host log. Host members are typed: a misspelling such as `this.transfrom.position.x` is a compile error with a source location rather than a runtime surprise.
+A script can currently drive transforms and sprites, read keyboard, pointer, and
+touch input, query entities and tags, spawn prefabs, use reusable profile data,
+react to 2D physics and collision events, update UI, play audio, emit effects,
+persist game data, navigate grids, and work with bounded collections and loops.
+Host members are typed: a misspelling such as
+`this.transfrom.position.x` is a compile error with a source location rather
+than a runtime surprise.
 
 `@export` fields are visible in the editor without running the script. The script declares the property's name, type, and default; the scene stores only the value authored for that particular entity.
 
-Decay is intentionally still small. It can hold safe entity references, find and
-inspect other entities, and despawn them, but it does not yet support spawning,
-structured value types such as vectors, collections, loops, or a large standard
-library. See [`decay/LANGUAGE.md`](decay/LANGUAGE.md) for the language reference
-and [`docs/scripting.md`](docs/scripting.md) for the exact Sindri surface scripts
+Decay is intentionally focused rather than general-purpose. It has safe entity,
+prefab, and profile references, arrays and maps, bounded loops, typed host
+namespaces, and operation budgets, but still lacks structured vectors, script
+coroutines, a debugger, and a full language server. See
+[`decay/LANGUAGE.md`](decay/LANGUAGE.md) for the language reference and
+[`docs/scripting.md`](docs/scripting.md) for the exact Sindri surface scripts
 can reach.
 
 ## What works today
@@ -84,7 +96,12 @@ can reach.
 - layered screen text rendered from project-owned OpenType font assets
 - deterministic offscreen PNG rendering exercised by CI
 - Decay scripts that run against the live world through a typed host surface
-- a browser-playable companion game proving Decay, fixed-step input, entity references, and rendering together
+- reusable prefab and profile assets that survive editor authoring and static export
+- masked Rapier2D bodies, colliders, sensors, events, velocity, and impulse on the shared fixed-step path
+- native and browser audio for WAV, Ogg, and MP3, including looping and pause/resume
+- responsive Weave presentation that resolves into ordinary UI data without mutating the authored world
+- static web export with base-path-aware project assets and cache invalidation
+- browser-playable Gather and Orbital Last Stand builds proving the engine through complete games
 
 ### Editor
 
@@ -168,14 +185,13 @@ GitHub Pages' `/sindri2/` project subpath rather than assuming a domain root.
 
 Sindri is pre-alpha, and several large pieces are intentionally not pretending to exist yet. Among the important gaps are:
 
-- physics and collision gameplay
-- audio
-- richer Decay value types, collections, loops with execution budgets, and spawning
-- broader gameplay stepping beyond scripts and sprite animation in editor play mode
-- multi-selection and editing common properties
-- richer asset inspectors and project authoring workflows
-- production build/export/package tooling
-- a mature 3D feature set beyond the current rendering foundation
+- editor prefab creation and linked prefab instances
+- richer asset import, preview, and project-settings workflows
+- Decay source authoring, formatting, language-server support, and debugging
+- structured vector and rotation values across the Decay host boundary
+- Weave editor tooling, hot reload, interaction states, intrinsic sizing, and accessibility mapping
+- native packaging and release tooling beyond the current static web exporter
+- a mature 3D feature set with materials, lighting, glTF import, and 3D physics
 
 The roadmap is in [`ROADMAP.md`](ROADMAP.md). What is demonstrably true **today** lives in [`docs/capabilities.md`](docs/capabilities.md); that file is updated with the implementation it describes rather than being treated as an aspirational checklist.
 
