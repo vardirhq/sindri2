@@ -101,6 +101,14 @@ pub enum ProjectError {
 pub struct ProjectManifest {
     pub format_version: u32,
     pub project: ProjectSection,
+    /// Assets that cannot be discovered by walking the authored scene.
+    ///
+    /// Weave entry stylesheets are the first editor feature that needs this:
+    /// imported `.weave` files must not be applied as independent roots just
+    /// because the project browser can see them. The manifest is the source of
+    /// truth the exporter and browser host already use for that distinction.
+    #[serde(default, skip_serializing_if = "AssetsSection::is_empty")]
+    pub assets: AssetsSection,
 }
 
 /// What the project itself says about itself.
@@ -119,6 +127,19 @@ pub struct ProjectSection {
     /// mean the editor opening a file the author never nominated.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub main_scene: Option<String>,
+}
+
+/// Explicit project assets that are not necessarily named by scene components.
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+pub struct AssetsSection {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub include: Vec<String>,
+}
+
+impl AssetsSection {
+    fn is_empty(&self) -> bool {
+        self.include.is_empty()
+    }
 }
 
 /// A project, as it was last read from disk.
@@ -199,6 +220,7 @@ impl Project {
                     name: name.to_owned(),
                     main_scene: Some(NEW_PROJECT_SCENE.to_owned()),
                 },
+                assets: AssetsSection::default(),
             },
         };
         project.write()?;
@@ -222,6 +244,12 @@ impl Project {
 
     pub fn name(&self) -> &str {
         &self.manifest.project.name
+    }
+
+    /// Explicit assets the project asks hosts to carry even when a scene does
+    /// not name them directly.
+    pub fn included_assets(&self) -> &[String] {
+        &self.manifest.assets.include
     }
 
     /// The scene opening this project should open.
