@@ -72,10 +72,12 @@ pub enum UiAlign {
     #[default]
     Center,
     End,
+    /// Fill the parent's cross axis while preserving main-axis size.
+    Stretch,
 }
 
 impl UiAlign {
-    pub const ALL: [Self; 3] = [Self::Start, Self::Center, Self::End];
+    pub const ALL: [Self; 4] = [Self::Start, Self::Center, Self::End, Self::Stretch];
 
     #[must_use]
     pub const fn as_str(self) -> &'static str {
@@ -83,8 +85,16 @@ impl UiAlign {
             Self::Start => "start",
             Self::Center => "center",
             Self::End => "end",
+            Self::Stretch => "stretch",
         }
     }
+}
+
+/// One child's resolved box inside a parent layout.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct UiLayoutBox {
+    pub offset: [f32; 2],
+    pub size: [f32; 2],
 }
 
 /// Places an entity's active children along one axis.
@@ -137,12 +147,12 @@ impl UiLayoutComponent {
     }
 
     /// Resolve the whole sibling line from the parent and every child box.
-    ///
-    /// Resolving siblings together is what makes spacing mean edge-to-edge air
-    /// for mixed sizes and lets `space_between` put the outside child edges on
-    /// the parent edges without guessing a centre distance.
     #[must_use]
-    pub fn offsets_in_box(self, parent_size: [f32; 2], child_sizes: &[[f32; 2]]) -> Vec<[f32; 2]> {
+    pub fn resolve_in_box(
+        self,
+        parent_size: [f32; 2],
+        child_sizes: &[[f32; 2]],
+    ) -> Vec<UiLayoutBox> {
         if child_sizes.is_empty() {
             return Vec::new();
         }
@@ -181,8 +191,30 @@ impl UiLayoutComponent {
             .map(|(child_size, child_main)| {
                 let logical_main = cursor + child_main / 2.0;
                 cursor += child_main + actual_gap;
-                self.finish_offset(logical_main, parent_cross, child_size[cross_axis].abs())
+
+                let mut resolved_size = [child_size[0].abs(), child_size[1].abs()];
+                if self.align == UiAlign::Stretch {
+                    resolved_size[cross_axis] = parent_cross;
+                }
+                let offset = self.finish_offset(
+                    logical_main,
+                    parent_cross,
+                    resolved_size[cross_axis],
+                );
+                UiLayoutBox {
+                    offset,
+                    size: resolved_size,
+                }
             })
+            .collect()
+    }
+
+    /// Resolve only the child offsets for callers that do not need sizing.
+    #[must_use]
+    pub fn offsets_in_box(self, parent_size: [f32; 2], child_sizes: &[[f32; 2]]) -> Vec<[f32; 2]> {
+        self.resolve_in_box(parent_size, child_sizes)
+            .into_iter()
+            .map(|child| child.offset)
             .collect()
     }
 
@@ -190,7 +222,7 @@ impl UiLayoutComponent {
         let cross_edge = ((parent_cross - child_cross).max(0.0)) / 2.0;
         let logical_cross = match self.align {
             UiAlign::Start => -cross_edge,
-            UiAlign::Center => 0.0,
+            UiAlign::Center | UiAlign::Stretch => 0.0,
             UiAlign::End => cross_edge,
         };
 
@@ -301,5 +333,16 @@ mod tests {
             column.offset_in_box(0, 1, [4.0, 2.0], [1.0, 0.5]),
             [1.5, 0.0],
         );
+    }
+
+    #[test]
+    fn stretch_fills_only_the_cross_axis() {
+        let mut row = layout(UiDirection::Row);
+        row.align = UiAlign::Stretch;
+        let resolved = row.resolve_in_box([4.0, 2.0], &[[1.0, 0.5], [0.5, 1.0]]);
+        assert_eq!(resolved[0].size, [1.0, 2.0]);
+        assert_eq!(resolved[1].size, [0.5, 2.0]);
+        assert_at(resolved[0].offset, [-0.5, 0.0]);
+        assert_at(resolved[1].offset, [0.75, 0.0]);
     }
 }
