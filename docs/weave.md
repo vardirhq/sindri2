@@ -19,6 +19,8 @@ The browser proof lives at `games/weave-poc` and is deployed to
   language reference, including diagnostics and unsupported CSS.
 - [`weave-poc.md`](weave-poc.md) records the architectural boundary and proof
   strategy.
+- [`weave-migration.md`](weave-migration.md) is the step-by-step real-game
+  migration guide and acceptance checklist.
 - `games/weave-poc/assets/demo.weave` is the smallest responsive example.
 - `games/orbital-last-stand/assets/ui.weave` is the production-oriented
   migration example as Last Stand screens move onto Weave.
