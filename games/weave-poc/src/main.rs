@@ -194,7 +194,12 @@ mod tests {
             "start"
         );
         assert_eq!(
-            string_field(mobile.world(), "feature-center", "sindri.ui.layout", "align"),
+            string_field(
+                mobile.world(),
+                "feature-center",
+                "sindri.ui.layout",
+                "align"
+            ),
             "center"
         );
         assert_eq!(
