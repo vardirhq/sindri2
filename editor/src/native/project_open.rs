@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 use eframe::egui;
 
 use crate::project::{Project, ProjectTree, manifest};
+use crate::weave_styles::ProjectStyles;
 
 use super::EditorApp;
 use super::unsaved::Discarding;
@@ -135,6 +136,7 @@ impl EditorApp {
             self.project_name = None;
             self.open_project_root = None;
             self.project_main_scene = None;
+            self.styles = ProjectStyles::default();
             return;
         };
         self.preferences.recent_projects.remember(&project);
@@ -143,12 +145,19 @@ impl EditorApp {
 
     /// Records what the open project is.
     ///
-    /// Three fields read off one manifest, so they are written in one place:
-    /// they have to agree, and the browser reads all three every frame it
-    /// draws. Held rather than re-read because a manifest does not change at
-    /// the frame rate a viewport does — the editor is the only thing that
-    /// changes it, and it does so through `set_main_scene`.
+    /// Project identity and presentation are read together. Keeping the parsed
+    /// styles here means a viewport resolves an already-composed stylesheet;
+    /// it never walks the file system or reparses Weave at frame rate.
     fn adopt(&mut self, project: &Project) {
+        self.styles = match ProjectStyles::load(project) {
+            Ok(styles) => styles,
+            Err(error) => {
+                let message = format!("Weave: {error}");
+                self.console.error(&message);
+                self.notice = Some(message);
+                ProjectStyles::default()
+            }
+        };
         self.project_name = Some(project.name().to_owned());
         self.open_project_root = Some(project.root().to_path_buf());
         self.project_main_scene = project.main_scene();
