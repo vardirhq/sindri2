@@ -10,6 +10,7 @@ sindri-assets = { path = "../sindri-assets", version = "0.1.0" }
 sindri-core = { path = "../sindri-core", version = "0.1.0" }
 sindri-decay = { path = "../sindri-decay", version = "0.1.0" }
 sindri-scene = { path = "../sindri-scene", version = "0.1.0" }
+weave = { path = "../../weave/crates/weave", version = "0.1.0" }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
