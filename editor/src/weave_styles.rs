@@ -202,11 +202,9 @@ fn collect_weave_files(
     Ok(())
 }
 
-fn insert_stamp(
-    path: &Path,
-    snapshot: &mut BTreeMap<PathBuf, FileStamp>,
-) -> Result<(), String> {
-    let metadata = std::fs::metadata(path).map_err(|error| format!("{}: {error}", path.display()))?;
+fn insert_stamp(path: &Path, snapshot: &mut BTreeMap<PathBuf, FileStamp>) -> Result<(), String> {
+    let metadata =
+        std::fs::metadata(path).map_err(|error| format!("{}: {error}", path.display()))?;
     snapshot.insert(
         path.to_path_buf(),
         FileStamp {
