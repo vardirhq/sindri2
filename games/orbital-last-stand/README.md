@@ -15,7 +15,9 @@ cargo run -p sindri-export --bin sindri-export -- games/orbital-last-stand dist
 assets/orbital.scene.json    79 entities: the ship, screens, catalogs, FX palettes
 assets/prefabs/              28 things that get spawned
 assets/profiles/             reusable module and synergy catalogs
-assets/scripts/              34 Decay scripts, and all of the game's rules
+assets/scripts/              35 Decay scripts, and all of the game's rules
+assets/ui.weave              composed responsive presentation entry point
+assets/ui/                   HUD, overlay, and screen presentation modules
 src/lib.rs                   a harness that plays it without a window
 ```
 
@@ -25,7 +27,19 @@ incomplete — so everything the game does is authored, and the only Rust here
 assembles the same public pieces a host assembles, in the order a host runs
 them. If the game needed anything private, `src/lib.rs` could not be written.
 
-## Two decisions worth knowing about
+The same authored UI entities are presented on desktop and portrait viewports.
+Weave owns responsive geometry and visual styling; Decay continues to own screen
+state, button actions, runtime text, and fill values. The migration is covered
+by `crates/sindri-weave/tests/last_stand.rs` and documented in
+`docs/weave-migration.md`.
+
+## Three decisions worth knowing about
+
+**Responsive UI is presentation, not gameplay.** The stylesheet is split into
+HUD, overlay, and screen modules composed by `ui.weave`. Portrait rules
+recompose the title and upgrade choices by viewport shape rather than guessing
+a device from a fixed width. Stable entity IDs keep existing Decay behavior and
+button hit targets intact.
 
 **The upgrade and synergy catalogs are profile assets, not script branches.**
 All 160 reference modules, their weighted pools and generic effects live in
