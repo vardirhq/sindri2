@@ -35,6 +35,7 @@ use crate::{
     slicer::Slicer,
     textures::SceneTextures,
     tilemap::TilemapTool,
+    weave_styles::ProjectStyles,
 };
 
 mod camera;
@@ -227,6 +228,13 @@ struct EditorApp {
     /// at the viewport's frame rate and a directory does not, so a walk per
     /// frame would be a syscall for every row sixty times a second.
     project: ProjectTree,
+    /// The project's composed Weave roots, when it has any.
+    ///
+    /// Loaded when a project is adopted rather than while a viewport draws.
+    /// Rendering is allowed to resolve presentation every frame; discovering
+    /// and parsing files at frame rate would be a very different and much more
+    /// expensive thing.
+    styles: ProjectStyles,
     workspace_tab: WorkspaceTab,
     preferences: Preferences,
     lifecycle: EngineLifecycle,
@@ -445,6 +453,7 @@ impl EditorApp {
             animation_tool: AnimationTool::default(),
             browser: BrowserState::default(),
             project,
+            styles: ProjectStyles::default(),
             workspace_tab: WorkspaceTab::Scene,
             preferences,
             lifecycle: initialized_lifecycle(),
