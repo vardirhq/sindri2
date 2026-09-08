@@ -1,9 +1,26 @@
+use std::collections::BTreeMap;
+
 use sindri_core::{SceneDocument, World};
 use sindri_weave::PresentationWorld;
-use weave::{Viewport, parse};
+use weave::{Stylesheet, Viewport, compose};
 
 const SCENE: &str = include_str!("../../../games/orbital-last-stand/assets/orbital.scene.json");
-const STYLE: &str = include_str!("../../../games/orbital-last-stand/assets/ui.weave");
+const STYLE_ENTRY: &str = include_str!("../../../games/orbital-last-stand/assets/ui.weave");
+const STYLE_HUD: &str = include_str!("../../../games/orbital-last-stand/assets/ui/hud.weave");
+const STYLE_OVERLAYS: &str =
+    include_str!("../../../games/orbital-last-stand/assets/ui/overlays.weave");
+const STYLE_SCREENS: &str =
+    include_str!("../../../games/orbital-last-stand/assets/ui/screens.weave");
+
+fn stylesheet() -> Stylesheet {
+    let sources = BTreeMap::from([
+        ("ui.weave".to_owned(), STYLE_ENTRY.to_owned()),
+        ("ui/hud.weave".to_owned(), STYLE_HUD.to_owned()),
+        ("ui/overlays.weave".to_owned(), STYLE_OVERLAYS.to_owned()),
+        ("ui/screens.weave".to_owned(), STYLE_SCREENS.to_owned()),
+    ]);
+    compose("ui.weave", &sources).expect("Last Stand Weave composes")
+}
 
 fn entity<'a>(world: &'a World, id: &str) -> &'a sindri_core::EntityData {
     world
@@ -37,7 +54,7 @@ fn last_stand_hud_resolves_for_desktop_and_phone_without_mutating_the_scene() {
         .expect("Last Stand scene loads")
         .world;
     let authored_health_width = size(&authored, "hud-hp")[0];
-    let stylesheet = parse(STYLE).expect("Last Stand Weave parses");
+    let stylesheet = stylesheet();
 
     let desktop = PresentationWorld::resolve(
         &authored,
@@ -79,7 +96,7 @@ fn last_stand_dynamic_hud_components_survive_presentation_resolution() {
     let authored = World::from_scene(&document)
         .expect("Last Stand scene loads")
         .world;
-    let stylesheet = parse(STYLE).expect("Last Stand Weave parses");
+    let stylesheet = stylesheet();
     let styled = PresentationWorld::resolve(
         &authored,
         &stylesheet,
@@ -116,7 +133,7 @@ fn last_stand_upgrade_choices_recompose_on_phone() {
     let authored = World::from_scene(&document)
         .expect("Last Stand scene loads")
         .world;
-    let stylesheet = parse(STYLE).expect("Last Stand Weave parses");
+    let stylesheet = stylesheet();
 
     let desktop = PresentationWorld::resolve(
         &authored,
