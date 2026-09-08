@@ -61,6 +61,7 @@ second renderer or a parallel UI object model.
 | `font-size`, `line-height`, `letter-spacing` | text metrics |
 | `font-weight` | text bold state |
 | `text-align` | text line alignment |
+| `text-wrap` | text wrapping (`none`, `word`/`wrap`, `glyph`) |
 | `text-transform` | text case |
 
 `justify-content` accepts `start`, `center`, `end`, and `space-between`.
