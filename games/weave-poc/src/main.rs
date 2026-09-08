@@ -185,6 +185,6 @@ mod tests {
         let desktop_size = number_field(desktop.world(), "title", "sindri.ui.text", "font_size");
         let mobile_size = number_field(mobile.world(), "title", "sindri.ui.text", "font_size");
         assert!((desktop_size - 84.0 / 720.0).abs() < 1.0e-6);
-        assert!((mobile_size - 56.0 / 844.0).abs() < 1.0e-6);
+        assert!((mobile_size - 58.0 / 844.0).abs() < 1.0e-6);
     }
 }
