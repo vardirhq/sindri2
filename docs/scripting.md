@@ -762,10 +762,10 @@ anchored elements move in from their own edge; a centred element stays centred,
 because the screen does not shrink, the edges come in.
 
 **Accessible labels are authored but not yet surfaced.** A button carries a
-`label`, stored beside the thing it names in the file a designer edits. Nothing
-reads it yet: there is no DOM to expose it to until a project can be exported to
-the web, and inventing a second accessibility path before then would be building
-the wrong one.
+`label`, stored beside the thing it names in the file a designer edits, but no
+backend reads it yet. Static web export exists, but its canvas/WebGPU
+presentation has no semantic DOM bridge; native presentation likewise needs an
+accessibility adapter.
 
 **An entity that is not the kind of element the call needs is named**, rather
 than the call quietly doing nothing — a HUD that stops updating because a script
