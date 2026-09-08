@@ -193,9 +193,14 @@ impl ProjectExport {
             wanted.insert(id, AssetKind::Sheet);
         }
 
-        // What the scene cannot name.
+        // What the scene cannot name. A listed Weave entry is special only in
+        // one useful way: its `@use` graph is declarative, so the exporter can
+        // follow it instead of making authors mirror imports in this list.
         for id in &file.assets.include {
             wanted.insert(id.clone(), AssetKind::for_id(id));
+            if id.ends_with(".weave") {
+                gather_weave_dependencies(project, id, &mut wanted)?;
+            }
         }
 
         for (id, kind) in wanted {
@@ -227,6 +232,37 @@ impl ProjectExport {
             .find(|asset| asset.kind == AssetKind::Scene)
             .map(|asset| asset.id.as_str())
     }
+}
+
+fn gather_weave_dependencies(
+    project: &Path,
+    entry: &str,
+    wanted: &mut BTreeMap<String, AssetKind>,
+) -> Result<(), ExportError> {
+    let mut pending = vec![entry.to_owned()];
+    let mut walked = BTreeSet::new();
+
+    while let Some(id) = pending.pop() {
+        if !walked.insert(id.clone()) {
+            continue;
+        }
+        wanted.insert(id.clone(), AssetKind::for_id(&id));
+
+        let path = resolve(project, &id);
+        let source = std::fs::read_to_string(&path)
+            .map_err(|error| ExportError::unreadable(&path, &error))?;
+        let imports = weave::imports(&source)
+            .map_err(|error| ExportError::Project(format!("{id}: {error}")))?;
+        for reference in imports {
+            let dependency = weave::resolve_import(&id, &reference)
+                .map_err(|error| ExportError::Project(error.to_string()))?;
+            if !walked.contains(&dependency) {
+                pending.push(dependency);
+            }
+        }
+    }
+
+    Ok(())
 }
 
 /// Switches on every entity in a copy of a world about to be walked.
