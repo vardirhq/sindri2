@@ -181,3 +181,32 @@ fn last_stand_upgrade_choices_recompose_on_phone() {
         "word"
     );
 }
+
+#[test]
+fn last_stand_screens_recompose_for_portrait_even_when_width_exceeds_phone_breakpoint() {
+    let document = SceneDocument::from_json(SCENE).expect("Last Stand scene parses");
+    let authored = World::from_scene(&document)
+        .expect("Last Stand scene loads")
+        .world;
+    let stylesheet = stylesheet();
+    let portrait = PresentationWorld::resolve(
+        &authored,
+        &stylesheet,
+        Viewport {
+            width: 980.0,
+            height: 1800.0,
+        },
+    )
+    .expect("wide portrait layout resolves");
+
+    assert_eq!(
+        string(
+            portrait.world(),
+            "upgrade-row",
+            "sindri.ui.layout",
+            "direction"
+        ),
+        "column"
+    );
+    assert!((size(portrait.world(), "title-bg")[0] - (2.0 * 0.92 * 980.0 / 1800.0)).abs() < 1.0e-6);
+}
