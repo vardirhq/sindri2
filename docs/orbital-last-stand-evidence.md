@@ -1,5 +1,10 @@
 # Orbital Last Stand: what a ten-minute run costs
 
+> **Measurement snapshot:** these numbers describe the named release harness and
+> CI-class machine at the time of the audit. Re-run the command below for current
+> performance; the workload shape and bounded-effects conclusion remain the
+> decision record.
+
 `docs/orbital-last-stand-audit.md` asks, as the twelfth of its twelve
 acceptance points, for frame-time, entity-count, query, collision, and
 allocation evidence from a late-run stress point — and says the workload should
