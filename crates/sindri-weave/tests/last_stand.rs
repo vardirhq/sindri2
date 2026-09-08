@@ -208,7 +208,5 @@ fn last_stand_screens_recompose_for_portrait_even_when_width_exceeds_phone_break
         ),
         "column"
     );
-    assert!(
-        (size(portrait.world(), "title-bg")[0] - (2.0 * 0.92 * 980.0 / 1800.0)).abs() < 1.0e-6
-    );
+    assert!((size(portrait.world(), "title-bg")[0] - (2.0 * 0.92 * 980.0 / 1800.0)).abs() < 1.0e-6);
 }
