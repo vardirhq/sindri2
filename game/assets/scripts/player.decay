@@ -13,8 +13,18 @@ script Player {
             return;
         }
 
-        let sideways = Input.axis("ArrowLeft", "ArrowRight");
-        let forward = Input.axis("ArrowDown", "ArrowUp");
+        var sideways = Input.axis("A", "D") + Input.axis("ArrowLeft", "ArrowRight");
+        var forward = Input.axis("S", "W") + Input.axis("ArrowDown", "ArrowUp");
+        if sideways == 0.0 && forward == 0.0 && Stick.held && !Pointer.over_ui {
+            sideways = Stick.x;
+            forward = -Stick.y;
+        }
+        let length = sqrt(sideways * sideways + forward * forward);
+        if length > 1.0 {
+            sideways /= length;
+            forward /= length;
+        }
+
         var grid_x = Grid.position_x(this.entity, floor);
         var grid_y = Grid.position_y(this.entity, floor);
         grid_x += sideways * speed * dt;
