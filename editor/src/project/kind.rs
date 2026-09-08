@@ -28,6 +28,8 @@ pub enum AssetKind {
     /// Reusable authored data, independent of scene entities.
     Profile,
     Script,
+    /// Responsive screen-UI presentation authored in Weave.
+    Stylesheet,
     Font,
     Audio,
     Other,
@@ -46,6 +48,7 @@ impl AssetKind {
             Self::Prefab => "Prefab",
             Self::Profile => "Profile",
             Self::Script => "Script",
+            Self::Stylesheet => "Weave",
             Self::Font => "Font",
             Self::Audio => "Audio",
             Self::Other => "File",
@@ -87,6 +90,7 @@ impl AssetKind {
             // a script the editor can actually run, and the rest are scripts
             // only in the sense that they are code sitting in a project.
             Some("decay" | "rs" | "ts" | "js" | "wgsl") => Self::Script,
+            Some("weave") => Self::Stylesheet,
             Some("ttf" | "otf" | "woff" | "woff2") => Self::Font,
             Some("wav" | "ogg" | "mp3") => Self::Audio,
             _ => Self::Other,

@@ -194,7 +194,12 @@ fn a_texture_row_responds_because_it_can_be_sliced() {
 /// [`only_a_scene_opens_on_a_double_click`].
 #[test]
 fn every_row_can_be_selected_even_with_nothing_to_open() {
-    for kind in [AssetKind::Script, AssetKind::Mesh, AssetKind::Other] {
+    for kind in [
+        AssetKind::Script,
+        AssetKind::Stylesheet,
+        AssetKind::Mesh,
+        AssetKind::Other,
+    ] {
         assert!(
             asset_row_click_at(kind, Vec2::new(40.0, 0.0)),
             "{kind:?} must still be selectable"
@@ -212,6 +217,7 @@ fn only_a_scene_opens_on_a_double_click() {
     for kind in [
         AssetKind::Scene,
         AssetKind::Script,
+        AssetKind::Stylesheet,
         AssetKind::Mesh,
         AssetKind::Other,
     ] {

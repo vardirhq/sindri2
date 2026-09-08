@@ -9,6 +9,7 @@ fn project() -> tempfile::TempDir {
     let root = directory.path();
     fs::write(root.join("demo.scene.json"), "{}").unwrap();
     fs::write(root.join("settings.json"), "{}").unwrap();
+    fs::write(root.join("ui.weave"), "").unwrap();
     fs::write(root.join("drifter.prefab.json"), "{}").unwrap();
     fs::write(root.join("weapon.profile.json"), "{}").unwrap();
     fs::write(root.join(".hidden"), "").unwrap();
@@ -48,6 +49,7 @@ fn the_browser_reads_the_directory_the_scene_lives_in() {
             "textures",
             "badge.png",
             "tiles.png",
+            "ui.weave",
             "weapon.profile.json",
         ],
         "children follow their parent, and each level is sorted by name"
@@ -107,6 +109,7 @@ fn a_row_knows_what_kind_of_file_it_is() {
     // The engine's own language, which the browser listed as a plain file
     // until it was named here.
     assert_eq!(kind("spin.decay"), Some(AssetKind::Script));
+    assert_eq!(kind("ui.weave"), Some(AssetKind::Stylesheet));
     assert_eq!(kind("Inter.ttf"), Some(AssetKind::Font));
     assert_eq!(kind("textures"), Some(AssetKind::Folder));
 }
