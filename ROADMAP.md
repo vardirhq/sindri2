@@ -327,11 +327,11 @@ the engine would be authoring things nothing can run.
 - [x] Add and remove components through the inspector, driven by the schema registry rather than a hardcoded list — Add Component offers what the entity lacks and the registry can create, and a type with no sensible blank is left out rather than offered and refused
 - [x] Edit any component's fields in the inspector, including one the engine has never heard of — driven by the stored payload, checked against the component's own schema before it becomes a command
 - [x] Edit a script's `@export` properties in the inspector, drawn from what the script declared — the capability that justified a statically typed language
-- [ ] Author a Decay script's **source** from the editor: open one, edit it, create one
+- [ ] Edit Decay source in the editor. Scripts can be created from the project browser and opened as read-only previews; full editing, completion, and diagnostics live in the VS Code extension
 - [x] Reparent by dragging in the hierarchy, with legal/illegal target feedback, cycle prevention, root drops, automatic target expansion, selection of the moved entity, and one-step undo through the existing command
 - [ ] Multi-select, and edit what a selection has in common
 - [ ] Copy, paste, and duplicate across scenes
-- [ ] Decide whether Sindri has prefabs, and if so what a prefab override is
+- [ ] Author and link prefab instances in the editor. The versioned single-root format, runtime/Decay spawning, static export, and typed asset picker are complete; creation and instance overrides are not
 
 ### Working on a project
 
@@ -339,21 +339,21 @@ the engine would be authoring things nothing can run.
   done: a project is a directory holding `sindri.toml`, the welcome window lists, makes and opens
   one, a scene opened from anywhere adopts the project it is inside, and the browser roots at it;
   more than one scene at a time does not exist
-- [ ] Import assets from a watched directory, decoding and registering them without a rebuild
-- [ ] Surface project settings, whatever `sindri.toml` turns out to hold — partly done: the file
-  exists and carries a format version, the project's name, and the scene it opens, which the project
-  browser can now nominate; the name cannot be edited from the editor, and the runtime does not read
-  the file at all
+- [x] Import, rename, copy, and delete project assets without a rebuild; native asset watching reloads changed textures, fonts, and scripts
+- [ ] Surface project settings from `sindri.toml` in the editor. The versioned
+  manifest names the project and entry scene, drives native/browser project
+  loading and static export, and the project browser can nominate the scene; the
+  editor still cannot edit the name or broader settings
 - [x] Show editor, script, render, and asset failures in the console; broader
   structured engine logging can grow behind the same surface
-- [ ] Search and filter that reaches both the hierarchy and the project browser
+- [x] Search and filter both the hierarchy and project browser, preserving ancestor paths and folder context
 
 ### Running the game
 
-- [ ] Play mode that runs the complete game loop against the edited world, with
-  pause and single step — scripts and sprite animation already run; other game
-  systems and single-step do not
-- [ ] Native preview, and web preview through the actual WASM build
+- [x] Play mode runs the shipped ordered fixed-step loop against the edited
+  world, including effects, physics, screen UI, scripts, and animation, with
+  pause, single-step, exactly-once input edges, and snapshot restore
+- [ ] Add one-click web preview through the actual WASM build. Native Game-view preview is complete
 - [ ] Frame timing, draw calls, and entity counts where a developer can see them
 
 ### Shape of the tool
