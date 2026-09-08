@@ -102,7 +102,7 @@ covering the outer border.
 | `direction` | `row`, `column` | Main layout axis |
 | `gap` | length | Empty space between adjacent child edges |
 | `justify-content` | `start`, `center`, `end`, `space-between` | Main-axis distribution |
-| `align-items` | `start`, `center`, `end`, `stretch` | Cross-axis alignment |
+| `align-items` | `start`, `center`, `end` | Cross-axis alignment |
 
 Layout is hierarchical. A child must be parented beneath the layout entity in
 the scene; visual overlap does not establish layout membership. Explicit child
@@ -213,7 +213,7 @@ The following CSS concepts are not implemented:
 
 - intrinsic `auto` sizing
 - margins or per-side padding
-- flex grow and shrink
+- flex grow and shrink, including cross-axis stretch
 - grid, wrapping layout, scrolling, and clipping regions
 - variables, calculations, or custom properties
 - selector composition and inheritance
