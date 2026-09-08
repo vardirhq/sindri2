@@ -136,17 +136,17 @@ requirement.
 - [x] Run the shared `winit` host, WGPU renderer, and engine lifecycle on a page canvas
 - [x] Run Decay gameplay, fixed-step simulation, keyboard input, entity references, and the shared game board in Chromium
 - [x] Make asynchronous host failures visible in the browser console rather than returning success before startup fails
-- [ ] Exercise `AssetLoader` and `UrlRoot` with real browser fetches rather than embedded bytes
+- [x] Exercise real browser fetching through static exports: the host fetches the manifest and content-hashed assets rather than embedding project bytes
 - [ ] Define page lifecycle semantics for resize, visibility, teardown, and device loss
-- [ ] Add an explicit capability error and user-facing message when WebGPU is unavailable
+- [x] Add explicit, user-facing capability errors when the canvas, WebGPU interface, or adapter is unavailable
 
 ### Browser quality and packaging
 
 - [x] Add a Playwright smoke test that proves the engine configured the canvas
-- [ ] Test missing WebGPU messaging
+- [x] Test missing canvas, WebGPU, and adapter messaging in the exported-page smoke suite
 - [ ] Test canvas selector/element validation
 - [ ] Test resize, device-pixel ratio, visibility pause, and teardown
-- [ ] Test static hosting under a non-root base path
+- [x] Test and deploy static hosting under GitHub Pages' non-root `/sindri2/` base path
 
 Exit gate: a Sindri project can be exported to static files, load its assets
 through the real pipeline, and run the same Decay gameplay and scene in a
@@ -219,7 +219,7 @@ described an engine that could not make a sound.
 - [x] Play one-shot sounds from gameplay through that boundary
 - [x] Add looping music with volume, and tie stop and resume to the engine lifecycle so pausing the game pauses the sound
 - [x] Add a browser backend behind the same boundary, including the user-gesture requirement browsers impose before any audio may start
-- [x] Let a scene reference an audio asset through a component, and surface audio in the editor's project browser (the browser lists audio; the editor cannot play a clip, and nothing gathers the audio a scene names the way `referenced_textures` does)
+- [x] Let a scene reference an audio asset through a component, surface audio in the editor's project browser, and audition selected clips through the editor's own backend. A `referenced_audio` gather still remains; dynamically named clips are declared through `[assets].include`
 
 Exit gate: the companion game plays a sound when something happens, natively and
 in a browser, and a headless test can assert it was asked to without a sound
@@ -290,9 +290,9 @@ Exit gate: shared grid/gameplay logic supports both sprite isometric and orthogr
 
 - [ ] Implement minimal `sindri new/dev/build/test/editor` CLI
 - [ ] Add native and web project templates to `sindri new`
-- [ ] Add native and static-web export pipelines
-- [ ] Add curated examples with CI build coverage
-- [ ] Add Editor/Decay and CLI/Decay getting-started guides, plus Rust extension guidance
+- [ ] Add native packaging; the static-web export pipeline, content-hashed manifest, shared browser host, Pages deployment, and browser smoke suite are complete
+- [x] Add curated examples with CI build and browser smoke coverage
+- [ ] Complete the documentation set: Editor/Decay and web-export guides exist; CLI/Decay and Rust extension guidance wait on those public surfaces
 - [ ] Document supported browsers, GPUs, OSes, and MSRV
 - [ ] Add CPU, GPU, memory, startup, and WASM-size benchmarks
 - [ ] Add screenshot/render regression suite where stable
@@ -493,9 +493,9 @@ the same shared projection drives rendering and editor picking.
   search paths
 - [ ] Give it depth with Milestone 8: a 3D prop in the same scene as the sprites
 - [x] Rebuild its coordinate handling on Milestone 9's grid module rather than its own — player movement, floor bounds, and orb distance checks use the typed Decay grid surface backed by the floor tilemap
-- [ ] Ship it through Milestone 10's export pipeline, natively and to the web,
-  as the pipeline's real test — it is playable in a hand-built browser host, but
-  no export pipeline produces that host yet
+- [ ] Ship it natively through Milestone 10's packaging path. The static-web
+  half is complete: the shared exporter and browser host deploy Gather through
+  the same content-hashed manifest path as the other examples
 - [ ] Rebuild it inside the editor for Milestone 11's exit gate
 
 Exit gate: the game is what someone is shown when they ask what Sindri is for,
@@ -517,14 +517,16 @@ The next item is not more language. It is `sindri-decay` — one script driving 
 - [ ] **Emit a host manifest**, now unblocked: `Environment` carries types and can enumerate them, so the description can be written out and read back. This is the first item of the external-editor track below, and the thing a language server has to agree with
 - [x] Define a language-neutral scripting host: a script reaches its transform, its sprite, the keyboard, the frame's time, and a log, all through the `Host` trait's three methods and all typed. The surface is the one `docs/2d-inventory.md` read off the legacy engine's `player.lua` rather than an invented one — see `docs/scripting.md`
 - [x] Give Decay a value that can hold an entity — `Value::Reference` is opaque to the language: holdable, passable, comparable, with no literal, no arithmetic and no way inside. The engine packs a slot and a generation into it, and the `Host` trait's three methods each take a subject, so a path rooted at a value a script holds resolves against what it names
-- [ ] Extend the host to other entities, spawning, and despawning, routed through `WorldCommand` (partly done: `World.find`, `World.exists`, `World.despawn` and reaching through a reference all work and are typed — **spawning** is blocked on the engine having a prefab to say what to create, and despawn is not yet routed through `WorldCommand`, because no script write is and play mode restores from a snapshot)
+- [ ] Finish routing script mutations through `WorldCommand`. Typed references,
+  find/query, despawn, and prefab-backed `World.spawn`/`spawn_child` work;
+  command routing and undo semantics remain open
 - [ ] Generate typed component access, diagnostics, and autocomplete from the component schema registry (Decay's `Environment` is where host globals enter, and `IrField` already carries `exported` and `type_name` — this is the capability Rhai structurally could not have offered, and the reason the language has a case)
 - [ ] Specify safe entity and asset handles, coroutine cancellation, deterministic scheduling, and execution budgets (call depth is bounded; the operation budget is slice 1 of the language track below, where it lands with the loops that make it necessary)
 - [ ] Prove function/module hot reload with preservation or explicit migration of compatible typed state
 - [ ] Document recurring gameplay-authoring pain points from Gather and other
   representative games, and feed them back into the Decay host and tooling
 - [ ] Define the editor, language-server, formatter, debugger, documentation, and testing commitments before making the language public
-- [ ] Decide whether the prototype provides enough gameplay-specific value to justify a permanent language ecosystem
+- [x] Decide whether the prototype provides enough gameplay-specific value to justify a permanent language ecosystem — Decay is the engine's gameplay language, used by Gather and Orbital Last Stand
 
 ### The language basics, ordered by what a script cannot say
 
@@ -718,9 +720,9 @@ component schema registry.
 
 - [ ] **Emit a host manifest.** The editor writes a generated, versioned file describing the host surface: every registered component and its schema, every `@export`-able field type, every host function and path. This is Decay's `.csproj` — the thing Unity regenerates when assets change, and the only reason OmniSharp knows anything. `ComponentSchemaRegistry` and `Environment` are the two halves of it, and `Environment` can now enumerate its types and globals for exactly this
 - [ ] **Serialize `Environment` to and from that manifest**, so the compiler a tool runs is configured identically to the one the engine runs. A language server that disagrees with the runtime about what exists is worse than none
-- [ ] **`decay-lsp`**: diagnostics, hover, go-to-definition, completion, find-references, over `decay-semantic`. Diagnostics come nearly free — they already carry line, column, and span — and completion after a `.` is now possible, because `HostType` knows what is behind one
+- [x] **`decay-lsp`**: diagnostics, hover, go-to-definition, completion, and references over `decay-semantic`, configured from the same environment as the runtime
 - [ ] Decide whether references cross files. One file is one compilation unit today, so find-references is per-file; project-wide anything needs multi-file compilation first
-- [ ] A syntax definition (TextMate or tree-sitter) — cheap, independent of everything above, and the first thing anyone notices
+- [x] A TextMate syntax definition and VS Code language configuration
 
 Typed host members landed first deliberately: a language server whose completion cannot see past a dot is a demo, and building it first would have meant building it twice.
 
