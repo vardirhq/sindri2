@@ -498,6 +498,82 @@ output of the file; everything above is evidence.
 Items 1–6 are the ones that block a game today. Items 7–12 are cheap relative to
 their daily cost. Items 13–15 are real but survivable.
 
+---
+
+## Beyond parity — where Sindri could lead
+
+Everything above answers "what is an engine expected to do", and every row can
+be checked against Unity or Godot. This section answers a different question:
+**what could an engine provide that none of them do?** It is kept separate
+deliberately. Mixed into the tables above, a reader could no longer tell "the
+baseline has this and we do not" from "nobody has this and we might", and that
+distinction is what makes the rest of this file worth reading.
+
+Nothing here is scheduled. These are candidates, and they compete with each
+other rather than with the ranked queue.
+
+### The thesis
+
+Sindri already refuses to hand a game raw `dt` and raw key states and wish it
+luck. It has a fixed step, input edges consumed exactly once, and a seeded
+stream that replays a run on every host. Read together those are one idea:
+
+> The engine gives you primitives for translating imperfect human input and
+> time into deterministic gameplay.
+
+That is a stronger position than any single feature below, and it is a
+description of what Sindri *is* rather than a direction bolted on. The
+candidates worth taking are the ones that follow from it.
+
+### Judged against the games, not against plausibility
+
+A candidate earns a row by replacing something a game in this repository is
+doing by hand today. Where a game is *not* asking for it, that is recorded too —
+an idea that sounds good and nothing needs is the most expensive kind.
+
+| Candidate | What it would replace | Position |
+| --- | --- | --- |
+| **Gameplay spatial queries** — nearest, within radius, within cone, within box, over tagged entities and backed by an index | `player.decay` has a literal `fn nearest()` looping `World.with_tag` with a `best_distance`; `arc.decay` needs "the next two nearest targets" | **Strongest.** See below — this also corrects a framing error above |
+| **Entity lifecycle policies** — despawn after a duration, off-camera, or on animation end | `World.despawn(this.entity)` and a hand-decremented countdown in `bullet`, `beam`, `arc`, `core`, `charger`, `drifter`, `challenger` | **Take.** Small, and seven scripts want it |
+| **Cooldowns and charges** — start, ready, remaining, normalised, recharge | `player.decay` hand-rolls `cooldown` and `mine_cooldown`; `director.decay` hand-rolls `spawn_timer` | **Take.** Small, and generic below gameplay |
+| **Buffered actions** — a press remembered for a window and consumed exactly once | Nothing yet; the games are not platformers | **Take, but narrowed.** See below |
+| **Named time domains** — gameplay, UI, physics and real clocks, scalable and freezable | **Nothing.** No game here scales time; only pause exists | **Row, not queue.** Best fit with the thesis, no current demand, and cross-cutting: every consumer must declare a clock |
+| **Gameplay sensors** — vision cone, aggro radius, interaction range, with enter/stay/leave | Enemy scripts compute their own geometry | **Downstream.** Mostly spatial queries plus a component; thin once those exist |
+| **Feedback orchestration** — one asset firing sound, effect, shake, haptics, hit-stop and flash | Real glue, but Sindri has no shake, no haptics, no hit-stop, no flash, and one effect shape | **Capstone.** It would orchestrate five systems that do not exist |
+| **Deterministic state history** — a short rolling window of selected properties | **Nothing.** No game here rewinds, trails, or replays | **Low.** Unusually cheap given determinism, and nothing needs it |
+| **Spawn regions and patterns** — a random point in a circle, edge, or area | A few lines of Decay per use | **Utility, not a system.** Does not earn a subsystem |
+
+### The one that changes something above
+
+Spatial queries expose a framing error in this file's own physics section, which
+lists raycast and overlap as **physics** queries. `fn nearest()` in
+`player.decay` is not a physics problem — it is a gameplay query over tagged
+entities, and it is the one the games actually hand-roll. The physics casts are
+a subset, not the parent.
+
+Determinism also matters here in a way it does not for the baseline: a query
+that answers in world order answers the same on every host, and a game built on
+"the nearest enemy" then replays from a seed. Neither Unity nor Godot promises
+that.
+
+### Buffering, narrowed
+
+The tempting version of this is a general *forgiveness* system — jump buffering,
+coyote time, grace periods — authored in one block. Half of it does not belong
+in an engine.
+
+"Remember a press for 120ms and let gameplay consume it exactly once" knows
+nothing about a game and is genuinely engine-level. "A grace period after being
+grounded" requires the engine to know what *grounded* means, which is
+game-specific: a top-down shooter has no such state, and an engine that assumed
+one would be a system games fight rather than use.
+
+So the half worth taking is the input half, and it already has a home: the
+**input action layer** in `sindri-platform`, which is built and stranded.
+Buffered press and consume-once are features of a named action, not a new
+subsystem — which folds this candidate into an existing queue item instead of
+adding an eleventh.
+
 ## Maintenance rule
 
 Update this file in the same change that moves any cell, as
@@ -512,3 +588,8 @@ checklist nobody reads:
 3. **Add the row before the feature.** The value of this file is that absent
    things have rows. A gap discovered during work belongs here in the same
    change, marked ❌, even when nothing is planned.
+4. **Keep the two questions apart.** Everything above "Beyond parity" is
+   answerable against Unity or Godot. Everything below it is not, and moving a
+   candidate up requires the baseline to have grown it, not for us to have
+   liked the idea. A candidate earns its place by naming what a game in this
+   repository does by hand — and when no game wants it, the row says so.

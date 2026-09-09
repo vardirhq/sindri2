@@ -24,6 +24,20 @@ All notable changes to Sindri Next will be documented here.
   heart stay `sindri.shape`, because a script moves them every frame and no
   baked frame can do that. See `docs/isometric-baker.md`.
 
+- **`docs/parity.md` gains a "beyond parity" section.** Everything above it
+  answers "what is an engine expected to do" and is checkable against Unity or
+  Godot; the new section answers "what could an engine provide that none of them
+  do", and is kept separate so a reader can still tell a gap from an ambition.
+  Candidates earn a row by naming what a game in this repository does by hand —
+  `player.decay` has a literal `fn nearest()` looping tagged entities with a
+  `best_distance`, and hand-decremented `cooldown`, `mine_cooldown` and
+  `spawn_timer`; seven scripts despawn themselves on a countdown. Where no game
+  wants a candidate the row says so, which is why named time domains are
+  recorded and not queued. The section also corrects a framing error above it:
+  raycast and overlap are listed as physics queries, but the query the games
+  actually hand-roll is a gameplay one over tagged entities, of which physics
+  casts are a subset.
+
 - **A component says what its fields are for.** A field template said a sprite
   had a `texture` and that it held a string; it could not say the string named a
   texture in the project. So the editor guessed from the field's name, through
