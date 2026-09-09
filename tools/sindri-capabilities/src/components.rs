@@ -56,7 +56,10 @@ pub(crate) fn describe() -> Result<Value, CapabilitiesError> {
     asset kind it names, which spellings it accepts, that it is a colour, an \
     angle, a bounded number, a collision mask, or another entity. A path is \
     dotted, and `[]` descends into a list, so `pieces[].friction` describes \
-    every piece.",
+    every piece. A choice that also carries `variants` decides the shape of what \
+    holds it: each spelling names the fields the object has when the tag says \
+    that word, and writing the word without them is a payload the engine \
+    refuses.",
         "components": components,
     }))
 }
@@ -77,6 +80,16 @@ fn meanings(registry: &ComponentSchemaRegistry, type_name: &str) -> Value {
                 }
                 FieldMeaning::Choice(options) => {
                     described["options"] = json!(options);
+                    // Where a choice decides more than itself, what each
+                    // spelling makes the component hold. A tool writing one of
+                    // these has to write the rest of them with it.
+                    if let Some(variants) = registry.variants(type_name, path) {
+                        described["variants"] = variants
+                            .iter()
+                            .map(|(name, template)| ((*name).to_owned(), template.clone()))
+                            .collect::<serde_json::Map<String, Value>>()
+                            .into();
+                    }
                 }
                 FieldMeaning::Range { min, max } => {
                     described["min"] = json!(min);

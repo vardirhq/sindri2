@@ -67,20 +67,20 @@ pub(crate) fn object_rows(
     let fields = registry.fields(type_name);
     // The blank is the one for the variant this payload is, not whichever
     // variant the registry's fresh component happens to be.
-    let blank = fields.map(|fields| choices::blank_for(type_name, fields, payload));
+    let blank = fields.map(|fields| choices::blank_for(registry, type_name, fields, payload));
     let mut drawn = fields::drawn_payload(blank.as_ref(), payload);
     for key in fields::ordered_keys(&drawn) {
         if (skip_properties && key == "properties") || !inspector::applies(type_name, &key) {
             continue;
         }
         // A choice can decide what else the component holds, so it is offered
-        // the whole payload rather than one field of it.
-        // The registry says which spellings a field accepts; the editor still
-        // says what picking one does to the rest of the payload, because for a
-        // tagged component that is a different question.
+        // the whole payload rather than one field of it. Which spellings it
+        // accepts and what each of them makes the component hold are both the
+        // component's own business, asked of the registry.
         if let Some(FieldMeaning::Choice(options)) = registry.meaning(type_name, &key) {
-            if let Some(chosen) = choice_row(ui, &key, &drawn, options) {
-                choices::choose(type_name, &key, chosen, &mut drawn);
+            let current = drawn.get(&key).and_then(Value::as_str).unwrap_or_default();
+            if let Some(chosen) = choice_row(ui, &key, &key, current, options, 0.0) {
+                choices::choose(registry, type_name, &key, chosen, &mut drawn);
             }
             continue;
         }
@@ -98,7 +98,7 @@ pub(crate) fn object_rows(
         };
         let meaning = registry.meaning(type_name, &key);
         if let Some(list) = asset_list(meaning, assets) {
-            asset_row(ui, &key, value, list);
+            asset_row(ui, &key, &key, value, list);
             continue;
         }
         if is_colour(meaning, value) {
@@ -160,36 +160,39 @@ fn is_colour(meaning: Option<&FieldMeaning>, value: &Value) -> bool {
 /// Returns the chosen name only when it is a change, so a menu that opened and
 /// closed does not rewrite a payload — which for a camera would mean rewriting
 /// the fields its projection decides.
-fn choice_row(
+///
+/// `at` is the field's dotted path, and is what the menu is identified by. Two
+/// pieces of one collider both have a `shape`, so a menu keyed by the field's
+/// name alone would be one menu opening on two rows.
+pub(crate) fn choice_row(
     ui: &mut egui::Ui,
+    at: &str,
     key: &str,
-    payload: &Value,
+    current: &str,
     options: &[&'static str],
+    indent: f32,
 ) -> Option<&'static str> {
-    let current = payload
-        .get(key)
-        .and_then(Value::as_str)
-        .unwrap_or_default()
-        .to_owned();
-    let mut chosen = current.clone();
-    property::Property::new(&inspector::humanize(key)).show(ui, |ui| {
-        egui::ComboBox::from_id_salt(("choice", key))
-            .selected_text(
-                RichText::new(inspector::humanize(&chosen))
-                    .size(text::LABEL)
-                    .color(color::TEXT_MUTED),
-            )
-            .width(property::picker_width(ui))
-            .show_ui(ui, |ui| {
-                for option in options {
-                    ui.selectable_value(
-                        &mut chosen,
-                        (*option).to_owned(),
-                        inspector::humanize(option),
-                    );
-                }
-            });
-    });
+    let mut chosen = current.to_owned();
+    property::Property::new(&inspector::humanize(key))
+        .indent(indent)
+        .show(ui, |ui| {
+            egui::ComboBox::from_id_salt(("choice", at))
+                .selected_text(
+                    RichText::new(inspector::humanize(&chosen))
+                        .size(text::LABEL)
+                        .color(color::TEXT_MUTED),
+                )
+                .width(property::picker_width(ui))
+                .show_ui(ui, |ui| {
+                    for option in options {
+                        ui.selectable_value(
+                            &mut chosen,
+                            (*option).to_owned(),
+                            inspector::humanize(option),
+                        );
+                    }
+                });
+        });
     (chosen != current)
         .then(|| options.iter().copied().find(|option| *option == chosen))
         .flatten()
@@ -205,7 +208,17 @@ fn choice_row(
 /// A reference the project cannot see is marked rather than silently accepted:
 /// the field turns to the editor's warning colour and says why on hover, which
 /// is the difference between a typo found here and a scene that will not load.
-pub(crate) fn asset_row(ui: &mut egui::Ui, key: &str, value: &mut Value, available: &[String]) {
+///
+/// `at` identifies the picker, for the same reason a choice needs it: a list
+/// whose items each name an asset would otherwise share one picker between
+/// them.
+pub(crate) fn asset_row(
+    ui: &mut egui::Ui,
+    at: &str,
+    key: &str,
+    value: &mut Value,
+    available: &[String],
+) {
     let mut typed = value.as_str().unwrap_or_default().to_owned();
     let known = typed.is_empty() || available.contains(&typed);
     let mut changed = false;
@@ -232,7 +245,7 @@ pub(crate) fn asset_row(ui: &mut egui::Ui, key: &str, value: &mut Value, availab
                 egui::TextEdit::singleline(&mut typed).hint_text("None"),
             )
             .changed();
-        egui::ComboBox::from_id_salt(("asset", key))
+        egui::ComboBox::from_id_salt(("asset", at))
             .selected_text("")
             .width(picker)
             .show_ui(ui, |ui| {

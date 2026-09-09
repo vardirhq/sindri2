@@ -199,7 +199,7 @@ cannot respond to gameplay without hand-written frame maths.
 | Feature | Engine | Editor | Decay | Proof | vs. baseline | Gap that matters |
 | --- | :-: | :-: | :-: | :-: | --- | --- |
 | Bodies, fixed-step stepping, velocity, impulse | ✅ | 🟡 | ✅ | ✅ | **Par** | — |
-| Compound colliders (several pieces, one body) | ✅ | 🟡 | — | ❌ | **Par** | Pieces are added, removed, reordered and edited; changing a piece's *shape* still needs variant support |
+| Compound colliders (several pieces, one body) | ✅ | ✅ | — | ❌ | **Par** | Pieces are added, removed, reordered and fully edited, a piece's shape included. No game authors one yet |
 | Masks, sensors, collision events | ✅ | 🟡 | ✅ | ✅ | **Par** | — |
 | **Named collision layers** | ❌ | ❌ | ❌ | — | **Behind** | Masks are raw `u32` bit values. Unity and Godot both name layers in project settings. Cheap to fix, daily friction |
 | Per-piece validation naming the failing index | ✅ | — | — | ✅ | **Ahead** | Neither baseline tells you *which* collider was wrong |
@@ -366,6 +366,7 @@ components not yet written. It is the highest-leverage item in this file.
 | Tilemap painting, sheet slicer, texture picker | ✅ | **Par** | — |
 | **Asset pickers for schema fields generally** | ✅ | **Ahead** | Declared per component in the schema registry, checked against the field template, and carried in `docs/generated/`. Unity needs a plugin (Odin) for the equivalent |
 | **Array-of-object editing** | ✅ | **Par** | A list of objects is added to, removed from and reordered, with each item's fields drawn through its meanings. Decided by the template, so a tilemap's thousand tiles stay a readout |
+| **Tagged-enum (variant) fields** | ✅ | **Par** | A field that decides what else its object holds is switched as one edit, at any depth — Godot's equivalent is swapping a Resource subtype. What is ours is that every variant is proved to decode at startup, so an unpickable one fails the build rather than the scene |
 | **Console / log panel** | ❌ | **Absent** | Errors and script `print` output are invisible in the editor |
 | **Profiler view** | ❌ | **Absent** | Where a fixed step goes is unmeasurable in-editor |
 | **Search / filter in hierarchy or project** | ❌ | **Absent** | Painful past a few dozen entities |
@@ -474,11 +475,14 @@ output of the file; everything above is evidence.
    editor's three name-keyed tables are gone, meanings are read at every depth
    rather than only at the top level, and a list of objects is editable: a
    compound collider's pieces are added to, removed from and reordered, each
-   piece drawn through the meanings that describe it. One thing is deliberately
-   left: a **variant tag** below the top level — a piece's `shape`, where
-   choosing `circle` must replace a box's half extents with a radius — is shown
-   as a readout that says so, because writing the word without its fields would
-   leave a payload the schema refuses.
+   piece drawn through the meanings that describe it. A **variant tag** — a
+   field that decides what else its object holds — is now switched as one edit
+   at any depth: a piece's `shape` moved from `box` to `circle` takes the half
+   extents away and puts a radius there, and a camera's `projection` does the
+   same thing at the top level through the same code rather than through a rule
+   written for cameras. Each variant is proved at startup by building the
+   component it would produce and decoding it, so a variant that cannot be
+   chosen safely stops the build.
 2. **Decay control of animation clips.** Animation exists and gameplay cannot
    reach it. Small, and it unblocks the whole animation domain.
 3. **UI widget set: slider, toggle, text input, scroll region.** Without these

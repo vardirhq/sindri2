@@ -109,7 +109,9 @@ pub(super) fn script_exports_section(
         // one the author has not touched, and the dot says so without a line of
         // prose under every row.
         if export.type_name.as_deref() == Some("Profile") {
-            super::super::field::asset_row(ui, &export.name, &mut value, profiles);
+            // An export's name is unique within its script, so it is both
+            // the label and what identifies the picker.
+            super::super::field::asset_row(ui, &export.name, &export.name, &mut value, profiles);
         } else {
             value_row(
                 ui,

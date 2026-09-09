@@ -16,6 +16,7 @@
 //! retyped here would be a second copy of an enum, and the drift this module
 //! exists to prevent is exactly that.
 
+use serde_json::json;
 use sindri_core::{AssetKind, ComponentSchemaRegistry, FieldMeaning};
 use sindri_physics::{ColliderShape2d, RigidBodyKind};
 
@@ -70,6 +71,7 @@ fn describe_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
         "projection",
         FieldMeaning::choice(CameraComponent::PROJECTIONS),
     )])?;
+    describe_projections(components)?;
     components.describe::<MeshComponent>([("texture", texture())])?;
     components.describe::<SpriteComponent>([("texture", texture()), ("tint", COLOUR)])?;
     components.describe::<UiImageComponent>([
@@ -116,6 +118,39 @@ fn describe_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
         ),
     ])?;
     describe_text(components)?;
+    Ok(())
+}
+
+/// What each projection makes a camera hold.
+///
+/// The two share their planes and differ in what they frame with, which is why
+/// the tag cannot be written on its own: a camera whose tag says orthographic
+/// and whose fields say perspective is not a camera the engine will load. The
+/// near and far planes are named in both, so switching keeps whatever they
+/// were and a camera that somehow lacked them gains the pair a fresh one has.
+fn describe_projections(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
+    let [perspective, orthographic] = CameraComponent::PROJECTIONS;
+    components.describe_variants::<CameraComponent>(
+        "projection",
+        [
+            (
+                perspective,
+                json!({
+                    "vertical_fov_degrees": CameraComponent::DEFAULT_VERTICAL_FOV_DEGREES,
+                    "near": CameraComponent::DEFAULT_NEAR,
+                    "far": CameraComponent::DEFAULT_FAR
+                }),
+            ),
+            (
+                orthographic,
+                json!({
+                    "vertical_size": CameraComponent::DEFAULT_VERTICAL_SIZE,
+                    "near": CameraComponent::DEFAULT_NEAR,
+                    "far": CameraComponent::DEFAULT_FAR
+                }),
+            ),
+        ],
+    )?;
     Ok(())
 }
 
@@ -172,6 +207,31 @@ fn describe_gameplay(components: &mut ComponentSchemaRegistry) -> Result<(), Sce
         ("pieces[].layers.memberships", FieldMeaning::Mask),
         ("pieces[].layers.filter", FieldMeaning::Mask),
     ])?;
+    describe_shapes(components)?;
+    describe_audio(components)?;
+    Ok(())
+}
+
+/// What each shape makes a collider piece hold.
+///
+/// The same relationship a camera's projection has, one level down: a box is
+/// half extents, a circle is a radius, a capsule is both a half height and a
+/// radius. The measurements are a piece of the size a fresh collider is, so a
+/// shape switched to is a shape somebody can see rather than one of zero size.
+fn describe_shapes(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
+    let [rectangle, circle, capsule] = ColliderShape2d::SHAPES;
+    components.describe_variants::<Collider2dComponent>(
+        "pieces[].shape.shape",
+        [
+            (rectangle, json!({ "half_extents": [0.5, 0.5] })),
+            (circle, json!({ "radius": 0.5 })),
+            (capsule, json!({ "half_height": 0.5, "radius": 0.25 })),
+        ],
+    )?;
+    Ok(())
+}
+
+fn describe_audio(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
     components.describe::<AudioSourceComponent>([
         ("clip", FieldMeaning::Asset(AssetKind::Audio)),
         ("volume", FieldMeaning::Range { min: 0.0, max: 1.0 }),

@@ -183,38 +183,3 @@ mod tests {
         );
     }
 }
-
-#[cfg(test)]
-mod removal_tests {
-    use super::{drawn_payload, merge_edits};
-    use crate::inspector::choices::choose;
-    use serde_json::json;
-
-    /// The whole of what a variant switch has to do, end to end: the payload
-    /// that reaches the world is one camera rather than the fields of two.
-    #[test]
-    fn a_variant_switch_leaves_one_cameras_worth_of_fields() {
-        let defaults = json!({
-            "projection": "perspective",
-            "vertical_fov_degrees": 60.0,
-            "near": 0.1,
-            "far": 100.0
-        });
-        let mut stored = json!({
-            "projection": "perspective",
-            "vertical_fov_degrees": 45.0,
-            "near": 0.1,
-            "far": 100.0
-        });
-        let mut drawn = drawn_payload(Some(&defaults), &stored);
-        choose("sindri.camera", "projection", "orthographic", &mut drawn);
-        merge_edits(Some(&defaults), &mut stored, &drawn);
-
-        assert_eq!(stored["projection"], json!("orthographic"));
-        assert!(
-            stored.get("vertical_fov_degrees").is_none(),
-            "the projection it was switched away from took its field with it"
-        );
-        assert!(stored["vertical_size"].as_f64().is_some());
-    }
-}

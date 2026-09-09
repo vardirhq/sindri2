@@ -7,23 +7,18 @@
 //! a payload missing half of itself, which the schema then refuses — a field
 //! that looks editable and cannot be edited.
 //!
-//! Which spellings a field accepts is the component's own business now, and is
-//! asked of the schema registry. What remains here is the other half: where a
-//! choice decides what else the component *holds*, [`choose`] writes those
-//! fields too, so picking one is a whole edit rather than half of one.
+//! Both halves are the component's own business now. Which spellings a field
+//! accepts is asked of the schema registry, and so is what each spelling makes
+//! the component hold: the registry checked at startup that choosing any of
+//! them produces a component the engine accepts.
+//!
+//! What is left here is the editor's side of that — the panel has a payload and
+//! a path, and needs the one call that turns a picked word into a whole edit.
+//! It used to be a hand-written rule that knew a camera's two projections by
+//! name, which is why a collider piece's shape had no picker at all.
 
-use serde_json::{Map, Value};
-use sindri_scene::CameraComponent;
-
-/// The field whose value decides what else a component holds.
-///
-/// One entry, because one built-in component is a tagged enum: a camera is a
-/// perspective one or an orthographic one, and the two hold different fields.
-/// Anything else here is a choice that decides only itself.
-#[must_use]
-pub fn variant_tag(type_name: &str) -> Option<&'static str> {
-    (type_name == "sindri.camera").then_some("projection")
-}
+use serde_json::Value;
+use sindri_core::ComponentSchemaRegistry;
 
 /// The registry's blank, rewritten for the variant this payload actually is.
 ///
@@ -31,146 +26,113 @@ pub fn variant_tag(type_name: &str) -> Option<&'static str> {
 /// blank is one variant of it — a fresh camera is a perspective one. Filling an
 /// orthographic camera's missing fields from that blank would give it a
 /// vertical field of view as well as a vertical size, which is the payload of
-/// two cameras. So the blank is put through the same [`choose`] the author's
-/// own switch goes through, and comes out describing the same variant they are
+/// two cameras. So the blank is put through the same switch the author's own
+/// choice goes through, and comes out describing the same variant they are
 /// looking at.
+///
+/// Only a tag the component itself carries. A tag inside a list is one tag per
+/// item — each piece of a collider has its own shape — and a blank holds one
+/// exemplar rather than one per item, so there is nothing there to rewrite. The
+/// items are drawn from what they store.
 #[must_use]
-pub fn blank_for(type_name: &str, defaults: &Value, payload: &Value) -> Value {
+pub fn blank_for(
+    registry: &ComponentSchemaRegistry,
+    type_name: &str,
+    defaults: &Value,
+    payload: &Value,
+) -> Value {
     let mut blank = defaults.clone();
-    if let Some(tag) = variant_tag(type_name)
-        && let Some(chosen) = payload.get(tag).and_then(Value::as_str)
-    {
-        choose(type_name, tag, chosen, &mut blank);
+    for tag in registry.variant_tags(type_name) {
+        let Some(chosen) = tag
+            .find(['.', '['])
+            .is_none()
+            .then(|| payload.get(tag).and_then(Value::as_str))
+            .flatten()
+        else {
+            continue;
+        };
+        registry.switch_variant(type_name, tag, chosen, &mut blank);
     }
     blank
 }
 
-/// Writes a chosen value, along with whatever else the choice decides.
+/// Writes a chosen value into the object that holds it, along with whatever
+/// else the choice decides.
 ///
-/// A camera's projection is the one case that decides more than itself: the
-/// two projections are two shapes of payload, sharing near and far and
-/// differing in what they frame with. Switching keeps the planes, drops the
-/// field belonging to the projection being left, and writes the one the
-/// arriving projection needs — because a camera whose tag says orthographic
-/// and whose fields say perspective is not a camera the engine will load.
-pub fn choose(type_name: &str, key: &str, chosen: &str, payload: &mut Value) {
-    let Some(fields) = payload.as_object_mut() else {
+/// `holder` is the object the field belongs to rather than the field itself,
+/// because for a tagged field those are different edits: switching a piece's
+/// shape from a box to a circle takes the half extents away and puts a radius
+/// there, and a caller holding only the word could do neither.
+///
+/// A choice that decides only itself — most of them — writes only itself.
+pub fn choose(
+    registry: &ComponentSchemaRegistry,
+    type_name: &str,
+    path: &str,
+    chosen: &str,
+    holder: &mut Value,
+) {
+    if registry.switch_variant(type_name, path, chosen, holder) {
         return;
-    };
-    fields.insert(key.to_owned(), Value::String(chosen.to_owned()));
-    if (type_name, key) == ("sindri.camera", "projection") {
-        camera_projection(chosen, fields);
     }
-}
-
-fn camera_projection(chosen: &str, fields: &mut Map<String, Value>) {
-    const FOV: &str = "vertical_fov_degrees";
-    const SIZE: &str = "vertical_size";
-    let (arriving, leaving, default) = if chosen == CameraComponent::PROJECTIONS[1] {
-        (SIZE, FOV, CameraComponent::DEFAULT_VERTICAL_SIZE)
-    } else {
-        (FOV, SIZE, CameraComponent::DEFAULT_VERTICAL_FOV_DEGREES)
-    };
-    fields.remove(leaving);
-    fields
-        .entry(arriving.to_owned())
-        .or_insert_with(|| Value::from(default));
-    // The planes are shared, so a camera that had them keeps them and one that
-    // did not gains the same pair a fresh camera starts with.
-    fields
-        .entry("near".to_owned())
-        .or_insert_with(|| Value::from(CameraComponent::DEFAULT_NEAR));
-    fields
-        .entry("far".to_owned())
-        .or_insert_with(|| Value::from(CameraComponent::DEFAULT_FAR));
+    let key = path.rsplit('.').next().unwrap_or(path);
+    if let Some(fields) = holder.as_object_mut() {
+        fields.insert(key.to_owned(), Value::String(chosen.to_owned()));
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::choose;
+    use super::{blank_for, choose};
     use serde_json::json;
+    use sindri_core::ComponentSchemaRegistry;
 
-    /// The camera's tag decides which other fields it has, so switching it is
-    /// not a change of one string. Typing the other name into a text box left
-    /// a payload the schema refused, which is a field that looks editable and
-    /// is not.
+    /// A choice nothing describes the shape of writes the word and stops. Most
+    /// choices are this: a text element holds the same fields whichever way it
+    /// wraps.
     #[test]
-    fn switching_a_cameras_projection_writes_the_fields_that_projection_has() {
-        let mut camera = json!({
-            "projection": "perspective",
-            "vertical_fov_degrees": 45.0,
-            "near": 0.2,
-            "far": 80.0
-        });
-        choose("sindri.camera", "projection", "orthographic", &mut camera);
-        assert_eq!(camera["projection"], json!("orthographic"));
-        assert!(camera.get("vertical_fov_degrees").is_none());
-        assert!(camera["vertical_size"].as_f64().is_some());
-        assert_eq!(camera["near"], json!(0.2), "the planes are shared");
-        assert_eq!(camera["far"], json!(80.0));
-
-        choose("sindri.camera", "projection", "perspective", &mut camera);
-        assert!(camera.get("vertical_size").is_none());
-        assert!(camera["vertical_fov_degrees"].as_f64().is_some());
-    }
-
-    /// A payload that already holds the arriving field keeps what it holds:
-    /// switching away and back must not overwrite an authored number with a
-    /// default.
-    #[test]
-    fn switching_back_keeps_what_was_already_there() {
-        let mut camera = json!({
-            "projection": "orthographic",
-            "vertical_size": 12.0,
-            "vertical_fov_degrees": 30.0,
-            "near": 0.1,
-            "far": 100.0
-        });
-        choose("sindri.camera", "projection", "perspective", &mut camera);
-        assert_eq!(camera["vertical_fov_degrees"], json!(30.0));
-    }
-
-    /// A blank describing the other variant would fill an orthographic camera
-    /// with a field of view, and the panel would show one camera's worth of
-    /// rows plus another's.
-    #[test]
-    fn the_blank_describes_the_variant_the_payload_is() {
-        let defaults = json!({
-            "projection": "perspective",
-            "vertical_fov_degrees": 60.0,
-            "near": 0.1,
-            "far": 100.0
-        });
-        let orthographic = json!({ "projection": "orthographic", "vertical_size": 4.0 });
-        let blank = super::blank_for("sindri.camera", &defaults, &orthographic);
-        assert!(blank.get("vertical_fov_degrees").is_none());
-        assert!(blank["vertical_size"].as_f64().is_some());
-
-        let perspective = json!({ "projection": "perspective" });
-        assert_eq!(
-            super::blank_for("sindri.camera", &defaults, &perspective),
-            defaults,
-            "and the variant the blank already describes is left alone"
-        );
-    }
-
-    #[test]
-    fn a_component_with_no_variants_keeps_its_blank() {
-        let defaults = json!({ "texture": "a.png", "layer": 0 });
-        assert_eq!(
-            super::blank_for("sindri.sprite", &defaults, &json!({ "texture": "b.png" })),
-            defaults
-        );
-    }
-
-    #[test]
-    fn a_plain_enum_writes_only_itself() {
+    fn a_plain_choice_writes_only_itself() {
+        let registry = ComponentSchemaRegistry::default();
         let mut image = json!({ "texture": "a.png", "anchor": "center" });
-        choose("sindri.ui.image", "anchor", "top_left", &mut image);
+        choose(
+            &registry,
+            "sindri.ui.image",
+            "anchor",
+            "top_left",
+            &mut image,
+        );
         assert_eq!(
             image,
             json!({ "texture": "a.png", "anchor": "top_left" }),
             "nothing else about the element changed"
+        );
+    }
+
+    /// The path names the field being looked at, so the word lands on that
+    /// field and not on the last thing the path happens to mention.
+    #[test]
+    fn a_nested_choice_writes_the_field_the_path_names() {
+        let registry = ComponentSchemaRegistry::default();
+        let mut piece = json!({ "shape": "box", "half_extents": [0.5, 0.5] });
+        choose(
+            &registry,
+            "some.component",
+            "pieces.2.shape.shape",
+            "circle",
+            &mut piece,
+        );
+        assert_eq!(piece["shape"], json!("circle"));
+    }
+
+    /// A component with no variants keeps its blank: there is nothing to
+    /// rewrite it for.
+    #[test]
+    fn a_blank_with_no_variants_is_the_blank() {
+        let registry = ComponentSchemaRegistry::default();
+        let defaults = json!({ "texture": "a.png", "layer": 0 });
+        assert_eq!(
+            blank_for(&registry, "sindri.sprite", &defaults, &json!({})),
+            defaults
         );
     }
 }
