@@ -157,3 +157,105 @@ fn duplicate_registration_is_rejected() {
         Err(ComponentRegistryError::AlreadyRegistered(_))
     ));
 }
+
+/// A described field has to exist.
+///
+/// The whole point of declaring meaning next to the component is that it can be
+/// checked against it. A path naming nothing is the drift this is meant to
+/// catch, so it fails where the registration is written.
+#[test]
+fn describing_a_field_the_component_does_not_have_is_refused() {
+    // The fields are here so serde can report them: that list is what
+    // the registry checks a template and its meanings against. Nothing
+    // reads them back.
+    #[allow(dead_code)]
+    #[derive(Debug, serde::Deserialize)]
+    struct Portrait {
+        image: String,
+        scale: f32,
+    }
+    impl SceneComponent for Portrait {
+        const TYPE_NAME: &'static str = "game.portrait";
+    }
+
+    let mut registry = ComponentSchemaRegistry::default();
+    registry
+        .register_with_fields::<Portrait>("Portrait", json!({ "image": "", "scale": 1.0 }))
+        .unwrap();
+
+    assert!(matches!(
+        registry.describe::<Portrait>([("picture", FieldMeaning::Asset(AssetKind::Texture))]),
+        Err(ComponentRegistryError::UnknownFieldPath { path, .. }) if path == "picture"
+    ));
+    registry
+        .describe::<Portrait>([("image", FieldMeaning::Asset(AssetKind::Texture))])
+        .expect("a field the component has is described");
+    assert_eq!(
+        registry.meaning("game.portrait", "image"),
+        Some(&FieldMeaning::Asset(AssetKind::Texture))
+    );
+    assert_eq!(registry.meaning("game.portrait", "scale"), None);
+}
+
+/// One meaning covers every item of a list.
+#[test]
+fn a_described_list_item_answers_for_every_index() {
+    // The fields are here so serde can report them: that list is what
+    // the registry checks a template and its meanings against. Nothing
+    // reads them back.
+    #[allow(dead_code)]
+    #[derive(Debug, serde::Deserialize)]
+    struct Loadout {
+        slots: Vec<Slot>,
+    }
+    // The fields are here so serde can report them: that list is what
+    // the registry checks a template and its meanings against. Nothing
+    // reads them back.
+    #[allow(dead_code)]
+    #[derive(Debug, serde::Deserialize)]
+    struct Slot {
+        icon: String,
+    }
+    impl SceneComponent for Loadout {
+        const TYPE_NAME: &'static str = "game.loadout";
+    }
+
+    let mut registry = ComponentSchemaRegistry::default();
+    registry
+        .register_with_fields::<Loadout>("Loadout", json!({ "slots": [{ "icon": "" }] }))
+        .unwrap();
+    registry
+        .describe::<Loadout>([("slots[].icon", FieldMeaning::Asset(AssetKind::Texture))])
+        .unwrap();
+
+    for path in ["slots.0.icon", "slots.4.icon", "slots[].icon"] {
+        assert_eq!(
+            registry.meaning("game.loadout", path),
+            Some(&FieldMeaning::Asset(AssetKind::Texture)),
+            "{path} should be answered by the exemplar"
+        );
+    }
+}
+
+/// A component nothing has described says nothing, rather than guessing.
+#[test]
+fn a_component_without_a_template_cannot_be_described() {
+    // The fields are here so serde can report them: that list is what
+    // the registry checks a template and its meanings against. Nothing
+    // reads them back.
+    #[allow(dead_code)]
+    #[derive(Debug, serde::Deserialize)]
+    struct Mystery {
+        anything: f32,
+    }
+    impl SceneComponent for Mystery {
+        const TYPE_NAME: &'static str = "game.mystery";
+    }
+
+    let mut registry = ComponentSchemaRegistry::default();
+    registry.register::<Mystery>("Mystery").unwrap();
+    assert!(matches!(
+        registry.describe::<Mystery>([("anything", FieldMeaning::Angle)]),
+        Err(ComponentRegistryError::DescribedWithoutFields(_))
+    ));
+}

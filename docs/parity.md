@@ -297,26 +297,51 @@ removes most of it.
 
 ### The root cause of hand-typed fields
 
-`editor/src/inspector/mod.rs` infers a widget from the **JSON value's runtime
-type**:
+The editor does infer meaning for some fields, and it is worth being precise
+about how, because the mechanism is the defect rather than its absence.
+
+Three lookup tables in the editor guess a field's meaning from its **name**:
 
 ```rust
-Value::String(_) => ValueKind::Text,
+// editor/src/native/inspector_panel/field.rs
+match (type_name, key) {
+    (_, "texture") => Some(assets.textures),
+    (_, "font")    => Some(assets.fonts),
+    (_, "clip")    => Some(assets.audio),
+    ("sindri.script", "source") => Some(assets.scripts),
+    _ => None,
+}
 ```
 
-Every string is a free-text box. A texture id, a script path, a font name, an
-animation clip, and a display label are all `String`, so all five are typed by
-hand, and a typo produces a silently missing asset rather than an error.
+plus `is_colour`, which requires the key to be literally `tint`, `color` or
+`colour`, and `editor/src/inspector/choices.rs`, which maps `(type_name, key)`
+to an enum's spellings. The `choices` module is careful — it takes each list
+from the engine's own constants rather than repeating them — but it is still a
+table in the editor keyed by field name.
 
-Pickers do exist — but only where somebody hand-wrote a section for one
-(`section/script.rs`, `section/animation.rs`, `section/text.rs`,
-`section/grid.rs`, `header.rs`). That is bespoke code per component, which is
-why every component added since lands as raw fields.
+Four consequences follow, and they are why more table entries is not the fix:
 
-The reason is architectural rather than lazy: `ComponentSchemaRegistry` records
-a **field template** — an exemplar JSON payload — so it describes each field's
-*shape* but not its *meaning*. Nothing anywhere says "this string is a texture
-id".
+1. **The bare-key rules are global.** `(_, "texture")`, `(_, "font")` and
+   `(_, "clip")` match *any* component, including one a game brings of its own.
+   A game component with a `clip` field is offered the audio list whether or not
+   it holds audio.
+2. **Anything absent from the table is a free-text box, silently.** A field
+   named `sheet`, `icon` or `portrait` gets nothing. This is what happens to
+   every component added since the table was written, which is why new work
+   keeps landing as raw fields.
+3. **A colour must be spelled `tint`.** Named anything else it is four number
+   boxes; and the check is `Numbers(4)`, which a UV rect and a quaternion also
+   satisfy.
+4. **It lives in the editor.** `sindri-capabilities` cannot document it, and no
+   other tool can use it.
+
+Underneath all four: meaning is *guessed by the consumer* rather than *declared
+by the component*. That is a second copy of knowledge about a component living
+away from the component — exactly the drift `check_template` was written to stop
+for field lists. `ComponentSchemaRegistry` stores a field template, a
+`serde_json::Value` exemplar checked against what serde asks the type for, so it
+captures each field's **shape** and nothing about its **meaning**. A texture id
+and a display label are both `String` to the registry.
 
 There is a second consequence, visible today. A value that is an array of
 objects falls to `ValueKind::Opaque`, which is displayed as stored and left
@@ -324,11 +349,12 @@ alone. **The `pieces` array of a compound collider is exactly that shape**, so
 compound colliders are authorable in a scene file and not editable in the
 inspector.
 
-The fix is to give registrations field *meaning* — asset(texture), asset(script),
-asset(clip), entity reference, enum, colour, angle, bounded range, list-of — and
-have the generic inspector choose its widget from that. It extends the registry
-that already exists, fixes every component at once including the ones not
-written yet, and is the highest-leverage item in this file.
+The fix is to move meaning to the registration — asset(texture), asset(script),
+asset(clip), entity reference, choice, colour, angle, bounded range, list-of —
+and have the editor read it instead of guessing. It extends the registry that
+already exists, makes the knowledge checkable against the template the way field
+lists already are, travels to every tool rather than only the editor, and fixes
+components not yet written. It is the highest-leverage item in this file.
 
 | Feature | Editor | vs. baseline | Gap that matters |
 | --- | :-: | --- | --- |
@@ -336,8 +362,8 @@ written yet, and is the highest-leverage item in this file.
 | Gizmos: transform, snapping, Z-lock-safe movement | ✅ | **Par** | No collider, camera, or effect gizmos |
 | Play / pause / stop / single-step, snapshot restore | ✅ | **Ahead** | Single-step and snapshot restore are better than Unity's play mode |
 | Tilemap painting, sheet slicer, texture picker | ✅ | **Par** | — |
-| **Asset pickers for schema fields generally** | ❌ | **Behind** | The root cause above |
-| **Array-of-object editing** | ❌ | **Behind** | Compound colliders, and anything list-shaped in future |
+| **Asset pickers for schema fields generally** | ✅ | **Ahead** | Declared per component in the schema registry, checked against the field template, and carried in `docs/generated/`. Unity needs a plugin (Odin) for the equivalent |
+| **Array-of-object editing** | ❌ | **Behind** | Compound colliders, and anything list-shaped in future. The meanings describing each piece exist; the control does not |
 | **Console / log panel** | ❌ | **Absent** | Errors and script `print` output are invisible in the editor |
 | **Profiler view** | ❌ | **Absent** | Where a fixed step goes is unmeasurable in-editor |
 | **Search / filter in hierarchy or project** | ❌ | **Absent** | Painful past a few dozen entities |
@@ -438,11 +464,14 @@ three we have partially built and stranded.
 Ordered by whether it stops somebody shipping a game, not by size. This is the
 output of the file; everything above is evidence.
 
-1. **Field meaning in the schema registry, and a generic inspector that uses
-   it.** Fixes hand-typed asset fields across every component at once, fixes
-   array-of-object editing, makes compound colliders authorable, and stops the
-   bespoke-section pattern from growing. Highest leverage in the file, and it
-   defends the "no Odin required" anti-goal.
+1. ~~**Field meaning in the schema registry.**~~ **Done.** A component now says
+   what its fields are for — asset kind, choice, colour, angle, bounded range,
+   collision mask, entity reference — and the registry checks every path against
+   the field template, so a renamed field is a startup error rather than a
+   control that quietly stopped appearing. The editor's three name-keyed tables
+   are gone. What remains of this item is **array-of-object editing**: a
+   compound collider's `pieces` still falls to `ValueKind::Opaque`, so the
+   meanings describing each piece have no control to drive yet.
 2. **Decay control of animation clips.** Animation exists and gameplay cannot
    reach it. Small, and it unblocks the whole animation domain.
 3. **UI widget set: slider, toggle, text input, scroll region.** Without these
@@ -469,6 +498,82 @@ output of the file; everything above is evidence.
 Items 1–6 are the ones that block a game today. Items 7–12 are cheap relative to
 their daily cost. Items 13–15 are real but survivable.
 
+---
+
+## Beyond parity — where Sindri could lead
+
+Everything above answers "what is an engine expected to do", and every row can
+be checked against Unity or Godot. This section answers a different question:
+**what could an engine provide that none of them do?** It is kept separate
+deliberately. Mixed into the tables above, a reader could no longer tell "the
+baseline has this and we do not" from "nobody has this and we might", and that
+distinction is what makes the rest of this file worth reading.
+
+Nothing here is scheduled. These are candidates, and they compete with each
+other rather than with the ranked queue.
+
+### The thesis
+
+Sindri already refuses to hand a game raw `dt` and raw key states and wish it
+luck. It has a fixed step, input edges consumed exactly once, and a seeded
+stream that replays a run on every host. Read together those are one idea:
+
+> The engine gives you primitives for translating imperfect human input and
+> time into deterministic gameplay.
+
+That is a stronger position than any single feature below, and it is a
+description of what Sindri *is* rather than a direction bolted on. The
+candidates worth taking are the ones that follow from it.
+
+### Judged against the games, not against plausibility
+
+A candidate earns a row by replacing something a game in this repository is
+doing by hand today. Where a game is *not* asking for it, that is recorded too —
+an idea that sounds good and nothing needs is the most expensive kind.
+
+| Candidate | What it would replace | Position |
+| --- | --- | --- |
+| **Gameplay spatial queries** — nearest, within radius, within cone, within box, over tagged entities and backed by an index | `player.decay` has a literal `fn nearest()` looping `World.with_tag` with a `best_distance`; `arc.decay` needs "the next two nearest targets" | **Strongest.** See below — this also corrects a framing error above |
+| **Entity lifecycle policies** — despawn after a duration, off-camera, or on animation end | `World.despawn(this.entity)` and a hand-decremented countdown in `bullet`, `beam`, `arc`, `core`, `charger`, `drifter`, `challenger` | **Take.** Small, and seven scripts want it |
+| **Cooldowns and charges** — start, ready, remaining, normalised, recharge | `player.decay` hand-rolls `cooldown` and `mine_cooldown`; `director.decay` hand-rolls `spawn_timer` | **Take.** Small, and generic below gameplay |
+| **Buffered actions** — a press remembered for a window and consumed exactly once | Nothing yet; the games are not platformers | **Take, but narrowed.** See below |
+| **Named time domains** — gameplay, UI, physics and real clocks, scalable and freezable | **Nothing.** No game here scales time; only pause exists | **Row, not queue.** Best fit with the thesis, no current demand, and cross-cutting: every consumer must declare a clock |
+| **Gameplay sensors** — vision cone, aggro radius, interaction range, with enter/stay/leave | Enemy scripts compute their own geometry | **Downstream.** Mostly spatial queries plus a component; thin once those exist |
+| **Feedback orchestration** — one asset firing sound, effect, shake, haptics, hit-stop and flash | Real glue, but Sindri has no shake, no haptics, no hit-stop, no flash, and one effect shape | **Capstone.** It would orchestrate five systems that do not exist |
+| **Deterministic state history** — a short rolling window of selected properties | **Nothing.** No game here rewinds, trails, or replays | **Low.** Unusually cheap given determinism, and nothing needs it |
+| **Spawn regions and patterns** — a random point in a circle, edge, or area | A few lines of Decay per use | **Utility, not a system.** Does not earn a subsystem |
+
+### The one that changes something above
+
+Spatial queries expose a framing error in this file's own physics section, which
+lists raycast and overlap as **physics** queries. `fn nearest()` in
+`player.decay` is not a physics problem — it is a gameplay query over tagged
+entities, and it is the one the games actually hand-roll. The physics casts are
+a subset, not the parent.
+
+Determinism also matters here in a way it does not for the baseline: a query
+that answers in world order answers the same on every host, and a game built on
+"the nearest enemy" then replays from a seed. Neither Unity nor Godot promises
+that.
+
+### Buffering, narrowed
+
+The tempting version of this is a general *forgiveness* system — jump buffering,
+coyote time, grace periods — authored in one block. Half of it does not belong
+in an engine.
+
+"Remember a press for 120ms and let gameplay consume it exactly once" knows
+nothing about a game and is genuinely engine-level. "A grace period after being
+grounded" requires the engine to know what *grounded* means, which is
+game-specific: a top-down shooter has no such state, and an engine that assumed
+one would be a system games fight rather than use.
+
+So the half worth taking is the input half, and it already has a home: the
+**input action layer** in `sindri-platform`, which is built and stranded.
+Buffered press and consume-once are features of a named action, not a new
+subsystem — which folds this candidate into an existing queue item instead of
+adding an eleventh.
+
 ## Maintenance rule
 
 Update this file in the same change that moves any cell, as
@@ -483,3 +588,8 @@ checklist nobody reads:
 3. **Add the row before the feature.** The value of this file is that absent
    things have rows. A gap discovered during work belongs here in the same
    change, marked ❌, even when nothing is planned.
+4. **Keep the two questions apart.** Everything above "Beyond parity" is
+   answerable against Unity or Godot. Everything below it is not, and moving a
+   candidate up requires the baseline to have grown it, not for us to have
+   liked the idea. A candidate earns its place by naming what a game in this
+   repository does by hand — and when no game wants it, the row says so.

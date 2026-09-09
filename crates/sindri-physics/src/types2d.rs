@@ -46,6 +46,16 @@ pub enum ColliderShape2d {
     Capsule { half_height: f32, radius: f32 },
 }
 
+impl ColliderShape2d {
+    /// Every shape, by the name it is stored under.
+    ///
+    /// Named here rather than wherever a chooser is drawn, so a shape added to
+    /// the enum is offered without anyone remembering to add it twice. The
+    /// spellings are checked against serde by a test, because a list of names
+    /// beside an enum is a second copy of it.
+    pub const SHAPES: [&'static str; 3] = ["box", "circle", "capsule"];
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Collider2d {
     pub shape: ColliderShape2d,

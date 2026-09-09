@@ -24,6 +24,40 @@ All notable changes to Sindri Next will be documented here.
   heart stay `sindri.shape`, because a script moves them every frame and no
   baked frame can do that. See `docs/isometric-baker.md`.
 
+- **`docs/parity.md` gains a "beyond parity" section.** Everything above it
+  answers "what is an engine expected to do" and is checkable against Unity or
+  Godot; the new section answers "what could an engine provide that none of them
+  do", and is kept separate so a reader can still tell a gap from an ambition.
+  Candidates earn a row by naming what a game in this repository does by hand —
+  `player.decay` has a literal `fn nearest()` looping tagged entities with a
+  `best_distance`, and hand-decremented `cooldown`, `mine_cooldown` and
+  `spawn_timer`; seven scripts despawn themselves on a countdown. Where no game
+  wants a candidate the row says so, which is why named time domains are
+  recorded and not queued. The section also corrects a framing error above it:
+  raycast and overlap are listed as physics queries, but the query the games
+  actually hand-roll is a gameplay one over tagged entities, of which physics
+  casts are a subset.
+
+- **A component says what its fields are for.** A field template said a sprite
+  had a `texture` and that it held a string; it could not say the string named a
+  texture in the project. So the editor guessed from the field's name, through
+  three lookup tables that were wrong in both directions: `(_, "clip")` offered
+  the project's audio to any component with a `clip` field, including a game's
+  own, while a field the tables had never heard of was a text box in silence —
+  which is what happened to every component added after they were written. A
+  registration now declares meaning — which asset kind a field names, which
+  spellings it accepts, that it is a colour, an angle, a bounded number, a
+  collision mask, or another entity — and the registry checks every declared
+  path against that component's field template, so a renamed field is a startup
+  error rather than a picker that quietly stopped appearing. Paths are dotted
+  and `[]` descends into a list, so one `pieces[].rotation` describes every
+  piece of a compound collider. The editor's tables are deleted and it asks the
+  registry instead; `docs/generated/sindri-capabilities.json` now carries the
+  meanings too, so the knowledge reaches every tool rather than living where
+  only the inspector could see it. Nothing the old tables got right was lost —
+  a test pins each of the eight pickers and eight dropdowns they drew — and
+  shapes, layouts, and collider pieces gained dropdowns they never had.
+
 - **One parity document replaces the two status matrices.** `docs/parity.md`
   is written from the outside in: it records what a game engine is expected to
   do, what Sindri actually does across engine, editor, Decay and game proof, and
@@ -38,8 +72,10 @@ All notable changes to Sindri Next will be documented here.
   and a ranked queue of what blocks somebody shipping a game. The audit turned up
   two capabilities that were built and unreachable — the bloom chain and the
   input action layer — and a root cause for hand-typed asset fields: the
-  inspector picks its widget from a JSON value's runtime type, so every string is
-  a free-text box.
+  editor guesses a field's meaning from its name through three lookup tables,
+  which are global where they should be scoped — `(_, "clip")` offers the audio
+  list to any component with a `clip` field — and silent for anything unlisted,
+  which is why every component added since lands as raw fields.
 
 - **A 2D collider may be authored in several pieces.** One shape is often a poor
   description of a thing: a character is a capsule with a circle at each side, a

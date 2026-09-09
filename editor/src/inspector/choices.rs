@@ -7,16 +7,13 @@
 //! a payload missing half of itself, which the schema then refuses — a field
 //! that looks editable and cannot be edited.
 //!
-//! Every entry here names a choice the engine already defines, and takes the
-//! spellings from the engine's own list rather than repeating them. Where a
-//! choice decides what else the component holds, [`choose`] writes those fields
-//! too, so picking one is a whole edit rather than half of one.
+//! Which spellings a field accepts is the component's own business now, and is
+//! asked of the schema registry. What remains here is the other half: where a
+//! choice decides what else the component *holds*, [`choose`] writes those
+//! fields too, so picking one is a whole edit rather than half of one.
 
 use serde_json::{Map, Value};
-use sindri_scene::{
-    CameraComponent, RigidBodyKind, TileProjection, UiAnchor, UiTextCase, UiTextLineAlign,
-    UiTextWrap,
-};
+use sindri_scene::CameraComponent;
 
 /// The field whose value decides what else a component holds.
 ///
@@ -46,42 +43,6 @@ pub fn blank_for(type_name: &str, defaults: &Value, payload: &Value) -> Value {
         choose(type_name, tag, chosen, &mut blank);
     }
     blank
-}
-
-/// The values this field may hold, if it is a choice among named ones.
-#[must_use]
-pub fn choices(type_name: &str, key: &str) -> Option<Vec<&'static str>> {
-    match (type_name, key) {
-        ("sindri.camera", "projection") => Some(CameraComponent::PROJECTIONS.to_vec()),
-        ("sindri.ui.image" | "sindri.ui.text", "anchor") => {
-            Some(UiAnchor::ALL.iter().map(|anchor| anchor.as_str()).collect())
-        }
-        ("sindri.ui.text", "wrap") => {
-            Some(UiTextWrap::ALL.iter().map(|mode| mode.as_str()).collect())
-        }
-        ("sindri.ui.text", "line_align") => Some(
-            UiTextLineAlign::ALL
-                .iter()
-                .map(|align| align.as_str())
-                .collect(),
-        ),
-        ("sindri.ui.text", "case") => {
-            Some(UiTextCase::ALL.iter().map(|case| case.as_str()).collect())
-        }
-        ("sindri.tilemap", "projection") => Some(
-            TileProjection::ALL
-                .iter()
-                .map(|projection| projection.as_str())
-                .collect(),
-        ),
-        ("sindri.physics2d.rigid_body", "kind") => Some(
-            RigidBodyKind::ALL
-                .iter()
-                .map(|kind| kind.as_str())
-                .collect(),
-        ),
-        _ => None,
-    }
 }
 
 /// Writes a chosen value, along with whatever else the choice decides.
@@ -126,22 +87,8 @@ fn camera_projection(chosen: &str, fields: &mut Map<String, Value>) {
 
 #[cfg(test)]
 mod tests {
-    use super::{choices, choose};
+    use super::choose;
     use serde_json::json;
-
-    #[test]
-    fn an_enum_field_offers_the_engines_own_spellings() {
-        assert_eq!(
-            choices("sindri.camera", "projection"),
-            Some(vec!["perspective", "orthographic"])
-        );
-        assert_eq!(
-            choices("sindri.ui.image", "anchor").map(|all| all.len()),
-            Some(9)
-        );
-        assert_eq!(choices("sindri.sprite", "texture"), None);
-        assert_eq!(choices("game.health", "hp"), None);
-    }
 
     /// The camera's tag decides which other fields it has, so switching it is
     /// not a change of one string. Typing the other name into a text box left

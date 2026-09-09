@@ -15,7 +15,7 @@
 //! that is refused after it has been written down.
 
 use serde_json::{Value, json};
-use sindri_core::SCENE_FORMAT_VERSION;
+use sindri_core::{ComponentSchemaRegistry, FieldMeaning, SCENE_FORMAT_VERSION};
 use sindri_scene::SceneExtractor;
 
 use crate::CapabilitiesError;
@@ -35,6 +35,7 @@ pub(crate) fn describe() -> Result<Value, CapabilitiesError> {
                 "display_name": metadata.display_name,
                 "schema_version": metadata.schema_version,
                 "fields": registry.fields(type_name),
+                "meanings": meanings(registry, type_name),
                 "default_payload": default_payload,
                 "addable": default_payload.is_some(),
             })
@@ -50,9 +51,52 @@ pub(crate) fn describe() -> Result<Value, CapabilitiesError> {
         "about": "Every component this engine build registers. `fields` is what \
     the component has; `default_payload` is what a fresh one is, and is null for a \
     type with no honest blank — one naming an asset the engine cannot invent. \
-    `addable` says whether a tool can add one without being given anything else.",
+    `addable` says whether a tool can add one without being given anything else. \
+    `meanings` says what a field is *for* where the shape alone cannot: which \
+    asset kind it names, which spellings it accepts, that it is a colour, an \
+    angle, a bounded number, a collision mask, or another entity. A path is \
+    dotted, and `[]` descends into a list, so `pieces[].friction` describes \
+    every piece.",
         "components": components,
     }))
+}
+
+/// What a component's fields mean, as a path-keyed object.
+///
+/// The registry knows this now, so every tool reading this file knows it too —
+/// which is the half of the old arrangement that was missing: the editor's
+/// guesses lived in the editor, where nothing else could see them.
+fn meanings(registry: &ComponentSchemaRegistry, type_name: &str) -> Value {
+    let described: serde_json::Map<String, Value> = registry
+        .meanings(type_name)
+        .map(|(path, meaning)| {
+            let mut described = json!({ "kind": meaning.kind() });
+            match meaning {
+                FieldMeaning::Asset(kind) => {
+                    described["asset"] = json!(kind.as_str());
+                }
+                FieldMeaning::Choice(options) => {
+                    described["options"] = json!(options);
+                }
+                FieldMeaning::Range { min, max } => {
+                    described["min"] = json!(min);
+                    // An unbounded end is written as null rather than as a
+                    // float nothing can compare against.
+                    described["max"] = if max.is_finite() {
+                        json!(max)
+                    } else {
+                        Value::Null
+                    };
+                }
+                FieldMeaning::Colour
+                | FieldMeaning::Angle
+                | FieldMeaning::Mask
+                | FieldMeaning::Entity => {}
+            }
+            (path.to_owned(), described)
+        })
+        .collect();
+    Value::Object(described)
 }
 
 /// Sorted by type name, because the registry holds these in a hash map and a
