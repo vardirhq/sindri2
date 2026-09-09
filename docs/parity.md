@@ -297,26 +297,51 @@ removes most of it.
 
 ### The root cause of hand-typed fields
 
-`editor/src/inspector/mod.rs` infers a widget from the **JSON value's runtime
-type**:
+The editor does infer meaning for some fields, and it is worth being precise
+about how, because the mechanism is the defect rather than its absence.
+
+Three lookup tables in the editor guess a field's meaning from its **name**:
 
 ```rust
-Value::String(_) => ValueKind::Text,
+// editor/src/native/inspector_panel/field.rs
+match (type_name, key) {
+    (_, "texture") => Some(assets.textures),
+    (_, "font")    => Some(assets.fonts),
+    (_, "clip")    => Some(assets.audio),
+    ("sindri.script", "source") => Some(assets.scripts),
+    _ => None,
+}
 ```
 
-Every string is a free-text box. A texture id, a script path, a font name, an
-animation clip, and a display label are all `String`, so all five are typed by
-hand, and a typo produces a silently missing asset rather than an error.
+plus `is_colour`, which requires the key to be literally `tint`, `color` or
+`colour`, and `editor/src/inspector/choices.rs`, which maps `(type_name, key)`
+to an enum's spellings. The `choices` module is careful — it takes each list
+from the engine's own constants rather than repeating them — but it is still a
+table in the editor keyed by field name.
 
-Pickers do exist — but only where somebody hand-wrote a section for one
-(`section/script.rs`, `section/animation.rs`, `section/text.rs`,
-`section/grid.rs`, `header.rs`). That is bespoke code per component, which is
-why every component added since lands as raw fields.
+Four consequences follow, and they are why more table entries is not the fix:
 
-The reason is architectural rather than lazy: `ComponentSchemaRegistry` records
-a **field template** — an exemplar JSON payload — so it describes each field's
-*shape* but not its *meaning*. Nothing anywhere says "this string is a texture
-id".
+1. **The bare-key rules are global.** `(_, "texture")`, `(_, "font")` and
+   `(_, "clip")` match *any* component, including one a game brings of its own.
+   A game component with a `clip` field is offered the audio list whether or not
+   it holds audio.
+2. **Anything absent from the table is a free-text box, silently.** A field
+   named `sheet`, `icon` or `portrait` gets nothing. This is what happens to
+   every component added since the table was written, which is why new work
+   keeps landing as raw fields.
+3. **A colour must be spelled `tint`.** Named anything else it is four number
+   boxes; and the check is `Numbers(4)`, which a UV rect and a quaternion also
+   satisfy.
+4. **It lives in the editor.** `sindri-capabilities` cannot document it, and no
+   other tool can use it.
+
+Underneath all four: meaning is *guessed by the consumer* rather than *declared
+by the component*. That is a second copy of knowledge about a component living
+away from the component — exactly the drift `check_template` was written to stop
+for field lists. `ComponentSchemaRegistry` stores a field template, a
+`serde_json::Value` exemplar checked against what serde asks the type for, so it
+captures each field's **shape** and nothing about its **meaning**. A texture id
+and a display label are both `String` to the registry.
 
 There is a second consequence, visible today. A value that is an array of
 objects falls to `ValueKind::Opaque`, which is displayed as stored and left
@@ -324,11 +349,12 @@ alone. **The `pieces` array of a compound collider is exactly that shape**, so
 compound colliders are authorable in a scene file and not editable in the
 inspector.
 
-The fix is to give registrations field *meaning* — asset(texture), asset(script),
-asset(clip), entity reference, enum, colour, angle, bounded range, list-of — and
-have the generic inspector choose its widget from that. It extends the registry
-that already exists, fixes every component at once including the ones not
-written yet, and is the highest-leverage item in this file.
+The fix is to move meaning to the registration — asset(texture), asset(script),
+asset(clip), entity reference, choice, colour, angle, bounded range, list-of —
+and have the editor read it instead of guessing. It extends the registry that
+already exists, makes the knowledge checkable against the template the way field
+lists already are, travels to every tool rather than only the editor, and fixes
+components not yet written. It is the highest-leverage item in this file.
 
 | Feature | Editor | vs. baseline | Gap that matters |
 | --- | :-: | --- | --- |
@@ -336,7 +362,7 @@ written yet, and is the highest-leverage item in this file.
 | Gizmos: transform, snapping, Z-lock-safe movement | ✅ | **Par** | No collider, camera, or effect gizmos |
 | Play / pause / stop / single-step, snapshot restore | ✅ | **Ahead** | Single-step and snapshot restore are better than Unity's play mode |
 | Tilemap painting, sheet slicer, texture picker | ✅ | **Par** | — |
-| **Asset pickers for schema fields generally** | ❌ | **Behind** | The root cause above |
+| **Asset pickers for schema fields generally** | 🟡 | **Behind** | Guessed from field names by tables in the editor: global bare-key rules, silence for anything unlisted. See the root cause above |
 | **Array-of-object editing** | ❌ | **Behind** | Compound colliders, and anything list-shaped in future |
 | **Console / log panel** | ❌ | **Absent** | Errors and script `print` output are invisible in the editor |
 | **Profiler view** | ❌ | **Absent** | Where a fixed step goes is unmeasurable in-editor |
@@ -438,11 +464,14 @@ three we have partially built and stranded.
 Ordered by whether it stops somebody shipping a game, not by size. This is the
 output of the file; everything above is evidence.
 
-1. **Field meaning in the schema registry, and a generic inspector that uses
-   it.** Fixes hand-typed asset fields across every component at once, fixes
-   array-of-object editing, makes compound colliders authorable, and stops the
-   bespoke-section pattern from growing. Highest leverage in the file, and it
-   defends the "no Odin required" anti-goal.
+1. **Field meaning in the schema registry, and a generic inspector that reads
+   it.** Replaces three name-keyed lookup tables in the editor that are global
+   where they should be scoped and silent where they should be complete. Fixes
+   hand-typed asset fields across every component at once, fixes array-of-object
+   editing, makes compound colliders authorable, and makes the knowledge
+   checkable against the field template the way field lists already are.
+   Highest leverage in the file, and it defends the "no Odin required"
+   anti-goal.
 2. **Decay control of animation clips.** Animation exists and gameplay cannot
    reach it. Small, and it unblocks the whole animation domain.
 3. **UI widget set: slider, toggle, text input, scroll region.** Without these

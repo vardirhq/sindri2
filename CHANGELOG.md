@@ -38,8 +38,10 @@ All notable changes to Sindri Next will be documented here.
   and a ranked queue of what blocks somebody shipping a game. The audit turned up
   two capabilities that were built and unreachable — the bloom chain and the
   input action layer — and a root cause for hand-typed asset fields: the
-  inspector picks its widget from a JSON value's runtime type, so every string is
-  a free-text box.
+  editor guesses a field's meaning from its name through three lookup tables,
+  which are global where they should be scoped — `(_, "clip")` offers the audio
+  list to any component with a `clip` field — and silent for anything unlisted,
+  which is why every component added since lands as raw fields.
 
 - **A 2D collider may be authored in several pieces.** One shape is often a poor
   description of a thing: a character is a capsule with a circle at each side, a
