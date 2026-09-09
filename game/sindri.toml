@@ -7,4 +7,4 @@ main_scene = "assets/gather.scene.json"
 # What the scene does not name. Gather's scripts play these by name at run
 # time, and no walk of a scene can see a string inside a program.
 [assets]
-include = ["audio/pickup.wav", "audio/victory.wav"]
+include = ["audio/pickup.wav", "audio/victory.wav", "ui/gather.weave"]

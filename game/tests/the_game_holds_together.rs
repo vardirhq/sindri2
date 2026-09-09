@@ -10,10 +10,14 @@ use std::collections::BTreeSet;
 
 use sindri_core::{SceneComponent, SceneDocument, Transform3D, UnknownComponentPolicy, World};
 use sindri_decay::{AudioCommand, ScriptComponent, ScriptFrame, ScriptSources, Scripts};
-use sindri_gather::{AUDIO, FONTS, Session, extractor, sources, world};
+use sindri_gather::{
+    AUDIO, FONTS, Session, extractor, presented_world, sources, stylesheets, world,
+};
 use sindri_grid::{GridCoord, GridPoint, GridSpace, PlanePoint};
 use sindri_platform::InputState;
-use sindri_scene::{SceneExtractor, TilemapComponent, WorldGridNavigation};
+use sindri_scene::{
+    SceneExtractor, TilemapComponent, UiAnchor, UiTextComponent, WorldGridNavigation,
+};
 
 const SCENE: &str = include_str!("../assets/gather.scene.json");
 
@@ -45,6 +49,59 @@ fn floor_grid(world: &World, extractor: &SceneExtractor) -> (Transform3D, GridSp
         map,
         tilemap.grid_space().expect("the floor has a valid grid"),
     )
+}
+
+#[test]
+fn weave_reflows_the_hud_for_a_phone() {
+    let authored = world().expect("the scene loads");
+    let extractor = extractor().expect("the schemas register");
+    let sheets = stylesheets().expect("the composed Gather stylesheet parses");
+    assert_eq!(sheets.len(), 1, "imports compose into one root");
+
+    let wide = presented_world(
+        &authored,
+        &sheets,
+        weave::Viewport {
+            width: 960.0,
+            height: 600.0,
+        },
+    )
+    .expect("desktop presentation resolves");
+    let phone = presented_world(
+        &authored,
+        &sheets,
+        weave::Viewport {
+            width: 390.0,
+            height: 844.0,
+        },
+    )
+    .expect("phone presentation resolves");
+    let title = authored
+        .entities()
+        .find(|(_, data)| {
+            data.source_id
+                .as_ref()
+                .is_some_and(|id| id.as_str() == "title")
+        })
+        .map(|(entity, _)| entity)
+        .expect("Gather has a title");
+
+    let wide_title = extractor
+        .components()
+        .get::<UiTextComponent>(&wide, title)
+        .expect("the title schema reads")
+        .expect("the title remains active");
+    let phone_title = extractor
+        .components()
+        .get::<UiTextComponent>(&phone, title)
+        .expect("the title schema reads")
+        .expect("the title remains active");
+    assert_eq!(wide_title.anchor, UiAnchor::TopLeft);
+    assert_eq!(phone_title.anchor, UiAnchor::Top);
+    assert!(
+        (wide_title.font_size - phone_title.font_size).abs() > f32::EPSILON,
+        "the phone media rule changes the title size"
+    );
 }
 
 /// Every texture the scene names is one the binary carries.

@@ -204,11 +204,25 @@ Each condition wraps ordinary rules. Conditions cannot yet be combined.
 This keeps Weave reversible: removing the bridge leaves the engine and scene
 model intact.
 
+## Editor workflow
+
+The editor reads `.weave` roots from `[assets].include`, follows each root's
+`@use` graph, and applies the same ordered composition as export to both Scene
+and Game views. An entity's stable ID is its `#id` selector; reusable `.class`
+selectors are authored in the inspector's **Weave Style** section. Selecting a
+stylesheet in the project browser opens a read-only source preview.
+
+Saved changes to the manifest or any stylesheet in the source graph are picked
+up automatically. A failed reload reports the source location and preserves
+the last good presentation until another file change succeeds. Source editing
+and named viewport presets are not integrated into the editor yet.
+
 ## Current limits
 
 This is still intentionally smaller than browser CSS. It has no compound or
 descendant selectors, pseudo-states, variables, per-side padding, margin,
-flexible growth/shrink, accessibility mapping, editor inspector, or hot reload.
+flexible growth/shrink, accessibility mapping, integrated stylesheet editor, or
+named viewport presets.
 The demo proves reusable classes, cascade behavior, responsive geometry,
 min/max constraints, uniform content padding, main/cross-axis alignment, font
 metrics, fills, strokes, rounded shapes, and composable stylesheet sources on

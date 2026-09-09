@@ -81,6 +81,14 @@ The focused `games/weave-poc` example demonstrates individual responsive
 rules. Orbital Last Stand is the production-oriented reference using composed
 stylesheets for every game screen.
 
+## Showcase
+
+- [Gather showcase contract](gather-showcase.md)
+
+This records which mature Sindri capabilities the flagship game demonstrates,
+which improvements belong in its refresh, and which forcing-function work must
+remain with Orbital Last Stand.
+
 ## Orbital Last Stand
 
 Current implementation status is maintained in:

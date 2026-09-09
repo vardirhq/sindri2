@@ -230,6 +230,13 @@ Presentation changes do not require those bindings to change.
 
 ## Authoring guidance
 
+The editor recognizes manifest-listed `.weave` roots, previews their source,
+authors `weave.style.classes`, and applies the composed result to Scene and Game
+views. It hot-reloads saved changes throughout each root's `@use` graph. A
+broken reload keeps the last good presentation and reports the source path,
+line, and column. Editing stylesheet source and choosing named viewport presets
+remain external workflows.
+
 - Keep semantic identity in entity IDs and reusable appearance in classes.
 - Keep one small entry stylesheet and split large surfaces with `@use`.
 - Use scene parenting to describe layout ownership.
@@ -257,7 +264,7 @@ The following CSS concepts are not implemented:
 - hover, pressed, focus, disabled, or other pseudo-states
 - transitions and animation
 - accessibility mapping
-- editor stylesheet tooling and hot reload
+- integrated stylesheet source editing and named viewport preset controls
 
 Do not silently imitate these features with unexplained fixed coordinates.
 Document the required workaround or add the missing primitive at the generic

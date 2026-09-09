@@ -311,9 +311,17 @@ order. `games/weave-poc` is the focused responsive showcase, while Orbital Last
 Stand uses four composed Weave files for its production-oriented screen UI.
 `docs/weave.md` and `docs/weave-reference.md` record the supported surface.
 
-This is not yet editor-authorable or a general CSS implementation. Compound
-selectors, pseudo-states, variables, intrinsic content sizing, accessibility
-mapping, hot reload, transitions, and editor tooling remain absent.
+The editor treats manifest-listed `.weave` roots as project assets, previews
+their source, authors reusable classes in a dedicated inspector section, and
+applies the composed presentation to both Scene and Game views. It watches the
+manifest and complete `@use` graph for saved changes, keeps the last good
+presentation after a broken save, and reports composition failures with their
+source path, line, and column. Stylesheet source editing and named viewport
+presets still live outside the editor.
+
+This is not a general CSS implementation. Compound selectors, pseudo-states,
+variables, intrinsic content sizing, accessibility mapping, transitions, and
+flexible growth remain absent.
 
 ### Screen UI
 
@@ -1129,8 +1137,8 @@ the README.
 ## The companion game
 
 `game/`, crate `sindri-gather` — "Gather". Five orbs on a diamond floor, a
-thing you drive with the arrow keys, a row of lamps that fills as you collect
-them, and a banner that fades in when you have them all. `ROADMAP.md` says why
+thing you drive with a keyboard or touch stick, a row of lamps that fills as you
+collect them, and a banner that fades in when you have them all. `ROADMAP.md` says why
 it exists and why it is not an example; this says what of it is real.
 
 ### Works
@@ -1141,10 +1149,11 @@ the same to within one 8-bit step, which is the cost of baking the darker checke
 square into the sheet rather than tinting
 it at draw time.
 
-**It is a game you can play.** `cargo run -p sindri-gather` opens a window,
-arrow keys move the player, walking into an orb takes it, taking all five wins.
-Escape quits. It runs its gameplay on the fixed step, so gathering happens at
-the same rate whatever the frame rate is.
+**It is a game you can play.** `cargo run -p sindri-gather` opens a window.
+Arrow keys or WASD move the player on desktop, and the browser build adds a
+touch stick without giving Decay a second movement path. Walking into an orb
+takes it, taking all five wins, and Escape quits. Gameplay runs on the fixed
+step, so gathering happens at the same rate whatever the frame rate is.
 
 **None of its rules are in Rust.** Moving, gathering, counting and winning are
 four Decay scripts in `game/assets/scripts/`. The Rust is a window, a device, a
@@ -1173,7 +1182,7 @@ and checking the banner comes up.
 for a fixed number of fixed steps — and photographs where that leaves the game,
 so the picture proves the scripts ran rather than that the scene loads.
 
-**It opens in the editor, and Play runs it there.** All 21 entities load, both
+**It opens in the editor, and Play runs it there.** All 22 entities load, both
 viewports draw it, and the editor advances the same Decay sources the standalone
 game does. `docs/editor-meets-the-game.md` records the first editor session
 against the older 68-entity scene; the tilemap removed its 49 floor rows and
