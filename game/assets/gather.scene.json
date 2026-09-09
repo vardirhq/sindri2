@@ -501,6 +501,227 @@
       }
     },
     {
+      "id": "wisp-halo",
+      "name": "Wisp Halo",
+      "parent": "wisp",
+      "transform_3d": {
+        "position": [0.0, 0.0, -0.05],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [2.8, 2.8, 1.0]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "phase": 0.4,
+            "pulse": 0.1,
+            "pulse_speed": 2.4,
+            "spin": 1.2
+          },
+          "script": "Ambient",
+          "source": "scripts/ambient.decay"
+        },
+        "sindri.shape": {
+          "kind": "ellipse",
+          "count": 6.0,
+          "fill": [0.0, 0.0, 0.0, 0.0],
+          "stroke": [0.38, 0.82, 1.0, 0.62],
+          "stroke_width": 0.08,
+          "corner_radius": 0.0,
+          "dashes": 10.0,
+          "dash_duty": 0.42,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "add",
+          "layer": 14
+        }
+      }
+    },
+    {
+      "id": "shrine",
+      "name": "Home Shrine",
+      "transform_3d": {
+        "position": [0.0, -1.65, -0.2],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.22, 0.58, 1.0]
+      },
+      "components": {
+        "sindri.shape": {
+          "kind": "ellipse",
+          "count": 6.0,
+          "fill": [0.33, 0.18, 0.04, 0.28],
+          "stroke": [0.97, 0.66, 0.22, 0.9],
+          "stroke_width": 0.055,
+          "corner_radius": 0.0,
+          "dashes": 12.0,
+          "dash_duty": 0.58,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "layer": 2
+        }
+      }
+    },
+    {
+      "id": "shrine-heart",
+      "name": "Shrine Heart",
+      "transform_3d": {
+        "position": [0.0, -1.65, -0.12],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.28, 0.28, 1.0]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "phase": 1.2,
+            "pulse": 0.12,
+            "pulse_speed": 1.8,
+            "spin": -0.45
+          },
+          "script": "Ambient",
+          "source": "scripts/ambient.decay"
+        },
+        "sindri.shape": {
+          "kind": "polygon",
+          "count": 6.0,
+          "fill": [0.97, 0.66, 0.22, 0.38],
+          "stroke": [1.0, 0.82, 0.48, 0.95],
+          "stroke_width": 0.08,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "add",
+          "layer": 3
+        }
+      }
+    },
+    {
+      "id": "waystone-west",
+      "name": "West Waystone",
+      "transform_3d": {
+        "position": [-3.56, 0.2, -0.1],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.25, 0.5, 1.0]
+      },
+      "components": {
+        "sindri.shape": {
+          "kind": "polygon",
+          "count": 5.0,
+          "fill": [0.08, 0.2, 0.24, 0.72],
+          "stroke": [0.38, 0.82, 0.72, 0.82],
+          "stroke_width": 0.06,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "layer": 4
+        }
+      }
+    },
+    {
+      "id": "waystone-east",
+      "name": "East Waystone",
+      "transform_3d": {
+        "position": [3.56, 0.2, -0.1],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.25, 0.5, 1.0]
+      },
+      "components": {
+        "sindri.shape": {
+          "kind": "polygon",
+          "count": 5.0,
+          "fill": [0.12, 0.12, 0.28, 0.72],
+          "stroke": [0.58, 0.55, 0.92, 0.86],
+          "stroke_width": 0.06,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "layer": 4
+        }
+      }
+    },
+    {
+      "id": "wall-marker-north",
+      "name": "North Standing Stones",
+      "transform_3d": {
+        "position": [0.275, 2.0625, -0.08],
+        "rotation": [0.0, 0.0, -0.229753, 0.973249],
+        "scale": [0.58, 0.1, 1.0]
+      },
+      "components": {
+        "sindri.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [0.08, 0.15, 0.18, 0.9],
+          "stroke": [0.34, 0.65, 0.58, 0.8],
+          "stroke_width": 0.08,
+          "corner_radius": 0.3,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "layer": 5
+        }
+      }
+    },
+    {
+      "id": "wall-marker-middle",
+      "name": "Middle Standing Stones",
+      "transform_3d": {
+        "position": [0.275, 1.5125, -0.08],
+        "rotation": [0.0, 0.0, -0.229753, 0.973249],
+        "scale": [0.58, 0.1, 1.0]
+      },
+      "components": {
+        "sindri.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [0.08, 0.15, 0.18, 0.9],
+          "stroke": [0.34, 0.65, 0.58, 0.8],
+          "stroke_width": 0.08,
+          "corner_radius": 0.3,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "layer": 5
+        }
+      }
+    },
+    {
+      "id": "wall-marker-south",
+      "name": "South Standing Stones",
+      "transform_3d": {
+        "position": [-0.275, 1.2375, -0.08],
+        "rotation": [0.0, 0.0, -0.229753, 0.973249],
+        "scale": [0.58, 0.1, 1.0]
+      },
+      "components": {
+        "sindri.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [0.08, 0.15, 0.18, 0.9],
+          "stroke": [0.34, 0.65, 0.58, 0.8],
+          "stroke_width": 0.08,
+          "corner_radius": 0.3,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "layer": 5
+        }
+      }
+    },
+    {
       "id": "world-camera",
       "name": "World Camera",
       "transform_3d": {

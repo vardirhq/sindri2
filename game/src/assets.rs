@@ -64,6 +64,10 @@ pub(crate) const SCRIPTS: &[(&str, &str)] = &[
         include_str!("../assets/scripts/wisp.decay"),
     ),
     (
+        "scripts/ambient.decay",
+        include_str!("../assets/scripts/ambient.decay"),
+    ),
+    (
         "scripts/orb.decay",
         include_str!("../assets/scripts/orb.decay"),
     ),
