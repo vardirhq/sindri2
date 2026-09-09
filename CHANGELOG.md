@@ -24,6 +24,15 @@ All notable changes to Sindri Next will be documented here.
   heart stay `sindri.shape`, because a script moves them every frame and no
   baked frame can do that. See `docs/isometric-baker.md`.
 
+- **Gather draws in the order things stand in, and its scenery is solid.** Every
+  world entity's sprite layer now comes from the isometric row it occupies, and
+  the player and Wisp keep theirs current as they move — so the player walks
+  behind what is north of it and in front of what is south. Hand-picked layers
+  could not do this: the orbs sat on layer 10 and the player on 20, so both drew
+  over the shrine from anywhere on the island. Solid scenery also claims its
+  grid cell, so the Wisp's pathfinding routes around a tree and the player is
+  stopped by one instead of walking through it.
+
 - Expand Weave from an isolated presentation proof into composed responsive
   project UI: `@use` stylesheet graphs, percentages, constraints, padding,
   gaps, wrapping, alignment, viewport units, and text wrapping resolve into
