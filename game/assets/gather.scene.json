@@ -64,6 +64,7 @@
           "projection": "isometric",
           "rows": 9,
           "texture": "textures/tiles.png",
+          "tile_overhang": 0.125,
           "tile_size": [1.1, 0.55],
           "tiles": [
             3,
@@ -292,7 +293,7 @@
       "id": "outcrop-0",
       "name": "Outcrop 1",
       "transform_3d": {
-        "position": [-1.1, -0.55, 0.0],
+        "position": [-1.65, 1.375, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.925, 1.4, 1.0]
       },
@@ -301,7 +302,7 @@
           "grid": "floor"
         },
         "sindri.sprite": {
-          "layer": 21,
+          "layer": 7,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -314,7 +315,7 @@
       "id": "outcrop-1",
       "name": "Outcrop 2",
       "transform_3d": {
-        "position": [1.65, -0.275, 0.0],
+        "position": [-2.75, 0.825, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.925, 1.4, 1.0]
       },
@@ -323,7 +324,7 @@
           "grid": "floor"
         },
         "sindri.sprite": {
-          "layer": 19,
+          "layer": 11,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -336,7 +337,7 @@
       "id": "outcrop-2",
       "name": "Outcrop 3",
       "transform_3d": {
-        "position": [-1.65, 0.825, 0.0],
+        "position": [-3.3, 0.55, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.925, 1.4, 1.0]
       },
@@ -345,7 +346,7 @@
           "grid": "floor"
         },
         "sindri.sprite": {
-          "layer": 11,
+          "layer": 13,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -599,7 +600,7 @@
       "transform_3d": {
         "position": [0.275, 2.0625, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.8, 1.0, 1.0]
+        "scale": [0.95, 1.075, 1.0]
       },
       "components": {
         "sindri.sprite": {
@@ -615,7 +616,7 @@
       "transform_3d": {
         "position": [0.275, 1.5125, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.8, 1.0, 1.0]
+        "scale": [0.95, 1.075, 1.0]
       },
       "components": {
         "sindri.sprite": {
@@ -631,7 +632,7 @@
       "transform_3d": {
         "position": [0.275, 0.9625, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.8, 1.0, 1.0]
+        "scale": [0.95, 1.075, 1.0]
       },
       "components": {
         "sindri.sprite": {
@@ -647,7 +648,7 @@
       "transform_3d": {
         "position": [0.275, 0.4125, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.8, 1.0, 1.0]
+        "scale": [0.95, 1.075, 1.0]
       },
       "components": {
         "sindri.sprite": {
@@ -760,7 +761,7 @@
       "id": "tree-1",
       "name": "Tree 2",
       "transform_3d": {
-        "position": [-2.75, 0.275, 0.0],
+        "position": [-2.2, 0.0, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [1.05, 2.5, 1.0]
       },
@@ -769,7 +770,7 @@
           "grid": "floor"
         },
         "sindri.sprite": {
-          "layer": 15,
+          "layer": 17,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -782,7 +783,7 @@
       "id": "tree-2",
       "name": "Tree 3",
       "transform_3d": {
-        "position": [-1.1, -1.1, 0.0],
+        "position": [-1.65, -0.275, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [1.05, 2.5, 1.0]
       },
@@ -791,7 +792,7 @@
           "grid": "floor"
         },
         "sindri.sprite": {
-          "layer": 25,
+          "layer": 19,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -848,7 +849,7 @@
       "id": "tree-5",
       "name": "Tree 6",
       "transform_3d": {
-        "position": [-2.2, -0.55, 0.0],
+        "position": [1.65, -0.825, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [1.05, 2.5, 1.0]
       },
@@ -857,7 +858,7 @@
           "grid": "floor"
         },
         "sindri.sprite": {
-          "layer": 21,
+          "layer": 23,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },

@@ -14,7 +14,7 @@ not need this document to be told that a component exists.
 | Capability | Current proof | Showcase quality |
 | --- | --- | --- |
 | Decay | Player movement, orb collection, progress lamps, victory, and Wisp behavior are scripts; Rust hosts them without owning game rules | Strong |
-| Tilemap | One authored 9x9 isometric tilemap draws a floor plan: a shore rim, a grass field, a path from the north landing to the shrine, and the shrine's flagstone plaza. Its four tiles are baked | Strong; the regions are what make the grid read as a place |
+| Tilemap | One authored 9x9 isometric tilemap draws a floor plan: a shore rim, a grass field, a path from the north landing to the shrine, and the shrine's flagstone plaza. Its four tiles are baked slabs, so the island has thickness at its rim rather than being a paper-thin diamond | Strong; the regions are what make the grid read as a place |
 | World art | Floor tiles, the shrine, two waystones, a ridge of four wall segments, six trees and three stone outcrops are baked sprites, generated from 3D models by `tools/isometric-baker` and drawn by the ordinary sprite path | Strong; replaces the procedural shapes that read as an engine debug scene |
 | Draw order | Every world entity takes its sprite layer from the isometric row it stands on, so the player walks behind what is north of it and in front of what is south | Strong; the alternative is a hand-picked layer per entity, which cannot be right from more than one position |
 | Grid coordinates | Player movement, bounds, and orb collection use the tilemap's logical coordinates. Solid scenery claims its cell, so the player is stopped by a tree and the Wisp's A* routes around one | Strong |

@@ -284,6 +284,7 @@ find the player, to a list that fits on one screen.
   "palette": ["light", "dark"],
   "columns": 7, "rows": 7,
   "tile_size": [1.1, 0.55],
+  "tile_overhang": 0.125,
   "projection": "isometric",
   "space": "world",
   "tiles": [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, ...]
@@ -293,6 +294,21 @@ find the player, to a list that fits on one screen.
 `tiles` holds `columns * rows` cells, row-major from the top-left. An empty cell is `null` and not a
 sentinel index, because every index is a real tile: reserving `0` or `-1` to mean "empty" is how a
 map ends up with an accidental floor in the corner nobody authored.
+
+`tile_overhang` is how far below its cell a tile's art reaches, in world units, and is zero unless a
+map says otherwise. A flat floor needs none. A floor of *slabs* does: the top face still covers
+exactly one cell, and the sides that make it read as a slab hang below into the cells in front of it.
+Without it a slab would have to be squashed into its cell, which makes it a picture of a slab painted
+on flat ground.
+
+It is an overhang rather than a second size because the cell is what everything else agrees on — the
+grid maths, picking, occupancy and gameplay all measure in cells, and a tile that simply drew larger
+would quietly move all of them. Only the drawn quad grows, and it grows downward.
+
+Nothing has to be authored per edge. A slab's sides are only ever *visible* where a neighbour is
+missing: the tile down-left, the tile down-right and the tile directly below together cover the
+skirt, and a map extracts in reading order, which draws all three after it. So every tile can carry
+its sides, the interior ones are covered, and the thickness shows exactly at the map's edge.
 
 **A cell indexes the map's own palette, not the sheet.** The palette names the sprites this map
 uses; the sheet places them. That keeps a 49-cell map 49 small integers rather than 49 repeated

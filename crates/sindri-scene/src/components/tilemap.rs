@@ -77,6 +77,22 @@ pub struct TilemapComponent {
     /// One tile's size in world units.
     #[serde(default = "unit_tile")]
     pub tile_size: [f32; 2],
+    /// How far below its cell a tile's art reaches, in world units.
+    ///
+    /// A flat floor is drawn tile-sized and needs none. A floor of *slabs* does:
+    /// the top face still covers exactly one cell, and the sides that make it
+    /// look like a slab hang below into the cells in front of it. Without this a
+    /// slab would have to be squashed into its cell, which would make it a
+    /// picture of a slab painted on flat ground.
+    ///
+    /// It is an overhang rather than a second size, because the cell is what
+    /// everything else agrees on: the grid maths, picking, occupancy and
+    /// gameplay all measure in cells, and a tile that drew larger without saying
+    /// it was *hanging* would quietly move all of them.
+    ///
+    /// Zero by default, so a map that says nothing is the flat map it was.
+    #[serde(default)]
+    pub tile_overhang: f32,
     #[serde(default)]
     pub projection: TileProjection,
     /// `columns * rows` cells, row-major from the top-left, `null` where the
@@ -96,11 +112,22 @@ const fn unit_tile() -> [f32; 2] {
     [1.0, 1.0]
 }
 
+/// The quad a tile is drawn on, which is its cell unless it hangs below one.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TileDraw {
+    /// Width and height in world units.
+    pub size: [f32; 2],
+    /// How far the quad's centre sits below the cell's.
+    pub offset_y: f32,
+}
+
 /// What is wrong with a tilemap, named specifically enough to fix.
 #[derive(Clone, Debug, Error, PartialEq)]
 pub enum TilemapError {
     #[error(transparent)]
     Grid(#[from] GridError),
+    #[error("a tile's overhang reaches below its cell, so it cannot be {0}")]
+    NegativeOverhang(f32),
     #[error(
         "tilemap is {columns}x{rows} tiles, which needs {expected} cells, but {actual} were given"
     )]
@@ -136,9 +163,24 @@ impl TilemapComponent {
     /// Checked here rather than at deserialization for the reason a bad UV rect
     /// is: a scene carrying a broken tilemap has to open, because the editor is
     /// where it gets fixed.
+    /// The quad one tile is drawn on: the cell, plus whatever hangs below it.
+    ///
+    /// Returned with the offset that keeps the *top* of the art on the cell, so
+    /// the overhang grows downward rather than around the middle.
+    #[must_use]
+    pub fn tile_draw(&self) -> TileDraw {
+        TileDraw {
+            size: [self.tile_size[0], self.tile_size[1] + self.tile_overhang],
+            offset_y: -self.tile_overhang / 2.0,
+        }
+    }
+
     pub fn validate(&self) -> Result<(), TilemapError> {
         self.grid_bounds()?;
         self.grid_space()?;
+        if !self.tile_overhang.is_finite() || self.tile_overhang < 0.0 {
+            return Err(TilemapError::NegativeOverhang(self.tile_overhang));
+        }
         if self.tiles.len() != self.expected_cells() {
             return Err(TilemapError::WrongCellCount {
                 columns: self.columns,
@@ -276,9 +318,63 @@ impl SceneComponent for TilemapComponent {
 mod tests {
     use super::*;
 
+    /// Compared with a tolerance because these are floats; the values are exact
+    /// sums of authored numbers, so the tolerance is only there to say so.
+    fn close(left: f32, right: f32) -> bool {
+        (left - right).abs() < 1.0e-6
+    }
+
+    /// A map that says nothing about overhang draws exactly its cells, which is
+    /// what every tilemap authored before the field did.
+    #[test]
+    fn a_map_without_an_overhang_draws_its_cell() {
+        let map = map(TileProjection::Isometric, 2, 2);
+        let draw = map.tile_draw();
+        assert!(close(draw.size[0], map.tile_size[0]));
+        assert!(close(draw.size[1], map.tile_size[1]));
+        assert!(close(draw.offset_y, 0.0));
+    }
+
+    /// An overhang grows the quad downward and leaves the top of the art where
+    /// the cell is. Both halves matter: a quad that grew around its middle
+    /// would lift the tile's face off the grid everything else measures in.
+    #[test]
+    fn an_overhang_hangs_below_the_cell_it_is_drawn_for() {
+        let mut map = map(TileProjection::Isometric, 2, 2);
+        map.tile_size = [1.1, 0.55];
+        map.tile_overhang = 0.125;
+
+        let draw = map.tile_draw();
+        assert!(close(draw.size[0], 1.1), "{:?}", draw.size);
+        assert!(close(draw.size[1], 0.675), "{:?}", draw.size);
+        assert!(close(draw.offset_y, -0.0625), "{}", draw.offset_y);
+
+        // The top edge is the thing that must not move: half the quad above its
+        // own centre, which the offset puts back on the cell's top edge.
+        let quad_top = draw.offset_y + draw.size[1] / 2.0;
+        let cell_top = map.tile_size[1] / 2.0;
+        assert!(
+            (quad_top - cell_top).abs() < 1.0e-6,
+            "{quad_top} != {cell_top}"
+        );
+    }
+
+    /// An overhang reaching *up* is refused rather than drawn, because a tile
+    /// hanging above its cell would occlude the row behind it.
+    #[test]
+    fn an_overhang_cannot_reach_above_the_cell() {
+        let mut map = map(TileProjection::Isometric, 2, 2);
+        map.tile_overhang = -0.5;
+        assert!(matches!(
+            map.validate(),
+            Err(TilemapError::NegativeOverhang(_))
+        ));
+    }
+
     fn map(projection: TileProjection, columns: u32, rows: u32) -> TilemapComponent {
         TilemapComponent {
             texture: "tiles".to_owned(),
+            tile_overhang: 0.0,
             palette: vec![
                 "a".to_owned(),
                 "b".to_owned(),

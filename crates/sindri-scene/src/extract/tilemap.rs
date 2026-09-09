@@ -52,8 +52,15 @@ impl SceneExtractor {
                 // One tile is a sprite of the map's tile size, placed by the
                 // map's own maths and then by the entity's transform, so moving
                 // the entity moves the floor.
-                let local = Mat4::from_translation(Vec3::new(offset_x, offset_y, 0.0))
-                    * Mat4::from_scale(Vec3::new(tilemap.tile_size[0], tilemap.tile_size[1], 1.0));
+                //
+                // A map whose tiles hang below their cells draws each on a
+                // taller quad, dropped by half the overhang so the top of the
+                // art stays on the cell. The cell itself never moves: it is what
+                // the grid, picking and gameplay all measure in.
+                let draw = tilemap.tile_draw();
+                let local =
+                    Mat4::from_translation(Vec3::new(offset_x, offset_y + draw.offset_y, 0.0))
+                        * Mat4::from_scale(Vec3::new(draw.size[0], draw.size[1], 1.0));
 
                 let camera = cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?;
                 let model = transform_matrix(transform) * local;

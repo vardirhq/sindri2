@@ -24,6 +24,16 @@ All notable changes to Sindri Next will be documented here.
   heart stay `sindri.shape`, because a script moves them every frame and no
   baked frame can do that. See `docs/isometric-baker.md`.
 
+- **A tilemap's tiles may hang below their cell.** `sindri.tilemap` gained
+  `tile_overhang`: how far below its cell a tile's art reaches, in world units,
+  zero unless a map says otherwise. A flat floor needs none; a floor of slabs
+  does, because the top face still covers exactly one cell while the sides that
+  make it read as a slab hang into the cells in front. The cell is unchanged and
+  is still what the grid, picking, occupancy and gameplay measure in — only the
+  drawn quad grows, and only downward. Gather's floor is now baked slabs, so its
+  island has thickness at the rim instead of being a paper-thin diamond, and the
+  baker gained a `plate` primitive for the flat case.
+
 - **Gather draws in the order things stand in, and its scenery is solid.** Every
   world entity's sprite layer now comes from the isometric row it occupies, and
   the player and Wisp keep theirs current as they move — so the player walks

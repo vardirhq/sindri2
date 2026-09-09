@@ -16,6 +16,15 @@ use sindri_grid::{GridCoord, GridPoint, GridSpace, PlanePoint};
 use sindri_platform::InputState;
 use sindri_scene::{SceneExtractor, SpriteComponent, TilemapComponent, WorldGridNavigation};
 
+/// A grid coordinate as a transform holds it.
+///
+/// The grid works in `f64` and a transform in `f32`, so something has to
+/// narrow. Named, so the narrowing reads as the intent it is.
+#[allow(clippy::cast_possible_truncation)]
+fn f64_to_f32(value: f64) -> f32 {
+    value as f32
+}
+
 fn logical_position(grid: GridSpace, map: Transform3D, world: [f32; 3]) -> GridPoint {
     let (sin, cos) = map.rotation_z_radians().sin_cos();
     let x = world[0] - map.position[0];
@@ -107,6 +116,11 @@ fn every_world_sprite_layers_by_where_it_stands() {
 /// Driven by holding a direction through the real scripts, which is what a
 /// player does — not by asking the collision helper whether a point is free,
 /// which would only test that the helper agrees with itself.
+///
+/// The player is put beside the tree rather than walked at whatever happens to
+/// be west of its start: a collision test that depends on the layout fails
+/// every time someone moves a tree, which is a test about composition wearing a
+/// collision test's name.
 #[test]
 fn the_player_cannot_walk_through_solid_scenery() {
     use sindri_platform::{InputEvent, Key};
@@ -129,8 +143,7 @@ fn the_player_cannot_walk_through_solid_scenery() {
             .expect("the scene names this entity")
     };
     let player = find(&world, "player");
-    // Due west of the player's start, so holding one key walks straight at it.
-    let outcrop = find(&world, "outcrop-2");
+    let tree = find(&world, "tree-0");
 
     let cell = |world: &World, entity| {
         logical_position(
@@ -143,12 +156,21 @@ fn the_player_cannot_walk_through_solid_scenery() {
                 .position,
         )
     };
-    let blocker = cell(&world, outcrop);
-    let start = cell(&world, player);
-    assert!(
-        start.x > blocker.x + 1.0 && (start.y - blocker.y).abs() < 0.5,
-        "this test needs the outcrop due west of the player, got {start:?} and {blocker:?}"
-    );
+    let blocker = cell(&world, tree);
+
+    // Two cells due east of the tree, so holding one key walks straight at it.
+    let start = GridPoint::new(blocker.x + 2.0, blocker.y);
+    {
+        let local = grid.project(start).expect("the start projects");
+        // The grid works in f64 and a transform holds f32, so the narrowing is
+        // the point of the conversion rather than an accident of it.
+        let (local_x, local_y) = (local.x, local.y);
+        let data = world.get_mut(player).expect("the player exists");
+        let mut transform = data.transform_3d.expect("the player has a transform");
+        transform.position[0] = map.position[0] + f64_to_f32(local_x);
+        transform.position[1] = map.position[1] + f64_to_f32(local_y);
+        data.transform_3d = Some(transform);
+    }
 
     let mut held = InputState::default();
     held.apply(InputEvent::KeyPressed(Key::ArrowLeft));
@@ -168,7 +190,7 @@ fn the_player_cannot_walk_through_solid_scenery() {
     );
     assert!(
         ended.x > blocker.x + 0.4,
-        "the player reached {ended:?}, walking into the outcrop at {blocker:?}"
+        "the player reached {ended:?}, walking into the tree at {blocker:?}"
     );
 }
 
