@@ -48,9 +48,10 @@ These documents govern the work:
 - `docs/project-format.md` — what a project is, and what `sindri.toml` holds.
 - `docs/scripting.md` and `decay/LANGUAGE.md` — scripting contracts.
 - `docs/capabilities.md` — detailed evidence for what actually works.
-- `docs/function-matrix.md` — 30-second Engine / Editor / Script checklist.
+- `docs/parity.md` — what an engine is expected to do, what Sindri does, and the
+  distance between them; carries the Engine / Editor / Decay / proof status that
+  the function and feature-integration matrices used to hold separately.
 - `docs/module-layout.md` — how a source file is sized and split.
-- `docs/feature-integration-matrix.md` — cross-surface integration status.
 
 Subsystem contracts live in `docs/`. If a subsystem's behaviour changes, update
 its contract in the same change.
@@ -90,15 +91,19 @@ Important constraints:
 
 ## Capability completion rule
 
-A surface earns ✅ in `docs/function-matrix.md` only when the behaviour is
+A surface earns ✅ in `docs/parity.md` only when the behaviour is
 implemented **and exercised** on that surface. Do not mark an API, schema,
 component, or editor control complete merely because it exists.
 
+`docs/parity.md` also carries rows for capabilities Sindri does not have. When
+work uncovers a gap, add its row in the same change, marked ❌, even when
+nothing is planned: a gap with no row is a gap nobody schedules.
+
 When a capability changes, update the relevant documentation in the same commit:
 
-- `docs/function-matrix.md` for terse Engine / Editor / Script status.
+- `docs/parity.md` for Engine / Editor / Decay / proof status, and for the
+  judgement against what an engine is expected to do.
 - `docs/capabilities.md` for detailed evidence and limitations.
-- `docs/feature-integration-matrix.md` when cross-surface status changes.
 - The relevant subsystem contract in `docs/` when behaviour changes.
 - `docs/generated/` when the Decay host surface or a component registration
   changes — regenerate with `cargo run -p sindri-capabilities -- --write`.

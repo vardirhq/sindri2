@@ -28,7 +28,7 @@ PAGES = [
     ("weave", "Weave responsive UI", "docs/weave.md", "UI STYLING"),
     ("weave-reference", "Weave reference", "docs/weave-reference.md", "REFERENCE"),
     ("export", "Web export", "docs/export.md", "SHIPPING"),
-    ("features", "Feature integration", "docs/feature-integration-matrix.md", "STATUS"),
+    ("parity", "Engine parity", "docs/parity.md", "STATUS"),
     ("architecture", "Architecture & direction", "docs/FEASIBILITY.md", "INTERNALS"),
 ]
 

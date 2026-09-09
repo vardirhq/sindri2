@@ -421,7 +421,7 @@ internals, the public authoring surface is still incomplete.
 ## Related source-of-truth documents
 
 - [Current capabilities](capabilities.md)
-- [Feature integration matrix](feature-integration-matrix.md)
+- [Parity](parity.md)
 - [Decay host surface](scripting.md)
 - [Decay language reference](../decay/LANGUAGE.md)
 - [2D physics boundary](physics.md)

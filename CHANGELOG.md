@@ -24,6 +24,23 @@ All notable changes to Sindri Next will be documented here.
   heart stay `sindri.shape`, because a script moves them every frame and no
   baked frame can do that. See `docs/isometric-baker.md`.
 
+- **One parity document replaces the two status matrices.** `docs/parity.md`
+  is written from the outside in: it records what a game engine is expected to
+  do, what Sindri actually does across engine, editor, Decay and game proof, and
+  the distance between them. `docs/function-matrix.md` and
+  `docs/feature-integration-matrix.md` are deleted, because both graded Sindri
+  against Sindri — a feature nobody had thought of had no row and so could not
+  show as missing. The integration matrix called 2D physics **Ready** while a
+  character could not be given a capsule with a circle at each side. The new file
+  carries rows for capabilities we have never built, a protected list of what
+  Sindri already does better, anti-goals taken from mistakes the baseline is
+  still paying for, the Unity Asset Store read as a market-validated gap list,
+  and a ranked queue of what blocks somebody shipping a game. The audit turned up
+  two capabilities that were built and unreachable — the bloom chain and the
+  input action layer — and a root cause for hand-typed asset fields: the
+  inspector picks its widget from a JSON value's runtime type, so every string is
+  a free-text box.
+
 - **A 2D collider may be authored in several pieces.** One shape is often a poor
   description of a thing: a character is a capsule with a circle at each side, a
   ship a box and two pods. `sindri.physics2d.collider` now takes a `pieces` list,

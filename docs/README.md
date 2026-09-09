@@ -13,9 +13,9 @@ contracts below; dated evidence should not override them.
   and the shortest route into the repository
 - [Roadmap](../ROADMAP.md) — dependency-ordered work and acceptance criteria
 - [Capabilities](capabilities.md) — detailed evidence for what works today
-- [Function matrix](function-matrix.md) — terse Engine / Editor / Decay status
-- [Feature integration matrix](feature-integration-matrix.md) — gaps between
-  runtime, authoring, scripting, and game proof
+- [Parity](parity.md) — what an engine is expected to do, what Sindri does, the
+  gaps between runtime, authoring, scripting, and game proof, and the ranked
+  queue of what to build next
 - [Changelog](../CHANGELOG.md) — user-visible changes
 - [Contributing](../CONTRIBUTING.md) — checks and contribution rules
 

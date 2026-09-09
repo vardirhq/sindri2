@@ -26,7 +26,7 @@ what the engine can do. As of this document Sindri still has:
 - no general material authoring;
 - no lighting system.
 
-None of those move because a tool renders triangles offline. `docs/function-matrix.md`
+None of those move because a tool renders triangles offline. `docs/parity.md`
 and `docs/capabilities.md` describe the engine, and the baker earns no row in
 either: a tool is not a surface a capability is exercised on.
 
