@@ -197,6 +197,7 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
             "columns": 1,
             "rows": 1,
             "tile_size": [1.0, 1.0],
+            "tile_overhang": 0.0,
             "projection": "orthogonal",
             "tiles": [null],
             "tint": [1.0, 1.0, 1.0, 1.0],

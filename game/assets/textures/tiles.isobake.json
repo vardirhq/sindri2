@@ -41,219 +41,30 @@
       "model": {
         "materials": {
           "grass": {
-            "colour": "#2d4a36"
-          },
-          "tuft": {
-            "colour": "#33523a"
+            "colour": "#3f6047",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
           }
         },
         "parts": [
           {
-            "type": "plate",
+            "type": "box",
             "material": "grass",
             "position": [
-              -0.375,
               0,
-              -0.375
+              0,
+              0
             ],
             "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "tuft",
-            "position": [
-              -0.125,
-              0,
-              -0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "grass",
-            "position": [
-              0.125,
-              0,
-              -0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "grass",
-            "position": [
-              0.375,
-              0,
-              -0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "grass",
-            "position": [
-              -0.375,
-              0,
-              -0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "grass",
-            "position": [
-              -0.125,
-              0,
-              -0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "grass",
-            "position": [
-              0.125,
-              0,
-              -0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "grass",
-            "position": [
-              0.375,
-              0,
-              -0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "grass",
-            "position": [
-              -0.375,
-              0,
-              0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "grass",
-            "position": [
-              -0.125,
-              0,
-              0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "grass",
-            "position": [
-              0.125,
-              0,
-              0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "tuft",
-            "position": [
-              0.375,
-              0,
-              0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "tuft",
-            "position": [
-              -0.375,
-              0,
-              0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "grass",
-            "position": [
-              -0.125,
-              0,
-              0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "grass",
-            "position": [
-              0.125,
-              0,
-              0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "grass",
-            "position": [
-              0.375,
-              0,
-              0.375
-            ],
-            "size": [
-              0.25,
-              0.25
+              1.0,
+              0.185382,
+              1.0
             ]
           }
         ]
@@ -264,219 +75,30 @@
       "model": {
         "materials": {
           "path": {
-            "colour": "#5f5540"
-          },
-          "pebble": {
-            "colour": "#695e48"
+            "colour": "#7a6c52",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
           }
         },
         "parts": [
           {
-            "type": "plate",
+            "type": "box",
             "material": "path",
             "position": [
-              -0.375,
               0,
-              -0.375
+              0,
+              0
             ],
             "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "path",
-            "position": [
-              -0.125,
-              0,
-              -0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "path",
-            "position": [
-              0.125,
-              0,
-              -0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "path",
-            "position": [
-              0.375,
-              0,
-              -0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "path",
-            "position": [
-              -0.375,
-              0,
-              -0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "path",
-            "position": [
-              -0.125,
-              0,
-              -0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "pebble",
-            "position": [
-              0.125,
-              0,
-              -0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "path",
-            "position": [
-              0.375,
-              0,
-              -0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "pebble",
-            "position": [
-              -0.375,
-              0,
-              0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "path",
-            "position": [
-              -0.125,
-              0,
-              0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "path",
-            "position": [
-              0.125,
-              0,
-              0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "path",
-            "position": [
-              0.375,
-              0,
-              0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "path",
-            "position": [
-              -0.375,
-              0,
-              0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "path",
-            "position": [
-              -0.125,
-              0,
-              0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "path",
-            "position": [
-              0.125,
-              0,
-              0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "path",
-            "position": [
-              0.375,
-              0,
-              0.375
-            ],
-            "size": [
-              0.25,
-              0.25
+              1.0,
+              0.185382,
+              1.0
             ]
           }
         ]
@@ -486,220 +108,31 @@
       "name": "flagstone",
       "model": {
         "materials": {
-          "slab": {
-            "colour": "#43424c"
-          },
-          "joint": {
-            "colour": "#3b3a44"
+          "flagstone": {
+            "colour": "#55545e",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
           }
         },
         "parts": [
           {
-            "type": "plate",
-            "material": "slab",
+            "type": "box",
+            "material": "flagstone",
             "position": [
-              -0.375,
               0,
-              -0.375
+              0,
+              0
             ],
             "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "slab",
-            "position": [
-              -0.125,
-              0,
-              -0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "slab",
-            "position": [
-              0.125,
-              0,
-              -0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "joint",
-            "position": [
-              0.375,
-              0,
-              -0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "slab",
-            "position": [
-              -0.375,
-              0,
-              -0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "joint",
-            "position": [
-              -0.125,
-              0,
-              -0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "slab",
-            "position": [
-              0.125,
-              0,
-              -0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "slab",
-            "position": [
-              0.375,
-              0,
-              -0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "slab",
-            "position": [
-              -0.375,
-              0,
-              0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "slab",
-            "position": [
-              -0.125,
-              0,
-              0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "slab",
-            "position": [
-              0.125,
-              0,
-              0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "slab",
-            "position": [
-              0.375,
-              0,
-              0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "slab",
-            "position": [
-              -0.375,
-              0,
-              0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "slab",
-            "position": [
-              -0.125,
-              0,
-              0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "joint",
-            "position": [
-              0.125,
-              0,
-              0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "slab",
-            "position": [
-              0.375,
-              0,
-              0.375
-            ],
-            "size": [
-              0.25,
-              0.25
+              1.0,
+              0.185382,
+              1.0
             ]
           }
         ]
@@ -709,220 +142,31 @@
       "name": "shore",
       "model": {
         "materials": {
-          "sand": {
-            "colour": "#524c3e"
-          },
-          "wet": {
-            "colour": "#474437"
+          "shore": {
+            "colour": "#6b6350",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
           }
         },
         "parts": [
           {
-            "type": "plate",
-            "material": "sand",
+            "type": "box",
+            "material": "shore",
             "position": [
-              -0.375,
               0,
-              -0.375
+              0,
+              0
             ],
             "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "sand",
-            "position": [
-              -0.125,
-              0,
-              -0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "sand",
-            "position": [
-              0.125,
-              0,
-              -0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "sand",
-            "position": [
-              0.375,
-              0,
-              -0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "wet",
-            "position": [
-              -0.375,
-              0,
-              -0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "sand",
-            "position": [
-              -0.125,
-              0,
-              -0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "sand",
-            "position": [
-              0.125,
-              0,
-              -0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "sand",
-            "position": [
-              0.375,
-              0,
-              -0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "sand",
-            "position": [
-              -0.375,
-              0,
-              0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "sand",
-            "position": [
-              -0.125,
-              0,
-              0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "wet",
-            "position": [
-              0.125,
-              0,
-              0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "sand",
-            "position": [
-              0.375,
-              0,
-              0.125
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "sand",
-            "position": [
-              -0.375,
-              0,
-              0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "sand",
-            "position": [
-              -0.125,
-              0,
-              0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "sand",
-            "position": [
-              0.125,
-              0,
-              0.375
-            ],
-            "size": [
-              0.25,
-              0.25
-            ]
-          },
-          {
-            "type": "plate",
-            "material": "wet",
-            "position": [
-              0.375,
-              0,
-              0.375
-            ],
-            "size": [
-              0.25,
-              0.25
+              1.0,
+              0.185382,
+              1.0
             ]
           }
         ]

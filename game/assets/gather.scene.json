@@ -64,6 +64,7 @@
           "projection": "isometric",
           "rows": 9,
           "texture": "textures/tiles.png",
+          "tile_overhang": 0.125,
           "tile_size": [1.1, 0.55],
           "tiles": [
             3,

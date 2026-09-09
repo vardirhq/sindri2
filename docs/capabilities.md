@@ -1242,6 +1242,15 @@ six values out of 255, so the authored regions were invisible and the island
 read as one flat dark diamond whatever was drawn on it. It now has four baked
 tiles — shore, grass, path, flagstone — and a floor plan drawn in them.
 
+Those tiles are **slabs**, not flat diamonds, which needed one thing from the
+engine: `sindri.tilemap` gained `tile_overhang`, how far below its cell a tile's
+art may reach. The cell is unchanged and still what the grid, picking, occupancy
+and gameplay measure in; only the drawn quad grows, downward. Nothing has to be
+authored per edge — a slab's sides are only visible where a neighbour is
+missing, and a map extracts in reading order, so the three tiles that could
+cover a skirt are all drawn after it. The thickness therefore shows exactly at
+the island's rim.
+
 What stayed a shape stayed for a reason: the Wisp halo and the shrine heart are
 animated every frame by Decay, which no baked frame can do.
 

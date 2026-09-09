@@ -136,11 +136,31 @@ the recipe is the source.
 ```
 
 Primitives are `box`, `plate`, `cylinder`, `cone` and `sphere`. A `plate` is a
-single flat quad in the XZ plane, and it exists because a floor tile is not a
-box: a box of zero height has its top and bottom faces in exactly the same
+single flat quad in the XZ plane, and it exists because a *flat* floor tile is
+not a box: a box of zero height has its top and bottom faces in exactly the same
 plane, and which of them wins a pixel then comes down to the last bit of an
 interpolation — so a tile that should be one flat colour comes out dithered
 between its brightest and darkest shade.
+
+### Baking a floor tile
+
+A tilemap draws each cell on a quad of its `tile_size`, so a tile's frame has to
+be exactly the tile and nothing more — `padding: 0`, no outline, and a model
+exactly one unit square. Anything raised above it, a tuft or a pebble, projects
+a fraction of a pixel past the diamond, and because the canvas is symmetric
+about the anchor that fraction costs a whole pixel each way and the cell stops
+matching the quad it fills.
+
+A *slab* tile is a box one unit square and however tall the slab is, centred on
+the origin. Centred, so the canvas — symmetric about the anchor — comes out
+exactly the tile plus the skirt with no wasted rows, and the top face lands on
+the cell once the tilemap drops the quad by half the overhang. One material, not
+two: the banded shading already gives a box three tones, the top face on the
+ramp's highlight and the two sides below it, and a second darker material for
+the sides darkens what the shading has already darkened.
+
+Size the skirt a hair *under* the pixels you want rather than over. The canvas
+rounds up, so 10.00002 pixels of skirt costs a whole pixel each way.
 
 ### Several models on one sheet
 

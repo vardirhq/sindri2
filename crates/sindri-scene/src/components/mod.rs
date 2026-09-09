@@ -23,7 +23,7 @@ pub use camera::{CameraComponent, CameraFit};
 pub use grid::{GridNavigationComponent, GridOccupantComponent, GridWallDocument};
 pub use mesh::{MeshComponent, MeshPrimitive};
 pub use sprite::SpriteComponent;
-pub use tilemap::{TileProjection, TilemapComponent, TilemapError};
+pub use tilemap::{TileDraw, TileProjection, TilemapComponent, TilemapError};
 pub use ui::{UiAnchor, UiFill, UiFillEdge, UiImageComponent, UiTextComponent};
 pub use ui_shape::{ShapeComponent, ShapeGeometry, UiShapeBlend, UiShapeComponent, UiShapeKind};
 pub use ui_text_options::{
