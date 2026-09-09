@@ -14,6 +14,11 @@ All notable changes to Sindri Next will be documented here.
   the transform scale that makes one baked pixel one intended pixel, so a baked
   asset can be used without custom game code. Generated documents are written in
   Sindri's canonical form, and `sindri-core` has a test that proves it.
+  Gather uses it: its shrine, two waystones and three standing-stone markers
+  were dashed ellipses, rectangles and pentagons drawn by `sindri.shape` — the
+  placeholder art of an engine debug scene — and are now baked sprites drawn by
+  the ordinary sprite path. The Wisp halo and shrine heart stay shapes, because
+  a script moves them every frame and no baked frame can do that.
   See `docs/isometric-baker.md`.
 
 - Expand Weave from an isolated presentation proof into composed responsive

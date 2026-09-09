@@ -1228,5 +1228,16 @@ as evidence of a capability.
 It is emphatically **not** runtime 3D and does not imply any. The engine still
 has one mesh primitive, no glTF import, no material authoring and no lighting
 system, exactly as the sections above say. Nothing the engine, editor, native
-game or browser export builds depends on the tool, and no Sindri game uses its
-output yet.
+game or browser export builds depends on the tool: the assets it produces are
+ordinary PNGs and sheet documents, and by the time a game loads one there is
+nothing left to say it was baked.
+
+Gather uses it. Its shrine, its two waystones and its three standing-stone
+markers were dashed ellipses, rectangles and pentagons drawn by
+`sindri.shape` — the placeholder art of an engine debug scene — and are now
+baked sprites drawn by the ordinary sprite path. The recipes are
+`game/assets/textures/*.isobake.json`, and the PNG and `.sheet.json` beside
+each are generated from them.
+
+What stayed a shape stayed for a reason: the Wisp halo and the shrine heart are
+animated every frame by Decay, which no baked frame can do.

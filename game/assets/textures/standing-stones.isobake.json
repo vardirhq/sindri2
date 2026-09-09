@@ -1,0 +1,33 @@
+{
+  "format_version": 1,
+  "id": "standing-stones",
+  "texture": "textures/standing-stones.png",
+  "tile": { "width": 88, "height": 44 },
+  "tile_world": { "width": 1.1, "height": 0.55 },
+  "facing": "south",
+  "directions": 1,
+  "footprint": { "width": 1, "height": 1 },
+  "render": {
+    "supersample": 4,
+    "padding": 2,
+    "outline": { "enabled": true, "colour": "#241d2b" },
+    "shading": {
+      "light": [-0.3, 0.89, 0.35],
+      "thresholds": [0.25, 0.5, 0.8]
+    }
+  },
+  "model": {
+    "kind": "primitives",
+    "materials": {
+      "stone": { "colour": "#7f8a90" },
+      "dark-stone": { "colour": "#5b6469" },
+      "turf": { "colour": "#4f6f52" }
+    },
+    "parts": [
+      { "type": "sphere", "material": "turf", "position": [0, 0.0, 0], "radius": 0.5, "segments": 14, "scale": [1.0, 0.22, 0.62] },
+      { "type": "box", "material": "stone", "position": [-0.22, 0.34, 0.02], "size": [0.19, 0.66, 0.17], "rotation": [0, 0, -7] },
+      { "type": "box", "material": "dark-stone", "position": [0.1, 0.25, -0.06], "size": [0.16, 0.48, 0.15], "rotation": [0, 0, 5] },
+      { "type": "box", "material": "stone", "position": [0.33, 0.15, 0.08], "size": [0.14, 0.3, 0.13], "rotation": [0, 0, -3] }
+    ]
+  }
+}
