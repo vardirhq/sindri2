@@ -38,6 +38,21 @@ All notable changes to Sindri Next will be documented here.
   actually hand-roll is a gameplay one over tagged entities, of which physics
   casts are a subset.
 
+- **A field that decides what else its object holds is now editable, anywhere.**
+  A collider piece's `shape` was a readout: choosing `circle` has to replace a
+  box's half extents with a radius, and writing the word alone leaves a payload
+  the schema refuses. A camera's `projection` was the single exception, switched
+  by a hand-written rule in the editor that knew the camera's two field names —
+  which is exactly why nothing else could have one. A component now says what
+  each spelling makes it hold, the registry checks the claim by building the
+  component that spelling produces and decoding it, and one path performs the
+  switch for every tagged field at any depth: the fields of the variant being
+  left are dropped, the arriving variant's are filled in, and everything else is
+  kept, because a field both variants have is a field the author set. A variant
+  that could not be chosen safely now fails the build instead of the scene, and
+  the pair of lists cannot drift — a spelling nothing describes and a variant no
+  spelling names are both registration errors. `docs/generated/` carries the
+  variants, so a tool that is not the editor knows them too.
 - **A list of objects is something you can edit.** A compound collider was
   authorable in a scene file and not in the inspector: an array of objects fell
   to `ValueKind::Opaque` and was shown as stored, which was the honest answer

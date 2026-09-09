@@ -159,6 +159,51 @@ pub fn exemplar<'a>(template: &'a Value, path: &str) -> Option<&'a Value> {
     Some(here)
 }
 
+/// What the template holds at `path`, to be written to.
+///
+/// The same walk as [`exemplar`], and used for the same reason a variant needs
+/// one: proving that choosing a variant produces a component the engine
+/// accepts means building that component, which means writing the variant into
+/// a copy of the template where the tag actually lives.
+///
+/// Unlike [`exemplar`], an empty path is the template itself rather than
+/// nothing. The two disagree deliberately: a *meaning* recorded against no
+/// field names nothing and is refused, while the object holding a top-level tag
+/// is the component, and a camera's `projection` is exactly that case.
+#[must_use]
+pub(super) fn at_mut<'a>(template: &'a mut Value, path: &str) -> Option<&'a mut Value> {
+    if path.is_empty() {
+        return Some(template);
+    }
+    let mut here = template;
+    for step in steps(path)? {
+        here = match step {
+            Step::Field(name) => here.get_mut(name)?,
+            Step::Each(name) => here.get_mut(name)?.as_array_mut()?.first_mut()?,
+        };
+    }
+    Some(here)
+}
+
+/// A path split into the object that holds the field, and the field's name.
+///
+/// A variant tag is a field of some object, and switching it rewrites *that
+/// object* rather than the tag alone — which is the whole difference between
+/// writing `circle` and writing a circle. So the parent is what the caller
+/// needs, and an empty parent means the component itself.
+///
+/// `None` for a path whose last step is an array, because `pieces[]` names
+/// every piece rather than a field one of them has.
+#[must_use]
+pub(super) fn split_leaf(path: &str) -> Option<(&str, &str)> {
+    let steps = steps(path)?;
+    let Some(Step::Field(leaf)) = steps.last() else {
+        return None;
+    };
+    let parent = &path[..path.len() - leaf.len()];
+    Some((parent.strip_suffix('.').unwrap_or(parent), leaf))
+}
+
 /// Whether `path` names something the template actually has.
 ///
 /// The check that keeps a meaning honest. A renamed field leaves its meaning
@@ -254,6 +299,36 @@ mod tests {
     fn an_empty_exemplar_resolves_nothing() {
         let template = json!({ "pieces": [] });
         assert!(!resolves(&template, "pieces[].friction"));
+    }
+
+    #[test]
+    fn a_path_splits_into_the_object_that_holds_it_and_the_field() {
+        assert_eq!(split_leaf("projection"), Some(("", "projection")));
+        assert_eq!(
+            split_leaf("pieces[].shape.shape"),
+            Some(("pieces[].shape", "shape"))
+        );
+        assert_eq!(split_leaf("outline.color"), Some(("outline", "color")));
+        // `pieces[]` names every piece, not a field of one, so there is no
+        // object-and-field to split it into.
+        assert_eq!(split_leaf("pieces[]"), None);
+        assert_eq!(split_leaf(""), None);
+    }
+
+    /// The walk a variant is written back through: the same steps `exemplar`
+    /// takes, ending somewhere that can be replaced.
+    #[test]
+    fn a_path_can_be_written_through() {
+        let mut template = json!({ "pieces": [{ "shape": { "shape": "box" } }] });
+        *at_mut(&mut template, "pieces[].shape").unwrap() = json!({ "shape": "circle" });
+        assert_eq!(template["pieces"][0]["shape"], json!({ "shape": "circle" }));
+        assert!(at_mut(&mut template, "pieces[].nothing").is_none());
+        // The object holding a top-level tag is the component itself.
+        assert!(at_mut(&mut template, "").is_some());
+        assert!(
+            !resolves(&template, ""),
+            "which a meaning still may not name"
+        );
     }
 
     #[test]

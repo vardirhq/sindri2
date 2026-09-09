@@ -10,6 +10,7 @@ mod fields;
 mod meaning;
 #[cfg(test)]
 mod tests;
+mod variant;
 
 use fields::declared_fields;
 pub use meaning::{AssetKind, FieldMeaning};
@@ -72,6 +73,11 @@ struct ComponentRegistration {
     /// then knows only the shape, which is what it knew before any of this
     /// existed.
     meanings: Vec<(String, FieldMeaning)>,
+    /// The fields that decide what else the component holds.
+    ///
+    /// Empty for the ordinary case, which is a component with no field that
+    /// decides the shape of another.
+    variants: Vec<variant::TaggedField>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -208,6 +214,7 @@ impl ComponentSchemaRegistry {
                 fields,
                 default_payload,
                 meanings: Vec::new(),
+                variants: Vec::new(),
             },
         );
         Ok(())
@@ -496,6 +503,49 @@ pub enum ComponentRegistryError {
     UnknownFieldPath {
         type_name: &'static str,
         path: String,
+    },
+    #[error(
+        "the field at '{path}' of component type '{type_name}' is not a choice, \
+         so its variants have no spellings to be picked by"
+    )]
+    VariantsWithoutChoice {
+        type_name: &'static str,
+        path: String,
+    },
+    #[error(
+        "'{variant}' is not one of the spellings the choice at '{path}' of \
+         component type '{type_name}' accepts"
+    )]
+    UnknownVariant {
+        type_name: &'static str,
+        path: String,
+        variant: String,
+    },
+    #[error(
+        "the choice at '{path}' of component type '{type_name}' accepts \
+         '{variant}', which no variant describes"
+    )]
+    UndescribedVariant {
+        type_name: &'static str,
+        path: String,
+        variant: String,
+    },
+    #[error(
+        "the template for variant '{variant}' of component type '{type_name}' is not an object"
+    )]
+    InvalidVariantTemplate {
+        type_name: &'static str,
+        variant: String,
+    },
+    #[error(
+        "choosing '{variant}' for component type '{type_name}' does not produce \
+         a component the engine accepts"
+    )]
+    VariantMismatch {
+        type_name: &'static str,
+        variant: String,
+        #[source]
+        source: serde_json::Error,
     },
     #[error("the field template for component type '{type_name}' does not match it: {wrong}")]
     TemplateMismatch {

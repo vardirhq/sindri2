@@ -181,7 +181,9 @@ events of the step that just happened.
 
 What the editor does not have is physics-specific viewport authoring: no
 collider outline and no handles for a shape. The generic inspector does expose
-the body and collider payloads, and editor Play steps them through the same
+the body and collider payloads — a compound's pieces are added, removed,
+reordered, and edited down to each piece's shape, though no game in this
+repository authors a compound yet — and editor Play steps them through the same
 fixed-update path as a build. `games/orbital-last-stand` is the end-to-end proof:
 player, enemies, projectiles, pickups, and effects use distinct masks and
 collision or sensor events continuously.
@@ -676,11 +678,16 @@ frame.
   the same rows and a field nobody wrote down is still visible at what it means;
   only a field actually changed is written back. A value that is one of a few
   names is a menu — a camera's projection, a UI anchor, a tilemap's projection,
-  a rigid body's kind — taken from the engine's own list. A camera's projection
-  decides which other fields it has, so choosing one writes them: switching to
-  orthographic drops the vertical field of view, keeps the near and far planes,
-  and gains a vertical size, which typing the word into a text box could never
-  do. A field naming a project asset offers what the project holds while
+  a rigid body's kind — taken from the engine's own list. Some of those names
+  decide what else the thing holding them consists of, and the component says
+  which: switching a camera to orthographic drops the vertical field of view,
+  keeps the near and far planes, and gains a vertical size, and switching a
+  collider piece from a box to a circle drops the half extents and gains a
+  radius. Both are one edit through one path, at whatever depth the field sits,
+  and the registry proved at startup that each variant decodes — so a spelling
+  the editor offers is one the engine will accept, which typing the word into a
+  text box could never promise. A field naming a project asset offers what the
+  project holds while
   staying typeable — spelled the way the open scene resolves it, which is not
   the path from the project root whenever a project keeps its scene under
   `assets/`, and a reference the loader could never reach is offered nowhere

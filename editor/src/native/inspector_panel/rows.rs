@@ -166,10 +166,17 @@ pub(crate) fn value_row(
                         .color(color::TEXT_FAINT),
                 );
             });
+            // A field that decides what the rest of this object holds is
+            // drawn first, and applied to the object rather than to itself:
+            // that is the edit it actually is.
+            let tag = variant_row(ui, at, value, indent + 10.0);
             let Value::Object(nested) = value else {
                 return;
             };
             for (key, value) in nested.iter_mut() {
+                if Some(key.as_str()) == tag.as_deref() {
+                    continue;
+                }
                 let nested_path = join(at.path, key);
                 value_row(
                     ui,
@@ -239,7 +246,7 @@ fn described_row(
             let Some(list) = asset_list(Some(meaning), described.assets) else {
                 return false;
             };
-            super::field::asset_row(ui, key, value, list);
+            super::field::asset_row(ui, at.path, key, value, list);
             true
         }
         FieldMeaning::Colour
@@ -251,25 +258,75 @@ fn described_row(
             colour_row(ui, key, value);
             true
         }
-        // A choice below the top level is left alone for now, and says so.
-        // Every one of them is a variant tag -- a collider piece that says
-        // `circle` holds a radius where a `box` holds half extents -- so
-        // writing the word without writing its fields would leave a payload
-        // the schema refuses, which is a control that looks like it works.
-        FieldMeaning::Choice(_) if !at.path.is_empty() && at.path.contains('.') => {
-            property::readout(
+        FieldMeaning::Choice(options) => {
+            if described
+                .registry
+                .variants(described.type_name, at.path)
+                .is_some()
+            {
+                // A tag that decides what its object holds is drawn by that
+                // object, which is the only caller that can write the fields
+                // the arriving variant needs. Reaching it here means somebody
+                // drew the tag on its own, and the word alone would leave a
+                // payload the schema refuses -- so it says that instead.
+                property::readout(
+                    ui,
+                    label,
+                    value.as_str().unwrap_or_default(),
+                    Some("Choosing another changes what else this holds, so it is chosen above"),
+                );
+            } else if let Some(chosen) = super::field::choice_row(
                 ui,
-                label,
+                at.path,
+                key,
                 value.as_str().unwrap_or_default(),
-                Some(
-                    "Choosing another needs this piece's other fields to change with it, \
-                     which the schema cannot yet say",
-                ),
-            );
+                options,
+                indent,
+            ) {
+                *value = Value::String(chosen.to_owned());
+            }
             true
         }
         _ => false,
     }
+}
+
+/// The field of this object that decides what else it holds, drawn as a picker.
+///
+/// Returns the tag it drew, so the object does not draw it a second time as an
+/// ordinary string. `None` when the object has no such field, which is the
+/// ordinary case.
+///
+/// This is where a variant switch has to happen: the arriving variant needs
+/// fields written beside the tag, and the object is the only thing that holds
+/// both. A collider piece switched from a box to a circle loses its half
+/// extents and gains a radius here, in one edit, and the registry proved at
+/// startup that the result is a piece the engine accepts.
+fn variant_row(ui: &mut egui::Ui, at: At<'_>, value: &mut Value, indent: f32) -> Option<String> {
+    let described = at.described?;
+    let object = value.as_object()?;
+    let (tag, options) = object.keys().find_map(|key| {
+        let path = join(at.path, key);
+        let FieldMeaning::Choice(options) =
+            described.registry.meaning(described.type_name, &path)?
+        else {
+            return None;
+        };
+        described.registry.variants(described.type_name, &path)?;
+        Some((key.clone(), options.clone()))
+    })?;
+    let path = join(at.path, &tag);
+    let current = object
+        .get(&tag)
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned();
+    if let Some(chosen) = super::field::choice_row(ui, &path, &tag, &current, &options, indent) {
+        described
+            .registry
+            .switch_variant(described.type_name, &path, chosen, value);
+    }
+    Some(tag)
 }
 
 /// What an uneditable value says about itself.

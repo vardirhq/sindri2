@@ -6,7 +6,10 @@
 //! right was lost with them — and that the two things they got wrong stay
 //! fixed.
 
+use serde_json::json;
 use sindri_core::{AssetKind, FieldMeaning};
+use sindri_editor::inspector::choices::choose;
+use sindri_editor::inspector::fields::{drawn_payload, merge_edits};
 use sindri_editor::native::scene_extractor;
 
 /// Every dropdown the old table drew is still a dropdown.
@@ -160,4 +163,167 @@ fn arrays_that_are_not_lists_of_objects_are_not_treated_as_lists() {
             .is_some_and(serde_json::Value::is_object);
         assert!(!is_list, "{type_name}.{path} should not draw as a list");
     }
+}
+
+/// The whole of what a variant switch has to do, end to end: the payload that
+/// reaches the world is one camera rather than the fields of two.
+///
+/// Against the registry the engine actually registers, so the two projections
+/// are the ones a camera really has rather than a pair written for the test.
+#[test]
+fn switching_a_projection_leaves_one_cameras_worth_of_fields() {
+    let scene = scene_extractor();
+    let components = scene.components();
+    let defaults = components
+        .fields("sindri.camera")
+        .expect("a camera has fields");
+    let mut stored = json!({
+        "projection": "perspective",
+        "vertical_fov_degrees": 45.0,
+        "near": 0.2,
+        "far": 80.0
+    });
+
+    let mut drawn = drawn_payload(Some(defaults), &stored);
+    choose(
+        components,
+        "sindri.camera",
+        "projection",
+        "orthographic",
+        &mut drawn,
+    );
+    merge_edits(Some(defaults), &mut stored, &drawn);
+
+    assert_eq!(stored["projection"], json!("orthographic"));
+    assert!(
+        stored.get("vertical_fov_degrees").is_none(),
+        "the projection it was switched away from took its field with it"
+    );
+    assert!(stored["vertical_size"].as_f64().is_some());
+    assert_eq!(stored["near"], json!(0.2), "the planes are shared");
+    assert_eq!(stored["far"], json!(80.0));
+    components
+        .validate_payload("sindri.camera", &stored)
+        .expect("the switched camera is one the engine accepts");
+}
+
+/// The same switch one level down, which is the thing that had no control at
+/// all: a piece's shape decides what the piece measures.
+#[test]
+fn switching_a_pieces_shape_rewrites_that_piece_alone() {
+    let scene = scene_extractor();
+    let components = scene.components();
+    let mut collider = components
+        .default_payload("sindri.physics2d.collider")
+        .expect("a collider is addable")
+        .clone();
+    collider["pieces"].as_array_mut().unwrap().push(
+        components
+            .exemplar("sindri.physics2d.collider", "pieces[]")
+            .expect("a piece to add")
+            .clone(),
+    );
+    collider["pieces"][0]["friction"] = json!(0.25);
+
+    let switched = components.switch_variant(
+        "sindri.physics2d.collider",
+        "pieces.0.shape.shape",
+        "circle",
+        &mut collider["pieces"][0]["shape"],
+    );
+
+    assert!(
+        switched,
+        "a piece's shape is a variant the registry describes"
+    );
+    assert_eq!(collider["pieces"][0]["shape"]["shape"], json!("circle"));
+    assert!(
+        collider["pieces"][0]["shape"].get("half_extents").is_none(),
+        "the box's measurement went with the box"
+    );
+    assert!(collider["pieces"][0]["shape"]["radius"].as_f64().is_some());
+    assert_eq!(
+        collider["pieces"][0]["friction"],
+        json!(0.25),
+        "the rest of the piece is not part of the switch"
+    );
+    assert_eq!(
+        collider["pieces"][1]["shape"]["shape"],
+        json!("box"),
+        "and neither is any other piece"
+    );
+    components
+        .validate_payload("sindri.physics2d.collider", &collider)
+        .expect("a compound of a circle and a box is one the engine accepts");
+}
+
+/// Every spelling the editor offers is one it can write. The registry proves
+/// this at startup for its own variants; this is the guard that the two lists
+/// stay the same list.
+#[test]
+fn every_spelling_of_a_tagged_field_is_a_variant() {
+    let scene = scene_extractor();
+    let components = scene.components();
+    for (type_name, tag) in [
+        ("sindri.camera", "projection"),
+        ("sindri.physics2d.collider", "pieces[].shape.shape"),
+    ] {
+        let Some(FieldMeaning::Choice(spellings)) = components.meaning(type_name, tag) else {
+            panic!("{type_name}.{tag} is offered as a choice");
+        };
+        let variants = components
+            .variants(type_name, tag)
+            .expect("a tagged field describes its variants");
+        assert_eq!(
+            spellings.len(),
+            variants.len(),
+            "{type_name}.{tag} offers {} spellings and describes {} variants",
+            spellings.len(),
+            variants.len()
+        );
+        for spelling in spellings {
+            assert!(
+                variants.iter().any(|(name, _)| name == spelling),
+                "{type_name}.{tag} offers '{spelling}' with nothing to write for it"
+            );
+        }
+    }
+}
+
+/// A switch below the top level has to survive the merge, not only the draw.
+///
+/// The panel edits a drawn copy and `merge_edits` decides what is written back,
+/// so a piece's new shape reaching the scene is a separate claim from the
+/// switch itself working.
+#[test]
+fn a_switched_shape_reaches_the_scene() {
+    let scene = scene_extractor();
+    let components = scene.components();
+    let defaults = components
+        .fields("sindri.physics2d.collider")
+        .expect("a collider has fields");
+    let mut stored = components
+        .default_payload("sindri.physics2d.collider")
+        .expect("a collider is addable")
+        .clone();
+
+    let mut drawn = drawn_payload(Some(defaults), &stored);
+    components.switch_variant(
+        "sindri.physics2d.collider",
+        "pieces.0.shape.shape",
+        "capsule",
+        &mut drawn["pieces"][0]["shape"],
+    );
+    merge_edits(Some(defaults), &mut stored, &drawn);
+
+    assert_eq!(stored["pieces"][0]["shape"]["shape"], json!("capsule"));
+    assert!(
+        stored["pieces"][0]["shape"]["half_height"]
+            .as_f64()
+            .is_some()
+    );
+    assert!(stored["pieces"][0]["shape"].get("half_extents").is_none());
+    components
+        .validate_payload("sindri.physics2d.collider", &stored)
+        .expect("what was written back is a collider the engine accepts");
 }
