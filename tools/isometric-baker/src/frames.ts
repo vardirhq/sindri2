@@ -27,7 +27,14 @@ import { type Direction, type DirectionCount, framesFor, strideFor } from './dir
 import { type IsoCamera, originTileCentre, projectToPixels } from './iso.ts';
 import { type RgbaImage } from './image.ts';
 import { type Mesh, boundsOf } from './model.ts';
-import { type ContentBounds, addInnerOutline, contentBounds, downsample, snapToPalette, thresholdAlpha } from './postprocess.ts';
+import {
+  type ContentBounds,
+  addInnerOutline,
+  contentBounds,
+  downsample,
+  snapToPalette,
+  thresholdAlpha,
+} from './postprocess.ts';
 import { rasterise } from './raster.ts';
 import { type ShadingConfig } from './shading.ts';
 import { uniqueColours } from './palette.ts';

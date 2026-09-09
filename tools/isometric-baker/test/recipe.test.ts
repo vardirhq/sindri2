@@ -105,7 +105,13 @@ test('a texture has to be a png, because that is what a bake writes', () => {
 
 test('a mistyped colour is caught where it was written', () => {
   assert.throws(
-    () => parse({ model: { materials: { rock: { colour: '#80808' } }, parts: [{ type: 'box', material: 'rock', size: [1, 1, 1] }] } }),
+    () =>
+      parse({
+        model: {
+          materials: { rock: { colour: '#80808' } },
+          parts: [{ type: 'box', material: 'rock', size: [1, 1, 1] }],
+        },
+      }),
     /expected a hex colour/,
   );
   assert.throws(() => parse({ render: { outline: { colour: 'grey' } } }), /expected a hex colour/);

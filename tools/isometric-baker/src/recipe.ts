@@ -108,7 +108,11 @@ function readShading(value: JsonValue, path: string): ShadingConfig {
   }
 
   return {
-    light: light.map((entry, index) => asNumber(entry, `${path}.light[${index}]`)) as [number, number, number],
+    light: light.map((entry, index) => asNumber(entry, `${path}.light[${index}]`)) as [
+      number,
+      number,
+      number,
+    ],
     thresholds: edges as [number, number, number],
   };
 }

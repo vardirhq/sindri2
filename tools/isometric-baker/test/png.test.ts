@@ -73,7 +73,12 @@ test('rows written with a predictor are still read', () => {
 function rebuild(header: Buffer, idat: Buffer): Buffer {
   const template = encodePng(createImage(1, 1));
   const signature = template.subarray(0, 8);
-  return Buffer.concat([signature, chunk('IHDR', header), chunk('IDAT', idat), chunk('IEND', Buffer.alloc(0))]);
+  return Buffer.concat([
+    signature,
+    chunk('IHDR', header),
+    chunk('IDAT', idat),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
 }
 
 function chunk(type: string, data: Buffer): Buffer {

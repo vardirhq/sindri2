@@ -78,7 +78,10 @@ async function difference(root: string, file: BakeOutput): Promise<string | null
     const at = firstDifference(baked, stored);
     if (!at) return null;
     if (at.x < 0) {
-      return `${file.path} is ${stored.width}x${stored.height} on disk but bakes to ${baked.width}x${baked.height}`;
+      return (
+        `${file.path} is ${stored.width}x${stored.height} on disk ` +
+        `but bakes to ${baked.width}x${baked.height}`
+      );
     }
     return `${file.path} differs from the bake at pixel ${at.x},${at.y}`;
   }
