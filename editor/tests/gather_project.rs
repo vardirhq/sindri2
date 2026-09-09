@@ -117,7 +117,7 @@ fn the_listing_starts_at_the_assets_and_the_rest_is_still_there() {
         .into_iter()
         .map(|(entry, _)| entry.name.as_str())
         .collect();
-    assert_eq!(in_assets, ["audio", "fonts", "scripts", "textures"]);
+    assert_eq!(in_assets, ["audio", "fonts", "scripts", "textures", "ui"]);
 
     let whole_project: Vec<&str> = tree
         .folders_in(None)

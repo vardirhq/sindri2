@@ -18,7 +18,9 @@ use sindri_scene::SceneExtractor;
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_scene::{CameraView, SceneRuntime, TextureBindings};
 
-use crate::assets::{bind_audio, bind_fonts, bind_textures, extractor, world};
+use crate::assets::{
+    bind_audio, bind_fonts, bind_textures, extractor, presented_world, stylesheets, world,
+};
 use crate::error::GatherError;
 use crate::session::{GatherAudio, Session, gather_audio_backend};
 
@@ -35,6 +37,7 @@ pub(crate) struct GatherApp {
     text: TextRenderer,
     glyphs: GlyphRenderer,
     shapes: ShapeRenderer,
+    stylesheets: Vec<weave::Stylesheet>,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -72,6 +75,7 @@ impl DesktopApp for GatherApp {
             glyphs: GlyphRenderer::new(context.device(), context.format()),
             shapes: ShapeRenderer::new(context.device(), context.format()),
             text,
+            stylesheets: stylesheets()?,
         })
     }
 
@@ -96,13 +100,22 @@ impl DesktopApp for GatherApp {
         Ok(())
     }
 
+    #[allow(clippy::cast_precision_loss)]
     fn render(
         &mut self,
         context: &AppContext<'_>,
         view: &wgpu::TextureView,
     ) -> Result<(), Self::Error> {
-        let prepared = self.scene.extract_animated(
+        let presented = presented_world(
             self.engine.world(),
+            &self.stylesheets,
+            weave::Viewport {
+                width: context.width() as f32,
+                height: context.height() as f32,
+            },
+        )?;
+        let prepared = self.scene.extract_animated(
+            &presented,
             Viewport::new(context.width(), context.height()),
             CameraView::default(),
             &self.bindings,
