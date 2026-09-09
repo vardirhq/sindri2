@@ -33,10 +33,121 @@ pub const SHEET_FORMAT_VERSION: u32 = 1;
 /// The suffix that turns a texture's ID into its sheet's ID.
 const SHEET_SUFFIX: &str = ".sheet.json";
 
+/// Where a sprite meets the ground, as a fraction of its frame.
+///
+/// A quad is drawn centred on the entity's position, so without this the middle
+/// of the picture is what lands on the tile. That is right for a floating orb
+/// and wrong for anything that stands: a character drawn in the middle of its
+/// frame is drawn half a body low, standing in the tile in front of its own.
+///
+/// It belongs to the image for the same reason the slice does — it is a fact
+/// about the picture, not about whoever draws it, so it is said once beside the
+/// image instead of by every scene that uses it.
+///
+/// `Center` is the default because that is what a quad already does, what the
+/// baker's frames are padded to, and what every engine with a sprite pivot
+/// defaults to. Baked art declares it anyway rather than leaning on the
+/// default, so a sheet describes itself.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum SpriteAnchor {
+    /// The middle of the frame. What a quad does on its own.
+    #[default]
+    Center,
+    /// The middle of the frame's bottom edge, which is where a sprite drawn
+    /// standing on the floor of its own frame touches the ground.
+    Bottom,
+    /// An exact point, as fractions of the frame from its top-left corner.
+    ///
+    /// Fractions rather than pixels so a sheet needs no image size to be
+    /// understood, and so the anchor survives the art being redrawn at another
+    /// resolution.
+    Fraction([f32; 2]),
+}
+
+impl SpriteAnchor {
+    /// Where the anchor sits, as fractions of the frame from its top-left.
+    #[must_use]
+    pub const fn fraction(self) -> [f32; 2] {
+        match self {
+            Self::Center => [0.5, 0.5],
+            Self::Bottom => [0.5, 1.0],
+            Self::Fraction(fraction) => fraction,
+        }
+    }
+
+    /// How far to move the drawn quad so the anchor lands on the entity.
+    ///
+    /// In the quad's own space, where it spans -0.5 to 0.5 and y counts up
+    /// while a frame's rows count down.
+    #[must_use]
+    pub fn offset(self) -> [f32; 2] {
+        let [x, y] = self.fraction();
+        [0.5 - x, y - 0.5]
+    }
+
+    /// Checks the anchor is a point on the frame.
+    ///
+    /// Outside it is refused rather than clamped: an anchor past the edge is a
+    /// number someone got wrong, and drawing it somewhere plausible instead
+    /// hides that.
+    fn validate(self) -> Result<(), SheetError> {
+        let [x, y] = self.fraction();
+        if [x, y]
+            .iter()
+            .all(|value| value.is_finite() && (0.0..=1.0).contains(value))
+        {
+            return Ok(());
+        }
+        Err(SheetError::Anchor { x, y })
+    }
+}
+
+/// Written as `"center"`, `"bottom"`, or `[x, y]`.
+///
+/// Hand-written by hand-drawn art's authors, so the two common answers have
+/// names and only the unusual one needs numbers.
+impl Serialize for SpriteAnchor {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::Center => serializer.serialize_str("center"),
+            Self::Bottom => serializer.serialize_str("bottom"),
+            Self::Fraction(fraction) => fraction.serialize(serializer),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for SpriteAnchor {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Authored {
+            Named(String),
+            Fraction([f32; 2]),
+        }
+        match Authored::deserialize(deserializer)? {
+            Authored::Named(name) => match name.as_str() {
+                "center" => Ok(Self::Center),
+                "bottom" => Ok(Self::Bottom),
+                other => Err(serde::de::Error::custom(format!(
+                    "unknown anchor {other:?}; expected \"center\", \"bottom\", or [x, y]"
+                ))),
+            },
+            Authored::Fraction(fraction) => Ok(Self::Fraction(fraction)),
+        }
+    }
+}
+
 /// One image, cut into named parts.
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct SpriteSheetDocument {
     pub format_version: u32,
+    /// Where sprites from this sheet meet the ground.
+    ///
+    /// Absent means [`SpriteAnchor::Center`], which is what a quad drew before
+    /// there was an anchor to declare — so every sheet written before this
+    /// keeps drawing exactly as it did.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub anchor: Option<SpriteAnchor>,
     /// A uniform slice, which is how a sheet is almost always cut.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub grid: Option<SheetGrid>,
@@ -193,6 +304,7 @@ impl SpriteSheetDocument {
     pub fn from_grid(columns: u32, rows: u32) -> Self {
         Self {
             format_version: SHEET_FORMAT_VERSION,
+            anchor: None,
             grid: Some(SheetGrid::edge_to_edge(columns, rows)),
             sprites: BTreeMap::new(),
             editor: BTreeMap::new(),
@@ -214,6 +326,7 @@ impl SpriteSheetDocument {
     /// `#floor` and not `#7`: a name survives a re-slice that moves the cell,
     /// and an index does not.
     pub fn rects(&self) -> Result<BTreeMap<String, [f32; 4]>, SheetError> {
+        self.anchor.unwrap_or_default().validate()?;
         let mut rects = BTreeMap::new();
         if let Some(grid) = &self.grid {
             if grid.columns == 0 || grid.rows == 0 {
@@ -300,6 +413,8 @@ pub enum SheetError {
     MeasuredWithoutSize,
     #[error("cell {index} does not fit the grid it was cut from")]
     CellDoesNotFit { index: u32 },
+    #[error("an anchor sits at ({x}, {y}), which is not a point on the frame")]
+    Anchor { x: f32, y: f32 },
     #[error("sheet is not valid json: {message}")]
     Json { message: String },
 }

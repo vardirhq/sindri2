@@ -1,11 +1,14 @@
 //! What a sprite sheet accepts, and the names it produces.
 
-use super::{SHEET_FORMAT_VERSION, SheetError, SheetGrid, SpriteSheetDocument, sheet_id_for};
+use super::{
+    SHEET_FORMAT_VERSION, SheetError, SheetGrid, SpriteAnchor, SpriteSheetDocument, sheet_id_for,
+};
 use crate::{AssetId, SpriteRef};
 
 fn grid(columns: u32, rows: u32, names: &[&str]) -> SpriteSheetDocument {
     SpriteSheetDocument {
         format_version: SHEET_FORMAT_VERSION,
+        anchor: None,
         grid: Some(SheetGrid {
             columns,
             rows,
@@ -152,4 +155,61 @@ fn a_generated_texture_is_a_reference_without_an_asset() {
 fn a_reference_with_nothing_after_the_hash_is_refused() {
     assert!(SpriteRef::parse("textures/tiles.png#").is_err());
     assert!(SpriteRef::parse("textures/tiles.png#a#b").is_err());
+}
+
+/// Offsets are exact sums of authored numbers; the tolerance only says these
+/// are floats.
+fn offset_is(anchor: SpriteAnchor, expected: [f32; 2]) {
+    let offset = anchor.offset();
+    assert!(
+        (offset[0] - expected[0]).abs() < 1.0e-6 && (offset[1] - expected[1]).abs() < 1.0e-6,
+        "{anchor:?} offsets by {offset:?} rather than {expected:?}"
+    );
+}
+
+/// The default is the centre, because that is what a quad drew before there was
+/// an anchor to declare — every sheet written before this keeps its picture.
+#[test]
+fn a_sheet_that_says_nothing_anchors_at_its_centre() {
+    let sheet = SpriteSheetDocument::from_grid(2, 2);
+    assert_eq!(sheet.anchor, None);
+    assert_eq!(sheet.anchor.unwrap_or_default(), SpriteAnchor::Center);
+    offset_is(SpriteAnchor::default(), [0.0, 0.0]);
+}
+
+/// The two common answers have names so hand-drawn art can say the usual thing
+/// without arithmetic, and the unusual one still takes numbers.
+#[test]
+fn an_anchor_is_written_as_a_name_or_a_point() {
+    for (json, anchor) in [
+        ("\"center\"", SpriteAnchor::Center),
+        ("\"bottom\"", SpriteAnchor::Bottom),
+        ("[0.5,0.75]", SpriteAnchor::Fraction([0.5, 0.75])),
+    ] {
+        assert_eq!(
+            serde_json::from_str::<SpriteAnchor>(json).expect("the anchor parses"),
+            anchor
+        );
+        assert_eq!(serde_json::to_string(&anchor).expect("it writes"), json);
+    }
+
+    let error = serde_json::from_str::<SpriteAnchor>("\"middle\"").unwrap_err();
+    assert!(error.to_string().contains("middle"), "{error}");
+}
+
+/// Anchoring at the foot lifts the quad by half its height, which is what puts
+/// the bottom of the picture on the tile rather than its middle.
+#[test]
+fn anchoring_at_the_foot_lifts_the_quad_onto_the_tile() {
+    offset_is(SpriteAnchor::Bottom, [0.0, 0.5]);
+    offset_is(SpriteAnchor::Fraction([1.0, 0.0]), [-0.5, -0.5]);
+}
+
+/// An anchor off the frame is a number someone got wrong, so it is refused
+/// rather than clamped to somewhere plausible.
+#[test]
+fn an_anchor_off_the_frame_is_refused() {
+    let mut sheet = SpriteSheetDocument::from_grid(1, 1);
+    sheet.anchor = Some(SpriteAnchor::Fraction([0.5, 1.5]));
+    assert!(matches!(sheet.rects(), Err(SheetError::Anchor { .. })));
 }

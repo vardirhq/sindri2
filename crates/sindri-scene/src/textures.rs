@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use sindri_core::{SceneComponent, SpriteRef, SpriteSheetDocument, World};
+use sindri_core::{SceneComponent, SpriteAnchor, SpriteRef, SpriteSheetDocument, World};
 use sindri_render::{TextureId, TextureRegistry, UvRect};
 use thiserror::Error;
 
@@ -23,6 +23,9 @@ pub struct TextureBindings {
     /// the reason the handles are: a scene says `tiles.png#floor`, the renderer
     /// knows a handle and a rect, and this is the only place that knows both.
     sheets: BTreeMap<String, BTreeMap<String, UvRect>>,
+    /// Where each texture's sprites meet the ground, by the same key. Kept
+    /// beside the rects because it arrives with them and is wanted with them.
+    anchors: BTreeMap<String, SpriteAnchor>,
 }
 
 impl TextureBindings {
@@ -78,6 +81,11 @@ impl TextureBindings {
             })?;
             rects.insert(name, rect);
         }
+        if let Some(anchor) = sheet.anchor {
+            self.anchors.insert(texture.clone(), anchor);
+        } else {
+            self.anchors.remove(&texture);
+        }
         self.sheets.insert(texture, rects);
         Ok(())
     }
@@ -85,6 +93,20 @@ impl TextureBindings {
     /// Forgets how `texture` is cut, leaving its sprites unresolved.
     pub fn unbind_sheet(&mut self, texture: &str) {
         self.sheets.remove(texture);
+        self.anchors.remove(texture);
+    }
+
+    /// Where `reference` meets the ground.
+    ///
+    /// A texture with no sheet, or a sheet that says nothing, anchors at its
+    /// centre — which is what a quad does on its own, so art that never
+    /// declared an anchor draws exactly where it always did.
+    #[must_use]
+    pub fn sprite_anchor(&self, reference: &SpriteRef) -> SpriteAnchor {
+        self.anchors
+            .get(reference.texture())
+            .copied()
+            .unwrap_or_default()
     }
 
     /// The part of the texture `reference` names, or `None` when it names the

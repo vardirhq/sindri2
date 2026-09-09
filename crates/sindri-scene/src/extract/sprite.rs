@@ -8,6 +8,7 @@
 
 use std::collections::BTreeMap;
 
+use glam::{Mat4, Vec3};
 use sindri_core::{EntityId, SpriteRef, World};
 use sindri_render::{
     ExtractedFrame, FrameCamera, FrameCommand, FramePass, RenderLayer, RenderStage, SpriteDepth,
@@ -143,7 +144,12 @@ impl SceneExtractor {
                 .and_then(|data| data.transform_3d)
                 .unwrap_or_default();
             let camera = cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?;
-            let model = transform_matrix(transform);
+            // The anchor moves the quad in its own space, so it scales and
+            // rotates with the sprite: an anchor at the foot of a picture stays
+            // at its foot however the entity is scaled.
+            let [offset_x, offset_y] = textures.sprite_anchor(&reference).offset();
+            let model = transform_matrix(transform)
+                * Mat4::from_translation(Vec3::new(offset_x, offset_y, 0.0));
             let order = TransparentOrder::new(
                 sprite.layer,
                 camera_distance(camera.view, model.w_axis.truncate()),

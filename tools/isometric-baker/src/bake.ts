@@ -62,9 +62,49 @@ export interface BakeResult {
   report: BakeReport;
 }
 
+/**
+ * Refuses a model that stands on more ground than its footprint claims.
+ *
+ * A footprint is what the game reserves: collision, placement and the order
+ * things draw in all read it, and all of them assume the picture stays inside
+ * it. A model wider than its footprint therefore covers tiles it does not own,
+ * and a character standing on one of those legally is drawn sliced by scenery
+ * it is not touching. Height is free — a tree is meant to tower over its cell —
+ * so only the ground is measured.
+ *
+ * Refused rather than widened for the author: the fix is either a smaller model
+ * or a bigger footprint, and which one is right depends on what the thing is.
+ */
+function checkFootprint(meshes: Mesh[], recipe: Recipe): void {
+  const axes = [
+    { name: 'x', stride: 0, limit: recipe.footprint.width },
+    { name: 'z', stride: 2, limit: recipe.footprint.height },
+  ];
+  for (const [index, mesh] of meshes.entries()) {
+    for (const axis of axes) {
+      let reach = 0;
+      for (let at = axis.stride; at < mesh.positions.length; at += 3) {
+        reach = Math.max(reach, Math.abs(mesh.positions[at]));
+      }
+      // Measured as a full width about the origin, because that is where the
+      // footprint is centred and how a recipe states it.
+      const extent = reach * 2;
+      if (extent > axis.limit + 1e-6) {
+        const name = recipe.variants[index].name ?? recipe.texture;
+        throw new Error(
+          `${name} stands ${extent.toFixed(3)} tiles across in ${axis.name}, ` +
+            `but its footprint claims ${axis.limit}. Shrink the model or widen the footprint: ` +
+            `a model wider than its footprint covers ground the game lets others stand on.`,
+        );
+      }
+    }
+  }
+}
+
 export function bake(recipe: Recipe): BakeResult {
   const camera = createCamera(recipe.tile);
   const meshes = recipe.variants.map((variant) => buildMesh(variant.model));
+  checkFootprint(meshes, recipe);
 
   // One canvas and one palette across the whole sheet. The canvas because
   // frames must be uniform for the anchor to be the centre of each; the palette

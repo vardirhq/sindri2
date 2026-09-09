@@ -1,5 +1,6 @@
 {
   "format_version": 1,
+  "anchor": "center",
   "grid": {
     "columns": 1,
     "rows": 1,
@@ -7,8 +8,8 @@
       "south"
     ],
     "size": [
-      108,
-      218
+      96,
+      212
     ],
     "margin": [
       2,

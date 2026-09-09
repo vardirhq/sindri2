@@ -197,6 +197,10 @@ pub const SHEETS: &[(&str, &str)] = &[
         include_str!("../assets/textures/tiles.sheet.json"),
     ),
     (
+        "textures/orb.sheet.json",
+        include_str!("../assets/textures/orb.sheet.json"),
+    ),
+    (
         "textures/pip.sheet.json",
         include_str!("../assets/textures/pip.sheet.json"),
     ),

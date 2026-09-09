@@ -9,12 +9,15 @@
 //! What happens once they load — draw order, collision, pathfinding, finishing
 //! the game — is `the_game_plays.rs`.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
-use sindri_core::{SceneComponent, SceneDocument, UnknownComponentPolicy, World};
+use sindri_core::{
+    AssetId, SceneComponent, SceneDocument, SpriteSheetDocument, UnknownComponentPolicy, World,
+    sheet_id_for,
+};
 use sindri_decay::{ScriptComponent, ScriptSources, Scripts};
 use sindri_gather::{
-    FONTS, TEXTURE_IDS, TEXTURES, extractor, presented_world, sources, stylesheets, world,
+    FONTS, SHEETS, TEXTURE_IDS, TEXTURES, extractor, presented_world, sources, stylesheets, world,
 };
 use sindri_scene::{
     SceneExtractor, ShapeComponent, SpriteComponent, TilemapComponent, UiAnchor, UiTextComponent,
@@ -288,5 +291,60 @@ fn the_scene_file_is_canonical() {
     assert_eq!(
         stored, canonical,
         "gather.scene.json is not canonical; rerun with SINDRI_UPDATE_GATHER_SCENE=1"
+    );
+}
+
+/// Every texture drawn in the world says where it meets the ground.
+///
+/// A quad is drawn centred on its entity, so a sprite that declares nothing is
+/// drawn by its middle. For baked art that is right — the baker pads each frame
+/// so its middle *is* the floor of the tile — and for hand-drawn art it is a
+/// coin toss nobody is asked to call. The player was drawn a third of a ball low
+/// for exactly that reason, and nothing failed.
+///
+/// So the game requires the answer to be written down rather than defaulted.
+/// `"center"` is a perfectly good answer — the orbs float and say so — but it
+/// has to be said, because a sheet that says nothing cannot be told apart from
+/// one whose author never considered the question.
+#[test]
+fn every_texture_drawn_in_the_world_declares_where_it_meets_the_ground() {
+    let world = world().expect("the scene loads");
+    let extractor = extractor().expect("the schemas register");
+    let sheets: BTreeMap<&str, &str> = SHEETS.iter().copied().collect();
+
+    // World sprites only. A UI image is placed by its own anchor against the
+    // viewport and never stands on anything, so asking where it meets the
+    // ground is a question about the wrong space.
+    let drawn: BTreeSet<String> = extractor
+        .components()
+        .query::<SpriteComponent>(&world)
+        .expect("sprites read")
+        .into_iter()
+        .map(|(_, sprite)| {
+            sprite
+                .reference()
+                .expect("a drawn sprite names a texture")
+                .texture()
+                .to_owned()
+        })
+        .collect();
+
+    let mut silent = Vec::new();
+    for texture in drawn {
+        let texture_id = AssetId::new(&texture).expect("a drawn texture is a valid id");
+        let id = sheet_id_for(&texture_id).expect("a texture has a sheet id");
+        let Some(json) = sheets.get(id.as_str()) else {
+            silent.push(format!("{texture} has no sheet at all"));
+            continue;
+        };
+        let sheet = SpriteSheetDocument::from_json(json).expect("a shipped sheet parses");
+        if sheet.anchor.is_none() {
+            silent.push(format!("{texture} declares no anchor"));
+        }
+    }
+
+    assert!(
+        silent.is_empty(),
+        "these are drawn in the world without saying where they touch it: {silent:?}"
     );
 }

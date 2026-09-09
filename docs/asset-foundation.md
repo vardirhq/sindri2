@@ -96,6 +96,32 @@ than the ordinary case for every unsliced texture in a project. The one exceptio
 sprite, whose own reference names no part because its clips do; `referenced_sheets` knows about that
 case explicitly, because nothing in the sprite's reference reveals it.
 
+### Where a sprite meets the ground
+
+A sheet also says where its sprites *touch the world*:
+
+```json
+"anchor": "center"          // the default: the middle of the frame
+"anchor": "bottom"          // the middle of the frame's bottom edge
+"anchor": [0.5, 0.8438]     // an exact point, as fractions from the top-left
+```
+
+A world sprite is drawn on a quad centred on its entity, so without an anchor the middle of the
+picture is what lands on the tile. That is right for something that floats and wrong for anything
+that stands: a character drawn in the middle of its frame is drawn half a body low, standing in the
+tile in front of its own, and nothing fails.
+
+It belongs to the sheet for the same reason the slice does — it is a fact about the picture, not
+about whoever draws it, so it is said once beside the image rather than by every scene that uses it.
+Fractions rather than pixels so a sheet needs no image size to be understood and the anchor survives
+the art being redrawn at another resolution.
+
+`"center"` is the default because it is what a quad already did, so every sheet written before the
+field keeps its picture exactly. Baked art declares it anyway rather than leaning on that default: a
+sheet that says nothing cannot be told apart from one whose author never considered the question.
+Anchors apply to world sprites only — a UI image is placed by its own anchor against the viewport and
+never stands on anything.
+
 ## Driving all of it
 
 Everything above was in place for a release and had no caller. Before `AssetLoader` landed, the demo's badge was `include_bytes!`, the editor bound two textures a demo crate handed it, and the only stage with a user was the decoder. The reason is visible in the shape: loading one asset correctly is six steps in a particular order — request a handle, enqueue it, move the entry to loading, drain, decode, apply against the handle that is still current — and each one fails quietly rather than loudly when it is skipped.
