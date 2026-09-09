@@ -14,10 +14,10 @@ not need this document to be told that a component exists.
 | Capability | Current proof | Showcase quality |
 | --- | --- | --- |
 | Decay | Player movement, orb collection, progress lamps, victory, and Wisp behavior are scripts; Rust hosts them without owning game rules | Strong |
-| Tilemap | One authored 7x7 isometric tilemap replaces 49 floor entities | Technically clear, visually plain |
+| Tilemap | One authored 9x9 isometric tilemap replaces a floor made from individual sprite entities | Technically clear; regional patterning is the world-refresh foundation |
 | Grid coordinates | Player movement, bounds, and orb collection use the tilemap's logical coordinates | Strong |
-| Navigation | The Wisp follows the player around authored walls through shared deterministic A* | Real but visually easy to miss |
-| Sprite animation | The player advances an authored clip | Real but not conspicuous |
+| Navigation | The Wisp follows the player around visible standing-stone walls through shared deterministic A*; its animated halo makes each step readable | Strong |
+| Animation | The player advances an authored sprite clip while the Wisp halo and shrine heart pulse and turn through Decay-driven transforms | Conspicuous |
 | UI and text | A project-font title, progress lamps, and a victory banner render as screen UI | Functional, not product-like |
 | Input | Arrow/WASD movement and the shared touch stick drive the same Decay player | Strong |
 | Audio | Background music plus pickup and victory sounds use the shared native/browser path | Complete but lightly presented |

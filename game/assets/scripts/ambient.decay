@@ -1,0 +1,32 @@
+// Quiet motion shared by Gather's world markers.
+//
+// The shapes stay authored in the scene. This script only gives their
+// transforms a pulse or turn, so the same presentation runs in every host.
+script Ambient {
+    @export
+    let spin: f32 = 0.0;
+
+    @export
+    let pulse: f32 = 0.0;
+
+    @export
+    let pulse_speed: f32 = 1.0;
+
+    @export
+    let phase: f32 = 0.0;
+
+    var base_x: f32 = 1.0;
+    var base_y: f32 = 1.0;
+
+    fn start() {
+        base_x = this.transform.scale.x;
+        base_y = this.transform.scale.y;
+    }
+
+    fn update(dt: f32) {
+        this.transform.rotation_z += spin * dt;
+        let amount = 1.0 + sin(Time.elapsed * pulse_speed + phase) * pulse;
+        this.transform.scale.x = base_x * amount;
+        this.transform.scale.y = base_y * amount;
+    }
+}

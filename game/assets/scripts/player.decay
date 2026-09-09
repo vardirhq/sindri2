@@ -30,11 +30,11 @@ script Player {
         grid_x += sideways * speed * dt;
         grid_y -= forward * speed * dt;
 
-        // The 7x7 floor owns cells 0 through 6 on both axes. Keeping the player
+        // The 9x9 floor owns cells 0 through 8 on both axes. Keeping the player
         // in those logical bounds follows the diamond instead of clamping it to
         // a screen-aligned rectangle laid over the picture.
-        grid_x = min(max(grid_x, 0.0), 6.0);
-        grid_y = min(max(grid_y, 0.0), 6.0);
+        grid_x = min(max(grid_x, 0.0), 8.0);
+        grid_y = min(max(grid_y, 0.0), 8.0);
         Grid.place(this.entity, floor, grid_x, grid_y);
     }
 }

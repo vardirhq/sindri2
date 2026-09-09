@@ -1143,11 +1143,10 @@ it exists and why it is not an example; this says what of it is real.
 
 ### Works
 
-**Its floor is a tilemap on a sliced sheet.** One entity holding a 7x7 grid of
-cells indexing a two-name palette, where it was 49 sprite entities; the picture is
-the same to within one 8-bit step, which is the cost of baking the darker checker
-square into the sheet rather than tinting
-it at draw time.
+**Its floor is a tilemap on a sliced sheet.** One entity holds a 9x9 grid of
+cells indexing a two-name palette, where the original floor was 49 sprite
+entities. Regional tile patterns now divide the expanded island into readable
+areas without returning to one entity per cell.
 
 **It is a game you can play.** `cargo run -p sindri-gather` opens a window.
 Arrow keys or WASD move the player on desktop, and the browser build adds a
@@ -1165,7 +1164,7 @@ for game-wide facts such as score and victory. Neither change added gameplay to
 Rust.
 
 **Its gameplay now uses the diamond's logical grid.** The player and orbs read
-continuous coordinates through the floor tilemap, movement clamps to the 7x7
+continuous coordinates through the floor tilemap, movement clamps to the 9x9
 logical bounds, and placement projects back through the same isometric mapping
 that draws and picks the floor. Arrow keys follow the two diagonal grid axes;
 holding two walks along a screen axis. Orb bobbing remains a presentation offset
@@ -1182,7 +1181,13 @@ and checking the banner comes up.
 for a fixed number of fixed steps — and photographs where that leaves the game,
 so the picture proves the scripts ran rather than that the scene loads.
 
-**It opens in the editor, and Play runs it there.** All 22 entities load, both
+**Its grid reads as an authored place.** The expanded island uses regional tile
+patterns, a home shrine, east and west waystones, and standing-stone bars placed
+over the same authored walls the Wisp routes around. Regular procedural shapes
+draw those landmarks, while a small Decay script turns and pulses the shrine
+heart and the Wisp's travelling halo.
+
+**It opens in the editor, and Play runs it there.** All 30 entities load, both
 viewports draw it, and the editor advances the same Decay sources the standalone
 game does. `docs/editor-meets-the-game.md` records the first editor session
 against the older 68-entity scene; the tilemap removed its 49 floor rows and

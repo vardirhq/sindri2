@@ -16,7 +16,8 @@ use sindri_gather::{
 use sindri_grid::{GridCoord, GridPoint, GridSpace, PlanePoint};
 use sindri_platform::InputState;
 use sindri_scene::{
-    SceneExtractor, TilemapComponent, UiAnchor, UiTextComponent, WorldGridNavigation,
+    SceneExtractor, ShapeComponent, TilemapComponent, UiAnchor, UiTextComponent,
+    WorldGridNavigation,
 };
 
 const SCENE: &str = include_str!("../assets/gather.scene.json");
@@ -49,6 +50,58 @@ fn floor_grid(world: &World, extractor: &SceneExtractor) -> (Transform3D, GridSp
         map,
         tilemap.grid_space().expect("the floor has a valid grid"),
     )
+}
+
+#[test]
+fn the_island_has_authored_regions() {
+    let world = world().expect("the scene loads");
+    let extractor = extractor().expect("the schemas register");
+    let (_, floor) = extractor
+        .components()
+        .query::<TilemapComponent>(&world)
+        .expect("the tilemap schema reads")
+        .into_iter()
+        .next()
+        .expect("Gather has a floor");
+
+    assert_eq!((floor.columns, floor.rows), (9, 9));
+    assert_eq!(floor.tiles.len(), 81);
+    assert!(
+        floor.tiles.windows(2).any(|tiles| tiles[0] == tiles[1]),
+        "the island uses authored regions rather than a full checkerboard"
+    );
+}
+
+#[test]
+fn landmarks_make_the_world_and_navigation_readable() {
+    let world = world().expect("the scene loads");
+    let extractor = extractor().expect("the schemas register");
+    let shaped: BTreeSet<String> = extractor
+        .components()
+        .query::<ShapeComponent>(&world)
+        .expect("the shape schema reads")
+        .into_iter()
+        .filter_map(|(entity, _)| {
+            world
+                .get(entity)?
+                .source_id
+                .as_ref()
+                .map(|id| id.as_str().to_owned())
+        })
+        .collect();
+
+    for expected in [
+        "shrine",
+        "shrine-heart",
+        "waystone-west",
+        "waystone-east",
+        "wall-marker-north",
+        "wall-marker-middle",
+        "wall-marker-south",
+        "wisp-halo",
+    ] {
+        assert!(shaped.contains(expected), "Gather is missing {expected}");
+    }
 }
 
 #[test]
