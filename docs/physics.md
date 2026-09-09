@@ -101,9 +101,41 @@ Collision masks are Sindri bit masks from the first implementation. They are not
 Rapier `Group` values in public APIs or serialized JSON.
 
 A collider may exist without a rigid-body component; it is treated as a static
-collider owned by the entity. An entity may initially have one authored collider
-per dimension. Compound/multiple colliders are deferred until a game proves the
-need rather than forcing a collection-shaped scene schema immediately.
+collider owned by the entity.
+
+A 2D collider may be authored in **several pieces**, because one shape is often a
+poor description of a thing: a character is a capsule with a circle at each side,
+a ship a box and two pods. The pieces belong to the one entity and move as one
+object — a compound is one collider made of parts, not several colliders — and
+they need no child entities to say so, because a piece already carries its own
+offset and rotation.
+
+```jsonc
+"sindri.physics2d.collider": {
+  "pieces": [
+    { "shape": { "shape": "capsule", "half_height": 0.4, "radius": 0.22 },
+      "offset": [0.0, 0.05], "rotation": 0.0, /* … */ },
+    { "shape": { "shape": "circle", "radius": 0.18 },
+      "offset": [-0.38, -0.1], "rotation": 0.0, /* … */ }
+  ]
+}
+```
+
+The single form — a collider written directly, with no `pieces` — still means
+exactly what it always did, and is kept rather than migrated: a scene is a file
+someone wrote, and a format that can only be read after a rewrite is one that
+breaks their project on upgrade.
+
+Two consequences worth stating, because both are derived rather than authored.
+Mass properties come from **every** piece and sum, so a body's centre of mass is
+decided by the compound and not by its first piece; `PhysicsWorld2d::mass`
+exposes the total so that claim can be checked. And validation is **per piece and
+names the index** — a compound is a list, so "restitution must be between 0 and
+1" without one is a needle in it. Nothing is inserted unless every piece passes,
+because a half-built body is worse than none.
+
+3D colliders remain single for now; the shape of the change is known, and it
+should follow a game that needs it rather than lead one.
 
 An entity may not participate in both the 2D and 3D physics worlds at once.
 Validation reports that as an authored configuration error instead of choosing a

@@ -57,10 +57,10 @@ pub struct ScenePhysics2d {
 /// Compared rather than the whole component, because a change to *anything*
 /// physics reads means the body has to be rebuilt, and a change to anything
 /// else must not.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, PartialEq)]
 struct Authored {
     body: Option<RigidBody2d>,
-    collider: sindri_physics::Collider2d,
+    collider: Vec<sindri_physics::Collider2d>,
     kind: RigidBodyKind,
 }
 
@@ -151,7 +151,7 @@ impl ScenePhysics2d {
                 .map(|authored| authored.0);
             let authored = Authored {
                 body,
-                collider: collider.0,
+                collider: collider.0.clone(),
                 kind: body.map_or(RigidBodyKind::Static, |body| body.kind),
             };
             match self.registered.get(&entity) {
@@ -171,11 +171,11 @@ impl ScenePhysics2d {
             let outcome = match authored.body {
                 Some(body) => {
                     self.world
-                        .insert_body(entity, RigidBody2d { pose, ..body }, authored.collider)
+                        .insert_body(entity, RigidBody2d { pose, ..body }, &authored.collider)
                 }
                 None => self
                     .world
-                    .insert_static_collider(entity, pose, authored.collider),
+                    .insert_static_collider(entity, pose, &authored.collider),
             };
             match outcome {
                 Ok(()) => {

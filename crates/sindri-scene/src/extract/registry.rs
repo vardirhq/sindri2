@@ -299,16 +299,22 @@ fn register_gameplay(components: &mut ComponentSchemaRegistry) -> Result<(), Sce
             "lock_rotation": false
         }),
     )?;
+    // The default is written as a compound of one rather than as a bare
+    // collider: both parse, and this is the shape a second piece is added to.
+    // A default in the older single form would make every new collider need
+    // rewriting before it could grow.
     components.register_with_default::<Collider2dComponent>(
         "Collider 2D",
         serde_json::json!({
-            "shape": { "shape": "box", "half_extents": [0.5, 0.5] },
-            "offset": [0.0, 0.0],
-            "rotation": 0.0,
-            "sensor": false,
-            "layers": { "memberships": 4_294_967_295_u32, "filter": 4_294_967_295_u32 },
-            "friction": 0.5,
-            "restitution": 0.0
+            "pieces": [{
+                "shape": { "shape": "box", "half_extents": [0.5, 0.5] },
+                "offset": [0.0, 0.0],
+                "rotation": 0.0,
+                "sensor": false,
+                "layers": { "memberships": 4_294_967_295_u32, "filter": 4_294_967_295_u32 },
+                "friction": 0.5,
+                "restitution": 0.0
+            }]
         }),
     )?;
     // Fields but no default, for the reason the registry states: a blank

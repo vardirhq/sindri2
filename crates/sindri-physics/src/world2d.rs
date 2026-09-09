@@ -14,13 +14,20 @@ use crate::types2d::{
     Collider2d, ColliderShape2d, PhysicsEvent2d, PhysicsEventKind, PhysicsPose2d, RigidBody2d,
 };
 use crate::validate::{
-    PhysicsError, finite2, validate_body2d, validate_collider2d, validate_pose2d,
+    PhysicsError, finite2, validate_body2d, validate_colliders2d, validate_pose2d,
 };
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct BodyRecord2d {
     body: r2::RigidBodyHandle,
-    collider: r2::ColliderHandle,
+    /// Every piece of the entity's collider.
+    ///
+    /// A list because one shape is often a poor description of a thing: a
+    /// character is a capsule with a circle at each side, a ship is a box and
+    /// two pods. Rapier parents them all to the one body, so they move as a
+    /// single object and their mass properties sum — which is what makes a
+    /// compound one collider rather than several colliding with each other.
+    colliders: Vec<r2::ColliderHandle>,
     kind: RigidBodyKind,
 }
 
@@ -59,30 +66,44 @@ impl PhysicsWorld2d {
         })
     }
 
+    /// Registers `entity` with a body and the pieces of its collider.
+    ///
+    /// Nothing is inserted until every piece validates, so a compound with one
+    /// bad piece leaves the world exactly as it was rather than half-built.
     pub fn insert_body(
         &mut self,
         entity: EntityId,
         body: RigidBody2d,
-        collider: Collider2d,
+        colliders: &[Collider2d],
     ) -> Result<(), PhysicsError> {
         if self.bodies.contains_key(&entity) {
             return Err(PhysicsError::EntityAlreadyRegistered(entity));
         }
+        if colliders.is_empty() {
+            return Err(PhysicsError::NoColliderPieces(entity));
+        }
         validate_body2d(&body)?;
-        validate_collider2d(&collider)?;
+        validate_colliders2d(colliders)?;
 
-        let builder = body_builder(body);
-        let collider_builder = collider_builder(entity, collider);
-        let (body_handle, collider_handle) = self.backend.insert(builder, collider_builder);
+        let body_handle = self.backend.insert_body(body_builder(body));
+        let handles: Vec<r2::ColliderHandle> = colliders
+            .iter()
+            .map(|collider| {
+                self.backend
+                    .insert_collider(collider_builder(entity, *collider), Some(body_handle))
+            })
+            .collect();
+        for handle in &handles {
+            self.collider_entities.insert(*handle, entity);
+        }
         self.bodies.insert(
             entity,
             BodyRecord2d {
                 body: body_handle,
-                collider: collider_handle,
+                colliders: handles,
                 kind: body.kind,
             },
         );
-        self.collider_entities.insert(collider_handle, entity);
         // What a script asked for before this existed.
         if let Some(velocity) = self.pending_velocity.remove(&entity)
             && matches!(
@@ -128,7 +149,7 @@ impl PhysicsWorld2d {
         &mut self,
         entity: EntityId,
         pose: PhysicsPose2d,
-        collider: Collider2d,
+        colliders: &[Collider2d],
     ) -> Result<(), PhysicsError> {
         self.insert_body(
             entity,
@@ -137,7 +158,7 @@ impl PhysicsWorld2d {
                 pose,
                 ..RigidBody2d::default()
             },
-            collider,
+            colliders,
         )
     }
 
@@ -145,7 +166,11 @@ impl PhysicsWorld2d {
         let Some(record) = self.bodies.remove(&entity) else {
             return false;
         };
-        self.collider_entities.remove(&record.collider);
+        for handle in &record.colliders {
+            self.collider_entities.remove(handle);
+        }
+        // Rapier drops a body's colliders with it, so the pieces need no
+        // separate removal — only the entity mapping above is ours to clear.
         let _ = self.backend.remove_body(record.body);
         true
     }
@@ -176,6 +201,15 @@ impl PhysicsWorld2d {
         })
     }
 
+    /// What the body weighs, summed over every piece of its collider.
+    ///
+    /// Exposed because a compound's mass is derived rather than authored: the
+    /// pieces decide it, and a claim about how they add up is worth being able
+    /// to check from outside the crate.
+    pub fn mass(&self, entity: EntityId) -> Result<f32, PhysicsError> {
+        Ok(self.backend.bodies[self.record(entity)?.body].mass())
+    }
+
     pub fn linear_velocity(&self, entity: EntityId) -> Result<[f32; 2], PhysicsError> {
         let record = self.record(entity)?;
         let velocity = self.backend.bodies[record.body].linvel();
@@ -188,7 +222,7 @@ impl PhysicsWorld2d {
         velocity: [f32; 2],
     ) -> Result<(), PhysicsError> {
         finite2("linear_velocity", velocity)?;
-        let record = *self.record(entity)?;
+        let record = self.record(entity)?.clone();
         if !matches!(
             record.kind,
             RigidBodyKind::Dynamic | RigidBodyKind::KinematicVelocity
@@ -210,7 +244,7 @@ impl PhysicsWorld2d {
         impulse: [f32; 2],
     ) -> Result<(), PhysicsError> {
         finite2("impulse", impulse)?;
-        let record = *self.record(entity)?;
+        let record = self.record(entity)?.clone();
         if record.kind != RigidBodyKind::Dynamic {
             return Err(PhysicsError::WrongBodyKind(
                 entity,
@@ -229,7 +263,7 @@ impl PhysicsWorld2d {
         pose: PhysicsPose2d,
     ) -> Result<(), PhysicsError> {
         validate_pose2d(pose)?;
-        let record = *self.record(entity)?;
+        let record = self.record(entity)?.clone();
         if record.kind != RigidBodyKind::KinematicPosition {
             return Err(PhysicsError::WrongBodyKind(
                 entity,
