@@ -30,6 +30,7 @@ import { type Mesh, boundsOf } from './model.ts';
 import { type ContentBounds, addInnerOutline, contentBounds, downsample, snapToPalette, thresholdAlpha } from './postprocess.ts';
 import { rasterise } from './raster.ts';
 import { type ShadingConfig } from './shading.ts';
+import { uniqueColours } from './palette.ts';
 import { rotationY, vec } from './vec.ts';
 
 export interface Footprint {
@@ -153,10 +154,19 @@ export interface FrameRequest {
   config: FrameConfig;
 }
 
-/** The palette a bake may snap to: the model's ramps, plus anything declared. */
+/**
+ * The palette a bake may snap to: the model's ramps, plus anything declared.
+ *
+ * Normalised and deduplicated, because the ramps come out of the colour maths
+ * in one spelling and the declared colours come out of a hand-written recipe in
+ * whatever spelling someone typed. The order is what breaks a tie when a
+ * blended edge pixel is equally close to two entries, so it has to be stated
+ * once rather than depending on which of two spellings of the same colour a
+ * recipe used.
+ */
 export function paletteFor(mesh: Mesh, config: FrameConfig): string[] {
   const outline = config.outline.enabled ? [config.outline.colour] : [];
-  return [...mesh.palette, ...config.extraPalette, ...outline];
+  return uniqueColours([...mesh.palette, ...config.extraPalette, ...outline]);
 }
 
 /** Render every direction, in rotation order. */

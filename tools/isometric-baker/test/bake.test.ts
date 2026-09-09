@@ -116,3 +116,19 @@ test('a sheet id replaces the extension rather than following it', () => {
 test('documents are written with a trailing newline', () => {
   assert.equal(toJson({ a: 1 }), '{\n  "a": 1\n}\n');
 });
+
+test('a colour declared in a different case is still one palette entry', async () => {
+  const recipe = await standingStone();
+  const shouted = {
+    ...recipe,
+    render: { ...recipe.render, outline: { enabled: true, colour: '#241D2B' } },
+  };
+  // The palette decides ties when a blended edge pixel is snapped, so the same
+  // colour spelled twice would be two entries and the bake could differ from
+  // one that spelled it once.
+  const result = bake(shouted);
+  assert.deepEqual(result.report.warnings, []);
+  const png = bake(recipe).files.find((file) => file.path.endsWith('.png'));
+  const shoutedPng = result.files.find((file) => file.path.endsWith('.png'));
+  assert.ok(png && shoutedPng && png.contents.equals(shoutedPng.contents));
+});

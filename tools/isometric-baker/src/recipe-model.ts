@@ -10,6 +10,7 @@ import {
   type JsonValue,
   asArray,
   asBoolean,
+  asColour,
   asNumber,
   asObject,
   asString,
@@ -43,11 +44,11 @@ function readRamp(value: JsonValue, path: string): Partial<RampOptions> {
 }
 
 export function readMaterial(value: JsonValue, path: string): MaterialSpec {
-  if (typeof value === 'string') return { colour: value };
+  if (typeof value === 'string') return { colour: asColour(value, path) };
   const source = asObject(value, path);
   rejectUnknown(source, path, ['colour', 'ramp', 'unlit']);
   return {
-    colour: required(source, 'colour', path, asString),
+    colour: required(source, 'colour', path, asColour),
     ramp: optional(source, 'ramp', path, readRamp),
     unlit: optional(source, 'unlit', path, asBoolean),
   };

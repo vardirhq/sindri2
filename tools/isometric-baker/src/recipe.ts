@@ -21,6 +21,7 @@ import {
   RecipeError,
   asArray,
   asBoolean,
+  asColour,
   asNumber,
   asObject,
   asString,
@@ -145,7 +146,7 @@ function readRender(value: JsonValue, path: string): FrameConfig {
       {
         enabled: optional(outlineSource, 'enabled', `${path}.outline`, asBoolean) ?? true,
         colour:
-          optional(outlineSource, 'colour', `${path}.outline`, asString) ?? DEFAULT_RENDER.outline.colour,
+          optional(outlineSource, 'colour', `${path}.outline`, asColour) ?? DEFAULT_RENDER.outline.colour,
       })
     : DEFAULT_RENDER.outline;
 
@@ -157,7 +158,7 @@ function readRender(value: JsonValue, path: string): FrameConfig {
     outline,
     paletteSnap: optional(source, 'palette_snap', path, asBoolean) ?? DEFAULT_RENDER.paletteSnap,
     extraPalette: extra
-      ? extra.map((entry, index) => asString(entry, `${path}.extra_palette[${index}]`))
+      ? extra.map((entry, index) => asColour(entry, `${path}.extra_palette[${index}]`))
       : [],
     alphaCutoff,
     shading: optional(source, 'shading', path, readShading) ?? DEFAULT_RENDER.shading,

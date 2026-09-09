@@ -102,3 +102,13 @@ test('a material may be named or written inline', () => {
 test('a texture has to be a png, because that is what a bake writes', () => {
   assert.throws(() => parse({ texture: 'textures/stone.webp' }), /must name a \.png/);
 });
+
+test('a mistyped colour is caught where it was written', () => {
+  assert.throws(
+    () => parse({ model: { materials: { rock: { colour: '#80808' } }, parts: [{ type: 'box', material: 'rock', size: [1, 1, 1] }] } }),
+    /expected a hex colour/,
+  );
+  assert.throws(() => parse({ render: { outline: { colour: 'grey' } } }), /expected a hex colour/);
+  // Case is spelling, not meaning: an upper-case colour is the same colour.
+  assert.doesNotThrow(() => parse({ render: { outline: { colour: '#241D2B' } } }));
+});

@@ -42,6 +42,21 @@ export function asBoolean(value: JsonValue, path: string): boolean {
   return value;
 }
 
+/**
+ * A hex colour, checked where it is written rather than where it is used.
+ *
+ * `#8d8f9a` and `#8D8F9A` are the same colour and both are accepted; `#8d8f9`
+ * is a typo, and finding out about it from the rasteriser three modules later
+ * would name the wrong thing.
+ */
+export function asColour(value: JsonValue, path: string): string {
+  const text = asString(value, path);
+  if (!/^#?(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(text.trim())) {
+    fail(path, `expected a hex colour like "#8d8f9a", got ${JSON.stringify(text)}`);
+  }
+  return text;
+}
+
 export function asVec3(value: JsonValue, path: string): [number, number, number] {
   const list = asArray(value, path);
   if (list.length !== 3) fail(path, `expected three numbers, got ${list.length}`);
