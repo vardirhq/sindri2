@@ -98,7 +98,10 @@ fn weave_reflows_the_hud_for_a_phone() {
         .expect("the title remains active");
     assert_eq!(wide_title.anchor, UiAnchor::TopLeft);
     assert_eq!(phone_title.anchor, UiAnchor::Top);
-    assert_ne!(wide_title.font_size, phone_title.font_size);
+    assert!(
+        (wide_title.font_size - phone_title.font_size).abs() > f32::EPSILON,
+        "the phone media rule changes the title size"
+    );
 }
 
 /// Every texture the scene names is one the binary carries.
