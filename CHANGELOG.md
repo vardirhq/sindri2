@@ -24,6 +24,29 @@ All notable changes to Sindri Next will be documented here.
   heart stay `sindri.shape`, because a script moves them every frame and no
   baked frame can do that. See `docs/isometric-baker.md`.
 
+- **A sheet says where its sprites meet the ground.** A world sprite is drawn on
+  a quad centred on its entity, so the middle of the picture was what landed on
+  the tile. Right for something that floats, wrong for anything that stands:
+  Gather's player was drawn a third of a ball low, standing in the tile in front
+  of its own, and nothing failed. `SpriteAnchor` — `"center"`, `"bottom"`, or an
+  exact `[x, y]` in fractions of the frame — is declared on the sheet, because
+  it is a fact about the picture rather than about whoever draws it. `"center"`
+  is the default and is what a quad already did, so every sheet written before
+  the field keeps its picture exactly; baked sheets now declare it anyway, since
+  a sheet that says nothing cannot be told apart from one whose author never
+  considered the question. Gather requires every texture it draws in the world
+  to answer, which is the part that stops the next hand-drawn sprite repeating
+  the mistake.
+
+- **The baker refuses art that overhangs its own footprint.** A footprint is what
+  the game reserves — collision, placement and draw order all read it and all
+  assume the picture stays inside it. Gather's shrine stood 1.12 tiles across on
+  a footprint of one, so it covered ground the game still handed out, and a
+  player standing legally on the next tile was drawn sliced by a plinth it was
+  not touching. Height stays free; only the ground is measured. Refused rather
+  than widened automatically, because whether the fix is a smaller model or a
+  bigger footprint depends on what the thing is.
+
 - **A tilemap's tiles may hang below their cell.** `sindri.tilemap` gained
   `tile_overhang`: how far below its cell a tile's art reaches, in world units,
   zero unless a map says otherwise. A flat floor needs none; a floor of slabs

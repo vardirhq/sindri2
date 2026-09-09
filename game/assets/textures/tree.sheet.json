@@ -1,5 +1,6 @@
 {
   "format_version": 1,
+  "anchor": "center",
   "grid": {
     "columns": 1,
     "rows": 1,

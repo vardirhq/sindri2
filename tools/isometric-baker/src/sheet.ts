@@ -34,6 +34,16 @@ export interface SheetGrid {
 
 export interface SpriteSheetDocument {
   format_version: number;
+  /**
+   * Where a frame meets the ground.
+   *
+   * Always the centre, because that is what every frame is padded to: the
+   * canvas is grown symmetrically about the floor centre of tile (0,0) so the
+   * middle of the picture *is* the point that stands on the tile. Written out
+   * rather than left to the format's default so the sheet says what it is, and
+   * so hand-drawn art sitting next to it is visibly making a choice.
+   */
+  anchor: 'center' | 'bottom' | [number, number];
   grid: SheetGrid;
 }
 
@@ -121,7 +131,7 @@ export function packSheet(
     grid.spacing = [2 * gutter, 2 * gutter];
   }
 
-  return { image: sheet, document: { format_version: SHEET_FORMAT_VERSION, grid } };
+  return { image: sheet, document: { format_version: SHEET_FORMAT_VERSION, anchor: 'center', grid } };
 }
 
 /**

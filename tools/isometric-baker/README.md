@@ -142,6 +142,23 @@ plane, and which of them wins a pixel then comes down to the last bit of an
 interpolation — so a tile that should be one flat colour comes out dithered
 between its brightest and darkest shade.
 
+### Footprints
+
+A recipe's `footprint` is what the *game* reserves for the thing: collision,
+placement and the order sprites draw in all read it, and all of them assume the
+picture stays inside it. So the baker refuses a model that stands on more ground
+than its footprint claims. Height is free — a tree is meant to tower over its
+cell — and only the ground is measured.
+
+The failure it prevents is quiet. Gather's shrine stood 1.12 tiles across on a
+footprint of one, so it covered ground the game still handed out, and a player
+standing on a neighbouring tile legally was drawn sliced by a plinth it was not
+touching. Nothing errored; it just looked wrong.
+
+It is refused rather than widened for you, because the fix depends on what the
+thing is: a shrine that overhangs by a tenth of a tile wants a smaller model,
+and one that genuinely covers four tiles wants a bigger footprint.
+
 ### Baking a floor tile
 
 A tilemap draws each cell on a quad of its `tile_size`, so a tile's frame has to
@@ -161,6 +178,15 @@ the sides darkens what the shading has already darkened.
 
 Size the skirt a hair *under* the pixels you want rather than over. The canvas
 rounds up, so 10.00002 pixels of skirt costs a whole pixel each way.
+
+### Anchors
+
+Every sheet the baker writes declares `"anchor": "center"`, and it is not a
+guess: the canvas is padded symmetrically about the floor centre of tile (0,0),
+so the middle of the frame *is* the point that stands on the tile. It is written
+out rather than left to the format's default so the sheet says what it is — and
+so hand-drawn art sitting beside it is visibly making a choice rather than
+inheriting one.
 
 ### Several models on one sheet
 

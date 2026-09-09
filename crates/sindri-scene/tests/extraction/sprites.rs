@@ -1,7 +1,8 @@
 //! Which batch a world sprite lands in, and where it is drawn.
 
 use glam::Vec2;
-use sindri_render::{FrameCommand, RenderStage, SpriteDepth};
+use sindri_core::{SpriteAnchor, SpriteSheetDocument};
+use sindri_render::{FrameCommand, RenderStage, SpriteDepth, TextureId};
 use sindri_scene::{CameraView, SceneExtractor, TextureBindings, WorldProjection};
 
 use crate::support::{VIEWPORT, close, scene, world_from};
@@ -146,5 +147,54 @@ fn sprites_draw_through_the_world_camera_with_their_full_transform() {
     assert_ne!(
         frame.passes()[0].camera.view_projection,
         orbited.passes()[0].camera.view_projection
+    );
+}
+
+/// A sheet that anchors at the foot lifts the picture so its bottom edge, not
+/// its middle, lands on the entity.
+///
+/// This is what stops a character being drawn half a body low. The scale is
+/// deliberately not 1, because the anchor moves the quad in its own space and
+/// so has to scale with it — a sprite drawn twice as tall lifts twice as far.
+#[test]
+fn an_anchored_sheet_stands_its_sprite_on_the_entity() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "prop",
+          "transform_3d": { "position": [1.0, 2.0, 0.0], "scale": [3.0, 5.0, 1.0] },
+          "components": { "sindri.sprite": { "texture": "sheet.png#0" } } }"#,
+    ));
+
+    let anchored = |anchor| {
+        let mut sheet = SpriteSheetDocument::from_grid(1, 1);
+        sheet.anchor = anchor;
+        let mut bindings = TextureBindings::new();
+        bindings.bind("sheet.png", TextureId::new(1));
+        bindings.bind_sheet("sheet.png", &sheet).expect("it slices");
+        let frame = SceneExtractor::new()
+            .unwrap()
+            .extract(&world, VIEWPORT, CameraView::default(), &bindings)
+            .expect("the scene extracts");
+        let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[0].command else {
+            panic!("expected a sprite batch");
+        };
+        instances[0].model().w_axis.truncate()
+    };
+
+    // Saying nothing draws exactly where a quad always drew, so art written
+    // before there was an anchor keeps its picture.
+    let silent = anchored(None);
+    assert!(close(silent.x, 1.0) && close(silent.y, 2.0), "{silent:?}");
+    let centred = anchored(Some(SpriteAnchor::Center));
+    assert!(
+        close(centred.y, silent.y),
+        "naming the default changes nothing"
+    );
+
+    // Half of the five-unit height, so the foot of the picture sits at 2.0.
+    let footed = anchored(Some(SpriteAnchor::Bottom));
+    assert!(
+        close(footed.y, 4.5) && close(footed.x, 1.0),
+        "the anchored sprite centres at {footed:?} rather than standing at 2.0"
     );
 }

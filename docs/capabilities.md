@@ -1242,6 +1242,15 @@ six values out of 255, so the authored regions were invisible and the island
 read as one flat dark diamond whatever was drawn on it. It now has four baked
 tiles — shore, grass, path, flagstone — and a floor plan drawn in them.
 
+Two things a scene could not previously say, both found by looking at the game
+rather than at the code. A sheet now declares **where its sprites meet the
+ground** — a quad is drawn centred on its entity, so the middle of the picture
+was what landed on the tile, and Gather's player was drawn a third of a ball low
+with nothing failing. And the baker now **refuses art that overhangs its own
+footprint**, which is what had the shrine covering ground the game still handed
+out, so a player standing legally beside it was drawn sliced by a plinth it was
+not touching.
+
 Those tiles are **slabs**, not flat diamonds, which needed one thing from the
 engine: `sindri.tilemap` gained `tile_overhang`, how far below its cell a tile's
 art may reach. The cell is unchanged and still what the grid, picking, occupancy
