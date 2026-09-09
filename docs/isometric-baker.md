@@ -88,15 +88,48 @@ Baked assets are checked into the repository, so a bake must be reproducible.
   zlib upgrade that changes the compressed stream and no pixel is not a
   regression.
 
+## Generated documents must be canonical
+
+A bake can write a prefab as well as a sheet, and both are Sindri documents.
+Sindri writes a document in a canonical form that is a fixed point — reading one
+and writing it again produces the same bytes — so a *generated* document has to
+already be at that fixed point. Otherwise the first time someone opens it in the
+editor and saves, the editor rewrites lines nobody edited, and the diff is noise
+attributed to a person.
+
+Meeting that means the tool reimplements two things this workspace owns: the
+serialization rules in `crates/sindri-core/src/scene/canonical.rs`, and the
+shortest decimal an `f32` is spelled with. That is the kind of agreement that
+holds until it quietly does not, so it is not trusted on the tool's side:
+`crates/sindri-core/tests/baked_documents_are_canonical.rs` parses the generated
+fixture with the real implementation and asserts writing it back is byte
+identical. That test reaches out of the crate on purpose — `sindri-core` defines
+canonical form, so it is the only place the claim can be tested.
+
+Anyone adding a generated document type to the baker should extend that test
+rather than assume the writer already covers it.
+
+## What a generated prefab may carry
+
+A transform, a `sindri.sprite` showing the default direction, and — only when
+the recipe names the scene entity holding the tilemap — a `sindri.grid.occupant`
+saying which cells it stands on. Provenance goes in the root's `editor` map,
+which runtimes ignore and a spawn drops.
+
+Nothing game-specific. IsoGame's generated furniture definitions carry
+categories, sit and lay spots, stackability and a collision model, because that
+is what its game needs from a chair. A Sindri prefab gets what any renderer
+needs, and a game says the rest itself — the alternative is every project
+carrying another game's vocabulary in a generic format.
+
 ## Scope today
 
 Baked: primitive models, a fixed configurable isometric camera, banded
 palette-based materials, supersampling, alpha thresholding, palette snapping, an
 optional inner outline, 1/2/4/8 directional frames, uniform anchor-aligned
-frames, deterministic PNG and `.sheet.json` output, and a persistent
-`.isobake.json` recipe.
+frames, deterministic PNG, `.sheet.json` and `.prefab.json` output, and a
+persistent `.isobake.json` recipe.
 
-Not baked, each its own change: prefab generation, model-file input
-(GLB/glTF/OBJ — refused explicitly rather than ignored), contact shadows,
-animation poses, layered character parts, editor integration, and any use in a
-game.
+Not baked, each its own change: model-file input (GLB/glTF/OBJ — refused
+explicitly rather than ignored), contact shadows, animation poses, layered
+character parts, editor integration, and any use in a game.

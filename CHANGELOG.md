@@ -10,6 +10,10 @@ All notable changes to Sindri Next will be documented here.
   CPU rasteriser, so bakes are byte-stable and checkable in CI. It changes nothing
   about the runtime — Sindri still has one mesh primitive, no glTF import, no
   material authoring and no lighting system — and no game uses its output yet.
+  It also generates a `.prefab.json` beside the sheet: a one-entity prefab with
+  the transform scale that makes one baked pixel one intended pixel, so a baked
+  asset can be used without custom game code. Generated documents are written in
+  Sindri's canonical form, and `sindri-core` has a test that proves it.
   See `docs/isometric-baker.md`.
 
 - Expand Weave from an isolated presentation proof into composed responsive

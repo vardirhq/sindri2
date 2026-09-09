@@ -11,10 +11,14 @@ model is an *authoring input* here, in the same way a `.ttf` is an authoring
 input to a font atlas.
 
 ```bash
-node src/cli.ts fixtures/standing-stone.isobake.json --out fixtures/baked
-node src/cli.ts fixtures/standing-stone.isobake.json --out fixtures/baked --check
+node src/cli.ts fixtures/project/prefabs/standing-stone.isobake.json --out fixtures/project
+node src/cli.ts fixtures/project/prefabs/standing-stone.isobake.json --out fixtures/project --check
 npm test
 ```
+
+`fixtures/project` is a miniature Sindri asset root, laid out the way a real one
+is: the recipe lives beside the prefab it generates, `--out` is the asset root,
+and re-baking rewrites the generated files in place.
 
 ## Where this came from
 
@@ -36,6 +40,7 @@ reinvention of it:
 | `src/render.ts`                  | `src/raster.ts`, `src/frames.ts` | A CPU rasteriser instead of a WebGL render target. |
 | `src/sheet.ts`, `src/factory.ts` | `src/sheet.ts`, `src/bake.ts`    | Sindri's sheet format instead of IsoGame's metadata. |
 | `src/catalog.ts`                 | `*.isobake.json`            | A document per asset instead of a TypeScript catalogue. |
+| generated furniture definitions  | `src/prefab.ts`             | A Sindri prefab, without IsoGame's game-specific fields. |
 
 Two deliberate departures, both because Sindri wants different things from the
 output than IsoGame does.
@@ -109,6 +114,11 @@ the recipe is the source.
   "facing": "south",                         // which way the model is authored
   "directions": 4,                           // 1, 2, 4 or 8 frames
   "footprint": { "width": 1, "height": 1 },  // tiles occupied
+  "prefab": {                                // optional; omit for a sheet alone
+    "path": "prefabs/standing-stone.prefab.json",
+    "name": "Standing Stone",
+    "recipe": "prefabs/standing-stone.isobake.json"
+  },
   "render": {
     "supersample": 4,
     "padding": 2,
@@ -137,28 +147,58 @@ quietly baking nothing.
 
 ## What a bake writes
 
-For `"texture": "textures/standing-stone.png"`:
+For `"texture": "textures/standing-stone.png"` and a `prefab` block:
 
 ```text
 textures/standing-stone.png          the frames, packed as one horizontal strip
 textures/standing-stone.sheet.json   an edge-to-edge grid of one row, named by direction
+prefabs/standing-stone.prefab.json   a one-entity prefab that draws it at the right size
 ```
 
 Note the sheet's name: Sindri's suffix **replaces** the extension, so it is
 `standing-stone.sheet.json`, not `standing-stone.png.sheet.json`
 (`sheet_id_for` in `crates/sindri-core/src/sheet.rs`).
 
-A scene then refers to one frame by name — `textures/standing-stone.png#north` —
-and sets the sprite's scale from the bake report:
+A scene refers to one frame by name — `textures/standing-stone.png#north` — and
+a sprite needs a scale that makes one baked pixel one intended pixel. That scale
+is arithmetic, so the tool does it rather than the author:
 
-```text
-standing-stone: 4 frames of 50x118
-  anchor        25, 59 (the centre of every frame)
-  sprite scale  0.8594 x 2.0281 world units
+```json
+"transform_3d": {
+  "position": [0.0, 0.0, 0.0],
+  "rotation": [0.0, 0.0, 0.0, 1.0],
+  "scale": [0.859375, 2.028125, 1.0]
+}
 ```
 
-Generating that prefab, rather than reading the number off a report, is the next
-change; this one stops at the assets.
+A generated prefab carries a transform, a sprite showing the default direction,
+and — only when the recipe names the scene's tilemap — a `sindri.grid.occupant`
+saying which cells it stands on. It does not carry categories, interaction
+spots, stackability or a collision model: those are what IsoGame needs from a
+chair, and a Sindri prefab that had them would make every project carry another
+game's vocabulary.
+
+### The generation record
+
+The root's `editor` map holds a `sindri.isometric-baker` entry — the canvas, the
+anchor, the tile, the directions, and the recipe that can rebuild it. An
+entity's `editor` state is defined as something runtimes ignore, and a prefab's
+is dropped when one is spawned, so recording provenance cannot change what the
+asset does. It is also what an editor will need to offer a rebuild.
+
+### Canonical output
+
+A Sindri document is written in a canonical form that is a *fixed point*:
+reading one and writing it again produces the same bytes. A generated prefab has
+to already be at that fixed point, or the first time someone opens it in the
+editor and saves, it rewrites lines nobody edited.
+
+That means reproducing two things Sindri owns — the serialization rules in
+`crates/sindri-core/src/scene/canonical.rs`, and the shortest decimal an `f32`
+is spelled with. Both are in `src/canonical.ts` and `src/f32.ts`, and neither is
+trusted on this side: `crates/sindri-core/tests/baked_documents_are_canonical.rs`
+parses the generated fixture with the real implementation and asserts that
+writing it back produces identical bytes.
 
 ## Determinism
 

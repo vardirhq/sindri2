@@ -12,6 +12,7 @@ import { type Mesh, buildMesh } from './model.ts';
 import { encodePng } from './png.ts';
 import { uniqueColours } from './palette.ts';
 import { usedColours } from './postprocess.ts';
+import { buildPrefab } from './prefab.ts';
 import { type Recipe } from './recipe.ts';
 import { type PackedSheet, packSheet, spriteScale, tileRatioMismatch } from './sheet.ts';
 
@@ -87,7 +88,27 @@ export function bake(recipe: Recipe): BakeResult {
     { path: sheetIdFor(recipe.texture), contents: Buffer.from(toJson(sheet.document)) },
   ];
 
-  return { camera, mesh, canvas, frames, sheet, files, report: report(recipe, camera, canvas, frames, mesh) };
+  const result: BakeResult = {
+    camera,
+    mesh,
+    canvas,
+    frames,
+    sheet,
+    files,
+    report: report(recipe, camera, canvas, frames, mesh),
+  };
+
+  // Last, because a prefab is written from the finished measurements: the
+  // canvas decides the sprite's scale, and the canvas is not known until every
+  // direction has been measured.
+  if (recipe.prefab) {
+    files.push({
+      path: recipe.prefab.path,
+      contents: Buffer.from(buildPrefab(recipe, result, recipe.prefab)),
+    });
+  }
+
+  return result;
 }
 
 /**

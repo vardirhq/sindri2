@@ -20,10 +20,11 @@ import { parseRecipe } from '../src/recipe.ts';
 import { usedColours } from '../src/postprocess.ts';
 import { paletteFor } from '../src/frames.ts';
 
-const FIXTURES = fileURLToPath(new URL('../fixtures/', import.meta.url));
+/** The miniature Sindri asset root the fixture bakes into, and out of. */
+const PROJECT = fileURLToPath(new URL('../fixtures/project/', import.meta.url));
 
 async function standingStone() {
-  const path = `${FIXTURES}standing-stone.isobake.json`;
+  const path = `${PROJECT}prefabs/standing-stone.isobake.json`;
   return parseRecipe(await readFile(path, 'utf8'), path);
 }
 
@@ -45,7 +46,7 @@ test('the fixture still bakes to the picture checked in beside it', async () => 
 
   const png = result.files.find((file) => file.path.endsWith('.png'));
   assert.ok(png, 'a bake writes a texture');
-  const stored = decodePng(await readFile(`${FIXTURES}baked/${png.path}`));
+  const stored = decodePng(await readFile(`${PROJECT}${png.path}`));
   const baked = decodePng(png.contents);
 
   const at = firstDifference(baked, stored);
@@ -59,7 +60,7 @@ test('the fixture still bakes to the picture checked in beside it', async () => 
 
   const sheet = result.files.find((file) => file.path === sheetIdFor(recipe.texture));
   assert.ok(sheet, 'a bake writes a sheet document');
-  assert.equal(sheet.contents.toString('utf8'), await readFile(`${FIXTURES}baked/${sheet.path}`, 'utf8'));
+  assert.equal(sheet.contents.toString('utf8'), await readFile(`${PROJECT}${sheet.path}`, 'utf8'));
 });
 
 test('every frame is the same size, with the anchor on its centre', async () => {

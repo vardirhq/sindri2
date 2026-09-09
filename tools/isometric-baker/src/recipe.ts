@@ -31,6 +31,7 @@ import {
   required,
 } from './json.ts';
 import { type ModelSpec } from './model.ts';
+import { type PrefabRequest } from './prefab.ts';
 import { readModel } from './recipe-model.ts';
 import { type ShadingConfig, DEFAULT_SHADING } from './shading.ts';
 import { type TileWorldSize } from './sheet.ts';
@@ -54,6 +55,8 @@ export interface Recipe {
   footprint: Footprint;
   render: FrameConfig;
   model: ModelSpec;
+  /** The prefab to generate beside the sheet, when one is wanted. */
+  prefab?: PrefabRequest;
 }
 
 export const DEFAULT_RENDER: FrameConfig = {
@@ -178,6 +181,42 @@ function readTileWorld(value: JsonValue, path: string): TileWorldSize {
   };
 }
 
+/**
+ * The prefab block.
+ *
+ * Optional: a bake that only wants a sheet — a tile set, an atlas something
+ * else composes — has no prefab to generate, and writing an unused one would
+ * put a file in the project that nothing names.
+ */
+function readPrefab(value: JsonValue, path: string): PrefabRequest {
+  const source = asObject(value, path);
+  rejectUnknown(source, path, ['path', 'name', 'default_direction', 'layer', 'grid', 'recipe']);
+
+  const target = required(source, 'path', path, asString);
+  if (!target.endsWith('.prefab.json')) {
+    fail(`${path}.path`, `a prefab is called <name>.prefab.json, got ${JSON.stringify(target)}`);
+  }
+
+  const direction = optional(source, 'default_direction', path, asString);
+  if (direction !== undefined && !isDirection(direction)) {
+    fail(`${path}.default_direction`, `${JSON.stringify(direction)} is not a compass direction`);
+  }
+
+  const layer = optional(source, 'layer', path, asNumber);
+  if (layer !== undefined && !Number.isInteger(layer)) {
+    fail(`${path}.layer`, `a draw layer is a whole number, got ${layer}`);
+  }
+
+  return {
+    path: target,
+    name: optional(source, 'name', path, asString),
+    defaultDirection: direction,
+    layer,
+    grid: optional(source, 'grid', path, asString),
+    recipe: optional(source, 'recipe', path, asString),
+  };
+}
+
 const TOP_LEVEL_KEYS = [
   'format_version',
   'id',
@@ -189,6 +228,7 @@ const TOP_LEVEL_KEYS = [
   'footprint',
   'render',
   'model',
+  'prefab',
 ];
 
 export function parseRecipe(json: string, source: string): Recipe {
@@ -250,5 +290,6 @@ export function parseRecipe(json: string, source: string): Recipe {
     footprint,
     render: optional(root, 'render', source, readRender) ?? DEFAULT_RENDER,
     model: required(root, 'model', source, readModel),
+    prefab: optional(root, 'prefab', source, readPrefab),
   };
 }

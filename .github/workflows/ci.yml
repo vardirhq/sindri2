@@ -66,7 +66,7 @@ jobs:
         run: node --test test/*.test.ts
       - name: Check the fixture is still what its recipe bakes
         working-directory: tools/isometric-baker
-        run: node src/cli.ts fixtures/standing-stone.isobake.json --out fixtures/baked --check
+        run: node src/cli.ts fixtures/project/prefabs/standing-stone.isobake.json --out fixtures/project --check
 
   clippy:
     name: Clippy

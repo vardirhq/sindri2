@@ -7,6 +7,11 @@
   "facing": "south",
   "directions": 4,
   "footprint": { "width": 1, "height": 1 },
+  "prefab": {
+    "path": "prefabs/standing-stone.prefab.json",
+    "name": "Standing Stone",
+    "recipe": "prefabs/standing-stone.isobake.json"
+  },
   "render": {
     "supersample": 4,
     "padding": 2,
