@@ -367,7 +367,7 @@ components not yet written. It is the highest-leverage item in this file.
 | **Asset pickers for schema fields generally** | ✅ | **Ahead** | Declared per component in the schema registry, checked against the field template, and carried in `docs/generated/`. Unity needs a plugin (Odin) for the equivalent |
 | **Array-of-object editing** | ✅ | **Par** | A list of objects is added to, removed from and reordered, with each item's fields drawn through its meanings. Decided by the template, so a tilemap's thousand tiles stay a readout |
 | **Tagged-enum (variant) fields** | ✅ | **Par** | A field that decides what else its object holds is switched as one edit, at any depth — Godot's equivalent is swapping a Resource subtype. What is ours is that every variant is proved to decode at startup, so an unpickable one fails the build rather than the scene |
-| **Console / log panel** | ❌ | **Absent** | Errors and script `print` output are invisible in the editor |
+| Console / log panel | ✅ | **Par** | Every failure the editor reports, plus script `print` named by the entity that printed it, filtered by level, repeats collapsed to a count, with a jump to the entity a line is about and an error count in the status bar. The gap is *where it lives*: a bottom-dock tab sharing one slot with the project browser and history, so watching the log means giving up the browser |
 | **Profiler view** | ❌ | **Absent** | Where a fixed step goes is unmeasurable in-editor |
 | **Search / filter in hierarchy or project** | ❌ | **Absent** | Painful past a few dozen entities |
 | **Project settings surface** | ❌ | **Absent** | `sindri.toml` is edited by hand |
@@ -396,7 +396,7 @@ components not yet written. It is the highest-leverage item in this file.
 | --- | :-: | --- | --- |
 | Named validation errors at the boundary | ✅ | **Ahead** | — |
 | Deterministic replay from a seed | ✅ | **Ahead** | Reproducing a bug is a seed, not a video |
-| **In-editor console** | ❌ | **Absent** | See the editor section |
+| In-editor console | ✅ | **Par** | See the editor section: it exists, and the gap is its placement rather than its content |
 | **Profiler / frame timing** | ❌ | **Absent** | `docs/effect-scaling.md` measured by hand, once |
 | **Debug draw from scripts** | ❌ | **Absent** | A script cannot draw a line to show what it thinks it is doing |
 | **Frame / draw-call debugger** | ❌ | **Absent** | — |
@@ -498,16 +498,15 @@ output of the file; everything above is evidence.
    pickups, transitions.
 9. **Collider gizmos in the Scene view.** Colliders are invisible while
    authoring, and compound pieces made that worse.
-10. **Editor console panel.** Errors and script output are currently invisible.
-11. **Multiple scenes and additive loading.** A menu plus a level is the normal
+10. **Multiple scenes and additive loading.** A menu plus a level is the normal
     shape of a game.
-12. **Un-strand bloom.** Built, working, unreachable.
-13. **Camera follow, confine, and shake.** Every game re-implements it.
-14. **Autotiling.** The daily cost of painting tilemaps by hand.
-15. **Profiler view.** Needed before performance work is anything but guessing.
+11. **Un-strand bloom.** Built, working, unreachable.
+12. **Camera follow, confine, and shake.** Every game re-implements it.
+13. **Autotiling.** The daily cost of painting tilemaps by hand.
+14. **Profiler view.** Needed before performance work is anything but guessing.
 
 Items 1–6 are the ones that block a game today. Items 7–12 are cheap relative to
-their daily cost. Items 13–15 are real but survivable.
+their daily cost. Items 13–14 are real but survivable.
 
 ---
 
