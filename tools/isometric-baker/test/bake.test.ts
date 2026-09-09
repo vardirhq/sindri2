@@ -82,6 +82,9 @@ test('the sheet is a grid of one row, named by direction and guttered', async ()
   const gutter = 2;
   assert.deepEqual(result.sheet.document, {
     format_version: 1,
+    // Declared rather than left to the format's default, so the sheet says
+    // where its frames meet the ground instead of inheriting an answer.
+    anchor: 'center',
     grid: {
       columns: 4,
       rows: 1,
