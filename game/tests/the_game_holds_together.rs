@@ -112,9 +112,10 @@ fn landmarks_make_the_world_and_navigation_readable() {
         "shrine",
         "waystone-west",
         "waystone-east",
-        "wall-marker-north",
-        "wall-marker-middle",
-        "wall-marker-south",
+        "ridge-stone-0",
+        "ridge-stone-3",
+        "tree-0",
+        "outcrop-0",
     ] {
         assert!(
             drawn.contains(expected),

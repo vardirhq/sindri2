@@ -20,6 +20,7 @@ import {
   type Geometry,
   boxGeometry,
   cylinderGeometry,
+  plateGeometry,
   sphereGeometry,
 } from './primitives.ts';
 import { type BandedMaterial, type MaterialSpec, bandMaterial } from './shading.ts';
@@ -37,6 +38,13 @@ interface PartBase {
 export interface BoxPart extends PartBase {
   type: 'box';
   size: Vec3;
+}
+
+/** A flat quad in the XZ plane: a floor tile, a rug, a painted marking. */
+export interface PlatePart extends PartBase {
+  type: 'plate';
+  /** Extent along x and z. */
+  size: [number, number];
 }
 
 export interface CylinderPart extends PartBase {
@@ -63,7 +71,7 @@ export interface ConePart extends PartBase {
   segments?: number;
 }
 
-export type ModelPart = BoxPart | CylinderPart | SpherePart | ConePart;
+export type ModelPart = BoxPart | PlatePart | CylinderPart | SpherePart | ConePart;
 
 const DEFAULT_SEGMENTS = 16;
 
@@ -71,6 +79,8 @@ function geometryOf(part: ModelPart): Geometry {
   switch (part.type) {
     case 'box':
       return boxGeometry(part.size);
+    case 'plate':
+      return plateGeometry(part.size);
     case 'cylinder':
       return cylinderGeometry({
         radiusTop: part.radiusTop ?? part.radius,

@@ -77,20 +77,44 @@ test('every frame is the same size, with the anchor on its centre', async () => 
   }
 });
 
-test('the sheet is a plain grid of one row, named by direction', async () => {
+test('the sheet is a grid of one row, named by direction and guttered', async () => {
   const result = bake(await standingStone());
+  const gutter = 2;
   assert.deepEqual(result.sheet.document, {
     format_version: 1,
-    grid: { columns: 4, rows: 1, names: ['south', 'west', 'north', 'east'] },
+    grid: {
+      columns: 4,
+      rows: 1,
+      size: [result.sheet.image.width, result.sheet.image.height],
+      margin: [gutter, gutter],
+      spacing: [2 * gutter, 2 * gutter],
+      names: ['south', 'west', 'north', 'east'],
+    },
   });
-  assert.equal(result.sheet.image.width, result.canvas.width * 4);
-  assert.equal(result.sheet.image.height, result.canvas.height);
+  assert.equal(result.sheet.image.width, (result.canvas.width + 2 * gutter) * 4);
+  assert.equal(result.sheet.image.height, result.canvas.height + 2 * gutter);
+});
+
+test('the gutter repeats each frame edge rather than leaving a hole', async () => {
+  const result = bake(await standingStone());
+  const sheet = result.sheet.image;
+  const gutter = 2;
+  const at = (x: number, y: number) => {
+    const i = (y * sheet.width + x) * 4;
+    return [sheet.data[i], sheet.data[i + 1], sheet.data[i + 2], sheet.data[i + 3]].join(',');
+  };
+  // A pixel in the gutter is the frame's own edge pixel repeated. If it were
+  // transparent instead, the bilinear minification the renderer does would pull
+  // a dark rim into every frame.
+  const midY = gutter + Math.floor(result.canvas.height / 2);
+  assert.equal(at(0, midY), at(gutter, midY), 'the left gutter repeats the left edge');
+  assert.equal(at(gutter - 1, gutter - 1), at(gutter, gutter), 'the corner repeats the corner');
 });
 
 test('nothing comes out in a colour the recipe did not declare', async () => {
   const recipe = await standingStone();
   const result = bake(recipe);
-  const declared = new Set(paletteFor(result.mesh, recipe.render));
+  const declared = new Set(result.meshes.flatMap((mesh) => paletteFor(mesh, recipe.render)));
 
   for (const frame of result.frames) {
     for (const colour of usedColours(frame.image)) {

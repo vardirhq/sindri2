@@ -76,6 +76,18 @@ function readPart(value: JsonValue, path: string): ModelPart {
     case 'box':
       rejectUnknown(source, path, [...SHARED_PART_KEYS, 'size']);
       return { type, ...base, size: required(source, 'size', path, asVec3) };
+    case 'plate': {
+      rejectUnknown(source, path, [...SHARED_PART_KEYS, 'size']);
+      const size = asArray(required(source, 'size', path, asArray), `${path}.size`);
+      if (size.length !== 2) {
+        fail(`${path}.size`, `a plate is flat, so it has two extents, got ${size.length}`);
+      }
+      return {
+        type,
+        ...base,
+        size: [asNumber(size[0], `${path}.size[0]`), asNumber(size[1], `${path}.size[1]`)],
+      };
+    }
     case 'cylinder':
       rejectUnknown(source, path, [...SHARED_PART_KEYS, 'radius', 'radius_top', 'height', 'segments']);
       return {
@@ -105,7 +117,7 @@ function readPart(value: JsonValue, path: string): ModelPart {
         scale: optional(source, 'scale', path, asVec3),
       };
     default:
-      fail(`${path}.type`, `unknown primitive "${type}" (expected box, cylinder, cone or sphere)`);
+      fail(`${path}.type`, `unknown primitive "${type}" (expected box, plate, cylinder, cone or sphere)`);
   }
 }
 

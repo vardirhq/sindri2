@@ -135,6 +135,34 @@ the recipe is the source.
 }
 ```
 
+Primitives are `box`, `plate`, `cylinder`, `cone` and `sphere`. A `plate` is a
+single flat quad in the XZ plane, and it exists because a floor tile is not a
+box: a box of zero height has its top and bottom faces in exactly the same
+plane, and which of them wins a pixel then comes down to the last bit of an
+interpolation — so a tile that should be one flat colour comes out dithered
+between its brightest and darkest shade.
+
+### Several models on one sheet
+
+A recipe may name `variants` instead of `model`, and each becomes a named frame
+of one sheet. That is what a tile set is:
+
+```jsonc
+"variants": [
+  { "name": "grass", "model": { "materials": { … }, "parts": [ … ] } },
+  { "name": "path",  "model": { "materials": { … }, "parts": [ … ] } }
+]
+```
+
+The frames share one canvas and one palette. The canvas because frames must be
+uniform for the anchor to be the centre of every one; the palette because a
+blended edge pixel of one tile must not snap to a shade only the tile beside it
+declared — two tiles meant to match would then not.
+
+Frames are named by direction for a lone model, by variant for a single-direction
+sheet of several, and `variant-direction` when it is both. A tilemap's `palette`
+is written in those names.
+
 A field the reader does not understand is an error, not a default: a recipe with
 `supersamples: 8` in it would otherwise bake at 4 and say nothing.
 
@@ -158,6 +186,20 @@ prefabs/standing-stone.prefab.json   a one-entity prefab that draws it at the ri
 Note the sheet's name: Sindri's suffix **replaces** the extension, so it is
 `standing-stone.sheet.json`, not `standing-stone.png.sheet.json`
 (`sheet_id_for` in `crates/sindri-core/src/sheet.rs`).
+
+### Gutters
+
+Frames are packed with two pixels of gutter, and the gutter is filled by
+repeating each frame's own edge pixels outward.
+
+This is not defensive tidiness. `TextureFilter::Nearest` in
+`crates/sindri-render/src/texture.rs` sets `mag_filter` to Nearest but leaves
+`min_filter` Linear, so a sheet drawn at even slightly under its authored size
+is sampled bilinearly — and a frame packed edge to edge against its neighbour is
+blended with it. On a sprite with transparent padding that is a faint rim; on a
+floor tile, whose art fills its cell exactly, it is the tile beside it smeared
+across every cell. A transparent gutter would only trade a colour seam for a
+dark one, which is why the edge is repeated instead.
 
 A scene refers to one frame by name — `textures/standing-stone.png#north` — and
 a sprite needs a scale that makes one baked pixel one intended pixel. That scale

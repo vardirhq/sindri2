@@ -122,13 +122,44 @@ is what its game needs from a chair. A Sindri prefab gets what any renderer
 needs, and a game says the rest itself — the alternative is every project
 carrying another game's vocabulary in a generic format.
 
+## Sheets of several models
+
+A recipe may name `variants` rather than one `model`, and each becomes a named
+frame of one sheet. A tile set is the case that needs it: a tilemap has one
+texture, and its `palette` is a list of names cut from that one sheet.
+
+The variants share one canvas and one palette — the canvas because frames must
+be uniform for the anchor to be the centre of every one, the palette because a
+blended edge pixel of one tile must not snap to a shade only the tile beside it
+declared.
+
+## Gutters, and a renderer detail worth knowing
+
+Frames are packed with two pixels of gutter, filled by repeating each frame's
+own edge pixels outward.
+
+`TextureFilter::Nearest` in `crates/sindri-render/src/texture.rs` sets
+`mag_filter` to Nearest but leaves `min_filter` Linear. A sheet drawn at even
+slightly under its authored size is therefore sampled bilinearly, and a frame
+packed edge to edge against its neighbour gets blended with it. On a sprite with
+transparent padding around its art that is a faint rim nobody notices; on a
+floor tile, whose art fills its cell exactly, it is the tile beside it smeared
+across every cell of the map.
+
+The gutter fixes it from the asset side. **Whether `min_filter` should be
+Nearest when Nearest was asked for is a separate question about the renderer**,
+and a real one — it would sharpen every minified sprite in both games. It is not
+answered here, because it changes what every existing project draws and deserves
+its own change rather than arriving inside an asset tool's.
+
 ## Scope today
 
-Baked: primitive models, a fixed configurable isometric camera, banded
-palette-based materials, supersampling, alpha thresholding, palette snapping, an
-optional inner outline, 1/2/4/8 directional frames, uniform anchor-aligned
-frames, deterministic PNG, `.sheet.json` and `.prefab.json` output, and a
-persistent `.isobake.json` recipe.
+Baked: primitive models (`box`, `plate`, `cylinder`, `cone`, `sphere`), a fixed
+configurable isometric camera, banded palette-based materials, supersampling,
+alpha thresholding, palette snapping, an optional inner outline, 1/2/4/8
+directional frames, several named models on one sheet, uniform anchor-aligned
+frames packed with extruded gutters, deterministic PNG, `.sheet.json` and
+`.prefab.json` output, and a persistent `.isobake.json` recipe.
 
 Not baked, each its own change: model-file input (GLB/glTF/OBJ — refused
 explicitly rather than ignored), contact shadows, animation poses, layered

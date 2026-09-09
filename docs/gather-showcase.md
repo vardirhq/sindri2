@@ -14,10 +14,10 @@ not need this document to be told that a component exists.
 | Capability | Current proof | Showcase quality |
 | --- | --- | --- |
 | Decay | Player movement, orb collection, progress lamps, victory, and Wisp behavior are scripts; Rust hosts them without owning game rules | Strong |
-| Tilemap | One authored 9x9 isometric tilemap replaces a floor made from individual sprite entities | Technically clear; regional patterning is the world-refresh foundation |
-| World art | The shrine, the two waystones and the three standing-stone markers are baked sprites, generated from 3D models by `tools/isometric-baker` and drawn by the ordinary sprite path | Strong; replaces the procedural shapes that read as an engine debug scene |
+| Tilemap | One authored 9x9 isometric tilemap draws a floor plan: a shore rim, a grass field, a path from the north landing to the shrine, and the shrine's flagstone plaza. Its four tiles are baked | Strong; the regions are what make the grid read as a place |
+| World art | Floor tiles, the shrine, two waystones, a ridge of four wall segments, six trees and three stone outcrops are baked sprites, generated from 3D models by `tools/isometric-baker` and drawn by the ordinary sprite path | Strong; replaces the procedural shapes that read as an engine debug scene |
 | Grid coordinates | Player movement, bounds, and orb collection use the tilemap's logical coordinates | Strong |
-| Navigation | The Wisp follows the player around visible standing-stone walls through shared deterministic A*; its animated halo makes each step readable | Strong |
+| Navigation | The Wisp follows the player around a visible ridge — four authored walls on one line, each with a baked wall segment standing on it — through shared deterministic A*; its animated halo makes each step readable | Strong |
 | Animation | The player advances an authored sprite clip while the Wisp halo and shrine heart pulse and turn through Decay-driven transforms — the two pieces that stayed procedural, because a shape a script moves every frame is what no baked frame can be | Conspicuous |
 | UI and text | A project-font title, progress lamps, and a victory banner render as screen UI | Functional, not product-like |
 | Input | Arrow/WASD movement and the shared touch stick drive the same Decay player | Strong |
