@@ -20,13 +20,14 @@ import { RecipeError, parseRecipe } from './recipe.ts';
 
 interface Options {
   recipe: string;
-  out: string | null;
+  /** Where assets are written. Always present: parsing fails without it. */
+  out: string;
   check: boolean;
   quiet: boolean;
 }
 
 function parseArgs(argv: string[]): Options {
-  const options: Options = { recipe: '', out: null, check: false, quiet: false };
+  const options = { recipe: '', out: null as string | null, check: false, quiet: false };
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -40,8 +41,9 @@ function parseArgs(argv: string[]): Options {
   }
 
   if (!options.recipe) throw new Error('usage: cli.ts <recipe.isobake.json> [--out DIR] [--check]');
-  if (!options.out) throw new Error('--out DIR is required: it is where the assets are written');
-  return options;
+  const out = options.out;
+  if (!out) throw new Error('--out DIR is required: it is where the assets are written');
+  return { ...options, out };
 }
 
 async function readRecipe(path: string) {

@@ -1,0 +1,3 @@
+# The optional type check (see README) installs these on demand. Nothing
+# else here needs them, and nothing is committed from them.
+node_modules/

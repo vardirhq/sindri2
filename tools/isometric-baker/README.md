@@ -59,6 +59,16 @@ dependencies** — no `node_modules`, nothing to install, nothing for
 `docs/dependency-policy.md` to have an opinion about. It runs on Node 22.18 or
 newer, which strips the TypeScript types without a build step.
 
+The types are still worth checking, which needs a compiler that the tool
+deliberately does not carry. Install one when you want it, and let it go again:
+
+```bash
+npm install --no-save typescript @types/node && npx tsc --noEmit
+```
+
+Nothing else needs that, and CI does not do it — a job that installed a package
+tree to check an asset tool would be the exact cost this design avoids.
+
 ### No cropped frames
 
 IsoGame crops each orientation to its own content and records an
