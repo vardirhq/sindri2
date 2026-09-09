@@ -10,6 +10,7 @@
 //! analyzer's view of it are derived from there. Nothing here decides which
 //! paths exist; it decides only how to reach one.
 
+mod animation;
 mod call;
 mod convert;
 mod dispatch;
@@ -99,6 +100,12 @@ pub struct WorldHost<'a> {
     /// host before scripts ran. A script that could change them would be
     /// deciding what the person did.
     screen_ui: Option<&'a sindri_scene::ScreenUi>,
+    /// Where each animated sprite has got to, when the host advances any.
+    ///
+    /// Mutable for one call: playing the clip already playing has to reset the
+    /// cursor, because naming it again is not a change to the world and nothing
+    /// else would notice. Everything else here is read.
+    animations: Option<&'a mut sindri_scene::SpriteAnimations>,
     /// What the script said, in order. Drained by the caller after the call.
     printed: Vec<String>,
 }
@@ -331,6 +338,8 @@ pub struct WorldServices<'a> {
     pub physics: Option<crate::Physics2d<'a>>,
     pub screen_ui: Option<&'a sindri_scene::ScreenUi>,
     pub random: Option<&'a mut sindri_core::Rng>,
+    /// Where each animated sprite has got to, when the host advances any.
+    pub animations: Option<&'a mut sindri_scene::SpriteAnimations>,
 }
 
 impl<'a> WorldHost<'a> {
@@ -349,6 +358,7 @@ impl<'a> WorldHost<'a> {
             physics,
             screen_ui,
             random,
+            animations,
         } = services;
         Self {
             world,
@@ -362,6 +372,7 @@ impl<'a> WorldHost<'a> {
             random,
             saves,
             effects,
+            animations,
             printed: Vec::new(),
         }
     }

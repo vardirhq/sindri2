@@ -20,21 +20,26 @@
 mod call;
 mod member;
 pub(super) mod names;
+mod person;
 
 #[cfg(test)]
 mod tests;
 
 pub(crate) use call::{
-    EFFECTS_CALLS, EffectsCall, FUNCTIONS, GAME_CALLS, GRID_CALLS, GameCall, GridCall,
-    HostFunction, INPUT_QUERIES, InputQuery, PHYSICS_CALLS, POINTER_QUERIES, POINTER_VALUES, PRINT,
-    PROFILE_CALLS, PhysicsCall, PointerQuery, PointerValue, ProfileCall, RANDOM_CALLS, RandomCall,
-    SAVE_CALLS, STICK_VALUES, SaveCall, StickValue, TIME_VALUES, TOUCH_CALLS, TOUCH_COUNT,
-    TimeValue, TouchCall, UI_CALLS, UiCall, VIEWPORT_VALUES, ViewportValue, WORLD_CALLS, WorldCall,
+    ANIMATION_CALLS, AnimationCall, EFFECTS_CALLS, EffectsCall, FUNCTIONS, GAME_CALLS, GRID_CALLS,
+    GameCall, GridCall, HostFunction, PHYSICS_CALLS, PRINT, PROFILE_CALLS, PhysicsCall,
+    ProfileCall, RANDOM_CALLS, RandomCall, SAVE_CALLS, SaveCall, TIME_VALUES, TimeValue, UI_CALLS,
+    UiCall, WORLD_CALLS, WorldCall,
 };
 pub(crate) use member::{SHAPE_MEMBERS, SPRITE_MEMBERS, TRANSFORM_MEMBERS, UI_IMAGE_MEMBERS};
 pub(crate) use names::{
-    EFFECTS, ENTITY, GAME, GRID, INPUT, PHYSICS, POINTER, PREFAB, PROFILE, PROFILES, RANDOM, SAVE,
-    SHAPE, SPRITE, STICK, TILEMAP_COMPONENT, TIME, TOUCH, TRANSFORM, UI, UI_IMAGE, VIEWPORT, WORLD,
+    ANIMATION, EFFECTS, ENTITY, GAME, GRID, INPUT, PHYSICS, POINTER, PREFAB, PROFILE, PROFILES,
+    RANDOM, SAVE, SHAPE, SPRITE, STICK, TILEMAP_COMPONENT, TIME, TOUCH, TRANSFORM, UI, UI_IMAGE,
+    VIEWPORT, WORLD,
+};
+pub(crate) use person::{
+    INPUT_QUERIES, InputQuery, POINTER_QUERIES, POINTER_VALUES, PointerQuery, PointerValue,
+    STICK_VALUES, StickValue, TOUCH_CALLS, TOUCH_COUNT, TouchCall, VIEWPORT_VALUES, ViewportValue,
 };
 
 use serde_json::Value as Json;

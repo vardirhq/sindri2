@@ -451,6 +451,18 @@ and the cursor holds a name rather than a rect so playback does not depend on
 where anything sits in an image. Playback is runtime state, so watching an
 animation run does not rewrite the scene it came from.
 
+**A script chooses the clip.** `Animation.play`, `stop` and `restart` name one
+of the clips the scene authored; `is_finished`, `frame` and `clip` read where
+playback has got to; `set_speed` scales it. The split above is what the surface
+is shaped around: choosing is authored state and writes the component, so it
+lives in the world and undoes and saves like anything else, while the cursor is
+derived and is only read — which is what keeps a script driving an animation
+from dirtying the scene. `play` is idempotent so that the natural way to write
+it (`if moving { play("walk") }`, named on every frame) runs the clip instead of
+pinning it to frame one; `restart` is the separate thing to want. Gather's
+player is the proof: its walk cycle had played since the sheet was sliced,
+including while standing still, and now runs only while it is walking.
+
 **A sheet is sliced in the editor, on the image.** Selecting a texture shows it
 in the inspector with each cell outlined on the picture; columns, rows, margin
 and spacing are drags, so a packed sheet with gutters can be cut and not only one

@@ -49,6 +49,8 @@ pub(super) struct TickWorld<'a> {
     pub(super) saves: Option<&'a mut sindri_core::SaveStore>,
     /// The fleck pool, when the host is running one.
     pub(super) effects: Option<&'a mut sindri_scene::Effects2d>,
+    /// Where each animated sprite has got to, when the host advances any.
+    pub(super) animations: Option<&'a mut sindri_scene::SpriteAnimations>,
 }
 
 pub(super) fn tick(
@@ -118,6 +120,11 @@ pub(super) fn tick(
                 random: at.random.as_deref_mut(),
                 saves: at.saves.as_deref_mut(),
                 effects: at.effects.as_deref_mut(),
+                // Reborrowed per tick like the rest: every script in the pass
+                // reads the same step's playback, and one taking the cursors
+                // away from the others would make which script ran first decide
+                // what the rest could see.
+                animations: at.animations.as_deref_mut(),
                 audio: &mut *at.audio,
             },
         ),

@@ -167,7 +167,8 @@ impl Session {
                 .with_physics(sindri_decay::Physics2d {
                     world: physics,
                     events,
-                }),
+                })
+                .with_animations(&mut self.animations),
         );
         self.pending_audio
             .extend(self.scripts.take_audio_commands());

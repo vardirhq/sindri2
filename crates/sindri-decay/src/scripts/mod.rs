@@ -7,6 +7,7 @@
 //! the file it was opened from.
 
 mod environment;
+mod person_surface;
 mod run;
 mod sources;
 
@@ -90,6 +91,14 @@ pub struct ScriptFrame<'a> {
     /// `None` for a host that draws none, and then `Effects.burst` says so
     /// rather than throwing flecks nobody will ever see.
     pub effects: Option<&'a mut sindri_scene::Effects2d>,
+    /// Where each animated sprite has got to, when the host advances any.
+    ///
+    /// `None` for a host that advances none, and then `Animation.is_finished`
+    /// answers that nothing has finished — which is true of a host where
+    /// nothing is playing. Naming a clip still writes the world, because which
+    /// clip plays is authored state and is the scene's whether or not anything
+    /// is drawing it.
+    pub animations: Option<&'a mut sindri_scene::SpriteAnimations>,
     pub delta_seconds: f32,
 }
 
@@ -108,6 +117,7 @@ impl<'a> ScriptFrame<'a> {
             random: None,
             saves: None,
             effects: None,
+            animations: None,
             delta_seconds,
         }
     }
@@ -158,6 +168,13 @@ impl<'a> ScriptFrame<'a> {
     #[must_use]
     pub fn with_physics(mut self, physics: Physics2d<'a>) -> Self {
         self.physics = Some(physics);
+        self
+    }
+
+    /// The same frame, with the animation cursors a script may read and reset.
+    #[must_use]
+    pub fn with_animations(mut self, animations: &'a mut sindri_scene::SpriteAnimations) -> Self {
+        self.animations = Some(animations);
         self
     }
 }
@@ -274,6 +291,7 @@ impl Scripts {
             random,
             saves,
             effects,
+            animations,
             delta_seconds,
         } = frame;
         let mut report = ScriptReport::default();
@@ -313,6 +331,7 @@ impl Scripts {
             random,
             saves,
             effects,
+            animations,
             started: BTreeSet::new(),
             spawned: Vec::new(),
         };

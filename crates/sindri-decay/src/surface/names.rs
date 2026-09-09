@@ -47,6 +47,14 @@ pub(crate) const GRID: &str = "Grid";
 /// the backend unreplaceable one script at a time.
 pub(crate) const PHYSICS: &str = "Physics";
 pub(crate) const UI: &str = "Ui";
+
+/// Which authored clip an entity is playing, and where it has got to.
+///
+/// Clips are authored, never built: a script names one the scene already holds,
+/// the same way it names an audio asset. That is what keeps the editor's clip
+/// list the single record of what an entity can do — a script that could invent
+/// a clip would make the animation panel a partial view of the truth.
+pub(crate) const ANIMATION: &str = "Animation";
 pub(crate) const RANDOM: &str = "Random";
 pub(crate) const SAVE: &str = "Save";
 pub(crate) const EFFECTS: &str = "Effects";

@@ -299,6 +299,7 @@ impl EditorApp {
                 random: &mut self.random,
                 saves: &mut self.saves,
                 effects: &mut self.effects,
+                animations: &mut self.animations,
                 delta_seconds: delta,
             },
         );

@@ -178,14 +178,15 @@ the gap is legible, not because it is scheduled.
 
 ## Animation
 
-The weakest major system relative to the baseline, and the one where the gap is
-widest between "we have something" and "a game can use it". Sprite clips exist
-and play; **a script cannot select or control one**, which means animation
-cannot respond to gameplay without hand-written frame maths.
+Still the weakest major system relative to the baseline, but no longer the one
+where nothing connects. Sprite clips exist, play, and are now *chosen by
+gameplay*: a script plays, stops, restarts and times a clip, and is told when a
+one-shot has ended. What remains absent is everything above a single clip —
+events, blending, tweening, and animating anything that is not a sprite frame.
 
 | Feature | Engine | Editor | Decay | Proof | vs. baseline | Gap that matters |
 | --- | :-: | :-: | :-: | :-: | --- | --- |
-| Sprite frame clips, timing, loop state | ✅ | ✅ | ❌ | ✅ | **Behind** | **Decay cannot play, stop, or select a clip.** This is the single blocking hole |
+| Sprite frame clips, timing, loop state | ✅ | ✅ | ✅ | ✅ | **Par** | `Animation.play`/`stop`/`restart`/`is_finished`/`frame`/`clip`/`set_speed`. Gather's player runs its walk cycle only while walking |
 | Clip authoring and preview | — | ✅ | — | ✅ | **Par** | — |
 | **Animation events (a frame fires a callback)** | ❌ | ❌ | ❌ | ❌ | **Absent** | Footsteps, hit frames, spawn-on-frame all need it |
 | **Property animation (animate any component field)** | ❌ | ❌ | ❌ | ❌ | **Absent** | Unity's Animation window animates any serialized property. We animate sprite frames and nothing else |
@@ -483,8 +484,14 @@ output of the file; everything above is evidence.
    written for cameras. Each variant is proved at startup by building the
    component it would produce and decoding it, so a variant that cannot be
    chosen safely stops the build.
-2. **Decay control of animation clips.** Animation exists and gameplay cannot
-   reach it. Small, and it unblocks the whole animation domain.
+2. ~~**Decay control of animation clips.**~~ **Done.** A script names one of the
+   clips the scene authored, stops it, restarts a finished one, reads the frame
+   it is on, and is told when a one-shot has ended. The two halves stay where
+   they belong — which clip plays is written to the world, where it has got to
+   is read from the cursor beside it — so a script driving an animation still
+   does not rewrite the scene it came from. Gather's player is the proof: its
+   walk cycle had run since the sheet was sliced, including while standing
+   still, because the clip was authored and nothing could tell it otherwise.
 3. **UI widget set: slider, toggle, text input, scroll region.** Without these
    no settings screen, inventory, or long list can be built at all.
 4. **Physics queries: raycast, overlap, shape cast.** Line of sight, ground

@@ -38,6 +38,21 @@ All notable changes to Sindri Next will be documented here.
   actually hand-roll is a gameplay one over tagged entities, of which physics
   casts are a subset.
 
+- **A script can drive an animation.** Sprite clips have existed, played and been
+  authorable in the editor for some time, and no script could select one — so an
+  animation could be cut, previewed and shipped without ever responding to
+  gameplay. `Animation.play`, `stop` and `restart` name a clip the scene already
+  holds; `is_finished`, `frame` and `clip` say where playback has got to;
+  `set_speed` scales it. The surface is shaped around where the two halves of an
+  animation live: which clip plays is authored state and is written to the
+  world, and the cursor is derived and only read, so a script driving an
+  animation still does not rewrite the scene it came from. `play` is idempotent
+  — naming the clip already playing does nothing — because a script says what
+  state it is in on every frame, and a `play` that restarted would hold a walk
+  cycle on its first frame for ever; `restart` is the separate way back to the
+  start of a one-shot. Gather's player is the proof: its walk cycle had run
+  whenever the scene did, including while standing still, and now runs only
+  while it walks.
 - **A field that decides what else its object holds is now editable, anywhere.**
   A collider piece's `shape` was a readout: choosing `circle` has to replace a
   box's half extents with a radius, and writing the word alone leaves a payload

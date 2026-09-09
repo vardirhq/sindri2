@@ -194,6 +194,90 @@ fn the_player_cannot_walk_through_solid_scenery() {
     );
 }
 
+/// The walk cycle belongs to walking.
+///
+/// Gather's player has had a four-frame `bob` clip since the sheet was sliced,
+/// and it played whenever the scene did — so standing still was a bob on the
+/// spot. The clip was authored and always playing, and nothing could tell it
+/// otherwise. This is what Decay reaching animation is *for*, and it is proved
+/// here rather than only in the engine's own tests: the real script, the real
+/// scene, and the real input a window feeds.
+#[test]
+fn the_player_only_bobs_while_walking() {
+    use sindri_platform::{InputEvent, Key};
+
+    let mut world = world().expect("the scene loads");
+    let extractor = extractor().expect("the schemas register");
+    let sources = sources();
+    let mut scripts = Scripts::new();
+    let mut animations = sindri_scene::SpriteAnimations::new();
+
+    let player = world
+        .entities()
+        .find(|(_, data)| {
+            data.source_id
+                .as_ref()
+                .is_some_and(|id| id.as_str() == "player")
+        })
+        .map(|(entity, _)| entity)
+        .expect("the scene names the player");
+
+    let playing = |world: &World| -> Option<String> {
+        world
+            .get(player)?
+            .components
+            .get("sindri.animation.sprite")?
+            .get("playing")?
+            .as_str()
+            .map(str::to_owned)
+    };
+
+    let step = |world: &mut World,
+                scripts: &mut Scripts,
+                animations: &mut sindri_scene::SpriteAnimations,
+                held: &InputState| {
+        let report = scripts.advance(
+            world,
+            extractor.components(),
+            ScriptFrame::new(&sources, held, 1.0 / 60.0).with_animations(animations),
+        );
+        assert!(report.failures.is_empty(), "{:?}", report.failures);
+    };
+
+    // Standing still, with nothing held.
+    let still = InputState::default();
+    for _ in 0..4 {
+        step(&mut world, &mut scripts, &mut animations, &still);
+    }
+    assert_eq!(
+        playing(&world),
+        None,
+        "the player bobbed on the spot with nothing held"
+    );
+
+    // Walking.
+    let mut held = InputState::default();
+    held.apply(InputEvent::KeyPressed(Key::ArrowLeft));
+    for _ in 0..4 {
+        step(&mut world, &mut scripts, &mut animations, &held);
+    }
+    assert_eq!(
+        playing(&world).as_deref(),
+        Some("bob"),
+        "the walk cycle did not start when the player walked"
+    );
+
+    // And stopping again.
+    for _ in 0..4 {
+        step(&mut world, &mut scripts, &mut animations, &still);
+    }
+    assert_eq!(
+        playing(&world),
+        None,
+        "the walk cycle kept running after the player stopped"
+    );
+}
+
 /// The Wisp is real gameplay pathfinding: its first direct east edge is authored
 /// as a wall, so deterministic cardinal A* must route south before approaching
 /// the player. This catches a script that merely moves toward the target while
