@@ -1181,7 +1181,13 @@ and checking the banner comes up.
 for a fixed number of fixed steps — and photographs where that leaves the game,
 so the picture proves the scripts ran rather than that the scene loads.
 
-**It opens in the editor, and Play runs it there.** All 22 entities load, both
+**Its grid reads as an authored place.** The expanded island uses regional tile
+patterns, a home shrine, east and west waystones, and standing-stone bars placed
+over the same authored walls the Wisp routes around. Regular procedural shapes
+draw those landmarks, while a small Decay script turns and pulses the shrine
+heart and the Wisp's travelling halo.
+
+**It opens in the editor, and Play runs it there.** All 30 entities load, both
 viewports draw it, and the editor advances the same Decay sources the standalone
 game does. `docs/editor-meets-the-game.md` records the first editor session
 against the older 68-entity scene; the tilemap removed its 49 floor rows and
