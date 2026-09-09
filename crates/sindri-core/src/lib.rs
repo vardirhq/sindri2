@@ -28,8 +28,8 @@ pub use asset::{
 };
 pub use command::{CommandBuffer, CommandError, CommandHistory, Transaction, WorldCommand};
 pub use component::{
-    ComponentMetadata, ComponentRegistryError, ComponentSchemaRegistry, SceneComponent,
-    UnknownComponentPolicy,
+    AssetKind, ComponentMetadata, ComponentRegistryError, ComponentSchemaRegistry, FieldMeaning,
+    SceneComponent, UnknownComponentPolicy,
 };
 pub use engine::{EngineCore, EngineError, EngineFrame};
 pub use entity::EntityId;

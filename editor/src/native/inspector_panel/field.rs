@@ -10,9 +10,19 @@
 //! the same way — it edits the drawn payload, and the caller turns the
 //! difference into a checked command — so a richer control is never a second
 //! path into the world.
+//!
+//! What a field means is asked of the schema registry rather than guessed from
+//! its name. The guess used to live here as a table: `texture` meant the
+//! texture list, `clip` meant the audio list, a colour had to be spelled
+//! `tint`. It was wrong in both directions — the bare-key rules matched any
+//! component, so a game's own with a `clip` field was offered the project's
+//! audio, while a field the table had never heard of was a text box in
+//! silence. The component says now, and the registry checks what it says
+//! against its own field template.
 
 use eframe::egui::{self, Color32, RichText};
 use serde_json::Value;
+use sindri_core::{AssetKind, ComponentSchemaRegistry, FieldMeaning};
 
 use crate::inspector::{self, choices, fields};
 use crate::ui::theme::{color, metric, text};
@@ -50,10 +60,11 @@ pub(crate) fn object_rows(
     ui: &mut egui::Ui,
     type_name: &str,
     payload: &mut Value,
-    fields: Option<&Value>,
+    registry: &ComponentSchemaRegistry,
     assets: FieldAssets<'_>,
     skip_properties: bool,
 ) {
+    let fields = registry.fields(type_name);
     // The blank is the one for the variant this payload is, not whichever
     // variant the registry's fresh component happens to be.
     let blank = fields.map(|fields| choices::blank_for(type_name, fields, payload));
@@ -64,13 +75,13 @@ pub(crate) fn object_rows(
         }
         // A choice can decide what else the component holds, so it is offered
         // the whole payload rather than one field of it.
-        if let Some(options) = choices::choices(type_name, &key)
-            && let Some(chosen) = choice_row(ui, &key, &drawn, &options)
-        {
-            choices::choose(type_name, &key, chosen, &mut drawn);
-            continue;
-        }
-        if choices::choices(type_name, &key).is_some() {
+        // The registry says which spellings a field accepts; the editor still
+        // says what picking one does to the rest of the payload, because for a
+        // tagged component that is a different question.
+        if let Some(FieldMeaning::Choice(options)) = registry.meaning(type_name, &key) {
+            if let Some(chosen) = choice_row(ui, &key, &drawn, options) {
+                choices::choose(type_name, &key, chosen, &mut drawn);
+            }
             continue;
         }
         // Whether the scene set this field or the schema did. The panel already
@@ -85,11 +96,12 @@ pub(crate) fn object_rows(
         let Some(value) = drawn.get_mut(&key) else {
             continue;
         };
-        if let Some(list) = asset_list(type_name, &key, assets) {
+        let meaning = registry.meaning(type_name, &key);
+        if let Some(list) = asset_list(meaning, assets) {
             asset_row(ui, &key, value, list);
             continue;
         }
-        if is_colour(&key, value) {
+        if is_colour(meaning, value) {
             colour_row(ui, &key, value);
             continue;
         }
@@ -99,18 +111,33 @@ pub(crate) fn object_rows(
 }
 
 /// The project list a field names, if it names one.
-fn asset_list<'a>(type_name: &str, key: &str, assets: FieldAssets<'a>) -> Option<&'a [String]> {
-    match (type_name, key) {
-        (_, "texture") => Some(assets.textures),
-        (_, "font") => Some(assets.fonts),
-        (_, "clip") => Some(assets.audio),
-        ("sindri.script", "source") => Some(assets.scripts),
-        _ => None,
-    }
+///
+/// One arm per kind the project actually holds, so a component naming an asset
+/// gets its list whatever the field is called, and one that names no asset gets
+/// no list however suggestively it is spelled.
+fn asset_list<'a>(meaning: Option<&FieldMeaning>, assets: FieldAssets<'a>) -> Option<&'a [String]> {
+    let FieldMeaning::Asset(kind) = meaning? else {
+        return None;
+    };
+    Some(match kind {
+        AssetKind::Texture => assets.textures,
+        AssetKind::Font => assets.fonts,
+        AssetKind::Audio => assets.audio,
+        AssetKind::Script => assets.scripts,
+        AssetKind::Profile => assets.profiles,
+        // Neither is a list the inspector draws a field from today: a prefab is
+        // chosen by its own picker, and a stylesheet is not a component field.
+        AssetKind::Prefab | AssetKind::Weave => return None,
+    })
 }
 
-fn is_colour(key: &str, value: &Value) -> bool {
-    matches!(key, "tint" | "color" | "colour")
+/// Whether to draw a swatch.
+///
+/// The shape is still checked. A component may call a field a colour, but a
+/// payload that is not four numbers cannot be edited as one, and refusing here
+/// leaves it visible as what it is rather than clamped into what it is not.
+fn is_colour(meaning: Option<&FieldMeaning>, value: &Value) -> bool {
+    matches!(meaning, Some(FieldMeaning::Colour))
         && matches!(
             inspector::value_kind(value),
             inspector::ValueKind::Numbers(4)

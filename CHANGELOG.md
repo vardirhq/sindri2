@@ -24,6 +24,26 @@ All notable changes to Sindri Next will be documented here.
   heart stay `sindri.shape`, because a script moves them every frame and no
   baked frame can do that. See `docs/isometric-baker.md`.
 
+- **A component says what its fields are for.** A field template said a sprite
+  had a `texture` and that it held a string; it could not say the string named a
+  texture in the project. So the editor guessed from the field's name, through
+  three lookup tables that were wrong in both directions: `(_, "clip")` offered
+  the project's audio to any component with a `clip` field, including a game's
+  own, while a field the tables had never heard of was a text box in silence —
+  which is what happened to every component added after they were written. A
+  registration now declares meaning — which asset kind a field names, which
+  spellings it accepts, that it is a colour, an angle, a bounded number, a
+  collision mask, or another entity — and the registry checks every declared
+  path against that component's field template, so a renamed field is a startup
+  error rather than a picker that quietly stopped appearing. Paths are dotted
+  and `[]` descends into a list, so one `pieces[].rotation` describes every
+  piece of a compound collider. The editor's tables are deleted and it asks the
+  registry instead; `docs/generated/sindri-capabilities.json` now carries the
+  meanings too, so the knowledge reaches every tool rather than living where
+  only the inspector could see it. Nothing the old tables got right was lost —
+  a test pins each of the eight pickers and eight dropdowns they drew — and
+  shapes, layouts, and collider pieces gained dropdowns they never had.
+
 - **One parity document replaces the two status matrices.** `docs/parity.md`
   is written from the outside in: it records what a game engine is expected to
   do, what Sindri actually does across engine, editor, Decay and game proof, and

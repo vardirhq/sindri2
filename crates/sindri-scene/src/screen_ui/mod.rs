@@ -24,7 +24,7 @@ use sindri_core::{
 };
 
 pub use hierarchy::{UiHierarchy, UiPlaced};
-pub use layout::{UiDirection, UiLayoutComponent};
+pub use layout::{UiAlign, UiDirection, UiJustify, UiLayoutComponent};
 pub use rect::{SafeArea, ScreenExtent, ScreenRect};
 
 /// Something on the screen a person can press.

@@ -7,10 +7,12 @@ use thiserror::Error;
 use crate::{EntityId, SceneDocument, SceneEntityId, SceneError, World};
 
 mod fields;
+mod meaning;
 #[cfg(test)]
 mod tests;
 
 use fields::declared_fields;
+pub use meaning::{AssetKind, FieldMeaning};
 
 pub trait SceneComponent: DeserializeOwned {
     const TYPE_NAME: &'static str;
@@ -64,6 +66,12 @@ struct ComponentRegistration {
     /// two meant its panel showed two rows where the same component authored by
     /// hand showed seven.
     default_payload: Option<Value>,
+    /// What this component's fields *mean*, by path.
+    ///
+    /// Empty for a component nobody has described, which is honest: a tool
+    /// then knows only the shape, which is what it knew before any of this
+    /// existed.
+    meanings: Vec<(String, FieldMeaning)>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -199,9 +207,76 @@ impl ComponentSchemaRegistry {
                 validate: validate_payload::<T>,
                 fields,
                 default_payload,
+                meanings: Vec::new(),
             },
         );
         Ok(())
+    }
+
+    /// Says what some of a registered component's fields mean.
+    ///
+    /// Shape comes from the field template; this is the other half. A tool
+    /// drawing `sindri.sprite` learns that `texture` names a project texture
+    /// rather than merely holding a string, and stops having to guess it from
+    /// the field's name.
+    ///
+    /// Every path is checked against the field template, for the same reason
+    /// the template itself is checked against serde: a meaning is a second
+    /// mention of a field, and a second mention drifts. A renamed field leaves
+    /// its meaning naming nothing, and that is a registration error here rather
+    /// than a picker that quietly stopped appearing.
+    ///
+    /// A path is dotted, and `[]` descends into an array: `pieces[].friction`
+    /// means the `friction` of every piece. The template carries one exemplar
+    /// item, which is what the path resolves against.
+    pub fn describe<T: SceneComponent>(
+        &mut self,
+        meanings: impl IntoIterator<Item = (&'static str, FieldMeaning)>,
+    ) -> Result<(), ComponentRegistryError> {
+        let registration = self
+            .registrations
+            .get_mut(T::TYPE_NAME)
+            .ok_or(ComponentRegistryError::NotRegistered(T::TYPE_NAME))?;
+        let Some(template) = registration.fields.as_ref() else {
+            return Err(ComponentRegistryError::DescribedWithoutFields(T::TYPE_NAME));
+        };
+        for (path, meaning) in meanings {
+            if !meaning::resolves(template, path) {
+                return Err(ComponentRegistryError::UnknownFieldPath {
+                    type_name: T::TYPE_NAME,
+                    path: path.to_owned(),
+                });
+            }
+            registration.meanings.push((path.to_owned(), meaning));
+        }
+        Ok(())
+    }
+
+    /// What this component's field at `path` means, if anything has said.
+    ///
+    /// `path` names the field actually being looked at, so an item of an array
+    /// is asked for by index — `pieces.0.friction` — and answered by the
+    /// exemplar path the registration stored.
+    #[must_use]
+    pub fn meaning(&self, type_name: &str, path: &str) -> Option<&FieldMeaning> {
+        self.registrations
+            .get(type_name)?
+            .meanings
+            .iter()
+            .find(|(stored, _)| meaning::matches(stored, path))
+            .map(|(_, meaning)| meaning)
+    }
+
+    /// Every meaning recorded for a component, in registration order.
+    ///
+    /// For generated documents, which say what a component consists of and can
+    /// now say what its fields are for.
+    pub fn meanings(&self, type_name: &str) -> impl Iterator<Item = (&str, &FieldMeaning)> {
+        self.registrations
+            .get(type_name)
+            .into_iter()
+            .flat_map(|registration| registration.meanings.iter())
+            .map(|(path, meaning)| (path.as_str(), meaning))
     }
 
     /// Every field this component has, at its unstated value, or `None` for a
@@ -403,6 +478,13 @@ pub enum ComponentRegistryError {
     NotRegistered(&'static str),
     #[error("the field template for component type '{0}' is not an object")]
     InvalidFields(&'static str),
+    #[error("component type '{0}' has no field template, so its fields cannot be described")]
+    DescribedWithoutFields(&'static str),
+    #[error("component type '{type_name}' has no field at '{path}'")]
+    UnknownFieldPath {
+        type_name: &'static str,
+        path: String,
+    },
     #[error("the field template for component type '{type_name}' does not match it: {wrong}")]
     TemplateMismatch {
         type_name: &'static str,

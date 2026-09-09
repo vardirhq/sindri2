@@ -3,7 +3,7 @@
 use std::path::{Path, PathBuf};
 
 use eframe::egui::{self};
-use sindri_core::{SceneDocument, UnknownComponentPolicy, World};
+use sindri_core::{AssetKind, FieldMeaning, SceneDocument, UnknownComponentPolicy, World};
 use sindri_decay::ScriptComponent;
 use sindri_scene::{SceneExtractor, SpriteAnimations};
 
@@ -74,6 +74,11 @@ pub fn scene_extractor() -> SceneExtractor {
             }),
         )
         .expect("sindri.script registers");
+    // A script names a file in the project, which is the one thing about this
+    // component a panel cannot work out from the shape of its payload.
+    scene
+        .describe::<ScriptComponent>([("source", FieldMeaning::Asset(AssetKind::Script))])
+        .expect("a script's source names a script");
     scene
 }
 

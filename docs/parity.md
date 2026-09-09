@@ -362,8 +362,8 @@ components not yet written. It is the highest-leverage item in this file.
 | Gizmos: transform, snapping, Z-lock-safe movement | ✅ | **Par** | No collider, camera, or effect gizmos |
 | Play / pause / stop / single-step, snapshot restore | ✅ | **Ahead** | Single-step and snapshot restore are better than Unity's play mode |
 | Tilemap painting, sheet slicer, texture picker | ✅ | **Par** | — |
-| **Asset pickers for schema fields generally** | 🟡 | **Behind** | Guessed from field names by tables in the editor: global bare-key rules, silence for anything unlisted. See the root cause above |
-| **Array-of-object editing** | ❌ | **Behind** | Compound colliders, and anything list-shaped in future |
+| **Asset pickers for schema fields generally** | ✅ | **Ahead** | Declared per component in the schema registry, checked against the field template, and carried in `docs/generated/`. Unity needs a plugin (Odin) for the equivalent |
+| **Array-of-object editing** | ❌ | **Behind** | Compound colliders, and anything list-shaped in future. The meanings describing each piece exist; the control does not |
 | **Console / log panel** | ❌ | **Absent** | Errors and script `print` output are invisible in the editor |
 | **Profiler view** | ❌ | **Absent** | Where a fixed step goes is unmeasurable in-editor |
 | **Search / filter in hierarchy or project** | ❌ | **Absent** | Painful past a few dozen entities |
@@ -464,14 +464,14 @@ three we have partially built and stranded.
 Ordered by whether it stops somebody shipping a game, not by size. This is the
 output of the file; everything above is evidence.
 
-1. **Field meaning in the schema registry, and a generic inspector that reads
-   it.** Replaces three name-keyed lookup tables in the editor that are global
-   where they should be scoped and silent where they should be complete. Fixes
-   hand-typed asset fields across every component at once, fixes array-of-object
-   editing, makes compound colliders authorable, and makes the knowledge
-   checkable against the field template the way field lists already are.
-   Highest leverage in the file, and it defends the "no Odin required"
-   anti-goal.
+1. ~~**Field meaning in the schema registry.**~~ **Done.** A component now says
+   what its fields are for — asset kind, choice, colour, angle, bounded range,
+   collision mask, entity reference — and the registry checks every path against
+   the field template, so a renamed field is a startup error rather than a
+   control that quietly stopped appearing. The editor's three name-keyed tables
+   are gone. What remains of this item is **array-of-object editing**: a
+   compound collider's `pieces` still falls to `ValueKind::Opaque`, so the
+   meanings describing each piece have no control to drive yet.
 2. **Decay control of animation clips.** Animation exists and gameplay cannot
    reach it. Small, and it unblocks the whole animation domain.
 3. **UI widget set: slider, toggle, text input, scroll region.** Without these

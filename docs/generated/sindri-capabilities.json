@@ -1,5 +1,5 @@
 {
-  "about": "Every component this engine build registers. `fields` is what the component has; `default_payload` is what a fresh one is, and is null for a type with no honest blank — one naming an asset the engine cannot invent. `addable` says whether a tool can add one without being given anything else.",
+  "about": "Every component this engine build registers. `fields` is what the component has; `default_payload` is what a fresh one is, and is null for a type with no honest blank — one naming an asset the engine cannot invent. `addable` says whether a tool can add one without being given anything else. `meanings` says what a field is *for* where the shape alone cannot: which asset kind it names, which spellings it accepts, that it is a colour, an angle, a bounded number, a collision mask, or another entity. A path is dotted, and `[]` descends into a list, so `pieces[].friction` describes every piece.",
   "components": [
     {
       "addable": false,
@@ -9,6 +9,13 @@
         "clips": {},
         "playing": null,
         "speed": 1.0
+      },
+      "meanings": {
+        "speed": {
+          "kind": "range",
+          "max": null,
+          "min": 0.0
+        }
       },
       "schema_version": 1,
       "type_name": "sindri.animation.sprite"
@@ -22,6 +29,17 @@
         "clip": "",
         "looping": false,
         "volume": 1.0
+      },
+      "meanings": {
+        "clip": {
+          "asset": "audio",
+          "kind": "asset"
+        },
+        "volume": {
+          "kind": "range",
+          "max": 1.0,
+          "min": 0.0
+        }
       },
       "schema_version": 1,
       "type_name": "sindri.audio.source"
@@ -40,6 +58,15 @@
         "near": 0.10000000149011612,
         "projection": "perspective",
         "vertical_fov_degrees": 60.0
+      },
+      "meanings": {
+        "projection": {
+          "kind": "choice",
+          "options": [
+            "perspective",
+            "orthographic"
+          ]
+        }
       },
       "schema_version": 1,
       "type_name": "sindri.camera"
@@ -81,6 +108,15 @@
           1.0
         ]
       },
+      "meanings": {
+        "texture": {
+          "asset": "texture",
+          "kind": "asset"
+        },
+        "tint": {
+          "kind": "colour"
+        }
+      },
       "schema_version": 1,
       "type_name": "sindri.effect.burst"
     },
@@ -93,6 +129,7 @@
       "fields": {
         "walls": []
       },
+      "meanings": {},
       "schema_version": 1,
       "type_name": "sindri.grid.navigation"
     },
@@ -109,6 +146,11 @@
         ],
         "grid": ""
       },
+      "meanings": {
+        "grid": {
+          "kind": "entity"
+        }
+      },
       "schema_version": 1,
       "type_name": "sindri.grid.occupant"
     },
@@ -124,6 +166,12 @@
         "layer": 0,
         "primitive": "cube",
         "texture": "procedural:checkerboard"
+      },
+      "meanings": {
+        "texture": {
+          "asset": "texture",
+          "kind": "asset"
+        }
       },
       "schema_version": 1,
       "type_name": "sindri.mesh"
@@ -181,6 +229,30 @@
           }
         ]
       },
+      "meanings": {
+        "pieces[].layers.filter": {
+          "kind": "mask"
+        },
+        "pieces[].layers.memberships": {
+          "kind": "mask"
+        },
+        "pieces[].restitution": {
+          "kind": "range",
+          "max": 1.0,
+          "min": 0.0
+        },
+        "pieces[].rotation": {
+          "kind": "angle"
+        },
+        "pieces[].shape.shape": {
+          "kind": "choice",
+          "options": [
+            "box",
+            "circle",
+            "capsule"
+          ]
+        }
+      },
       "schema_version": 1,
       "type_name": "sindri.physics2d.collider"
     },
@@ -223,6 +295,20 @@
             0.0
           ],
           "rotation": 0.0
+        }
+      },
+      "meanings": {
+        "kind": {
+          "kind": "choice",
+          "options": [
+            "static",
+            "dynamic",
+            "kinematic_position",
+            "kinematic_velocity"
+          ]
+        },
+        "pose.rotation": {
+          "kind": "angle"
         }
       },
       "schema_version": 1,
@@ -279,6 +365,33 @@
         "sweep_start": 0.0,
         "sweep_turns": 1.0
       },
+      "meanings": {
+        "blend": {
+          "kind": "choice",
+          "options": [
+            "over",
+            "add"
+          ]
+        },
+        "fill": {
+          "kind": "colour"
+        },
+        "kind": {
+          "kind": "choice",
+          "options": [
+            "rect",
+            "ellipse",
+            "polygon",
+            "grid"
+          ]
+        },
+        "stroke": {
+          "kind": "colour"
+        },
+        "sweep_start": {
+          "kind": "angle"
+        }
+      },
       "schema_version": 1,
       "type_name": "sindri.shape"
     },
@@ -305,6 +418,15 @@
           1.0
         ]
       },
+      "meanings": {
+        "texture": {
+          "asset": "texture",
+          "kind": "asset"
+        },
+        "tint": {
+          "kind": "colour"
+        }
+      },
       "schema_version": 1,
       "type_name": "sindri.sprite"
     },
@@ -317,6 +439,7 @@
       "fields": {
         "tags": []
       },
+      "meanings": {},
       "schema_version": 1,
       "type_name": "sindri.tags"
     },
@@ -367,6 +490,22 @@
           1.0
         ]
       },
+      "meanings": {
+        "projection": {
+          "kind": "choice",
+          "options": [
+            "orthogonal",
+            "isometric"
+          ]
+        },
+        "texture": {
+          "asset": "texture",
+          "kind": "asset"
+        },
+        "tint": {
+          "kind": "colour"
+        }
+      },
       "schema_version": 1,
       "type_name": "sindri.tilemap"
     },
@@ -379,6 +518,7 @@
       "fields": {
         "label": ""
       },
+      "meanings": {},
       "schema_version": 1,
       "type_name": "sindri.ui.button"
     },
@@ -415,6 +555,29 @@
           1.0
         ]
       },
+      "meanings": {
+        "anchor": {
+          "kind": "choice",
+          "options": [
+            "center",
+            "top",
+            "bottom",
+            "left",
+            "right",
+            "top_left",
+            "top_right",
+            "bottom_left",
+            "bottom_right"
+          ]
+        },
+        "texture": {
+          "asset": "texture",
+          "kind": "asset"
+        },
+        "tint": {
+          "kind": "colour"
+        }
+      },
       "schema_version": 1,
       "type_name": "sindri.ui.image"
     },
@@ -432,6 +595,33 @@
         "direction": "column",
         "justify": "center",
         "spacing": 0.25
+      },
+      "meanings": {
+        "align": {
+          "kind": "choice",
+          "options": [
+            "start",
+            "center",
+            "end",
+            "stretch"
+          ]
+        },
+        "direction": {
+          "kind": "choice",
+          "options": [
+            "column",
+            "row"
+          ]
+        },
+        "justify": {
+          "kind": "choice",
+          "options": [
+            "start",
+            "center",
+            "end",
+            "space_between"
+          ]
+        }
       },
       "schema_version": 1,
       "type_name": "sindri.ui.layout"
@@ -488,6 +678,47 @@
         "stroke_width": 0.04,
         "sweep_start": 0.0,
         "sweep_turns": 1.0
+      },
+      "meanings": {
+        "anchor": {
+          "kind": "choice",
+          "options": [
+            "center",
+            "top",
+            "bottom",
+            "left",
+            "right",
+            "top_left",
+            "top_right",
+            "bottom_left",
+            "bottom_right"
+          ]
+        },
+        "blend": {
+          "kind": "choice",
+          "options": [
+            "over",
+            "add"
+          ]
+        },
+        "fill": {
+          "kind": "colour"
+        },
+        "kind": {
+          "kind": "choice",
+          "options": [
+            "rect",
+            "ellipse",
+            "polygon",
+            "grid"
+          ]
+        },
+        "stroke": {
+          "kind": "colour"
+        },
+        "sweep_start": {
+          "kind": "angle"
+        }
       },
       "schema_version": 1,
       "type_name": "sindri.ui.shape"
@@ -547,6 +778,61 @@
         "values": [],
         "visible": -1.0,
         "wrap": "none"
+      },
+      "meanings": {
+        "anchor": {
+          "kind": "choice",
+          "options": [
+            "center",
+            "top",
+            "bottom",
+            "left",
+            "right",
+            "top_left",
+            "top_right",
+            "bottom_left",
+            "bottom_right"
+          ]
+        },
+        "case": {
+          "kind": "choice",
+          "options": [
+            "as_written",
+            "upper",
+            "lower"
+          ]
+        },
+        "color": {
+          "kind": "colour"
+        },
+        "font": {
+          "asset": "font",
+          "kind": "asset"
+        },
+        "line_align": {
+          "kind": "choice",
+          "options": [
+            "follow",
+            "left",
+            "center",
+            "right",
+            "justify"
+          ]
+        },
+        "outline.color": {
+          "kind": "colour"
+        },
+        "shadow.color": {
+          "kind": "colour"
+        },
+        "wrap": {
+          "kind": "choice",
+          "options": [
+            "none",
+            "word",
+            "glyph"
+          ]
+        }
       },
       "schema_version": 1,
       "type_name": "sindri.ui.text"

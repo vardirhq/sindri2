@@ -254,3 +254,21 @@ fn a_collider_with_no_pieces_is_refused() {
         Err(PhysicsError::NoColliderPieces(_))
     ));
 }
+
+/// The names beside the enum are the names serde uses.
+///
+/// A list of spellings next to a type is a second copy of it, and a second copy
+/// drifts. This is the check that makes the copy safe to rely on.
+#[test]
+fn every_collider_shape_name_is_one_serde_reads() {
+    for name in ColliderShape2d::SHAPES {
+        let payload = match name {
+            "box" => serde_json::json!({ "shape": name, "half_extents": [0.5, 0.5] }),
+            "circle" => serde_json::json!({ "shape": name, "radius": 0.5 }),
+            "capsule" => serde_json::json!({ "shape": name, "half_height": 0.4, "radius": 0.2 }),
+            other => panic!("{other} has no case here, so the list has grown"),
+        };
+        serde_json::from_value::<ColliderShape2d>(payload)
+            .unwrap_or_else(|error| panic!("'{name}' is not a shape serde reads: {error}"));
+    }
+}

@@ -39,6 +39,8 @@ pub(super) fn builtin_components() -> Result<ComponentSchemaRegistry, SceneExtra
     let mut components = ComponentSchemaRegistry::default();
     register_drawables(&mut components)?;
     register_gameplay(&mut components)?;
+    // What the fields are for, once every field exists to be described.
+    super::meanings::describe_builtins(&mut components)?;
     Ok(components)
 }
 

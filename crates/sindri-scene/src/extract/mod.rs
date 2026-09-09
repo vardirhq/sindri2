@@ -7,8 +7,9 @@
 
 mod camera;
 mod effects;
+mod meanings;
 mod mesh;
-mod registry;
+pub(crate) mod registry;
 mod shape;
 mod sprite;
 mod text;
@@ -21,8 +22,8 @@ use camera::ResolvedCamera;
 use camera::view::{place_overlay_in_scene, resolved_screen_overlay, safe_rotation};
 use glam::{Mat4, Vec3};
 use sindri_core::{
-    ComponentRegistryError, ComponentSchemaRegistry, SceneComponent, SceneDocument, SpriteRefError,
-    Transform3D, UnknownComponentPolicy, World,
+    ComponentRegistryError, ComponentSchemaRegistry, FieldMeaning, SceneComponent, SceneDocument,
+    SpriteRefError, Transform3D, UnknownComponentPolicy, World,
 };
 use sindri_render::{
     ClearOperations, ExtractedFrame, FramePlanError, PreparedFrame, TextError,
@@ -125,6 +126,20 @@ impl SceneExtractor {
     ) -> Result<(), SceneExtractError> {
         self.components
             .register_with_fields::<T>(display_name, fields)?;
+        Ok(())
+    }
+
+    /// Says what some of a registered component's fields mean, so a tool can
+    /// offer the right control instead of guessing from the field's name.
+    ///
+    /// Every path is checked against that component's field template, so a
+    /// meaning naming a field that does not exist is an error here rather than
+    /// a control that quietly stopped appearing.
+    pub fn describe<T: SceneComponent>(
+        &mut self,
+        meanings: impl IntoIterator<Item = (&'static str, FieldMeaning)>,
+    ) -> Result<(), SceneExtractError> {
+        self.components.describe::<T>(meanings)?;
         Ok(())
     }
 
