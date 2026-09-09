@@ -1,0 +1,36 @@
+{
+  "format_version": 1,
+  "metadata": {
+    "name": "Standing Stone"
+  },
+  "entities": [
+    {
+      "id": "standing-stone",
+      "name": "Standing Stone",
+      "transform_3d": {
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.859375, 2.028125, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/standing-stone.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      },
+      "editor": {
+        "sindri.isometric-baker": {
+          "anchor": [25, 59],
+          "canvas": [50, 118],
+          "directions": ["south", "west", "north", "east"],
+          "format_version": 1,
+          "recipe": "prefabs/standing-stone.isobake.json",
+          "sheet": "textures/standing-stone.sheet.json",
+          "texture": "textures/standing-stone.png",
+          "tile": [64, 32],
+          "world_units_per_pixel": 0.0171875
+        }
+      }
+    }
+  ]
+}

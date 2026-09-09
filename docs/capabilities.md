@@ -1211,3 +1211,33 @@ every sprite batch after the first drew with the last batch's camera. See
 ### Scripted pathfinding
 
 Decay can query and advance authored grid occupants through deterministic A* with `Grid.can_reach` and `Grid.step_toward`. The host delegates to the same `WorldGridNavigation` adapter used by engine tests, so walls, occupancy, and whole footprints retain one meaning. Gather's Wisp exercises that path at runtime.
+
+---
+
+## Tooling beside the engine
+
+Things that live in the repository, are run by hand, and change nothing about
+what the engine can do. They are listed here so that finding one does not read
+as evidence of a capability.
+
+### The isometric baker
+
+`tools/isometric-baker` bakes a 3D model into an ordinary sprite sheet and the
+`.sheet.json` beside it, offline. Its contract is `docs/isometric-baker.md`.
+
+It is emphatically **not** runtime 3D and does not imply any. The engine still
+has one mesh primitive, no glTF import, no material authoring and no lighting
+system, exactly as the sections above say. Nothing the engine, editor, native
+game or browser export builds depends on the tool: the assets it produces are
+ordinary PNGs and sheet documents, and by the time a game loads one there is
+nothing left to say it was baked.
+
+Gather uses it. Its shrine, its two waystones and its three standing-stone
+markers were dashed ellipses, rectangles and pentagons drawn by
+`sindri.shape` — the placeholder art of an engine debug scene — and are now
+baked sprites drawn by the ordinary sprite path. The recipes are
+`game/assets/textures/*.isobake.json`, and the PNG and `.sheet.json` beside
+each are generated from them.
+
+What stayed a shape stayed for a reason: the Wisp halo and the shrine heart are
+animated every frame by Decay, which no baked frame can do.

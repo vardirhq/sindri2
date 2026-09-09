@@ -11,12 +11,13 @@ use std::collections::BTreeSet;
 use sindri_core::{SceneComponent, SceneDocument, Transform3D, UnknownComponentPolicy, World};
 use sindri_decay::{AudioCommand, ScriptComponent, ScriptFrame, ScriptSources, Scripts};
 use sindri_gather::{
-    AUDIO, FONTS, Session, extractor, presented_world, sources, stylesheets, world,
+    AUDIO, FONTS, Session, TEXTURE_IDS, TEXTURES, extractor, presented_world, sources, stylesheets,
+    world,
 };
 use sindri_grid::{GridCoord, GridPoint, GridSpace, PlanePoint};
 use sindri_platform::InputState;
 use sindri_scene::{
-    SceneExtractor, ShapeComponent, TilemapComponent, UiAnchor, UiTextComponent,
+    SceneExtractor, ShapeComponent, SpriteComponent, TilemapComponent, UiAnchor, UiTextComponent,
     WorldGridNavigation,
 };
 
@@ -72,14 +73,15 @@ fn the_island_has_authored_regions() {
     );
 }
 
-#[test]
-fn landmarks_make_the_world_and_navigation_readable() {
-    let world = world().expect("the scene loads");
-    let extractor = extractor().expect("the schemas register");
-    let shaped: BTreeSet<String> = extractor
+/// The authored IDs of every entity carrying `C`.
+///
+/// Generic because the point of the landmark test is comparing two component
+/// sets, and a closure cannot be generic over the component it queries.
+fn authored_ids<C: SceneComponent>(extractor: &SceneExtractor, world: &World) -> BTreeSet<String> {
+    extractor
         .components()
-        .query::<ShapeComponent>(&world)
-        .expect("the shape schema reads")
+        .query::<C>(world)
+        .expect("the component schema reads")
         .into_iter()
         .filter_map(|(entity, _)| {
             world
@@ -88,19 +90,47 @@ fn landmarks_make_the_world_and_navigation_readable() {
                 .as_ref()
                 .map(|id| id.as_str().to_owned())
         })
-        .collect();
+        .collect()
+}
+
+/// The landmarks are there, and each is made of the right thing.
+///
+/// The split is the point. Gather's world art is baked
+/// (`tools/isometric-baker`) and drawn as ordinary sprites, so the shrine, the
+/// waystones and the standing stones are sprites. What stayed procedural is
+/// what a shape is genuinely better at: two small pieces that a script
+/// animates every frame, which no baked frame could do.
+#[test]
+fn landmarks_make_the_world_and_navigation_readable() {
+    let world = world().expect("the scene loads");
+    let extractor = extractor().expect("the schemas register");
+
+    let shaped = authored_ids::<ShapeComponent>(&extractor, &world);
+    let drawn = authored_ids::<SpriteComponent>(&extractor, &world);
 
     for expected in [
         "shrine",
-        "shrine-heart",
         "waystone-west",
         "waystone-east",
         "wall-marker-north",
         "wall-marker-middle",
         "wall-marker-south",
-        "wisp-halo",
     ] {
-        assert!(shaped.contains(expected), "Gather is missing {expected}");
+        assert!(
+            drawn.contains(expected),
+            "Gather's {expected} should be a baked sprite"
+        );
+        assert!(
+            !shaped.contains(expected),
+            "{expected} still carries the procedural placeholder it replaced"
+        );
+    }
+
+    for animated in ["shrine-heart", "wisp-halo"] {
+        assert!(
+            shaped.contains(animated),
+            "{animated} is animated every frame, so it stays a shape"
+        );
     }
 }
 
@@ -167,11 +197,24 @@ fn every_texture_the_scene_names_is_shipped() {
     let referenced: BTreeSet<String> = sindri_scene::referenced_textures(&world)
         .into_iter()
         .collect();
-    let shipped: BTreeSet<String> = ["tiles", "orb", "player", "pip", "banner"]
-        .into_iter()
-        .map(|name| format!("textures/{name}.png"))
-        .collect();
+    // Against the list the binary actually embeds, rather than a third copy of
+    // it written here: a hand-kept list in a test drifts from the one it is
+    // meant to check, and the drift is invisible until a texture is missing.
+    let shipped: BTreeSet<String> = TEXTURES.iter().map(|(id, _)| (*id).to_owned()).collect();
     assert_eq!(referenced, shipped);
+}
+
+/// The browser build fetches exactly what the native build embeds.
+///
+/// Two lists say which textures Gather has — one of bytes for the native
+/// binary, one of IDs for the browser to fetch — and a texture added to one
+/// and not the other is a game that looks right in one target and wrong in the
+/// other, with nothing failing.
+#[test]
+fn the_browser_fetches_every_texture_the_native_build_embeds() {
+    let embedded: BTreeSet<&str> = TEXTURES.iter().map(|(id, _)| *id).collect();
+    let fetched: BTreeSet<&str> = TEXTURE_IDS.iter().copied().collect();
+    assert_eq!(embedded, fetched);
 }
 
 /// Every font is embedded too; an absent font deliberately draws no text

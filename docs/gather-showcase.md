@@ -15,9 +15,10 @@ not need this document to be told that a component exists.
 | --- | --- | --- |
 | Decay | Player movement, orb collection, progress lamps, victory, and Wisp behavior are scripts; Rust hosts them without owning game rules | Strong |
 | Tilemap | One authored 9x9 isometric tilemap replaces a floor made from individual sprite entities | Technically clear; regional patterning is the world-refresh foundation |
+| World art | The shrine, the two waystones and the three standing-stone markers are baked sprites, generated from 3D models by `tools/isometric-baker` and drawn by the ordinary sprite path | Strong; replaces the procedural shapes that read as an engine debug scene |
 | Grid coordinates | Player movement, bounds, and orb collection use the tilemap's logical coordinates | Strong |
 | Navigation | The Wisp follows the player around visible standing-stone walls through shared deterministic A*; its animated halo makes each step readable | Strong |
-| Animation | The player advances an authored sprite clip while the Wisp halo and shrine heart pulse and turn through Decay-driven transforms | Conspicuous |
+| Animation | The player advances an authored sprite clip while the Wisp halo and shrine heart pulse and turn through Decay-driven transforms — the two pieces that stayed procedural, because a shape a script moves every frame is what no baked frame can be | Conspicuous |
 | UI and text | A project-font title, progress lamps, and a victory banner render as screen UI | Functional, not product-like |
 | Input | Arrow/WASD movement and the shared touch stick drive the same Decay player | Strong |
 | Audio | Background music plus pickup and victory sounds use the shared native/browser path | Complete but lightly presented |
@@ -34,7 +35,7 @@ its own sake.
 
 | Capability | Refresh proof |
 | --- | --- |
-| World composition | A compact authored map with paths, obstacles, enclosed spaces, and recognizable landmarks makes its grid legible as a place |
+| World composition | A compact authored map with paths, obstacles, enclosed spaces, and recognizable landmarks makes its grid legible as a place. Landmarks are authored art, not procedural stand-ins: see `docs/isometric-baker.md` |
 | Navigation | Obstacles and feedback make the Wisp's route around authored walls immediately visible |
 | Animation | Player, orbs, Wisp, environmental props, and completion presentation move conspicuously through existing sprite-animation support |
 | Weave | Composed stylesheets present title, objective, progress, Wisp status, pause, and completion UI across desktop and portrait viewports |

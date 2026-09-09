@@ -40,13 +40,22 @@ pub const WEAVE_SOURCES: &[(&str, &str)] = &[
     ),
 ];
 
-#[cfg(target_arch = "wasm32")]
-pub(crate) const TEXTURE_IDS: &[&str] = &[
+/// Every texture Gather draws, by ID.
+///
+/// The browser fetches these; the native build embeds the bytes in `TEXTURES`.
+/// Both targets need the same set, so the list is not behind a `cfg` — a
+/// texture added to one and not the other is a game that looks right on one
+/// target and wrong on the other, with nothing failing, and a native test
+/// compares the two.
+pub const TEXTURE_IDS: &[&str] = &[
     "textures/tiles.png",
     "textures/orb.png",
     "textures/player.png",
     "textures/pip.png",
     "textures/banner.png",
+    "textures/shrine.png",
+    "textures/standing-stones.png",
+    "textures/waystone.png",
 ];
 
 /// The scene and scripts are embedded only in native builds.
@@ -103,6 +112,21 @@ pub const TEXTURES: &[(&str, &[u8])] = &[
     (
         "textures/banner.png",
         include_bytes!("../assets/textures/banner.png"),
+    ),
+    // Baked by `tools/isometric-baker` from the recipes beside them. The
+    // recipe is the source; the PNG and its sheet are derived, and re-baking
+    // rewrites them in place.
+    (
+        "textures/shrine.png",
+        include_bytes!("../assets/textures/shrine.png"),
+    ),
+    (
+        "textures/standing-stones.png",
+        include_bytes!("../assets/textures/standing-stones.png"),
+    ),
+    (
+        "textures/waystone.png",
+        include_bytes!("../assets/textures/waystone.png"),
     ),
 ];
 
@@ -169,6 +193,18 @@ pub const SHEETS: &[(&str, &str)] = &[
     (
         "textures/player.sheet.json",
         include_str!("../assets/textures/player.sheet.json"),
+    ),
+    (
+        "textures/shrine.sheet.json",
+        include_str!("../assets/textures/shrine.sheet.json"),
+    ),
+    (
+        "textures/standing-stones.sheet.json",
+        include_str!("../assets/textures/standing-stones.sheet.json"),
+    ),
+    (
+        "textures/waystone.sheet.json",
+        include_str!("../assets/textures/waystone.sheet.json"),
     ),
 ];
 

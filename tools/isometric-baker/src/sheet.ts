@@ -1,0 +1,127 @@
+/**
+ * Packing baked frames into one texture, and describing it the way Sindri does.
+ *
+ * Sindri slices an image with a document beside it: `textures/shrine.png` is cut
+ * by `textures/shrine.sheet.json`, and the rule lives in
+ * `crates/sindri-core/src/sheet.rs`. Note that the suffix *replaces* the
+ * extension rather than following it — a sheet for `shrine.png` is
+ * `shrine.sheet.json`, not `shrine.png.sheet.json`.
+ *
+ * Because every frame of a bake is the same size, the sheet is a plain
+ * edge-to-edge grid of one row: `SheetGrid::edge_to_edge`, with a name per cell.
+ * A grid that divides an image edge to edge needs no recorded image size and no
+ * gutters — the frames already carry a transparent margin, so there is nothing
+ * for filtering to bleed in from.
+ */
+
+import { type BakedFrame } from './frames.ts';
+import { type RgbaImage, createImage } from './image.ts';
+import { type IsoCamera } from './iso.ts';
+
+/** The version `SHEET_FORMAT_VERSION` in `sindri-core` currently writes. */
+export const SHEET_FORMAT_VERSION = 1;
+
+export interface SheetGrid {
+  columns: number;
+  rows: number;
+  names: string[];
+}
+
+export interface SpriteSheetDocument {
+  format_version: number;
+  grid: SheetGrid;
+}
+
+export interface PackedSheet {
+  image: RgbaImage;
+  document: SpriteSheetDocument;
+}
+
+/**
+ * Lay the frames out as one horizontal strip.
+ *
+ * A strip and not a clever bin packer: the frames are all one size, four of them
+ * is not a packing problem, and a strip stays readable when someone opens the
+ * PNG to check the pipeline's work.
+ */
+export function packSheet(frames: BakedFrame[]): PackedSheet {
+  if (frames.length === 0) throw new Error('a sheet needs at least one frame');
+
+  const { width, height } = frames[0].image;
+  for (const frame of frames) {
+    if (frame.image.width !== width || frame.image.height !== height) {
+      throw new Error(
+        `frame ${frame.direction} is ${frame.image.width}x${frame.image.height}, ` +
+          `but the sheet is packed at ${width}x${height}; frames must be uniform`,
+      );
+    }
+  }
+
+  const sheet = createImage(width * frames.length, height);
+  const stride = sheet.width * 4;
+
+  frames.forEach((frame, column) => {
+    for (let y = 0; y < height; y++) {
+      const source = y * width * 4;
+      sheet.data.set(frame.image.data.subarray(source, source + width * 4), y * stride + column * width * 4);
+    }
+  });
+
+  return {
+    image: sheet,
+    document: {
+      format_version: SHEET_FORMAT_VERSION,
+      grid: {
+        columns: frames.length,
+        rows: 1,
+        names: frames.map((frame) => frame.direction),
+      },
+    },
+  };
+}
+
+export interface TileWorldSize {
+  /** World units across the tile diamond, matching a tilemap's `tile_size[0]`. */
+  width: number;
+  /** World units down it, matching `tile_size[1]`. */
+  height: number;
+}
+
+/**
+ * The transform scale a Sindri world sprite needs to draw one frame at exactly
+ * one baked pixel per intended pixel.
+ *
+ * A sprite is a unit quad centred on its transform
+ * (`crates/sindri-render/src/sprite_batch/mod.rs`), so its scale *is* its size in
+ * world units. The bake knows how many pixels one tile is across; a tilemap
+ * knows how many world units it is across; the ratio converts between them.
+ *
+ * Uniform in both axes on purpose: the camera is orthographic, so a pixel is the
+ * same size vertically as horizontally, and using the tile's height ratio for Y
+ * would squash every baked sprite by the isometric foreshortening a second time.
+ */
+export function spriteScale(
+  canvas: { width: number; height: number },
+  camera: IsoCamera,
+  tile: TileWorldSize,
+): { scale: [number, number]; worldUnitsPerPixel: number } {
+  const worldUnitsPerPixel = tile.width / camera.tile.width;
+  return {
+    scale: [canvas.width * worldUnitsPerPixel, canvas.height * worldUnitsPerPixel],
+    worldUnitsPerPixel,
+  };
+}
+
+/**
+ * How far a tilemap's own tile shape is from the one the bake assumed.
+ *
+ * A tilemap drawing 1.1 x 0.55 world-unit tiles is a 2:1 diamond and matches a
+ * 64x32 bake exactly. One drawing 1.1 x 0.6 does not, and a sprite baked for the
+ * first will stand a little wrong on the second — worth reporting rather than
+ * discovering in a capture.
+ */
+export function tileRatioMismatch(camera: IsoCamera, tile: TileWorldSize): number {
+  const baked = camera.tile.height / camera.tile.width;
+  const scene = tile.height / tile.width;
+  return Math.abs(baked - scene);
+}

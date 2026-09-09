@@ -1,0 +1,39 @@
+{
+  "format_version": 1,
+  "id": "shrine",
+  "texture": "textures/shrine.png",
+  "tile": { "width": 88, "height": 44 },
+  "tile_world": { "width": 1.1, "height": 0.55 },
+  "facing": "south",
+  "directions": 1,
+  "footprint": { "width": 1, "height": 1 },
+  "render": {
+    "supersample": 4,
+    "padding": 2,
+    "outline": { "enabled": true, "colour": "#241d2b" },
+    "shading": {
+      "light": [-0.3, 0.89, 0.35],
+      "thresholds": [0.25, 0.5, 0.8]
+    }
+  },
+  "model": {
+    "kind": "primitives",
+    "materials": {
+      "stone": { "colour": "#9b8f7c" },
+      "dark-stone": { "colour": "#6d6558" },
+      "moss": { "colour": "#5d7c4f" },
+      "ember": { "colour": "#f7a838", "unlit": true }
+    },
+    "parts": [
+      { "type": "box", "material": "dark-stone", "position": [0, 0.06, 0], "size": [1.12, 0.12, 1.12] },
+      { "type": "box", "material": "stone", "position": [0, 0.19, 0], "size": [0.86, 0.14, 0.86] },
+      { "type": "box", "material": "moss", "position": [-0.4, 0.13, 0.34], "size": [0.3, 0.03, 0.22] },
+      { "type": "box", "material": "stone", "position": [-0.3, 0.62, 0], "size": [0.17, 0.72, 0.19] },
+      { "type": "box", "material": "stone", "position": [0.3, 0.62, 0], "size": [0.17, 0.72, 0.19] },
+      { "type": "box", "material": "dark-stone", "position": [0, 0.4, -0.22], "size": [0.6, 0.5, 0.1] },
+      { "type": "box", "material": "stone", "position": [0, 1.04, 0], "size": [0.9, 0.12, 0.36] },
+      { "type": "cone", "material": "dark-stone", "position": [0, 1.24, 0], "radius": 0.46, "height": 0.3, "segments": 4, "rotation": [0, 45, 0] },
+      { "type": "box", "material": "ember", "position": [0, 1.43, 0], "size": [0.08, 0.1, 0.08] }
+    ]
+  }
+}

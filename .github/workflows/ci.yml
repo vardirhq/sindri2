@@ -46,6 +46,28 @@ jobs:
       - name: Check file sizes
         run: scripts/check-file-size.py
 
+  # The isometric baker is a Node tool with no dependencies, so this is the
+  # whole of its build: run its tests, then re-bake its fixture and check that
+  # nothing about the result moved. A baked asset is checked into the
+  # repository, and the only thing that makes that safe is a job that notices
+  # when the pipeline stops producing it.
+  baker:
+    name: Isometric baker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          # Type stripping runs .ts directly, so the tool has no build step —
+          # but it needs a Node new enough to do it without a flag.
+          node-version: '22.18'
+      - name: Test
+        working-directory: tools/isometric-baker
+        run: node --test test/*.test.ts
+      - name: Check the fixture is still what its recipe bakes
+        working-directory: tools/isometric-baker
+        run: node src/cli.ts fixtures/project/prefabs/standing-stone.isobake.json --out fixtures/project --check
+
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
