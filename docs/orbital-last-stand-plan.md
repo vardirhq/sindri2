@@ -89,8 +89,8 @@ collection work the Decay roadmap already describes, not an enemy list.
 ### 3–10
 
 Designed when reached, against the audit's stated requirements for each. Every
-one updates `docs/function-matrix.md`, `docs/capabilities.md`,
-`docs/feature-integration-matrix.md`, its own subsystem contract, and
+one updates `docs/parity.md`, `docs/capabilities.md`,
+its own subsystem contract, and
 `CHANGELOG.md` in the same change, and exercises the capability in Gather where
 Gather can reasonably reach it.
 

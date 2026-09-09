@@ -129,7 +129,7 @@ It currently supports:
 - texture and Decay source hot reload through the real asset pipeline
 - deterministic editor screenshot capture in CI
 
-For the deliberately exhaustive and evidence-based inventory, including controls that are still incomplete, see [`docs/capabilities.md`](docs/capabilities.md). The counterparts still needed across runtime, editor, Decay, and Gather are kept together in the [`feature integration matrix`](docs/feature-integration-matrix.md).
+For the deliberately exhaustive and evidence-based inventory, including controls that are still incomplete, see [`docs/capabilities.md`](docs/capabilities.md). The counterparts still needed across runtime, editor, Decay, and games — and an honest account of where Sindri sits against what a game engine is expected to do — are kept together in [`docs/parity.md`](docs/parity.md).
 
 ## Architecture
 

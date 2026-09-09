@@ -118,10 +118,12 @@ Entries describe what someone ran, not what a roadmap promises or a type
 signature implies. A wrong entry is worse than a missing one, so correcting a
 claim counts as a change worth making on its own.
 
-[`docs/feature-integration-matrix.md`](docs/feature-integration-matrix.md) keeps
-the corresponding engine/runtime, editor, Decay, and Gather work in one row.
-Update that row whenever a feature moves on one surface, including when the
-other surfaces remain missing; recording the gap is the point.
+[`docs/parity.md`](docs/parity.md) keeps the corresponding engine/runtime,
+editor, Decay, and game-proof work in one row, alongside the judgement of where
+that leaves Sindri against what an engine is expected to do. Update that row
+whenever a feature moves on one surface, including when the other surfaces
+remain missing; recording the gap is the point. Add a row for a capability
+Sindri lacks when work uncovers one.
 
 ## Versioning
 

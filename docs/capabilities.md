@@ -387,7 +387,7 @@ place it back through the same projection and map transform. It can also read
 the viewport aspect ratio; general camera conversion and direct typed camera
 access remain missing.
 
-`docs/feature-integration-matrix.md` tracks those counterparts explicitly rather
+`docs/parity.md` tracks those counterparts explicitly rather
 than allowing the runtime type to make the broader feature look complete.
 
 ### Hosts and platforms
