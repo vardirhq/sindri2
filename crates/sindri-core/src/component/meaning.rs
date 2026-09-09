@@ -139,6 +139,26 @@ fn steps(path: &str) -> Option<Vec<Step<'_>>> {
         .collect()
 }
 
+/// What the template holds at `path`, if it holds anything.
+///
+/// The template is the component at rest, so the value here is what that field
+/// looks like when nobody has said otherwise — which makes it two things at
+/// once: the check that a path names something real, and the blank a tool uses
+/// when it needs to make one. A list's exemplar item is the new item.
+#[must_use]
+pub fn exemplar<'a>(template: &'a Value, path: &str) -> Option<&'a Value> {
+    let mut here = template;
+    for step in steps(path)? {
+        here = match step {
+            Step::Field(name) => here.get(name)?,
+            // An empty exemplar describes no item, so a path through it names
+            // nothing and is refused rather than assumed.
+            Step::Each(name) => here.get(name)?.as_array()?.first()?,
+        };
+    }
+    Some(here)
+}
+
 /// Whether `path` names something the template actually has.
 ///
 /// The check that keeps a meaning honest. A renamed field leaves its meaning
@@ -146,28 +166,7 @@ fn steps(path: &str) -> Option<Vec<Step<'_>>> {
 /// than a picker that quietly stopped appearing.
 #[must_use]
 pub fn resolves(template: &Value, path: &str) -> bool {
-    let Some(steps) = steps(path) else {
-        return false;
-    };
-    let mut here = template;
-    for step in steps {
-        here = match step {
-            Step::Field(name) => match here.get(name) {
-                Some(value) => value,
-                None => return false,
-            },
-            Step::Each(name) => match here.get(name).and_then(Value::as_array) {
-                // An empty exemplar describes no item, so a path through it
-                // resolves to nothing and is refused rather than assumed.
-                Some(items) => match items.first() {
-                    Some(first) => first,
-                    None => return false,
-                },
-                None => return false,
-            },
-        };
-    }
-    true
+    exemplar(template, path).is_some()
 }
 
 /// The meaning stored for `path`, matching an array path against any index.
@@ -234,6 +233,19 @@ mod tests {
         assert!(!resolves(&template, "peices[].friction"));
         assert!(!resolves(&template, ""));
         assert!(!resolves(&template, "pieces[]."));
+    }
+
+    /// The exemplar is both the check and the blank: what a list's new item is
+    /// made from.
+    #[test]
+    fn a_lists_exemplar_is_the_item_a_new_one_is_made_from() {
+        let template = json!({ "pieces": [{ "friction": 0.5, "sensor": false }] });
+        assert_eq!(
+            exemplar(&template, "pieces[]"),
+            Some(&json!({ "friction": 0.5, "sensor": false }))
+        );
+        assert_eq!(exemplar(&template, "pieces[].friction"), Some(&json!(0.5)));
+        assert_eq!(exemplar(&template, "pieces[].restitution"), None);
     }
 
     /// An array with no exemplar describes no item, so nothing about one can

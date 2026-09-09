@@ -28,7 +28,7 @@ use crate::inspector::{self, choices, fields};
 use crate::ui::theme::{color, metric, text};
 use crate::ui::widgets::property;
 
-use super::rows::{Authored, value_row};
+use super::rows::{At, Authored, Described, value_row};
 
 /// What the panel knows about the project while drawing a field.
 ///
@@ -105,7 +105,15 @@ pub(crate) fn object_rows(
             colour_row(ui, &key, value);
             continue;
         }
-        value_row(ui, &key, value, 0.0, authored);
+        let at = At {
+            described: Some(Described {
+                registry,
+                type_name,
+                assets,
+            }),
+            path: &key,
+        };
+        value_row(ui, at, &key, value, 0.0, authored);
     }
     fields::merge_edits(blank.as_ref(), payload, &drawn);
 }
@@ -115,7 +123,10 @@ pub(crate) fn object_rows(
 /// One arm per kind the project actually holds, so a component naming an asset
 /// gets its list whatever the field is called, and one that names no asset gets
 /// no list however suggestively it is spelled.
-fn asset_list<'a>(meaning: Option<&FieldMeaning>, assets: FieldAssets<'a>) -> Option<&'a [String]> {
+pub(crate) fn asset_list<'a>(
+    meaning: Option<&FieldMeaning>,
+    assets: FieldAssets<'a>,
+) -> Option<&'a [String]> {
     let FieldMeaning::Asset(kind) = meaning? else {
         return None;
     };
@@ -194,7 +205,7 @@ fn choice_row(
 /// A reference the project cannot see is marked rather than silently accepted:
 /// the field turns to the editor's warning colour and says why on hover, which
 /// is the difference between a typo found here and a scene that will not load.
-pub(super) fn asset_row(ui: &mut egui::Ui, key: &str, value: &mut Value, available: &[String]) {
+pub(crate) fn asset_row(ui: &mut egui::Ui, key: &str, value: &mut Value, available: &[String]) {
     let mut typed = value.as_str().unwrap_or_default().to_owned();
     let known = typed.is_empty() || available.contains(&typed);
     let mut changed = false;
@@ -259,7 +270,7 @@ pub(super) fn asset_row(ui: &mut egui::Ui, key: &str, value: &mut Value, availab
 /// nobody reads a colour that way. The swatch opens egui's own picker; the
 /// numbers stay beside it, because a tint is also a number someone may want to
 /// type exactly.
-fn colour_row(ui: &mut egui::Ui, key: &str, value: &mut Value) {
+pub(crate) fn colour_row(ui: &mut egui::Ui, key: &str, value: &mut Value) {
     let mut rgba = [0.0_f32; 4];
     for (index, channel) in rgba.iter_mut().enumerate() {
         // A channel outside 0..1 is not a colour anything can show, and the

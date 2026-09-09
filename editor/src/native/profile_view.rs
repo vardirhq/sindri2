@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use eframe::egui::{self, RichText};
 use serde_json::{Map, Value};
 
-use crate::native::inspector_panel::rows::{Authored, value_row};
+use crate::native::inspector_panel::rows::{At, Authored, value_row};
 use crate::ui::icons;
 use crate::ui::theme::{color, metric, text};
 use crate::ui::widgets::{button, button::Intent, panel};
@@ -169,7 +169,7 @@ fn value_editor(ui: &mut egui::Ui, value: &mut Value, key: &str) -> bool {
         }
         _ => {
             let before = value.clone();
-            value_row(ui, key, value, 8.0, Authored::Set);
+            value_row(ui, At::loose(), key, value, 8.0, Authored::Set);
             *value != before
         }
     }

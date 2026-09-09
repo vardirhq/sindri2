@@ -11,12 +11,69 @@
 use eframe::egui::{self, RichText};
 use serde_json::Value;
 
+use sindri_core::{ComponentSchemaRegistry, FieldMeaning};
+
 use crate::components::{self, Family};
 use crate::inspector;
 use crate::ui::theme::{color, metric, text};
 use crate::ui::widgets::{property, vector};
 
 use super::draft::Offer;
+use super::field::{FieldAssets, asset_list, colour_row};
+use super::list;
+
+/// What the schema says about the component being drawn, where there is one.
+///
+/// `None` for values with no component behind them — a script's exported
+/// properties, a profile's own data — which are drawn by shape alone, exactly
+/// as they were before any of this existed.
+#[derive(Clone, Copy)]
+pub(crate) struct Described<'a> {
+    pub(crate) registry: &'a ComponentSchemaRegistry,
+    pub(crate) type_name: &'a str,
+    pub(crate) assets: FieldAssets<'a>,
+}
+
+/// Where in a component a value sits, and what the component says about it.
+///
+/// The path is the whole dotted route to this value — `outline.color`,
+/// `pieces.2.friction` — because that is what a meaning is keyed by. Before
+/// this, rows knew only a field's own name, so a meaning below the top level
+/// was recorded and never read.
+#[derive(Clone, Copy)]
+pub(crate) struct At<'a> {
+    pub(crate) described: Option<Described<'a>>,
+    pub(crate) path: &'a str,
+}
+
+impl<'a> At<'a> {
+    /// The context for a value nested inside this one.
+    pub(crate) const fn into(self, path: &'a str) -> Self {
+        Self {
+            described: self.described,
+            path,
+        }
+    }
+
+    /// A value with no component behind it.
+    pub(crate) const fn loose() -> Self {
+        Self {
+            described: None,
+            path: "",
+        }
+    }
+
+    pub(crate) fn meaning(self) -> Option<&'a FieldMeaning> {
+        let described = self.described?;
+        described.registry.meaning(described.type_name, self.path)
+    }
+
+    /// What the schema says a value here looks like when nobody has said.
+    pub(crate) fn exemplar(self) -> Option<&'a Value> {
+        let described = self.described?;
+        described.registry.exemplar(described.type_name, self.path)
+    }
+}
 
 /// Whether a field holds what the author put there or what the schema did.
 ///
@@ -41,15 +98,23 @@ impl Authored {
     }
 }
 
-/// One field, drawn as whatever its stored shape deserves.
+/// One field, drawn as whatever it means, or failing that as whatever it is.
+///
+/// Meaning is asked for first and at every depth, which is the whole of what
+/// `at` adds: a colour inside a text component's outline is a colour, and so is
+/// the one inside the third piece of a collider.
 pub(crate) fn value_row(
     ui: &mut egui::Ui,
+    at: At<'_>,
     key: &str,
     value: &mut Value,
     indent: f32,
     authored: Authored,
 ) {
     let label = inspector::humanize(key);
+    if described_row(ui, at, &label, key, value, indent) {
+        return;
+    }
     match inspector::value_kind(value) {
         inspector::ValueKind::Number => {
             let mut number = value.as_f64().unwrap_or_default();
@@ -105,7 +170,15 @@ pub(crate) fn value_row(
                 return;
             };
             for (key, value) in nested.iter_mut() {
-                value_row(ui, key, value, indent + 10.0, Authored::Default);
+                let nested_path = join(at.path, key);
+                value_row(
+                    ui,
+                    at.into(&nested_path),
+                    key,
+                    value,
+                    indent + 10.0,
+                    Authored::Default,
+                );
             }
         }
         // Shown as stored and left alone. A text field over a tilemap's tiles
@@ -126,6 +199,76 @@ pub(crate) fn value_row(
                 }),
             );
         }
+    }
+}
+
+/// One dotted path, extended by one step.
+pub(crate) fn join(path: &str, key: &str) -> String {
+    if path.is_empty() {
+        key.to_owned()
+    } else {
+        format!("{path}.{key}")
+    }
+}
+
+/// The row a value gets because the component said what it is, if it said.
+///
+/// Returns whether it drew one. Everything here would otherwise be a number, a
+/// string, or a readout: the schema is what turns it into a picker, a swatch,
+/// or a list somebody can add to.
+fn described_row(
+    ui: &mut egui::Ui,
+    at: At<'_>,
+    label: &str,
+    key: &str,
+    value: &mut Value,
+    indent: f32,
+) -> bool {
+    // A list is decided by the template rather than by the value, because an
+    // empty list still has items it *would* hold, and that is exactly when
+    // somebody needs to add the first one.
+    if list::is_list(at) && value.is_array() {
+        list::list_rows(ui, at, label, value, indent);
+        return true;
+    }
+    let (Some(described), Some(meaning)) = (at.described, at.meaning()) else {
+        return false;
+    };
+    match meaning {
+        FieldMeaning::Asset(_) => {
+            let Some(list) = asset_list(Some(meaning), described.assets) else {
+                return false;
+            };
+            super::field::asset_row(ui, key, value, list);
+            true
+        }
+        FieldMeaning::Colour
+            if matches!(
+                inspector::value_kind(value),
+                inspector::ValueKind::Numbers(4)
+            ) =>
+        {
+            colour_row(ui, key, value);
+            true
+        }
+        // A choice below the top level is left alone for now, and says so.
+        // Every one of them is a variant tag -- a collider piece that says
+        // `circle` holds a radius where a `box` holds half extents -- so
+        // writing the word without writing its fields would leave a payload
+        // the schema refuses, which is a control that looks like it works.
+        FieldMeaning::Choice(_) if !at.path.is_empty() && at.path.contains('.') => {
+            property::readout(
+                ui,
+                label,
+                value.as_str().unwrap_or_default(),
+                Some(
+                    "Choosing another needs this piece's other fields to change with it, \
+                     which the schema cannot yet say",
+                ),
+            );
+            true
+        }
+        _ => false,
     }
 }
 
