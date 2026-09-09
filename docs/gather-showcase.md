@@ -14,7 +14,7 @@ not need this document to be told that a component exists.
 | Capability | Current proof | Showcase quality |
 | --- | --- | --- |
 | Decay | Player movement, orb collection, progress lamps, victory, and Wisp behavior are scripts; Rust hosts them without owning game rules | Strong |
-| Tilemap | One authored 7x7 isometric tilemap replaces 49 floor entities | Technically clear, visually plain |
+| Tilemap | One authored 9x9 isometric tilemap replaces a floor made from individual sprite entities | Technically clear; regional patterning is the world-refresh foundation |
 | Grid coordinates | Player movement, bounds, and orb collection use the tilemap's logical coordinates | Strong |
 | Navigation | The Wisp follows the player around authored walls through shared deterministic A* | Real but visually easy to miss |
 | Sprite animation | The player advances an authored clip | Real but not conspicuous |

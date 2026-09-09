@@ -52,6 +52,26 @@ fn floor_grid(world: &World, extractor: &SceneExtractor) -> (Transform3D, GridSp
 }
 
 #[test]
+fn the_island_has_authored_regions() {
+    let world = world().expect("the scene loads");
+    let extractor = extractor().expect("the schemas register");
+    let (_, floor) = extractor
+        .components()
+        .query::<TilemapComponent>(&world)
+        .expect("the tilemap schema reads")
+        .into_iter()
+        .next()
+        .expect("Gather has a floor");
+
+    assert_eq!((floor.columns, floor.rows), (9, 9));
+    assert_eq!(floor.tiles.len(), 81);
+    assert!(
+        floor.tiles.windows(2).any(|tiles| tiles[0] == tiles[1]),
+        "the island uses authored regions rather than a full checkerboard"
+    );
+}
+
+#[test]
 fn weave_reflows_the_hud_for_a_phone() {
     let authored = world().expect("the scene loads");
     let extractor = extractor().expect("the schemas register");
