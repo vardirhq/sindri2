@@ -24,6 +24,19 @@ All notable changes to Sindri Next will be documented here.
   heart stay `sindri.shape`, because a script moves them every frame and no
   baked frame can do that. See `docs/isometric-baker.md`.
 
+- **A 2D collider may be authored in several pieces.** One shape is often a poor
+  description of a thing: a character is a capsule with a circle at each side, a
+  ship a box and two pods. `sindri.physics2d.collider` now takes a `pieces` list,
+  and the pieces belong to the one entity and move as one object — a compound is
+  one collider made of parts, not several colliders, and it needs no child
+  entities, because a piece already carries its own offset and rotation. The
+  single form still means what it always did and is kept rather than migrated,
+  since a scene is a file someone wrote. Mass properties come from every piece
+  and sum, which is the change most likely to move behaviour quietly, so
+  `PhysicsWorld2d::mass` exposes the total and a test pins it. Validation is per
+  piece and names the failing index, and nothing is inserted unless every piece
+  passes.
+
 - **A sheet says where its sprites meet the ground.** A world sprite is drawn on
   a quad centred on its entity, so the middle of the picture was what landed on
   the tile. Right for something that floats, wrong for anything that stands:

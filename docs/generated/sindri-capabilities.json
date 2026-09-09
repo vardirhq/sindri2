@@ -131,47 +131,55 @@
     {
       "addable": true,
       "default_payload": {
-        "friction": 0.5,
-        "layers": {
-          "filter": 4294967295,
-          "memberships": 4294967295
-        },
-        "offset": [
-          0.0,
-          0.0
-        ],
-        "restitution": 0.0,
-        "rotation": 0.0,
-        "sensor": false,
-        "shape": {
-          "half_extents": [
-            0.5,
-            0.5
-          ],
-          "shape": "box"
-        }
+        "pieces": [
+          {
+            "friction": 0.5,
+            "layers": {
+              "filter": 4294967295,
+              "memberships": 4294967295
+            },
+            "offset": [
+              0.0,
+              0.0
+            ],
+            "restitution": 0.0,
+            "rotation": 0.0,
+            "sensor": false,
+            "shape": {
+              "half_extents": [
+                0.5,
+                0.5
+              ],
+              "shape": "box"
+            }
+          }
+        ]
       },
       "display_name": "Collider 2D",
       "fields": {
-        "friction": 0.5,
-        "layers": {
-          "filter": 4294967295,
-          "memberships": 4294967295
-        },
-        "offset": [
-          0.0,
-          0.0
-        ],
-        "restitution": 0.0,
-        "rotation": 0.0,
-        "sensor": false,
-        "shape": {
-          "half_extents": [
-            0.5,
-            0.5
-          ],
-          "shape": "box"
-        }
+        "pieces": [
+          {
+            "friction": 0.5,
+            "layers": {
+              "filter": 4294967295,
+              "memberships": 4294967295
+            },
+            "offset": [
+              0.0,
+              0.0
+            ],
+            "restitution": 0.0,
+            "rotation": 0.0,
+            "sensor": false,
+            "shape": {
+              "half_extents": [
+                0.5,
+                0.5
+              ],
+              "shape": "box"
+            }
+          }
+        ]
       },
       "schema_version": 1,
       "type_name": "sindri.physics2d.collider"

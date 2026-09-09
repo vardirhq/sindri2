@@ -79,7 +79,7 @@ fn a_script_sets_a_bodys_velocity() {
     let entity = scripted(&mut world, "Bullet", "Bullet");
     let mut physics = PhysicsWorld2d::new([0.0, 0.0]).expect("a world");
     physics
-        .insert_body(entity, RigidBody2d::default(), Collider2d::circle(1.0))
+        .insert_body(entity, RigidBody2d::default(), &[Collider2d::circle(1.0)])
         .expect("a body");
 
     let report = advance(
@@ -108,7 +108,7 @@ fn a_script_reads_a_bodys_velocity_back() {
     let entity = scripted(&mut world, "Bullet", "Bullet");
     let mut physics = PhysicsWorld2d::new([0.0, 0.0]).expect("a world");
     physics
-        .insert_body(entity, RigidBody2d::default(), Collider2d::circle(1.0))
+        .insert_body(entity, RigidBody2d::default(), &[Collider2d::circle(1.0)])
         .expect("a body");
     physics
         .set_linear_velocity(entity, [12.0, 0.0])
@@ -142,7 +142,7 @@ fn an_impulse_moves_a_body_that_was_still() {
     let entity = scripted(&mut world, "Bullet", "Bullet");
     let mut physics = PhysicsWorld2d::new([0.0, 0.0]).expect("a world");
     physics
-        .insert_body(entity, RigidBody2d::default(), Collider2d::circle(1.0))
+        .insert_body(entity, RigidBody2d::default(), &[Collider2d::circle(1.0)])
         .expect("a body");
 
     advance(
@@ -397,7 +397,7 @@ fn every_script_in_a_pass_reaches_the_same_physics() {
                     kind: RigidBodyKind::Dynamic,
                     ..RigidBody2d::default()
                 },
-                Collider2d::circle(1.0),
+                &[Collider2d::circle(1.0)],
             )
             .expect("a body");
     }

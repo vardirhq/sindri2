@@ -24,6 +24,13 @@ pub enum PhysicsError {
     NotNormalized(&'static str),
     #[error("physics timestep must be finite and greater than zero")]
     InvalidTimestep,
+    #[error("collider piece {index} is invalid: {reason}")]
+    ColliderPiece {
+        index: usize,
+        reason: Box<PhysicsError>,
+    },
+    #[error("entity {0:?} has a collider with no pieces")]
+    NoColliderPieces(EntityId),
 }
 
 pub(crate) fn validate_body2d(body: &RigidBody2d) -> Result<(), PhysicsError> {
@@ -33,6 +40,21 @@ pub(crate) fn validate_body2d(body: &RigidBody2d) -> Result<(), PhysicsError> {
     finite("gravity_scale", body.gravity_scale)?;
     non_negative("linear_damping", body.linear_damping)?;
     non_negative("angular_damping", body.angular_damping)
+}
+
+/// Checks every piece of a compound, naming the one that is wrong.
+///
+/// The index is in the message because a compound is authored as a list and a
+/// bad piece is otherwise a needle in it: "restitution must be between 0 and 1"
+/// says nothing about *which* of five colliders to fix.
+pub(crate) fn validate_colliders2d(colliders: &[Collider2d]) -> Result<(), PhysicsError> {
+    for (index, collider) in colliders.iter().enumerate() {
+        validate_collider2d(collider).map_err(|reason| PhysicsError::ColliderPiece {
+            index,
+            reason: Box::new(reason),
+        })?;
+    }
+    Ok(())
 }
 
 pub(crate) fn validate_collider2d(collider: &Collider2d) -> Result<(), PhysicsError> {
