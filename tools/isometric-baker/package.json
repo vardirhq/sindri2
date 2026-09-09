@@ -1,0 +1,17 @@
+{
+  "name": "@sindri/isometric-baker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Offline 3D-to-isometric-2D sprite baker for Sindri. Adapted from IsoGame's Sprite Factory (MIT).",
+  "license": "MIT OR Apache-2.0",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "bake": "node src/cli.ts",
+    "test": "node --test test/*.test.ts"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

@@ -1,0 +1,54 @@
+{
+  "format_version": 1,
+  "id": "standing-stone",
+  "texture": "textures/standing-stone.png",
+  "tile": { "width": 64, "height": 32 },
+  "tile_world": { "width": 1.1, "height": 0.55 },
+  "facing": "south",
+  "directions": 4,
+  "footprint": { "width": 1, "height": 1 },
+  "render": {
+    "supersample": 4,
+    "padding": 2,
+    "palette_snap": true,
+    "alpha_cutoff": 128,
+    "outline": { "enabled": true, "colour": "#241d2b" },
+    "shading": {
+      "light": [-0.3, 0.89, 0.35],
+      "thresholds": [0.25, 0.5, 0.8]
+    }
+  },
+  "model": {
+    "kind": "primitives",
+    "materials": {
+      "stone": { "colour": "#8d8f9a" },
+      "moss": { "colour": "#5d7c4f" }
+    },
+    "parts": [
+      {
+        "type": "box",
+        "material": "stone",
+        "position": [0, 0.09, 0],
+        "size": [0.68, 0.18, 0.68]
+      },
+      {
+        "type": "box",
+        "material": "stone",
+        "position": [0, 0.62, 0],
+        "size": [0.34, 0.88, 0.4]
+      },
+      {
+        "type": "box",
+        "material": "stone",
+        "position": [0, 1.11, 0],
+        "size": [0.42, 0.1, 0.48]
+      },
+      {
+        "type": "box",
+        "material": "moss",
+        "position": [0.2, 0.22, 0.1],
+        "size": [0.3, 0.08, 0.24]
+      }
+    ]
+  }
+}
