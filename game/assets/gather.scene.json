@@ -186,7 +186,7 @@
           "source": "scripts/orb.decay"
         },
         "sindri.sprite": {
-          "layer": 10,
+          "layer": 9,
           "texture": "textures/orb.png",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -210,7 +210,7 @@
           "source": "scripts/orb.decay"
         },
         "sindri.sprite": {
-          "layer": 10,
+          "layer": 17,
           "texture": "textures/orb.png",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -234,7 +234,7 @@
           "source": "scripts/orb.decay"
         },
         "sindri.sprite": {
-          "layer": 10,
+          "layer": 17,
           "texture": "textures/orb.png",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -244,7 +244,7 @@
       "id": "orb-3",
       "name": "Orb 4",
       "transform_3d": {
-        "position": [0.0, -1.65, 0.0],
+        "position": [0.0, -2.2, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.34, 0.34, 1.0]
       },
@@ -258,7 +258,7 @@
           "source": "scripts/orb.decay"
         },
         "sindri.sprite": {
-          "layer": 10,
+          "layer": 33,
           "texture": "textures/orb.png",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -282,7 +282,7 @@
           "source": "scripts/orb.decay"
         },
         "sindri.sprite": {
-          "layer": 10,
+          "layer": 9,
           "texture": "textures/orb.png",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -292,14 +292,21 @@
       "id": "outcrop-0",
       "name": "Outcrop 1",
       "transform_3d": {
-        "position": [-1.1, -0.55, -0.1437],
+        "position": [-1.1, -0.55, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.925, 1.4, 1.0]
       },
       "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
         "sindri.sprite": {
+          "layer": 21,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
         }
       }
     },
@@ -307,14 +314,21 @@
       "id": "outcrop-1",
       "name": "Outcrop 2",
       "transform_3d": {
-        "position": [1.65, -0.275, -0.1594],
+        "position": [1.65, -0.275, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.925, 1.4, 1.0]
       },
       "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
         "sindri.sprite": {
+          "layer": 19,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
         }
       }
     },
@@ -322,14 +336,21 @@
       "id": "outcrop-2",
       "name": "Outcrop 3",
       "transform_3d": {
-        "position": [-1.65, 0.825, -0.2219],
+        "position": [-1.65, 0.825, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.925, 1.4, 1.0]
       },
       "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
         "sindri.sprite": {
+          "layer": 11,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
         }
       }
     },
@@ -542,7 +563,7 @@
       "id": "player",
       "name": "Player",
       "transform_3d": {
-        "position": [0.0, 0.0, 0.2],
+        "position": [0.0, 0.0, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.62, 0.62, 1.0]
       },
@@ -566,7 +587,7 @@
           "source": "scripts/player.decay"
         },
         "sindri.sprite": {
-          "layer": 20,
+          "layer": 17,
           "texture": "textures/player.png",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -576,12 +597,13 @@
       "id": "ridge-stone-0",
       "name": "Ridge Stone 1",
       "transform_3d": {
-        "position": [0.275, 2.0625, -0.2922],
+        "position": [0.275, 2.0625, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.8, 1.0, 1.0]
       },
       "components": {
         "sindri.sprite": {
+          "layer": 2,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -591,12 +613,13 @@
       "id": "ridge-stone-1",
       "name": "Ridge Stone 2",
       "transform_3d": {
-        "position": [0.275, 1.5125, -0.2609],
+        "position": [0.275, 1.5125, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.8, 1.0, 1.0]
       },
       "components": {
         "sindri.sprite": {
+          "layer": 6,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -606,12 +629,13 @@
       "id": "ridge-stone-2",
       "name": "Ridge Stone 3",
       "transform_3d": {
-        "position": [0.275, 0.9625, -0.2297],
+        "position": [0.275, 0.9625, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.8, 1.0, 1.0]
       },
       "components": {
         "sindri.sprite": {
+          "layer": 10,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -621,12 +645,13 @@
       "id": "ridge-stone-3",
       "name": "Ridge Stone 4",
       "transform_3d": {
-        "position": [0.275, 0.4125, -0.1984],
+        "position": [0.275, 0.4125, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.8, 1.0, 1.0]
       },
       "components": {
         "sindri.sprite": {
+          "layer": 14,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -636,15 +661,21 @@
       "id": "shrine",
       "name": "Home Shrine",
       "transform_3d": {
-        "position": [0.0, -1.65, -0.0812],
+        "position": [0.0, -1.65, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [1.3, 2.675, 1.0]
       },
       "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 2,
+          "layer": 29,
           "texture": "textures/shrine.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
         }
       }
     },
@@ -652,7 +683,7 @@
       "id": "shrine-heart",
       "name": "Shrine Heart",
       "transform_3d": {
-        "position": [0.0, -1.38, -0.0612],
+        "position": [0.0, -1.38, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.28, 0.28, 1.0]
       },
@@ -675,7 +706,7 @@
           "dashes": 0.0,
           "fill": [0.97, 0.66, 0.22, 0.38],
           "kind": "polygon",
-          "layer": 3,
+          "layer": 30,
           "stroke": [1.0, 0.82, 0.48, 0.95],
           "stroke_width": 0.08,
           "sweep_start": 0.0,
@@ -707,14 +738,21 @@
       "id": "tree-0",
       "name": "Tree 1",
       "transform_3d": {
-        "position": [-1.1, 1.1, -0.2375],
+        "position": [-1.1, 1.1, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [1.05, 2.5, 1.0]
       },
       "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
         "sindri.sprite": {
+          "layer": 9,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
         }
       }
     },
@@ -722,14 +760,21 @@
       "id": "tree-1",
       "name": "Tree 2",
       "transform_3d": {
-        "position": [-2.75, 0.275, -0.1906],
+        "position": [-2.75, 0.275, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [1.05, 2.5, 1.0]
       },
       "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
         "sindri.sprite": {
+          "layer": 15,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
         }
       }
     },
@@ -737,14 +782,21 @@
       "id": "tree-2",
       "name": "Tree 3",
       "transform_3d": {
-        "position": [-1.1, -1.1, -0.1125],
+        "position": [-1.1, -1.1, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [1.05, 2.5, 1.0]
       },
       "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
         "sindri.sprite": {
+          "layer": 25,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
         }
       }
     },
@@ -752,14 +804,21 @@
       "id": "tree-3",
       "name": "Tree 4",
       "transform_3d": {
-        "position": [2.75, 0.275, -0.1906],
+        "position": [2.2, 0.0, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [1.05, 2.5, 1.0]
       },
       "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
         "sindri.sprite": {
+          "layer": 17,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
         }
       }
     },
@@ -767,14 +826,21 @@
       "id": "tree-4",
       "name": "Tree 5",
       "transform_3d": {
-        "position": [2.2, -0.55, -0.1437],
+        "position": [2.2, -0.55, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [1.05, 2.5, 1.0]
       },
       "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
         "sindri.sprite": {
+          "layer": 21,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
         }
       }
     },
@@ -782,14 +848,21 @@
       "id": "tree-5",
       "name": "Tree 6",
       "transform_3d": {
-        "position": [-2.2, -0.55, -0.1437],
+        "position": [-2.2, -0.55, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [1.05, 2.5, 1.0]
       },
       "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
         "sindri.sprite": {
+          "layer": 21,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
         }
       }
     },
@@ -797,14 +870,21 @@
       "id": "waystone-east",
       "name": "East Waystone",
       "transform_3d": {
-        "position": [1.1, 0.0, -0.175],
+        "position": [1.1, 0.0, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.625, 1.85, 1.0]
       },
       "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
         "sindri.sprite": {
+          "layer": 17,
           "texture": "textures/waystone.png#south",
           "tint": [0.72, 0.68, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
         }
       }
     },
@@ -812,14 +892,21 @@
       "id": "waystone-west",
       "name": "West Waystone",
       "transform_3d": {
-        "position": [-1.1, 0.0, -0.175],
+        "position": [-1.1, 0.0, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.625, 1.85, 1.0]
       },
       "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
         "sindri.sprite": {
+          "layer": 17,
           "texture": "textures/waystone.png#south",
           "tint": [0.6, 0.98, 0.9, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
         }
       }
     },
@@ -827,7 +914,7 @@
       "id": "wisp",
       "name": "Wisp",
       "transform_3d": {
-        "position": [0.0, 2.2, 0.1],
+        "position": [0.0, 2.2, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.24, 0.24, 1.0]
       },
@@ -846,7 +933,7 @@
           "source": "scripts/wisp.decay"
         },
         "sindri.sprite": {
-          "layer": 15,
+          "layer": 1,
           "texture": "textures/orb.png",
           "tint": [0.45, 0.82, 1.0, 0.72]
         }
@@ -857,7 +944,7 @@
       "name": "Wisp Halo",
       "parent": "wisp",
       "transform_3d": {
-        "position": [0.0, 0.0, -0.05],
+        "position": [0.0, 0.0, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [2.8, 2.8, 1.0]
       },
@@ -880,7 +967,7 @@
           "dashes": 10.0,
           "fill": [0.0, 0.0, 0.0, 0.0],
           "kind": "ellipse",
-          "layer": 14,
+          "layer": 17,
           "stroke": [0.38, 0.82, 1.0, 0.62],
           "stroke_width": 0.08,
           "sweep_start": 0.0,

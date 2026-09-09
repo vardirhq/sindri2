@@ -31,6 +31,12 @@ script Wisp {
 
         if floor != null && player != null {
             Grid.step_toward(this.entity, floor, player);
+            // The same row-per-layer rule the player follows, so the Wisp
+            // passes behind a tree it has not reached and in front of one it
+            // has.
+            this.sprite.layer = 1.0
+                + 2.0 * (Grid.position_x(this.entity, floor)
+                    + Grid.position_y(this.entity, floor));
         }
     }
 }

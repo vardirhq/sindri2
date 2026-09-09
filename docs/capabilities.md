@@ -1244,3 +1244,20 @@ tiles — shore, grass, path, flagstone — and a floor plan drawn in them.
 
 What stayed a shape stayed for a reason: the Wisp halo and the shrine heart are
 animated every frame by Decay, which no baked frame can do.
+
+### Draw order and collision in Gather
+
+Every world entity's sprite layer is derived from the isometric row it stands
+on, and the two that move keep theirs current from Decay. This is not a
+refinement: sprites batch by layer *and texture*, and a frame's passes are
+ordered by layer alone, so two different textures on one layer are drawn in
+whichever order their textures sort in — however far apart they stand. Gather
+previously gave the orbs layer 10 and the player layer 20, so both drew over the
+shrine from anywhere on the island.
+
+Solid scenery claims its cell with `sindri.grid.occupant`, which the Wisp's A*
+already reads, and carries a `solid` tag the player script tests with
+`World.with_tag` before it steps. Two mechanisms because the two move
+differently: the Wisp steps cell to cell and asks the engine to route it, while
+the player walks in continuous coordinates and has to test the cell it is about
+to enter. Nothing new was added to the engine for either.

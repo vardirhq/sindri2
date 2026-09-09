@@ -7,6 +7,24 @@ script Player {
     @export
     let speed: f32 = 3.2;
 
+    // Whether a cell is claimed by something solid.
+    //
+    // Occupancy is the engine's own answer to this and the Wisp's pathfinding
+    // reads it directly, but a script cannot ask it about a cell — only about a
+    // route between entities. So the solid things carry a tag as well, and this
+    // asks them where they are. Half a cell each way, because a prop fills the
+    // cell it stands on and the player is a point walking through them.
+    fn blocked(floor: Entity, x: f32, y: f32) -> bool {
+        for solid in World.with_tag("solid") {
+            let dx = abs(Grid.position_x(solid, floor) - x);
+            let dy = abs(Grid.position_y(solid, floor) - y);
+            if dx < 0.5 && dy < 0.5 {
+                return true;
+            }
+        }
+        return false;
+    }
+
     fn update(dt: f32) {
         let floor = World.find("Floor");
         if floor == null {
@@ -35,6 +53,28 @@ script Player {
         // a screen-aligned rectangle laid over the picture.
         grid_x = min(max(grid_x, 0.0), 8.0);
         grid_y = min(max(grid_y, 0.0), 8.0);
+
+        // Solid things are stood around rather than walked through. Each axis
+        // is resolved on its own so that meeting a tree head-on still lets you
+        // slide along it, instead of stopping dead the way a single combined
+        // test would.
+        let was_x = Grid.position_x(this.entity, floor);
+        let was_y = Grid.position_y(this.entity, floor);
+        if blocked(floor, grid_x, was_y) {
+            grid_x = was_x;
+        }
+        if blocked(floor, grid_x, grid_y) {
+            grid_y = was_y;
+        }
+
         Grid.place(this.entity, floor, grid_x, grid_y);
+
+        // Draw order follows where the player stands, so walking south of the
+        // shrine puts them in front of it and walking north puts them behind.
+        // A layer per row is what makes that possible at all: sprites batch by
+        // layer and texture, so two different textures on one layer are ordered
+        // by which texture they are rather than by where they are. Half rows,
+        // because a wall stands on the edge between two cells.
+        this.sprite.layer = 1.0 + 2.0 * (grid_x + grid_y);
     }
 }
