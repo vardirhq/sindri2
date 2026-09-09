@@ -1,0 +1,33 @@
+{
+  "format_version": 1,
+  "id": "stone-wall",
+  "texture": "textures/stone-wall.png",
+  "tile": { "width": 88, "height": 44 },
+  "tile_world": { "width": 1.1, "height": 0.55 },
+  "facing": "south",
+  "directions": 4,
+  "footprint": { "width": 1, "height": 1 },
+  "render": {
+    "supersample": 4,
+    "padding": 2,
+    "outline": { "enabled": true, "colour": "#241d2b" },
+    "shading": { "light": [-0.3, 0.89, 0.35], "thresholds": [0.25, 0.5, 0.8] }
+  },
+  "model": {
+    "kind": "primitives",
+    "materials": {
+      "stone": { "colour": "#7f8a90" },
+      "dark-stone": { "colour": "#5b6469" },
+      "moss": { "colour": "#4f6f52" }
+    },
+    "parts": [
+      { "type": "box", "material": "dark-stone", "position": [0, 0.05, 0], "size": [0.3, 0.1, 1.04] },
+      { "type": "box", "material": "stone", "position": [0, 0.17, -0.3], "size": [0.24, 0.16, 0.4] },
+      { "type": "box", "material": "dark-stone", "position": [0, 0.16, 0.06], "size": [0.24, 0.14, 0.3] },
+      { "type": "box", "material": "stone", "position": [0, 0.18, 0.36], "size": [0.24, 0.18, 0.32] },
+      { "type": "box", "material": "stone", "position": [0, 0.34, -0.16], "size": [0.2, 0.16, 0.34] },
+      { "type": "box", "material": "dark-stone", "position": [0, 0.33, 0.22], "size": [0.2, 0.14, 0.36] },
+      { "type": "box", "material": "moss", "position": [0.1, 0.13, -0.42], "size": [0.12, 0.03, 0.16] }
+    ]
+  }
+}

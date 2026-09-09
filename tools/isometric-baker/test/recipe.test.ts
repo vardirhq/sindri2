@@ -81,7 +81,7 @@ test('a model source that is not baked yet says so instead of being skipped', ()
 test('an unknown primitive names the ones that exist', () => {
   assert.throws(
     () => parse({ model: { materials: {}, parts: [{ type: 'torus', material: '#fff' }] } }),
-    /expected box, cylinder, cone or sphere/,
+    /expected box, plate, cylinder, cone or sphere/,
   );
 });
 
@@ -95,8 +95,9 @@ test('a material may be named or written inline', () => {
       ],
     },
   });
-  assert.equal(recipe.model.materials.rock.unlit, true);
-  assert.deepEqual(recipe.model.parts[1].material, { colour: '#ff0000', ramp: undefined, unlit: undefined });
+  const model = recipe.variants[0].model;
+  assert.equal(model.materials.rock.unlit, true);
+  assert.deepEqual(model.parts[1].material, { colour: '#ff0000', ramp: undefined, unlit: undefined });
 });
 
 test('a texture has to be a png, because that is what a bake writes', () => {

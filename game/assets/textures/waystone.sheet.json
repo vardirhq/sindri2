@@ -5,6 +5,18 @@
     "rows": 1,
     "names": [
       "south"
+    ],
+    "size": [
+      54,
+      152
+    ],
+    "margin": [
+      2,
+      2
+    ],
+    "spacing": [
+      4,
+      4
     ]
   }
 }

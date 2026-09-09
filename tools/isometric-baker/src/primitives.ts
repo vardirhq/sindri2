@@ -57,6 +57,23 @@ function pushQuad(geometry: Geometry, a: Vec3, b: Vec3, c: Vec3, d: Vec3, normal
   geometry.indices.push(ia, ib, ic, ia, ic, id);
 }
 
+/**
+ * A single horizontal quad, facing up, centred on the origin.
+ *
+ * A floor tile is not a box, and modelling one as a box of zero height is worse
+ * than wrong: the top and bottom faces then occupy exactly the same plane, and
+ * which of them wins a pixel comes down to the last bit of a barycentric
+ * interpolation — so a tile that should be one flat colour comes out dithered
+ * between its brightest and darkest shade. One quad has no second face to
+ * argue with.
+ */
+export function plateGeometry(size: readonly [number, number]): Geometry {
+  const [x, z] = [size[0] / 2, size[1] / 2];
+  const geometry = emptyGeometry();
+  pushQuad(geometry, vec(-x, 0, z), vec(x, 0, z), vec(x, 0, -z), vec(-x, 0, -z), vec(0, 1, 0));
+  return geometry;
+}
+
 /** An axis-aligned box centred on the origin. */
 export function boxGeometry(size: Vec3): Geometry {
   const [x, y, z] = [size[0] / 2, size[1] / 2, size[2] / 2];

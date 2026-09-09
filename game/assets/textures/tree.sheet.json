@@ -1,17 +1,14 @@
 {
   "format_version": 1,
   "grid": {
-    "columns": 4,
+    "columns": 1,
     "rows": 1,
     "names": [
-      "south",
-      "west",
-      "north",
-      "east"
+      "south"
     ],
     "size": [
-      216,
-      122
+      88,
+      204
     ],
     "margin": [
       2,

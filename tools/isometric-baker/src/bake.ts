@@ -14,7 +14,7 @@ import { uniqueColours } from './palette.ts';
 import { usedColours } from './postprocess.ts';
 import { buildPrefab } from './prefab.ts';
 import { type Recipe } from './recipe.ts';
-import { type PackedSheet, packSheet, spriteScale, tileRatioMismatch } from './sheet.ts';
+import { type PackedSheet, frameName, packSheet, spriteScale, tileRatioMismatch } from './sheet.ts';
 
 /** The suffix that turns a texture's ID into its sheet's ID, as `sindri-core` does. */
 export function sheetIdFor(texture: string): string {
@@ -53,7 +53,8 @@ export interface BakeReport {
 
 export interface BakeResult {
   camera: IsoCamera;
-  mesh: Mesh;
+  /** One per variant, in sheet order. A lone model is the only entry. */
+  meshes: Mesh[];
   canvas: Canvas;
   frames: BakedFrame[];
   sheet: PackedSheet;
@@ -63,26 +64,36 @@ export interface BakeResult {
 
 export function bake(recipe: Recipe): BakeResult {
   const camera = createCamera(recipe.tile);
-  const mesh = buildMesh(recipe.model);
+  const meshes = recipe.variants.map((variant) => buildMesh(variant.model));
+
+  // One canvas and one palette across the whole sheet. The canvas because
+  // frames must be uniform for the anchor to be the centre of each; the palette
+  // because a blended edge pixel of one tile must not snap to a shade only the
+  // tile beside it declared — two tiles meant to match would then not.
   const canvas = measureCanvas(
-    mesh,
+    meshes,
     recipe.footprint,
     recipe.directions,
     camera,
     recipe.render.padding,
   );
+  const palette = uniqueColours(meshes.flatMap((mesh) => paletteFor(mesh, recipe.render)));
 
-  const frames = bakeFrames({
-    mesh,
-    footprint: recipe.footprint,
-    facing: recipe.facing,
-    count: recipe.directions,
-    camera,
-    canvas,
-    config: recipe.render,
-  });
+  const frames = meshes.flatMap((mesh, index) =>
+    bakeFrames({
+      mesh,
+      variant: recipe.variants[index].name,
+      footprint: recipe.footprint,
+      facing: recipe.facing,
+      count: recipe.directions,
+      camera,
+      canvas,
+      config: recipe.render,
+      palette,
+    }),
+  );
 
-  const sheet = packSheet(frames);
+  const sheet = packSheet(frames, recipe.directions);
   const files: BakeOutput[] = [
     { path: recipe.texture, contents: encodePng(sheet.image) },
     { path: sheetIdFor(recipe.texture), contents: Buffer.from(toJson(sheet.document)) },
@@ -90,12 +101,12 @@ export function bake(recipe: Recipe): BakeResult {
 
   const result: BakeResult = {
     camera,
-    mesh,
+    meshes,
     canvas,
     frames,
     sheet,
     files,
-    report: report(recipe, camera, canvas, frames, mesh),
+    report: report(recipe, camera, canvas, frames, palette),
   };
 
   // Last, because a prefab is written from the finished measurements: the
@@ -126,7 +137,7 @@ function report(
   camera: IsoCamera,
   canvas: Canvas,
   frames: BakedFrame[],
-  mesh: Mesh,
+  declared: string[],
 ): BakeReport {
   const { scale, worldUnitsPerPixel } = spriteScale(canvas, camera, recipe.tileWorld);
   const warnings: string[] = [];
@@ -142,8 +153,8 @@ function report(
 
   const frameReports = frames.map((frame) => {
     if (!frame.content) {
-      warnings.push(`frame ${frame.direction} drew nothing`);
-      return { direction: frame.direction, content: '0x0', margin: 0 };
+      warnings.push(`frame ${frameName(frame, recipe.directions)} drew nothing`);
+      return { direction: frameName(frame, recipe.directions), content: '0x0', margin: 0 };
     }
     const margin = Math.min(
       frame.content.x,
@@ -151,14 +162,17 @@ function report(
       canvas.width - (frame.content.x + frame.content.width),
       canvas.height - (frame.content.y + frame.content.height),
     );
-    if (margin <= 0) {
+    // Only worth saying when a margin was asked for. A recipe with no padding
+    // is one whose art is meant to reach the edge — a floor tile has to fill
+    // its cell exactly, or the tilemap draws a seam between every pair.
+    if (margin <= 0 && recipe.render.padding > 0) {
       warnings.push(
-        `frame ${frame.direction} touches the canvas edge; raise render.padding or the ` +
-          'silhouette will be clipped',
+        `frame ${frameName(frame, recipe.directions)} touches the canvas edge; raise ` +
+          'render.padding or the silhouette will be clipped',
       );
     }
     return {
-      direction: frame.direction,
+      direction: frameName(frame, recipe.directions),
       content: `${frame.content.width}x${frame.content.height}`,
       margin,
     };
@@ -167,7 +181,6 @@ function report(
   // What the palette promises: every pixel that came out was a colour the
   // recipe declared going in. A colour outside it means the snap step let
   // something through, which is worth saying out loud.
-  const declared = paletteFor(mesh, recipe.render);
   const used = uniqueColours(frames.flatMap((frame) => usedColours(frame.image)));
   for (const colour of used) {
     if (!declared.includes(colour)) {

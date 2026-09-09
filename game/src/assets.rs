@@ -56,6 +56,8 @@ pub const TEXTURE_IDS: &[&str] = &[
     "textures/shrine.png",
     "textures/standing-stones.png",
     "textures/waystone.png",
+    "textures/stone-wall.png",
+    "textures/tree.png",
 ];
 
 /// The scene and scripts are embedded only in native builds.
@@ -127,6 +129,14 @@ pub const TEXTURES: &[(&str, &[u8])] = &[
     (
         "textures/waystone.png",
         include_bytes!("../assets/textures/waystone.png"),
+    ),
+    (
+        "textures/stone-wall.png",
+        include_bytes!("../assets/textures/stone-wall.png"),
+    ),
+    (
+        "textures/tree.png",
+        include_bytes!("../assets/textures/tree.png"),
     ),
 ];
 
@@ -205,6 +215,14 @@ pub const SHEETS: &[(&str, &str)] = &[
     (
         "textures/waystone.sheet.json",
         include_str!("../assets/textures/waystone.sheet.json"),
+    ),
+    (
+        "textures/stone-wall.sheet.json",
+        include_str!("../assets/textures/stone-wall.sheet.json"),
+    ),
+    (
+        "textures/tree.sheet.json",
+        include_str!("../assets/textures/tree.sheet.json"),
     ),
 ];
 

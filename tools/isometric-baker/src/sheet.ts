@@ -14,6 +14,7 @@
  * for filtering to bleed in from.
  */
 
+import { type DirectionCount } from './directions.ts';
 import { type BakedFrame } from './frames.ts';
 import { type RgbaImage, createImage } from './image.ts';
 import { type IsoCamera } from './iso.ts';
@@ -24,6 +25,10 @@ export const SHEET_FORMAT_VERSION = 1;
 export interface SheetGrid {
   columns: number;
   rows: number;
+  /** The image this grid was cut against. Required once there are gutters. */
+  size?: [number, number];
+  margin?: [number, number];
+  spacing?: [number, number];
   names: string[];
 }
 
@@ -38,13 +43,48 @@ export interface PackedSheet {
 }
 
 /**
+ * What a frame is called on the sheet.
+ *
+ * A sheet of one model names its frames by direction, which is what a scene
+ * saying `#north` wants. A sheet of several — a tile set — names them by model,
+ * because "grass" and "path" are the names a tilemap palette is written in. A
+ * sheet that is both names them by both, and nothing has to guess which half of
+ * the name it is looking at.
+ */
+export function frameName(frame: BakedFrame, count: DirectionCount): string {
+  if (frame.variant === null) return frame.direction;
+  return count === 1 ? frame.variant : `${frame.variant}-${frame.direction}`;
+}
+
+/**
+ * Pixels of gutter around every frame.
+ *
+ * Not zero, and this is the reason. `TextureFilter::Nearest` in
+ * `crates/sindri-render/src/texture.rs` sets `mag_filter` to Nearest but leaves
+ * `min_filter` Linear, so a sheet drawn at even slightly under its authored
+ * size is sampled bilinearly — and a frame packed edge to edge against its
+ * neighbour is then blended with it. On a sprite it is a faint rim; on a floor
+ * tile, whose art fills its cell exactly, it is the tile beside it smeared
+ * across every cell.
+ *
+ * The gutter is filled by extending each frame's own edge pixels outward, so
+ * what the filter reaches for is the colour that was already there. A
+ * transparent gutter would only trade a colour seam for a dark one.
+ */
+const GUTTER = 2;
+
+/**
  * Lay the frames out as one horizontal strip.
  *
  * A strip and not a clever bin packer: the frames are all one size, four of them
  * is not a packing problem, and a strip stays readable when someone opens the
  * PNG to check the pipeline's work.
  */
-export function packSheet(frames: BakedFrame[]): PackedSheet {
+export function packSheet(
+  frames: BakedFrame[],
+  count: DirectionCount = 4,
+  gutter: number = GUTTER,
+): PackedSheet {
   if (frames.length === 0) throw new Error('a sheet needs at least one frame');
 
   const { width, height } = frames[0].image;
@@ -57,27 +97,60 @@ export function packSheet(frames: BakedFrame[]): PackedSheet {
     }
   }
 
-  const sheet = createImage(width * frames.length, height);
-  const stride = sheet.width * 4;
+  // A margin of one gutter and a spacing of two leaves every frame with exactly
+  // `gutter` pixels of its own on all four sides, which is the arrangement
+  // `SheetGrid` measures cells against.
+  const sheet = createImage(
+    frames.length * (width + 2 * gutter),
+    height + 2 * gutter,
+  );
 
   frames.forEach((frame, column) => {
-    for (let y = 0; y < height; y++) {
-      const source = y * width * 4;
-      sheet.data.set(frame.image.data.subarray(source, source + width * 4), y * stride + column * width * 4);
-    }
+    const left = gutter + column * (width + 2 * gutter);
+    extrudeInto(sheet, frame.image, left, gutter, gutter);
   });
 
-  return {
-    image: sheet,
-    document: {
-      format_version: SHEET_FORMAT_VERSION,
-      grid: {
-        columns: frames.length,
-        rows: 1,
-        names: frames.map((frame) => frame.direction),
-      },
-    },
+  const grid: SheetGrid = {
+    columns: frames.length,
+    rows: 1,
+    names: frames.map((frame) => frameName(frame, count)),
   };
+  if (gutter > 0) {
+    grid.size = [sheet.width, sheet.height];
+    grid.margin = [gutter, gutter];
+    grid.spacing = [2 * gutter, 2 * gutter];
+  }
+
+  return { image: sheet, document: { format_version: SHEET_FORMAT_VERSION, grid } };
+}
+
+/**
+ * Copy `frame` to (`left`, `top`) and repeat its edge pixels `gutter` deep
+ * around it.
+ *
+ * Written as one clamped loop over the padded rectangle rather than a copy plus
+ * four border passes: the corners are then the same case as the edges, and the
+ * case that gets forgotten in the four-pass version is the corners.
+ */
+function extrudeInto(
+  sheet: RgbaImage,
+  frame: RgbaImage,
+  left: number,
+  top: number,
+  gutter: number,
+): void {
+  for (let y = -gutter; y < frame.height + gutter; y++) {
+    const sourceY = Math.min(Math.max(y, 0), frame.height - 1);
+    for (let x = -gutter; x < frame.width + gutter; x++) {
+      const sourceX = Math.min(Math.max(x, 0), frame.width - 1);
+      const from = (sourceY * frame.width + sourceX) * 4;
+      const to = ((top + y) * sheet.width + (left + x)) * 4;
+      sheet.data[to] = frame.data[from];
+      sheet.data[to + 1] = frame.data[from + 1];
+      sheet.data[to + 2] = frame.data[from + 2];
+      sheet.data[to + 3] = frame.data[from + 3];
+    }
+  }
 }
 
 export interface TileWorldSize {

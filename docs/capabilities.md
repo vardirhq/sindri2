@@ -1232,12 +1232,15 @@ game or browser export builds depends on the tool: the assets it produces are
 ordinary PNGs and sheet documents, and by the time a game loads one there is
 nothing left to say it was baked.
 
-Gather uses it. Its shrine, its two waystones and its three standing-stone
-markers were dashed ellipses, rectangles and pentagons drawn by
-`sindri.shape` — the placeholder art of an engine debug scene — and are now
-baked sprites drawn by the ordinary sprite path. The recipes are
-`game/assets/textures/*.isobake.json`, and the PNG and `.sheet.json` beside
-each are generated from them.
+Gather uses it for its whole world. Its floor tiles, shrine, waystones, ridge
+wall segments, trees and stone outcrops are baked sprites drawn by the ordinary
+sprite path; the recipes are `game/assets/textures/*.isobake.json`, and the PNG
+and `.sheet.json` beside each are generated from them.
+
+The floor is the part that mattered most. Gather's two tile tones differed by
+six values out of 255, so the authored regions were invisible and the island
+read as one flat dark diamond whatever was drawn on it. It now has four baked
+tiles — shore, grass, path, flagstone — and a floor plan drawn in them.
 
 What stayed a shape stayed for a reason: the Wisp halo and the shrine heart are
 animated every frame by Decay, which no baked frame can do.

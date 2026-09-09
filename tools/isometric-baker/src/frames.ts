@@ -63,6 +63,8 @@ export interface FrameConfig {
 }
 
 export interface BakedFrame {
+  /** Which named model this frame is of, or null when the recipe named none. */
+  variant: string | null;
   direction: Direction;
   /** Rotation step, counted from the authored facing. */
   index: number;
@@ -102,7 +104,7 @@ export function rotateFootprint(footprint: Footprint, eighths: number): Footprin
  * any per-frame pivot to carry.
  */
 export function measureCanvas(
-  mesh: Mesh,
+  meshes: Mesh | Mesh[],
   footprint: Footprint,
   count: DirectionCount,
   camera: IsoCamera,
@@ -112,6 +114,10 @@ export function measureCanvas(
   let maxY = 0;
   const stride = strideFor(count);
 
+  // Across every model on the sheet, not just one: frames have to be uniform
+  // for the anchor to be the centre of all of them, so the tallest variant
+  // decides the canvas that the shortest is padded out to.
+  for (const mesh of Array.isArray(meshes) ? meshes : [meshes]) {
   for (let index = 0; index < count; index++) {
     const rotation = rotationY(index * stride);
     const box = boundsOf(mesh, rotation);
@@ -127,6 +133,7 @@ export function measureCanvas(
         }
       }
     }
+  }
   }
 
   return {
@@ -153,12 +160,23 @@ function ceilPixels(value: number): number {
 
 export interface FrameRequest {
   mesh: Mesh;
+  /** The name this model is filed under on the sheet, or null for a lone model. */
+  variant?: string | null;
   footprint: Footprint;
   facing: Direction;
   count: DirectionCount;
   camera: IsoCamera;
   canvas: Canvas;
   config: FrameConfig;
+  /**
+   * The palette to snap to, when it is not this model's own.
+   *
+   * A sheet of several models shares one palette, so a colour blended at the
+   * edge of one tile cannot snap to a shade that only the tile beside it
+   * declared. Without it each variant would be snapped against a different set
+   * and two tiles meant to match would not.
+   */
+  palette?: string[];
 }
 
 /**
@@ -179,7 +197,7 @@ export function paletteFor(mesh: Mesh, config: FrameConfig): string[] {
 /** Render every direction, in rotation order. */
 export function bakeFrames(request: FrameRequest): BakedFrame[] {
   const { mesh, footprint, facing, count, camera, canvas, config } = request;
-  const palette = paletteFor(mesh, config);
+  const palette = request.palette ?? paletteFor(mesh, config);
   const stride = strideFor(count);
   const names = framesFor(facing, count);
 
@@ -201,6 +219,13 @@ export function bakeFrames(request: FrameRequest): BakedFrame[] {
     if (config.paletteSnap) image = snapToPalette(image, palette);
     if (config.outline.enabled) image = addInnerOutline(image, config.outline.colour);
 
-    return { direction, index, image, footprint: rotated, content: contentBounds(image) };
+    return {
+      variant: request.variant ?? null,
+      direction,
+      index,
+      image,
+      footprint: rotated,
+      content: contentBounds(image),
+    };
   });
 }

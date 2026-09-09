@@ -38,6 +38,12 @@ import { type TileWorldSize } from './sheet.ts';
 
 export { RecipeError };
 
+/** One named model on a sheet. A lone model has no name of its own. */
+export interface ModelVariant {
+  name: string | null;
+  model: ModelSpec;
+}
+
 /** The version this tool writes and reads. */
 export const RECIPE_FORMAT_VERSION = 1;
 
@@ -54,7 +60,14 @@ export interface Recipe {
   directions: DirectionCount;
   footprint: Footprint;
   render: FrameConfig;
-  model: ModelSpec;
+  /**
+   * The models on this sheet, in the order their frames are packed.
+   *
+   * Always at least one. A recipe naming a single `model` becomes one variant
+   * with no name, whose frames are called by direction; a recipe naming
+   * `variants` becomes one per entry, which is what a tile set is.
+   */
+  variants: ModelVariant[];
   /** The prefab to generate beside the sheet, when one is wanted. */
   prefab?: PrefabRequest;
 }
@@ -217,6 +230,47 @@ function readPrefab(value: JsonValue, path: string): PrefabRequest {
   };
 }
 
+/**
+ * The models a sheet holds.
+ *
+ * `model` and `variants` are the same thing said two ways, and a recipe may say
+ * it only once: a document that said both would have to decide which won, and
+ * whichever it picked would surprise whoever wrote the other.
+ */
+function readVariants(root: Record<string, JsonValue>, source: string): ModelVariant[] {
+  const single = root.model;
+  const many = root.variants;
+
+  if (single !== undefined && many !== undefined) {
+    fail(source, 'has both "model" and "variants"; a sheet is described one way or the other');
+  }
+  if (single !== undefined) {
+    return [{ name: null, model: readModel(single, `${source}.model`) }];
+  }
+  if (many === undefined) fail(source, 'is missing "model"');
+
+  const entries = asArray(many, `${source}.variants`);
+  if (entries.length === 0) fail(`${source}.variants`, 'names no models');
+
+  const seen = new Set<string>();
+  return entries.map((entry, index) => {
+    const path = `${source}.variants[${index}]`;
+    const variant = asObject(entry, path);
+    rejectUnknown(variant, path, ['name', 'model']);
+
+    const name = required(variant, 'name', path, asString);
+    if (!/^[a-z0-9][a-z0-9_-]*$/.test(name)) {
+      fail(`${path}.name`, `expected a lowercase name like "long-grass", got ${JSON.stringify(name)}`);
+    }
+    // Two frames of one name would make a sheet whose rects disagree about
+    // which cell that name cuts, which `sindri-core` refuses when it loads it.
+    if (seen.has(name)) fail(`${path}.name`, `is used twice; a sheet names each frame once`);
+    seen.add(name);
+
+    return { name, model: readModel(required(variant, 'model', path, (value) => value), `${path}.model`) };
+  });
+}
+
 const TOP_LEVEL_KEYS = [
   'format_version',
   'id',
@@ -228,8 +282,27 @@ const TOP_LEVEL_KEYS = [
   'footprint',
   'render',
   'model',
+  'variants',
   'prefab',
 ];
+
+/**
+ * The prefab block, refused on a sheet of several models.
+ *
+ * A prefab draws one named frame, and on a tile set there is no one frame it
+ * could mean — the whole point of the sheet is that a tilemap picks per cell.
+ */
+function prefab(root: Record<string, JsonValue>, source: string): PrefabRequest | undefined {
+  const request = optional(root, 'prefab', source, readPrefab);
+  if (request && root.variants !== undefined) {
+    fail(
+      `${source}.prefab`,
+      'a sheet of several models has no single frame for a prefab to draw; ' +
+        'bake the prefab from its own recipe',
+    );
+  }
+  return request;
+}
 
 export function parseRecipe(json: string, source: string): Recipe {
   let parsed: JsonValue;
@@ -289,7 +362,7 @@ export function parseRecipe(json: string, source: string): Recipe {
     directions,
     footprint,
     render: optional(root, 'render', source, readRender) ?? DEFAULT_RENDER,
-    model: required(root, 'model', source, readModel),
-    prefab: optional(root, 'prefab', source, readPrefab),
+    variants: readVariants(root, source),
+    prefab: prefab(root, source),
   };
 }
