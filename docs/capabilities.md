@@ -1211,3 +1211,22 @@ every sprite batch after the first drew with the last batch's camera. See
 ### Scripted pathfinding
 
 Decay can query and advance authored grid occupants through deterministic A* with `Grid.can_reach` and `Grid.step_toward`. The host delegates to the same `WorldGridNavigation` adapter used by engine tests, so walls, occupancy, and whole footprints retain one meaning. Gather's Wisp exercises that path at runtime.
+
+---
+
+## Tooling beside the engine
+
+Things that live in the repository, are run by hand, and change nothing about
+what the engine can do. They are listed here so that finding one does not read
+as evidence of a capability.
+
+### The isometric baker
+
+`tools/isometric-baker` bakes a 3D model into an ordinary sprite sheet and the
+`.sheet.json` beside it, offline. Its contract is `docs/isometric-baker.md`.
+
+It is emphatically **not** runtime 3D and does not imply any. The engine still
+has one mesh primitive, no glTF import, no material authoring and no lighting
+system, exactly as the sections above say. Nothing the engine, editor, native
+game or browser export builds depends on the tool, and no Sindri game uses its
+output yet.

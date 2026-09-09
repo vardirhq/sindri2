@@ -4,6 +4,14 @@ All notable changes to Sindri Next will be documented here.
 
 ## [Unreleased]
 
+- Add `tools/isometric-baker`, an offline asset baker that turns a 3D model into
+  an ordinary Sindri sprite sheet and the `.sheet.json` beside it. The pipeline
+  is adapted from IsoGame's Sprite Factory (MIT); the renderer is a dependency-free
+  CPU rasteriser, so bakes are byte-stable and checkable in CI. It changes nothing
+  about the runtime — Sindri still has one mesh primitive, no glTF import, no
+  material authoring and no lighting system — and no game uses its output yet.
+  See `docs/isometric-baker.md`.
+
 - Expand Weave from an isolated presentation proof into composed responsive
   project UI: `@use` stylesheet graphs, percentages, constraints, padding,
   gaps, wrapping, alignment, viewport units, and text wrapping resolve into

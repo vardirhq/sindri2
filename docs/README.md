@@ -121,6 +121,7 @@ and are not rolling capability lists:
 - [Feasibility and accepted product constraints](FEASIBILITY.md)
 - [Dependency policy](dependency-policy.md)
 - [CLI conventions](cli-conventions.md)
+- [The isometric baker](isometric-baker.md)
 - [Module layout and file-size policy](module-layout.md)
 - [Agent guidance](../AGENTS.md)
 - [Code of Conduct](../CODE_OF_CONDUCT.md)
