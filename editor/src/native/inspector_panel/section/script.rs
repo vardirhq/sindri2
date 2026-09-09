@@ -8,7 +8,7 @@ use crate::ui::theme::{color, text};
 use crate::ui::widgets::property;
 use crate::{inspector, scripts::SceneScripts};
 
-use super::super::rows::{Authored, text_row, value_row};
+use super::super::rows::{At, Authored, text_row, value_row};
 
 /// Which script of the chosen source this entity runs.
 ///
@@ -111,7 +111,14 @@ pub(super) fn script_exports_section(
         if export.type_name.as_deref() == Some("Profile") {
             super::super::field::asset_row(ui, &export.name, &mut value, profiles);
         } else {
-            value_row(ui, &export.name, &mut value, 0.0, Authored::of(authored));
+            value_row(
+                ui,
+                At::loose(),
+                &export.name,
+                &mut value,
+                0.0,
+                Authored::of(authored),
+            );
         }
         if value != before {
             // Setting a property is what puts it in the scene: a field left

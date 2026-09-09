@@ -38,6 +38,29 @@ All notable changes to Sindri Next will be documented here.
   actually hand-roll is a gameplay one over tagged entities, of which physics
   casts are a subset.
 
+- **A list of objects is something you can edit.** A compound collider was
+  authorable in a scene file and not in the inspector: an array of objects fell
+  to `ValueKind::Opaque` and was shown as stored, which was the honest answer
+  while nothing described what a list held. The field template's exemplar item
+  is what changed that — it says what a piece consists of, what each of its
+  fields means, and what a fresh one is, so a new piece is the piece the
+  registration already describes rather than one the editor invents. Pieces can
+  be added, removed and reordered, and each piece's fields are drawn through
+  their own meanings. Two refusals are deliberate: the last item cannot be
+  removed, because the engine refuses a collider with no pieces, and a variant
+  tag below the top level — a piece's `shape`, where `circle` must replace a
+  box's half extents with a radius — is a readout that says why rather than a
+  control that would write a payload the schema rejects. Whether something is a
+  list is decided by the template, not the stored value, so an empty list can
+  still be added to while a tilemap's thousand tiles and a footprint's pairs of
+  numbers stay readouts.
+- **Meanings are read at every depth.** They were consulted only for a
+  component's top-level keys, so a meaning recorded for a nested field was never
+  used: `sindri.ui.text`'s `outline.color` and `shadow.color` had swatches
+  declared and drew four number boxes. Rows now carry the dotted path they sit
+  at — `outline.color`, `pieces.2.friction` — which is what a meaning is keyed
+  by, and what made list items describable at all.
+
 - **A component says what its fields are for.** A field template said a sprite
   had a `texture` and that it held a string; it could not say the string named a
   texture in the project. So the editor guessed from the field's name, through

@@ -95,3 +95,69 @@ fn a_colour_is_named_by_the_component_not_by_its_spelling() {
         "a shape's stroke is a colour that the old spelling rule never matched"
     );
 }
+
+/// A compound collider's pieces are a list the panel can build from.
+///
+/// This is what made array-of-object editing possible: the template carries one
+/// exemplar piece, so the editor knows what a piece consists of and what a
+/// fresh one is without inventing either.
+#[test]
+fn a_colliders_pieces_are_a_list_with_a_blank_to_add() {
+    let scene = scene_extractor();
+    let components = scene.components();
+    let pieces = components
+        .exemplar("sindri.physics2d.collider", "pieces")
+        .and_then(|value| value.as_array())
+        .expect("a collider's pieces are a list");
+    let blank = pieces.first().expect("with one exemplar piece");
+    assert!(
+        blank.is_object(),
+        "a piece is an object, so it can be drawn"
+    );
+    for field in [
+        "shape",
+        "offset",
+        "rotation",
+        "sensor",
+        "layers",
+        "friction",
+        "restitution",
+    ] {
+        assert!(
+            blank.get(field).is_some(),
+            "a fresh piece should carry {field}"
+        );
+    }
+    // And the engine accepts what that blank would produce, so adding one
+    // cannot write a scene that will not load.
+    components
+        .validate_payload(
+            "sindri.physics2d.collider",
+            &serde_json::json!({ "pieces": [blank, blank] }),
+        )
+        .expect("a collider of two fresh pieces is valid");
+}
+
+/// A list is decided by the template, so the shapes that are not lists stay
+/// readouts.
+///
+/// A tilemap's thousand tiles and a footprint's pairs of numbers are arrays
+/// too, and drawing either as an editable list of objects would be wrong.
+#[test]
+fn arrays_that_are_not_lists_of_objects_are_not_treated_as_lists() {
+    let scene = scene_extractor();
+    let components = scene.components();
+    for (type_name, path) in [
+        ("sindri.tilemap", "tiles"),
+        ("sindri.tilemap", "palette"),
+        ("sindri.grid.occupant", "footprint"),
+        ("sindri.tags", "tags"),
+    ] {
+        let is_list = components
+            .exemplar(type_name, path)
+            .and_then(|value| value.as_array())
+            .and_then(|items| items.first())
+            .is_some_and(serde_json::Value::is_object);
+        assert!(!is_list, "{type_name}.{path} should not draw as a list");
+    }
+}

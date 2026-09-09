@@ -252,6 +252,18 @@ impl ComponentSchemaRegistry {
         Ok(())
     }
 
+    /// What this component's field template holds at `path`.
+    ///
+    /// The component at rest, so it answers two questions with one value: does
+    /// this field exist, and what does one look like when nobody has said. A
+    /// tool adding an item to a list wants the second — the exemplar item *is*
+    /// the new item, so a fresh collider piece is the piece the registration
+    /// already describes rather than one the editor invents.
+    #[must_use]
+    pub fn exemplar(&self, type_name: &str, path: &str) -> Option<&Value> {
+        meaning::exemplar(self.registrations.get(type_name)?.fields.as_ref()?, path)
+    }
+
     /// What this component's field at `path` means, if anything has said.
     ///
     /// `path` names the field actually being looked at, so an item of an array

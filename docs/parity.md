@@ -199,7 +199,7 @@ cannot respond to gameplay without hand-written frame maths.
 | Feature | Engine | Editor | Decay | Proof | vs. baseline | Gap that matters |
 | --- | :-: | :-: | :-: | :-: | --- | --- |
 | Bodies, fixed-step stepping, velocity, impulse | ✅ | 🟡 | ✅ | ✅ | **Par** | — |
-| Compound colliders (several pieces, one body) | ✅ | ❌ | — | ❌ | **Par** | Authorable in the file; **the inspector cannot edit the `pieces` array** (see the editor section) |
+| Compound colliders (several pieces, one body) | ✅ | 🟡 | — | ❌ | **Par** | Pieces are added, removed, reordered and edited; changing a piece's *shape* still needs variant support |
 | Masks, sensors, collision events | ✅ | 🟡 | ✅ | ✅ | **Par** | — |
 | **Named collision layers** | ❌ | ❌ | ❌ | — | **Behind** | Masks are raw `u32` bit values. Unity and Godot both name layers in project settings. Cheap to fix, daily friction |
 | Per-piece validation naming the failing index | ✅ | — | — | ✅ | **Ahead** | Neither baseline tells you *which* collider was wrong |
@@ -343,11 +343,13 @@ for field lists. `ComponentSchemaRegistry` stores a field template, a
 captures each field's **shape** and nothing about its **meaning**. A texture id
 and a display label are both `String` to the registry.
 
-There is a second consequence, visible today. A value that is an array of
-objects falls to `ValueKind::Opaque`, which is displayed as stored and left
-alone. **The `pieces` array of a compound collider is exactly that shape**, so
-compound colliders are authorable in a scene file and not editable in the
-inspector.
+A second consequence used to follow, and is now fixed. A value that is an array
+of objects fell to `ValueKind::Opaque` and was displayed as stored — the
+`pieces` array of a compound collider is exactly that shape, so compounds were
+authorable in a scene file and not in the inspector. The template's exemplar
+item is what closed it: it says what a piece consists of, what each field means,
+and what a fresh one is, so the panel can draw a list and add to it without
+inventing anything.
 
 The fix is to move meaning to the registration — asset(texture), asset(script),
 asset(clip), entity reference, choice, colour, angle, bounded range, list-of —
@@ -363,7 +365,7 @@ components not yet written. It is the highest-leverage item in this file.
 | Play / pause / stop / single-step, snapshot restore | ✅ | **Ahead** | Single-step and snapshot restore are better than Unity's play mode |
 | Tilemap painting, sheet slicer, texture picker | ✅ | **Par** | — |
 | **Asset pickers for schema fields generally** | ✅ | **Ahead** | Declared per component in the schema registry, checked against the field template, and carried in `docs/generated/`. Unity needs a plugin (Odin) for the equivalent |
-| **Array-of-object editing** | ❌ | **Behind** | Compound colliders, and anything list-shaped in future. The meanings describing each piece exist; the control does not |
+| **Array-of-object editing** | ✅ | **Par** | A list of objects is added to, removed from and reordered, with each item's fields drawn through its meanings. Decided by the template, so a tilemap's thousand tiles stay a readout |
 | **Console / log panel** | ❌ | **Absent** | Errors and script `print` output are invisible in the editor |
 | **Profiler view** | ❌ | **Absent** | Where a fixed step goes is unmeasurable in-editor |
 | **Search / filter in hierarchy or project** | ❌ | **Absent** | Painful past a few dozen entities |
@@ -464,14 +466,19 @@ three we have partially built and stranded.
 Ordered by whether it stops somebody shipping a game, not by size. This is the
 output of the file; everything above is evidence.
 
-1. ~~**Field meaning in the schema registry.**~~ **Done.** A component now says
-   what its fields are for — asset kind, choice, colour, angle, bounded range,
-   collision mask, entity reference — and the registry checks every path against
-   the field template, so a renamed field is a startup error rather than a
-   control that quietly stopped appearing. The editor's three name-keyed tables
-   are gone. What remains of this item is **array-of-object editing**: a
-   compound collider's `pieces` still falls to `ValueKind::Opaque`, so the
-   meanings describing each piece have no control to drive yet.
+1. ~~**Field meaning in the schema registry, and array-of-object editing.**~~
+   **Done.** A component says what its fields are for — asset kind, choice,
+   colour, angle, bounded range, collision mask, entity reference — and the
+   registry checks every path against the field template, so a renamed field is
+   a startup error rather than a control that quietly stopped appearing. The
+   editor's three name-keyed tables are gone, meanings are read at every depth
+   rather than only at the top level, and a list of objects is editable: a
+   compound collider's pieces are added to, removed from and reordered, each
+   piece drawn through the meanings that describe it. One thing is deliberately
+   left: a **variant tag** below the top level — a piece's `shape`, where
+   choosing `circle` must replace a box's half extents with a radius — is shown
+   as a readout that says so, because writing the word without its fields would
+   leave a payload the schema refuses.
 2. **Decay control of animation clips.** Animation exists and gameplay cannot
    reach it. Small, and it unblocks the whole animation domain.
 3. **UI widget set: slider, toggle, text input, scroll region.** Without these
