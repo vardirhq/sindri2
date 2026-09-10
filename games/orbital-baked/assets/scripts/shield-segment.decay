@@ -1,0 +1,71 @@
+// One plate of a boss's rotating shield.
+//
+// The mechanic this exists for is entirely physical, which is why the script is
+// this short. A bullet spends itself on the first sensor it enters, and these
+// orbit outside the hull's own collider, so a plate does not need to know it is
+// blocking anything -- it is simply in the way, and the boss is not. Destroy one
+// and the gap it leaves is a real gap: bullets fly through it to the hull
+// because there is nothing there any more.
+//
+// So the fight is about the opening. The ring turns, so the player either moves
+// with the gap to keep firing through it, or stands still and opens another.
+script ShieldSegment {
+    // Where on the ring this plate sits, and how fast the ring turns. Both are
+    // set by the boss when it builds the ring, so a boss can have a fast thin
+    // shield or a slow heavy one without a second prefab.
+    @export let angle: f32 = 0.0;
+    @export let radius: f32 = 1.5;
+    @export let spin: f32 = 0.5;
+    @export let health: f32 = 8.0;
+
+    var hp: f32 = 0.0;
+    var state: f32 = -1.0;
+    // `angle` is where this plate was set on the ring and stays that way: an
+    // export is immutable, and the ring's rotation is shared by every plate, so
+    // the turn is kept separately and added.
+    var turn: f32 = 0.0;
+
+    fn start() {
+        this.hp = this.health;
+        wear(2.0, "whole");
+    }
+
+    fn update(dt: f32) {
+        this.turn += this.spin * dt;
+        let a = this.angle + this.turn;
+        // Local to the boss, because this is spawned as its child: the ring
+        // rides along wherever the boss goes without either of them knowing it.
+        this.transform.position.x = cos(a) * this.radius;
+        this.transform.position.y = sin(a) * this.radius;
+        // Face outward, so the lit edge of the plate is the side being shot at.
+        this.transform.rotation_z = a;
+        receive_hits();
+    }
+
+    fn receive_hits() {
+        for hit in Physics.sensor_entered() {
+            if World.exists(hit) && World.has_tag(hit, "player_damage") {
+                this.hp -= World.property_number(hit, "damage", 0.0);
+            }
+        }
+        if this.hp <= 0.0 {
+            Effects.burst(this.entity);
+            Audio.play("audio/kill.wav", 0.22);
+            World.despawn(this.entity);
+            return;
+        }
+        let share = this.hp / max(this.health, 0.001);
+        if share > 0.66 { wear(2.0, "whole"); }
+        else if share > 0.33 { wear(1.0, "cracked"); }
+        else { wear(0.0, "failing"); }
+    }
+
+    // Only on a change, because `Animation.play` restarts the clip.
+    fn wear(next: f32, clip: String) {
+        if next == this.state {
+            return;
+        }
+        this.state = next;
+        Animation.play(this.entity, clip);
+    }
+}

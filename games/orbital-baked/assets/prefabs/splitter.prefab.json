@@ -1,0 +1,20 @@
+{
+  "format_version": 1,
+  "metadata": { "name": "Sector Hazards" },
+  "entities": [{
+    "id": "sector-hazards", "name": "Sector Hazards",
+    "transform_3d": { "position": [0.0, 0.0, -5.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+    "components": {
+      "sindri.script": {
+        "source": "scripts/splitter.decay",
+        "script": "Hazards",
+        "properties": {
+          "health": 2.0,
+          "asteroid": "prefabs/hazard-asteroid-large.prefab.json",
+          "field": "prefabs/hazard-field.prefab.json",
+          "beam": "prefabs/hazard-beam.prefab.json"
+        }
+      }
+    }
+  }]
+}

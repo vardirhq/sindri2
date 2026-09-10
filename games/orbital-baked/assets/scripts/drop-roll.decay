@@ -1,0 +1,63 @@
+// Resolves one defeated enemy against the reference Normal powerup economy.
+// Keeping the roll in a spawned resolver gives every enemy and boss one shared
+// implementation without requiring a game-specific engine hook.
+script DropRoll {
+    @export let powerup: Prefab;
+    @export let elite: f32 = 0.0;
+    @export let boss: f32 = 0.0;
+    @export let regular_chance: f32 = 0.058;
+    @export let elite_chance: f32 = 0.26;
+    @export let boss_chance: f32 = 1.0;
+    @export let low_health_bonus: f32 = 0.055;
+    @export let repair_weight: f32 = 0.44;
+    @export let repair_bias: f32 = 0.26;
+    @export let pulse_weight: f32 = 0.24;
+    @export let pity_kills: f32 = 120.0;
+    // The reference flat repair is 28 on a 100-hull baseline. Sindri's
+    // normalized baseline is five hull, so 1.4 preserves the same proportion.
+    @export let repair_flat: f32 = 1.4;
+    @export let repair_hull: f32 = 0.08;
+
+    fn start() {
+        let since_repair = Game.get("kills_since_repair", 0.0) + 1.0;
+        Game.set("kills_since_repair", since_repair);
+
+        let max_hp = max(0.001, Game.get("max_hp", 5.0));
+        let health_ratio = max(0.0, min(1.0, Game.get("hp", max_hp) / max_hp));
+        let missing = 1.0 - health_ratio;
+        let pity = since_repair >= this.pity_kills;
+        let wounded_boss = this.boss > 0.0 && health_ratio < 0.62;
+
+        var chance: f32 = this.regular_chance;
+        if this.elite > 0.0 { chance = this.elite_chance; }
+        if this.boss > 0.0 { chance = this.boss_chance; }
+        chance += missing * this.low_health_bonus;
+
+        if !pity && Random.value() >= min(1.0, chance) {
+            World.despawn(this.entity);
+            return;
+        }
+
+        var kind: f32 = 0.0;
+        if !pity && !wounded_boss {
+            let repair = this.repair_weight + missing * this.repair_bias;
+            let choice = Random.value();
+            if choice >= repair && choice < repair + this.pulse_weight {
+                kind = 1.0;
+            } else if choice >= repair + this.pulse_weight {
+                kind = 2.0;
+            }
+        }
+
+        let drop = World.spawn(this.powerup);
+        drop.transform.position.x = this.transform.position.x;
+        drop.transform.position.y = this.transform.position.y;
+        World.set_property(drop, "kind", kind);
+        if kind == 0.0 {
+            World.set_property(drop, "value", this.repair_flat + max_hp * this.repair_hull);
+            Game.set("kills_since_repair", 0.0);
+        }
+        Game.set("powerups_dropped", Game.get("powerups_dropped", 0.0) + 1.0);
+        World.despawn(this.entity);
+    }
+}

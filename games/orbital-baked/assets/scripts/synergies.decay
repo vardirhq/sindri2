@@ -1,0 +1,61 @@
+// Synergy recipes are authored data. The script only interprets the fixed
+// recipe shape, so a new combination does not require a new Decay branch.
+script Synergies {
+    @export let catalog: Profile;
+    @export let celebration: Prefab;
+
+    var previous_count: f32 = 0.0;
+
+    fn update(dt: f32) {
+        var index: f32 = 0.0;
+        var active_count: f32 = 0.0;
+        let count = Profiles.count(this.catalog, "synergies");
+        while index < count {
+            if evaluate(index) { active_count += 1.0; }
+            index += 1.0;
+        }
+        Game.set("synergy_count", active_count);
+        if Game.get("run_state", 0.0) == 1.0 && active_count > this.previous_count {
+            celebrate(active_count - this.previous_count);
+        }
+        this.previous_count = active_count;
+    }
+
+    fn celebrate(unlocked: f32) {
+        let player = World.find("Player");
+        if player == null { return; }
+        var ring: f32 = 0.0;
+        while ring < 3.0 {
+            let flare = World.spawn(this.celebration);
+            flare.transform.position.x = player.transform.position.x;
+            flare.transform.position.y = player.transform.position.y;
+            World.set_property(flare, "style", 3.0 + ring % 2.0);
+            World.set_property(flare, "start_size", 0.35 + ring * 0.22);
+            World.set_property(flare, "end_size", 2.4 + ring * 0.85 + unlocked * 0.18);
+            World.set_property(flare, "duration", 0.55 + ring * 0.12);
+            World.set_property(flare, "spin", 3.0 + ring * 2.0);
+            ring += 1.0;
+        }
+        Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.58));
+    }
+
+    fn evaluate(index: f32) -> bool {
+        var active: bool = true;
+        if !meets(index, "required_0", "minimum_0") { active = false; }
+        if !meets(index, "required_1", "minimum_1") { active = false; }
+        if !meets(index, "required_2", "minimum_2") { active = false; }
+        if !meets(index, "required_3", "minimum_3") { active = false; }
+        if !meets(index, "required_4", "minimum_4") { active = false; }
+        let output = Profiles.text_at(this.catalog, "synergies", index, "key", "");
+        if active { Game.set(output, 1.0); }
+        else { Game.set(output, 0.0); }
+        return active;
+    }
+
+    fn meets(index: f32, key_field: String, minimum_field: String) -> bool {
+        let key = Profiles.text_at(this.catalog, "synergies", index, key_field, "");
+        if key == "" { return true; }
+        let minimum = Profiles.number_at(this.catalog, "synergies", index, minimum_field, 0.0);
+        return Game.get(key, 0.0) >= minimum;
+    }
+}

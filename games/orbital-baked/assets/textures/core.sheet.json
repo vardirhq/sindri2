@@ -1,0 +1,26 @@
+{
+  "format_version": 1,
+  "anchor": "center",
+  "grid": {
+    "columns": 4,
+    "rows": 1,
+    "names": [
+      "hull-0",
+      "hull-1",
+      "hull-2",
+      "hull-3"
+    ],
+    "size": [
+      736,
+      160
+    ],
+    "margin": [
+      2,
+      2
+    ],
+    "spacing": [
+      4,
+      4
+    ]
+  }
+}

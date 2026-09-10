@@ -1,0 +1,170 @@
+// Ember Belt edge flares and Core Approach warning beams. Both are telegraphed
+// line hazards, so one script owns the shared readable-danger lifecycle.
+script HazardBeam {
+    // 1 = Ember Belt edge band, 2 = Core Approach pulse.
+    @export let mode: f32 = 2.0;
+    @export let axis: f32 = 1.0;
+    @export let side: f32 = 1.0;
+    @export let warning: f32 = 1.05;
+    @export let active_for: f32 = 0.55;
+    @export let player_dps: f32 = 4.5;
+    @export let enemy_dps: f32 = 3.4;
+    @export let flare_enemy_dps: f32 = 1.2;
+    @export let view_size: f32 = 11.0;
+
+    var warn_left: f32 = 0.0;
+    var active_left: f32 = 0.0;
+
+    fn start() {
+        this.warn_left = this.warning;
+        this.active_left = this.active_for;
+        if this.mode == 2.0 {
+            style_pulse();
+            size_warning();
+        } else {
+            style_flare();
+        }
+    }
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 1.0 {
+            return;
+        }
+        if this.mode == 1.0 {
+            update_flare(dt);
+        } else {
+            update_pulse(dt);
+        }
+    }
+
+    fn update_flare(dt: f32) {
+        let time = Game.get("elapsed", 0.0);
+        let intensity = (sin(time * 0.72) + 1.0) * 0.5;
+        let half_x = visible_half_x();
+        let half_y = visible_half_y();
+        let edge = half_y * 2.0 * (0.18 + 0.08 * sin(time * 0.21));
+        let safe = half_y - edge;
+        this.transform.position.y = this.side * (half_y - edge * 0.5);
+        this.transform.scale.x = half_x * 2.0;
+        this.transform.scale.y = edge;
+        if intensity <= 0.55 {
+            this.shape.fill.a = 0.0;
+            this.shape.stroke.a = 0.0;
+            return;
+        }
+        let visible = (intensity - 0.55) / 0.45;
+        this.shape.fill.a = 0.04 + visible * 0.18;
+        this.shape.stroke.a = 0.22 + visible * 0.48;
+        if intensity <= 0.82 {
+            return;
+        }
+
+        let player = World.find("Player");
+        if player != null && abs(player.transform.position.y) > safe {
+            Game.set("hp", Game.get("hp", 0.0) - this.player_dps * 0.6 * dt);
+        }
+        damage_enemies_flare(safe, dt);
+    }
+
+    fn update_pulse(dt: f32) {
+        if this.warn_left > 0.0 {
+            this.warn_left -= dt;
+            size_warning();
+            this.shape.fill.a = 0.07;
+            this.shape.stroke.a = 0.85;
+            return;
+        }
+        this.active_left -= dt;
+        size_pulse();
+        this.shape.fill.a = 0.5;
+        this.shape.stroke.a = 1.0;
+        damage_line(dt);
+        if this.active_left <= 0.0 {
+            World.despawn(this.entity);
+        }
+    }
+
+    fn size_pulse() {
+        if this.axis == 1.0 {
+            this.transform.scale.x = 0.56;
+            this.transform.scale.y = visible_half_y() * 2.0 + 2.0;
+        } else {
+            this.transform.scale.x = visible_half_x() * 2.0 + 2.0;
+            this.transform.scale.y = 0.56;
+        }
+    }
+
+    fn size_warning() {
+        if this.axis == 1.0 {
+            this.transform.scale.x = 0.10;
+            this.transform.scale.y = visible_half_y() * 2.0 + 2.0;
+        } else {
+            this.transform.scale.x = visible_half_x() * 2.0 + 2.0;
+            this.transform.scale.y = 0.10;
+        }
+    }
+
+    fn damage_line(dt: f32) {
+        let player = World.find("Player");
+        if player != null && line_distance(player) < 0.28 {
+            Game.set("hp", Game.get("hp", 0.0) - this.player_dps * dt);
+        }
+        for enemy in World.with_tag("enemy") {
+            if World.exists(enemy) && line_distance(enemy) < 0.28 {
+                add_enemy_damage(enemy, this.enemy_dps * dt);
+            }
+        }
+    }
+
+    fn damage_enemies_flare(safe: f32, dt: f32) {
+        for enemy in World.with_tag("enemy") {
+            if World.exists(enemy) && abs(enemy.transform.position.y) > safe {
+                add_enemy_damage(enemy, this.flare_enemy_dps * dt);
+            }
+        }
+    }
+
+    fn style_flare() {
+        this.shape.fill.r = 1.0;
+        this.shape.fill.g = 0.20;
+        this.shape.fill.b = 0.04;
+        this.shape.stroke.r = 1.0;
+        this.shape.stroke.g = 0.46;
+        this.shape.stroke.b = 0.08;
+        this.shape.dashes = 0.0;
+    }
+
+    fn style_pulse() {
+        this.shape.fill.r = 1.0;
+        this.shape.fill.g = 0.14;
+        this.shape.fill.b = 0.36;
+        this.shape.stroke.r = 1.0;
+        this.shape.stroke.g = 0.42;
+        this.shape.stroke.b = 0.56;
+        this.shape.dashes = 10.0;
+    }
+
+    fn line_distance(entity: Entity) -> f32 {
+        if this.axis == 1.0 {
+            return abs(entity.transform.position.x - this.transform.position.x);
+        }
+        return abs(entity.transform.position.y - this.transform.position.y);
+    }
+
+    fn add_enemy_damage(enemy: Entity, amount: f32) {
+        let current = World.property_number(enemy, "hazard_damage", 0.0);
+        World.set_property(enemy, "hazard_damage", current + amount);
+    }
+
+    fn visible_half_x() -> f32 {
+        let aspect = max(Viewport.aspect, 0.001);
+        if aspect >= 1.0 { return this.view_size * 0.5 * aspect; }
+        return this.view_size * 0.5;
+    }
+
+    fn visible_half_y() -> f32 {
+        let aspect = max(Viewport.aspect, 0.001);
+        if aspect >= 1.0 { return this.view_size * 0.5; }
+        return this.view_size * 0.5 / aspect;
+    }
+}

@@ -1,0 +1,3895 @@
+{
+  "format_version": 9,
+  "metadata": {
+    "name": "Orbital Last Stand"
+  },
+  "entities": [
+    {
+      "id": "backdrop",
+      "name": "backdrop",
+      "parent": null,
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          -10.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          60.0,
+          60.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.00152,
+            0.00212,
+            0.00439,
+            1.0
+          ],
+          "stroke": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "stroke_width": 0.0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "layer": -200
+        }
+      }
+    },
+    {
+      "id": "backdrop-grid",
+      "name": "backdrop-grid",
+      "parent": null,
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          -10.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          60.0,
+          60.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.shape": {
+          "kind": "grid",
+          "count": 52.0,
+          "fill": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "stroke": [
+            0.00852,
+            0.0343,
+            0.02445,
+            1.0
+          ],
+          "stroke_width": 0.0004,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "layer": -199
+        }
+      }
+    },
+    {
+      "id": "camera",
+      "name": "Camera",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          10.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.camera": {
+          "far": 100.0,
+          "near": 0.1,
+          "projection": "orthographic",
+          "vertical_size": 11.0,
+          "fit": "shorter"
+        },
+        "sindri.script": {
+          "source": "scripts/camera-fx.decay",
+          "script": "CameraFx",
+          "properties": {}
+        }
+      }
+    },
+    {
+      "id": "card-dmg",
+      "name": "Guidance Kernel",
+      "parent": "upgrade-row",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.7896,
+          0.2,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "upgrade-card"
+          ]
+        },
+        "sindri.script": {
+          "properties": {
+            "catalog": "profiles/module-catalog.profile.json",
+            "slot": 0.0
+          },
+          "script": "Module",
+          "source": "scripts/module.decay"
+        },
+        "sindri.tags": {
+          "tags": [
+            "upgrade"
+          ]
+        },
+        "sindri.ui.button": {
+          "label": "Guidance Kernel"
+        },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.00335,
+            0.00561,
+            0.01444,
+            1.0
+          ],
+          "stroke": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ],
+          "stroke_width": 0.01,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "anchor": "center",
+          "layer": 110
+        }
+      }
+    },
+    {
+      "id": "card-dmg-blurb",
+      "name": "Guidance Kernel Blurb",
+      "parent": "card-dmg",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.035,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "upgrade-card-copy"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.19807,
+            0.2384,
+            0.31399,
+            1.0
+          ],
+          "font": "fonts/IBMPlexMono-Regular.ttf",
+          "font_size": 0.033,
+          "layer": 140,
+          "line_height": 0.03465,
+          "text": "+1 damage, shots seek",
+          "bounds": [
+            0.7,
+            0.09
+          ],
+          "wrap": "word",
+          "line_align": "center",
+          "case": "upper",
+          "letter_spacing": 0.00495,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "card-dmg-name",
+      "name": "Guidance Kernel Name",
+      "parent": "card-dmg",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.035,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "upgrade-card-name"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
+          ],
+          "font": "fonts/ChakraPetch-Bold.ttf",
+          "font_size": 0.046,
+          "layer": 140,
+          "line_height": 0.0483,
+          "text": "Guidance Kernel",
+          "bounds": [
+            0.7,
+            0.06
+          ],
+          "wrap": "none",
+          "auto_size": {
+            "enabled": true,
+            "min": 0.028
+          },
+          "case": "as_written",
+          "letter_spacing": 0.00092,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "card-hull",
+      "name": "Arc Imprint",
+      "parent": "upgrade-row",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.7896,
+          0.2,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "upgrade-card"
+          ]
+        },
+        "sindri.script": {
+          "properties": {
+            "catalog": "profiles/module-catalog.profile.json",
+            "slot": 1.0
+          },
+          "script": "Module",
+          "source": "scripts/module.decay"
+        },
+        "sindri.tags": {
+          "tags": [
+            "upgrade"
+          ]
+        },
+        "sindri.ui.button": {
+          "label": "Arc Imprint"
+        },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.00335,
+            0.00561,
+            0.01444,
+            1.0
+          ],
+          "stroke": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ],
+          "stroke_width": 0.01,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "anchor": "center",
+          "layer": 110
+        }
+      }
+    },
+    {
+      "id": "card-hull-blurb",
+      "name": "Arc Imprint Blurb",
+      "parent": "card-hull",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.035,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "upgrade-card-copy"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.19807,
+            0.2384,
+            0.31399,
+            1.0
+          ],
+          "font": "fonts/IBMPlexMono-Regular.ttf",
+          "font_size": 0.033,
+          "layer": 140,
+          "line_height": 0.03465,
+          "text": "+2 hull, impacts chain",
+          "bounds": [
+            0.7,
+            0.09
+          ],
+          "wrap": "word",
+          "line_align": "center",
+          "case": "upper",
+          "letter_spacing": 0.00495,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "card-hull-name",
+      "name": "Arc Imprint Name",
+      "parent": "card-hull",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.035,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "upgrade-card-name"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
+          ],
+          "font": "fonts/ChakraPetch-Bold.ttf",
+          "font_size": 0.046,
+          "layer": 140,
+          "line_height": 0.0483,
+          "text": "Arc Imprint",
+          "bounds": [
+            0.7,
+            0.06
+          ],
+          "wrap": "none",
+          "auto_size": {
+            "enabled": true,
+            "min": 0.028
+          },
+          "case": "as_written",
+          "letter_spacing": 0.00092,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "card-magnet",
+      "name": "Nova Imprint",
+      "parent": "upgrade-row",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.7896,
+          0.2,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "upgrade-card"
+          ]
+        },
+        "sindri.script": {
+          "properties": {
+            "catalog": "profiles/module-catalog.profile.json",
+            "slot": 2.0
+          },
+          "script": "Module",
+          "source": "scripts/module.decay"
+        },
+        "sindri.tags": {
+          "tags": [
+            "upgrade"
+          ]
+        },
+        "sindri.ui.button": {
+          "label": "Nova Imprint"
+        },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.00335,
+            0.00561,
+            0.01444,
+            1.0
+          ],
+          "stroke": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ],
+          "stroke_width": 0.01,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "anchor": "center",
+          "layer": 110
+        }
+      }
+    },
+    {
+      "id": "card-magnet-blurb",
+      "name": "Nova Imprint Blurb",
+      "parent": "card-magnet",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.035,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "upgrade-card-copy"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.19807,
+            0.2384,
+            0.31399,
+            1.0
+          ],
+          "font": "fonts/IBMPlexMono-Regular.ttf",
+          "font_size": 0.033,
+          "layer": 140,
+          "line_height": 0.03465,
+          "text": "+1.2 collection, impact burst",
+          "bounds": [
+            0.7,
+            0.09
+          ],
+          "wrap": "word",
+          "line_align": "center",
+          "case": "upper",
+          "letter_spacing": 0.00495,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "card-magnet-name",
+      "name": "Nova Imprint Name",
+      "parent": "card-magnet",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.035,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "upgrade-card-name"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
+          ],
+          "font": "fonts/ChakraPetch-Bold.ttf",
+          "font_size": 0.046,
+          "layer": 140,
+          "line_height": 0.0483,
+          "text": "Nova Imprint",
+          "bounds": [
+            0.7,
+            0.06
+          ],
+          "wrap": "none",
+          "auto_size": {
+            "enabled": true,
+            "min": 0.028
+          },
+          "case": "as_written",
+          "letter_spacing": 0.00092,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "card-pierce",
+      "name": "Gravity Anchor",
+      "parent": "upgrade-row",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.7896,
+          0.2,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "upgrade-card"
+          ]
+        },
+        "sindri.script": {
+          "properties": {
+            "catalog": "profiles/module-catalog.profile.json",
+            "slot": 3.0
+          },
+          "script": "Module",
+          "source": "scripts/module.decay"
+        },
+        "sindri.tags": {
+          "tags": [
+            "upgrade"
+          ]
+        },
+        "sindri.ui.button": {
+          "label": "Gravity Anchor"
+        },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.00335,
+            0.00561,
+            0.01444,
+            1.0
+          ],
+          "stroke": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ],
+          "stroke_width": 0.01,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "anchor": "center",
+          "layer": 110
+        }
+      }
+    },
+    {
+      "id": "card-pierce-blurb",
+      "name": "Gravity Anchor Blurb",
+      "parent": "card-pierce",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.035,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "upgrade-card-copy"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.19807,
+            0.2384,
+            0.31399,
+            1.0
+          ],
+          "font": "fonts/IBMPlexMono-Regular.ttf",
+          "font_size": 0.033,
+          "layer": 140,
+          "line_height": 0.03465,
+          "text": "+1 pierce, leaves mines",
+          "bounds": [
+            0.7,
+            0.09
+          ],
+          "wrap": "word",
+          "line_align": "center",
+          "case": "upper",
+          "letter_spacing": 0.00495,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "card-pierce-name",
+      "name": "Gravity Anchor Name",
+      "parent": "card-pierce",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.035,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "upgrade-card-name"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
+          ],
+          "font": "fonts/ChakraPetch-Bold.ttf",
+          "font_size": 0.046,
+          "layer": 140,
+          "line_height": 0.0483,
+          "text": "Gravity Anchor",
+          "bounds": [
+            0.7,
+            0.06
+          ],
+          "wrap": "none",
+          "auto_size": {
+            "enabled": true,
+            "min": 0.028
+          },
+          "case": "as_written",
+          "letter_spacing": 0.00092,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "card-rate",
+      "name": "Prism Imprint",
+      "parent": "upgrade-row",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.7896,
+          0.2,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "upgrade-card"
+          ]
+        },
+        "sindri.script": {
+          "properties": {
+            "catalog": "profiles/module-catalog.profile.json",
+            "slot": 4.0
+          },
+          "script": "Module",
+          "source": "scripts/module.decay"
+        },
+        "sindri.tags": {
+          "tags": [
+            "upgrade"
+          ]
+        },
+        "sindri.ui.button": {
+          "label": "Prism Imprint"
+        },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.00335,
+            0.00561,
+            0.01444,
+            1.0
+          ],
+          "stroke": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ],
+          "stroke_width": 0.01,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "anchor": "center",
+          "layer": 110
+        }
+      }
+    },
+    {
+      "id": "card-rate-blurb",
+      "name": "Prism Imprint Blurb",
+      "parent": "card-rate",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.035,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "upgrade-card-copy"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.19807,
+            0.2384,
+            0.31399,
+            1.0
+          ],
+          "font": "fonts/IBMPlexMono-Regular.ttf",
+          "font_size": 0.033,
+          "layer": 140,
+          "line_height": 0.03465,
+          "text": "fire faster, impacts lance",
+          "bounds": [
+            0.7,
+            0.09
+          ],
+          "wrap": "word",
+          "line_align": "center",
+          "case": "upper",
+          "letter_spacing": 0.00495,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "card-rate-name",
+      "name": "Prism Imprint Name",
+      "parent": "card-rate",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.035,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "upgrade-card-name"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
+          ],
+          "font": "fonts/ChakraPetch-Bold.ttf",
+          "font_size": 0.046,
+          "layer": 140,
+          "line_height": 0.0483,
+          "text": "Prism Imprint",
+          "bounds": [
+            0.7,
+            0.06
+          ],
+          "wrap": "none",
+          "auto_size": {
+            "enabled": true,
+            "min": 0.028
+          },
+          "case": "as_written",
+          "letter_spacing": 0.00092,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "card-speed",
+      "name": "Trimmed Hull",
+      "parent": "upgrade-row",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.7896,
+          0.2,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "upgrade-card"
+          ]
+        },
+        "sindri.script": {
+          "properties": {
+            "catalog": "profiles/module-catalog.profile.json",
+            "slot": 5.0
+          },
+          "script": "Module",
+          "source": "scripts/module.decay"
+        },
+        "sindri.tags": {
+          "tags": [
+            "upgrade"
+          ]
+        },
+        "sindri.ui.button": {
+          "label": "Trimmed Hull"
+        },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.00335,
+            0.00561,
+            0.01444,
+            1.0
+          ],
+          "stroke": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ],
+          "stroke_width": 0.01,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "anchor": "center",
+          "layer": 110
+        }
+      }
+    },
+    {
+      "id": "card-speed-blurb",
+      "name": "Trimmed Hull Blurb",
+      "parent": "card-speed",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.035,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "upgrade-card-copy"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.19807,
+            0.2384,
+            0.31399,
+            1.0
+          ],
+          "font": "fonts/IBMPlexMono-Regular.ttf",
+          "font_size": 0.033,
+          "layer": 140,
+          "line_height": 0.03465,
+          "text": "+0.8 speed",
+          "bounds": [
+            0.7,
+            0.09
+          ],
+          "wrap": "word",
+          "line_align": "center",
+          "case": "upper",
+          "letter_spacing": 0.00495,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "card-speed-name",
+      "name": "Trimmed Hull Name",
+      "parent": "card-speed",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.035,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "upgrade-card-name"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
+          ],
+          "font": "fonts/ChakraPetch-Bold.ttf",
+          "font_size": 0.046,
+          "layer": 140,
+          "line_height": 0.0483,
+          "text": "Trimmed Hull",
+          "bounds": [
+            0.7,
+            0.06
+          ],
+          "wrap": "none",
+          "auto_size": {
+            "enabled": true,
+            "min": 0.028
+          },
+          "case": "as_written",
+          "letter_spacing": 0.00092,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "chooser",
+      "name": "UpgradeChooser",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "catalog": "profiles/module-catalog.profile.json",
+            "offers": 3.0
+          },
+          "script": "UpgradeChooser",
+          "source": "scripts/upgrade-chooser.decay"
+        }
+      }
+    },
+    {
+      "id": "stats",
+      "name": "Stats",
+      "components": {
+        "sindri.script": {
+          "properties": {},
+          "script": "Stats",
+          "source": "scripts/stats.decay"
+        }
+      }
+    },
+    {
+      "id": "synergies",
+      "name": "Synergies",
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "catalog": "profiles/synergy-catalog.profile.json",
+            "celebration": "prefabs/spectacle.prefab.json"
+          },
+          "script": "Synergies",
+          "source": "scripts/synergies.decay"
+        }
+      }
+    },
+    {
+      "id": "director",
+      "name": "Director",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "arena": 7.5,
+            "boss_at": 180.0,
+            "charger": "prefabs/charger.prefab.json",
+            "challenger": "prefabs/challenger.prefab.json",
+            "drifter": "prefabs/drifter.prefab.json",
+            "elite_after": 105.0,
+            "elite_base": 0.025,
+            "elite_time_divisor": 3000.0,
+            "elite_bonus_scale": 0.65,
+            "elite_cap": 0.32,
+            "splitter": "prefabs/splitter.prefab.json",
+            "warden": "prefabs/warden.prefab.json",
+            "wave_gap": 6.0
+          },
+          "script": "Director",
+          "source": "scripts/director.decay"
+        }
+      }
+    },
+    {
+      "id": "hud",
+      "name": "Hud",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {},
+          "script": "Hud",
+          "source": "scripts/hud.decay"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "id": "hud-boss",
+      "name": "BossPanel",
+      "parent": "hud",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "disabled": true
+    },
+    {
+      "id": "hud-boss-back",
+      "name": "BossBack",
+      "parent": "hud-boss",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.33,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.84,
+          0.02,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "hud-meter",
+            "hud-boss-meter",
+            "meter-back"
+          ]
+        },
+        "sindri.ui.image": {
+          "anchor": "top",
+          "layer": 128,
+          "texture": "textures/bar-back.png",
+          "tint": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ]
+        }
+      }
+    },
+    {
+      "id": "hud-boss-bar",
+      "name": "BossBar",
+      "parent": "hud-boss",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.33,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.84,
+          0.02,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "hud-meter",
+            "hud-boss-meter",
+            "meter-fill"
+          ]
+        },
+        "sindri.ui.image": {
+          "anchor": "top",
+          "fill": {
+            "amount": 1.0,
+            "from": "left"
+          },
+          "layer": 129,
+          "texture": "textures/bar.png",
+          "tint": [
+            1.0,
+            0.35,
+            0.35,
+            1.0
+          ]
+        }
+      }
+    },
+    {
+      "id": "hud-boss-name",
+      "name": "BossName",
+      "parent": "hud-boss",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.125,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "hud-text",
+            "hud-boss-name"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "top",
+          "color": [
+            1.0,
+            0.14703,
+            0.06848,
+            1.0
+          ],
+          "font": "fonts/IBMPlexMono-Regular.ttf",
+          "font_size": 0.032,
+          "layer": 140,
+          "line_height": 0.034,
+          "text": "WARDEN",
+          "shadow": {
+            "offset": [
+              0.0,
+              -0.004
+            ],
+            "color": [
+              0.0,
+              0.0,
+              0.0,
+              0.75
+            ],
+            "softness": 0.005
+          },
+          "case": "upper",
+          "letter_spacing": 0.0048,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "hud-clock",
+      "name": "Clock",
+      "parent": "hud",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.075,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "hud-text",
+            "hud-clock"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "top",
+          "color": [
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
+          ],
+          "font": "fonts/IBMPlexMono-Regular.ttf",
+          "font_size": 0.075,
+          "layer": 140,
+          "line_height": 0.079,
+          "text": "{}:{.2}",
+          "shadow": {
+            "offset": [
+              0.0,
+              -0.004
+            ],
+            "color": [
+              0.0,
+              0.0,
+              0.0,
+              0.75
+            ],
+            "softness": 0.005
+          },
+          "case": "upper",
+          "letter_spacing": 0.01125,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "hud-cores",
+      "name": "Cores",
+      "parent": "hud",
+      "transform_3d": {
+        "position": [
+          0.04,
+          0.055,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.84,
+          0.014,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "hud-meter",
+            "hud-player-meter",
+            "cores-meter",
+            "meter-fill"
+          ]
+        },
+        "sindri.ui.image": {
+          "anchor": "bottom_left",
+          "fill": {
+            "amount": 0.0,
+            "from": "left"
+          },
+          "layer": 129,
+          "texture": "textures/bar.png",
+          "tint": [
+            0.5,
+            0.8,
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    {
+      "id": "hud-cores-back",
+      "name": "CoresBack",
+      "parent": "hud",
+      "transform_3d": {
+        "position": [
+          0.04,
+          0.055,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.84,
+          0.014,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "hud-meter",
+            "hud-player-meter",
+            "cores-meter",
+            "meter-back"
+          ]
+        },
+        "sindri.ui.image": {
+          "anchor": "bottom_left",
+          "layer": 128,
+          "texture": "textures/bar-back.png",
+          "tint": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ]
+        }
+      }
+    },
+    {
+      "id": "hud-hp",
+      "name": "Health",
+      "parent": "hud",
+      "transform_3d": {
+        "position": [
+          0.04,
+          0.1,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.84,
+          0.028,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "hud-meter",
+            "hud-player-meter",
+            "health-meter",
+            "meter-fill"
+          ]
+        },
+        "sindri.ui.image": {
+          "anchor": "bottom_left",
+          "fill": {
+            "amount": 1.0,
+            "from": "left"
+          },
+          "layer": 129,
+          "texture": "textures/bar.png",
+          "tint": [
+            1.0,
+            0.14703,
+            0.06848,
+            1.0
+          ]
+        }
+      }
+    },
+    {
+      "id": "hud-hp-back",
+      "name": "HealthBack",
+      "parent": "hud",
+      "transform_3d": {
+        "position": [
+          0.04,
+          0.1,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.84,
+          0.028,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "hud-meter",
+            "hud-player-meter",
+            "health-meter",
+            "meter-back"
+          ]
+        },
+        "sindri.ui.image": {
+          "anchor": "bottom_left",
+          "layer": 128,
+          "texture": "textures/bar-back.png",
+          "tint": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ]
+        }
+      }
+    },
+    {
+      "id": "hud-hp-text",
+      "name": "HealthText",
+      "parent": "hud",
+      "transform_3d": {
+        "position": [
+          0.04,
+          0.16,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "hud-text",
+            "hud-health-label"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "bottom_left",
+          "color": [
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
+          ],
+          "font": "fonts/IBMPlexMono-Regular.ttf",
+          "font_size": 0.03,
+          "layer": 140,
+          "line_height": 0.0315,
+          "text": "{}/{}",
+          "shadow": {
+            "offset": [
+              0.0,
+              -0.004
+            ],
+            "color": [
+              0.0,
+              0.0,
+              0.0,
+              0.75
+            ],
+            "softness": 0.005
+          },
+          "case": "upper",
+          "letter_spacing": 0.0045,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "hud-level",
+      "name": "Level",
+      "parent": "hud",
+      "transform_3d": {
+        "position": [
+          -0.04,
+          -0.155,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "hud-text",
+            "hud-stat",
+            "hud-level"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "top_right",
+          "color": [
+            0.20156,
+            0.92158,
+            0.57758,
+            1.0
+          ],
+          "font": "fonts/IBMPlexMono-Regular.ttf",
+          "font_size": 0.028,
+          "layer": 140,
+          "line_height": 0.0294,
+          "text": "Level {}",
+          "shadow": {
+            "offset": [
+              0.0,
+              -0.004
+            ],
+            "color": [
+              0.0,
+              0.0,
+              0.0,
+              0.75
+            ],
+            "softness": 0.005
+          },
+          "case": "upper",
+          "letter_spacing": 0.0042,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "hud-score",
+      "name": "Score",
+      "parent": "hud",
+      "transform_3d": {
+        "position": [
+          -0.04,
+          -0.2,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "hud-text",
+            "hud-stat",
+            "hud-score"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "top_right",
+          "color": [
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
+          ],
+          "font": "fonts/IBMPlexMono-Regular.ttf",
+          "font_size": 0.032,
+          "layer": 140,
+          "line_height": 0.0336,
+          "text": "Score {}",
+          "shadow": {
+            "offset": [
+              0.0,
+              -0.004
+            ],
+            "color": [
+              0.0,
+              0.0,
+              0.0,
+              0.75
+            ],
+            "softness": 0.005
+          },
+          "case": "upper",
+          "letter_spacing": 0.0048,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "hud-wave",
+      "name": "Wave",
+      "parent": "hud",
+      "transform_3d": {
+        "position": [
+          0.04,
+          -0.155,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "hud-text",
+            "hud-stat",
+            "hud-wave"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "top_left",
+          "color": [
+            0.20156,
+            0.92158,
+            0.57758,
+            1.0
+          ],
+          "font": "fonts/IBMPlexMono-Regular.ttf",
+          "font_size": 0.028,
+          "layer": 140,
+          "line_height": 0.0294,
+          "text": "Wave {}",
+          "shadow": {
+            "offset": [
+              0.0,
+              -0.004
+            ],
+            "color": [
+              0.0,
+              0.0,
+              0.0,
+              0.75
+            ],
+            "softness": 0.005
+          },
+          "case": "upper",
+          "letter_spacing": 0.0042,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "music",
+      "name": "Music",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.audio.source": {
+          "autoplay": true,
+          "clip": "audio/theme.wav",
+          "looping": true,
+          "volume": 0.3
+        }
+      }
+    },
+    {
+      "id": "pause",
+      "name": "Pause",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "disabled": true
+    },
+    {
+      "id": "pause-bg",
+      "name": "PauseBack",
+      "parent": "pause",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.84,
+          0.4,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "overlay-panel",
+            "pause-panel"
+          ]
+        },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.00335,
+            0.00561,
+            0.01444,
+            1.0
+          ],
+          "stroke": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ],
+          "stroke_width": 0.003,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "anchor": "center",
+          "layer": 100
+        }
+      }
+    },
+    {
+      "id": "pause-quit",
+      "name": "PauseQuit",
+      "parent": "pause",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.16,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.7392,
+          0.1,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "overlay-button",
+            "overlay-danger"
+          ]
+        },
+        "sindri.script": {
+          "properties": {
+            "action": 3.0
+          },
+          "script": "Button",
+          "source": "scripts/button.decay"
+        },
+        "sindri.ui.button": {
+          "label": "pause-quit"
+        },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "stroke": [
+            0.35218,
+            0.05511,
+            0.03335,
+            1.0
+          ],
+          "stroke_width": 0.02,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "anchor": "center",
+          "layer": 110
+        }
+      }
+    },
+    {
+      "id": "pause-quit-text",
+      "name": "PauseQuitText",
+      "parent": "pause",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.16,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "overlay-button-label",
+            "overlay-danger-label"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            1.0,
+            0.14703,
+            0.06848,
+            1.0
+          ],
+          "font": "fonts/ChakraPetch-Bold.ttf",
+          "font_size": 0.05,
+          "layer": 140,
+          "line_height": 0.0525,
+          "text": "GIVE UP",
+          "case": "as_written",
+          "letter_spacing": 0.001,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "pause-resume",
+      "name": "PauseResume",
+      "parent": "pause",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.02,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.7392,
+          0.1,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "overlay-button",
+            "overlay-primary"
+          ]
+        },
+        "sindri.script": {
+          "properties": {
+            "action": 2.0
+          },
+          "script": "Button",
+          "source": "scripts/button.decay"
+        },
+        "sindri.ui.button": {
+          "label": "pause-resume"
+        },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.20156,
+            0.92158,
+            0.57758,
+            1.0
+          ],
+          "stroke": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "stroke_width": 0.0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "anchor": "center",
+          "layer": 110
+        }
+      }
+    },
+    {
+      "id": "pause-resume-text",
+      "name": "PauseResumeText",
+      "parent": "pause",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.02,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "overlay-button-label",
+            "overlay-primary-label"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.00152,
+            0.00212,
+            0.00439,
+            1.0
+          ],
+          "font": "fonts/ChakraPetch-Bold.ttf",
+          "font_size": 0.05,
+          "layer": 140,
+          "line_height": 0.0525,
+          "text": "RESUME",
+          "case": "as_written",
+          "letter_spacing": 0.001,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "pause-title",
+      "name": "PauseTitle",
+      "parent": "pause",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.24,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "overlay-title",
+            "pause-title"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
+          ],
+          "font": "fonts/ChakraPetch-Bold.ttf",
+          "font_size": 0.08,
+          "layer": 140,
+          "line_height": 0.084,
+          "text": "Paused",
+          "case": "as_written",
+          "letter_spacing": 0.0016,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "player",
+      "name": "Player",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.42,
+          0.42,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.physics2d.collider": {
+          "friction": 0.0,
+          "layers": {
+            "filter": 26,
+            "memberships": 4
+          },
+          "offset": [
+            0.0,
+            0.0
+          ],
+          "restitution": 0.0,
+          "rotation": 0.0,
+          "sensor": true,
+          "shape": {
+            "radius": 0.16,
+            "shape": "circle"
+          }
+        },
+        "sindri.physics2d.rigid_body": {
+          "angular_damping": 0.0,
+          "angular_velocity": 0.0,
+          "gravity_scale": 0.0,
+          "kind": "dynamic",
+          "linear_damping": 0.0,
+          "linear_velocity": [
+            0.0,
+            0.0
+          ],
+          "lock_rotation": true,
+          "pose": {
+            "position": [
+              0.0,
+              0.0
+            ],
+            "rotation": 0.0
+          }
+        },
+        "sindri.script": {
+          "properties": {
+            "bullet": "prefabs/bullet.prefab.json",
+            "edge_padding": 0.28,
+            "invulnerable_for": 0.9,
+            "mine": "prefabs/mine.prefab.json",
+            "muzzle_fx": "prefabs/spectacle.prefab.json"
+          },
+          "script": "Player",
+          "source": "scripts/player.decay"
+        },
+        "sindri.tags": {
+          "tags": [
+            "player"
+          ]
+        },
+        "sindri.sprite": {
+          "texture": "textures/player.png#hull-0",
+          "tint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "layer": 5
+        },
+        "sindri.animation.sprite": {
+          "clips": {
+            "idle": {
+              "frames": [
+                "hull-0",
+                "hull-1",
+                "hull-2",
+                "hull-3"
+              ],
+              "seconds_per_frame": 0.09,
+              "looping": true
+            }
+          },
+          "playing": "idle",
+          "speed": 1.0
+        }
+      }
+    },
+    {
+      "id": "player-shield",
+      "name": "Player Shield",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.72,
+          0.72,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "kind": 1.0,
+            "side": 0.0
+          },
+          "script": "PlayerVisual",
+          "source": "scripts/player-visual.decay"
+        },
+        "sindri.shape": {
+          "kind": "polygon",
+          "count": 6.0,
+          "fill": [
+            0.47059,
+            0.92157,
+            1.0,
+            0.0
+          ],
+          "stroke": [
+            0.47059,
+            0.92157,
+            1.0,
+            0.5
+          ],
+          "stroke_width": 0.035,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "add",
+          "layer": 4
+        }
+      }
+    },
+    {
+      "id": "player-engine-left",
+      "name": "Player Engine Left",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "kind": 2.0,
+            "side": -0.075
+          },
+          "script": "PlayerVisual",
+          "source": "scripts/player-visual.decay"
+        },
+        "sindri.shape": {
+          "kind": "polygon",
+          "count": 3.0,
+          "fill": [
+            0.47059,
+            0.92157,
+            1.0,
+            0.42
+          ],
+          "stroke": [
+            0.91373,
+            0.99216,
+            1.0,
+            0.2
+          ],
+          "stroke_width": 0.015,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "add",
+          "layer": 4
+        }
+      }
+    },
+    {
+      "id": "player-engine-right",
+      "name": "Player Engine Right",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "kind": 2.0,
+            "side": 0.075
+          },
+          "script": "PlayerVisual",
+          "source": "scripts/player-visual.decay"
+        },
+        "sindri.shape": {
+          "kind": "polygon",
+          "count": 3.0,
+          "fill": [
+            0.47059,
+            0.92157,
+            1.0,
+            0.42
+          ],
+          "stroke": [
+            0.91373,
+            0.99216,
+            1.0,
+            0.2
+          ],
+          "stroke_width": 0.015,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "add",
+          "layer": 4
+        }
+      }
+    },
+    {
+      "id": "player-core",
+      "name": "Player Core",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.095,
+          0.095,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "kind": 3.0,
+            "side": 0.0
+          },
+          "script": "PlayerVisual",
+          "source": "scripts/player-visual.decay"
+        },
+        "sindri.shape": {
+          "kind": "ellipse",
+          "count": 6.0,
+          "fill": [
+            0.91373,
+            0.99216,
+            1.0,
+            0.88
+          ],
+          "stroke": [
+            0.47059,
+            0.92157,
+            1.0,
+            1.0
+          ],
+          "stroke_width": 0.02,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "add",
+          "layer": 6
+        }
+      }
+    },
+    {
+      "id": "player-hurt",
+      "name": "PlayerHurt",
+      "parent": "player",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.effect.burst": {
+          "count": 18,
+          "drag": 1.6,
+          "fade": true,
+          "layer": 6,
+          "lifetime": 0.5,
+          "size": 0.09,
+          "speed": 4.5,
+          "spread": 6.2831853,
+          "texture": "textures/fleck.png",
+          "tint": [
+            0.5,
+            0.9,
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    {
+      "id": "result",
+      "name": "Result",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {},
+          "script": "Result",
+          "source": "scripts/result.decay"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "id": "result-again",
+      "name": "ResultAgain",
+      "parent": "result",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.22,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.7392,
+          0.11,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "overlay-button",
+            "overlay-primary",
+            "result-action"
+          ]
+        },
+        "sindri.script": {
+          "properties": {
+            "action": 0.0
+          },
+          "script": "Button",
+          "source": "scripts/button.decay"
+        },
+        "sindri.ui.button": {
+          "label": "result-again"
+        },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.20156,
+            0.92158,
+            0.57758,
+            1.0
+          ],
+          "stroke": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "stroke_width": 0.0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "anchor": "center",
+          "layer": 110
+        }
+      }
+    },
+    {
+      "id": "result-again-text",
+      "name": "ResultAgainText",
+      "parent": "result",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.22,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "overlay-button-label",
+            "overlay-primary-label",
+            "result-action-label"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.00152,
+            0.00212,
+            0.00439,
+            1.0
+          ],
+          "font": "fonts/ChakraPetch-Bold.ttf",
+          "font_size": 0.055,
+          "layer": 140,
+          "line_height": 0.05775,
+          "text": "PLAY AGAIN",
+          "case": "as_written",
+          "letter_spacing": 0.0011,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "result-best",
+      "name": "ResultBest",
+      "parent": "result",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.16,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "result-stat",
+            "result-best"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
+          ],
+          "font": "fonts/ChakraPetch-Bold.ttf",
+          "font_size": 0.042,
+          "layer": 140,
+          "line_height": 0.0441,
+          "text": "Best {}",
+          "case": "as_written",
+          "letter_spacing": 0.00084,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "result-bg",
+      "name": "ResultBack",
+      "parent": "result",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.04,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.84,
+          0.56,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "overlay-panel",
+            "result-panel"
+          ]
+        },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.00335,
+            0.00561,
+            0.01444,
+            1.0
+          ],
+          "stroke": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ],
+          "stroke_width": 0.003,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "anchor": "center",
+          "layer": 100
+        }
+      }
+    },
+    {
+      "id": "result-kills",
+      "name": "ResultKills",
+      "parent": "result",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.08,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "result-stat",
+            "result-kills"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
+          ],
+          "font": "fonts/ChakraPetch-Bold.ttf",
+          "font_size": 0.042,
+          "layer": 140,
+          "line_height": 0.0441,
+          "text": "Kills {}",
+          "case": "as_written",
+          "letter_spacing": 0.00084,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "result-score",
+      "name": "ResultScore",
+      "parent": "result",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.26,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "overlay-title",
+            "result-score"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
+          ],
+          "font": "fonts/ChakraPetch-Bold.ttf",
+          "font_size": 0.058,
+          "layer": 140,
+          "line_height": 0.0609,
+          "text": "Score {}",
+          "case": "as_written",
+          "letter_spacing": 0.00116,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "result-time",
+      "name": "ResultTime",
+      "parent": "result",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "result-stat",
+            "result-time"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
+          ],
+          "font": "fonts/ChakraPetch-Bold.ttf",
+          "font_size": 0.042,
+          "layer": 140,
+          "line_height": 0.0441,
+          "text": "Survived {}:{.2}",
+          "case": "as_written",
+          "letter_spacing": 0.00084,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "result-title",
+      "name": "ResultTitle",
+      "parent": "result",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.42,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "overlay-kicker",
+            "result-title"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
+          ],
+          "font": "fonts/ChakraPetch-Bold.ttf",
+          "font_size": 0.085,
+          "layer": 140,
+          "line_height": 0.08925,
+          "text": "Run over",
+          "case": "as_written",
+          "letter_spacing": 0.0017,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "title",
+      "name": "Title",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {},
+          "script": "Title",
+          "source": "scripts/title.decay"
+        }
+      }
+    },
+    {
+      "id": "title-best",
+      "name": "TitleBest",
+      "parent": "title",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.1,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "title-meta"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
+          ],
+          "font": "fonts/IBMPlexMono-Regular.ttf",
+          "font_size": 0.046,
+          "layer": 140,
+          "line_height": 0.0483,
+          "text": "Best {}",
+          "case": "upper",
+          "letter_spacing": 0.0069,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "title-bg",
+      "name": "TitleBack",
+      "parent": "title",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.06,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.84,
+          0.52,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "title-panel"
+          ]
+        },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.00335,
+            0.00561,
+            0.01444,
+            1.0
+          ],
+          "stroke": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ],
+          "stroke_width": 0.003,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "anchor": "center",
+          "layer": 100
+        }
+      }
+    },
+    {
+      "id": "title-hint",
+      "name": "TitleHint",
+      "parent": "title",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.8,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "title-copy"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.20156,
+            0.92158,
+            0.57758,
+            1.0
+          ],
+          "font": "fonts/IBMPlexMono-Regular.ttf",
+          "font_size": 0.03,
+          "layer": 140,
+          "line_height": 0.0315,
+          "text": "Move with WASD, or drag anywhere to steer. You fire on your own.",
+          "bounds": [
+            0.84,
+            0.16
+          ],
+          "wrap": "word",
+          "line_align": "center",
+          "case": "upper",
+          "letter_spacing": 0.0045,
+          "shadow": {
+            "offset": [
+              0.0,
+              -0.004
+            ],
+            "color": [
+              0.0,
+              0.0,
+              0.0,
+              0.75
+            ],
+            "softness": 0.005
+          },
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "title-name",
+      "name": "Logo",
+      "parent": "title",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.52,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.86,
+          0.43,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "title-logo"
+          ]
+        },
+        "sindri.ui.image": {
+          "texture": "textures/logo.png",
+          "anchor": "center",
+          "tint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "layer": 140
+        }
+      }
+    },
+    {
+      "id": "title-notice",
+      "name": "TitleNotice",
+      "parent": "title",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.06,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "title-copy",
+            "title-notice"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            1.0,
+            0.14703,
+            0.06848,
+            1.0
+          ],
+          "font": "fonts/IBMPlexMono-Regular.ttf",
+          "font_size": 0.034,
+          "layer": 140,
+          "line_height": 0.0357,
+          "text": "Your saved progress could not be read.",
+          "bounds": [
+            0.84,
+            0.16
+          ],
+          "wrap": "word",
+          "line_align": "center",
+          "case": "upper",
+          "letter_spacing": 0.0051,
+          "bold": false
+        }
+      },
+      "disabled": true
+    },
+    {
+      "id": "title-start",
+      "name": "TitleStart",
+      "parent": "title",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.55,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.84,
+          0.115,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "title-action",
+            "overlay-primary"
+          ]
+        },
+        "sindri.script": {
+          "properties": {
+            "action": 0.0
+          },
+          "script": "Button",
+          "source": "scripts/button.decay"
+        },
+        "sindri.ui.button": {
+          "label": "title-start"
+        },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.20156,
+            0.92158,
+            0.57758,
+            1.0
+          ],
+          "stroke": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "stroke_width": 0.0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "anchor": "center",
+          "layer": 110
+        }
+      }
+    },
+    {
+      "id": "title-start-text",
+      "name": "TitleStartText",
+      "parent": "title",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.55,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "title-action-label",
+            "overlay-primary-label"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.00152,
+            0.00212,
+            0.00439,
+            1.0
+          ],
+          "font": "fonts/ChakraPetch-Bold.ttf",
+          "font_size": 0.06,
+          "layer": 140,
+          "line_height": 0.063,
+          "text": "START",
+          "case": "as_written",
+          "letter_spacing": 0.0012,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "upgrade-row",
+      "name": "UpgradeRow",
+      "parent": "upgrades",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.04,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "upgrade-grid"
+          ]
+        },
+        "sindri.ui.layout": {
+          "direction": "column",
+          "spacing": 0.3
+        }
+      }
+    },
+    {
+      "id": "upgrades",
+      "name": "Upgrades",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "id": "upgrades-bg",
+      "name": "UpgradeBack",
+      "parent": "upgrades",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.88,
+          0.92,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "upgrade-panel"
+          ]
+        },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.00335,
+            0.00561,
+            0.01444,
+            1.0
+          ],
+          "stroke": [
+            0.10302,
+            0.10505,
+            0.113,
+            1.0
+          ],
+          "stroke_width": 0.003,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "anchor": "center",
+          "layer": 100
+        }
+      }
+    },
+    {
+      "id": "upgrades-title",
+      "name": "UpgradeTitle",
+      "parent": "upgrades",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.6,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "upgrade-heading"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.80695,
+            0.85499,
+            0.92158,
+            1.0
+          ],
+          "font": "fonts/ChakraPetch-Bold.ttf",
+          "font_size": 0.072,
+          "layer": 140,
+          "line_height": 0.0756,
+          "text": "Choose a module",
+          "case": "as_written",
+          "letter_spacing": 0.00144,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "trail-mint",
+      "name": "TrailMint",
+      "components": {
+        "sindri.effect.burst": {
+          "texture": "textures/fleck.png",
+          "count": 2,
+          "speed": 0.3,
+          "spread": 0.18,
+          "lifetime": 0.24,
+          "size": 0.052,
+          "tint": [
+            0.34,
+            1.0,
+            0.72,
+            0.9
+          ],
+          "fade": true,
+          "drag": 3.2,
+          "layer": 5
+        }
+      }
+    },
+    {
+      "id": "trail-cyan",
+      "name": "TrailCyan",
+      "components": {
+        "sindri.effect.burst": {
+          "texture": "textures/fleck.png",
+          "count": 2,
+          "speed": 0.42,
+          "spread": 0.2,
+          "lifetime": 0.28,
+          "size": 0.06,
+          "tint": [
+            0.28,
+            0.92,
+            1.0,
+            0.92
+          ],
+          "fade": true,
+          "drag": 3.0,
+          "layer": 6
+        }
+      }
+    },
+    {
+      "id": "trail-magenta",
+      "name": "TrailMagenta",
+      "components": {
+        "sindri.effect.burst": {
+          "texture": "textures/fleck.png",
+          "count": 2,
+          "speed": 0.48,
+          "spread": 0.22,
+          "lifetime": 0.3,
+          "size": 0.064,
+          "tint": [
+            1.0,
+            0.2,
+            0.72,
+            0.92
+          ],
+          "fade": true,
+          "drag": 2.8,
+          "layer": 6
+        }
+      }
+    },
+    {
+      "id": "trail-gold",
+      "name": "TrailGold",
+      "components": {
+        "sindri.effect.burst": {
+          "texture": "textures/fleck.png",
+          "count": 2,
+          "speed": 0.52,
+          "spread": 0.24,
+          "lifetime": 0.3,
+          "size": 0.062,
+          "tint": [
+            1.0,
+            0.82,
+            0.28,
+            0.94
+          ],
+          "fade": true,
+          "drag": 2.8,
+          "layer": 6
+        }
+      }
+    },
+    {
+      "id": "trail-hostile",
+      "name": "TrailHostile",
+      "components": {
+        "sindri.effect.burst": {
+          "texture": "textures/fleck.png",
+          "count": 2,
+          "speed": 0.38,
+          "spread": 0.2,
+          "lifetime": 0.26,
+          "size": 0.058,
+          "tint": [
+            1.0,
+            0.2,
+            0.18,
+            0.9
+          ],
+          "fade": true,
+          "drag": 3.0,
+          "layer": 5
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+// What a kill leaves behind. Module economy is applied when salvage is
+// collected, so an upgrade taken while a gem is in flight affects that gem too.
+script Core {
+    @export let worth: f32 = 1.0;
+    @export let pull: f32 = 7.0;
+    @export let reach: f32 = 2.2;
+    @export let life: f32 = 22.0;
+
+    var age: f32 = 0.0;
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 1.0 {
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+            return;
+        }
+        this.age += dt;
+        this.transform.rotation_z = this.age * 2.0;
+        if this.age >= this.life {
+            World.despawn(this.entity);
+            return;
+        }
+        let player = World.find("Player");
+        if player == null { return; }
+
+        let dx = player.transform.position.x - this.transform.position.x;
+        let dy = player.transform.position.y - this.transform.position.y;
+        let far = sqrt(dx * dx + dy * dy);
+        let range = this.reach + Game.get("magnet", 2.2);
+        if far < range && far > 0.001 {
+            Physics.set_velocity(this.entity, dx / far * this.pull, dy / far * this.pull);
+        } else {
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+        }
+
+        for hit in Physics.sensor_entered() {
+            var xp: f32 = this.worth * Game.get("xp_gain", 1.0);
+            if Game.get("special_scrap_feast", 0.0) > 0.0 { xp *= 1.35; }
+            Game.set("cores", Game.get("cores", 0.0) + xp);
+            Game.set("score", Game.get("score", 0.0) + this.worth * 5.0);
+            Audio.play("audio/core.wav", 0.25);
+            World.despawn(this.entity);
+            return;
+        }
+    }
+}

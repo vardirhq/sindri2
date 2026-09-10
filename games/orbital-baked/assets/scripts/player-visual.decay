@@ -1,0 +1,139 @@
+// The Strider's animated presentation, separated from its collider and combat
+// script. These are ordinary authored shapes: a reactive rotating shield,
+// pulsing canopy core and two live engine plumes. Module families deliberately
+// leak into the presentation so a run changes the ship, not just its numbers.
+script PlayerVisual {
+    // 1 = shield, 2 = engine trail, 3 = canopy core.
+    @export let kind: f32 = 1.0;
+    @export let side: f32 = 0.0;
+
+    var player: Entity = null;
+    var clock: f32 = 0.0;
+
+    fn start() {
+        this.player = World.find("Player");
+        if this.kind == 2.0 {
+            World.set_shape_point(0.0, -0.045, 0.04);
+            World.set_shape_point(1.0, 0.045, 0.04);
+            World.set_shape_point(2.0, 0.0, -0.20);
+            this.shape.count = 3.0;
+        }
+    }
+
+    fn update(dt: f32) {
+        let player = this.player;
+        if player == null || !World.exists(player) { return; }
+
+        let state = Game.get("run_state", 0.0);
+        if state == 1.0 { this.clock += dt; }
+        this.transform.position.x = player.transform.position.x;
+        this.transform.position.y = player.transform.position.y;
+
+        if state == 0.0 || state == 4.0 {
+            this.shape.fill.a = 0.0;
+            this.shape.stroke.a = 0.0;
+            return;
+        }
+
+        if this.kind == 1.0 { update_shield(dt, state); }
+        else if this.kind == 2.0 { update_engine(); }
+        else { update_core(); }
+    }
+
+    fn update_shield(dt: f32, state: f32) {
+        var impact = Game.get("shield_impact", 0.0);
+        if state == 1.0 && impact > 0.0 {
+            impact = max(0.0, impact - dt / 0.22);
+            Game.set("shield_impact", impact);
+        }
+        let armor = min(1.0, max(0.0, Game.get("armor", 0.0) / 0.65));
+        let overdrive = min(1.0, max(0.0, Game.get("overdrive", 0.0) / 4.0));
+        let weapon_load = min(1.0, (Game.get("pierce", 0.0) + Game.get("beam", 0.0) + Game.get("arc", 0.0)) / 3.0);
+        let breath = 0.5 + 0.5 * sin(this.clock * (4.2 + overdrive * 3.0));
+        let size = 0.70 + breath * 0.035 + impact * 0.16 + overdrive * 0.055 + weapon_load * 0.025;
+        this.transform.scale.x = size;
+        this.transform.scale.y = size;
+        this.transform.rotation_z = -this.clock * (1.5 + armor * 0.8 + overdrive * 1.8 + weapon_load * 0.8);
+        this.shape.dashes = 6.0 + armor * 6.0 + weapon_load * 4.0;
+        this.shape.sweep_start = this.clock * (0.08 + overdrive * 0.12 + weapon_load * 0.04);
+        this.shape.fill.a = 0.025 + overdrive * 0.06 + impact * 0.14;
+        this.shape.stroke.a = 0.42 + breath * 0.12 + armor * 0.16 + overdrive * 0.18 + impact * 0.24;
+        this.shape.stroke_width = 0.032 + armor * 0.014 + overdrive * 0.012 + impact * 0.03;
+    }
+
+    fn update_engine() {
+        let facing = Game.get("player_facing", 1.5707963);
+        let forward_x = cos(facing);
+        let forward_y = sin(facing);
+        let right_x = -forward_y;
+        let right_y = forward_x;
+        this.transform.position.x += -forward_x * 0.20 + right_x * this.side;
+        this.transform.position.y += -forward_y * 0.20 + right_y * this.side;
+        this.transform.rotation_z = facing - 1.5707963;
+
+        let thrust = Game.get("player_thrust", 0.0);
+        let overdrive = min(1.0, max(0.0, Game.get("overdrive", 0.0) / 4.0));
+        let missile = min(1.0, Game.get("missile", 0.0));
+        let nova = min(1.0, Game.get("nova", 0.0));
+        let pulse = 0.78 + sin(this.clock * (19.0 + overdrive * 11.0) + this.side * 7.0) * 0.16;
+        this.transform.scale.x = 0.9 + pulse * 0.08 + overdrive * 0.08 + missile * 0.05;
+        this.transform.scale.y = (0.68 + thrust * 0.72 + overdrive * 0.42 + missile * 0.20) * pulse;
+        this.shape.fill.r = 0.35 + nova * 0.65;
+        this.shape.fill.g = 0.86 - nova * 0.34 + missile * 0.08;
+        this.shape.fill.b = 1.0 - nova * 0.72;
+        this.shape.stroke.r = 0.72 + nova * 0.28;
+        this.shape.stroke.g = 0.96 - nova * 0.22;
+        this.shape.stroke.b = 1.0 - nova * 0.48;
+        this.shape.fill.a = 0.28 + thrust * 0.40 + overdrive * 0.22;
+        this.shape.stroke.a = 0.16 + thrust * 0.28 + overdrive * 0.28;
+        this.shape.stroke_width = 0.035 + thrust * 0.025 + overdrive * 0.025;
+    }
+
+    fn update_core() {
+        let facing = Game.get("player_facing", 1.5707963);
+        this.transform.position.x += cos(facing) * 0.045;
+        this.transform.position.y += sin(facing) * 0.045;
+        let overdrive = min(1.0, max(0.0, Game.get("overdrive", 0.0) / 4.0));
+        let arc = min(1.0, Game.get("arc", 0.0));
+        let nova = min(1.0, Game.get("nova", 0.0));
+        let beam = min(1.0, Game.get("beam", 0.0));
+        let missile = min(1.0, Game.get("missile", 0.0));
+        let pierce = min(1.0, Game.get("pierce", 0.0));
+        let signatures = min(4.0, arc + nova + beam + missile + pierce);
+        let beat = 0.5 + 0.5 * sin(this.clock * (7.5 + overdrive * 8.0 + signatures * 1.4));
+        let pulse = 0.09 + beat * 0.024 + overdrive * 0.035 + signatures * 0.006;
+        this.transform.scale.x = pulse;
+        this.transform.scale.y = pulse;
+        this.transform.rotation_z = this.clock * (1.2 + overdrive * 3.0 + signatures * 0.7);
+        this.shape.count = 4.0 + signatures;
+        this.shape.dashes = signatures * 2.0;
+        this.shape.sweep_start = -this.clock * (0.06 + signatures * 0.025);
+        apply_core_signature(arc, nova, beam, missile, pierce);
+        this.shape.fill.a = 0.78 + beat * 0.16;
+        this.shape.stroke.a = 0.88 + overdrive * 0.12;
+        this.shape.stroke_width = 0.045 + overdrive * 0.025 + signatures * 0.004;
+    }
+
+    fn apply_core_signature(arc: f32, nova: f32, beam: f32, missile: f32, pierce: f32) {
+        // Priority keeps mixed builds readable instead of averaging everything into mud.
+        if beam > 0.0 {
+            this.shape.fill.r = 0.78; this.shape.fill.g = 0.42; this.shape.fill.b = 1.0;
+            this.shape.stroke.r = 0.94; this.shape.stroke.g = 0.78; this.shape.stroke.b = 1.0;
+        } else if nova > 0.0 {
+            this.shape.fill.r = 1.0; this.shape.fill.g = 0.40; this.shape.fill.b = 0.12;
+            this.shape.stroke.r = 1.0; this.shape.stroke.g = 0.84; this.shape.stroke.b = 0.42;
+        } else if arc > 0.0 {
+            this.shape.fill.r = 0.24; this.shape.fill.g = 0.90; this.shape.fill.b = 1.0;
+            this.shape.stroke.r = 0.72; this.shape.stroke.g = 0.98; this.shape.stroke.b = 1.0;
+        } else if missile > 0.0 {
+            this.shape.fill.r = 1.0; this.shape.fill.g = 0.78; this.shape.fill.b = 0.24;
+            this.shape.stroke.r = 1.0; this.shape.stroke.g = 0.95; this.shape.stroke.b = 0.72;
+        } else if pierce > 0.0 {
+            this.shape.fill.r = 0.36; this.shape.fill.g = 1.0; this.shape.fill.b = 0.72;
+            this.shape.stroke.r = 0.76; this.shape.stroke.g = 1.0; this.shape.stroke.b = 0.90;
+        } else {
+            this.shape.fill.r = 0.42; this.shape.fill.g = 0.94; this.shape.fill.b = 1.0;
+            this.shape.stroke.r = 0.88; this.shape.stroke.g = 0.99; this.shape.stroke.b = 1.0;
+        }
+    }
+}

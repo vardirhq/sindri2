@@ -1,0 +1,219 @@
+// The ship's module-derived state and the runtime effects that belong to the
+// build as a whole rather than to one projectile or enemy.
+script Stats {
+    var granted_hp: f32 = 0.0;
+    var player: Entity = null;
+    var last_kills: f32 = 0.0;
+    var last_elite_kills: f32 = 0.0;
+    var last_boss_hp: f32 = 0.0;
+    var last_level: f32 = 1.0;
+    var white_noise: f32 = 4.0;
+
+    fn start() {
+        this.player = World.find("Player");
+        wipe();
+    }
+
+    fn update(dt: f32) {
+        if Game.get("stats_reset", 0.0) > 0.0 {
+            Game.set("stats_reset", 0.0);
+            wipe();
+        }
+        derive();
+        if Game.get("run_state", 0.0) == 1.0 { runtime(dt); }
+    }
+
+    fn wipe() {
+        clear("damage_add", "damage_mul");
+        clear("fire_rate_add", "fire_rate_mul");
+        clear("bullet_speed_add", "bullet_speed_mul");
+        clear("bullet_size_add", "bullet_size_mul");
+        clear("shots_add", "shots_mul");
+        clear("pierce_add", "pierce_mul");
+        clear("crit_add", "crit_mul");
+        clear("crit_power_add", "crit_power_mul");
+        clear("move_speed_add", "move_speed_mul");
+        clear("max_hp_add", "max_hp_mul");
+        clear("armor_add", "armor_mul");
+        clear("regen_add", "regen_mul");
+        clear("magnet_add", "magnet_mul");
+        clear("xp_gain_add", "xp_gain_mul");
+        clear_flag("missile"); clear_flag("arc"); clear_flag("nova"); clear_flag("mines"); clear_flag("beam");
+        clear_flag("comp_blade"); clear_flag("comp_shield"); clear_flag("comp_ember"); clear_flag("comp_wisp"); clear_flag("comp_drone"); clear_flag("comp_wrecking");
+        clear_flag("transform_storm"); clear_flag("transform_horizon"); clear_flag("transform_recursive"); clear_flag("transform_rail_prism"); clear_flag("transform_critical_mass");
+        clear_flag("transform_thunder_choir"); clear_flag("transform_razor_prism"); clear_flag("transform_guardian_swarm"); clear_flag("transform_singularity_court");
+        clear_specials();
+        Game.set("owned_modules_0", 0.0); Game.set("owned_modules_1", 0.0); Game.set("owned_modules_2", 0.0); Game.set("owned_modules_3", 0.0);
+        Game.set("black_modules_taken", 0.0); Game.set("picked_module", -1.0);
+        Game.set("offer_0", -1.0); Game.set("offer_1", -1.0); Game.set("offer_2", -1.0); Game.set("offer_3", -1.0);
+        Game.set("player_aura_dps", 0.0); Game.set("player_aura_radius", 0.0); Game.set("orbit_loom_dps", 0.0);
+        Game.set("grave_echo_time", 0.0); Game.set("companion_spawn_reset", 1.0); Game.set("last_bulkhead_used", 0.0);
+        Game.set("constellation_count", 0.0); Game.set("aegis_reservoir", 0.0);
+        this.granted_hp = 0.0;
+        this.last_kills = Game.get("kills", 0.0);
+        this.last_elite_kills = Game.get("elite_kills", 0.0);
+        this.last_boss_hp = 0.0;
+        this.last_level = Game.get("level", 1.0);
+        this.white_noise = 4.0;
+        derive();
+        Game.set("hp", Game.get("max_hp", 5.0));
+        this.granted_hp = Game.get("max_hp", 5.0);
+    }
+
+    fn clear(add: String, mul: String) {
+        Game.set(add, 0.0);
+        Game.set(mul, 1.0);
+    }
+
+    fn clear_flag(key: String) { Game.set(key, 0.0); }
+
+    fn clear_specials() {
+        clear_flag("special_blood_battery"); clear_flag("special_revenge_relay"); clear_flag("special_last_bulkhead"); clear_flag("special_kill_switch");
+        clear_flag("special_scrap_feast"); clear_flag("special_critical_reboot"); clear_flag("special_phase_memory"); clear_flag("special_terminal_velocity");
+        clear_flag("special_big_bang_board"); clear_flag("special_echo_chamber"); clear_flag("special_fork_tax"); clear_flag("special_ghost_protocol");
+        clear_flag("special_arc_battery"); clear_flag("special_prism_mirror"); clear_flag("special_anchor_clock"); clear_flag("special_homing_instinct");
+        clear_flag("special_second_opinion"); clear_flag("special_orbital_foundry"); clear_flag("special_mutual_defense"); clear_flag("special_crowded_orbit");
+        clear_flag("special_black_sun"); clear_flag("special_white_noise"); clear_flag("special_needle_storm"); clear_flag("special_glass_needle");
+        clear_flag("special_heavy_phase"); clear_flag("special_bright_ghost"); clear_flag("special_seeking_splitter"); clear_flag("special_storm_lens");
+        clear_flag("special_gravity_prism"); clear_flag("special_nova_guidance"); clear_flag("special_phase_anchor"); clear_flag("special_critical_arc");
+        clear_flag("special_razor_payload"); clear_flag("special_razor_velocity"); clear_flag("special_ember_arc"); clear_flag("special_wisp_anchor");
+        clear_flag("special_drone_fork"); clear_flag("special_aegis_nova"); clear_flag("special_familiar_guidance"); clear_flag("special_orbital_prism");
+        clear_flag("special_saint_elmo"); clear_flag("special_funeral_star"); clear_flag("special_choir_engine"); clear_flag("special_event_horizon_chip");
+        clear_flag("special_recursive_bus"); clear_flag("special_prism_rail"); clear_flag("special_critical_mass_cell"); clear_flag("special_guardian_network");
+        clear_flag("special_moon_court"); clear_flag("special_dead_god_circuit"); clear_flag("special_rusted_key"); clear_flag("special_lucky_bolt"); clear_flag("special_warm_seat");
+        clear_flag("special_constellation_engine"); clear_flag("special_reversal_chamber"); clear_flag("special_aegis_reservoir"); clear_flag("special_orbit_loom");
+        clear_flag("special_broadside_protocol"); clear_flag("special_grave_echo"); clear_flag("special_split_horizon"); clear_flag("special_devouring_moon");
+        clear_flag("special_pulse_heart"); clear_flag("special_execution_mark");
+    }
+
+    fn stat(out: String, add: String, mul: String, base: f32) {
+        Game.set(out, (base + Game.get(add, 0.0)) * Game.get(mul, 1.0));
+    }
+
+    fn derive() {
+        stat("damage", "damage_add", "damage_mul", 1.0);
+        stat("fire_rate", "fire_rate_add", "fire_rate_mul", 2.38);
+        stat("bullet_speed", "bullet_speed_add", "bullet_speed_mul", 9.0);
+        stat("bullet_size", "bullet_size_add", "bullet_size_mul", 1.0);
+        stat("shots", "shots_add", "shots_mul", 1.0);
+        stat("pierce", "pierce_add", "pierce_mul", 0.0);
+        stat("crit", "crit_add", "crit_mul", 0.0);
+        stat("crit_power", "crit_power_add", "crit_power_mul", 2.0);
+        stat("move_speed", "move_speed_add", "move_speed_mul", 5.2);
+        stat("max_hp", "max_hp_add", "max_hp_mul", 5.0);
+        stat("armor", "armor_add", "armor_mul", 0.0);
+        stat("regen", "regen_add", "regen_mul", 0.0);
+        stat("magnet", "magnet_add", "magnet_mul", 2.2);
+        stat("xp_gain", "xp_gain_add", "xp_gain_mul", 1.0);
+        Game.set("max_hp", max(1.25, Game.get("max_hp", 5.0)));
+        Game.set("crit", min(0.75, max(0.0, Game.get("crit", 0.0))));
+        Game.set("armor", min(0.65, max(0.0, Game.get("armor", 0.0))));
+        let ceiling = Game.get("max_hp", 5.0);
+        if ceiling > this.granted_hp {
+            Game.set("hp", min(ceiling, Game.get("hp", 5.0) + ceiling - this.granted_hp));
+            this.granted_hp = ceiling;
+        } else if Game.get("hp", ceiling) > ceiling {
+            Game.set("hp", ceiling);
+            this.granted_hp = ceiling;
+        }
+        Game.set("fire_gap", max(0.05, 1.0 / max(0.1, Game.get("fire_rate", 2.38))));
+    }
+
+    fn runtime(dt: f32) {
+        let regen = Game.get("regen", 0.0);
+        if regen > 0.0 { heal(regen * dt); }
+        process_kills();
+        process_boss();
+        process_level();
+        process_white_noise(dt);
+        publish_auras();
+        let ghost = Game.get("grave_echo_time", 0.0);
+        if ghost > 0.0 { Game.set("grave_echo_time", max(0.0, ghost - dt)); }
+    }
+
+    fn process_kills() {
+        let kills = Game.get("kills", 0.0);
+        if kills > this.last_kills && Game.get("special_blood_battery", 0.0) > 0.0 {
+            heal((kills - this.last_kills) * 0.0175);
+        }
+        if kills > this.last_kills && Game.get("special_grave_echo", 0.0) > 0.0 {
+            let old_tens = (this.last_kills - this.last_kills % 10.0) / 10.0;
+            let new_tens = (kills - kills % 10.0) / 10.0;
+            if new_tens > old_tens { Game.set("grave_echo_time", 3.0); }
+        }
+        this.last_kills = kills;
+        let elites = Game.get("elite_kills", 0.0);
+        if elites > this.last_elite_kills && Game.get("special_blood_battery", 0.0) > 0.0 {
+            heal((elites - this.last_elite_kills) * 0.0575);
+        }
+        if elites > this.last_elite_kills && Game.get("special_grave_echo", 0.0) > 0.0 { Game.set("grave_echo_time", 3.0); }
+        this.last_elite_kills = elites;
+    }
+
+    fn process_boss() {
+        let hp = Game.get("boss_hp", 0.0);
+        if this.last_boss_hp > 0.0 && hp <= 0.0 {
+            if Game.get("special_blood_battery", 0.0) > 0.0 { heal(0.2825); }
+            if Game.get("special_funeral_star", 0.0) > 0.0 {
+                Game.set("max_hp_add", Game.get("max_hp_add", 0.0) + 0.5);
+                derive();
+                Game.set("hp", Game.get("max_hp", 5.0));
+            }
+            if Game.get("special_dead_god_circuit", 0.0) > 0.0 {
+                Game.set("damage_mul", Game.get("damage_mul", 1.0) * 1.05);
+            }
+            if Game.get("special_grave_echo", 0.0) > 0.0 { Game.set("grave_echo_time", 3.0); }
+            let bosses = Game.get("boss_count", 0.0);
+            if bosses > 0.0 && bosses % 2.0 == 0.0 {
+                Game.set("module_pool", 3.0);
+                Game.set("run_state", 2.0);
+            }
+        }
+        this.last_boss_hp = hp;
+    }
+
+    fn process_level() {
+        let level = Game.get("level", 1.0);
+        if level > this.last_level && Game.get("special_critical_reboot", 0.0) > 0.0 {
+            heal(Game.get("max_hp", 5.0) * 0.12);
+            purge_hostile(4.4);
+        }
+        this.last_level = level;
+    }
+
+    fn process_white_noise(dt: f32) {
+        if Game.get("special_white_noise", 0.0) <= 0.0 { this.white_noise = 4.0; return; }
+        this.white_noise -= dt;
+        if this.white_noise <= 0.0 {
+            this.white_noise = 4.0;
+            purge_hostile(3.8);
+            Effects.burst(this.player);
+        }
+    }
+
+    fn purge_hostile(radius: f32) {
+        let player = this.player;
+        if player == null { return; }
+        for shot in World.with_tag("hostile_shot") {
+            if !World.exists(shot) { continue; }
+            let dx = shot.transform.position.x - player.transform.position.x;
+            let dy = shot.transform.position.y - player.transform.position.y;
+            if dx * dx + dy * dy <= radius * radius { World.despawn(shot); }
+        }
+    }
+
+    fn publish_auras() {
+        var radius: f32 = 0.0;
+        var dps: f32 = 0.0;
+        if Game.get("special_black_sun", 0.0) > 0.0 { radius = 2.5; dps = Game.get("damage", 1.0) * 0.18; }
+        if Game.get("special_dead_god_circuit", 0.0) > 0.0 { radius = 3.5; dps = Game.get("damage", 1.0) * 0.34; }
+        Game.set("player_aura_radius", radius);
+        Game.set("player_aura_dps", dps);
+        if Game.get("special_orbit_loom", 0.0) > 0.0 { Game.set("orbit_loom_dps", Game.get("damage", 1.0) * 0.16); }
+        else { Game.set("orbit_loom_dps", 0.0); }
+    }
+
+    fn heal(amount: f32) {
+        Game.set("hp", min(Game.get("max_hp", 5.0), Game.get("hp", 5.0) + max(0.0, amount)));
+    }
+}
