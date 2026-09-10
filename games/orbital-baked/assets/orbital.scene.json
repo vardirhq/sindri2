@@ -1299,6 +1299,7 @@
       "components": {
         "sindri.script": {
           "properties": {
+            "aegis": "prefabs/aegis.prefab.json",
             "arena": 7.5,
             "boss_at": 180.0,
             "charger": "prefabs/charger.prefab.json",

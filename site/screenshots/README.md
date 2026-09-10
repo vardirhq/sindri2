@@ -32,6 +32,11 @@ first upgrade covers the field), `spectacle` (a deliberately excessive build,
 for the effect vocabulary), or `playing` (twelve seconds in, with the upgrade
 chooser up).
 
+`orbital-baked-capture` also takes `boss-0` through `boss-11`, which open a boss
+rush on that boss and photograph the fight seven seconds in. Bosses otherwise
+arrive on a timer, so photographing the twelfth one meant playing for most of an
+hour.
+
 ```
 cargo run -p orbital-baked --bin orbital-baked-capture -- \
   site/screenshots/orbital-baked-combat.png 1440 900 combat
@@ -43,6 +48,8 @@ cargo run -p orbital-baked --bin orbital-baked-capture -- \
   site/screenshots/orbital-baked-upgrade.png 1440 900 playing
 cargo run -p orbital-baked --bin orbital-baked-capture -- \
   site/screenshots/orbital-baked-phone.png 390 844 combat
+cargo run -p orbital-baked --bin orbital-baked-capture -- \
+  site/screenshots/orbital-baked-aegis.png 1440 900 boss-11
 
 cargo run -p orbital-last-stand --bin orbital-capture -- \
   site/screenshots/orbital-last-stand-combat.png 1440 900 combat

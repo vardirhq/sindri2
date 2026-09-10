@@ -8,6 +8,9 @@ script Director {
     @export let splitter: Prefab;
     @export let warden: Prefab;
     @export let challenger: Prefab;
+    // The Aegis has its own sheet: its hull is a fortress hub rather than a
+    // repainted gunship, so it cannot ride the challenger's frames.
+    @export let aegis: Prefab;
     @export let wave_gap: f32 = 6.0;
     @export let boss_at: f32 = 180.0;
     @export let first_boss_at: f32 = 60.0;
@@ -413,12 +416,14 @@ script Director {
         send_kind(pick);
     }
 
-    /// Put one boss on the field: zero is the Warden, and the rest are the
-    /// challenger prefab's kinds offset by one.
+    /// Put one boss on the field: zero is the Warden, eleven is the Aegis, and
+    /// the rest are the challenger prefab's kinds offset by one.
     fn send_kind(pick: f32) {
         var boss: Entity = null;
         if pick == 0.0 {
             boss = World.spawn(this.warden);
+        } else if pick == 11.0 {
+            boss = World.spawn(this.aegis);
         } else {
             boss = World.spawn(this.challenger);
             World.set_property(boss, "kind", pick - 1.0);
