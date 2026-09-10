@@ -1,0 +1,434 @@
+{
+  "format_version": 1,
+  "id": "asteroid",
+  "texture": "textures/asteroid.png",
+  "view": "top-down",
+  "pixels_per_unit": 96,
+  "directions": 1,
+  "render": {
+    "supersample": 4,
+    "padding": 2,
+    "palette_snap": true,
+    "alpha_cutoff": 128,
+    "outline": {
+      "enabled": true,
+      "colour": "#0d1420"
+    },
+    "shading": {
+      "light": [
+        -0.35,
+        0.86,
+        0.37
+      ],
+      "thresholds": [
+        0.3,
+        0.55,
+        0.82
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "large",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "rock": {
+            "colour": "#3a4a56"
+          },
+          "dark": {
+            "colour": "#151d24"
+          },
+          "lit": {
+            "colour": "#6b8c9e"
+          },
+          "ice": {
+            "colour": "#8ca8b8"
+          }
+        },
+        "parts": [
+          {
+            "type": "sphere",
+            "material": "rock",
+            "position": [
+              0,
+              0.1,
+              0
+            ],
+            "radius": 0.42,
+            "segments": 12,
+            "scale": [
+              1.0,
+              0.55,
+              0.92
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "lit",
+            "position": [
+              0.0,
+              0.12,
+              0.231
+            ],
+            "radius": 0.126,
+            "segments": 10,
+            "scale": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "ice",
+            "position": [
+              0.1903,
+              0.12,
+              -0.2073
+            ],
+            "radius": 0.1827,
+            "segments": 10,
+            "scale": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "dark",
+            "position": [
+              -0.3306,
+              0.12,
+              0.0284
+            ],
+            "radius": 0.1638,
+            "segments": 10,
+            "scale": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "lit",
+            "position": [
+              0.2029,
+              0.12,
+              0.1565
+            ],
+            "radius": 0.1449,
+            "segments": 10,
+            "scale": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "ice",
+            "position": [
+              -0.0522,
+              0.12,
+              -0.3021
+            ],
+            "radius": 0.126,
+            "segments": 10,
+            "scale": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "dark",
+            "position": [
+              -0.1249,
+              0.12,
+              0.1943
+            ],
+            "radius": 0.1827,
+            "segments": 10,
+            "scale": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "lit",
+            "position": [
+              0.2722,
+              0.12,
+              -0.0715
+            ],
+            "radius": 0.1638,
+            "segments": 10,
+            "scale": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "medium",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "rock": {
+            "colour": "#3a4a56"
+          },
+          "dark": {
+            "colour": "#151d24"
+          },
+          "lit": {
+            "colour": "#6b8c9e"
+          },
+          "ice": {
+            "colour": "#8ca8b8"
+          }
+        },
+        "parts": [
+          {
+            "type": "sphere",
+            "material": "rock",
+            "position": [
+              0,
+              0.1,
+              0
+            ],
+            "radius": 0.4,
+            "segments": 12,
+            "scale": [
+              1.0,
+              0.55,
+              0.92
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "lit",
+            "position": [
+              0.2586,
+              0.12,
+              -0.0336
+            ],
+            "radius": 0.1506,
+            "segments": 10,
+            "scale": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "ice",
+            "position": [
+              -0.2525,
+              0.12,
+              -0.1778
+            ],
+            "radius": 0.1326,
+            "segments": 10,
+            "scale": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "dark",
+            "position": [
+              0.0505,
+              0.12,
+              0.2314
+            ],
+            "radius": 0.1866,
+            "segments": 10,
+            "scale": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "lit",
+            "position": [
+              0.1434,
+              0.12,
+              -0.246
+            ],
+            "radius": 0.1686,
+            "segments": 10,
+            "scale": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "ice",
+            "position": [
+              -0.3179,
+              0.12,
+              0.0985
+            ],
+            "radius": 0.1506,
+            "segments": 10,
+            "scale": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "dark",
+            "position": [
+              0.2357,
+              0.12,
+              0.1116
+            ],
+            "radius": 0.1326,
+            "segments": 10,
+            "scale": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "small",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "rock": {
+            "colour": "#3a4a56"
+          },
+          "dark": {
+            "colour": "#151d24"
+          },
+          "lit": {
+            "colour": "#6b8c9e"
+          },
+          "ice": {
+            "colour": "#8ca8b8"
+          }
+        },
+        "parts": [
+          {
+            "type": "sphere",
+            "material": "rock",
+            "position": [
+              0,
+              0.1,
+              0
+            ],
+            "radius": 0.38,
+            "segments": 12,
+            "scale": [
+              1.0,
+              0.55,
+              0.92
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "lit",
+            "position": [
+              0.0116,
+              0.12,
+              -0.2794
+            ],
+            "radius": 0.167,
+            "segments": 10,
+            "scale": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "ice",
+            "position": [
+              -0.1492,
+              0.12,
+              0.1496
+            ],
+            "radius": 0.1499,
+            "segments": 10,
+            "scale": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "dark",
+            "position": [
+              0.2566,
+              0.12,
+              -0.0113
+            ],
+            "radius": 0.1328,
+            "segments": 10,
+            "scale": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "lit",
+            "position": [
+              -0.2316,
+              0.12,
+              -0.1945
+            ],
+            "radius": 0.1157,
+            "segments": 10,
+            "scale": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "ice",
+            "position": [
+              0.0303,
+              0.12,
+              0.2321
+            ],
+            "radius": 0.167,
+            "segments": 10,
+            "scale": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

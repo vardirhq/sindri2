@@ -1,0 +1,2540 @@
+{
+  "format_version": 1,
+  "id": "warden",
+  "texture": "textures/warden.png",
+  "view": "top-down",
+  "pixels_per_unit": 160,
+  "directions": 1,
+  "render": {
+    "supersample": 4,
+    "padding": 2,
+    "palette_snap": true,
+    "alpha_cutoff": 128,
+    "outline": {
+      "enabled": true,
+      "colour": "#0a1018"
+    },
+    "shading": {
+      "light": [
+        -0.42,
+        0.8,
+        0.43
+      ],
+      "thresholds": [
+        0.26,
+        0.52,
+        0.8
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "body-0",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "hull": {
+            "colour": "#ff3218"
+          },
+          "lit": {
+            "colour": "#ff8757"
+          },
+          "mid": {
+            "colour": "#c41c06"
+          },
+          "dark": {
+            "colour": "#7a0f00"
+          },
+          "deep": {
+            "colour": "#3d0600"
+          },
+          "hot": {
+            "colour": "#ffd154"
+          },
+          "burn": {
+            "colour": "#fff3d0"
+          },
+          "eye": {
+            "colour": "#ffffff"
+          }
+        },
+        "parts": [
+          {
+            "type": "cylinder",
+            "material": "deep",
+            "position": [
+              0,
+              0.04,
+              0
+            ],
+            "radius": 0.6,
+            "height": 0.09,
+            "segments": 12
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0,
+              0.1,
+              0
+            ],
+            "radius": 0.545,
+            "height": 0.11,
+            "segments": 6
+          },
+          {
+            "type": "cylinder",
+            "material": "hull",
+            "position": [
+              0,
+              0.19,
+              0
+            ],
+            "radius": 0.475,
+            "height": 0.17,
+            "segments": 6,
+            "radius_top": 0.415
+          },
+          {
+            "type": "cylinder",
+            "material": "mid",
+            "position": [
+              0,
+              0.29,
+              0
+            ],
+            "radius": 0.355,
+            "height": 0.1,
+            "segments": 6,
+            "radius_top": 0.3
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              0.28,
+              0.13,
+              0.485
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -0.5236,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0.36,
+              0.17,
+              0.6235
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0.39,
+              0.22,
+              0.6755
+            ],
+            "radius": 0.045,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0.0,
+              0.27,
+              0.44
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.0,
+              0.14,
+              0.5
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              0.56,
+              0.13,
+              0.0
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -1.5708,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0.72,
+              0.17,
+              0.0
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0.78,
+              0.22,
+              0.0
+            ],
+            "radius": 0.058,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0.3811,
+              0.27,
+              0.22
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ],
+            "rotation": [
+              0,
+              -1.0472,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.433,
+              0.14,
+              0.25
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -1.0472,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              0.28,
+              0.13,
+              -0.485
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -2.618,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0.36,
+              0.17,
+              -0.6235
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0.39,
+              0.22,
+              -0.6755
+            ],
+            "radius": 0.058,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0.3811,
+              0.27,
+              -0.22
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ],
+            "rotation": [
+              0,
+              -2.0944,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.433,
+              0.14,
+              -0.25
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -2.0944,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              -0.28,
+              0.13,
+              -0.485
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -3.6652,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              -0.36,
+              0.17,
+              -0.6235
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              -0.39,
+              0.22,
+              -0.6755
+            ],
+            "radius": 0.045,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0.0,
+              0.27,
+              -0.44
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ],
+            "rotation": [
+              0,
+              -3.1416,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.0,
+              0.14,
+              -0.5
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -3.1416,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              -0.56,
+              0.13,
+              -0.0
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -4.7124,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              -0.72,
+              0.17,
+              -0.0
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              -0.78,
+              0.22,
+              -0.0
+            ],
+            "radius": 0.032,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              -0.3811,
+              0.27,
+              -0.22
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ],
+            "rotation": [
+              0,
+              -4.1888,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.433,
+              0.14,
+              -0.25
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -4.1888,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              -0.28,
+              0.13,
+              0.485
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -5.7596,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              -0.36,
+              0.17,
+              0.6235
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              -0.39,
+              0.22,
+              0.6755
+            ],
+            "radius": 0.032,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              -0.3811,
+              0.27,
+              0.22
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ],
+            "rotation": [
+              0,
+              -5.236,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.433,
+              0.14,
+              0.25
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -5.236,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "deep",
+            "position": [
+              0,
+              0.35,
+              0
+            ],
+            "radius": 0.245,
+            "height": 0.08,
+            "segments": 18,
+            "radius_top": 0.215
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0,
+              0.4,
+              0
+            ],
+            "radius": 0.18,
+            "height": 0.07,
+            "segments": 18,
+            "radius_top": 0.135
+          },
+          {
+            "type": "cylinder",
+            "material": "burn",
+            "position": [
+              0,
+              0.45,
+              0
+            ],
+            "radius": 0.1225,
+            "height": 0.05,
+            "segments": 18,
+            "radius_top": 0.085
+          },
+          {
+            "type": "sphere",
+            "material": "eye",
+            "position": [
+              0,
+              0.49,
+              0
+            ],
+            "radius": 0.0875,
+            "segments": 18,
+            "scale": [
+              1.0,
+              0.55,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "body-1",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "hull": {
+            "colour": "#ff3218"
+          },
+          "lit": {
+            "colour": "#ff8757"
+          },
+          "mid": {
+            "colour": "#c41c06"
+          },
+          "dark": {
+            "colour": "#7a0f00"
+          },
+          "deep": {
+            "colour": "#3d0600"
+          },
+          "hot": {
+            "colour": "#ffd154"
+          },
+          "burn": {
+            "colour": "#fff3d0"
+          },
+          "eye": {
+            "colour": "#ffffff"
+          }
+        },
+        "parts": [
+          {
+            "type": "cylinder",
+            "material": "deep",
+            "position": [
+              0,
+              0.04,
+              0
+            ],
+            "radius": 0.6,
+            "height": 0.09,
+            "segments": 12
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0,
+              0.1,
+              0
+            ],
+            "radius": 0.545,
+            "height": 0.11,
+            "segments": 6
+          },
+          {
+            "type": "cylinder",
+            "material": "hull",
+            "position": [
+              0,
+              0.19,
+              0
+            ],
+            "radius": 0.475,
+            "height": 0.17,
+            "segments": 6,
+            "radius_top": 0.415
+          },
+          {
+            "type": "cylinder",
+            "material": "mid",
+            "position": [
+              0,
+              0.29,
+              0
+            ],
+            "radius": 0.355,
+            "height": 0.1,
+            "segments": 6,
+            "radius_top": 0.3
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              0.28,
+              0.13,
+              0.485
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -0.5236,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0.36,
+              0.17,
+              0.6235
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0.39,
+              0.22,
+              0.6755
+            ],
+            "radius": 0.06,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0.0,
+              0.27,
+              0.44
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.0,
+              0.14,
+              0.5
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              0.56,
+              0.13,
+              0.0
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -1.5708,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0.72,
+              0.17,
+              0.0
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0.78,
+              0.22,
+              0.0
+            ],
+            "radius": 0.0525,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0.3811,
+              0.27,
+              0.22
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ],
+            "rotation": [
+              0,
+              -1.0472,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.433,
+              0.14,
+              0.25
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -1.0472,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              0.28,
+              0.13,
+              -0.485
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -2.618,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0.36,
+              0.17,
+              -0.6235
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0.39,
+              0.22,
+              -0.6755
+            ],
+            "radius": 0.0375,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0.3811,
+              0.27,
+              -0.22
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ],
+            "rotation": [
+              0,
+              -2.0944,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.433,
+              0.14,
+              -0.25
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -2.0944,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              -0.28,
+              0.13,
+              -0.485
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -3.6652,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              -0.36,
+              0.17,
+              -0.6235
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              -0.39,
+              0.22,
+              -0.6755
+            ],
+            "radius": 0.03,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0.0,
+              0.27,
+              -0.44
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ],
+            "rotation": [
+              0,
+              -3.1416,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.0,
+              0.14,
+              -0.5
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -3.1416,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              -0.56,
+              0.13,
+              -0.0
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -4.7124,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              -0.72,
+              0.17,
+              -0.0
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              -0.78,
+              0.22,
+              -0.0
+            ],
+            "radius": 0.0375,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              -0.3811,
+              0.27,
+              -0.22
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ],
+            "rotation": [
+              0,
+              -4.1888,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.433,
+              0.14,
+              -0.25
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -4.1888,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              -0.28,
+              0.13,
+              0.485
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -5.7596,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              -0.36,
+              0.17,
+              0.6235
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              -0.39,
+              0.22,
+              0.6755
+            ],
+            "radius": 0.0525,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              -0.3811,
+              0.27,
+              0.22
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ],
+            "rotation": [
+              0,
+              -5.236,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.433,
+              0.14,
+              0.25
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -5.236,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "deep",
+            "position": [
+              0,
+              0.35,
+              0
+            ],
+            "radius": 0.245,
+            "height": 0.08,
+            "segments": 18,
+            "radius_top": 0.215
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0,
+              0.4,
+              0
+            ],
+            "radius": 0.2,
+            "height": 0.07,
+            "segments": 18,
+            "radius_top": 0.135
+          },
+          {
+            "type": "cylinder",
+            "material": "burn",
+            "position": [
+              0,
+              0.45,
+              0
+            ],
+            "radius": 0.14,
+            "height": 0.05,
+            "segments": 18,
+            "radius_top": 0.085
+          },
+          {
+            "type": "sphere",
+            "material": "eye",
+            "position": [
+              0,
+              0.49,
+              0
+            ],
+            "radius": 0.1,
+            "segments": 18,
+            "scale": [
+              1.0,
+              0.55,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "body-2",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "hull": {
+            "colour": "#ff3218"
+          },
+          "lit": {
+            "colour": "#ff8757"
+          },
+          "mid": {
+            "colour": "#c41c06"
+          },
+          "dark": {
+            "colour": "#7a0f00"
+          },
+          "deep": {
+            "colour": "#3d0600"
+          },
+          "hot": {
+            "colour": "#ffd154"
+          },
+          "burn": {
+            "colour": "#fff3d0"
+          },
+          "eye": {
+            "colour": "#ffffff"
+          }
+        },
+        "parts": [
+          {
+            "type": "cylinder",
+            "material": "deep",
+            "position": [
+              0,
+              0.04,
+              0
+            ],
+            "radius": 0.6,
+            "height": 0.09,
+            "segments": 12
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0,
+              0.1,
+              0
+            ],
+            "radius": 0.545,
+            "height": 0.11,
+            "segments": 6
+          },
+          {
+            "type": "cylinder",
+            "material": "hull",
+            "position": [
+              0,
+              0.19,
+              0
+            ],
+            "radius": 0.475,
+            "height": 0.17,
+            "segments": 6,
+            "radius_top": 0.415
+          },
+          {
+            "type": "cylinder",
+            "material": "mid",
+            "position": [
+              0,
+              0.29,
+              0
+            ],
+            "radius": 0.355,
+            "height": 0.1,
+            "segments": 6,
+            "radius_top": 0.3
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              0.28,
+              0.13,
+              0.485
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -0.5236,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0.36,
+              0.17,
+              0.6235
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0.39,
+              0.22,
+              0.6755
+            ],
+            "radius": 0.045,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0.0,
+              0.27,
+              0.44
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.0,
+              0.14,
+              0.5
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              0.56,
+              0.13,
+              0.0
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -1.5708,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0.72,
+              0.17,
+              0.0
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0.78,
+              0.22,
+              0.0
+            ],
+            "radius": 0.032,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0.3811,
+              0.27,
+              0.22
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ],
+            "rotation": [
+              0,
+              -1.0472,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.433,
+              0.14,
+              0.25
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -1.0472,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              0.28,
+              0.13,
+              -0.485
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -2.618,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0.36,
+              0.17,
+              -0.6235
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0.39,
+              0.22,
+              -0.6755
+            ],
+            "radius": 0.032,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0.3811,
+              0.27,
+              -0.22
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ],
+            "rotation": [
+              0,
+              -2.0944,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.433,
+              0.14,
+              -0.25
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -2.0944,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              -0.28,
+              0.13,
+              -0.485
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -3.6652,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              -0.36,
+              0.17,
+              -0.6235
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              -0.39,
+              0.22,
+              -0.6755
+            ],
+            "radius": 0.045,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0.0,
+              0.27,
+              -0.44
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ],
+            "rotation": [
+              0,
+              -3.1416,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.0,
+              0.14,
+              -0.5
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -3.1416,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              -0.56,
+              0.13,
+              -0.0
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -4.7124,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              -0.72,
+              0.17,
+              -0.0
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              -0.78,
+              0.22,
+              -0.0
+            ],
+            "radius": 0.058,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              -0.3811,
+              0.27,
+              -0.22
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ],
+            "rotation": [
+              0,
+              -4.1888,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.433,
+              0.14,
+              -0.25
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -4.1888,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              -0.28,
+              0.13,
+              0.485
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -5.7596,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              -0.36,
+              0.17,
+              0.6235
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              -0.39,
+              0.22,
+              0.6755
+            ],
+            "radius": 0.058,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              -0.3811,
+              0.27,
+              0.22
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ],
+            "rotation": [
+              0,
+              -5.236,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.433,
+              0.14,
+              0.25
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -5.236,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "deep",
+            "position": [
+              0,
+              0.35,
+              0
+            ],
+            "radius": 0.245,
+            "height": 0.08,
+            "segments": 18,
+            "radius_top": 0.215
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0,
+              0.4,
+              0
+            ],
+            "radius": 0.18,
+            "height": 0.07,
+            "segments": 18,
+            "radius_top": 0.135
+          },
+          {
+            "type": "cylinder",
+            "material": "burn",
+            "position": [
+              0,
+              0.45,
+              0
+            ],
+            "radius": 0.1225,
+            "height": 0.05,
+            "segments": 18,
+            "radius_top": 0.085
+          },
+          {
+            "type": "sphere",
+            "material": "eye",
+            "position": [
+              0,
+              0.49,
+              0
+            ],
+            "radius": 0.0875,
+            "segments": 18,
+            "scale": [
+              1.0,
+              0.55,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "body-3",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "hull": {
+            "colour": "#ff3218"
+          },
+          "lit": {
+            "colour": "#ff8757"
+          },
+          "mid": {
+            "colour": "#c41c06"
+          },
+          "dark": {
+            "colour": "#7a0f00"
+          },
+          "deep": {
+            "colour": "#3d0600"
+          },
+          "hot": {
+            "colour": "#ffd154"
+          },
+          "burn": {
+            "colour": "#fff3d0"
+          },
+          "eye": {
+            "colour": "#ffffff"
+          }
+        },
+        "parts": [
+          {
+            "type": "cylinder",
+            "material": "deep",
+            "position": [
+              0,
+              0.04,
+              0
+            ],
+            "radius": 0.6,
+            "height": 0.09,
+            "segments": 12
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0,
+              0.1,
+              0
+            ],
+            "radius": 0.545,
+            "height": 0.11,
+            "segments": 6
+          },
+          {
+            "type": "cylinder",
+            "material": "hull",
+            "position": [
+              0,
+              0.19,
+              0
+            ],
+            "radius": 0.475,
+            "height": 0.17,
+            "segments": 6,
+            "radius_top": 0.415
+          },
+          {
+            "type": "cylinder",
+            "material": "mid",
+            "position": [
+              0,
+              0.29,
+              0
+            ],
+            "radius": 0.355,
+            "height": 0.1,
+            "segments": 6,
+            "radius_top": 0.3
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              0.28,
+              0.13,
+              0.485
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -0.5236,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0.36,
+              0.17,
+              0.6235
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0.39,
+              0.22,
+              0.6755
+            ],
+            "radius": 0.03,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0.0,
+              0.27,
+              0.44
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.0,
+              0.14,
+              0.5
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              0.56,
+              0.13,
+              0.0
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -1.5708,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0.72,
+              0.17,
+              0.0
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0.78,
+              0.22,
+              0.0
+            ],
+            "radius": 0.0375,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0.3811,
+              0.27,
+              0.22
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ],
+            "rotation": [
+              0,
+              -1.0472,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.433,
+              0.14,
+              0.25
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -1.0472,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              0.28,
+              0.13,
+              -0.485
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -2.618,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0.36,
+              0.17,
+              -0.6235
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0.39,
+              0.22,
+              -0.6755
+            ],
+            "radius": 0.0525,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0.3811,
+              0.27,
+              -0.22
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ],
+            "rotation": [
+              0,
+              -2.0944,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.433,
+              0.14,
+              -0.25
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -2.0944,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              -0.28,
+              0.13,
+              -0.485
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -3.6652,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              -0.36,
+              0.17,
+              -0.6235
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              -0.39,
+              0.22,
+              -0.6755
+            ],
+            "radius": 0.06,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0.0,
+              0.27,
+              -0.44
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ],
+            "rotation": [
+              0,
+              -3.1416,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.0,
+              0.14,
+              -0.5
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -3.1416,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              -0.56,
+              0.13,
+              -0.0
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -4.7124,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              -0.72,
+              0.17,
+              -0.0
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              -0.78,
+              0.22,
+              -0.0
+            ],
+            "radius": 0.0525,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              -0.3811,
+              0.27,
+              -0.22
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ],
+            "rotation": [
+              0,
+              -4.1888,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.433,
+              0.14,
+              -0.25
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -4.1888,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              -0.28,
+              0.13,
+              0.485
+            ],
+            "size": [
+              0.2,
+              0.16,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -5.7596,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              -0.36,
+              0.17,
+              0.6235
+            ],
+            "radius": 0.075,
+            "height": 0.13,
+            "segments": 8,
+            "radius_top": 0.05
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              -0.39,
+              0.22,
+              0.6755
+            ],
+            "radius": 0.0375,
+            "height": 0.05,
+            "segments": 8,
+            "radius_top": 0.02
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              -0.3811,
+              0.27,
+              0.22
+            ],
+            "size": [
+              0.08,
+              0.12,
+              0.22
+            ],
+            "rotation": [
+              0,
+              -5.236,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.433,
+              0.14,
+              0.25
+            ],
+            "size": [
+              0.13,
+              0.13,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -5.236,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "deep",
+            "position": [
+              0,
+              0.35,
+              0
+            ],
+            "radius": 0.245,
+            "height": 0.08,
+            "segments": 18,
+            "radius_top": 0.215
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0,
+              0.4,
+              0
+            ],
+            "radius": 0.16,
+            "height": 0.07,
+            "segments": 18,
+            "radius_top": 0.135
+          },
+          {
+            "type": "cylinder",
+            "material": "burn",
+            "position": [
+              0,
+              0.45,
+              0
+            ],
+            "radius": 0.105,
+            "height": 0.05,
+            "segments": 18,
+            "radius_top": 0.085
+          },
+          {
+            "type": "sphere",
+            "material": "eye",
+            "position": [
+              0,
+              0.49,
+              0
+            ],
+            "radius": 0.075,
+            "segments": 18,
+            "scale": [
+              1.0,
+              0.55,
+              1.0
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

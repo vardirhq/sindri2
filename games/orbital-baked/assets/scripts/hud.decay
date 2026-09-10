@@ -1,0 +1,157 @@
+// Everything the run says about itself while it is running.
+//
+// The scene owns typography and draw order; this script owns values and the
+// restrained motion that makes state changes readable without UI confetti.
+script Hud {
+    var score: Entity = null;
+    var clock: Entity = null;
+    var level: Entity = null;
+    var sector: Entity = null;
+    var health_bar: Entity = null;
+    var health_text: Entity = null;
+    var cores_bar: Entity = null;
+    var boss_panel: Entity = null;
+    var boss_bar: Entity = null;
+    var boss_name: Entity = null;
+
+    var health_bar_scale_x: f32 = 1.0;
+    var health_bar_scale_y: f32 = 1.0;
+    var health_text_scale_x: f32 = 1.0;
+    var health_text_scale_y: f32 = 1.0;
+    var boss_presence: f32 = 0.0;
+    var boss_panel_y: f32 = 0.0;
+    var boss_panel_scale_x: f32 = 1.0;
+    var boss_panel_scale_y: f32 = 1.0;
+    var previous_boss_hp: f32 = 0.0;
+    var boss_hit: f32 = 0.0;
+    var hud_clock: f32 = 0.0;
+
+    fn start() {
+        this.score = World.find("Score");
+        this.clock = World.find("Clock");
+        this.level = World.find("Level");
+        this.sector = World.find("Wave");
+        this.health_bar = World.find("Health");
+        this.health_text = World.find("HealthText");
+        this.cores_bar = World.find("Cores");
+        this.boss_panel = World.find("BossPanel");
+        this.boss_bar = World.find("BossBar");
+        this.boss_name = World.find("BossName");
+
+        let health_bar = this.health_bar;
+        let cores_bar = this.cores_bar;
+        let health_text = this.health_text;
+        health_bar.transform.position.y = 1.76;
+        cores_bar.transform.position.y = 1.71;
+        health_text.transform.position.y = 1.83;
+        this.health_bar_scale_x = health_bar.transform.scale.x;
+        this.health_bar_scale_y = health_bar.transform.scale.y;
+        this.health_text_scale_x = health_text.transform.scale.x;
+        this.health_text_scale_y = health_text.transform.scale.y;
+
+        let boss_panel = this.boss_panel;
+        this.boss_panel_y = boss_panel.transform.position.y;
+        this.boss_panel_scale_x = boss_panel.transform.scale.x;
+        this.boss_panel_scale_y = boss_panel.transform.scale.y;
+
+        Ui.set_text(this.health_text, "HP {}/{}");
+        Ui.set_text(this.level, "LV {}");
+        Ui.set_text(this.score, "SCORE {}");
+        World.set_active(this.sector, true);
+        update_sector();
+    }
+
+    fn update(dt: f32) {
+        this.hud_clock += dt;
+        Ui.set_number(this.score, Game.get("score", 0.0));
+        Ui.set_number(this.level, Game.get("level", 1.0));
+
+        let elapsed = Game.get("elapsed", 0.0);
+        let minutes = (elapsed - elapsed % 60.0) / 60.0;
+        Ui.set_numbers(this.clock, minutes, elapsed % 60.0);
+        update_sector();
+
+        let hp = max(Game.get("hp", 0.0), 0.0);
+        let max_hp = max(Game.get("max_hp", 1.0), 1.0);
+        Ui.set_fill(this.health_bar, hp / max_hp);
+        Ui.set_numbers(this.health_text, hp, max_hp);
+        animate_player_health();
+
+        let cores = Game.get("cores", 0.0);
+        let needed = max(Game.get("next_level", 1.0), 1.0);
+        Ui.set_fill(this.cores_bar, min(cores / needed, 1.0));
+
+        update_boss(dt);
+    }
+
+    fn animate_player_health() {
+        let impact = min(1.0, max(0.0, Game.get("shield_impact", 0.0)));
+        let health_bar = this.health_bar;
+        let health_text = this.health_text;
+        health_bar.transform.scale.x = this.health_bar_scale_x;
+        health_bar.transform.scale.y = this.health_bar_scale_y * (1.0 + impact * 0.16);
+        health_text.transform.scale.x = this.health_text_scale_x * (1.0 + impact * 0.05);
+        health_text.transform.scale.y = this.health_text_scale_y * (1.0 + impact * 0.05);
+    }
+
+    fn update_boss(dt: f32) {
+        let boss_max = Game.get("boss_max", 0.0);
+        let boss_hp = max(0.0, Game.get("boss_hp", 0.0));
+        let target = if_number(boss_max > 0.0);
+        let blend = 1.0 - exp(-8.5 * max(0.0, dt));
+        this.boss_presence += (target - this.boss_presence) * blend;
+
+        if boss_max > 0.0 && this.previous_boss_hp > 0.0 && boss_hp < this.previous_boss_hp {
+            this.boss_hit = 1.0;
+        }
+        if this.boss_hit > 0.0 { this.boss_hit = max(0.0, this.boss_hit - dt * 5.0); }
+        this.previous_boss_hp = boss_hp;
+
+        World.set_active(this.boss_panel, boss_max > 0.0 || this.boss_presence > 0.015);
+        let boss_panel = this.boss_panel;
+        let entrance = this.boss_presence;
+        boss_panel.transform.position.y = this.boss_panel_y + (1.0 - entrance) * 0.09;
+        boss_panel.transform.scale.x = this.boss_panel_scale_x * (0.92 + entrance * 0.08 + this.boss_hit * 0.012);
+        boss_panel.transform.scale.y = this.boss_panel_scale_y * (0.78 + entrance * 0.22 + this.boss_hit * 0.08);
+
+        if boss_max > 0.0 {
+            Ui.set_fill(this.boss_bar, boss_hp / boss_max);
+            update_boss_name();
+            let boss_name = this.boss_name;
+            let spawn_pulse = (1.0 - entrance) * 0.18;
+            let danger = 1.0 - boss_hp / max(1.0, boss_max);
+            let breathe = sin(this.hud_clock * (3.0 + danger * 4.0)) * 0.012 * danger;
+            boss_name.transform.scale.x = 1.0 + spawn_pulse + breathe;
+            boss_name.transform.scale.y = 1.0 + spawn_pulse + breathe;
+        }
+    }
+
+    fn update_sector() {
+        let current = Game.get("sector", 1.0);
+        if current == 1.0 { Ui.set_text(this.sector, "OUTER DRIFT"); }
+        else if current == 2.0 { Ui.set_text(this.sector, "EMBER BELT"); }
+        else if current == 3.0 { Ui.set_text(this.sector, "VIOLET WAKE"); }
+        else if current == 4.0 { Ui.set_text(this.sector, "NULL LATTICE"); }
+        else { Ui.set_text(this.sector, "CORE APPROACH"); }
+    }
+
+    fn update_boss_name() {
+        let kind = Game.get("boss_kind", 0.0);
+        if kind == 0.0 { Ui.set_text(this.boss_name, "WARDEN"); }
+        else if kind == 1.0 { Ui.set_text(this.boss_name, "HARROWER"); }
+        else if kind == 2.0 { Ui.set_text(this.boss_name, "PRISM"); }
+        else if kind == 3.0 { Ui.set_text(this.boss_name, "SINGULARITY"); }
+        else if kind == 4.0 { Ui.set_text(this.boss_name, "CROWN"); }
+        else if kind == 5.0 { Ui.set_text(this.boss_name, "BROOD"); }
+        else if kind == 6.0 { Ui.set_text(this.boss_name, "MIRROR"); }
+        else if kind == 7.0 { Ui.set_text(this.boss_name, "ARCHITECT"); }
+        else if kind == 8.0 { Ui.set_text(this.boss_name, "SPINE"); }
+        else if kind == 9.0 { Ui.set_text(this.boss_name, "LEVIATHAN"); }
+        else { Ui.set_text(this.boss_name, "LAST LIGHT"); }
+    }
+
+    fn if_number(value: bool) -> f32 {
+        if value { return 1.0; }
+        return 0.0;
+    }
+}

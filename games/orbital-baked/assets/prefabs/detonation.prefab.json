@@ -1,0 +1,23 @@
+{
+  "format_version": 1,
+  "metadata": { "name": "Detonation" },
+  "entities": [{
+    "id": "detonation", "name": "Detonation",
+    "transform_3d": { "position": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.8571, 1.8571, 1.0] },
+    "components": {
+      "sindri.sprite": { "texture": "textures/detonation.png#boom-0", "tint": [1.0, 1.0, 1.0, 1.0], "layer": 9 },
+      "sindri.animation.sprite": {
+        "clips": {
+          "boom": {
+            "frames": ["boom-0", "boom-1", "boom-2", "boom-3", "boom-4"],
+            "seconds_per_frame": 0.05,
+            "looping": false
+          }
+        },
+        "playing": null,
+        "speed": 1.0
+      },
+      "sindri.script": { "source": "scripts/detonation.decay", "script": "Detonation", "properties": {} }
+    }
+  }]
+}

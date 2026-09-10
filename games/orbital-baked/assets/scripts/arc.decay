@@ -1,0 +1,102 @@
+// A short-lived secondary round. It begins on an impact, skips the enemy at
+// that exact point, then crosses the next two nearest targets. The bright
+// diamond and burst at every hop make the chain readable without a bespoke
+// renderer.
+script Arc {
+    @export let speed: f32 = 14.0;
+    @export let life: f32 = 0.55;
+    @export let damage: f32 = 0.27;
+    @export let jumps: f32 = 2.0;
+    @export let impact_fx: Prefab;
+
+    var age: f32 = 0.0;
+    var spent: f32 = 0.0;
+    var retiring: bool = false;
+    var trail: Entity = null;
+    var trail_clock: f32 = 0.0;
+
+    fn start() {
+        this.trail = World.find("TrailCyan");
+        retarget();
+    }
+
+    fn update(dt: f32) {
+        if !World.exists(this.entity) {
+            return;
+        }
+        if this.retiring {
+            World.despawn(this.entity);
+            return;
+        }
+        if Game.get("run_state", 0.0) != 1.0 {
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+            return;
+        }
+        this.age += dt;
+        this.transform.rotation_z += dt * 8.0;
+        let pulse = 1.0 + sin(this.age * 24.0) * 0.18;
+        this.transform.scale.y = 0.12 * pulse;
+        this.trail_clock -= dt;
+        if this.trail != null && this.trail_clock <= 0.0 {
+            this.trail_clock = 0.02;
+            Effects.burst_at(this.trail, this.transform.position.x, this.transform.position.y);
+        }
+        if this.age >= this.life {
+            retire();
+            return;
+        }
+        for hit in Physics.sensor_entered() {
+            if !World.exists(this.entity) {
+                return;
+            }
+            this.spent += 1.0;
+            Effects.burst(this.entity);
+            flash();
+            if this.spent >= this.jumps {
+                retire();
+                return;
+            }
+            retarget();
+        }
+    }
+
+    fn flash() {
+        let flare = World.spawn(this.impact_fx);
+        flare.transform.position.x = this.transform.position.x;
+        flare.transform.position.y = this.transform.position.y;
+        World.set_property(flare, "style", 1.0);
+        World.set_property(flare, "end_size", 1.25);
+        World.set_property(flare, "duration", 0.22);
+        Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.1));
+    }
+
+    fn retarget() {
+        var target: Entity = null;
+        var best: f32 = 0.0;
+        for enemy in World.with_tag("enemy") {
+            let dx = enemy.transform.position.x - this.transform.position.x;
+            let dy = enemy.transform.position.y - this.transform.position.y;
+            let distance = dx * dx + dy * dy;
+            // The impact that made the arc is centred on its first target.
+            if distance > 0.16 && (target == null || distance < best) {
+                target = enemy;
+                best = distance;
+            }
+        }
+        if target == null {
+            retire();
+            return;
+        }
+        let dx = target.transform.position.x - this.transform.position.x;
+        let dy = target.transform.position.y - this.transform.position.y;
+        let far = sqrt(dx * dx + dy * dy);
+        Physics.set_velocity(this.entity, dx / far * this.speed, dy / far * this.speed);
+        this.transform.rotation_z = atan2(dy, dx);
+    }
+
+    fn retire() {
+        // Stay alive until every script has consumed this frame's collision.
+        this.retiring = true;
+        Physics.set_velocity(this.entity, 0.0, 0.0);
+    }
+}

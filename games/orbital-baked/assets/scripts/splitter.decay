@@ -1,0 +1,158 @@
+// Persistent Last Stand sector hazard controller.
+//
+// The scene already injects `prefabs/splitter.prefab.json` into Director. The
+// faithful enemy roster no longer uses that old non-reference enemy, so this
+// legacy asset slot now bootstraps hazards without rewriting the giant scene
+// document. The file name is compatibility; the runtime role is not.
+script Hazards {
+    // Kept only for the old prefab durability acceptance check while the scene
+    // still carries this legacy asset slot. Hazards never read it.
+    @export let health: f32 = 2.0;
+    @export let asteroid: Prefab;
+    @export let field: Prefab;
+    @export let beam: Prefab;
+    @export let view_size: f32 = 11.0;
+
+    var was_sector: f32 = -1.0;
+    var beam_timer: f32 = 0.0;
+
+    fn update(dt: f32) {
+        let state = Game.get("run_state", 0.0);
+        if state != 1.0 {
+            // Choices and manual pause freeze the reference world. Director
+            // clears hazards when a run actually ends; only title/result need
+            // to make the next run rebuild Outer Drift.
+            if state == 0.0 || state == 4.0 {
+                this.was_sector = -1.0;
+                Game.set("nullified", 0.0);
+            }
+            return;
+        }
+
+        let sector = Game.get("sector", 1.0);
+        if sector != this.was_sector {
+            clear_hazards();
+            setup_sector(sector);
+            this.was_sector = sector;
+        }
+
+        if sector == 5.0 {
+            update_core(dt);
+        }
+    }
+
+    fn clear_hazards() {
+        Game.set("nullified", 0.0);
+        for hazard in World.with_tag("hazard") {
+            if World.exists(hazard) {
+                World.despawn(hazard);
+            }
+        }
+    }
+
+    fn setup_sector(sector: f32) {
+        if sector == 1.0 {
+            spawn_asteroids();
+        } else if sector == 2.0 {
+            spawn_flare(1.0);
+            spawn_flare(-1.0);
+        } else if sector == 3.0 {
+            spawn_gravity();
+            spawn_gravity();
+            spawn_gravity();
+        } else if sector == 4.0 {
+            let null_field = World.spawn(this.field);
+            null_field.transform.position.x = -visible_half_x() * 0.36;
+            null_field.transform.position.y = visible_half_y() * 0.24;
+            World.set_property(null_field, "kind", 2.0);
+            World.set_property(null_field, "radius", Random.range(1.6, 2.1));
+        } else if sector == 5.0 {
+            this.beam_timer = 0.0;
+        }
+    }
+
+    fn spawn_asteroids() {
+        let player = World.find("Player");
+        let half_x = visible_half_x();
+        let half_y = visible_half_y();
+        var made: f32 = 0.0;
+        while made < 7.0 {
+            let rock = World.spawn(this.asteroid);
+            var x: f32 = 0.0;
+            var y: f32 = 0.0;
+            var safe: bool = false;
+            var tries: f32 = 0.0;
+            while tries < 30.0 && !safe {
+                x = Random.range(-half_x + 0.9, half_x - 0.9);
+                y = Random.range(-half_y + 0.9, half_y - 0.9);
+                safe = player == null || distance_from(player, x, y) > 3.8;
+                tries += 1.0;
+            }
+            if !safe {
+                x = -half_x + 0.8 + made % 2.0 * (half_x * 2.0 - 1.6);
+                y = -half_y + 1.2;
+            }
+            rock.transform.position.x = x;
+            rock.transform.position.y = y;
+            World.set_property(rock, "vx", Random.range(-0.35, 0.35));
+            World.set_property(rock, "vy", Random.range(0.2, 0.7));
+            made += 1.0;
+        }
+    }
+
+    fn spawn_flare(side: f32) {
+        let flare = World.spawn(this.beam);
+        World.set_property(flare, "mode", 1.0);
+        World.set_property(flare, "side", side);
+    }
+
+    fn spawn_gravity() {
+        let gravity = World.spawn(this.field);
+        let margin = 2.4;
+        gravity.transform.position.x = Random.range(-visible_half_x() + margin,
+                                                     visible_half_x() - margin);
+        gravity.transform.position.y = Random.range(-visible_half_y() + margin,
+                                                     visible_half_y() - margin);
+        World.set_property(gravity, "kind", 1.0);
+        World.set_property(gravity, "radius", Random.range(1.6, 2.3));
+    }
+
+    fn update_core(dt: f32) {
+        this.beam_timer -= dt;
+        if this.beam_timer > 0.0 {
+            return;
+        }
+        this.beam_timer = 3.1;
+        let pulse = World.spawn(this.beam);
+        World.set_property(pulse, "mode", 2.0);
+        if Game.get("elapsed", 0.0) % 8.0 < 4.0 {
+            World.set_property(pulse, "axis", 1.0);
+            pulse.transform.position.x = Random.range(-visible_half_x() * 0.6,
+                                                       visible_half_x() * 0.6);
+            pulse.transform.position.y = 0.0;
+        } else {
+            World.set_property(pulse, "axis", 0.0);
+            pulse.transform.position.x = 0.0;
+            pulse.transform.position.y = Random.range(-visible_half_y() * 0.56,
+                                                       visible_half_y() * 0.56);
+        }
+    }
+
+    fn distance_from(entity: Entity, x: f32, y: f32) -> f32 {
+        let dx = entity.transform.position.x - x;
+        let dy = entity.transform.position.y - y;
+        return sqrt(dx * dx + dy * dy);
+    }
+
+    fn visible_half_x() -> f32 {
+        let aspect = max(Viewport.aspect, 0.001);
+        if aspect >= 1.0 { return this.view_size * 0.5 * aspect; }
+        return this.view_size * 0.5;
+    }
+
+    fn visible_half_y() -> f32 {
+        let aspect = max(Viewport.aspect, 0.001);
+        if aspect >= 1.0 { return this.view_size * 0.5; }
+        return this.view_size * 0.5 / aspect;
+    }
+}

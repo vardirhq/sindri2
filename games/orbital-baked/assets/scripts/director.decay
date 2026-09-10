@@ -1,0 +1,422 @@
+// Owns Last Stand campaign timing and spawning. Reference details and deliberate
+// parity gaps live in docs/last-stand-reference-parity.md.
+script Director {
+    @export let drifter: Prefab;
+    @export let charger: Prefab;
+    // Legacy scene property: this asset slot now contains the persistent sector
+    // hazard controller because the faithful roster no longer uses Splitter.
+    @export let splitter: Prefab;
+    @export let warden: Prefab;
+    @export let challenger: Prefab;
+    @export let wave_gap: f32 = 6.0;
+    @export let boss_at: f32 = 180.0;
+    @export let first_boss_at: f32 = 60.0;
+    @export let boss_interval: f32 = 60.0;
+    @export let run_limit: f32 = 600.0;
+    @export let normal_spawn: f32 = 1.12;
+    @export let elite_after: f32 = 105.0;
+    @export let elite_base: f32 = 0.025;
+    @export let elite_time_divisor: f32 = 3000.0;
+    @export let elite_bonus_scale: f32 = 0.65;
+    @export let elite_cap: f32 = 0.32;
+    @export let arena: f32 = 7.5;
+    // What the camera frames, matching `sindri.camera.vertical_size` on the
+    // scene's camera and the same export every other script here carries.
+    @export let view_size: f32 = 11.0;
+    // How far past the visible edge something arrives, so a body with a radius
+    // is wholly outside the frame rather than clipping into it.
+    @export let spawn_margin: f32 = 1.4;
+
+    var title: Entity = null;
+    var hud: Entity = null;
+    var pause_screen: Entity = null;
+    var result_screen: Entity = null;
+    var hazards: Entity = null;
+    var elapsed: f32 = 0.0;
+    var spawn_timer: f32 = 0.0;
+    var next_boss: f32 = 60.0;
+    var boss_count: f32 = 0.0;
+    var last_boss: f32 = -1.0;
+    var previous_boss: f32 = -1.0;
+    var was_state: f32 = -1.0;
+
+    fn start() {
+        this.title = World.find("Title");
+        this.hud = World.find("Hud");
+        this.pause_screen = World.find("Pause");
+        this.result_screen = World.find("Result");
+        this.hazards = World.spawn(this.splitter);
+        Game.set("run_state", 0.0);
+        Game.set("nullified", 0.0);
+        show_only_title();
+    }
+
+    fn show_only_title() {
+        World.set_active(this.title, true);
+        World.set_active(this.hud, false);
+        World.set_active(this.pause_screen, false);
+        World.set_active(this.result_screen, false);
+    }
+
+    fn begin() {
+        let seed = Save.number("runs", 0.0) + 1.0;
+        Save.set_number("runs", seed);
+        Random.seed(seed);
+        this.elapsed = 0.0;
+        this.spawn_timer = 0.0;
+        this.next_boss = this.first_boss_at;
+        this.boss_count = 0.0;
+        this.last_boss = -1.0;
+        this.previous_boss = -1.0;
+        Game.set("score", 0.0);
+        Game.set("kills", 0.0);
+        Game.set("cores", 0.0);
+        Game.set("level", 1.0);
+        Game.set("next_level", 35.0);
+        Game.set("module_pool", 0.0);
+        Game.set("elapsed", 0.0);
+        Game.set("sector", 1.0);
+        Game.set("boss_count", 0.0);
+        Game.set("boss_hp", 0.0);
+        Game.set("boss_max", 0.0);
+        Game.set("boss_kind", -1.0);
+        Game.set("victory", 0.0);
+        Game.set("nullified", 0.0);
+        Game.set("elite_bonus", 0.0);
+        Game.set("elite_spawned", 0.0);
+        Game.set("kills_since_repair", 0.0);
+        Game.set("powerups_dropped", 0.0);
+        Game.set("overdrive", 0.0);
+        Game.set("stats_reset", 1.0);
+        Game.set("player_reset", 1.0);
+        Game.set("modules_reset", 1.0);
+        clear_tag("enemy");
+        clear_tag("bullet");
+        clear_tag("player_damage");
+        clear_tag("mine");
+        clear_tag("core");
+        clear_tag("powerup");
+        clear_tag("drop_roll");
+        clear_tag("hostile_shot");
+        clear_tag("hazard");
+        World.set_active(this.title, false);
+        World.set_active(this.hud, true);
+        World.set_active(this.result_screen, false);
+        Game.set("run_state", 1.0);
+    }
+
+    fn clear_tag(tag: String) {
+        for entity in World.with_tag(tag) { World.despawn(entity); }
+    }
+
+    fn update(dt: f32) {
+        let state = Game.get("run_state", 0.0);
+        if state != this.was_state {
+            this.was_state = state;
+            World.set_active(this.pause_screen, state == 3.0);
+            World.set_active(this.result_screen, state == 4.0);
+        }
+        if state == 0.0 {
+            if Game.get("request_start", 0.0) > 0.0 {
+                Game.set("request_start", 0.0);
+                begin();
+            }
+            return;
+        }
+        if state == 4.0 {
+            if Game.get("request_start", 0.0) > 0.0 {
+                Game.set("request_start", 0.0);
+                begin();
+            }
+            return;
+        }
+        if Input.just_pressed("Escape") {
+            if state == 1.0 { Game.set("run_state", 3.0); }
+            else if state == 3.0 { Game.set("run_state", 1.0); }
+        }
+        if state != 1.0 { return; }
+        if Game.get("hp", 1.0) <= 0.0 {
+            Game.set("victory", 0.0);
+            end_run();
+            return;
+        }
+
+        this.elapsed += dt;
+        Game.set("elapsed", this.elapsed);
+        publish_sector();
+        if this.elapsed >= this.run_limit {
+            this.elapsed = this.run_limit;
+            Game.set("elapsed", this.run_limit);
+            Game.set("victory", 1.0);
+            end_run();
+            return;
+        }
+        if Game.get("cores", 0.0) >= Game.get("next_level", 35.0) {
+            let level = Game.get("level", 1.0) + 1.0;
+            let threshold = Game.get("next_level", 35.0);
+            Game.set("cores", Game.get("cores", 0.0) - threshold);
+            Game.set("level", level);
+            Game.set("next_level", next_xp(threshold));
+            publish_module_pool(level);
+            Game.set("run_state", 2.0);
+            return;
+        }
+
+        let boss_alive = Game.get("boss_hp", 0.0) > 0.0;
+        if !boss_alive && this.elapsed >= this.next_boss {
+            this.boss_count += 1.0;
+            Game.set("boss_count", this.boss_count);
+            this.next_boss += this.boss_interval;
+            send_boss();
+            return;
+        }
+        if boss_alive { return; }
+
+        this.spawn_timer -= dt;
+        let rate = spawn_rate();
+        while this.spawn_timer <= 0.0 {
+            spawn_one();
+            this.spawn_timer += rate;
+        }
+    }
+
+    fn next_xp(threshold: f32) -> f32 {
+        // Reference: floor(threshold * 1.28 + 8). Decay has modulo but no
+        // floor builtin. 1.28 is exactly 32/25 for these integer thresholds,
+        // so remove the remainder before dividing instead of approximating.
+        let scaled = threshold * 32.0;
+        return (scaled - scaled % 25.0) / 25.0 + 8.0;
+    }
+
+    fn publish_module_pool(level: f32) {
+        // 0 salvage, 1 boss relic, 2 Foundry Signal. The chooser consumes this
+        // without needing to know why a level belongs to a particular pool.
+        if level % 7.0 == 0.0 { Game.set("module_pool", 2.0); }
+        else if level % 5.0 == 0.0 { Game.set("module_pool", 1.0); }
+        else { Game.set("module_pool", 0.0); }
+    }
+
+    fn end_run() {
+        Game.set("run_state", 4.0);
+        Game.set("boss_hp", 0.0);
+        Game.set("boss_max", 0.0);
+        Game.set("nullified", 0.0);
+        let score = Game.get("score", 0.0);
+        if score > Save.number("best_score", 0.0) { Save.set_number("best_score", score); }
+        Save.set_number("total_kills", Save.number("total_kills", 0.0) + Game.get("kills", 0.0));
+        clear_tag("enemy");
+        clear_tag("player_damage");
+        clear_tag("mine");
+        clear_tag("hostile_shot");
+        clear_tag("hazard");
+        clear_tag("powerup");
+        clear_tag("drop_roll");
+    }
+
+    fn spawn_rate() -> f32 {
+        return max(0.085, 0.7 - this.elapsed * 0.00092) /
+               (this.normal_spawn * sector_pressure());
+    }
+
+    fn sector_pressure() -> f32 {
+        if this.elapsed >= 480.0 { return 1.27; }
+        if this.elapsed >= 360.0 { return 1.18; }
+        if this.elapsed >= 240.0 { return 1.12; }
+        if this.elapsed >= 120.0 { return 1.07; }
+        return 1.0;
+    }
+
+    fn publish_sector() {
+        if this.elapsed >= 480.0 { Game.set("sector", 5.0); }
+        else if this.elapsed >= 360.0 { Game.set("sector", 4.0); }
+        else if this.elapsed >= 240.0 { Game.set("sector", 3.0); }
+        else if this.elapsed >= 120.0 { Game.set("sector", 2.0); }
+        else { Game.set("sector", 1.0); }
+    }
+
+    fn spawn_one() {
+        let count = unlocked_count();
+        let slot = Random.int(0.0, count - 1.0);
+        if slot == 2.0 {
+            let enemy = World.spawn(this.charger);
+            make_elite(enemy, true);
+            place(enemy);
+            return;
+        }
+        spawn_roster(slot);
+    }
+
+    fn unlocked_count() -> f32 {
+        if this.elapsed >= 545.0 { return 15.0; }
+        if this.elapsed >= 505.0 { return 14.0; }
+        if this.elapsed >= 455.0 { return 13.0; }
+        if this.elapsed >= 430.0 { return 12.0; }
+        if this.elapsed >= 405.0 { return 11.0; }
+        if this.elapsed >= 335.0 { return 10.0; }
+        if this.elapsed >= 310.0 { return 9.0; }
+        if this.elapsed >= 285.0 { return 8.0; }
+        if this.elapsed >= 230.0 { return 7.0; }
+        if this.elapsed >= 190.0 { return 6.0; }
+        if this.elapsed >= 170.0 { return 5.0; }
+        if this.elapsed >= 120.0 { return 4.0; }
+        if this.elapsed >= 70.0 { return 3.0; }
+        if this.elapsed >= 35.0 { return 2.0; }
+        return 1.0;
+    }
+
+    fn spawn_roster(kind: f32) {
+        let enemy = World.spawn(this.drifter);
+        World.set_property(enemy, "kind", kind);
+        if kind == 0.0 { configure(enemy, 1.5, 2.0, 1.0, 1.0); }
+        else if kind == 1.0 { configure(enemy, 1.0, 3.0, 2.25, 1.5); }
+        else if kind == 3.0 { configure(enemy, 0.82, 6.0, 3.75, 2.0); }
+        else if kind == 4.0 { configure(enemy, 1.88, 3.0, 3.0, 1.2); }
+        else if kind == 5.0 { configure(enemy, 0.86, 7.0, 6.0, 1.6); }
+        else if kind == 6.0 { configure(enemy, 1.25, 4.0, 4.0, 1.4); }
+        else if kind == 7.0 { configure(enemy, 2.52, 2.0, 2.0, 0.7); }
+        else if kind == 8.0 { configure(enemy, 1.4, 5.0, 5.75, 1.3); }
+        else if kind == 9.0 { configure(enemy, 1.06, 4.0, 4.75, 1.3); }
+        else if kind == 10.0 { configure(enemy, 1.68, 5.0, 5.25, 1.5); }
+        else if kind == 11.0 { configure(enemy, 1.78, 7.0, 7.25, 1.9); }
+        else if kind == 12.0 { configure(enemy, 1.82, 6.0, 6.25, 1.6); }
+        else if kind == 13.0 { configure(enemy, 0.92, 8.0, 7.75, 1.8); }
+        else { configure(enemy, 2.02, 6.0, 7.25, 1.7); }
+        make_elite(enemy, false);
+        place(enemy);
+    }
+
+    fn configure(enemy: Entity, speed: f32, health: f32, worth: f32, touch: f32) {
+        World.set_property(enemy, "speed", speed);
+        World.set_property(enemy, "health", health);
+        World.set_property(enemy, "worth", worth);
+        World.set_property(enemy, "touch_damage", touch);
+    }
+
+    fn make_elite(enemy: Entity, charger_enemy: bool) {
+        if this.elapsed <= this.elite_after { return; }
+        let bonus = Game.get("elite_bonus", 0.0);
+        let chance = min(this.elite_cap,
+            this.elite_base + this.elapsed / this.elite_time_divisor +
+            bonus * this.elite_bonus_scale);
+        if Random.value() >= chance { return; }
+
+        let trait = Random.int(0.0, 4.0);
+        if trait == 0.0 {
+            scale_elite(enemy, trait, 2.35, 1.05, 0.88, 2.20, charger_enemy);
+        } else if trait == 1.0 {
+            scale_elite(enemy, trait, 1.55, 1.45, 1.38, 2.10, charger_enemy);
+        } else if trait == 2.0 {
+            scale_elite(enemy, trait, 1.65, 1.20, 1.08, 2.25, charger_enemy);
+        } else if trait == 3.0 {
+            scale_elite(enemy, trait, 1.85, 1.25, 1.06, 2.30, charger_enemy);
+        } else {
+            scale_elite(enemy, trait, 1.70, 1.12, 1.12, 2.25, charger_enemy);
+        }
+    }
+
+    fn scale_elite(enemy: Entity, trait: f32, hp: f32, damage: f32,
+                   speed: f32, value: f32, charger_enemy: bool) {
+        World.set_property(enemy, "elite", 1.0);
+        World.set_property(enemy, "elite_trait", trait);
+        World.set_property(enemy, "health",
+            World.property_number(enemy, "health", 1.0) * hp);
+        World.set_property(enemy, "touch_damage",
+            World.property_number(enemy, "touch_damage", 1.0) * damage);
+        World.set_property(enemy, "worth",
+            World.property_number(enemy, "worth", 1.0) * value);
+        if charger_enemy {
+            World.set_property(enemy, "approach",
+                World.property_number(enemy, "approach", 1.0) * speed);
+            World.set_property(enemy, "dash_speed",
+                World.property_number(enemy, "dash_speed", 1.0) * speed);
+        } else {
+            World.set_property(enemy, "speed",
+                World.property_number(enemy, "speed", 1.0) * speed);
+        }
+        Game.set("elite_spawned", Game.get("elite_spawned", 0.0) + 1.0);
+    }
+
+    fn send_boss() {
+        clear_tag("enemy");
+        clear_tag("hostile_shot");
+        // The reference expands from four bosses to nine at 4:00 and all
+        // eleven at 8:00. Avoid either of the two most recent eligible picks.
+        let boss_pool = eligible_boss_count();
+        Game.set("boss_pool", boss_pool);
+        var pick: f32 = Random.int(0.0, boss_pool - 1.0);
+        var attempts: f32 = 0.0;
+        while attempts < 8.0 && (pick == this.last_boss || pick == this.previous_boss) {
+            pick = Random.int(0.0, boss_pool - 1.0);
+            attempts += 1.0;
+        }
+        // A pathological random streak must not weaken the no-repeat rule.
+        while pick == this.last_boss || pick == this.previous_boss {
+            pick = (pick + 1.0) % boss_pool;
+        }
+        this.previous_boss = this.last_boss;
+        this.last_boss = pick;
+
+        var boss: Entity = null;
+        if pick == 0.0 {
+            boss = World.spawn(this.warden);
+        } else {
+            boss = World.spawn(this.challenger);
+            World.set_property(boss, "kind", pick - 1.0);
+        }
+        // Above the frame, so the boss descends into view rather than
+        // materialising inside it.
+        boss.transform.position.x = 0.0;
+        boss.transform.position.y = spawn_ring_y();
+    }
+
+    fn eligible_boss_count() -> f32 {
+        if this.elapsed >= 480.0 { return 11.0; }
+        if this.elapsed >= 240.0 { return 9.0; }
+        return 4.0;
+    }
+
+    // Enemies arrive from outside the frame, never in front of the player.
+    //
+    // This used to be a circle of radius `arena`, which the camera is required
+    // to frame whole -- `it_fits_a_phone` asserts exactly that -- so every
+    // spawn landed somewhere on screen and enemies appeared out of nothing. A
+    // ring cannot be both inside the guaranteed-visible arena and outside the
+    // view, so placement follows the view instead: a random direction, walked
+    // out to the edge of the frame plus a margin.
+    //
+    // `arena` stays the floor, so a wide screen that shows less height than the
+    // authored arena still spawns no nearer than the reference distance.
+    fn place(enemy: Entity) {
+        let angle = Random.range(0.0, 6.2831853);
+        let dx = cos(angle);
+        let dy = sin(angle);
+        let ring_x = spawn_ring_x();
+        let ring_y = spawn_ring_y();
+        // Where that direction leaves the rectangle: the nearer of the two
+        // axis crossings. Guarded because a direction along one axis has no
+        // crossing on the other.
+        let reach = min(ring_x / max(abs(dx), 0.0001), ring_y / max(abs(dy), 0.0001));
+        enemy.transform.position.x = dx * reach;
+        enemy.transform.position.y = dy * reach;
+    }
+
+    fn spawn_ring_x() -> f32 {
+        return max(visible_half_x() + this.spawn_margin, this.arena);
+    }
+
+    fn spawn_ring_y() -> f32 {
+        return max(visible_half_y() + this.spawn_margin, this.arena);
+    }
+
+    fn visible_half_x() -> f32 {
+        let aspect = max(Viewport.aspect, 0.001);
+        if aspect >= 1.0 { return this.view_size * 0.5 * aspect; }
+        return this.view_size * 0.5;
+    }
+
+    fn visible_half_y() -> f32 {
+        let aspect = max(Viewport.aspect, 0.001);
+        if aspect >= 1.0 { return this.view_size * 0.5; }
+        return this.view_size * 0.5 / aspect;
+    }
+}

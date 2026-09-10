@@ -1,0 +1,52 @@
+// One reusable module card. All ordinary module behavior is interpreted from
+// the profile, so adding a module does not add a branch here.
+script Module {
+    @export let catalog: Profile;
+    @export let slot: f32 = 0.0;
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 2.0 || !Ui.is_pressed(this.entity) { return; }
+        let index = offered_index();
+        if index < 0.0 { return; }
+        apply(index);
+        let owned_key = Profiles.text_at(this.catalog, "modules", index, "owned_key", "");
+        Game.set(owned_key, 1.0);
+        if Profiles.flag_at(this.catalog, "modules", index, "black_signal", false) {
+            Game.set("black_modules_taken", Game.get("black_modules_taken", 0.0) + 1.0);
+        }
+        Game.set("picked_module", index);
+        Audio.play("audio/upgrade.wav", 0.4);
+        Game.set("run_state", 1.0);
+    }
+
+    fn offered_index() -> f32 {
+        if this.slot == 0.0 { return Game.get("offer_0", -1.0); }
+        if this.slot == 1.0 { return Game.get("offer_1", -1.0); }
+        if this.slot == 2.0 { return Game.get("offer_2", -1.0); }
+        return Game.get("offer_3", -1.0);
+    }
+
+    fn apply(index: f32) {
+        let id = Profiles.number_at(this.catalog, "modules", index, "id", -1.0);
+        var effect: f32 = 0.0;
+        let count = Profiles.count(this.catalog, "effects");
+        while effect < count {
+            if Profiles.number_at(this.catalog, "effects", effect, "module_id", -2.0) == id {
+                apply_effect(effect);
+            }
+            effect += 1.0;
+        }
+    }
+
+    fn apply_effect(index: f32) {
+        let operation = Profiles.text_at(this.catalog, "effects", index, "operation", "");
+        let key = Profiles.text_at(this.catalog, "effects", index, "key", "");
+        let value = Profiles.number_at(this.catalog, "effects", index, "value", 0.0);
+        if operation == "add" { Game.set(key, Game.get(key, 0.0) + value); }
+        else if operation == "multiply" { Game.set(key, Game.get(key, 1.0) * value); }
+        else if operation == "set" { Game.set(key, value); }
+        else if operation == "heal" {
+            Game.set(key, min(Game.get("max_hp", 5.0), Game.get(key, 5.0) + value));
+        }
+    }
+}

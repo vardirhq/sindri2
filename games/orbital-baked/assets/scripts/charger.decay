@@ -1,0 +1,144 @@
+// Closes to a distance, broadcasts its intent, then turns into a neon missile.
+script Charger {
+    @export let health: f32 = 3.0;
+    @export let worth: f32 = 2.0;
+    @export let approach: f32 = 1.2;
+    @export let wind_up: f32 = 0.75;
+    @export let dash_speed: f32 = 9.5;
+    @export let rest: f32 = 1.1;
+    @export let touch_damage: f32 = 1.0;
+    @export let elite: f32 = 0.0;
+    @export let elite_trait: f32 = 0.0;
+    @export let view_size: f32 = 11.0;
+    @export let hazard_damage: f32 = 0.0;
+    @export let core: Prefab;
+    @export let death_burst: Prefab;
+    @export let drop_roll: Prefab;
+    @export let elite_shell: Prefab;
+    @export let elite_ring: Prefab;
+
+    var hp: f32 = 0.0;
+    var death_burst_damage: f32 = 0.0;
+    var phase: f32 = 0.0;
+    var timer: f32 = 0.0;
+    var dash_x: f32 = 0.0;
+    var dash_y: f32 = 0.0;
+    var visual_time: f32 = 0.0;
+    var visual_phase: f32 = 0.0;
+
+    fn start() {
+        let late = max(0.0, Game.get("elapsed", 0.0) - 180.0);
+        this.hp = this.health * (1.0 + late * 0.0014);
+        this.visual_phase = Random.range(0.0, 6.2831853);
+        this.transform.rotation_z = this.visual_phase; this.sprite.tint.a = 0.92;
+        this.sprite.tint.r = 1.0; this.sprite.tint.g = 0.88; this.sprite.tint.b = 0.53;
+        tint_elite();
+        spawn_elite_visuals();
+    }
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 1.0 { Physics.set_velocity(this.entity, 0.0, 0.0); return; }
+        this.visual_time += dt;
+        animate_body();
+        tint_elite();
+        if this.hazard_damage > 0.0 {
+            this.hp -= this.hazard_damage; this.hazard_damage = 0.0;
+            if this.hp <= 0.0 { die(); return; }
+        }
+        let player = World.find("Player");
+        if player == null { return; }
+        let dx = player.transform.position.x - this.transform.position.x;
+        let dy = player.transform.position.y - this.transform.position.y;
+        let far = sqrt(dx * dx + dy * dy);
+        let visible = is_visible();
+        if this.phase != 0.0 && !visible { this.phase = 0.0; }
+
+        if this.phase == 0.0 {
+            if far > 0.001 { Physics.set_velocity(this.entity, dx / far * this.approach, dy / far * this.approach); }
+            if far < 5.0 && visible { this.phase = 1.0; this.timer = this.wind_up; }
+        } else if this.phase == 1.0 {
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+            this.timer -= dt;
+            let charge = 1.0 - max(0.0, this.timer) / max(0.01, this.wind_up);
+            this.sprite.tint.r = 1.0;
+            this.sprite.tint.g = 0.22 + charge * 0.78;
+            this.sprite.tint.a = 0.35 + charge * 0.58;
+            this.transform.scale.x = 0.38 * (1.0 + charge * 0.22);
+            this.transform.scale.y = 0.38 * (1.0 + charge * 0.22);
+            if this.timer <= 0.0 {
+                this.phase = 2.0; this.timer = 0.55;
+                Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.16));
+                if far > 0.001 { this.dash_x = dx / far; this.dash_y = dy / far; }
+            }
+        } else {
+            this.sprite.tint.g = 1.0;
+            this.sprite.tint.a = 1.0;
+            Physics.set_velocity(this.entity, this.dash_x * this.dash_speed, this.dash_y * this.dash_speed);
+            this.timer -= dt;
+            if this.timer <= 0.0 { this.phase = 0.0; this.timer = this.rest; }
+        }
+
+        for hit in Physics.sensor_entered() {
+            if hit == player {
+                Game.set("player_damage_taken", max(Game.get("player_damage_taken", 0.0), this.touch_damage));
+                continue;
+            }
+            if !World.exists(hit) { continue; }
+            if this.hp > 0.0 {
+                let damage = damage_from(hit); this.hp -= damage;
+                if this.hp <= 0.0 && World.property_number(hit, "nova", 0.0) > 0.0 { this.death_burst_damage = damage * 0.3; }
+            }
+        }
+        if this.hp <= 0.0 { die(); }
+    }
+
+    fn animate_body() {
+        let pulse = 0.5 + 0.5 * sin(this.visual_time * 8.0 + this.visual_phase);
+        this.transform.rotation_z = this.visual_phase + this.visual_time * (if_number(this.phase == 2.0) * 7.0 + 0.8);
+        if this.phase == 0.0 {
+            this.transform.scale.x = 0.38 * (0.94 + pulse * 0.10);
+            this.transform.scale.y = 0.38 * (0.94 + pulse * 0.10);
+            this.sprite.tint.a = 0.62 + pulse * 0.25;
+        }
+    }
+
+    fn is_visible() -> bool {
+        let aspect = max(Viewport.aspect, 0.001);
+        var half_x: f32 = this.view_size * 0.5; var half_y: f32 = this.view_size * 0.5;
+        if aspect >= 1.0 { half_x *= aspect; } else { half_y /= aspect; }
+        let radius = max(abs(this.transform.scale.x), abs(this.transform.scale.y)) * 0.5;
+        return this.transform.position.x + radius >= -half_x && this.transform.position.x - radius <= half_x && this.transform.position.y + radius >= -half_y && this.transform.position.y - radius <= half_y;
+    }
+
+    fn damage_from(hit: Entity) -> f32 { if World.has_tag(hit, "player_damage") { return World.property_number(hit, "damage", 0.0); } return 0.0; }
+
+    fn spawn_elite_visuals() {
+        if this.elite <= 0.0 { return; }
+        let shell = World.spawn(this.elite_shell); World.set_property(shell, "sides", 3.0); World.set_property(shell, "trait", this.elite_trait); World.set_parent(shell, this.entity);
+        let ring = World.spawn(this.elite_ring); World.set_property(ring, "sides", 3.0); World.set_property(ring, "trait", this.elite_trait); World.set_parent(ring, this.entity);
+    }
+
+    fn tint_elite() {
+        if this.elite <= 0.0 { return; }
+        if this.elite_trait == 0.0 { elite_color(1.0, 0.91, 0.58); }
+        else if this.elite_trait == 1.0 { elite_color(1.0, 0.42, 0.45); }
+        else if this.elite_trait == 2.0 { elite_color(1.0, 0.69, 0.31); }
+        else if this.elite_trait == 3.0 { elite_color(0.84, 0.49, 1.0); }
+        else { elite_color(0.45, 1.0, 0.82); }
+    }
+
+    fn elite_color(r: f32, g: f32, b: f32) { this.sprite.tint.r = r; this.sprite.tint.g = g; this.sprite.tint.b = b; this.sprite.tint.a = max(this.sprite.tint.a, 0.24); }
+
+    fn die() {
+        burst_on_death(); Effects.burst(this.entity); Audio.play("audio/kill.wav", 0.3);
+        Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.12));
+        Game.set("kills", Game.get("kills", 0.0) + 1.0); Game.set("score", Game.get("score", 0.0) + this.worth * 10.0);
+        let drop = World.spawn(this.core); drop.transform.position.x = this.transform.position.x; drop.transform.position.y = this.transform.position.y; World.set_property(drop, "worth", this.worth);
+        let roll = World.spawn(this.drop_roll); roll.transform.position.x = this.transform.position.x; roll.transform.position.y = this.transform.position.y; World.set_property(roll, "elite", this.elite);
+        World.despawn(this.entity);
+    }
+
+    fn burst_on_death() { if this.death_burst_damage <= 0.0 { return; } let wave = World.spawn(this.death_burst); wave.transform.position.x = this.transform.position.x; wave.transform.position.y = this.transform.position.y; World.set_property(wave, "damage", this.death_burst_damage); }
+
+    fn if_number(value: bool) -> f32 { if value { return 1.0; } return 0.0; }
+}

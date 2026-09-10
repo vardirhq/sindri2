@@ -1,0 +1,1364 @@
+{
+  "format_version": 1,
+  "id": "charger",
+  "texture": "textures/charger.png",
+  "view": "top-down",
+  "pixels_per_unit": 128,
+  "directions": 1,
+  "render": {
+    "supersample": 4,
+    "padding": 2,
+    "palette_snap": true,
+    "alpha_cutoff": 128,
+    "outline": {
+      "enabled": true,
+      "colour": "#0a1018"
+    },
+    "shading": {
+      "light": [
+        -0.42,
+        0.8,
+        0.43
+      ],
+      "thresholds": [
+        0.26,
+        0.52,
+        0.8
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "body-0",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "plate": {
+            "colour": "#ff2511"
+          },
+          "lit": {
+            "colour": "#ff7a4d"
+          },
+          "dark": {
+            "colour": "#a81405"
+          },
+          "deep": {
+            "colour": "#5c0900"
+          },
+          "hot": {
+            "colour": "#ffd154"
+          },
+          "burn": {
+            "colour": "#fff0c2"
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0,
+              0.11,
+              -0.42
+            ],
+            "size": [
+              0.14,
+              0.18,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0,
+              0.11,
+              -0.28
+            ],
+            "size": [
+              0.25,
+              0.2,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plate",
+            "position": [
+              0,
+              0.11,
+              -0.14
+            ],
+            "size": [
+              0.37,
+              0.22,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plate",
+            "position": [
+              0,
+              0.11,
+              0.0
+            ],
+            "size": [
+              0.49,
+              0.23,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plate",
+            "position": [
+              0,
+              0.11,
+              0.14
+            ],
+            "size": [
+              0.45,
+              0.2,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "dark",
+            "position": [
+              0,
+              0.11,
+              0.26
+            ],
+            "size": [
+              0.3,
+              0.17,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0,
+              0.16,
+              -0.52
+            ],
+            "size": [
+              0.075,
+              0.11,
+              0.2
+            ]
+          },
+          {
+            "type": "box",
+            "material": "dark",
+            "position": [
+              0,
+              0.24,
+              -0.08
+            ],
+            "size": [
+              0.075,
+              0.06,
+              0.34
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0,
+              0.26,
+              -0.3
+            ],
+            "size": [
+              0.05,
+              0.05,
+              0.12
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plate",
+            "position": [
+              -0.34,
+              0.1,
+              0.1
+            ],
+            "size": [
+              0.4,
+              0.12,
+              0.19
+            ],
+            "rotation": [
+              0,
+              0.72,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              -0.55,
+              0.08,
+              0.24
+            ],
+            "size": [
+              0.22,
+              0.1,
+              0.13
+            ],
+            "rotation": [
+              0,
+              0.95,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.3,
+              0.14,
+              0.02
+            ],
+            "size": [
+              0.26,
+              0.08,
+              0.07
+            ],
+            "rotation": [
+              0,
+              0.72,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              -0.13,
+              0.19,
+              0.32
+            ],
+            "radius": 0.0797,
+            "height": 0.07,
+            "segments": 18,
+            "radius_top": 0.03
+          },
+          {
+            "type": "cylinder",
+            "material": "burn",
+            "position": [
+              -0.13,
+              0.23,
+              0.4093
+            ],
+            "radius": 0.045,
+            "height": 0.05,
+            "segments": 18,
+            "radius_top": 0.015
+          },
+          {
+            "type": "box",
+            "material": "plate",
+            "position": [
+              0.34,
+              0.1,
+              0.1
+            ],
+            "size": [
+              0.4,
+              0.12,
+              0.19
+            ],
+            "rotation": [
+              0,
+              -0.72,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0.55,
+              0.08,
+              0.24
+            ],
+            "size": [
+              0.22,
+              0.1,
+              0.13
+            ],
+            "rotation": [
+              0,
+              -0.95,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.3,
+              0.14,
+              0.02
+            ],
+            "size": [
+              0.26,
+              0.08,
+              0.07
+            ],
+            "rotation": [
+              0,
+              -0.72,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0.13,
+              0.19,
+              0.32
+            ],
+            "radius": 0.0797,
+            "height": 0.07,
+            "segments": 18,
+            "radius_top": 0.03
+          },
+          {
+            "type": "cylinder",
+            "material": "burn",
+            "position": [
+              0.13,
+              0.23,
+              0.4093
+            ],
+            "radius": 0.045,
+            "height": 0.05,
+            "segments": 18,
+            "radius_top": 0.015
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0,
+              0.22,
+              -0.18
+            ],
+            "radius": 0.07,
+            "height": 0.08,
+            "segments": 18,
+            "radius_top": 0.04
+          }
+        ]
+      }
+    },
+    {
+      "name": "body-1",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "plate": {
+            "colour": "#ff2511"
+          },
+          "lit": {
+            "colour": "#ff7a4d"
+          },
+          "dark": {
+            "colour": "#a81405"
+          },
+          "deep": {
+            "colour": "#5c0900"
+          },
+          "hot": {
+            "colour": "#ffd154"
+          },
+          "burn": {
+            "colour": "#fff0c2"
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0,
+              0.11,
+              -0.42
+            ],
+            "size": [
+              0.14,
+              0.18,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0,
+              0.11,
+              -0.28
+            ],
+            "size": [
+              0.25,
+              0.2,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plate",
+            "position": [
+              0,
+              0.11,
+              -0.14
+            ],
+            "size": [
+              0.37,
+              0.22,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plate",
+            "position": [
+              0,
+              0.11,
+              0.0
+            ],
+            "size": [
+              0.49,
+              0.23,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plate",
+            "position": [
+              0,
+              0.11,
+              0.14
+            ],
+            "size": [
+              0.45,
+              0.2,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "dark",
+            "position": [
+              0,
+              0.11,
+              0.26
+            ],
+            "size": [
+              0.3,
+              0.17,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0,
+              0.16,
+              -0.52
+            ],
+            "size": [
+              0.075,
+              0.11,
+              0.2
+            ]
+          },
+          {
+            "type": "box",
+            "material": "dark",
+            "position": [
+              0,
+              0.24,
+              -0.08
+            ],
+            "size": [
+              0.075,
+              0.06,
+              0.34
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0,
+              0.26,
+              -0.3
+            ],
+            "size": [
+              0.05,
+              0.05,
+              0.12
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plate",
+            "position": [
+              -0.34,
+              0.1,
+              0.1
+            ],
+            "size": [
+              0.4,
+              0.12,
+              0.19
+            ],
+            "rotation": [
+              0,
+              0.72,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              -0.55,
+              0.08,
+              0.24
+            ],
+            "size": [
+              0.22,
+              0.1,
+              0.13
+            ],
+            "rotation": [
+              0,
+              0.95,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.3,
+              0.14,
+              0.02
+            ],
+            "size": [
+              0.26,
+              0.08,
+              0.07
+            ],
+            "rotation": [
+              0,
+              0.72,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              -0.13,
+              0.19,
+              0.32
+            ],
+            "radius": 0.0815,
+            "height": 0.07,
+            "segments": 18,
+            "radius_top": 0.03
+          },
+          {
+            "type": "cylinder",
+            "material": "burn",
+            "position": [
+              -0.13,
+              0.23,
+              0.4129
+            ],
+            "radius": 0.0467,
+            "height": 0.05,
+            "segments": 18,
+            "radius_top": 0.015
+          },
+          {
+            "type": "box",
+            "material": "plate",
+            "position": [
+              0.34,
+              0.1,
+              0.1
+            ],
+            "size": [
+              0.4,
+              0.12,
+              0.19
+            ],
+            "rotation": [
+              0,
+              -0.72,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0.55,
+              0.08,
+              0.24
+            ],
+            "size": [
+              0.22,
+              0.1,
+              0.13
+            ],
+            "rotation": [
+              0,
+              -0.95,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.3,
+              0.14,
+              0.02
+            ],
+            "size": [
+              0.26,
+              0.08,
+              0.07
+            ],
+            "rotation": [
+              0,
+              -0.72,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0.13,
+              0.19,
+              0.32
+            ],
+            "radius": 0.0815,
+            "height": 0.07,
+            "segments": 18,
+            "radius_top": 0.03
+          },
+          {
+            "type": "cylinder",
+            "material": "burn",
+            "position": [
+              0.13,
+              0.23,
+              0.4129
+            ],
+            "radius": 0.0467,
+            "height": 0.05,
+            "segments": 18,
+            "radius_top": 0.015
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0,
+              0.22,
+              -0.18
+            ],
+            "radius": 0.085,
+            "height": 0.08,
+            "segments": 18,
+            "radius_top": 0.04
+          }
+        ]
+      }
+    },
+    {
+      "name": "body-2",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "plate": {
+            "colour": "#ff2511"
+          },
+          "lit": {
+            "colour": "#ff7a4d"
+          },
+          "dark": {
+            "colour": "#a81405"
+          },
+          "deep": {
+            "colour": "#5c0900"
+          },
+          "hot": {
+            "colour": "#ffd154"
+          },
+          "burn": {
+            "colour": "#fff0c2"
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0,
+              0.11,
+              -0.42
+            ],
+            "size": [
+              0.14,
+              0.18,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0,
+              0.11,
+              -0.28
+            ],
+            "size": [
+              0.25,
+              0.2,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plate",
+            "position": [
+              0,
+              0.11,
+              -0.14
+            ],
+            "size": [
+              0.37,
+              0.22,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plate",
+            "position": [
+              0,
+              0.11,
+              0.0
+            ],
+            "size": [
+              0.49,
+              0.23,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plate",
+            "position": [
+              0,
+              0.11,
+              0.14
+            ],
+            "size": [
+              0.45,
+              0.2,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "dark",
+            "position": [
+              0,
+              0.11,
+              0.26
+            ],
+            "size": [
+              0.3,
+              0.17,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0,
+              0.16,
+              -0.52
+            ],
+            "size": [
+              0.075,
+              0.11,
+              0.2
+            ]
+          },
+          {
+            "type": "box",
+            "material": "dark",
+            "position": [
+              0,
+              0.24,
+              -0.08
+            ],
+            "size": [
+              0.075,
+              0.06,
+              0.34
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0,
+              0.26,
+              -0.3
+            ],
+            "size": [
+              0.05,
+              0.05,
+              0.12
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plate",
+            "position": [
+              -0.34,
+              0.1,
+              0.1
+            ],
+            "size": [
+              0.4,
+              0.12,
+              0.19
+            ],
+            "rotation": [
+              0,
+              0.72,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              -0.55,
+              0.08,
+              0.24
+            ],
+            "size": [
+              0.22,
+              0.1,
+              0.13
+            ],
+            "rotation": [
+              0,
+              0.95,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.3,
+              0.14,
+              0.02
+            ],
+            "size": [
+              0.26,
+              0.08,
+              0.07
+            ],
+            "rotation": [
+              0,
+              0.72,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              -0.13,
+              0.19,
+              0.32
+            ],
+            "radius": 0.0603,
+            "height": 0.07,
+            "segments": 18,
+            "radius_top": 0.03
+          },
+          {
+            "type": "cylinder",
+            "material": "burn",
+            "position": [
+              -0.13,
+              0.23,
+              0.3707
+            ],
+            "radius": 0.027,
+            "height": 0.05,
+            "segments": 18,
+            "radius_top": 0.015
+          },
+          {
+            "type": "box",
+            "material": "plate",
+            "position": [
+              0.34,
+              0.1,
+              0.1
+            ],
+            "size": [
+              0.4,
+              0.12,
+              0.19
+            ],
+            "rotation": [
+              0,
+              -0.72,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0.55,
+              0.08,
+              0.24
+            ],
+            "size": [
+              0.22,
+              0.1,
+              0.13
+            ],
+            "rotation": [
+              0,
+              -0.95,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.3,
+              0.14,
+              0.02
+            ],
+            "size": [
+              0.26,
+              0.08,
+              0.07
+            ],
+            "rotation": [
+              0,
+              -0.72,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0.13,
+              0.19,
+              0.32
+            ],
+            "radius": 0.0603,
+            "height": 0.07,
+            "segments": 18,
+            "radius_top": 0.03
+          },
+          {
+            "type": "cylinder",
+            "material": "burn",
+            "position": [
+              0.13,
+              0.23,
+              0.3707
+            ],
+            "radius": 0.027,
+            "height": 0.05,
+            "segments": 18,
+            "radius_top": 0.015
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0,
+              0.22,
+              -0.18
+            ],
+            "radius": 0.07,
+            "height": 0.08,
+            "segments": 18,
+            "radius_top": 0.04
+          }
+        ]
+      }
+    },
+    {
+      "name": "body-3",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "plate": {
+            "colour": "#ff2511"
+          },
+          "lit": {
+            "colour": "#ff7a4d"
+          },
+          "dark": {
+            "colour": "#a81405"
+          },
+          "deep": {
+            "colour": "#5c0900"
+          },
+          "hot": {
+            "colour": "#ffd154"
+          },
+          "burn": {
+            "colour": "#fff0c2"
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0,
+              0.11,
+              -0.42
+            ],
+            "size": [
+              0.14,
+              0.18,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0,
+              0.11,
+              -0.28
+            ],
+            "size": [
+              0.25,
+              0.2,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plate",
+            "position": [
+              0,
+              0.11,
+              -0.14
+            ],
+            "size": [
+              0.37,
+              0.22,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plate",
+            "position": [
+              0,
+              0.11,
+              0.0
+            ],
+            "size": [
+              0.49,
+              0.23,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plate",
+            "position": [
+              0,
+              0.11,
+              0.14
+            ],
+            "size": [
+              0.45,
+              0.2,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "dark",
+            "position": [
+              0,
+              0.11,
+              0.26
+            ],
+            "size": [
+              0.3,
+              0.17,
+              0.21
+            ]
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0,
+              0.16,
+              -0.52
+            ],
+            "size": [
+              0.075,
+              0.11,
+              0.2
+            ]
+          },
+          {
+            "type": "box",
+            "material": "dark",
+            "position": [
+              0,
+              0.24,
+              -0.08
+            ],
+            "size": [
+              0.075,
+              0.06,
+              0.34
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0,
+              0.26,
+              -0.3
+            ],
+            "size": [
+              0.05,
+              0.05,
+              0.12
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plate",
+            "position": [
+              -0.34,
+              0.1,
+              0.1
+            ],
+            "size": [
+              0.4,
+              0.12,
+              0.19
+            ],
+            "rotation": [
+              0,
+              0.72,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              -0.55,
+              0.08,
+              0.24
+            ],
+            "size": [
+              0.22,
+              0.1,
+              0.13
+            ],
+            "rotation": [
+              0,
+              0.95,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.3,
+              0.14,
+              0.02
+            ],
+            "size": [
+              0.26,
+              0.08,
+              0.07
+            ],
+            "rotation": [
+              0,
+              0.72,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              -0.13,
+              0.19,
+              0.32
+            ],
+            "radius": 0.0585,
+            "height": 0.07,
+            "segments": 18,
+            "radius_top": 0.03
+          },
+          {
+            "type": "cylinder",
+            "material": "burn",
+            "position": [
+              -0.13,
+              0.23,
+              0.3671
+            ],
+            "radius": 0.0253,
+            "height": 0.05,
+            "segments": 18,
+            "radius_top": 0.015
+          },
+          {
+            "type": "box",
+            "material": "plate",
+            "position": [
+              0.34,
+              0.1,
+              0.1
+            ],
+            "size": [
+              0.4,
+              0.12,
+              0.19
+            ],
+            "rotation": [
+              0,
+              -0.72,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "deep",
+            "position": [
+              0.55,
+              0.08,
+              0.24
+            ],
+            "size": [
+              0.22,
+              0.1,
+              0.13
+            ],
+            "rotation": [
+              0,
+              -0.95,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.3,
+              0.14,
+              0.02
+            ],
+            "size": [
+              0.26,
+              0.08,
+              0.07
+            ],
+            "rotation": [
+              0,
+              -0.72,
+              0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0.13,
+              0.19,
+              0.32
+            ],
+            "radius": 0.0585,
+            "height": 0.07,
+            "segments": 18,
+            "radius_top": 0.03
+          },
+          {
+            "type": "cylinder",
+            "material": "burn",
+            "position": [
+              0.13,
+              0.23,
+              0.3671
+            ],
+            "radius": 0.0253,
+            "height": 0.05,
+            "segments": 18,
+            "radius_top": 0.015
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0,
+              0.22,
+              -0.18
+            ],
+            "radius": 0.055,
+            "height": 0.08,
+            "segments": 18,
+            "radius_top": 0.04
+          }
+        ]
+      }
+    }
+  ]
+}

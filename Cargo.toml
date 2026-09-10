@@ -20,6 +20,7 @@ members = [
     "examples/cube",
     "game",
     "games/orbital-last-stand",
+    "games/orbital-baked",
     "games/weave-poc",
 ]
 # Decay and Weave are their own workspaces, and a path dependency alone does not

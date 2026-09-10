@@ -1,0 +1,27 @@
+// One pressable thing, and the one number it leaves on the board when pressed.
+//
+// A button that ran game logic would be a button that had to know the game.
+// This one says only that it was pressed, and the director decides what that
+// means — which is why the same script is start, resume, and play again.
+script Button {
+    /// Which board value to set, chosen by the scene:
+    ///   0  start a run          2  resume from pause
+    ///   1  quit to the title    3  give up
+    @export let action: f32 = 0.0;
+
+    fn update(dt: f32) {
+        if !Ui.is_pressed(this.entity) {
+            return;
+        }
+        Audio.play("audio/click.wav", 0.3);
+        if this.action == 0.0 {
+            Game.set("request_start", 1.0);
+        } else if this.action == 1.0 {
+            Game.set("run_state", 0.0);
+        } else if this.action == 2.0 {
+            Game.set("run_state", 1.0);
+        } else {
+            Game.set("hp", 0.0);
+        }
+    }
+}

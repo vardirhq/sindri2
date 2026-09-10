@@ -1,0 +1,174 @@
+.hud-text {
+    color: #dbeafe;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.hud-clock {
+    width: 280px;
+    height: 52px;
+    x: 0px;
+    y: -34px;
+    anchor: top;
+    color: #f8fafc;
+    font-size: 40px;
+    line-height: 44px;
+    letter-spacing: 4px;
+    text-align: center;
+}
+
+.hud-stat {
+    width: 220px;
+    height: 26px;
+    font-size: 18px;
+    line-height: 22px;
+    letter-spacing: 2px;
+}
+
+.hud-wave {
+    x: 28px;
+    y: -34px;
+    anchor: top_left;
+    color: #6ee7b7;
+    text-align: start;
+}
+
+.hud-level {
+    x: -28px;
+    y: -34px;
+    anchor: top_right;
+    color: #6ee7b7;
+    text-align: end;
+}
+
+.hud-score {
+    x: -28px;
+    y: -68px;
+    anchor: top_right;
+    color: #cbd5e1;
+    text-align: end;
+}
+
+.hud-player-meter {
+    width: 360px;
+    x: 28px;
+    anchor: bottom_left;
+}
+
+.health-meter {
+    height: 22px;
+    y: 42px;
+}
+
+.cores-meter {
+    height: 9px;
+    y: 22px;
+}
+
+.hud-health-label {
+    width: 360px;
+    height: 24px;
+    x: 28px;
+    y: 76px;
+    anchor: bottom_left;
+    color: #f8fafc;
+    font-size: 16px;
+    line-height: 20px;
+    letter-spacing: 2px;
+    text-align: start;
+}
+
+.hud-boss-name {
+    width: 520px;
+    height: 26px;
+    x: 0px;
+    y: -108px;
+    anchor: top;
+    color: #fb7185;
+    font-size: 18px;
+    line-height: 22px;
+    letter-spacing: 5px;
+    text-align: center;
+}
+
+.hud-boss-meter {
+    width: 520px;
+    height: 18px;
+    x: 0px;
+    y: -140px;
+    anchor: top;
+}
+
+@media (max-width: 700px) {
+    .hud-clock {
+        width: 44vw;
+        height: 11vw;
+        y: -5vw;
+        font-size: 7vw;
+        line-height: 9vw;
+        letter-spacing: 0.8vw;
+    }
+
+    .hud-stat {
+        width: 38vw;
+        height: 6vw;
+        font-size: 3.4vw;
+        line-height: 4.5vw;
+        letter-spacing: 0.35vw;
+    }
+
+    .hud-wave {
+        x: 4vw;
+        y: -6vw;
+    }
+
+    .hud-level {
+        x: -4vw;
+        y: -6vw;
+    }
+
+    .hud-score {
+        x: -4vw;
+        y: -13vw;
+    }
+
+    .hud-player-meter {
+        width: 70vw;
+        x: 4vw;
+    }
+
+    .health-meter {
+        height: 4.5vw;
+        y: 8vw;
+    }
+
+    .cores-meter {
+        height: 2vw;
+        y: 4vw;
+    }
+
+    .hud-health-label {
+        width: 70vw;
+        height: 5vw;
+        x: 4vw;
+        y: 15vw;
+        font-size: 3.3vw;
+        line-height: 4.2vw;
+        letter-spacing: 0.35vw;
+    }
+
+    .hud-boss-name {
+        width: 82vw;
+        height: 6vw;
+        y: -19vw;
+        font-size: 3.6vw;
+        line-height: 4.8vw;
+        letter-spacing: 0.8vw;
+    }
+
+    .hud-boss-meter {
+        width: 82vw;
+        height: 3.5vw;
+        y: -26vw;
+    }
+}

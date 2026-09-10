@@ -1,0 +1,257 @@
+.title-panel {
+    width: 780px;
+    height: 620px;
+    x: 0px;
+    y: 10px;
+    anchor: center;
+    background: #07101f;
+    border-color: #26364d;
+    border-width: 2px;
+    border-radius: 28px;
+}
+
+.title-logo {
+    width: 620px;
+    height: 310px;
+    x: 0px;
+    y: 145px;
+    anchor: center;
+}
+
+.title-meta {
+    width: 500px;
+    height: 28px;
+    x: 0px;
+    y: -22px;
+    anchor: center;
+    color: #94a3b8;
+    font-size: 18px;
+    line-height: 22px;
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+}
+
+.title-action {
+    width: 520px;
+    height: 68px;
+    x: 0px;
+    y: -130px;
+    anchor: center;
+    border-width: 2px;
+    border-radius: 16px;
+}
+
+.title-action-label {
+    width: 480px;
+    height: 30px;
+    x: 0px;
+    y: -130px;
+    anchor: center;
+    font-size: 22px;
+    line-height: 26px;
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+}
+
+.title-copy {
+    width: 620px;
+    height: 58px;
+    x: 0px;
+    y: -225px;
+    anchor: center;
+    color: #94a3b8;
+    font-size: 16px;
+    line-height: 22px;
+    text-align: center;
+    text-wrap: word;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.title-notice {
+    y: -62px;
+    color: #fda4af;
+}
+
+.upgrade-panel {
+    width: 1080px;
+    height: 640px;
+    x: 0px;
+    y: 0px;
+    anchor: center;
+    background: #07101f;
+    border-color: #26364d;
+    border-width: 2px;
+    border-radius: 28px;
+}
+
+.upgrade-heading {
+    width: 900px;
+    height: 58px;
+    x: 0px;
+    y: 250px;
+    anchor: center;
+    color: #f8fafc;
+    font-size: 38px;
+    line-height: 44px;
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+}
+
+.upgrade-grid {
+    width: 980px;
+    height: 360px;
+    x: 0px;
+    y: -20px;
+    direction: row;
+    gap: 20px;
+    justify-content: center;
+    align-items: center;
+}
+
+.upgrade-card {
+    width: 300px;
+    height: 290px;
+    background: #0d192a;
+    border-color: #3b4a63;
+    border-width: 2px;
+    border-radius: 20px;
+}
+
+.upgrade-card-name {
+    width: 86%;
+    height: 64px;
+    x: 0px;
+    y: 46px;
+    anchor: center;
+    color: #f8fafc;
+    font-size: 22px;
+    line-height: 27px;
+    font-weight: 700;
+    text-align: center;
+    text-wrap: word;
+    letter-spacing: 1px;
+}
+
+.upgrade-card-copy {
+    width: 82%;
+    height: 76px;
+    x: 0px;
+    y: -48px;
+    anchor: center;
+    color: #94a3b8;
+    font-size: 16px;
+    line-height: 22px;
+    text-align: center;
+    text-wrap: word;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+@media (orientation: portrait) {
+    .title-panel {
+        width: 92vw;
+        height: 142vw;
+        border-radius: 5vw;
+    }
+
+    .title-logo {
+        width: 82vw;
+        height: 41vw;
+        y: 34vw;
+    }
+
+    .title-meta {
+        width: 78vw;
+        height: 6vw;
+        y: 4vw;
+        font-size: 4vw;
+        line-height: 5vw;
+        letter-spacing: 0.6vw;
+    }
+
+    .title-action {
+        width: 78vw;
+        height: 14vw;
+        y: -24vw;
+        border-radius: 3.5vw;
+    }
+
+    .title-action-label {
+        width: 72vw;
+        height: 6vw;
+        y: -24vw;
+        font-size: 4.8vw;
+        line-height: 6vw;
+        letter-spacing: 0.6vw;
+    }
+
+    .title-copy {
+        width: 78vw;
+        height: 18vw;
+        y: -51vw;
+        font-size: 3.3vw;
+        line-height: 4.6vw;
+        letter-spacing: 0.3vw;
+    }
+
+    .title-notice {
+        y: -10vw;
+        color: #fda4af;
+    }
+
+    .upgrade-panel {
+        width: 92vw;
+        height: 176vw;
+        border-radius: 5vw;
+    }
+
+    .upgrade-heading {
+        width: 80vw;
+        height: 12vw;
+        y: 74vw;
+        font-size: 7vw;
+        line-height: 9vw;
+        letter-spacing: 0.7vw;
+    }
+
+    .upgrade-grid {
+        width: 80vw;
+        height: 126vw;
+        y: -5vw;
+        direction: column;
+        gap: 3vw;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .upgrade-card {
+        width: 100%;
+        height: 34vw;
+        border-radius: 4vw;
+    }
+
+    .upgrade-card-name {
+        width: 86%;
+        height: 9vw;
+        y: 7vw;
+        font-size: 4.8vw;
+        line-height: 6vw;
+        letter-spacing: 0.25vw;
+    }
+
+    .upgrade-card-copy {
+        width: 84%;
+        height: 11vw;
+        y: -7vw;
+        font-size: 3.3vw;
+        line-height: 4.5vw;
+        letter-spacing: 0.2vw;
+    }
+}
