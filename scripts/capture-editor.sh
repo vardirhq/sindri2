@@ -13,6 +13,14 @@ mkdir -p "$output_dir"
 # scene is of interest, and passing none photographs the one this always did.
 scene=${2:-examples/cube/assets/demo.scene.json}
 
+# Built before it is launched, so the wait below times the editor starting up
+# rather than rustc. The loop that follows gives the window thirty seconds to
+# appear, and when `cargo run` compiles it is that budget being spent on the
+# build: the failure is then "window did not appear", which describes the window
+# accurately and the problem not at all. A build here is a fraction of a second
+# once the binary exists.
+cargo build --package sindri-editor
+
 cargo run --package sindri-editor -- "$scene" &
 editor_pid=$!
 window_id=""

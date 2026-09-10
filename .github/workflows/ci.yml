@@ -136,6 +136,23 @@ jobs:
       # The captures stay in this job rather than a parallel one of their own:
       # they run the same crates the tests just built, and a separate job would
       # spend longer recompiling them than the captures take.
+      #
+      # The editor is built in its own step first, because `cargo run` otherwise
+      # compiles inside the capture's own budget. `capture-editor.sh` waits
+      # thirty seconds for a window to appear, and that had been spent waiting
+      # for rustc rather than for the editor: the capture failed with "window
+      # did not appear" while the editor was still being linked, which is a true
+      # statement about a window and a useless one about what went wrong. It had
+      # been passing with about a second to spare, so any change to what the
+      # cache already holds decides it.
+      #
+      # One `cargo build` for the one package, matching how the script runs it.
+      # Building several packages in a single invocation unifies their features,
+      # which resolves differently from `cargo run --package sindri-editor` on
+      # its own -- the artifacts then do not match what the run wants and it
+      # compiles them again, which is the whole of what this avoids.
+      - name: Build the editor the capture runs
+        run: cargo build --package sindri-editor
       - name: Capture native editor runtime viewport
         env:
           WGPU_BACKEND: vulkan
