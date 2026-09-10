@@ -42,11 +42,19 @@ pub const WEAVE_SOURCES: &[(&str, &str)] = &[
 
 /// Every texture Gather draws, by ID.
 ///
-/// The browser fetches these; the native build embeds the bytes in `TEXTURES`.
-/// Both targets need the same set, so the list is not behind a `cfg` — a
-/// texture added to one and not the other is a game that looks right on one
-/// target and wrong on the other, with nothing failing, and a native test
-/// compares the two.
+/// The native build embeds the bytes in `TEXTURES`; this is the same set as
+/// IDs, and `the_browser_fetches_every_texture_the_native_build_embeds` asserts
+/// the two agree — a texture added to one and not the other is a game that
+/// looks right on one target and wrong on the other, with nothing failing.
+///
+/// Native-only, and the `cfg` is the point rather than an accident. The browser
+/// takes its textures from the project manifest, which is what lets one host
+/// serve any project; it does not read this list and must not, because a list
+/// of one game's textures compiled into a generic host is a list that is wrong
+/// for every other game. It did read this list once, to decide which textures
+/// got their sprite sheets, and every project that was not Gather silently got
+/// none.
+#[cfg(not(target_arch = "wasm32"))]
 pub const TEXTURE_IDS: &[&str] = &[
     "textures/tiles.png",
     "textures/orb.png",

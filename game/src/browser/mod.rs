@@ -22,7 +22,7 @@ use sindri_scene::{CameraView, SceneExtractor, SceneRuntime, TextureBindings};
 use weave::{Stylesheet, Viewport as WeaveViewport};
 
 use self::loader::{BrowserProjectAssets, BrowserProjectLoader};
-use crate::assets::{TEXTURE_IDS, extractor, presented_world};
+use crate::assets::{extractor, presented_world};
 use crate::error::GatherError;
 use crate::session::Session;
 
@@ -81,6 +81,7 @@ impl BrowserGatherApp {
         context: &AppContext<'_>,
         project: BrowserProjectAssets,
     ) -> Result<(), GatherError> {
+        let mut loaded: Vec<AssetId> = Vec::new();
         for (id, asset) in project.textures {
             let texture = Texture2D::from_rgba8(
                 context.device(),
@@ -92,10 +93,19 @@ impl BrowserGatherApp {
             )?;
             self.bindings
                 .bind(id.as_str(), self.textures.insert(texture));
+            loaded.push(id);
         }
 
-        for texture_id in TEXTURE_IDS {
-            let texture_id = AssetId::new(*texture_id)?;
+        // Every texture this project actually loaded, rather than a list of one
+        // game's textures. The host is generic -- it serves whichever project's
+        // manifest it is handed -- and this loop used to walk `TEXTURE_IDS`,
+        // which is Gather's set: tiles, orb, shrine, tree. For any other project
+        // it matched almost nothing, so almost nothing had its sheet bound, and
+        // a sprite asking for one frame of a sheet was drawn as the whole sheet
+        // squeezed into the frame's quad. Three rocks in a row where an asteroid
+        // should be, four drifters in a row where a drifter should be. Nothing
+        // failed: an unbound sheet is indistinguishable from a plain texture.
+        for texture_id in loaded {
             let Some(sheet_id) = sheet_id_for(&texture_id) else {
                 continue;
             };
