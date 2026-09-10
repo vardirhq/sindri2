@@ -48,21 +48,17 @@ script Hud {
         let health_bar = this.health_bar;
         let cores_bar = this.cores_bar;
         let health_text = this.health_text;
-        // Where the reference puts them, which `hud_parity` pins.
+        // The scene and the stylesheet already place this HUD, and they place
+        // it well: the player's own state along the bottom left, and the sector,
+        // clock, level and score across the top. This variant trusts that.
         //
-        // The tracks move with the fills, and did not: only the two fills and
-        // the label were placed here, so the backs stayed at the positions the
-        // scene gives them and every meter was split in half -- a bar at the top
-        // of the screen and the track it is measured against at the bottom. A
-        // fill with no track behind it has nothing to be a fraction of, which is
-        // why the cores bar looked like it was doing nothing.
-        health_bar.transform.position.y = 1.76;
-        cores_bar.transform.position.y = 1.71;
-        health_text.transform.position.y = 1.83;
-        let health_back = this.health_back;
-        let cores_back = this.cores_back;
-        health_back.transform.position.y = 1.76;
-        cores_back.transform.position.y = 1.71;
+        // It used to be overridden here, with the meters and the health label
+        // hauled up to hard-coded positions taken from the game Orbital Last
+        // Stand recreates -- which put them in the top left, on top of the
+        // sector name, where two pieces of text were drawn over each other. That
+        // fidelity is worth keeping and it is kept: the original still has those
+        // positions, and `hud_parity` still pins them. This copy exists to look
+        // its best rather than to match, so here the authored layout wins.
         this.health_bar_scale_x = health_bar.transform.scale.x;
         this.health_bar_scale_y = health_bar.transform.scale.y;
         this.cores_bar_scale_y = cores_bar.transform.scale.y;
