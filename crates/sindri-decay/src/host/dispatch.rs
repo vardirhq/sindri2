@@ -12,10 +12,10 @@ use decay_ir::Path;
 use decay_runtime::{RuntimeError, Value};
 
 use crate::surface::{
-    EFFECTS, EFFECTS_CALLS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, INPUT, INPUT_QUERIES,
-    InputQuery, PHYSICS, PHYSICS_CALLS, POINTER, POINTER_QUERIES, PROFILE_CALLS, PROFILES,
-    PointerQuery, RANDOM, RANDOM_CALLS, SAVE, SAVE_CALLS, TOUCH, TOUCH_CALLS, UI, UI_CALLS, WORLD,
-    WORLD_CALLS,
+    ANIMATION, ANIMATION_CALLS, EFFECTS, EFFECTS_CALLS, GAME, GAME_CALLS, GRID, GRID_CALLS,
+    GameCall, INPUT, INPUT_QUERIES, InputQuery, PHYSICS, PHYSICS_CALLS, POINTER, POINTER_QUERIES,
+    PROFILE_CALLS, PROFILES, PointerQuery, RANDOM, RANDOM_CALLS, SAVE, SAVE_CALLS, TOUCH,
+    TOUCH_CALLS, UI, UI_CALLS, WORLD, WORLD_CALLS,
 };
 
 use super::WorldHost;
@@ -47,6 +47,9 @@ impl WorldHost<'_> {
             SAVE => named(SAVE_CALLS, name).map(|call| self.save_call(call, path, args)),
             EFFECTS => named(EFFECTS_CALLS, name).map(|call| self.effects_call(call, path, args)),
             GRID => named(GRID_CALLS, name).map(|call| self.grid_call(call, path, args)),
+            ANIMATION => {
+                named(ANIMATION_CALLS, name).map(|call| self.animation_call(call, path, args))
+            }
             TOUCH => named(TOUCH_CALLS, name).map(|call| self.touch_call(call, path, args)),
             POINTER => {
                 named(POINTER_QUERIES, name).map(|query| self.pointer_query(query, path, args))

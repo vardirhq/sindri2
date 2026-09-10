@@ -154,8 +154,8 @@ its own change rather than arriving inside an asset tool's.
 
 ## Scope today
 
-Baked: primitive models (`box`, `plate`, `cylinder`, `cone`, `sphere`), a fixed
-configurable isometric camera, banded palette-based materials, supersampling,
+Baked: primitive models (`box`, `plate`, `cylinder`, `cone`, `sphere`), three
+cameras — isometric, top-down and side — banded palette-based materials, supersampling,
 alpha thresholding, palette snapping, an optional inner outline, 1/2/4/8
 directional frames, several named models on one sheet, uniform anchor-aligned
 frames packed with extruded gutters, deterministic PNG, `.sheet.json` and
@@ -163,4 +163,25 @@ frames packed with extruded gutters, deterministic PNG, `.sheet.json` and
 
 Not baked, each its own change: model-file input (GLB/glTF/OBJ — refused
 explicitly rather than ignored), contact shadows, animation poses, layered
-character parts, editor integration, and any use in a game.
+character parts, and editor integration.
+
+## Views
+
+`view` picks the camera, and `isometric` is the default so a recipe written
+before the others existed still means what it meant.
+
+The isometric camera cannot reach the other two by any choice of tile. Its pitch
+is the tile's own ratio — `sin(elevation) = tileHeight / tileWidth` — so a
+square tile would mean a pitch of 90°, which is why it refuses one: a top-down
+view draws no diamond to derive a pitch from. Its yaw is fixed at 45° besides,
+so no tile produces an axis-aligned view either.
+
+The flat views therefore state their scale instead of deriving it, as
+`pixels_per_unit`. Each view refuses the other's fields — a `tile` on a
+top-down bake claims a relationship to a tilemap that the picture does not have
+— and a flat bake skips the footprint check, because that check exists to keep a
+picture inside ground a tilemap handed out and no tilemap is handing out any.
+
+There is no separate animation mode and none is needed: `variants` already packs
+several models onto one sheet as named frames, which is exactly the shape
+`sindri.animation.sprite` reads.

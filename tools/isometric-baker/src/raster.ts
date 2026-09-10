@@ -15,11 +15,11 @@
  * machine. So the baker does.
  *
  * What is kept identical to the GPU path is what the pixels mean: the same
- * orthographic rig from `iso.ts`, the same banded shading from `shading.ts`,
+ * orthographic rig from `camera.ts`, the same banded shading from `shading.ts`,
  * and the same supersample-then-downsample order.
  */
 
-import { type IsoCamera, depthOf, projectToPixels } from './iso.ts';
+import { type Camera, depthOf, projectToPixels } from './camera.ts';
 import { type RgbaImage, createImage } from './image.ts';
 import { type Mesh } from './model.ts';
 import { type ShadingConfig, lightVector, shadeIndex } from './shading.ts';
@@ -29,7 +29,7 @@ export interface RasterRequest {
   mesh: Mesh;
   /** Applied to the model before projection: this is the frame's direction. */
   rotation: Mat3;
-  camera: IsoCamera;
+  camera: Camera;
   /** Canvas size in *final* pixels; the raster is this times `supersample`. */
   width: number;
   height: number;

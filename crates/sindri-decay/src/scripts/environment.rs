@@ -12,12 +12,11 @@ use crate::{
     ScriptComponent,
     audio_host::AUDIO,
     surface::{
-        EFFECTS, EFFECTS_CALLS, ENTITY, EffectsCall, FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS,
-        GameCall, GridCall, HostFunction, INPUT, INPUT_QUERIES, Node, PHYSICS, PHYSICS_CALLS,
-        POINTER, POINTER_QUERIES, POINTER_VALUES, PREFAB, PRINT, PROFILE, PROFILE_CALLS, PROFILES,
-        PhysicsCall, PointerValue, ProfileCall, RANDOM, RANDOM_CALLS, RandomCall, SAVE, SAVE_CALLS,
-        STICK, STICK_VALUES, SaveCall, StickValue, THIS, THROUGH_REFERENCE, TIME, TIME_VALUES,
-        TOUCH, TOUCH_CALLS, TOUCH_COUNT, UI, UI_CALLS, UiCall, VIEWPORT, VIEWPORT_VALUES, WORLD,
+        ANIMATION, ANIMATION_CALLS, AnimationCall, EFFECTS, EFFECTS_CALLS, ENTITY, EffectsCall,
+        FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, GridCall, HostFunction, INPUT,
+        INPUT_QUERIES, Node, PHYSICS, PHYSICS_CALLS, PREFAB, PRINT, PROFILE, PROFILE_CALLS,
+        PROFILES, PhysicsCall, ProfileCall, RANDOM, RANDOM_CALLS, RandomCall, SAVE, SAVE_CALLS,
+        SaveCall, THIS, THROUGH_REFERENCE, TIME, TIME_VALUES, UI, UI_CALLS, UiCall, WORLD,
         WORLD_CALLS, WorldCall,
     },
 };
@@ -110,10 +109,11 @@ pub fn environment() -> Environment {
     add_world_surface(&mut environment);
     add_profile_surface(&mut environment);
 
-    add_pointer_surface(&mut environment);
-    add_viewport_surface(&mut environment);
+    super::person_surface::add_pointer_surface(&mut environment);
+    super::person_surface::add_viewport_surface(&mut environment);
     add_physics_surface(&mut environment);
     add_ui_surface(&mut environment);
+    add_animation_surface(&mut environment);
     add_random_surface(&mut environment);
     add_save_surface(&mut environment);
     add_effects_surface(&mut environment);
@@ -180,16 +180,6 @@ fn add_profile_surface(environment: &mut Environment) {
     environment.add_value(PROFILES, Type::Named(PROFILES.to_owned()));
 }
 
-/// The shape of the screen the host is drawing into.
-pub(super) fn add_viewport_surface(environment: &mut Environment) {
-    let mut viewport = HostType::new();
-    for (name, _) in VIEWPORT_VALUES {
-        viewport = viewport.with_value(*name, Type::F32);
-    }
-    environment.add_type(VIEWPORT, viewport);
-    environment.add_value(VIEWPORT, Type::Named(VIEWPORT.to_owned()));
-}
-
 /// What a script can do to the world it is in: find, spawn, despawn, reparent,
 /// and write an exported field on another script.
 ///
@@ -254,62 +244,6 @@ pub(super) fn add_world_surface(environment: &mut Environment) {
     environment.add_value(WORLD, Type::Named(WORLD.to_owned()));
 }
 
-/// Where the person is pointing, and the fingers behind it.
-pub(super) fn add_pointer_surface(environment: &mut Environment) {
-    let mut pointer = HostType::new();
-    for (name, value) in POINTER_VALUES {
-        pointer = pointer.with_value(
-            *name,
-            match value {
-                PointerValue::X
-                | PointerValue::Y
-                | PointerValue::OverlayX
-                | PointerValue::OverlayY => Type::F32,
-                PointerValue::Inside | PointerValue::OverUi => Type::Bool,
-            },
-        );
-    }
-    for (name, _) in POINTER_QUERIES {
-        pointer = pointer.with_function(
-            *name,
-            FunctionType {
-                params: vec![Type::String],
-                return_type: Type::Bool,
-            },
-        );
-    }
-    environment.add_type(POINTER, pointer);
-    environment.add_value(POINTER, Type::Named(POINTER.to_owned()));
-
-    let mut touch = HostType::new().with_value(TOUCH_COUNT, Type::F32);
-    for (name, _) in TOUCH_CALLS {
-        touch = touch.with_function(
-            *name,
-            FunctionType {
-                params: vec![Type::F32],
-                return_type: Type::F32,
-            },
-        );
-    }
-    environment.add_type(TOUCH, touch);
-    environment.add_value(TOUCH, Type::Named(TOUCH.to_owned()));
-
-    let mut stick = HostType::new();
-    for (name, value) in STICK_VALUES {
-        stick = stick.with_value(
-            *name,
-            match value {
-                StickValue::Held => Type::Bool,
-                StickValue::X | StickValue::Y | StickValue::AnchorX | StickValue::AnchorY => {
-                    Type::F32
-                }
-            },
-        );
-    }
-    environment.add_type(STICK, stick);
-    environment.add_value(STICK, Type::Named(STICK.to_owned()));
-}
-
 /// What a script can do to a body, and ask about what it touched.
 pub(super) fn add_physics_surface(environment: &mut Environment) {
     let entity = || Type::Named(ENTITY.to_owned());
@@ -338,6 +272,40 @@ pub(super) fn add_physics_surface(environment: &mut Environment) {
     }
     environment.add_type(PHYSICS, physics);
     environment.add_value(PHYSICS, Type::Named(PHYSICS.to_owned()));
+}
+
+/// Which authored clip an entity plays, and where it has got to.
+///
+/// A clip is named with text the same way an audio asset is: the scene authored
+/// it, and a script picks from what the scene holds. There is no way to build
+/// one, which is what keeps the editor's clip list the whole record of what an
+/// entity can do.
+pub(super) fn add_animation_surface(environment: &mut Environment) {
+    let entity = || Type::Named(ENTITY.to_owned());
+    let mut animation = HostType::new();
+    for (name, call) in ANIMATION_CALLS {
+        animation = animation.with_function(
+            *name,
+            FunctionType {
+                params: match call {
+                    AnimationCall::Play => vec![entity(), Type::String],
+                    AnimationCall::Speed => vec![entity(), Type::F32],
+                    _ => vec![entity()],
+                },
+                return_type: match call {
+                    AnimationCall::Finished => Type::Bool,
+                    AnimationCall::Frame => Type::F32,
+                    AnimationCall::Clip => Type::String,
+                    AnimationCall::Play
+                    | AnimationCall::Restart
+                    | AnimationCall::Stop
+                    | AnimationCall::Speed => Type::Unit,
+                },
+            },
+        );
+    }
+    environment.add_type(ANIMATION, animation);
+    environment.add_value(ANIMATION, Type::Named(ANIMATION.to_owned()));
 }
 
 /// What a script can change about a screen element.

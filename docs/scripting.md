@@ -872,6 +872,45 @@ The split X/Y reads are a consequence of Decay not having a structured vector
 or grid-coordinate value yet. They are kept behind one namespace so that value
 can replace the pair later without exposing tilemap storage to gameplay code.
 
+### Animation
+
+| Call | Returns |
+| --- | --- |
+| `Animation.play(entity, clip)` | nothing |
+| `Animation.stop(entity)` | nothing |
+| `Animation.restart(entity)` | nothing |
+| `Animation.is_finished(entity)` | `bool` |
+| `Animation.frame(entity)` | `f32` |
+| `Animation.clip(entity)` | `String` |
+| `Animation.set_speed(entity, speed)` | nothing |
+
+`clip` names one of the clips the entity's `sindri.animation.sprite` already
+holds. A script picks from what the scene authored and cannot build one, which
+is what keeps the editor's clip list the whole record of what an entity can do.
+
+The two halves of animation live in two places, and this surface keeps them
+there. *Which* clip plays is authored state, so `play` and `stop` write the
+component in the world and the playback cursor follows on the next advance —
+gameplay writes the world, and playback is derived from it. *Where* the clip has
+got to is derived, so `is_finished` and `frame` read the cursor beside the
+world, which is what stops watching an animation run from rewriting the scene it
+came from.
+
+`play` is idempotent: naming the clip already playing does nothing. A script
+says what state it is in on every frame — `if moving { Animation.play(e, "walk") }`
+is how Gather's player drives its walk cycle — and a `play` that started the
+clip again would hold it on its first frame for ever. `restart` is the other
+thing to want, and is the way back to the start of a one-shot that has finished.
+
+Reads answer for the step that has already happened, because scripts run before
+animations advance. A clip cannot finish during the frame a script asks about
+it, which is what makes `is_finished` mean what it says.
+
+An entity with no `sindri.animation.sprite` is an error rather than a silent
+nothing: a script telling something to play a clip it cannot hold is a mistake
+worth hearing about on the frame it happens. A clip name the component does not
+hold is reported by the advance, the same way a broken clip authored by hand is.
+
 ### Audio
 
 | Call | Returns |

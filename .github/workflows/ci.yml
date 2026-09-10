@@ -67,6 +67,14 @@ jobs:
       - name: Check the fixture is still what its recipe bakes
         working-directory: tools/isometric-baker
         run: node src/cli.ts fixtures/project/prefabs/standing-stone.isobake.json --out fixtures/project --check
+      - name: Check the baked game art is still what its recipes bake
+        working-directory: tools/isometric-baker
+        # The same promise the fixture makes, for the assets a game actually
+        # ships. The detonation is the flat-view path, so this is also what
+        # keeps `top-down` honest.
+        run: |
+          node src/cli.ts ../../games/orbital-last-stand/assets/textures/detonation.isobake.json \
+            --out ../../games/orbital-last-stand/assets --check
 
   clippy:
     name: Clippy

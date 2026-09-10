@@ -69,6 +69,8 @@ pub struct HostServices<'a> {
     pub saves: Option<&'a mut sindri_core::SaveStore>,
     /// The fleck pool, when the host is running one.
     pub effects: Option<&'a mut sindri_scene::Effects2d>,
+    /// Where each animated sprite has got to, when the host advances any.
+    pub animations: Option<&'a mut sindri_scene::SpriteAnimations>,
     /// What the script asked to be played, in order.
     pub audio: &'a mut Vec<AudioCommand>,
 }
@@ -89,6 +91,7 @@ impl<'a> WorldHost<'a> {
             random,
             saves,
             effects,
+            animations,
             audio,
         } = services;
         Self {
@@ -105,6 +108,7 @@ impl<'a> WorldHost<'a> {
                     physics,
                     screen_ui,
                     random,
+                    animations,
                 },
             ),
             audio,
@@ -275,6 +279,7 @@ mod tests {
                 random: None,
                 saves: None,
                 effects: None,
+                animations: None,
                 audio: &mut queue,
             },
         );
@@ -345,6 +350,7 @@ mod tests {
                 random: None,
                 saves: None,
                 effects: None,
+                animations: None,
                 audio: &mut queue,
             },
         );

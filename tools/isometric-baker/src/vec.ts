@@ -72,7 +72,7 @@ export function multiply(a: Mat3, b: Mat3): Mat3 {
  * A rotation about +Y by a whole number of eighth-turns.
  *
  * Written as an exact table rather than `Math.cos(index * Math.PI / 4)` for the
- * reason `iso.ts` avoids trigonometry: a quarter turn has to be exactly a
+ * reason `camera.ts` avoids trigonometry: a quarter turn has to be exactly a
  * quarter turn, or four frames of one asset stop agreeing about where the
  * middle of the tile is.
  */

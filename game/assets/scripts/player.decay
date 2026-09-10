@@ -69,6 +69,18 @@ script Player {
 
         Grid.place(this.entity, floor, grid_x, grid_y);
 
+        // The walk cycle belongs to walking. It used to run whenever the scene
+        // was playing, so standing still was a bob on the spot -- the clip was
+        // authored, always playing, and nothing could tell it otherwise. What
+        // moved is measured after the solid things have had their say, so
+        // walking into a tree stops the feet as well as the player.
+        let moved = abs(grid_x - was_x) + abs(grid_y - was_y);
+        if moved > 0.0001 {
+            Animation.play(this.entity, "bob");
+        } else {
+            Animation.stop(this.entity);
+        }
+
         // Draw order follows where the player stands, so walking south of the
         // shrine puts them in front of it and walking north puts them behind.
         // A layer per row is what makes that possible at all: sprites batch by

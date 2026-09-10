@@ -28,147 +28,6 @@ pub(crate) const FUNCTIONS: &[(&str, HostFunction)] = &[
 /// The name a script calls to say something into the host's log.
 pub(crate) const PRINT: &str = "print";
 
-/// A question a script asks about the keyboard.
-#[derive(Clone, Copy, Debug)]
-pub(crate) enum InputQuery {
-    /// Two opposing keys as -1, 0, or 1.
-    Axis,
-    Down,
-    Pressed,
-    Released,
-}
-
-impl InputQuery {
-    /// How many key names it takes.
-    pub(crate) const fn keys(self) -> usize {
-        match self {
-            Self::Axis => 2,
-            Self::Down | Self::Pressed | Self::Released => 1,
-        }
-    }
-
-    /// Whether it answers with a number rather than a truth.
-    pub(crate) const fn is_number(self) -> bool {
-        matches!(self, Self::Axis)
-    }
-}
-
-pub(crate) const INPUT_QUERIES: &[(&str, InputQuery)] = &[
-    ("axis", InputQuery::Axis),
-    ("is_down", InputQuery::Down),
-    ("just_pressed", InputQuery::Pressed),
-    ("just_released", InputQuery::Released),
-];
-
-/// A question a script asks about where the person is pointing.
-///
-/// One namespace for the mouse and the finger, because a game that aims at a
-/// point should not have to ask which the person is using — and a game written
-/// for a mouse then works on a phone without a second code path. What each
-/// unified answer means when both are present is in `docs/scripting.md`.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum PointerQuery {
-    Down,
-    Pressed,
-    Released,
-}
-
-pub(crate) const POINTER_QUERIES: &[(&str, PointerQuery)] = &[
-    ("is_down", PointerQuery::Down),
-    ("just_pressed", PointerQuery::Pressed),
-    ("just_released", PointerQuery::Released),
-];
-
-/// A value a script reads about where the pointer is.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum PointerValue {
-    X,
-    Y,
-    /// Whether there is a pointer at all.
-    ///
-    /// A mouse outside the window and a screen nobody is touching are the same
-    /// answer, and a game drawing a cursor or testing a button needs to know
-    /// before it reads a position that would otherwise be the last one.
-    Inside,
-    /// Whether a screen element is taking the pointer this frame.
-    ///
-    /// The engine does not silently withhold input from gameplay when a menu is
-    /// up: which scripts are gameplay is not something a host can know, and a
-    /// rule that guesses is one that will guess wrong. So a gameplay script
-    /// asks, in one line, and the answer is why a click on a pause button does
-    /// not also fire the gun behind it.
-    OverUi,
-    /// Where the pointer is in the overlay's own units, across and up.
-    ///
-    /// `x` and `y` are viewport pixels, and how many pixels tall a window is
-    /// is not something a scene knows — so a script could tell where the
-    /// pointer was on the screen and not what it was pointing at. The overlay
-    /// is two tall and centred on the origin, which is a space the scene
-    /// authored against, so a game that knows how much world its camera frames
-    /// can turn these into world coordinates and the engine does not have to
-    /// guess at a camera on a script's behalf.
-    OverlayX,
-    OverlayY,
-}
-
-pub(crate) const POINTER_VALUES: &[(&str, PointerValue)] = &[
-    ("x", PointerValue::X),
-    ("y", PointerValue::Y),
-    ("overlay_x", PointerValue::OverlayX),
-    ("overlay_y", PointerValue::OverlayY),
-    ("inside", PointerValue::Inside),
-    ("over_ui", PointerValue::OverUi),
-];
-
-/// A value a script reads about the viewport it is running in.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum ViewportValue {
-    Aspect,
-}
-
-pub(crate) const VIEWPORT_VALUES: &[(&str, ViewportValue)] = &[("aspect", ViewportValue::Aspect)];
-
-/// What a script reads from the steering stick.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum StickValue {
-    /// How far it is pushed, -1 to 1, in screen axes.
-    X,
-    Y,
-    /// Whether a finger is on it at all.
-    ///
-    /// Not the same as a zero reading, which is also what a thumb resting
-    /// inside the dead zone gives: a game drawing the control wants to show it
-    /// while it is held even when it is centred.
-    Held,
-    /// Where the thumb landed, for a game that draws the ring.
-    AnchorX,
-    AnchorY,
-}
-
-pub(crate) const STICK_VALUES: &[(&str, StickValue)] = &[
-    ("x", StickValue::X),
-    ("y", StickValue::Y),
-    ("held", StickValue::Held),
-    ("anchor_x", StickValue::AnchorX),
-    ("anchor_y", StickValue::AnchorY),
-];
-
-/// A question about the fingers specifically.
-///
-/// Separate from `Pointer` because it answers something `Pointer` cannot: how
-/// many there are, and where the second one is. A game that only needs "where
-/// is the person pointing" never touches this.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum TouchCall {
-    X,
-    Y,
-}
-
-pub(crate) const TOUCH_CALLS: &[(&str, TouchCall)] = &[("x", TouchCall::X), ("y", TouchCall::Y)];
-
-/// How many fingers are down, as a value rather than a call.
-pub(crate) const TOUCH_COUNT: &str = "count";
-
 /// A note left on the board shared by every script in the world.
 ///
 /// The smallest thing that lets two scripts cooperate. Decay has no value that
@@ -457,6 +316,56 @@ pub(crate) const UI_CALLS: &[(&str, UiCall)] = &[
     ("is_hovered", UiCall::Hovered),
     ("is_pressed", UiCall::Pressed),
     ("is_held", UiCall::Held),
+];
+
+/// What a script can do to an entity's sprite animation.
+///
+/// Which clip plays is authored state, so [`AnimationCall::Play`] and
+/// [`AnimationCall::Stop`] write the component in the world and the cursor
+/// follows on the next advance — gameplay writes the world, and playback is
+/// derived from it. The rest read where that playback has got to, which lives
+/// beside the world because advancing an animation must not dirty the scene.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum AnimationCall {
+    /// Makes a clip the entity has authored be the one playing.
+    ///
+    /// Idempotent, and that is the whole of its contract: naming the clip
+    /// already playing does nothing. A script says what state it is in every
+    /// frame — `if moving { play("walk") }` is the natural way to write it —
+    /// and a `play` that restarted would hold such a clip on its first frame
+    /// for ever. Starting one again is [`AnimationCall::Restart`], which is a
+    /// different thing to want and says so.
+    Play,
+    /// Plays the current clip again from its first frame.
+    ///
+    /// The way back to the start of a one-shot that has finished, which naming
+    /// it again cannot be without breaking the call above.
+    Restart,
+    /// Stops, and lets the sprite's own reference show again.
+    Stop,
+    /// Whether a non-looping clip has reached its end and is holding there.
+    ///
+    /// The call a death or attack animation is waited on with, and the reason
+    /// this namespace unblocks anything: without it a script can start a clip
+    /// and never learn that it ended.
+    Finished,
+    /// Which frame of the clip is showing, counted within the clip.
+    Frame,
+    /// The clip playing, or an empty string when none is.
+    Clip,
+    /// A multiplier on time, so one clip runs slower or faster without a second
+    /// copy of it. Zero holds the current frame.
+    Speed,
+}
+
+pub(crate) const ANIMATION_CALLS: &[(&str, AnimationCall)] = &[
+    ("play", AnimationCall::Play),
+    ("restart", AnimationCall::Restart),
+    ("stop", AnimationCall::Stop),
+    ("is_finished", AnimationCall::Finished),
+    ("frame", AnimationCall::Frame),
+    ("clip", AnimationCall::Clip),
+    ("set_speed", AnimationCall::Speed),
 ];
 
 /// What a script can draw from the run's stream.

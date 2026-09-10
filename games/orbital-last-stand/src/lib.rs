@@ -19,7 +19,9 @@ use sindri_decay::{
     Physics2d, PrefabSources, ProfileSources, ScriptComponent, ScriptFrame, ScriptSources, Scripts,
 };
 use sindri_platform::InputState;
-use sindri_scene::{Effects2d, SceneExtractor, ScenePhysics2d, ScreenExtent, ScreenUi};
+use sindri_scene::{
+    Effects2d, SceneExtractor, ScenePhysics2d, ScreenExtent, ScreenUi, SpriteAnimations,
+};
 
 /// Where the project is, from wherever the harness is being run.
 #[must_use]
@@ -38,6 +40,12 @@ pub struct Run {
     pub physics: ScenePhysics2d,
     pub screen_ui: ScreenUi,
     pub effects: Effects2d,
+    /// Where each animated sprite has got to.
+    ///
+    /// Beside the world rather than in it, because advancing a clip must not
+    /// dirty the scene it came from — which is also what lets a capture step
+    /// the run forward without rewriting the project it opened.
+    pub animations: SpriteAnimations,
     pub random: Rng,
     pub saves: SaveStore,
     pub input: InputState,
@@ -163,6 +171,7 @@ impl Run {
             physics: ScenePhysics2d::top_down().map_err(|e| e.to_string())?,
             screen_ui: ScreenUi::default(),
             effects: Effects2d::default(),
+            animations: SpriteAnimations::new(),
             random: Rng::default(),
             saves: SaveStore::default(),
             input: InputState::default(),
@@ -206,10 +215,20 @@ impl Run {
                 .with_physics(Physics2d {
                     world: physics,
                     events,
-                }),
+                })
+                .with_animations(&mut self.animations),
         );
         for failure in &report.failures {
             notes.push(failure.to_string());
+        }
+        // After the scripts, so a clip a script started this step is advanced
+        // by this step — and so a read of `is_finished` answers for the advance
+        // that already happened rather than the one about to.
+        if let Err(error) = self
+            .animations
+            .advance(&self.world, &self.components, delta)
+        {
+            notes.push(error.to_string());
         }
         self.scripts.take_audio_commands();
         self.elapsed += delta;

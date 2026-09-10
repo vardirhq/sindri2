@@ -5,6 +5,11 @@
   "globals": [
     {
       "kind": "value",
+      "name": "Animation",
+      "type": "Animation"
+    },
+    {
+      "kind": "value",
       "name": "Audio",
       "type": "Audio"
     },
@@ -188,6 +193,69 @@
     }
   ],
   "types": [
+    {
+      "members": [
+        {
+          "kind": "function",
+          "name": "clip",
+          "parameters": [
+            "Entity"
+          ],
+          "returns": "String"
+        },
+        {
+          "kind": "function",
+          "name": "frame",
+          "parameters": [
+            "Entity"
+          ],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "is_finished",
+          "parameters": [
+            "Entity"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "play",
+          "parameters": [
+            "Entity",
+            "String"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
+          "name": "restart",
+          "parameters": [
+            "Entity"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
+          "name": "set_speed",
+          "parameters": [
+            "Entity",
+            "f32"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
+          "name": "stop",
+          "parameters": [
+            "Entity"
+          ],
+          "returns": "unit"
+        }
+      ],
+      "name": "Animation"
+    },
     {
       "members": [
         {

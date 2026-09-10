@@ -28,6 +28,7 @@ What the entity a script runs on offers, beyond the script's own fields.
 
 Names in scope without qualification. Decay has no imports, so each of these is a name a script cannot use for its own.
 
+- `Animation`: `Animation`
 - `Audio`: `Audio`
 - `Effects`: `Effects`
 - `Game`: `Game`
@@ -55,6 +56,16 @@ Names in scope without qualification. Decay has no imports, so each of these is 
 - `sqrt(f32)` → `f32`
 
 ## Types
+
+### `Animation`
+
+- `clip(Entity)` → `String`
+- `frame(Entity)` → `f32`
+- `is_finished(Entity)` → `bool`
+- `play(Entity, String)` → `unit`
+- `restart(Entity)` → `unit`
+- `set_speed(Entity, f32)` → `unit`
+- `stop(Entity)` → `unit`
 
 ### `Audio`
 
