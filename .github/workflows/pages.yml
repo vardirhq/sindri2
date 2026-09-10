@@ -45,6 +45,7 @@ jobs:
           for project in \
             "game:gather" \
             "games/orbital-last-stand:orbital-last-stand" \
+            "games/orbital-baked:orbital-baked" \
             "games/graphics-lab:graphics-lab" \
             "games/weave-poc:weave-poc"; do
             src="${project%%:*}"
@@ -68,7 +69,7 @@ jobs:
           test -f target/pages/index.html
           test -f target/pages/docs/scripting/index.html
           test -f target/pages/docs/language/index.html
-          for route in gather orbital-last-stand graphics-lab weave-poc; do
+          for route in gather orbital-last-stand orbital-baked graphics-lab weave-poc; do
             test -f "target/pages/examples/$route/index.html"
             test -f "target/pages/examples/$route/assets/sindri.manifest.json"
             test -f "target/pages/examples/$route/pkg/sindri_gather.js"
@@ -76,6 +77,10 @@ jobs:
             grep -q '"kind": "scene"' "target/pages/examples/$route/assets/sindri.manifest.json"
           done
           grep -q '"kind": "prefab"' target/pages/examples/orbital-last-stand/assets/sindri.manifest.json
+          # The baked variant ships sprite sheets rather than vector shapes, so
+          # a route that exported without them is broken in the one way that
+          # matters and still passes every check above.
+          grep -q 'player.sheet.json' target/pages/examples/orbital-baked/assets/sindri.manifest.json
           grep -q '"kind": "script"' target/pages/examples/graphics-lab/assets/sindri.manifest.json
           grep -q '"demo.weave"' target/pages/examples/weave-poc/assets/sindri.manifest.json
       - uses: actions/configure-pages@v6
