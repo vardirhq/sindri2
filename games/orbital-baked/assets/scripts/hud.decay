@@ -10,12 +10,17 @@ script Hud {
     var health_bar: Entity = null;
     var health_text: Entity = null;
     var cores_bar: Entity = null;
+    var health_back: Entity = null;
+    var cores_back: Entity = null;
     var boss_panel: Entity = null;
     var boss_bar: Entity = null;
     var boss_name: Entity = null;
 
     var health_bar_scale_x: f32 = 1.0;
     var health_bar_scale_y: f32 = 1.0;
+    var cores_bar_scale_y: f32 = 1.0;
+    var previous_cores: f32 = 0.0;
+    var core_flash: f32 = 0.0;
     var health_text_scale_x: f32 = 1.0;
     var health_text_scale_y: f32 = 1.0;
     var boss_presence: f32 = 0.0;
@@ -34,6 +39,8 @@ script Hud {
         this.health_bar = World.find("Health");
         this.health_text = World.find("HealthText");
         this.cores_bar = World.find("Cores");
+        this.health_back = World.find("HealthBack");
+        this.cores_back = World.find("CoresBack");
         this.boss_panel = World.find("BossPanel");
         this.boss_bar = World.find("BossBar");
         this.boss_name = World.find("BossName");
@@ -41,11 +48,24 @@ script Hud {
         let health_bar = this.health_bar;
         let cores_bar = this.cores_bar;
         let health_text = this.health_text;
+        // Where the reference puts them, which `hud_parity` pins.
+        //
+        // The tracks move with the fills, and did not: only the two fills and
+        // the label were placed here, so the backs stayed at the positions the
+        // scene gives them and every meter was split in half -- a bar at the top
+        // of the screen and the track it is measured against at the bottom. A
+        // fill with no track behind it has nothing to be a fraction of, which is
+        // why the cores bar looked like it was doing nothing.
         health_bar.transform.position.y = 1.76;
         cores_bar.transform.position.y = 1.71;
         health_text.transform.position.y = 1.83;
+        let health_back = this.health_back;
+        let cores_back = this.cores_back;
+        health_back.transform.position.y = 1.76;
+        cores_back.transform.position.y = 1.71;
         this.health_bar_scale_x = health_bar.transform.scale.x;
         this.health_bar_scale_y = health_bar.transform.scale.y;
+        this.cores_bar_scale_y = cores_bar.transform.scale.y;
         this.health_text_scale_x = health_text.transform.scale.x;
         this.health_text_scale_y = health_text.transform.scale.y;
 
@@ -80,6 +100,22 @@ script Hud {
         let cores = Game.get("cores", 0.0);
         let needed = max(Game.get("next_level", 1.0), 1.0);
         Ui.set_fill(this.cores_bar, min(cores / needed, 1.0));
+
+        // A core is worth one and a level costs thirty-five, so a pickup moves
+        // this bar by about a thirtieth of its width: true progress, and far too
+        // little to notice while something is shooting at you. The bar swells
+        // for a moment instead, so the answer to "did that count?" is yes and
+        // arrives immediately, rather than several cores later when the fill has
+        // finally grown wide enough to see.
+        if cores > this.previous_cores {
+            this.core_flash = 1.0;
+        }
+        this.previous_cores = cores;
+        if this.core_flash > 0.0 {
+            this.core_flash = max(0.0, this.core_flash - dt * 3.5);
+        }
+        let cores_bar = this.cores_bar;
+        cores_bar.transform.scale.y = this.cores_bar_scale_y * (1.0 + this.core_flash * 0.85);
 
         update_boss(dt);
     }
