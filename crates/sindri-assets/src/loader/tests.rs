@@ -1,5 +1,7 @@
 //! What a loader does with a second request, a failure, and a reload.
 
+use std::time::{Duration, Instant};
+
 use sindri_core::AssetLoadErrorKind;
 
 use super::*;
@@ -41,16 +43,36 @@ fn loader(files: &[(&str, &[u8])]) -> AssetLoader<CountingDecoder> {
 
 /// Drains until the loader has nothing outstanding, so a test does not
 /// depend on how many frames the I/O workers took.
+/// Polls until the loader's worker has answered everything asked of it.
+///
+/// Bounded by a deadline rather than by a number of turns around the loop. It
+/// used to spin ten thousand times and give up, which is not a measure of
+/// anything: how many yields it takes for a worker thread to be scheduled
+/// depends on what else the machine is doing, so the same passing test fails
+/// on a busy one. Under a test runner that gives each test its own process --
+/// several at a time on a four-core runner -- ten thousand yields stopped
+/// being enough, and the test that failed was the one whose worker happened to
+/// be starved rather than the one that was wrong.
+///
+/// A deadline says the thing actually meant: an asset that has not loaded in
+/// ten seconds is a loader that is stuck, however heavily loaded the machine.
 fn settle(loader: &mut AssetLoader<CountingDecoder>) -> Vec<AssetLoadOutcome> {
+    const LIMIT: Duration = Duration::from_secs(10);
+
     let mut outcomes = Vec::new();
-    for _ in 0..10_000 {
+    let deadline = Instant::now() + LIMIT;
+    loop {
         outcomes.extend(loader.poll());
         if loader.outstanding() == 0 {
             break;
         }
+        assert!(
+            Instant::now() < deadline,
+            "the loader still had {} outstanding after {LIMIT:?}",
+            loader.outstanding(),
+        );
         std::thread::yield_now();
     }
-    assert_eq!(loader.outstanding(), 0, "the loader never settled");
     outcomes
 }
 

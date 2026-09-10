@@ -4,6 +4,28 @@ All notable changes to Sindri Next will be documented here.
 
 ## [Unreleased]
 
+- **CI runs the same checks about nine times faster.** The workspace's tests
+  were the whole of CI's critical path, and most of that was one number: the
+  repository set no Cargo profile, so a game engine whose tests are mostly
+  simulation ran that simulation unoptimised. One Orbital test spent a hundred
+  and ten seconds stepping six thousand frames. Optimising the test profile,
+  dependencies included -- the physics solver is a dependency -- took the whole
+  suite from about 288 seconds to 82 with debug assertions and overflow checks
+  untouched. Running it under `cargo-nextest`, which schedules every test in one
+  pool instead of one binary at a time, took it to 45; splitting the slowest
+  test into the five screen shapes it was looping over took it to **30 seconds
+  for all 1350 tests**. Doctests are run in their own step, because nextest
+  cannot run them and dropping them silently would have been a real loss of
+  coverage.
+
+  Two things this turned up. Adopting nextest exposed a test that was flaky by
+  construction: it waited for a background loader by spinning a fixed ten
+  thousand times, which measures nothing -- how many yields a worker needs to be
+  scheduled depends on what else the machine is doing. It now waits on a
+  deadline, which says the thing meant. And path-filtering CI by "docs only"
+  was considered and rejected: sixteen markdown files in this repository are
+  read by Rust tests, so a documentation change here genuinely can fail one.
+
 - Add `tools/isometric-baker`, an offline asset baker that turns a 3D model into
   an ordinary Sindri sprite sheet and the `.sheet.json` beside it. The pipeline
   is adapted from IsoGame's Sprite Factory (MIT); the renderer is a dependency-free

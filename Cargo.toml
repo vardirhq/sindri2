@@ -84,3 +84,22 @@ module_name_repetitions = "allow"
 must_use_candidate = "allow"
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
+
+# A game engine's tests are mostly simulation: stepping a world sixty times a
+# second and asking what happened. Unoptimised, that arithmetic dominated the
+# workspace's test time -- one Orbital test spent a hundred and ten seconds
+# simulating six thousand frames, and the two slowest suites together were most
+# of CI's critical path.
+#
+# Optimising the test profile is what fixes that, because the cost is in the
+# code under test rather than in the harness around it. Dependencies are
+# optimised in dev builds too: the physics solver is a dependency, so leaving it
+# at `opt-level = 0` would have left most of the cost in place.
+#
+# Debug assertions and overflow checks are untouched, so this buys speed rather
+# than trading away what the tests are able to catch.
+[profile.test]
+opt-level = 2
+
+[profile.dev.package."*"]
+opt-level = 2

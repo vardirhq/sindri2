@@ -19,15 +19,6 @@ const STEP: f32 = 1.0 / 60.0;
 /// script carries as its own `view_size` export.
 const VIEW_SIZE: f32 = 11.0;
 
-/// Every viewport worth being sure about, widest to narrowest.
-const SCREENS: [(&str, f32, f32); 5] = [
-    ("desktop 16:9", 1920.0, 1080.0),
-    ("laptop 16:10", 1440.0, 900.0),
-    ("tablet portrait", 1536.0, 2048.0),
-    ("phone portrait", 1080.0, 2400.0),
-    ("phone landscape", 2400.0, 1080.0),
-];
-
 /// What the camera frames, worked out the way the extractor does: the authored
 /// size lands on the shorter axis.
 fn visible_half(width: f32, height: f32) -> (f32, f32) {
@@ -62,51 +53,78 @@ fn position(run: &Run, entity: EntityId) -> [f32; 3] {
         .position
 }
 
-/// Every enemy the director places arrives outside the frame, on every screen.
-#[test]
-fn enemies_arrive_from_outside_the_frame() {
-    for (name, width, height) in SCREENS {
-        let (half_x, half_y) = visible_half(width, height);
+/// Every enemy the director places arrives outside the frame.
+///
+/// One test per screen shape rather than a loop over all five. A loop makes
+/// this one test that simulates six thousand frames, which is the slowest
+/// thing in the workspace and reports only the first shape that breaks; five
+/// tests run at once and each names the shape it is about.
+fn enemies_arrive_from_outside(name: &str, width: f32, height: f32) {
+    let (half_x, half_y) = visible_half(width, height);
 
-        let mut run = Run::open().expect("the project opens");
-        run.viewport = (width, height);
-        for _ in 0..6 {
-            let notes = run.step(STEP);
-            assert!(notes.is_empty(), "{name}: {notes:#?}");
-        }
-        run.click("TitleStart");
-        // A hull that survives the whole sample, so the run does not end early
-        // and stop spawning.
-        run.set_board("hp", 10_000.0);
-
-        let mut seen: Vec<EntityId> = Vec::new();
-        let mut checked = 0_usize;
-        // Twenty seconds is many spawns at the Normal rate, and short of the
-        // first boss at sixty.
-        for _ in 0..1_200 {
-            let notes = run.step(STEP);
-            assert!(notes.is_empty(), "{name}: {notes:#?}");
-
-            for enemy in tagged(&run, "enemy") {
-                if seen.contains(&enemy) {
-                    continue;
-                }
-                seen.push(enemy);
-
-                let [x, y, _] = position(&run, enemy);
-                assert!(
-                    x.abs() > half_x || y.abs() > half_y,
-                    "{name}: an enemy appeared at ({x:.2}, {y:.2}), inside the \
-                     {half_x:.2} by {half_y:.2} the camera frames"
-                );
-                checked += 1;
-            }
-        }
-
-        assert!(
-            checked >= 5,
-            "{name}: only {checked} enemies spawned in twenty seconds, which is \
-             too few for this to have proved anything"
-        );
+    let mut run = Run::open().expect("the project opens");
+    run.viewport = (width, height);
+    for _ in 0..6 {
+        let notes = run.step(STEP);
+        assert!(notes.is_empty(), "{name}: {notes:#?}");
     }
+    run.click("TitleStart");
+    // A hull that survives the whole sample, so the run does not end early
+    // and stop spawning.
+    run.set_board("hp", 10_000.0);
+
+    let mut seen: Vec<EntityId> = Vec::new();
+    let mut checked = 0_usize;
+    // Twenty seconds is many spawns at the Normal rate, and short of the
+    // first boss at sixty.
+    for _ in 0..1_200 {
+        let notes = run.step(STEP);
+        assert!(notes.is_empty(), "{name}: {notes:#?}");
+
+        for enemy in tagged(&run, "enemy") {
+            if seen.contains(&enemy) {
+                continue;
+            }
+            seen.push(enemy);
+
+            let [x, y, _] = position(&run, enemy);
+            assert!(
+                x.abs() > half_x || y.abs() > half_y,
+                "{name}: an enemy appeared at ({x:.2}, {y:.2}), inside the \
+                 {half_x:.2} by {half_y:.2} the camera frames"
+            );
+            checked += 1;
+        }
+    }
+
+    assert!(
+        checked >= 5,
+        "{name}: only {checked} enemies spawned in twenty seconds, which is \
+         too few for this to have proved anything"
+    );
+}
+
+#[test]
+fn enemies_arrive_from_outside_a_desktop() {
+    enemies_arrive_from_outside("desktop 16:9", 1920.0, 1080.0);
+}
+
+#[test]
+fn enemies_arrive_from_outside_a_laptop() {
+    enemies_arrive_from_outside("laptop 16:10", 1440.0, 900.0);
+}
+
+#[test]
+fn enemies_arrive_from_outside_a_tablet() {
+    enemies_arrive_from_outside("tablet portrait", 1536.0, 2048.0);
+}
+
+#[test]
+fn enemies_arrive_from_outside_a_portrait_phone() {
+    enemies_arrive_from_outside("phone portrait", 1080.0, 2400.0);
+}
+
+#[test]
+fn enemies_arrive_from_outside_a_landscape_phone() {
+    enemies_arrive_from_outside("phone landscape", 2400.0, 1080.0);
 }
