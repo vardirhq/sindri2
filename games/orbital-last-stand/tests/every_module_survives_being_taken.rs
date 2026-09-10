@@ -51,10 +51,10 @@ fn collect_board_keys(value: &serde_json::Value) -> Vec<String> {
     let mut found = Vec::new();
     fn walk(value: &serde_json::Value, found: &mut Vec<String>) {
         match value {
-            serde_json::Value::String(text) => {
-                if text.starts_with("special_") || text.starts_with("synergy_") {
-                    found.push(text.clone());
-                }
+            serde_json::Value::String(text)
+                if text.starts_with("special_") || text.starts_with("synergy_") =>
+            {
+                found.push(text.clone());
             }
             serde_json::Value::Array(items) => items.iter().for_each(|i| walk(i, found)),
             serde_json::Value::Object(map) => {
