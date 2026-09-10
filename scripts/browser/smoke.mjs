@@ -181,7 +181,31 @@ if (EXPECT_FAILURE) {
 }
 
 const webgpu = await page.evaluate(() => Boolean(navigator.gpu));
-await page.waitForTimeout(6000);
+
+// Wait for the engine to have started rather than for a number of seconds to
+// have passed. Starting means sizing its own canvas, which is exactly what
+// `started` is checked on below, so this waits on the condition the run is
+// about to be judged by.
+//
+// It used to be a flat six seconds. That is a bet on how fast the machine is,
+// and on a loaded runner -- this job builds a wasm bundle and exports three
+// projects first -- the bet loses: the canvas is still at its 300x150 default
+// when it is measured, and the failure reads "the page did not start the
+// engine" about an engine that was starting perfectly well. A timeout here is
+// deliberately not an error: it falls through to the same checks and the same
+// diagnostics, so an engine that genuinely never starts fails exactly as it
+// did, just later.
+await page
+  .waitForFunction(
+    () => {
+      const canvas = document.querySelector('canvas');
+      return Boolean(canvas) && canvas.width > 300;
+    },
+    { timeout: 60000 },
+  )
+  .catch(() => {});
+// Then a moment to draw a frame or two into the canvas it just sized.
+await page.waitForTimeout(1500);
 
 await page.mouse.click(480, 270);
 await page.keyboard.press('KeyD');
