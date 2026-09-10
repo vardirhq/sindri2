@@ -589,7 +589,7 @@
         },
         "sindri.sprite": {
           "layer": 17,
-          "texture": "textures/player.png",
+          "texture": "textures/player.png#bob-0",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
       }

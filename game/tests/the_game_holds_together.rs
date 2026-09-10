@@ -264,6 +264,77 @@ fn every_authored_property_names_a_field_its_script_exports() {
     }
 }
 
+/// A sprite drawn from a sheet names which part of it to draw.
+///
+/// A sheet drawn whole is every frame at once, and that is what a sprite naming
+/// no part of its own falls back to. While a clip plays nothing shows, because
+/// the animation names the frame; the moment one stops -- or before any script
+/// has run at all, which is the title screen -- the fallback is the entire
+/// strip, drawn as one squashed picture with nothing failing.
+///
+/// That is exactly what shipped. The player stood on the title screen as four
+/// overlapping copies of itself, because `Animation.stop` is what standing
+/// still now means and the texture named no frame to fall back to. Every other
+/// sheet-drawn sprite in the scene already carried its `#frame`; this one did
+/// not, and while the clip was unconditionally playing nothing revealed it.
+///
+/// So the rule belongs to the scene rather than to the script: anything drawn
+/// from a sheet that cuts named frames must name one. Then no animation state
+/// -- playing, stopped, or never started -- can leave a sprite undefined.
+#[test]
+fn every_sprite_drawn_from_a_sheet_names_a_frame_of_it() {
+    let world = world().expect("the scene loads");
+    let extractor = extractor().expect("the schemas register");
+
+    let cut_by_sheet: BTreeMap<String, BTreeSet<String>> = SHEETS
+        .iter()
+        .filter_map(|(id, json)| {
+            let document: SpriteSheetDocument =
+                serde_json::from_str(json).unwrap_or_else(|error| panic!("{id} parses: {error}"));
+            let names: BTreeSet<String> = document
+                .grid
+                .map(|grid| grid.names)
+                .unwrap_or_default()
+                .into_iter()
+                .chain(document.sprites.into_keys())
+                .collect();
+            (!names.is_empty()).then(|| ((*id).to_owned(), names))
+        })
+        .collect();
+
+    for (entity, sprite) in extractor
+        .components()
+        .query::<SpriteComponent>(&world)
+        .expect("the scene's sprites read")
+    {
+        let reference = sprite.reference().expect("the sprite reference parses");
+        let Some(sheet) =
+            sheet_id_for(&AssetId::new(reference.texture().to_owned()).expect("an asset id"))
+        else {
+            continue;
+        };
+        let Some(frames) = cut_by_sheet.get(sheet.as_str()) else {
+            continue;
+        };
+        let name = world
+            .get(entity)
+            .and_then(|data| data.name.clone())
+            .unwrap_or_else(|| format!("{entity:?}"));
+        let Some(drawn) = reference.sprite() else {
+            panic!(
+                "{name} draws {} and names no frame of it, so whenever no clip \
+                 is playing it draws all of {frames:?} at once",
+                reference.texture(),
+            );
+        };
+        assert!(
+            frames.contains(drawn),
+            "{name} draws '{drawn}', which {} does not cut: {frames:?}",
+            reference.texture(),
+        );
+    }
+}
+
 fn _sources_are_used(_: &ScriptSources) {}
 const _: fn() = || {
     let _ = ScriptComponent::TYPE_NAME;
