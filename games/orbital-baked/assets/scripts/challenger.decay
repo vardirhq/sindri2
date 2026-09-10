@@ -18,6 +18,7 @@ script Challenger {
     var hp: f32 = 0.0;
     var phase: f32 = 1.0;
     var previous_phase: f32 = 1.0;
+    var armour_tier: f32 = 0.0;
     var attack: f32 = 0.9;
     var special: f32 = 2.7;
     var clock: f32 = 0.0;
@@ -401,14 +402,29 @@ script Challenger {
         Audio.play("audio/boss.wav", 0.48);
     }
 
-    // The vector boss shed a polygon side per damage tier, which a sprite cannot
-    // do. The tell it carried -- "this thing is coming apart" -- is kept as heat
-    // instead: the hull loses its green and blue as the armour goes, so a nearly
-    // dead boss reads as raw red at a glance, the way the shrinking outline did.
+    // The vector boss shed a polygon side per damage tier. A sheet has fixed
+    // geometry, but it can hold more than one, so the tiers are baked as five
+    // sets of frames and selected by clip: ten armour plates ringing the hull at
+    // full health, five and a row of torn sockets at the end. The thresholds are
+    // the ones the outline used, so it comes apart on the same schedule.
     fn update_spine_armor() {
         let share = this.hp / max(Game.get("boss_max", 1.0), 1.0);
-        this.sprite.tint.g = 0.42 + share * 0.58;
-        this.sprite.tint.b = 0.30 + share * 0.70;
+        if share > 0.8 { wear_armour(10.0, "armour10"); }
+        else if share > 0.6 { wear_armour(9.0, "armour9"); }
+        else if share > 0.4 { wear_armour(8.0, "armour8"); }
+        else if share > 0.2 { wear_armour(7.0, "armour7"); }
+        else { wear_armour(5.0, "armour5"); }
+    }
+
+    // Only on a change of tier: `Animation.play` restarts the clip, so calling
+    // it every frame would hold the boss on its first frame and the plates
+    // would stop breathing.
+    fn wear_armour(tier: f32, clip: String) {
+        if tier == this.armour_tier {
+            return;
+        }
+        this.armour_tier = tier;
+        Animation.play(this.entity, clip);
     }
 
     fn spine_attack(dt: f32) {

@@ -99,7 +99,7 @@
           }
         },
         "sindri.sprite": {
-          "texture": "textures/challenger.png#body-0",
+          "texture": "textures/challenger.png#a10-0",
           "tint": [
             1.0,
             1.0,
@@ -110,18 +110,58 @@
         },
         "sindri.animation.sprite": {
           "clips": {
-            "idle": {
+            "armour10": {
               "frames": [
-                "body-0",
-                "body-1",
-                "body-2",
-                "body-3"
+                "a10-0",
+                "a10-1",
+                "a10-2",
+                "a10-3"
+              ],
+              "seconds_per_frame": 0.12,
+              "looping": true
+            },
+            "armour9": {
+              "frames": [
+                "a9-0",
+                "a9-1",
+                "a9-2",
+                "a9-3"
+              ],
+              "seconds_per_frame": 0.12,
+              "looping": true
+            },
+            "armour8": {
+              "frames": [
+                "a8-0",
+                "a8-1",
+                "a8-2",
+                "a8-3"
+              ],
+              "seconds_per_frame": 0.12,
+              "looping": true
+            },
+            "armour7": {
+              "frames": [
+                "a7-0",
+                "a7-1",
+                "a7-2",
+                "a7-3"
+              ],
+              "seconds_per_frame": 0.12,
+              "looping": true
+            },
+            "armour5": {
+              "frames": [
+                "a5-0",
+                "a5-1",
+                "a5-2",
+                "a5-3"
               ],
               "seconds_per_frame": 0.12,
               "looping": true
             }
           },
-          "playing": "idle",
+          "playing": "armour10",
           "speed": 1.0
         }
       }
