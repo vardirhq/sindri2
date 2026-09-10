@@ -1,12 +1,12 @@
 {
   "format_version": 1,
   "metadata": {
-    "name": "Tier One Bosses"
+    "name": "Brood Spawn"
   },
   "entities": [
     {
-      "id": "challenger",
-      "name": "Challenger",
+      "id": "brood-spawn",
+      "name": "Brood Spawn",
       "transform_3d": {
         "position": [
           0.0,
@@ -20,8 +20,8 @@
           1.0
         ],
         "scale": [
-          1.0,
-          1.0,
+          0.4,
+          0.4,
           1.0
         ]
       },
@@ -29,7 +29,7 @@
         "sindri.tags": {
           "tags": [
             "enemy",
-            "boss"
+            "brood"
           ]
         },
         "sindri.physics2d.rigid_body": {
@@ -47,7 +47,7 @@
           ],
           "angular_velocity": 0.0,
           "gravity_scale": 0.0,
-          "linear_damping": 1.4,
+          "linear_damping": 0.0,
           "angular_damping": 0.0,
           "lock_rotation": true
         },
@@ -71,15 +71,15 @@
         },
         "sindri.effect.burst": {
           "texture": "textures/fleck.png",
-          "count": 96,
-          "speed": 9.0,
-          "spread": 0.65,
-          "lifetime": 1.05,
-          "size": 0.16,
+          "count": 28,
+          "speed": 5.8,
+          "spread": 0.55,
+          "lifetime": 0.58,
+          "size": 0.09,
           "tint": [
-            0.56,
-            0.91,
             1.0,
+            0.45,
+            0.55,
             1.0
           ],
           "fade": true,
@@ -87,34 +87,41 @@
           "layer": 6
         },
         "sindri.script": {
-          "source": "scripts/challenger.decay",
-          "script": "Challenger",
+          "source": "scripts/drifter.decay",
+          "script": "Drifter",
           "properties": {
             "kind": 0.0,
-            "shot": "prefabs/enemy-bullet.prefab.json",
+            "speed": 1.5,
+            "health": 2.0,
+            "worth": 1.0,
+            "touch_damage": 1.0,
             "core": "prefabs/core.prefab.json",
-            "drop_roll": "prefabs/drop-roll.prefab.json",
             "death_burst": "prefabs/nova.prefab.json",
-            "minion": "prefabs/drifter.prefab.json",
-            "brood_spawn": "prefabs/brood-spawn.prefab.json"
+            "shot": "prefabs/enemy-bullet.prefab.json",
+            "drop_roll": "prefabs/drop-roll.prefab.json",
+            "elite_shell": "prefabs/enemy-shell.prefab.json",
+            "elite_ring": "prefabs/enemy-ring.prefab.json",
+            "arc_mark": "prefabs/enemy-arc-mark.prefab.json",
+            "phaser_mark": "prefabs/phaser-mark.prefab.json",
+            "prong_mark": "prefabs/enemy-prong.prefab.json"
           }
         },
         "sindri.shape": {
           "kind": "polygon",
-          "count": 5.0,
+          "count": 6.0,
           "fill": [
-            1.0,
-            0.61,
-            0.36,
-            0.1
+            0.0,
+            0.0,
+            0.0,
+            0.0
           ],
           "stroke": [
+            0.17465,
+            0.8388,
             1.0,
-            0.61,
-            0.36,
             1.0
           ],
-          "stroke_width": 0.06,
+          "stroke_width": 0.09,
           "corner_radius": 0.0,
           "dashes": 0.0,
           "dash_duty": 0.5,

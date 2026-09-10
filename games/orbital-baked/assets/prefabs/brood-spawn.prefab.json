@@ -1,12 +1,12 @@
 {
   "format_version": 1,
   "metadata": {
-    "name": "Tier One Bosses"
+    "name": "Brood Spawn"
   },
   "entities": [
     {
-      "id": "challenger",
-      "name": "Challenger",
+      "id": "brood-spawn",
+      "name": "Brood Spawn",
       "transform_3d": {
         "position": [
           0.0,
@@ -20,8 +20,8 @@
           1.0
         ],
         "scale": [
-          1.0,
-          1.0,
+          0.4,
+          0.4,
           1.0
         ]
       },
@@ -29,7 +29,7 @@
         "sindri.tags": {
           "tags": [
             "enemy",
-            "boss"
+            "brood"
           ]
         },
         "sindri.physics2d.rigid_body": {
@@ -47,7 +47,7 @@
           ],
           "angular_velocity": 0.0,
           "gravity_scale": 0.0,
-          "linear_damping": 1.4,
+          "linear_damping": 0.0,
           "angular_damping": 0.0,
           "lock_rotation": true
         },
@@ -71,15 +71,15 @@
         },
         "sindri.effect.burst": {
           "texture": "textures/fleck.png",
-          "count": 96,
-          "speed": 9.0,
-          "spread": 0.65,
-          "lifetime": 1.05,
-          "size": 0.16,
+          "count": 28,
+          "speed": 5.8,
+          "spread": 0.55,
+          "lifetime": 0.58,
+          "size": 0.09,
           "tint": [
-            0.56,
-            0.91,
             1.0,
+            0.45,
+            0.55,
             1.0
           ],
           "fade": true,
@@ -87,21 +87,27 @@
           "layer": 6
         },
         "sindri.script": {
-          "source": "scripts/challenger.decay",
-          "script": "Challenger",
+          "source": "scripts/drifter.decay",
+          "script": "Drifter",
           "properties": {
             "kind": 0.0,
-            "shot": "prefabs/enemy-bullet.prefab.json",
+            "speed": 1.5,
+            "health": 2.0,
+            "worth": 1.0,
+            "touch_damage": 1.0,
             "core": "prefabs/core.prefab.json",
-            "drop_roll": "prefabs/drop-roll.prefab.json",
             "death_burst": "prefabs/nova.prefab.json",
-            "minion": "prefabs/drifter.prefab.json",
-            "shield_segment": "prefabs/shield-segment.prefab.json",
-            "brood_spawn": "prefabs/brood-spawn.prefab.json"
+            "shot": "prefabs/enemy-bullet.prefab.json",
+            "drop_roll": "prefabs/drop-roll.prefab.json",
+            "elite_shell": "prefabs/enemy-shell.prefab.json",
+            "elite_ring": "prefabs/enemy-ring.prefab.json",
+            "arc_mark": "prefabs/enemy-arc-mark.prefab.json",
+            "phaser_mark": "prefabs/phaser-mark.prefab.json",
+            "prong_mark": "prefabs/enemy-prong.prefab.json"
           }
         },
         "sindri.sprite": {
-          "texture": "textures/challenger.png#a10-0",
+          "texture": "textures/drifter.png#body-0",
           "tint": [
             1.0,
             1.0,
@@ -112,58 +118,18 @@
         },
         "sindri.animation.sprite": {
           "clips": {
-            "armour10": {
+            "idle": {
               "frames": [
-                "a10-0",
-                "a10-1",
-                "a10-2",
-                "a10-3"
+                "body-0",
+                "body-1",
+                "body-2",
+                "body-3"
               ],
-              "seconds_per_frame": 0.12,
-              "looping": true
-            },
-            "armour9": {
-              "frames": [
-                "a9-0",
-                "a9-1",
-                "a9-2",
-                "a9-3"
-              ],
-              "seconds_per_frame": 0.12,
-              "looping": true
-            },
-            "armour8": {
-              "frames": [
-                "a8-0",
-                "a8-1",
-                "a8-2",
-                "a8-3"
-              ],
-              "seconds_per_frame": 0.12,
-              "looping": true
-            },
-            "armour7": {
-              "frames": [
-                "a7-0",
-                "a7-1",
-                "a7-2",
-                "a7-3"
-              ],
-              "seconds_per_frame": 0.12,
-              "looping": true
-            },
-            "armour5": {
-              "frames": [
-                "a5-0",
-                "a5-1",
-                "a5-2",
-                "a5-3"
-              ],
-              "seconds_per_frame": 0.12,
+              "seconds_per_frame": 0.13,
               "looping": true
             }
           },
-          "playing": "armour10",
+          "playing": "idle",
           "speed": 1.0
         }
       }
