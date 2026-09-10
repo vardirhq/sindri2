@@ -89,17 +89,25 @@ missing_panics_doc = "allow"
 # second and asking what happened. Unoptimised, that arithmetic dominated the
 # workspace's test time -- one Orbital test spent a hundred and ten seconds
 # simulating six thousand frames, and the two slowest suites together were most
-# of CI's critical path.
+# of CI's critical path. Optimising dependencies takes the suite from about 288
+# seconds to 97, because most of that arithmetic is in the physics solver and
+# the physics solver is a dependency.
 #
-# Optimising the test profile is what fixes that, because the cost is in the
-# code under test rather than in the harness around it. Dependencies are
-# optimised in dev builds too: the physics solver is a dependency, so leaving it
-# at `opt-level = 0` would have left most of the cost in place.
+# Dependencies rather than the whole workspace, which is the part worth
+# explaining. Optimising the workspace too is faster to run -- 97 seconds down
+# to 30 -- and still the wrong trade for CI, because the two costs are not paid
+# at the same rate. A dependency is compiled once and restored from the cache on
+# every run after that; a workspace crate is recompiled on every run, because
+# changing one is what a pull request is. Measured cold, optimising the
+# workspace cost about 123 seconds of compilation to save about 67 seconds of
+# test time, and only the compilation recurs.
+#
+# So this is deliberately the smaller of the two speedups. A developer who runs
+# the suite repeatedly against an unchanged tree is in the opposite position --
+# the compilation is paid once and the saving is per run -- and can add
+# `[profile.test] opt-level = 2` locally, which is the whole of the difference.
 #
 # Debug assertions and overflow checks are untouched, so this buys speed rather
 # than trading away what the tests are able to catch.
-[profile.test]
-opt-level = 2
-
 [profile.dev.package."*"]
 opt-level = 2

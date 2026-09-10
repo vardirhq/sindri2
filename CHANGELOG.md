@@ -4,19 +4,28 @@ All notable changes to Sindri Next will be documented here.
 
 ## [Unreleased]
 
-- **CI runs the same checks about nine times faster.** The workspace's tests
+- **CI runs the same checks about three times faster.** The workspace's tests
   were the whole of CI's critical path, and most of that was one number: the
   repository set no Cargo profile, so a game engine whose tests are mostly
   simulation ran that simulation unoptimised. One Orbital test spent a hundred
-  and ten seconds stepping six thousand frames. Optimising the test profile,
-  dependencies included -- the physics solver is a dependency -- took the whole
-  suite from about 288 seconds to 82 with debug assertions and overflow checks
-  untouched. Running it under `cargo-nextest`, which schedules every test in one
-  pool instead of one binary at a time, took it to 45; splitting the slowest
-  test into the five screen shapes it was looping over took it to **30 seconds
-  for all 1350 tests**. Doctests are run in their own step, because nextest
-  cannot run them and dropping them silently would have been a real loss of
-  coverage.
+  and ten seconds stepping six thousand frames. Optimising *dependencies* takes
+  the suite from about 288 seconds to 97 -- most of that arithmetic is in the
+  physics solver, which is a dependency -- with debug assertions and overflow
+  checks untouched. Running it under `cargo-nextest`, which schedules every test
+  in one pool instead of one binary at a time, and splitting the slowest test
+  into the five screen shapes it was looping over take it further still.
+  Doctests are run in their own step, because nextest cannot run them and
+  dropping them silently would have been a real loss of coverage.
+
+  Dependencies rather than the whole workspace is the part worth knowing.
+  Optimising workspace crates too runs faster -- 97 seconds down to 30 -- and is
+  still the wrong trade for CI, because a dependency is compiled once and
+  restored from the cache while a workspace crate is recompiled on every run.
+  Measured, that cost about 123 seconds of compilation to save 67 seconds of
+  test time, so the first version of this change was a net loss in CI and the
+  smaller speedup is the one kept. A developer running the suite repeatedly
+  against an unchanged tree is in the opposite position and can add
+  `[profile.test] opt-level = 2` locally.
 
   Two things this turned up. Adopting nextest exposed a test that was flaky by
   construction: it waited for a background loader by spinning a fixed ten
