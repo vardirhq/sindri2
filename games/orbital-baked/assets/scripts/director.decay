@@ -370,7 +370,9 @@ script Director {
     }
 
     fn eligible_boss_count() -> f32 {
-        if this.elapsed >= 480.0 { return 11.0; }
+        // Twelve rather than eleven: the Aegis is kind ten, and a boss the pool
+        // cannot pick is a boss nobody ever fights.
+        if this.elapsed >= 480.0 { return 12.0; }
         if this.elapsed >= 240.0 { return 9.0; }
         return 4.0;
     }

@@ -9,6 +9,7 @@ script Challenger {
     @export let drop_roll: Prefab;
     @export let death_burst: Prefab;
     @export let minion: Prefab;
+    @export let shield_segment: Prefab;
     @export let hazard_damage: f32 = 0.0;
 
     var health: f32 = 132.0;
@@ -19,6 +20,7 @@ script Challenger {
     var phase: f32 = 1.0;
     var previous_phase: f32 = 1.0;
     var armour_tier: f32 = 0.0;
+    var ring_built: f32 = 0.0;
     var attack: f32 = 0.9;
     var special: f32 = 2.7;
     var clock: f32 = 0.0;
@@ -94,6 +96,17 @@ script Challenger {
             this.touch_damage = 2.25;
             this.speed = 1.0;
             tint(1.0, 0.5, 0.62);
+        } else if this.kind == 10.0 {
+            // The Aegis. Less hull than its neighbours because the ring is the
+            // rest of its health, and slow, because a fight about finding the
+            // opening is a worse fight if the opening runs away.
+            this.health = 196.0;
+            this.worth = 92.0;
+            this.touch_damage = 2.4;
+            this.speed = 0.72;
+            this.transform.scale.x = 1.9;
+            this.transform.scale.y = 1.9;
+            tint(0.55, 0.88, 1.0);
         } else if this.kind == 8.0 {
             this.health = 234.0;
             this.worth = 80.0;
@@ -166,6 +179,10 @@ script Challenger {
             update_spine_armor();
             orbit(dx, dy, far, 4.5, 0.38);
             spine_attack(dt);
+        } else if this.kind == 10.0 {
+            build_shield_ring();
+            orbit(dx, dy, far, 3.9, 0.30);
+            aegis_attack(dt);
         } else if this.kind == 8.0 {
             anchor_move(-4.2);
             leviathan_attack(dt, player);
@@ -612,5 +629,43 @@ script Challenger {
         roll.transform.position.y = this.transform.position.y;
         World.set_property(roll, "boss", 1.0);
         World.despawn(this.entity);
+    }
+
+    // The Aegis: a hull nobody can reach, behind eight plates that turn.
+    //
+    // The gating is not written anywhere, and that is the point. A bullet spends
+    // itself on the first sensor it enters, and the ring orbits outside the
+    // hull's own collider -- so while a plate is in the way it eats the shot,
+    // and where a plate has been destroyed there is nothing left to eat it.
+    // Whether this boss can be hurt from where the player is standing is
+    // therefore a fact about the world rather than a rule in a script, and it
+    // stays true for every weapon in the game including ones added later.
+    fn build_shield_ring() {
+        if this.ring_built > 0.0 {
+            return;
+        }
+        this.ring_built = 1.0;
+        let plates = 8.0;
+        var slot: f32 = 0.0;
+        while slot < plates {
+            let plate = World.spawn_child(this.shield_segment, this.entity);
+            World.set_property(plate, "angle", slot / plates * 6.2831853);
+            World.set_property(plate, "radius", 1.55);
+            World.set_property(plate, "spin", 0.55);
+            World.set_property(plate, "health", 7.0);
+            slot += 1.0;
+        }
+    }
+
+    // Fires outward through its own ring, so a plate the player has destroyed is
+    // also the hole its shots come out of. Opening a way in opens a way out.
+    fn aegis_attack(dt: f32) {
+        this.attack -= dt;
+        if this.attack > 0.0 {
+            return;
+        }
+        fire_ring(8.0, 3.9, 1.0);
+        if this.phase == 2.0 { this.attack = 1.05; }
+        else { this.attack = 1.5; }
     }
 }

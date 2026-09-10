@@ -95,7 +95,8 @@
             "core": "prefabs/core.prefab.json",
             "drop_roll": "prefabs/drop-roll.prefab.json",
             "death_burst": "prefabs/nova.prefab.json",
-            "minion": "prefabs/drifter.prefab.json"
+            "minion": "prefabs/drifter.prefab.json",
+            "shield_segment": "prefabs/shield-segment.prefab.json"
           }
         },
         "sindri.sprite": {

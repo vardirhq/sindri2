@@ -1,0 +1,31 @@
+{
+  "format_version": 1,
+  "anchor": "center",
+  "grid": {
+    "columns": 9,
+    "rows": 1,
+    "names": [
+      "s2-0",
+      "s2-1",
+      "s2-2",
+      "s1-0",
+      "s1-1",
+      "s1-2",
+      "s0-0",
+      "s0-1",
+      "s0-2"
+    ],
+    "size": [
+      630,
+      120
+    ],
+    "margin": [
+      2,
+      2
+    ],
+    "spacing": [
+      4,
+      4
+    ]
+  }
+}
