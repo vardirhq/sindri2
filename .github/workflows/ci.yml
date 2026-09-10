@@ -75,6 +75,16 @@ jobs:
         run: |
           node src/cli.ts ../../games/orbital-last-stand/assets/textures/detonation.isobake.json \
             --out ../../games/orbital-last-stand/assets --check
+      # Orbital Baked is a whole game's art rather than one asset, and it is the
+      # reason this check matters more than it did: seven sheets are committed
+      # here, and a recipe that stops producing what is checked in would show up
+      # as art that quietly drifts from its source rather than as a failure.
+      - name: Check the baked variant's art is still what its recipes bake
+        working-directory: tools/isometric-baker
+        run: |
+          for recipe in ../../games/orbital-baked/assets/textures/*.isobake.json; do
+            node src/cli.ts "$recipe" --out ../../games/orbital-baked/assets --check
+          done
 
   clippy:
     name: Clippy
