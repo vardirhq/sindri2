@@ -9,6 +9,7 @@ script Challenger {
     @export let drop_roll: Prefab;
     @export let death_burst: Prefab;
     @export let minion: Prefab;
+    @export let brood_spawn: Prefab;
     @export let shield_segment: Prefab;
     @export let hazard_damage: f32 = 0.0;
 
@@ -26,6 +27,7 @@ script Challenger {
     var clock: f32 = 0.0;
     var offset: f32 = 0.0;
     var telegraph: f32 = 0.0;
+    var stunned: f32 = 0.0;
     var dash_time: f32 = 0.0;
     var dash_x: f32 = 0.0;
     var dash_y: f32 = 0.0;
@@ -256,7 +258,21 @@ script Challenger {
         } else if this.dash_time > 0.0 {
             this.dash_time -= dt;
             Physics.set_velocity(this.entity, this.dash_x * 7.2, this.dash_y * 7.2);
-            if this.dash_time <= 0.0 { fire_fan(this.dash_x, this.dash_y, 5.0, 4.3); }
+            if this.dash_time <= 0.0 {
+                fire_fan(this.dash_x, this.dash_y, 5.0, 4.3);
+                // Everything that goes that fast has to stop. The Harrower
+                // overshoots and spends a moment hauling itself back around,
+                // and `receive_hits` makes those the only cheap seconds in the
+                // fight -- so the question stops being "how do I survive the
+                // charge" and becomes "how do I make it charge where I want".
+                this.stunned = 1.15;
+                if this.phase == 2.0 { this.stunned = 0.85; }
+            }
+        } else if this.stunned > 0.0 {
+            this.stunned -= dt;
+            // Still carrying its own momentum, which is what makes the window
+            // readable: it is visibly coasting rather than hunting.
+            Physics.set_velocity(this.entity, this.dash_x * 0.9, this.dash_y * 0.9);
         } else {
             chase(dx, dy, far, 0.72);
             this.special -= dt;
@@ -341,7 +357,7 @@ script Challenger {
             var made: f32 = 0.0;
             while made < 2.0 {
                 let angle = this.offset + made * 3.14159265;
-                let helper = World.spawn(this.minion);
+                let helper = World.spawn(this.brood_spawn);
                 helper.transform.position.x = this.transform.position.x + cos(angle) * 1.4;
                 helper.transform.position.y = this.transform.position.y + sin(angle) * 1.4;
                 made += 1.0;
@@ -564,6 +580,18 @@ script Challenger {
                          max(Game.get("player_damage_taken", 0.0), this.touch_damage));
             } else if World.exists(hit) && World.has_tag(hit, "player_damage") {
                 var damage: f32 = World.property_number(hit, "damage", 0.0);
+                // The Brood does not defend itself; its children do. While any
+                // of them is alive the parent simply cannot be hurt, so the
+                // fight is about clearing the room rather than out-damaging the
+                // thing in the middle of it.
+                if this.kind == 4.0 && brood_alive() > 0.0 {
+                    damage = 0.0;
+                }
+                // And the Harrower is worth hitting exactly when it has just
+                // missed.
+                if this.kind == 0.0 && this.stunned > 0.0 {
+                    damage *= 2.6;
+                }
                 if this.kind == 7.0 {
                     let share = this.hp / max(Game.get("boss_max", 1.0), 1.0);
                     if share > 0.6 { damage *= 0.72; }
@@ -667,5 +695,21 @@ script Challenger {
         fire_ring(8.0, 3.9, 1.0);
         if this.phase == 2.0 { this.attack = 1.05; }
         else { this.attack = 1.5; }
+    }
+
+    // How many of the Brood's children are still on the field.
+    //
+    // Counted by tag rather than remembered, because remembering would mean
+    // holding entity handles across the frames in which they die. A tag asks
+    // the world what is actually there, which is the same question the player
+    // is answering by looking at the screen.
+    fn brood_alive() -> f32 {
+        var alive: f32 = 0.0;
+        for child in World.with_tag("brood") {
+            if World.exists(child) {
+                alive += 1.0;
+            }
+        }
+        return alive;
     }
 }

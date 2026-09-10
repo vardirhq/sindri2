@@ -35,6 +35,7 @@ script Director {
     var elapsed: f32 = 0.0;
     var spawn_timer: f32 = 0.0;
     var next_boss: f32 = 60.0;
+    var boss_was_alive: f32 = 0.0;
     var boss_count: f32 = 0.0;
     var last_boss: f32 = -1.0;
     var previous_boss: f32 = -1.0;
@@ -163,10 +164,25 @@ script Director {
         }
 
         let boss_alive = Game.get("boss_hp", 0.0) > 0.0;
+
+        // The gap between bosses is measured from the end of the last fight
+        // rather than from when it was scheduled to start.
+        //
+        // It used to advance the clock by one interval per boss sent, which
+        // works only while fights are shorter than the interval. They are not:
+        // a boss that takes ninety seconds to kill runs straight past its own
+        // next slot, so the moment it dies the clock is already overdue and the
+        // next one arrives at once. The intended minute of ordinary play in
+        // between simply never happened, and the longer a fight ran the less
+        // breathing room it earned.
+        if this.boss_was_alive > 0.0 && !boss_alive {
+            this.next_boss = this.elapsed + this.boss_interval;
+        }
+        if boss_alive { this.boss_was_alive = 1.0; } else { this.boss_was_alive = 0.0; }
+
         if !boss_alive && this.elapsed >= this.next_boss {
             this.boss_count += 1.0;
             Game.set("boss_count", this.boss_count);
-            this.next_boss += this.boss_interval;
             send_boss();
             return;
         }
