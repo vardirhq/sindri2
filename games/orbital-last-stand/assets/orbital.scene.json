@@ -162,7 +162,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["upgrade-card"]
+          "classes": [
+            "upgrade-card"
+          ]
         },
         "sindri.script": {
           "properties": {
@@ -231,7 +233,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["upgrade-card-copy"]
+          "classes": [
+            "upgrade-card-copy"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -282,7 +286,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["upgrade-card-name"]
+          "classes": [
+            "upgrade-card-name"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -336,7 +342,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["upgrade-card"]
+          "classes": [
+            "upgrade-card"
+          ]
         },
         "sindri.script": {
           "properties": {
@@ -405,7 +413,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["upgrade-card-copy"]
+          "classes": [
+            "upgrade-card-copy"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -456,7 +466,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["upgrade-card-name"]
+          "classes": [
+            "upgrade-card-name"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -510,7 +522,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["upgrade-card"]
+          "classes": [
+            "upgrade-card"
+          ]
         },
         "sindri.script": {
           "properties": {
@@ -579,7 +593,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["upgrade-card-copy"]
+          "classes": [
+            "upgrade-card-copy"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -630,7 +646,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["upgrade-card-name"]
+          "classes": [
+            "upgrade-card-name"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -684,7 +702,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["upgrade-card"]
+          "classes": [
+            "upgrade-card"
+          ]
         },
         "sindri.script": {
           "properties": {
@@ -753,7 +773,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["upgrade-card-copy"]
+          "classes": [
+            "upgrade-card-copy"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -804,7 +826,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["upgrade-card-name"]
+          "classes": [
+            "upgrade-card-name"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -858,7 +882,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["upgrade-card"]
+          "classes": [
+            "upgrade-card"
+          ]
         },
         "sindri.script": {
           "properties": {
@@ -927,7 +953,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["upgrade-card-copy"]
+          "classes": [
+            "upgrade-card-copy"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -978,7 +1006,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["upgrade-card-name"]
+          "classes": [
+            "upgrade-card-name"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -1032,7 +1062,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["upgrade-card"]
+          "classes": [
+            "upgrade-card"
+          ]
         },
         "sindri.script": {
           "properties": {
@@ -1101,7 +1133,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["upgrade-card-copy"]
+          "classes": [
+            "upgrade-card-copy"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -1152,7 +1186,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["upgrade-card-name"]
+          "classes": [
+            "upgrade-card-name"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -1360,7 +1396,11 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["hud-meter","hud-boss-meter","meter-back"]
+          "classes": [
+            "hud-meter",
+            "hud-boss-meter",
+            "meter-back"
+          ]
         },
         "sindri.ui.image": {
           "anchor": "top",
@@ -1399,7 +1439,11 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["hud-meter","hud-boss-meter","meter-fill"]
+          "classes": [
+            "hud-meter",
+            "hud-boss-meter",
+            "meter-fill"
+          ]
         },
         "sindri.ui.image": {
           "anchor": "top",
@@ -1442,7 +1486,10 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["hud-text","hud-boss-name"]
+          "classes": [
+            "hud-text",
+            "hud-boss-name"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "top",
@@ -1500,7 +1547,10 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["hud-text","hud-clock"]
+          "classes": [
+            "hud-text",
+            "hud-clock"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "top",
@@ -1552,13 +1602,18 @@
         ],
         "scale": [
           0.84,
-          0.014,
+          0.02,
           1.0
         ]
       },
       "components": {
         "weave.style": {
-          "classes": ["hud-meter","hud-player-meter","cores-meter","meter-fill"]
+          "classes": [
+            "hud-meter",
+            "hud-player-meter",
+            "cores-meter",
+            "meter-fill"
+          ]
         },
         "sindri.ui.image": {
           "anchor": "bottom_left",
@@ -1595,22 +1650,27 @@
         ],
         "scale": [
           0.84,
-          0.014,
+          0.02,
           1.0
         ]
       },
       "components": {
         "weave.style": {
-          "classes": ["hud-meter","hud-player-meter","cores-meter","meter-back"]
+          "classes": [
+            "hud-meter",
+            "hud-player-meter",
+            "cores-meter",
+            "meter-back"
+          ]
         },
         "sindri.ui.image": {
           "anchor": "bottom_left",
           "layer": 128,
           "texture": "textures/bar-back.png",
           "tint": [
-            0.10302,
-            0.10505,
-            0.113,
+            0.2,
+            0.24,
+            0.32,
             1.0
           ]
         }
@@ -1640,7 +1700,12 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["hud-meter","hud-player-meter","health-meter","meter-fill"]
+          "classes": [
+            "hud-meter",
+            "hud-player-meter",
+            "health-meter",
+            "meter-fill"
+          ]
         },
         "sindri.ui.image": {
           "anchor": "bottom_left",
@@ -1683,16 +1748,21 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["hud-meter","hud-player-meter","health-meter","meter-back"]
+          "classes": [
+            "hud-meter",
+            "hud-player-meter",
+            "health-meter",
+            "meter-back"
+          ]
         },
         "sindri.ui.image": {
           "anchor": "bottom_left",
           "layer": 128,
           "texture": "textures/bar-back.png",
           "tint": [
-            0.10302,
-            0.10505,
-            0.113,
+            0.2,
+            0.24,
+            0.32,
             1.0
           ]
         }
@@ -1722,7 +1792,10 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["hud-text","hud-health-label"]
+          "classes": [
+            "hud-text",
+            "hud-health-label"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "bottom_left",
@@ -1780,7 +1853,11 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["hud-text","hud-stat","hud-level"]
+          "classes": [
+            "hud-text",
+            "hud-stat",
+            "hud-level"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "top_right",
@@ -1838,7 +1915,11 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["hud-text","hud-stat","hud-score"]
+          "classes": [
+            "hud-text",
+            "hud-stat",
+            "hud-score"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "top_right",
@@ -1896,7 +1977,11 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["hud-text","hud-stat","hud-wave"]
+          "classes": [
+            "hud-text",
+            "hud-stat",
+            "hud-wave"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "top_left",
@@ -2007,7 +2092,10 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["overlay-panel","pause-panel"]
+          "classes": [
+            "overlay-panel",
+            "pause-panel"
+          ]
         },
         "sindri.ui.shape": {
           "kind": "rect",
@@ -2060,7 +2148,10 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["overlay-button","overlay-danger"]
+          "classes": [
+            "overlay-button",
+            "overlay-danger"
+          ]
         },
         "sindri.script": {
           "properties": {
@@ -2123,7 +2214,10 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["overlay-button-label","overlay-danger-label"]
+          "classes": [
+            "overlay-button-label",
+            "overlay-danger-label"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -2168,7 +2262,10 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["overlay-button","overlay-primary"]
+          "classes": [
+            "overlay-button",
+            "overlay-primary"
+          ]
         },
         "sindri.script": {
           "properties": {
@@ -2231,7 +2328,10 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["overlay-button-label","overlay-primary-label"]
+          "classes": [
+            "overlay-button-label",
+            "overlay-primary-label"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -2276,7 +2376,10 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["overlay-title","pause-title"]
+          "classes": [
+            "overlay-title",
+            "pause-title"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -2358,11 +2461,11 @@
         },
         "sindri.script": {
           "properties": {
-          "bullet": "prefabs/bullet.prefab.json",
-          "edge_padding": 0.28,
-          "invulnerable_for": 0.9,
-          "mine": "prefabs/mine.prefab.json",
-          "muzzle_fx": "prefabs/spectacle.prefab.json"
+            "bullet": "prefabs/bullet.prefab.json",
+            "edge_padding": 0.28,
+            "invulnerable_for": 0.9,
+            "mine": "prefabs/mine.prefab.json",
+            "muzzle_fx": "prefabs/spectacle.prefab.json"
           },
           "script": "Player",
           "source": "scripts/player.decay"
@@ -2718,7 +2821,11 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["overlay-button","overlay-primary","result-action"]
+          "classes": [
+            "overlay-button",
+            "overlay-primary",
+            "result-action"
+          ]
         },
         "sindri.script": {
           "properties": {
@@ -2781,7 +2888,11 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["overlay-button-label","overlay-primary-label","result-action-label"]
+          "classes": [
+            "overlay-button-label",
+            "overlay-primary-label",
+            "result-action-label"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -2826,7 +2937,10 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["result-stat","result-best"]
+          "classes": [
+            "result-stat",
+            "result-best"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -2871,7 +2985,10 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["overlay-panel","result-panel"]
+          "classes": [
+            "overlay-panel",
+            "result-panel"
+          ]
         },
         "sindri.ui.shape": {
           "kind": "rect",
@@ -2924,7 +3041,10 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["result-stat","result-kills"]
+          "classes": [
+            "result-stat",
+            "result-kills"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -2969,7 +3089,10 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["overlay-title","result-score"]
+          "classes": [
+            "overlay-title",
+            "result-score"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -3014,7 +3137,10 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["result-stat","result-time"]
+          "classes": [
+            "result-stat",
+            "result-time"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -3059,7 +3185,10 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["overlay-kicker","result-title"]
+          "classes": [
+            "overlay-kicker",
+            "result-title"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -3133,7 +3262,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["title-meta"]
+          "classes": [
+            "title-meta"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -3178,7 +3309,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["title-panel"]
+          "classes": [
+            "title-panel"
+          ]
         },
         "sindri.ui.shape": {
           "kind": "rect",
@@ -3231,7 +3364,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["title-copy"]
+          "classes": [
+            "title-copy"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -3295,7 +3430,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["title-logo"]
+          "classes": [
+            "title-logo"
+          ]
         },
         "sindri.ui.image": {
           "texture": "textures/logo.png",
@@ -3334,7 +3471,10 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["title-copy","title-notice"]
+          "classes": [
+            "title-copy",
+            "title-notice"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -3386,7 +3526,10 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["title-action","overlay-primary"]
+          "classes": [
+            "title-action",
+            "overlay-primary"
+          ]
         },
         "sindri.script": {
           "properties": {
@@ -3449,7 +3592,10 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["title-action-label","overlay-primary-label"]
+          "classes": [
+            "title-action-label",
+            "overlay-primary-label"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -3494,7 +3640,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["upgrade-grid"]
+          "classes": [
+            "upgrade-grid"
+          ]
         },
         "sindri.ui.layout": {
           "direction": "column",
@@ -3548,7 +3696,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["upgrade-panel"]
+          "classes": [
+            "upgrade-panel"
+          ]
         },
         "sindri.ui.shape": {
           "kind": "rect",
@@ -3601,7 +3751,9 @@
       },
       "components": {
         "weave.style": {
-          "classes": ["upgrade-heading"]
+          "classes": [
+            "upgrade-heading"
+          ]
         },
         "sindri.ui.text": {
           "anchor": "center",
@@ -3633,7 +3785,12 @@
           "spread": 0.18,
           "lifetime": 0.24,
           "size": 0.052,
-          "tint": [0.34, 1.0, 0.72, 0.9],
+          "tint": [
+            0.34,
+            1.0,
+            0.72,
+            0.9
+          ],
           "fade": true,
           "drag": 3.2,
           "layer": 5
@@ -3651,7 +3808,12 @@
           "spread": 0.2,
           "lifetime": 0.28,
           "size": 0.06,
-          "tint": [0.28, 0.92, 1.0, 0.92],
+          "tint": [
+            0.28,
+            0.92,
+            1.0,
+            0.92
+          ],
           "fade": true,
           "drag": 3.0,
           "layer": 6
@@ -3669,7 +3831,12 @@
           "spread": 0.22,
           "lifetime": 0.3,
           "size": 0.064,
-          "tint": [1.0, 0.2, 0.72, 0.92],
+          "tint": [
+            1.0,
+            0.2,
+            0.72,
+            0.92
+          ],
           "fade": true,
           "drag": 2.8,
           "layer": 6
@@ -3687,7 +3854,12 @@
           "spread": 0.24,
           "lifetime": 0.3,
           "size": 0.062,
-          "tint": [1.0, 0.82, 0.28, 0.94],
+          "tint": [
+            1.0,
+            0.82,
+            0.28,
+            0.94
+          ],
           "fade": true,
           "drag": 2.8,
           "layer": 6
@@ -3705,7 +3877,12 @@
           "spread": 0.2,
           "lifetime": 0.26,
           "size": 0.058,
-          "tint": [1.0, 0.2, 0.18, 0.9],
+          "tint": [
+            1.0,
+            0.2,
+            0.18,
+            0.9
+          ],
           "fade": true,
           "drag": 3.0,
           "layer": 5
