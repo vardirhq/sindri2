@@ -40,6 +40,11 @@ jobs:
           mkdir -p target/pages/assets
           cp site/index.html target/pages/index.html
           cp site/site.css target/pages/assets/site.css
+          # The screenshots the site draws on. They are captured by the
+          # binaries in this repository rather than grabbed by hand, so the
+          # page shows what the engine draws today rather than what it drew
+          # whenever somebody last remembered to take a picture.
+          cp -R site/screenshots target/pages/assets/screenshots
           # Every example is exported through the real project pipeline. This
           # keeps Pages honest about exactly what desktop/browser exports ship.
           for project in \
