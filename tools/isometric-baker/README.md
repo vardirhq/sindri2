@@ -4,6 +4,12 @@ An **offline asset baker**. A 3D model goes in; ordinary Sindri sprites come
 out — a PNG and the `.sheet.json` beside it, in the formats the engine already
 reads.
 
+Isometric is what it was built for and is still the default, but it bakes three
+views now — see [Views](#views). The tool keeps its name because a generated
+prefab records its provenance under `sindri.isometric-baker`, and renaming that
+key would rewrite every asset already baked with it; that is a migration worth
+arguing on its own rather than smuggling in here.
+
 This is not runtime 3D, and nothing here changes what Sindri renders. Sindri
 still draws sprites, sheets, tilemaps and prefabs; the engine still has one cube
 primitive, no glTF import, no material authoring and no lighting system. A 3D
@@ -98,6 +104,63 @@ as its silhouette. Per-frame pivot metadata in the sheet format would remove
 that, and is a worthwhile engine feature — but one that should be argued on its
 own merits rather than smuggled in under an asset tool.
 
+## Views
+
+A recipe's `view` picks the camera. `isometric` is the default, so a recipe
+written before this existed still means what it meant.
+
+| `view` | The camera | Height | Scale is stated as |
+| --- | --- | --- | --- |
+| `isometric` | Pitched by the tile's own ratio, yawed 45° | Up the screen | `tile` + `tile_world` |
+| `top-down` | Straight down | Invisible | `pixels_per_unit` |
+| `side` | Straight along +Z | Up the screen | `pixels_per_unit` |
+
+The two flat views exist because the isometric camera cannot reach them by any
+choice of tile. Its pitch comes from the tile's ratio —
+`sin(elevation) = tileHeight / tileWidth` — so a square tile would be a pitch of
+90°, which is why `createCamera` refuses one: a top-down view draws no diamond
+to derive a pitch from. Its yaw is fixed at 45° besides, so no tile at all
+produces an axis-aligned view.
+
+So the flat views state their scale rather than deriving it. `pixels_per_unit`
+is the whole of it: one world unit is that many pixels in both screen axes,
+because an axis-aligned orthographic view has no foreshortening to account for.
+
+Each view refuses the other's fields. A `tile` on a `top-down` bake is somebody
+expecting a relationship to a tilemap that the picture does not have, and baking
+it at some default would be the quiet kind of wrong this format exists to
+prevent. For the same reason a flat prefab may not name a `grid`: there is no
+tilemap for it to occupy.
+
+Two things follow from the geometry rather than from any decision here:
+
+- **A top-down bake shows only top faces**, so the banded shading gives one tone
+  per material and the result is flat by nature. Shape has to come from the
+  model's silhouette and its materials, not from its lighting.
+- **A flat bake skips the footprint check.** That check exists because a tilemap
+  hands out ground and the picture has to stay inside what it was given. With no
+  tilemap, no ground is being handed out, and there is nothing to overrun.
+
+### Animation frames
+
+There is no separate animation mode, and none is needed. `variants` already
+packs several models onto one sheet as named frames, so a clip is a recipe with
+`directions: 1` and one variant per frame:
+
+```jsonc
+"view": "side",
+"pixels_per_unit": 32,
+"directions": 1,
+"variants": [
+  { "name": "walk-0", "model": { … } },
+  { "name": "walk-1", "model": { … } }
+]
+```
+
+That is exactly the shape `sindri.animation.sprite` reads: its `frames` are
+sheet sprite names. The frames share one canvas and one palette, which is what
+keeps a walk cycle from shimmering between shades as it plays.
+
 ## The recipe
 
 A bake is described by a `<name>.isobake.json` document, which is the durable
@@ -109,6 +172,7 @@ the recipe is the source.
   "format_version": 1,
   "id": "standing-stone",
   "texture": "textures/standing-stone.png",  // where the sheet is written
+  "view": "isometric",                       // or "top-down" or "side"
   "tile": { "width": 64, "height": 32 },     // pixels across one floor diamond
   "tile_world": { "width": 1.1, "height": 0.55 }, // the tilemap it stands on
   "facing": "south",                         // which way the model is authored
@@ -147,7 +211,8 @@ between its brightest and darkest shade.
 A recipe's `footprint` is what the *game* reserves for the thing: collision,
 placement and the order sprites draw in all read it, and all of them assume the
 picture stays inside it. So the baker refuses a model that stands on more ground
-than its footprint claims. Height is free — a tree is meant to tower over its
+than its footprint claims. Isometric only — a flat view stands on no tilemap, so
+nothing is reserving ground for the picture to overrun. Height is free — a tree is meant to tower over its
 cell — and only the ground is measured.
 
 The failure it prevents is quiet. Gather's shrine stood 1.12 tiles across on a
@@ -215,6 +280,10 @@ A field the reader does not understand is an error, not a default: a recipe with
 Model conventions: one unit is one tile edge, `y = 0` is the floor, the model is
 centred on its own footprint in X/Z, and it faces `+X` — "south" — at rotation 0.
 
+Model conventions hold in every view: the model is authored the same way and
+only the camera differs, so one model can be baked isometric for one game and
+top-down for another without being rebuilt.
+
 Only `"kind": "primitives"` bakes today. Model-file input (GLB/glTF/OBJ) is
 refused explicitly rather than ignored, so a recipe naming one fails instead of
 quietly baking nothing.
@@ -269,7 +338,11 @@ game's vocabulary.
 ### The generation record
 
 The root's `editor` map holds a `sindri.isometric-baker` entry — the canvas, the
-anchor, the tile, the directions, and the recipe that can rebuild it. An
+anchor, the directions, the recipe that can rebuild it, and whichever scale the
+view actually has: `tile` for an isometric bake, `view` and `pixels_per_unit`
+for a flat one. The view is written only when it is not the default, so a record
+made before flat views existed still reads as the isometric bake it was, byte
+for byte. An
 entity's `editor` state is defined as something runtimes ignore, and a prefab's
 is dropped when one is spawned, so recording provenance cannot change what the
 asset does. It is also what an editor will need to offer a rebuild.

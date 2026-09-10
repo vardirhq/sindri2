@@ -5,6 +5,7 @@ script Mine {
     @export let arm_after: f32 = 0.35;
     @export let life: f32 = 7.0;
     @export let blast: Prefab;
+    @export let flash: Prefab;
 
     var age: f32 = 0.0;
     var tripped: bool = false;
@@ -39,6 +40,14 @@ script Mine {
     }
 
     fn detonate() {
+        // The drawn blast, on top of the shockwave the blast prefab already
+        // is. It despawns itself when its clip ends rather than being timed
+        // from here, so re-timing the animation does not mean editing this.
+        if this.flash != null {
+            let boom = World.spawn(this.flash);
+            boom.transform.position.x = this.transform.position.x;
+            boom.transform.position.y = this.transform.position.y;
+        }
         let wave = World.spawn(this.blast);
         wave.transform.position.x = this.transform.position.x;
         wave.transform.position.y = this.transform.position.y;

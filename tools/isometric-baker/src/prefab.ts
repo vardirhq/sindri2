@@ -160,9 +160,18 @@ function generation(recipe: Recipe, report: BakeReport, request: PrefabRequest):
     format_version: GENERATOR_FORMAT_VERSION,
     sheet: sheetIdFor(recipe.texture),
     texture: recipe.texture,
-    tile: [recipe.tile.width, recipe.tile.height],
     world_units_per_pixel: report.worldUnitsPerPixel,
   };
+  // Each view records the scale it actually has. An isometric bake says its
+  // tile, a flat one says its pixels per unit, and the view itself is written
+  // only when it is not the default — so a record made before flat views
+  // existed still reads as the isometric bake it was, byte for byte.
+  if (recipe.tile) {
+    record.tile = [recipe.tile.width, recipe.tile.height];
+  } else {
+    record.view = recipe.view;
+    record.pixels_per_unit = recipe.pixelsPerUnit;
+  }
   if (request.recipe) record.recipe = request.recipe;
   return record;
 }

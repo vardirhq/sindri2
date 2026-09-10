@@ -160,3 +160,69 @@ test('a colour declared in a different case is still one palette entry', async (
   const shoutedPng = result.files.find((file) => file.path.endsWith('.png'));
   assert.ok(png && shoutedPng && png.contents.equals(shoutedPng.contents));
 });
+
+/** A flat-view recipe built in memory, so the assertions are about the view. */
+function flat(view: 'top-down' | 'side', pixelsPerUnit: number) {
+  return parseRecipe(
+    JSON.stringify({
+      format_version: 1,
+      id: 'probe',
+      texture: 'textures/probe.png',
+      view,
+      pixels_per_unit: pixelsPerUnit,
+      directions: 1,
+      model: {
+        materials: { hull: { colour: '#7fd4ff' } },
+        // A unit wide, a unit deep, and deliberately taller than either.
+        parts: [{ type: 'box', material: 'hull', position: [0, 1, 0], size: [1, 2, 1] }],
+      },
+    }),
+    'probe',
+  );
+}
+
+test('a flat bake measures itself, because it stands on no tilemap', () => {
+  const result = bake(flat('top-down', 32));
+  // The scale a generated prefab is built from: canvas pixels over the camera's
+  // own pixels-per-unit, with no tile in the arithmetic anywhere.
+  assert.equal(result.report.worldUnitsPerPixel, 1 / 32);
+  assert.equal(result.report.spriteScale[0], result.canvas.width / 32);
+  assert.equal(result.report.spriteScale[1], result.canvas.height / 32);
+  assert.deepEqual(result.report.warnings, [], `${result.report.warnings}`);
+});
+
+test('height is invisible from above and is the whole picture from the side', () => {
+  // The same model, twice. Looking down, a two-unit-tall box is a one-unit
+  // square; looking along, it is a tall rectangle. That difference is the only
+  // thing the two views disagree about, and it is the reason both exist.
+  const above = bake(flat('top-down', 32)).report;
+  const beside = bake(flat('side', 32)).report;
+
+  assert.equal(above.canvas.width, above.canvas.height, 'a unit-square footprint is square from above');
+  assert.ok(
+    beside.canvas.height > beside.canvas.width,
+    `a box twice as tall as it is wide should be taller than it is wide from the side, got ${beside.canvas.width}x${beside.canvas.height}`,
+  );
+});
+
+test('a model larger than any footprint is fine when nothing hands out ground', () => {
+  // Isometric refuses this: a model wider than its footprint covers tiles the
+  // game still lets others stand on. A flat view has no tilemap making that
+  // promise, so there is nothing to break.
+  const recipe = parseRecipe(
+    JSON.stringify({
+      format_version: 1,
+      id: 'wide',
+      texture: 'textures/wide.png',
+      view: 'top-down',
+      pixels_per_unit: 8,
+      directions: 1,
+      model: {
+        materials: { hull: { colour: '#7fd4ff' } },
+        parts: [{ type: 'box', material: 'hull', size: [6, 1, 6] }],
+      },
+    }),
+    'wide',
+  );
+  assert.doesNotThrow(() => bake(recipe));
+});

@@ -119,3 +119,48 @@ test('a mistyped colour is caught where it was written', () => {
   // Case is spelling, not meaning: an upper-case colour is the same colour.
   assert.doesNotThrow(() => parse({ render: { outline: { colour: '#241D2B' } } }));
 });
+
+test('a flat view states its scale directly and has no tile', () => {
+  const recipe = parse({ view: 'top-down', pixels_per_unit: 32 });
+  assert.equal(recipe.view, 'top-down');
+  assert.equal(recipe.pixelsPerUnit, 32);
+  assert.equal(recipe.tile, null, 'a top-down bake draws no diamond');
+  assert.equal(recipe.tileWorld, null, 'and stands on no tilemap');
+});
+
+test('each view refuses the other view\'s way of stating its scale', () => {
+  // A tile on a flat bake is somebody expecting a tilemap relationship the
+  // picture does not have; baking it at some default is the quiet kind of wrong
+  // this format exists to prevent.
+  assert.throws(
+    () => parse({ view: 'side', pixels_per_unit: 32, tile: { width: 64, height: 32 } }),
+    /draws no diamond/,
+  );
+  assert.throws(
+    () => parse({ view: 'top-down', pixels_per_unit: 32, tile_world: { width: 1, height: 1 } }),
+    /draws no diamond/,
+  );
+  // And the other way: two sources for one number can disagree.
+  assert.throws(() => parse({ pixels_per_unit: 32 }), /gets its scale from "tile"/);
+});
+
+test('a flat view without a scale is refused rather than guessed', () => {
+  assert.throws(() => parse({ view: 'top-down' }), RecipeError);
+  assert.throws(() => parse({ view: 'side', pixels_per_unit: 0 }), /positive number/);
+});
+
+test('a view nobody implements is named, not defaulted', () => {
+  assert.throws(() => parse({ view: 'dimetric' }), /isometric, top-down, side/);
+});
+
+test('a flat prefab cannot occupy a tilemap', () => {
+  assert.throws(
+    () =>
+      parse({
+        view: 'top-down',
+        pixels_per_unit: 32,
+        prefab: { path: 'prefabs/x.prefab.json', name: 'X', grid: 'Floor' },
+      }),
+    /stands on none/,
+  );
+});

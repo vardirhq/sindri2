@@ -1,0 +1,24 @@
+// The blast a mine leaves behind, as a sprite rather than a shape.
+//
+// Everything else in this game draws itself with `sindri.shape` and a script
+// full of arithmetic, which is the right tool for a shield that breathes or an
+// engine that stretches with thrust. An explosion is the other kind of thing:
+// it is not a parameter of anything, it happens once and it is over, and the
+// frames were drawn rather than derived.
+//
+// So this is the whole script. It starts the clip and gets out of the way, and
+// the one thing it has to know is when the clip ended -- which is what
+// `Animation.is_finished` is for. Before it existed a one-shot had to be timed
+// by a countdown the script kept in step with the clip's own frame times by
+// hand, and the two drifted the moment anybody re-timed the animation.
+script Detonation {
+    fn start() {
+        Animation.play(this.entity, "boom");
+    }
+
+    fn update(dt: f32) {
+        if Animation.is_finished(this.entity) {
+            World.despawn(this.entity);
+        }
+    }
+}

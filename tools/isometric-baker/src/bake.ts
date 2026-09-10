@@ -7,7 +7,7 @@
  */
 
 import { type BakedFrame, type Canvas, bakeFrames, measureCanvas, paletteFor } from './frames.ts';
-import { type IsoCamera, createCamera } from './iso.ts';
+import { type Camera, createCamera, createFlatCamera } from './camera.ts';
 import { type Mesh, buildMesh } from './model.ts';
 import { encodePng } from './png.ts';
 import { uniqueColours } from './palette.ts';
@@ -52,7 +52,7 @@ export interface BakeReport {
 }
 
 export interface BakeResult {
-  camera: IsoCamera;
+  camera: Camera;
   /** One per variant, in sheet order. A lone model is the only entry. */
   meshes: Mesh[];
   canvas: Canvas;
@@ -76,6 +76,10 @@ export interface BakeResult {
  * or a bigger footprint, and which one is right depends on what the thing is.
  */
 function checkFootprint(meshes: Mesh[], recipe: Recipe): void {
+  // A flat view stands on no tilemap, so no ground is being handed out and
+  // there is nothing for a model to overrun. The check is about a promise the
+  // tilemap makes, not about a model being a sensible size.
+  if (recipe.view !== 'isometric') return;
   const axes = [
     { name: 'x', stride: 0, limit: recipe.footprint.width },
     { name: 'z', stride: 2, limit: recipe.footprint.height },
@@ -101,8 +105,16 @@ function checkFootprint(meshes: Mesh[], recipe: Recipe): void {
   }
 }
 
+/** The rig this recipe asked for. */
+function cameraFor(recipe: Recipe): Camera {
+  if (recipe.view === 'isometric') {
+    return createCamera(recipe.tile ?? undefined);
+  }
+  return createFlatCamera(recipe.view, recipe.pixelsPerUnit ?? 0);
+}
+
 export function bake(recipe: Recipe): BakeResult {
-  const camera = createCamera(recipe.tile);
+  const camera = cameraFor(recipe);
   const meshes = recipe.variants.map((variant) => buildMesh(variant.model));
   checkFootprint(meshes, recipe);
 
@@ -174,7 +186,7 @@ export function toJson(value: unknown): string {
 
 function report(
   recipe: Recipe,
-  camera: IsoCamera,
+  camera: Camera,
   canvas: Canvas,
   frames: BakedFrame[],
   declared: string[],
@@ -183,7 +195,7 @@ function report(
   const warnings: string[] = [];
 
   const mismatch = tileRatioMismatch(camera, recipe.tileWorld);
-  if (mismatch > 1e-6) {
+  if (mismatch > 1e-6 && recipe.tile && recipe.tileWorld) {
     warnings.push(
       `the bake's ${recipe.tile.width}x${recipe.tile.height} tile is not the shape of the ` +
         `${recipe.tileWorld.width}x${recipe.tileWorld.height} world tile it is meant to stand on; ` +

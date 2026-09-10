@@ -15,7 +15,7 @@
 
 import { type Direction, type DirectionCount, DIRECTION_COUNTS, isDirection } from './directions.ts';
 import { type Footprint, type FrameConfig } from './frames.ts';
-import { type TileSize } from './iso.ts';
+import { type TileSize, type View, VIEWS, isView } from './camera.ts';
 import {
   type JsonValue,
   RecipeError,
@@ -53,9 +53,28 @@ export interface Recipe {
   id: string;
   /** Asset ID of the texture to write, relative to the project's asset root. */
   texture: string;
-  tile: TileSize;
-  /** The tilemap this asset is meant to stand on, in world units. */
-  tileWorld: TileWorldSize;
+  /** Which way this bake is looked at. */
+  view: View;
+  /**
+   * The tile an isometric bake's pitch is derived from.
+   *
+   * `null` for a flat view. A top-down tile is a square and a side-on one is a
+   * line, so neither has a ratio to be a pitch, and a recipe that named one
+   * would be describing a relationship its picture does not have.
+   */
+  tile: TileSize | null;
+  /**
+   * The tilemap this asset is meant to stand on, in world units.
+   *
+   * `null` for a flat view, which stands on no tilemap.
+   */
+  tileWorld: TileWorldSize | null;
+  /**
+   * Pixels per world unit, for a flat view that states its scale directly.
+   *
+   * `null` for an isometric bake, which derives it from the tile.
+   */
+  pixelsPerUnit: number | null;
   facing: Direction;
   directions: DirectionCount;
   footprint: Footprint;
@@ -271,10 +290,67 @@ function readVariants(root: Record<string, JsonValue>, source: string): ModelVar
   });
 }
 
+/**
+ * How a bake is looked at, and how big a world unit is when it is.
+ *
+ * The two questions are one question, because each view measures itself the way
+ * that view actually thinks. An isometric bake states a floor tile and the
+ * camera's pitch falls out of its ratio; a flat bake has no pitch and no
+ * diamond, so it states pixels per world unit and there is nothing to derive.
+ *
+ * Naming the other view's field is refused rather than ignored. A `tile` on a
+ * top-down bake is somebody expecting a tilemap relationship that the picture
+ * does not have, and baking it anyway at some default would be the quiet kind
+ * of wrong this format exists to avoid.
+ */
+function readScale(
+  root: Record<string, JsonValue>,
+  source: string,
+): Pick<Recipe, 'view' | 'tile' | 'tileWorld' | 'pixelsPerUnit'> {
+  const named = optional(root, 'view', source, asString);
+  if (named !== undefined && !isView(named)) {
+    fail(`${source}.view`, `expected one of ${VIEWS.join(', ')}, got ${JSON.stringify(named)}`);
+  }
+  const view: View = (named as View | undefined) ?? 'isometric';
+
+  const only = (keys: string[], why: string) => {
+    for (const key of keys) {
+      if (root[key] !== undefined) fail(`${source}.${key}`, why);
+    }
+  };
+
+  if (view === 'isometric') {
+    only(
+      ['pixels_per_unit'],
+      'is for a flat view; an isometric bake gets its scale from "tile", and two ' +
+        'sources for one number can disagree',
+    );
+    return {
+      view,
+      tile: optional(root, 'tile', source, readTile) ?? { width: 64, height: 32 },
+      tileWorld: optional(root, 'tile_world', source, readTileWorld) ?? DEFAULT_TILE_WORLD,
+      pixelsPerUnit: null,
+    };
+  }
+
+  only(
+    ['tile', 'tile_world'],
+    `describes a floor diamond, and a "${view}" bake draws no diamond; ` +
+      'state "pixels_per_unit" instead',
+  );
+  const pixelsPerUnit = required(root, 'pixels_per_unit', source, asNumber);
+  if (!(pixelsPerUnit > 0) || !Number.isFinite(pixelsPerUnit)) {
+    fail(`${source}.pixels_per_unit`, `must be a positive number, got ${pixelsPerUnit}`);
+  }
+  return { view, tile: null, tileWorld: null, pixelsPerUnit };
+}
+
 const TOP_LEVEL_KEYS = [
   'format_version',
   'id',
   'texture',
+  'view',
+  'pixels_per_unit',
   'tile',
   'tile_world',
   'facing',
@@ -352,17 +428,25 @@ export function parseRecipe(json: string, source: string): Recipe {
     );
   }
 
+  const scale = readScale(root, source);
+  const request = prefab(root, source);
+  if (scale.view !== 'isometric' && request?.grid) {
+    fail(
+      `${source}.prefab.grid`,
+      `names a tilemap for the prefab to occupy, and a "${scale.view}" bake stands on none`,
+    );
+  }
+
   return {
     formatVersion,
     id,
     texture,
-    tile: optional(root, 'tile', source, readTile) ?? { width: 64, height: 32 },
-    tileWorld: optional(root, 'tile_world', source, readTileWorld) ?? DEFAULT_TILE_WORLD,
+    ...scale,
     facing,
     directions,
     footprint,
     render: optional(root, 'render', source, readRender) ?? DEFAULT_RENDER,
     variants: readVariants(root, source),
-    prefab: prefab(root, source),
+    prefab: request,
   };
 }

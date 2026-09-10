@@ -170,7 +170,7 @@ the gap is legible, not because it is scheduled.
 | Feature | Engine | Editor | Decay | Proof | vs. baseline | Gap that matters |
 | --- | :-: | :-: | :-: | :-: | --- | --- |
 | Cameras, depth, cube primitive, textured mesh | 🟡 | 🟡 | ❌ | ❌ | **Behind** | Foundation only |
-| **glTF / model import** | ❌ | ❌ | ❌ | ❌ | **Absent** | `tools/isometric-baker` renders models to 2D sprites offline; that is not runtime 3D |
+| **glTF / model import** | ❌ | ❌ | ❌ | ❌ | **Absent** | `tools/isometric-baker` renders models to 2D sprites offline, in three views; that is not runtime 3D |
 | **Materials** | ❌ | ❌ | ❌ | ❌ | **Absent** | — |
 | **Lighting** | ❌ | ❌ | ❌ | ❌ | **Absent** | — |
 | **Skeletal animation** | ❌ | ❌ | ❌ | ❌ | **Absent** | — |
@@ -186,7 +186,7 @@ events, blending, tweening, and animating anything that is not a sprite frame.
 
 | Feature | Engine | Editor | Decay | Proof | vs. baseline | Gap that matters |
 | --- | :-: | :-: | :-: | :-: | --- | --- |
-| Sprite frame clips, timing, loop state | ✅ | ✅ | ✅ | ✅ | **Par** | `Animation.play`/`stop`/`restart`/`is_finished`/`frame`/`clip`/`set_speed`. Gather's player runs its walk cycle only while walking |
+| Sprite frame clips, timing, loop state | ✅ | ✅ | ✅ | ✅ | **Par** | `Animation.play`/`stop`/`restart`/`is_finished`/`frame`/`clip`/`set_speed`. Gather's player runs its walk cycle only while walking; Orbital's mine blast plays once and despawns itself when it ends |
 | Clip authoring and preview | — | ✅ | — | ✅ | **Par** | — |
 | **Animation events (a frame fires a callback)** | ❌ | ❌ | ❌ | ❌ | **Absent** | Footsteps, hit frames, spawn-on-frame all need it |
 | **Property animation (animate any component field)** | ❌ | ❌ | ❌ | ❌ | **Absent** | Unity's Animation window animates any serialized property. We animate sprite frames and nothing else |

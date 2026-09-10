@@ -17,7 +17,7 @@
 import { type DirectionCount } from './directions.ts';
 import { type BakedFrame } from './frames.ts';
 import { type RgbaImage, createImage } from './image.ts';
-import { type IsoCamera } from './iso.ts';
+import { type Camera } from './camera.ts';
 
 /** The version `SHEET_FORMAT_VERSION` in `sindri-core` currently writes. */
 export const SHEET_FORMAT_VERSION = 1;
@@ -185,10 +185,15 @@ export interface TileWorldSize {
  */
 export function spriteScale(
   canvas: { width: number; height: number },
-  camera: IsoCamera,
-  tile: TileWorldSize,
+  camera: Camera,
+  tile: TileWorldSize | null,
 ): { scale: [number, number]; worldUnitsPerPixel: number } {
-  const worldUnitsPerPixel = tile.width / camera.tile.width;
+  // An isometric bake is measured against the tilemap it stands on: so many
+  // world units across the diamond, so many pixels across the diamond. A flat
+  // view stands on nothing, so it measures itself — the camera's own scale is
+  // the whole relationship between a baked pixel and a world unit.
+  const worldUnitsPerPixel =
+    tile === null || camera.tile === null ? 1 / camera.pixelsPerUnit : tile.width / camera.tile.width;
   return {
     scale: [canvas.width * worldUnitsPerPixel, canvas.height * worldUnitsPerPixel],
     worldUnitsPerPixel,
@@ -203,7 +208,10 @@ export function spriteScale(
  * first will stand a little wrong on the second — worth reporting rather than
  * discovering in a capture.
  */
-export function tileRatioMismatch(camera: IsoCamera, tile: TileWorldSize): number {
+export function tileRatioMismatch(camera: Camera, tile: TileWorldSize | null): number {
+  // A flat view claims no relationship to a tilemap, so there is none to be
+  // wrong about.
+  if (tile === null || camera.tile === null) return 0;
   const baked = camera.tile.height / camera.tile.width;
   const scene = tile.height / tile.width;
   return Math.abs(baked - scene);

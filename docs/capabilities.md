@@ -1251,6 +1251,13 @@ game or browser export builds depends on the tool: the assets it produces are
 ordinary PNGs and sheet documents, and by the time a game loads one there is
 nothing left to say it was baked.
 
+It bakes three views. Isometric is what it was built for and remains the
+default; **top-down** and **side** were added because the isometric camera
+cannot reach them by any choice of tile — its pitch is the tile's own ratio, so
+a square tile would be a pitch of 90°, and its yaw is fixed at the 45° diagonal.
+The flat views state `pixels_per_unit` rather than deriving a scale from a
+diamond they do not draw, and each view refuses the other's fields.
+
 Gather uses it for its whole world. Its floor tiles, shrine, waystones, ridge
 wall segments, trees and stone outcrops are baked sprites drawn by the ordinary
 sprite path; the recipes are `game/assets/textures/*.isobake.json`, and the PNG
@@ -1269,6 +1276,15 @@ with nothing failing. And the baker now **refuses art that overhangs its own
 footprint**, which is what had the shrine covering ground the game still handed
 out, so a player standing legally beside it was drawn sliced by a plinth it was
 not touching.
+
+Orbital Last Stand uses it for one thing, and the one thing is the point:
+`textures/detonation.isobake.json` bakes a five-frame blast, top-down, as
+`variants` of one sheet. That game draws itself with `sindri.shape` and script
+arithmetic, which is the right tool for a shield that breathes with your armour;
+an explosion is the other kind of thing — not a parameter of anything, over as
+soon as it happens, and drawn rather than derived. `scripts/detonation.decay` is
+the whole script: it plays the clip and despawns when `Animation.is_finished`
+says the clip ended.
 
 Those tiles are **slabs**, not flat diamonds, which needed one thing from the
 engine: `sindri.tilemap` gained `tile_overhang`, how far below its cell a tile's

@@ -24,7 +24,7 @@
  */
 
 import { type Direction, type DirectionCount, framesFor, strideFor } from './directions.ts';
-import { type IsoCamera, originTileCentre, projectToPixels } from './iso.ts';
+import { type Camera, originTileCentre, projectToPixels } from './camera.ts';
 import { type RgbaImage } from './image.ts';
 import { type Mesh, boundsOf } from './model.ts';
 import {
@@ -107,7 +107,7 @@ export function measureCanvas(
   meshes: Mesh | Mesh[],
   footprint: Footprint,
   count: DirectionCount,
-  camera: IsoCamera,
+  camera: Camera,
   padding: number,
 ): Canvas {
   let maxX = 0;
@@ -165,7 +165,7 @@ export interface FrameRequest {
   footprint: Footprint;
   facing: Direction;
   count: DirectionCount;
-  camera: IsoCamera;
+  camera: Camera;
   canvas: Canvas;
   config: FrameConfig;
   /**

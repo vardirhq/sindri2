@@ -55,6 +55,10 @@ test('the prefab scale is the canvas measured in world units', async () => {
   };
 
   const [width, height] = prefab.entities[0].transform_3d.scale;
+  // Re-derived from the recipe rather than read back off the report, so this is
+  // an independent computation of the same number. The fixture is an isometric
+  // bake, which is what makes a tile the right thing to derive it from.
+  assert.ok(recipe.tile && recipe.tileWorld, 'the fixture stands on a tilemap');
   const perPixel = recipe.tileWorld.width / recipe.tile.width;
   // Compared as the `f32` the field holds, not as the decimal it is spelled
   // with: the file carries the shortest decimal that names that `f32`, which is
