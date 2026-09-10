@@ -114,14 +114,45 @@ jobs:
       - uses: ./.github/actions/linux-deps
         with:
           packages: imagemagick libasound2-dev libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest@0.9.143
+      # `cargo test` runs one test binary at a time, so the workspace's slowest
+      # suite was serialised behind everything else however idle the runner
+      # was. nextest runs every test in one pool across all binaries, which
+      # turns the total into roughly the slowest single test rather than the
+      # sum of the slowest per binary.
       - name: Test
         env:
           WGPU_BACKEND: vulkan
           SINDRI_REQUIRE_GPU: 1
-        run: cargo test --workspace --all-features
+        run: cargo nextest run --workspace --all-features
+      # nextest does not run doctests -- it has no way to, they are compiled
+      # and run by rustdoc rather than built into a test binary. Left out, the
+      # switch above would have quietly dropped every example in the public
+      # API's documentation from CI, so they are run here instead.
+      - name: Test the documented examples
+        run: cargo test --workspace --all-features --doc
       # The captures stay in this job rather than a parallel one of their own:
       # they run the same crates the tests just built, and a separate job would
       # spend longer recompiling them than the captures take.
+      #
+      # The editor is built in its own step first, because `cargo run` otherwise
+      # compiles inside the capture's own budget. `capture-editor.sh` waits
+      # thirty seconds for a window to appear, and that had been spent waiting
+      # for rustc rather than for the editor: the capture failed with "window
+      # did not appear" while the editor was still being linked, which is a true
+      # statement about a window and a useless one about what went wrong. It had
+      # been passing with about a second to spare, so any change to what the
+      # cache already holds decides it.
+      #
+      # One `cargo build` for the one package, matching how the script runs it.
+      # Building several packages in a single invocation unifies their features,
+      # which resolves differently from `cargo run --package sindri-editor` on
+      # its own -- the artifacts then do not match what the run wants and it
+      # compiles them again, which is the whole of what this avoids.
+      - name: Build the editor the capture runs
+        run: cargo build --package sindri-editor
       - name: Capture native editor runtime viewport
         env:
           WGPU_BACKEND: vulkan
