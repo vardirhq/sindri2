@@ -111,3 +111,12 @@ missing_panics_doc = "allow"
 # than trading away what the tests are able to catch.
 [profile.dev.package."*"]
 opt-level = 2
+
+[profile.dev.package.sindri-scene]
+opt-level = 2
+[profile.dev.package.sindri-decay]
+opt-level = 2
+[profile.dev.package.sindri-core]
+opt-level = 2
+[profile.test.package.orbital-last-stand]
+opt-level = 2
