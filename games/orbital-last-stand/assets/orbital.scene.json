@@ -2498,6 +2498,23 @@
           "sweep_turns": 1.0,
           "blend": "over",
           "layer": 5
+        },
+        "sindri.effect.burst": {
+          "texture": "textures/fleck.png",
+          "count": 30,
+          "speed": 6.4,
+          "spread": 0.62,
+          "lifetime": 0.52,
+          "size": 0.085,
+          "tint": [
+            0.45,
+            1.0,
+            0.72,
+            1.0
+          ],
+          "fade": true,
+          "drag": 1.5,
+          "layer": 6
         }
       }
     },

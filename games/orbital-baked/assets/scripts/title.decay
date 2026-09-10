@@ -8,11 +8,19 @@ script Title {
     // another entity looks it up once and keeps it.
     var best: Entity = null;
     var notice: Entity = null;
+    var pick_label: Entity = null;
+    var shown_pick: f32 = -1.0;
 
 
     fn start() {
         this.best = World.find("TitleBest");
         this.notice = World.find("TitleNotice");
+        this.pick_label = World.find("TitlePickText");
+        // A run started from the title is an ordinary run unless the rush
+        // button says otherwise, and the button sets this the moment it is
+        // pressed. Clearing it here means quitting a rush and pressing START
+        // gives you a game rather than another rush.
+        Game.set("mode", 0.0);
         World.set_active(this.notice, Save.is_damaged());
     }
 
@@ -21,5 +29,29 @@ script Title {
             return;
         }
         Ui.set_number(this.best, Save.number("best_score", 0.0));
+
+        // Only when it changes: `Ui.set_text` every frame is work for nothing,
+        // and the label is a button's worth of state rather than a readout.
+        let pick = Game.get("rush_from", 0.0);
+        if pick != this.shown_pick {
+            this.shown_pick = pick;
+            name_pick(pick);
+        }
+    }
+    /// The roster, in the order a rush walks it: the Warden, then the eleven
+    /// kinds the challenger prefab serves.
+    fn name_pick(pick: f32) {
+        if pick == 0.0 { Ui.set_text(this.pick_label, "OPENS ON  WARDEN"); }
+        else if pick == 1.0 { Ui.set_text(this.pick_label, "OPENS ON  HARROWER"); }
+        else if pick == 2.0 { Ui.set_text(this.pick_label, "OPENS ON  PRISM"); }
+        else if pick == 3.0 { Ui.set_text(this.pick_label, "OPENS ON  SINGULARITY"); }
+        else if pick == 4.0 { Ui.set_text(this.pick_label, "OPENS ON  CROWN"); }
+        else if pick == 5.0 { Ui.set_text(this.pick_label, "OPENS ON  BROOD"); }
+        else if pick == 6.0 { Ui.set_text(this.pick_label, "OPENS ON  MIRROR"); }
+        else if pick == 7.0 { Ui.set_text(this.pick_label, "OPENS ON  ARCHITECT"); }
+        else if pick == 8.0 { Ui.set_text(this.pick_label, "OPENS ON  SPINE"); }
+        else if pick == 9.0 { Ui.set_text(this.pick_label, "OPENS ON  LEVIATHAN"); }
+        else if pick == 10.0 { Ui.set_text(this.pick_label, "OPENS ON  LAST LIGHT"); }
+        else { Ui.set_text(this.pick_label, "OPENS ON  AEGIS"); }
     }
 }

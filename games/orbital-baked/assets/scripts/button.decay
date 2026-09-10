@@ -7,6 +7,7 @@ script Button {
     /// Which board value to set, chosen by the scene:
     ///   0  start a run          2  resume from pause
     ///   1  quit to the title    3  give up
+    ///   4  start a boss rush    5  cycle which boss the rush opens on
     @export let action: f32 = 0.0;
 
     fn update(dt: f32) {
@@ -15,11 +16,20 @@ script Button {
         }
         Audio.play("audio/click.wav", 0.3);
         if this.action == 0.0 {
+            Game.set("mode", 0.0);
             Game.set("request_start", 1.0);
         } else if this.action == 1.0 {
             Game.set("run_state", 0.0);
         } else if this.action == 2.0 {
             Game.set("run_state", 1.0);
+        } else if this.action == 4.0 {
+            Game.set("mode", 1.0);
+            Game.set("request_start", 1.0);
+        } else if this.action == 5.0 {
+            // Twelve bosses: the Warden, then the eleven the challenger prefab
+            // serves. Wraps, because a picker that stops at the end is a picker
+            // you have to think about.
+            Game.set("rush_from", (Game.get("rush_from", 0.0) + 1.0) % 12.0);
         } else {
             Game.set("hp", 0.0);
         }

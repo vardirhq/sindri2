@@ -10,6 +10,7 @@ script Hud {
     var health_bar: Entity = null;
     var health_text: Entity = null;
     var cores_bar: Entity = null;
+    var cores_text: Entity = null;
     var health_back: Entity = null;
     var cores_back: Entity = null;
     var boss_panel: Entity = null;
@@ -39,6 +40,7 @@ script Hud {
         this.health_bar = World.find("Health");
         this.health_text = World.find("HealthText");
         this.cores_bar = World.find("Cores");
+        this.cores_text = World.find("CoresText");
         this.health_back = World.find("HealthBack");
         this.cores_back = World.find("CoresBack");
         this.boss_panel = World.find("BossPanel");
@@ -72,6 +74,7 @@ script Hud {
 
         Ui.set_text(this.health_text, "HP {}/{}");
         Ui.set_text(this.level, "LV {}");
+        Ui.set_text(this.cores_text, "XP {}/{}");
         Ui.set_text(this.score, "SCORE {}");
         World.set_active(this.sector, true);
         update_sector();
@@ -96,6 +99,11 @@ script Hud {
         let cores = Game.get("cores", 0.0);
         let needed = max(Game.get("next_level", 1.0), 1.0);
         Ui.set_fill(this.cores_bar, min(cores / needed, 1.0));
+        // The number is the part that always answers. A bar can only move by a
+        // thirty-fifth of itself per core, and at the far left of the screen
+        // that is a few pixels; a count changes on every single pickup, which
+        // is the question being asked -- did that one land?
+        Ui.set_numbers(this.cores_text, cores, needed);
 
         // A core is worth one and a level costs thirty-five, so a pickup moves
         // this bar by about a thirtieth of its width: true progress, and far too
@@ -179,7 +187,8 @@ script Hud {
         else if kind == 7.0 { Ui.set_text(this.boss_name, "ARCHITECT"); }
         else if kind == 8.0 { Ui.set_text(this.boss_name, "SPINE"); }
         else if kind == 9.0 { Ui.set_text(this.boss_name, "LEVIATHAN"); }
-        else { Ui.set_text(this.boss_name, "LAST LIGHT"); }
+        else if kind == 10.0 { Ui.set_text(this.boss_name, "LAST LIGHT"); }
+        else { Ui.set_text(this.boss_name, "AEGIS"); }
     }
 
     fn if_number(value: bool) -> f32 {
