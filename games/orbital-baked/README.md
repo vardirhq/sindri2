@@ -20,7 +20,16 @@ Each from a `.isobake.json` recipe in `assets/textures`:
 | `core`           | the drifting core                  | 4      |
 | `drifter`        | the hex sentry                     | 4      |
 | `charger`        | the ram                            | 4      |
-| `challenger`     | the orange gunship, five armour tiers | 20  |
+| `harrower`       | five blades off a pentagon         | 4      |
+| `prism`          | a seven-sided crystal spire        | 4      |
+| `singularity`    | a twelve-sided well                | 4      |
+| `crown`          | ten sides and five attendants      | 4      |
+| `brood`          | an eight-sided shell of pods       | 4      |
+| `mirror`         | a diamond with one polished face   | 4      |
+| `architect`      | a hexagon carrying three walls     | 4      |
+| `spine`          | ten plate sockets, five armour tiers | 20     |
+| `leviathan`      | the largest hull, with a dorsal ridge | 4      |
+| `last-light`     | sixteen rays off a bright disc     | 4      |
 | `warden`         | the boss fortress                  | 4      |
 | `aegis`          | the shielded fortress hub          | 4      |
 | `shield-segment` | one plate of the Aegis’s ring, three states | 9      |
@@ -51,11 +60,20 @@ The elite identity markers (shell, ring, prong, arc, phaser) stay vectors for
 the same reason — they are drawn over an enemy to mark it, closer to interface
 than to object.
 
+## One sheet per boss
+
+There is no shared boss sheet. Ten of the twelve used to be a single orange
+gunship recoloured by a script tint, which is most of why they read as the same
+fight in different colours — the polygon count the vector original gave each of
+them had been flattened into one hull. Each boss now has its own recipe, its own
+sheet, its own prefab and its own script, and the side count is back: five for
+the Harrower through sixteen for the Last Light.
+
 ## What the sprites cost
 
 Two things the vector art did that a sprite cannot, and what replaced them:
 
-- **The challenger shed a polygon side per damage tier.** A sheet has fixed
+- **A boss shed a polygon side per damage tier.** A sheet has fixed
   geometry, but it can hold more than one, so the Spine's five armour tiers are
   baked as five sets of frames and selected by clip: ten plates ringing the hull
   at full health, five and a row of torn sockets at the end.
@@ -78,6 +96,8 @@ cargo run -p orbital-baked --bin orbital-baked-capture -- \
 
 `boss-0` is the Warden and `boss-11` is the Aegis; the shot presses the picker
 that many times, starts the rush, and photographs the fight seven seconds in.
+The roster in between is the Harrower, Prism, Singularity, Crown, Brood, Mirror,
+Architect, Spine, Leviathan and Last Light, in that order.
 
 ## A thing that only shows up on a boss
 

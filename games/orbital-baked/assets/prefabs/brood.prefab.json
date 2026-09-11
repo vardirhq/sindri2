@@ -1,12 +1,12 @@
 {
   "format_version": 1,
   "metadata": {
-    "name": "Aegis"
+    "name": "Brood"
   },
   "entities": [
     {
-      "id": "aegis",
-      "name": "Aegis",
+      "id": "brood",
+      "name": "Brood",
       "transform_3d": {
         "position": [
           0.0,
@@ -20,8 +20,8 @@
           1.0
         ],
         "scale": [
-          1.9,
-          1.9,
+          1.0,
+          1.0,
           1.0
         ]
       },
@@ -77,9 +77,9 @@
           "lifetime": 1.05,
           "size": 0.16,
           "tint": [
+            0.72,
             1.0,
-            1.0,
-            1.0,
+            0.4,
             1.0
           ],
           "fade": true,
@@ -87,18 +87,18 @@
           "layer": 6
         },
         "sindri.script": {
-          "source": "scripts/aegis.decay",
-          "script": "Aegis",
+          "source": "scripts/brood.decay",
+          "script": "Brood",
           "properties": {
             "shot": "prefabs/enemy-bullet.prefab.json",
             "core": "prefabs/core.prefab.json",
             "drop_roll": "prefabs/drop-roll.prefab.json",
             "death_burst": "prefabs/nova.prefab.json",
-            "shield_segment": "prefabs/shield-segment.prefab.json"
+            "brood_spawn": "prefabs/brood-spawn.prefab.json"
           }
         },
         "sindri.sprite": {
-          "texture": "textures/aegis.png#aegis-0",
+          "texture": "textures/brood.png#body-0",
           "tint": [
             1.0,
             1.0,
@@ -111,10 +111,10 @@
           "clips": {
             "idle": {
               "frames": [
-                "aegis-0",
-                "aegis-1",
-                "aegis-2",
-                "aegis-3"
+                "body-0",
+                "body-1",
+                "body-2",
+                "body-3"
               ],
               "seconds_per_frame": 0.12,
               "looping": true

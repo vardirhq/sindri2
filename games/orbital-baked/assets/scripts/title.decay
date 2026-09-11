@@ -39,7 +39,7 @@ script Title {
         }
     }
     /// The roster, in the order a rush walks it: the Warden, then the eleven
-    /// kinds the challenger prefab serves.
+    /// bosses, each of which is now its own prefab.
     fn name_pick(pick: f32) {
         if pick == 0.0 { Ui.set_text(this.pick_label, "OPENS ON  WARDEN"); }
         else if pick == 1.0 { Ui.set_text(this.pick_label, "OPENS ON  HARROWER"); }

@@ -1,12 +1,12 @@
 {
   "format_version": 1,
   "metadata": {
-    "name": "Aegis"
+    "name": "Leviathan"
   },
   "entities": [
     {
-      "id": "aegis",
-      "name": "Aegis",
+      "id": "leviathan",
+      "name": "Leviathan",
       "transform_3d": {
         "position": [
           0.0,
@@ -20,8 +20,8 @@
           1.0
         ],
         "scale": [
-          1.9,
-          1.9,
+          2.35,
+          2.35,
           1.0
         ]
       },
@@ -77,9 +77,9 @@
           "lifetime": 1.05,
           "size": 0.16,
           "tint": [
+            0.43,
             1.0,
-            1.0,
-            1.0,
+            0.79,
             1.0
           ],
           "fade": true,
@@ -87,18 +87,17 @@
           "layer": 6
         },
         "sindri.script": {
-          "source": "scripts/aegis.decay",
-          "script": "Aegis",
+          "source": "scripts/leviathan.decay",
+          "script": "Leviathan",
           "properties": {
             "shot": "prefabs/enemy-bullet.prefab.json",
             "core": "prefabs/core.prefab.json",
             "drop_roll": "prefabs/drop-roll.prefab.json",
-            "death_burst": "prefabs/nova.prefab.json",
-            "shield_segment": "prefabs/shield-segment.prefab.json"
+            "death_burst": "prefabs/nova.prefab.json"
           }
         },
         "sindri.sprite": {
-          "texture": "textures/aegis.png#aegis-0",
+          "texture": "textures/leviathan.png#body-0",
           "tint": [
             1.0,
             1.0,
@@ -111,10 +110,10 @@
           "clips": {
             "idle": {
               "frames": [
-                "aegis-0",
-                "aegis-1",
-                "aegis-2",
-                "aegis-3"
+                "body-0",
+                "body-1",
+                "body-2",
+                "body-3"
               ],
               "seconds_per_frame": 0.12,
               "looping": true

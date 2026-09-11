@@ -1,0 +1,976 @@
+{
+  "format_version": 1,
+  "id": "architect",
+  "texture": "textures/architect.png",
+  "view": "top-down",
+  "pixels_per_unit": 128,
+  "directions": 1,
+  "render": {
+    "supersample": 4,
+    "padding": 2,
+    "palette_snap": true,
+    "alpha_cutoff": 128,
+    "outline": {
+      "enabled": true,
+      "colour": "#0a1018"
+    },
+    "shading": {
+      "light": [
+        -0.42,
+        0.8,
+        0.43
+      ],
+      "thresholds": [
+        0.26,
+        0.52,
+        0.8
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "body-0",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "armour": "#ffa23d",
+          "lit": "#ffd9a0",
+          "mid": "#c96a14",
+          "dark": "#7d400a",
+          "deep": "#3d2205",
+          "eye": "#fff1d8",
+          "glow": "#ffbb66"
+        },
+        "parts": [
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0,
+              0.03,
+              0
+            ],
+            "radius": 0.4692,
+            "height": 0.06,
+            "segments": 6
+          },
+          {
+            "type": "cylinder",
+            "material": "deep",
+            "position": [
+              0,
+              0.09,
+              0
+            ],
+            "radius": 0.46,
+            "height": 0.09,
+            "segments": 6
+          },
+          {
+            "type": "cylinder",
+            "material": "armour",
+            "position": [
+              0,
+              0.19,
+              0
+            ],
+            "radius": 0.3956,
+            "height": 0.14,
+            "segments": 6,
+            "radius_top": 0.3036
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              0.4267,
+              0.13,
+              0.0733
+            ],
+            "size": [
+              0.09,
+              0.09,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -80.2597,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              0.6883,
+              0.17,
+              0.1182
+            ],
+            "size": [
+              0.56,
+              0.14,
+              0.11
+            ],
+            "rotation": [
+              0,
+              -80.2597,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.6883,
+              0.25,
+              0.1182
+            ],
+            "size": [
+              0.44,
+              0.05,
+              0.05
+            ],
+            "rotation": [
+              0,
+              -80.2597,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              -0.2768,
+              0.13,
+              0.3329
+            ],
+            "size": [
+              0.09,
+              0.09,
+              0.34
+            ],
+            "rotation": [
+              0,
+              39.7403,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.4465,
+              0.17,
+              0.537
+            ],
+            "size": [
+              0.56,
+              0.14,
+              0.11
+            ],
+            "rotation": [
+              0,
+              39.7403,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.4465,
+              0.25,
+              0.537
+            ],
+            "size": [
+              0.44,
+              0.05,
+              0.05
+            ],
+            "rotation": [
+              0,
+              39.7403,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              -0.1499,
+              0.13,
+              -0.4062
+            ],
+            "size": [
+              0.09,
+              0.09,
+              0.34
+            ],
+            "rotation": [
+              0,
+              159.7403,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.2418,
+              0.17,
+              -0.6552
+            ],
+            "size": [
+              0.56,
+              0.14,
+              0.11
+            ],
+            "rotation": [
+              0,
+              159.7403,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.2418,
+              0.25,
+              -0.6552
+            ],
+            "size": [
+              0.44,
+              0.05,
+              0.05
+            ],
+            "rotation": [
+              0,
+              159.7403,
+              0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "eye",
+            "position": [
+              0,
+              0.32,
+              0
+            ],
+            "radius": 0.12,
+            "segments": 10
+          }
+        ]
+      }
+    },
+    {
+      "name": "body-1",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "armour": "#ffa23d",
+          "lit": "#ffd9a0",
+          "mid": "#c96a14",
+          "dark": "#7d400a",
+          "deep": "#3d2205",
+          "eye": "#fff1d8",
+          "glow": "#ffbb66"
+        },
+        "parts": [
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0,
+              0.03,
+              0
+            ],
+            "radius": 0.4692,
+            "height": 0.06,
+            "segments": 6
+          },
+          {
+            "type": "cylinder",
+            "material": "deep",
+            "position": [
+              0,
+              0.09,
+              0
+            ],
+            "radius": 0.46,
+            "height": 0.09,
+            "segments": 6
+          },
+          {
+            "type": "cylinder",
+            "material": "armour",
+            "position": [
+              0,
+              0.19,
+              0
+            ],
+            "radius": 0.3956,
+            "height": 0.14,
+            "segments": 6,
+            "radius_top": 0.3036
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              0.4365,
+              0.13,
+              0.0749
+            ],
+            "size": [
+              0.09,
+              0.09,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -80.2597,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              0.7041,
+              0.17,
+              0.1209
+            ],
+            "size": [
+              0.56,
+              0.14,
+              0.11
+            ],
+            "rotation": [
+              0,
+              -80.2597,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.7041,
+              0.25,
+              0.1209
+            ],
+            "size": [
+              0.44,
+              0.05,
+              0.05
+            ],
+            "rotation": [
+              0,
+              -80.2597,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              -0.2832,
+              0.13,
+              0.3406
+            ],
+            "size": [
+              0.09,
+              0.09,
+              0.34
+            ],
+            "rotation": [
+              0,
+              39.7403,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.4567,
+              0.17,
+              0.5493
+            ],
+            "size": [
+              0.56,
+              0.14,
+              0.11
+            ],
+            "rotation": [
+              0,
+              39.7403,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.4567,
+              0.25,
+              0.5493
+            ],
+            "size": [
+              0.44,
+              0.05,
+              0.05
+            ],
+            "rotation": [
+              0,
+              39.7403,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              -0.1534,
+              0.13,
+              -0.4155
+            ],
+            "size": [
+              0.09,
+              0.09,
+              0.34
+            ],
+            "rotation": [
+              0,
+              159.7403,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.2474,
+              0.17,
+              -0.6702
+            ],
+            "size": [
+              0.56,
+              0.14,
+              0.11
+            ],
+            "rotation": [
+              0,
+              159.7403,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.2474,
+              0.25,
+              -0.6702
+            ],
+            "size": [
+              0.44,
+              0.05,
+              0.05
+            ],
+            "rotation": [
+              0,
+              159.7403,
+              0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "eye",
+            "position": [
+              0,
+              0.32,
+              0
+            ],
+            "radius": 0.128,
+            "segments": 10
+          }
+        ]
+      }
+    },
+    {
+      "name": "body-2",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "armour": "#ffa23d",
+          "lit": "#ffd9a0",
+          "mid": "#c96a14",
+          "dark": "#7d400a",
+          "deep": "#3d2205",
+          "eye": "#fff1d8",
+          "glow": "#ffbb66"
+        },
+        "parts": [
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0,
+              0.03,
+              0
+            ],
+            "radius": 0.4692,
+            "height": 0.06,
+            "segments": 6
+          },
+          {
+            "type": "cylinder",
+            "material": "deep",
+            "position": [
+              0,
+              0.09,
+              0
+            ],
+            "radius": 0.46,
+            "height": 0.09,
+            "segments": 6
+          },
+          {
+            "type": "cylinder",
+            "material": "armour",
+            "position": [
+              0,
+              0.19,
+              0
+            ],
+            "radius": 0.3956,
+            "height": 0.14,
+            "segments": 6,
+            "radius_top": 0.3036
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              0.4463,
+              0.13,
+              0.0766
+            ],
+            "size": [
+              0.09,
+              0.09,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -80.2597,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              0.7198,
+              0.17,
+              0.1236
+            ],
+            "size": [
+              0.56,
+              0.14,
+              0.11
+            ],
+            "rotation": [
+              0,
+              -80.2597,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.7198,
+              0.25,
+              0.1236
+            ],
+            "size": [
+              0.44,
+              0.05,
+              0.05
+            ],
+            "rotation": [
+              0,
+              -80.2597,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              -0.2895,
+              0.13,
+              0.3482
+            ],
+            "size": [
+              0.09,
+              0.09,
+              0.34
+            ],
+            "rotation": [
+              0,
+              39.7403,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.4669,
+              0.17,
+              0.5616
+            ],
+            "size": [
+              0.56,
+              0.14,
+              0.11
+            ],
+            "rotation": [
+              0,
+              39.7403,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.4669,
+              0.25,
+              0.5616
+            ],
+            "size": [
+              0.44,
+              0.05,
+              0.05
+            ],
+            "rotation": [
+              0,
+              39.7403,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              -0.1568,
+              0.13,
+              -0.4248
+            ],
+            "size": [
+              0.09,
+              0.09,
+              0.34
+            ],
+            "rotation": [
+              0,
+              159.7403,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.2529,
+              0.17,
+              -0.6852
+            ],
+            "size": [
+              0.56,
+              0.14,
+              0.11
+            ],
+            "rotation": [
+              0,
+              159.7403,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.2529,
+              0.25,
+              -0.6852
+            ],
+            "size": [
+              0.44,
+              0.05,
+              0.05
+            ],
+            "rotation": [
+              0,
+              159.7403,
+              0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "eye",
+            "position": [
+              0,
+              0.32,
+              0
+            ],
+            "radius": 0.136,
+            "segments": 10
+          }
+        ]
+      }
+    },
+    {
+      "name": "body-3",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "armour": "#ffa23d",
+          "lit": "#ffd9a0",
+          "mid": "#c96a14",
+          "dark": "#7d400a",
+          "deep": "#3d2205",
+          "eye": "#fff1d8",
+          "glow": "#ffbb66"
+        },
+        "parts": [
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0,
+              0.03,
+              0
+            ],
+            "radius": 0.4692,
+            "height": 0.06,
+            "segments": 6
+          },
+          {
+            "type": "cylinder",
+            "material": "deep",
+            "position": [
+              0,
+              0.09,
+              0
+            ],
+            "radius": 0.46,
+            "height": 0.09,
+            "segments": 6
+          },
+          {
+            "type": "cylinder",
+            "material": "armour",
+            "position": [
+              0,
+              0.19,
+              0
+            ],
+            "radius": 0.3956,
+            "height": 0.14,
+            "segments": 6,
+            "radius_top": 0.3036
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              0.4561,
+              0.13,
+              0.0783
+            ],
+            "size": [
+              0.09,
+              0.09,
+              0.34
+            ],
+            "rotation": [
+              0,
+              -80.2597,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              0.7356,
+              0.17,
+              0.1263
+            ],
+            "size": [
+              0.56,
+              0.14,
+              0.11
+            ],
+            "rotation": [
+              0,
+              -80.2597,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.7356,
+              0.25,
+              0.1263
+            ],
+            "size": [
+              0.44,
+              0.05,
+              0.05
+            ],
+            "rotation": [
+              0,
+              -80.2597,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              -0.2958,
+              0.13,
+              0.3558
+            ],
+            "size": [
+              0.09,
+              0.09,
+              0.34
+            ],
+            "rotation": [
+              0,
+              39.7403,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.4772,
+              0.17,
+              0.5739
+            ],
+            "size": [
+              0.56,
+              0.14,
+              0.11
+            ],
+            "rotation": [
+              0,
+              39.7403,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.4772,
+              0.25,
+              0.5739
+            ],
+            "size": [
+              0.44,
+              0.05,
+              0.05
+            ],
+            "rotation": [
+              0,
+              39.7403,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mid",
+            "position": [
+              -0.1602,
+              0.13,
+              -0.4341
+            ],
+            "size": [
+              0.09,
+              0.09,
+              0.34
+            ],
+            "rotation": [
+              0,
+              159.7403,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.2585,
+              0.17,
+              -0.7002
+            ],
+            "size": [
+              0.56,
+              0.14,
+              0.11
+            ],
+            "rotation": [
+              0,
+              159.7403,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.2585,
+              0.25,
+              -0.7002
+            ],
+            "size": [
+              0.44,
+              0.05,
+              0.05
+            ],
+            "rotation": [
+              0,
+              159.7403,
+              0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "eye",
+            "position": [
+              0,
+              0.32,
+              0
+            ],
+            "radius": 0.144,
+            "segments": 10
+          }
+        ]
+      }
+    }
+  ]
+}

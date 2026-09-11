@@ -6,10 +6,20 @@ script Director {
     // Legacy scene property: this asset slot now contains the persistent sector
     // hazard controller because the faithful roster no longer uses Splitter.
     @export let splitter: Prefab;
+    // Twelve bosses, twelve prefabs. There is no shared challenger any more:
+    // each one has its own hull, its own script and its own way of fighting,
+    // so there is nothing left for a `kind` number to select between.
     @export let warden: Prefab;
-    @export let challenger: Prefab;
-    // The Aegis has its own sheet: its hull is a fortress hub rather than a
-    // repainted gunship, so it cannot ride the challenger's frames.
+    @export let harrower: Prefab;
+    @export let prism: Prefab;
+    @export let singularity: Prefab;
+    @export let crown: Prefab;
+    @export let brood: Prefab;
+    @export let mirror: Prefab;
+    @export let architect: Prefab;
+    @export let spine: Prefab;
+    @export let leviathan: Prefab;
+    @export let last_light: Prefab;
     @export let aegis: Prefab;
     @export let wave_gap: f32 = 6.0;
     @export let boss_at: f32 = 180.0;
@@ -416,18 +426,22 @@ script Director {
         send_kind(pick);
     }
 
-    /// Put one boss on the field: zero is the Warden, eleven is the Aegis, and
-    /// the rest are the challenger prefab's kinds offset by one.
+    /// Put one boss on the field. The pick is an index into the roster in the
+    /// order a run meets them, and each one is simply its own prefab.
     fn send_kind(pick: f32) {
         var boss: Entity = null;
-        if pick == 0.0 {
-            boss = World.spawn(this.warden);
-        } else if pick == 11.0 {
-            boss = World.spawn(this.aegis);
-        } else {
-            boss = World.spawn(this.challenger);
-            World.set_property(boss, "kind", pick - 1.0);
-        }
+        if pick == 0.0 { boss = World.spawn(this.warden); }
+        else if pick == 1.0 { boss = World.spawn(this.harrower); }
+        else if pick == 2.0 { boss = World.spawn(this.prism); }
+        else if pick == 3.0 { boss = World.spawn(this.singularity); }
+        else if pick == 4.0 { boss = World.spawn(this.crown); }
+        else if pick == 5.0 { boss = World.spawn(this.brood); }
+        else if pick == 6.0 { boss = World.spawn(this.mirror); }
+        else if pick == 7.0 { boss = World.spawn(this.architect); }
+        else if pick == 8.0 { boss = World.spawn(this.spine); }
+        else if pick == 9.0 { boss = World.spawn(this.leviathan); }
+        else if pick == 10.0 { boss = World.spawn(this.last_light); }
+        else { boss = World.spawn(this.aegis); }
         // Above the frame, so the boss descends into view rather than
         // materialising inside it.
         boss.transform.position.x = 0.0;
@@ -435,8 +449,8 @@ script Director {
     }
 
     fn eligible_boss_count() -> f32 {
-        // Twelve rather than eleven: the Aegis is kind ten, and a boss the pool
-        // cannot pick is a boss nobody ever fights.
+        // Twelve, and every one of them reachable: a boss the pool cannot pick
+        // is a boss nobody ever fights.
         if this.elapsed >= 480.0 { return 12.0; }
         if this.elapsed >= 240.0 { return 9.0; }
         return 4.0;
