@@ -95,6 +95,42 @@ impl World {
         Ok(document)
     }
 
+    /// The entity a scene's stable identity names, if the world still holds it.
+    ///
+    /// The one direction that was missing. A world could *mint* stable IDs and
+    /// *write* them out, but nothing could read one back — so any caller
+    /// holding a serialized identity had to walk every entity itself and decide
+    /// what to do about a tie. That is the shape of question an authoring tool
+    /// asks constantly: a proposal, a saved selection, a console line, and a
+    /// prefab reference all name entities the way the *file* does, never by the
+    /// runtime handle, because a handle is meaningless the moment the scene is
+    /// reloaded.
+    ///
+    /// Unambiguous by construction: `WorldCommand::SetSourceId` refuses to give
+    /// two entities the same stable ID, and a scene carrying a duplicate fails
+    /// to load. So this returns the entity or nothing, and never has to pick.
+    #[must_use]
+    pub fn entity_for_source_id(&self, source_id: &SceneEntityId) -> Option<EntityId> {
+        self.entities().find_map(|(entity, data)| {
+            (data.source_id.as_ref() == Some(source_id)).then_some(entity)
+        })
+    }
+
+    /// Every stable identity the world currently holds, and what it names.
+    ///
+    /// For a caller resolving many references at once — an authoring proposal
+    /// naming a dozen entities, say. One pass rather than a dozen, and the map
+    /// is the same one [`World::from_scene`] hands back, so a caller that has
+    /// just loaded a scene need not build it twice.
+    #[must_use]
+    pub fn source_id_map(&self) -> HashMap<SceneEntityId, EntityId> {
+        self.entities()
+            .filter_map(|(entity, data)| {
+                data.source_id.clone().map(|source_id| (source_id, entity))
+            })
+            .collect()
+    }
+
     /// Gives every runtime-spawned entity a stable ID derived from `prefix`.
     ///
     /// IDs are minted in entity index order and skip identities already in use,

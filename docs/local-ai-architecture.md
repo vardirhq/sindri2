@@ -46,6 +46,16 @@ Sindri is already preparing for this architecture even though broad AI assistanc
 
 The editor's mutations flow through checked, undoable commands. Components are registered through schemas. Decay is statically typed and has a compiler, semantic model, diagnostics, and language server. The repository also plans a generated host manifest and explicitly states that AI should operate through structured editor commands.
 
+The groundwork is now specific rather than incidental. Every v1 protocol
+operation maps to an existing checked command; `Transaction` already applies a
+group atomically as one labelled undo step and rolls back a refusal;
+`World::entity_for_source_id` and `World::source_id_map` resolve serialized
+identities to runtime handles without guessing; and `Transaction::rehearse`
+answers what a group would do against a copy, leaving the live world and the
+undo stack alone. See the readiness table in `docs/ai-authoring-protocol.md`.
+The one requirement not yet met is the authoring manifest hash, which waits on
+the manifest schema being settled.
+
 Relevant current references:
 
 - [Sindri repository](https://github.com/vardirhq/sindri2)
