@@ -4,6 +4,21 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **The console reports the size of a problem rather than the size of its own
+  log.** It collapsed a repeated message into a count only when the repeat was
+  the entry *immediately* before it, and nothing fails on its own: a frame
+  reports a rotation of failures — one per entity, one per script — so an
+  identical pair is almost never adjacent and the collapsing almost never
+  fired. Every frame added the whole rotation again. Opening Orbital Last Stand
+  filled the console with the same handful of errors and put seventy-two on the
+  status bar.
+
+  A repeat is now counted against any matching entry in the window, and counted
+  where that entry already sits rather than moved to the end: recurring failures
+  settle with their counts climbing while anything new still arrives at the
+  bottom, instead of the whole list churning once a frame. The status bar's
+  count is of distinct failures, which is the number worth reading.
+
 - **The editor's panels are arranged by the person using it.** Every panel —
   Scene, Game, Hierarchy, Inspector, Project, Console, History — is now a tab,
   and every tab is dragged into any of seven slots: two columns down each side,

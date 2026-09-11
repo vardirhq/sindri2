@@ -7,10 +7,19 @@
 //! single-line notice.
 //!
 //! This is a log. It is bounded, because an editor runs for hours, and it
-//! collapses a message repeated back to back into a count, because the thing
-//! most worth logging — a render failure — recurs every frame and would
-//! otherwise fill the buffer sixty times a second and push everything that
-//! explains it out of the top.
+//! collapses a repeated message into a count, because the things most worth
+//! logging — a render failure, a script that will not compile — recur every
+//! frame and would otherwise fill the buffer sixty times a second and push
+//! everything that explains them out of the top.
+//!
+//! Collapsing looks back through the whole window rather than only at the entry
+//! just recorded. That distinction is the difference between a usable console
+//! and the one this replaced: a frame that reports the same failure for forty
+//! different entities records forty *different* messages in a rotation, so no
+//! two identical ones are ever adjacent and back-to-back collapsing never
+//! fires. Opening Orbital Last Stand filled the console with the same handful
+//! of errors and put seventy-two on the status bar, which is a number about the
+//! console rather than about the project.
 
 use std::collections::VecDeque;
 
@@ -71,12 +80,19 @@ pub struct Console {
 }
 
 impl Console {
-    /// Records a message, or counts it again if it is the one just recorded.
+    /// Records a message, or counts it again if it has been said before.
     pub fn record(&mut self, level: Level, message: impl Into<String>) {
         self.record_about(level, message, None);
     }
 
     /// The same, for something that is about one entity.
+    ///
+    /// A message already in the window is counted where it already sits rather
+    /// than moved to the end. Leaving it in place is what keeps the log
+    /// readable while something is failing every frame: the recurring entries
+    /// settle at the top with their counts climbing, and anything new still
+    /// arrives at the bottom where it will be seen. Moving them would make the
+    /// whole list churn once a second and say nothing by doing it.
     pub fn record_about(
         &mut self,
         level: Level,
@@ -84,11 +100,13 @@ impl Console {
         subject: Option<EntityId>,
     ) {
         let message = message.into();
-        if let Some(last) = self.entries.back_mut()
-            && last.level == level
-            && last.message == message
+        if let Some(said) = self
+            .entries
+            .iter_mut()
+            .rev()
+            .find(|entry| entry.level == level && entry.message == message)
         {
-            last.count += 1;
+            said.count += 1;
             return;
         }
         self.entries.push_back(Entry {
@@ -216,10 +234,13 @@ mod tests {
         );
     }
 
-    /// Only back to back. The same failure after something else happened is a
-    /// second occurrence and reads as one.
+    /// This used to assert the opposite -- that a failure recurring after
+    /// something else happened was a second entry -- and that rule is what made
+    /// the console unreadable. Nothing fails on its own: a frame reports a
+    /// rotation of failures, so an identical pair is almost never adjacent, and
+    /// a rule that only collapses adjacent ones collapses almost nothing.
     #[test]
-    fn the_same_message_after_another_is_a_new_entry() {
+    fn the_same_message_after_another_is_counted_not_repeated() {
         let mut console = Console::default();
         console.error("Surface lost");
         console.info("Opened demo.scene.json");
@@ -227,9 +248,8 @@ mod tests {
         assert_eq!(
             messages(&console),
             [
-                (Level::Error, "Surface lost".to_owned(), 1),
+                (Level::Error, "Surface lost".to_owned(), 2),
                 (Level::Info, "Opened demo.scene.json".to_owned(), 1),
-                (Level::Error, "Surface lost".to_owned(), 1),
             ]
         );
     }
@@ -332,5 +352,38 @@ mod tests {
         let entry = console.entries().next().unwrap();
         assert_eq!(entry.count, 60);
         assert_eq!(entry.subject, Some(entity));
+    }
+
+    /// The bug this exists to stop: a frame reports the same failure for each of
+    /// several entities, so no two identical messages are ever adjacent, and
+    /// back-to-back collapsing never fires. Sixty frames of that is what put
+    /// seventy-two errors on the status bar of a project with a handful.
+    #[test]
+    fn a_repeating_rotation_of_messages_collapses() {
+        let mut console = Console::default();
+        for _ in 0..60 {
+            for entity in ["drifter", "charger", "splitter"] {
+                console.error(format!("{entity}: names a script that is not loaded"));
+            }
+        }
+        assert_eq!(
+            console.entries().len(),
+            3,
+            "three distinct failures are three lines, however often they recur"
+        );
+        assert!(console.entries().all(|entry| entry.count == 60));
+    }
+
+    /// And the status bar then reports the size of the problem rather than the
+    /// size of the log.
+    #[test]
+    fn the_error_count_is_of_distinct_failures() {
+        let mut console = Console::default();
+        for _ in 0..60 {
+            for entity in ["drifter", "charger", "splitter"] {
+                console.error(format!("{entity}: names a script that is not loaded"));
+            }
+        }
+        assert_eq!(console.counts().errors, 3);
     }
 }

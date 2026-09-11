@@ -71,9 +71,11 @@ than level with them.
 
 ### Errors are the editor's failure, not the project's
 
-Opening Orbital Last Stand reports dozens of errors, most of them the same
-error. A list that long is not information. Group by cause, count the repeats,
-name the entity each is about, and where the editor knows the fix, offer it.
+Opening Orbital Last Stand reported dozens of errors, most of them the same
+error recorded again every frame. Counting repeats fixed the volume; what is
+left is the harder half. Forty entities failing because one script did not load
+is one problem, and the console should say so — group by cause, name the
+entities under it, and where the editor knows the fix, offer it.
 
 ### The arrangement belongs to the person using it
 
@@ -87,8 +89,10 @@ it are done.
 
 1. ~~**A workspace the user arranges.**~~ Done: `editor/src/dock/`. Every panel
    is a tab, every tab is draggable into any slot, and slots resize freely.
-2. **Error grouping in the console.** Small, self-contained, and it stops the
-   editor lying about the size of a problem.
+2. ~~**Error grouping in the console.**~~ Done: a repeat is counted against any
+   matching entry rather than only the one before it. What is left is grouping
+   by *cause* — forty entities failing for one missing script are still forty
+   lines, each counted correctly.
 3. **Gizmos for the shapes that have none** — colliders, cameras, effect radii.
    Each one removes a round trip through Play.
 4. **Edit while playing, with a decision at Stop.** The largest single
