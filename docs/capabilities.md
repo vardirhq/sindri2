@@ -836,6 +836,26 @@ frame.
   one undoable command-history step
 - Scene and Game views, the latter rendering through the authored camera with no
   editor chrome painted over it — both live at once in the `Docked` arrangement
+- **A setup flow for the local assistant that asks nobody to type.** An
+  Assistant panel reads the machine and offers one next step at a time: install
+  the runner, start it, download a model picked for the available memory, verify
+  it. Every step is a button; the only thing a person ever types is an operating
+  system password, and only where the platform demands one.
+
+  The states are distinguished rather than collapsed — not installed, installed
+  but not running, running with no usable model, present but unverified, ready,
+  and present but unable to do what a proposal needs — because each is a
+  different sentence and a different action, and an editor that says "could not
+  connect" to all of them has answered none. While the next move is outside the
+  editor it keeps probing, so the screen advances on its own when an install
+  finishes.
+
+  A model is recommended only when its weights plus working room fit the memory
+  reported, and a machine that can hold none of them is told so and still given
+  the list. Completion reports the capabilities actually verified rather than a
+  connection light. Detection and model download run over the loopback socket
+  using only the standard library, so the editor gains no HTTP client and an
+  AI-disabled build remains a normal configuration.
 - **One field that finds anything.** Ctrl+K opens a palette over everything
   else, searching the panels, the scene's entities, the project's files and
   scenes, the arrangements, and the editor's verbs at once; each row says which
