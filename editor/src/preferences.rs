@@ -181,14 +181,14 @@ mod tests {
         assert_eq!(Preferences::default().asset_view, AssetView::List);
     }
 
-    /// The arrangement question this settled: Studio is what the editor opens
-    /// as, and every panel in it is reachable without rearranging anything.
+    /// The arrangement question this settled: the scene gets the window, and
+    /// every panel is still reachable without rearranging anything.
     #[test]
-    fn the_workspace_opens_in_the_studio_arrangement() {
+    fn the_workspace_opens_in_the_canvas_arrangement() {
         let opened = Preferences::default().workspace;
         assert_eq!(
             opened,
-            crate::dock::Workspace::preset(crate::dock::Preset::Studio)
+            crate::dock::Workspace::preset(crate::dock::Preset::Canvas)
         );
     }
 

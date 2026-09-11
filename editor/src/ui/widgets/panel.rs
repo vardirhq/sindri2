@@ -22,6 +22,28 @@ pub fn frame() -> egui::Frame {
         .inner_margin(0)
 }
 
+/// The frame an overlay is drawn in: a panel that floats over the scene.
+///
+/// Opaque rather than translucent, and that is a decision rather than an
+/// oversight. A translucent panel looks wonderful over the calm sky in a
+/// mockup and is unreadable over a dense tileset, and which of those the scene
+/// holds is not something the editor gets to choose. What separates an overlay
+/// from a dock is the shadow and the rounding, which say it is above the world
+/// rather than beside it.
+pub fn overlay_frame() -> egui::Frame {
+    egui::Frame::new()
+        .fill(color::PANEL)
+        .stroke(hairline())
+        .corner_radius(6)
+        .inner_margin(0)
+        .shadow(egui::epaint::Shadow {
+            offset: [0, 6],
+            blur: 20,
+            spread: 0,
+            color: egui::Color32::from_black_alpha(120),
+        })
+}
+
 /// The frame for the region a viewport lives in.
 ///
 /// No border of its own: the rendered image fills it edge to edge and the

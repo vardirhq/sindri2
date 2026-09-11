@@ -7,7 +7,7 @@
 
 use eframe::egui::{self, Align, Layout, RichText, Sense, Stroke, Vec2};
 
-use crate::dock::{Panel as DockPanel, Preset, Slot, Workspace};
+use crate::dock::{Panel as DockPanel, Place, Preset, Workspace};
 use crate::preferences::CameraProjection;
 use crate::ui::icons;
 use crate::ui::theme::{color, hairline, metric, text};
@@ -198,7 +198,7 @@ impl EditorApp {
                     && self
                         .preferences
                         .workspace
-                        .group(Slot::Main)
+                        .group(Place::MAIN)
                         .is_some_and(|group| group.panels == [panel]);
                 let entry =
                     ui.add_enabled(!last_view, egui::Button::selectable(open, panel.label()));
@@ -221,7 +221,7 @@ impl EditorApp {
             for preset in Preset::ALL {
                 if ui
                     .button(preset.label())
-                    .on_hover_text("Replaces the current arrangement")
+                    .on_hover_text(preset.note())
                     .clicked()
                 {
                     self.preferences.workspace = Workspace::preset(preset);

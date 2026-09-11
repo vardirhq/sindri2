@@ -12,13 +12,13 @@
 
 use eframe::egui::{Pos2, Rect};
 
-use super::{Panel, Slot};
+use super::{Corner, Panel, Place, Slot};
 
 /// Where a dragged panel would land if it were released now.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct DropTarget {
-    pub slot: Slot,
-    /// Which tab position within the slot.
+    pub place: Place,
+    /// Which tab position within it.
     pub index: usize,
 }
 
@@ -64,27 +64,34 @@ pub fn tab_index(tabs: &[Rect], pointer: Pos2) -> usize {
         .unwrap_or(tabs.len())
 }
 
-/// Which edge slot a pointer near the window's border would open.
+/// Where a pointer near the window's border would put a panel.
 ///
-/// Only the outermost slots, and only when the pointer is outside every panel
-/// already drawn: the inner slots are reachable by dropping onto the group
-/// already there, and an edge gesture that could mean either is a gesture that
-/// means neither.
-pub fn edge_slot(window: Rect, pointer: Pos2) -> Option<Slot> {
+/// **Edges dock, corners float.** One rule, and it is the whole of how a place
+/// that currently holds nothing is reached: everywhere else is reached by
+/// dropping onto the group already there. A pointer inside the band of both a
+/// side and a top or bottom edge is in a corner and means an overlay; inside
+/// one band only, it means the dock against that edge.
+///
+/// The top edge alone answers nothing, because there is no dock along the top —
+/// the menu bar is there. Its two corners still take overlays.
+pub fn edge_place(window: Rect, pointer: Pos2) -> Option<Place> {
     if !window.contains(pointer) {
         return None;
     }
-    // Closest edge wins, so a corner names one slot rather than flickering
-    // between the two whose bands it is inside.
-    [
-        (pointer.x - window.left(), Slot::FarLeft),
-        (window.right() - pointer.x, Slot::FarRight),
-        (window.bottom() - pointer.y, Slot::Bottom),
-    ]
-    .into_iter()
-    .filter(|(distance, _)| *distance <= EDGE_BAND)
-    .min_by(|(one, _), (other, _)| one.total_cmp(other))
-    .map(|(_, slot)| slot)
+    let left = pointer.x - window.left() <= EDGE_BAND;
+    let right = window.right() - pointer.x <= EDGE_BAND;
+    let top = pointer.y - window.top() <= EDGE_BAND;
+    let bottom = window.bottom() - pointer.y <= EDGE_BAND;
+    match (left, right, top, bottom) {
+        (true, _, true, _) => Some(Place::Overlay(Corner::TopLeft)),
+        (_, true, true, _) => Some(Place::Overlay(Corner::TopRight)),
+        (true, _, _, true) => Some(Place::Overlay(Corner::BottomLeft)),
+        (_, true, _, true) => Some(Place::Overlay(Corner::BottomRight)),
+        (true, ..) => Some(Place::Dock(Slot::FarLeft)),
+        (_, true, ..) => Some(Place::Dock(Slot::FarRight)),
+        (_, _, _, true) => Some(Place::Dock(Slot::Bottom)),
+        _ => None,
+    }
 }
 
 #[cfg(test)]
@@ -130,32 +137,63 @@ mod tests {
         assert_eq!(tab_index(&[], pos2(10.0, 10.0)), 0);
     }
 
-    #[test]
-    fn the_middle_of_the_window_opens_no_edge_slot() {
-        let window = Rect::from_min_size(pos2(0.0, 0.0), vec2(1400.0, 900.0));
-        assert_eq!(edge_slot(window, pos2(700.0, 450.0)), None);
+    fn window() -> Rect {
+        Rect::from_min_size(pos2(0.0, 0.0), vec2(1400.0, 900.0))
     }
 
     #[test]
-    fn each_border_opens_the_slot_against_it() {
-        let window = Rect::from_min_size(pos2(0.0, 0.0), vec2(1400.0, 900.0));
-        assert_eq!(edge_slot(window, pos2(10.0, 450.0)), Some(Slot::FarLeft));
-        assert_eq!(edge_slot(window, pos2(1390.0, 450.0)), Some(Slot::FarRight));
-        assert_eq!(edge_slot(window, pos2(700.0, 890.0)), Some(Slot::Bottom));
+    fn the_middle_of_the_window_opens_nothing() {
+        assert_eq!(edge_place(window(), pos2(700.0, 450.0)), None);
     }
 
-    /// A corner is within the band of two edges at once, and picking the nearer
-    /// is what stops the highlight flickering between them.
     #[test]
-    fn a_corner_resolves_to_the_nearer_edge() {
-        let window = Rect::from_min_size(pos2(0.0, 0.0), vec2(1400.0, 900.0));
-        assert_eq!(edge_slot(window, pos2(8.0, 880.0)), Some(Slot::FarLeft));
-        assert_eq!(edge_slot(window, pos2(40.0, 885.0)), Some(Slot::Bottom));
+    fn each_border_docks_against_it() {
+        assert_eq!(
+            edge_place(window(), pos2(10.0, 450.0)),
+            Some(Place::Dock(Slot::FarLeft))
+        );
+        assert_eq!(
+            edge_place(window(), pos2(1390.0, 450.0)),
+            Some(Place::Dock(Slot::FarRight))
+        );
+        assert_eq!(
+            edge_place(window(), pos2(700.0, 890.0)),
+            Some(Place::Dock(Slot::Bottom))
+        );
+    }
+
+    /// Edges dock, corners float. The rule has to be unambiguous where the two
+    /// bands overlap, or the highlight flickers between a dock and an overlay
+    /// as the pointer moves a pixel.
+    #[test]
+    fn each_corner_overlays_it() {
+        assert_eq!(
+            edge_place(window(), pos2(8.0, 8.0)),
+            Some(Place::Overlay(Corner::TopLeft))
+        );
+        assert_eq!(
+            edge_place(window(), pos2(1392.0, 8.0)),
+            Some(Place::Overlay(Corner::TopRight))
+        );
+        assert_eq!(
+            edge_place(window(), pos2(8.0, 892.0)),
+            Some(Place::Overlay(Corner::BottomLeft))
+        );
+        assert_eq!(
+            edge_place(window(), pos2(1392.0, 892.0)),
+            Some(Place::Overlay(Corner::BottomRight))
+        );
+    }
+
+    /// There is no dock along the top -- the menu bar is there -- so the top
+    /// edge between its two corners answers nothing rather than guessing.
+    #[test]
+    fn the_top_edge_between_the_corners_answers_nothing() {
+        assert_eq!(edge_place(window(), pos2(700.0, 8.0)), None);
     }
 
     #[test]
     fn a_pointer_outside_the_window_lands_nowhere() {
-        let window = Rect::from_min_size(pos2(0.0, 0.0), vec2(1400.0, 900.0));
-        assert_eq!(edge_slot(window, pos2(-20.0, 450.0)), None);
+        assert_eq!(edge_place(window(), pos2(-20.0, 450.0)), None);
     }
 }

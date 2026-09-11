@@ -8,14 +8,29 @@
 //! written for got a worse editor for it.
 //!
 //! So the arrangement is data. A [`Workspace`] says which panels live in which
-//! [`Slot`] and how big each slot is; the frame loop reads it rather than
-//! knowing it. The two arrangements that used to be the only choices are now
-//! two [presets](Workspace::preset) — starting points someone can drag away
-//! from, rather than the only two shapes the editor has.
+//! [`Place`] and how big each is; the frame loop reads it rather than knowing
+//! it. The arrangements that used to be the only choices are now
+//! [presets](Workspace::preset) — starting points someone can drag away from,
+//! rather than the only shapes the editor has.
+//!
+//! A panel is placed one of two ways, and the difference is whether it takes
+//! room from the scene or covers it. A [`Slot`] is a dock: it claims space, and
+//! the scene view gets what is left. A [`Corner`] is an overlay: it floats over
+//! the scene, anchored to one of its corners, and the scene keeps the whole
+//! window. Overlays are what makes the canvas-first arrangement expressible
+//! without a second editor — see `docs/editor-direction.md`.
+//!
+//! Overlays anchor rather than float freely, and stack when they share a
+//! corner. Free-floating panels do not overlap in a drawing because someone
+//! placed them; they overlap constantly in use, and an editor whose panels can
+//! be piled on each other by accident is one where rearranging furniture
+//! becomes the work.
 
 mod drag;
+mod place;
 
-pub use drag::{Drag, DropTarget, edge_slot, tab_index};
+pub use drag::{Drag, DropTarget, edge_place, tab_index};
+pub use place::{Corner, Place, Slot};
 
 use serde::{Deserialize, Serialize};
 
@@ -78,92 +93,11 @@ impl Panel {
     }
 }
 
-/// Where in the window a group of panels sits.
-///
-/// Seven rather than four because the arrangements people actually want are
-/// asymmetric: two columns down one side and one down the other is the common
-/// shape of an editor, and a model with a single slot per edge cannot say it.
-/// Slots claim space from the outside in, so `FarLeft` is against the window
-/// and `Left` sits inside it.
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Slot {
-    FarLeft,
-    Left,
-    FarRight,
-    Right,
-    /// Under the centre, between the side columns.
-    Bottom,
-    /// The centre itself: whatever is left when every other slot has taken its
-    /// share. Cannot be empty — see [`Workspace::take`].
-    Main,
-    /// A second group under [`Slot::Main`], for showing two views at once.
-    MainBottom,
-}
-
-impl Slot {
-    /// Every slot in the order it claims space, outermost first.
-    ///
-    /// The frame loop walks this, so the order here *is* the arrangement:
-    /// a slot claiming space earlier ends up further out, and `Main` is last
-    /// because it is defined as the remainder.
-    pub const ALL: [Self; 7] = [
-        Self::FarLeft,
-        Self::FarRight,
-        Self::Left,
-        Self::Right,
-        Self::Bottom,
-        Self::MainBottom,
-        Self::Main,
-    ];
-
-    /// Which way the slot is measured: `true` when its size is a width.
-    pub const fn is_column(self) -> bool {
-        matches!(
-            self,
-            Self::FarLeft | Self::Left | Self::FarRight | Self::Right
-        )
-    }
-
-    /// How big a slot is before anyone has resized it.
-    const fn default_size(self) -> f32 {
-        match self {
-            Self::FarLeft | Self::Left => 260.0,
-            Self::FarRight => 340.0,
-            Self::Right | Self::Bottom | Self::MainBottom => 300.0,
-            // Never used: `Main` is the remainder and has no size of its own.
-            Self::Main => 0.0,
-        }
-    }
-
-    /// The smallest a slot may be dragged to.
-    ///
-    /// Small enough to be a genuine choice rather than the editor overruling
-    /// one. The old panels had minimums near their defaults, which meant the
-    /// resize handle had a few pixels of travel and reads as broken.
-    pub const fn min_size(self) -> f32 {
-        if self.is_column() { 150.0 } else { 90.0 }
-    }
-
-    /// A stable id for the egui panel, so a slot keeps its size across frames.
-    pub const fn id(self) -> &'static str {
-        match self {
-            Self::FarLeft => "dock-far-left",
-            Self::Left => "dock-left",
-            Self::FarRight => "dock-far-right",
-            Self::Right => "dock-right",
-            Self::Bottom => "dock-bottom",
-            Self::Main => "dock-main",
-            Self::MainBottom => "dock-main-bottom",
-        }
-    }
-}
-
-/// One slot's contents: the panels in it, and which of them is showing.
+/// One place's contents: the panels in it, and which of them is showing.
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(default)]
 pub struct Group {
-    /// The panels in this slot, in tab order.
+    /// The panels here, in tab order.
     pub panels: Vec<Panel>,
     /// Which tab is selected, as an index into `panels`.
     ///
@@ -171,16 +105,30 @@ pub struct Group {
     /// twice — which cannot happen, but which a hand-edited settings file could
     /// ask for — still resolves to one tab. Clamped on read rather than trusted.
     pub active: usize,
-    /// How wide or tall the slot is, in points.
+    /// How big it is along its own axis, in points: a docked column's width, a
+    /// docked row's height, an overlay's width.
     pub size: f32,
+    /// How tall an overlay is. Docks take the whole of their cross axis and
+    /// ignore this.
+    pub height: f32,
+    /// Whether an overlay is rolled up to just its tab strip.
+    ///
+    /// The answer to the honest objection to overlays: they cover the world.
+    /// Clicking the showing tab rolls one up, so getting the scene back is the
+    /// same gesture as putting the panel away and costs no travel to a control
+    /// somewhere else. Docks ignore this — collapsing one is what dragging its
+    /// edge already does.
+    pub collapsed: bool,
 }
 
 impl Group {
-    fn new(slot: Slot, panels: &[Panel]) -> Self {
+    fn new(place: Place, panels: &[Panel]) -> Self {
         Self {
             panels: panels.to_vec(),
             active: 0,
-            size: slot.default_size(),
+            size: place.default_size(),
+            height: place.default_height(),
+            collapsed: false,
         }
     }
 
@@ -209,28 +157,36 @@ impl Group {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default)]
 pub struct Workspace {
-    /// One entry per slot. A slot with no entry is empty and is not drawn.
-    slots: Vec<(Slot, Group)>,
+    /// One entry per place. A place with no entry is empty and is not drawn.
+    places: Vec<(Place, Group)>,
 }
 
 impl Default for Workspace {
     fn default() -> Self {
-        Self::preset(Preset::Studio)
+        Self::preset(Preset::Canvas)
     }
 }
 
 /// An arrangement to start from.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum Preset {
-    /// Hierarchy left, both views centre, project and inspector right.
+    /// The scene has the window; everything else overlays a corner of it or is
+    /// one click away.
     ///
-    /// The default, and the descendant of the old "2 by 3": the scene and what
-    /// the player would see at the same time, which is the comparison an editor
-    /// exists to make. The console is a tab beside the scene rather than a
-    /// third row in the project column, because what the console says is about
-    /// the thing in the viewport next to it.
+    /// The default, and the direction the editor is being taken in: a scene
+    /// view that is the document rather than the rectangle five panels left
+    /// over. The inspector stays docked on purpose — see
+    /// `docs/editor-direction.md` for why properties want an edge and verbs do
+    /// not.
     #[default]
-    Studio,
+    Canvas,
+    /// Every panel docked, taking room from the scene: hierarchy left, both
+    /// views centre, project and inspector right.
+    ///
+    /// What the editor was before the canvas direction, kept as a preset rather
+    /// than archived in a folder. Changing your mind about the default should
+    /// cost a menu click, not a checkout.
+    Docked,
     /// One view at a time, with the project browser along the bottom.
     ///
     /// The whole width for the viewport, which suits a laptop screen or working
@@ -239,12 +195,22 @@ pub enum Preset {
 }
 
 impl Preset {
-    pub const ALL: [Self; 2] = [Self::Studio, Self::Wide];
+    pub const ALL: [Self; 3] = [Self::Canvas, Self::Docked, Self::Wide];
 
     pub const fn label(self) -> &'static str {
         match self {
-            Self::Studio => "Studio",
+            Self::Canvas => "Canvas",
+            Self::Docked => "Docked",
             Self::Wide => "Wide",
+        }
+    }
+
+    /// What choosing it would do, for the menu that offers it.
+    pub const fn note(self) -> &'static str {
+        match self {
+            Self::Canvas => "The scene fills the window; panels overlay its corners",
+            Self::Docked => "Every panel takes its own room beside the scene",
+            Self::Wide => "One view at a time, project browser along the bottom",
         }
     }
 }
@@ -252,71 +218,106 @@ impl Preset {
 impl Workspace {
     /// One of the arrangements the editor ships with.
     pub fn preset(preset: Preset) -> Self {
-        let slots: &[(Slot, &[Panel])] = match preset {
-            Preset::Studio => &[
-                (Slot::Left, &[Panel::Hierarchy]),
-                (Slot::Main, &[Panel::Scene, Panel::Console]),
-                (Slot::MainBottom, &[Panel::Game]),
-                (Slot::Right, &[Panel::Project, Panel::History]),
-                (Slot::FarRight, &[Panel::Inspector]),
-            ],
-            Preset::Wide => &[
-                (Slot::Left, &[Panel::Hierarchy]),
-                (Slot::Main, &[Panel::Scene, Panel::Game]),
+        use Corner::{BottomLeft, TopLeft};
+        use Slot::{Bottom, FarRight, Left, Main, MainBottom, Right};
+        let places: &[(Place, &[Panel])] = match preset {
+            Preset::Canvas => &[
+                // The scene has the window, and what is not the scene either
+                // covers a corner of it or is one click away. The inspector is
+                // the exception and is docked on purpose: it moves on every
+                // selection if it floats, it covers the neighbours a value is
+                // being judged against, and a schema-driven entity is thirty
+                // fields deep. Verbs travel; properties do not.
+                (Place::Dock(Main), &[Panel::Scene, Panel::Game]),
+                (Place::Overlay(TopLeft), &[Panel::Hierarchy]),
                 (
-                    Slot::Bottom,
+                    Place::Overlay(BottomLeft),
                     &[Panel::Project, Panel::Console, Panel::History],
                 ),
-                (Slot::FarRight, &[Panel::Inspector]),
+                (Place::Dock(FarRight), &[Panel::Inspector]),
+            ],
+            Preset::Docked => &[
+                (Place::Dock(Left), &[Panel::Hierarchy]),
+                (Place::Dock(Main), &[Panel::Scene, Panel::Console]),
+                (Place::Dock(MainBottom), &[Panel::Game]),
+                (Place::Dock(Right), &[Panel::Project, Panel::History]),
+                (Place::Dock(FarRight), &[Panel::Inspector]),
+            ],
+            Preset::Wide => &[
+                (Place::Dock(Left), &[Panel::Hierarchy]),
+                (Place::Dock(Main), &[Panel::Scene, Panel::Game]),
+                (
+                    Place::Dock(Bottom),
+                    &[Panel::Project, Panel::Console, Panel::History],
+                ),
+                (Place::Dock(FarRight), &[Panel::Inspector]),
             ],
         };
         Self {
-            slots: slots
+            places: places
                 .iter()
-                .map(|(slot, panels)| (*slot, Group::new(*slot, panels)))
+                .map(|(place, panels)| (*place, Group::new(*place, panels)))
                 .collect(),
         }
     }
 
-    /// The group in a slot, if the slot holds anything.
-    pub fn group(&self, slot: Slot) -> Option<&Group> {
-        self.slots
+    /// The group in a place, if it holds anything.
+    pub fn group(&self, place: Place) -> Option<&Group> {
+        self.places
             .iter()
-            .find(|(candidate, group)| *candidate == slot && !group.is_empty())
+            .find(|(candidate, group)| *candidate == place && !group.is_empty())
             .map(|(_, group)| group)
     }
 
-    fn group_mut(&mut self, slot: Slot) -> &mut Group {
+    fn group_mut(&mut self, place: Place) -> &mut Group {
         if let Some(index) = self
-            .slots
+            .places
             .iter()
-            .position(|(candidate, _)| *candidate == slot)
+            .position(|(candidate, _)| *candidate == place)
         {
-            return &mut self.slots[index].1;
+            return &mut self.places[index].1;
         }
-        self.slots.push((slot, Group::new(slot, &[])));
-        let last = self.slots.len() - 1;
-        &mut self.slots[last].1
+        self.places.push((place, Group::new(place, &[])));
+        let last = self.places.len() - 1;
+        &mut self.places[last].1
     }
 
-    /// Selects a tab within a slot.
-    pub fn select(&mut self, slot: Slot, index: usize) {
-        self.group_mut(slot).active = index;
+    /// Selects a tab, and unrolls the overlay it is in if it was rolled up.
+    ///
+    /// Choosing a tab is asking to see it. An overlay that stayed collapsed
+    /// after one was picked would have answered a click with nothing.
+    pub fn select(&mut self, place: Place, index: usize) {
+        let group = self.group_mut(place);
+        group.active = index;
+        group.collapsed = false;
     }
 
-    /// Records a slot's size after the user has dragged its edge.
-    pub fn resize(&mut self, slot: Slot, size: f32) {
-        self.group_mut(slot).size = size;
+    /// Rolls an overlay up to its tab strip, or back down.
+    pub fn toggle_collapsed(&mut self, place: Place) {
+        if place.is_overlay() {
+            let group = self.group_mut(place);
+            group.collapsed = !group.collapsed;
+        }
+    }
+
+    /// Records a size after the user has dragged an edge.
+    pub fn resize(&mut self, place: Place, size: f32) {
+        self.group_mut(place).size = size;
+    }
+
+    /// Records an overlay's height after the user has dragged its edge.
+    pub fn resize_height(&mut self, place: Place, height: f32) {
+        self.group_mut(place).height = height;
     }
 
     /// Where a panel currently lives, if it is placed at all.
-    pub fn location(&self, panel: Panel) -> Option<(Slot, usize)> {
-        self.slots.iter().find_map(|(slot, group)| {
+    pub fn location(&self, panel: Panel) -> Option<(Place, usize)> {
+        self.places.iter().find_map(|(place, group)| {
             group
                 .panels
                 .iter()
                 .position(|candidate| *candidate == panel)
-                .map(|index| (*slot, index))
+                .map(|index| (*place, index))
         })
     }
 
@@ -326,61 +327,61 @@ impl Workspace {
 
     /// Takes a panel out of wherever it is.
     ///
-    /// `Main` is refused when it would empty it. The centre is what every other
-    /// slot is measured against, so a workspace with nothing in the middle is
-    /// not a smaller editor — it is an editor with a hole where the work goes,
-    /// and no drag or menu entry should be able to produce one.
+    /// The centre is refused when it would empty it. Every other place is
+    /// measured against the centre, so a workspace with nothing in the middle
+    /// is not a smaller editor — it is an editor with a hole where the work
+    /// goes, and no drag or menu entry should be able to produce one.
     pub fn take(&mut self, panel: Panel) -> bool {
-        let Some((slot, index)) = self.location(panel) else {
+        let Some((place, index)) = self.location(panel) else {
             return false;
         };
-        if slot == Slot::Main && self.group_mut(Slot::Main).panels.len() == 1 {
+        if place == Place::MAIN && self.group_mut(Place::MAIN).panels.len() == 1 {
             return false;
         }
-        let group = self.group_mut(slot);
+        let group = self.group_mut(place);
         group.panels.remove(index);
         group.active = group.active.min(group.panels.len().saturating_sub(1));
         true
     }
 
-    /// Whether moving a panel to a slot would be allowed.
+    /// Whether moving a panel somewhere would be allowed.
     ///
     /// Asked before the highlight is drawn as well as before the move is made,
     /// so a drag that will be refused is never shown as one that will be
     /// obeyed. A gesture that lights up and then does nothing is worse than one
     /// that never lights up.
-    pub fn can_place(&self, panel: Panel, slot: Slot) -> bool {
-        if slot == Slot::Main {
+    pub fn can_place(&self, panel: Panel, place: Place) -> bool {
+        if place == Place::MAIN {
             return true;
         }
         match self.location(panel) {
-            Some((Slot::Main, _)) => self
-                .group(Slot::Main)
+            Some((Place::MAIN, _)) => self
+                .group(Place::MAIN)
                 .is_some_and(|group| group.panels.len() > 1),
             _ => true,
         }
     }
 
-    /// Puts a panel into a slot at a given tab position, taking it from
-    /// wherever it was.
+    /// Puts a panel somewhere at a given tab position, taking it from wherever
+    /// it was.
     ///
     /// Moving rather than copying: a panel is one region of the window, and two
     /// of them would be two views of one piece of state fighting over the same
     /// scroll position and the same selection.
-    pub fn place(&mut self, panel: Panel, slot: Slot, index: usize) {
-        if !self.can_place(panel, slot) {
+    pub fn place(&mut self, panel: Panel, place: Place, index: usize) {
+        if !self.can_place(panel, place) {
             return;
         }
-        let from = self.location(panel);
-        if let Some((origin, at)) = from {
+        if let Some((origin, at)) = self.location(panel) {
             let group = self.group_mut(origin);
             group.panels.remove(at);
             group.active = group.active.min(group.panels.len().saturating_sub(1));
         }
-        let group = self.group_mut(slot);
+        let group = self.group_mut(place);
         let index = index.min(group.panels.len());
         group.panels.insert(index, panel);
         group.active = index;
+        group.collapsed = false;
     }
 
     /// Closes a panel, or reopens it where it last was.
@@ -388,20 +389,20 @@ impl Workspace {
         if self.is_open(panel) {
             self.take(panel);
         } else {
-            self.place(panel, Slot::Main, usize::MAX);
+            self.place(panel, Place::MAIN, usize::MAX);
         }
     }
 
     /// Repairs an arrangement read back from settings.
     ///
     /// Settings are a file on disk, and a file on disk can say anything: a
-    /// panel listed twice, a panel in no slot at all, an empty centre, a size
-    /// of minus one. None of those should stop the editor opening, and none of
+    /// panel listed twice, a panel placed nowhere, an empty centre, a size of
+    /// minus one. None of those should stop the editor opening, and none of
     /// them should be trusted either, so every one is corrected here rather
     /// than guarded against at each of the places that reads this.
     pub fn repair(&mut self) {
         let mut seen = Vec::new();
-        for (slot, group) in &mut self.slots {
+        for (place, group) in &mut self.places {
             group.panels.retain(|panel| {
                 let first = !seen.contains(panel);
                 if first {
@@ -409,30 +410,42 @@ impl Workspace {
                 }
                 first
             });
-            // `Main` is the remainder and has no size of its own, so there is
-            // nothing here to correct — and clamping it to a minimum it never
-            // uses would make a repaired settings file differ from a fresh one.
-            if *slot != Slot::Main {
-                group.size = if group.size.is_finite() {
-                    group.size.max(slot.min_size())
-                } else {
-                    slot.default_size()
-                };
+            // The centre is the remainder and has no size of its own, so there
+            // is nothing here to correct — and clamping it to a minimum it
+            // never uses would make a repaired settings file differ from a
+            // fresh one.
+            if *place != Place::MAIN {
+                group.size = repaired(group.size, *place, Place::default_size);
+            }
+            if place.is_overlay() {
+                group.height = repaired(group.height, *place, Place::default_height);
+            } else {
+                group.collapsed = false;
             }
             group.active = group.active.min(group.panels.len().saturating_sub(1));
         }
-        // A panel in no slot is unreachable, and the View menu is how it is
+        // A panel placed nowhere is unreachable, and the View menu is how it is
         // reopened — so an unplaced panel is a closed panel, which is allowed.
         // An empty centre is not.
-        if self.group(Slot::Main).is_none() {
+        if self.group(Place::MAIN).is_none() {
             let rescued = Panel::ALL
                 .into_iter()
                 .find(|panel| panel.is_viewport() && !seen.contains(panel))
                 .unwrap_or(Panel::Scene);
             self.take(rescued);
-            self.group_mut(Slot::Main).panels.push(rescued);
-            self.group_mut(Slot::Main).active = 0;
+            self.group_mut(Place::MAIN).panels.push(rescued);
+            self.group_mut(Place::MAIN).active = 0;
         }
+    }
+}
+
+/// One stored measurement, corrected: a number that is not a number falls back
+/// to the default, and one that is merely too small is raised to the minimum.
+fn repaired(stored: f32, place: Place, fallback: fn(Place) -> f32) -> f32 {
+    if stored.is_finite() {
+        stored.max(place.min_size())
+    } else {
+        fallback(place)
     }
 }
 

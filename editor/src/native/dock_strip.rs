@@ -10,7 +10,7 @@
 
 use eframe::egui::{self, Align, Align2, Color32, FontId, Layout, Pos2, Rect, Stroke, Vec2};
 
-use crate::dock::{Drag, DropTarget, Panel as DockPanel, Slot};
+use crate::dock::{Drag, DropTarget, Panel as DockPanel, Place, Slot};
 use crate::ui::icons;
 use crate::ui::theme::{color, metric, text};
 use crate::ui::widgets::tabs::{self, Weight};
@@ -40,11 +40,11 @@ impl EditorApp {
     pub(super) fn dock_strip(
         &mut self,
         ui: &mut egui::Ui,
-        slot: Slot,
+        place: Place,
         panels: &[DockPanel],
         active: usize,
     ) -> (Rect, Vec<Rect>) {
-        let weight = if slot == Slot::Main || slot == Slot::MainBottom {
+        let weight = if matches!(place, Place::Dock(Slot::Main | Slot::MainBottom)) {
             Weight::Primary
         } else {
             Weight::Secondary
@@ -54,6 +54,7 @@ impl EditorApp {
         let mut chosen = None;
         let mut closed = None;
         let mut started = None;
+        let mut rolled = false;
         let strip = tabs::strip(ui, |ui| {
             for (index, panel) in panels.iter().copied().enumerate() {
                 let response = tabs::tab(
@@ -66,7 +67,15 @@ impl EditorApp {
                 );
                 rects.push(response.rect);
                 if response.clicked() {
-                    chosen = Some(index);
+                    // Clicking the tab already showing rolls an overlay up to
+                    // its strip and back down. That is the answer to the honest
+                    // objection to overlays -- they cover the world -- and it
+                    // costs no travel to a control somewhere else.
+                    if index == active && place.is_overlay() {
+                        rolled = true;
+                    } else {
+                        chosen = Some(index);
+                    }
                 }
                 // Middle-click closes, the way it does in every editor and
                 // every browser. The View menu puts it back.
@@ -90,7 +99,10 @@ impl EditorApp {
             }
         });
         if let Some(index) = chosen {
-            self.preferences.workspace.select(slot, index);
+            self.preferences.workspace.select(place, index);
+        }
+        if rolled {
+            self.preferences.workspace.toggle_collapsed(place);
         }
         if let Some(panel) = closed {
             self.preferences.workspace.take(panel);
@@ -137,8 +149,8 @@ impl EditorApp {
             egui::Order::Foreground,
             egui::Id::new("dock-drag"),
         ));
-        if let Some(DropTarget { slot, index }) = drag.target {
-            if let Some(zone) = self.dock.zones.iter().find(|zone| zone.slot == slot) {
+        if let Some(DropTarget { place, index }) = drag.target {
+            if let Some(zone) = self.dock.zones.iter().find(|zone| zone.place == place) {
                 // A landing inside a group is shown as a wash over the whole
                 // group plus a caret between the tabs it would land between, so
                 // both halves of the answer — which group, and where in it —
@@ -168,7 +180,7 @@ impl EditorApp {
                 // An empty slot has no zone to highlight, so the band along the
                 // edge it would open is the highlight.
                 painter.rect_filled(
-                    empty_slot_band(context.content_rect(), slot),
+                    empty_place_band(self.dock.canvas, place),
                     2.0,
                     color::FORGE.gamma_multiply(0.2),
                 );
@@ -203,23 +215,42 @@ impl EditorApp {
     }
 }
 
-/// Where a slot nothing is currently in would appear.
+/// Where a place nothing is currently in would appear.
 ///
-/// Only the three outer slots can be reached this way, which is why this needs
-/// no answer for the rest: every other slot already has a group to drop onto.
-fn empty_slot_band(window: Rect, slot: Slot) -> Rect {
-    let depth = 220.0_f32.min(window.width() * 0.25);
-    match slot {
-        Slot::FarLeft | Slot::Left => {
-            Rect::from_min_size(window.min, Vec2::new(depth, window.height()))
+/// A dock is shown as the full band it would claim, because that is what
+/// dropping there costs the scene. An overlay is shown at the size and corner
+/// it would take, because that is what it would cover.
+fn empty_place_band(canvas: Rect, place: Place) -> Rect {
+    match place {
+        Place::Dock(slot) => {
+            let depth = 220.0_f32.min(canvas.width() * 0.25);
+            match slot {
+                Slot::FarLeft | Slot::Left => {
+                    Rect::from_min_size(canvas.min, Vec2::new(depth, canvas.height()))
+                }
+                Slot::FarRight | Slot::Right => Rect::from_min_size(
+                    Pos2::new(canvas.right() - depth, canvas.top()),
+                    Vec2::new(depth, canvas.height()),
+                ),
+                Slot::Bottom | Slot::MainBottom | Slot::Main => Rect::from_min_size(
+                    Pos2::new(canvas.left(), canvas.bottom() - 220.0),
+                    Vec2::new(canvas.width(), 220.0),
+                ),
+            }
         }
-        Slot::FarRight | Slot::Right => Rect::from_min_size(
-            Pos2::new(window.right() - depth, window.top()),
-            Vec2::new(depth, window.height()),
-        ),
-        Slot::Bottom | Slot::MainBottom | Slot::Main => Rect::from_min_size(
-            Pos2::new(window.left(), window.bottom() - 220.0),
-            Vec2::new(window.width(), 220.0),
-        ),
+        Place::Overlay(corner) => {
+            let size = Vec2::new(260.0, 240.0);
+            let x = if corner.is_left() {
+                canvas.left() + 12.0
+            } else {
+                canvas.right() - 12.0 - size.x
+            };
+            let y = if corner.is_bottom() {
+                canvas.bottom() - 12.0 - size.y
+            } else {
+                canvas.top() + 12.0
+            };
+            Rect::from_min_size(Pos2::new(x, y), size)
+        }
     }
 }

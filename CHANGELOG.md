@@ -4,6 +4,31 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **The scene view is the document.** The editor now opens in a `Canvas`
+  arrangement: the scene fills the window, the hierarchy and the project browser
+  overlay its corners, and the inspector stays docked at the edge. A panel can
+  now be placed one of two ways — a **dock** takes room from the scene, an
+  **overlay** floats over it, anchored to one of the scene's four corners — and
+  the rule for reaching an empty one is that **edges dock and corners float**.
+
+  Overlays anchor and stack rather than floating freely, so two sharing a corner
+  sit one above the other and cannot be piled on each other by accident.
+  Clicking the tab already showing rolls one up to its strip and back down,
+  which is the answer to the honest objection to overlays: they cover the world.
+  They are drawn opaque on purpose — a translucent panel is legible over a
+  mockup's calm sky and unreadable over a dense tileset.
+
+  The inspector is deliberately *not* floating. It would move on every selection
+  so no muscle memory could form, it would cover the neighbours a value is being
+  judged against, and a schema-driven entity is thirty fields deep. Verbs travel
+  well; properties do not.
+
+  The previous arrangement is kept as the `Docked` preset rather than archived,
+  so changing your mind costs a menu click. `docs/editor-direction.md` records
+  what this direction takes from the canvas-first proposal, what it declines and
+  why, and the two things — liveness, and the change-to-consequence loop — that
+  no mockup can show and that this must not be allowed to reorder.
+
 - **The console reports the size of a problem rather than the size of its own
   log.** It collapsed a repeated message into a count only when the repeat was
   the entry *immediately* before it, and nothing fails on its own: a frame
@@ -26,8 +51,8 @@ All notable changes to Sindri Engine will be documented here.
   inserts between the tabs it lands between; dropping on a window edge opens a
   slot nothing was in. An empty slot is not drawn. The arrangement and each
   slot's size survive a restart, `View → Panels` reopens anything closed, and
-  `View → Arrangement` offers `Studio` and `Wide` as starting points rather than
-  as the only two shapes the editor has.
+  `View → Arrangement` offers the presets as starting points rather than as the
+  only shapes the editor has.
 
   The Console opens beside the Scene view in the default arrangement. It used to
   share one bottom slot with the project browser and the history, so reading the

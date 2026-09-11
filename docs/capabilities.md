@@ -835,16 +835,31 @@ frame.
   translation/angle/scale snapping, respect Z lock, and merge a whole drag into
   one undoable command-history step
 - Scene and Game views, the latter rendering through the authored camera with no
-  editor chrome painted over it — both live at once in the `Studio` arrangement
+  editor chrome painted over it — both live at once in the `Docked` arrangement
 - **A workspace the user arranges.** Every panel — Scene, Game, Hierarchy,
   Inspector, Project, Console, History — is a tab, and every tab is dragged into
-  any of seven slots: two columns down each side, one along the bottom, and the
-  centre split in two. Dropping onto a tab strip inserts between the tabs it
-  lands between; dropping on a window edge opens a slot nothing was in. A slot
-  with nothing in it is not drawn, so the arrangement has no empty furniture in
-  it. Middle-click closes a tab and **View → Panels** brings it back;
-  **View → Arrangement** offers `Studio` and `Wide` as starting points. Where
-  every panel sits and how big each slot is survives a restart.
+  any of eleven places: seven docks — two columns down each side, one along the
+  bottom, the centre split in two — and four overlays, one anchored to each
+  corner of the scene view. **A dock takes room from the scene; an overlay
+  covers it**, which is what makes the canvas-first arrangement expressible
+  without a second editor.
+
+  **Edges dock, corners float.** Dropping a tab on a window edge docks it
+  there; dropping it in a corner floats it. Dropping onto an existing tab strip
+  inserts between the tabs it lands between, and onto a group's body joins it at
+  the end. A place with nothing in it is not drawn, so the arrangement has no
+  empty furniture in it. Middle-click closes a tab and **View → Panels** brings
+  it back; **View → Arrangement** offers `Canvas`, `Docked`, and `Wide` as
+  starting points. Where every panel sits and how big it is survives a restart.
+
+  Overlays anchor and stack rather than floating freely: two sharing a corner
+  sit one above the other, so they cannot be piled on each other by accident.
+  Clicking the tab already showing rolls an overlay up to its strip and back
+  down, which is the answer to the honest objection to overlays — they cover the
+  world — and costs no travel to a control somewhere else. They are drawn
+  opaque: a translucent panel is legible over a mockup's calm sky and
+  unreadable over a dense tileset, and which of those the scene holds is not
+  something the editor gets to choose.
 
   Two rules the model enforces rather than asking callers to respect: a panel
   lives in exactly one slot, and the centre is never empty — the last tab in it

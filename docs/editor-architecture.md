@@ -37,10 +37,27 @@ each slot is. `editor/src/native/workspace.rs` walks `Slot::ALL` and draws
 whatever it finds there, and knows nothing about which panel that turns out to
 be beyond how to draw each one.
 
-Seven slots, claimed from the outside in: `FarLeft`, `Left`, `FarRight`,
-`Right`, `Bottom`, `MainBottom`, and `Main`. `Main` is the remainder and has no
-size of its own. Any panel may be in any slot; the two arrangements that used to
-be the only choices are now presets to start from.
+A `Place` is one of two things, and the difference is whether a panel takes room
+from the scene or covers it:
+
+- **`Dock(Slot)`** claims space. Seven slots, claimed from the outside in:
+  `FarLeft`, `Left`, `FarRight`, `Right`, `Bottom`, `MainBottom`, and `Main`.
+  `Main` is the remainder and has no size of its own.
+- **`Overlay(Corner)`** floats over the scene view, anchored to one of its four
+  corners, and the scene keeps the whole window.
+
+Overlays anchor rather than floating freely, and stack when they share a corner.
+Free-floating panels do not overlap in a drawing because someone placed them;
+they overlap constantly in use, and an editor whose panels can be piled on each
+other by accident is one where rearranging furniture becomes the work.
+
+Any panel may be in any place. The arrangements that used to be the only choices
+are presets to start from — `Canvas`, `Docked`, `Wide`.
+
+Docks are drawn first and claim space; the scene view is what is left; overlays
+are drawn over that, because where an overlay goes is not known until the docks
+have taken their share. `DockLayout::canvas` carries that rectangle between the
+two halves of the frame.
 
 Rules the model enforces, so no caller has to:
 
@@ -54,6 +71,10 @@ Rules the model enforces, so no caller has to:
 
 Adding a panel is one `dock::Panel` variant and one arm of the match in
 `native/workspace.rs`. Nothing else in the editor needs to know.
+
+The direction this is being taken in — canvas-first as a resting posture rather
+than as an architecture, and what that does and does not adopt — is
+`docs/editor-direction.md`.
 
 ### The sizing trap
 

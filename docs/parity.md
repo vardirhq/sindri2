@@ -376,7 +376,8 @@ components not yet written. It is the highest-leverage item in this file.
 | **Prefab creation from a selection** | ❌ | **Absent** | — |
 | **Save inspector** | ❌ | **Absent** | Persistence is play-testable but not viewable |
 | **Multi-select and bulk edit** | ❌ | **Absent** | — |
-| **Customisable layout** | ✅ | **Par** | Every panel is a tab and every tab is draggable into any of seven slots, with the arrangement and each slot's size persisted. Two presets to start from. Behind Unity and Unreal only in that a panel cannot yet be torn off into a window of its own |
+| **Customisable layout** | ✅ | **Par** | Every panel is a tab, draggable into any of seven docks or four scene-anchored overlays — edges dock, corners float — with the arrangement and every size persisted. Three presets to start from. Behind Unity and Unreal only in that a panel cannot yet be torn off into a window of its own |
+| **Canvas-first workspace** | ✅ | **Ahead** | The scene view is the document and panels overlay its corners, rather than the viewport being the rectangle left over when the docks have taken theirs. Unity and Godot have no equivalent posture; the nearest comparison is a design tool. Still to come: command palette, chrome collapse, and the Game view as an anchored thumbnail — see `docs/editor-direction.md` |
 | **Customisable shortcuts** | ❌ | **Behind** | Keys are fixed in `native/shortcuts.rs` |
 | **Live edit while playing** | ❌ | **Behind** | Stop restores the world wholesale, so a value tuned during a run is lost. The largest single cost in the change-and-feel loop; see `docs/editor-direction.md` |
 | **Record and scrub a run** | ❌ | **Absent** | The step is fixed and deterministic, so this is available rather than aspirational, and nothing offers it |
