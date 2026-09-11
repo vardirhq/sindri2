@@ -209,16 +209,17 @@ def _validate_operation(
     if op == "spawn":
         alias = _required_string(operation, "alias", path, errors)
         _required_string(operation, "name", path, errors)
+        duplicate_alias = alias in aliases if alias else False
         if alias:
-            if alias in aliases:
+            if duplicate_alias:
                 errors.append(
                     Diagnostic(
                         "reference.duplicate_alias", f"{path}/alias", "alias already declared"
                     )
                 )
-            else:
-                aliases.add(alias)
         _entity_ref(operation.get("parent"), f"{path}/parent", aliases, errors, nullable=True)
+        if alias and not duplicate_alias:
+            aliases.add(alias)
         components = operation.get("components")
         if not isinstance(components, dict):
             errors.append(
