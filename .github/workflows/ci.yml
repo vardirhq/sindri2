@@ -314,6 +314,13 @@ jobs:
           cargo run --quiet --package sindri-export --bin sindri-export -- \
             games/weave-poc target/dist/weave --base /sindri2/examples/weave-poc/
           cp -R game/pkg/. target/dist/weave/pkg/
+          # The baked variant, which is the one deployed to Pages that a person
+          # actually plays. Its title screen is laid out by Weave rather than by
+          # its scene, and its portrait rules are reached only in a browser at
+          # phone width -- so nothing else here looks at them.
+          cargo run --quiet --package sindri-export --bin sindri-export -- \
+            games/orbital-baked target/dist/orbital-baked --base /sindri2/
+          cp -R game/pkg/. target/dist/orbital-baked/pkg/
       - name: Smoke the rendered games
         run: |
           node scripts/browser/smoke.mjs examples/cube target/render-artifacts/browser-cube.png
@@ -325,6 +332,9 @@ jobs:
             SINDRI_BASE_PATH=/sindri2/examples/weave-poc/ \
             SINDRI_VIEWPORT_WIDTH=390 SINDRI_VIEWPORT_HEIGHT=844 \
             node scripts/browser/smoke.mjs target/dist/weave target/render-artifacts/browser-weave-phone.png
+          SINDRI_EXPECT_ASSETS=1 SINDRI_BASE_PATH=/sindri2/ \
+            SINDRI_VIEWPORT_WIDTH=390 SINDRI_VIEWPORT_HEIGHT=844 \
+            node scripts/browser/smoke.mjs target/dist/orbital-baked target/render-artifacts/browser-orbital-baked-phone.png
       - name: Smoke the startup failure paths
         run: |
           SINDRI_EXPECT_FAILURE=canvas SINDRI_BASE_PATH=/sindri2/ \
@@ -343,6 +353,7 @@ jobs:
             target/render-artifacts/browser-gather.png
             target/render-artifacts/browser-orbital.png
             target/render-artifacts/browser-weave-phone.png
+            target/render-artifacts/browser-orbital-baked-phone.png
             target/render-artifacts/browser-no-canvas.png
             target/render-artifacts/browser-no-adapter.png
             target/render-artifacts/browser-no-device.png
