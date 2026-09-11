@@ -1,6 +1,6 @@
-# Contributing to Sindri Next
+# Contributing to Sindri Engine
 
-Sindri Next is pre-alpha. Public APIs and serialized formats still move, so the
+Sindri Engine is pre-alpha. Public APIs and serialized formats still move, so the
 most useful contributions are ones that make the foundation harder to get wrong
 rather than ones that add surface area.
 
@@ -133,7 +133,7 @@ changes in particular need a migration before the version moves.
 
 ## Licensing of contributions
 
-Sindri Next is dual-licensed under [Apache 2.0](LICENSE-APACHE) and
+Sindri Engine is dual-licensed under [Apache 2.0](LICENSE-APACHE) and
 [MIT](LICENSE-MIT). Unless you state otherwise, any contribution you submit for
 inclusion is licensed under both, with no additional terms, as described in
 section 5 of the Apache 2.0 licence.

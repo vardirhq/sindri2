@@ -1,37 +1,265 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b0d10"><title>Sindri — Rust game engine</title><meta name="description" content="Sindri is a lightweight 2D + 3D Rust game engine with a native visual editor, Decay scripting, and native/WebGPU rendering."><link rel="stylesheet" href="./assets/site.css"></head>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0d1117">
+<title>Sindri Engine — a 2D + 3D Rust game engine</title>
+<meta name="description" content="Sindri Engine is a lightweight 2D + 3D Rust game engine with a native visual editor, typed Decay scripting, and one renderer targeting native desktops and WebGPU browsers.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./assets/site.css">
+</head>
 <body>
-<header class="nav"><a class="brand" href="./"><span class="brandmark">S</span><span>Sindri</span><small>pre-alpha</small></a><nav><a href="./docs/getting-started/">Docs</a><a href="./docs/scripting/">Decay</a><a href="./examples/gather/">Gather</a><a href="./examples/orbital-last-stand/">Orbital</a><a href="./examples/orbital-baked/">Orbital Baked</a><a href="./examples/graphics-lab/">Graphics Lab</a><a href="./examples/weave-poc/">Weave</a><a href="https://github.com/vardirhq/sindri2">GitHub ↗</a></nav></header>
+
+<header class="nav">
+  <div class="shell">
+    <a class="brand" href="./">
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <polygon points="16,3 27.26,9.5 27.26,22.5 16,29 4.74,22.5 4.74,9.5" stroke="#e6e1d4" stroke-width="1.6" fill="none"/>
+        <polygon points="16,9 22.06,12.5 22.06,19.5 16,23 9.94,19.5 9.94,12.5" stroke="#e6e1d4" stroke-width="1.2" fill="none"/>
+        <polygon points="16,13.2 18.42,14.6 18.42,17.4 16,18.8 13.58,17.4 13.58,14.6" fill="#f0c050"/>
+      </svg>
+      <span>
+        <span class="wordmark">S<i>I</i>NDR<i>I</i></span>
+        <span class="tagline"><span class="rule"></span><span class="chip">ENGINE</span></span>
+      </span>
+    </a>
+    <nav>
+      <a href="#engine">engine</a>
+      <a href="#decay">decay</a>
+      <a href="#games">games</a>
+      <a href="#docs">docs</a>
+      <a class="ghost" href="https://github.com/vardirhq/sindri2">github ↗</a>
+    </nav>
+  </div>
+</header>
+
 <main>
-<section class="hero"><div class="hero-copy"><div class="eyebrow"><span></span> BUILT IN RUST · NATIVE + WEBGPU</div><h1>Build worlds.<br><em>Understand the engine.</em></h1><p>Sindri is a deliberately coherent 2D + 3D game engine with a native visual editor, typed Decay gameplay scripting, one scene model, and one renderer from desktop to browser.</p><div class="actions"><a class="button primary" href="./docs/getting-started/">Start building →</a><a class="button" href="./examples/gather/">Play Gather</a></div><div class="status"><span>● PRE-ALPHA</span> APIs and formats are evolving while the engine is proven through real games.</div></div>
-<div class="engine-window"><div class="windowbar"><i></i><i></i><i></i><span>orbital.scene.json — Sindri Editor</span></div><div class="editor"><aside><b>WORLD</b><div>▾ Game</div><div class="indent active">◈ Player</div><div class="indent">◈ Camera</div><div class="indent">▸ Environment</div><div class="indent">▸ UI</div></aside><div class="viewport"><div class="grid"></div><div class="cube"><span></span></div><div class="axis">Y<br>└─ X</div><div class="play">▶</div></div><aside class="inspector"><b>INSPECTOR</b><h3>Player</h3><label>TRANSFORM</label><div class="field">Position <code>0  1  0</code></div><div class="field">Rotation <code>0  0  0</code></div><label>DECAY SCRIPT</label><div class="field"><code>player.decay</code></div><div class="field accent">speed <code>6.0</code></div></aside></div></div></section>
-<section class="proof"><span>ONE RUNTIME MODEL</span><span>VERSIONED SCENES</span><span>TYPED SCRIPTING</span><span>RESPONSIVE UI</span><span>WEBGPU</span><span>NATIVE EDITOR</span></section>
-<section class="section"><div class="section-head"><div><div class="eyebrow">ENGINE, EDITOR, LANGUAGE</div><h2>Small enough to understand.<br>Serious enough to build with.</h2></div><p>Sindri avoids parallel systems that drift apart. The editor authors the runtime world. Decay crosses one typed host boundary. Browser and native builds share the same engine.</p></div><div class="cards"><article><div class="num">01</div><h3>One scene model</h3><p>2D and 3D entities, components, hierarchies and transforms live in versioned, canonical scene documents designed to survive source control.</p><a href="./docs/scenes/">Explore scenes →</a></article><article><div class="num">02</div><h3>A real editor</h3><p>Hierarchy, inspector, Scene and Game views, gizmos, animation, tilemaps, assets and Play mode operate on the same world the runtime uses.</p><a href="./docs/editor/">Editor guide →</a></article><article class="decay-card"><div class="num">03</div><h3>Decay scripting</h3><pre><code>script Player {
-  @export let speed: f32 = 6.0;
 
-  fn update(dt: f32) {
-    let x = Input.axis(
-      "ArrowLeft", "ArrowRight"
-    );
-    this.transform.position.x +=
-      x * speed * dt;
-  }
-}</code></pre><a href="./docs/scripting/">Read the deep scripting guide →</a></article></div></section>
-<section class="section split"><div><div class="eyebrow">DECAY</div><h2>A gameplay language that refuses to guess.</h2><p>Host members are typed. Exported properties are inspectable without executing code. Misspell a component path and compilation fails at the source location instead of exploding three frames later.</p><div class="actions"><a class="button primary" href="./docs/scripting/">Scripting guide →</a><a class="button" href="./docs/language/">Language reference</a></div></div><div class="terminal"><div class="term-head">player.decay</div><pre><code><span>@export</span>
-let speed: f32 = 6.0;
+  <section class="shell">
+    <div class="hero">
+      <div class="kicker"><span></span> built in rust · native + webgpu</div>
+      <h1>A 2D + 3D game engine<br>small enough to understand.</h1>
+      <p>One runtime model, one scene format, one asset pipeline, and one renderer that can target native desktops and WebGPU browsers without turning the web into a separate edition of the engine.</p>
+      <div class="actions">
+        <a class="button primary" href="./examples/gather/">play gather in your browser →</a>
+        <a class="button" href="#engine">what works today</a>
+      </div>
+      <p class="notice">
+        <b>● PRE-ALPHA</b>
+        <span>public APIs, Decay, and serialized formats may change while the engine is proven through real editor and gameplay use</span>
+      </p>
+    </div>
+  </section>
 
-fn update(dt: f32) {
-  let movement = Input.axis(
-    "A", "D"
-  );
+  <section class="shell" style="padding-top:clamp(40px,6vw,72px)">
+    <figure class="frame" style="margin:0">
+      <figcaption>
+        <span>sindri editor · games/orbital-baked/assets/orbital.scene.json</span>
+        <span>79 entities · 0 errors · 0 warnings</span>
+      </figcaption>
+      <img src="./assets/screenshots/editor-orbital-scene.png" alt="The Sindri editor holding the Orbital Last Stand scene" width="1600" height="1200">
+    </figure>
+    <p class="caption">Captured by a binary in the repository, not a screen grab — a seventy-nine entity hierarchy and a real asset tree, because that is what the editor is for.</p>
+  </section>
 
-  this.transform.position.x +=
-    movement * speed * dt;
+  <section class="shell">
+    <div class="proof">
+      <span>one scene model</span>
+      <span>versioned scenes</span>
+      <span>typed scripting</span>
+      <span>rapier2d physics</span>
+      <span>responsive weave ui</span>
+      <span>webgpu</span>
+      <span>native editor</span>
+    </div>
+  </section>
 
-  if Input.just_pressed("Space") {
-    Audio.play("jump.ogg", 0.8);
-  }
-}</code></pre></div></section>
-<section class="gather"><div><div class="eyebrow">RUNNING ON SINDRI</div><h2>Five proving grounds, five different jobs.</h2><p><strong>Gather</strong> proves the existing engine can make a complete game. <strong>Orbital Last Stand</strong> pushes parity against a real production target. <strong>Orbital Baked</strong> is that same game drawn from baked 3D sprite sheets instead of engine vectors, proving the asset pipeline against eighty moving things rather than one fixture. <strong>Graphics Lab</strong> asks how expensive procedural geometry can look. <strong>Weave</strong> proves responsive UI styling can remain isolated behind one engine bridge.</p><a class="button light" href="./examples/gather/">Launch Gather ↗</a> <a class="button light" href="./examples/orbital-last-stand/">Launch Orbital Last Stand ↗</a> <a class="button light" href="./examples/orbital-baked/">Launch Orbital Baked ↗</a> <a class="button light" href="./examples/graphics-lab/">Launch Graphics Lab ↗</a> <a class="button light" href="./examples/weave-poc/">Launch Weave ↗</a></div><div class="gather-art"><div class="tile t1"></div><div class="tile t2"></div><div class="tile t3"></div><div class="player">◆</div><div class="gem">✦</div></div></section>
-<section class="docs-cta"><div class="eyebrow">DOCUMENTATION</div><h2>Learn the model, not just the API.</h2><p>The docs explain why systems are shaped the way they are, what is stable, what is deliberately absent, and where the boundaries live. Decay and Weave get dedicated references because languages with shallow docs are just bug generators with punctuation.</p><div class="doclinks"><a href="./docs/getting-started/"><b>Getting started</b><span>Build and run Sindri →</span></a><a href="./docs/project/"><b>Projects</b><span>Manifest, assets and project roots →</span></a><a href="./docs/scripting/"><b>Decay scripting</b><span>Language, lifecycle and host surface →</span></a><a href="./docs/weave/"><b>Weave UI</b><span>Responsive presentation and migration →</span></a><a href="./docs/export/"><b>Web export</b><span>Build and deploy a project →</span></a><a href="./docs/architecture/"><b>Architecture</b><span>Boundaries, decisions and risks →</span></a></div></section>
-</main><footer><span>SINDRI</span><p>MIT OR Apache-2.0 · Built in Rust by Vardir</p><a href="https://github.com/vardirhq/sindri2">GitHub ↗</a></footer></body></html>
+  <section class="shell block" id="engine">
+    <div class="head">
+      <div>
+        <div class="kicker">engine, editor, language</div>
+        <h2>Small enough to understand.<br>Opinionated enough to build with.</h2>
+      </div>
+      <p class="lede">Sindri avoids parallel systems that drift apart. The editor edits the same world and scene representation the runtime uses. Decay crosses one typed host boundary. Native and browser hosts share the same engine concepts, assets, GPU abstraction, and renderer.</p>
+    </div>
+    <div class="tiles">
+      <article>
+        <div class="num">01</div>
+        <h3>One scene model</h3>
+        <p>2D and 3D entities, components, hierarchies and transforms live in versioned, canonical scene documents. Stable authored IDs stay separate from generation-checked runtime handles, and unknown component payloads are preserved by default.</p>
+      </article>
+      <article>
+        <div class="num">02</div>
+        <h3>A real editor</h3>
+        <p>A searchable, collapsible hierarchy with drag-and-drop reparenting, generic component editing through the schema registry, sprite-sheet slicing and clips, undo/redo with drag merging, and Play mode on the real engine lifecycle.</p>
+      </article>
+      <article>
+        <div class="num">03</div>
+        <h3>Measured complexity</h3>
+        <p>Systems are kept simple until profiling or real use proves they need to become more complicated. Features are exercised through real scenes, deterministic captures, and small games before they are described as capabilities.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="shell block" id="decay">
+    <div class="split">
+      <div>
+        <div class="kicker">decay</div>
+        <h2>A gameplay language that refuses to guess.</h2>
+        <p class="lede">Host members are typed: a misspelling such as <code class="inline">this.transfrom.position.x</code> is a compile error with a source location rather than a runtime surprise. <code class="inline">@export</code> fields are visible in the editor without running the script.</p>
+        <p class="lede" style="font-size:13.5px;line-height:1.7;color:var(--dim)">The language itself is engine-agnostic. It has safe entity, prefab and profile references, arrays and maps, bounded loops, typed host namespaces, and operation budgets — and still lacks structured vectors, coroutines, a debugger, and a full language server.</p>
+        <div class="actions">
+          <a class="button" href="./docs/scripting/">host surface →</a>
+          <a class="button" href="./docs/language/">language reference →</a>
+        </div>
+      </div>
+      <div class="code">
+        <div class="bar">player.decay</div>
+<pre><span class="k">script</span> <span class="v">Player</span> {
+    <span class="t">@export</span>
+    <span class="k">let</span> speed: <span class="t">f32</span> = <span class="v">6.0</span>;
+
+    <span class="k">fn</span> <span class="v">update</span>(dt: <span class="t">f32</span>) {
+        <span class="k">let</span> movement = Input.axis(<span class="v">"ArrowLeft"</span>, <span class="v">"ArrowRight"</span>);
+        this.transform.position.x += movement * speed * dt;
+
+        <span class="k">if</span> Input.just_pressed(<span class="v">"Space"</span>) {
+            print(<span class="v">"Back to the middle"</span>);
+            this.transform.position.x = <span class="v">0.0</span>;
+        }
+    }
+}</pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="shell block" id="games">
+    <div class="head">
+      <div>
+        <div class="kicker">running on sindri</div>
+        <h2>Proving grounds, each with a different job.</h2>
+      </div>
+      <p class="lede">Every image below is produced by a capture binary or the browser smoke in this repository, so it can be regenerated after a change instead of slowly drifting away from what the engine actually draws.</p>
+    </div>
+
+    <div class="cards">
+
+      <article class="card">
+        <img src="./assets/screenshots/orbital-baked-aegis.png" alt="Orbital Baked, the Aegis boss fight" style="object-position:50% 18%" width="1440" height="900">
+        <div class="body">
+          <div class="title"><h3>Orbital Baked</h3><span class="meta">boss-11 · aegis</span></div>
+          <p>The same game drawn from baked 3D sprite sheets instead of engine vectors, proving the asset pipeline against eighty moving things rather than one fixture.</p>
+          <a class="go" href="./examples/orbital-baked/">launch ↗</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <img src="./assets/screenshots/gather.png" alt="Gather, the companion game" style="object-position:50% 45%" width="1600" height="900">
+        <div class="body">
+          <div class="title"><h3>Gather</h3><span class="meta">browser · webgpu</span></div>
+          <p>Proves the engine can make a complete game. Runs the same Rust engine, Decay scripts, scene, renderer and project-owned font as its native build.</p>
+          <a class="go" href="./examples/gather/">play ↗</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="shot">
+          <img src="./assets/screenshots/orbital-last-stand-phone.png" alt="Orbital Last Stand at 390 by 844" width="390" height="844">
+        </div>
+        <div class="body">
+          <div class="title"><h3>Orbital Last Stand</h3><span class="meta">390 × 844</span></div>
+          <p>The forcing-function game: authored scene, prefabs and profiles, physics, audio, persistence, effects, and responsive Weave UI — held to the viewport a test asserts against.</p>
+          <a class="go" href="./examples/orbital-last-stand/">launch ↗</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <img src="./assets/screenshots/graphics-lab.png" alt="Graphics Lab, procedural geometry in motion" style="object-position:50% 45%" width="1440" height="900">
+        <div class="body">
+          <div class="title"><h3>Graphics Lab</h3><span class="meta">procedural geometry</span></div>
+          <p>Asks how expensive procedural geometry can look before the renderer has materials or lighting, and keeps the answer honest by drawing it every frame.</p>
+          <a class="go" href="./examples/graphics-lab/">launch ↗</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <img src="./assets/screenshots/weave-poc.png" alt="The Weave responsive UI showcase" style="object-position:50% 40%" width="1440" height="900">
+        <div class="body">
+          <div class="title"><h3>Weave</h3><span class="meta">responsive ui</span></div>
+          <p>One scene recomposed for desktop and portrait viewports through presentation rules that resolve into ordinary Sindri UI data, isolated behind a single engine bridge.</p>
+          <a class="go" href="./examples/weave-poc/">launch ↗</a>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <section class="shell block">
+    <div class="panel">
+      <div class="kicker">what is still missing</div>
+      <h2>Several large pieces are intentionally not pretending to exist yet.</h2>
+      <div class="list">
+        <div>editor prefab creation and linked instances</div>
+        <div>richer asset import, preview, project settings</div>
+        <div>Decay formatting, LSP, and debugging</div>
+        <div>structured vectors across the host boundary</div>
+        <div>Weave editor tooling and hot reload</div>
+        <div>native packaging and release tooling</div>
+        <div>materials, lighting, glTF import, 3D physics</div>
+      </div>
+      <div class="note">working code beats plausible architecture. that makes progress slower than ticking boxes on a roadmap. it also makes the boxes mean something.</div>
+    </div>
+  </section>
+
+  <section class="shell block" id="docs">
+    <div class="kicker">documentation</div>
+    <h2 style="margin-top:12px">Learn the model, not just the API.</h2>
+    <p class="lede" style="margin-top:16px;max-width:680px">The detailed contracts live alongside the code, and are updated with the implementation they describe rather than being treated as an aspirational checklist.</p>
+    <div class="doclinks">
+      <a href="./docs/getting-started/"><b>Getting started</b><span>build and run Sindri →</span></a>
+      <a href="./docs/editor/"><b>Editor capabilities</b><span>what demonstrably works today →</span></a>
+      <a href="./docs/scripting/"><b>Decay scripting</b><span>the exact Decay-to-Sindri host surface →</span></a>
+      <a href="./docs/weave/"><b>Weave UI</b><span>responsive presentation and migration →</span></a>
+      <a href="./docs/export/"><b>Web export</b><span>build and deploy a project →</span></a>
+      <a href="./docs/parity/"><b>Parity</b><span>where Sindri sits against expectation →</span></a>
+    </div>
+  </section>
+
+  <section class="shell block">
+    <div class="try">
+      <div>
+        <h2>Try the editor.</h2>
+        <p class="sub">the workspace currently requires rust 1.95 · dual-licensed MIT or apache-2.0</p>
+      </div>
+      <div class="code">
+        <div class="bar">SHELL</div>
+<pre><span class="p">$</span> git clone https://github.com/vardirhq/sindri2
+<span class="p">$</span> cargo run --package sindri-editor</pre>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="shell">
+    <div class="brand">
+      <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <polygon points="16,3 27.26,9.5 27.26,22.5 16,29 4.74,22.5 4.74,9.5" stroke="#8a8580" stroke-width="1.6" fill="none"/>
+        <polygon points="16,13.2 18.42,14.6 18.42,17.4 16,18.8 13.58,17.4 13.58,14.6" fill="#f0c050"/>
+      </svg>
+      <span>
+        <span class="wordmark">SINDRI</span>
+        <span class="tagline"><span class="rule"></span><span class="chip">ENGINE</span></span>
+      </span>
+    </div>
+    <span>built in rust by vardir · pre-alpha · MIT or Apache-2.0</span>
+    <a href="https://github.com/vardirhq/sindri2">github.com/vardirhq/sindri2 ↗</a>
+  </div>
+</footer>
+
+</body>
+</html>

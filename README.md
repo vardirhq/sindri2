@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="https://github.com/vardirhq/sindri2/blob/main/docs%2Ffile_000000005bd882118094c913acb7257c.png" alt="Sindri Next" width="680">
+  <img src="https://github.com/vardirhq/sindri2/blob/main/docs%2Ffile_000000005bd882118094c913acb7257c.png" alt="Sindri Engine" width="680">
 </p>
 
 <p align="center"><strong>A lightweight 2D + 3D game engine built in Rust, with a native visual editor and Decay scripting.</strong></p>
 
-Sindri Next is a from-the-foundation evolution of Sindri Engine. It is built around one runtime model, one scene format, one asset pipeline, and one renderer that can target native desktops and WebGPU browsers without turning the web into a separate edition of the engine.
+Sindri Engine is a from-the-foundation rebuild of the original Sindri. It is built around one runtime model, one scene format, one asset pipeline, and one renderer that can target native desktops and WebGPU browsers without turning the web into a separate edition of the engine.
 
 > **Status:** pre-alpha and under active development. Public APIs, Decay, and serialized formats may change while the engine is being proven through real editor and gameplay use.
 
@@ -252,7 +252,7 @@ The detailed contracts live alongside the code:
 
 ## Why Sindri?
 
-The original Sindri Engine proved a lot of useful ideas, but Sindri Next is using those lessons to build a more coherent foundation rather than carrying every old architectural decision forward.
+The original Sindri proved a lot of useful ideas. This engine is built on those lessons rather than carrying every old architectural decision forward, which is why it takes the name outright instead of shipping beside it.
 
 The project has a simple rule: **working code beats plausible architecture**. Features are exercised through real scenes, editor workflows, browser/native paths, deterministic captures, tests, and small gameplay examples before they are described as capabilities.
 

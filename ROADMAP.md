@@ -1,4 +1,4 @@
-# Sindri Next roadmap
+# Sindri Engine roadmap
 
 This is the checkable engineering plan. Check an item only when its acceptance criteria and relevant tests are complete. The roadmap is ordered by dependency, not excitement.
 
@@ -200,7 +200,7 @@ shaped like the tool.
 - [x] Run the engine in a browser at all, which it never had been — two things had been broken since the browser target was added: a failure was recorded and never reported, because `spawn_app` hands the loop to the page before `run` returns, and the surface refused every canvas because a canvas offers no sRGB format. See `docs/browser.md`; `scripts/browser/smoke.mjs` is the check
 - [ ] Start the companion game and grow it through this milestone, verified natively and in browser — see "The companion game" below, which replaces the `hello-2d` and platformer slice this milestone used to schedule (started: `game/` plays natively and in a browser, with a scripted offscreen capture in CI; animation, its tilemap floor, and project-font title work, while authored parallax remains)
 
-Exit gate: Sindri Next matches the useful core of legacy 2D without inheriting its desktop/server/Lua coupling, and each ported system can be authored in the editor rather than only by hand in JSON.
+Exit gate: Sindri Engine matches the useful core of legacy 2D without inheriting its desktop/server/Lua coupling, and each ported system can be authored in the editor rather than only by hand in JSON.
 
 ## Audio — unnumbered on purpose
 
@@ -503,7 +503,7 @@ and it runs on both targets at every tagged snapshot.
 
 ## Decay — the gameplay language, started ahead of this plan
 
-**This track was begun deliberately out of order, and Decay is now the decided direction.** The advice recorded in `docs/decay-direction.md` was to defer a bespoke language and put Rhai behind a scripting host; that recommendation was not taken, and the question is closed — Sindri Next scripts in Decay, and no embedded language is adopted. `decay/` is a separate workspace with a lexer, parser, semantic analyzer, symbolic IR, and interpreter. The boxes below are the original research framing, kept because the questions are still the right ones, with the state of each marked honestly.
+**This track was begun deliberately out of order, and Decay is now the decided direction.** The advice recorded in `docs/decay-direction.md` was to defer a bespoke language and put Rhai behind a scripting host; that recommendation was not taken, and the question is closed — Sindri Engine scripts in Decay, and no embedded language is adopted. `decay/` is a separate workspace with a lexer, parser, semantic analyzer, symbolic IR, and interpreter. The boxes below are the original research framing, kept because the questions are still the right ones, with the state of each marked honestly.
 
 What the language has and does not have is in `decay/README.md`, and the engine-facing summary is in `docs/capabilities.md`. The rule that keeps this affordable: **nothing under `decay/` may depend on a `sindri-*` crate, and no engine crate depends on Decay.** The language is replaceable for exactly as long as that holds.
 

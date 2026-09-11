@@ -41,7 +41,7 @@ The legacy Sindri engine's `Grid<T>` demonstrated the useful small core: signed
 cell coordinates, rectangular bounds, deterministic row-major traversal, and
 four/eight-way neighbour queries. It also tied coordinate conversion to its
 render `Vec2`, stored `cell_size` beside cell data, and used unchecked casts and
-allocation. Sindri Next keeps the concepts, not that coupling or implementation.
+allocation. Sindri Engine keeps the concepts, not that coupling or implementation.
 
 IsoGame's `CoordinateUtils` contains the standard reversible diamond formulas
 used above. It also combines them with room dimensions, canvas dimensions, pan,

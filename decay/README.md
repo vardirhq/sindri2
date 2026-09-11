@@ -1,6 +1,6 @@
 # Decay
 
-Decay is an experimental gameplay language for Sindri Next.
+Decay is an experimental gameplay language for Sindri Engine.
 
 **[`LANGUAGE.md`](LANGUAGE.md) is the language reference** — the full grammar,
 every operator, and, more usefully at this stage, explicit lists of what does

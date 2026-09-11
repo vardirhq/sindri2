@@ -1,4 +1,4 @@
-# Sindri Next feasibility review
+# Sindri Engine feasibility review
 
 Reviewed: 2026-08-14
 Reconciled with the implemented direction: 2026-08-21
@@ -17,7 +17,7 @@ product direction is Editor + Decay, recorded in `docs/decay-direction.md`.
 TypeScript may still earn a deliberate embedding layer for web applications,
 but it is not the primary browser gameplay API or a first-release gate.
 
-The legacy `vardirhq/sindri-engine` repository contains substantial reusable 2D concepts and product work, including a `wgpu` backend, world/entity code, scenes, input, physics, pathfinding, scripting, examples, and a Tauri editor. It is useful migration material. It should not be copied wholesale: several large modules currently combine responsibilities that Sindri Next explicitly needs to separate.
+The legacy `vardirhq/sindri-engine` repository contains substantial reusable 2D concepts and product work, including a `wgpu` backend, world/entity code, scenes, input, physics, pathfinding, scripting, examples, and a Tauri editor. It is useful migration material. It should not be copied wholesale: several large modules currently combine responsibilities this engine explicitly needs to separate.
 
 ## Decisions required for realism
 

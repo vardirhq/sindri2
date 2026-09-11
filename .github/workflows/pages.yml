@@ -72,6 +72,24 @@ jobs:
       - name: Verify assembled routes
         run: |
           test -f target/pages/index.html
+          # Every internal reference the landing page makes, resolved against
+          # what was actually assembled. A renamed screenshot or a doc slug
+          # that moved leaves a broken image or a 404 that looks fine in the
+          # build log and only shows up to a visitor.
+          python - <<'CHECK'
+          import pathlib, re, sys
+
+          root = pathlib.Path("target/pages")
+          refs = sorted(set(re.findall(
+              r'(?:href|src)="\./([^"#]+)"', (root / "index.html").read_text())))
+          missing = [
+              ref for ref in refs
+              if not (root / ref).is_file() and not (root / ref / "index.html").is_file()
+          ]
+          for ref in refs:
+              print(("MISSING " if ref in missing else "ok      ") + ref)
+          sys.exit(1 if missing else 0)
+          CHECK
           test -f target/pages/docs/scripting/index.html
           test -f target/pages/docs/language/index.html
           for route in gather orbital-last-stand orbital-baked graphics-lab weave-poc; do
