@@ -4,6 +4,62 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **Sindri will manage its own model runner.** A prebuilt llama.cpp server is
+  about 31 MB and needs no installation at all — it is a binary unpacked into
+  your own folder — where Ollama is a system service with a gigabyte installer
+  and a permission prompt. Adopting it makes setup passwordless and removes the
+  one step Sindri could not perform on your behalf. Ollama stays supported for
+  anyone already running it; what changes is which runtime the guided path
+  installs.
+
+  Getting a file onto the machine now goes through a pinned manifest and a
+  verification Sindri does itself. Transport is the platform's own downloader —
+  `curl`, or `wget` where there is no curl — because a TLS client would have
+  meant a crypto subtree in a crate graph that is meant to gain no HTTP stack.
+  The only dependency this needs is `sha2`, which was already in the editor's
+  tree, so the capability costs no new subtree at all.
+
+  That is not a shortcut. A downloader reporting success has said nothing about
+  *what* it fetched: a captive portal, a truncated transfer and a tampered
+  mirror all look like a completed download to the tool that performed it. So
+  downloads go to a `.part` file and the real name comes into existence only by
+  a rename, only after the hash matched; a mismatch deletes the partial rather
+  than leaving it for a resume to build on; a file already on disk that already
+  verifies is reused, because re-running setup has to be free or nobody re-runs
+  it; and `curl` is given `--fail`, or it exits zero on an HTTP error page and
+  hands a 404 body to the hash check.
+
+- **The assistant grades a model against your machine instead of answering yes
+  or no.** Recommended, Supported, Best effort, or Will not fit — because "runs,
+  but will drop a tool call halfway through a multi-step edit" is a real and
+  common answer that a boolean has nowhere to put, and omitting such a model
+  from the list reads as Sindri not supporting something you can plainly see
+  running.
+
+  How much memory a model needs is now **estimated** from its parameter count,
+  quantisation and context length rather than hardcoded per model. Context is
+  the part of the memory bill a person changes, so a fixed figure per model is
+  wrong the moment they change it.
+
+  The models themselves moved out of the code and into
+  `editor/assets/ai-models.json`: a committed manifest, validated on load
+  against a schema version, carrying the licence and source of everything it
+  names. Adding a model needs no code.
+
+  One entry is marked the standard, and that is what Sindri leads with wherever
+  it is comfortable. Bigger is not better past the point where a model drives
+  the tool loop reliably — beyond it the extra parameters cost context headroom
+  and speed, which is a trade to make deliberately rather than a default to be
+  handed.
+
+  Hardware detection now asks `rocm-smi` as well as `nvidia-smi`. Asking only
+  NVIDIA meant every Radeon machine fell silently through to system memory and
+  was told it could run less than it can.
+
+  The grading, the residency estimate and the manifest shape follow
+  `vardirhq/local-code`, which solved the same problem against the same
+  reference card.
+
 - **Setting up the local assistant is a panel with one button in it.** An
   Assistant panel reads the machine and shows the one next thing to do: install
   the model runner, start it, download a model chosen for the hardware, check

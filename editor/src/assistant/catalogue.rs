@@ -1,232 +1,216 @@
-//! The models Sindri will recommend, and whether one fits this machine.
+//! The models Sindri will recommend, how much room each needs, and how well it
+//! would run on this machine.
 //!
-//! Two rules decide everything here. A model is recommended only when it has
-//! been *measured* against Sindri's own conformance cases rather than chosen
-//! from a general coding leaderboard — the question is whether it can call
-//! Sindri's tools and answer Sindri's diagnostics, not whether it scores well on
-//! repository-scale benchmarks. And a model is never recommended onto hardware
-//! that cannot hold it: a suggestion that ends in a swap-thrashing machine or an
-//! out-of-memory failure is worse than no suggestion, because the person who
-//! took it now believes local AI does not work.
+//! Two rules decide everything here. A model is graded on what it can *do* —
+//! whether it holds a schema and emits a clean tool call and knows when to stop
+//! — rather than on where it sits on a general coding leaderboard, because the
+//! only question that matters is whether it can drive Sindri's protocol. And it
+//! is never offered as though it will run well on hardware that cannot hold it:
+//! a recommendation that ends in a swap-thrashing machine is worse than none,
+//! because whoever took it concludes that local AI does not work.
 //!
-//! Profiles are tied to editor releases rather than hardcoded forever, because
-//! what a machine can run depends on quantisation, context length, GPU offload,
-//! and backend version, and all four move.
+//! The models themselves live in a committed manifest rather than in this file.
+//! A manifest is versioned, validated on load, and carries the licence and
+//! source of everything it names — and a model added to it needs no code.
+
+use std::sync::OnceLock;
+
+use serde::Deserialize;
 
 /// Gigabytes, as the unit everything here is stated in.
 type Gb = f32;
 
-/// How much room a model needs beyond its own weights.
+/// The manifest schema this build understands.
 ///
-/// Context, key/value cache and backend overhead all live in the same memory as
-/// the weights. Ignoring them is how a 8.1 GB model gets recommended onto a
-/// 8 GB card and then runs on the CPU at a tenth of the speed, which reads to
-/// the person who tried it as "local AI is useless" rather than "that was the
-/// wrong model".
-const HEADROOM: Gb = 2.5;
+/// Checked rather than carried: a manifest written to a later schema may mean
+/// something different by the same field names, and reading it as though it did
+/// not is how a model gets recommended on a number that has changed meaning.
+const SCHEMA_VERSION: u32 = 1;
+
+/// The manifest, compiled in.
+///
+/// Committed rather than fetched: what Sindri recommends is part of the build
+/// that was tested, and a list that can change underneath an editor is a list
+/// that can recommend something that build has never run.
+const MANIFEST: &str = include_str!("../../assets/ai-models.json");
+
+/// The context length residency is estimated against.
+///
+/// A variable rather than a constant of nature, and the reason estimation
+/// beats a hardcoded figure per model: context is the part of the memory bill
+/// the person changes, and a table of fixed numbers is wrong the moment they do.
+pub const DEFAULT_CONTEXT: u32 = 16_384;
 
 /// What a model can do, as far as Sindri's own verification is concerned.
 ///
-/// Reported rather than promised: each of these is a claim the setup verifies
-/// against the real model before the editor enables anything that depends on
-/// it. See `Feature`.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+/// Reported rather than promised: each is a claim setup verifies against the
+/// real model before the editor enables anything that depends on it.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq)]
 pub struct Supports {
-    /// Can be made to answer in a strict schema, which the proposal protocol
-    /// requires of every response.
+    /// Can be held to a strict schema, which every proposal is.
+    #[serde(default)]
     pub structured_output: bool,
+    #[serde(default)]
     pub tool_calling: bool,
+    #[serde(default)]
     pub vision: bool,
 }
 
 /// One model Sindri knows about.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct Profile {
-    /// What the backend calls it, which is what gets pulled.
-    pub tag: &'static str,
-    /// The download, in gigabytes.
-    pub download: Gb,
-    /// What it needs resident to run at full speed.
-    pub resident: Gb,
-    pub licence: &'static str,
+    /// What the runner calls it, which is what gets pulled.
+    pub id: String,
+    /// Billions of parameters, which is what residency is estimated from.
+    pub params_b: f32,
+    pub quantisation: String,
+    pub display_name: String,
+    /// Why Sindri suggests it, shown before anything is downloaded.
+    pub description: String,
+    pub license: String,
+    pub source: String,
+    /// Whether this is the model Sindri leads with where it fits.
+    ///
+    /// A designated standard rather than "the biggest that fits", because
+    /// bigger is not better past the point where a model drives the tool loop
+    /// reliably: beyond it the extra parameters buy quality at the cost of
+    /// context headroom and speed, which is a trade for someone to make
+    /// deliberately rather than a default to be handed.
+    #[serde(default)]
+    pub standard: bool,
+    #[serde(flatten)]
     pub supports: Supports,
-    /// Why Sindri suggests it, in one line, shown before anything is downloaded.
-    pub because: &'static str,
 }
+
+/// How well a model would run here.
+///
+/// Four grades rather than a yes or no, because "runs, but slowly, and will
+/// drop a tool call on a multi-step edit" is a real and common answer that a
+/// boolean has nowhere to put — and hiding it reads as Sindri not supporting a
+/// model the person can plainly see running.
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub enum Tier {
+    /// Does not fit. Will spill and crawl.
+    Unsupported,
+    /// Fits and is useful, but under the bar for driving the tool loop
+    /// reliably through a multi-step edit.
+    BestEffort,
+    /// Fits, but near the ceiling: less context headroom, slower.
+    Supported,
+    /// The works-properly bar.
+    Recommended,
+}
+
+impl Tier {
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Unsupported => "Will not fit",
+            Self::BestEffort => "Best effort",
+            Self::Supported => "Supported",
+            Self::Recommended => "Recommended",
+        }
+    }
+
+    /// Whether Sindri would put this forward on its own.
+    pub const fn is_offered(self) -> bool {
+        matches!(self, Self::Recommended | Self::Supported)
+    }
+}
+
+/// Below this many billion parameters a model stops driving the tool loop
+/// dependably, however well it converses.
+const TOOL_LOOP_FLOOR: f32 = 4.0;
+
+/// How much of the available memory a model may claim before it counts as
+/// near the ceiling rather than comfortable.
+///
+/// Four fifths, which is what puts the reference card's 14B at its ceiling
+/// rather than at its standard — the grading this is checked against calls
+/// that model the best quality a 12 GB card can host, not the one to lead with.
+const CEILING: f32 = 0.8;
 
 impl Profile {
-    /// Whether this fits in `available` gigabytes with room to work.
-    pub fn fits(self, available: Gb) -> bool {
-        available >= self.resident + HEADROOM
+    /// What this needs resident, in gigabytes, at a given context length.
+    ///
+    /// Weights at roughly half a gigabyte per billion parameters at Q4, plus
+    /// the key/value cache, which scales with context, plus the runner's own
+    /// overhead. An estimate rather than a measurement, and deliberately a
+    /// little pessimistic: the failure it exists to prevent is recommending
+    /// something that does not fit.
+    pub fn residency(&self, context_tokens: u32) -> Gb {
+        let weights = self.params_b * 0.58;
+        let cache =
+            f32::from(u16::try_from(context_tokens.max(2_048) / 1_024).unwrap_or(u16::MAX)) / 16.0;
+        weights + cache + 0.6
     }
 
-    /// What it needs in total, which is the number worth showing a person.
-    pub fn needs(self) -> Gb {
-        self.resident + HEADROOM
+    /// How well it would run on a machine with this much to spare.
+    pub fn tier(&self, available: Gb, context_tokens: u32) -> Tier {
+        let needs = self.residency(context_tokens);
+        if needs > available {
+            return Tier::Unsupported;
+        }
+        if self.params_b < TOOL_LOOP_FLOOR {
+            return Tier::BestEffort;
+        }
+        if needs > available * CEILING {
+            return Tier::Supported;
+        }
+        Tier::Recommended
     }
 }
 
-/// The models this editor build has profiles for, roomiest last.
+/// Every model the manifest names, smallest first.
 ///
-/// Ordered so that picking the best fit is a scan: the first that fits is the
-/// smallest adequate one, and walking to the end finds the largest that does.
-pub const PROFILES: [Profile; 3] = [
-    Profile {
-        tag: "qwen3:8b",
-        download: 5.2,
-        resident: 6.5,
-        licence: "Apache-2.0",
-        supports: Supports {
-            structured_output: true,
-            tool_calling: true,
-            vision: false,
-        },
-        because: "The baseline Sindri tunes for: tool calling and strict schemas on a mid-range card",
-    },
-    Profile {
-        tag: "gemma3:12b",
-        download: 8.1,
-        resident: 9.5,
-        licence: "Gemma Terms of Use",
-        supports: Supports {
-            structured_output: true,
-            tool_calling: true,
-            vision: true,
-        },
-        because: "Adds vision, for asking about a sprite or a screenshot",
-    },
-    Profile {
-        tag: "qwen3-coder:30b",
-        download: 19.0,
-        resident: 21.0,
-        licence: "Apache-2.0",
-        supports: Supports {
-            structured_output: true,
-            tool_calling: true,
-            vision: false,
-        },
-        because: "Stronger Decay generation, for a machine with room for it",
-    },
-];
-
-/// What Sindri would suggest for a machine with this much to spare.
-///
-/// The largest profile that fits, because the extra capability is worth having
-/// when the memory is there. `None` when nothing fits, which is a real answer
-/// and must be said rather than papered over with the smallest one — a person
-/// whose machine cannot run any of these is better served by being told so and
-/// pointed at a remote endpoint.
-pub fn recommended(available: Gb) -> Option<Profile> {
-    PROFILES
-        .into_iter()
-        .rfind(|profile| profile.fits(available))
+/// Parsed once. A manifest that will not parse is a build problem rather than a
+/// runtime one — `the_manifest_is_valid` fails before it ships — so this treats
+/// a failure as empty rather than carrying an error nobody could act on.
+pub fn profiles() -> &'static [Profile] {
+    static PARSED: OnceLock<Vec<Profile>> = OnceLock::new();
+    PARSED.get_or_init(|| {
+        let Ok(manifest) = serde_json::from_str::<Manifest>(MANIFEST) else {
+            return Vec::new();
+        };
+        if manifest.schema_version != SCHEMA_VERSION {
+            return Vec::new();
+        }
+        let mut all: Vec<Profile> = manifest.models.into_values().flatten().collect();
+        all.sort_by(|one, other| one.params_b.total_cmp(&other.params_b));
+        all
+    })
 }
 
-/// The profile for a tag the backend reports, if this build knows it.
+#[derive(Deserialize)]
+struct Manifest {
+    schema_version: u32,
+    models: std::collections::BTreeMap<String, Vec<Profile>>,
+}
+
+/// What Sindri would put forward for a machine with this much to spare.
 ///
-/// A model the user pulled themselves is not refused for being unknown — it is
-/// simply unprofiled, and its capabilities come from verification rather than
-/// from this table.
-pub fn profile_for(tag: &str) -> Option<Profile> {
-    PROFILES.into_iter().find(|profile| profile.tag == tag)
+/// The most capable model that still grades as comfortable, never one that is
+/// merely near the ceiling: the difference between those two is the difference
+/// between an assistant that works and one that mostly works, and a first
+/// recommendation should not be the second.
+///
+/// `None` when nothing qualifies, which is a real answer and must be said
+/// rather than papered over with the smallest model in the list.
+pub fn recommended(available: Gb, context_tokens: u32) -> Option<&'static Profile> {
+    let comfortable =
+        |profile: &&Profile| profile.tier(available, context_tokens) == Tier::Recommended;
+    profiles()
+        .iter()
+        .find(|profile| profile.standard && comfortable(profile))
+        .or_else(|| profiles().iter().rfind(comfortable))
+}
+
+/// The profile for an id the runner reports, if the manifest names it.
+///
+/// A model someone pulled themselves is not refused for being unknown — it is
+/// unprofiled, and verification rather than this table decides what it can do.
+pub fn profile_for(id: &str) -> Option<&'static Profile> {
+    profiles().iter().find(|profile| profile.id == id)
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn a_model_needs_room_beyond_its_own_weights() {
-        let baseline = profile_for("qwen3:8b").expect("the baseline is profiled");
-        assert!(
-            !baseline.fits(baseline.resident),
-            "a card with exactly the weights and nothing spare does not fit it"
-        );
-        assert!(baseline.fits(baseline.needs()));
-    }
-
-    /// The headline target the architecture names: a 12 GB card should get a
-    /// real recommendation, and it should not be the largest profile.
-    #[test]
-    fn twelve_gigabytes_is_offered_something_that_runs_on_it() {
-        let chosen = recommended(12.0).expect("12 GB can run something");
-        assert!(chosen.fits(12.0));
-        assert_ne!(
-            chosen.tag, "qwen3-coder:30b",
-            "the 30b package exceeds 12 GB before context and overhead"
-        );
-    }
-
-    #[test]
-    fn more_memory_is_offered_more_capability() {
-        let small = recommended(9.5).expect("9.5 GB runs the baseline");
-        let large = recommended(32.0).expect("32 GB runs the largest");
-        assert!(large.resident > small.resident);
-    }
-
-    /// The rule this exists for. Recommending something that will not run is
-    /// worse than recommending nothing, because the person who takes the
-    /// suggestion concludes that local AI does not work.
-    #[test]
-    fn a_machine_that_can_run_none_of_them_is_told_so() {
-        assert_eq!(recommended(4.0), None);
-        assert_eq!(recommended(0.0), None);
-    }
-
-    #[test]
-    fn every_recommendation_actually_fits_the_machine_it_was_made_for() {
-        for available in [6.0, 9.0, 12.0, 16.0, 24.0, 48.0] {
-            if let Some(profile) = recommended(available) {
-                assert!(
-                    profile.fits(available),
-                    "{} was recommended for {available} GB and does not fit",
-                    profile.tag
-                );
-            }
-        }
-    }
-
-    /// Every profile has to be able to answer in a schema, because the proposal
-    /// protocol is a schema and a model that cannot hold to one cannot author.
-    #[test]
-    fn every_profile_can_produce_structured_output() {
-        for profile in PROFILES {
-            assert!(
-                profile.supports.structured_output,
-                "{} cannot be recommended without structured output",
-                profile.tag
-            );
-        }
-    }
-
-    #[test]
-    fn every_profile_says_why_it_is_suggested_and_under_what_licence() {
-        for profile in PROFILES {
-            assert!(!profile.because.is_empty(), "{} has no reason", profile.tag);
-            assert!(
-                !profile.licence.is_empty(),
-                "{} has no licence",
-                profile.tag
-            );
-            assert!(profile.download > 0.0);
-        }
-    }
-
-    #[test]
-    fn the_profiles_are_ordered_roomiest_last() {
-        let mut previous = 0.0;
-        for profile in PROFILES {
-            assert!(
-                profile.resident > previous,
-                "{} is out of order",
-                profile.tag
-            );
-            previous = profile.resident;
-        }
-    }
-
-    #[test]
-    fn a_model_the_user_pulled_themselves_is_simply_unprofiled() {
-        assert_eq!(profile_for("some-local-model:latest"), None);
-    }
-}
+mod tests;

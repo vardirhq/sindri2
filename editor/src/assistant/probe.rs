@@ -146,22 +146,53 @@ fn available_memory() -> Option<f32> {
     video_memory().or_else(system_memory)
 }
 
-/// Video memory, asked of the one tool that reliably reports it.
+/// Video memory, asked of whichever vendor tool is present.
 ///
-/// Best-effort by design. A machine with no `nvidia-smi` is not a machine
-/// without a GPU, so a failure here falls through to system memory rather than
-/// concluding anything.
+/// Both vendors, because asking only NVIDIA means every Radeon machine falls
+/// silently through to system memory and gets told it can run less than it can.
+/// Best-effort throughout: a machine with neither tool is not a machine without
+/// a GPU, so a failure falls through rather than concluding anything.
 fn video_memory() -> Option<f32> {
-    let output = std::process::Command::new("nvidia-smi")
-        .args(["--query-gpu=memory.total", "--format=csv,noheader,nounits"])
-        .output()
-        .ok()?;
-    if !output.status.success() {
-        return None;
-    }
-    let text = String::from_utf8(output.stdout).ok()?;
+    nvidia_memory().or_else(amd_memory)
+}
+
+fn nvidia_memory() -> Option<f32> {
+    let text = run(
+        "nvidia-smi",
+        &["--query-gpu=memory.total", "--format=csv,noheader,nounits"],
+    )?;
     let megabytes: f32 = text.lines().next()?.trim().parse().ok()?;
     Some(megabytes / 1024.0)
+}
+
+/// The largest AMD card, in gigabytes.
+///
+/// `rocm-smi` reports in bytes and one line per card; the largest is taken
+/// rather than the sum, because a model runs on one card unless it has been
+/// deliberately split across several.
+fn amd_memory() -> Option<f32> {
+    let text = run("rocm-smi", &["--showmeminfo", "vram", "--csv"])?;
+    text.lines()
+        .filter_map(|line| line.rsplit(',').next())
+        // Parsed as `f32` directly: a card's memory in bytes is far inside what
+        // a float holds exactly enough for a figure shown to one decimal place.
+        .filter_map(|field| field.trim().parse::<f32>().ok())
+        .map(|bytes| bytes / 1_073_741_824.0)
+        .filter(|gigabytes| *gigabytes > 0.0)
+        .max_by(f32::total_cmp)
+}
+
+/// One command, or nothing when it is absent or unhappy.
+fn run(program: &str, arguments: &[&str]) -> Option<String> {
+    let output = std::process::Command::new(program)
+        .args(arguments)
+        .output()
+        .ok()?;
+    output
+        .status
+        .success()
+        .then(|| String::from_utf8(output.stdout).ok())
+        .flatten()
 }
 
 /// What the system has, as the fallback for a machine running on its CPU.

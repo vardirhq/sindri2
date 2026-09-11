@@ -432,6 +432,10 @@ The editor must remain responsive while inference runs. Model activity should no
 
 Sindri should optimize its baseline workflows for an 8B-class quantized model, not merely verify them on a large cloud model.
 
+The editor's model list is `editor/assets/ai-models.json`, a committed manifest validated on load and carrying the licence and source of everything it names. It grades a model against the machine as **Recommended / Supported / Best effort / Will not fit**, because "runs, but will drop a tool call on a multi-step edit" is a real answer a boolean has nowhere to put. Residency is *estimated* from parameter count, quantisation and context length rather than hardcoded per model, since context is the part of the memory bill a person changes. One entry is marked the standard, and that is what Sindri leads with wherever it is comfortable — bigger is not better past the point where a model drives the tool loop reliably, because beyond it the extra parameters cost context headroom and speed.
+
+The grading and the residency estimate follow `vardirhq/local-code`'s `MODELS.md` and `hardware.py`, which are tuned against the same reference card.
+
 As current reference points, Ollama lists:
 
 - [`qwen3:8b`](https://ollama.com/library/qwen3:8b) at approximately 5.2 GB for its Q4 package.
@@ -482,6 +486,82 @@ Detection must distinguish these states:
 - compatible model installed but not loaded
 - model loaded and capability tests passed
 - model reachable but failing a required capability
+
+### Decision: manage llama.cpp rather than install Ollama
+
+**Status: adopted.** This supersedes the provider decision above for the
+*guided* path. Ollama remains supported for anyone already running it; what
+changes is which runtime Sindri installs and manages on someone's behalf.
+
+Ollama is a *system service you install*. That makes the first step of setup a
+platform installer — a gigabyte-plus download, an operating-system permission
+prompt on two of three platforms, and a TLS-capable downloader the editor does
+not have and is meant not to grow. It is the one step of the current flow that
+Sindri cannot perform for someone, and the reason the Assistant panel opens a
+download page instead of doing the work.
+
+`vardirhq/local-code` solves the same problem the other way, and its runtime
+manifest is the argument in one entry:
+
+```json
+"url": ".../llama-b9842-bin-ubuntu-vulkan-x64.tar.gz",
+"sha256": "79cb630e...", "size": 31198960, "license": "MIT"
+```
+
+**A prebuilt llama.cpp server is about 31 MB and needs no installation at all** —
+it is a binary unpacked into a user directory and started as the user. That
+removes the installer, removes the privilege, and makes the whole setup
+passwordless, which is stronger than the rule this section states.
+
+#### How a file gets onto the machine
+
+The obvious way to download over HTTPS from Rust is a TLS client, and that would
+have meant `rustls` and a crypto backend in the editor's tree — a sizeable
+subtree, and one whose licences are not all already on the allowlist. Weighed
+against the rule that Sindri's crate graph gains no HTTP stack, it was the wrong
+trade.
+
+So **transport is the platform's own downloader** — `curl`, or `wget` where
+there is no curl — and **verification is Sindri's own**. `editor/src/assistant/fetch.rs`
+holds both. The only dependency this needs is `sha2`, which was already in the
+editor's tree through `sindri-assets`, so the whole capability costs no new
+subtree at all. Unpacking uses `tar` for the same reason.
+
+That is not a workaround. A downloader reporting success has said nothing about
+*what* it fetched: a captive portal, a truncated transfer and a tampered mirror
+all look like a completed download to the tool that performed it. The bytes are
+hashed against the manifest regardless of how they arrived, which is the check
+that actually matters — and resumption and proxy configuration come free from
+whatever the machine is already set up for, rather than being implemented twice.
+
+The discipline, all of it tested without a network:
+
+- Downloads go to a `.part` file and the destination comes into existence only
+  by a rename, only after the hash matched. There is no window in which a
+  half-written or wrong file sits at the name everything else looks for.
+- A mismatch deletes the partial rather than leaving it for a resume, because
+  continuing from wrong bytes only ever produces more of them.
+- A file already on disk that already verifies is reused. Re-running setup has
+  to be free, or nobody re-runs it.
+- `curl` is given `--fail`, or it exits zero on an HTTP error page and hands a
+  404 body to the hash check — which would report corruption rather than a
+  missing file.
+
+Assets are selected by platform and architecture with an `any` fallback, and
+model URLs pin a content hash in the path rather than a branch, so what is
+served cannot change under the digest.
+
+The cost is owning a runtime version: a pinned llama.cpp build has to be moved
+forward deliberately, and GPU backends multiply the manifest entries. That is
+real, and it is the same cost `local-code` already carries.
+
+#### Manifest compatibility
+
+The manifest field names and selection semantics are shared with
+`vardirhq/local-code`; the files are separate. The two tools fetch the same
+kinds of asset for the same reasons, so a machine set up by one should be
+legible to the other — but a shared file would couple their release cadences,
+and each needs entries the other does not.
 
 ### Nobody types anything
 

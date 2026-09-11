@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "runtimes": {
+    "llama.cpp": [
+      {
+        "id": "llama.cpp",
+        "version": "b9842",
+        "platform": "linux",
+        "architecture": "x86_64",
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b9842/llama-b9842-bin-ubuntu-vulkan-x64.tar.gz",
+        "sha256": "79cb630e029a1a0bc1be4342f293850f874a1ffe2453e8dfb1efefcb9789bb9c",
+        "size": 31198960,
+        "display_name": "llama.cpp server",
+        "description": "The local model runner Sindri manages. Unpacked into your own folder; nothing is installed system-wide.",
+        "license": "MIT",
+        "source": "https://github.com/ggml-org/llama.cpp"
+      },
+      {
+        "id": "llama.cpp",
+        "version": "b9842",
+        "platform": "macos",
+        "architecture": "arm64",
+        "url": "https://github.com/ggml-org/llama.cpp/releases/download/b9842/llama-b9842-bin-macos-arm64.tar.gz",
+        "sha256": "c2903c14b9e0cf60a62fc85b8b8ab379267f5f849b9c6f29c8a4e21d299fa62b",
+        "size": 11129599,
+        "display_name": "llama.cpp server",
+        "description": "The local model runner Sindri manages. Unpacked into your own folder; nothing is installed system-wide.",
+        "license": "MIT",
+        "source": "https://github.com/ggml-org/llama.cpp"
+      }
+    ]
+  }
+}
