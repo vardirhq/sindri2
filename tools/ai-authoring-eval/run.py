@@ -26,7 +26,16 @@ component types, fields, and assets present in the context packet. Never invent
 capabilities or use human-readable names as identity. A proposal must contain
 only supported authoring operations. Ask a clarification question when identity
 or intent is ambiguous. Refuse mutation requests the protocol cannot represent.
-Do not include Markdown or commentary outside the JSON object."""
+Do not include Markdown or commentary outside the JSON object.
+
+The envelope has exactly: protocol_version, request_id, manifest_hash, outcome,
+label, summary, question, operations. Copy the three request identity values.
+Outcome is proposal, clarification, answer, or refusal. Only proposal may have
+operations; only clarification may have a non-null question. Supported operation
+kinds are set_scene_name, spawn, despawn, set_name, set_transform, set_parent,
+set_component, remove_component, and set_disabled. Existing entity references
+have exactly {"scene_id":"..."}; newly spawned entities use an earlier declared
+{"alias":"..."}. Source and arbitrary file writes are unsupported."""
 
 
 def parse_args() -> argparse.Namespace:
@@ -203,10 +212,36 @@ def check_expectations(proposal: dict[str, Any], expect: dict[str, Any]) -> list
     for required in expect.get("required_operations", []):
         if not any(partial_match(operation, required) for operation in operations):
             errors.append(f"missing operation matching {json.dumps(required, sort_keys=True)}")
+    for relationship in expect.get("parent_relationships", []):
+        if not has_parent_relationship(operations, relationship):
+            errors.append(
+                "missing spawn relationship "
+                f"{relationship['parent_name']!r} -> {relationship['child_name']!r}"
+            )
     question_contains = expect.get("question_contains")
     if question_contains and question_contains.casefold() not in str(proposal.get("question", "")).casefold():
         errors.append(f"clarification question must contain {question_contains!r}")
     return errors
+
+
+def has_parent_relationship(
+    operations: list[dict[str, Any]], relationship: dict[str, str]
+) -> bool:
+    aliases_by_name = {
+        operation.get("name"): operation.get("alias")
+        for operation in operations
+        if isinstance(operation, dict) and operation.get("op") == "spawn"
+    }
+    parent_alias = aliases_by_name.get(relationship["parent_name"])
+    if not isinstance(parent_alias, str):
+        return False
+    return any(
+        operation.get("op") == "spawn"
+        and operation.get("name") == relationship["child_name"]
+        and operation.get("parent") == {"alias": parent_alias}
+        for operation in operations
+        if isinstance(operation, dict)
+    )
 
 
 def partial_match(value: Any, expected: Any) -> bool:
