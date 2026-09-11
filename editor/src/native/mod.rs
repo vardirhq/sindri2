@@ -49,6 +49,7 @@ mod hierarchy;
 mod history_view;
 mod inspector_panel;
 mod overlay;
+mod palette_view;
 mod pointer;
 mod preview_view;
 mod profile_view;
@@ -245,6 +246,8 @@ struct EditorApp {
     /// Which panel is being dragged, and what one frame measured about where
     /// every group ended up.
     dock: workspace::DockLayout,
+    /// The one field that finds anything, and what is typed into it.
+    palette: crate::palette::Palette,
     preferences: Preferences,
     lifecycle: EngineLifecycle,
     viewport_yaw: f32,
@@ -464,6 +467,7 @@ impl EditorApp {
             project,
             styles: ProjectStyles::default(),
             dock: workspace::DockLayout::default(),
+            palette: crate::palette::Palette::default(),
             preferences,
             lifecycle: initialized_lifecycle(),
             viewport_yaw: 0.0,

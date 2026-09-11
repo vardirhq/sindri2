@@ -178,6 +178,29 @@ impl EditorApp {
                         toolbar::divider(ui);
                         self.centre_tabs_in_bar(ui);
                     }
+                    // The palette's own advertisement, centred. A keyboard
+                    // shortcut nobody is told about is a shortcut nobody uses,
+                    // and this is the answer to "where did that panel go" -- a
+                    // question people have before they have read anything.
+                    //
+                    // Placed at a rectangle for the same reason the transport
+                    // is: the inline tabs before it leave the cursor at the far
+                    // end of the bar, so anything allocated after them lands
+                    // off the edge and is never seen.
+                    let hint = Rect::from_center_size(
+                        egui::pos2(base.center().x, base.center().y),
+                        Vec2::new(super::palette_view::HINT_WIDTH, 24.0),
+                    );
+                    let mut child = ui.new_child(
+                        egui::UiBuilder::new()
+                            .max_rect(hint)
+                            .layout(Layout::left_to_right(Align::Center)),
+                    );
+                    let mut asked = false;
+                    super::palette_view::palette_hint(&mut child, &mut asked);
+                    if asked {
+                        self.palette.open();
+                    }
                     if floating {
                         // Placed at a rectangle rather than reached by adding
                         // space. Inside an `Area` the cursor arithmetic the
