@@ -82,6 +82,122 @@ entities under it, and where the editor knows the fix, offer it.
 Implemented. See below; it is the first slice, because an editor whose panels
 cannot be moved is one that has decided what you are working on.
 
+## The canvas-first question
+
+A mockup put the proposition plainly: one full-window scene view, with every
+panel floating over it as an instrument. It is worth writing down what that
+gets right, what it gets wrong, and which of the two this repository is acting
+on, because the next person to see a picture like it will ask again.
+
+### What it assumes
+
+Canvas-first is the document-editor model — Figma, Illustrator: one canvas,
+tools arranged around it. That model works for Figma because of a property
+games do not share. **In Figma, what you see is the entirety of what you are
+making.** Nothing in the document is invisible.
+
+A game scene is not like that. Much of what is authored has no appearance at
+all: script bindings, collision layers, spawn tables, tags, audio triggers,
+prefab inheritance, the director that decides when the enemies come. The scene
+view shows the set dressing and hides the machine. So a canvas-first editor
+optimises hard for the part of the work that was never the bottleneck — placing
+visible things — and puts the genuinely difficult part, understanding the
+invisible machine, behind a summon.
+
+That is the reservation. It is not a refusal, because the editor as it stood
+gave the scene no primacy at all: the viewport was the rectangle left over when
+five panels had taken theirs.
+
+### What this repository does about it
+
+**Canvas-first as a resting posture, not as an architecture.** The editor rests
+looking like that picture and becomes an IDE when the work is IDE work. Which
+is a question about default state and about how a hidden surface is summoned,
+not about whether panels dock.
+
+Concretely, and in the order the items are worth doing:
+
+1. A **placement** beside `docked` and `closed`: an overlay anchored to a corner
+   of the scene view, which draws over the world rather than taking room from
+   it. `Canvas` is then a preset rather than a second editor.
+2. **A command palette.** The summoning mechanism, and the safety net that makes
+   hiding a panel something other than hiding it. Nothing else here should ship
+   before it does.
+3. **The Game view demoted to an anchored camera thumbnail**, promotable to
+   full. Most of the time the question is *is the player in frame*, which a
+   thumbnail answers and half a window does not.
+4. **Contextual verbs at the selection**, and the properties they belong to
+   staying at an edge. Verbs travel well; thirty schema-driven fields do not.
+5. **The Add palette populated from the project's own prefabs**, not from a
+   fixed list. Orbital gets Drifter and Charger in it without the engine having
+   heard of either.
+
+### What it gets wrong, and is not being copied
+
+- **A floating inspector.** It moves on every selection so no muscle memory
+  forms, it covers the neighbours a value is being judged against, and Sindri's
+  inspector is schema-driven — a real entity is thirty fields, not five.
+  Properties stay at an edge.
+- **Everything floating at once.** Six translucent surfaces do not overlap in a
+  drawing because someone placed them; they overlap constantly in use. Overlays
+  here are anchored to corners and stack, so they cannot be piled on each other
+  by accident.
+- **Top-level modes for editors that do not exist.** A `Script` or `Audio` tab
+  teaches someone the tool is bigger than it is and disappoints them on the
+  second click. An absent mode is better than a hollow one.
+- **A design tuned for an empty scene.** The mockup's status bar says three
+  thousand entities and its hierarchy shows six. What has to survive is a
+  hierarchy of three thousand rows, an inspector on a forty-field body, and a
+  tileset dense enough that a translucent panel over it is unreadable. Design
+  for hour three, not minute one.
+
+### The two things a mockup cannot show
+
+**Liveness.** What makes an editor feel like this decade is not floating panels;
+it is that nothing stalls, everything is live, and the distance between a change
+and its consequence is zero. A canvas-first editor that hitches on selection
+feels worse than a plain docked one that never does. This cannot be drawn, which
+is exactly why it gets under-invested, and why editors designed from mockups
+tend to look current and feel ten years old.
+
+**The loop.** A picture shows an editor at rest. The reason this one is not
+reached for is not that its panels have borders — it is that tuning a value
+means stop, edit, play, and try to remember what it felt like ninety seconds
+ago. Canvas-first is a good surface answer to a structural problem. It does not
+replace items 4 and 5 of the order of work below, and it must not be allowed to
+reorder them.
+
+### Getting the docked editor back
+
+Two ways, and neither is a folder of dead code kept beside the live one. A
+second copy of an editor is a second editor to compile, test, and keep honest,
+and it rots from the first week.
+
+**As a menu click.** The docked arrangement survives as the `Docked` preset in
+**View -> Arrangement**. It is the same panels in the same places; nothing about
+it was deleted. Changing your mind about the default costs one click, not a
+revert.
+
+**As a commit.** The editor exactly as it stood before this direction was
+adopted is commit `8880d96` on `claude/bold-goodall-s1xveg`, tagged
+`editor-docked-v0` locally. (The tag is not on the remote: this environment's
+GitHub token pushes branch refs only, and refused the tag with a 403. The commit
+is pushed, so the archive is real either way -- the tag is just a friendlier
+name for it.)
+
+```bash
+git show 8880d96:editor/src/dock/mod.rs     # read one file
+git diff 8880d96 -- editor/                 # what the canvas work changed
+git checkout 8880d96                        # run it whole
+```
+
+### Warmth is a requirement
+
+The one thing in the mockup to take without qualification. It is warm, it has
+texture, it does not look like a dashboard, and the editor it was drawn against
+is competent and cold. "I should want to use the editor" is a specification, not
+a mood — and an editor nobody opens has failed however correct its panels are.
+
 ## Order of work
 
 Dependency order, not priority order — each item is cheaper once the ones above
@@ -89,6 +205,8 @@ it are done.
 
 1. ~~**A workspace the user arranges.**~~ Done: `editor/src/dock/`. Every panel
    is a tab, every tab is draggable into any slot, and slots resize freely.
+   Extended since with overlay placement and the `Canvas` preset; see the
+   canvas-first section above.
 2. ~~**Error grouping in the console.**~~ Done: a repeat is counted against any
    matching entry rather than only the one before it. What is left is grouping
    by *cause* — forty entities failing for one missing script are still forty
