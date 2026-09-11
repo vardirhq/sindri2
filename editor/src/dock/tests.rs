@@ -190,7 +190,10 @@ fn deduplicating_never_leaves_the_centre_empty() {
 
 #[test]
 fn a_settings_file_with_an_empty_centre_is_given_one() {
-    let mut workspace = Workspace { places: Vec::new() };
+    let mut workspace = Workspace {
+        places: Vec::new(),
+        chrome: Chrome::Floating,
+    };
     workspace.repair();
     assert!(
         workspace.group(Place::MAIN).is_some(),
@@ -262,4 +265,31 @@ fn a_move_the_workspace_would_refuse_can_be_asked_about_first() {
         workspace.can_place(Panel::Hierarchy, Place::Dock(Slot::Left)),
         "and every other panel moves as usual"
     );
+}
+
+/// Canvas means nothing docks. The first attempt moved two panels into floating
+/// boxes and left the title bar, the tab strip, the toolbar, the inspector
+/// column and the status bar all claiming their rows — a docked editor with two
+/// insets, in which the scene had about half the window.
+#[test]
+fn the_canvas_arrangement_lets_nothing_claim_space_from_the_scene() {
+    let workspace = Workspace::preset(Preset::Canvas);
+    assert_eq!(workspace.chrome(), Chrome::Floating);
+    for place in Place::all() {
+        if place == Place::MAIN {
+            continue;
+        }
+        assert!(
+            workspace.group(place).is_none() || place.is_overlay(),
+            "{place:?} docks, so the scene does not have the window"
+        );
+    }
+}
+
+/// And the arrangements that are meant to dock still do.
+#[test]
+fn the_docked_arrangements_keep_their_furniture() {
+    for preset in [Preset::Docked, Preset::Wide] {
+        assert_eq!(Workspace::preset(preset).chrome(), Chrome::Docked);
+    }
 }

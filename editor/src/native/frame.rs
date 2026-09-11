@@ -69,10 +69,22 @@ impl eframe::App for EditorApp {
         self.update_title(ui.ctx());
         self.handle_close_request(ui.ctx());
         self.handle_shortcuts(ui.ctx());
-        self.top_bar(ui);
-        self.status_bar(ui);
         self.render_error = None;
-        self.workspace(ui);
+        // Order is the arrangement. Docked furniture claims its rows before the
+        // workspace divides what is left, so the bars go first. Floating
+        // furniture is drawn over a scene that has already taken the whole
+        // window, so the workspace goes first — and the centre's tabs, which
+        // the bar draws in that mode, need the centre's drop zone to exist
+        // before they can point it at themselves.
+        if self.preferences.workspace.chrome().floats() {
+            self.workspace(ui);
+            self.top_bar(ui);
+            self.status_bar(ui);
+        } else {
+            self.top_bar(ui);
+            self.status_bar(ui);
+            self.workspace(ui);
+        }
         // Releasing the pointer ends a drag, so the next one is its own step.
         if ui.ctx().input(|input| input.pointer.any_released()) {
             self.history.break_merge_run();

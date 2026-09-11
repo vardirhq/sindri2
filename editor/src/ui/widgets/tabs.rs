@@ -47,10 +47,54 @@ impl Weight {
 /// against: a tab released over a strip joins that group, and the caller cannot
 /// work out where the strip ended up without being told.
 pub fn strip(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui)) -> Rect {
+    row(ui, Shape::Full { top_radius: 0 }, add)
+}
+
+/// How a row of tabs occupies its container.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Shape {
+    /// A band across the whole container, with a ground and a baseline rule.
+    ///
+    /// `top_radius` rounds its upper corners to sit inside a floating card: a
+    /// card's rounding is painted by its frame and then painted over by
+    /// whatever draws first inside it, which is this. Square corners here are
+    /// what made the floating panels read as docked rectangles that happened to
+    /// be inset.
+    Full { top_radius: u8 },
+    /// Tabs standing where they are, claiming only the width they need.
+    ///
+    /// For the title bar, where a full-width band would swallow the rest of the
+    /// bar — which is exactly what happened to the transport controls the first
+    /// time the centre's tabs were drawn up there.
+    Inline,
+}
+
+/// A row of tabs, either shape.
+pub fn row(ui: &mut egui::Ui, shape: Shape, add: impl FnOnce(&mut egui::Ui)) -> Rect {
+    let Shape::Full { top_radius } = shape else {
+        let start = ui.cursor().left();
+        ui.scope(|ui| {
+            ui.spacing_mut().item_spacing.x = 0.0;
+            add(ui);
+        });
+        return Rect::from_min_max(
+            Pos2::new(start, ui.max_rect().top()),
+            Pos2::new(ui.cursor().left(), ui.max_rect().bottom()),
+        );
+    };
     let width = ui.available_width();
     let (rect, _) = ui.allocate_exact_size(Vec2::new(width, STRIP_HEIGHT), Sense::hover());
     let painter = ui.painter_at(rect);
-    painter.rect_filled(rect, 0.0, color::HEADER);
+    painter.rect_filled(
+        rect,
+        egui::CornerRadius {
+            nw: top_radius,
+            ne: top_radius,
+            sw: 0,
+            se: 0,
+        },
+        color::HEADER,
+    );
     painter.hline(rect.x_range(), rect.bottom() - 0.5, hairline());
     let mut content = ui.new_child(
         UiBuilder::new()

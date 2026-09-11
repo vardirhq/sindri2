@@ -85,6 +85,15 @@ const MAX_SHARE: f32 = 0.75;
 /// between two overlays stacked in the same corner.
 const OVERLAY_GUTTER: f32 = 12.0;
 
+/// The widest the floating tool island may be.
+///
+/// A cap rather than a size: the island shrinks to the controls in it, and this
+/// stops it growing to whatever `available_width` reports. Inside an `Area`
+/// that is auto-sizing, that number is enormous — which is what first made the
+/// island a full-width band again, wearing rounded ends and hiding half its own
+/// controls behind the hierarchy.
+const ISLAND_WIDTH: f32 = 620.0;
+
 impl EditorApp {
     /// Draws every place that holds anything: docks, then the scene, then the
     /// overlays over it.
@@ -180,7 +189,7 @@ impl EditorApp {
         let Some(group) = self.preferences.workspace.group(place) else {
             return;
         };
-        let canvas = self.dock.canvas;
+        let canvas = self.overlay_field();
         let width = group.size.clamp(
             place.min_size(),
             (canvas.width() - OVERLAY_GUTTER * 2.0).max(place.min_size()),
@@ -214,14 +223,35 @@ impl EditorApp {
                 ui.set_min_size(rect.size());
                 ui.set_max_size(rect.size());
                 panel::overlay_frame().show(ui, |ui| {
-                    // Clipped to the frame, or a list longer than the overlay
-                    // draws straight out of the bottom of it and over the world
-                    // with no edge to say where the panel stopped.
-                    ui.set_clip_rect(rect);
+                    // Clipped just inside the frame, or a list longer than the
+                    // overlay draws straight out of the bottom of it and over
+                    // the world with no edge to say where the panel stopped.
+                    // Inset by a point so the clip does not eat the card's own
+                    // outline along with the overflow.
+                    ui.set_clip_rect(rect.shrink(1.0));
                     panel::fill_slot(ui, true);
                     self.draw_group(ui, place);
                 });
             });
+    }
+
+    /// The region overlays arrange themselves in.
+    ///
+    /// The canvas itself when the window's furniture is docked, because the
+    /// bars have already taken their rows out of it. When the furniture floats,
+    /// the canvas runs edge to edge under the bars — that is the point of it —
+    /// so the corners overlays anchor to have to be inset past them by hand, or
+    /// the hierarchy sits under the menus.
+    fn overlay_field(&self) -> Rect {
+        let canvas = self.dock.canvas;
+        if self.preferences.workspace.chrome().floats() {
+            Rect::from_min_max(
+                egui::pos2(canvas.left(), canvas.top() + metric::TOP_BAR_HEIGHT),
+                egui::pos2(canvas.right(), canvas.bottom() - metric::STATUS_HEIGHT),
+            )
+        } else {
+            canvas
+        }
     }
 
     /// A place's frame: viewports sit on ink, everything else on panel ground.
@@ -247,7 +277,15 @@ impl EditorApp {
         let panels = group.panels.clone();
         let active = group.active_index();
         let collapsed = group.collapsed && place.is_overlay();
-        let (strip, tabs) = self.dock_strip(ui, place, &panels, active);
+        // The centre wears no strip of its own when the furniture floats: its
+        // tabs are drawn in the top bar, so a full-width row here would be the
+        // same tabs twice and another row of chrome ending the canvas.
+        let in_the_bar = place == Place::MAIN && self.preferences.workspace.chrome().floats();
+        let (strip, tabs) = if in_the_bar {
+            (Rect::NOTHING, Vec::new())
+        } else {
+            self.dock_strip(ui, place, &panels, active)
+        };
         let body = ui.available_rect_before_wrap();
         self.dock.zones.push(Zone {
             place,
@@ -272,8 +310,17 @@ impl EditorApp {
     fn draw_panel(&mut self, ui: &mut egui::Ui, panel: DockPanel) {
         match panel {
             DockPanel::Scene => {
-                self.scene_tools(ui, true);
-                self.render_view(ui, WorkspaceTab::Scene);
+                if self.preferences.workspace.chrome().floats() {
+                    // The world first, into the whole of the space, and the
+                    // tools over it afterwards. Drawn the other way round the
+                    // toolbar claims a row and the scene starts below it, which
+                    // is a docked editor however the panels are placed.
+                    self.render_view(ui, WorkspaceTab::Scene);
+                    self.tool_island(ui);
+                } else {
+                    self.scene_tools(ui, true);
+                    self.render_view(ui, WorkspaceTab::Scene);
+                }
             }
             DockPanel::Game => {
                 self.game_tools(ui);
@@ -285,6 +332,55 @@ impl EditorApp {
             DockPanel::Console => self.console_body(ui),
             DockPanel::History => self.history_body(ui),
         }
+    }
+
+    /// Points the centre's drop zone at the tabs drawn in the title bar.
+    ///
+    /// The zone was pushed with nothing in it while the centre was drawn,
+    /// because its tabs had not been laid out yet — the bar draws before the
+    /// workspace does on a docked arrangement and after it on a floating one.
+    /// Filling it in here is what keeps "drop a panel on the Scene tab" working
+    /// in both.
+    pub(super) fn retarget_centre_zone(&mut self, strip: Rect, tabs: Vec<Rect>) {
+        if let Some(zone) = self
+            .dock
+            .zones
+            .iter_mut()
+            .find(|zone| zone.place == Place::MAIN)
+        {
+            zone.strip = strip;
+            zone.tabs = tabs;
+        }
+    }
+
+    /// The scene tools, as an island floating over the world they act on.
+    ///
+    /// Anchored to the top of the canvas rather than following anything: these
+    /// are the verbs that are always available, and a control that moves is a
+    /// control that has to be looked for.
+    fn tool_island(&mut self, ui: &mut egui::Ui) {
+        let field = self.overlay_field();
+        // Given an explicit rectangle rather than left to size itself. An
+        // auto-sizing `Area` measured zero here and the island rendered
+        // nothing at all — the same pattern the docked overlays already use
+        // works, and the centring needs a known width anyway.
+        let width = ISLAND_WIDTH.min(field.width() - OVERLAY_GUTTER * 2.0);
+        let rect = Rect::from_min_size(
+            egui::pos2(field.center().x - width / 2.0, field.top() + OVERLAY_GUTTER),
+            egui::vec2(width, metric::TOOLBAR_HEIGHT),
+        );
+        egui::Area::new(egui::Id::new("scene-tool-island"))
+            .fixed_pos(rect.min)
+            .order(egui::Order::Middle)
+            .interactable(true)
+            .show(ui.ctx(), |ui| {
+                ui.set_min_size(rect.size());
+                ui.set_max_size(rect.size());
+                panel::overlay_frame().show(ui, |ui| {
+                    ui.set_clip_rect(rect.shrink(1.0));
+                    self.scene_tools_island(ui);
+                });
+            });
     }
 
     /// Works out where a dragged tab would land, shows it, and lands it.

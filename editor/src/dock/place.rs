@@ -202,3 +202,28 @@ impl Place {
         }
     }
 }
+
+/// Whether the window's own furniture takes room from the scene or floats over
+/// it.
+///
+/// The distinction the first canvas arrangement missed. Moving two panels into
+/// floating boxes while the title bar, the tab strip, the toolbar, the
+/// inspector column and the status bar all still claimed their rows left the
+/// scene occupying about half the window — a docked editor with two insets, not
+/// a canvas. Canvas-first means *nothing* docks: the scene is the window, and
+/// every control is drawn over it.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Chrome {
+    /// Bars and panels claim space; the scene gets what is left.
+    #[default]
+    Docked,
+    /// Bars and panels float; the scene gets the whole window.
+    Floating,
+}
+
+impl Chrome {
+    pub const fn floats(self) -> bool {
+        matches!(self, Self::Floating)
+    }
+}

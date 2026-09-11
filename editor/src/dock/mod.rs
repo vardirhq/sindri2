@@ -30,7 +30,7 @@ mod drag;
 mod place;
 
 pub use drag::{Drag, DropTarget, edge_place, tab_index};
-pub use place::{Corner, Place, Slot};
+pub use place::{Chrome, Corner, Place, Slot};
 
 use serde::{Deserialize, Serialize};
 
@@ -159,6 +159,14 @@ impl Group {
 pub struct Workspace {
     /// One entry per place. A place with no entry is empty and is not drawn.
     places: Vec<(Place, Group)>,
+    /// Whether the window's furniture takes room from the scene or floats over
+    /// it.
+    ///
+    /// Part of the arrangement rather than a separate setting, because it is
+    /// the same question every other entry here answers: does this take space,
+    /// or cover it. A preset sets both together, and they are not independently
+    /// meaningful — floating panels around a docked title bar is neither shape.
+    chrome: Chrome,
 }
 
 impl Default for Workspace {
@@ -216,25 +224,34 @@ impl Preset {
 }
 
 impl Workspace {
+    /// How the window's furniture is drawn in this arrangement.
+    pub const fn chrome(&self) -> Chrome {
+        self.chrome
+    }
+
     /// One of the arrangements the editor ships with.
     pub fn preset(preset: Preset) -> Self {
-        use Corner::{BottomLeft, TopLeft};
+        use Corner::{BottomLeft, TopLeft, TopRight};
         use Slot::{Bottom, FarRight, Left, Main, MainBottom, Right};
         let places: &[(Place, &[Panel])] = match preset {
             Preset::Canvas => &[
-                // The scene has the window, and what is not the scene either
-                // covers a corner of it or is one click away. The inspector is
-                // the exception and is docked on purpose: it moves on every
-                // selection if it floats, it covers the neighbours a value is
-                // being judged against, and a schema-driven entity is thirty
-                // fields deep. Verbs travel; properties do not.
+                // Nothing docks. The scene is the window and every other
+                // surface is drawn over it, the title bar and the status bar
+                // included -- see `Chrome::Floating`.
+                //
+                // The inspector floats here but is *anchored*, not attached to
+                // the selection. Anchoring is what keeps the thing a mockup
+                // gets right (the scene is the document) without the thing it
+                // gets wrong: a panel that jumps to whatever was last clicked
+                // forms no muscle memory and covers the neighbours a value is
+                // being judged against.
                 (Place::Dock(Main), &[Panel::Scene, Panel::Game]),
                 (Place::Overlay(TopLeft), &[Panel::Hierarchy]),
                 (
                     Place::Overlay(BottomLeft),
                     &[Panel::Project, Panel::Console, Panel::History],
                 ),
-                (Place::Dock(FarRight), &[Panel::Inspector]),
+                (Place::Overlay(TopRight), &[Panel::Inspector]),
             ],
             Preset::Docked => &[
                 (Place::Dock(Left), &[Panel::Hierarchy]),
@@ -253,12 +270,26 @@ impl Workspace {
                 (Place::Dock(FarRight), &[Panel::Inspector]),
             ],
         };
-        Self {
+        let mut workspace = Self {
             places: places
                 .iter()
                 .map(|(place, panels)| (*place, Group::new(*place, panels)))
                 .collect(),
+            chrome: match preset {
+                Preset::Canvas => Chrome::Floating,
+                Preset::Docked | Preset::Wide => Chrome::Docked,
+            },
+        };
+        if preset == Preset::Canvas {
+            // An inspector is a column of fields, and the default overlay
+            // height is a note's worth. Given its own figure rather than a
+            // taller default for every overlay, which would make the hierarchy
+            // and the project browser cover the scene for no reason.
+            let inspector = workspace.group_mut(Place::Overlay(TopRight));
+            inspector.size = 320.0;
+            inspector.height = 560.0;
         }
+        workspace
     }
 
     /// The group in a place, if it holds anything.

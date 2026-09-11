@@ -30,11 +30,13 @@ pub fn frame() -> egui::Frame {
 /// holds is not something the editor gets to choose. What separates an overlay
 /// from a dock is the shadow and the rounding, which say it is above the world
 /// rather than beside it.
+pub const OVERLAY_RADIUS: u8 = 8;
+
 pub fn overlay_frame() -> egui::Frame {
     egui::Frame::new()
         .fill(color::PANEL)
         .stroke(hairline())
-        .corner_radius(6)
+        .corner_radius(OVERLAY_RADIUS)
         .inner_margin(0)
         .shadow(egui::epaint::Shadow {
             offset: [0, 6],

@@ -153,6 +153,26 @@ impl EditorApp {
         });
     }
 
+    /// The same tools, sized to themselves rather than to the width available.
+    ///
+    /// `scene_tools` draws a rail across the top of the viewport, which is the
+    /// right shape when it is claiming a row. An island floating over the scene
+    /// wants the opposite: as much room as the controls need and not one point
+    /// more, or it is a full-width band again with rounded ends.
+    pub(super) fn scene_tools_island(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 4.0;
+            ui.add_space(metric::GUTTER);
+            self.manipulators(ui);
+            self.manipulator_options(ui);
+            toolbar::divider(ui);
+            self.camera_controls(ui);
+            toolbar::divider(ui);
+            projection_choice(ui, &mut self.preferences.projection);
+            ui.add_space(metric::GUTTER);
+        });
+    }
+
     /// The row of tools above the viewport.
     ///
     /// The game view has none of them: they change what the editor is looking

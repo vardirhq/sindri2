@@ -13,7 +13,7 @@ use eframe::egui::{self, Align, Align2, Color32, FontId, Layout, Pos2, Rect, Str
 use crate::dock::{Drag, DropTarget, Panel as DockPanel, Place, Slot};
 use crate::ui::icons;
 use crate::ui::theme::{color, metric, text};
-use crate::ui::widgets::tabs::{self, Weight};
+use crate::ui::widgets::tabs::{self, Shape, Weight};
 
 use super::EditorApp;
 
@@ -44,6 +44,27 @@ impl EditorApp {
         panels: &[DockPanel],
         active: usize,
     ) -> (Rect, Vec<Rect>) {
+        // Rounded when it is the top of a floating card, square when it is the
+        // top of a dock that reaches the window's edges.
+        let top_radius = if place.is_overlay() {
+            crate::ui::widgets::panel::OVERLAY_RADIUS
+        } else {
+            0
+        };
+        self.dock_strip_as(ui, place, panels, active, Shape::Full { top_radius })
+    }
+
+    /// The same, saying whether the strip spans its container or stands where it
+    /// is. Inline is for the title bar, where a full-width strip would swallow
+    /// the rest of the bar.
+    pub(super) fn dock_strip_as(
+        &mut self,
+        ui: &mut egui::Ui,
+        place: Place,
+        panels: &[DockPanel],
+        active: usize,
+        shape: Shape,
+    ) -> (Rect, Vec<Rect>) {
         let weight = if matches!(place, Place::Dock(Slot::Main | Slot::MainBottom)) {
             Weight::Primary
         } else {
@@ -55,7 +76,7 @@ impl EditorApp {
         let mut closed = None;
         let mut started = None;
         let mut rolled = false;
-        let strip = tabs::strip(ui, |ui| {
+        let strip = tabs::row(ui, shape, |ui| {
             for (index, panel) in panels.iter().copied().enumerate() {
                 let response = tabs::tab(
                     ui,
