@@ -4,6 +4,31 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **Sindri will manage its own model runner.** A prebuilt llama.cpp server is
+  about 31 MB and needs no installation at all — it is a binary unpacked into
+  your own folder — where Ollama is a system service with a gigabyte installer
+  and a permission prompt. Adopting it makes setup passwordless and removes the
+  one step Sindri could not perform on your behalf. Ollama stays supported for
+  anyone already running it; what changes is which runtime the guided path
+  installs.
+
+  Getting a file onto the machine now goes through a pinned manifest and a
+  verification Sindri does itself. Transport is the platform's own downloader —
+  `curl`, or `wget` where there is no curl — because a TLS client would have
+  meant a crypto subtree in a crate graph that is meant to gain no HTTP stack.
+  The only dependency this needs is `sha2`, which was already in the editor's
+  tree, so the capability costs no new subtree at all.
+
+  That is not a shortcut. A downloader reporting success has said nothing about
+  *what* it fetched: a captive portal, a truncated transfer and a tampered
+  mirror all look like a completed download to the tool that performed it. So
+  downloads go to a `.part` file and the real name comes into existence only by
+  a rename, only after the hash matched; a mismatch deletes the partial rather
+  than leaving it for a resume to build on; a file already on disk that already
+  verifies is reused, because re-running setup has to be free or nobody re-runs
+  it; and `curl` is given `--fail`, or it exits zero on an HTTP error page and
+  hands a 404 body to the hash check.
+
 - **The assistant grades a model against your machine instead of answering yes
   or no.** Recommended, Supported, Best effort, or Will not fit — because "runs,
   but will drop a tool call halfway through a multi-step edit" is a real and

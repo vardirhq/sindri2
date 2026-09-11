@@ -31,6 +31,7 @@
 //! privilege at all, that route is preferred — see [`Elevation`].
 
 pub mod catalogue;
+pub mod fetch;
 pub mod probe;
 
 pub use catalogue::{DEFAULT_CONTEXT, Profile, Supports, Tier};

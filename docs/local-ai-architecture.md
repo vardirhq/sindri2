@@ -487,10 +487,11 @@ Detection must distinguish these states:
 - model loaded and capability tests passed
 - model reachable but failing a required capability
 
-### Proposal: manage llama.cpp rather than install Ollama
+### Decision: manage llama.cpp rather than install Ollama
 
-**Status: proposed, not adopted.** This changes the provider decision above, so
-it is written here as an argument rather than made silently in code.
+**Status: adopted.** This supersedes the provider decision above for the
+*guided* path. Ollama remains supported for anyone already running it; what
+changes is which runtime Sindri installs and manages on someone's behalf.
 
 Ollama is a *system service you install*. That makes the first step of setup a
 platform installer — a gigabyte-plus download, an operating-system permission
@@ -512,26 +513,55 @@ it is a binary unpacked into a user directory and started as the user. That
 removes the installer, removes the privilege, and makes the whole setup
 passwordless, which is stronger than the rule this section states.
 
-What adopting it would mean:
+#### How a file gets onto the machine
 
-- A committed runtime manifest beside the model one, with `sha256`, `size`,
-  `license` and `source` per platform and architecture.
-- Downloads written to a `.part` file, hashed while streaming, verified against
-  the manifest, and atomically renamed on success — so setup is resumable and
-  idempotent, and an interrupted download costs nothing.
-- Reuse when the file on disk already verifies **and** its manifest version
-  matches, which is what makes re-running setup cheap.
-- One narrow dependency: an HTTPS client that can GET a file to disk. Not an
-  API client, not auth, not a JSON transport. That is a much smaller thing to
-  put through `docs/dependency-policy.md` and `cargo deny` than a general HTTP
-  stack, and it belongs to the editor crate alone — the engine graph keeps the
-  rule above.
-- Ollama stays supported as a provider for anyone who already runs it. What
-  changes is which runtime the *guided* path manages.
+The obvious way to download over HTTPS from Rust is a TLS client, and that would
+have meant `rustls` and a crypto backend in the editor's tree — a sizeable
+subtree, and one whose licences are not all already on the allowlist. Weighed
+against the rule that Sindri's crate graph gains no HTTP stack, it was the wrong
+trade.
+
+So **transport is the platform's own downloader** — `curl`, or `wget` where
+there is no curl — and **verification is Sindri's own**. `editor/src/assistant/fetch.rs`
+holds both. The only dependency this needs is `sha2`, which was already in the
+editor's tree through `sindri-assets`, so the whole capability costs no new
+subtree at all. Unpacking uses `tar` for the same reason.
+
+That is not a workaround. A downloader reporting success has said nothing about
+*what* it fetched: a captive portal, a truncated transfer and a tampered mirror
+all look like a completed download to the tool that performed it. The bytes are
+hashed against the manifest regardless of how they arrived, which is the check
+that actually matters — and resumption and proxy configuration come free from
+whatever the machine is already set up for, rather than being implemented twice.
+
+The discipline, all of it tested without a network:
+
+- Downloads go to a `.part` file and the destination comes into existence only
+  by a rename, only after the hash matched. There is no window in which a
+  half-written or wrong file sits at the name everything else looks for.
+- A mismatch deletes the partial rather than leaving it for a resume, because
+  continuing from wrong bytes only ever produces more of them.
+- A file already on disk that already verifies is reused. Re-running setup has
+  to be free, or nobody re-runs it.
+- `curl` is given `--fail`, or it exits zero on an HTTP error page and hands a
+  404 body to the hash check — which would report corruption rather than a
+  missing file.
+
+Assets are selected by platform and architecture with an `any` fallback, and
+model URLs pin a content hash in the path rather than a branch, so what is
+served cannot change under the digest.
 
 The cost is owning a runtime version: a pinned llama.cpp build has to be moved
 forward deliberately, and GPU backends multiply the manifest entries. That is
 real, and it is the same cost `local-code` already carries.
+
+#### Manifest compatibility
+
+The manifest field names and selection semantics are shared with
+`vardirhq/local-code`; the files are separate. The two tools fetch the same
+kinds of asset for the same reasons, so a machine set up by one should be
+legible to the other — but a shared file would couple their release cadences,
+and each needs entries the other does not.
 
 ### Nobody types anything
 
