@@ -1,12 +1,12 @@
-//! Tabs, for the two places the editor has them.
+//! Tabs: how every docked panel is named, selected, and picked up.
 //!
-//! Scene and Game are not two options of equal weight with the panels around
-//! them — they are the workspace, and the rest of the window is arranged around
-//! whichever one is showing. So the tab is drawn as a workspace selector: an
-//! icon, a name, a lit ground, and a rule along the bottom that reads as the
-//! active surface continuing into the view underneath it. Project and Console
-//! get the same shape at a smaller size, because they are the same idea one
-//! level down.
+//! There is one strip in the editor and every group wears it, because a tab is
+//! no longer a choice between two fixed views — it is what a panel *is* once
+//! the arrangement became something the user drags into shape. So the tab is
+//! drawn as a surface selector: an icon, a name, a lit ground, and a rule along
+//! the bottom that reads as the active surface continuing into the view
+//! underneath it. The centre gets the same shape at a larger size, because what
+//! separates a viewport from a side panel is emphasis, not kind.
 
 use eframe::egui::{
     self, Align, Align2, FontId, Layout, Pos2, Rect, Response, Sense, UiBuilder, Vec2,
@@ -18,9 +18,9 @@ use crate::ui::theme::{color, hairline, metric, text};
 /// How prominent a strip of tabs is.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Weight {
-    /// The workspace selector: Scene and Game.
+    /// The centre, where the work is.
     Primary,
-    /// A dock's own tabs: Project and Console.
+    /// A docked side or bottom group.
     Secondary,
 }
 
@@ -42,7 +42,11 @@ impl Weight {
 ///
 /// The rule is the strip's, not each tab's: drawn per tab it stopped where the
 /// last label did, which made a row of tabs look like it was missing something.
-pub fn strip<R>(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui) -> R) -> R {
+///
+/// Returns the strip's own rectangle, which is what a dock drop is resolved
+/// against: a tab released over a strip joins that group, and the caller cannot
+/// work out where the strip ended up without being told.
+pub fn strip(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui)) -> Rect {
     let width = ui.available_width();
     let (rect, _) = ui.allocate_exact_size(Vec2::new(width, STRIP_HEIGHT), Sense::hover());
     let painter = ui.painter_at(rect);
@@ -54,16 +58,22 @@ pub fn strip<R>(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui) -> R) -> R {
             .layout(Layout::left_to_right(Align::Center)),
     );
     content.spacing_mut().item_spacing.x = 0.0;
-    add(&mut content)
+    add(&mut content);
+    rect
 }
 
 /// One tab. Returns its response so the caller decides what selecting means.
+///
+/// Senses dragging as well as clicking, because a tab is also the handle the
+/// panel is moved by. `travelling` dims the one being dragged, so the strip
+/// shows where it came from while the pointer carries a copy of it.
 pub fn tab(
     ui: &mut egui::Ui,
     weight: Weight,
     selected: bool,
     icon: Option<MaterialIcon>,
     label: &str,
+    travelling: bool,
 ) -> Response {
     let font = FontId::proportional(weight.font());
     // Measured rather than guessed from character count: the tab is painted, so
@@ -75,8 +85,10 @@ pub fn tab(
         .layout_no_wrap(label.to_owned(), font, egui::Color32::PLACEHOLDER);
     let icon_width = if icon.is_some() { 20.0 } else { 0.0 };
     let width = galley.size().x + icon_width + 26.0;
-    let (rect, response) =
-        ui.allocate_exact_size(Vec2::new(width, ui.available_height()), Sense::click());
+    let (rect, response) = ui.allocate_exact_size(
+        Vec2::new(width, ui.available_height()),
+        Sense::click_and_drag(),
+    );
     let painter = ui.painter_at(rect);
     let hovered = response.hovered();
     if selected {
@@ -94,11 +106,14 @@ pub fn tab(
     } else if hovered {
         painter.rect_filled(rect, 0.0, color::RAISED);
     }
-    let foreground = match (selected, hovered) {
+    let mut foreground = match (selected, hovered) {
         (true, _) => color::TEXT,
         (false, true) => color::TEXT_MUTED,
         (false, false) => color::TEXT_FAINT,
     };
+    if travelling {
+        foreground = foreground.gamma_multiply(0.4);
+    }
     let mut cursor = rect.left() + 13.0;
     if let Some(icon) = icon {
         painter.text(

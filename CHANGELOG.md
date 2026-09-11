@@ -4,6 +4,37 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **The editor's panels are arranged by the person using it.** Every panel —
+  Scene, Game, Hierarchy, Inspector, Project, Console, History — is now a tab,
+  and every tab is dragged into any of seven slots: two columns down each side,
+  one along the bottom, and the centre split in two. Dropping onto a tab strip
+  inserts between the tabs it lands between; dropping on a window edge opens a
+  slot nothing was in. An empty slot is not drawn. The arrangement and each
+  slot's size survive a restart, `View → Panels` reopens anything closed, and
+  `View → Arrangement` offers `Studio` and `Wide` as starting points rather than
+  as the only two shapes the editor has.
+
+  The Console opens beside the Scene view in the default arrangement. It used to
+  share one bottom slot with the project browser and the history, so reading the
+  log meant giving up the browser — and what the console says is usually about
+  the thing in the viewport next to it.
+
+  **This also fixes panels that could not be resized.** An `egui::Panel`
+  persists the size of the rectangle its *contents* occupied rather than its
+  own, so a panel whose contents were narrower than their slot shrank to fit
+  them on the next frame — and, because the persisted size is where the
+  following frame starts, stayed shrunk however far its edge was dragged. That
+  is why the project column sat at its minimum width and would not move, and why
+  every panel opened narrower than the default it declared. Each slot now claims
+  its full width before anything draws, and the arbitrary maximum widths are
+  gone: a slot may take up to three quarters of the window. `panel::fill_slot`
+  carries a headless regression test for both halves of it.
+
+  The tab strip has also replaced each panel's separate header. A docked panel
+  used to spend a second row saying its own name directly under a tab that had
+  just said it; a panel's own controls now sit at the far end of the strip that
+  names it.
+
 - **CI runs the same checks about three times faster.** The workspace's tests
   were the whole of CI's critical path, and most of that was one number: the
   repository set no Cargo profile, so a game engine whose tests are mostly

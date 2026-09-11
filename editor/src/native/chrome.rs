@@ -7,14 +7,15 @@
 
 use eframe::egui::{self, Align, Layout, RichText, Sense, Stroke, Vec2};
 
-use crate::preferences::{CameraProjection, Layout as WorkspaceLayout};
+use crate::dock::{Panel as DockPanel, Preset, Slot, Workspace};
+use crate::preferences::CameraProjection;
 use crate::ui::icons;
 use crate::ui::theme::{color, hairline, metric, text};
 use crate::ui::widgets::{button, panel, toolbar};
 
+use super::EditorApp;
 use super::runtime::{PLAYING_TIP, Transport, play_button, transport_icon};
 use super::unsaved::Discarding;
-use super::{EditorApp, WorkspaceTab};
 
 /// How much room the transport group takes, so the bar can centre it.
 ///
@@ -106,16 +107,6 @@ impl EditorApp {
                     let lead = (centre - ui.cursor().left()).max(12.0);
                     ui.add_space(lead);
                     self.transport(ui);
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        ui.add_space(12.0);
-                        // Which arrangement the window is in, said where the
-                        // View menu that changes it can be reached.
-                        ui.label(
-                            RichText::new(self.preferences.layout.label())
-                                .size(text::NOTE)
-                                .color(color::TEXT_FAINT),
-                        );
-                    });
                 });
             });
     }
@@ -186,24 +177,54 @@ impl EditorApp {
         );
     }
 
-    /// Chooses how the workspace is arranged.
+    /// Which panels are open, and the arrangements to start from.
     ///
-    /// The choice is a preference rather than session state, so it survives a
-    /// restart: rearranging the editor every time it opens is the thing this
-    /// exists to stop.
+    /// The arrangement itself is dragged rather than chosen — a tab goes where
+    /// it is dropped — so what a menu is still good for is the two things a
+    /// drag cannot say: bring back a panel that was closed, and put everything
+    /// back the way it started.
     fn view_menu(&mut self, ui: &mut egui::Ui) {
         bar_menu(ui, "View", |ui| {
             ui.label(
-                RichText::new("LAYOUT")
+                RichText::new("PANELS")
                     .size(text::NOTE)
                     .color(color::TEXT_FAINT),
             );
-            for layout in WorkspaceLayout::ALL {
+            for panel in DockPanel::ALL {
+                let open = self.preferences.workspace.is_open(panel);
+                // The one panel that cannot be closed says so by being
+                // disabled rather than by refusing when clicked.
+                let last_view = open
+                    && self
+                        .preferences
+                        .workspace
+                        .group(Slot::Main)
+                        .is_some_and(|group| group.panels == [panel]);
+                let entry =
+                    ui.add_enabled(!last_view, egui::Button::selectable(open, panel.label()));
+                if entry.clicked() {
+                    self.preferences.workspace.toggle(panel);
+                    ui.close();
+                }
+                if last_view {
+                    entry.on_disabled_hover_text(
+                        "The centre cannot be emptied. Put something else there first.",
+                    );
+                }
+            }
+            ui.separator();
+            ui.label(
+                RichText::new("ARRANGEMENT")
+                    .size(text::NOTE)
+                    .color(color::TEXT_FAINT),
+            );
+            for preset in Preset::ALL {
                 if ui
-                    .selectable_label(self.preferences.layout == layout, layout.label())
+                    .button(preset.label())
+                    .on_hover_text("Replaces the current arrangement")
                     .clicked()
                 {
-                    self.preferences.layout = layout;
+                    self.preferences.workspace = Workspace::preset(preset);
                     ui.close();
                 }
             }
@@ -419,13 +440,5 @@ impl EditorApp {
                     });
                 });
             });
-    }
-}
-
-/// Which workspace a tab selects, and what it is called.
-pub(super) const fn workspace_label(tab: WorkspaceTab) -> &'static str {
-    match tab {
-        WorkspaceTab::Scene => "Scene",
-        WorkspaceTab::Game => "Game",
     }
 }

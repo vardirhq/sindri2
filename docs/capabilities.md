@@ -835,11 +835,29 @@ frame.
   translation/angle/scale snapping, respect Z lock, and merge a whole drag into
   one undoable command-history step
 - Scene and Game views, the latter rendering through the authored camera with no
-  editor chrome painted over it — both live at once in the `2 by 3` layout
-- Two workspace layouts chosen from **View → Layout** and remembered between
-  launches: `2 by 3` puts Scene above Game with Hierarchy, Project, and
-  Inspector beside them, and `Wide` shows one view at a time over a Project
-  dock
+  editor chrome painted over it — both live at once in the `Studio` arrangement
+- **A workspace the user arranges.** Every panel — Scene, Game, Hierarchy,
+  Inspector, Project, Console, History — is a tab, and every tab is dragged into
+  any of seven slots: two columns down each side, one along the bottom, and the
+  centre split in two. Dropping onto a tab strip inserts between the tabs it
+  lands between; dropping on a window edge opens a slot nothing was in. A slot
+  with nothing in it is not drawn, so the arrangement has no empty furniture in
+  it. Middle-click closes a tab and **View → Panels** brings it back;
+  **View → Arrangement** offers `Studio` and `Wide` as starting points. Where
+  every panel sits and how big each slot is survives a restart.
+
+  Two rules the model enforces rather than asking callers to respect: a panel
+  lives in exactly one slot, and the centre is never empty — the last tab in it
+  refuses to be dragged out or closed, because an editor with a hole where the
+  work goes is not a smaller editor. An arrangement read back from settings is
+  repaired rather than trusted.
+- Slots resize over a range wide enough for the handle to be a real control.
+  They previously could not: an `egui::Panel` persists the size of its
+  *contents* rather than its own, so any panel whose contents were narrower than
+  their slot sprang back to its minimum on the next frame however far its edge
+  was dragged. Every slot now claims its full width before drawing, and
+  `editor/src/ui/widgets/panel.rs` carries a headless test that fails if the
+  claim is removed
 - Play, pause, and stop, driving the real engine lifecycle rather than a display
   flag, and a separate **Discard changes** that returns the world to the file.
   Play advances sprite animations and Decay scripts, and hands scripts the

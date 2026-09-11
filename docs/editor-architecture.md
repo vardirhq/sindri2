@@ -23,16 +23,60 @@ editor commands / protocol
 public Sindri engine crates
 ```
 
-Engine crates never depend on the editor. Editor interactions will become
-versioned commands before undo/redo, remote inspection, or AI-assisted actions
-are added.
+Engine crates never depend on the editor. Editor mutations go through checked,
+named, reversible commands rather than direct world writes — which is what makes
+undo, history travel, and any future remote or generated proposal share one
+seam. See `docs/editor-direction.md` for what the editor is being built toward,
+including what is deliberately not being built.
+
+## The workspace
+
+The arrangement of panels is data, not code. `editor/src/dock/` holds a
+`Workspace`: which `Panel` sits in which `Slot`, in what tab order, and how big
+each slot is. `editor/src/native/workspace.rs` walks `Slot::ALL` and draws
+whatever it finds there, and knows nothing about which panel that turns out to
+be beyond how to draw each one.
+
+Seven slots, claimed from the outside in: `FarLeft`, `Left`, `FarRight`,
+`Right`, `Bottom`, `MainBottom`, and `Main`. `Main` is the remainder and has no
+size of its own. Any panel may be in any slot; the two arrangements that used to
+be the only choices are now presets to start from.
+
+Rules the model enforces, so no caller has to:
+
+- A panel lives in exactly one slot. Two copies would be two views of one piece
+  of state fighting over the same scroll position and the same selection.
+- `Main` is never empty. An editor with a hole where the work goes is not a
+  smaller editor, so neither a drag nor a menu entry can produce one.
+- An arrangement read back from settings is repaired rather than trusted. A file
+  on disk can name a panel twice, select a tab that is not there, or ask for a
+  size of minus one, and none of those should stop the editor opening.
+
+Adding a panel is one `dock::Panel` variant and one arm of the match in
+`native/workspace.rs`. Nothing else in the editor needs to know.
+
+### The sizing trap
+
+An `egui::Panel` persists the size of the rectangle its **contents** occupied,
+not its own. A panel whose contents are narrower than the space they were given
+therefore shrinks to fit them on the next frame, and stays shrunk however far
+its edge is dragged — the persisted size is what the following frame starts
+from. This is not theoretical: it is why the editor's project column could not
+be made wider than its minimum, and why every panel opened narrower than its
+declared default.
+
+Every docked slot opens with `panel::fill_slot`, which claims the whole slot
+before anything else draws. `editor/src/ui/widgets/panel.rs` carries the
+headless regression test for both halves of it.
 
 ## Visual principles
 
 - Dense, calm workspace rather than default toolkit styling.
 - Clear hierarchy between authored content, tools, and runtime status.
 - One warm Sindri accent; semantic axis and status colors remain distinct.
-- Useful at 1080p, with resizable hierarchy and inspector panels.
+- Useful at 1080p, and arranged by the person using it rather than by the
+  editor: every panel is a tab, every tab is draggable into any slot, and slots
+  resize over a range wide enough for the handle to be a real control.
 - Visual polish is maintained continuously rather than postponed to a rewrite.
 
 ## The design system

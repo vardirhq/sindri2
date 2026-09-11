@@ -90,47 +90,6 @@ pub enum CameraProjection {
     Orthographic,
 }
 
-/// How the workspace arranges its panels.
-#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Layout {
-    /// Scene above Game on the left, then Hierarchy, Project, and Inspector as
-    /// columns beside them.
-    ///
-    /// The default because it shows the scene and what the player would see at
-    /// the same time, which is the comparison an editor exists to make, and
-    /// because Project as a tall column is where a list of assets reads better
-    /// than a grid of identical icons.
-    #[default]
-    TwoByThree,
-    /// One view at a time with Project docked along the bottom.
-    ///
-    /// Keeps the whole width for the viewport, which suits a narrow screen or
-    /// working on one view without the other competing for attention.
-    Wide,
-}
-
-impl Layout {
-    pub const ALL: [Self; 2] = [Self::TwoByThree, Self::Wide];
-
-    pub const fn label(self) -> &'static str {
-        match self {
-            Self::TwoByThree => "2 by 3",
-            Self::Wide => "Wide",
-        }
-    }
-}
-
-/// Which dock at the bottom of the workspace is showing.
-#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum BottomTab {
-    #[default]
-    Project,
-    Console,
-    History,
-}
-
 /// Editor settings that outlive a session.
 ///
 /// Deliberately small. Anything derived from the selection or the current
@@ -144,7 +103,11 @@ pub enum BottomTab {
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(default)]
 pub struct Preferences {
-    pub layout: Layout,
+    /// Which panel is in which slot, and how big each slot is.
+    ///
+    /// An arrangement someone dragged into shape is a decision made once, and
+    /// making it again every launch is what settings exist to stop.
+    pub workspace: crate::dock::Workspace,
     pub asset_view: AssetView,
     /// How much of the project the browser lists.
     ///
@@ -155,7 +118,6 @@ pub struct Preferences {
     pub console_filter: ConsoleFilter,
     pub snapping: crate::gizmo::Snapping,
     pub projection: CameraProjection,
-    pub bottom_tab: BottomTab,
     /// The scene file the editor last had open, reopened on the next launch.
     ///
     /// A path rather than anything richer, and one the editor is free to fail
@@ -189,10 +151,16 @@ impl Preferences {
     /// reported: an editor that refused to open because it could not parse a
     /// window preference would be worse than one that opens with defaults.
     pub fn load(storage: Option<&dyn eframe::Storage>) -> Self {
-        storage
+        let mut preferences: Self = storage
             .and_then(|storage| storage.get_string(KEY))
             .and_then(|stored| serde_json::from_str(&stored).ok())
-            .unwrap_or_default()
+            .unwrap_or_default();
+        // Settings are a file on disk and a file on disk can say anything. An
+        // arrangement is the one setting here complex enough to be wrong in a
+        // way that cannot be drawn, so it is corrected on the way in rather
+        // than guarded against at each of the places that reads it.
+        preferences.workspace.repair();
+        preferences
     }
 
     pub fn save(&self, storage: &mut dyn eframe::Storage) {
@@ -213,16 +181,21 @@ mod tests {
         assert_eq!(Preferences::default().asset_view, AssetView::List);
     }
 
-    /// The layout question this settled: 2 by 3 is what the editor opens as.
+    /// The arrangement question this settled: Studio is what the editor opens
+    /// as, and every panel in it is reachable without rearranging anything.
     #[test]
-    fn the_workspace_opens_in_the_two_by_three_layout() {
-        assert_eq!(Preferences::default().layout, Layout::TwoByThree);
+    fn the_workspace_opens_in_the_studio_arrangement() {
+        let opened = Preferences::default().workspace;
+        assert_eq!(
+            opened,
+            crate::dock::Workspace::preset(crate::dock::Preset::Studio)
+        );
     }
 
     #[test]
     fn settings_survive_a_round_trip() {
         let chosen = Preferences {
-            layout: Layout::Wide,
+            workspace: crate::dock::Workspace::preset(crate::dock::Preset::Wide),
             asset_view: AssetView::Grid,
             asset_scope: AssetScope::Project,
             console_filter: ConsoleFilter::Errors,
@@ -233,7 +206,6 @@ mod tests {
                 scale: 0.5,
             },
             projection: CameraProjection::Orthographic,
-            bottom_tab: BottomTab::Console,
             last_scene: Some("projects/level.scene.json".to_owned()),
             collapsed_hierarchy: BTreeSet::from(["projects/level.scene.json::player".to_owned()]),
             recent_projects: crate::project::RecentProjects::default(),
@@ -249,6 +221,10 @@ mod tests {
     fn settings_missing_a_field_keep_their_default() {
         let partial: Preferences = serde_json::from_str(r#"{"asset_view":"grid"}"#).unwrap();
         assert_eq!(partial.asset_view, AssetView::Grid);
+        assert!(
+            partial.workspace.is_open(crate::dock::Panel::Scene),
+            "settings from before the workspace was arrangeable get the default arrangement"
+        );
         assert_eq!(partial.projection, CameraProjection::Perspective);
         assert!(partial.collapsed_hierarchy.is_empty());
         assert_eq!(
@@ -290,7 +266,7 @@ mod tests {
     fn what_is_saved_is_what_comes_back() {
         let mut storage = FakeStorage::default();
         let chosen = Preferences {
-            layout: Layout::Wide,
+            workspace: crate::dock::Workspace::preset(crate::dock::Preset::Wide),
             asset_view: AssetView::Grid,
             asset_scope: AssetScope::Project,
             console_filter: ConsoleFilter::Errors,
@@ -301,7 +277,6 @@ mod tests {
                 scale: 0.5,
             },
             projection: CameraProjection::Orthographic,
-            bottom_tab: BottomTab::Console,
             last_scene: Some("projects/level.scene.json".to_owned()),
             collapsed_hierarchy: BTreeSet::new(),
             recent_projects: crate::project::RecentProjects::default(),

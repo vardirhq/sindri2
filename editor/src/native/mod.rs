@@ -42,6 +42,7 @@ mod camera;
 mod chrome;
 mod console_view;
 mod device;
+mod dock_strip;
 mod editing;
 mod frame;
 mod hierarchy;
@@ -62,6 +63,7 @@ mod tools;
 mod unsaved;
 mod viewport;
 mod welcome;
+mod workspace;
 
 #[cfg(test)]
 mod tests;
@@ -126,6 +128,11 @@ pub fn run() -> eframe::Result {
     )
 }
 
+/// Which of the two views of the world is being drawn.
+///
+/// Not which tab is selected — that is the dock's business now — but which
+/// *kind* of view a render is for: the Scene view takes camera input and wears
+/// editor chrome, and the Game view takes neither.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum WorkspaceTab {
     Scene,
@@ -235,7 +242,9 @@ struct EditorApp {
     /// and parsing files at frame rate would be a very different and much more
     /// expensive thing.
     styles: ProjectStyles,
-    workspace_tab: WorkspaceTab,
+    /// Which panel is being dragged, and what one frame measured about where
+    /// every group ended up.
+    dock: workspace::DockLayout,
     preferences: Preferences,
     lifecycle: EngineLifecycle,
     viewport_yaw: f32,
@@ -454,7 +463,7 @@ impl EditorApp {
             browser: BrowserState::default(),
             project,
             styles: ProjectStyles::default(),
-            workspace_tab: WorkspaceTab::Scene,
+            dock: workspace::DockLayout::default(),
             preferences,
             lifecycle: initialized_lifecycle(),
             viewport_yaw: 0.0,
