@@ -65,17 +65,11 @@ fn tagged(run: &Run, tag: &str) -> Vec<EntityId> {
 fn spawn_aegis(run: &mut Run) -> EntityId {
     let document = run
         .prefabs
-        .get("prefabs/challenger.prefab.json")
-        .expect("the boss prefab ships");
+        .get("prefabs/aegis.prefab.json")
+        .expect("the Aegis prefab ships");
     let entity = run.world.spawn_prefab(document).expect("boss spawns").root;
     let data = run.world.get_mut(entity).expect("boss remains");
     data.transform_3d.as_mut().expect("boss transform").position = [0.0, 3.5, 0.0];
-    data.components
-        .get_mut("sindri.script")
-        .and_then(|script| script.get_mut("properties"))
-        .and_then(serde_json::Value::as_object_mut)
-        .expect("script properties")
-        .insert("kind".to_owned(), json!(10.0));
     entity
 }
 
@@ -133,22 +127,34 @@ fn the_ring_turns() {
     );
 
     // Still on its ring rather than drifting off it: the radius is what keeps
-    // the plates outside the hull, which is the whole of the gating.
-    // A child's transform is local to its parent, so this is the ring radius
-    // directly: the plate rides at 1.55 from a hull that is itself moving.
-    let radius = after[0].hypot(after[1]);
+    // the plates outside the hull, which is the whole of the gating. Measured
+    // from the boss rather than from the origin, because that is the distance
+    // the mechanic is about — and because measuring it from the origin is how
+    // a ring that had come off its boss entirely once passed this test.
+    let hull = run
+        .world
+        .get(boss)
+        .and_then(|data| data.transform_3d.as_ref())
+        .expect("the boss survives")
+        .position;
+    let radius = (after[0] - hull[0]).hypot(after[1] - hull[1]);
     assert!(
         (radius - 1.55).abs() < 0.2,
-        "the plate left its ring (radius {radius:.3})"
+        "the plate left its ring (radius {radius:.3} from a hull at          {:.3},{:.3})",
+        hull[0],
+        hull[1]
     );
-    let _ = boss;
 }
 
 /// The plates are what the player's fire lands on, which is the mechanic.
 ///
 /// If a plate's collider were on the wrong layer, or the ring tucked inside the
 /// hull, the shots would go straight past and the boss would be shielded in
-/// appearance only. So this fires into the ring and checks the ring pays for it.
+/// appearance only. So this fires at the boss and checks two things in order:
+/// that a whole ring pays for the shots instead of the hull, and that once the
+/// ring has holes in it the hull starts paying after all. Aimed at wherever the
+/// boss actually is, because an earlier version fired at a fixed point and
+/// passed while the ring was sitting at the origin nowhere near the boss.
 #[test]
 fn fire_lands_on_the_plates_rather_than_the_hull() {
     let mut run = isolated_run();
@@ -162,14 +168,22 @@ fn fire_lands_on_the_plates_rather_than_the_hull() {
         .get("prefabs/bullet.prefab.json")
         .expect("the bullet prefab ships")
         .clone();
+    let full = run.board("boss_hp");
 
-    // Fired from below the boss, straight up into the ring, over and over: the
-    // ring turns, so this walks around it rather than drilling one plate.
-    for _ in 0..90 {
+    // One shot, aimed from just outside the ring at the hull behind it.
+    let fire = |run: &mut Run| {
+        let Some(hull) = run
+            .world
+            .get(boss)
+            .and_then(|data| data.transform_3d.as_ref())
+            .map(|transform| transform.position)
+        else {
+            return;
+        };
         let shot = run.world.spawn_prefab(&bullet).expect("a shot spawns").root;
         if let Some(data) = run.world.get_mut(shot) {
             if let Some(transform) = data.transform_3d.as_mut() {
-                transform.position = [0.0, 0.6, 0.0];
+                transform.position = [hull[0], hull[1] - 2.6, 0.0];
             }
             if let Some(properties) = data
                 .components
@@ -184,15 +198,162 @@ fn fire_lands_on_the_plates_rather_than_the_hull() {
             }
         }
         for _ in 0..4 {
-            step(&mut run);
+            step(run);
         }
-    }
+    };
 
+    // While the ring is whole the hull is unreachable, wherever it has got to.
+    let mut whole = 0;
+    while run.count("shield") == 8 && whole < 12 {
+        fire(&mut run);
+        whole += 1;
+    }
+    assert!(
+        whole > 0,
+        "no shot was fired while the ring was whole, so nothing was tested"
+    );
+    assert!(
+        (run.board("boss_hp") - full).abs() < 0.001,
+        "the hull lost {:.2} through an unbroken ring",
+        full - run.board("boss_hp")
+    );
+
+    // Keep firing: the ring turns, so this walks around it rather than
+    // drilling one plate, and the gaps it opens are how the hull is reached.
+    // Stopped at the first hit on the hull, because the question is whether an
+    // opening lets a shot through, not how long the boss survives one.
+    let mut shots = 0;
+    while shots < 90 && run.board("boss_hp") >= full {
+        fire(&mut run);
+        shots += 1;
+    }
     let left = run.count("shield");
     assert!(
         left < 8,
         "ninety shots into the ring destroyed no plates: the fire is not \
          landing on them, so the shield is decoration rather than a mechanic"
     );
-    assert!(run.world.get(boss).is_some(), "the boss is still alive");
+    assert!(
+        run.board("boss_hp") < full,
+        "the hull never took a shot through a ring with {} plates missing: \
+         the opening is not an opening",
+        8 - left
+    );
+}
+
+/// The Aegis wears its own steel.
+///
+/// Every other boss the challenger prefab serves is that orange gunship
+/// recoloured by a script tint, and for a long time the Aegis was too: a blue
+/// asked for once at configuration and overwritten every frame after by the
+/// cream the kinds either side share. Neither colour was one anybody chose for
+/// it, and neither belonged beside its own blue plates. It has its own sheet
+/// now, so the guard is two-sided — the right texture, and no tint over it.
+#[test]
+fn it_wears_its_own_hull_rather_than_a_tinted_gunship() {
+    let mut run = isolated_run();
+    let aegis = spawn_aegis(&mut run);
+    for _ in 0..40 {
+        step(&mut run);
+    }
+
+    let sprite = run
+        .components
+        .get::<sindri_scene::SpriteComponent>(&run.world, aegis)
+        .expect("the sprite store answers")
+        .expect("the Aegis draws a sprite")
+        .clone();
+
+    assert!(
+        sprite.texture.starts_with("textures/aegis.png#"),
+        "the Aegis draws its own sheet, not {}",
+        sprite.texture
+    );
+
+    for (channel, name) in sprite.tint.iter().take(3).zip(["red", "green", "blue"]) {
+        assert!(
+            (channel - 1.0).abs() < 1e-3,
+            "the {name} channel is {channel}: a tint would recolour a hull that \
+             is already the colour it should be"
+        );
+    }
+}
+
+/// The ring goes where the boss goes.
+///
+/// The plates were spawned as children of the hull, which reads as the obvious
+/// way to say "these belong to it" and was wrong: nothing composes a parent's
+/// transform into a world sprite or a collider, so the ring drew and blocked
+/// around the origin while the boss flew around somewhere else. On screen it
+/// was a tidy shield in the middle of the arena guarding nothing, and every
+/// shot at the boss went straight through. So this lets the hull travel and
+/// checks the ring is still on it.
+#[test]
+fn the_ring_travels_with_the_hull() {
+    let mut run = isolated_run();
+    let boss = spawn_aegis(&mut run);
+    step(&mut run);
+    step(&mut run);
+
+    // Long enough for the boss to have driven itself well away from where it
+    // started, under its own movement rather than a position written over it:
+    // physics owns a dynamic body's pose, so a transform set from here does
+    // not survive the step that follows.
+    for _ in 0..180 {
+        step(&mut run);
+    }
+
+    let hull = run
+        .world
+        .get(boss)
+        .and_then(|data| data.transform_3d.as_ref())
+        .expect("the boss survives")
+        .position;
+    // Otherwise this proves nothing: a boss that never left the middle of the
+    // arena is exactly where a ring stuck at the origin would be anyway.
+    let travelled = hull[0].hypot(hull[1]);
+    assert!(
+        travelled > 2.0,
+        "the boss only reached {travelled:.3} from the origin, which is too \
+         close to tell a ring that follows it from one that does not"
+    );
+
+    let plates = tagged(&run, "shield");
+    assert!(!plates.is_empty(), "the ring survives");
+    for plate in plates {
+        let at = run
+            .world
+            .get(plate)
+            .and_then(|data| data.transform_3d.as_ref())
+            .expect("a plate has a transform")
+            .position;
+        let radius = (at[0] - hull[0]).hypot(at[1] - hull[1]);
+        assert!(
+            (radius - 1.55).abs() < 0.25,
+            "a plate sits {radius:.3} from a hull at {:.3},{:.3}: the ring is \
+             not on the boss",
+            hull[0],
+            hull[1]
+        );
+    }
+}
+
+/// A plate does not outlive the boss it rings.
+///
+/// It used to be a child, so despawning the hull took the ring with it. Now
+/// that they are siblings the plates have to notice, or a dead boss leaves
+/// eight invisible walls in the arena that eat the player's fire forever.
+#[test]
+fn the_ring_goes_when_the_boss_does() {
+    let mut run = isolated_run();
+    let boss = spawn_aegis(&mut run);
+    step(&mut run);
+    step(&mut run);
+    assert_eq!(run.count("shield"), 8, "the ring is up");
+
+    run.world.despawn_recursive(boss).expect("the boss dies");
+    for _ in 0..4 {
+        step(&mut run);
+    }
+    assert_eq!(run.count("shield"), 0, "the ring went with it");
 }

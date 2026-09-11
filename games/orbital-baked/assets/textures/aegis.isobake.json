@@ -1,0 +1,2064 @@
+{
+  "format_version": 1,
+  "id": "aegis",
+  "texture": "textures/aegis.png",
+  "view": "top-down",
+  "pixels_per_unit": 128,
+  "directions": 1,
+  "render": {
+    "supersample": 4,
+    "padding": 2,
+    "palette_snap": true,
+    "alpha_cutoff": 128,
+    "outline": {
+      "enabled": true,
+      "colour": "#08131c"
+    },
+    "shading": {
+      "light": [
+        -0.42,
+        0.8,
+        0.43
+      ],
+      "thresholds": [
+        0.26,
+        0.52,
+        0.8
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "aegis-0",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "hull": {
+            "colour": "#3a5972"
+          },
+          "lit": {
+            "colour": "#6f95b0"
+          },
+          "mid": {
+            "colour": "#27405a"
+          },
+          "deep": {
+            "colour": "#16283a"
+          },
+          "rim": {
+            "colour": "#2b6f8c"
+          },
+          "glow": {
+            "colour": "#57dbff"
+          },
+          "hot": {
+            "colour": "#9beeff"
+          },
+          "eye": {
+            "colour": "#e8fdff"
+          }
+        },
+        "parts": [
+          {
+            "type": "cylinder",
+            "material": "hull",
+            "position": [
+              0.0,
+              0.07,
+              0.0
+            ],
+            "radius": 0.63,
+            "radius_top": 0.58,
+            "height": 0.14,
+            "segments": 8
+          },
+          {
+            "type": "cylinder",
+            "material": "rim",
+            "position": [
+              0.0,
+              0.16,
+              0.0
+            ],
+            "radius": 0.6,
+            "radius_top": 0.55,
+            "height": 0.06,
+            "segments": 8
+          },
+          {
+            "type": "cylinder",
+            "material": "mid",
+            "position": [
+              0.0,
+              0.21,
+              0.0
+            ],
+            "radius": 0.4,
+            "radius_top": 0.36,
+            "height": 0.1,
+            "segments": 16
+          },
+          {
+            "type": "cylinder",
+            "material": "deep",
+            "position": [
+              0.0,
+              0.28,
+              0.0
+            ],
+            "radius": 0.3,
+            "radius_top": 0.27,
+            "height": 0.07,
+            "segments": 16
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.3253,
+              0.19,
+              0.3253
+            ],
+            "size": [
+              0.34,
+              0.12,
+              0.17
+            ],
+            "rotation": [
+              0.0,
+              -0.7854,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.3253,
+              0.19,
+              0.3253
+            ],
+            "size": [
+              0.34,
+              0.12,
+              0.17
+            ],
+            "rotation": [
+              0.0,
+              -2.3562,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.3253,
+              0.19,
+              -0.3253
+            ],
+            "size": [
+              0.34,
+              0.12,
+              0.17
+            ],
+            "rotation": [
+              0.0,
+              -3.927,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.3253,
+              0.19,
+              -0.3253
+            ],
+            "size": [
+              0.34,
+              0.12,
+              0.17
+            ],
+            "rotation": [
+              0.0,
+              -5.4978,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              0.56,
+              0.23,
+              0.0
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -0.0,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              0.645,
+              0.27,
+              0.0
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -0.0,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              0.396,
+              0.23,
+              0.396
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -0.7854,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              0.4561,
+              0.27,
+              0.4561
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -0.7854,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              0.0,
+              0.23,
+              0.56
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -1.5708,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              0.0,
+              0.27,
+              0.645
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -1.5708,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              -0.396,
+              0.23,
+              0.396
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -2.3562,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              -0.4561,
+              0.27,
+              0.4561
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -2.3562,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              -0.56,
+              0.23,
+              0.0
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -3.1416,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              -0.645,
+              0.27,
+              0.0
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -3.1416,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              -0.396,
+              0.23,
+              -0.396
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -3.927,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              -0.4561,
+              0.27,
+              -0.4561
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -3.927,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              -0.0,
+              0.23,
+              -0.56
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -4.7124,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              -0.0,
+              0.27,
+              -0.645
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -4.7124,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              0.396,
+              0.23,
+              -0.396
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -5.4978,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              0.4561,
+              0.27,
+              -0.4561
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -5.4978,
+              0.0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "glow",
+            "position": [
+              0.0,
+              0.33,
+              0.0
+            ],
+            "radius": 0.2,
+            "radius_top": 0.16,
+            "height": 0.06,
+            "segments": 18
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0.0,
+              0.37,
+              0.0
+            ],
+            "radius": 0.13,
+            "radius_top": 0.11,
+            "height": 0.05,
+            "segments": 18
+          },
+          {
+            "type": "sphere",
+            "material": "eye",
+            "position": [
+              0.0,
+              0.41,
+              0.0
+            ],
+            "radius": 0.095,
+            "segments": 18,
+            "scale": [
+              1.0,
+              0.6,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "aegis-1",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "hull": {
+            "colour": "#3a5972"
+          },
+          "lit": {
+            "colour": "#6f95b0"
+          },
+          "mid": {
+            "colour": "#27405a"
+          },
+          "deep": {
+            "colour": "#16283a"
+          },
+          "rim": {
+            "colour": "#2b6f8c"
+          },
+          "glow": {
+            "colour": "#57dbff"
+          },
+          "hot": {
+            "colour": "#9beeff"
+          },
+          "eye": {
+            "colour": "#e8fdff"
+          }
+        },
+        "parts": [
+          {
+            "type": "cylinder",
+            "material": "hull",
+            "position": [
+              0.0,
+              0.07,
+              0.0
+            ],
+            "radius": 0.63,
+            "radius_top": 0.58,
+            "height": 0.14,
+            "segments": 8
+          },
+          {
+            "type": "cylinder",
+            "material": "rim",
+            "position": [
+              0.0,
+              0.16,
+              0.0
+            ],
+            "radius": 0.6,
+            "radius_top": 0.55,
+            "height": 0.06,
+            "segments": 8
+          },
+          {
+            "type": "cylinder",
+            "material": "mid",
+            "position": [
+              0.0,
+              0.21,
+              0.0
+            ],
+            "radius": 0.4,
+            "radius_top": 0.36,
+            "height": 0.1,
+            "segments": 16
+          },
+          {
+            "type": "cylinder",
+            "material": "deep",
+            "position": [
+              0.0,
+              0.28,
+              0.0
+            ],
+            "radius": 0.3,
+            "radius_top": 0.27,
+            "height": 0.07,
+            "segments": 16
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.3253,
+              0.19,
+              0.3253
+            ],
+            "size": [
+              0.34,
+              0.12,
+              0.17
+            ],
+            "rotation": [
+              0.0,
+              -0.7854,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.3253,
+              0.19,
+              0.3253
+            ],
+            "size": [
+              0.34,
+              0.12,
+              0.17
+            ],
+            "rotation": [
+              0.0,
+              -2.3562,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.3253,
+              0.19,
+              -0.3253
+            ],
+            "size": [
+              0.34,
+              0.12,
+              0.17
+            ],
+            "rotation": [
+              0.0,
+              -3.927,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.3253,
+              0.19,
+              -0.3253
+            ],
+            "size": [
+              0.34,
+              0.12,
+              0.17
+            ],
+            "rotation": [
+              0.0,
+              -5.4978,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              0.5492,
+              0.23,
+              0.1093
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -0.1963,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              0.6326,
+              0.27,
+              0.1258
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -0.1963,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              0.3111,
+              0.23,
+              0.4656
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -0.9817,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              0.3583,
+              0.27,
+              0.5363
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -0.9817,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              -0.1093,
+              0.23,
+              0.5492
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -1.7671,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              -0.1258,
+              0.27,
+              0.6326
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -1.7671,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              -0.4656,
+              0.23,
+              0.3111
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -2.5525,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              -0.5363,
+              0.27,
+              0.3583
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -2.5525,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              -0.5492,
+              0.23,
+              -0.1093
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -3.3379,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              -0.6326,
+              0.27,
+              -0.1258
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -3.3379,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              -0.3111,
+              0.23,
+              -0.4656
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -4.1233,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              -0.3583,
+              0.27,
+              -0.5363
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -4.1233,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              0.1093,
+              0.23,
+              -0.5492
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -4.9087,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              0.1258,
+              0.27,
+              -0.6326
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -4.9087,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              0.4656,
+              0.23,
+              -0.3111
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -5.6941,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              0.5363,
+              0.27,
+              -0.3583
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -5.6941,
+              0.0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "glow",
+            "position": [
+              0.0,
+              0.33,
+              0.0
+            ],
+            "radius": 0.212,
+            "radius_top": 0.172,
+            "height": 0.06,
+            "segments": 18
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0.0,
+              0.37,
+              0.0
+            ],
+            "radius": 0.142,
+            "radius_top": 0.122,
+            "height": 0.05,
+            "segments": 18
+          },
+          {
+            "type": "sphere",
+            "material": "eye",
+            "position": [
+              0.0,
+              0.41,
+              0.0
+            ],
+            "radius": 0.107,
+            "segments": 18,
+            "scale": [
+              1.0,
+              0.6,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "aegis-2",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "hull": {
+            "colour": "#3a5972"
+          },
+          "lit": {
+            "colour": "#6f95b0"
+          },
+          "mid": {
+            "colour": "#27405a"
+          },
+          "deep": {
+            "colour": "#16283a"
+          },
+          "rim": {
+            "colour": "#2b6f8c"
+          },
+          "glow": {
+            "colour": "#57dbff"
+          },
+          "hot": {
+            "colour": "#9beeff"
+          },
+          "eye": {
+            "colour": "#e8fdff"
+          }
+        },
+        "parts": [
+          {
+            "type": "cylinder",
+            "material": "hull",
+            "position": [
+              0.0,
+              0.07,
+              0.0
+            ],
+            "radius": 0.63,
+            "radius_top": 0.58,
+            "height": 0.14,
+            "segments": 8
+          },
+          {
+            "type": "cylinder",
+            "material": "rim",
+            "position": [
+              0.0,
+              0.16,
+              0.0
+            ],
+            "radius": 0.6,
+            "radius_top": 0.55,
+            "height": 0.06,
+            "segments": 8
+          },
+          {
+            "type": "cylinder",
+            "material": "mid",
+            "position": [
+              0.0,
+              0.21,
+              0.0
+            ],
+            "radius": 0.4,
+            "radius_top": 0.36,
+            "height": 0.1,
+            "segments": 16
+          },
+          {
+            "type": "cylinder",
+            "material": "deep",
+            "position": [
+              0.0,
+              0.28,
+              0.0
+            ],
+            "radius": 0.3,
+            "radius_top": 0.27,
+            "height": 0.07,
+            "segments": 16
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.3253,
+              0.19,
+              0.3253
+            ],
+            "size": [
+              0.34,
+              0.12,
+              0.17
+            ],
+            "rotation": [
+              0.0,
+              -0.7854,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.3253,
+              0.19,
+              0.3253
+            ],
+            "size": [
+              0.34,
+              0.12,
+              0.17
+            ],
+            "rotation": [
+              0.0,
+              -2.3562,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.3253,
+              0.19,
+              -0.3253
+            ],
+            "size": [
+              0.34,
+              0.12,
+              0.17
+            ],
+            "rotation": [
+              0.0,
+              -3.927,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.3253,
+              0.19,
+              -0.3253
+            ],
+            "size": [
+              0.34,
+              0.12,
+              0.17
+            ],
+            "rotation": [
+              0.0,
+              -5.4978,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              0.5174,
+              0.23,
+              0.2143
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -0.3927,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              0.5959,
+              0.27,
+              0.2468
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -0.3927,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              0.2143,
+              0.23,
+              0.5174
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -1.1781,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              0.2468,
+              0.27,
+              0.5959
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -1.1781,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              -0.2143,
+              0.23,
+              0.5174
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -1.9635,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              -0.2468,
+              0.27,
+              0.5959
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -1.9635,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              -0.5174,
+              0.23,
+              0.2143
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -2.7489,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              -0.5959,
+              0.27,
+              0.2468
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -2.7489,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              -0.5174,
+              0.23,
+              -0.2143
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -3.5343,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              -0.5959,
+              0.27,
+              -0.2468
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -3.5343,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              -0.2143,
+              0.23,
+              -0.5174
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -4.3197,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              -0.2468,
+              0.27,
+              -0.5959
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -4.3197,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              0.2143,
+              0.23,
+              -0.5174
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -5.1051,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              0.2468,
+              0.27,
+              -0.5959
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -5.1051,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              0.5174,
+              0.23,
+              -0.2143
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -5.8905,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              0.5959,
+              0.27,
+              -0.2468
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -5.8905,
+              0.0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "glow",
+            "position": [
+              0.0,
+              0.33,
+              0.0
+            ],
+            "radius": 0.22,
+            "radius_top": 0.18,
+            "height": 0.06,
+            "segments": 18
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0.0,
+              0.37,
+              0.0
+            ],
+            "radius": 0.15,
+            "radius_top": 0.13,
+            "height": 0.05,
+            "segments": 18
+          },
+          {
+            "type": "sphere",
+            "material": "eye",
+            "position": [
+              0.0,
+              0.41,
+              0.0
+            ],
+            "radius": 0.115,
+            "segments": 18,
+            "scale": [
+              1.0,
+              0.6,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "aegis-3",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "hull": {
+            "colour": "#3a5972"
+          },
+          "lit": {
+            "colour": "#6f95b0"
+          },
+          "mid": {
+            "colour": "#27405a"
+          },
+          "deep": {
+            "colour": "#16283a"
+          },
+          "rim": {
+            "colour": "#2b6f8c"
+          },
+          "glow": {
+            "colour": "#57dbff"
+          },
+          "hot": {
+            "colour": "#9beeff"
+          },
+          "eye": {
+            "colour": "#e8fdff"
+          }
+        },
+        "parts": [
+          {
+            "type": "cylinder",
+            "material": "hull",
+            "position": [
+              0.0,
+              0.07,
+              0.0
+            ],
+            "radius": 0.63,
+            "radius_top": 0.58,
+            "height": 0.14,
+            "segments": 8
+          },
+          {
+            "type": "cylinder",
+            "material": "rim",
+            "position": [
+              0.0,
+              0.16,
+              0.0
+            ],
+            "radius": 0.6,
+            "radius_top": 0.55,
+            "height": 0.06,
+            "segments": 8
+          },
+          {
+            "type": "cylinder",
+            "material": "mid",
+            "position": [
+              0.0,
+              0.21,
+              0.0
+            ],
+            "radius": 0.4,
+            "radius_top": 0.36,
+            "height": 0.1,
+            "segments": 16
+          },
+          {
+            "type": "cylinder",
+            "material": "deep",
+            "position": [
+              0.0,
+              0.28,
+              0.0
+            ],
+            "radius": 0.3,
+            "radius_top": 0.27,
+            "height": 0.07,
+            "segments": 16
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.3253,
+              0.19,
+              0.3253
+            ],
+            "size": [
+              0.34,
+              0.12,
+              0.17
+            ],
+            "rotation": [
+              0.0,
+              -0.7854,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.3253,
+              0.19,
+              0.3253
+            ],
+            "size": [
+              0.34,
+              0.12,
+              0.17
+            ],
+            "rotation": [
+              0.0,
+              -2.3562,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              -0.3253,
+              0.19,
+              -0.3253
+            ],
+            "size": [
+              0.34,
+              0.12,
+              0.17
+            ],
+            "rotation": [
+              0.0,
+              -3.927,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "lit",
+            "position": [
+              0.3253,
+              0.19,
+              -0.3253
+            ],
+            "size": [
+              0.34,
+              0.12,
+              0.17
+            ],
+            "rotation": [
+              0.0,
+              -5.4978,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              0.4656,
+              0.23,
+              0.3111
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -0.589,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              0.5363,
+              0.27,
+              0.3583
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -0.589,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              0.1093,
+              0.23,
+              0.5492
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -1.3744,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              0.1258,
+              0.27,
+              0.6326
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -1.3744,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              -0.3111,
+              0.23,
+              0.4656
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -2.1598,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              -0.3583,
+              0.27,
+              0.5363
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -2.1598,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              -0.5492,
+              0.23,
+              0.1093
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -2.9452,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              -0.6326,
+              0.27,
+              0.1258
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -2.9452,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              -0.4656,
+              0.23,
+              -0.3111
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -3.7306,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              -0.5363,
+              0.27,
+              -0.3583
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -3.7306,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              -0.1093,
+              0.23,
+              -0.5492
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -4.516,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              -0.1258,
+              0.27,
+              -0.6326
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -4.516,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              0.3111,
+              0.23,
+              -0.4656
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -5.3014,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              0.3583,
+              0.27,
+              -0.5363
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -5.3014,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rim",
+            "position": [
+              0.5492,
+              0.23,
+              -0.1093
+            ],
+            "size": [
+              0.2,
+              0.14,
+              0.13
+            ],
+            "rotation": [
+              0.0,
+              -6.0868,
+              0.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "glow",
+            "position": [
+              0.6326,
+              0.27,
+              -0.1258
+            ],
+            "size": [
+              0.09,
+              0.05,
+              0.08
+            ],
+            "rotation": [
+              0.0,
+              -6.0868,
+              0.0
+            ]
+          },
+          {
+            "type": "cylinder",
+            "material": "glow",
+            "position": [
+              0.0,
+              0.33,
+              0.0
+            ],
+            "radius": 0.212,
+            "radius_top": 0.172,
+            "height": 0.06,
+            "segments": 18
+          },
+          {
+            "type": "cylinder",
+            "material": "hot",
+            "position": [
+              0.0,
+              0.37,
+              0.0
+            ],
+            "radius": 0.142,
+            "radius_top": 0.122,
+            "height": 0.05,
+            "segments": 18
+          },
+          {
+            "type": "sphere",
+            "material": "eye",
+            "position": [
+              0.0,
+              0.41,
+              0.0
+            ],
+            "radius": 0.107,
+            "segments": 18,
+            "scale": [
+              1.0,
+              0.6,
+              1.0
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -65,6 +65,19 @@
     y: 22px;
 }
 
+.hud-xp-label {
+    width: 360px;
+    height: 24px;
+    x: 210px;
+    y: 76px;
+    anchor: bottom_left;
+    color: #6bc7ff;
+    font-size: 16px;
+    line-height: 20px;
+    letter-spacing: 2px;
+    text-align: start;
+}
+
 .hud-health-label {
     width: 360px;
     height: 24px;

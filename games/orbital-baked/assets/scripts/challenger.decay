@@ -108,7 +108,14 @@ script Challenger {
             this.speed = 0.72;
             this.transform.scale.x = 1.9;
             this.transform.scale.y = 1.9;
-            tint(0.55, 0.88, 1.0);
+            // No tint. Every other kind is the orange gunship recoloured, and
+            // the Aegis was too: a blue asked for here, which `configure_kind`
+            // sets once and `configure_color_only` overwrote every frame after,
+            // so what actually reached the screen was the shared cream of the
+            // kinds either side over a warm hull. Neither colour was one anybody
+            // chose for it, and neither belonged beside its own blue plates. It
+            // has its own sheet now, so it wears its own steel.
+            tint(1.0, 1.0, 1.0);
         } else if this.kind == 8.0 {
             this.health = 234.0;
             this.worth = 80.0;
@@ -244,6 +251,9 @@ script Challenger {
         else if this.kind == 6.0 { tint(0.45, 0.96, 1.0); }
         else if this.kind == 7.0 { tint(1.0, 0.5, 0.62); }
         else if this.kind == 8.0 { tint(0.43, 1.0, 0.79); }
+        // The Aegis wears its own sheet, so it returns to white here rather
+        // than falling through to the cream the kinds either side share.
+        else if this.kind == 10.0 { tint(1.0, 1.0, 1.0); }
         else { tint(1.0, 0.95, 0.6); }
     }
 
@@ -665,6 +675,11 @@ script Challenger {
     // itself on the first sensor it enters, and the ring orbits outside the
     // hull's own collider -- so while a plate is in the way it eats the shot,
     // and where a plate has been destroyed there is nothing left to eat it.
+    //
+    // The plates are spawned beside this boss rather than under it. See
+    // `shield-segment.decay`: a parent's transform reaches neither the sprite
+    // nor the collider, so a plate has to say where it is in the same
+    // coordinates everything else is reading.
     // Whether this boss can be hurt from where the player is standing is
     // therefore a fact about the world rather than a rule in a script, and it
     // stays true for every weapon in the game including ones added later.
@@ -676,7 +691,7 @@ script Challenger {
         let plates = 8.0;
         var slot: f32 = 0.0;
         while slot < plates {
-            let plate = World.spawn_child(this.shield_segment, this.entity);
+            let plate = World.spawn(this.shield_segment);
             World.set_property(plate, "angle", slot / plates * 6.2831853);
             World.set_property(plate, "radius", 1.55);
             World.set_property(plate, "spin", 0.55);

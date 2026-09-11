@@ -31,12 +31,36 @@ script ShieldSegment {
     }
 
     fn update(dt: f32) {
+        // The ring follows the boss by reading where it is, not by hanging off
+        // it. Parenting would be the obvious way to say this and it is what the
+        // first version did, but a world sprite and a collider both read an
+        // entity's own transform and nothing composes a parent's into it, so
+        // eight plates authored at a local radius drew and blocked in a neat
+        // ring around the origin while the boss flew around somewhere else --
+        // a shield that looked right in a screenshot and stopped nothing.
+        // Tracking the boss states the same intent in coordinates both the
+        // renderer and the physics world already agree about.
+        var cx: f32 = 0.0;
+        var cy: f32 = 0.0;
+        var found: f32 = 0.0;
+        for boss in World.with_tag("boss") {
+            if World.exists(boss) {
+                cx = boss.transform.position.x;
+                cy = boss.transform.position.y;
+                found = 1.0;
+            }
+        }
+        // A plate outlives nothing. Without a boss there is no ring to be part
+        // of, and a plate left behind would be an invisible wall in the arena.
+        if found == 0.0 {
+            World.despawn(this.entity);
+            return;
+        }
+
         this.turn += this.spin * dt;
         let a = this.angle + this.turn;
-        // Local to the boss, because this is spawned as its child: the ring
-        // rides along wherever the boss goes without either of them knowing it.
-        this.transform.position.x = cos(a) * this.radius;
-        this.transform.position.y = sin(a) * this.radius;
+        this.transform.position.x = cx + cos(a) * this.radius;
+        this.transform.position.y = cy + sin(a) * this.radius;
         // Face outward, so the lit edge of the plate is the side being shot at.
         this.transform.rotation_z = a;
         receive_hits();

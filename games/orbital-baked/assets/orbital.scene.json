@@ -1299,6 +1299,7 @@
       "components": {
         "sindri.script": {
           "properties": {
+            "aegis": "prefabs/aegis.prefab.json",
             "arena": 7.5,
             "boss_at": 180.0,
             "charger": "prefabs/charger.prefab.json",
@@ -1601,7 +1602,7 @@
           1.0
         ],
         "scale": [
-          0.84,
+          1.9,
           0.02,
           1.0
         ]
@@ -1649,7 +1650,7 @@
           1.0
         ],
         "scale": [
-          0.84,
+          1.9,
           0.02,
           1.0
         ]
@@ -1693,7 +1694,7 @@
           1.0
         ],
         "scale": [
-          0.84,
+          1.9,
           0.028,
           1.0
         ]
@@ -1741,7 +1742,7 @@
           1.0
         ],
         "scale": [
-          0.84,
+          1.9,
           0.028,
           1.0
         ]
@@ -1810,6 +1811,67 @@
           "layer": 140,
           "line_height": 0.0315,
           "text": "{}/{}",
+          "shadow": {
+            "offset": [
+              0.0,
+              -0.004
+            ],
+            "color": [
+              0.0,
+              0.0,
+              0.0,
+              0.75
+            ],
+            "softness": 0.005
+          },
+          "case": "upper",
+          "letter_spacing": 0.0045,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "hud-xp-text",
+      "name": "CoresText",
+      "parent": "hud",
+      "transform_3d": {
+        "position": [
+          1.16,
+          0.16,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "hud-text",
+            "hud-xp-label"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "bottom_left",
+          "color": [
+            0.42,
+            0.78,
+            1.0,
+            1.0
+          ],
+          "font": "fonts/IBMPlexMono-Regular.ttf",
+          "font_size": 0.03,
+          "layer": 140,
+          "line_height": 0.0315,
+          "text": "XP {}/{}",
           "shadow": {
             "offset": [
               0.0,
@@ -2500,6 +2562,23 @@
           },
           "playing": "idle",
           "speed": 1.0
+        },
+        "sindri.effect.burst": {
+          "texture": "textures/fleck.png",
+          "count": 30,
+          "speed": 6.4,
+          "spread": 0.62,
+          "lifetime": 0.52,
+          "size": 0.085,
+          "tint": [
+            0.45,
+            1.0,
+            0.72,
+            1.0
+          ],
+          "fade": true,
+          "drag": 1.5,
+          "layer": 6
         }
       }
     },
@@ -3349,7 +3428,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          -0.8,
+          -0.96,
           0.0
         ],
         "rotation": [
@@ -3511,7 +3590,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          -0.55,
+          -0.3,
           0.0
         ],
         "rotation": [
@@ -3577,7 +3656,7 @@
       "transform_3d": {
         "position": [
           0.0,
-          -0.55,
+          -0.3,
           0.0
         ],
         "rotation": [
@@ -3612,6 +3691,234 @@
           "layer": 140,
           "line_height": 0.063,
           "text": "START",
+          "case": "as_written",
+          "letter_spacing": 0.0012,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "title-rush",
+      "name": "TitleRush",
+      "parent": "title",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.52,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.84,
+          0.115,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "title-action",
+            "title-rush"
+          ]
+        },
+        "sindri.script": {
+          "properties": {
+            "action": 4.0
+          },
+          "script": "Button",
+          "source": "scripts/button.decay"
+        },
+        "sindri.ui.button": {
+          "label": "title-start"
+        },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.20156,
+            0.92158,
+            0.57758,
+            1.0
+          ],
+          "stroke": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "stroke_width": 0.0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "anchor": "center",
+          "layer": 110
+        }
+      }
+    },
+    {
+      "id": "title-rush-text",
+      "name": "TitleRushText",
+      "parent": "title",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.52,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "title-action-label",
+            "title-rush-label"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.00152,
+            0.00212,
+            0.00439,
+            1.0
+          ],
+          "font": "fonts/ChakraPetch-Bold.ttf",
+          "font_size": 0.06,
+          "layer": 140,
+          "line_height": 0.063,
+          "text": "BOSS RUSH",
+          "case": "as_written",
+          "letter_spacing": 0.0012,
+          "bold": false
+        }
+      }
+    },
+    {
+      "id": "title-pick",
+      "name": "TitlePick",
+      "parent": "title",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.74,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.84,
+          0.115,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "title-action",
+            "title-pick"
+          ]
+        },
+        "sindri.script": {
+          "properties": {
+            "action": 5.0
+          },
+          "script": "Button",
+          "source": "scripts/button.decay"
+        },
+        "sindri.ui.button": {
+          "label": "title-start"
+        },
+        "sindri.ui.shape": {
+          "kind": "rect",
+          "count": 6.0,
+          "fill": [
+            0.20156,
+            0.92158,
+            0.57758,
+            1.0
+          ],
+          "stroke": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "stroke_width": 0.0,
+          "corner_radius": 0.0,
+          "dashes": 0.0,
+          "dash_duty": 0.5,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0,
+          "blend": "over",
+          "anchor": "center",
+          "layer": 110
+        }
+      }
+    },
+    {
+      "id": "title-pick-text",
+      "name": "TitlePickText",
+      "parent": "title",
+      "transform_3d": {
+        "position": [
+          0.0,
+          -0.74,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "weave.style": {
+          "classes": [
+            "title-action-label",
+            "title-pick-label"
+          ]
+        },
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            0.00152,
+            0.00212,
+            0.00439,
+            1.0
+          ],
+          "font": "fonts/ChakraPetch-Bold.ttf",
+          "font_size": 0.06,
+          "layer": 140,
+          "line_height": 0.063,
+          "text": "OPENS ON  WARDEN",
           "case": "as_written",
           "letter_spacing": 0.0012,
           "bold": false

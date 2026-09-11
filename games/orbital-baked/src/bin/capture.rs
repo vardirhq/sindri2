@@ -28,35 +28,50 @@ use sindri_scene::{CameraView, SceneRuntime, TextureBindings, UiCanvas, WorldPro
 /// the person did in that time.
 struct Shot {
     seconds: f32,
-    /// Press this element once play has settled, by the name the scene gave it.
-    click: Option<&'static str>,
+    /// Press these elements in order once play has settled, by the names the
+    /// scene gave them.
+    clicks: Vec<String>,
 }
 
 fn shot_for(name: &str) -> Shot {
+    // `boss-7` opens a boss rush on the eighth boss of the roster, so any one
+    // of the twelve can be photographed on demand rather than waited for.
+    if let Some(index) = name.strip_prefix("boss-")
+        && let Ok(index) = index.parse::<usize>()
+    {
+        let mut clicks = vec!["TitlePick".to_owned(); index];
+        clicks.push("TitleRush".to_owned());
+        return Shot {
+            // Long enough for the boss to descend into the frame and open with
+            // whatever it opens with.
+            seconds: 7.0,
+            clicks,
+        };
+    }
     match name {
         // A run in progress: enemies out, bullets flying, the HUD live.
         "playing" => Shot {
             seconds: 12.0,
-            click: Some("TitleStart"),
+            clicks: vec!["TitleStart".to_owned()],
         },
         // Mid-fight, before the first upgrade interrupts it. This is the shot
         // that shows the cast, which "playing" at twelve seconds does not:
         // by then the chooser is up and covering the field.
         "combat" => Shot {
             seconds: 5.0,
-            click: Some("TitleStart"),
+            clicks: vec!["TitleStart".to_owned()],
         },
         // A deliberately excessive combat build used to inspect the complete
         // effect vocabulary together: spread fire, every proc, and companions.
         "spectacle" => Shot {
             seconds: 5.0,
-            click: Some("TitleStart"),
+            clicks: vec!["TitleStart".to_owned()],
         },
         // The title screen, which is what a player sees first and what every
         // layout mistake shows up on.
         _ => Shot {
             seconds: 0.2,
-            click: None,
+            clicks: Vec::new(),
         },
     }
 }
@@ -129,8 +144,11 @@ async fn capture(
     for _ in 0..8 {
         run.step(1.0 / 60.0);
     }
-    if let Some(element) = shot.click {
+    for element in &shot.clicks {
         run.click(element);
+        // One frame between presses: the picker reads its own board value back
+        // on the next update, so pressing it twice in a frame advances it once.
+        run.step(1.0 / 60.0);
     }
     if what == "spectacle" {
         run.set_board("shots_add", 2.0);

@@ -8,6 +8,9 @@ script Director {
     @export let splitter: Prefab;
     @export let warden: Prefab;
     @export let challenger: Prefab;
+    // The Aegis has its own sheet: its hull is a fortress hub rather than a
+    // repainted gunship, so it cannot ride the challenger's frames.
+    @export let aegis: Prefab;
     @export let wave_gap: f32 = 6.0;
     @export let boss_at: f32 = 180.0;
     @export let first_boss_at: f32 = 60.0;
@@ -36,6 +39,7 @@ script Director {
     var spawn_timer: f32 = 0.0;
     var next_boss: f32 = 60.0;
     var boss_was_alive: f32 = 0.0;
+    var rush_index: f32 = 0.0;
     var boss_count: f32 = 0.0;
     var last_boss: f32 = -1.0;
     var previous_boss: f32 = -1.0;
@@ -60,6 +64,10 @@ script Director {
     }
 
     fn begin() {
+        // A boss rush opens on whichever boss the title screen was showing, and
+        // walks the roster from there. Everything else about the run is the
+        // same run: the same director, the same upgrades, the same death.
+        this.rush_index = Game.get("rush_from", 0.0);
         let seed = Save.number("runs", 0.0) + 1.0;
         Save.set_number("runs", seed);
         Random.seed(seed);
@@ -103,7 +111,17 @@ script Director {
         World.set_active(this.title, false);
         World.set_active(this.hud, true);
         World.set_active(this.result_screen, false);
+        if rushing() > 0.0 {
+            // No warm-up in a rush: the first boss is the point of pressing the
+            // button, so it arrives rather than being waited for.
+            this.next_boss = 0.0;
+        }
         Game.set("run_state", 1.0);
+    }
+
+    /// Whether this run is a boss rush.
+    fn rushing() -> f32 {
+        return Game.get("mode", 0.0);
     }
 
     fn clear_tag(tag: String) {
@@ -176,7 +194,13 @@ script Director {
         // between simply never happened, and the longer a fight ran the less
         // breathing room it earned.
         if this.boss_was_alive > 0.0 && !boss_alive {
-            this.next_boss = this.elapsed + this.boss_interval;
+            if rushing() > 0.0 {
+                // Long enough to breathe and take the upgrade, short enough
+                // that the next one is clearly the point.
+                this.next_boss = this.elapsed + 4.0;
+            } else {
+                this.next_boss = this.elapsed + this.boss_interval;
+            }
         }
         if boss_alive { this.boss_was_alive = 1.0; } else { this.boss_was_alive = 0.0; }
 
@@ -187,6 +211,12 @@ script Director {
             return;
         }
         if boss_alive { return; }
+
+        // A rush is bosses. Ordinary enemies would only be in the way of
+        // looking at one.
+        if rushing() > 0.0 {
+            return;
+        }
 
         this.spawn_timer -= dt;
         let rate = spawn_rate();
@@ -359,6 +389,17 @@ script Director {
         // eleven at 8:00. Avoid either of the two most recent eligible picks.
         let boss_pool = eligible_boss_count();
         Game.set("boss_pool", boss_pool);
+
+        // A rush walks the whole roster in order and wraps, so pressing the
+        // button is the way to see every boss in the game rather than the way
+        // to see whichever four the clock has unlocked.
+        if rushing() > 0.0 {
+            let picked = this.rush_index % 12.0;
+            this.rush_index = picked + 1.0;
+            send_kind(picked);
+            return;
+        }
+
         var pick: f32 = Random.int(0.0, boss_pool - 1.0);
         var attempts: f32 = 0.0;
         while attempts < 8.0 && (pick == this.last_boss || pick == this.previous_boss) {
@@ -372,9 +413,17 @@ script Director {
         this.previous_boss = this.last_boss;
         this.last_boss = pick;
 
+        send_kind(pick);
+    }
+
+    /// Put one boss on the field: zero is the Warden, eleven is the Aegis, and
+    /// the rest are the challenger prefab's kinds offset by one.
+    fn send_kind(pick: f32) {
         var boss: Entity = null;
         if pick == 0.0 {
             boss = World.spawn(this.warden);
+        } else if pick == 11.0 {
+            boss = World.spawn(this.aegis);
         } else {
             boss = World.spawn(this.challenger);
             World.set_property(boss, "kind", pick - 1.0);
