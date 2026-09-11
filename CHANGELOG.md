@@ -4,6 +4,25 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **Every baked rotation in both Orbital games was doing nothing.** A model
+  part's `rotation` is three Euler angles in degrees, and all 822 of them across
+  the nine `games/orbital-*` recipes were authored in radians. Read as degrees,
+  a quarter turn became a nudge of one and a half degrees, so every part kept
+  its position and lost its orientation.
+
+  It failed quietly, which is why it survived: the models still baked, still had
+  the right silhouette and the right size, and simply pointed nowhere. A ring of
+  blades meant to face outward came out a ring of parallel planks. The drifter's
+  spokes, the warden's cannons, the aegis's plates and the swept wings on the
+  player, core and charger are all in the recipes and none of them reached the
+  screen.
+
+  The recipes are converted and re-baked, whole degrees snapped to whole degrees
+  so the baker's exact quarter turns stay exact. The unit is now stated in
+  `docs/isometric-baker.md` and asserted in `tools/isometric-baker/test`,
+  including the specific case of radians-as-degrees, because a recipe with the
+  wrong unit bakes successfully and looks merely mediocre.
+
 - **Sindri will manage its own model runner.** A prebuilt llama.cpp server is
   about 31 MB and needs no installation at all — it is a binary unpacked into
   your own folder — where Ollama is a system service with a gigabyte installer
