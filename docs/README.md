@@ -47,6 +47,7 @@ contracts below; dated evidence should not override them.
 
 - [Editor architecture](editor-architecture.md)
 - [Editor design QA](../design-qa.md)
+- [Local-first AI authoring architecture](local-ai-architecture.md)
 
 The editor audits below are dated investigations. Their resolved findings remain
 valuable explanations of how bugs escaped code review, but
