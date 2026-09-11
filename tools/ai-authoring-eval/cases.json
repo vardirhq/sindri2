@@ -208,6 +208,9 @@
             "components": {}
           }
         ],
+        "parent_relationships": [
+          { "parent_name": "Camera Rig", "child_name": "Camera" }
+        ],
         "forbidden_operations": ["set_parent"]
       }
     },
