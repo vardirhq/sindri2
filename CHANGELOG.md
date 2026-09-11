@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Sindri Next will be documented here.
+All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 

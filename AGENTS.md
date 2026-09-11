@@ -1,13 +1,13 @@
 # AGENTS.md
 
-Repository guidance for AI coding agents working on Sindri Next.
+Repository guidance for AI coding agents working on Sindri Engine.
 
 Read this file before making changes. Repository documents and the current code
 are authoritative over remembered context from earlier sessions.
 
 ## Product direction
 
-Sindri Next is a pre-alpha Rust game engine targeting native desktop and WebGPU
+Sindri Engine is a pre-alpha Rust game engine targeting native desktop and WebGPU
 browsers, with a native editor, the Decay gameplay language, and two games that
 prove it. The engine is developed vertically: runtime capability,
 authoring, scripting, and a real game should evolve together where the feature

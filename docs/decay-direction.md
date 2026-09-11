@@ -7,7 +7,7 @@
 > superseded Rhai recommendation is retained later in this document as a dated
 > decision record.
 
-Sindri Next's existing engine foundation remains a good fit for a simpler authoring model than the original Rust + TypeScript split.
+The existing engine foundation remains a good fit for a simpler authoring model than the original Rust + TypeScript split.
 
 The proposed direction is:
 
@@ -77,7 +77,7 @@ sindri test
 
 Exact CLI commands are not specified here.
 
-## Fit with Sindri Next today
+## Fit with Sindri Engine today
 
 This direction does **not** imply restarting the engine.
 
@@ -277,7 +277,7 @@ The README's own headline example did not execute. All three are fixed and teste
 
 ## The decision
 
-**Decay is the scripting language for Sindri Next. Rhai is not adopted, and the question is closed.** Decided 2026-08-20, after the foundation was built and reviewed.
+**Decay is the scripting language for Sindri Engine. Rhai is not adopted, and the question is closed.** Decided 2026-08-20, after the foundation was built and reviewed.
 
 This settles a real cost rather than a preference: a scripting host maintained against two runtimes is worse than either, and the typed-authoring argument that justifies Decay only pays off if Decay is the actual path rather than a hedge. Nothing in the tree ever depended on Rhai — the spike was deliberately never committed — so there is nothing to remove. What ends is treating it as a live option.
 

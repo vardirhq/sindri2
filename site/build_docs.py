@@ -129,25 +129,47 @@ def table_of_contents(body: str) -> str:
     return f"<b>ON THIS PAGE</b>{items}"
 
 
+# The lockup is inline SVG rather than an asset so a documentation page is a
+# single request against one stylesheet, and so it cannot go missing from a
+# route that was assembled without the images.
+MARK = (
+    '<svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">'
+    '<polygon points="16,3 27.26,9.5 27.26,22.5 16,29 4.74,22.5 4.74,9.5" '
+    'stroke="#e6e1d4" stroke-width="1.6" fill="none"/>'
+    '<polygon points="16,9 22.06,12.5 22.06,19.5 16,23 9.94,19.5 9.94,12.5" '
+    'stroke="#e6e1d4" stroke-width="1.2" fill="none"/>'
+    '<polygon points="16,13.2 18.42,14.6 18.42,17.4 16,18.8 13.58,17.4 13.58,14.6" '
+    'fill="#f0c050"/>'
+    "</svg>"
+)
+
 TEMPLATE = """<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#0b0d10">
-<title>{title} — Sindri Docs</title>
+<meta name="theme-color" content="#0d1117">
+<title>{title} — Sindri Engine docs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../../assets/site.css">
 </head>
 <body class="docs-body">
 <header class="nav">
-<a class="brand" href="../../"><span class="brandmark">S</span><span>Sindri</span><small>DOCS</small></a>
+<div class="shell">
+<a class="brand" href="../../">{mark}<span>
+<span class="wordmark">S<i>I</i>NDR<i>I</i></span>
+<span class="tagline"><span class="rule"></span><span class="chip">DOCS</span></span>
+</span></a>
 <nav>
-<a href="../documentation/">Docs</a>
-<a href="../scripting/">Decay</a>
-<a href="../weave/">Weave</a>
-<a href="../../examples/gather/">Gather</a>
-<a href="https://github.com/vardirhq/sindri2">GitHub ↗</a>
+<a href="../documentation/">docs</a>
+<a href="../scripting/">decay</a>
+<a href="../weave/">weave</a>
+<a href="../../examples/gather/">gather</a>
+<a class="ghost" href="https://github.com/vardirhq/sindri2">github ↗</a>
 </nav>
+</div>
 </header>
 <div class="docs-shell">
 <aside class="sidebar"><nav>{nav}</nav></aside>
@@ -155,9 +177,14 @@ TEMPLATE = """<!doctype html>
 <aside class="toc">{toc}</aside>
 </div>
 <footer>
-<span>SINDRI</span>
-<p>Documentation generated from the repository sources.</p>
-<a href="https://github.com/vardirhq/sindri2">Edit on GitHub ↗</a>
+<div class="shell">
+<div class="brand">{mark}<span>
+<span class="wordmark">SINDRI</span>
+<span class="tagline"><span class="rule"></span><span class="chip">ENGINE</span></span>
+</span></div>
+<span>generated from the repository sources</span>
+<a href="https://github.com/vardirhq/sindri2">edit on github ↗</a>
+</div>
 </footer>
 </body>
 </html>
@@ -183,6 +210,7 @@ for slug, title, path, kicker in PAGES:
         TEMPLATE.format(
             title=html.escape(title),
             kicker=kicker,
+            mark=MARK,
             nav=navigation(slug),
             body=body,
             toc=table_of_contents(body),

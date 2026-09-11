@@ -2,7 +2,7 @@
 
 This document asks a deliberately concrete question:
 
-> Could [Orbital Last Stand](https://github.com/MadsenDev/tester-repo), as it exists today, be created in Sindri Next, as Sindri exists today?
+> Could [Orbital Last Stand](https://github.com/MadsenDev/tester-repo), as it exists today, be created in Sindri Engine, as Sindri exists today?
 
 It is a capability audit, not a commitment to port the game and not an argument
 that Sindri should become a survivor-like-specific engine. Orbital Last Stand is

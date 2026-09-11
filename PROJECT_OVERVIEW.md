@@ -1,4 +1,4 @@
-# Sindri Next
+# Sindri Engine
 
 > **Historical architecture brief.** This document preserves the original
 > Rust + first-class TypeScript product proposal and is no longer the current
@@ -13,7 +13,7 @@
 
 ## Project overview
 
-Sindri Next is a **general-purpose 2D and 3D game engine written primarily in Rust**, designed to run both natively and in modern web browsers.
+Sindri Engine is a **general-purpose 2D and 3D game engine written primarily in Rust**, designed to run both natively and in modern web browsers.
 
 The engine should use Rust for its runtime, rendering, world model, physics integration, asset systems, and performance-sensitive functionality while providing a **first-class TypeScript/JavaScript API for browser game developers**.
 
