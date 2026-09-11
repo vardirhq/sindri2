@@ -72,6 +72,28 @@ impl Transaction {
         self.commands.len()
     }
 
+    /// Runs the whole group against a copy, changing nothing.
+    ///
+    /// Returns the world the transaction *would* produce, or the error that
+    /// would stop it. The live world is untouched and no undo step is recorded,
+    /// which is what separates asking whether an edit is possible from making
+    /// it.
+    ///
+    /// This exists for hosts that must show a person what a group of commands
+    /// would do before it is allowed to happen — an authoring proposal from a
+    /// model, most obviously, where validation must never be the thing that
+    /// mutates. `apply` already rolls back a rejected group, so this is not
+    /// about safety; it is about being able to answer the question at all
+    /// without the answer being visible in the editor for a frame.
+    ///
+    /// Costs a clone of the world, so it belongs on a deliberate action rather
+    /// than in a frame loop.
+    pub fn rehearse(&self, world: &World) -> Result<World, CommandError> {
+        let mut trial = world.clone();
+        self.clone().apply(&mut trial)?;
+        Ok(trial)
+    }
+
     /// Applies every command in order, returning the transaction that reverses it.
     ///
     /// Application is all-or-nothing: a rejected command rolls back the ones

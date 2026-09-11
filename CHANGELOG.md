@@ -4,6 +4,28 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **A world can resolve a scene's stable identities, and a transaction can be
+  rehearsed.** Two small additions to `sindri-core`, both of which a host for
+  the AI authoring protocol cannot be written without, and both useful on their
+  own account.
+
+  `World::entity_for_source_id` and `World::source_id_map` answer the direction
+  that was missing. A world could mint stable IDs and write them out, but
+  nothing could read one back, so every caller holding a serialized identity
+  walked the entities itself and decided what to do about a tie. Anything that
+  names an entity the way the *file* does — a saved selection, a prefab
+  reference, an authoring proposal — needs this, because a runtime handle means
+  nothing once the scene has been reloaded. The answer is unambiguous by
+  construction: two entities cannot share a stable ID, so a reference resolves
+  to one entity or to none.
+
+  `Transaction::rehearse` runs a whole group against a copy and returns the
+  world it would produce, or the error that would stop it, leaving the live
+  world and the undo stack untouched. `apply` already rolls back a refusal, so
+  this is not about safety — it is about being able to ask *what would this do*
+  without the answer being visible in the editor for a frame, which is what a
+  host showing a proposal for acceptance needs.
+
 - **Ctrl+K finds anything.** One field that searches panels, the scene's
   entities, the project's files and scenes, the arrangements, and the editor's
   verbs — and does the thing when you press Enter. Arrow keys move, Escape

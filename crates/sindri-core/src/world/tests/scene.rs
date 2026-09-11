@@ -123,3 +123,97 @@ fn saving_survives_slot_reuse_after_despawn() {
         ["alpha", "root"]
     );
 }
+
+/// Resolving a stable identity back to the entity it names.
+///
+/// The direction an authoring host needs: a proposal, a saved selection and a
+/// prefab reference all name entities the way the file does, because a runtime
+/// handle means nothing once the scene has been reloaded.
+mod source_ids {
+    use crate::{EntityData, SceneEntityId, World};
+
+    fn identified(world: &mut World, id: &str) -> crate::EntityId {
+        let source_id = SceneEntityId::new(id).expect("a valid stable id");
+        world.spawn(EntityData {
+            source_id: Some(source_id),
+            ..EntityData::default()
+        })
+    }
+
+    #[test]
+    fn a_stable_id_resolves_to_its_entity() {
+        let mut world = World::default();
+        let first = identified(&mut world, "player");
+        let second = identified(&mut world, "director");
+        let player = SceneEntityId::new("player").expect("a valid stable id");
+        let director = SceneEntityId::new("director").expect("a valid stable id");
+        assert_eq!(world.entity_for_source_id(&player), Some(first));
+        assert_eq!(world.entity_for_source_id(&director), Some(second));
+    }
+
+    /// "Resolve references without guessing" is the host's rule, so an identity
+    /// nothing carries is an answer of none rather than a nearby entity.
+    #[test]
+    fn an_unknown_stable_id_resolves_to_nothing() {
+        let mut world = World::default();
+        identified(&mut world, "player");
+        let absent = SceneEntityId::new("nobody").expect("a valid stable id");
+        assert_eq!(world.entity_for_source_id(&absent), None);
+    }
+
+    /// An entity spawned at runtime carries no stable id until one is assigned,
+    /// and must not be reachable through this before it has one.
+    #[test]
+    fn an_entity_with_no_stable_id_is_not_resolvable() {
+        let mut world = World::default();
+        let spawned = world.spawn(EntityData::default());
+        assert!(
+            world
+                .source_id_map()
+                .values()
+                .all(|entity| *entity != spawned)
+        );
+    }
+
+    #[test]
+    fn a_despawned_entity_stops_resolving() {
+        let mut world = World::default();
+        let entity = identified(&mut world, "player");
+        let player = SceneEntityId::new("player").expect("a valid stable id");
+        assert_eq!(world.entity_for_source_id(&player), Some(entity));
+        world
+            .despawn_recursive(entity)
+            .expect("an entity with no children despawns");
+        assert_eq!(world.entity_for_source_id(&player), None);
+    }
+
+    /// The bulk form, for a caller resolving a dozen references at once.
+    #[test]
+    fn the_map_holds_every_identity_the_world_carries() {
+        let mut world = World::default();
+        let first = identified(&mut world, "player");
+        let second = identified(&mut world, "director");
+        world.spawn(EntityData::default());
+        let map = world.source_id_map();
+        assert_eq!(map.len(), 2, "only the entities carrying an identity");
+        assert_eq!(
+            map.get(&SceneEntityId::new("player").expect("a valid stable id")),
+            Some(&first)
+        );
+        assert_eq!(
+            map.get(&SceneEntityId::new("director").expect("a valid stable id")),
+            Some(&second)
+        );
+    }
+
+    /// The two forms must not be able to disagree.
+    #[test]
+    fn the_map_and_the_single_lookup_agree() {
+        let mut world = World::default();
+        identified(&mut world, "player");
+        identified(&mut world, "director");
+        for (source_id, entity) in world.source_id_map() {
+            assert_eq!(world.entity_for_source_id(&source_id), Some(entity));
+        }
+    }
+}

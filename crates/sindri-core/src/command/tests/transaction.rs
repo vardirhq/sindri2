@@ -186,3 +186,112 @@ fn empty_transactions_are_not_recorded() {
     assert_eq!(history.undo(&mut world).unwrap(), None);
     assert_eq!(history.redo(&mut world).unwrap(), None);
 }
+
+/// Asking what a group of commands would do, without it happening.
+///
+/// The property a host showing a proposal depends on: validation must never be
+/// the thing that mutates, and the preview must be the real outcome rather than
+/// a description of one.
+mod rehearsal {
+    use crate::{CommandHistory, Transform3D, World, WorldCommand};
+
+    use super::super::support::{edit, world_with_two_entities};
+
+    fn named(world: &World, entity: crate::EntityId) -> Option<String> {
+        world.get(entity).and_then(|data| data.name.clone())
+    }
+
+    #[test]
+    fn a_rehearsal_leaves_the_world_alone() {
+        let (world, entity, _) = world_with_two_entities();
+        let before = named(&world, entity);
+        let group = edit(
+            "Rename",
+            vec![WorldCommand::SetName {
+                entity,
+                name: Some("Renamed".into()),
+            }],
+        );
+        group.rehearse(&world).expect("the rename is allowed");
+        assert_eq!(
+            named(&world, entity),
+            before,
+            "the live world must be untouched by being asked"
+        );
+    }
+
+    #[test]
+    fn a_rehearsal_returns_the_world_the_group_would_produce() {
+        let (world, entity, _) = world_with_two_entities();
+        let group = edit(
+            "Rename",
+            vec![WorldCommand::SetName {
+                entity,
+                name: Some("Renamed".into()),
+            }],
+        );
+        let trial = group.rehearse(&world).expect("the rename is allowed");
+        assert_eq!(named(&trial, entity).as_deref(), Some("Renamed"));
+    }
+
+    /// A group that would be refused is refused here too, with the same error,
+    /// so a host can show why without trying it for real first.
+    #[test]
+    fn a_rehearsal_reports_the_refusal_the_real_thing_would() {
+        let (mut world, entity, _) = world_with_two_entities();
+        world.get_mut(entity).unwrap().transform_3d = Some(Transform3D {
+            position: [0.0, 0.0, -50.0],
+            z_locked: true,
+            ..Transform3D::default()
+        });
+        let group = edit(
+            "Move",
+            vec![WorldCommand::SetTransform3D {
+                entity,
+                transform: Some(Transform3D {
+                    position: [1.0, 2.0, 3.0],
+                    z_locked: true,
+                    ..Transform3D::default()
+                }),
+            }],
+        );
+        let refused = group.rehearse(&world).expect_err("the z lock refuses it");
+        let mut history = CommandHistory::default();
+        let real = history
+            .apply(group, &mut world)
+            .expect_err("and refuses it for real too");
+        assert_eq!(refused.to_string(), real.to_string());
+    }
+
+    /// Rehearsing is not applying, so nothing to undo comes of it.
+    #[test]
+    fn a_rehearsal_records_no_undo_step() {
+        let (world, entity, _) = world_with_two_entities();
+        let history = CommandHistory::default();
+        let group = edit(
+            "Rename",
+            vec![WorldCommand::SetName {
+                entity,
+                name: Some("Renamed".into()),
+            }],
+        );
+        group.rehearse(&world).expect("the rename is allowed");
+        assert!(!history.can_undo());
+    }
+
+    /// And it can be asked twice, because it consumed nothing the first time.
+    #[test]
+    fn a_group_can_be_rehearsed_more_than_once() {
+        let (world, entity, _) = world_with_two_entities();
+        let group = edit(
+            "Rename",
+            vec![WorldCommand::SetName {
+                entity,
+                name: Some("Renamed".into()),
+            }],
+        );
+        let first = group.rehearse(&world).expect("allowed");
+        let second = group.rehearse(&world).expect("allowed again");
+        assert_eq!(named(&first, entity), named(&second, entity));
+    }
+}

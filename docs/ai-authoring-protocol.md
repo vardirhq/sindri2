@@ -432,6 +432,39 @@ Stored audit records should include:
 
 Audit records must not contain provider credentials.
 
+## Host adapter readiness
+
+What a Sindri host adapter needs from the engine, audited against it rather than
+assumed. The operations were designed against the real command surface, and it
+shows: every one of them already had a checked command behind it.
+
+| Protocol requirement | Engine | Where |
+| --- | :-: | --- |
+| `set_scene_name` | ✅ | `WorldCommand::SetSceneName` |
+| `spawn` | ✅ | `WorldCommand::Spawn` |
+| `despawn` | ✅ | `WorldCommand::Despawn` |
+| `set_name` | ✅ | `WorldCommand::SetName` |
+| `set_transform` | ✅ | `WorldCommand::SetTransform3D` |
+| `set_parent` | ✅ | `WorldCommand::SetParent` |
+| `set_component` | ✅ | `WorldCommand::SetComponent` |
+| `remove_component` | ✅ | `WorldCommand::RemoveComponent` |
+| `set_disabled` | ✅ | `WorldCommand::SetDisabled` |
+| Applied atomically, one undo step carrying `label`, failure leaves the world unchanged | ✅ | `Transaction` — a rejected command rolls back the ones already applied |
+| Resolve entity references without guessing | ✅ | `World::entity_for_source_id`, `World::source_id_map` |
+| Dry-run the complete proposal against temporary state | ✅ | `Transaction::rehearse` |
+| Verify the authoring manifest hash | ⚠️ | `docs/generated/sindri-capabilities.json` carries the components and its schema, engine and scene-format versions, but no hash. Blocked on the first open question below |
+
+Resolution is unambiguous by construction rather than by convention:
+`WorldCommand::SetSourceId` refuses to give two entities the same stable ID, and
+a scene carrying a duplicate fails to load. So a reference resolves to one
+entity or to nothing, and a host never has to choose between candidates.
+
+`rehearse` exists because validation must never be the thing that mutates.
+`Transaction::apply` already rolls back a rejected group, so this is not about
+safety — it is about answering *what would this do* without the answer being
+visible in the editor for a frame, and about the preview being the real outcome
+rather than a description of one.
+
 ## Open design questions
 
 - The exact generated authoring manifest schema and compatibility policy.
