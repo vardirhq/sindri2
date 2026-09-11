@@ -93,6 +93,8 @@ def load_cases(path: Path, selected: list[str] | None) -> list[dict[str, Any]]:
     cases = corpus.get("cases")
     if not isinstance(cases, list):
         raise ValueError("corpus cases must be an array")
+    if any(not isinstance(case, dict) for case in cases):
+        raise ValueError("every corpus case must be an object")
     ids = [case.get("id") for case in cases if isinstance(case, dict)]
     if len(ids) != len(set(ids)) or any(not isinstance(case_id, str) for case_id in ids):
         raise ValueError("case IDs must be unique strings")
