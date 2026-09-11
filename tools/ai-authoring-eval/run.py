@@ -14,7 +14,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from protocol import Diagnostic, parse_response, validate_proposal
+from protocol import parse_response, validate_proposal
 
 TOOL_DIR = Path(__file__).resolve().parent
 DEFAULT_ENDPOINT = "http://127.0.0.1:11434/v1/chat/completions"
