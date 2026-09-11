@@ -4,6 +4,77 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **The scene view is the document.** The editor now opens in a `Canvas`
+  arrangement: the scene fills the window, the hierarchy and the project browser
+  overlay its corners, and the inspector stays docked at the edge. A panel can
+  now be placed one of two ways — a **dock** takes room from the scene, an
+  **overlay** floats over it, anchored to one of the scene's four corners — and
+  the rule for reaching an empty one is that **edges dock and corners float**.
+
+  Overlays anchor and stack rather than floating freely, so two sharing a corner
+  sit one above the other and cannot be piled on each other by accident.
+  Clicking the tab already showing rolls one up to its strip and back down,
+  which is the answer to the honest objection to overlays: they cover the world.
+  They are drawn opaque on purpose — a translucent panel is legible over a
+  mockup's calm sky and unreadable over a dense tileset.
+
+  The inspector is deliberately *not* floating. It would move on every selection
+  so no muscle memory could form, it would cover the neighbours a value is being
+  judged against, and a schema-driven entity is thirty fields deep. Verbs travel
+  well; properties do not.
+
+  The previous arrangement is kept as the `Docked` preset rather than archived,
+  so changing your mind costs a menu click. `docs/editor-direction.md` records
+  what this direction takes from the canvas-first proposal, what it declines and
+  why, and the two things — liveness, and the change-to-consequence loop — that
+  no mockup can show and that this must not be allowed to reorder.
+
+- **The console reports the size of a problem rather than the size of its own
+  log.** It collapsed a repeated message into a count only when the repeat was
+  the entry *immediately* before it, and nothing fails on its own: a frame
+  reports a rotation of failures — one per entity, one per script — so an
+  identical pair is almost never adjacent and the collapsing almost never
+  fired. Every frame added the whole rotation again. Opening Orbital Last Stand
+  filled the console with the same handful of errors and put seventy-two on the
+  status bar.
+
+  A repeat is now counted against any matching entry in the window, and counted
+  where that entry already sits rather than moved to the end: recurring failures
+  settle with their counts climbing while anything new still arrives at the
+  bottom, instead of the whole list churning once a frame. The status bar's
+  count is of distinct failures, which is the number worth reading.
+
+- **The editor's panels are arranged by the person using it.** Every panel —
+  Scene, Game, Hierarchy, Inspector, Project, Console, History — is now a tab,
+  and every tab is dragged into any of seven slots: two columns down each side,
+  one along the bottom, and the centre split in two. Dropping onto a tab strip
+  inserts between the tabs it lands between; dropping on a window edge opens a
+  slot nothing was in. An empty slot is not drawn. The arrangement and each
+  slot's size survive a restart, `View → Panels` reopens anything closed, and
+  `View → Arrangement` offers the presets as starting points rather than as the
+  only shapes the editor has.
+
+  The Console opens beside the Scene view in the default arrangement. It used to
+  share one bottom slot with the project browser and the history, so reading the
+  log meant giving up the browser — and what the console says is usually about
+  the thing in the viewport next to it.
+
+  **This also fixes panels that could not be resized.** An `egui::Panel`
+  persists the size of the rectangle its *contents* occupied rather than its
+  own, so a panel whose contents were narrower than their slot shrank to fit
+  them on the next frame — and, because the persisted size is where the
+  following frame starts, stayed shrunk however far its edge was dragged. That
+  is why the project column sat at its minimum width and would not move, and why
+  every panel opened narrower than the default it declared. Each slot now claims
+  its full width before anything draws, and the arbitrary maximum widths are
+  gone: a slot may take up to three quarters of the window. `panel::fill_slot`
+  carries a headless regression test for both halves of it.
+
+  The tab strip has also replaced each panel's separate header. A docked panel
+  used to spend a second row saying its own name directly under a tab that had
+  just said it; a panel's own controls now sit at the far end of the strip that
+  names it.
+
 - **CI runs the same checks about three times faster.** The workspace's tests
   were the whole of CI's critical path, and most of that was one number: the
   repository set no Cargo profile, so a game engine whose tests are mostly

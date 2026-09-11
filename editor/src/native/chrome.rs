@@ -5,16 +5,17 @@
 //! is running, whether anything has gone wrong — and nothing that belongs to
 //! the thing being edited.
 
-use eframe::egui::{self, Align, Layout, RichText, Sense, Stroke, Vec2};
+use eframe::egui::{self, Align, Layout, Rect, RichText, Sense, Stroke, Vec2};
 
-use crate::preferences::{CameraProjection, Layout as WorkspaceLayout};
+use crate::dock::{Panel as DockPanel, Place, Preset, Workspace};
+use crate::preferences::CameraProjection;
 use crate::ui::icons;
 use crate::ui::theme::{color, hairline, metric, text};
-use crate::ui::widgets::{button, panel, toolbar};
+use crate::ui::widgets::{button, panel, tabs, toolbar};
 
+use super::EditorApp;
 use super::runtime::{PLAYING_TIP, Transport, play_button, transport_icon};
 use super::unsaved::Discarding;
-use super::{EditorApp, WorkspaceTab};
 
 /// How much room the transport group takes, so the bar can centre it.
 ///
@@ -76,15 +77,84 @@ pub(super) fn projection_choice(ui: &mut egui::Ui, current: &mut CameraProjectio
         .show(ui);
 }
 
+/// Draws a full-width bar along one edge, taking room or floating over the
+/// scene depending on the arrangement.
+///
+/// One function for both because the difference is entirely where the rectangle
+/// comes from. A docked bar asks `egui` for a panel and gets the window
+/// shortened; a floating one is an `Area` laid over the scene, drawn on a scrim
+/// rather than on an opaque band, so the world runs underneath it to the edge
+/// of the window.
+///
+/// A free function rather than a method because the contents need the editor
+/// mutably — the menus it draws write to it — and a method would already be
+/// holding the borrow.
+fn bar(
+    ui: &mut egui::Ui,
+    id: &'static str,
+    top: bool,
+    height: f32,
+    floating: bool,
+    contents: impl FnOnce(&mut egui::Ui, Rect),
+) {
+    {
+        if !floating {
+            let panel = if top {
+                egui::Panel::top(id)
+            } else {
+                egui::Panel::bottom(id)
+            };
+            panel
+                .exact_size(height)
+                .frame(egui::Frame::new().fill(color::HEADER))
+                .show(ui, |ui| {
+                    let base = ui.max_rect();
+                    let edge = if top {
+                        base.bottom() - 0.5
+                    } else {
+                        base.top() + 0.5
+                    };
+                    ui.painter().hline(base.x_range(), edge, hairline());
+                    contents(ui, base);
+                });
+            return;
+        }
+        let window = ui.ctx().content_rect();
+        let rect = if top {
+            Rect::from_min_size(window.min, Vec2::new(window.width(), height))
+        } else {
+            Rect::from_min_size(
+                egui::pos2(window.left(), window.bottom() - height),
+                Vec2::new(window.width(), height),
+            )
+        };
+        egui::Area::new(egui::Id::new(id))
+            .fixed_pos(rect.min)
+            .order(egui::Order::Foreground)
+            .interactable(true)
+            .show(ui.ctx(), |ui| {
+                ui.set_min_size(rect.size());
+                ui.set_max_size(rect.size());
+                // A scrim rather than a fill: dark enough that a menu label
+                // reads over a bright scene, sheer enough that the world is
+                // visibly continuous underneath. An opaque band here is what
+                // made the last attempt a docked editor wearing a canvas.
+                ui.painter().rect_filled(rect, 0.0, color::SCRIM);
+                contents(ui, rect);
+            });
+    }
+}
+
 impl EditorApp {
     pub(super) fn top_bar(&mut self, ui: &mut egui::Ui) {
-        egui::Panel::top("editor-top-bar")
-            .exact_size(metric::TOP_BAR_HEIGHT)
-            .frame(egui::Frame::new().fill(color::HEADER))
-            .show(ui, |ui| {
-                let base = ui.max_rect();
-                ui.painter()
-                    .hline(base.x_range(), base.bottom() - 0.5, hairline());
+        let floating = self.preferences.workspace.chrome().floats();
+        bar(
+            ui,
+            "editor-top-bar",
+            true,
+            metric::TOP_BAR_HEIGHT,
+            floating,
+            |ui, base| {
                 ui.horizontal_centered(|ui| {
                     ui.spacing_mut().item_spacing.x = 8.0;
                     ui.add_space(12.0);
@@ -99,25 +169,59 @@ impl EditorApp {
                     self.file_menu(ui);
                     self.edit_menu(ui);
                     self.view_menu(ui);
-                    // Centred on the window rather than on whatever the menus
-                    // left over: measured from the bar itself, so the transport
-                    // does not drift sideways as the menu labels change.
-                    let centre = base.center().x - TRANSPORT_WIDTH / 2.0;
-                    let lead = (centre - ui.cursor().left()).max(12.0);
-                    ui.add_space(lead);
-                    self.transport(ui);
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        ui.add_space(12.0);
-                        // Which arrangement the window is in, said where the
-                        // View menu that changes it can be reached.
-                        ui.label(
-                            RichText::new(self.preferences.layout.label())
-                                .size(text::NOTE)
-                                .color(color::TEXT_FAINT),
+                    // When the furniture floats, the centre's tabs live here
+                    // rather than on a strip of their own. A row of tabs under
+                    // this bar would be a second band of chrome across the top
+                    // of a window whose whole claim is that the scene runs to
+                    // its edges.
+                    if floating {
+                        toolbar::divider(ui);
+                        self.centre_tabs_in_bar(ui);
+                    }
+                    if floating {
+                        // Placed at a rectangle rather than reached by adding
+                        // space. Inside an `Area` the cursor arithmetic the
+                        // docked bar uses put the transport somewhere it was
+                        // never drawn; a child UI given the rect it should
+                        // occupy cannot be wrong about where that is.
+                        let room = Rect::from_min_max(
+                            egui::pos2(base.right() - 12.0 - TRANSPORT_WIDTH, base.top()),
+                            base.max,
                         );
-                    });
+                        let mut child = ui.new_child(
+                            egui::UiBuilder::new()
+                                .max_rect(room)
+                                .layout(Layout::left_to_right(Align::Center)),
+                        );
+                        child.spacing_mut().item_spacing.x = 8.0;
+                        self.transport(&mut child);
+                    } else {
+                        // Centred on the window rather than on whatever the
+                        // menus left over, so it does not drift sideways as the
+                        // menu labels change.
+                        let centre = base.center().x - TRANSPORT_WIDTH / 2.0;
+                        let lead = (centre - ui.cursor().left()).max(12.0);
+                        ui.add_space(lead);
+                        self.transport(ui);
+                    }
                 });
-            });
+            },
+        );
+    }
+
+    /// The centre's tabs, drawn into the title bar.
+    ///
+    /// The same tabs the strip would have drawn, registered as the same drop
+    /// zone, so a panel can still be dragged into the centre by aiming at them.
+    fn centre_tabs_in_bar(&mut self, ui: &mut egui::Ui) {
+        let Some(group) = self.preferences.workspace.group(Place::MAIN) else {
+            return;
+        };
+        let panels = group.panels.clone();
+        let active = group.active_index();
+        let (strip, tabs) =
+            self.dock_strip_as(ui, Place::MAIN, &panels, active, tabs::Shape::Inline);
+        self.retarget_centre_zone(strip, tabs);
     }
 
     /// Undo, redo, and the three states the engine can be in.
@@ -186,24 +290,54 @@ impl EditorApp {
         );
     }
 
-    /// Chooses how the workspace is arranged.
+    /// Which panels are open, and the arrangements to start from.
     ///
-    /// The choice is a preference rather than session state, so it survives a
-    /// restart: rearranging the editor every time it opens is the thing this
-    /// exists to stop.
+    /// The arrangement itself is dragged rather than chosen — a tab goes where
+    /// it is dropped — so what a menu is still good for is the two things a
+    /// drag cannot say: bring back a panel that was closed, and put everything
+    /// back the way it started.
     fn view_menu(&mut self, ui: &mut egui::Ui) {
         bar_menu(ui, "View", |ui| {
             ui.label(
-                RichText::new("LAYOUT")
+                RichText::new("PANELS")
                     .size(text::NOTE)
                     .color(color::TEXT_FAINT),
             );
-            for layout in WorkspaceLayout::ALL {
+            for panel in DockPanel::ALL {
+                let open = self.preferences.workspace.is_open(panel);
+                // The one panel that cannot be closed says so by being
+                // disabled rather than by refusing when clicked.
+                let last_view = open
+                    && self
+                        .preferences
+                        .workspace
+                        .group(Place::MAIN)
+                        .is_some_and(|group| group.panels == [panel]);
+                let entry =
+                    ui.add_enabled(!last_view, egui::Button::selectable(open, panel.label()));
+                if entry.clicked() {
+                    self.preferences.workspace.toggle(panel);
+                    ui.close();
+                }
+                if last_view {
+                    entry.on_disabled_hover_text(
+                        "The centre cannot be emptied. Put something else there first.",
+                    );
+                }
+            }
+            ui.separator();
+            ui.label(
+                RichText::new("ARRANGEMENT")
+                    .size(text::NOTE)
+                    .color(color::TEXT_FAINT),
+            );
+            for preset in Preset::ALL {
                 if ui
-                    .selectable_label(self.preferences.layout == layout, layout.label())
+                    .button(preset.label())
+                    .on_hover_text(preset.note())
                     .clicked()
                 {
-                    self.preferences.layout = layout;
+                    self.preferences.workspace = Workspace::preset(preset);
                     ui.close();
                 }
             }
@@ -349,13 +483,14 @@ impl EditorApp {
     }
 
     pub(super) fn status_bar(&self, ui: &mut egui::Ui) {
-        egui::Panel::bottom("editor-status")
-            .exact_size(metric::STATUS_HEIGHT)
-            .frame(egui::Frame::new().fill(color::HEADER))
-            .show(ui, |ui| {
-                let base = ui.max_rect();
-                ui.painter()
-                    .hline(base.x_range(), base.top() + 0.5, hairline());
+        let floating = self.preferences.workspace.chrome().floats();
+        bar(
+            ui,
+            "editor-status",
+            false,
+            metric::STATUS_HEIGHT,
+            floating,
+            |ui, _| {
                 ui.horizontal_centered(|ui| {
                     ui.spacing_mut().item_spacing.x = 6.0;
                     ui.add_space(10.0);
@@ -418,14 +553,7 @@ impl EditorApp {
                         }
                     });
                 });
-            });
-    }
-}
-
-/// Which workspace a tab selects, and what it is called.
-pub(super) const fn workspace_label(tab: WorkspaceTab) -> &'static str {
-    match tab {
-        WorkspaceTab::Scene => "Scene",
-        WorkspaceTab::Game => "Game",
+            },
+        );
     }
 }

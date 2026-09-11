@@ -20,6 +20,9 @@ pub mod camera_visualization;
 pub mod components;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod console;
+/// Which panel is where, and the drag that moves one.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod dock;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod fixture;
 /// Direct manipulation handles for Scene-view transforms.

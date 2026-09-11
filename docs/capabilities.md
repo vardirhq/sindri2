@@ -835,11 +835,44 @@ frame.
   translation/angle/scale snapping, respect Z lock, and merge a whole drag into
   one undoable command-history step
 - Scene and Game views, the latter rendering through the authored camera with no
-  editor chrome painted over it — both live at once in the `2 by 3` layout
-- Two workspace layouts chosen from **View → Layout** and remembered between
-  launches: `2 by 3` puts Scene above Game with Hierarchy, Project, and
-  Inspector beside them, and `Wide` shows one view at a time over a Project
-  dock
+  editor chrome painted over it — both live at once in the `Docked` arrangement
+- **A workspace the user arranges.** Every panel — Scene, Game, Hierarchy,
+  Inspector, Project, Console, History — is a tab, and every tab is dragged into
+  any of eleven places: seven docks — two columns down each side, one along the
+  bottom, the centre split in two — and four overlays, one anchored to each
+  corner of the scene view. **A dock takes room from the scene; an overlay
+  covers it**, which is what makes the canvas-first arrangement expressible
+  without a second editor.
+
+  **Edges dock, corners float.** Dropping a tab on a window edge docks it
+  there; dropping it in a corner floats it. Dropping onto an existing tab strip
+  inserts between the tabs it lands between, and onto a group's body joins it at
+  the end. A place with nothing in it is not drawn, so the arrangement has no
+  empty furniture in it. Middle-click closes a tab and **View → Panels** brings
+  it back; **View → Arrangement** offers `Canvas`, `Docked`, and `Wide` as
+  starting points. Where every panel sits and how big it is survives a restart.
+
+  Overlays anchor and stack rather than floating freely: two sharing a corner
+  sit one above the other, so they cannot be piled on each other by accident.
+  Clicking the tab already showing rolls an overlay up to its strip and back
+  down, which is the answer to the honest objection to overlays — they cover the
+  world — and costs no travel to a control somewhere else. They are drawn
+  opaque: a translucent panel is legible over a mockup's calm sky and
+  unreadable over a dense tileset, and which of those the scene holds is not
+  something the editor gets to choose.
+
+  Two rules the model enforces rather than asking callers to respect: a panel
+  lives in exactly one slot, and the centre is never empty — the last tab in it
+  refuses to be dragged out or closed, because an editor with a hole where the
+  work goes is not a smaller editor. An arrangement read back from settings is
+  repaired rather than trusted.
+- Slots resize over a range wide enough for the handle to be a real control.
+  They previously could not: an `egui::Panel` persists the size of its
+  *contents* rather than its own, so any panel whose contents were narrower than
+  their slot sprang back to its minimum on the next frame however far its edge
+  was dragged. Every slot now claims its full width before drawing, and
+  `editor/src/ui/widgets/panel.rs` carries a headless test that fails if the
+  claim is removed
 - Play, pause, and stop, driving the real engine lifecycle rather than a display
   flag, and a separate **Discard changes** that returns the world to the file.
   Play advances sprite animations and Decay scripts, and hands scripts the

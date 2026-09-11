@@ -7,7 +7,7 @@ mod tools;
 
 use std::path::{Path, PathBuf};
 
-use eframe::egui::{self, Align, Layout};
+use eframe::egui;
 use egui_material_icons::MaterialIcon;
 use sindri_core::EntityId;
 
@@ -15,19 +15,21 @@ use self::row::{folder_row, listing_row, row_menu};
 use self::state::BrowserState;
 use self::tools::{back_out, browser_tools, empty_listing};
 use crate::{
-    preferences::{AssetScope, AssetView, BottomTab, Layout as WorkspaceLayout},
+    preferences::{AssetScope, AssetView},
     project::{AssetKind, ProjectTree},
     ui::icons,
-    ui::theme::{color, metric},
-    ui::widgets::{
-        panel,
-        tabs::{self, Weight},
-    },
+    ui::widgets::panel,
 };
 
 use super::EditorApp;
 use super::console_view::console_view;
 use super::unsaved::Discarding;
+
+/// How wide the browser has to be before the folder tree earns its column.
+///
+/// The tree is a second list beside the first; below this it takes the room the
+/// file names need and gives back a column of truncated folder names.
+const FOLDER_TREE_WIDTH: f32 = 420.0;
 
 /// What a frame of the project browser asked for.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -358,125 +360,73 @@ fn asset_tile(
 }
 
 impl EditorApp {
-    /// The dock's tabs, and the count that says an error is waiting.
-    fn dock_tabs(&mut self, ui: &mut egui::Ui) {
-        let counts = self.console.counts();
-        let mut chosen = self.preferences.bottom_tab;
-        tabs::strip(ui, |ui| {
-            for (tab, icon, label) in [
-                (BottomTab::Project, icons::PROJECT, "Project"),
-                (BottomTab::Console, icons::CONSOLE, "Console"),
-                (BottomTab::History, icons::UNDO, "History"),
-            ] {
-                if tabs::tab(
-                    ui,
-                    Weight::Secondary,
-                    self.preferences.bottom_tab == tab,
-                    Some(icon),
-                    label,
-                )
-                .clicked()
-                {
-                    chosen = tab;
-                }
-            }
-            // An error nobody is looking at is the reason the console
-            // exists, so the tab strip says there is one whichever tab
-            // is showing.
-            if counts.errors > 0 {
-                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    ui.add_space(metric::GUTTER);
-                    crate::ui::widgets::toolbar::chip(ui, &counts.summary(), color::DANGER_TEXT);
-                });
-            }
-        });
-        self.preferences.bottom_tab = chosen;
+    /// The project browser, and everything it can be asked to do.
+    pub(super) fn project_body(&mut self, ui: &mut egui::Ui) {
+        let context = ui.ctx().clone();
+        // The folder tree is worth its width only in a dock wider than it is
+        // tall. Asked of the space the browser actually got rather than of
+        // which arrangement the editor is in: the arrangement is now something
+        // the user drags, and a browser dragged into a wide dock should look
+        // like one.
+        let folders = ui.available_width() > FOLDER_TREE_WIDTH;
+        let scope = self.preferences.asset_scope;
+        let action = project_browser(
+            ui,
+            &mut self.asset_search,
+            &mut self.preferences.asset_view,
+            &mut self.preferences.asset_scope,
+            &mut self.browser,
+            folders,
+            Listing::of(&self.project, scope),
+            SceneRoles {
+                open: self.file.path(),
+                main: self.project_main_scene.as_deref(),
+                in_project: self.open_project_root.is_some(),
+            },
+            &mut self.asset_rename,
+        );
+        self.act_on_browser(action, &context);
     }
 
-    pub(super) fn asset_panel(&mut self, ui: &mut egui::Ui) {
-        let context = ui.ctx().clone();
-        let mut action = BrowserAction::None;
-        let mut clear_console = false;
-        let mut go_to = None;
-        let mut travel = None;
-        let (panel_side, default, min, max) = match self.preferences.layout {
-            // A tall column, which is what makes the list view worth having.
-            WorkspaceLayout::TwoByThree => {
-                (egui::Panel::right("project-column"), 280.0, 200.0, 420.0)
-            }
-            WorkspaceLayout::Wide => (egui::Panel::bottom("project-dock"), 226.0, 140.0, 330.0),
-        };
-        // The folder tree only fits when the browser is a wide dock.
-        let folders = self.preferences.layout == WorkspaceLayout::Wide;
-        // Read before the panel borrows the preferences mutably: how much of
-        // the project is listed is decided from the tree, and the switch that
-        // changes it lives inside.
-        let scope = self.preferences.asset_scope;
-        panel_side
-            .default_size(default)
-            .min_size(min)
-            .max_size(max)
-            .resizable(true)
-            .frame(panel::frame())
-            .show(ui, |ui| {
-                self.dock_tabs(ui);
-                match self.preferences.bottom_tab {
-                    BottomTab::Project => {
-                        action = project_browser(
-                            ui,
-                            &mut self.asset_search,
-                            &mut self.preferences.asset_view,
-                            &mut self.preferences.asset_scope,
-                            &mut self.browser,
-                            folders,
-                            Listing::of(&self.project, scope),
-                            SceneRoles {
-                                open: self.file.path(),
-                                main: self.project_main_scene.as_deref(),
-                                in_project: self.open_project_root.is_some(),
-                            },
-                            &mut self.asset_rename,
-                        );
-                    }
-                    BottomTab::Console => {
-                        // The world is read for a name rather than handed over:
-                        // the console knows which entity a line is about, and
-                        // what it is called is the panel's question.
-                        let world = &self.world;
-                        let named = |entity: EntityId| {
-                            world.get(entity).map(super::hierarchy::row::entity_name)
-                        };
-                        let answered = console_view(
-                            ui,
-                            &self.console,
-                            self.lifecycle.state(),
-                            &mut self.preferences.console_filter,
-                            &named,
-                        );
-                        clear_console = answered.cleared;
-                        go_to = answered.go_to;
-                    }
-                    BottomTab::History => {
-                        travel = super::history_view::history_panel(ui, &self.history);
-                    }
-                }
-            });
-        if clear_console {
+    /// What the editor and the running game have said.
+    pub(super) fn console_body(&mut self, ui: &mut egui::Ui) {
+        // The world is read for a name rather than handed over: the console
+        // knows which entity a line is about, and what it is called is the
+        // panel's question.
+        let world = &self.world;
+        let named = |entity: EntityId| world.get(entity).map(super::hierarchy::row::entity_name);
+        let answered = console_view(
+            ui,
+            &self.console,
+            self.lifecycle.state(),
+            &mut self.preferences.console_filter,
+            &named,
+        );
+        let cleared = answered.cleared;
+        let go_to = answered.go_to;
+        if cleared {
             self.console.clear();
         }
         if let Some(entity) = go_to {
             self.select(Some(entity));
         }
-        if let Some(travel) = travel {
+    }
+
+    /// Every step taken, and the one we are standing on.
+    pub(super) fn history_body(&mut self, ui: &mut egui::Ui) {
+        if let Some(travel) = super::history_view::history_panel(ui, &self.history) {
             self.travel_history(travel);
         }
-        // Acted on outside the panel, because every answer writes to state the
-        // browser was reading from.
+    }
+
+    /// Acted on outside the browser, because every answer writes to state the
+    /// browser was reading from.
+    fn act_on_browser(&mut self, action: BrowserAction, context: &egui::Context) {
         match action {
             BrowserAction::None => {}
             BrowserAction::Refresh => self.refresh_project(),
             BrowserAction::Open(path) => {
-                self.discard_or_confirm(Discarding::OpenPath(path), &context);
+                self.discard_or_confirm(Discarding::OpenPath(path), context);
             }
             BrowserAction::Select(path) => self.select_asset(&path),
             BrowserAction::LookIn(folder) => self.browser.look_in(Some(&folder)),

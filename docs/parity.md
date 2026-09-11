@@ -368,7 +368,7 @@ components not yet written. It is the highest-leverage item in this file.
 | **Asset pickers for schema fields generally** | ✅ | **Ahead** | Declared per component in the schema registry, checked against the field template, and carried in `docs/generated/`. Unity needs a plugin (Odin) for the equivalent |
 | **Array-of-object editing** | ✅ | **Par** | A list of objects is added to, removed from and reordered, with each item's fields drawn through its meanings. Decided by the template, so a tilemap's thousand tiles stay a readout |
 | **Tagged-enum (variant) fields** | ✅ | **Par** | A field that decides what else its object holds is switched as one edit, at any depth — Godot's equivalent is swapping a Resource subtype. What is ours is that every variant is proved to decode at startup, so an unpickable one fails the build rather than the scene |
-| Console / log panel | ✅ | **Par** | Every failure the editor reports, plus script `print` named by the entity that printed it, filtered by level, repeats collapsed to a count, with a jump to the entity a line is about and an error count in the status bar. The gap is *where it lives*: a bottom-dock tab sharing one slot with the project browser and history, so watching the log means giving up the browser |
+| Console / log panel | ✅ | **Par** | Every failure the editor reports, plus script `print` named by the entity that printed it, filtered by level, repeats collapsed to a count, with a jump to the entity a line is about and an error count in the status bar. It can now be put wherever it is wanted — it opens beside the Scene view — so watching the log no longer costs the project browser, and a failure recurring every frame is one counted line wherever it sits in the log rather than a new line per frame |
 | **Profiler view** | ❌ | **Absent** | Where a fixed step goes is unmeasurable in-editor |
 | **Search / filter in hierarchy or project** | ❌ | **Absent** | Painful past a few dozen entities |
 | **Project settings surface** | ❌ | **Absent** | `sindri.toml` is edited by hand |
@@ -376,7 +376,11 @@ components not yet written. It is the highest-leverage item in this file.
 | **Prefab creation from a selection** | ❌ | **Absent** | — |
 | **Save inspector** | ❌ | **Absent** | Persistence is play-testable but not viewable |
 | **Multi-select and bulk edit** | ❌ | **Absent** | — |
-| **Customisable layout / shortcuts** | ❌ | **Behind** | — |
+| **Customisable layout** | ✅ | **Par** | Every panel is a tab, draggable into any of seven docks or four scene-anchored overlays — edges dock, corners float — with the arrangement and every size persisted. Three presets to start from. Behind Unity and Unreal only in that a panel cannot yet be torn off into a window of its own |
+| **Canvas-first workspace** | ✅ | **Ahead** | The scene view is the document and panels overlay its corners, rather than the viewport being the rectangle left over when the docks have taken theirs. Unity and Godot have no equivalent posture; the nearest comparison is a design tool. Still to come: command palette, chrome collapse, and the Game view as an anchored thumbnail — see `docs/editor-direction.md` |
+| **Customisable shortcuts** | ❌ | **Behind** | Keys are fixed in `native/shortcuts.rs` |
+| **Live edit while playing** | ❌ | **Behind** | Stop restores the world wholesale, so a value tuned during a run is lost. The largest single cost in the change-and-feel loop; see `docs/editor-direction.md` |
+| **Record and scrub a run** | ❌ | **Absent** | The step is fixed and deterministic, so this is available rather than aspirational, and nothing offers it |
 | **In-editor script editing** | ❌ | **Behind** | — |
 
 ## Build, export, and platform

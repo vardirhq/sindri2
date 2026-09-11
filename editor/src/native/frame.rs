@@ -1,21 +1,14 @@
-//! One frame of the editor: docks, panels, and the arrangement they take.
+//! One frame of the editor: what happens, and in what order.
 //!
 //! `eframe` calls `update` once a frame, and everything the editor draws hangs
-//! off it. The work each region does lives in the module that owns that
-//! region; what is here is only the order and the layout.
+//! off it. The work each region does lives in the module that owns that region;
+//! the arrangement those regions are drawn in is no longer here at all — it is
+//! the [`Workspace`](crate::dock::Workspace) the user dragged into shape, and
+//! `workspace.rs` walks it.
 
-use eframe::egui::{self};
+use eframe::egui;
 
-use crate::preferences::Layout as WorkspaceLayout;
-use crate::ui::icons;
-use crate::ui::theme::{color, metric, text};
-use crate::ui::widgets::{
-    panel,
-    tabs::{self, Weight},
-};
-
-use super::chrome::workspace_label;
-use super::{EditorApp, WorkspaceTab};
+use super::EditorApp;
 
 #[allow(
     clippy::cast_possible_truncation,
@@ -26,101 +19,7 @@ pub(super) fn physical_viewport_dimension(points: f32, scale: f32) -> u32 {
     (points * scale).round().clamp(1.0, u32::MAX as f32) as u32
 }
 
-/// The icon a workspace is known by, in the tab and anywhere else it is named.
-pub(super) const fn workspace_icon(tab: WorkspaceTab) -> egui_material_icons::MaterialIcon {
-    match tab {
-        WorkspaceTab::Scene => icons::WORLD,
-        WorkspaceTab::Game => icons::CAMERA,
-    }
-}
-
-/// The name strip above a view that is already on screen.
-///
-/// Drawn as a lit tab rather than as a plain label: in the two-by-three
-/// arrangement both views are visible at once, so a control that selected one
-/// would do nothing — but it is the same workspace it would be in the tabbed
-/// arrangement, and it should be recognisably that.
-fn view_banner(ui: &mut egui::Ui, tab: WorkspaceTab, note: &str) {
-    tabs::strip(ui, |ui| {
-        tabs::tab(
-            ui,
-            Weight::Primary,
-            true,
-            Some(workspace_icon(tab)),
-            workspace_label(tab),
-        );
-        if tab == WorkspaceTab::Game {
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.add_space(metric::GUTTER);
-                ui.label(
-                    egui::RichText::new(note)
-                        .size(text::NOTE)
-                        .color(color::TEXT_FAINT),
-                );
-            });
-        }
-    });
-}
-
 impl EditorApp {
-    /// The 2 by 3 workspace: Scene above Game, with the panels beside them.
-    fn two_by_three_views(&mut self, ui: &mut egui::Ui) {
-        egui::CentralPanel::default()
-            .frame(panel::viewport_frame())
-            .show(ui, |ui| {
-                // The Game view is a bottom panel so it keeps its height while
-                // the Scene view takes whatever is left.
-                egui::Panel::bottom("game-view")
-                    .default_size(300.0)
-                    .min_size(120.0)
-                    .resizable(true)
-                    .frame(panel::viewport_frame())
-                    .show(ui, |ui| {
-                        let note = self.game_device.note();
-                        view_banner(ui, WorkspaceTab::Game, &note);
-                        self.game_tools(ui);
-                        self.render_view(ui, WorkspaceTab::Game);
-                    });
-                view_banner(ui, WorkspaceTab::Scene, "");
-                self.scene_tools(ui, true);
-                self.render_view(ui, WorkspaceTab::Scene);
-            });
-    }
-
-    /// The wide workspace: one view at a time, chosen by a tab.
-    fn tabbed_view(&mut self, ui: &mut egui::Ui) {
-        egui::CentralPanel::default()
-            .frame(panel::viewport_frame())
-            .show(ui, |ui| {
-                let mut chosen = self.workspace_tab;
-                tabs::strip(ui, |ui| {
-                    for tab in [WorkspaceTab::Scene, WorkspaceTab::Game] {
-                        if tabs::tab(
-                            ui,
-                            Weight::Primary,
-                            self.workspace_tab == tab,
-                            Some(workspace_icon(tab)),
-                            workspace_label(tab),
-                        )
-                        .clicked()
-                        {
-                            chosen = tab;
-                        }
-                    }
-                });
-                self.workspace_tab = chosen;
-                let tab = self.workspace_tab;
-                if tab == WorkspaceTab::Game {
-                    self.game_tools(ui);
-                } else {
-                    self.scene_tools(ui, true);
-                }
-                // Only the visible view is drawn: rendering the hidden one would
-                // spend a frame's GPU work on something nobody is looking at.
-                self.render_view(ui, tab);
-            });
-    }
-
     /// Picks up saved Weave changes before either viewport resolves presentation.
     ///
     /// `ProjectStyles` throttles the file-system poll itself. Keeping the call
@@ -170,25 +69,21 @@ impl eframe::App for EditorApp {
         self.update_title(ui.ctx());
         self.handle_close_request(ui.ctx());
         self.handle_shortcuts(ui.ctx());
-        self.top_bar(ui);
-        self.status_bar(ui);
-        // Panels claim space in the order they are shown, so this order is the
-        // arrangement: each right panel sits to the left of the one before it.
-        match self.preferences.layout {
-            WorkspaceLayout::TwoByThree => {
-                self.inspector_panel(ui);
-                self.asset_panel(ui);
-                self.hierarchy_panel(ui);
-                self.render_error = None;
-                self.two_by_three_views(ui);
-            }
-            WorkspaceLayout::Wide => {
-                self.hierarchy_panel(ui);
-                self.inspector_panel(ui);
-                self.asset_panel(ui);
-                self.render_error = None;
-                self.tabbed_view(ui);
-            }
+        self.render_error = None;
+        // Order is the arrangement. Docked furniture claims its rows before the
+        // workspace divides what is left, so the bars go first. Floating
+        // furniture is drawn over a scene that has already taken the whole
+        // window, so the workspace goes first — and the centre's tabs, which
+        // the bar draws in that mode, need the centre's drop zone to exist
+        // before they can point it at themselves.
+        if self.preferences.workspace.chrome().floats() {
+            self.workspace(ui);
+            self.top_bar(ui);
+            self.status_bar(ui);
+        } else {
+            self.top_bar(ui);
+            self.status_bar(ui);
+            self.workspace(ui);
         }
         // Releasing the pointer ends a drag, so the next one is its own step.
         if ui.ctx().input(|input| input.pointer.any_released()) {

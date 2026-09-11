@@ -22,6 +22,30 @@ pub fn frame() -> egui::Frame {
         .inner_margin(0)
 }
 
+/// The frame an overlay is drawn in: a panel that floats over the scene.
+///
+/// Opaque rather than translucent, and that is a decision rather than an
+/// oversight. A translucent panel looks wonderful over the calm sky in a
+/// mockup and is unreadable over a dense tileset, and which of those the scene
+/// holds is not something the editor gets to choose. What separates an overlay
+/// from a dock is the shadow and the rounding, which say it is above the world
+/// rather than beside it.
+pub const OVERLAY_RADIUS: u8 = 8;
+
+pub fn overlay_frame() -> egui::Frame {
+    egui::Frame::new()
+        .fill(color::PANEL)
+        .stroke(hairline())
+        .corner_radius(OVERLAY_RADIUS)
+        .inner_margin(0)
+        .shadow(egui::epaint::Shadow {
+            offset: [0, 6],
+            blur: 20,
+            spread: 0,
+            color: egui::Color32::from_black_alpha(120),
+        })
+}
+
 /// The frame for the region a viewport lives in.
 ///
 /// No border of its own: the rendered image fills it edge to edge and the
@@ -85,6 +109,26 @@ pub fn header<R>(
     );
     child.spacing_mut().item_spacing.x = 4.0;
     actions(&mut child)
+}
+
+/// Claims the whole of a resizable panel before its contents draw.
+///
+/// An `egui::Panel` persists the size of the rectangle its *contents* ended up
+/// occupying, not the size of the panel itself. So a panel whose contents are
+/// narrower than the space they were given shrinks to fit them on the next
+/// frame, and — because the persisted size is what the next frame starts
+/// from — it stays shrunk however far its edge is dragged. That is not a
+/// theoretical hazard: it is why the editor's project column could not be made
+/// wider than its minimum.
+///
+/// Every docked slot opens with this, so the size on screen is the size the
+/// user chose rather than the width of the longest label in it.
+pub fn fill_slot(ui: &mut egui::Ui, column: bool) {
+    if column {
+        ui.set_min_width(ui.available_width());
+    } else {
+        ui.set_min_height(ui.available_height());
+    }
 }
 
 /// A panel's contents, inset from its edges by the standard gutter.
@@ -240,4 +284,62 @@ pub fn search(ui: &mut egui::Ui, value: &mut String, hint: &str) {
 pub fn status_dot(ui: &mut egui::Ui, tint: egui::Color32) {
     let (rect, _) = ui.allocate_exact_size(Vec2::splat(8.0), Sense::hover());
     ui.painter().circle_filled(rect.center(), 3.0, tint);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use eframe::egui::{Context, Pos2, RawInput, Rect, Vec2};
+
+    /// Lays out one right-hand panel and reports the width it settled on.
+    ///
+    /// Run for three frames because the trap being guarded against only shows
+    /// on the second: the first frame uses the requested size, stores whatever
+    /// the contents occupied, and the next frame starts from that.
+    fn settled_width(filling: bool) -> f32 {
+        let context = Context::default();
+        let input = RawInput {
+            screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(1600.0, 900.0))),
+            ..RawInput::default()
+        };
+        let mut width = 0.0;
+        for _ in 0..3 {
+            let mut output = context.run_ui(input.clone(), |ui| {
+                let shown = egui::Panel::right("probe")
+                    .default_size(400.0)
+                    .min_size(150.0)
+                    .max_size(900.0)
+                    .resizable(true)
+                    .frame(egui::Frame::NONE)
+                    .show(ui, |ui| {
+                        if filling {
+                            fill_slot(ui, true);
+                        }
+                        ui.label("short");
+                    });
+                width = shown.response.rect.width();
+            });
+            // egui hands back texture work it expects a backend to apply. There
+            // is no backend here, and dropping it unapplied is a panic.
+            output.textures_delta.clear();
+        }
+        width
+    }
+
+    /// The bug this exists to stop coming back: a panel narrower than its own
+    /// slot is dragged wider, and is back at its minimum a frame later.
+    #[test]
+    fn contents_narrower_than_the_slot_shrink_the_slot() {
+        assert!(
+            (settled_width(false) - 150.0).abs() < 0.5,
+            "without the claim the panel collapses to its minimum, whatever \
+             size it was given -- which is what made the project column \
+             unresizable"
+        );
+    }
+
+    #[test]
+    fn claiming_the_slot_keeps_the_size_it_was_given() {
+        assert!((settled_width(true) - 400.0).abs() < 0.5);
+    }
 }

@@ -32,6 +32,17 @@ pub mod color {
     /// A surface lifted off the panel: a card, a tile, a resting button.
     pub const RAISED: Color32 = Color32::from_rgb(22, 27, 33);
 
+    /// The wash a floating bar is drawn on, over the scene rather than instead
+    /// of it.
+    ///
+    /// Dark enough that a menu label reads over a bright scene, sheer enough
+    /// that the world is visibly continuous underneath — which is the whole
+    /// difference between chrome that floats and chrome that ends the canvas.
+    /// Only ever under a bar, never under a panel: a panel holds a list of
+    /// small text, and small text over a tileset is unreadable at any alpha
+    /// that still lets the tileset through.
+    pub const SCRIM: Color32 = Color32::from_rgba_premultiplied(11, 14, 18, 226);
+
     /// A surface lifted further: a menu, a popup, a modal.
     pub const FLOATING: Color32 = Color32::from_rgb(26, 31, 38);
 
