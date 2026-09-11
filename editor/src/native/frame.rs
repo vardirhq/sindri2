@@ -68,7 +68,13 @@ impl eframe::App for EditorApp {
         self.advance_play(ui.ctx());
         self.update_title(ui.ctx());
         self.handle_close_request(ui.ctx());
-        self.handle_shortcuts(ui.ctx());
+        // Before any other key is read: while the palette is open it owns the
+        // keyboard, and an arrow that moved its selection and also nudged an
+        // entity would be the worst of both.
+        let palette_open = self.palette(ui.ctx());
+        if !palette_open {
+            self.handle_shortcuts(ui.ctx());
+        }
         self.render_error = None;
         // Order is the arrangement. Docked furniture claims its rows before the
         // workspace divides what is left, so the bars go first. Floating

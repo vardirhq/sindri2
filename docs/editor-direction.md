@@ -120,9 +120,10 @@ Concretely, and in the order the items are worth doing:
 1. A **placement** beside `docked` and `closed`: an overlay anchored to a corner
    of the scene view, which draws over the world rather than taking room from
    it. `Canvas` is then a preset rather than a second editor.
-2. **A command palette.** The summoning mechanism, and the safety net that makes
-   hiding a panel something other than hiding it. Nothing else here should ship
-   before it does.
+2. ~~**A command palette.**~~ Done: `editor/src/palette/`. Ctrl+K, and one
+   field that finds panels, entities, project files, scenes, arrangements and
+   verbs. It is the safety net that makes hiding a panel something other than
+   losing it, which is why it came before anything else here.
 3. **The Game view demoted to an anchored camera thumbnail**, promotable to
    full. Most of the time the question is *is the player in frame*, which a
    thumbnail answers and half a window does not.
@@ -218,6 +219,52 @@ it are done.
    snapshot boundary.
 5. **Record and scrub a run.** Depends on 4 having settled what a run's
    authority over the world is.
+
+## Modes
+
+A mode is a **different document and a different canvas**, not a different set
+of panels. That is the whole test, and it is what separates a mode worth having
+from an arrangement someone could already have dragged into shape. Scene is the
+world. UI is the screen. Audio is the mix. Script is the graph of what runs.
+
+The dock model already carries most of this: a `Workspace` is data, persisted,
+holding places and panels, so a mode is a *named* workspace plus the panels that
+mode offers. Switching modes swaps the workspace. The expensive part of modes is
+therefore not the modes — it is the editors inside them, which is where the
+effort belongs anyway.
+
+Ranked by what already exists to build on:
+
+1. **UI.** The strongest case by a distance, because Weave is already here: the
+   styles, the layout engine, hot reload, the screen-size chooser. A UI mode is
+   a screen-shaped canvas instead of a world-shaped one, a widget tree instead
+   of an entity hierarchy, and a styles inspector. Most of the runtime exists;
+   what is missing is the authoring surface. It is also where Sindri could be
+   plainly better than its baselines, because UI authoring is the weakest part
+   of every engine it would be compared against.
+2. **Audio, as an overview and a mixer.** Every `AudioSource` in the scene, the
+   clip each names, its volume and falloff, and what triggers it. This is the
+   part **only Sindri can do**, because only Sindri knows the scene — the audio
+   equivalent of the hierarchy.
+3. **Script, as the thing an external editor cannot be.** Not a code editor; it
+   cannot beat VS Code at editing text and should not try, and `tools/decay-lsp`
+   already makes the external editor good. What it can be is which scripts are
+   attached to what, what each script's exports need authored, live values while
+   the scene plays, and compile failures mapped to the entity that has the
+   problem.
+
+Two things deliberately excluded, and the reasoning is the same for both: a MIDI
+editor implies a synthesis and sequencing runtime the engine does not have and
+competes with tools that have had decades of work, and recording competes with
+Audacity for a job done once per asset. A bad version of either inside a game
+engine costs the credibility of the mode that holds it. If something specific
+demands them later, that demand will be better information than the ambition is.
+
+The discipline that makes modes safe: **ship one only when it is better than the
+alternative for at least one real task.** An empty mode teaches someone the tool
+is bigger than it is and disappoints them on the second click, which is the
+objection to the mockup's `Script` and `Audio` tabs and remains the objection to
+shipping a mode before it does something.
 
 ## What is deliberately not here
 

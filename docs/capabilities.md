@@ -836,6 +836,20 @@ frame.
   one undoable command-history step
 - Scene and Game views, the latter rendering through the authored camera with no
   editor chrome painted over it — both live at once in the `Docked` arrangement
+- **One field that finds anything.** Ctrl+K opens a palette over everything
+  else, searching the panels, the scene's entities, the project's files and
+  scenes, the arrangements, and the editor's verbs at once; each row says which
+  kind it is, because "Console" the panel and `console.decay` the file are
+  otherwise two rows that look the same and do very different things. Arrow keys
+  move, Enter acts, Escape closes, and a pill in the title bar says the shortcut
+  is there.
+
+  Matching is a scored subsequence rather than a substring, so `oscn` finds
+  `orbital.scene.json`, and the query is split into terms matched in any order,
+  so a file is reachable by its folder as well as its name. The ranking is the
+  part that decides whether a palette is worth having, so it is a pure function
+  in `palette/score.rs` tested against the orderings a person would expect
+  rather than against particular numbers.
 - **A workspace the user arranges.** Every panel — Scene, Game, Hierarchy,
   Inspector, Project, Console, History — is a tab, and every tab is dragged into
   any of eleven places: seven docks — two columns down each side, one along the

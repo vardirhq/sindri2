@@ -37,6 +37,9 @@ pub mod inspector;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod native;
 /// Selecting rendered entities through the Scene viewport.
+/// One field that finds anything: panels, entities, files, and verbs.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod palette;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod picking;
 #[cfg(not(target_arch = "wasm32"))]

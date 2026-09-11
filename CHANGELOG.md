@@ -4,6 +4,25 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **Ctrl+K finds anything.** One field that searches panels, the scene's
+  entities, the project's files and scenes, the arrangements, and the editor's
+  verbs — and does the thing when you press Enter. Arrow keys move, Escape
+  closes, and a pill in the title bar says the shortcut exists, because a
+  shortcut nobody is told about is a shortcut nobody uses.
+
+  It came before any further canvas work on purpose: the canvas arrangement
+  hides more than the docked one did, and until now the only way back to a
+  closed panel was the View menu. A palette is what makes hiding a panel
+  something other than losing it.
+
+  Matching is by subsequence and scored, not substring — `oscn` finds
+  `orbital.scene.json` — and the query is split into terms matched in any order,
+  so `prefabs drifter` and `drifter prefabs` both work. What decides whether a
+  palette is useful is the order results come back in, so the ranking lives in
+  `palette/score.rs` with tests written as the orderings a person would expect:
+  initials beat incidental letters, a prefix beats a match further in, a
+  contiguous run beats a scattered one, and the shorter of two answers wins.
+
 - **The scene view is the document.** The editor now opens in a `Canvas`
   arrangement: the scene fills the window, the hierarchy and the project browser
   overlay its corners, and the inspector stays docked at the edge. A panel can
