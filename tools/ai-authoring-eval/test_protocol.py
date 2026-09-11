@@ -95,6 +95,17 @@ class ValidationTests(unittest.TestCase):
         errors = validate_proposal(value)
         self.assertIn("reference.unknown_alias", {error.code for error in errors})
 
+    def test_rejects_spawn_parented_to_its_own_alias(self) -> None:
+        value = proposal({
+            "op": "spawn",
+            "alias": "loop",
+            "name": "Loop",
+            "parent": {"alias": "loop"},
+            "components": {},
+        })
+        errors = validate_proposal(value)
+        self.assertIn("reference.unknown_alias", {error.code for error in errors})
+
     def test_rejects_runtime_entity_id_shape(self) -> None:
         value = proposal({
             "op": "set_disabled", "entity": {"entity_id": 42}, "disabled": True
