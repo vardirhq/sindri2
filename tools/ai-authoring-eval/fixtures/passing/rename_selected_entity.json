@@ -1,0 +1,16 @@
+{
+  "protocol_version": 1,
+  "request_id": "corpus-rename-1",
+  "manifest_hash": "sha256:corpus-v1",
+  "outcome": "proposal",
+  "label": "Rename player",
+  "summary": "Rename the selected player to Pilot.",
+  "question": null,
+  "operations": [
+    {
+      "op": "set_name",
+      "entity": { "scene_id": "player" },
+      "name": "Pilot"
+    }
+  ]
+}
