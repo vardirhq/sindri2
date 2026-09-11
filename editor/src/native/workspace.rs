@@ -331,6 +331,7 @@ impl EditorApp {
             DockPanel::Project => self.project_body(ui),
             DockPanel::Console => self.console_body(ui),
             DockPanel::History => self.history_body(ui),
+            DockPanel::Assistant => self.assistant_body(ui),
         }
     }
 

@@ -38,6 +38,7 @@ use crate::{
     weave_styles::ProjectStyles,
 };
 
+mod assistant_view;
 mod camera;
 mod chrome;
 mod console_view;
@@ -138,6 +139,15 @@ pub fn run() -> eframe::Result {
 enum WorkspaceTab {
     Scene,
     Game,
+}
+
+/// What [`EditorApp::gpu`] hands back: the pieces that share one device.
+struct Gpu {
+    renderers: SceneRenderers,
+    textures: SceneTextures,
+    state_for_textures: eframe::egui_wgpu::RenderState,
+    scene_viewport: RuntimeViewport,
+    game_viewport: RuntimeViewport,
 }
 
 struct EditorApp {
@@ -248,6 +258,8 @@ struct EditorApp {
     dock: workspace::DockLayout,
     /// The one field that finds anything, and what is typed into it.
     palette: crate::palette::Palette,
+    /// How far along the local assistant's setup is.
+    assistant: assistant_view::AssistantState,
     preferences: Preferences,
     lifecycle: EngineLifecycle,
     viewport_yaw: f32,
@@ -407,6 +419,31 @@ impl EditorApp {
         (decided, file, open_error)
     }
 
+    /// Everything the GPU side of the editor needs, built together.
+    ///
+    /// One step because they are one concern and they share one device: two
+    /// viewports, the renderers they draw through, and the texture set they
+    /// resolve against all hang off the render state, and separating them in
+    /// the constructor only separated the lines, not the coupling.
+    fn gpu(context: &eframe::CreationContext<'_>, scene: Option<&std::path::Path>) -> Gpu {
+        let render_state = context
+            .wgpu_render_state
+            .clone()
+            .expect("the native editor requires eframe's WGPU renderer");
+        let renderers = SceneRenderers::new(&render_state);
+        let textures = SceneTextures::for_scene(&render_state.device, &render_state.queue, scene);
+        let state_for_textures = render_state.clone();
+        let scene_viewport = RuntimeViewport::new(render_state.clone(), "Sindri editor scene view");
+        let game_viewport = RuntimeViewport::new(render_state.clone(), "Sindri editor game view");
+        Gpu {
+            renderers,
+            textures,
+            state_for_textures,
+            scene_viewport,
+            game_viewport,
+        }
+    }
+
     fn new(context: &eframe::CreationContext<'_>) -> Self {
         crate::ui::theme::install(&context.egui_ctx);
         let preferences = Preferences::load(context.storage);
@@ -424,16 +461,13 @@ impl EditorApp {
         // entity from the demo scene, which selected the cube in that one scene
         // and silently nothing in every other.
         let selection = Selection::default();
-        let render_state = context
-            .wgpu_render_state
-            .clone()
-            .expect("the native editor requires eframe's WGPU renderer");
-        let renderers = SceneRenderers::new(&render_state);
-        let textures =
-            SceneTextures::for_scene(&render_state.device, &render_state.queue, file.path());
-        let state_for_textures = render_state.clone();
-        let scene_viewport = RuntimeViewport::new(render_state.clone(), "Sindri editor scene view");
-        let game_viewport = RuntimeViewport::new(render_state, "Sindri editor game view");
+        let Gpu {
+            renderers,
+            textures,
+            state_for_textures,
+            scene_viewport,
+            game_viewport,
+        } = Self::gpu(context, file.path());
         let project = ProjectTree::beside(file.path());
         let mut app = Self {
             scene,
@@ -468,6 +502,7 @@ impl EditorApp {
             styles: ProjectStyles::default(),
             dock: workspace::DockLayout::default(),
             palette: crate::palette::Palette::default(),
+            assistant: assistant_view::AssistantState::default(),
             preferences,
             lifecycle: initialized_lifecycle(),
             viewport_yaw: 0.0,

@@ -10,6 +10,9 @@
 #[cfg(not(target_arch = "wasm32"))]
 pub mod animation;
 /// Hearing a clip without a running scene.
+/// Getting from no local AI at all to a verified assistant.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod assistant;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod audition;
 /// Scene-view geometry for authored camera frustums.

@@ -27,6 +27,7 @@ pub(super) const fn panel_icon(panel: DockPanel) -> egui_material_icons::Materia
         DockPanel::Project => icons::PROJECT,
         DockPanel::Console => icons::CONSOLE,
         DockPanel::History => icons::UNDO,
+        DockPanel::Assistant => icons::EFFECT,
     }
 }
 
@@ -159,6 +160,7 @@ impl EditorApp {
                     crate::ui::widgets::toolbar::chip(ui, &counts.summary(), color::DANGER_TEXT);
                 }
             }
+            DockPanel::Assistant => self.assistant_actions(ui),
             DockPanel::Scene | DockPanel::Project | DockPanel::History => {}
         }
     }

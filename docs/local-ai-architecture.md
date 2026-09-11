@@ -461,6 +461,10 @@ The first-run experience should guide a non-expert from no local AI installation
 
 ### Detection
 
+Implemented as `assistant::Probe` and `assistant::readiness`, with the states below as `assistant::Readiness`. The order the questions are asked in *is* the diagnosis: not installed is asked before not running, which is asked before no model, because each later question is meaningless when an earlier one is the answer. That is the whole reason the editor can say something specific instead of "could not connect".
+
+Every state carries its one next action as data (`assistant::Step`), so the UI renders the decision rather than making it, and a CLI can offer the same set.
+
 Sindri should detect:
 
 - whether a supported local endpoint is reachable
@@ -478,6 +482,16 @@ Detection must distinguish these states:
 - compatible model installed but not loaded
 - model loaded and capability tests passed
 - model reachable but failing a required capability
+
+### Nobody types anything
+
+**The setup must never ask a person to type.** Not a command, not a model name, not a path, not a URL. The single exception is a password, and only where the operating system itself demands one to install software — that prompt belongs to the OS, Sindri never sees what is entered, and a route that avoids it is preferred wherever one exists.
+
+This is a requirement rather than a preference, and it is what separates a setup flow from a page of instructions. An editor that prints `curl … | sh` and waits has not automated anything; it has moved the work into a terminal and called that onboarding. The person who cannot get past that step is precisely the person the flow exists for.
+
+Every step is therefore a button: install the runner, start it, take the suggested model or pick another from a list, verify. `editor/src/assistant` encodes this, and `no_step_ever_asks_a_person_to_type_anything` enforces it against the action set, so a step added later that wants a name or a path fails a test rather than reaching a release.
+
+Doing the install on someone's behalf has to be paid for in care. The source is pinned rather than discovered; what will run is shown before it runs; nothing is elevated without the person seeing why; and consent is explicit at every step that costs disk, time, or privilege.
 
 ### Guided installation
 

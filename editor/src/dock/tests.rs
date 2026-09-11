@@ -53,8 +53,22 @@ fn moving_a_panel_takes_it_out_of_where_it_was() {
         Some((Place::Dock(Slot::Left), 0))
     );
     assert!(
+        workspace
+            .group(Place::Dock(Slot::FarRight))
+            .is_none_or(|group| !group.panels.contains(&Panel::Inspector)),
+        "a panel is in one place, so the slot it left no longer lists it"
+    );
+}
+
+/// And a slot emptied by the move stops being drawn at all.
+#[test]
+fn a_slot_whose_last_panel_leaves_is_no_longer_drawn() {
+    let mut workspace = Workspace::preset(Preset::Docked);
+    workspace.place(Panel::Assistant, Place::Dock(Slot::Left), 0);
+    workspace.place(Panel::Inspector, Place::Dock(Slot::Left), 0);
+    assert!(
         workspace.group(Place::Dock(Slot::FarRight)).is_none(),
-        "the slot it left held only the inspector, so it is now empty and undrawn"
+        "both of its panels left, so it is empty and undrawn"
     );
 }
 

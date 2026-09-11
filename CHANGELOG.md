@@ -4,6 +4,43 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **Setting up the local assistant is a panel with one button in it.** An
+  Assistant panel reads the machine and shows the one next thing to do: install
+  the model runner, start it, download a model chosen for the hardware, check
+  what it can actually do. Each state is a sentence and a button.
+
+  **Nobody is asked to type anything.** Not a command, not a model name, not a
+  path. The one exception is a password, and only where the operating system
+  itself demands one — that prompt belongs to the OS and Sindri never sees what
+  goes into it. A test asserts this against the action set rather than against
+  the drawing, so a step added later that wants a name fails the build.
+
+  The states are named rather than collapsed into "could not connect", and the
+  order they are asked in is the diagnosis: not installed before not running
+  before no model, because each later question is meaningless when an earlier
+  one is the answer. While the next move is happening outside the editor it
+  keeps watching, so finishing an install advances the screen by itself — there
+  is no refresh button to find.
+
+  A model is only suggested when the machine can hold it, weights plus room for
+  context and overhead. Recommending one that will not load is worse than
+  recommending none, because the person who takes the suggestion concludes that
+  local AI does not work. A machine too small for anything measured is told so
+  plainly and still offered the whole list to choose from.
+
+  Finishing reports what was *verified* — structured answers, tool calling,
+  scene inspection, Decay editing — rather than a green connection light, and a
+  model that fails something every proposal depends on is called unusable
+  instead of ready.
+
+  Detection talks to the runner over the loopback socket using the standard
+  library alone, so the editor gains no HTTP stack and an AI-disabled build
+  stays a normal configuration. Downloading a model goes the same way: the
+  runner does the fetching and Sindri asks it to. Installing the runner itself
+  needs TLS, which the editor deliberately has no client for, so that step opens
+  the pinned download page through the operating system and the probe watches
+  for the result.
+
 - **A world can resolve a scene's stable identities, and a transaction can be
   rehearsed.** Two small additions to `sindri-core`, both of which a host for
   the AI authoring protocol cannot be written without, and both useful on their

@@ -57,11 +57,13 @@ pub enum Panel {
     Console,
     /// Every step taken, and the one we are standing on.
     History,
+    /// The local assistant: its setup while it has one, and itself after.
+    Assistant,
 }
 
 impl Panel {
     /// Every panel, in the order a menu should offer them.
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 8] = [
         Self::Scene,
         Self::Game,
         Self::Hierarchy,
@@ -69,6 +71,7 @@ impl Panel {
         Self::Project,
         Self::Console,
         Self::History,
+        Self::Assistant,
     ];
 
     pub const fn label(self) -> &'static str {
@@ -80,6 +83,7 @@ impl Panel {
             Self::Project => "Project",
             Self::Console => "Console",
             Self::History => "History",
+            Self::Assistant => "Assistant",
         }
     }
 
@@ -251,14 +255,17 @@ impl Workspace {
                     Place::Overlay(BottomLeft),
                     &[Panel::Project, Panel::Console, Panel::History],
                 ),
-                (Place::Overlay(TopRight), &[Panel::Inspector]),
+                (
+                    Place::Overlay(TopRight),
+                    &[Panel::Inspector, Panel::Assistant],
+                ),
             ],
             Preset::Docked => &[
                 (Place::Dock(Left), &[Panel::Hierarchy]),
                 (Place::Dock(Main), &[Panel::Scene, Panel::Console]),
                 (Place::Dock(MainBottom), &[Panel::Game]),
                 (Place::Dock(Right), &[Panel::Project, Panel::History]),
-                (Place::Dock(FarRight), &[Panel::Inspector]),
+                (Place::Dock(FarRight), &[Panel::Inspector, Panel::Assistant]),
             ],
             Preset::Wide => &[
                 (Place::Dock(Left), &[Panel::Hierarchy]),
@@ -267,6 +274,7 @@ impl Workspace {
                     Place::Dock(Bottom),
                     &[Panel::Project, Panel::Console, Panel::History],
                 ),
+                (Place::Dock(Right), &[Panel::Assistant]),
                 (Place::Dock(FarRight), &[Panel::Inspector]),
             ],
         };
