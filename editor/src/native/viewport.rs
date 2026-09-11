@@ -192,6 +192,30 @@ impl EditorApp {
         );
     }
 
+    /// Remembers where a view was drawn, for the two things that need it.
+    ///
+    /// A script's pointer coordinates are in the Game view's own pixels, and an
+    /// overlay anchors to the corners of the world as drawn rather than of the
+    /// panel it was drawn in — the panel includes a tab strip and a toolbar,
+    /// and an overlay covering those would put the hierarchy on top of the tabs
+    /// that switch Scene and Game.
+    fn record_view_rect(&mut self, editing: bool, rect: egui::Rect) {
+        // Only the Game view records its own. The Scene view must not clear it:
+        // an arrangement showing both draws the Game view first, so clearing
+        // here would throw away the rectangle that was just recorded.
+        // Forgetting a view that stopped being drawn is `advance_scripts`'s
+        // job, once per frame.
+        if !editing {
+            self.game_view_rect = Some(rect);
+        }
+        // Only the centre's viewport is the canvas: a Scene view someone
+        // dragged into a corner is not what the other corners arrange
+        // themselves against.
+        if self.dock.drawing_main {
+            self.dock.canvas = rect;
+        }
+    }
+
     /// Draws one view of the world into whatever space `ui` has left.
     ///
     /// The Scene view takes camera input and wears editor chrome; the Game view
@@ -211,14 +235,7 @@ impl EditorApp {
         } else {
             self.game_device.fit(panel)
         };
-        // Only the Game view records one. The Scene view must not clear it:
-        // the two-by-three workspace draws the Game view first, so clearing
-        // here would throw away the rectangle that was just recorded.
-        // Forgetting a view that stopped being drawn is `advance_scripts`'s
-        // job, once per frame.
-        if !editing {
-            self.game_view_rect = Some(rect);
-        }
+        self.record_view_rect(editing, rect);
         let painting = editing && self.tilemap_tool.brush().is_some();
         let camera_before_input = self.scene_camera();
         let gizmo_owned = if editing && !painting {

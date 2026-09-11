@@ -43,13 +43,24 @@ pub(super) struct Zone {
 pub(crate) struct DockLayout {
     pub(super) drag: Option<Drag>,
     pub(super) zones: Vec<Zone>,
-    /// The scene view's rectangle, which is what overlays anchor to.
+    /// The rectangle overlays anchor to: the world as actually drawn, not the
+    /// panel it was drawn in.
+    ///
+    /// The difference is the centre's own furniture. A group wears a tab strip,
+    /// and the Scene view wears a toolbar under it; anchoring to the panel puts
+    /// the first overlay on top of both, so the tabs that switch Scene and Game
+    /// end up underneath the hierarchy and cannot be clicked. Anchoring to the
+    /// viewport instead means an overlay covers the world — which is what it is
+    /// for — and never the controls.
     ///
     /// Nothing until the centre has been drawn once. `Rect::ZERO` rather than
     /// an `Option`, because the only frame it is wrong on is the first, where
     /// an overlay drawn at the origin for one frame is invisible and an
     /// `Option` unwrapped at four call sites is not.
     pub(super) canvas: Rect,
+    /// Whether the group being drawn is the centre, so the viewport inside it
+    /// knows whether its rectangle is the one overlays should anchor to.
+    pub(super) drawing_main: bool,
 }
 
 impl Default for DockLayout {
@@ -58,6 +69,7 @@ impl Default for DockLayout {
             drag: None,
             zones: Vec::new(),
             canvas: Rect::ZERO,
+            drawing_main: false,
         }
     }
 }
@@ -144,10 +156,18 @@ impl EditorApp {
             .show(ui, |ui| {
                 self.draw_group(ui, Place::MAIN);
             });
-        // Remembered for the overlays, which anchor to the scene rather than to
-        // the window: an overlay in the top-left corner belongs against the
-        // scene's corner, not underneath whatever dock is covering it.
-        self.dock.canvas = response.response.rect;
+        // A fallback for the frame where the centre holds no viewport at all:
+        // a console in the middle has no rendered rectangle to anchor to, and
+        // the panel it was drawn in is the next best answer.
+        if !self
+            .preferences
+            .workspace
+            .group(Place::MAIN)
+            .and_then(crate::dock::Group::selected)
+            .is_some_and(DockPanel::is_viewport)
+        {
+            self.dock.canvas = response.response.rect;
+        }
     }
 
     /// The overlays anchored to one corner of the scene, stacked in tab order.
@@ -194,6 +214,10 @@ impl EditorApp {
                 ui.set_min_size(rect.size());
                 ui.set_max_size(rect.size());
                 panel::overlay_frame().show(ui, |ui| {
+                    // Clipped to the frame, or a list longer than the overlay
+                    // draws straight out of the bottom of it and over the world
+                    // with no edge to say where the panel stopped.
+                    ui.set_clip_rect(rect);
                     panel::fill_slot(ui, true);
                     self.draw_group(ui, place);
                 });
@@ -235,7 +259,9 @@ impl EditorApp {
             return;
         }
         if let Some(panel) = panels.get(active).copied() {
+            self.dock.drawing_main = place == Place::MAIN;
             self.draw_panel(ui, panel);
+            self.dock.drawing_main = false;
         }
     }
 
