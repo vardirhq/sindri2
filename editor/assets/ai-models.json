@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "reference_hardware": "NVIDIA RTX 3060 12 GB at Q4_K_M",
+  "models": {
+    "qwen2.5-coder:7b": [
+      {
+        "id": "qwen2.5-coder:7b",
+        "params_b": 7.6,
+        "quantisation": "Q4_K_M",
+        "display_name": "Qwen2.5 Coder 7B",
+        "description": "The standard Sindri tunes for: clean tool calls and strict schemas on a mid-range card.",
+        "license": "Apache-2.0",
+        "source": "https://ollama.com/library/qwen2.5-coder",
+        "structured_output": true,
+        "tool_calling": true,
+        "vision": false,
+        "standard": true
+      }
+    ],
+    "qwen3:8b": [
+      {
+        "id": "qwen3:8b",
+        "params_b": 8.2,
+        "quantisation": "Q4_K_M",
+        "display_name": "Qwen3 8B",
+        "description": "A general-purpose alternative to the coder model at much the same size.",
+        "license": "Apache-2.0",
+        "source": "https://ollama.com/library/qwen3",
+        "structured_output": true,
+        "tool_calling": true,
+        "vision": false
+      }
+    ],
+    "gemma3:12b": [
+      {
+        "id": "gemma3:12b",
+        "params_b": 12.2,
+        "quantisation": "Q4_K_M",
+        "display_name": "Gemma 3 12B",
+        "description": "Adds vision, for asking about a sprite or a screenshot.",
+        "license": "Gemma Terms of Use",
+        "source": "https://ollama.com/library/gemma3",
+        "structured_output": true,
+        "tool_calling": true,
+        "vision": true
+      }
+    ],
+    "qwen2.5-coder:14b": [
+      {
+        "id": "qwen2.5-coder:14b",
+        "params_b": 14.8,
+        "quantisation": "Q4_K_M",
+        "display_name": "Qwen2.5 Coder 14B",
+        "description": "The best quality a 12 GB card can host, with less context headroom.",
+        "license": "Apache-2.0",
+        "source": "https://ollama.com/library/qwen2.5-coder",
+        "structured_output": true,
+        "tool_calling": true,
+        "vision": false
+      }
+    ],
+    "qwen3:1.7b": [
+      {
+        "id": "qwen3:1.7b",
+        "params_b": 1.7,
+        "quantisation": "Q4_K_M",
+        "display_name": "Qwen3 1.7B",
+        "description": "Runs almost anywhere. Useful for questions; unreliable at multi-step edits.",
+        "license": "Apache-2.0",
+        "source": "https://ollama.com/library/qwen3",
+        "structured_output": true,
+        "tool_calling": true,
+        "vision": false
+      }
+    ]
+  }
+}

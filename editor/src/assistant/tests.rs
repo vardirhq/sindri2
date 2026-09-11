@@ -109,7 +109,7 @@ fn a_running_runner_with_no_model_is_offered_one_that_fits() {
     let Action::Pull { profile } = state.step(&probe).action else {
         panic!("a 12 GB machine should be offered a download");
     };
-    assert!(profile.fits(12.0));
+    assert_eq!(profile.tier(12.0, DEFAULT_CONTEXT), Tier::Recommended);
 }
 
 /// Consent has to be informed, so the step says the size, the licence and the
@@ -121,9 +121,12 @@ fn a_download_says_what_it_costs_before_it_starts() {
     let Action::Pull { profile } = step.action else {
         panic!("expected a download");
     };
-    assert!(step.detail.contains(&format!("{:.1} GB", profile.download)));
-    assert!(step.detail.contains(profile.licence));
-    assert!(step.detail.contains(profile.because));
+    assert!(
+        step.detail
+            .contains(&format!("{:.1} GB", profile.residency(DEFAULT_CONTEXT)))
+    );
+    assert!(step.detail.contains(&profile.license));
+    assert!(step.detail.contains(&profile.description));
 }
 
 /// A machine too small for anything measured still gets a list to click, marked
@@ -137,10 +140,13 @@ fn a_small_machine_is_told_the_truth_and_still_given_the_choice() {
     };
     assert_eq!(
         choices.len(),
-        catalogue::PROFILES.len(),
-        "all of them, marked"
+        catalogue::profiles().len(),
+        "all of them, graded"
     );
-    assert!(choices.iter().all(|(_, fits)| !fits));
+    assert!(
+        choices.iter().all(|(_, tier)| *tier == Tier::Unsupported),
+        "nothing fits a 2 GB machine, and each choice says so"
+    );
     assert!(step.detail.contains("2.0 GB"));
 }
 

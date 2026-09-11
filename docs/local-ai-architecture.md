@@ -432,6 +432,10 @@ The editor must remain responsive while inference runs. Model activity should no
 
 Sindri should optimize its baseline workflows for an 8B-class quantized model, not merely verify them on a large cloud model.
 
+The editor's model list is `editor/assets/ai-models.json`, a committed manifest validated on load and carrying the licence and source of everything it names. It grades a model against the machine as **Recommended / Supported / Best effort / Will not fit**, because "runs, but will drop a tool call on a multi-step edit" is a real answer a boolean has nowhere to put. Residency is *estimated* from parameter count, quantisation and context length rather than hardcoded per model, since context is the part of the memory bill a person changes. One entry is marked the standard, and that is what Sindri leads with wherever it is comfortable — bigger is not better past the point where a model drives the tool loop reliably, because beyond it the extra parameters cost context headroom and speed.
+
+The grading and the residency estimate follow `vardirhq/local-code`'s `MODELS.md` and `hardware.py`, which are tuned against the same reference card.
+
 As current reference points, Ollama lists:
 
 - [`qwen3:8b`](https://ollama.com/library/qwen3:8b) at approximately 5.2 GB for its Q4 package.
@@ -482,6 +486,52 @@ Detection must distinguish these states:
 - compatible model installed but not loaded
 - model loaded and capability tests passed
 - model reachable but failing a required capability
+
+### Proposal: manage llama.cpp rather than install Ollama
+
+**Status: proposed, not adopted.** This changes the provider decision above, so
+it is written here as an argument rather than made silently in code.
+
+Ollama is a *system service you install*. That makes the first step of setup a
+platform installer — a gigabyte-plus download, an operating-system permission
+prompt on two of three platforms, and a TLS-capable downloader the editor does
+not have and is meant not to grow. It is the one step of the current flow that
+Sindri cannot perform for someone, and the reason the Assistant panel opens a
+download page instead of doing the work.
+
+`vardirhq/local-code` solves the same problem the other way, and its runtime
+manifest is the argument in one entry:
+
+```json
+"url": ".../llama-b9842-bin-ubuntu-vulkan-x64.tar.gz",
+"sha256": "79cb630e...", "size": 31198960, "license": "MIT"
+```
+
+**A prebuilt llama.cpp server is about 31 MB and needs no installation at all** —
+it is a binary unpacked into a user directory and started as the user. That
+removes the installer, removes the privilege, and makes the whole setup
+passwordless, which is stronger than the rule this section states.
+
+What adopting it would mean:
+
+- A committed runtime manifest beside the model one, with `sha256`, `size`,
+  `license` and `source` per platform and architecture.
+- Downloads written to a `.part` file, hashed while streaming, verified against
+  the manifest, and atomically renamed on success — so setup is resumable and
+  idempotent, and an interrupted download costs nothing.
+- Reuse when the file on disk already verifies **and** its manifest version
+  matches, which is what makes re-running setup cheap.
+- One narrow dependency: an HTTPS client that can GET a file to disk. Not an
+  API client, not auth, not a JSON transport. That is a much smaller thing to
+  put through `docs/dependency-policy.md` and `cargo deny` than a general HTTP
+  stack, and it belongs to the editor crate alone — the engine graph keeps the
+  rule above.
+- Ollama stays supported as a provider for anyone who already runs it. What
+  changes is which runtime the *guided* path manages.
+
+The cost is owning a runtime version: a pinned llama.cpp build has to be moved
+forward deliberately, and GPU backends multiply the manifest entries. That is
+real, and it is the same cost `local-code` already carries.
 
 ### Nobody types anything
 

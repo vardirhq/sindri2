@@ -4,6 +4,37 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **The assistant grades a model against your machine instead of answering yes
+  or no.** Recommended, Supported, Best effort, or Will not fit — because "runs,
+  but will drop a tool call halfway through a multi-step edit" is a real and
+  common answer that a boolean has nowhere to put, and omitting such a model
+  from the list reads as Sindri not supporting something you can plainly see
+  running.
+
+  How much memory a model needs is now **estimated** from its parameter count,
+  quantisation and context length rather than hardcoded per model. Context is
+  the part of the memory bill a person changes, so a fixed figure per model is
+  wrong the moment they change it.
+
+  The models themselves moved out of the code and into
+  `editor/assets/ai-models.json`: a committed manifest, validated on load
+  against a schema version, carrying the licence and source of everything it
+  names. Adding a model needs no code.
+
+  One entry is marked the standard, and that is what Sindri leads with wherever
+  it is comfortable. Bigger is not better past the point where a model drives
+  the tool loop reliably — beyond it the extra parameters cost context headroom
+  and speed, which is a trade to make deliberately rather than a default to be
+  handed.
+
+  Hardware detection now asks `rocm-smi` as well as `nvidia-smi`. Asking only
+  NVIDIA meant every Radeon machine fell silently through to system memory and
+  was told it could run less than it can.
+
+  The grading, the residency estimate and the manifest shape follow
+  `vardirhq/local-code`, which solved the same problem against the same
+  reference card.
+
 - **Setting up the local assistant is a panel with one button in it.** An
   Assistant panel reads the machine and shows the one next thing to do: install
   the model runner, start it, download a model chosen for the hardware, check

@@ -33,7 +33,7 @@
 pub mod catalogue;
 pub mod probe;
 
-pub use catalogue::{Profile, Supports};
+pub use catalogue::{DEFAULT_CONTEXT, Profile, Supports, Tier};
 
 /// What the editor could see when it last looked.
 ///
@@ -193,10 +193,9 @@ pub enum Action {
     Pull { profile: Profile },
     /// Offer models to click.
     ///
-    /// Never a field to type into. `fits` says which of them this machine can
-    /// actually hold, so an unusable choice is visibly unusable rather than
-    /// merely absent.
-    PickFrom { choices: Vec<(Profile, bool)> },
+    /// Never a field to type into. Each carries how well it would run here, so
+    /// a choice that will crawl is visibly that rather than merely absent.
+    PickFrom { choices: Vec<(Profile, Tier)> },
     /// Run the verification suite.
     Verify { model: String },
     /// Nothing to do.
@@ -247,12 +246,13 @@ fn install_plan() -> InstallPlan {
 /// All of them, not just the ones that fit: a list that silently omits the
 /// choice someone was looking for reads as Sindri not supporting it. Marking it
 /// says the true thing instead, and leaves the decision where it belongs.
-fn choices_for(available: Option<f32>) -> Vec<(Profile, bool)> {
-    catalogue::PROFILES
-        .into_iter()
+fn choices_for(available: Option<f32>) -> Vec<(Profile, Tier)> {
+    catalogue::profiles()
+        .iter()
         .map(|profile| {
-            let fits = available.is_none_or(|room| profile.fits(room));
-            (profile, fits)
+            let tier =
+                available.map_or(Tier::Supported, |room| profile.tier(room, DEFAULT_CONTEXT));
+            (profile.clone(), tier)
         })
         .collect()
 }
@@ -304,12 +304,12 @@ pub fn readiness(probe: &Probe, verified: Option<(&str, &[Feature])>) -> Readine
 /// unprofiled, and verification rather than a table decides what it can do.
 fn usable_model(probe: &Probe) -> Option<&str> {
     let room = probe.available_memory;
-    let profiled = catalogue::PROFILES.into_iter().rev().find(|profile| {
-        probe.models.iter().any(|held| held == profile.tag)
-            && room.is_none_or(|available| profile.fits(available))
+    let profiled = catalogue::profiles().iter().rev().find(|profile| {
+        probe.models.contains(&profile.id)
+            && room.is_none_or(|available| profile.tier(available, DEFAULT_CONTEXT).is_offered())
     });
     profiled
-        .map(|profile| profile.tag)
+        .map(|profile| profile.id.as_str())
         .or_else(|| probe.models.first().map(String::as_str))
 }
 
@@ -338,17 +338,22 @@ impl Readiness {
                 detail: "Ollama is installed but not answering. Sindri will start it.".to_owned(),
                 action: Action::Start,
             },
-            Self::NoModel => match probe.available_memory.and_then(catalogue::recommended) {
+            Self::NoModel => match probe
+                .available_memory
+                .and_then(|room| catalogue::recommended(room, DEFAULT_CONTEXT))
+            {
                 Some(profile) => Step {
-                    title: format!("Download {}", profile.tag),
+                    title: format!("Download {}", profile.display_name),
                     detail: format!(
-                        "{}. {:.1} GB download, needs about {:.1} GB free to run, {}.",
-                        profile.because,
-                        profile.download,
-                        profile.needs(),
-                        profile.licence
+                        "{} Needs about {:.1} GB to run at {}, {}.",
+                        profile.description,
+                        profile.residency(DEFAULT_CONTEXT),
+                        profile.quantisation,
+                        profile.license
                     ),
-                    action: Action::Pull { profile },
+                    action: Action::Pull {
+                        profile: profile.clone(),
+                    },
                 },
                 None => Step {
                     title: "Pick a model".to_owned(),
@@ -360,7 +365,7 @@ impl Readiness {
                         // machine, and the report can be wrong.
                         Some(available) => format!(
                             "This machine reports {available:.1} GB for a model, less than any \
-                             model Sindri has measured needs. These will be slow or will not \
+                             model Sindri would lead with needs. These will be slow or will not \
                              load, but the choice is yours."
                         ),
                         None => "Sindri could not tell how much memory is available, so it will \

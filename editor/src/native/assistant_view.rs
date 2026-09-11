@@ -12,7 +12,9 @@ use std::time::{Duration, Instant};
 
 use eframe::egui::{self, RichText};
 
-use crate::assistant::{Action, Feature, InstallPlan, Probe, Profile, Readiness, probe, readiness};
+use crate::assistant::{
+    Action, Feature, InstallPlan, Probe, Profile, Readiness, Tier, probe, readiness,
+};
 use crate::ui::icons;
 use crate::ui::theme::{color, metric, text};
 use crate::ui::widgets::{
@@ -143,7 +145,7 @@ impl EditorApp {
         match action {
             Action::Install { plan } => self.get_runner(&plan, context),
             Action::Start => self.start_runner(),
-            Action::Pull { profile } => self.pull_model(profile),
+            Action::Pull { profile } => self.pull_model(&profile),
             Action::PickFrom { .. } | Action::Verify { .. } | Action::None => {}
         }
     }
@@ -193,16 +195,16 @@ impl EditorApp {
     ///
     /// Over the loopback socket the probe already uses, so this needs no TLS
     /// and no client: the runner does the fetching, and Sindri asks it to.
-    fn pull_model(&mut self, profile: Profile) {
-        self.assistant.working = Some(format!("Downloading {}…", profile.tag));
+    fn pull_model(&mut self, profile: &Profile) {
+        self.assistant.working = Some(format!("Downloading {}…", profile.display_name));
         self.assistant.last_looked = None;
         self.console.info(format!(
-            "Downloading {} ({:.1} GB)",
-            profile.tag, profile.download
+            "Downloading {} at {}",
+            profile.id, profile.quantisation
         ));
-        let tag = profile.tag.to_owned();
+        let id = profile.id.clone();
         std::thread::spawn(move || {
-            let _ = probe::pull(&tag);
+            let _ = probe::pull(&id);
         });
     }
 }
@@ -211,13 +213,9 @@ impl EditorApp {
 fn offer(ui: &mut egui::Ui, action: &Action) -> Option<Action> {
     match action {
         Action::Install { plan } => {
-            let pressed = button::labelled(
-                ui,
-                "Get the model runner",
-                Intent::Primary,
-                "Downloads and installs the local model runner",
-            )
-            .clicked();
+            let pressed =
+                button::labelled(ui, "Get the model runner", Intent::Primary, plan.performs)
+                    .clicked();
             ui.add_space(6.0);
             ui.label(
                 RichText::new(plan.performs)
@@ -236,35 +234,42 @@ fn offer(ui: &mut egui::Ui, action: &Action) -> Option<Action> {
         .then(|| action.clone()),
         Action::Pull { profile } => button::labelled(
             ui,
-            &format!("Download {}", profile.tag),
+            &format!("Download {}", profile.display_name),
             Intent::Primary,
-            profile.because,
+            &profile.description,
         )
         .clicked()
         .then(|| action.clone()),
         Action::PickFrom { choices } => {
             let mut chosen = None;
-            for (profile, fits) in choices {
+            for (profile, tier) in choices {
                 ui.horizontal(|ui| {
                     ui.add_space(metric::GUTTER);
-                    if button::labelled(ui, profile.tag, Intent::Primary, profile.because).clicked()
+                    if button::labelled(
+                        ui,
+                        &profile.display_name,
+                        Intent::Primary,
+                        &profile.description,
+                    )
+                    .clicked()
                     {
-                        chosen = Some(Action::Pull { profile: *profile });
+                        chosen = Some(Action::Pull {
+                            profile: profile.clone(),
+                        });
                     }
+                    // How well it would run, said rather than implied by being
+                    // present in or absent from the list.
                     ui.label(
-                        RichText::new(if *fits {
-                            format!("{:.1} GB", profile.download)
-                        } else {
-                            format!(
-                                "{:.1} GB — more than this machine reports",
-                                profile.download
-                            )
-                        })
+                        RichText::new(format!(
+                            "{} · {:.1} GB",
+                            tier.label(),
+                            profile.residency(crate::assistant::DEFAULT_CONTEXT)
+                        ))
                         .size(text::NOTE)
-                        .color(if *fits {
-                            color::TEXT_FAINT
-                        } else {
-                            color::WARNING
+                        .color(match tier {
+                            Tier::Recommended | Tier::Supported => color::TEXT_FAINT,
+                            Tier::BestEffort => color::TEXT_MUTED,
+                            Tier::Unsupported => color::WARNING,
                         }),
                     );
                 });
