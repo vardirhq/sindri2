@@ -4,6 +4,56 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **Every boss in Orbital Baked is its own boss now.** Ten of the twelve shared
+  one prefab, one script and one sprite sheet, told apart by a `kind` number and
+  a tint — so they were the same orange gunship in ten colours, and eight of the
+  ten opened by orbiting the player and firing a ring. The vector original gave
+  each of them a different polygon count; baking had flattened that into one
+  hull.
+
+  Each now has its own recipe, sheet, prefab and script, and the side count is
+  back: five for the Harrower through sixteen for the Last Light. More
+  importantly each has its own *verb*, because a boss that differs only in how
+  many bullets it fires is not a different fight:
+
+  | boss | how you fight it |
+  | --- | --- |
+  | Harrower | bait the charge; it is soft only just after it misses |
+  | Prism | shoot on the beat — soft only while a facet faces you |
+  | Singularity | it drags you in for the whole fight |
+  | Crown | it heals unless it is being hurt now |
+  | Brood | cannot be hurt at all while a child lives |
+  | Mirror | every hit comes back; stop shooting |
+  | Architect | it fills the arena with slow walls |
+  | Spine | ten plates, each one you break is damage it stops soaking |
+  | Leviathan | one turning beam; the safe ground is behind it |
+  | Last Light | borrows the others' verbs in turn |
+
+  The Warden and the Aegis kept the fights they had. The roster is asserted
+  rather than trusted — its own script, its own sheet, clips that name frames
+  the sheet holds, and a director that can reach all twelve — because a game
+  runs perfectly well with every boss wearing the same hull, which is exactly
+  how this happened.
+
+- **Every baked rotation in both Orbital games was doing nothing.** A model
+  part's `rotation` is three Euler angles in degrees, and all 822 of them across
+  the nine `games/orbital-*` recipes were authored in radians. Read as degrees,
+  a quarter turn became a nudge of one and a half degrees, so every part kept
+  its position and lost its orientation.
+
+  It failed quietly, which is why it survived: the models still baked, still had
+  the right silhouette and the right size, and simply pointed nowhere. A ring of
+  blades meant to face outward came out a ring of parallel planks. The drifter's
+  spokes, the warden's cannons, the aegis's plates and the swept wings on the
+  player, core and charger are all in the recipes and none of them reached the
+  screen.
+
+  The recipes are converted and re-baked, whole degrees snapped to whole degrees
+  so the baker's exact quarter turns stay exact. The unit is now stated in
+  `docs/isometric-baker.md` and asserted in `tools/isometric-baker/test`,
+  including the specific case of radians-as-degrees, because a recipe with the
+  wrong unit bakes successfully and looks merely mediocre.
+
 - **Sindri will manage its own model runner.** A prebuilt llama.cpp server is
   about 31 MB and needs no installation at all — it is a binary unpacked into
   your own folder — where Ollama is a system service with a gigabyte installer

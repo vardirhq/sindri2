@@ -26,8 +26,8 @@ script Button {
             Game.set("mode", 1.0);
             Game.set("request_start", 1.0);
         } else if this.action == 5.0 {
-            // Twelve bosses: the Warden, then the eleven the challenger prefab
-            // serves. Wraps, because a picker that stops at the end is a picker
+            // Twelve bosses, each its own prefab, in the order a run meets
+            // them. Wraps, because a picker that stops at the end is a picker
             // you have to think about.
             Game.set("rush_from", (Game.get("rush_from", 0.0) + 1.0) % 12.0);
         } else {

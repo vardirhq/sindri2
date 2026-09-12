@@ -1,0 +1,282 @@
+// Cannot be hurt while any of its children lives.
+//
+// Its hull is baked from `textures/brood.isobake.json`; everything this
+// script does to it beyond that is motion.
+script Brood {
+    @export let view_size: f32 = 11.0;
+    @export let shot: Prefab;
+    @export let core: Prefab;
+    @export let drop_roll: Prefab;
+    @export let death_burst: Prefab;
+    @export let hazard_damage: f32 = 0.0;
+    @export let brood_spawn: Prefab;
+
+    var hp: f32 = 0.0;
+    var phase: f32 = 1.0;
+    var previous_phase: f32 = 1.0;
+    var attack: f32 = 0.75;
+    var special: f32 = 2.7;
+    var clock: f32 = 0.0;
+    var offset: f32 = 0.0;
+    var phase_flash: f32 = 0.0;
+    var death_burst_damage: f32 = 0.0;
+
+    fn start() {
+        // Bosses that arrive later in a run are the same boss with more to
+        // chew through, which is the reference game's curve rather than a
+        // second set of numbers per boss.
+        let elapsed = Game.get("elapsed", 0.0);
+        let scale = 1.0 + min(1.35, max(0.0, elapsed - 60.0) * 0.0025);
+        this.hp = 198.0 * scale;
+        this.offset = Random.range(0.0, 6.2831853);
+        Game.set("boss_max", this.hp);
+        Game.set("boss_hp", this.hp);
+        // The roster index, which is what the HUD and the title's picker
+        // count in: the Warden is zero, so every boss here is its old kind
+        // plus one and the Aegis is eleven.
+        Game.set("boss_kind", 5.0);
+        // It arrives already full.
+        tint();
+    }
+
+    fn tint() {
+        this.sprite.tint.r = 0.72;
+        this.sprite.tint.g = 1.0;
+        this.sprite.tint.b = 0.4;
+    }
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 1.0 {
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+            return;
+        }
+        if this.hazard_damage > 0.0 {
+            this.hp -= this.hazard_damage;
+            this.hazard_damage = 0.0;
+            if this.hp <= 0.0 { die(); return; }
+        }
+        let player = World.find("Player");
+        if player == null { return; }
+
+        this.clock += dt;
+        this.transform.rotation_z = this.offset + this.clock * -0.42;
+        update_phase(dt);
+
+        let dx = player.transform.position.x - this.transform.position.x;
+        let dy = player.transform.position.y - this.transform.position.y;
+        let far = sqrt(dx * dx + dy * dy);
+
+        // Off-screen it may approach, but it cannot aim, wind up, or fire.
+        if is_visible() {
+            act(dt, player, dx, dy, far);
+        } else {
+            chase(dx, dy, far, 1.0);
+        }
+
+        receive_hits(player, dx, dy, far);
+        Game.set("boss_hp", max(this.hp, 0.0));
+        if this.hp <= 0.0 { die(); }
+    }
+
+    fn update_phase(dt: f32) {
+        let share = this.hp / max(Game.get("boss_max", 1.0), 1.0);
+        if share <= 0.56 { this.phase = 2.0; } else { this.phase = 1.0; }
+        if this.phase != this.previous_phase {
+            this.previous_phase = this.phase;
+            this.phase_flash = 0.55;
+            this.attack = 0.28;
+            this.special = 0.75;
+            hatch(4.0);
+            Effects.burst(this.entity);
+            Audio.play("audio/boss.wav", 0.55);
+        }
+        if this.phase_flash > 0.0 {
+            this.phase_flash -= dt;
+            this.sprite.tint.r = 1.0;
+            this.sprite.tint.g = 1.0;
+            this.sprite.tint.b = 1.0;
+        } else {
+            tint();
+        }
+    }
+
+    fn receive_hits(player: Entity, dx: f32, dy: f32, far: f32) {
+        for hit in Physics.sensor_entered() {
+            if hit == player {
+                Game.set("player_damage_taken",
+                         max(Game.get("player_damage_taken", 0.0), 1.7));
+            } else if World.exists(hit) && World.has_tag(hit, "player_damage") {
+                var damage: f32 = World.property_number(hit, "damage", 0.0);
+                damage = taken(damage, player, dx, dy, far);
+                this.hp -= damage;
+                if this.hp <= 0.0 && World.property_number(hit, "nova", 0.0) > 0.0 {
+                    this.death_burst_damage = damage * 0.3;
+                }
+            }
+        }
+    }
+
+    fn chase(dx: f32, dy: f32, far: f32, scale: f32) {
+        if far > 0.001 {
+            Physics.set_velocity(this.entity, dx / far * 0.96 * scale,
+                                 dy / far * 0.96 * scale);
+        }
+    }
+
+    fn orbit(dx: f32, dy: f32, far: f32, want: f32, tangent: f32) {
+        if far <= 0.001 { return; }
+        var radial: f32 = 0.0;
+        if far > want + 0.45 { radial = 1.0; }
+        if far < want - 0.45 { radial = -0.55; }
+        let nx = dx / far;
+        let ny = dy / far;
+        Physics.set_velocity(this.entity,
+            (nx * radial - ny * tangent) * 0.96,
+            (ny * radial + nx * tangent) * 0.96);
+    }
+
+    fn anchor_move(target_y: f32) {
+        let dx = -this.transform.position.x;
+        let dy = target_y - this.transform.position.y;
+        let far = sqrt(dx * dx + dy * dy);
+        if far > 0.15 {
+            Physics.set_velocity(this.entity, dx / far * 0.96, dy / far * 0.96);
+        } else {
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+        }
+    }
+
+    fn fire_fan(nx: f32, ny: f32, count: f32, velocity: f32, spread: f32) {
+        let base = atan2(ny, nx);
+        let half = (count - 1.0) * 0.5;
+        var slot: f32 = 0.0;
+        while slot < count {
+            fire_at(this.transform.position.x, this.transform.position.y,
+                    base + (slot - half) * spread, velocity, 1.0);
+            slot += 1.0;
+        }
+        Audio.play("audio/boss.wav", 0.38);
+    }
+
+    fn fire_ring(count: f32, velocity: f32, gaps: f32) {
+        var slot: f32 = 0.0;
+        let gap = (this.clock * 1.4) % count;
+        while slot < count {
+            let distance = abs(slot - gap);
+            if gaps <= 0.0 || (distance > gaps && distance < count - gaps) {
+                fire_at(this.transform.position.x, this.transform.position.y,
+                        slot / count * 6.2831853 - this.clock * 0.65, velocity, 1.0);
+            }
+            slot += 1.0;
+        }
+        Audio.play("audio/boss.wav", 0.4);
+    }
+
+    fn fire_at(x: f32, y: f32, angle: f32, velocity: f32, damage: f32) {
+        let bolt = World.spawn(this.shot);
+        bolt.transform.position.x = x + cos(angle) * 0.65;
+        bolt.transform.position.y = y + sin(angle) * 0.65;
+        World.set_property(bolt, "dir_x", cos(angle));
+        World.set_property(bolt, "dir_y", sin(angle));
+        World.set_property(bolt, "speed", velocity);
+        World.set_property(bolt, "damage", damage);
+    }
+
+    fn visible_half_x() -> f32 {
+        let aspect = max(Viewport.aspect, 0.001);
+        if aspect >= 1.0 { return this.view_size * 0.5 * aspect; }
+        return this.view_size * 0.5;
+    }
+
+    fn visible_half_y() -> f32 {
+        let aspect = max(Viewport.aspect, 0.001);
+        if aspect >= 1.0 { return this.view_size * 0.5; }
+        return this.view_size * 0.5 / aspect;
+    }
+
+    fn is_visible() -> bool {
+        let half_x = visible_half_x();
+        let half_y = visible_half_y();
+        let radius = max(abs(this.transform.scale.x), abs(this.transform.scale.y)) * 0.5;
+        return this.transform.position.x + radius >= -half_x &&
+               this.transform.position.x - radius <= half_x &&
+               this.transform.position.y + radius >= -half_y &&
+               this.transform.position.y - radius <= half_y;
+    }
+
+    fn die() {
+        if this.death_burst_damage > 0.0 {
+            let wave = World.spawn(this.death_burst);
+            wave.transform.position.x = this.transform.position.x;
+            wave.transform.position.y = this.transform.position.y;
+            World.set_property(wave, "damage", this.death_burst_damage);
+        }
+        Effects.burst(this.entity);
+        Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.9));
+        Audio.play("audio/kill.wav", 0.6);
+        Game.set("kills", Game.get("kills", 0.0) + 1.0);
+        Game.set("score", Game.get("score", 0.0) + 62.0 * 10.0);
+        Game.set("boss_hp", 0.0);
+        Game.set("boss_max", 0.0);
+        var made: f32 = 0.0;
+        while made < 8.0 {
+            let angle = made / 8.0 * 6.2831853;
+            let drop = World.spawn(this.core);
+            drop.transform.position.x = this.transform.position.x + cos(angle) * 1.2;
+            drop.transform.position.y = this.transform.position.y + sin(angle) * 1.2;
+            World.set_property(drop, "worth", 5.0);
+            made += 1.0;
+        }
+        let roll = World.spawn(this.drop_roll);
+        roll.transform.position.x = this.transform.position.x;
+        roll.transform.position.y = this.transform.position.y;
+        World.set_property(roll, "boss", 1.0);
+        World.despawn(this.entity);
+    }
+
+    // What this boss is. Everything above is plumbing every boss shares.
+    fn act(dt: f32, player: Entity, dx: f32, dy: f32, far: f32) {
+        orbit(dx, dy, far, 5.0, 0.32);
+        this.attack -= dt;
+        this.special -= dt;
+        if this.attack <= 0.0 && far > 0.001 {
+            if this.phase == 2.0 { fire_fan(dx / far, dy / far, 5.0, 4.0, 0.18); }
+            else { fire_fan(dx / far, dy / far, 3.0, 3.5, 0.18); }
+            if this.phase == 2.0 { this.attack = 1.25; } else { this.attack = 1.75; }
+        }
+        if this.special <= 0.0 {
+            hatch(2.0);
+            if this.phase == 2.0 { this.special = 3.7; } else { this.special = 5.0; }
+        }
+    }
+
+    // What it does to damage on the way in.
+    fn taken(damage: f32, player: Entity, dx: f32, dy: f32, far: f32) -> f32 {
+        // Not reduced -- refused. It does not defend itself; its children do.
+        if brood_alive() > 0.0 { return 0.0; }
+        return damage;
+    }
+
+    fn hatch(count: f32) {
+        var made: f32 = 0.0;
+        while made < count {
+            let angle = this.offset + made / count * 6.2831853;
+            let child = World.spawn(this.brood_spawn);
+            child.transform.position.x = this.transform.position.x + cos(angle) * 1.4;
+            child.transform.position.y = this.transform.position.y + sin(angle) * 1.4;
+            made += 1.0;
+        }
+        Effects.burst(this.entity);
+    }
+
+    // Counted by asking the world rather than by remembering, because
+    // remembering would mean holding handles across the frames they die in. A
+    // tag answers the same question the player is answering by looking.
+    fn brood_alive() -> f32 {
+        var alive: f32 = 0.0;
+        for child in World.with_tag("brood") {
+            if World.exists(child) { alive += 1.0; }
+        }
+        return alive;
+    }
+}

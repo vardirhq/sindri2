@@ -1,0 +1,26 @@
+{
+  "format_version": 1,
+  "anchor": "center",
+  "grid": {
+    "columns": 4,
+    "rows": 1,
+    "names": [
+      "body-0",
+      "body-1",
+      "body-2",
+      "body-3"
+    ],
+    "size": [
+      800,
+      186
+    ],
+    "margin": [
+      2,
+      2
+    ],
+    "spacing": [
+      4,
+      4
+    ]
+  }
+}

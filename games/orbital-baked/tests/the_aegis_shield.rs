@@ -243,12 +243,12 @@ fn fire_lands_on_the_plates_rather_than_the_hull() {
 
 /// The Aegis wears its own steel.
 ///
-/// Every other boss the challenger prefab serves is that orange gunship
-/// recoloured by a script tint, and for a long time the Aegis was too: a blue
-/// asked for once at configuration and overwritten every frame after by the
-/// cream the kinds either side share. Neither colour was one anybody chose for
-/// it, and neither belonged beside its own blue plates. It has its own sheet
-/// now, so the guard is two-sided — the right texture, and no tint over it.
+/// For a long time every boss but this one was a single orange gunship
+/// recoloured by a script tint, and the Aegis was too: a blue asked for once at
+/// configuration and overwritten every frame after by the cream its neighbours
+/// shared. Neither colour was one anybody chose for it, and neither belonged
+/// beside its own blue plates. Every boss wears its own hull now, so the guard
+/// is two-sided — the right texture, and no tint over it.
 #[test]
 fn it_wears_its_own_hull_rather_than_a_tinted_gunship() {
     let mut run = isolated_run();

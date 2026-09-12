@@ -1,0 +1,42 @@
+{
+  "format_version": 1,
+  "anchor": "center",
+  "grid": {
+    "columns": 20,
+    "rows": 1,
+    "names": [
+      "armour10-0",
+      "armour10-1",
+      "armour10-2",
+      "armour10-3",
+      "armour9-0",
+      "armour9-1",
+      "armour9-2",
+      "armour9-3",
+      "armour8-0",
+      "armour8-1",
+      "armour8-2",
+      "armour8-3",
+      "armour7-0",
+      "armour7-1",
+      "armour7-2",
+      "armour7-3",
+      "armour5-0",
+      "armour5-1",
+      "armour5-2",
+      "armour5-3"
+    ],
+    "size": [
+      3040,
+      150
+    ],
+    "margin": [
+      2,
+      2
+    ],
+    "spacing": [
+      4,
+      4
+    ]
+  }
+}

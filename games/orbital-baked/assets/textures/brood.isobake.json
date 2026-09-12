@@ -1,0 +1,1144 @@
+{
+  "format_version": 1,
+  "id": "brood",
+  "texture": "textures/brood.png",
+  "view": "top-down",
+  "pixels_per_unit": 128,
+  "directions": 1,
+  "render": {
+    "supersample": 4,
+    "padding": 2,
+    "palette_snap": true,
+    "alpha_cutoff": 128,
+    "outline": {
+      "enabled": true,
+      "colour": "#0a1018"
+    },
+    "shading": {
+      "light": [
+        -0.42,
+        0.8,
+        0.43
+      ],
+      "thresholds": [
+        0.26,
+        0.52,
+        0.8
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "body-0",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "armour": "#6ee26b",
+          "lit": "#c6f5c2",
+          "mid": "#2f8a34",
+          "dark": "#1d5f22",
+          "deep": "#123c16",
+          "eye": "#eaffe6",
+          "glow": "#9bf59a"
+        },
+        "parts": [
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0,
+              0.03,
+              0
+            ],
+            "radius": 0.66,
+            "height": 0.06,
+            "segments": 8
+          },
+          {
+            "type": "cylinder",
+            "material": "deep",
+            "position": [
+              0,
+              0.09,
+              0
+            ],
+            "radius": 0.62,
+            "height": 0.12,
+            "segments": 8
+          },
+          {
+            "type": "cylinder",
+            "material": "mid",
+            "position": [
+              0,
+              0.19,
+              0
+            ],
+            "radius": 0.58,
+            "height": 0.06,
+            "segments": 8,
+            "radius_top": 0.54
+          },
+          {
+            "type": "cylinder",
+            "material": "armour",
+            "position": [
+              0.2592,
+              0.24,
+              0.0208
+            ],
+            "radius": 0.21,
+            "height": 0.16,
+            "segments": 8,
+            "radius_top": 0.15
+          },
+          {
+            "type": "sphere",
+            "material": "lit",
+            "position": [
+              0.2592,
+              0.33,
+              0.0208
+            ],
+            "radius": 0.1,
+            "segments": 10
+          },
+          {
+            "type": "cylinder",
+            "material": "armour",
+            "position": [
+              -0.1476,
+              0.24,
+              0.2141
+            ],
+            "radius": 0.21,
+            "height": 0.16,
+            "segments": 8,
+            "radius_top": 0.15
+          },
+          {
+            "type": "sphere",
+            "material": "lit",
+            "position": [
+              -0.1476,
+              0.33,
+              0.2141
+            ],
+            "radius": 0.1,
+            "segments": 10
+          },
+          {
+            "type": "cylinder",
+            "material": "armour",
+            "position": [
+              -0.1116,
+              0.24,
+              -0.2348
+            ],
+            "radius": 0.21,
+            "height": 0.16,
+            "segments": 8,
+            "radius_top": 0.15
+          },
+          {
+            "type": "sphere",
+            "material": "lit",
+            "position": [
+              -0.1116,
+              0.33,
+              -0.2348
+            ],
+            "radius": 0.1,
+            "segments": 10
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              0.5528,
+              0.22,
+              0.0
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -90.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              0.3909,
+              0.22,
+              0.3909
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -45.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              0.0,
+              0.22,
+              0.5528
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              0.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.3909,
+              0.22,
+              0.3909
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              45.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.5528,
+              0.22,
+              0.0
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              90.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.3909,
+              0.22,
+              -0.3909
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              135.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.0,
+              0.22,
+              -0.5528
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              180.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              0.3909,
+              0.22,
+              -0.3909
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              225.0,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "body-1",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "armour": "#6ee26b",
+          "lit": "#c6f5c2",
+          "mid": "#2f8a34",
+          "dark": "#1d5f22",
+          "deep": "#123c16",
+          "eye": "#eaffe6",
+          "glow": "#9bf59a"
+        },
+        "parts": [
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0,
+              0.03,
+              0
+            ],
+            "radius": 0.66,
+            "height": 0.06,
+            "segments": 8
+          },
+          {
+            "type": "cylinder",
+            "material": "deep",
+            "position": [
+              0,
+              0.09,
+              0
+            ],
+            "radius": 0.62,
+            "height": 0.12,
+            "segments": 8
+          },
+          {
+            "type": "cylinder",
+            "material": "mid",
+            "position": [
+              0,
+              0.19,
+              0
+            ],
+            "radius": 0.58,
+            "height": 0.06,
+            "segments": 8,
+            "radius_top": 0.54
+          },
+          {
+            "type": "cylinder",
+            "material": "armour",
+            "position": [
+              0.2592,
+              0.24,
+              0.0208
+            ],
+            "radius": 0.22,
+            "height": 0.16,
+            "segments": 8,
+            "radius_top": 0.15
+          },
+          {
+            "type": "sphere",
+            "material": "lit",
+            "position": [
+              0.2592,
+              0.33,
+              0.0208
+            ],
+            "radius": 0.11,
+            "segments": 10
+          },
+          {
+            "type": "cylinder",
+            "material": "armour",
+            "position": [
+              -0.1476,
+              0.24,
+              0.2141
+            ],
+            "radius": 0.22,
+            "height": 0.16,
+            "segments": 8,
+            "radius_top": 0.15
+          },
+          {
+            "type": "sphere",
+            "material": "lit",
+            "position": [
+              -0.1476,
+              0.33,
+              0.2141
+            ],
+            "radius": 0.11,
+            "segments": 10
+          },
+          {
+            "type": "cylinder",
+            "material": "armour",
+            "position": [
+              -0.1116,
+              0.24,
+              -0.2348
+            ],
+            "radius": 0.22,
+            "height": 0.16,
+            "segments": 8,
+            "radius_top": 0.15
+          },
+          {
+            "type": "sphere",
+            "material": "lit",
+            "position": [
+              -0.1116,
+              0.33,
+              -0.2348
+            ],
+            "radius": 0.11,
+            "segments": 10
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              0.5528,
+              0.22,
+              0.0
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -90.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              0.3909,
+              0.22,
+              0.3909
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -45.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              0.0,
+              0.22,
+              0.5528
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              0.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.3909,
+              0.22,
+              0.3909
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              45.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.5528,
+              0.22,
+              0.0
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              90.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.3909,
+              0.22,
+              -0.3909
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              135.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.0,
+              0.22,
+              -0.5528
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              180.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              0.3909,
+              0.22,
+              -0.3909
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              225.0,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "body-2",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "armour": "#6ee26b",
+          "lit": "#c6f5c2",
+          "mid": "#2f8a34",
+          "dark": "#1d5f22",
+          "deep": "#123c16",
+          "eye": "#eaffe6",
+          "glow": "#9bf59a"
+        },
+        "parts": [
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0,
+              0.03,
+              0
+            ],
+            "radius": 0.66,
+            "height": 0.06,
+            "segments": 8
+          },
+          {
+            "type": "cylinder",
+            "material": "deep",
+            "position": [
+              0,
+              0.09,
+              0
+            ],
+            "radius": 0.62,
+            "height": 0.12,
+            "segments": 8
+          },
+          {
+            "type": "cylinder",
+            "material": "mid",
+            "position": [
+              0,
+              0.19,
+              0
+            ],
+            "radius": 0.58,
+            "height": 0.06,
+            "segments": 8,
+            "radius_top": 0.54
+          },
+          {
+            "type": "cylinder",
+            "material": "armour",
+            "position": [
+              0.2592,
+              0.24,
+              0.0208
+            ],
+            "radius": 0.23,
+            "height": 0.16,
+            "segments": 8,
+            "radius_top": 0.15
+          },
+          {
+            "type": "sphere",
+            "material": "lit",
+            "position": [
+              0.2592,
+              0.33,
+              0.0208
+            ],
+            "radius": 0.12,
+            "segments": 10
+          },
+          {
+            "type": "cylinder",
+            "material": "armour",
+            "position": [
+              -0.1476,
+              0.24,
+              0.2141
+            ],
+            "radius": 0.23,
+            "height": 0.16,
+            "segments": 8,
+            "radius_top": 0.15
+          },
+          {
+            "type": "sphere",
+            "material": "lit",
+            "position": [
+              -0.1476,
+              0.33,
+              0.2141
+            ],
+            "radius": 0.12,
+            "segments": 10
+          },
+          {
+            "type": "cylinder",
+            "material": "armour",
+            "position": [
+              -0.1116,
+              0.24,
+              -0.2348
+            ],
+            "radius": 0.23,
+            "height": 0.16,
+            "segments": 8,
+            "radius_top": 0.15
+          },
+          {
+            "type": "sphere",
+            "material": "lit",
+            "position": [
+              -0.1116,
+              0.33,
+              -0.2348
+            ],
+            "radius": 0.12,
+            "segments": 10
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              0.5528,
+              0.22,
+              0.0
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -90.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              0.3909,
+              0.22,
+              0.3909
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -45.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              0.0,
+              0.22,
+              0.5528
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              0.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.3909,
+              0.22,
+              0.3909
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              45.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.5528,
+              0.22,
+              0.0
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              90.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.3909,
+              0.22,
+              -0.3909
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              135.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.0,
+              0.22,
+              -0.5528
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              180.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              0.3909,
+              0.22,
+              -0.3909
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              225.0,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "body-3",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "armour": "#6ee26b",
+          "lit": "#c6f5c2",
+          "mid": "#2f8a34",
+          "dark": "#1d5f22",
+          "deep": "#123c16",
+          "eye": "#eaffe6",
+          "glow": "#9bf59a"
+        },
+        "parts": [
+          {
+            "type": "cylinder",
+            "material": "dark",
+            "position": [
+              0,
+              0.03,
+              0
+            ],
+            "radius": 0.66,
+            "height": 0.06,
+            "segments": 8
+          },
+          {
+            "type": "cylinder",
+            "material": "deep",
+            "position": [
+              0,
+              0.09,
+              0
+            ],
+            "radius": 0.62,
+            "height": 0.12,
+            "segments": 8
+          },
+          {
+            "type": "cylinder",
+            "material": "mid",
+            "position": [
+              0,
+              0.19,
+              0
+            ],
+            "radius": 0.58,
+            "height": 0.06,
+            "segments": 8,
+            "radius_top": 0.54
+          },
+          {
+            "type": "cylinder",
+            "material": "armour",
+            "position": [
+              0.2592,
+              0.24,
+              0.0208
+            ],
+            "radius": 0.24,
+            "height": 0.16,
+            "segments": 8,
+            "radius_top": 0.15
+          },
+          {
+            "type": "sphere",
+            "material": "lit",
+            "position": [
+              0.2592,
+              0.33,
+              0.0208
+            ],
+            "radius": 0.13,
+            "segments": 10
+          },
+          {
+            "type": "cylinder",
+            "material": "armour",
+            "position": [
+              -0.1476,
+              0.24,
+              0.2141
+            ],
+            "radius": 0.24,
+            "height": 0.16,
+            "segments": 8,
+            "radius_top": 0.15
+          },
+          {
+            "type": "sphere",
+            "material": "lit",
+            "position": [
+              -0.1476,
+              0.33,
+              0.2141
+            ],
+            "radius": 0.13,
+            "segments": 10
+          },
+          {
+            "type": "cylinder",
+            "material": "armour",
+            "position": [
+              -0.1116,
+              0.24,
+              -0.2348
+            ],
+            "radius": 0.24,
+            "height": 0.16,
+            "segments": 8,
+            "radius_top": 0.15
+          },
+          {
+            "type": "sphere",
+            "material": "lit",
+            "position": [
+              -0.1116,
+              0.33,
+              -0.2348
+            ],
+            "radius": 0.13,
+            "segments": 10
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              0.5528,
+              0.22,
+              0.0
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -90.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              0.3909,
+              0.22,
+              0.3909
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              -45.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              0.0,
+              0.22,
+              0.5528
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              0.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.3909,
+              0.22,
+              0.3909
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              45.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.5528,
+              0.22,
+              0.0
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              90.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.3909,
+              0.22,
+              -0.3909
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              135.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              -0.0,
+              0.22,
+              -0.5528
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              180.0,
+              0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "armour",
+            "position": [
+              0.3909,
+              0.22,
+              -0.3909
+            ],
+            "size": [
+              0.1,
+              0.1,
+              0.1
+            ],
+            "rotation": [
+              0,
+              225.0,
+              0
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "format_version": 1,
   "metadata": {
-    "name": "The Aegis"
+    "name": "Aegis"
   },
   "entities": [
     {
@@ -20,8 +20,8 @@
           1.0
         ],
         "scale": [
-          1.0,
-          1.0,
+          1.9,
+          1.9,
           1.0
         ]
       },
@@ -77,8 +77,8 @@
           "lifetime": 1.05,
           "size": 0.16,
           "tint": [
-            0.56,
-            0.91,
+            1.0,
+            1.0,
             1.0,
             1.0
           ],
@@ -87,17 +87,14 @@
           "layer": 6
         },
         "sindri.script": {
-          "source": "scripts/challenger.decay",
-          "script": "Challenger",
+          "source": "scripts/aegis.decay",
+          "script": "Aegis",
           "properties": {
-            "kind": 10.0,
             "shot": "prefabs/enemy-bullet.prefab.json",
             "core": "prefabs/core.prefab.json",
             "drop_roll": "prefabs/drop-roll.prefab.json",
             "death_burst": "prefabs/nova.prefab.json",
-            "minion": "prefabs/drifter.prefab.json",
-            "shield_segment": "prefabs/shield-segment.prefab.json",
-            "brood_spawn": "prefabs/brood-spawn.prefab.json"
+            "shield_segment": "prefabs/shield-segment.prefab.json"
           }
         },
         "sindri.sprite": {
@@ -112,7 +109,7 @@
         },
         "sindri.animation.sprite": {
           "clips": {
-            "turn": {
+            "idle": {
               "frames": [
                 "aegis-0",
                 "aegis-1",
@@ -123,7 +120,7 @@
               "looping": true
             }
           },
-          "playing": "turn",
+          "playing": "idle",
           "speed": 1.0
         }
       }

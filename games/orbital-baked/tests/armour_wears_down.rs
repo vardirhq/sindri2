@@ -8,7 +8,6 @@
 //! So the wiring is checked here rather than looked at.
 
 use orbital_baked::Run;
-use serde_json::json;
 use sindri_core::EntityId;
 
 const STEP: f32 = 1.0 / 60.0;
@@ -49,22 +48,16 @@ fn isolated_run() -> Run {
     run
 }
 
-fn spawn_challenger(run: &mut Run) -> EntityId {
+fn spawn_spine(run: &mut Run) -> EntityId {
+    // The Spine is the one boss whose armour thins as it is damaged, and it is
+    // now its own prefab rather than a `kind` selected out of a shared one.
     let document = run
         .prefabs
-        .get("prefabs/challenger.prefab.json")
-        .expect("the tier-one boss prefab ships");
+        .get("prefabs/spine.prefab.json")
+        .expect("the Spine prefab ships");
     let entity = run.world.spawn_prefab(document).expect("boss spawns").root;
     let data = run.world.get_mut(entity).expect("boss remains");
     data.transform_3d.as_mut().expect("boss transform").position = [0.0, 3.5, 0.0];
-    data.components
-        .get_mut("sindri.script")
-        .and_then(|script| script.get_mut("properties"))
-        .and_then(serde_json::Value::as_object_mut)
-        .expect("script properties")
-        // Kind seven is the Spine, the one boss whose armour thins as it is
-        // damaged. The others in this prefab wear fixed plating.
-        .insert("kind".to_owned(), json!(7.0));
     entity
 }
 
@@ -82,7 +75,7 @@ fn clip(run: &Run, entity: EntityId) -> String {
 #[test]
 fn the_boss_sheds_armour_as_its_health_falls() {
     let mut run = isolated_run();
-    let boss = spawn_challenger(&mut run);
+    let boss = spawn_spine(&mut run);
     step(&mut run);
     step(&mut run);
 
@@ -137,12 +130,11 @@ fn every_armour_clip_names_frames_the_sheet_holds() {
     let run = Run::open().expect("the project opens");
     let prefab = run
         .prefabs
-        .get("prefabs/challenger.prefab.json")
+        .get("prefabs/spine.prefab.json")
         .expect("the boss prefab ships");
-    let text = std::fs::read_to_string(
-        orbital_baked::project().join("assets/textures/challenger.sheet.json"),
-    )
-    .expect("the sheet reads");
+    let text =
+        std::fs::read_to_string(orbital_baked::project().join("assets/textures/spine.sheet.json"))
+            .expect("the sheet reads");
     let sheet: serde_json::Value = serde_json::from_str(&text).expect("the sheet parses");
     let names: Vec<&str> = sheet["grid"]["names"]
         .as_array()

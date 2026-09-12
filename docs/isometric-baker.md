@@ -71,6 +71,25 @@ reasonable engine feature.** It is deliberately not part of this: it changes a
 serialized format the editor and runtime both read, and should be argued on its
 own merits rather than arriving as a side effect of an asset tool.
 
+## A part's rotation is in degrees
+
+`rotation` on a model part is three Euler angles **in degrees**, applied X then
+Y then Z. Nothing in a recipe records the unit, and the number that means a
+quarter turn is `90` rather than `1.5708`.
+
+This is worth stating because getting it wrong fails quietly. A recipe authored
+in radians still bakes: every angle simply lands within about six degrees of
+zero, so each part keeps roughly its authored *position* and loses its
+orientation. A ring of blades meant to face outward comes out as a ring of
+parallel planks, and because the silhouette is still symmetric and still the
+right size, it reads as a slightly mushy version of the intended model rather
+than as a broken one. Every `games/orbital-*` recipe was authored in radians and
+had been baked that way, which is why nothing in the game pointed anywhere.
+
+The baker keeps whole quarter turns exact (see `cosOf` in `src/vec.ts`), so an
+angle that is a whole number of degrees is also the angle that avoids a
+fractional tilt at a shading threshold. Prefer whole degrees.
+
 ## Determinism
 
 Baked assets are checked into the repository, so a bake must be reproducible.
