@@ -4,6 +4,120 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **A project can declare more than one scene, and every one of them ships.**
+  `[project] scenes` in `sindri.toml` lists the scenes a game can reach besides
+  the one it opens on, and `sindri-export` walks each of them exactly as it
+  walks the main scene.
+
+  Declared rather than discovered, which is the only list the exporter takes.
+  A scene reached by `Scene.go("house")` is a string inside a program, and the
+  exporter deliberately does not hunt for strings that resemble paths — a field
+  declared `String` is text however much it looks like one, which is why
+  prefabs are found through a script's declared types instead. Nor would
+  `[assets] include` do: it ships raw bytes, so a scene listed there would
+  arrive without its own textures, scripts or prefabs. That is an export that
+  looks complete and opens a door onto nothing, and it is what the new tests
+  are pointed at.
+
+  `scene_id()` now returns the scene the project *names* rather than the first
+  scene asset gathered, which stops being the same thing once more than one
+  ships.
+
+  The editor's manifest carries `scenes` without using it yet. It serializes by
+  named field, so a field it did not model would have been dropped the first
+  time anything rewrote `sindri.toml` — someone would have found their
+  interiors missing from the next build with nothing to point at. Asserted
+  through the real save path, because it is the write that loses a field.
+
+- **A script can ask to be somewhere else.** `Scene.go(name)` and
+  `Scene.current()`, with `LoadedScenes` keeping which scene a world is playing
+  and switching between them. Together with `World::add_scene` that is a game
+  with more than one place in it.
+
+  The change cannot happen inside the call. The script asking is running *in*
+  the scene being left, from a world the change would rearrange underneath it,
+  so `Scene.go` records an intention and the host performs it between frames —
+  the same shape `Audio.play` already has for recording a sound for whoever
+  owns a speaker. `Scene.current()` therefore answers the scene being played
+  and never the one asked for; a script that read back its own request would
+  see the move happen a frame before it did.
+
+  The first request in a frame wins. Two scripts asking is a conflict with no
+  right answer, and taking the last would make a door beside a door depend on
+  which script the pass reached first.
+
+  Leaving a scene disables it rather than unloading it, so everything it holds
+  is as the player left it on return. Whether that is what a game wants is the
+  game's call, not the engine's: `load` and `enter` are separate verbs so a
+  scene can be brought in without being entered, and `unload` is the one verb
+  that discards played state.
+
+  A host that plays exactly one scene passes no channel, and `Scene.go` says so
+  rather than accepting a request nothing will perform — a game whose doors
+  silently never open should be heard about on the first frame.
+
+  `Scene.current()` answers a plain name rather than an optional one. Decay
+  cannot compare a `String` with `null`, so a null would have been a value no
+  script could test; a host that has a scene channel is playing something, and
+  "playing nothing" is a state only its own startup can be in.
+
+- **A world can hold more than one scene.** `World::add_scene` loads a scene
+  beside whatever a world already holds, optionally under a parent entity —
+  and because `World::is_active` walks ancestors, disabling that one entity
+  takes the whole scene out of drawing, stepping, scripting and picking without
+  touching anything inside it.
+
+  This is the first part of `docs/parity.md`'s largest gap: one scene per
+  project. Gather needs a farm and a farmhouse both *live*, because walking
+  indoors has to leave the crops growing, and reloading the farm from its file
+  on the way out would reset them — a scene file holds the authored state, not
+  the played one. So a scene is added and switched off rather than loaded and
+  dropped.
+
+  The awkward part is identity. A scene's entity IDs are unique inside that file
+  and nowhere else, so two interiors may each author a `door`, while
+  `source_id_map` answers for the whole world. Every ID is therefore namespaced
+  on the way in: `door` from `house` becomes `house/door`. A collision after
+  that is a caller giving two scenes one namespace, and is refused rather than
+  resolved — with every identity resolved before anything is spawned, so a
+  refusal leaves the world exactly as it was.
+
+  This is a runtime capability, deliberately. `World::to_scene` writes one
+  document, so a world holding several scenes does not round-trip back into the
+  files it came from; the editor still edits one scene at a time.
+
+  Not yet: a project-level scene list, an editor surface, or anything in Decay
+  that can ask for a change.
+
+- **A Decay script can change the ground.** `Grid.tile` and `Grid.set_tile`
+  read and write a tilemap's cells by column and row, and `Grid.columns` /
+  `Grid.rows` give the map's size. This closes the last 🟡 on the tilemap row of
+  `docs/parity.md`.
+
+  Until now a script could only put entities *on top of* a floor, so anything
+  where the ground itself changes — tilled, watered, grown, burnt, flooded — had
+  to keep the picture and the game's idea of the picture in agreement by hand.
+
+  A cell is named by whole column and row rather than by a world position,
+  because the map is the authority on which cell a position falls in and a
+  script doing that arithmetic itself would be a second answer free to disagree.
+  Reading off the map answers `-1` rather than failing, since anything that
+  moves will ask about the edge; writing off the map is an error, because it has
+  no sensible meaning and dropping it silently would hide the mistake. So is a
+  palette index the map cannot answer — a map holding one fails validation on
+  the next load, long after and nowhere near the script that wrote it.
+
+  The write edits the stored payload in place rather than going through the
+  typed view, for the reason the sprite and shape paths do: the view is
+  `Deserialize`-only, so rebuilding it would drop a field it does not model.
+
+- **Gather's role is widened.** `AGENTS.md` said the showcase may only
+  demonstrate capabilities the engine already has. It is becoming an isometric
+  farming game held to the standard of a game somebody would choose to play,
+  and it may now pull new engine capability — generally, not shaped around it.
+  What still separates it from Orbital Last Stand is why a gap is found: Gather
+  finds them by trying to be good, Orbital by trying to be faithful.
+
 - **Every boss in Orbital Baked is its own boss now.** Ten of the twelve shared
   one prefab, one script and one sprite sheet, told apart by a `kind` number and
   a tint — so they were the same orange gunship in ten colours, and eight of the

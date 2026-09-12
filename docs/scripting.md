@@ -854,6 +854,68 @@ by guesswork.
 | `Grid.can_reach(mover, grid, target)` | `bool` |
 | `Grid.step_toward(mover, grid, target)` | `bool` |
 
+### Where the game is
+
+| Call | Returns |
+| --- | --- |
+| `Scene.current()` | `String` |
+| `Scene.go(name)` | nothing |
+
+`Scene.go` records an intention; it does not move anything. The script asking is
+running *in* the scene being left, from a world the change would rearrange
+underneath it, so the host performs the move between frames — the same shape as
+`Audio.play` recording a sound for whoever owns a speaker.
+
+`Scene.current()` therefore answers the scene being played, never the one asked
+for. A script that read back its own request would see the move happen a frame
+before it did.
+
+The first request in a frame is the one that counts. Two scripts asking is a
+conflict with no right answer, and taking the last would make a door beside a
+door depend on which script the pass reached first.
+
+A host that plays exactly one scene offers neither call, and `Scene.go` says so
+rather than accepting a request nothing will perform — a game whose doors
+silently never open should be heard about on the first frame.
+
+What a scene contains, where its file is, and when it loads are the host's
+business. This namespace knows a name.
+
+### Grid cells
+
+Where the calls above are about an entity's position on a map, these are about
+what the map *holds* there.
+
+| Call | Returns |
+| --- | --- |
+| `Grid.tile(map, column, row)` | `f32` |
+| `Grid.set_tile(map, column, row, index)` | nothing |
+| `Grid.columns(map)` | `f32` |
+| `Grid.rows(map)` | `f32` |
+
+A cell is named by whole column and row rather than by a world position: the map
+is the authority on which cell a position falls in, and a script doing that
+arithmetic itself would be a second answer free to disagree with the first.
+
+`tile` answers with an index into the map's `palette`, or `-1` where the cell
+holds nothing. Reading a cell the map does not have is `-1` as well rather than
+an error, because anything that moves will ask about the edge and every caller
+would otherwise wrap the call in a bounds check the map can do itself.
+
+`set_tile` takes the same index, or any negative number to empty the cell.
+Writing outside the map *is* an error, because unlike reading it has no sensible
+meaning and silently dropping it would hide the mistake. So is an index the
+palette cannot answer: a map holding one fails validation on the next load, long
+after and nowhere near the script that wrote it.
+
+The write edits the stored payload in place rather than going through
+`TilemapComponent`, for the same reason the sprite and shape paths do: the view
+is `Deserialize`-only, so rebuilding and reserializing it would drop any field
+the view does not model.
+
+This is what makes ground a thing gameplay can change — tilled, watered, grown,
+burnt, flooded — rather than scenery a script can only put entities on top of.
+
 The second entity must carry a world-space `sindri.tilemap`. Its projection,
 cell size, and complete world-XY transform define the coordinate space; there is no implicit
 "first grid" and no second set of projection settings for scripts to disagree

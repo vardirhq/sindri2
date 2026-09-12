@@ -16,8 +16,8 @@ use crate::{
         FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, GridCall, HostFunction, INPUT,
         INPUT_QUERIES, Node, PHYSICS, PHYSICS_CALLS, PREFAB, PRINT, PROFILE, PROFILE_CALLS,
         PROFILES, PhysicsCall, ProfileCall, RANDOM, RANDOM_CALLS, RandomCall, SAVE, SAVE_CALLS,
-        SaveCall, THIS, THROUGH_REFERENCE, TIME, TIME_VALUES, UI, UI_CALLS, UiCall, WORLD,
-        WORLD_CALLS, WorldCall,
+        SCENE, SCENE_CALLS, SaveCall, SceneCall, THIS, THROUGH_REFERENCE, TIME, TIME_VALUES, UI,
+        UI_CALLS, UiCall, WORLD, WORLD_CALLS, WorldCall,
     },
 };
 
@@ -118,6 +118,7 @@ pub fn environment() -> Environment {
     add_save_surface(&mut environment);
     add_effects_surface(&mut environment);
     add_grid_surface(&mut environment);
+    add_scene_surface(&mut environment);
     add_audio_surface(&mut environment);
 
     environment
@@ -392,6 +393,30 @@ pub(super) fn add_save_surface(environment: &mut Environment) {
     environment.add_value(SAVE, Type::Named(SAVE.to_owned()));
 }
 
+pub(super) fn add_scene_surface(environment: &mut Environment) {
+    let mut scene = HostType::new();
+    for (name, call) in SCENE_CALLS {
+        scene = scene.with_function(
+            *name,
+            FunctionType {
+                params: match call {
+                    SceneCall::Go => vec![Type::String],
+                    SceneCall::Current => Vec::new(),
+                },
+                return_type: match call {
+                    SceneCall::Go => Type::Unit,
+                    // Declared as text and answered as null before any
+                    // scene has been entered, which is how `World.find`
+                    // declares an entity it may not find.
+                    SceneCall::Current => Type::String,
+                },
+            },
+        );
+    }
+    environment.add_type(SCENE, scene);
+    environment.add_value(SCENE, Type::Named(SCENE.to_owned()));
+}
+
 /// Short-lived visual flecks a script can throw.
 pub(super) fn add_effects_surface(environment: &mut Environment) {
     let mut effects = HostType::new();
@@ -438,10 +463,24 @@ pub(super) fn add_grid_surface(environment: &mut Environment) {
                         Type::Named(ENTITY.to_owned()),
                         Type::Named(ENTITY.to_owned()),
                     ],
+                    GridCall::Tile => vec![Type::Named(ENTITY.to_owned()), Type::F32, Type::F32],
+                    GridCall::SetTile => vec![
+                        Type::Named(ENTITY.to_owned()),
+                        Type::F32,
+                        Type::F32,
+                        Type::F32,
+                    ],
+                    GridCall::Columns | GridCall::Rows => {
+                        vec![Type::Named(ENTITY.to_owned())]
+                    }
                 },
                 return_type: match call {
-                    GridCall::PositionX | GridCall::PositionY => Type::F32,
-                    GridCall::Place => Type::Unit,
+                    GridCall::PositionX
+                    | GridCall::PositionY
+                    | GridCall::Tile
+                    | GridCall::Columns
+                    | GridCall::Rows => Type::F32,
+                    GridCall::Place | GridCall::SetTile => Type::Unit,
                     GridCall::CanReach | GridCall::StepToward => Type::Bool,
                 },
             },

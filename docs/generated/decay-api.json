@@ -60,6 +60,11 @@
     },
     {
       "kind": "value",
+      "name": "Scene",
+      "type": "Scene"
+    },
+    {
+      "kind": "value",
       "name": "Stick",
       "type": "Stick"
     },
@@ -388,6 +393,14 @@
         },
         {
           "kind": "function",
+          "name": "columns",
+          "parameters": [
+            "Entity"
+          ],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
           "name": "place",
           "parameters": [
             "Entity",
@@ -417,6 +430,25 @@
         },
         {
           "kind": "function",
+          "name": "rows",
+          "parameters": [
+            "Entity"
+          ],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "set_tile",
+          "parameters": [
+            "Entity",
+            "f32",
+            "f32",
+            "f32"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
           "name": "step_toward",
           "parameters": [
             "Entity",
@@ -424,6 +456,16 @@
             "Entity"
           ],
           "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "tile",
+          "parameters": [
+            "Entity",
+            "f32",
+            "f32"
+          ],
+          "returns": "f32"
         }
       ],
       "name": "Grid"
@@ -832,6 +874,25 @@
         }
       ],
       "name": "Save"
+    },
+    {
+      "members": [
+        {
+          "kind": "function",
+          "name": "current",
+          "parameters": [],
+          "returns": "String"
+        },
+        {
+          "kind": "function",
+          "name": "go",
+          "parameters": [
+            "String"
+          ],
+          "returns": "unit"
+        }
+      ],
+      "name": "Scene"
     },
     {
       "members": [

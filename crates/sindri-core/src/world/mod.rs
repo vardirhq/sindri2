@@ -13,7 +13,7 @@ mod scene;
 mod tests;
 
 pub use prefab::SpawnedPrefab;
-pub use scene::LoadedScene;
+pub use scene::{AddedScene, LoadedScene};
 
 use std::collections::BTreeMap;
 

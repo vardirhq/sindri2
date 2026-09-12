@@ -126,7 +126,7 @@ is why it earns a section rather than a footnote.
 | Reusable data profiles | ✅ | ✅ | ✅ | ✅ | **Ahead** | Unity has no native equivalent; ScriptableObject is close but needs code per asset. Optional schemas when a second catalog proves the shape |
 | Transform | ✅ | ✅ | 🟡 | ✅ | **Par** | No structured vector or rotation value in Decay |
 | Scene save / load | ✅ | ✅ | — | ✅ | **Par** | Readable single file, which is **Ahead**; see the advantages table |
-| **Multiple scenes / additive loading** | ❌ | ❌ | ❌ | ❌ | **Absent** | One scene per project. Every non-trivial game needs a menu scene and a level scene, and today that is one file or a manual swap |
+| **Multiple scenes / additive loading** | ✅ | 🟡 | ✅ | ✅ | **Behind** | `World::add_scene` loads a scene beside the ones a world already holds; `LoadedScenes` keeps which one is played and switches between them, leaving everything a scene holds as the player left it. `Scene.go`/`Scene.current` let a script ask, `[project] scenes` declares them and the exporter walks each one for its own assets. The editor carries the list through a save but offers no way to edit it, and a world holding several scenes does not round-trip through `to_scene` |
 | Scene streaming / Addressables | ❌ | ❌ | ❌ | ❌ | **Absent** | Not urgent at 2D scale, but named so it is not a surprise |
 | Undo / redo | ✅ | ✅ | — | — | **Par** | Command-backed; script writes are outside it |
 
@@ -150,7 +150,7 @@ is why it earns a section rather than a footnote.
 | Sprites, sheets, UVs, layers, blending | ✅ | ✅ | 🟡 | ✅ | **Par** | Decay has sprite asset and visibility paths only |
 | Sheet-declared ground anchor | ✅ | ✅ | — | ✅ | **Ahead** | Says where a sprite meets the ground, so sorting is authored rather than guessed |
 | Procedural shapes | ✅ | 🟡 | ✅ | ✅ | **Ahead** | Instanced with sprites; Unity needs a plugin or a mesh. No point-handle authoring |
-| Tilemaps (ortho + iso, overhang) | ✅ | ✅ | 🟡 | ✅ | **Par** | No typed tile-cell read/write in Decay |
+| Tilemaps (ortho + iso, overhang) | ✅ | ✅ | ✅ | ✅ | **Par** | `Grid.tile`/`set_tile` read and write cells; `Grid.columns`/`rows` give the size |
 | **Autotiling / rule tiles** | ❌ | ❌ | ❌ | ❌ | **Absent** | Unity and Godot both ship it. Painting a wall run by hand is the daily cost |
 | **Tilemap collision** | ❌ | ❌ | ❌ | ❌ | **Absent** | Grid walls serve pathfinding, not physics. A tilemap generates no colliders |
 | **2D lights and shadows** | ❌ | ❌ | ❌ | ❌ | **Absent** | URP 2D lights, Godot's CanvasModulate + Light2D. Nothing here |

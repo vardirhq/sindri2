@@ -207,7 +207,43 @@ pub(crate) enum GridCall {
     CanReach,
     /// Move an authored occupant one deterministic A* node toward a target.
     StepToward,
+    /// Which sprite a cell holds, as an index into the map's palette.
+    ///
+    /// In the `Grid` namespace rather than a namespace of its own because a
+    /// cell is the same cell the rest of these calls place things on, and a
+    /// second name for it would be a second meaning for it.
+    Tile,
+    SetTile,
+    /// The map's size, so a script can walk it without asking about cells that
+    /// are not there.
+    Columns,
+    Rows,
 }
+
+impl GridCall {
+    /// Whether this names a map and a cell rather than an occupant and a map.
+    ///
+    /// The two shapes cannot share an argument list, so they cannot share the
+    /// code that reads one.
+    pub(crate) const fn is_about_a_cell(self) -> bool {
+        matches!(
+            self,
+            Self::Tile | Self::SetTile | Self::Columns | Self::Rows
+        )
+    }
+}
+
+/// Asking where the game is, and to be somewhere else.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum SceneCall {
+    /// Ask to move to a named scene, performed between frames.
+    Go,
+    /// The scene being played, or `null` where the host names none.
+    Current,
+}
+
+pub(crate) const SCENE_CALLS: &[(&str, SceneCall)] =
+    &[("go", SceneCall::Go), ("current", SceneCall::Current)];
 
 pub(crate) const GRID_CALLS: &[(&str, GridCall)] = &[
     ("position_x", GridCall::PositionX),
@@ -215,6 +251,10 @@ pub(crate) const GRID_CALLS: &[(&str, GridCall)] = &[
     ("place", GridCall::Place),
     ("can_reach", GridCall::CanReach),
     ("step_toward", GridCall::StepToward),
+    ("tile", GridCall::Tile),
+    ("set_tile", GridCall::SetTile),
+    ("columns", GridCall::Columns),
+    ("rows", GridCall::Rows),
 ];
 
 /// What a script can do to a body, and ask about what it touched.

@@ -15,9 +15,10 @@ format_version = 1
 [project]
 name = "Gather"
 main_scene = "assets/gather.scene.json"
+scenes = ["assets/house.scene.json"]
 ```
 
-Three fields, and each is read by something today.
+Four fields, and each is read by something today.
 
 - `format_version` describes the file rather than the project, which is why it
   sits above the table — TOML puts bare keys before the first table, so a
@@ -40,6 +41,23 @@ Three fields, and each is read by something today.
   a nominated scene that has been deleted opens **nothing** rather than some
   other scene that happens to be nearby — standing one in for the other reads as
   though the named one loaded.
+
+- `scenes` are the other scenes the project can reach, written the same way.
+  Optional and usually absent: most projects have one place in them.
+
+  Declared rather than discovered, which is the only list the exporter takes and
+  is worth justifying. A scene reached by `Scene.go("house")` is a string inside
+  a program, and the exporter deliberately does not look for strings that
+  resemble paths — a field declared `String` is text however much it looks like
+  one, which is the same reason prefabs are found through a script's declared
+  types instead. Nor is `[assets] include` the place for them: that ships raw
+  bytes, so a scene listed there would arrive without its own textures, scripts
+  or prefabs, which is an export that looks complete and opens a door onto
+  nothing.
+
+  Listing the main scene here as well is allowed and changes nothing; it ships
+  once. The editor does not use this field yet but carries it through a save, so
+  writing one by hand is safe.
 
 `PROJECT_OVERVIEW.md` sketches a larger file: window size, feature flags, an
 asset root, a web canvas selector. None of that is here, and the sketch itself
