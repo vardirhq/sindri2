@@ -126,7 +126,7 @@ is why it earns a section rather than a footnote.
 | Reusable data profiles | ✅ | ✅ | ✅ | ✅ | **Ahead** | Unity has no native equivalent; ScriptableObject is close but needs code per asset. Optional schemas when a second catalog proves the shape |
 | Transform | ✅ | ✅ | 🟡 | ✅ | **Par** | No structured vector or rotation value in Decay |
 | Scene save / load | ✅ | ✅ | — | ✅ | **Par** | Readable single file, which is **Ahead**; see the advantages table |
-| **Multiple scenes / additive loading** | ❌ | ❌ | ❌ | ❌ | **Absent** | One scene per project. Every non-trivial game needs a menu scene and a level scene, and today that is one file or a manual swap |
+| **Multiple scenes / additive loading** | 🟡 | ❌ | ❌ | ❌ | **Behind** | `World::add_scene` loads a scene beside the ones a world already holds, under a parent that switches the whole scene in and out; stable IDs are namespaced so two interiors may each author a `door`. No project-level scene list, no editor surface, and nothing in Decay can ask for a change yet |
 | Scene streaming / Addressables | ❌ | ❌ | ❌ | ❌ | **Absent** | Not urgent at 2D scale, but named so it is not a surprise |
 | Undo / redo | ✅ | ✅ | — | — | **Par** | Command-backed; script writes are outside it |
 

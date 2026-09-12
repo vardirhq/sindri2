@@ -55,7 +55,7 @@ pub use sheet::{
 pub use tags::TagsComponent;
 pub use time::{FixedStepClock, FixedStepConfig, FrameSteps, TimeError, TimeScale};
 pub use transform::Transform3D;
-pub use world::{EntityData, LoadedScene, SpawnedPrefab, World, WorldError};
+pub use world::{AddedScene, EntityData, LoadedScene, SpawnedPrefab, World, WorldError};
 
 /// Common imports for native Sindri game code.
 pub mod prelude {

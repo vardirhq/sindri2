@@ -12,6 +12,23 @@ pub struct LoadedScene {
     pub entity_map: HashMap<SceneEntityId, EntityId>,
 }
 
+/// What [`World::add_scene`] put into an existing world.
+#[derive(Clone, Debug)]
+pub struct AddedScene {
+    /// The scene's own IDs to the entities they became. Keyed by the ID as the
+    /// file spells it, not as the world now holds it, because a caller reading
+    /// its own scene knows the former and not the latter.
+    pub entity_map: HashMap<SceneEntityId, EntityId>,
+    /// The entities the scene authored at its root, in file order.
+    ///
+    /// With no parent given these are the world's new roots; with one they are
+    /// now its children. Either way they are what a caller switches to take the
+    /// scene out of play.
+    pub roots: Vec<EntityId>,
+    /// The scene's own IDs to the namespaced ones the world now holds.
+    pub source_ids: HashMap<SceneEntityId, SceneEntityId>,
+}
+
 impl World {
     pub fn from_scene(scene: &SceneDocument) -> Result<LoadedScene, WorldError> {
         scene.validate()?;
@@ -41,6 +58,96 @@ impl World {
         }
 
         Ok(LoadedScene { world, entity_map })
+    }
+
+    /// Loads a scene *into* this world rather than building a new one.
+    ///
+    /// This is what more than one scene at a time is built on. A game with a
+    /// farm and a farmhouse wants both scenes live: walking indoors has to
+    /// leave the crops growing, and reloading the farm from its file on the way
+    /// back out would reset them, because the file holds the *authored* state
+    /// and not the *played* one. So a scene is added and switched off rather
+    /// than loaded and dropped.
+    ///
+    /// `under`, when given, becomes the parent of every entity the scene
+    /// authored at its root. That is the switch: [`World::is_active`] walks
+    /// ancestors, so disabling that one entity takes the whole scene out of
+    /// drawing, stepping, scripting and picking without touching anything
+    /// inside it.
+    ///
+    /// # Stable identities
+    ///
+    /// A scene's entity IDs are unique within that scene and nowhere else: two
+    /// interiors may each author a `door`. Since [`World::source_id_map`] and
+    /// [`World::entity_for_source_id`] answer for the whole world, every ID is
+    /// prefixed with `namespace` on the way in, so `door` from `house` becomes
+    /// `house/door`. A collision after that is a caller giving two scenes the
+    /// same namespace, and is refused rather than resolved.
+    ///
+    /// This is a runtime capability. [`World::to_scene`] writes one document,
+    /// so a world holding several scenes does not round-trip back into the
+    /// files it came from — the editor still edits one scene at a time.
+    pub fn add_scene(
+        &mut self,
+        scene: &SceneDocument,
+        namespace: &str,
+        under: Option<EntityId>,
+    ) -> Result<AddedScene, WorldError> {
+        scene.validate()?;
+        if let Some(under) = under
+            && self.get(under).is_none()
+        {
+            return Err(WorldError::InvalidEntity(under));
+        }
+        let taken: HashSet<SceneEntityId> = self
+            .entities()
+            .filter_map(|(_, data)| data.source_id.clone())
+            .collect();
+
+        // Every identity is resolved before anything is spawned, so a
+        // collision leaves the world exactly as it was rather than half
+        // holding a scene nobody asked for.
+        let mut namespaced = HashMap::with_capacity(scene.entities.len());
+        for entity in &scene.entities {
+            let id = SceneEntityId::new(format!("{namespace}/{}", entity.id.as_str()))?;
+            if taken.contains(&id) {
+                return Err(WorldError::DuplicateSourceId(id));
+            }
+            namespaced.insert(entity.id.clone(), id);
+        }
+
+        let mut entity_map = HashMap::with_capacity(scene.entities.len());
+        for entity in &scene.entities {
+            let runtime = self.spawn(EntityData {
+                source_id: Some(namespaced[&entity.id].clone()),
+                name: entity.name.clone(),
+                transform_3d: entity.transform_3d,
+                components: entity.components.clone(),
+                disabled: entity.disabled,
+                editor: entity.editor.clone(),
+                ..EntityData::default()
+            });
+            entity_map.insert(entity.id.clone(), runtime);
+        }
+
+        let mut roots = Vec::new();
+        for entity in &scene.entities {
+            let child = entity_map[&entity.id];
+            if let Some(parent) = &entity.parent {
+                self.set_parent(child, Some(entity_map[parent]))?;
+            } else {
+                roots.push(child);
+                if under.is_some() {
+                    self.set_parent(child, under)?;
+                }
+            }
+        }
+
+        Ok(AddedScene {
+            entity_map,
+            roots,
+            source_ids: namespaced,
+        })
     }
 
     /// Document-level metadata carried through a load/edit/save cycle.

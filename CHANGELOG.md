@@ -4,6 +4,34 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **A world can hold more than one scene.** `World::add_scene` loads a scene
+  beside whatever a world already holds, optionally under a parent entity —
+  and because `World::is_active` walks ancestors, disabling that one entity
+  takes the whole scene out of drawing, stepping, scripting and picking without
+  touching anything inside it.
+
+  This is the first part of `docs/parity.md`'s largest gap: one scene per
+  project. Gather needs a farm and a farmhouse both *live*, because walking
+  indoors has to leave the crops growing, and reloading the farm from its file
+  on the way out would reset them — a scene file holds the authored state, not
+  the played one. So a scene is added and switched off rather than loaded and
+  dropped.
+
+  The awkward part is identity. A scene's entity IDs are unique inside that file
+  and nowhere else, so two interiors may each author a `door`, while
+  `source_id_map` answers for the whole world. Every ID is therefore namespaced
+  on the way in: `door` from `house` becomes `house/door`. A collision after
+  that is a caller giving two scenes one namespace, and is refused rather than
+  resolved — with every identity resolved before anything is spawned, so a
+  refusal leaves the world exactly as it was.
+
+  This is a runtime capability, deliberately. `World::to_scene` writes one
+  document, so a world holding several scenes does not round-trip back into the
+  files it came from; the editor still edits one scene at a time.
+
+  Not yet: a project-level scene list, an editor surface, or anything in Decay
+  that can ask for a change.
+
 - **A Decay script can change the ground.** `Grid.tile` and `Grid.set_tile`
   read and write a tilemap's cells by column and row, and `Grid.columns` /
   `Grid.rows` give the map's size. This closes the last 🟡 on the tilemap row of
