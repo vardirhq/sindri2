@@ -4,7 +4,7 @@ use glam::{Mat4, Vec3};
 use sindri_core::World;
 use sindri_render::{SpriteInstance, TransparentOrder, UvRect};
 
-use crate::{TextureBindings, TilemapComponent};
+use crate::{TextureBindings, TileProjection, TilemapComponent};
 
 use super::camera::ResolvedCameras;
 use super::camera::view::camera_distance;
@@ -34,6 +34,15 @@ impl SceneExtractor {
                 .and_then(|data| data.transform_3d)
                 .unwrap_or_default();
             let texture = textures.resolve(&tilemap.texture);
+            let world_transform = transform_matrix(transform);
+            let camera = cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?;
+
+            // A tilemap owns one place in world ordering. Its cells have their
+            // own internal order below, but moving across the map must not make
+            // one cell escape the map's authored world layer/depth and sort as
+            // though it were a separate world entity.
+            let map_distance = camera_distance(camera.view, world_transform.w_axis.truncate());
+
             // The palette is resolved once and the cells index the answers: a
             // map of 49 tiles names a handful of sprites, so looking each one
             // up per cell would be the same lookup forty-nine times.
@@ -61,18 +70,18 @@ impl SceneExtractor {
                 let local =
                     Mat4::from_translation(Vec3::new(offset_x, offset_y + draw.offset_y, 0.0))
                         * Mat4::from_scale(Vec3::new(draw.size[0], draw.size[1], 1.0));
+                let model = world_transform * local;
 
-                let camera = cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?;
-                let model = transform_matrix(transform) * local;
-                let position = model.w_axis.truncate().with_z(transform.position[2]);
-                // Row and column break the tie rather than the entity index,
-                // because every tile of one map shares an entity. Reading order
-                // is the map's order, so the same map extracts the same way
-                // every time.
+                // The map's layer and world distance place the tilemap as one
+                // object in the scene. The submission index then gives cells a
+                // deterministic internal back-to-front order. Isometric rows
+                // are diagonals (column + row), not row-major array rows: using
+                // row-major order lets the underhang of a far-south tile draw
+                // over the top face of a much more northern tile.
                 let order = TransparentOrder::new(
                     tilemap.layer,
-                    camera_distance(camera.view, position),
-                    row.saturating_mul(tilemap.columns).saturating_add(column),
+                    map_distance,
+                    tile_submission_index(&tilemap, column, row),
                 )?;
                 batches
                     .entry((DrawSpace::World, tilemap.layer, texture))
@@ -84,5 +93,68 @@ impl SceneExtractor {
             }
         }
         Ok(())
+    }
+}
+
+/// Stable ordering inside one tilemap.
+///
+/// Orthogonal maps are authored top-to-bottom, left-to-right, so row-major is
+/// already their visual order. Isometric maps advance visually downward on
+/// diagonals: `(0, 1)` and `(1, 0)` share a row, while `(24, 0)` is far below
+/// `(0, 1)` despite appearing earlier in a row-major array. The column is only
+/// a deterministic tie-break inside one diagonal.
+fn tile_submission_index(tilemap: &TilemapComponent, column: u32, row: u32) -> u32 {
+    match tilemap.projection {
+        TileProjection::Orthogonal => row.saturating_mul(tilemap.columns).saturating_add(column),
+        TileProjection::Isometric => {
+            let diagonal = column.saturating_add(row);
+            let stride = tilemap.columns.max(tilemap.rows).max(1);
+            diagonal.saturating_mul(stride).saturating_add(column)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn map(projection: TileProjection, columns: u32, rows: u32) -> TilemapComponent {
+        TilemapComponent {
+            texture: "tiles.png".to_owned(),
+            palette: vec!["tile".to_owned()],
+            columns,
+            rows,
+            tile_size: [1.0, 1.0],
+            tile_overhang: 0.0,
+            projection,
+            tiles: vec![],
+            tint: [1.0, 1.0, 1.0, 1.0],
+            layer: 0,
+        }
+    }
+
+    #[test]
+    fn orthogonal_tiles_keep_row_major_order() {
+        let map = map(TileProjection::Orthogonal, 4, 4);
+        assert!(tile_submission_index(&map, 3, 0) < tile_submission_index(&map, 0, 1));
+    }
+
+    #[test]
+    fn isometric_tiles_order_by_visual_diagonal_not_array_row() {
+        let map = map(TileProjection::Isometric, 25, 25);
+
+        // Row-major gets this backwards: (24, 0) has array index 24 and
+        // (0, 1) has 25, but the first cell is twenty-three diagonals further
+        // south and therefore has to draw later.
+        assert!(tile_submission_index(&map, 24, 0) > tile_submission_index(&map, 0, 1));
+        assert!(tile_submission_index(&map, 1, 0) < tile_submission_index(&map, 0, 2));
+    }
+
+    #[test]
+    fn overhang_does_not_change_internal_tile_order() {
+        let mut map = map(TileProjection::Isometric, 8, 8);
+        let before = tile_submission_index(&map, 3, 4);
+        map.tile_overhang = 10.0;
+        assert_eq!(tile_submission_index(&map, 3, 4), before);
     }
 }
