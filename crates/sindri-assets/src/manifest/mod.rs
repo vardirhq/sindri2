@@ -130,6 +130,8 @@ pub enum AssetKind {
     Texture,
     /// A sprite sheet describing how a texture is cut up.
     Sheet,
+    /// Semantic tiles and their baked face sprite references.
+    TileSet,
     Font,
     Audio,
     /// Something the engine does not decode: read as bytes, or not at all.
@@ -143,11 +145,12 @@ impl AssetKind {
     /// Every kind, in the order a host should load them.
     ///
     /// The scene first, because everything else is referenced from it.
-    pub const ALL: [Self; 9] = [
+    pub const ALL: [Self; 10] = [
         Self::Scene,
         Self::Prefab,
         Self::Profile,
         Self::Sheet,
+        Self::TileSet,
         Self::Script,
         Self::Texture,
         Self::Font,
@@ -177,6 +180,7 @@ impl AssetKind {
             _ if id.ends_with(sindri_core::PREFAB_SUFFIX) => Self::Prefab,
             _ if id.ends_with(sindri_core::PROFILE_SUFFIX) => Self::Profile,
             _ if id.ends_with(".sheet.json") => Self::Sheet,
+            _ if id.ends_with(sindri_core::TILESET_SUFFIX) => Self::TileSet,
             _ if id.ends_with(".scene.json") => Self::Scene,
             _ => Self::Other,
         }
@@ -192,6 +196,7 @@ impl AssetKind {
             Self::Profile => "profile",
             Self::Texture => "texture",
             Self::Sheet => "sheet",
+            Self::TileSet => "tile_set",
             Self::Font => "font",
             Self::Audio => "audio",
             Self::Other => "other",

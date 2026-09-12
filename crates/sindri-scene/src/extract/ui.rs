@@ -13,7 +13,7 @@ use crate::UiImageComponent;
 use crate::screen_ui::UiPlaced;
 
 use super::camera::view::{OverlayExtent, camera_distance};
-use super::sprite::{DrawSpace, Drawing, SpriteBatches, drawn_rect};
+use super::sprite::{DrawSpace, Drawing, SpriteBatches, SpriteDraw, drawn_rect};
 use super::{SceneExtractError, SceneExtractor};
 
 /// Where an already-placed element lands on this viewport.
@@ -97,17 +97,12 @@ impl SceneExtractor {
                 camera_distance(camera.view, position),
                 entity.index(),
             )?;
-            batches
-                .entry((
-                    DrawSpace::Screen,
-                    image.layer,
-                    textures.resolve(reference.texture()),
-                ))
-                .or_default()
-                .push((
-                    order,
-                    SpriteInstance::new(model, image.tint).with_uv_rect(uv),
-                ));
+            batches.push(SpriteDraw {
+                space: DrawSpace::Screen,
+                texture: textures.resolve(reference.texture()),
+                order,
+                sprite: SpriteInstance::new(model, image.tint).with_uv_rect(uv),
+            });
         }
         Ok(())
     }

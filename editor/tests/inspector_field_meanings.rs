@@ -46,6 +46,7 @@ fn no_asset_picker_the_editor_offered_was_lost() {
         ("sindri.mesh", "texture", AssetKind::Texture),
         ("sindri.ui.image", "texture", AssetKind::Texture),
         ("sindri.tilemap", "texture", AssetKind::Texture),
+        ("sindri.tile_volume", "tileset", AssetKind::TileSet),
         ("sindri.effect.burst", "texture", AssetKind::Texture),
         ("sindri.ui.text", "font", AssetKind::Font),
         ("sindri.audio.source", "clip", AssetKind::Audio),

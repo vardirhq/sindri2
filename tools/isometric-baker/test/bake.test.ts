@@ -226,3 +226,38 @@ test('a model larger than any footprint is fine when nothing hands out ground', 
   );
   assert.doesNotThrow(() => bake(recipe));
 });
+
+test('block-face output bakes aligned independently named layers', () => {
+  const recipe = parseRecipe(
+    JSON.stringify({
+      ...MINIMAL_BLOCK,
+      variants: [
+        {
+          name: 'grass',
+          model: {
+            materials: { earth: { colour: '#805236' }, grass: { colour: '#6f9f52' } },
+            parts: [
+              { type: 'box', material: 'earth', position: [0, 0.5, 0], size: [1, 1, 1] },
+              { type: 'plate', material: 'grass', position: [0, 1.001, 0], size: [1, 1] },
+            ],
+          },
+        },
+      ],
+    }),
+    'blocks',
+  );
+  const result = bake(recipe);
+  assert.deepEqual(result.sheet.document.grid.names, ['grass-top', 'grass-south', 'grass-east']);
+  assert.equal(result.frames.length, 3);
+  assert.ok(result.frames.every((frame) => frame.image.width === result.canvas.width));
+  assert.ok(result.frames.every((frame) => frame.image.height === result.canvas.height));
+  assert.ok(result.frames.every((frame) => frame.content !== null), 'every visible block face draws');
+});
+
+const MINIMAL_BLOCK = {
+  format_version: 1,
+  id: 'blocks',
+  texture: 'textures/blocks.png',
+  output: 'block_faces',
+  directions: 1,
+};

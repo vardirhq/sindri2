@@ -1037,6 +1037,159 @@
             }
           ]
         },
+        "sindri.tile_grid": {
+          "cell_size": [1.1, 0.55],
+          "columns": 25,
+          "level_step": [0.0, 0.55],
+          "projection": "isometric",
+          "rows": 25
+        },
+        "sindri.tile_volume": {
+          "cells": [
+            {
+              "position": [10, 10, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [11, 10, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [12, 10, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [13, 10, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [14, 10, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [10, 11, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [11, 11, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [12, 11, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [13, 11, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [14, 11, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [10, 12, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [11, 12, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [12, 12, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [13, 12, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [14, 12, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [10, 13, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [11, 13, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [12, 13, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [13, 13, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [14, 13, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [10, 14, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [11, 14, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [12, 14, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [13, 14, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [14, 14, 0],
+              "tile": "grass"
+            },
+            {
+              "position": [11, 11, 1],
+              "tile": "grass"
+            },
+            {
+              "position": [12, 11, 1],
+              "tile": "grass"
+            },
+            {
+              "position": [13, 11, 1],
+              "tile": "grass"
+            },
+            {
+              "position": [11, 12, 1],
+              "tile": "grass"
+            },
+            {
+              "position": [12, 12, 1],
+              "tile": "grass"
+            },
+            {
+              "position": [13, 12, 1],
+              "tile": "grass"
+            },
+            {
+              "position": [11, 13, 1],
+              "tile": "grass"
+            },
+            {
+              "position": [12, 13, 1],
+              "tile": "grass"
+            },
+            {
+              "position": [13, 13, 1],
+              "tile": "grass"
+            },
+            {
+              "position": [12, 12, 2],
+              "tile": "stone"
+            }
+          ],
+          "layer": 4,
+          "tileset": "gather.tileset.json"
+        },
         "sindri.tilemap": {
           "columns": 25,
           "layer": 0,

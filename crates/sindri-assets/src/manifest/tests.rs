@@ -167,6 +167,7 @@ fn a_scanned_manifest_says_what_its_assets_are() {
         ("prefabs/bullet.prefab.json", AssetKind::Prefab),
         ("profiles/player.profile.json", AssetKind::Profile),
         ("textures/player.sheet.json", AssetKind::Sheet),
+        ("tiles/world.tileset.json", AssetKind::TileSet),
         ("textures/player.png", AssetKind::Texture),
         ("fonts/Inter.ttf", AssetKind::Font),
         ("audio/theme.wav", AssetKind::Audio),
@@ -186,6 +187,7 @@ fn a_scanned_manifest_says_what_its_assets_are() {
         AssetKind::Prefab,
         AssetKind::Profile,
         AssetKind::Sheet,
+        AssetKind::TileSet,
         AssetKind::Texture,
         AssetKind::Font,
         AssetKind::Audio,
@@ -207,6 +209,7 @@ fn the_longer_name_wins_among_the_json_documents() {
         "a prefab read as a sheet is a prefab nothing can spawn"
     );
     assert_eq!(AssetKind::for_id("a/b.sheet.json"), AssetKind::Sheet);
+    assert_eq!(AssetKind::for_id("a/b.tileset.json"), AssetKind::TileSet);
     assert_eq!(AssetKind::for_id("a/b.profile.json"), AssetKind::Profile);
     assert_eq!(AssetKind::for_id("a/b.scene.json"), AssetKind::Scene);
     assert_eq!(AssetKind::for_id("a/b.json"), AssetKind::Other);

@@ -473,6 +473,65 @@
     {
       "addable": true,
       "default_payload": {
+        "cell_size": [
+          1.0,
+          1.0
+        ],
+        "columns": 1,
+        "level_step": [
+          0.0,
+          0.5
+        ],
+        "projection": "orthogonal",
+        "rows": 1
+      },
+      "display_name": "Tile Grid",
+      "fields": {
+        "cell_size": [
+          1.0,
+          1.0
+        ],
+        "columns": 1,
+        "level_step": [
+          0.0,
+          0.5
+        ],
+        "projection": "orthogonal",
+        "rows": 1
+      },
+      "meanings": {
+        "projection": {
+          "kind": "choice",
+          "options": [
+            "orthogonal",
+            "isometric"
+          ]
+        }
+      },
+      "schema_version": 1,
+      "type_name": "sindri.tile_grid"
+    },
+    {
+      "addable": false,
+      "default_payload": null,
+      "display_name": "Tile Volume",
+      "fields": {
+        "cells": [],
+        "layer": 0,
+        "tileset": ""
+      },
+      "meanings": {
+        "tileset": {
+          "asset": "tile_set",
+          "kind": "asset"
+        }
+      },
+      "schema_version": 1,
+      "type_name": "sindri.tile_volume"
+    },
+    {
+      "addable": true,
+      "default_payload": {
         "columns": 1,
         "layer": 0,
         "palette": [],

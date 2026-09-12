@@ -12,6 +12,7 @@ fn project() -> tempfile::TempDir {
     fs::write(root.join("ui.weave"), "").unwrap();
     fs::write(root.join("drifter.prefab.json"), "{}").unwrap();
     fs::write(root.join("weapon.profile.json"), "{}").unwrap();
+    fs::write(root.join("world.tileset.json"), "{}").unwrap();
     fs::write(root.join(".hidden"), "").unwrap();
     fs::create_dir(root.join("textures")).unwrap();
     fs::write(root.join("textures/badge.png"), "").unwrap();
@@ -51,6 +52,7 @@ fn the_browser_reads_the_directory_the_scene_lives_in() {
             "tiles.png",
             "ui.weave",
             "weapon.profile.json",
+            "world.tileset.json",
         ],
         "children follow their parent, and each level is sorted by name"
     );
@@ -99,6 +101,7 @@ fn a_row_knows_what_kind_of_file_it_is() {
     // acceptance project's every enemy appeared.
     assert_eq!(kind("drifter.prefab.json"), Some(AssetKind::Prefab));
     assert_eq!(kind("weapon.profile.json"), Some(AssetKind::Profile));
+    assert_eq!(kind("world.tileset.json"), Some(AssetKind::TileSet));
     assert_eq!(
         kind("settings.json"),
         Some(AssetKind::Other),

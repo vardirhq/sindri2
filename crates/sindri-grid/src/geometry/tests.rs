@@ -190,6 +190,39 @@ fn coordinate_neighbours_do_not_overflow() {
 }
 
 #[test]
+fn volume_coordinates_have_six_stable_face_neighbours() {
+    let coord = GridCoord3::new(4, 7, 2);
+    assert_eq!(
+        coord.face_neighbours().collect::<Vec<_>>(),
+        vec![
+            GridCoord3::new(4, 7, 3),
+            GridCoord3::new(4, 6, 2),
+            GridCoord3::new(5, 7, 2),
+            GridCoord3::new(4, 8, 2),
+            GridCoord3::new(3, 7, 2),
+            GridCoord3::new(4, 7, 1),
+        ]
+    );
+}
+
+#[test]
+fn a_volume_projects_levels_without_changing_grid_math() {
+    let grid = GridSpace::new(Projection::Isometric, 64.0, 32.0).unwrap();
+    let volume = VolumeSpace::new(grid, PlanePoint::new(0.0, -24.0)).unwrap();
+    let coord = GridCoord3::new(3, 2, 4);
+    assert_point(
+        volume.grid_to_plane(coord).unwrap(),
+        PlanePoint::new(32.0, -16.0),
+    );
+    assert_eq!(
+        volume
+            .plane_to_grid_at_level(PlanePoint::new(32.0, -16.0), 4)
+            .unwrap(),
+        coord
+    );
+}
+
+#[test]
 fn invalid_projection_inputs_are_rejected() {
     assert!(matches!(
         GridSpace::new(Projection::Orthogonal, 0.0, 1.0),

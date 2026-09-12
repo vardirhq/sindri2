@@ -19,6 +19,7 @@ mod scene;
 #[allow(clippy::collapsible_if)]
 mod sheet;
 mod tags;
+mod tileset;
 mod time;
 mod transform;
 mod world;
@@ -54,6 +55,10 @@ pub use sheet::{
     SHEET_FORMAT_VERSION, SheetError, SheetGrid, SpriteAnchor, SpriteSheetDocument, sheet_id_for,
 };
 pub use tags::TagsComponent;
+pub use tileset::{
+    TILESET_FORMAT_VERSION, TILESET_SUFFIX, TileDefinition, TileFace, TileFaceVisual, TileFaces,
+    TileSetDocument, TileSetError,
+};
 pub use time::{FixedStepClock, FixedStepConfig, FrameSteps, TimeError, TimeScale};
 pub use transform::Transform3D;
 pub use world::{AddedScene, EntityData, LoadedScene, SpawnedPrefab, World, WorldError};

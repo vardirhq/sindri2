@@ -12,8 +12,9 @@ use sindri_assets::{
     AudioAsset, AudioAssetDecoder, FetchAssetSource, FontAsset, FontAssetDecoder,
     MANIFEST_FILE_NAME, PrefabAssetDecoder, ProfileAssetDecoder, SceneAssetDecoder,
     SpriteSheetAssetDecoder, TextAssetDecoder, TextureAsset, TextureAssetDecoder,
+    TileSetAssetDecoder,
 };
-use sindri_core::{AssetId, SceneDocument, SpriteSheetDocument};
+use sindri_core::{AssetId, SceneDocument, SpriteSheetDocument, TileSetDocument};
 use sindri_decay::{PrefabSources, ProfileSources, ScriptSources};
 use weave::Stylesheet;
 
@@ -28,6 +29,7 @@ pub(super) struct BrowserProjectAssets {
     pub(super) fonts: Vec<(AssetId, FontAsset)>,
     pub(super) audio: Vec<(AssetId, AudioAsset)>,
     pub(super) sheets: BTreeMap<String, SpriteSheetDocument>,
+    pub(super) tile_sets: Vec<(AssetId, TileSetDocument)>,
     pub(super) stylesheets: Vec<Stylesheet>,
     pub(super) asset_count: usize,
 }
@@ -87,6 +89,7 @@ pub(super) struct ProjectLoaders {
     fonts: AssetLoader<FontAssetDecoder>,
     audio: AssetLoader<AudioAssetDecoder>,
     sheets: AssetLoader<SpriteSheetAssetDecoder>,
+    tile_sets: AssetLoader<TileSetAssetDecoder>,
     prefabs: AssetLoader<PrefabAssetDecoder>,
     profiles: AssetLoader<ProfileAssetDecoder>,
     styles: AssetLoader<TextAssetDecoder>,
@@ -120,6 +123,8 @@ impl ProjectLoaders {
             .with_manifest(manifest.clone());
         let mut sheets = AssetLoader::new(source.clone(), config, SpriteSheetAssetDecoder)?
             .with_manifest(manifest.clone());
+        let mut tile_sets = AssetLoader::new(source.clone(), config, TileSetAssetDecoder)?
+            .with_manifest(manifest.clone());
         let mut prefabs = AssetLoader::new(source.clone(), config, PrefabAssetDecoder)?
             .with_manifest(manifest.clone());
         let mut profiles = AssetLoader::new(source.clone(), config, ProfileAssetDecoder)?
@@ -139,6 +144,7 @@ impl ProjectLoaders {
         request_kind(&mut fonts, &manifest, AssetKind::Font)?;
         request_kind(&mut audio, &manifest, AssetKind::Audio)?;
         request_kind(&mut sheets, &manifest, AssetKind::Sheet)?;
+        request_kind(&mut tile_sets, &manifest, AssetKind::TileSet)?;
         request_kind(&mut prefabs, &manifest, AssetKind::Prefab)?;
         request_kind(&mut profiles, &manifest, AssetKind::Profile)?;
         let style_ids = manifest
@@ -161,6 +167,7 @@ impl ProjectLoaders {
             fonts,
             audio,
             sheets,
+            tile_sets,
             manifest,
         })
     }
@@ -172,6 +179,7 @@ impl ProjectLoaders {
         poll_loader(&mut self.fonts)?;
         poll_loader(&mut self.audio)?;
         poll_loader(&mut self.sheets)?;
+        poll_loader(&mut self.tile_sets)?;
         poll_loader(&mut self.prefabs)?;
         poll_loader(&mut self.profiles)?;
         poll_loader(&mut self.styles)?;
@@ -182,6 +190,7 @@ impl ProjectLoaders {
             + self.fonts.outstanding()
             + self.audio.outstanding()
             + self.sheets.outstanding()
+            + self.tile_sets.outstanding()
             + self.prefabs.outstanding()
             + self.profiles.outstanding()
             + self.styles.outstanding()
@@ -223,6 +232,7 @@ impl ProjectLoaders {
             .into_iter()
             .map(|(id, sheet)| (id.as_str().to_owned(), sheet))
             .collect();
+        let tile_sets = loaded_many(&self.tile_sets, &ids(AssetKind::TileSet))?;
         let style_sources = self
             .style_ids
             .iter()
@@ -243,6 +253,7 @@ impl ProjectLoaders {
             fonts,
             audio,
             sheets,
+            tile_sets,
             stylesheets,
             asset_count,
         }))

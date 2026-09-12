@@ -3,10 +3,12 @@
 mod coord;
 mod error;
 mod space;
+mod volume;
 
 #[cfg(test)]
 mod tests;
 
-pub use coord::{GridBounds, GridCoord, GridPoint, PlanePoint};
+pub use coord::{GridBounds, GridCoord, GridCoord3, GridPoint, PlanePoint};
 pub use error::GridError;
 pub use space::{GridSpace, PlaneYAxis, Projection};
+pub use volume::VolumeSpace;

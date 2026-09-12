@@ -141,6 +141,44 @@ Two things follow from the geometry rather than from any decision here:
   hands out ground and the picture has to stay inside what it was given. With no
   tilemap, no ground is being handed out, and there is nothing to overrun.
 
+## Block-face atlases
+
+Stackable tile volumes need to remove faces shared by neighbouring blocks. A
+whole cube baked into one sprite cannot do that, so an isometric recipe may set
+`"output": "block_faces"`. The baker then renders each named variant as three
+aligned frames: `<name>-top`, `<name>-south`, and `<name>-east`.
+
+All three frames use the canvas and floor-centre anchor measured from the whole
+model. The runtime can therefore draw any subset at the same cell transform and
+the pieces meet exactly. `directions` must be `1`: these are the three visible
+layers of one fixed isometric view, not rotations of a freestanding object.
+
+```jsonc
+{
+  "output": "block_faces",
+  "directions": 1,
+  "variants": [{
+    "name": "grass",
+    "model": {
+      "materials": {
+        "earth": { "colour": "#805236" },
+        "grass": { "colour": "#6f9f52" }
+      },
+      "parts": [
+        { "type": "box", "material": "earth", "position": [0, 0.5, 0], "size": [1, 1, 1] },
+        { "type": "plate", "material": "grass", "position": [0, 1.001, 0], "size": [1, 1] }
+      ]
+    }
+  }]
+}
+```
+
+Face extraction follows outward axis-aligned normals. This deliberately suits
+Minecraft-like blocks and their flat decals; rounded or diagonal geometry is a
+normal sprite, not a block face. A thin top plate is how a grass block gives its
+top a different material without duplicating the cube or hand-authoring three
+separate models.
+
 ### Animation frames
 
 There is no separate animation mode, and none is needed. `variants` already

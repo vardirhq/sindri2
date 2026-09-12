@@ -12,12 +12,13 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use sindri_core::{
-    AssetId, SceneComponent, SceneDocument, SpriteSheetDocument, UnknownComponentPolicy, World,
-    sheet_id_for,
+    AssetId, SceneComponent, SceneDocument, SpriteSheetDocument, TileSetDocument,
+    UnknownComponentPolicy, World, sheet_id_for,
 };
 use sindri_decay::{ScriptComponent, ScriptSources, Scripts};
 use sindri_gather::{
-    FONTS, SHEETS, TEXTURE_IDS, TEXTURES, extractor, presented_world, sources, stylesheets, world,
+    FONTS, SHEETS, TEXTURE_IDS, TEXTURES, TILE_SETS, extractor, presented_world, sources,
+    stylesheets, world,
 };
 use sindri_scene::{
     SceneExtractor, ShapeComponent, SpriteComponent, TilemapComponent, UiAnchor, UiTextComponent,
@@ -190,9 +191,14 @@ fn weave_reflows_the_hud_for_a_phone() {
 #[test]
 fn every_texture_the_scene_names_is_shipped() {
     let (world, _scenes) = world().expect("the scene loads");
-    let referenced: BTreeSet<String> = sindri_scene::referenced_textures(&world)
+    let mut referenced: BTreeSet<String> = sindri_scene::referenced_textures(&world)
         .into_iter()
         .collect();
+    for (id, json) in TILE_SETS {
+        let tile_set =
+            TileSetDocument::from_json(json).unwrap_or_else(|error| panic!("{id} parses: {error}"));
+        referenced.extend(sindri_scene::tile_set_textures(&tile_set));
+    }
     // Against the list the binary actually embeds, rather than a third copy of
     // it written here: a hand-kept list in a test drifts from the one it is
     // meant to check, and the drift is invisible until a texture is missing.

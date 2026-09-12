@@ -16,10 +16,11 @@ use sindri_render::{
 };
 use sindri_scene::SceneExtractor;
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_scene::{CameraView, SceneRuntime, TextureBindings};
+use sindri_scene::{CameraView, SceneRuntime, TextureBindings, TileSetBindings};
 
 use crate::assets::{
-    bind_audio, bind_fonts, bind_textures, extractor, presented_world, scenes, stylesheets, world,
+    bind_audio, bind_fonts, bind_textures, bind_tile_sets, extractor, presented_world, scenes,
+    stylesheets, world,
 };
 use crate::error::GatherError;
 use crate::session::{GatherAudio, Session, gather_audio_backend};
@@ -30,6 +31,7 @@ pub(crate) struct GatherApp {
     engine: EngineHost<Session, GatherAudio>,
     scene: SceneExtractor,
     bindings: TextureBindings,
+    tile_sets: TileSetBindings,
     textures: TextureRegistry,
     depth: DepthTarget,
     cubes: TexturedCubeRenderer,
@@ -70,6 +72,7 @@ impl DesktopApp for GatherApp {
             engine,
             scene,
             bindings,
+            tile_sets: bind_tile_sets()?,
             textures,
             depth: DepthTarget::new(context.device(), context.width(), context.height()),
             cubes: TexturedCubeRenderer::new(context.device(), context.format()),
@@ -123,7 +126,8 @@ impl DesktopApp for GatherApp {
             &self.bindings,
             SceneRuntime::default()
                 .with_animations(self.engine.game().animations())
-                .with_effects(self.engine.game().effects()),
+                .with_effects(self.engine.game().effects())
+                .with_tile_sets(&self.tile_sets),
         )?;
         let mut encoder =
             context

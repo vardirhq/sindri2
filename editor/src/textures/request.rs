@@ -8,12 +8,13 @@ use std::{
 
 use sindri_assets::{
     AssetLoader, AssetWatch, FileSystemAssetSource, FontAssetDecoder, SpriteSheetAssetDecoder,
-    TextureAssetDecoder,
+    TextureAssetDecoder, TileSetAssetDecoder,
 };
 use sindri_core::{AssetId, World, sheet_id_for};
 use sindri_render::{TextRenderer, Texture2D, TextureRegistry};
 use sindri_scene::{
-    PROCEDURAL_TEXTURES, TextureBindings, referenced_fonts, referenced_sheets, referenced_textures,
+    PROCEDURAL_TEXTURES, TextureBindings, TileSetBindings, referenced_fonts, referenced_sheets,
+    referenced_textures, referenced_tile_sets, tile_set_textures,
 };
 
 use super::{QUEUE, SceneTextures, TextureNote, WATCH_INTERVAL, manifest_beside, root_of};
@@ -74,11 +75,15 @@ impl SceneTextures {
                 )
                 .ok()
             }),
+            tile_sets: root.as_deref().and_then(|root| {
+                AssetLoader::new(FileSystemAssetSource::new(root), QUEUE, TileSetAssetDecoder).ok()
+            }),
             sliced: BTreeMap::new(),
             watch: root.map(AssetWatch::new),
             last_examined: Instant::now(),
             registry,
             bindings,
+            tile_set_bindings: TileSetBindings::new(),
         }
     }
 
@@ -131,7 +136,14 @@ impl SceneTextures {
     /// a whole world cheap.
     pub fn request(&mut self, world: &World, text: &mut TextRenderer) -> Vec<TextureNote> {
         let (wanted_fonts, mut notes) = self.request_fonts(world, text);
-        let referenced = referenced_textures(world);
+        let (wanted_tile_sets, tile_notes) = self.request_tile_sets(world);
+        notes.extend(tile_notes);
+        let mut referenced = referenced_textures(world);
+        for id in &wanted_tile_sets {
+            if let Some(tile_set) = self.tile_set_bindings.get(id.as_str()) {
+                referenced.extend(tile_set_textures(tile_set));
+            }
+        }
         let wanted: BTreeSet<AssetId> = referenced
             .iter()
             .filter_map(|reference| AssetId::new(reference.clone()).ok())
@@ -165,7 +177,11 @@ impl SceneTextures {
             }
         }
         if let Some(watch) = watch.as_mut() {
-            let watched = wanted.union(&wanted_fonts).cloned().collect();
+            let watched: BTreeSet<AssetId> = wanted
+                .union(&wanted_fonts)
+                .cloned()
+                .chain(wanted_tile_sets.iter().cloned())
+                .collect();
             watch.retain(&watched);
         }
         // Which texture each sheet cuts, so an arriving sheet knows what to
@@ -226,6 +242,27 @@ impl SceneTextures {
         notes
     }
 
+    fn request_tile_sets(&mut self, world: &World) -> (BTreeSet<AssetId>, Vec<TextureNote>) {
+        let wanted: BTreeSet<AssetId> = referenced_tile_sets(world)
+            .iter()
+            .filter_map(|reference| AssetId::new(reference.clone()).ok())
+            .collect();
+        let mut notes = Vec::new();
+        if let Some(tile_sets) = &mut self.tile_sets {
+            for released in tile_sets.retain(&wanted) {
+                self.tile_set_bindings.unbind(released.as_str());
+            }
+            for id in &wanted {
+                if self.tile_set_bindings.get(id.as_str()).is_none()
+                    && let Err(error) = tile_sets.request(id.clone())
+                {
+                    notes.push(TextureNote::Failed(format!("{id}: {error}")));
+                }
+            }
+        }
+        (wanted, notes)
+    }
+
     pub(super) fn examine_files(&mut self) -> Vec<TextureNote> {
         if self.last_examined.elapsed() < WATCH_INTERVAL {
             return Vec::new();
@@ -234,6 +271,7 @@ impl SceneTextures {
         let Self {
             loader: Some(loader),
             fonts,
+            tile_sets,
             watch: Some(watch),
             ..
         } = self
@@ -245,6 +283,11 @@ impl SceneTextures {
             let result =
                 if let Some(fonts) = fonts.as_mut().filter(|fonts| fonts.get(&id).is_some()) {
                     fonts.reload(&id)
+                } else if let Some(tile_sets) = tile_sets
+                    .as_mut()
+                    .filter(|tile_sets| tile_sets.get(&id).is_some())
+                {
+                    tile_sets.reload(&id)
                 } else {
                     loader.reload(&id)
                 };

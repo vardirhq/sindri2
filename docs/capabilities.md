@@ -970,9 +970,11 @@ settings gear.
 
 ### Engine
 
-- **No reusable tileset asset model.** A tilemap has a component, renderer, and
-  palette of named sprites from a sheet, but tile semantics such as terrain,
-  collision, and reusable tile metadata do not exist
+- **No reusable tileset asset model yet.** Tile System 2 now has renderer-free
+  integer XYZ coordinates, explicit level projection, validated tile-grid
+  geometry, and sparse `sindri.tile_volume` cell data. Tile semantics, reusable
+  tile metadata, visible-face rendering, and the editor workflow remain to be
+  built; the accepted contract is in `docs/tile-system-2.md`.
 - World-space text, rich spans, and font fallback are missing. Screen text has
   authored alignment and wrapping, including Weave-controlled wrapping
 - **One mesh primitive: `Cube`.** No quad, sphere, or glTF import

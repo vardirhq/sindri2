@@ -144,6 +144,9 @@ impl ProjectExport {
             for reference in referenced_textures(&world) {
                 wanted.insert(reference, AssetKind::Texture);
             }
+            for tile_set in sindri_scene::referenced_tile_sets(&world) {
+                wanted.insert(tile_set, AssetKind::TileSet);
+            }
             for font in referenced_fonts(&world) {
                 wanted.insert(font, AssetKind::Font);
             }
@@ -199,6 +202,24 @@ impl ProjectExport {
             }
             for id in scripts.referenced_profiles(&world, &components) {
                 wanted.insert(id, AssetKind::Profile);
+            }
+        }
+
+        // Tile-set faces name textures indirectly through a reusable asset.
+        // Resolve those references before sheets, so their named sprites bring
+        // the sidecars that slice them just like scene sprites do.
+        let tile_sets = wanted
+            .iter()
+            .filter(|(_, kind)| **kind == AssetKind::TileSet)
+            .map(|(id, _)| id.clone())
+            .collect::<Vec<_>>();
+        for id in tile_sets {
+            let text = std::fs::read_to_string(resolve(project, &id))
+                .map_err(|error| ExportError::unreadable(&resolve(project, &id), &error))?;
+            let tile_set = sindri_core::TileSetDocument::from_json(&text)
+                .map_err(|error| ExportError::Project(format!("{id}: {error}")))?;
+            for texture in sindri_scene::tile_set_textures(&tile_set) {
+                wanted.insert(texture, AssetKind::Texture);
             }
         }
 

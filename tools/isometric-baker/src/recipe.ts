@@ -44,6 +44,9 @@ export interface ModelVariant {
   model: ModelSpec;
 }
 
+/** How the baked model is split into sheet frames. */
+export type OutputMode = 'sprite' | 'block_faces';
+
 /** The version this tool writes and reads. */
 export const RECIPE_FORMAT_VERSION = 1;
 
@@ -79,6 +82,8 @@ export interface Recipe {
   directions: DirectionCount;
   footprint: Footprint;
   render: FrameConfig;
+  /** Whole sprites, or aligned top/south/east layers for a stackable block. */
+  output: OutputMode;
   /**
    * The models on this sheet, in the order their frames are packed.
    *
@@ -357,6 +362,7 @@ const TOP_LEVEL_KEYS = [
   'directions',
   'footprint',
   'render',
+  'output',
   'model',
   'variants',
   'prefab',
@@ -419,6 +425,14 @@ export function parseRecipe(json: string, source: string): Recipe {
     fail(`${source}.directions`, `expected one of ${DIRECTION_COUNTS.join(', ')}, got ${directions}`);
   }
 
+  const output = optional(root, 'output', source, asString) ?? 'sprite';
+  if (output !== 'sprite' && output !== 'block_faces') {
+    fail(`${source}.output`, `expected "sprite" or "block_faces", got ${JSON.stringify(output)}`);
+  }
+  if (output === 'block_faces' && directions !== 1) {
+    fail(`${source}.directions`, 'block-face output has one fixed view; set "directions" to 1');
+  }
+
   const footprint = optional(root, 'footprint', source, readFootprint) ?? { width: 1, height: 1 };
   if (directions === 8 && footprint.width !== footprint.height) {
     fail(
@@ -430,6 +444,9 @@ export function parseRecipe(json: string, source: string): Recipe {
 
   const scale = readScale(root, source);
   const request = prefab(root, source);
+  if (output === 'block_faces' && request) {
+    fail(`${source}.prefab`, 'block-face output is a tile-set atlas, not one placeable sprite');
+  }
   if (scale.view !== 'isometric' && request?.grid) {
     fail(
       `${source}.prefab.grid`,
@@ -446,6 +463,7 @@ export function parseRecipe(json: string, source: string): Recipe {
     directions,
     footprint,
     render: optional(root, 'render', source, readRender) ?? DEFAULT_RENDER,
+    output,
     variants: readVariants(root, source),
     prefab: request,
   };

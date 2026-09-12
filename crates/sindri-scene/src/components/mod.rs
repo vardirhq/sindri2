@@ -13,6 +13,7 @@ mod camera;
 mod grid;
 mod mesh;
 mod sprite;
+mod tile_volume;
 mod tilemap;
 mod ui;
 mod ui_shape;
@@ -23,6 +24,9 @@ pub use camera::{CameraComponent, CameraFit};
 pub use grid::{GridNavigationComponent, GridOccupantComponent, GridWallDocument};
 pub use mesh::{MeshComponent, MeshPrimitive};
 pub use sprite::SpriteComponent;
+pub use tile_volume::{
+    TileCellDocument, TileGridComponent, TileGridError, TileVolumeComponent, TileVolumeError,
+};
 pub use tilemap::{TileDraw, TileProjection, TilemapComponent, TilemapError};
 pub use ui::{UiAnchor, UiFill, UiFillEdge, UiImageComponent, UiTextComponent};
 pub use ui_shape::{ShapeComponent, ShapeGeometry, UiShapeBlend, UiShapeComponent, UiShapeKind};

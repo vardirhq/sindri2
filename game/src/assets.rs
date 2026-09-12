@@ -15,7 +15,7 @@ use sindri_assets::{
 };
 use sindri_core::World;
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_core::{AssetId, SceneDocument, SpriteSheetDocument, sheet_id_for};
+use sindri_core::{AssetId, SceneDocument, SpriteSheetDocument, TileSetDocument, sheet_id_for};
 use sindri_decay::ScriptComponent;
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_decay::ScriptSources;
@@ -25,7 +25,7 @@ use sindri_platform::{AudioBackend, AudioClip};
 use sindri_render::{TextRenderer, Texture2D, TextureRegistry};
 use sindri_scene::SceneExtractor;
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_scene::TextureBindings;
+use sindri_scene::{TextureBindings, TileSetBindings};
 
 use crate::error::GatherError;
 
@@ -56,6 +56,7 @@ pub const WEAVE_SOURCES: &[(&str, &str)] = &[
 /// none.
 #[cfg(not(target_arch = "wasm32"))]
 pub const TEXTURE_IDS: &[&str] = &[
+    "textures/gather-blocks.png",
     "textures/ground.png",
     "textures/orb.png",
     "textures/player.png",
@@ -122,6 +123,10 @@ pub(crate) const SCRIPTS: &[(&str, &str)] = &[
 /// Native art bytes used by the standalone game and capture tests.
 #[cfg(not(target_arch = "wasm32"))]
 pub const TEXTURES: &[(&str, &[u8])] = &[
+    (
+        "textures/gather-blocks.png",
+        include_bytes!("../assets/textures/gather-blocks.png"),
+    ),
     (
         "textures/ground.png",
         include_bytes!("../assets/textures/ground.png"),
@@ -220,6 +225,10 @@ pub fn bind_audio(audio: &mut dyn AudioBackend) -> Result<(), GatherError> {
 #[cfg(not(target_arch = "wasm32"))]
 pub const SHEETS: &[(&str, &str)] = &[
     (
+        "textures/gather-blocks.sheet.json",
+        include_str!("../assets/textures/gather-blocks.sheet.json"),
+    ),
+    (
         "textures/ground.sheet.json",
         include_str!("../assets/textures/ground.sheet.json"),
     ),
@@ -256,6 +265,22 @@ pub const SHEETS: &[(&str, &str)] = &[
         include_str!("../assets/textures/tree.sheet.json"),
     ),
 ];
+
+/// Semantic block sets embedded by the native game.
+#[cfg(not(target_arch = "wasm32"))]
+pub const TILE_SETS: &[(&str, &str)] = &[(
+    "gather.tileset.json",
+    include_str!("../assets/gather.tileset.json"),
+)];
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn bind_tile_sets() -> Result<TileSetBindings, GatherError> {
+    let mut bindings = TileSetBindings::new();
+    for (id, json) in TILE_SETS {
+        bindings.bind(*id, TileSetDocument::from_json(json)?)?;
+    }
+    Ok(bindings)
+}
 
 /// Every native texture on the GPU, and every sheet bound to what it cuts.
 #[cfg(not(target_arch = "wasm32"))]

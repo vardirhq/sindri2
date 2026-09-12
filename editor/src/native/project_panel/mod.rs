@@ -115,7 +115,7 @@ pub(super) const fn asset_icon(kind: AssetKind) -> MaterialIcon {
         AssetKind::Font => icons::FONT,
         // A sprite and the sheet that cuts it are both about a grid over an
         // image, and neither is the image.
-        AssetKind::Sprite | AssetKind::Sheet => icons::TILEMAP,
+        AssetKind::Sprite | AssetKind::Sheet | AssetKind::TileSet => icons::TILEMAP,
         AssetKind::Mesh => icons::MESH,
         AssetKind::Prefab => icons::PREFAB,
         AssetKind::Profile | AssetKind::Other => icons::FILE,

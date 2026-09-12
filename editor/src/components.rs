@@ -100,6 +100,16 @@ const KNOWN: &[Known] = &[
         icon: icons::TILEMAP,
     },
     Known {
+        type_name: "sindri.tile_grid",
+        family: Family::Grid,
+        icon: icons::GRID,
+    },
+    Known {
+        type_name: "sindri.tile_volume",
+        family: Family::Rendering,
+        icon: icons::TILEMAP,
+    },
+    Known {
         type_name: "sindri.ui.image",
         family: Family::Ui,
         icon: icons::UI_ELEMENT,

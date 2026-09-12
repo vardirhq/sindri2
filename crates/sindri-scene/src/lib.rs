@@ -17,16 +17,18 @@ mod physics;
 mod physics_sync;
 pub(crate) mod screen_ui;
 mod textures;
+mod tilesets;
 
 pub use animation::{AnimationClip, AnimationError, SpriteAnimationComponent, SpriteAnimations};
 pub use audio::AudioSourceComponent;
 pub use camera_math::camera_rotation_from_look_at;
 pub use components::{
     CameraComponent, CameraFit, GridNavigationComponent, GridOccupantComponent, GridWallDocument,
-    MeshComponent, MeshPrimitive, ShapeComponent, ShapeGeometry, SpriteComponent, TileDraw,
-    TileProjection, TilemapComponent, TilemapError, UiAnchor, UiFill, UiFillEdge, UiImageComponent,
-    UiShapeBlend, UiShapeComponent, UiShapeKind, UiTextAutoSize, UiTextCase, UiTextComponent,
-    UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap, ui_text_template,
+    MeshComponent, MeshPrimitive, ShapeComponent, ShapeGeometry, SpriteComponent, TileCellDocument,
+    TileDraw, TileGridComponent, TileGridError, TileProjection, TileVolumeComponent,
+    TileVolumeError, TilemapComponent, TilemapError, UiAnchor, UiFill, UiFillEdge,
+    UiImageComponent, UiShapeBlend, UiShapeComponent, UiShapeKind, UiTextAutoSize, UiTextCase,
+    UiTextComponent, UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap, ui_text_template,
 };
 pub use effects::{EffectBurstComponent, Effects2d, Fleck};
 pub use extract::{
@@ -45,3 +47,4 @@ pub use textures::{
     TEXTURE_NAMING_COMPONENTS, TextureBindings, referenced_fonts, referenced_sheets,
     referenced_textures, unresolved_sprites, unresolved_textures,
 };
+pub use tilesets::{TileSetBindings, referenced_tile_sets, tile_set_sheets, tile_set_textures};

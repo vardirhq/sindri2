@@ -24,8 +24,8 @@ use crate::animation::SpriteAnimationComponent;
 use crate::audio::AudioSourceComponent;
 use crate::components::{
     CameraComponent, GridNavigationComponent, GridOccupantComponent, MeshComponent, ShapeComponent,
-    SpriteComponent, TilemapComponent, UiImageComponent, UiShapeBlend, UiShapeComponent,
-    UiShapeKind, UiTextComponent,
+    SpriteComponent, TileGridComponent, TileVolumeComponent, TilemapComponent, UiImageComponent,
+    UiShapeBlend, UiShapeComponent, UiShapeKind, UiTextComponent,
 };
 use crate::effects::EffectBurstComponent;
 use crate::physics::{Collider2dComponent, RigidBody2dComponent};
@@ -188,6 +188,12 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
     // nothing — no fill, no stroke — would add a component that draws
     // absolutely nothing and read as a broken button.
     register_shapes(components)?;
+    register_tiles(components)?;
+    Ok(())
+}
+
+/// The retiring flat map and the stackable replacement beside it.
+fn register_tiles(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
     // A one-by-one map of one empty cell: the smallest tilemap that is
     // still a valid one, so adding the component in the editor gives
     // something to paint into rather than something to repair.
@@ -203,6 +209,26 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
             "projection": "orthogonal",
             "tiles": [null],
             "tint": [1.0, 1.0, 1.0, 1.0],
+            "layer": 0
+        }),
+    )?;
+    components.register_with_default::<TileGridComponent>(
+        "Tile Grid",
+        serde_json::json!({
+            "columns": 1,
+            "rows": 1,
+            "cell_size": [1.0, 1.0],
+            "level_step": [0.0, 0.5],
+            "projection": "orthogonal"
+        }),
+    )?;
+    // A tile set is a project asset; there is no honest path the engine can
+    // invent for a fresh volume, so the editor completes this component.
+    components.register_with_fields::<TileVolumeComponent>(
+        "Tile Volume",
+        serde_json::json!({
+            "tileset": "",
+            "cells": [],
             "layer": 0
         }),
     )?;
@@ -383,6 +409,7 @@ mod tests {
                 "sindri.animation.sprite",
                 "sindri.audio.source",
                 "sindri.grid.occupant",
+                "sindri.tile_volume",
                 "sindri.ui.text",
             ])
         );

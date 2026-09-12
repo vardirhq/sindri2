@@ -18,7 +18,7 @@ use sindri_render::{
     TextRenderer, Texture2D, TextureRegistry, TexturedCubeRenderer, Viewport,
     encode_prepared_frame,
 };
-use sindri_scene::{CameraView, SceneExtractor, SceneRuntime, TextureBindings};
+use sindri_scene::{CameraView, SceneExtractor, SceneRuntime, TextureBindings, TileSetBindings};
 use weave::{Stylesheet, Viewport as WeaveViewport};
 
 use self::loader::{BrowserProjectAssets, BrowserProjectLoader};
@@ -40,6 +40,7 @@ pub(super) struct BrowserGatherApp {
     engine: Option<EngineHost<Session, BrowserAudioBackend>>,
     scene: SceneExtractor,
     bindings: TextureBindings,
+    tile_sets: TileSetBindings,
     textures: TextureRegistry,
     depth: DepthTarget,
     cubes: TexturedCubeRenderer,
@@ -112,6 +113,10 @@ impl BrowserGatherApp {
             if let Some(sheet) = project.sheets.get(sheet_id.as_str()) {
                 self.bindings.bind_sheet(texture_id.as_str(), sheet)?;
             }
+        }
+
+        for (id, tile_set) in project.tile_sets {
+            self.tile_sets.bind(id.as_str(), tile_set)?;
         }
 
         for (id, asset) in project.fonts {
@@ -217,6 +222,7 @@ impl DesktopApp for BrowserGatherApp {
             engine: None,
             scene: extractor()?,
             bindings: TextureBindings::new(),
+            tile_sets: TileSetBindings::new(),
             textures: TextureRegistry::new(context.device(), context.queue()),
             depth: DepthTarget::new(context.device(), context.width(), context.height()),
             cubes: TexturedCubeRenderer::new(context.device(), context.format()),
@@ -327,7 +333,8 @@ impl DesktopApp for BrowserGatherApp {
             &self.bindings,
             SceneRuntime::default()
                 .with_animations(engine.game().animations())
-                .with_effects(engine.game().effects()),
+                .with_effects(engine.game().effects())
+                .with_tile_sets(&self.tile_sets),
         )?;
         let mut encoder =
             context

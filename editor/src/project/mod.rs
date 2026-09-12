@@ -365,6 +365,13 @@ impl ProjectTree {
             .collect()
     }
 
+    /// References to every reusable tile set the browser can see.
+    pub fn tile_sets(&self) -> Vec<String> {
+        self.referenced(AssetKind::TileSet)
+            .map(str::to_owned)
+            .collect()
+    }
+
     /// References to every Decay script the browser can see.
     ///
     /// Decay only: `.rs` and `.wgsl` are listed as scripts by the browser

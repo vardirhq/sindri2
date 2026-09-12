@@ -11,6 +11,7 @@ mod scene;
 mod sheet;
 mod text;
 mod texture;
+mod tileset;
 
 #[cfg(test)]
 mod tests;
@@ -22,6 +23,7 @@ pub use scene::SceneAssetDecoder;
 pub use sheet::SpriteSheetAssetDecoder;
 pub use text::TextAssetDecoder;
 pub use texture::{TextureAsset, TextureAssetDecoder};
+pub use tileset::TileSetAssetDecoder;
 
 use sindri_core::{
     AssetHandle, AssetId, AssetLoadError, AssetLoadErrorKind, AssetStore, AssetStoreError,
