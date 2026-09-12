@@ -105,9 +105,7 @@ impl SceneExtractor {
 /// a deterministic tie-break inside one diagonal.
 fn tile_submission_index(tilemap: &TilemapComponent, column: u32, row: u32) -> u32 {
     match tilemap.projection {
-        TileProjection::Orthogonal => row
-            .saturating_mul(tilemap.columns)
-            .saturating_add(column),
+        TileProjection::Orthogonal => row.saturating_mul(tilemap.columns).saturating_add(column),
         TileProjection::Isometric => {
             let diagonal = column.saturating_add(row);
             let stride = tilemap.columns.max(tilemap.rows).max(1);
