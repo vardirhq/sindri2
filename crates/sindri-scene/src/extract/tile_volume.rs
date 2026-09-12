@@ -56,7 +56,7 @@ impl SceneExtractor {
                     .cell_to_local(coord)
                     .expect("a validated grid projects finite integer cells");
                 for (face_index, (face, visual)) in definition.faces.iter().enumerate() {
-                    if face_is_occluded(volume, tile_set, coord, face)? {
+                    if face_is_occluded(&volume, tile_set, coord, face)? {
                         continue;
                     }
                     let reference = SpriteRef::parse(&visual.sprite)?;
