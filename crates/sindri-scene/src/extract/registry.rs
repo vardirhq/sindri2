@@ -409,6 +409,7 @@ mod tests {
                 "sindri.animation.sprite",
                 "sindri.audio.source",
                 "sindri.grid.occupant",
+                "sindri.tile_volume",
                 "sindri.ui.text",
             ])
         );
