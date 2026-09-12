@@ -43,6 +43,12 @@ impl SceneExtractor {
             // though it were a separate world entity.
             let map_distance = camera_distance(camera.view, world_transform.w_axis.truncate());
 
+            // Zero is the legacy/default authored value. When the sheet knows
+            // how far its art hangs below a logical tile, let the asset say it
+            // once and scale that fact to this map's world-space tile height.
+            // A positive component value remains an explicit override.
+            let overhang = resolved_tile_overhang(&tilemap, textures);
+
             // The palette is resolved once and the cells index the answers: a
             // map of 49 tiles names a handful of sprites, so looking each one
             // up per cell would be the same lookup forty-nine times.
@@ -66,7 +72,7 @@ impl SceneExtractor {
                 // taller quad, dropped by half the overhang so the top of the
                 // art stays on the cell. The cell itself never moves: it is what
                 // the grid, picking and gameplay all measure in.
-                let draw = tilemap.tile_draw();
+                let draw = tilemap.tile_draw_with_overhang(overhang);
                 let local =
                     Mat4::from_translation(Vec3::new(offset_x, offset_y + draw.offset_y, 0.0))
                         * Mat4::from_scale(Vec3::new(draw.size[0], draw.size[1], 1.0));
@@ -96,6 +102,15 @@ impl SceneExtractor {
     }
 }
 
+fn resolved_tile_overhang(tilemap: &TilemapComponent, textures: &TextureBindings) -> f32 {
+    if tilemap.tile_overhang > 0.0 {
+        return tilemap.tile_overhang;
+    }
+    textures
+        .tile_overhang_ratio(&tilemap.texture)
+        .map_or(0.0, |ratio| ratio * tilemap.tile_size[1])
+}
+
 /// Stable ordering inside one tilemap.
 ///
 /// Orthogonal maps are authored top-to-bottom, left-to-right, so row-major is
@@ -116,6 +131,8 @@ fn tile_submission_index(tilemap: &TilemapComponent, column: u32, row: u32) -> u
 
 #[cfg(test)]
 mod tests {
+    use sindri_core::SpriteSheetDocument;
+
     use super::*;
 
     fn map(projection: TileProjection, columns: u32, rows: u32) -> TilemapComponent {
@@ -131,6 +148,23 @@ mod tests {
             tint: [1.0, 1.0, 1.0, 1.0],
             layer: 0,
         }
+    }
+
+    #[test]
+    fn sheet_metadata_supplies_default_tile_overhang() {
+        let mut bindings = TextureBindings::new();
+        let mut sheet = SpriteSheetDocument::from_grid(1, 1);
+        sheet.tile_overhang_ratio = Some(0.25);
+        bindings
+            .bind_sheet("tiles.png", &sheet)
+            .expect("the one-cell sheet binds");
+        let mut map = map(TileProjection::Isometric, 1, 1);
+        map.tile_size = [2.0, 0.8];
+
+        assert!((resolved_tile_overhang(&map, &bindings) - 0.2).abs() < 1.0e-6);
+
+        map.tile_overhang = 0.3;
+        assert!((resolved_tile_overhang(&map, &bindings) - 0.3).abs() < 1.0e-6);
     }
 
     #[test]
