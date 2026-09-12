@@ -92,10 +92,8 @@ fn describe_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
         "projection",
         FieldMeaning::choice(TileProjection::ALL.into_iter().map(TileProjection::as_str)),
     )])?;
-    components.describe::<TileVolumeComponent>([(
-        "tileset",
-        FieldMeaning::Asset(AssetKind::TileSet),
-    )])?;
+    components
+        .describe::<TileVolumeComponent>([("tileset", FieldMeaning::Asset(AssetKind::TileSet))])?;
     components.describe::<ShapeComponent>([
         ("kind", shape_kinds()),
         ("blend", shape_blends()),

@@ -47,6 +47,4 @@ pub use textures::{
     TEXTURE_NAMING_COMPONENTS, TextureBindings, referenced_fonts, referenced_sheets,
     referenced_textures, unresolved_sprites, unresolved_textures,
 };
-pub use tilesets::{
-    TileSetBindings, referenced_tile_sets, tile_set_sheets, tile_set_textures,
-};
+pub use tilesets::{TileSetBindings, referenced_tile_sets, tile_set_sheets, tile_set_textures};

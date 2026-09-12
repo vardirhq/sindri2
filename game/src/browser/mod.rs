@@ -18,9 +18,7 @@ use sindri_render::{
     TextRenderer, Texture2D, TextureRegistry, TexturedCubeRenderer, Viewport,
     encode_prepared_frame,
 };
-use sindri_scene::{
-    CameraView, SceneExtractor, SceneRuntime, TextureBindings, TileSetBindings,
-};
+use sindri_scene::{CameraView, SceneExtractor, SceneRuntime, TextureBindings, TileSetBindings};
 use weave::{Stylesheet, Viewport as WeaveViewport};
 
 use self::loader::{BrowserProjectAssets, BrowserProjectLoader};

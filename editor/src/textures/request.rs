@@ -136,22 +136,8 @@ impl SceneTextures {
     /// a whole world cheap.
     pub fn request(&mut self, world: &World, text: &mut TextRenderer) -> Vec<TextureNote> {
         let (wanted_fonts, mut notes) = self.request_fonts(world, text);
-        let wanted_tile_sets: BTreeSet<AssetId> = referenced_tile_sets(world)
-            .iter()
-            .filter_map(|reference| AssetId::new(reference.clone()).ok())
-            .collect();
-        if let Some(tile_sets) = &mut self.tile_sets {
-            for released in tile_sets.retain(&wanted_tile_sets) {
-                self.tile_set_bindings.unbind(released.as_str());
-            }
-            for id in &wanted_tile_sets {
-                if self.tile_set_bindings.get(id.as_str()).is_none()
-                    && let Err(error) = tile_sets.request(id.clone())
-                {
-                    notes.push(TextureNote::Failed(format!("{id}: {error}")));
-                }
-            }
-        }
+        let (wanted_tile_sets, tile_notes) = self.request_tile_sets(world);
+        notes.extend(tile_notes);
         let mut referenced = referenced_textures(world);
         for id in &wanted_tile_sets {
             if let Some(tile_set) = self.tile_set_bindings.get(id.as_str()) {
@@ -254,6 +240,27 @@ impl SceneTextures {
             }
         }
         notes
+    }
+
+    fn request_tile_sets(&mut self, world: &World) -> (BTreeSet<AssetId>, Vec<TextureNote>) {
+        let wanted: BTreeSet<AssetId> = referenced_tile_sets(world)
+            .iter()
+            .filter_map(|reference| AssetId::new(reference.clone()).ok())
+            .collect();
+        let mut notes = Vec::new();
+        if let Some(tile_sets) = &mut self.tile_sets {
+            for released in tile_sets.retain(&wanted) {
+                self.tile_set_bindings.unbind(released.as_str());
+            }
+            for id in &wanted {
+                if self.tile_set_bindings.get(id.as_str()).is_none()
+                    && let Err(error) = tile_sets.request(id.clone())
+                {
+                    notes.push(TextureNote::Failed(format!("{id}: {error}")));
+                }
+            }
+        }
+        (wanted, notes)
     }
 
     pub(super) fn examine_files(&mut self) -> Vec<TextureNote> {
