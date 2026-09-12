@@ -48,6 +48,8 @@ impl SceneExtractor {
             // once and scale that fact to this map's world-space tile height.
             // A positive component value remains an explicit override.
             let overhang = resolved_tile_overhang(&tilemap, textures);
+            let draw_size = [tilemap.tile_size[0], tilemap.tile_size[1] + overhang];
+            let draw_offset_y = -overhang / 2.0;
 
             // The palette is resolved once and the cells index the answers: a
             // map of 49 tiles names a handful of sprites, so looking each one
@@ -72,10 +74,11 @@ impl SceneExtractor {
                 // taller quad, dropped by half the overhang so the top of the
                 // art stays on the cell. The cell itself never moves: it is what
                 // the grid, picking and gameplay all measure in.
-                let draw = tilemap.tile_draw_with_overhang(overhang);
-                let local =
-                    Mat4::from_translation(Vec3::new(offset_x, offset_y + draw.offset_y, 0.0))
-                        * Mat4::from_scale(Vec3::new(draw.size[0], draw.size[1], 1.0));
+                let local = Mat4::from_translation(Vec3::new(
+                    offset_x,
+                    offset_y + draw_offset_y,
+                    0.0,
+                )) * Mat4::from_scale(Vec3::new(draw_size[0], draw_size[1], 1.0));
                 let model = world_transform * local;
 
                 // The map's layer and world distance place the tilemap as one
