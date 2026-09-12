@@ -1,0 +1,23 @@
+name: Regenerate capabilities artifact
+
+on:
+  push:
+    branches:
+      - claude/gather-rebuild
+
+permissions:
+  contents: read
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - name: Regenerate capabilities
+        run: cargo run -p sindri-capabilities -- --write
+      - name: Upload generated capabilities
+        uses: actions/upload-artifact@v7
+        with:
+          name: regenerated-capabilities
+          path: docs/generated/sindri-capabilities.json
