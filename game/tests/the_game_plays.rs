@@ -83,7 +83,7 @@ fn every_world_sprite_layers_by_where_it_stands() {
             continue;
         };
         let at = logical_position(grid, map, transform.position);
-        if !(-1.0_f64..=9.0).contains(&at.x) || !(-1.0_f64..=9.0).contains(&at.y) {
+        if !(-1.0_f64..=25.0).contains(&at.x) || !(-1.0_f64..=25.0).contains(&at.y) {
             continue;
         }
 
@@ -106,7 +106,7 @@ fn every_world_sprite_layers_by_where_it_stands() {
     }
 
     assert!(
-        checked >= 20,
+        checked >= 70,
         "expected the world's sprites, checked {checked}"
     );
 }
@@ -310,7 +310,7 @@ fn the_wisp_routes_around_the_authored_wall() {
         .placement(wisp)
         .expect("the wisp is an occupant")
         .anchor;
-    assert_eq!(before, GridCoord::new(0, 0));
+    assert_eq!(before, GridCoord::new(8, 8));
 
     let mut session = Session::new(extractor.components().clone());
     session
@@ -324,8 +324,50 @@ fn the_wisp_routes_around_the_authored_wall() {
         .anchor;
     assert_eq!(
         after,
-        GridCoord::new(0, 1),
-        "the wall from (0,0) to (1,0) forces the first A* step south"
+        GridCoord::new(8, 9),
+        "the wall from (8,8) to (9,8) forces the first A* step south"
+    );
+}
+
+/// A map this size is a world rather than a diorama, so the authored camera
+/// has to travel with the player. Driven through the real Decay script rather
+/// than duplicating its easing in the assertion.
+#[test]
+fn the_camera_follows_the_player_across_the_farm() {
+    use sindri_platform::{InputEvent, Key};
+
+    let (mut world, loaded) = world().expect("the scene loads");
+    let extractor = extractor().expect("the schemas register");
+    let mut session = Session::new(extractor.components().clone())
+        .with_scenes(sindri_gather::scenes().expect("the scenes parse"), loaded);
+
+    let by_id = |world: &World, wanted: &str| {
+        world
+            .entities()
+            .find(|(_, data)| {
+                data.source_id
+                    .as_ref()
+                    .is_some_and(|id| id.as_str() == wanted)
+            })
+            .map_or_else(|| panic!("the scene names {wanted}"), |(entity, _)| entity)
+    };
+    let player = by_id(&world, "player");
+    let camera = by_id(&world, "world-camera");
+
+    let mut held = InputState::default();
+    held.apply(InputEvent::KeyPressed(Key::ArrowRight));
+    for _ in 0..120 {
+        session
+            .step(&mut world, &held, (960.0, 600.0), 1.0 / 60.0)
+            .expect("the farm steps");
+    }
+
+    let player_at = world.get(player).unwrap().transform_3d.unwrap().position;
+    let camera_at = world.get(camera).unwrap().transform_3d.unwrap().position;
+    assert!(camera_at[0] > 0.5, "the camera stayed at the old plaza");
+    assert!(
+        (camera_at[0] - player_at[0]).abs() < 0.5 && (camera_at[1] - player_at[1]).abs() < 0.5,
+        "camera {camera_at:?} did not settle near player {player_at:?}"
     );
 }
 

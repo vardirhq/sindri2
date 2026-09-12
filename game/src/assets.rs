@@ -86,6 +86,10 @@ pub(crate) const SCENES: &[(&str, &str)] = &[
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) const SCRIPTS: &[(&str, &str)] = &[
     (
+        "scripts/camera-follow.decay",
+        include_str!("../assets/scripts/camera-follow.decay"),
+    ),
+    (
         "scripts/player.decay",
         include_str!("../assets/scripts/player.decay"),
     ),

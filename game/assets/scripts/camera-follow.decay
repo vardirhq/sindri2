@@ -1,0 +1,23 @@
+// Keeps a large world playable without putting camera behaviour in the Rust
+// host. Following this game's active player is a game rule, so it belongs with
+// its movement and doors in Decay.
+script CameraFollow {
+    @export
+    let ease: f32 = 7.5;
+
+    fn update(dt: f32) {
+        let player = World.find("Player");
+        if player == null {
+            return;
+        }
+
+        // Frame-rate-independent enough for a visual follow: the capped step
+        // cannot overshoot after a slow frame, while ordinary fixed frames ease
+        // rather than snapping and keep the farmer away from the exact centre.
+        let amount = min(1.0, ease * dt);
+        this.transform.position.x +=
+            (player.transform.position.x - this.transform.position.x) * amount;
+        this.transform.position.y +=
+            (player.transform.position.y - this.transform.position.y) * amount;
+    }
+}
