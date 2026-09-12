@@ -4,6 +4,26 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **Gather is now a farm rather than a nine-cell-wide plaza.** Its authored
+  island is 25 by 25 cells, with three working plots, dry and watered soil, an
+  irregular coast and pond, a connected path network, a flagstone farmhouse
+  yard, boundary groves, field walls, standing stones, and four waystones. The
+  old composition remains at the centre in world space, so this is an expanded
+  place rather than a different one pasted over it.
+
+  A Decay camera script eases after the active player so the larger map is
+  actually walkable at the original readable scale. The shed now carries its
+  own camera too: switching the opening scene off used to switch off its only
+  camera, leaving the interior's scripts alive but its world impossible to
+  render. An integration test now holds every playable place to exactly one
+  active world camera.
+
+  The oldest repeated landmarks have been redrawn at the same time. Trees now
+  have a tapered trunk, roots, branching and a layered canopy; waystones have a
+  weathered crown, luminous carved rune, moss and loose rubble; standing-stone
+  clusters use irregular caps, varied faces and ground fragments. Their
+  editable isometric-baker recipes remain the source of truth.
+
 - **Gather has a second place in it, and a door between them.** The shed: a
   small room off the island's plaza, reached by walking onto a door and left the
   same way. The integration proof for everything above — a scene switched off

@@ -29,10 +29,990 @@
       }
     },
     {
+      "id": "farm-outcrop-00",
+      "name": "Farm Outcrop 1",
+      "transform_3d": {
+        "position": [-4.4, 3.3, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.925, 1.4, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 25,
+          "texture": "textures/standing-stones.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-outcrop-01",
+      "name": "Farm Outcrop 2",
+      "transform_3d": {
+        "position": [-5.5, 2.2, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.925, 1.4, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 33,
+          "texture": "textures/standing-stones.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-outcrop-02",
+      "name": "Farm Outcrop 3",
+      "transform_3d": {
+        "position": [4.4, 3.3, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.925, 1.4, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 25,
+          "texture": "textures/standing-stones.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-outcrop-03",
+      "name": "Farm Outcrop 4",
+      "transform_3d": {
+        "position": [6.6, 2.2, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.925, 1.4, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 33,
+          "texture": "textures/standing-stones.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-outcrop-04",
+      "name": "Farm Outcrop 5",
+      "transform_3d": {
+        "position": [6.05, -2.475, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.925, 1.4, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 67,
+          "texture": "textures/standing-stones.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-outcrop-05",
+      "name": "Farm Outcrop 6",
+      "transform_3d": {
+        "position": [4.4, -3.3, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.925, 1.4, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 73,
+          "texture": "textures/standing-stones.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-outcrop-06",
+      "name": "Farm Outcrop 7",
+      "transform_3d": {
+        "position": [-6.05, -2.475, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.925, 1.4, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 67,
+          "texture": "textures/standing-stones.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-outcrop-07",
+      "name": "Farm Outcrop 8",
+      "transform_3d": {
+        "position": [-4.4, -3.3, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.925, 1.4, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 73,
+          "texture": "textures/standing-stones.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-outcrop-08",
+      "name": "Farm Outcrop 9",
+      "transform_3d": {
+        "position": [-1.1, -2.2, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.925, 1.4, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 65,
+          "texture": "textures/standing-stones.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-outcrop-09",
+      "name": "Farm Outcrop 10",
+      "transform_3d": {
+        "position": [0.0, -2.2, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.925, 1.4, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 65,
+          "texture": "textures/standing-stones.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-outcrop-10",
+      "name": "Farm Outcrop 11",
+      "transform_3d": {
+        "position": [2.2, -3.3, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.925, 1.4, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 73,
+          "texture": "textures/standing-stones.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-outcrop-11",
+      "name": "Farm Outcrop 12",
+      "transform_3d": {
+        "position": [1.65, -4.125, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.925, 1.4, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 79,
+          "texture": "textures/standing-stones.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-outcrop-12",
+      "name": "Farm Outcrop 13",
+      "transform_3d": {
+        "position": [0.0, -4.4, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.925, 1.4, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 81,
+          "texture": "textures/standing-stones.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-tree-00",
+      "name": "Farm Tree 1",
+      "transform_3d": {
+        "position": [-0.55, 4.675, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.05, 2.5, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 15,
+          "texture": "textures/tree.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-tree-01",
+      "name": "Farm Tree 2",
+      "transform_3d": {
+        "position": [-2.2, 3.85, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.05, 2.5, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 21,
+          "texture": "textures/tree.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-tree-02",
+      "name": "Farm Tree 3",
+      "transform_3d": {
+        "position": [1.1, 4.4, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.05, 2.5, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 17,
+          "texture": "textures/tree.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-tree-03",
+      "name": "Farm Tree 4",
+      "transform_3d": {
+        "position": [2.2, 3.85, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.05, 2.5, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 21,
+          "texture": "textures/tree.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-tree-04",
+      "name": "Farm Tree 5",
+      "transform_3d": {
+        "position": [7.7, 1.1, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.05, 2.5, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 41,
+          "texture": "textures/tree.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-tree-05",
+      "name": "Farm Tree 6",
+      "transform_3d": {
+        "position": [8.8, 0.55, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.05, 2.5, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 45,
+          "texture": "textures/tree.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-tree-06",
+      "name": "Farm Tree 7",
+      "transform_3d": {
+        "position": [8.8, -0.55, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.05, 2.5, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 53,
+          "texture": "textures/tree.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-tree-07",
+      "name": "Farm Tree 8",
+      "transform_3d": {
+        "position": [7.15, -1.375, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.05, 2.5, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 59,
+          "texture": "textures/tree.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-tree-08",
+      "name": "Farm Tree 9",
+      "transform_3d": {
+        "position": [4.4, -1.1, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.05, 2.5, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 57,
+          "texture": "textures/tree.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-tree-09",
+      "name": "Farm Tree 10",
+      "transform_3d": {
+        "position": [-7.15, 1.375, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.05, 2.5, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 39,
+          "texture": "textures/tree.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-tree-10",
+      "name": "Farm Tree 11",
+      "transform_3d": {
+        "position": [-8.8, 0.55, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.05, 2.5, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 45,
+          "texture": "textures/tree.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-tree-11",
+      "name": "Farm Tree 12",
+      "transform_3d": {
+        "position": [-8.8, -0.55, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.05, 2.5, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 53,
+          "texture": "textures/tree.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-tree-12",
+      "name": "Farm Tree 13",
+      "transform_3d": {
+        "position": [-7.15, -1.375, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.05, 2.5, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 59,
+          "texture": "textures/tree.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-tree-13",
+      "name": "Farm Tree 14",
+      "transform_3d": {
+        "position": [-3.3, -3.3, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.05, 2.5, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 73,
+          "texture": "textures/tree.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-tree-14",
+      "name": "Farm Tree 15",
+      "transform_3d": {
+        "position": [-1.1, -4.4, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.05, 2.5, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 81,
+          "texture": "textures/tree.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-tree-15",
+      "name": "Farm Tree 16",
+      "transform_3d": {
+        "position": [1.1, -4.4, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.05, 2.5, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 81,
+          "texture": "textures/tree.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-tree-16",
+      "name": "Farm Tree 17",
+      "transform_3d": {
+        "position": [3.85, -3.025, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.05, 2.5, 1.0]
+      },
+      "components": {
+        "sindri.grid.occupant": {
+          "grid": "floor"
+        },
+        "sindri.sprite": {
+          "layer": 71,
+          "texture": "textures/tree.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        },
+        "sindri.tags": {
+          "tags": ["solid"]
+        }
+      }
+    },
+    {
+      "id": "farm-wall-00",
+      "name": "Farm Wall 1",
+      "transform_3d": {
+        "position": [-0.275, 4.5375, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.95, 1.075, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "layer": 16,
+          "texture": "textures/stone-wall.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "id": "farm-wall-01",
+      "name": "Farm Wall 2",
+      "transform_3d": {
+        "position": [-1.375, 3.9875, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.95, 1.075, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "layer": 20,
+          "texture": "textures/stone-wall.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "id": "farm-wall-02",
+      "name": "Farm Wall 3",
+      "transform_3d": {
+        "position": [-2.475, 3.4375, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.95, 1.075, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "layer": 24,
+          "texture": "textures/stone-wall.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "id": "farm-wall-03",
+      "name": "Farm Wall 4",
+      "transform_3d": {
+        "position": [3.025, 2.8875, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.95, 1.075, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "layer": 28,
+          "texture": "textures/stone-wall.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "id": "farm-wall-04",
+      "name": "Farm Wall 5",
+      "transform_3d": {
+        "position": [1.925, 2.3375, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.95, 1.075, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "layer": 32,
+          "texture": "textures/stone-wall.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "id": "farm-wall-05",
+      "name": "Farm Wall 6",
+      "transform_3d": {
+        "position": [0.825, 1.7875, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.95, 1.075, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "layer": 36,
+          "texture": "textures/stone-wall.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "id": "farm-wall-06",
+      "name": "Farm Wall 7",
+      "transform_3d": {
+        "position": [-6.875, 1.2375, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.95, 1.075, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "layer": 40,
+          "texture": "textures/stone-wall.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "id": "farm-wall-07",
+      "name": "Farm Wall 8",
+      "transform_3d": {
+        "position": [-7.975, 0.6875, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.95, 1.075, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "layer": 44,
+          "texture": "textures/stone-wall.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "id": "farm-wall-08",
+      "name": "Farm Wall 9",
+      "transform_3d": {
+        "position": [-9.075, 0.1375, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.95, 1.075, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "layer": 48,
+          "texture": "textures/stone-wall.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "id": "farm-wall-09",
+      "name": "Farm Wall 10",
+      "transform_3d": {
+        "position": [-3.575, -0.4125, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.95, 1.075, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "layer": 52,
+          "texture": "textures/stone-wall.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "id": "farm-wall-10",
+      "name": "Farm Wall 11",
+      "transform_3d": {
+        "position": [-4.675, -0.9625, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.95, 1.075, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "layer": 56,
+          "texture": "textures/stone-wall.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "id": "farm-wall-11",
+      "name": "Farm Wall 12",
+      "transform_3d": {
+        "position": [-5.775, -1.5125, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.95, 1.075, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "layer": 60,
+          "texture": "textures/stone-wall.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "id": "farm-wall-12",
+      "name": "Farm Wall 13",
+      "transform_3d": {
+        "position": [6.325, 1.2375, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.95, 1.075, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "layer": 40,
+          "texture": "textures/stone-wall.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "id": "farm-wall-13",
+      "name": "Farm Wall 14",
+      "transform_3d": {
+        "position": [5.225, 0.6875, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.95, 1.075, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "layer": 44,
+          "texture": "textures/stone-wall.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "id": "farm-wall-14",
+      "name": "Farm Wall 15",
+      "transform_3d": {
+        "position": [8.525, -0.4125, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.95, 1.075, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "layer": 52,
+          "texture": "textures/stone-wall.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "id": "farm-wall-15",
+      "name": "Farm Wall 16",
+      "transform_3d": {
+        "position": [7.425, -0.9625, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.95, 1.075, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "layer": 56,
+          "texture": "textures/stone-wall.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "id": "farm-waystone-00",
+      "name": "Farm Waystone 1",
+      "transform_3d": {
+        "position": [4.95, 2.475, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.8, 1.0, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "layer": 31,
+          "texture": "textures/waystone.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "id": "farm-waystone-01",
+      "name": "Farm Waystone 2",
+      "transform_3d": {
+        "position": [-4.95, 2.475, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.8, 1.0, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "layer": 31,
+          "texture": "textures/waystone.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "id": "farm-waystone-02",
+      "name": "Farm Waystone 3",
+      "transform_3d": {
+        "position": [4.95, -2.475, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.8, 1.0, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "layer": 67,
+          "texture": "textures/waystone.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
+      "id": "farm-waystone-03",
+      "name": "Farm Waystone 4",
+      "transform_3d": {
+        "position": [-4.95, -2.475, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.8, 1.0, 1.0]
+      },
+      "components": {
+        "sindri.sprite": {
+          "layer": 67,
+          "texture": "textures/waystone.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
       "id": "floor",
       "name": "Floor",
       "transform_3d": {
-        "position": [0.0, 2.2, -0.6],
+        "position": [0.0, 6.6, -0.6],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [1.0, 1.0, 1.0]
       },
@@ -40,114 +1020,669 @@
         "sindri.grid.navigation": {
           "walls": [
             {
-              "first": [0, 0],
-              "second": [1, 0]
+              "first": [8, 8],
+              "second": [9, 8]
             },
             {
-              "first": [1, 1],
-              "second": [2, 1]
+              "first": [9, 9],
+              "second": [10, 9]
             },
             {
-              "first": [2, 2],
-              "second": [3, 2]
+              "first": [10, 10],
+              "second": [11, 10]
             },
             {
-              "first": [3, 3],
-              "second": [4, 3]
+              "first": [11, 11],
+              "second": [12, 11]
             }
           ]
         },
         "sindri.tilemap": {
-          "columns": 9,
+          "columns": 25,
           "layer": 0,
-          "palette": ["grass", "grass-b", "grass-c", "path", "flagstone", "water"],
+          "palette": [
+            "grass",
+            "grass-b",
+            "grass-c",
+            "grass-tuft",
+            "grass-bloom",
+            "soil",
+            "soil-wet",
+            "path",
+            "flagstone",
+            "water"
+          ],
           "projection": "isometric",
-          "rows": 9,
+          "rows": 25,
           "texture": "textures/ground.png",
           "tile_overhang": 0.125,
           "tile_size": [1.1, 0.55],
           "tiles": [
-            5,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
             3,
-            3,
-            5,
-            5,
-            5,
-            5,
-            5,
-            5,
-            5,
-            0,
-            3,
-            3,
+            9,
+            9,
+            9,
+            2,
+            9,
+            9,
+            9,
+            7,
+            9,
+            9,
+            9,
+            1,
+            9,
+            9,
+            9,
+            2,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            4,
+            2,
             1,
             0,
+            2,
+            1,
+            0,
+            2,
+            1,
+            7,
+            2,
+            1,
+            0,
+            2,
+            1,
+            0,
+            2,
+            3,
+            0,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            0,
+            5,
+            5,
+            6,
+            5,
+            5,
+            5,
+            0,
+            0,
+            7,
+            0,
+            0,
+            0,
+            5,
+            5,
+            5,
+            5,
+            5,
+            0,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            0,
+            5,
+            6,
+            5,
+            5,
+            5,
+            5,
+            1,
+            2,
+            7,
+            1,
             2,
             0,
             5,
             5,
-            2,
-            1,
-            3,
-            3,
-            2,
-            1,
-            0,
             5,
-            5,
-            1,
-            0,
-            2,
-            3,
-            3,
-            0,
-            2,
-            5,
-            5,
-            1,
-            2,
-            1,
-            0,
-            3,
-            3,
-            1,
             5,
             5,
             0,
-            2,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
             0,
+            6,
+            5,
+            5,
+            5,
+            5,
+            6,
             2,
             1,
-            3,
+            7,
+            2,
+            4,
+            0,
+            5,
+            5,
+            5,
+            5,
+            5,
+            0,
+            9,
+            9,
+            9,
+            9,
+            9,
+            0,
             3,
             5,
             5,
+            5,
+            5,
+            6,
+            5,
+            0,
+            4,
+            7,
+            0,
+            0,
+            0,
+            5,
+            5,
+            5,
+            5,
+            5,
+            0,
+            0,
+            9,
+            9,
+            9,
+            9,
+            2,
+            0,
+            5,
+            5,
+            5,
+            6,
+            5,
+            5,
+            1,
+            2,
+            7,
+            3,
+            2,
+            0,
+            5,
+            5,
+            5,
+            5,
+            5,
+            0,
+            1,
+            9,
+            9,
+            9,
+            9,
+            3,
+            0,
+            5,
+            5,
+            6,
+            5,
+            5,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            1,
+            0,
             2,
             1,
             0,
+            2,
+            9,
+            9,
+            9,
+            9,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            7,
+            0,
+            3,
+            7,
+            0,
+            0,
+            0,
+            7,
+            0,
+            0,
+            0,
+            0,
+            0,
+            9,
+            9,
+            9,
+            9,
+            9,
+            4,
+            3,
+            1,
+            2,
+            0,
+            1,
+            2,
+            7,
+            1,
+            2,
+            7,
+            1,
+            3,
+            0,
+            7,
+            2,
+            0,
+            1,
+            2,
+            0,
+            9,
+            9,
+            9,
+            9,
+            9,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            9,
+            9,
+            9,
+            9,
+            0,
+            0,
+            0,
+            4,
+            0,
+            0,
+            3,
+            7,
+            8,
+            8,
+            8,
+            8,
+            8,
+            0,
+            0,
+            0,
+            3,
+            0,
+            0,
+            0,
+            0,
+            9,
+            9,
+            9,
+            9,
+            2,
+            0,
+            1,
+            2,
+            0,
+            1,
+            2,
+            7,
+            8,
+            8,
+            8,
+            8,
+            8,
+            0,
+            1,
+            2,
+            0,
+            1,
+            2,
+            0,
+            1,
+            9,
+            9,
+            9,
+            9,
+            1,
+            0,
+            6,
+            6,
+            6,
+            6,
+            6,
+            7,
+            8,
+            8,
+            8,
+            8,
+            8,
+            0,
+            3,
             1,
             0,
             4,
-            4,
-            4,
+            1,
+            0,
+            9,
+            9,
+            9,
+            9,
+            9,
+            0,
+            0,
             5,
+            5,
+            5,
+            5,
+            5,
+            5,
+            8,
+            8,
+            8,
+            8,
+            8,
+            0,
+            0,
+            9,
+            9,
+            9,
+            0,
+            0,
+            9,
+            9,
+            9,
+            9,
+            9,
             2,
+            0,
+            5,
+            5,
+            5,
+            5,
+            5,
+            5,
+            3,
+            2,
+            7,
+            1,
+            2,
+            0,
+            9,
+            9,
+            9,
+            9,
+            9,
+            3,
+            4,
+            9,
+            9,
+            9,
+            9,
+            9,
+            0,
+            6,
+            6,
+            6,
+            6,
+            6,
+            6,
+            2,
+            1,
+            7,
+            3,
+            1,
+            0,
+            9,
+            9,
+            9,
+            9,
+            9,
+            0,
+            3,
+            9,
+            9,
+            9,
+            9,
+            0,
+            0,
+            5,
+            5,
+            5,
+            5,
+            5,
+            5,
+            0,
+            0,
+            7,
+            0,
+            0,
+            0,
+            0,
+            9,
+            9,
+            9,
+            3,
+            0,
+            3,
+            9,
+            9,
+            9,
+            9,
+            9,
+            0,
+            5,
+            5,
+            5,
+            5,
+            5,
+            5,
+            1,
+            3,
+            7,
+            1,
+            2,
+            0,
+            1,
+            4,
+            0,
+            1,
+            2,
+            0,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
             0,
             2,
             1,
+            3,
             2,
+            1,
+            0,
+            2,
+            1,
+            7,
             4,
+            1,
+            0,
+            2,
+            1,
+            0,
+            2,
+            1,
+            3,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            0,
+            0,
+            0,
+            9,
+            9,
+            0,
             4,
-            4,
-            5,
-            5,
-            5,
-            5,
-            5,
-            5,
-            4,
-            4,
-            4
+            0,
+            7,
+            9,
+            0,
+            0,
+            0,
+            9,
+            9,
+            0,
+            0,
+            0,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9,
+            9
           ]
         }
       }
@@ -187,7 +1722,7 @@
           "source": "scripts/orb.decay"
         },
         "sindri.sprite": {
-          "layer": 9,
+          "layer": 41,
           "texture": "textures/orb.png",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -211,7 +1746,7 @@
           "source": "scripts/orb.decay"
         },
         "sindri.sprite": {
-          "layer": 17,
+          "layer": 49,
           "texture": "textures/orb.png",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -235,7 +1770,7 @@
           "source": "scripts/orb.decay"
         },
         "sindri.sprite": {
-          "layer": 17,
+          "layer": 49,
           "texture": "textures/orb.png",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -259,7 +1794,7 @@
           "source": "scripts/orb.decay"
         },
         "sindri.sprite": {
-          "layer": 33,
+          "layer": 65,
           "texture": "textures/orb.png",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -283,7 +1818,7 @@
           "source": "scripts/orb.decay"
         },
         "sindri.sprite": {
-          "layer": 9,
+          "layer": 41,
           "texture": "textures/orb.png",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -302,7 +1837,7 @@
           "grid": "floor"
         },
         "sindri.sprite": {
-          "layer": 7,
+          "layer": 39,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -324,7 +1859,7 @@
           "grid": "floor"
         },
         "sindri.sprite": {
-          "layer": 11,
+          "layer": 43,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -346,7 +1881,7 @@
           "grid": "floor"
         },
         "sindri.sprite": {
-          "layer": 13,
+          "layer": 45,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -588,7 +2123,7 @@
           "source": "scripts/player.decay"
         },
         "sindri.sprite": {
-          "layer": 17,
+          "layer": 49,
           "texture": "textures/player.png#bob-0",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -604,7 +2139,7 @@
       },
       "components": {
         "sindri.sprite": {
-          "layer": 2,
+          "layer": 34,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -620,7 +2155,7 @@
       },
       "components": {
         "sindri.sprite": {
-          "layer": 6,
+          "layer": 38,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -636,7 +2171,7 @@
       },
       "components": {
         "sindri.sprite": {
-          "layer": 10,
+          "layer": 42,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -652,7 +2187,7 @@
       },
       "components": {
         "sindri.sprite": {
-          "layer": 14,
+          "layer": 46,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -678,7 +2213,7 @@
           "source": "scripts/door.decay"
         },
         "sindri.sprite": {
-          "layer": 21,
+          "layer": 53,
           "texture": "textures/waystone.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -697,7 +2232,7 @@
           "grid": "floor"
         },
         "sindri.sprite": {
-          "layer": 29,
+          "layer": 61,
           "texture": "textures/shrine.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -774,7 +2309,7 @@
           "grid": "floor"
         },
         "sindri.sprite": {
-          "layer": 9,
+          "layer": 41,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -796,7 +2331,7 @@
           "grid": "floor"
         },
         "sindri.sprite": {
-          "layer": 17,
+          "layer": 49,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -818,7 +2353,7 @@
           "grid": "floor"
         },
         "sindri.sprite": {
-          "layer": 19,
+          "layer": 51,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -840,7 +2375,7 @@
           "grid": "floor"
         },
         "sindri.sprite": {
-          "layer": 17,
+          "layer": 49,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -862,7 +2397,7 @@
           "grid": "floor"
         },
         "sindri.sprite": {
-          "layer": 21,
+          "layer": 53,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -884,7 +2419,7 @@
           "grid": "floor"
         },
         "sindri.sprite": {
-          "layer": 23,
+          "layer": 55,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -906,7 +2441,7 @@
           "grid": "floor"
         },
         "sindri.sprite": {
-          "layer": 17,
+          "layer": 49,
           "texture": "textures/waystone.png#south",
           "tint": [0.72, 0.68, 1.0, 1.0]
         },
@@ -928,7 +2463,7 @@
           "grid": "floor"
         },
         "sindri.sprite": {
-          "layer": 17,
+          "layer": 49,
           "texture": "textures/waystone.png#south",
           "tint": [0.6, 0.98, 0.9, 1.0]
         },
@@ -960,7 +2495,7 @@
           "source": "scripts/wisp.decay"
         },
         "sindri.sprite": {
-          "layer": 1,
+          "layer": 33,
           "texture": "textures/orb.png",
           "tint": [0.45, 0.82, 1.0, 0.72]
         }
@@ -1016,6 +2551,13 @@
           "near": 0.1,
           "projection": "perspective",
           "vertical_fov_degrees": 45.0
+        },
+        "sindri.script": {
+          "properties": {
+            "ease": 7.5
+          },
+          "script": "CameraFollow",
+          "source": "scripts/camera-follow.decay"
         }
       }
     }

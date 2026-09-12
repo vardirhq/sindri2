@@ -7,6 +7,7 @@
 use sindri_core::World;
 use sindri_gather::{Session, extractor, scenes, world};
 use sindri_platform::{InputEvent, InputState, Key};
+use sindri_scene::CameraComponent;
 
 const STEP: f32 = 1.0 / 60.0;
 const VIEWPORT: (f32, f32) = (960.0, 600.0);
@@ -56,6 +57,44 @@ fn walking_into_the_door_goes_to_the_shed() {
         "the player never reached the door"
     );
     assert_eq!(session.scene(), Some("shed.scene.json"));
+}
+
+fn active_camera_count(world: &World) -> usize {
+    let extractor = extractor().expect("the schemas register");
+    extractor
+        .components()
+        .query::<CameraComponent>(world)
+        .expect("camera payloads read")
+        .into_iter()
+        .filter(|(entity, _)| world.is_active(*entity))
+        .count()
+}
+
+/// Scene switching must leave a renderable world, not merely a world whose
+/// scripts still step. The first interior had no camera, which the door tests
+/// could not see because they never extracted a frame.
+#[test]
+fn every_place_has_exactly_one_active_world_camera() {
+    let (mut world, mut session) = opened();
+    assert_eq!(active_camera_count(&world), 1);
+
+    assert!(walk_until_elsewhere(
+        &mut world,
+        &mut session,
+        Key::ArrowDown,
+        600
+    ));
+    assert_eq!(session.scene(), Some("shed.scene.json"));
+    assert_eq!(active_camera_count(&world), 1);
+
+    assert!(walk_until_elsewhere(
+        &mut world,
+        &mut session,
+        Key::ArrowUp,
+        600
+    ));
+    assert_eq!(session.scene(), Some("gather.scene.json"));
+    assert_eq!(active_camera_count(&world), 1);
 }
 
 /// The property the whole design rests on, in the running game rather than in

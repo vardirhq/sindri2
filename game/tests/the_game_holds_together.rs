@@ -37,11 +37,34 @@ fn the_island_has_authored_regions() {
         .next()
         .expect("Gather has a floor");
 
-    assert_eq!((floor.columns, floor.rows), (9, 9));
-    assert_eq!(floor.tiles.len(), 81);
+    assert_eq!((floor.columns, floor.rows), (25, 25));
+    assert_eq!(floor.tiles.len(), 625);
     assert!(
         floor.tiles.windows(2).any(|tiles| tiles[0] == tiles[1]),
         "the island uses authored regions rather than a full checkerboard"
+    );
+
+    let used = floor.tiles.iter().copied().collect::<BTreeSet<_>>();
+    assert_eq!(
+        used.len(),
+        floor.palette.len(),
+        "every ground state in the sheet earns a place on the farm"
+    );
+
+    let count = |tile| {
+        floor
+            .tiles
+            .iter()
+            .filter(|cell| **cell == Some(tile))
+            .count()
+    };
+    assert!(count(5) >= 60, "the farm has substantial dry working plots");
+    assert!(count(6) >= 15, "one working plot is visibly watered");
+    assert!(count(7) >= 30, "paths connect the farm's regions");
+    assert!(count(8) >= 20, "the farmhouse has a flagstone yard");
+    assert!(
+        count(9) >= 150,
+        "an irregular shore makes the map an island"
     );
 }
 

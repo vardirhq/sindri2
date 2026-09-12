@@ -8,37 +8,17 @@
       "id": "floor",
       "name": "Floor",
       "transform_3d": {
-        "position": [
-          0.0,
-          1.4,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
+        "position": [0.0, 1.4, -0.6],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
       },
       "components": {
         "sindri.tilemap": {
           "texture": "textures/ground.png",
-          "palette": [
-            "flagstone",
-            "path",
-            "grass"
-          ],
+          "palette": ["flagstone", "path", "grass"],
           "columns": 7,
           "rows": 5,
-          "tile_size": [
-            1.1,
-            0.55
-          ],
+          "tile_size": [1.1, 0.55],
           "tile_overhang": 0.125,
           "projection": "isometric",
           "tiles": [
@@ -86,22 +66,9 @@
       "id": "player",
       "name": "Player",
       "transform_3d": {
-        "position": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          0.62,
-          0.62,
-          1.0
-        ]
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.62, 0.62, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -113,23 +80,13 @@
         },
         "sindri.sprite": {
           "texture": "textures/player.png#bob-0",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ],
+          "tint": [1.0, 1.0, 1.0, 1.0],
           "layer": 17
         },
         "sindri.animation.sprite": {
           "clips": {
             "bob": {
-              "frames": [
-                "bob-0",
-                "bob-1",
-                "bob-2",
-                "bob-3"
-              ],
+              "frames": ["bob-0", "bob-1", "bob-2", "bob-3"],
               "seconds_per_frame": 0.16,
               "looping": true
             }
@@ -143,22 +100,9 @@
       "id": "way-out",
       "name": "Way Out",
       "transform_3d": {
-        "position": [
-          0.55,
-          0.025,
-          -0.6
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
+        "position": [0.55, 0.025, -0.6],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -167,19 +111,31 @@
           "properties": {
             "goes_to": "gather.scene.json",
             "reach": 0.8,
-            "arrive_x": 4.0,
-            "arrive_y": 5.0
+            "arrive_x": 12.0,
+            "arrive_y": 13.0
           }
         },
         "sindri.sprite": {
           "texture": "textures/waystone.png#south",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ],
+          "tint": [1.0, 1.0, 1.0, 1.0],
           "layer": 11
+        }
+      }
+    },
+    {
+      "id": "world-camera",
+      "name": "World Camera",
+      "transform_3d": {
+        "position": [0.0, 0.0, 9.0],
+        "rotation": [0.0, -0.0, -0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "components": {
+        "sindri.camera": {
+          "far": 60.0,
+          "near": 0.1,
+          "projection": "perspective",
+          "vertical_fov_degrees": 45.0
         }
       }
     }

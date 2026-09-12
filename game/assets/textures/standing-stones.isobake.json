@@ -19,15 +19,23 @@
   "model": {
     "kind": "primitives",
     "materials": {
-      "stone": { "colour": "#7f8a90" },
-      "dark-stone": { "colour": "#5b6469" },
-      "turf": { "colour": "#4f6f52" }
+      "stone": { "colour": "#7f8d92" },
+      "stone-lit": { "colour": "#a4afb0" },
+      "dark-stone": { "colour": "#505d61" },
+      "moss": { "colour": "#55774c" },
+      "turf": { "colour": "#45684a" }
     },
     "parts": [
-      { "type": "sphere", "material": "turf", "position": [0, 0.0, 0], "radius": 0.5, "segments": 14, "scale": [1.0, 0.22, 0.62] },
-      { "type": "box", "material": "stone", "position": [-0.22, 0.34, 0.02], "size": [0.19, 0.66, 0.17], "rotation": [0, 0, -7] },
-      { "type": "box", "material": "dark-stone", "position": [0.1, 0.25, -0.06], "size": [0.16, 0.48, 0.15], "rotation": [0, 0, 5] },
-      { "type": "box", "material": "stone", "position": [0.33, 0.15, 0.08], "size": [0.14, 0.3, 0.13], "rotation": [0, 0, -3] }
+      { "type": "sphere", "material": "turf", "position": [0, 0.0, 0], "radius": 0.48, "segments": 12, "scale": [1.0, 0.16, 0.68] },
+      { "type": "box", "material": "dark-stone", "position": [-0.23, 0.34, 0.02], "size": [0.24, 0.64, 0.2], "rotation": [0, -7, -8] },
+      { "type": "cone", "material": "stone", "position": [-0.24, 0.69, 0.02], "radius": 0.17, "height": 0.22, "segments": 5, "rotation": [0, 8, 0] },
+      { "type": "box", "material": "stone", "position": [0.08, 0.27, -0.09], "size": [0.2, 0.5, 0.18], "rotation": [0, 9, 6] },
+      { "type": "cone", "material": "stone-lit", "position": [0.08, 0.56, -0.09], "radius": 0.14, "height": 0.18, "segments": 5, "rotation": [0, -5, 0] },
+      { "type": "box", "material": "dark-stone", "position": [0.31, 0.17, 0.09], "size": [0.18, 0.3, 0.16], "rotation": [0, -8, -4] },
+      { "type": "cone", "material": "stone", "position": [0.31, 0.36, 0.09], "radius": 0.125, "height": 0.14, "segments": 5, "rotation": [0, 5, 0] },
+      { "type": "box", "material": "moss", "position": [-0.31, 0.43, 0.128], "size": [0.09, 0.2, 0.02], "rotation": [0, 0, -8] },
+      { "type": "sphere", "material": "stone", "position": [0.2, 0.07, 0.28], "radius": 0.09, "segments": 7, "scale": [1.0, 0.62, 0.8] },
+      { "type": "sphere", "material": "dark-stone", "position": [-0.02, 0.055, 0.3], "radius": 0.065, "segments": 7, "scale": [1.0, 0.58, 0.78] }
     ]
   }
 }
