@@ -16,6 +16,7 @@ use sindri_render::{
 
 use crate::screen_ui::UiHierarchy;
 use crate::{SpriteAnimationComponent, SpriteAnimations, SpriteComponent, TextureBindings};
+use crate::TileSetBindings;
 
 use super::camera::ResolvedCameras;
 use super::camera::view::camera_distance;
@@ -67,6 +68,7 @@ pub(super) struct Shared<'a> {
     pub(super) animations: &'a SpriteAnimations,
     pub(super) effects: Option<&'a crate::Effects2d>,
     pub(super) hierarchy: &'a UiHierarchy,
+    pub(super) tile_sets: Option<&'a TileSetBindings>,
 }
 
 /// What every drawn image needs, other than the world it came from.
@@ -98,6 +100,7 @@ impl SceneExtractor {
             animations,
             effects,
             hierarchy,
+            tile_sets,
         } = shared;
         let mut batches = SpriteBatches::new();
         let resting = self.resting_sprites(world)?;
@@ -111,6 +114,7 @@ impl SceneExtractor {
         self.push_world_sprites(world, drawing, &mut batches)?;
         self.push_ui_images(world, drawing, &mut batches)?;
         self.push_tilemaps(world, cameras, textures, &mut batches)?;
+        self.push_tile_volumes(world, cameras, textures, tile_sets, &mut batches)?;
         // Into the same ordered queue as everything else, so adjacent flecks
         // can still share a draw with sprites using the same texture.
         Self::push_effects(effects, cameras, textures, &mut batches)?;

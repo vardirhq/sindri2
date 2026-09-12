@@ -14,6 +14,7 @@ mod shape;
 mod sprite;
 mod text;
 mod tilemap;
+mod tile_volume;
 mod ui;
 
 pub use camera::view::UiCanvas;
@@ -34,7 +35,11 @@ use thiserror::Error;
 use self::sprite::Shared;
 use crate::Effects2d;
 use crate::screen_ui::UiHierarchy;
-use crate::{AnimationError, SpriteAnimations, TextureBindings, TilemapError};
+use crate::{
+    AnimationError, SpriteAnimations, TextureBindings, TileGridError, TileSetBindings,
+    TileVolumeError, TilemapError,
+};
+use sindri_core::TileSetError;
 
 pub use camera::view::{CameraView, WorldProjection};
 pub use camera::{
@@ -81,6 +86,18 @@ pub enum SceneExtractError {
     Animation(#[from] AnimationError),
     #[error(transparent)]
     Tilemap(#[from] TilemapError),
+    #[error(transparent)]
+    TileGrid(#[from] TileGridError),
+    #[error(transparent)]
+    TileVolume(#[from] TileVolumeError),
+    #[error(transparent)]
+    TileSet(#[from] TileSetError),
+    #[error("a tile volume has no tile grid on the same entity")]
+    MissingTileGrid,
+    #[error("tile set `{0}` has not been bound")]
+    UnboundTileSet(String),
+    #[error("tile `{tile}` does not exist in tile set `{tile_set}`")]
+    UnknownTile { tile_set: String, tile: String },
     #[error(transparent)]
     SpriteRef(#[from] SpriteRefError),
     #[error(transparent)]
@@ -181,6 +198,7 @@ impl SceneExtractor {
             animations,
             effects,
             canvas,
+            tile_sets,
         } = runtime;
         let aspect = viewport.aspect_ratio()?;
         let mut cameras = self.resolve_cameras(world, aspect, view)?;
@@ -203,6 +221,7 @@ impl SceneExtractor {
                 animations,
                 effects,
                 hierarchy: &hierarchy,
+                tile_sets,
             },
             &mut frame,
         )?;
@@ -229,6 +248,7 @@ impl SceneExtractor {
             animations,
             effects,
             canvas,
+            tile_sets,
         } = runtime;
         let aspect = viewport.aspect_ratio()?;
         let mut cameras = resolved_screen_overlay(aspect);
@@ -257,6 +277,7 @@ impl SceneExtractor {
                 animations,
                 effects,
                 hierarchy: &hierarchy,
+                tile_sets,
             },
             &mut frame,
         )?;
@@ -279,6 +300,8 @@ pub struct SceneRuntime<'a> {
     pub animations: Option<&'a SpriteAnimations>,
     /// The live flecks, when a host is running any.
     pub effects: Option<&'a Effects2d>,
+    /// Reusable semantic tiles used by stackable volumes.
+    pub tile_sets: Option<&'a TileSetBindings>,
     /// Where the UI overlay is: on the viewport, or in the scene.
     ///
     /// A game always wants it on the viewport, because there it *is* the
@@ -299,6 +322,13 @@ impl<'a> SceneRuntime<'a> {
     #[must_use]
     pub const fn with_effects(mut self, effects: &'a Effects2d) -> Self {
         self.effects = Some(effects);
+        self
+    }
+
+    /// The tile-set assets available to render stackable volumes.
+    #[must_use]
+    pub const fn with_tile_sets(mut self, tile_sets: &'a TileSetBindings) -> Self {
+        self.tile_sets = Some(tile_sets);
         self
     }
 

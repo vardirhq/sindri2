@@ -17,6 +17,7 @@ mod physics;
 mod physics_sync;
 pub(crate) mod screen_ui;
 mod textures;
+mod tilesets;
 
 pub use animation::{AnimationClip, AnimationError, SpriteAnimationComponent, SpriteAnimations};
 pub use audio::AudioSourceComponent;
@@ -46,3 +47,4 @@ pub use textures::{
     TEXTURE_NAMING_COMPONENTS, TextureBindings, referenced_fonts, referenced_sheets,
     referenced_textures, unresolved_sprites, unresolved_textures,
 };
+pub use tilesets::{TileSetBindings, referenced_tile_sets};

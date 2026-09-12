@@ -14,5 +14,6 @@ mod support;
 mod text;
 mod textures;
 mod tilemap;
+mod tile_volume;
 mod ui;
 mod view;
