@@ -854,6 +854,33 @@ by guesswork.
 | `Grid.can_reach(mover, grid, target)` | `bool` |
 | `Grid.step_toward(mover, grid, target)` | `bool` |
 
+### Where the game is
+
+| Call | Returns |
+| --- | --- |
+| `Scene.current()` | `String` |
+| `Scene.go(name)` | nothing |
+
+`Scene.go` records an intention; it does not move anything. The script asking is
+running *in* the scene being left, from a world the change would rearrange
+underneath it, so the host performs the move between frames — the same shape as
+`Audio.play` recording a sound for whoever owns a speaker.
+
+`Scene.current()` therefore answers the scene being played, never the one asked
+for. A script that read back its own request would see the move happen a frame
+before it did.
+
+The first request in a frame is the one that counts. Two scripts asking is a
+conflict with no right answer, and taking the last would make a door beside a
+door depend on which script the pass reached first.
+
+A host that plays exactly one scene offers neither call, and `Scene.go` says so
+rather than accepting a request nothing will perform — a game whose doors
+silently never open should be heard about on the first frame.
+
+What a scene contains, where its file is, and when it loads are the host's
+business. This namespace knows a name.
+
 ### Grid cells
 
 Where the calls above are about an entity's position on a map, these are about

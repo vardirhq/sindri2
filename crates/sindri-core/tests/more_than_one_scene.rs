@@ -11,7 +11,7 @@
 //! `door`, and the world answers for all of them at once.
 
 use serde_json::json;
-use sindri_core::{SceneDocument, SceneEntityId, World};
+use sindri_core::{LoadedScenes, SceneDocument, SceneEntityId, SceneSwitchError, World};
 
 /// A scene with a root, a child under it, and a second root beside them.
 fn cottage(door: &str) -> SceneDocument {
@@ -185,5 +185,147 @@ fn loading_under_an_entity_the_world_lost_is_refused() {
             .add_scene(&cottage("door"), "house", Some(gone))
             .is_err(),
         "a parent that is not there is not a parent"
+    );
+}
+
+// --------------------------------------------------------------------------
+// Which scene is being played is a game's idea rather than a world's, so it is
+// kept beside the world rather than in it.
+
+/// The property the whole design rests on: a scene you walk out of and back
+/// into is the scene you left, not the scene its file describes.
+#[test]
+fn leaving_a_scene_and_returning_finds_it_as_it_was() {
+    let mut world = World::default();
+    let mut scenes = LoadedScenes::new();
+
+    scenes
+        .enter(&mut world, "farm", &cottage("door"))
+        .expect("the farm opens");
+    let lamp = scenes
+        .root("farm")
+        .and_then(|_| world.entity_for_source_id(&id("farm/lamp")))
+        .expect("the farm's lamp");
+
+    // Something the player did, which is in the world and not in the file.
+    world
+        .get_mut(lamp)
+        .expect("the lamp")
+        .components
+        .insert("lit".to_owned(), json!(true));
+
+    scenes
+        .enter(&mut world, "house", &cottage("door"))
+        .expect("the house opens");
+    assert!(
+        !world.is_active(lamp),
+        "the farm is out of play while indoors"
+    );
+
+    scenes.go_to(&mut world, "farm").expect("back outside");
+    assert!(world.is_active(lamp), "and in play again");
+    assert_eq!(
+        world.get(lamp).expect("the lamp").components.get("lit"),
+        Some(&json!(true)),
+        "what the player changed is still changed"
+    );
+}
+
+#[test]
+fn exactly_one_scene_is_in_play() {
+    let mut world = World::default();
+    let mut scenes = LoadedScenes::new();
+    for name in ["farm", "house", "barn"] {
+        scenes
+            .enter(&mut world, name, &cottage("door"))
+            .expect("it opens");
+    }
+    assert_eq!(scenes.active(), Some("barn"));
+    for name in ["farm", "house"] {
+        let root = scenes.root(name).expect("a root");
+        assert!(!world.is_active(root), "{name} should be out of play");
+    }
+    assert!(world.is_active(scenes.root("barn").expect("a root")));
+}
+
+/// A scene arrives switched off. Live-on-arrival would draw it over whatever is
+/// being played for the frame between loading and switching.
+#[test]
+fn a_loaded_scene_is_not_a_played_one() {
+    let mut world = World::default();
+    let mut scenes = LoadedScenes::new();
+    let root = scenes
+        .load(&mut world, "barn", &cottage("door"))
+        .expect("it loads");
+    assert!(scenes.holds("barn"));
+    assert_eq!(scenes.active(), None, "loading is not entering");
+    assert!(!world.is_active(root));
+}
+
+#[test]
+fn loading_the_same_scene_twice_is_the_same_scene() {
+    let mut world = World::default();
+    let mut scenes = LoadedScenes::new();
+    let first = scenes
+        .load(&mut world, "barn", &cottage("door"))
+        .expect("it loads");
+    let before = world.len();
+    let again = scenes
+        .load(&mut world, "barn", &cottage("door"))
+        .expect("it is already there");
+    assert_eq!(first, again);
+    assert_eq!(world.len(), before, "and was not loaded a second time");
+}
+
+#[test]
+fn going_somewhere_that_was_never_loaded_says_so() {
+    let mut world = World::default();
+    let mut scenes = LoadedScenes::new();
+    assert_eq!(
+        scenes.go_to(&mut world, "attic"),
+        Err(SceneSwitchError::NotLoaded("attic".to_owned()))
+    );
+}
+
+/// A name that half-exists is worse than one that does not: `holds` would
+/// answer yes for a scene with nothing in it.
+#[test]
+fn a_scene_that_fails_to_load_is_not_remembered() {
+    let mut world = World::default();
+    let mut scenes = LoadedScenes::new();
+    let before = world.len();
+    // The same namespace twice is refused by `add_scene`, which is the easiest
+    // way to make a load fail without an invalid document.
+    world
+        .add_scene(&cottage("door"), "barn", None)
+        .expect("something already holds that namespace");
+    let held = world.len();
+    assert!(scenes.load(&mut world, "barn", &cottage("door")).is_err());
+    assert!(!scenes.holds("barn"));
+    assert_eq!(
+        world.len(),
+        held,
+        "and left nothing behind, including the root it would have used"
+    );
+    assert!(held > before);
+}
+
+/// Unloading is the one verb that throws played state away, which is why it is
+/// not what leaving a scene does.
+#[test]
+fn unloading_takes_a_scene_out_of_the_world() {
+    let mut world = World::default();
+    let mut scenes = LoadedScenes::new();
+    scenes
+        .enter(&mut world, "barn", &cottage("door"))
+        .expect("it opens");
+    let root = scenes.root("barn").expect("a root");
+    assert!(scenes.unload(&mut world, "barn").expect("it unloads"));
+    assert!(!scenes.holds("barn"));
+    assert_eq!(scenes.active(), None, "and is no longer being played");
+    assert!(world.get(root).is_none(), "its entities are gone");
+    assert!(
+        !scenes.unload(&mut world, "barn").expect("a second unload"),
+        "unloading what is not there is not an error"
     );
 }

@@ -39,6 +39,7 @@ Names in scope without qualification. Decay has no imports, so each of these is 
 - `Profiles`: `Profiles`
 - `Random`: `Random`
 - `Save`: `Save`
+- `Scene`: `Scene`
 - `Stick`: `Stick`
 - `Time`: `Time`
 - `Touch`: `Touch`
@@ -177,6 +178,11 @@ The host names this type but has not described its members.
 - `number(String, f32)` → `f32`
 - `set_flag(String, bool)` → `unit`
 - `set_number(String, f32)` → `unit`
+
+### `Scene`
+
+- `current()` → `String`
+- `go(String)` → `unit`
 
 ### `Shape`
 

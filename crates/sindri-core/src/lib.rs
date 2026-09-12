@@ -46,8 +46,8 @@ pub use profile::{PROFILE_FORMAT_VERSION, PROFILE_SUFFIX, ProfileDocument, Profi
 pub use random::Rng;
 pub use save::{SAVE_FORMAT_VERSION, SaveDocument, SaveReadError, SaveState, SaveStore, SaveValue};
 pub use scene::{
-    SCENE_FORMAT_VERSION, SceneDocument, SceneEntity, SceneEntityId, SceneError, SceneJsonError,
-    SceneMetadata,
+    LoadedScenes, SCENE_FORMAT_VERSION, SceneDocument, SceneEntity, SceneEntityId, SceneError,
+    SceneJsonError, SceneMetadata, SceneSwitchError,
 };
 pub use sheet::{
     SHEET_FORMAT_VERSION, SheetError, SheetGrid, SpriteAnchor, SpriteSheetDocument, sheet_id_for,

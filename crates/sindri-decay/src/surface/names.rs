@@ -40,6 +40,13 @@ pub(crate) const WORLD: &str = "World";
 
 pub(crate) const GRID: &str = "Grid";
 
+/// Where the game is, and asking to be somewhere else.
+///
+/// A name and nothing more: what a scene contains, where its file is and when
+/// it loads are the host's business, and a namespace that knew any of it would
+/// make the language responsible for a project layout.
+pub(crate) const SCENE: &str = "Scene";
+
 /// What a body is doing, and what it touched.
 ///
 /// Sindri physics, never Rapier: `docs/physics.md` makes the backend a private

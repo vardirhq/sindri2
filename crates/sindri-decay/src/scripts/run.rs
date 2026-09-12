@@ -28,6 +28,8 @@ pub(super) struct TickWorld<'a> {
     pub(super) world: &'a mut World,
     pub(super) sources: &'a ScriptSources,
     pub(super) prefabs: &'a PrefabSources,
+    /// Which scene is being played, and where a script asked to go.
+    pub(super) scenes: Option<&'a mut crate::SceneChannel>,
     pub(super) profiles: &'a ProfileSources,
     pub(super) input: &'a InputState,
     /// Which entities have a script instance.
@@ -126,6 +128,9 @@ pub(super) fn tick(
                 // what the rest could see.
                 animations: at.animations.as_deref_mut(),
                 audio: &mut *at.audio,
+                // Reborrowed per tick like the rest: one channel for the pass,
+                // so which script ran first does not decide who may ask.
+                scenes: at.scenes.as_deref_mut(),
             },
         ),
     );

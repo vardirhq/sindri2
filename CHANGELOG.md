@@ -4,6 +4,38 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **A script can ask to be somewhere else.** `Scene.go(name)` and
+  `Scene.current()`, with `LoadedScenes` keeping which scene a world is playing
+  and switching between them. Together with `World::add_scene` that is a game
+  with more than one place in it.
+
+  The change cannot happen inside the call. The script asking is running *in*
+  the scene being left, from a world the change would rearrange underneath it,
+  so `Scene.go` records an intention and the host performs it between frames —
+  the same shape `Audio.play` already has for recording a sound for whoever
+  owns a speaker. `Scene.current()` therefore answers the scene being played
+  and never the one asked for; a script that read back its own request would
+  see the move happen a frame before it did.
+
+  The first request in a frame wins. Two scripts asking is a conflict with no
+  right answer, and taking the last would make a door beside a door depend on
+  which script the pass reached first.
+
+  Leaving a scene disables it rather than unloading it, so everything it holds
+  is as the player left it on return. Whether that is what a game wants is the
+  game's call, not the engine's: `load` and `enter` are separate verbs so a
+  scene can be brought in without being entered, and `unload` is the one verb
+  that discards played state.
+
+  A host that plays exactly one scene passes no channel, and `Scene.go` says so
+  rather than accepting a request nothing will perform — a game whose doors
+  silently never open should be heard about on the first frame.
+
+  `Scene.current()` answers a plain name rather than an optional one. Decay
+  cannot compare a `String` with `null`, so a null would have been a value no
+  script could test; a host that has a scene channel is playing something, and
+  "playing nothing" is a state only its own startup can be in.
+
 - **A world can hold more than one scene.** `World::add_scene` loads a scene
   beside whatever a world already holds, optionally under a parent entity —
   and because `World::is_active` walks ancestors, disabling that one entity

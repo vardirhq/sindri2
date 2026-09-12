@@ -73,6 +73,13 @@ pub struct HostServices<'a> {
     pub animations: Option<&'a mut sindri_scene::SpriteAnimations>,
     /// What the script asked to be played, in order.
     pub audio: &'a mut Vec<AudioCommand>,
+    /// Which scene is being played, and which one a script asked for.
+    ///
+    /// `None` for a host that plays exactly one scene, and then `Scene.go`
+    /// says so rather than accepting a request that goes nowhere — a game
+    /// whose doors silently never open should be heard about on the first
+    /// frame, not mistaken for a door nobody walked into.
+    pub scenes: Option<&'a mut crate::SceneChannel>,
 }
 
 impl<'a> WorldHost<'a> {
@@ -93,6 +100,7 @@ impl<'a> WorldHost<'a> {
             effects,
             animations,
             audio,
+            scenes,
         } = services;
         Self {
             inner: crate::host::WorldHost::new(
@@ -109,6 +117,7 @@ impl<'a> WorldHost<'a> {
                     screen_ui,
                     random,
                     animations,
+                    scenes,
                 },
             ),
             audio,
@@ -281,6 +290,7 @@ mod tests {
                 effects: None,
                 animations: None,
                 audio: &mut queue,
+                scenes: None,
             },
         );
         host.call(
@@ -352,6 +362,7 @@ mod tests {
                 effects: None,
                 animations: None,
                 audio: &mut queue,
+                scenes: None,
             },
         );
         let error = host

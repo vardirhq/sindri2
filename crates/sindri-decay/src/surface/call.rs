@@ -233,6 +233,18 @@ impl GridCall {
     }
 }
 
+/// Asking where the game is, and to be somewhere else.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum SceneCall {
+    /// Ask to move to a named scene, performed between frames.
+    Go,
+    /// The scene being played, or `null` where the host names none.
+    Current,
+}
+
+pub(crate) const SCENE_CALLS: &[(&str, SceneCall)] =
+    &[("go", SceneCall::Go), ("current", SceneCall::Current)];
+
 pub(crate) const GRID_CALLS: &[(&str, GridCall)] = &[
     ("position_x", GridCall::PositionX),
     ("position_y", GridCall::PositionY),

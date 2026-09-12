@@ -20,6 +20,7 @@ mod physics;
 mod profile;
 mod random;
 mod save;
+mod scene;
 mod tiles;
 mod ui;
 
@@ -107,6 +108,12 @@ pub struct WorldHost<'a> {
     /// cursor, because naming it again is not a change to the world and nothing
     /// else would notice. Everything else here is read.
     animations: Option<&'a mut sindri_scene::SpriteAnimations>,
+    /// Which scene is being played, and where a script asked to go.
+    ///
+    /// Mutable because asking is a write: `Scene.go` records an intention the
+    /// host performs between frames, since the change would rearrange the world
+    /// the asking script is still running in.
+    scenes: Option<&'a mut crate::SceneChannel>,
     /// What the script said, in order. Drained by the caller after the call.
     printed: Vec<String>,
 }
@@ -341,6 +348,11 @@ pub struct WorldServices<'a> {
     pub random: Option<&'a mut sindri_core::Rng>,
     /// Where each animated sprite has got to, when the host advances any.
     pub animations: Option<&'a mut sindri_scene::SpriteAnimations>,
+    /// Which scene is being played, and where a script asked to go.
+    ///
+    /// `None` for a host that plays exactly one scene, and then `Scene.go`
+    /// says so rather than accepting a request nothing will perform.
+    pub scenes: Option<&'a mut crate::SceneChannel>,
 }
 
 impl<'a> WorldHost<'a> {
@@ -360,6 +372,7 @@ impl<'a> WorldHost<'a> {
             screen_ui,
             random,
             animations,
+            scenes,
         } = services;
         Self {
             world,
@@ -374,6 +387,7 @@ impl<'a> WorldHost<'a> {
             saves,
             effects,
             animations,
+            scenes,
             printed: Vec::new(),
         }
     }

@@ -58,6 +58,11 @@ pub(crate) const SPAWN_LIMIT_PER_PASS: usize = 4096;
 pub struct ScriptFrame<'a> {
     pub sources: &'a ScriptSources,
     pub prefabs: &'a PrefabSources,
+    /// Which scene is being played, and where a script asked to go.
+    ///
+    /// `None` for a host that plays exactly one scene, and then `Scene.go`
+    /// says so rather than accepting a request nothing will perform.
+    pub scenes: Option<&'a mut crate::SceneChannel>,
     pub profiles: &'a ProfileSources,
     pub input: &'a InputState,
     /// The physics a script may read and drive, when the host runs any.
@@ -110,6 +115,7 @@ impl<'a> ScriptFrame<'a> {
         Self {
             sources,
             prefabs: PrefabSources::none(),
+            scenes: None,
             profiles: ProfileSources::none(),
             input,
             physics: None,
@@ -126,6 +132,17 @@ impl<'a> ScriptFrame<'a> {
     #[must_use]
     pub fn with_prefabs(mut self, prefabs: &'a PrefabSources) -> Self {
         self.prefabs = prefabs;
+        self
+    }
+
+    /// The same frame, with the scene it is being played in.
+    ///
+    /// Handing this over is what makes `Scene.go` available: without it a
+    /// script asking to move is told the host plays one scene, rather than
+    /// having its request quietly dropped.
+    #[must_use]
+    pub fn with_scenes(mut self, scenes: &'a mut crate::SceneChannel) -> Self {
+        self.scenes = Some(scenes);
         self
     }
 
@@ -284,6 +301,7 @@ impl Scripts {
         let ScriptFrame {
             sources,
             prefabs,
+            scenes,
             profiles,
             input,
             physics,
@@ -324,6 +342,7 @@ impl Scripts {
             world,
             sources,
             prefabs,
+            scenes,
             profiles,
             input,
             physics,
