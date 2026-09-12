@@ -59,7 +59,7 @@ fn walking_into_the_door_goes_to_the_shed() {
     assert_eq!(session.scene(), Some("shed.scene.json"));
 }
 
-fn active_camera_count(world: &World) -> usize {
+fn active_cameras(world: &World) -> Vec<CameraComponent> {
     let extractor = extractor().expect("the schemas register");
     extractor
         .components()
@@ -67,16 +67,26 @@ fn active_camera_count(world: &World) -> usize {
         .expect("camera payloads read")
         .into_iter()
         .filter(|(entity, _)| world.is_active(*entity))
-        .count()
+        .map(|(_, camera)| camera)
+        .collect()
+}
+
+fn assert_one_parallel_camera(world: &World) {
+    let cameras = active_cameras(world);
+    assert_eq!(cameras.len(), 1, "a playable place has one active camera");
+    assert!(
+        matches!(cameras[0], CameraComponent::Orthographic { .. }),
+        "baked ground and props need parallel projection so their hidden Z \n+         separation cannot become parallax"
+    );
 }
 
 /// Scene switching must leave a renderable world, not merely a world whose
 /// scripts still step. The first interior had no camera, which the door tests
 /// could not see because they never extracted a frame.
 #[test]
-fn every_place_has_exactly_one_active_world_camera() {
+fn every_place_has_exactly_one_parallel_world_camera() {
     let (mut world, mut session) = opened();
-    assert_eq!(active_camera_count(&world), 1);
+    assert_one_parallel_camera(&world);
 
     assert!(walk_until_elsewhere(
         &mut world,
@@ -85,7 +95,7 @@ fn every_place_has_exactly_one_active_world_camera() {
         600
     ));
     assert_eq!(session.scene(), Some("shed.scene.json"));
-    assert_eq!(active_camera_count(&world), 1);
+    assert_one_parallel_camera(&world);
 
     assert!(walk_until_elsewhere(
         &mut world,
@@ -94,7 +104,7 @@ fn every_place_has_exactly_one_active_world_camera() {
         600
     ));
     assert_eq!(session.scene(), Some("gather.scene.json"));
-    assert_eq!(active_camera_count(&world), 1);
+    assert_one_parallel_camera(&world);
 }
 
 /// The property the whole design rests on, in the running game rather than in

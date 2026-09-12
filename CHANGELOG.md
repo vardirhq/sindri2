@@ -16,7 +16,9 @@ All notable changes to Sindri Engine will be documented here.
   own camera too: switching the opening scene off used to switch off its only
   camera, leaving the interior's scripts alive but its world impossible to
   render. An integration test now holds every playable place to exactly one
-  active world camera.
+  active world camera. Both cameras use parallel projection: the ground's
+  hidden depth offset can still keep transparent draws ordered, but can no
+  longer turn into false parallax that makes props slide over their tiles.
 
   The oldest repeated landmarks have been redrawn at the same time. Trees now
   have a tapered trunk, roots, branching and a layered canopy; waystones have a
