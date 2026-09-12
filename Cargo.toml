@@ -65,7 +65,7 @@ fontdb = { version = "0.23", default-features = false, features = ["std"] }
 # thing that holds. Drop this the moment a fixed 1.13 exists; the only reason a
 # crate nothing calls is listed at all is that a version requirement has to be
 # attached to a real dependency to reach the resolver.
-tinyvec = "~1.12"
+tinyvec = "~1.13"
 glyphon = "0.12"
 js-sys = "0.3"
 sha2 = "0.11"
