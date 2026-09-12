@@ -81,7 +81,7 @@ impl SceneExtractor {
                 let order = TransparentOrder::new(
                     tilemap.layer,
                     map_distance,
-                    tile_submission_index(tilemap, column, row),
+                    tile_submission_index(&tilemap, column, row),
                 )?;
                 batches
                     .entry((DrawSpace::World, tilemap.layer, texture))
