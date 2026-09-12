@@ -3,6 +3,10 @@ format_version = 1
 [project]
 name = "Gather"
 main_scene = "assets/gather.scene.json"
+# Places the game can reach that no walk of the opening scene can see: a door
+# names one with `Scene.go("shed.scene.json")`, which is a string inside a
+# program. See docs/project-format.md.
+scenes = ["assets/shed.scene.json"]
 
 # What the scene does not name. Gather's scripts play these by name at run
 # time, and no walk of a scene can see a string inside a program.

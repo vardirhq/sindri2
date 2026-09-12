@@ -2,17 +2,23 @@
   "format_version": 1,
   "anchor": "center",
   "grid": {
-    "columns": 4,
+    "columns": 10,
     "rows": 1,
     "names": [
       "grass",
+      "grass-b",
+      "grass-c",
+      "grass-tuft",
+      "grass-bloom",
+      "soil",
+      "soil-wet",
       "path",
       "flagstone",
-      "shore"
+      "water"
     ],
     "size": [
-      368,
-      58
+      960,
+      72
     ],
     "margin": [
       2,

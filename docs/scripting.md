@@ -203,6 +203,18 @@ table above lists, reaching the same numbers.
 | Call | Returns |
 | --- | --- |
 | `World.find(name)` | `Entity`, or `null` |
+
+`World.find` prefers an entity that is taking part in the scene, and otherwise
+answers with the first match in world order. That matters once a world holds
+more than one scene: a game with a farm and a farmhouse has a `Player` in each,
+and only one of them is anywhere the player is.
+
+It *prefers* rather than filters. A switched-off screen is looked up by name
+precisely so that something can switch it back on, so a lookup that skipped what
+is out of play would make every such screen unreachable. `World.with_tag` does
+filter, because a query answering with things out of play is a different
+question from a lookup of one thing somebody already knows the name of.
+
 | `World.exists(entity)` | `bool` |
 | `World.despawn(entity)` | nothing |
 | `World.spawn(prefab)` | `Entity` |

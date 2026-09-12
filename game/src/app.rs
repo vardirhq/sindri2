@@ -19,7 +19,7 @@ use sindri_scene::SceneExtractor;
 use sindri_scene::{CameraView, SceneRuntime, TextureBindings};
 
 use crate::assets::{
-    bind_audio, bind_fonts, bind_textures, extractor, presented_world, stylesheets, world,
+    bind_audio, bind_fonts, bind_textures, extractor, presented_world, scenes, stylesheets, world,
 };
 use crate::error::GatherError;
 use crate::session::{GatherAudio, Session, gather_audio_backend};
@@ -58,8 +58,10 @@ impl DesktopApp for GatherApp {
         session.keep_saves_in(Box::new(sindri_platform::FileSaves::at(
             std::path::Path::new("gather-save.json"),
         )));
+        let (opened, loaded) = world()?;
+        let session = session.with_scenes(scenes()?, loaded);
         let mut engine = EngineHost::new_with_audio(session, FixedStepConfig::default(), audio)?;
-        *engine.world_mut() = world()?;
+        *engine.world_mut() = opened;
         engine.start()?;
 
         let mut text = TextRenderer::new();

@@ -69,7 +69,7 @@ fn floor_grid(world: &World, extractor: &SceneExtractor) -> (Transform3D, GridSp
 /// toss whether the wall occludes what is behind it.
 #[test]
 fn every_world_sprite_layers_by_where_it_stands() {
-    let world = world().expect("the scene loads");
+    let (world, _scenes) = world().expect("the scene loads");
     let extractor = extractor().expect("the schemas register");
     let (map, grid) = floor_grid(&world, &extractor);
 
@@ -125,7 +125,7 @@ fn every_world_sprite_layers_by_where_it_stands() {
 fn the_player_cannot_walk_through_solid_scenery() {
     use sindri_platform::{InputEvent, Key};
 
-    let mut world = world().expect("the scene loads");
+    let (mut world, _scenes) = world().expect("the scene loads");
     let extractor = extractor().expect("the schemas register");
     let sources = sources();
     let mut scripts = Scripts::new();
@@ -206,7 +206,7 @@ fn the_player_cannot_walk_through_solid_scenery() {
 fn the_player_only_bobs_while_walking() {
     use sindri_platform::{InputEvent, Key};
 
-    let mut world = world().expect("the scene loads");
+    let (mut world, _scenes) = world().expect("the scene loads");
     let extractor = extractor().expect("the schemas register");
     let sources = sources();
     let mut scripts = Scripts::new();
@@ -284,7 +284,7 @@ fn the_player_only_bobs_while_walking() {
 /// ignoring the scene navigation components.
 #[test]
 fn the_wisp_routes_around_the_authored_wall() {
-    let mut world = world().expect("the scene loads");
+    let (mut world, _scenes) = world().expect("the scene loads");
     let extractor = extractor().expect("the schemas register");
     let floor = world
         .entities()
@@ -339,10 +339,14 @@ fn the_wisp_routes_around_the_authored_wall() {
 fn walking_into_the_orbs_wins_the_game() {
     use sindri_platform::{InputEvent, Key};
 
-    let mut world = world().expect("the scene loads");
+    let (mut world, _scenes) = world().expect("the scene loads");
     let extractor = extractor().expect("the schemas register");
     let sources = sources();
     let mut scripts = Scripts::new();
+    // The island's doors ask for a scene change, so these frames need somewhere
+    // to record one. A frame built without it is a host that plays one scene,
+    // and `Scene.go` says so rather than accepting a request nothing performs.
+    let mut scenes = sindri_decay::SceneChannel::playing("gather.scene.json");
 
     let (map, grid) = floor_grid(&world, &extractor);
 
@@ -396,10 +400,14 @@ fn walking_into_the_orbs_wins_the_game() {
                 held.apply(InputEvent::KeyPressed(Key::ArrowUp));
             }
 
+            // The doors on the island ask for a scene change, so this frame
+            // is given somewhere to record that. Without it `Scene.go` says
+            // the host plays one scene -- which is the truth for a frame built
+            // without one, and is what this used to be.
             let report = scripts.advance(
                 &mut world,
                 extractor.components(),
-                ScriptFrame::new(&sources, &held, 1.0 / 60.0),
+                ScriptFrame::new(&sources, &held, 1.0 / 60.0).with_scenes(&mut scenes),
             );
             assert!(report.failures.is_empty(), "{:?}", report.failures);
 
@@ -486,7 +494,7 @@ fn every_sound_the_game_plays_is_shipped_and_decodes() {
     use sindri_core::AssetId;
     use sindri_scene::AudioSourceComponent;
 
-    let world = world().expect("the scene loads");
+    let (world, _scenes) = world().expect("the scene loads");
     let extractor = extractor().expect("the schemas register");
     let shipped: BTreeSet<&str> = AUDIO.iter().map(|(id, _)| *id).collect();
 
@@ -515,7 +523,7 @@ fn every_sound_the_game_plays_is_shipped_and_decodes() {
 /// A fresh game starts at nothing, so playing again is playing again.
 #[test]
 fn starting_over_starts_at_nothing() {
-    let mut world = world().expect("the scene loads");
+    let (mut world, _scenes) = world().expect("the scene loads");
     let extractor = extractor().expect("the schemas register");
     let mut scripts = Scripts::new();
     scripts.advance(

@@ -27,7 +27,7 @@ const SCENE: &str = include_str!("../assets/gather.scene.json");
 
 #[test]
 fn the_island_has_authored_regions() {
-    let world = world().expect("the scene loads");
+    let (world, _scenes) = world().expect("the scene loads");
     let extractor = extractor().expect("the schemas register");
     let (_, floor) = extractor
         .components()
@@ -74,7 +74,7 @@ fn authored_ids<C: SceneComponent>(extractor: &SceneExtractor, world: &World) ->
 /// animates every frame, which no baked frame could do.
 #[test]
 fn landmarks_make_the_world_and_navigation_readable() {
-    let world = world().expect("the scene loads");
+    let (world, _scenes) = world().expect("the scene loads");
     let extractor = extractor().expect("the schemas register");
 
     let shaped = authored_ids::<ShapeComponent>(&extractor, &world);
@@ -109,7 +109,7 @@ fn landmarks_make_the_world_and_navigation_readable() {
 
 #[test]
 fn weave_reflows_the_hud_for_a_phone() {
-    let authored = world().expect("the scene loads");
+    let (authored, _scenes) = world().expect("the scene loads");
     let extractor = extractor().expect("the schemas register");
     let sheets = stylesheets().expect("the composed Gather stylesheet parses");
     assert_eq!(sheets.len(), 1, "imports compose into one root");
@@ -166,7 +166,7 @@ fn weave_reflows_the_hud_for_a_phone() {
 /// else would notice — the game would just look wrong.
 #[test]
 fn every_texture_the_scene_names_is_shipped() {
-    let world = world().expect("the scene loads");
+    let (world, _scenes) = world().expect("the scene loads");
     let referenced: BTreeSet<String> = sindri_scene::referenced_textures(&world)
         .into_iter()
         .collect();
@@ -194,7 +194,7 @@ fn the_browser_fetches_every_texture_the_native_build_embeds() {
 /// rather than falling back to a machine-dependent face.
 #[test]
 fn every_font_the_scene_names_is_shipped() {
-    let world = world().expect("the scene loads");
+    let (world, _scenes) = world().expect("the scene loads");
     let referenced = sindri_scene::referenced_fonts(&world);
     let shipped = FONTS
         .iter()
@@ -206,7 +206,7 @@ fn every_font_the_scene_names_is_shipped() {
 /// Every script the scene names is one the binary carries, and it compiles.
 #[test]
 fn every_script_the_scene_names_compiles() {
-    let world = world().expect("the scene loads");
+    let (world, _scenes) = world().expect("the scene loads");
     let extractor = extractor().expect("the schemas register");
     let named = sindri_decay::referenced_sources(&world, extractor.components());
     let sources = sources();
@@ -236,7 +236,7 @@ fn the_scene_holds_no_component_the_game_cannot_run() {
 /// catching here instead.
 #[test]
 fn every_authored_property_names_a_field_its_script_exports() {
-    let world = world().expect("the scene loads");
+    let (world, _scenes) = world().expect("the scene loads");
     let extractor = extractor().expect("the schemas register");
     let sources = sources();
     let mut scripts = Scripts::new();
@@ -283,7 +283,7 @@ fn every_authored_property_names_a_field_its_script_exports() {
 /// -- playing, stopped, or never started -- can leave a sprite undefined.
 #[test]
 fn every_sprite_drawn_from_a_sheet_names_a_frame_of_it() {
-    let world = world().expect("the scene loads");
+    let (world, _scenes) = world().expect("the scene loads");
     let extractor = extractor().expect("the schemas register");
 
     let cut_by_sheet: BTreeMap<String, BTreeSet<String>> = SHEETS
@@ -379,7 +379,7 @@ fn the_scene_file_is_canonical() {
 /// one whose author never considered the question.
 #[test]
 fn every_texture_drawn_in_the_world_declares_where_it_meets_the_ground() {
-    let world = world().expect("the scene loads");
+    let (world, _scenes) = world().expect("the scene loads");
     let extractor = extractor().expect("the schemas register");
     let sheets: BTreeMap<&str, &str> = SHEETS.iter().copied().collect();
 

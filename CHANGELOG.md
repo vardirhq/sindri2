@@ -4,6 +4,85 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **Gather has a second place in it, and a door between them.** The shed: a
+  small room off the island's plaza, reached by walking onto a door and left the
+  same way. The integration proof for everything above — a scene switched off
+  rather than unloaded, so the island is exactly as it was on the way back,
+  asserted with a mark written into the played world that no scene file
+  contains.
+
+  Each place has its own player. That is how the genre works, and it is what
+  keeps a transition from having to carry an entity between scenes: continuity
+  lives in the blackboard, and the door hands over the cell to arrive in. Which
+  is also why arrival is taken in `update` and not `start` — walking back into
+  somewhere already visited runs no `start` at all.
+
+  `player.decay` now asks the map how big it is with `Grid.columns` / `Grid.rows`
+  instead of clamping to the island's nine cells. The hardcoded bounds let the
+  player walk straight off the shed the first time it opened, which is the kind
+  of thing a second place finds immediately.
+
+- **`World.find` prefers an entity that is in play.** Once a world can hold
+  several scenes, a game with two places has a `Player` in each and only one of
+  them is anywhere the player is; a lookup reaching the switched-off one would
+  drive a player nobody can see, in a place nobody is.
+
+  It prefers rather than filters, which is the load-bearing part. A switched-off
+  screen is looked up by name all through Orbital's title and pause flow
+  precisely so something can switch it back on, so a lookup that skipped what is
+  out of play would make every one of those unreachable. `World.with_tag` still
+  filters: a query answering with things out of play is a different question
+  from a lookup of one thing somebody already knows the name of.
+
+- **A scene can be loaded without renaming what is in it.**
+  `LoadedScenes::load_keeping_identities` and `enter_keeping_identities`, backed
+  by an empty namespace in `World::add_scene`.
+
+  Found by wiring Gather's host for scenes. Routing its opening scene through
+  the loader renamed every entity in the game — `shrine` became
+  `gather.scene.json/shrine` — and two tests that identify authored entities by
+  stable ID failed. The tests were right. Everything that resolves an entity by
+  stable ID was written against the identities in the *file*: a test, an editor
+  showing a running world, an authoring proposal naming a dozen entities. A
+  runtime that silently renamed them would make the two disagree about what
+  anything is called.
+
+  So a project's own opening scene keeps its authored identities, and guest
+  scenes are namespaced. The cost, stated rather than discovered: an
+  unnamespaced scene has no room for a second one using the same IDs, and that
+  is refused rather than resolved.
+
+- **Gather's host plays scenes rather than a scene.** The session holds every
+  scene the project can reach, which of them are in the world, and which one is
+  being played; a request from `Scene.go` is performed after the frame, never
+  inside it.
+
+  The opening scene is loaded through the same loader as any other, under a root
+  that can be switched off. A world whose first scene had been poured in flat
+  would be the one place a game could never leave.
+
+- **Gather's ground is rebuilt.** One `ground` sheet replaces `tiles`: three
+  turf variants, a flowering one, tilled and watered soil, a path, flagstone
+  and water. Groundwork for the farming game, and the first art authored
+  against one shared style module rather than by copying numbers between
+  recipes.
+
+  Two things learned doing it, both about the fact that a tile's top is a flat
+  upward face. The light therefore gives every tile the same value, so **a field
+  of grass is one plane of one colour** — texture has to be geometry, which is
+  why these tiles carry sub-grid detail rather than a second tint.
+
+  And that detail has to *tile*. The first attempt scattered small domes, which
+  the baker will not let cross a footprint, so they had to be inset — leaving a
+  bare margin on every tile that laid a lattice of absence across the field.
+  Worse than no texture, because it draws the grid. Boxes on a sub-grid that
+  exactly divides the tile reach the edge without ever crossing it.
+
+  Ground also carries **no outline**, where props still do. An outline
+  distinguishes an object from its background; drawn on every cell of a
+  continuous field it draws the grid instead. That is now a rule in the style
+  rather than an accident.
+
 - **A project can declare more than one scene, and every one of them ships.**
   `[project] scenes` in `sindri.toml` lists the scenes a game can reach besides
   the one it opens on, and `sindri-export` walks each of them exactly as it

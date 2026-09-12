@@ -1,0 +1,3833 @@
+{
+  "format_version": 1,
+  "id": "ground",
+  "texture": "textures/ground.png",
+  "tile": {
+    "width": 88,
+    "height": 44
+  },
+  "tile_world": {
+    "width": 1.1,
+    "height": 0.55
+  },
+  "facing": "south",
+  "directions": 1,
+  "footprint": {
+    "width": 1,
+    "height": 1
+  },
+  "render": {
+    "supersample": 4,
+    "padding": 2,
+    "outline": {
+      "enabled": false,
+      "colour": "#241d2b"
+    },
+    "shading": {
+      "light": [
+        -0.3,
+        0.89,
+        0.35
+      ],
+      "thresholds": [
+        0.25,
+        0.5,
+        0.8
+      ]
+    }
+  },
+  "variants": [
+    {
+      "name": "grass",
+      "model": {
+        "materials": {
+          "grass": {
+            "colour": "#3f6047",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          },
+          "blade": {
+            "colour": "#486a48",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          },
+          "blade-deep": {
+            "colour": "#3a5942",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "grass",
+            "position": [
+              0.0,
+              -0.0,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.1854,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.4375,
+              0.0927,
+              -0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.0625,
+              0.0927,
+              -0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.1875,
+              0.0927,
+              -0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.4375,
+              0.0927,
+              -0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.3125,
+              0.0927,
+              -0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.4375,
+              0.0927,
+              -0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.3125,
+              0.0927,
+              -0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.1875,
+              0.0927,
+              -0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.0625,
+              0.0927,
+              -0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.4375,
+              0.0927,
+              -0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.4375,
+              0.0927,
+              -0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.3125,
+              0.0927,
+              -0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.0625,
+              0.0927,
+              -0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.1875,
+              0.0927,
+              -0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.1875,
+              0.0927,
+              0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.1875,
+              0.0927,
+              0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.3125,
+              0.0927,
+              0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.4375,
+              0.0927,
+              0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.1875,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.0625,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.3125,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.4375,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.1875,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.4375,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.3125,
+              0.0927,
+              0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.1875,
+              0.0927,
+              0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.0625,
+              0.0927,
+              0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.4375,
+              0.0927,
+              0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "grass-b",
+      "model": {
+        "materials": {
+          "grass-b": {
+            "colour": "#3f6047",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          },
+          "blade": {
+            "colour": "#486a48",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          },
+          "blade-deep": {
+            "colour": "#3a5942",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "grass-b",
+            "position": [
+              0.0,
+              -0.0,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.1854,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.1875,
+              0.0927,
+              -0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.4375,
+              0.0927,
+              -0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.4375,
+              0.0927,
+              -0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.3125,
+              0.0927,
+              -0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.0625,
+              0.0927,
+              -0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.1875,
+              0.0927,
+              -0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.4375,
+              0.0927,
+              -0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.1875,
+              0.0927,
+              -0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.0625,
+              0.0927,
+              -0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.3125,
+              0.0927,
+              -0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.3125,
+              0.0927,
+              -0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.1875,
+              0.0927,
+              -0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.0625,
+              0.0927,
+              -0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.1875,
+              0.0927,
+              -0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.4375,
+              0.0927,
+              -0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.3125,
+              0.0927,
+              0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.1875,
+              0.0927,
+              0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.0625,
+              0.0927,
+              0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.3125,
+              0.0927,
+              0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.4375,
+              0.0927,
+              0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.0625,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.3125,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.4375,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.3125,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.1875,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.0625,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.1875,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.1875,
+              0.0927,
+              0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.0625,
+              0.0927,
+              0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.1875,
+              0.0927,
+              0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.3125,
+              0.0927,
+              0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.4375,
+              0.0927,
+              0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "grass-c",
+      "model": {
+        "materials": {
+          "grass-c": {
+            "colour": "#3f6047",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          },
+          "blade": {
+            "colour": "#486a48",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          },
+          "blade-deep": {
+            "colour": "#3a5942",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "grass-c",
+            "position": [
+              0.0,
+              -0.0,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.1854,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.4375,
+              0.0927,
+              -0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.3125,
+              0.0927,
+              -0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.0625,
+              0.0927,
+              -0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.4375,
+              0.0927,
+              -0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.4375,
+              0.0927,
+              -0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.3125,
+              0.0927,
+              -0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.4375,
+              0.0927,
+              -0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.3125,
+              0.0927,
+              -0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.0625,
+              0.0927,
+              -0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.1875,
+              0.0927,
+              -0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.3125,
+              0.0927,
+              -0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.4375,
+              0.0927,
+              -0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.4375,
+              0.0927,
+              -0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.3125,
+              0.0927,
+              -0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.3125,
+              0.0927,
+              0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.1875,
+              0.0927,
+              0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.3125,
+              0.0927,
+              0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.4375,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.1875,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.0625,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.3125,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.4375,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.3125,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.0625,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.1875,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.0625,
+              0.0927,
+              0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "grass-tuft",
+      "model": {
+        "materials": {
+          "grass-tuft": {
+            "colour": "#3f6047",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          },
+          "blade": {
+            "colour": "#486a48",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          },
+          "blade-deep": {
+            "colour": "#3a5942",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "grass-tuft",
+            "position": [
+              0.0,
+              -0.0,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.1854,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.1875,
+              0.0927,
+              -0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.3125,
+              0.0927,
+              -0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.1875,
+              0.0927,
+              -0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.0625,
+              0.0927,
+              -0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.1875,
+              0.0927,
+              -0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.3125,
+              0.0927,
+              -0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.4375,
+              0.0927,
+              -0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.3125,
+              0.0927,
+              -0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.0625,
+              0.0927,
+              -0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.1875,
+              0.0927,
+              0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.1875,
+              0.0927,
+              0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.3125,
+              0.0927,
+              0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.4375,
+              0.0927,
+              0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.4375,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.3125,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.1875,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.1875,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.3125,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.4375,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.4375,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.1875,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.0625,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.0625,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.1875,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.3125,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.3125,
+              0.0927,
+              0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.1875,
+              0.0927,
+              0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.0625,
+              0.0927,
+              0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "grass-bloom",
+      "model": {
+        "materials": {
+          "grass-bloom": {
+            "colour": "#3f6047",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          },
+          "blade": {
+            "colour": "#486a48",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          },
+          "blade-deep": {
+            "colour": "#3a5942",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          },
+          "bloom": {
+            "colour": "#b5493f"
+          },
+          "bloom-pale": {
+            "colour": "#d9d2c2"
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "grass-bloom",
+            "position": [
+              0.0,
+              -0.0,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.1854,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.4375,
+              0.0927,
+              -0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.1875,
+              0.0927,
+              -0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.3125,
+              0.0927,
+              -0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.4375,
+              0.0927,
+              -0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.4375,
+              0.0927,
+              -0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.1875,
+              0.0927,
+              -0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.3125,
+              0.0927,
+              -0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.0625,
+              0.0927,
+              -0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.1875,
+              0.0927,
+              -0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.3125,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.1875,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.0625,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.1875,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.4375,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              0.4375,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              -0.3125,
+              0.0927,
+              0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade",
+            "position": [
+              -0.0625,
+              0.0927,
+              0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "blade-deep",
+            "position": [
+              0.3125,
+              0.0927,
+              0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "bloom",
+            "position": [
+              -0.3121,
+              0.1327,
+              -0.0994
+            ],
+            "radius": 0.05,
+            "segments": 6
+          },
+          {
+            "type": "sphere",
+            "material": "bloom-pale",
+            "position": [
+              0.0332,
+              0.1327,
+              0.1275
+            ],
+            "radius": 0.045,
+            "segments": 6
+          },
+          {
+            "type": "sphere",
+            "material": "bloom-pale",
+            "position": [
+              -0.1434,
+              0.1327,
+              -0.029
+            ],
+            "radius": 0.045,
+            "segments": 6
+          }
+        ]
+      }
+    },
+    {
+      "name": "soil",
+      "model": {
+        "materials": {
+          "soil": {
+            "colour": "#5b4433",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          },
+          "furrow": {
+            "colour": "#4a3628",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          },
+          "clod": {
+            "colour": "#634c3b",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "soil",
+            "position": [
+              0.0,
+              -0.0,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.1854,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "furrow",
+            "position": [
+              0.0,
+              0.0827,
+              -0.33
+            ],
+            "size": [
+              0.94,
+              0.05,
+              0.12
+            ]
+          },
+          {
+            "type": "box",
+            "material": "furrow",
+            "position": [
+              0.0,
+              0.0827,
+              -0.11
+            ],
+            "size": [
+              0.94,
+              0.05,
+              0.12
+            ]
+          },
+          {
+            "type": "box",
+            "material": "furrow",
+            "position": [
+              0.0,
+              0.0827,
+              0.11
+            ],
+            "size": [
+              0.94,
+              0.05,
+              0.12
+            ]
+          },
+          {
+            "type": "box",
+            "material": "furrow",
+            "position": [
+              0.0,
+              0.0827,
+              0.33
+            ],
+            "size": [
+              0.94,
+              0.05,
+              0.12
+            ]
+          },
+          {
+            "type": "box",
+            "material": "clod",
+            "position": [
+              -0.3125,
+              0.0927,
+              -0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "clod",
+            "position": [
+              -0.1875,
+              0.0927,
+              -0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "clod",
+            "position": [
+              0.0625,
+              0.0927,
+              -0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "clod",
+            "position": [
+              0.0625,
+              0.0927,
+              -0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "clod",
+            "position": [
+              0.4375,
+              0.0927,
+              -0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "clod",
+            "position": [
+              0.1875,
+              0.0927,
+              -0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "clod",
+            "position": [
+              -0.3125,
+              0.0927,
+              0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "clod",
+            "position": [
+              -0.1875,
+              0.0927,
+              0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "clod",
+            "position": [
+              0.4375,
+              0.0927,
+              0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "clod",
+            "position": [
+              -0.0625,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "clod",
+            "position": [
+              0.4375,
+              0.0927,
+              0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "clod",
+            "position": [
+              -0.3125,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "clod",
+            "position": [
+              -0.1875,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "clod",
+            "position": [
+              0.0625,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "clod",
+            "position": [
+              0.1875,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "clod",
+            "position": [
+              0.3125,
+              0.0927,
+              0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "clod",
+            "position": [
+              -0.3125,
+              0.0927,
+              0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "clod",
+            "position": [
+              0.4375,
+              0.0927,
+              0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "soil-wet",
+      "model": {
+        "materials": {
+          "soil-wet": {
+            "colour": "#3d2c20",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          },
+          "furrow-wet": {
+            "colour": "#2c1f16",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          },
+          "sheen": {
+            "colour": "#4a6f7a",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "soil-wet",
+            "position": [
+              0.0,
+              -0.0,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.1854,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "furrow-wet",
+            "position": [
+              0.0,
+              0.0827,
+              -0.33
+            ],
+            "size": [
+              0.94,
+              0.05,
+              0.12
+            ]
+          },
+          {
+            "type": "box",
+            "material": "furrow-wet",
+            "position": [
+              0.0,
+              0.0827,
+              -0.11
+            ],
+            "size": [
+              0.94,
+              0.05,
+              0.12
+            ]
+          },
+          {
+            "type": "box",
+            "material": "furrow-wet",
+            "position": [
+              0.0,
+              0.0827,
+              0.11
+            ],
+            "size": [
+              0.94,
+              0.05,
+              0.12
+            ]
+          },
+          {
+            "type": "box",
+            "material": "furrow-wet",
+            "position": [
+              0.0,
+              0.0827,
+              0.33
+            ],
+            "size": [
+              0.94,
+              0.05,
+              0.12
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "sheen",
+            "position": [
+              -0.1466,
+              0.0977,
+              0.0301
+            ],
+            "radius": 0.09,
+            "segments": 6,
+            "scale": [
+              1.6,
+              0.08,
+              1.0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "sheen",
+            "position": [
+              -0.091,
+              0.0977,
+              -0.0186
+            ],
+            "radius": 0.09,
+            "segments": 6,
+            "scale": [
+              1.6,
+              0.08,
+              1.0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "sheen",
+            "position": [
+              0.2505,
+              0.0977,
+              0.1568
+            ],
+            "radius": 0.09,
+            "segments": 6,
+            "scale": [
+              1.6,
+              0.08,
+              1.0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "sheen",
+            "position": [
+              -0.1286,
+              0.0977,
+              -0.1107
+            ],
+            "radius": 0.09,
+            "segments": 6,
+            "scale": [
+              1.6,
+              0.08,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "path",
+      "model": {
+        "materials": {
+          "path": {
+            "colour": "#7a6a52",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          },
+          "grit": {
+            "colour": "#6a5b46",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          },
+          "grit-pale": {
+            "colour": "#84745c",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "path",
+            "position": [
+              0.0,
+              -0.0,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.1854,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              -0.45,
+              0.0927,
+              -0.45
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              -0.35,
+              0.0927,
+              -0.45
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit-pale",
+            "position": [
+              0.15,
+              0.0927,
+              -0.45
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit-pale",
+            "position": [
+              0.25,
+              0.0927,
+              -0.45
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit-pale",
+            "position": [
+              -0.35,
+              0.0927,
+              -0.35
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              0.05,
+              0.0927,
+              -0.35
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit-pale",
+            "position": [
+              0.15,
+              0.0927,
+              -0.35
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              0.45,
+              0.0927,
+              -0.35
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit-pale",
+            "position": [
+              -0.35,
+              0.0927,
+              -0.25
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              -0.25,
+              0.0927,
+              -0.25
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              -0.05,
+              0.0927,
+              -0.25
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit-pale",
+            "position": [
+              0.35,
+              0.0927,
+              -0.25
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              0.45,
+              0.0927,
+              -0.25
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit-pale",
+            "position": [
+              -0.45,
+              0.0927,
+              -0.15
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit-pale",
+            "position": [
+              -0.35,
+              0.0927,
+              -0.15
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit-pale",
+            "position": [
+              -0.25,
+              0.0927,
+              -0.15
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              -0.05,
+              0.0927,
+              -0.15
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              0.25,
+              0.0927,
+              -0.15
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              0.45,
+              0.0927,
+              -0.15
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              -0.15,
+              0.0927,
+              -0.05
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              0.35,
+              0.0927,
+              -0.05
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit-pale",
+            "position": [
+              0.45,
+              0.0927,
+              -0.05
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              -0.45,
+              0.0927,
+              0.05
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit-pale",
+            "position": [
+              -0.35,
+              0.0927,
+              0.05
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              -0.05,
+              0.0927,
+              0.05
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit-pale",
+            "position": [
+              0.05,
+              0.0927,
+              0.05
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              0.45,
+              0.0927,
+              0.05
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              -0.25,
+              0.0927,
+              0.15
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit-pale",
+            "position": [
+              -0.15,
+              0.0927,
+              0.15
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              0.25,
+              0.0927,
+              0.15
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              0.35,
+              0.0927,
+              0.15
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit-pale",
+            "position": [
+              -0.45,
+              0.0927,
+              0.25
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              -0.15,
+              0.0927,
+              0.25
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              -0.05,
+              0.0927,
+              0.25
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit-pale",
+            "position": [
+              0.25,
+              0.0927,
+              0.25
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit-pale",
+            "position": [
+              0.35,
+              0.0927,
+              0.25
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              0.45,
+              0.0927,
+              0.25
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit-pale",
+            "position": [
+              -0.45,
+              0.0927,
+              0.35
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit-pale",
+            "position": [
+              -0.35,
+              0.0927,
+              0.35
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              -0.15,
+              0.0927,
+              0.35
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              -0.05,
+              0.0927,
+              0.35
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit-pale",
+            "position": [
+              0.05,
+              0.0927,
+              0.35
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit-pale",
+            "position": [
+              0.35,
+              0.0927,
+              0.35
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              -0.45,
+              0.0927,
+              0.45
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit-pale",
+            "position": [
+              -0.35,
+              0.0927,
+              0.45
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              0.05,
+              0.0927,
+              0.45
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              0.15,
+              0.0927,
+              0.45
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grit",
+            "position": [
+              0.35,
+              0.0927,
+              0.45
+            ],
+            "size": [
+              0.1,
+              0.03,
+              0.1
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "flagstone",
+      "model": {
+        "materials": {
+          "flagstone": {
+            "colour": "#6f6a6f",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          },
+          "joint": {
+            "colour": "#4a464b",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          },
+          "chip": {
+            "colour": "#7c7880",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "flagstone",
+            "position": [
+              0.0,
+              -0.0,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.1854,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "joint",
+            "position": [
+              0.0,
+              0.0877,
+              0.0
+            ],
+            "size": [
+              0.98,
+              0.04,
+              0.06
+            ]
+          },
+          {
+            "type": "box",
+            "material": "joint",
+            "position": [
+              0.0,
+              0.0877,
+              0.0
+            ],
+            "size": [
+              0.06,
+              0.04,
+              0.98
+            ]
+          },
+          {
+            "type": "box",
+            "material": "chip",
+            "position": [
+              -0.0625,
+              0.0927,
+              -0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "chip",
+            "position": [
+              0.4375,
+              0.0927,
+              -0.3125
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "chip",
+            "position": [
+              -0.3125,
+              0.0927,
+              -0.1875
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "chip",
+            "position": [
+              -0.0625,
+              0.0927,
+              -0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "chip",
+            "position": [
+              0.0625,
+              0.0927,
+              0.0625
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          },
+          {
+            "type": "box",
+            "material": "chip",
+            "position": [
+              0.3125,
+              0.0927,
+              0.4375
+            ],
+            "size": [
+              0.125,
+              0.03,
+              0.125
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "water",
+      "model": {
+        "materials": {
+          "water": {
+            "colour": "#2f5d78",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          },
+          "ripple": {
+            "colour": "#3f7d96",
+            "ramp": {
+              "lightness": [
+                -0.24,
+                -0.09,
+                -0.04,
+                0.0
+              ]
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "water",
+            "position": [
+              0.0,
+              -0.055,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.1854,
+              1.0
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "ripple",
+            "position": [
+              0.125,
+              0.0427,
+              -0.1387
+            ],
+            "radius": 0.058,
+            "segments": 6,
+            "scale": [
+              2.2,
+              0.05,
+              0.7
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "ripple",
+            "position": [
+              0.3014,
+              0.0427,
+              0.2079
+            ],
+            "radius": 0.0587,
+            "segments": 6,
+            "scale": [
+              2.2,
+              0.05,
+              0.7
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "ripple",
+            "position": [
+              -0.0965,
+              0.0427,
+              -0.0064
+            ],
+            "radius": 0.0616,
+            "segments": 6,
+            "scale": [
+              2.2,
+              0.05,
+              0.7
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "ripple",
+            "position": [
+              0.2083,
+              0.0427,
+              0.0736
+            ],
+            "radius": 0.0577,
+            "segments": 6,
+            "scale": [
+              2.2,
+              0.05,
+              0.7
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "ripple",
+            "position": [
+              -0.2336,
+              0.0427,
+              -0.0005
+            ],
+            "radius": 0.0949,
+            "segments": 6,
+            "scale": [
+              2.2,
+              0.05,
+              0.7
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "ripple",
+            "position": [
+              0.069,
+              0.0427,
+              -0.1026
+            ],
+            "radius": 0.0966,
+            "segments": 6,
+            "scale": [
+              2.2,
+              0.05,
+              0.7
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "ripple",
+            "position": [
+              0.088,
+              0.0427,
+              -0.2216
+            ],
+            "radius": 0.0972,
+            "segments": 6,
+            "scale": [
+              2.2,
+              0.05,
+              0.7
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "ripple",
+            "position": [
+              0.2954,
+              0.0427,
+              0.0208
+            ],
+            "radius": 0.0614,
+            "segments": 6,
+            "scale": [
+              2.2,
+              0.05,
+              0.7
+            ]
+          },
+          {
+            "type": "sphere",
+            "material": "ripple",
+            "position": [
+              0.1079,
+              0.0427,
+              -0.1371
+            ],
+            "radius": 0.0859,
+            "segments": 6,
+            "scale": [
+              2.2,
+              0.05,
+              0.7
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

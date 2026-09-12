@@ -4,12 +4,13 @@
 //! winning are Decay scripts in `assets/scripts/`; this advances them
 //! and hands what they did to the engine.
 
+use std::collections::BTreeMap;
+
 use sindri_core::{ComponentSchemaRegistry, World};
 use sindri_decay::{
     AudioCommand, PrefabSources, ProfileSources, ScriptFrame, ScriptSources, Scripts,
 };
 
-#[cfg(not(target_arch = "wasm32"))]
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_platform::NativeAudioBackend;
 use sindri_platform::{AudioBackend, AudioError, FrameContext, Game, InputState, PlaybackSettings};
@@ -72,6 +73,16 @@ pub struct Session {
     save_backend: Box<dyn sindri_platform::SaveBackend>,
     pending_audio: Vec<AudioCommand>,
     autoplay_started: bool,
+    /// Every scene the project can reach, by the ID a script names.
+    scenes: BTreeMap<String, sindri_core::SceneDocument>,
+    /// Which of them are in the world, and which one is being played.
+    loaded: sindri_core::LoadedScenes,
+    /// The scene being played, and where a script asked to go.
+    ///
+    /// `None` until the host says which scene it opened on. A session that
+    /// never says is a session whose scripts are told `Scene.go` cannot work
+    /// here, which is the truth rather than a request dropped in silence.
+    channel: Option<sindri_decay::SceneChannel>,
 }
 
 impl Session {
@@ -104,6 +115,9 @@ impl Session {
             save_backend: Box::new(sindri_platform::MemorySaves::new()),
             pending_audio: Vec::new(),
             autoplay_started: false,
+            scenes: BTreeMap::new(),
+            loaded: sindri_core::LoadedScenes::new(),
+            channel: None,
         }
     }
 
@@ -123,6 +137,60 @@ impl Session {
     pub fn with_profiles(mut self, profiles: ProfileSources) -> Self {
         self.profiles = profiles;
         self
+    }
+
+    /// The scenes this project can reach, and which of them is already open.
+    ///
+    /// The world arrives with its opening scene in it, so the session is told
+    /// what that scene was rather than loading it again: `LoadedScenes` is the
+    /// record of what is in the world, and two records of that would be one
+    /// too many.
+    #[must_use]
+    pub fn with_scenes(
+        mut self,
+        scenes: Vec<(String, sindri_core::SceneDocument)>,
+        loaded: sindri_core::LoadedScenes,
+    ) -> Self {
+        // The scene being played is the one the loader entered. Taken from it
+        // rather than from the list's first entry, so the two cannot disagree.
+        self.channel = loaded.active().map(sindri_decay::SceneChannel::playing);
+        self.scenes = scenes.into_iter().collect();
+        self.loaded = loaded;
+        self
+    }
+
+    /// Which scene is being played, or `None` where the host runs just one.
+    #[must_use]
+    pub fn scene(&self) -> Option<&str> {
+        self.loaded.active()
+    }
+
+    /// Performs a scene change a script asked for, if one did.
+    ///
+    /// Between frames, never inside one: the script that asked is running in
+    /// the scene being left, from a world this rearranges underneath it. The
+    /// scene it came from is switched off rather than unloaded, so walking back
+    /// in finds it as it was.
+    fn follow_scene_request(&mut self, world: &mut World) -> Result<(), GatherError> {
+        let Some(channel) = self.channel.as_mut() else {
+            return Ok(());
+        };
+        let Some(wanted) = channel.take() else {
+            return Ok(());
+        };
+        if self.loaded.active() == Some(wanted.as_str()) {
+            // Already there. Not an error: two doors into one room, or a script
+            // asking twice, should be a no-op rather than a reload that threw
+            // the room's state away.
+            return Ok(());
+        }
+        let document = self
+            .scenes
+            .get(&wanted)
+            .ok_or_else(|| GatherError::UnknownScene(wanted.clone()))?;
+        self.loaded.enter(world, &wanted, document)?;
+        channel.now_playing(wanted);
+        Ok(())
     }
 
     /// One fixed step: the scripts run, then the animations move.
@@ -154,22 +222,26 @@ impl Session {
         self.effects
             .advance(std::time::Duration::from_secs_f32(delta_seconds));
         let (physics, events) = self.physics.for_scripts();
-        let report = self.scripts.advance(
-            world,
-            &self.components,
-            ScriptFrame::new(&self.sources, input, delta_seconds)
-                .with_prefabs(&self.prefabs)
-                .with_profiles(&self.profiles)
-                .with_screen_ui(&self.screen_ui)
-                .with_random(&mut self.random)
-                .with_saves(&mut self.saves)
-                .with_effects(&mut self.effects)
-                .with_physics(sindri_decay::Physics2d {
-                    world: physics,
-                    events,
-                })
-                .with_animations(&mut self.animations),
-        );
+        let mut frame = ScriptFrame::new(&self.sources, input, delta_seconds)
+            .with_prefabs(&self.prefabs)
+            .with_profiles(&self.profiles)
+            .with_screen_ui(&self.screen_ui)
+            .with_random(&mut self.random)
+            .with_saves(&mut self.saves)
+            .with_effects(&mut self.effects)
+            .with_physics(sindri_decay::Physics2d {
+                world: physics,
+                events,
+            })
+            .with_animations(&mut self.animations);
+        // Only when this session is actually playing one of several scenes.
+        // Handed over conditionally rather than always, so a host running a
+        // single scene has its scripts told `Scene.go` cannot work here instead
+        // of having a request accepted and dropped.
+        if let Some(channel) = self.channel.as_mut() {
+            frame = frame.with_scenes(channel);
+        }
+        let report = self.scripts.advance(world, &self.components, frame);
         self.pending_audio
             .extend(self.scripts.take_audio_commands());
         for failure in &report.failures {
@@ -180,6 +252,9 @@ impl Session {
         }
         self.animations
             .advance(world, &self.components, delta_seconds)?;
+        // Last, so a script's request is performed with no script mid-call in
+        // the scene it is leaving.
+        self.follow_scene_request(world)?;
         Ok(())
     }
 
