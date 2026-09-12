@@ -14,6 +14,7 @@ mod grid;
 mod mesh;
 mod sprite;
 mod tilemap;
+mod tile_volume;
 mod ui;
 mod ui_shape;
 mod ui_text_options;
@@ -24,6 +25,9 @@ pub use grid::{GridNavigationComponent, GridOccupantComponent, GridWallDocument}
 pub use mesh::{MeshComponent, MeshPrimitive};
 pub use sprite::SpriteComponent;
 pub use tilemap::{TileDraw, TileProjection, TilemapComponent, TilemapError};
+pub use tile_volume::{
+    TileCellDocument, TileGridComponent, TileGridError, TileVolumeComponent, TileVolumeError,
+};
 pub use ui::{UiAnchor, UiFill, UiFillEdge, UiImageComponent, UiTextComponent};
 pub use ui_shape::{ShapeComponent, ShapeGeometry, UiShapeBlend, UiShapeComponent, UiShapeKind};
 pub use ui_text_options::{

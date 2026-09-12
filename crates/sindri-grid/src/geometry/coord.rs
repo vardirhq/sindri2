@@ -51,6 +51,55 @@ impl GridCoord {
     }
 }
 
+/// An integer cell in a stackable grid volume.
+///
+/// X and Y retain exactly the meaning they have in [`GridCoord`]. Z is a
+/// logical level: changing the size or anchor of a sprite never changes it.
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct GridCoord3 {
+    pub x: i32,
+    pub y: i32,
+    pub z: i32,
+}
+
+impl GridCoord3 {
+    #[must_use]
+    pub const fn new(x: i32, y: i32, z: i32) -> Self {
+        Self { x, y, z }
+    }
+
+    #[must_use]
+    pub const fn column(self) -> GridCoord {
+        GridCoord::new(self.x, self.y)
+    }
+
+    /// Applies an offset, returning `None` at the edge of the integer domain.
+    #[must_use]
+    pub fn checked_offset(self, x: i32, y: i32, z: i32) -> Option<Self> {
+        Some(Self {
+            x: self.x.checked_add(x)?,
+            y: self.y.checked_add(y)?,
+            z: self.z.checked_add(z)?,
+        })
+    }
+
+    /// The six face-sharing neighbours in top, north, east, south, west,
+    /// bottom order.
+    pub fn face_neighbours(self) -> impl Iterator<Item = Self> {
+        const OFFSETS: [(i32, i32, i32); 6] = [
+            (0, 0, 1),
+            (0, -1, 0),
+            (1, 0, 0),
+            (0, 1, 0),
+            (-1, 0, 0),
+            (0, 0, -1),
+        ];
+        OFFSETS
+            .into_iter()
+            .filter_map(move |(x, y, z)| self.checked_offset(x, y, z))
+    }
+}
+
 /// A continuous position expressed in grid axes.
 ///
 /// Integer values name cell centres. Half-integers therefore lie on cell

@@ -10,7 +10,8 @@ mod pathfinding;
 mod walls;
 
 pub use geometry::{
-    GridBounds, GridCoord, GridError, GridPoint, GridSpace, PlanePoint, PlaneYAxis, Projection,
+    GridBounds, GridCoord, GridCoord3, GridError, GridPoint, GridSpace, PlanePoint, PlaneYAxis,
+    Projection, VolumeSpace,
 };
 pub use occupancy::{FootprintError, GridFootprint, GridOccupancy, GridPlacementError};
 pub use pathfinding::{GridMovement, GridPath, GridPathCosts, GridPathError, GridPathfinder};

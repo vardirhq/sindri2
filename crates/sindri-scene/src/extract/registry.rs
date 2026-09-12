@@ -24,8 +24,8 @@ use crate::animation::SpriteAnimationComponent;
 use crate::audio::AudioSourceComponent;
 use crate::components::{
     CameraComponent, GridNavigationComponent, GridOccupantComponent, MeshComponent, ShapeComponent,
-    SpriteComponent, TilemapComponent, UiImageComponent, UiShapeBlend, UiShapeComponent,
-    UiShapeKind, UiTextComponent,
+    SpriteComponent, TileGridComponent, TileVolumeComponent, TilemapComponent, UiImageComponent,
+    UiShapeBlend, UiShapeComponent, UiShapeKind, UiTextComponent,
 };
 use crate::effects::EffectBurstComponent;
 use crate::physics::{Collider2dComponent, RigidBody2dComponent};
@@ -203,6 +203,26 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
             "projection": "orthogonal",
             "tiles": [null],
             "tint": [1.0, 1.0, 1.0, 1.0],
+            "layer": 0
+        }),
+    )?;
+    components.register_with_default::<TileGridComponent>(
+        "Tile Grid",
+        serde_json::json!({
+            "columns": 1,
+            "rows": 1,
+            "cell_size": [1.0, 1.0],
+            "level_step": [0.0, 0.5],
+            "projection": "orthogonal"
+        }),
+    )?;
+    // A tile set is a project asset; there is no honest path the engine can
+    // invent for a fresh volume, so the editor completes this component.
+    components.register_with_fields::<TileVolumeComponent>(
+        "Tile Volume",
+        serde_json::json!({
+            "tileset": "",
+            "cells": [],
             "layer": 0
         }),
     )?;
