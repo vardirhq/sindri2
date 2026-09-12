@@ -1,0 +1,42 @@
+name: Diagnose PR 264 tests
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  nextest-output:
+    if: github.event.pull_request.number == 264
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: false
+      - uses: ./.github/actions/linux-deps
+        with:
+          packages: imagemagick libasound2-dev libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest@0.9.143
+      - name: Capture failing test output
+        env:
+          WGPU_BACKEND: vulkan
+          SINDRI_REQUIRE_GPU: 1
+        shell: bash
+        run: |
+          set +e
+          cargo nextest run --workspace --all-features --no-fail-fast 2>&1 | tee nextest-output.txt
+          status=${PIPESTATUS[0]}
+          echo "$status" > nextest-exit-code.txt
+          exit 0
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pr264-nextest-output
+          path: |
+            nextest-output.txt
+            nextest-exit-code.txt
+          retention-days: 1
