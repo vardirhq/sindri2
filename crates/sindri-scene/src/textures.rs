@@ -26,6 +26,10 @@ pub struct TextureBindings {
     /// Where each texture's sprites meet the ground, by the same key. Kept
     /// beside the rects because it arrives with them and is wanted with them.
     anchors: BTreeMap<String, SpriteAnchor>,
+    /// How much tile art hangs below its logical cell, relative to one cell
+    /// height. Kept with the sheet because it is a property of the picture, not
+    /// of whichever tilemap happens to draw it.
+    tile_overhang_ratios: BTreeMap<String, f32>,
 }
 
 impl TextureBindings {
@@ -86,6 +90,11 @@ impl TextureBindings {
         } else {
             self.anchors.remove(&texture);
         }
+        if let Some(ratio) = sheet.tile_overhang_ratio {
+            self.tile_overhang_ratios.insert(texture.clone(), ratio);
+        } else {
+            self.tile_overhang_ratios.remove(&texture);
+        }
         self.sheets.insert(texture, rects);
         Ok(())
     }
@@ -94,6 +103,7 @@ impl TextureBindings {
     pub fn unbind_sheet(&mut self, texture: &str) {
         self.sheets.remove(texture);
         self.anchors.remove(texture);
+        self.tile_overhang_ratios.remove(texture);
     }
 
     /// Where `reference` meets the ground.
@@ -107,6 +117,14 @@ impl TextureBindings {
             .get(reference.texture())
             .copied()
             .unwrap_or_default()
+    }
+
+    /// How far tile art hangs below one logical cell, relative to the cell's
+    /// height. `None` means the sheet makes no claim and the tilemap stays flat
+    /// unless it carries an authored override.
+    #[must_use]
+    pub fn tile_overhang_ratio(&self, texture: &str) -> Option<f32> {
+        self.tile_overhang_ratios.get(texture).copied()
     }
 
     /// The part of the texture `reference` names, or `None` when it names the
@@ -341,11 +359,8 @@ pub const TEXTURE_NAMING_COMPONENTS: &[&str] = &[
 /// The same trap as `TEXTURE_NAMING_COMPONENTS`, one renderer along: a
 /// component missing from here never has its font requested, so nothing binds
 /// it and the text simply does not draw — a blank where a label should be, with
-/// no failed frame to point at it. The test beside the one above holds this
-/// list against the registry too, though it has to ask differently: a
-/// font-naming component has no default payload to be read — it cannot invent a
-/// font — so the test probes each validator instead, and a component that
-/// deserializes a `font` has to be named here or fail the build.
+/// no failed frame to point at it. `TEXTURE_NAMING_COMPONENTS` has the same
+/// contract for textures.
 pub const FONT_NAMING_COMPONENTS: &[&str] = &[UiTextComponent::TYPE_NAME];
 
 /// Every texture a world draws with that nothing has bound.
