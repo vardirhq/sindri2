@@ -15,7 +15,9 @@
 use std::{error::Error, fs, io::BufWriter, path::Path};
 
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_gather::{Session, bind_fonts, extractor, presented_world, stylesheets, world};
+use sindri_gather::{
+    Session, bind_fonts, bind_tile_sets, extractor, presented_world, stylesheets, world,
+};
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_gpu::{GpuContext, GpuRequestOptions};
 #[cfg(not(target_arch = "wasm32"))]
@@ -60,6 +62,7 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
     bind_fonts(&mut text)?;
 
     let (textures, bindings) = sindri_gather::bind_textures(&gpu.device, &gpu.queue)?;
+    let tile_sets = bind_tile_sets()?;
 
     let scene = extractor()?;
     let (mut world, loaded) = world()?;
@@ -91,7 +94,8 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
         &bindings,
         SceneRuntime::default()
             .with_animations(session.animations())
-            .with_effects(session.effects()),
+            .with_effects(session.effects())
+            .with_tile_sets(&tile_sets),
     )?;
 
     let mut encoder = gpu

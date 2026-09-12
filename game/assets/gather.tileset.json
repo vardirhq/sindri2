@@ -1,0 +1,53 @@
+{
+  "format_version": 1,
+  "tiles": {
+    "earth": {
+      "faces": {
+        "east": {
+          "sprite": "textures/gather-blocks.png#earth-east",
+          "size": [1.1, 1.9]
+        },
+        "south": {
+          "sprite": "textures/gather-blocks.png#earth-south",
+          "size": [1.1, 1.9]
+        },
+        "top": {
+          "sprite": "textures/gather-blocks.png#earth-top",
+          "size": [1.1, 1.9]
+        }
+      }
+    },
+    "grass": {
+      "faces": {
+        "east": {
+          "sprite": "textures/gather-blocks.png#grass-east",
+          "size": [1.1, 1.9]
+        },
+        "south": {
+          "sprite": "textures/gather-blocks.png#grass-south",
+          "size": [1.1, 1.9]
+        },
+        "top": {
+          "sprite": "textures/gather-blocks.png#grass-top",
+          "size": [1.1, 1.9]
+        }
+      }
+    },
+    "stone": {
+      "faces": {
+        "east": {
+          "sprite": "textures/gather-blocks.png#stone-east",
+          "size": [1.1, 1.9]
+        },
+        "south": {
+          "sprite": "textures/gather-blocks.png#stone-south",
+          "size": [1.1, 1.9]
+        },
+        "top": {
+          "sprite": "textures/gather-blocks.png#stone-top",
+          "size": [1.1, 1.9]
+        }
+      }
+    }
+  }
+}
