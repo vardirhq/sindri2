@@ -2549,8 +2549,8 @@
         "sindri.camera": {
           "far": 60.0,
           "near": 0.1,
-          "projection": "perspective",
-          "vertical_fov_degrees": 45.0
+          "projection": "orthographic",
+          "vertical_size": 7.5
         },
         "sindri.script": {
           "properties": {

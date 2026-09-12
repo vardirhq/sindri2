@@ -18,6 +18,12 @@ SHED = ROOT / "game/assets/shed.scene.json"
 SIZE = 25
 CENTRE = 12
 FLOOR_Y = round(0.275 * (SIZE - 1), 4)
+CAMERA = {
+    "far": 60.0,
+    "near": 0.1,
+    "projection": "orthographic",
+    "vertical_size": 7.5,
+}
 
 
 def grass(col: int, row: int) -> int:
@@ -249,6 +255,10 @@ def main() -> None:
         "arrive_y": 3.0,
     })
     camera = next(entity for entity in document["entities"] if entity["id"] == "world-camera")
+    # Every baked sprite stands on the floor visually, even though Z separates
+    # transparent depth planes. A perspective camera would turn that hidden Z
+    # separation into parallax as it follows the player.
+    camera["components"]["sindri.camera"] = CAMERA
     camera["components"]["sindri.script"] = {
         "properties": {"ease": 7.5},
         "script": "CameraFollow",
@@ -293,8 +303,12 @@ def main() -> None:
         "arrive_x": 12.0,
         "arrive_y": 13.0,
     })
-    if not any(entity["id"] == "world-camera" for entity in shed["entities"]):
-        shed["entities"].append({
+    shed_camera = next(
+        (entity for entity in shed["entities"] if entity["id"] == "world-camera"),
+        None,
+    )
+    if shed_camera is None:
+        shed_camera = {
             "id": "world-camera",
             "name": "World Camera",
             "transform_3d": {
@@ -302,15 +316,10 @@ def main() -> None:
                 "rotation": [0.0, -0.0, -0.0, 1.0],
                 "scale": [1.0, 1.0, 1.0],
             },
-            "components": {
-                "sindri.camera": {
-                    "far": 60.0,
-                    "near": 0.1,
-                    "projection": "perspective",
-                    "vertical_fov_degrees": 45.0,
-                }
-            },
-        })
+            "components": {},
+        }
+        shed["entities"].append(shed_camera)
+    shed_camera["components"]["sindri.camera"] = CAMERA
     write_canonical(SHED, shed)
 
 
