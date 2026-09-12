@@ -1,0 +1,56 @@
+{
+  "format_version": 1,
+  "id": "gather-blocks",
+  "texture": "textures/gather-blocks.png",
+  "output": "block_faces",
+  "view": "isometric",
+  "tile": { "width": 88, "height": 44 },
+  "tile_world": { "width": 1.1, "height": 0.55 },
+  "facing": "south",
+  "directions": 1,
+  "footprint": { "width": 1, "height": 1 },
+  "render": {
+    "supersample": 4,
+    "padding": 0,
+    "alpha_cutoff": 128,
+    "palette_snap": true,
+    "outline": { "enabled": true, "colour": "#20222a" },
+    "shading": {
+      "light": [-0.3, 0.89, 0.35],
+      "thresholds": [0.25, 0.5, 0.8]
+    }
+  },
+  "variants": [
+    {
+      "name": "grass",
+      "model": {
+        "materials": {
+          "earth": { "colour": "#805236" },
+          "grass": { "colour": "#6f9f52" }
+        },
+        "parts": [
+          { "type": "box", "material": "earth", "position": [0, 0.5, 0], "size": [1, 1, 1] },
+          { "type": "plate", "material": "grass", "position": [0, 1.001, 0], "size": [1, 1] }
+        ]
+      }
+    },
+    {
+      "name": "earth",
+      "model": {
+        "materials": { "earth": { "colour": "#805236" } },
+        "parts": [
+          { "type": "box", "material": "earth", "position": [0, 0.5, 0], "size": [1, 1, 1] }
+        ]
+      }
+    },
+    {
+      "name": "stone",
+      "model": {
+        "materials": { "stone": { "colour": "#92928d" } },
+        "parts": [
+          { "type": "box", "material": "stone", "position": [0, 0.5, 0], "size": [1, 1, 1] }
+        ]
+      }
+    }
+  ]
+}

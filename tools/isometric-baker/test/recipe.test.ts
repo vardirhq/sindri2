@@ -30,6 +30,18 @@ test('a minimal recipe fills in the defaults', () => {
   assert.deepEqual(recipe.footprint, { width: 1, height: 1 });
   assert.equal(recipe.render.supersample, 4);
   assert.equal(recipe.render.outline.enabled, true);
+  assert.equal(recipe.output, 'sprite');
+});
+
+test('block faces are an explicit single-view tile-set output', () => {
+  const recipe = parse({ output: 'block_faces', directions: 1 });
+  assert.equal(recipe.output, 'block_faces');
+  assert.throws(() => parse({ output: 'block_faces' }), /set "directions" to 1/);
+  assert.throws(() => parse({ output: 'voxels' }), /sprite.*block_faces/);
+  assert.throws(
+    () => parse({ output: 'block_faces', directions: 1, prefab: { path: 'prefabs/block.prefab.json' } }),
+    /tile-set atlas/,
+  );
 });
 
 test('a field nobody reads is refused rather than ignored', () => {

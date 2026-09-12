@@ -124,6 +124,44 @@ export interface Mesh {
   ramps: Record<string, string[]>;
 }
 
+export type BlockFace = 'top' | 'south' | 'east';
+
+/**
+ * Keep one camera-facing axis of a block while preserving the original vertex
+ * positions. Preserving them is deliberate: every face is later measured on
+ * the whole model's canvas, so the independently culled layers share one exact
+ * anchor when the runtime recomposes them.
+ */
+export function blockFaceMesh(mesh: Mesh, face: BlockFace): Mesh {
+  const wanted: Record<BlockFace, Vec3> = {
+    top: vec(0, 1, 0),
+    south: vec(0, 0, 1),
+    east: vec(1, 0, 0),
+  };
+  const normal = wanted[face];
+  const indices: number[] = [];
+  const triangleMaterial: number[] = [];
+  for (let triangle = 0; triangle < mesh.triangleMaterial.length; triangle++) {
+    const vertex = mesh.indices[triangle * 3] * 3;
+    const alignment =
+      mesh.normals[vertex] * normal[0] +
+      mesh.normals[vertex + 1] * normal[1] +
+      mesh.normals[vertex + 2] * normal[2];
+    if (alignment < 1 - 1e-6) continue;
+    indices.push(
+      mesh.indices[triangle * 3],
+      mesh.indices[triangle * 3 + 1],
+      mesh.indices[triangle * 3 + 2],
+    );
+    triangleMaterial.push(mesh.triangleMaterial[triangle]);
+  }
+  return {
+    ...mesh,
+    indices: Uint32Array.from(indices),
+    triangleMaterial: Uint16Array.from(triangleMaterial),
+  };
+}
+
 export interface Bounds {
   min: Vec3;
   max: Vec3;

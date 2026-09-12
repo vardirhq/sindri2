@@ -8,7 +8,7 @@
 
 import { type BakedFrame, type Canvas, bakeFrames, measureCanvas, paletteFor } from './frames.ts';
 import { type Camera, createCamera, createFlatCamera } from './camera.ts';
-import { type Mesh, buildMesh } from './model.ts';
+import { type BlockFace, type Mesh, blockFaceMesh, buildMesh } from './model.ts';
 import { encodePng } from './png.ts';
 import { uniqueColours } from './palette.ts';
 import { usedColours } from './postprocess.ts';
@@ -131,10 +131,26 @@ export function bake(recipe: Recipe): BakeResult {
   );
   const palette = uniqueColours(meshes.flatMap((mesh) => paletteFor(mesh, recipe.render)));
 
-  const frames = meshes.flatMap((mesh, index) =>
+  const renderModels: { mesh: Mesh; name: string | null }[] = [];
+  const faces: BlockFace[] = ['top', 'south', 'east'];
+  meshes.forEach((mesh, index) => {
+    const name = recipe.variants[index].name;
+    if (recipe.output === 'block_faces') {
+      for (const face of faces) {
+        renderModels.push({
+          mesh: blockFaceMesh(mesh, face),
+          name: name === null ? face : `${name}-${face}`,
+        });
+      }
+    } else {
+      renderModels.push({ mesh, name });
+    }
+  });
+
+  const frames = renderModels.flatMap(({ mesh, name }) =>
     bakeFrames({
       mesh,
-      variant: recipe.variants[index].name,
+      variant: name,
       footprint: recipe.footprint,
       facing: recipe.facing,
       count: recipe.directions,
