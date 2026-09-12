@@ -2,15 +2,17 @@
 //! the world.
 
 use decay_ir::Path;
-use decay_runtime::RuntimeError;
+use decay_runtime::{RuntimeError, Value};
 use sindri_core::{EntityId, Transform3D};
-use sindri_grid::{GridCoord, GridPathfinder, GridSpace, PlanePoint, PlaneYAxis, Projection};
+use sindri_grid::{
+    GridCoord, GridPathfinder, GridPoint, GridSpace, PlanePoint, PlaneYAxis, Projection,
+};
 use sindri_scene::WorldGridNavigation;
 
-use crate::surface::TILEMAP_COMPONENT;
+use crate::surface::{GridCall, TILEMAP_COMPONENT};
 
 use super::WorldHost;
-use super::convert::as_f32;
+use super::convert::{as_f32, number};
 
 /// The renderer-independent grid and the entity transform placing it in world
 /// XY. Kept together because a logical coordinate only means a world position
@@ -158,5 +160,114 @@ impl WorldHost<'_> {
             .find_path(GridPathfinder::default(), entity, goal)
             .map(|route| route.map(sindri_grid::GridPath::into_nodes))
             .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))
+    }
+
+    /// The `Grid.*` calls that name an entity and the map it stands on.
+    ///
+    /// Here rather than beside the world calls because everything it needs --
+    /// the projection, the transform, the pathfinder -- is in this file, and it
+    /// was the one thing in `call.rs` that had nothing to do with the rest of
+    /// it.
+    pub(super) fn grid_call(
+        &mut self,
+        call: GridCall,
+        path: &Path,
+        args: &[Value],
+    ) -> Result<Value, RuntimeError> {
+        debug_assert!(
+            !call.is_about_a_cell(),
+            "cell calls are dispatched to `tile_call` before this"
+        );
+        let entity = self.entity_argument(path, args, 0, "the positioned object")?;
+        let map = self.entity_argument(path, args, 1, "the grid")?;
+        let grid = self.map_grid(path, map)?;
+
+        match call {
+            GridCall::PositionX | GridCall::PositionY => {
+                let world = self
+                    .transform_of(entity)
+                    .ok_or_else(|| {
+                        RuntimeError::Host(format!(
+                            "{} needs the positioned object to have a transform",
+                            path.dotted()
+                        ))
+                    })?
+                    .position_2d();
+                let local = world_to_map(grid.transform, world);
+                let point = grid
+                    .space
+                    .unproject(local)
+                    .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
+                Ok(Value::Number(match call {
+                    GridCall::PositionX => point.x,
+                    GridCall::PositionY => point.y,
+                    _ => unreachable!("matched above"),
+                }))
+            }
+            GridCall::Place => {
+                let x = number(
+                    path,
+                    args.get(2).ok_or_else(|| {
+                        RuntimeError::Host(format!("{} needs a grid X", path.dotted()))
+                    })?,
+                )?;
+                let y = number(
+                    path,
+                    args.get(3).ok_or_else(|| {
+                        RuntimeError::Host(format!("{} needs a grid Y", path.dotted()))
+                    })?,
+                )?;
+                let local = grid
+                    .space
+                    .project(GridPoint::new(x, y))
+                    .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
+                let world = map_to_world(grid.transform, local);
+                let Some(mut transform) = self.transform_of(entity) else {
+                    return Err(RuntimeError::Host(format!(
+                        "{} needs the positioned object to have a transform",
+                        path.dotted()
+                    )));
+                };
+                transform.set_position_2d(world);
+                let Some(data) = self.world.get_mut(entity) else {
+                    return Err(RuntimeError::Host(format!(
+                        "{}'s positioned object no longer exists",
+                        path.dotted()
+                    )));
+                };
+                data.transform_3d = Some(transform);
+                Ok(Value::Unit)
+            }
+            GridCall::CanReach | GridCall::StepToward => {
+                let target = self.entity_argument(path, args, 2, "the path target")?;
+                let route = self.path_to_target(path, entity, map, target, grid)?;
+                if call == GridCall::CanReach {
+                    return Ok(Value::Bool(route.is_some()));
+                }
+                let Some(next) = route.as_deref().and_then(|nodes| nodes.get(1)).copied() else {
+                    return Ok(Value::Bool(false));
+                };
+                let local = grid
+                    .space
+                    .grid_to_plane(next)
+                    .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
+                let world = map_to_world(grid.transform, local);
+                let Some(mut transform) = self.transform_of(entity) else {
+                    return Err(RuntimeError::Host(format!(
+                        "{} needs the moving occupant to have a transform",
+                        path.dotted()
+                    )));
+                };
+                transform.set_position_2d(world);
+                self.world
+                    .get_mut(entity)
+                    .expect("entity argument was validated above")
+                    .transform_3d = Some(transform);
+                Ok(Value::Bool(true))
+            }
+            // Dispatched to `tile_call`, which is the only other reader of
+            // this namespace and takes a map and a cell instead.
+            _ => unreachable!("a cell call never reaches here"),
+        }
     }
 }

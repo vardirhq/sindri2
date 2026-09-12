@@ -4,6 +4,35 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **A Decay script can change the ground.** `Grid.tile` and `Grid.set_tile`
+  read and write a tilemap's cells by column and row, and `Grid.columns` /
+  `Grid.rows` give the map's size. This closes the last 🟡 on the tilemap row of
+  `docs/parity.md`.
+
+  Until now a script could only put entities *on top of* a floor, so anything
+  where the ground itself changes — tilled, watered, grown, burnt, flooded — had
+  to keep the picture and the game's idea of the picture in agreement by hand.
+
+  A cell is named by whole column and row rather than by a world position,
+  because the map is the authority on which cell a position falls in and a
+  script doing that arithmetic itself would be a second answer free to disagree.
+  Reading off the map answers `-1` rather than failing, since anything that
+  moves will ask about the edge; writing off the map is an error, because it has
+  no sensible meaning and dropping it silently would hide the mistake. So is a
+  palette index the map cannot answer — a map holding one fails validation on
+  the next load, long after and nowhere near the script that wrote it.
+
+  The write edits the stored payload in place rather than going through the
+  typed view, for the reason the sprite and shape paths do: the view is
+  `Deserialize`-only, so rebuilding it would drop a field it does not model.
+
+- **Gather's role is widened.** `AGENTS.md` said the showcase may only
+  demonstrate capabilities the engine already has. It is becoming an isometric
+  farming game held to the standard of a game somebody would choose to play,
+  and it may now pull new engine capability — generally, not shaped around it.
+  What still separates it from Orbital Last Stand is why a gap is found: Gather
+  finds them by trying to be good, Orbital by trying to be faithful.
+
 - **Every boss in Orbital Baked is its own boss now.** Ten of the twelve shared
   one prefab, one script and one sprite sheet, told apart by a `kind` number and
   a tint — so they were the same orange gunship in ten colours, and eight of the

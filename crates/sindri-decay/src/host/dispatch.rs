@@ -46,7 +46,15 @@ impl WorldHost<'_> {
             RANDOM => named(RANDOM_CALLS, name).map(|call| self.random_call(call, path, args)),
             SAVE => named(SAVE_CALLS, name).map(|call| self.save_call(call, path, args)),
             EFFECTS => named(EFFECTS_CALLS, name).map(|call| self.effects_call(call, path, args)),
-            GRID => named(GRID_CALLS, name).map(|call| self.grid_call(call, path, args)),
+            GRID => named(GRID_CALLS, name).map(|call| {
+                // Two argument shapes wear one namespace: a cell is named by
+                // the map that holds it, an occupant by the map it stands on.
+                if call.is_about_a_cell() {
+                    self.tile_call(call, path, args)
+                } else {
+                    self.grid_call(call, path, args)
+                }
+            }),
             ANIMATION => {
                 named(ANIMATION_CALLS, name).map(|call| self.animation_call(call, path, args))
             }

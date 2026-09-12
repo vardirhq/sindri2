@@ -19,8 +19,22 @@ Two games serve two different purposes, and confusing them wastes both.
 in a real gameplay context. A unit test, component type, editor control, or
 callable Decay API is necessary evidence but is not a substitute for a feature
 being used in a game — and Gather is where a finished capability proves it can
-be used. It is not a disposable demo, and it does not reach for what the engine
-grew yesterday.
+be used. It is not a disposable demo.
+
+Gather is an isometric farming game, and it is held to the standard of a game
+somebody would choose to play rather than of a demo that proves a point. That
+is deliberate: a showcase nobody wants to play does not showcase anything, and
+the previous Gather — a walkable diorama of six scripts — was a fraction of the
+size of the game meant to be *stressing* the engine.
+
+Being the showcase no longer means it may only use what already exists. Where
+the game needs a capability Sindri lacks, that capability is added, as a
+general one, on the same terms as any other. What separates it from the
+forcing function below is *why* the gap is found: Gather finds gaps by trying
+to be a good game, Orbital by trying to be a faithful recreation. Gather also
+carries the art: it is the one place the isometric baker is pushed as far as it
+goes, because a showcase that looks approximate sells an engine that looks
+approximate.
 
 **Orbital Last Stand is the forcing function.** It is a recreation of a real,
 complete game built only through the editor and Decay, and its job is to find
@@ -29,9 +43,11 @@ as a *general* Sindri capability, never as something shaped around that game.
 A new gameplay capability is proven there first. See
 `docs/orbital-last-stand-plan.md`.
 
-So: a capability the engine already had is not complete until Gather uses it; a
-capability being added is proven in Orbital Last Stand, and may reach Gather
-later or not at all. Say which of the two a change is, in its documentation.
+So: a capability the engine already had is not complete until Gather uses it;
+a capability found by recreating a known game is proven in Orbital Last Stand;
+a capability found by making Gather good is added for Gather, generally rather
+than shaped around it. Say which of the three a change is, in its
+documentation.
 
 ## Read before changing architecture
 

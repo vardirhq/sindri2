@@ -96,10 +96,14 @@ Names in scope without qualification. Decay has no imports, so each of these is 
 ### `Grid`
 
 - `can_reach(Entity, Entity, Entity)` → `bool`
+- `columns(Entity)` → `f32`
 - `place(Entity, Entity, f32, f32)` → `unit`
 - `position_x(Entity, Entity)` → `f32`
 - `position_y(Entity, Entity)` → `f32`
+- `rows(Entity)` → `f32`
+- `set_tile(Entity, f32, f32, f32)` → `unit`
 - `step_toward(Entity, Entity, Entity)` → `bool`
+- `tile(Entity, f32, f32)` → `f32`
 
 ### `Input`
 

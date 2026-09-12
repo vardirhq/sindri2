@@ -388,6 +388,14 @@
         },
         {
           "kind": "function",
+          "name": "columns",
+          "parameters": [
+            "Entity"
+          ],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
           "name": "place",
           "parameters": [
             "Entity",
@@ -417,6 +425,25 @@
         },
         {
           "kind": "function",
+          "name": "rows",
+          "parameters": [
+            "Entity"
+          ],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "set_tile",
+          "parameters": [
+            "Entity",
+            "f32",
+            "f32",
+            "f32"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
           "name": "step_toward",
           "parameters": [
             "Entity",
@@ -424,6 +451,16 @@
             "Entity"
           ],
           "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "tile",
+          "parameters": [
+            "Entity",
+            "f32",
+            "f32"
+          ],
+          "returns": "f32"
         }
       ],
       "name": "Grid"

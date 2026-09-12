@@ -438,10 +438,24 @@ pub(super) fn add_grid_surface(environment: &mut Environment) {
                         Type::Named(ENTITY.to_owned()),
                         Type::Named(ENTITY.to_owned()),
                     ],
+                    GridCall::Tile => vec![Type::Named(ENTITY.to_owned()), Type::F32, Type::F32],
+                    GridCall::SetTile => vec![
+                        Type::Named(ENTITY.to_owned()),
+                        Type::F32,
+                        Type::F32,
+                        Type::F32,
+                    ],
+                    GridCall::Columns | GridCall::Rows => {
+                        vec![Type::Named(ENTITY.to_owned())]
+                    }
                 },
                 return_type: match call {
-                    GridCall::PositionX | GridCall::PositionY => Type::F32,
-                    GridCall::Place => Type::Unit,
+                    GridCall::PositionX
+                    | GridCall::PositionY
+                    | GridCall::Tile
+                    | GridCall::Columns
+                    | GridCall::Rows => Type::F32,
+                    GridCall::Place | GridCall::SetTile => Type::Unit,
                     GridCall::CanReach | GridCall::StepToward => Type::Bool,
                 },
             },

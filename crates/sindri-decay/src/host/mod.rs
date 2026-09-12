@@ -20,6 +20,7 @@ mod physics;
 mod profile;
 mod random;
 mod save;
+mod tiles;
 mod ui;
 
 use std::collections::BTreeSet;

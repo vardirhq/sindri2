@@ -854,6 +854,41 @@ by guesswork.
 | `Grid.can_reach(mover, grid, target)` | `bool` |
 | `Grid.step_toward(mover, grid, target)` | `bool` |
 
+### Grid cells
+
+Where the calls above are about an entity's position on a map, these are about
+what the map *holds* there.
+
+| Call | Returns |
+| --- | --- |
+| `Grid.tile(map, column, row)` | `f32` |
+| `Grid.set_tile(map, column, row, index)` | nothing |
+| `Grid.columns(map)` | `f32` |
+| `Grid.rows(map)` | `f32` |
+
+A cell is named by whole column and row rather than by a world position: the map
+is the authority on which cell a position falls in, and a script doing that
+arithmetic itself would be a second answer free to disagree with the first.
+
+`tile` answers with an index into the map's `palette`, or `-1` where the cell
+holds nothing. Reading a cell the map does not have is `-1` as well rather than
+an error, because anything that moves will ask about the edge and every caller
+would otherwise wrap the call in a bounds check the map can do itself.
+
+`set_tile` takes the same index, or any negative number to empty the cell.
+Writing outside the map *is* an error, because unlike reading it has no sensible
+meaning and silently dropping it would hide the mistake. So is an index the
+palette cannot answer: a map holding one fails validation on the next load, long
+after and nowhere near the script that wrote it.
+
+The write edits the stored payload in place rather than going through
+`TilemapComponent`, for the same reason the sprite and shape paths do: the view
+is `Deserialize`-only, so rebuilding and reserializing it would drop any field
+the view does not model.
+
+This is what makes ground a thing gameplay can change — tilled, watered, grown,
+burnt, flooded — rather than scenery a script can only put entities on top of.
+
 The second entity must carry a world-space `sindri.tilemap`. Its projection,
 cell size, and complete world-XY transform define the coordinate space; there is no implicit
 "first grid" and no second set of projection settings for scripts to disagree
