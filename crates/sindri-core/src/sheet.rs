@@ -148,6 +148,15 @@ pub struct SpriteSheetDocument {
     /// keeps drawing exactly as it did.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub anchor: Option<SpriteAnchor>,
+    /// How far tile art extends below its logical cell, as a fraction of that
+    /// cell's height.
+    ///
+    /// This belongs to the image rather than the tilemap: a slab has the same
+    /// skirt however many maps draw it. Tilemaps turn the ratio back into world
+    /// units using their own `tile_size`, which keeps the metadata reusable when
+    /// the same art is drawn at another scale.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tile_overhang_ratio: Option<f32>,
     /// A uniform slice, which is how a sheet is almost always cut.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub grid: Option<SheetGrid>,
@@ -305,6 +314,7 @@ impl SpriteSheetDocument {
         Self {
             format_version: SHEET_FORMAT_VERSION,
             anchor: None,
+            tile_overhang_ratio: None,
             grid: Some(SheetGrid::edge_to_edge(columns, rows)),
             sprites: BTreeMap::new(),
             editor: BTreeMap::new(),
@@ -375,6 +385,11 @@ impl SpriteSheetDocument {
                 supported: SHEET_FORMAT_VERSION,
             });
         }
+        if let Some(ratio) = self.tile_overhang_ratio {
+            if !ratio.is_finite() || ratio < 0.0 {
+                return Err(SheetError::TileOverhangRatio(ratio));
+            }
+        }
         self.rects().map(|_| ())
     }
 }
@@ -415,6 +430,8 @@ pub enum SheetError {
     CellDoesNotFit { index: u32 },
     #[error("an anchor sits at ({x}, {y}), which is not a point on the frame")]
     Anchor { x: f32, y: f32 },
+    #[error("tile overhang ratio must be finite and non-negative, got {0}")]
+    TileOverhangRatio(f32),
     #[error("sheet is not valid json: {message}")]
     Json { message: String },
 }
