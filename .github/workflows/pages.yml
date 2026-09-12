@@ -37,6 +37,15 @@ jobs:
         run: wasm-pack build game --target web --release --out-dir pkg
       - name: Assemble Sindri site
         run: |
+          # Assemble into an empty directory. `target/` is restored by
+          # `rust-cache`, so `target/pages` can arrive already populated by an
+          # earlier run -- and then `cp -R site/screenshots
+          # target/pages/assets/screenshots` copies *into* the existing
+          # directory instead of creating it, leaving every screenshot one
+          # level too deep and the landing page pointing at nothing. A stale
+          # tree is the worse half of it: a deleted asset would keep being
+          # served because nothing here removes what it no longer copies.
+          rm -rf target/pages
           mkdir -p target/pages/assets
           cp site/index.html target/pages/index.html
           cp site/site.css target/pages/assets/site.css
