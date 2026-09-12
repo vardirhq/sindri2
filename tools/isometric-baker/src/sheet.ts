@@ -6,18 +6,13 @@
  * `crates/sindri-core/src/sheet.rs`. Note that the suffix *replaces* the
  * extension rather than following it — a sheet for `shrine.png` is
  * `shrine.sheet.json`, not `shrine.png.sheet.json`.
- *
- * Because every frame of a bake is the same size, the sheet is a plain
- * edge-to-edge grid of one row: `SheetGrid::edge_to_edge`, with a name per cell.
- * A grid that divides an image edge to edge needs no recorded image size and no
- * gutters — the frames already carry a transparent margin, so there is nothing
- * for filtering to bleed in from.
  */
 
 import { type DirectionCount } from './directions.ts';
 import { type BakedFrame } from './frames.ts';
 import { type RgbaImage, createImage } from './image.ts';
 import { type Camera } from './camera.ts';
+import { type Mesh, boundsOf } from './model.ts';
 
 /** The version `SHEET_FORMAT_VERSION` in `sindri-core` currently writes. */
 export const SHEET_FORMAT_VERSION = 1;
@@ -39,11 +34,11 @@ export interface SpriteSheetDocument {
    *
    * Always the centre, because that is what every frame is padded to: the
    * canvas is grown symmetrically about the floor centre of tile (0,0) so the
-   * middle of the picture *is* the point that stands on the tile. Written out
-   * rather than left to the format's default so the sheet says what it is, and
-   * so hand-drawn art sitting next to it is visibly making a choice.
+   * middle of the picture *is* the point that stands on the tile.
    */
   anchor: 'center' | 'bottom' | [number, number];
+  /** How far tile art hangs below its logical diamond, in tile-height units. */
+  tile_overhang_ratio?: number;
   grid: SheetGrid;
 }
 
@@ -52,15 +47,7 @@ export interface PackedSheet {
   document: SpriteSheetDocument;
 }
 
-/**
- * What a frame is called on the sheet.
- *
- * A sheet of one model names its frames by direction, which is what a scene
- * saying `#north` wants. A sheet of several — a tile set — names them by model,
- * because "grass" and "path" are the names a tilemap palette is written in. A
- * sheet that is both names them by both, and nothing has to guess which half of
- * the name it is looking at.
- */
+/** What a frame is called on the sheet. */
 export function frameName(frame: BakedFrame, count: DirectionCount): string {
   if (frame.variant === null) return frame.direction;
   return count === 1 ? frame.variant : `${frame.variant}-${frame.direction}`;
@@ -73,27 +60,44 @@ export function frameName(frame: BakedFrame, count: DirectionCount): string {
  * `crates/sindri-render/src/texture.rs` sets `mag_filter` to Nearest but leaves
  * `min_filter` Linear, so a sheet drawn at even slightly under its authored
  * size is sampled bilinearly — and a frame packed edge to edge against its
- * neighbour is then blended with it. On a sprite it is a faint rim; on a floor
- * tile, whose art fills its cell exactly, it is the tile beside it smeared
- * across every cell.
- *
- * The gutter is filled by extending each frame's own edge pixels outward, so
- * what the filter reaches for is the colour that was already there. A
- * transparent gutter would only trade a colour seam for a dark one.
+ * neighbour is then blended with it.
  */
 const GUTTER = 2;
 
 /**
- * Lay the frames out as one horizontal strip.
+ * How much of an isometric model genuinely hangs below the floor it stands on.
  *
- * A strip and not a clever bin packer: the frames are all one size, four of them
- * is not a packing problem, and a strip stays readable when someone opens the
- * PNG to check the pipeline's work.
+ * The model format has a useful contract here: y=0 is the floor. That lets the
+ * baker distinguish a slab side from a flower, tuft, tree, or any other detail
+ * that rises above the tile. Measuring the final alpha bounds cannot make that
+ * distinction and would turn tall decoration into fake floor thickness.
+ *
+ * The result is expressed relative to the logical tile's screen height so the
+ * sheet remains independent of whichever world-space tile size later draws it.
  */
+export function tileOverhangRatio(meshes: Mesh[], camera: Camera): number | undefined {
+  if (camera.tile === null || meshes.length === 0) return undefined;
+
+  let belowFloor = 0;
+  for (const mesh of meshes) {
+    belowFloor = Math.max(belowFloor, Math.max(0, -boundsOf(mesh).min[1]));
+  }
+  if (belowFloor <= 0) return undefined;
+
+  // Height projects along the camera's screen-up axis. Going below y=0 moves
+  // the same distance downward, so only the Y contribution of that basis is
+  // relevant. X/Z are already represented by the logical diamond itself.
+  const pixels = belowFloor * camera.up[1] * camera.pixelsPerUnit;
+  const ratio = pixels / camera.tile.height;
+  return ratio > 0 ? ratio : undefined;
+}
+
+/** Lay the frames out as one horizontal strip. */
 export function packSheet(
   frames: BakedFrame[],
   count: DirectionCount = 4,
   gutter: number = GUTTER,
+  tileOverhang?: number,
 ): PackedSheet {
   if (frames.length === 0) throw new Error('a sheet needs at least one frame');
 
@@ -110,10 +114,7 @@ export function packSheet(
   // A margin of one gutter and a spacing of two leaves every frame with exactly
   // `gutter` pixels of its own on all four sides, which is the arrangement
   // `SheetGrid` measures cells against.
-  const sheet = createImage(
-    frames.length * (width + 2 * gutter),
-    height + 2 * gutter,
-  );
+  const sheet = createImage(frames.length * (width + 2 * gutter), height + 2 * gutter);
 
   frames.forEach((frame, column) => {
     const left = gutter + column * (width + 2 * gutter);
@@ -131,16 +132,18 @@ export function packSheet(
     grid.spacing = [2 * gutter, 2 * gutter];
   }
 
-  return { image: sheet, document: { format_version: SHEET_FORMAT_VERSION, anchor: 'center', grid } };
+  const document: SpriteSheetDocument = {
+    format_version: SHEET_FORMAT_VERSION,
+    anchor: 'center',
+    grid,
+  };
+  if (tileOverhang !== undefined) document.tile_overhang_ratio = tileOverhang;
+  return { image: sheet, document };
 }
 
 /**
  * Copy `frame` to (`left`, `top`) and repeat its edge pixels `gutter` deep
  * around it.
- *
- * Written as one clamped loop over the padded rectangle rather than a copy plus
- * four border passes: the corners are then the same case as the edges, and the
- * case that gets forgotten in the four-pass version is the corners.
  */
 function extrudeInto(
   sheet: RgbaImage,
@@ -170,28 +173,12 @@ export interface TileWorldSize {
   height: number;
 }
 
-/**
- * The transform scale a Sindri world sprite needs to draw one frame at exactly
- * one baked pixel per intended pixel.
- *
- * A sprite is a unit quad centred on its transform
- * (`crates/sindri-render/src/sprite_batch/mod.rs`), so its scale *is* its size in
- * world units. The bake knows how many pixels one tile is across; a tilemap
- * knows how many world units it is across; the ratio converts between them.
- *
- * Uniform in both axes on purpose: the camera is orthographic, so a pixel is the
- * same size vertically as horizontally, and using the tile's height ratio for Y
- * would squash every baked sprite by the isometric foreshortening a second time.
- */
+/** The transform scale a Sindri world sprite needs for one baked frame. */
 export function spriteScale(
   canvas: { width: number; height: number },
   camera: Camera,
   tile: TileWorldSize | null,
 ): { scale: [number, number]; worldUnitsPerPixel: number } {
-  // An isometric bake is measured against the tilemap it stands on: so many
-  // world units across the diamond, so many pixels across the diamond. A flat
-  // view stands on nothing, so it measures itself — the camera's own scale is
-  // the whole relationship between a baked pixel and a world unit.
   const worldUnitsPerPixel =
     tile === null || camera.tile === null ? 1 / camera.pixelsPerUnit : tile.width / camera.tile.width;
   return {
@@ -200,17 +187,8 @@ export function spriteScale(
   };
 }
 
-/**
- * How far a tilemap's own tile shape is from the one the bake assumed.
- *
- * A tilemap drawing 1.1 x 0.55 world-unit tiles is a 2:1 diamond and matches a
- * 64x32 bake exactly. One drawing 1.1 x 0.6 does not, and a sprite baked for the
- * first will stand a little wrong on the second — worth reporting rather than
- * discovering in a capture.
- */
+/** How far a tilemap's tile shape is from the one the bake assumed. */
 export function tileRatioMismatch(camera: Camera, tile: TileWorldSize | null): number {
-  // A flat view claims no relationship to a tilemap, so there is none to be
-  // wrong about.
   if (tile === null || camera.tile === null) return 0;
   const baked = camera.tile.height / camera.tile.width;
   const scene = tile.height / tile.width;

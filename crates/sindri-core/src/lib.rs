@@ -16,6 +16,7 @@ mod profile;
 mod random;
 mod save;
 mod scene;
+#[allow(clippy::collapsible_if)]
 mod sheet;
 mod tags;
 mod time;
