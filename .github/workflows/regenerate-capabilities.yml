@@ -1,9 +1,7 @@
 name: Regenerate capabilities artifact
 
 on:
-  push:
-    branches:
-      - claude/gather-rebuild
+  pull_request:
 
 permissions:
   contents: read
