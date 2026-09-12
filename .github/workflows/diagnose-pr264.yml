@@ -1,42 +1,63 @@
-name: Diagnose PR 264 tests
+name: Repair PR 264 test regressions
 
 on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  nextest-output:
-    if: github.event.pull_request.number == 264
+  repair:
+    if: github.event.pull_request.number == 264 && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
       - uses: dtolnay/rust-toolchain@1.95.0
-      - uses: Swatinem/rust-cache@v2
-        with:
-          save-if: false
-      - uses: ./.github/actions/linux-deps
-        with:
-          packages: imagemagick libasound2-dev libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-nextest@0.9.143
-      - name: Capture failing test output
+      - name: Repair Tile System 2 test expectations
+        shell: python
+        run: |
+          from pathlib import Path
+
+          test = Path('game/tests/the_game_holds_together.rs')
+          text = test.read_text()
+          text = text.replace(
+              'AssetId, SceneComponent, SceneDocument, SpriteSheetDocument, UnknownComponentPolicy, World,\n    sheet_id_for,',
+              'AssetId, SceneComponent, SceneDocument, SpriteSheetDocument, TileSetDocument,\n    UnknownComponentPolicy, World, sheet_id_for,'
+          )
+          text = text.replace(
+              'FONTS, SHEETS, TEXTURE_IDS, TEXTURES, extractor, presented_world, sources, stylesheets, world,',
+              'FONTS, SHEETS, TEXTURE_IDS, TEXTURES, TILE_SETS, extractor, presented_world, sources,\n    stylesheets, world,'
+          )
+          old = '''    let referenced: BTreeSet<String> = sindri_scene::referenced_textures(&world)\n        .into_iter()\n        .collect();'''
+          new = '''    let mut referenced: BTreeSet<String> = sindri_scene::referenced_textures(&world)\n        .into_iter()\n        .collect();\n    for (id, json) in TILE_SETS {\n        let tile_set = TileSetDocument::from_json(json)\n            .unwrap_or_else(|error| panic!("{id} parses: {error}"));\n        referenced.extend(sindri_scene::tile_set_textures(&tile_set));\n    }'''
+          if old not in text:
+              raise SystemExit('Gather texture assertion shape changed; refusing blind edit')
+          test.write_text(text.replace(old, new))
+
+          registry = Path('crates/sindri-scene/src/extract/registry.rs')
+          text = registry.read_text()
+          old = '''                "sindri.grid.occupant",\n                "sindri.ui.text",'''
+          new = '''                "sindri.grid.occupant",\n                "sindri.tile_volume",\n                "sindri.ui.text",'''
+          if old not in text:
+              raise SystemExit('Registry expectation shape changed; refusing blind edit')
+          registry.write_text(text.replace(old, new, 1))
+      - name: Re-canonicalize Gather scene
         env:
-          WGPU_BACKEND: vulkan
-          SINDRI_REQUIRE_GPU: 1
+          SINDRI_UPDATE_GATHER_SCENE: 1
+        run: cargo test -p sindri-gather the_scene_file_is_canonical
+      - name: Format
+        run: cargo fmt --all
+      - name: Commit repair
         shell: bash
         run: |
-          set +e
-          cargo nextest run --workspace --all-features --no-fail-fast 2>&1 | tee nextest-output.txt
-          status=${PIPESTATUS[0]}
-          echo "$status" > nextest-exit-code.txt
-          exit 0
-      - uses: actions/upload-artifact@v7
-        with:
-          name: pr264-nextest-output
-          path: |
-            nextest-output.txt
-            nextest-exit-code.txt
-          retention-days: 1
+          if git diff --quiet; then
+            echo 'No repair changes to commit.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add game/tests/the_game_holds_together.rs crates/sindri-scene/src/extract/registry.rs game/assets/gather.scene.json
+          git commit -m 'Fix Tile System 2 test regressions'
+          git push origin HEAD:${{ github.head_ref }}
