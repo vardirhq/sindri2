@@ -77,11 +77,11 @@ pub mod selection;
 pub mod slicer;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod textures;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod tile_volume;
 /// Painting a tilemap from a sliced image through undoable component edits.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod tilemap;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod tile_volume;
 /// Seeing a font before naming it in a component.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod typeface;
