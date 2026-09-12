@@ -74,11 +74,9 @@ impl SceneExtractor {
                 // taller quad, dropped by half the overhang so the top of the
                 // art stays on the cell. The cell itself never moves: it is what
                 // the grid, picking and gameplay all measure in.
-                let local = Mat4::from_translation(Vec3::new(
-                    offset_x,
-                    offset_y + draw_offset_y,
-                    0.0,
-                )) * Mat4::from_scale(Vec3::new(draw_size[0], draw_size[1], 1.0));
+                let local =
+                    Mat4::from_translation(Vec3::new(offset_x, offset_y + draw_offset_y, 0.0))
+                        * Mat4::from_scale(Vec3::new(draw_size[0], draw_size[1], 1.0));
                 let model = world_transform * local;
 
                 // The map's layer and world distance place the tilemap as one
