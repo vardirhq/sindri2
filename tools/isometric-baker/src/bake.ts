@@ -144,7 +144,7 @@ export function bake(recipe: Recipe): BakeResult {
     frames,
     recipe.directions,
     undefined,
-    tileOverhangRatio(frames, camera),
+    tileOverhangRatio(meshes, camera),
   );
   const files: BakeOutput[] = [
     { path: recipe.texture, contents: encodePng(sheet.image) },
