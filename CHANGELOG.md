@@ -4,6 +4,24 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **Gather has a second place in it, and a door between them.** The shed: a
+  small room off the island's plaza, reached by walking onto a door and left the
+  same way. The integration proof for everything above — a scene switched off
+  rather than unloaded, so the island is exactly as it was on the way back,
+  asserted with a mark written into the played world that no scene file
+  contains.
+
+  Each place has its own player. That is how the genre works, and it is what
+  keeps a transition from having to carry an entity between scenes: continuity
+  lives in the blackboard, and the door hands over the cell to arrive in. Which
+  is also why arrival is taken in `update` and not `start` — walking back into
+  somewhere already visited runs no `start` at all.
+
+  `player.decay` now asks the map how big it is with `Grid.columns` / `Grid.rows`
+  instead of clamping to the island's nine cells. The hardcoded bounds let the
+  player walk straight off the shed the first time it opened, which is the kind
+  of thing a second place finds immediately.
+
 - **`World.find` prefers an entity that is in play.** Once a world can hold
   several scenes, a game with two places has a `Player` in each and only one of
   them is anywhere the player is; a lookup reaching the switched-off one would

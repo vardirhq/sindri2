@@ -343,6 +343,10 @@ fn walking_into_the_orbs_wins_the_game() {
     let extractor = extractor().expect("the schemas register");
     let sources = sources();
     let mut scripts = Scripts::new();
+    // The island's doors ask for a scene change, so these frames need somewhere
+    // to record one. A frame built without it is a host that plays one scene,
+    // and `Scene.go` says so rather than accepting a request nothing performs.
+    let mut scenes = sindri_decay::SceneChannel::playing("gather.scene.json");
 
     let (map, grid) = floor_grid(&world, &extractor);
 
@@ -396,10 +400,14 @@ fn walking_into_the_orbs_wins_the_game() {
                 held.apply(InputEvent::KeyPressed(Key::ArrowUp));
             }
 
+            // The doors on the island ask for a scene change, so this frame
+            // is given somewhere to record that. Without it `Scene.go` says
+            // the host plays one scene -- which is the truth for a frame built
+            // without one, and is what this used to be.
             let report = scripts.advance(
                 &mut world,
                 extractor.components(),
-                ScriptFrame::new(&sources, &held, 1.0 / 60.0),
+                ScriptFrame::new(&sources, &held, 1.0 / 60.0).with_scenes(&mut scenes),
             );
             assert!(report.failures.is_empty(), "{:?}", report.failures);
 

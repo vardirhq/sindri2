@@ -1,0 +1,38 @@
+// A way from one place to another.
+//
+// Standing on it asks for a scene change. The asking is all this does: the
+// change happens between frames, because this script is running in the scene
+// being left and the move rearranges the world it is running in.
+//
+// Where to arrive is handed over the blackboard rather than written into the
+// other side, because the player on the other side is a *different entity*.
+// Each place has its own, which is how the genre works and what keeps a
+// transition from having to carry an entity between scenes.
+script Door {
+    // The scene this leads to, as the project names it.
+    @export let goes_to: String = "";
+    // How close counts as standing on it, in cells.
+    @export let reach: f32 = 0.7;
+    // Which cell to stand in on the other side.
+    @export let arrive_x: f32 = 0.0;
+    @export let arrive_y: f32 = 0.0;
+
+    fn update(dt: f32) {
+        let floor = World.find("Floor");
+        let player = World.find("Player");
+        if floor == null || player == null {
+            return;
+        }
+        // Measured in cells rather than world units, so a door's reach means
+        // the same thing wherever the map is placed or however it is scaled.
+        let dx = Grid.position_x(player, floor) - Grid.position_x(this.entity, floor);
+        let dy = Grid.position_y(player, floor) - Grid.position_y(this.entity, floor);
+        if sqrt(dx * dx + dy * dy) > this.reach {
+            return;
+        }
+        Game.set("arrive_x", this.arrive_x);
+        Game.set("arrive_y", this.arrive_y);
+        Game.set("arriving", 1.0);
+        Scene.go(this.goes_to);
+    }
+}

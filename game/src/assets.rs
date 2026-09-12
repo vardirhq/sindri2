@@ -75,16 +75,23 @@ pub const TEXTURE_IDS: &[&str] = &[
 /// A game with interiors reaches them by name, so all of them have to be here
 /// — a browser build fetches the same IDs through the real asset pipeline.
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) const SCENES: &[(&str, &str)] = &[(
-    "gather.scene.json",
-    include_str!("../assets/gather.scene.json"),
-)];
+pub(crate) const SCENES: &[(&str, &str)] = &[
+    (
+        "gather.scene.json",
+        include_str!("../assets/gather.scene.json"),
+    ),
+    ("shed.scene.json", include_str!("../assets/shed.scene.json")),
+];
 
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) const SCRIPTS: &[(&str, &str)] = &[
     (
         "scripts/player.decay",
         include_str!("../assets/scripts/player.decay"),
+    ),
+    (
+        "scripts/door.decay",
+        include_str!("../assets/scripts/door.decay"),
     ),
     (
         "scripts/wisp.decay",

@@ -31,6 +31,16 @@ script Player {
             return;
         }
 
+        // A door left a cell to arrive in. Taken here rather than in `start`
+        // because a scene is switched off rather than unloaded: walking back
+        // into somewhere already visited runs no `start` at all, and arriving
+        // through a door has to put you at the door either way.
+        if Game.get("arriving", 0.0) > 0.0 {
+            Game.set("arriving", 0.0);
+            Grid.place(this.entity, floor,
+                       Game.get("arrive_x", 0.0), Game.get("arrive_y", 0.0));
+        }
+
         var sideways = Input.axis("A", "D") + Input.axis("ArrowLeft", "ArrowRight");
         var forward = Input.axis("S", "W") + Input.axis("ArrowDown", "ArrowUp");
         if sideways == 0.0 && forward == 0.0 && Stick.held && !Pointer.over_ui {
@@ -48,11 +58,14 @@ script Player {
         grid_x += sideways * speed * dt;
         grid_y -= forward * speed * dt;
 
-        // The 9x9 floor owns cells 0 through 8 on both axes. Keeping the player
-        // in those logical bounds follows the diamond instead of clamping it to
+        // The map owns cells 0 through its own size, so the bounds are asked
+        // for rather than written down. They used to be the island's nine, and
+        // a second place of any other size would have let the player walk off
+        // it -- which is what happened the first time the shed was opened.
+        // Keeping to logical bounds follows the diamond instead of clamping to
         // a screen-aligned rectangle laid over the picture.
-        grid_x = min(max(grid_x, 0.0), 8.0);
-        grid_y = min(max(grid_y, 0.0), 8.0);
+        grid_x = min(max(grid_x, 0.0), Grid.columns(floor) - 1.0);
+        grid_y = min(max(grid_y, 0.0), Grid.rows(floor) - 1.0);
 
         // Solid things are stood around rather than walked through. Each axis
         // is resolved on its own so that meeting a tree head-on still lets you

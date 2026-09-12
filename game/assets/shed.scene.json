@@ -1,0 +1,187 @@
+{
+  "format_version": 9,
+  "metadata": {
+    "name": "The Shed"
+  },
+  "entities": [
+    {
+      "id": "floor",
+      "name": "Floor",
+      "transform_3d": {
+        "position": [
+          0.0,
+          1.4,
+          -0.6
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.tilemap": {
+          "texture": "textures/ground.png",
+          "palette": [
+            "flagstone",
+            "path",
+            "grass"
+          ],
+          "columns": 7,
+          "rows": 5,
+          "tile_size": [
+            1.1,
+            0.55
+          ],
+          "tile_overhang": 0.125,
+          "projection": "isometric",
+          "tiles": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "layer": 0
+        }
+      }
+    },
+    {
+      "id": "player",
+      "name": "Player",
+      "transform_3d": {
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          0.62,
+          0.62,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.script": {
+          "source": "scripts/player.decay",
+          "script": "Player",
+          "properties": {
+            "speed": 2.6
+          }
+        },
+        "sindri.sprite": {
+          "texture": "textures/player.png#bob-0",
+          "tint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "layer": 17
+        },
+        "sindri.animation.sprite": {
+          "clips": {
+            "bob": {
+              "frames": [
+                "bob-0",
+                "bob-1",
+                "bob-2",
+                "bob-3"
+              ],
+              "seconds_per_frame": 0.16,
+              "looping": true
+            }
+          },
+          "playing": "bob",
+          "speed": 1.0
+        }
+      }
+    },
+    {
+      "id": "way-out",
+      "name": "Way Out",
+      "transform_3d": {
+        "position": [
+          0.55,
+          0.025,
+          -0.6
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "components": {
+        "sindri.script": {
+          "source": "scripts/door.decay",
+          "script": "Door",
+          "properties": {
+            "goes_to": "gather.scene.json",
+            "reach": 0.8,
+            "arrive_x": 4.0,
+            "arrive_y": 5.0
+          }
+        },
+        "sindri.sprite": {
+          "texture": "textures/waystone.png#south",
+          "tint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "layer": 11
+        }
+      }
+    }
+  ]
+}

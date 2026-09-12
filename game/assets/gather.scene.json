@@ -659,6 +659,32 @@
       }
     },
     {
+      "id": "shed-door",
+      "name": "Shed Door",
+      "transform_3d": {
+        "position": [-1.1, -0.55, -0.6],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "components": {
+        "sindri.script": {
+          "properties": {
+            "arrive_x": 3.0,
+            "arrive_y": 3.0,
+            "goes_to": "shed.scene.json",
+            "reach": 0.8
+          },
+          "script": "Door",
+          "source": "scripts/door.decay"
+        },
+        "sindri.sprite": {
+          "layer": 21,
+          "texture": "textures/waystone.png#south",
+          "tint": [1.0, 1.0, 1.0, 1.0]
+        }
+      }
+    },
+    {
       "id": "shrine",
       "name": "Home Shrine",
       "transform_3d": {
