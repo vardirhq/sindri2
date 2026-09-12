@@ -12,6 +12,7 @@ import { type DirectionCount } from './directions.ts';
 import { type BakedFrame } from './frames.ts';
 import { type RgbaImage, createImage } from './image.ts';
 import { type Camera } from './camera.ts';
+import { type Mesh, boundsOf } from './model.ts';
 
 /** The version `SHEET_FORMAT_VERSION` in `sindri-core` currently writes. */
 export const SHEET_FORMAT_VERSION = 1;
@@ -46,9 +47,7 @@ export interface PackedSheet {
   document: SpriteSheetDocument;
 }
 
-/**
- * What a frame is called on the sheet.
- */
+/** What a frame is called on the sheet. */
 export function frameName(frame: BakedFrame, count: DirectionCount): string {
   if (frame.variant === null) return frame.direction;
   return count === 1 ? frame.variant : `${frame.variant}-${frame.direction}`;
@@ -66,31 +65,34 @@ export function frameName(frame: BakedFrame, count: DirectionCount): string {
 const GUTTER = 2;
 
 /**
- * Measure how much rendered tile art extends below its logical diamond.
+ * How much of an isometric model genuinely hangs below the floor it stands on.
  *
- * The frame centre is the floor anchor, and an isometric tile's bottom edge is
- * half a tile-height below it. Content bounds are measured after all
- * post-processing, so this is the exact skirt the final PNG actually needs,
- * not an estimate from model geometry. A flat view has no tile and therefore
- * no tile overhang metadata.
+ * The model format has a useful contract here: y=0 is the floor. That lets the
+ * baker distinguish a slab side from a flower, tuft, tree, or any other detail
+ * that rises above the tile. Measuring the final alpha bounds cannot make that
+ * distinction and would turn tall decoration into fake floor thickness.
+ *
+ * The result is expressed relative to the logical tile's screen height so the
+ * sheet remains independent of whichever world-space tile size later draws it.
  */
-export function tileOverhangRatio(frames: BakedFrame[], camera: Camera): number | undefined {
-  if (camera.tile === null || frames.length === 0) return undefined;
+export function tileOverhangRatio(meshes: Mesh[], camera: Camera): number | undefined {
+  if (camera.tile === null || meshes.length === 0) return undefined;
 
-  const logicalBottom = frames[0].image.height / 2 + camera.tile.height / 2;
-  let actualBottom = logicalBottom;
-  for (const frame of frames) {
-    if (frame.content) {
-      actualBottom = Math.max(actualBottom, frame.content.y + frame.content.height);
-    }
+  let belowFloor = 0;
+  for (const mesh of meshes) {
+    belowFloor = Math.max(belowFloor, Math.max(0, -boundsOf(mesh).min[1]));
   }
-  const pixels = Math.max(0, actualBottom - logicalBottom);
-  return pixels > 0 ? pixels / camera.tile.height : undefined;
+  if (belowFloor <= 0) return undefined;
+
+  // Height projects along the camera's screen-up axis. Going below y=0 moves
+  // the same distance downward, so only the Y contribution of that basis is
+  // relevant. X/Z are already represented by the logical diamond itself.
+  const pixels = belowFloor * camera.up[1] * camera.pixelsPerUnit;
+  const ratio = pixels / camera.tile.height;
+  return ratio > 0 ? ratio : undefined;
 }
 
-/**
- * Lay the frames out as one horizontal strip.
- */
+/** Lay the frames out as one horizontal strip. */
 export function packSheet(
   frames: BakedFrame[],
   count: DirectionCount = 4,
@@ -171,10 +173,7 @@ export interface TileWorldSize {
   height: number;
 }
 
-/**
- * The transform scale a Sindri world sprite needs to draw one frame at exactly
- * one baked pixel per intended pixel.
- */
+/** The transform scale a Sindri world sprite needs for one baked frame. */
 export function spriteScale(
   canvas: { width: number; height: number },
   camera: Camera,
@@ -188,9 +187,7 @@ export function spriteScale(
   };
 }
 
-/**
- * How far a tilemap's own tile shape is from the one the bake assumed.
- */
+/** How far a tilemap's tile shape is from the one the bake assumed. */
 export function tileRatioMismatch(camera: Camera, tile: TileWorldSize | null): number {
   if (tile === null || camera.tile === null) return 0;
   const baked = camera.tile.height / camera.tile.width;
