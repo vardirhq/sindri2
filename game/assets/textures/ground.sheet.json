@@ -1,6 +1,7 @@
 {
   "format_version": 1,
   "anchor": "center",
+  "tile_overhang_ratio": 0.11353384957800032,
   "grid": {
     "columns": 10,
     "rows": 1,
