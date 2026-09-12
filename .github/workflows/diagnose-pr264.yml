@@ -15,6 +15,9 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
       - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: ./.github/actions/linux-deps
+        with:
+          packages: imagemagick libasound2-dev libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
       - name: Repair Tile System 2 test expectations
         shell: python
         run: |
