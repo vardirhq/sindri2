@@ -455,14 +455,34 @@ impl WorldHost<'_> {
 
     /// The entity a scene named `name`, or `None`.
     ///
-    /// First match in world order, and the surface says so: two entities with
-    /// one name is an authoring mistake the editor should catch, not something
-    /// to invent a rule for here.
+    /// An entity taking part in the scene wins; otherwise the first match in
+    /// world order. Two entities with one name is still an authoring mistake
+    /// the editor should catch, and within either group the rule is order.
+    ///
+    /// Active-first exists because a world can hold more than one scene. A game
+    /// with a farm and a farmhouse has a `Player` in each, and only one of them
+    /// is anywhere the player is — a script that reached the switched-off one
+    /// would drive a player nobody can see, in a place nobody is.
+    ///
+    /// The fallback is what keeps that from being a change in behaviour. A
+    /// switched-off screen is looked up by name all over Orbital's title and
+    /// pause flow precisely so it can be switched back on, and a lookup that
+    /// skipped it would break every one of those. So this prefers, rather than
+    /// filters: `World.with_tag` filters, because a query answering with things
+    /// out of play is a different question, and this is a lookup of one thing
+    /// somebody already knows the name of.
     pub(super) fn find_named(&self, name: &str) -> Option<EntityId> {
-        self.world
-            .entities()
-            .find(|(_, data)| data.name.as_deref() == Some(name))
-            .map(|(entity, _)| entity)
+        let mut fallback = None;
+        for (entity, data) in self.world.entities() {
+            if data.name.as_deref() != Some(name) {
+                continue;
+            }
+            if self.world.is_active(entity) {
+                return Some(entity);
+            }
+            fallback = fallback.or(Some(entity));
+        }
+        fallback
     }
 
     pub(super) fn entity_argument(

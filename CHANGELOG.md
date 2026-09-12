@@ -4,6 +4,18 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **`World.find` prefers an entity that is in play.** Once a world can hold
+  several scenes, a game with two places has a `Player` in each and only one of
+  them is anywhere the player is; a lookup reaching the switched-off one would
+  drive a player nobody can see, in a place nobody is.
+
+  It prefers rather than filters, which is the load-bearing part. A switched-off
+  screen is looked up by name all through Orbital's title and pause flow
+  precisely so something can switch it back on, so a lookup that skipped what is
+  out of play would make every one of those unreachable. `World.with_tag` still
+  filters: a query answering with things out of play is a different question
+  from a lookup of one thing somebody already knows the name of.
+
 - **A scene can be loaded without renaming what is in it.**
   `LoadedScenes::load_keeping_identities` and `enter_keeping_identities`, backed
   by an empty namespace in `World::add_scene`.
