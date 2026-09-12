@@ -2,9 +2,7 @@
 
 use sindri_core::{SpriteSheetDocument, TileSetDocument};
 use sindri_render::{FrameCommand, TextureId};
-use sindri_scene::{
-    CameraView, SceneExtractor, SceneRuntime, TextureBindings, TileSetBindings,
-};
+use sindri_scene::{CameraView, SceneExtractor, SceneRuntime, TextureBindings, TileSetBindings};
 
 use crate::support::{VIEWPORT, scene, world_from};
 

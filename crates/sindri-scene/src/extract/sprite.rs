@@ -14,9 +14,9 @@ use sindri_render::{
     SpriteInstance, TextureId, TransparentOrder, UvRect,
 };
 
+use crate::TileSetBindings;
 use crate::screen_ui::UiHierarchy;
 use crate::{SpriteAnimationComponent, SpriteAnimations, SpriteComponent, TextureBindings};
-use crate::TileSetBindings;
 
 use super::camera::ResolvedCameras;
 use super::camera::view::camera_distance;

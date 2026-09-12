@@ -60,19 +60,11 @@ impl TileGridComponent {
             ),
             TileProjection::Isometric => (Projection::Isometric, PlanePoint::default()),
         };
-        let grid = GridSpace::with_origin_and_y_axis(
-            projection,
-            width,
-            height,
-            origin,
-            PlaneYAxis::Up,
-        )?;
+        let grid =
+            GridSpace::with_origin_and_y_axis(projection, width, height, origin, PlaneYAxis::Up)?;
         VolumeSpace::new(
             grid,
-            PlanePoint::new(
-                f64::from(self.level_step[0]),
-                f64::from(self.level_step[1]),
-            ),
+            PlanePoint::new(f64::from(self.level_step[0]), f64::from(self.level_step[1])),
         )
     }
 

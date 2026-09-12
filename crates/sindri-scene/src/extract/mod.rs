@@ -13,8 +13,8 @@ pub(crate) mod registry;
 mod shape;
 mod sprite;
 mod text;
-mod tilemap;
 mod tile_volume;
+mod tilemap;
 mod ui;
 
 pub use camera::view::UiCanvas;

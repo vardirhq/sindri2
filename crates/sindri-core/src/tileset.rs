@@ -186,7 +186,11 @@ fn validate_visual(
             sprite: visual.sprite.clone(),
         });
     }
-    if !visual.size.iter().all(|value| value.is_finite() && *value > 0.0) {
+    if !visual
+        .size
+        .iter()
+        .all(|value| value.is_finite() && *value > 0.0)
+    {
         return Err(TileSetError::InvalidSize {
             tile: tile.to_owned(),
             face,
