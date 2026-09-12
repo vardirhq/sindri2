@@ -50,7 +50,10 @@ fn serialized_cells_have_a_stable_zyx_order() {
         .iter()
         .map(|cell| cell["position"].clone())
         .collect::<Vec<_>>();
-    assert_eq!(positions, vec![json!([1, 1, 0]), json!([0, 2, 0]), json!([0, 0, 2])]);
+    assert_eq!(
+        positions,
+        vec![json!([1, 1, 0]), json!([0, 2, 0]), json!([0, 0, 2])]
+    );
 }
 
 #[test]
@@ -62,8 +65,12 @@ fn the_same_screen_point_addresses_the_chosen_level() {
         level_step: [0.0, 0.5],
         projection: TileProjection::Isometric,
     };
-    let view = glam::Mat4::orthographic_rh(-4.0, 4.0, -4.0, 4.0, 0.1, 10.0)
-        * glam::Mat4::look_at_rh(glam::Vec3::new(0.0, 0.0, 5.0), glam::Vec3::ZERO, glam::Vec3::Y);
+    let view = glam::camera::rh::proj::directx::orthographic(-4.0, 4.0, -4.0, 4.0, 0.1, 10.0)
+        * glam::camera::rh::view::look_at_mat4(
+            glam::Vec3::new(0.0, 0.0, 5.0),
+            glam::Vec3::ZERO,
+            glam::Vec3::Y,
+        );
     let point = [0.5, 0.5];
     let low = cell_at_viewport(&grid, Transform3D::default(), view, point, 0).unwrap();
     let high = cell_at_viewport(&grid, Transform3D::default(), view, point, 1).unwrap();
