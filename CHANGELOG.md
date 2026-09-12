@@ -4,6 +4,28 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **Gather's ground is rebuilt.** One `ground` sheet replaces `tiles`: three
+  turf variants, a flowering one, tilled and watered soil, a path, flagstone
+  and water. Groundwork for the farming game, and the first art authored
+  against one shared style module rather than by copying numbers between
+  recipes.
+
+  Two things learned doing it, both about the fact that a tile's top is a flat
+  upward face. The light therefore gives every tile the same value, so **a field
+  of grass is one plane of one colour** — texture has to be geometry, which is
+  why these tiles carry sub-grid detail rather than a second tint.
+
+  And that detail has to *tile*. The first attempt scattered small domes, which
+  the baker will not let cross a footprint, so they had to be inset — leaving a
+  bare margin on every tile that laid a lattice of absence across the field.
+  Worse than no texture, because it draws the grid. Boxes on a sub-grid that
+  exactly divides the tile reach the edge without ever crossing it.
+
+  Ground also carries **no outline**, where props still do. An outline
+  distinguishes an object from its background; drawn on every cell of a
+  continuous field it draws the grid instead. That is now a rule in the style
+  rather than an accident.
+
 - **A project can declare more than one scene, and every one of them ships.**
   `[project] scenes` in `sindri.toml` lists the scenes a game can reach besides
   the one it opens on, and `sindri-export` walks each of them exactly as it

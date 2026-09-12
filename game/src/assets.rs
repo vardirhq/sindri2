@@ -56,7 +56,7 @@ pub const WEAVE_SOURCES: &[(&str, &str)] = &[
 /// none.
 #[cfg(not(target_arch = "wasm32"))]
 pub const TEXTURE_IDS: &[&str] = &[
-    "textures/tiles.png",
+    "textures/ground.png",
     "textures/orb.png",
     "textures/player.png",
     "textures/pip.png",
@@ -104,8 +104,8 @@ pub(crate) const SCRIPTS: &[(&str, &str)] = &[
 #[cfg(not(target_arch = "wasm32"))]
 pub const TEXTURES: &[(&str, &[u8])] = &[
     (
-        "textures/tiles.png",
-        include_bytes!("../assets/textures/tiles.png"),
+        "textures/ground.png",
+        include_bytes!("../assets/textures/ground.png"),
     ),
     (
         "textures/orb.png",
@@ -201,8 +201,8 @@ pub fn bind_audio(audio: &mut dyn AudioBackend) -> Result<(), GatherError> {
 #[cfg(not(target_arch = "wasm32"))]
 pub const SHEETS: &[(&str, &str)] = &[
     (
-        "textures/tiles.sheet.json",
-        include_str!("../assets/textures/tiles.sheet.json"),
+        "textures/ground.sheet.json",
+        include_str!("../assets/textures/ground.sheet.json"),
     ),
     (
         "textures/orb.sheet.json",
