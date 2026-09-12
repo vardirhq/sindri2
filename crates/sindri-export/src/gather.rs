@@ -37,6 +37,17 @@ struct AssetsSection {
 struct ProjectSection {
     name: String,
     main_scene: String,
+    /// Scenes the project can reach besides the one it opens on.
+    ///
+    /// Declared rather than discovered, which is the one place this exporter
+    /// takes a list. A scene reached by `Scene.go("house")` is a string inside
+    /// a program, and the comment below about prefabs says why that cannot be
+    /// found by looking: a field declared `String` is text however much it
+    /// resembles a path. Naming them in `[assets] include` would ship the scene
+    /// files and none of their textures, scripts or prefabs, which is the kind
+    /// of export that looks complete.
+    #[serde(default)]
+    scenes: Vec<String>,
 }
 
 /// One file the export will ship, and what it is.
@@ -48,11 +59,16 @@ pub struct GatheredAsset {
     pub bytes: Vec<u8>,
 }
 
-/// Everything a project ships, worked out from its scene.
+/// Everything a project ships, worked out from its scenes.
 #[derive(Debug)]
 pub struct ProjectExport {
     pub name: String,
     pub assets: Vec<GatheredAsset>,
+    /// The scene a host opens on, by the ID it is shipped under.
+    ///
+    /// Held rather than looked for: with more than one scene shipping, "the
+    /// first scene asset" is whichever one happened to be gathered first.
+    main_scene: String,
 }
 
 impl ProjectExport {
@@ -68,12 +84,6 @@ impl ProjectExport {
         let file: ProjectFile =
             toml::from_str(&text).map_err(|error| ExportError::Project(error.to_string()))?;
 
-        let scene_path = project.join(&file.project.main_scene);
-        let scene_bytes = read(&scene_path)?;
-        let document: SceneDocument = serde_json::from_slice(&scene_bytes).map_err(|error| {
-            ExportError::Project(format!("the main scene does not read: {error}"))
-        })?;
-
         let extractor = SceneExtractor::new().map_err(|error| {
             ExportError::Project(format!("the components do not register: {error}"))
         })?;
@@ -84,20 +94,37 @@ impl ProjectExport {
         components
             .register::<sindri_decay::ScriptComponent>("Script")
             .map_err(|error| ExportError::Project(format!("sindri.script: {error}")))?;
-        let mut world = World::from_scene(&document)
-            .map_err(|error| {
-                ExportError::Project(format!("the main scene does not load: {error}"))
-            })?
-            .world;
-        everything_on(&mut world);
-
-        let mut assets = vec![GatheredAsset {
-            // A scene is named by its file, so two scenes in one project do not
-            // collide, and so the host asks for the one the project names.
-            id: leaf(&file.project.main_scene),
-            kind: AssetKind::Scene,
-            bytes: scene_bytes,
-        }];
+        // Every scene the project declares, the one it opens on first. Each is
+        // walked exactly as the main scene is: a second scene whose textures
+        // did not ship would be a door that opened onto nothing.
+        let mut assets = Vec::new();
+        let mut worlds = Vec::new();
+        let mut loaded: BTreeSet<String> = BTreeSet::new();
+        for path in std::iter::once(&file.project.main_scene).chain(&file.project.scenes) {
+            // A project that lists its own main scene is not an error; it is
+            // someone being explicit, and shipping it twice would be.
+            if !loaded.insert(path.clone()) {
+                continue;
+            }
+            let bytes = read(&project.join(path))?;
+            let document: SceneDocument = serde_json::from_slice(&bytes).map_err(|error| {
+                ExportError::Project(format!("scene {path} does not read: {error}"))
+            })?;
+            let mut world = World::from_scene(&document)
+                .map_err(|error| {
+                    ExportError::Project(format!("scene {path} does not load: {error}"))
+                })?
+                .world;
+            everything_on(&mut world);
+            worlds.push(world);
+            assets.push(GatheredAsset {
+                // A scene is named by its file, so two scenes in one project do
+                // not collide, and so the host asks for the one it means.
+                id: leaf(path),
+                kind: AssetKind::Scene,
+                bytes,
+            });
+        }
 
         // Ordered and de-duplicated, because two entities naming one texture is
         // one download.
@@ -109,7 +136,7 @@ impl ProjectExport {
         // the next; a prefab spawned by *that* prefab's script is the one
         // after. A game whose every enemy is a prefab would otherwise export
         // as an empty world that looked complete.
-        let mut pending = vec![world];
+        let mut pending = worlds;
         let mut sources = ScriptSources::new();
         let mut scripts = Scripts::new();
         let mut walked: BTreeSet<String> = BTreeSet::new();
@@ -221,15 +248,25 @@ impl ProjectExport {
         Ok(Self {
             name: file.project.name,
             assets,
+            main_scene: leaf(&file.project.main_scene),
         })
     }
 
-    /// The scene's file name, which is what a host asks for first.
+    /// The scene a host opens on, by the ID it ships under.
     #[must_use]
     pub fn scene_id(&self) -> Option<&str> {
         self.assets
             .iter()
-            .find(|asset| asset.kind == AssetKind::Scene)
+            .find(|asset| asset.kind == AssetKind::Scene && asset.id == self.main_scene)
+            .map(|asset| asset.id.as_str())
+    }
+
+    /// Every scene the export ships, in the order they were gathered, the one
+    /// it opens on first.
+    pub fn scene_ids(&self) -> impl Iterator<Item = &str> {
+        self.assets
+            .iter()
+            .filter(|asset| asset.kind == AssetKind::Scene)
             .map(|asset| asset.id.as_str())
     }
 }

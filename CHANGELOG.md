@@ -4,6 +4,31 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **A project can declare more than one scene, and every one of them ships.**
+  `[project] scenes` in `sindri.toml` lists the scenes a game can reach besides
+  the one it opens on, and `sindri-export` walks each of them exactly as it
+  walks the main scene.
+
+  Declared rather than discovered, which is the only list the exporter takes.
+  A scene reached by `Scene.go("house")` is a string inside a program, and the
+  exporter deliberately does not hunt for strings that resemble paths — a field
+  declared `String` is text however much it looks like one, which is why
+  prefabs are found through a script's declared types instead. Nor would
+  `[assets] include` do: it ships raw bytes, so a scene listed there would
+  arrive without its own textures, scripts or prefabs. That is an export that
+  looks complete and opens a door onto nothing, and it is what the new tests
+  are pointed at.
+
+  `scene_id()` now returns the scene the project *names* rather than the first
+  scene asset gathered, which stops being the same thing once more than one
+  ships.
+
+  The editor's manifest carries `scenes` without using it yet. It serializes by
+  named field, so a field it did not model would have been dropped the first
+  time anything rewrote `sindri.toml` — someone would have found their
+  interiors missing from the next build with nothing to point at. Asserted
+  through the real save path, because it is the write that loses a field.
+
 - **A script can ask to be somewhere else.** `Scene.go(name)` and
   `Scene.current()`, with `LoadedScenes` keeping which scene a world is playing
   and switching between them. Together with `World::add_scene` that is a game

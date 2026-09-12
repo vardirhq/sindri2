@@ -126,6 +126,15 @@ pub struct ProjectSection {
     /// mean the editor opening a file the author never nominated.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub main_scene: Option<String>,
+    /// Scenes the project can reach besides the one it opens on.
+    ///
+    /// The editor does not use these yet; it carries them so that saving a
+    /// project does not delete them. This struct serializes by named field, so
+    /// a field it did not know about would be quietly dropped the first time
+    /// anything here rewrote the manifest — and a person would find their
+    /// interiors gone from a build with nothing to point at.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub scenes: Vec<String>,
 }
 
 /// What a project asks hosts to carry even when its scene cannot name it.
@@ -218,6 +227,7 @@ impl Project {
                 project: ProjectSection {
                     name: name.to_owned(),
                     main_scene: Some(NEW_PROJECT_SCENE.to_owned()),
+                    scenes: Vec::new(),
                 },
                 assets: AssetsSection::default(),
             },

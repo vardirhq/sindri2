@@ -2,6 +2,8 @@ use std::path::Path;
 
 use sindri_core::SceneDocument;
 
+use crate::scene_file::SceneFile;
+
 use super::{FORMAT_VERSION, MANIFEST_NAME, Project, ProjectError, is_project, root_for};
 
 /// A project made the way the welcome window makes one.
@@ -239,4 +241,64 @@ fn a_scene_in_no_project_belongs_to_no_project() {
     let scene = directory.path().join("loose.scene.json");
     std::fs::write(&scene, "{}").expect("a scene");
     assert_eq!(root_for(&scene), None);
+}
+
+/// A field the editor does not use must still survive the editor saving.
+///
+/// `ProjectSection` serializes by named field, so anything it did not model
+/// would be dropped the first time the editor rewrote the manifest — and a
+/// person would find the scenes their game reaches missing from the next build,
+/// with nothing to point at. Asserted through the real save path rather than by
+/// reading the struct, because it is the write that loses a field.
+#[test]
+fn saving_a_project_keeps_the_scenes_it_did_not_open() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let root = directory.path().join("two-places");
+    let project = created(&root, "Two Places");
+
+    // Written as a person or another tool would write it.
+    let manifest = root.join(MANIFEST_NAME);
+    let text = std::fs::read_to_string(&manifest).expect("the manifest reads");
+    std::fs::write(
+        &manifest,
+        text.replace(
+            "[project]",
+            "[project]\nscenes = [\"assets/house.scene.json\"]",
+        ),
+    )
+    .expect("the manifest writes");
+    drop(project);
+
+    let mut project = Project::open(&root).expect("the project reopens");
+    assert_eq!(
+        project.manifest.project.scenes,
+        vec!["assets/house.scene.json".to_owned()],
+        "the field is read"
+    );
+
+    // Anything that rewrites the manifest, here the ordinary act of nominating
+    // a different opening scene.
+    let other = root.join("other.scene.json");
+    SceneFile::create(&other, &SceneDocument::default()).expect("a second scene file");
+    project
+        .set_main_scene(&other)
+        .expect("the scene can be nominated");
+
+    let after = std::fs::read_to_string(&manifest).expect("the manifest still reads");
+    assert!(
+        after.contains("assets/house.scene.json"),
+        "saving dropped the scenes the editor does not use:\n{after}"
+    );
+}
+
+/// And a project that names none does not grow an empty list, so manifests do
+/// not change shape just by being opened.
+#[test]
+fn a_project_with_no_extra_scenes_writes_no_list() {
+    let directory = tempfile::tempdir().expect("a temporary directory");
+    let root = directory.path().join("one-place");
+    let project = created(&root, "One Place");
+    drop(project);
+    let text = std::fs::read_to_string(root.join(MANIFEST_NAME)).expect("the manifest reads");
+    assert!(!text.contains("scenes"), "{text}");
 }

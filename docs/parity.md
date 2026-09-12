@@ -126,7 +126,7 @@ is why it earns a section rather than a footnote.
 | Reusable data profiles | ✅ | ✅ | ✅ | ✅ | **Ahead** | Unity has no native equivalent; ScriptableObject is close but needs code per asset. Optional schemas when a second catalog proves the shape |
 | Transform | ✅ | ✅ | 🟡 | ✅ | **Par** | No structured vector or rotation value in Decay |
 | Scene save / load | ✅ | ✅ | — | ✅ | **Par** | Readable single file, which is **Ahead**; see the advantages table |
-| **Multiple scenes / additive loading** | ✅ | ❌ | ✅ | ❌ | **Behind** | `World::add_scene` loads a scene beside the ones a world already holds; `LoadedScenes` keeps which one is played and switches between them, leaving everything a scene holds as the player left it. `Scene.go`/`Scene.current` let a script ask. Stable IDs are namespaced, so two interiors may each author a `door`. No project-level scene list and no editor surface, and a world holding several scenes does not round-trip through `to_scene` |
+| **Multiple scenes / additive loading** | ✅ | 🟡 | ✅ | ✅ | **Behind** | `World::add_scene` loads a scene beside the ones a world already holds; `LoadedScenes` keeps which one is played and switches between them, leaving everything a scene holds as the player left it. `Scene.go`/`Scene.current` let a script ask, `[project] scenes` declares them and the exporter walks each one for its own assets. The editor carries the list through a save but offers no way to edit it, and a world holding several scenes does not round-trip through `to_scene` |
 | Scene streaming / Addressables | ❌ | ❌ | ❌ | ❌ | **Absent** | Not urgent at 2D scale, but named so it is not a surprise |
 | Undo / redo | ✅ | ✅ | — | — | **Par** | Command-backed; script writes are outside it |
 
