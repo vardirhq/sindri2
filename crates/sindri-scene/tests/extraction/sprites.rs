@@ -5,7 +5,68 @@ use sindri_core::{SpriteAnchor, SpriteSheetDocument};
 use sindri_render::{FrameCommand, RenderStage, SpriteDepth, TextureId};
 use sindri_scene::{CameraView, SceneExtractor, TextureBindings, WorldProjection};
 
-use crate::support::{VIEWPORT, close, scene, world_from};
+use crate::support::{VIEWPORT, close, document, scene, world_from};
+
+/// Painter order crosses texture boundaries.
+///
+/// Sorting into texture batches first used to turn A-behind-B-in-front-of-A
+/// into one A draw followed or preceded by one B draw. No ordering of those two
+/// calls can represent the requested picture. Correct extraction emits three
+/// contiguous runs: A, B, then A again.
+#[test]
+fn transparent_sprites_interleave_across_textures() {
+    let world = world_from(&document(
+        r#"
+        { "id": "camera", "transform_3d": { "position": [0.0, 0.0, 10.0] },
+          "components": { "sindri.camera": {
+            "projection": "perspective", "vertical_fov_degrees": 45.0,
+            "near": 0.1, "far": 100.0 } } },
+        { "id": "far-a", "transform_3d": { "position": [0.0, 0.0, -2.0] },
+          "components": { "sindri.sprite": {
+            "texture": "a.png", "layer": 5,
+            "tint": [1.0, 1.0, 1.0, 0.2] } } },
+        { "id": "middle-b", "transform_3d": { "position": [0.0, 0.0, 0.0] },
+          "components": { "sindri.sprite": {
+            "texture": "b.png", "layer": 5,
+            "tint": [1.0, 1.0, 1.0, 0.5] } } },
+        { "id": "near-a", "transform_3d": { "position": [0.0, 0.0, 2.0] },
+          "components": { "sindri.sprite": {
+            "texture": "a.png", "layer": 5,
+            "tint": [1.0, 1.0, 1.0, 0.8] } } }"#,
+    ));
+    let mut bindings = TextureBindings::new();
+    bindings.bind("a.png", TextureId::new(1));
+    bindings.bind("b.png", TextureId::new(2));
+
+    let frame = SceneExtractor::new()
+        .unwrap()
+        .extract(&world, VIEWPORT, CameraView::default(), &bindings)
+        .expect("the scene extracts");
+
+    let textures = frame
+        .passes()
+        .iter()
+        .map(|pass| match &pass.command {
+            FrameCommand::SpriteBatch { texture, .. } => *texture,
+            _ => panic!("the fixture contains only sprites"),
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        textures,
+        [TextureId::new(1), TextureId::new(2), TextureId::new(1)],
+        "texture batching swallowed painter order"
+    );
+
+    let alphas = frame
+        .passes()
+        .iter()
+        .map(|pass| match &pass.command {
+            FrameCommand::SpriteBatch { instances, .. } => instances[0].tint()[3],
+            _ => unreachable!(),
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(alphas, [0.2, 0.5, 0.8]);
+}
 
 /// A layer is an explicit override on order, so it splits the batches even
 /// when everything else about two sprites is the same.

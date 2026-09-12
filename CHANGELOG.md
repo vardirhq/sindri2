@@ -4,6 +4,14 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **Tile System 2 begins with correct global painter ordering and a stackable
+  volume contract.** Transparent sprites are ordered across texture boundaries
+  before adjacent equal textures are batched, so an object from one sheet can
+  correctly appear between two objects from another. The accepted replacement
+  for `sindri.tilemap` stores integer `(x, y, z)` cells, derives visible baked
+  faces from their neighbours, and gives Gather a new identity as a
+  Minecraft-style isometric world rendered entirely through 2D sprites.
+
 - **Gather is now a farm rather than a nine-cell-wide plaza.** Its authored
   island is 25 by 25 cells, with three working plots, dry and watered soil, an
   irregular coast and pond, a connected path network, a flagstone farmhouse

@@ -8,7 +8,7 @@ use crate::{TextureBindings, TilemapComponent};
 
 use super::camera::ResolvedCameras;
 use super::camera::view::camera_distance;
-use super::sprite::{DrawSpace, SpriteBatches};
+use super::sprite::{DrawSpace, SpriteBatches, SpriteDraw};
 use super::{SceneExtractError, SceneExtractor, transform_matrix};
 
 impl SceneExtractor {
@@ -74,13 +74,12 @@ impl SceneExtractor {
                     camera_distance(camera.view, position),
                     row.saturating_mul(tilemap.columns).saturating_add(column),
                 )?;
-                batches
-                    .entry((DrawSpace::World, tilemap.layer, texture))
-                    .or_default()
-                    .push((
-                        order,
-                        SpriteInstance::new(model, tilemap.tint).with_uv_rect(rect),
-                    ));
+                batches.push(SpriteDraw {
+                    space: DrawSpace::World,
+                    texture,
+                    order,
+                    sprite: SpriteInstance::new(model, tilemap.tint).with_uv_rect(rect),
+                });
             }
         }
         Ok(())

@@ -36,6 +36,7 @@ contracts below; dated evidence should not override them.
 - [How Sindri does 2D](2d-model.md)
 - [Camera semantics](cameras.md)
 - [Grid coordinates and projection](grid.md)
+- [Tile System 2](tile-system-2.md)
 - [Physics architecture](physics.md)
 - [Platform host](platform-host.md)
 - [Rendering frame pipeline](rendering-frame-pipeline.md)

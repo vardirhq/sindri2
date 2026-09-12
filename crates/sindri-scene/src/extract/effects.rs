@@ -13,7 +13,7 @@ use crate::Effects2d;
 
 use super::camera::ResolvedCameras;
 use super::camera::view::camera_distance;
-use super::sprite::{DrawSpace, SpriteBatches};
+use super::sprite::{DrawSpace, SpriteBatches, SpriteDraw};
 use super::{SceneExtractError, SceneExtractor};
 use crate::TextureBindings;
 
@@ -44,10 +44,12 @@ impl SceneExtractor {
                 camera_distance(camera.view, position),
                 u32::try_from(index).unwrap_or(u32::MAX),
             )?;
-            batches
-                .entry((DrawSpace::World, fleck.layer, textures.resolve(texture)))
-                .or_default()
-                .push((order, SpriteInstance::new(model, fleck.drawn_tint())));
+            batches.push(SpriteDraw {
+                space: DrawSpace::World,
+                texture: textures.resolve(texture),
+                order,
+                sprite: SpriteInstance::new(model, fleck.drawn_tint()),
+            });
         }
         Ok(())
     }

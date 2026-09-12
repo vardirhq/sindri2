@@ -1,10 +1,9 @@
 //! Sprites in the world, and the batching every image draw shares.
 //!
 //! A world sprite, a UI image, and a tilemap's cells are all one quad with one
-//! texture, so they fill one set of batches and are flushed together here. What
-//! separates them is the space they are drawn in, which is the first part of a
-//! batch's key: a batch is one draw, and two spaces cannot share a draw because
-//! they differ in both projection and pipeline.
+//! texture, so they fill one ordered queue and are flushed together here. What
+//! separates them is the space they are drawn in: two spaces cannot share a
+//! draw because they differ in both projection and pipeline.
 
 use std::collections::BTreeMap;
 
@@ -32,15 +31,22 @@ pub(super) enum DrawSpace {
     World,
 }
 
-/// Everything that will become a sprite draw, gathered before any of it is
-/// ordered.
+/// One image before painter order decides which draw call it belongs to.
 ///
-/// Keyed by what decides a batch — the space, which picks the projection and
-/// pipeline; the layer, which overrides distance; and the texture, which is what
-/// a draw binds. World sprites, UI images, and tilemaps fill the same map, so
-/// they share a batch when they share all three.
-pub(super) type SpriteBatches =
-    BTreeMap<(DrawSpace, i32, TextureId), Vec<(TransparentOrder, SpriteInstance)>>;
+/// Texture deliberately is not part of the ordering key. Sorting into texture
+/// buckets first makes two overlapping images from different sheets impossible
+/// to interleave correctly: the texture ID, rather than their layer and depth,
+/// decides which one is painted last. Once this queue is ordered, adjacent
+/// images using one texture become a batch; a texture may therefore earn more
+/// than one draw when another image genuinely belongs between its sprites.
+pub(super) struct SpriteDraw {
+    pub(super) space: DrawSpace,
+    pub(super) texture: TextureId,
+    pub(super) order: TransparentOrder,
+    pub(super) sprite: SpriteInstance,
+}
+
+pub(super) type SpriteBatches = Vec<SpriteDraw>;
 
 /// What each animated entity shows when nothing has ticked it yet.
 ///
@@ -93,7 +99,7 @@ impl SceneExtractor {
             effects,
             hierarchy,
         } = shared;
-        let mut batches: SpriteBatches = BTreeMap::new();
+        let mut batches = SpriteBatches::new();
         let resting = self.resting_sprites(world)?;
         let drawing = Drawing {
             cameras,
@@ -105,8 +111,8 @@ impl SceneExtractor {
         self.push_world_sprites(world, drawing, &mut batches)?;
         self.push_ui_images(world, drawing, &mut batches)?;
         self.push_tilemaps(world, cameras, textures, &mut batches)?;
-        // Into the same batches as everything else, so a burst merges with what
-        // is already on its layer instead of costing a draw call.
+        // Into the same ordered queue as everything else, so adjacent flecks
+        // can still share a draw with sprites using the same texture.
         Self::push_effects(effects, cameras, textures, &mut batches)?;
         Self::flush_batches(batches, cameras, frame)
     }
@@ -155,30 +161,40 @@ impl SceneExtractor {
                 camera_distance(camera.view, model.w_axis.truncate()),
                 entity.index(),
             )?;
-            batches
-                .entry((
-                    DrawSpace::World,
-                    sprite.layer,
-                    textures.resolve(reference.texture()),
-                ))
-                .or_default()
-                .push((
-                    order,
-                    SpriteInstance::new(model, sprite.tint).with_uv_rect(drawn_rect(
-                        entity, &reference, textures, animations, resting,
-                    )),
-                ));
+            batches.push(SpriteDraw {
+                space: DrawSpace::World,
+                texture: textures.resolve(reference.texture()),
+                order,
+                sprite: SpriteInstance::new(model, sprite.tint).with_uv_rect(drawn_rect(
+                    entity, &reference, textures, animations, resting,
+                )),
+            });
         }
         Ok(())
     }
 
     fn flush_batches(
-        batches: SpriteBatches,
+        mut batches: SpriteBatches,
         cameras: &ResolvedCameras,
         frame: &mut ExtractedFrame,
     ) -> Result<(), SceneExtractError> {
-        for ((space, layer, texture), mut sprites) in batches {
-            sprites.sort_by_key(|(order, _)| *order);
+        batches.sort_by_key(|draw| (draw.space, draw.order));
+        let mut draws = batches.into_iter().peekable();
+        while let Some(first) = draws.next() {
+            let space = first.space;
+            let layer = first.order.layer();
+            let texture = first.texture;
+            let mut instances = vec![first.sprite];
+            while draws.peek().is_some_and(|draw| {
+                draw.space == space && draw.order.layer() == layer && draw.texture == texture
+            }) {
+                instances.push(
+                    draws
+                        .next()
+                        .expect("the adjacent sprite was just inspected")
+                        .sprite,
+                );
+            }
             let (stage, camera, depth) = match space {
                 DrawSpace::Screen => (
                     RenderStage::Overlay,
@@ -202,7 +218,7 @@ impl SceneExtractor {
                 FrameCommand::SpriteBatch {
                     texture,
                     depth,
-                    instances: sprites.into_iter().map(|(_, sprite)| sprite).collect(),
+                    instances,
                 },
             ));
         }
