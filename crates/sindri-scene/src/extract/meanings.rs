@@ -24,8 +24,8 @@ use crate::animation::SpriteAnimationComponent;
 use crate::audio::AudioSourceComponent;
 use crate::components::{
     CameraComponent, GridOccupantComponent, MeshComponent, ShapeComponent, SpriteComponent,
-    TileGridComponent, TileProjection, TilemapComponent, UiImageComponent, UiShapeBlend,
-    UiShapeComponent, UiShapeKind, UiTextComponent,
+    TileGridComponent, TileProjection, TileVolumeComponent, TilemapComponent, UiImageComponent,
+    UiShapeBlend, UiShapeComponent, UiShapeKind, UiTextComponent,
 };
 use crate::components::{UiAnchor, UiTextCase, UiTextLineAlign, UiTextWrap};
 use crate::effects::EffectBurstComponent;
@@ -91,6 +91,10 @@ fn describe_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
     components.describe::<TileGridComponent>([(
         "projection",
         FieldMeaning::choice(TileProjection::ALL.into_iter().map(TileProjection::as_str)),
+    )])?;
+    components.describe::<TileVolumeComponent>([(
+        "tileset",
+        FieldMeaning::Asset(AssetKind::TileSet),
     )])?;
     components.describe::<ShapeComponent>([
         ("kind", shape_kinds()),
@@ -268,6 +272,7 @@ mod tests {
             ("sindri.mesh", "texture", AssetKind::Texture),
             ("sindri.ui.image", "texture", AssetKind::Texture),
             ("sindri.tilemap", "texture", AssetKind::Texture),
+            ("sindri.tile_volume", "tileset", AssetKind::TileSet),
             ("sindri.effect.burst", "texture", AssetKind::Texture),
             ("sindri.ui.text", "font", AssetKind::Font),
             ("sindri.audio.source", "clip", AssetKind::Audio),

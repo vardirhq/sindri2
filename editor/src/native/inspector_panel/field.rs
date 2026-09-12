@@ -41,6 +41,7 @@ pub(crate) struct FieldAssets<'a> {
     pub(crate) scripts: &'a [String],
     pub(crate) audio: &'a [String],
     pub(crate) profiles: &'a [String],
+    pub(crate) tile_sets: &'a [String],
 }
 
 /// The rows of one payload, indented under its heading.
@@ -136,6 +137,7 @@ pub(crate) fn asset_list<'a>(
         AssetKind::Audio => assets.audio,
         AssetKind::Script => assets.scripts,
         AssetKind::Profile => assets.profiles,
+        AssetKind::TileSet => assets.tile_sets,
         // Neither is a list the inspector draws a field from today: a prefab is
         // chosen by its own picker, and a stylesheet is not a component field.
         AssetKind::Prefab | AssetKind::Weave => return None,

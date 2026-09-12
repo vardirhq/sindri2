@@ -188,6 +188,12 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
     // nothing — no fill, no stroke — would add a component that draws
     // absolutely nothing and read as a broken button.
     register_shapes(components)?;
+    register_tiles(components)?;
+    Ok(())
+}
+
+/// The retiring flat map and the stackable replacement beside it.
+fn register_tiles(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
     // A one-by-one map of one empty cell: the smallest tilemap that is
     // still a valid one, so adding the component in the editor gives
     // something to paint into rather than something to repair.

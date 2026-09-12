@@ -6,6 +6,7 @@
 
 use sindri_assets::AssetLoadOutcome;
 use sindri_render::TextRenderer;
+use sindri_scene::{tile_set_sheets, tile_set_textures};
 
 use super::{SceneTextures, TextureNote, upload};
 
@@ -22,6 +23,7 @@ impl SceneTextures {
         text: &mut TextRenderer,
     ) -> Vec<TextureNote> {
         let mut notes = self.examine_files();
+        notes.extend(self.poll_tile_sets());
         notes.extend(self.poll_sheets());
         notes.extend(self.poll_fonts(text));
         let Self {
@@ -75,6 +77,56 @@ impl SceneTextures {
                     error.id(),
                     error.message()
                 ))),
+            }
+        }
+        notes
+    }
+
+    pub(super) fn poll_tile_sets(&mut self) -> Vec<TextureNote> {
+        let mut notes = Vec::new();
+        let Some(tile_sets) = &mut self.tile_sets else {
+            return notes;
+        };
+        let mut ready = Vec::new();
+        for outcome in tile_sets.poll() {
+            match outcome {
+                AssetLoadOutcome::Ready(id) => {
+                    let Some(tile_set) = tile_sets.get(&id).cloned() else {
+                        continue;
+                    };
+                    match self.tile_set_bindings.bind(id.as_str(), tile_set.clone()) {
+                        Ok(_) => notes.push(TextureNote::Loaded(format!(
+                            "{id} ({} tiles)",
+                            tile_set.tiles.len()
+                        ))),
+                        Err(error) => notes.push(TextureNote::Failed(error.to_string())),
+                    }
+                    ready.push(tile_set);
+                }
+                AssetLoadOutcome::Failed(error) => notes.push(TextureNote::Failed(format!(
+                    "{}: {}",
+                    error.id(),
+                    error.message()
+                ))),
+            }
+        }
+        for tile_set in ready {
+            if let Some(loader) = &mut self.loader {
+                for texture in tile_set_textures(&tile_set) {
+                    if let Ok(id) = sindri_core::AssetId::new(texture)
+                        && let Err(error) = loader.request(id.clone())
+                    {
+                        notes.push(TextureNote::Failed(format!("{id}: {error}")));
+                    }
+                }
+            }
+            if let Some(sheets) = &mut self.sheets {
+                for (id, texture) in tile_set_sheets(&tile_set) {
+                    self.sliced.insert(id.clone(), texture);
+                    if let Err(error) = sheets.request(id.clone()) {
+                        notes.push(TextureNote::Failed(format!("{id}: {error}")));
+                    }
+                }
             }
         }
         notes

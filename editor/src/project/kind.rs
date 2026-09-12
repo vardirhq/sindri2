@@ -27,6 +27,7 @@ pub enum AssetKind {
     Prefab,
     /// Reusable authored data, independent of scene entities.
     Profile,
+    TileSet,
     Script,
     /// Responsive screen-UI presentation authored in Weave.
     Stylesheet,
@@ -47,6 +48,7 @@ impl AssetKind {
             Self::Mesh => "Mesh",
             Self::Prefab => "Prefab",
             Self::Profile => "Profile",
+            Self::TileSet => "Tile Set",
             Self::Script => "Script",
             Self::Stylesheet => "Weave",
             Self::Font => "Font",
@@ -82,6 +84,9 @@ impl AssetKind {
         }
         if lower.ends_with(sindri_core::PROFILE_SUFFIX) {
             return Self::Profile;
+        }
+        if lower.ends_with(sindri_core::TILESET_SUFFIX) {
+            return Self::TileSet;
         }
         match lower.rsplit_once('.').map(|(_, extension)| extension) {
             Some("png" | "jpg" | "jpeg" | "webp" | "bmp" | "ktx2" | "dds") => Self::Texture,

@@ -33,6 +33,7 @@ pub enum AssetKind {
     Script,
     Prefab,
     Profile,
+    TileSet,
     Weave,
 }
 
@@ -46,6 +47,7 @@ impl AssetKind {
             Self::Script => "script",
             Self::Prefab => "prefab",
             Self::Profile => "profile",
+            Self::TileSet => "tile_set",
             Self::Weave => "weave",
         }
     }

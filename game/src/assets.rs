@@ -15,7 +15,7 @@ use sindri_assets::{
 };
 use sindri_core::World;
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_core::{AssetId, SceneDocument, SpriteSheetDocument, sheet_id_for};
+use sindri_core::{AssetId, SceneDocument, SpriteSheetDocument, TileSetDocument, sheet_id_for};
 use sindri_decay::ScriptComponent;
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_decay::ScriptSources;
@@ -25,7 +25,7 @@ use sindri_platform::{AudioBackend, AudioClip};
 use sindri_render::{TextRenderer, Texture2D, TextureRegistry};
 use sindri_scene::SceneExtractor;
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_scene::TextureBindings;
+use sindri_scene::{TextureBindings, TileSetBindings};
 
 use crate::error::GatherError;
 
@@ -256,6 +256,19 @@ pub const SHEETS: &[(&str, &str)] = &[
         include_str!("../assets/textures/tree.sheet.json"),
     ),
 ];
+
+/// Semantic block sets embedded by the native game.
+#[cfg(not(target_arch = "wasm32"))]
+pub const TILE_SETS: &[(&str, &str)] = &[];
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn bind_tile_sets() -> Result<TileSetBindings, GatherError> {
+    let mut bindings = TileSetBindings::new();
+    for (id, json) in TILE_SETS {
+        bindings.bind(*id, TileSetDocument::from_json(json)?)?;
+    }
+    Ok(bindings)
+}
 
 /// Every native texture on the GPU, and every sheet bound to what it cuts.
 #[cfg(not(target_arch = "wasm32"))]

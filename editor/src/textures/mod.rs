@@ -29,10 +29,11 @@ use std::{
 use sindri_assets::{
     AssetLoadQueueConfig, AssetLoader, AssetManifest, AssetWatch, FontAssetDecoder,
     MANIFEST_FILE_NAME, SpriteSheetAssetDecoder, TextureAsset, TextureAssetDecoder,
+    TileSetAssetDecoder,
 };
 use sindri_core::AssetId;
 use sindri_render::{Texture2D, TextureError, TextureRegistry};
-use sindri_scene::TextureBindings;
+use sindri_scene::{TextureBindings, TileSetBindings};
 
 /// How many texture loads run at once, and how many may be waiting.
 ///
@@ -89,10 +90,13 @@ pub struct SceneTextures {
     /// that will not decode is a picture problem, and a sheet that will not is
     /// a naming problem.
     sheets: Option<AssetLoader<SpriteSheetAssetDecoder>>,
+    /// Semantic block assets used by stackable tile volumes.
+    tile_sets: Option<AssetLoader<TileSetAssetDecoder>>,
     /// Which texture each sheet cuts, keyed by the sheet's own ID.
     sliced: BTreeMap<AssetId, String>,
     registry: TextureRegistry,
     bindings: TextureBindings,
+    tile_set_bindings: TileSetBindings,
 }
 
 /// The project's manifest, if it ships one.
@@ -137,6 +141,10 @@ impl SceneTextures {
         &self.bindings
     }
 
+    pub const fn tile_sets(&self) -> &TileSetBindings {
+        &self.tile_set_bindings
+    }
+
     /// Whether anything is still on its way.
     pub fn loading(&self) -> bool {
         self.loader
@@ -144,6 +152,10 @@ impl SceneTextures {
             .is_some_and(|loader| loader.outstanding() > 0)
             || self
                 .fonts
+                .as_ref()
+                .is_some_and(|loader| loader.outstanding() > 0)
+            || self
+                .tile_sets
                 .as_ref()
                 .is_some_and(|loader| loader.outstanding() > 0)
     }

@@ -94,6 +94,7 @@ pub fn is_readable(path: &Path) -> bool {
             | AssetKind::Stylesheet
             | AssetKind::Scene
             | AssetKind::Sheet
+            | AssetKind::TileSet
             | AssetKind::Other
     ) && !looks_binary(path)
 }

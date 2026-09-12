@@ -196,7 +196,7 @@ pub(crate) fn asset_row(
             AssetKind::Scene => "Double-click to open this scene",
             AssetKind::Texture => "Click to slice this image into sprites",
             AssetKind::Folder => "Double-click to look inside this folder",
-            AssetKind::Script | AssetKind::Stylesheet | AssetKind::Sheet => {
+            AssetKind::Script | AssetKind::Stylesheet | AssetKind::Sheet | AssetKind::TileSet => {
                 "Click to read this file"
             }
             AssetKind::Profile => "Click to edit this reusable profile",

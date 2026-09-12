@@ -2,13 +2,41 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use sindri_core::{SceneComponent, TileSetDocument, TileSetError, World};
+use sindri_core::{
+    AssetId, SceneComponent, SpriteRef, TileSetDocument, TileSetError, World, sheet_id_for,
+};
 
 use crate::TileVolumeComponent;
 
 #[derive(Clone, Debug, Default)]
 pub struct TileSetBindings {
     bound: BTreeMap<String, TileSetDocument>,
+}
+
+/// Texture references used by a decoded tile set's baked faces.
+pub fn tile_set_textures(tile_set: &TileSetDocument) -> BTreeSet<String> {
+    tile_set
+        .tiles
+        .values()
+        .flat_map(|tile| tile.faces.iter())
+        .filter_map(|(_, visual)| SpriteRef::parse(&visual.sprite).ok())
+        .map(|reference| reference.texture().to_owned())
+        .collect()
+}
+
+/// Sheet IDs and the textures they slice for every named baked face.
+pub fn tile_set_sheets(tile_set: &TileSetDocument) -> BTreeMap<AssetId, String> {
+    tile_set
+        .tiles
+        .values()
+        .flat_map(|tile| tile.faces.iter())
+        .filter_map(|(_, visual)| SpriteRef::parse(&visual.sprite).ok())
+        .filter(|reference| reference.sprite().is_some())
+        .filter_map(|reference| {
+            let texture = reference.asset()?;
+            Some((sheet_id_for(&texture)?, reference.texture().to_owned()))
+        })
+        .collect()
 }
 
 impl TileSetBindings {

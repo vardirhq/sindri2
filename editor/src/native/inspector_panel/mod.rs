@@ -84,6 +84,7 @@ struct PanelContext {
     scripts: Vec<String>,
     audio: Vec<String>,
     profiles: Vec<String>,
+    tile_sets: Vec<String>,
     /// The first `.decay` source the project holds that declares a script, and
     /// the first script it declares.
     ///
@@ -129,6 +130,7 @@ impl PanelContext {
             scripts: &self.scripts,
             audio: &self.audio,
             profiles: &self.profiles,
+            tile_sets: &self.tile_sets,
         }
     }
 }
@@ -374,6 +376,7 @@ impl EditorApp {
             scripts,
             audio: self.project.audio(),
             profiles: self.project.profiles(),
+            tile_sets: self.project.tile_sets(),
             animation_sprites: animation_texture
                 .as_deref()
                 .map(|texture| self.project.sprites_for_texture(texture))

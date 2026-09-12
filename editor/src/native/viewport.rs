@@ -107,6 +107,7 @@ impl RuntimeViewport {
                 SceneRuntime::default()
                     .with_animations(source.animations)
                     .with_effects(source.effects)
+                    .with_tile_sets(source.textures.tile_sets())
                     .with_canvas(canvas),
             )
             .map_err(|error| error.to_string())?;
