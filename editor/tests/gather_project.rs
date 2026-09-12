@@ -132,8 +132,8 @@ fn the_listing_starts_at_the_assets_and_the_rest_is_still_there() {
 
 /// The tile and sprite palettes read the file behind a reference by joining it
 /// onto a directory, and it has to be the same directory the loader uses.
-/// Joined onto the project root, Gather's `textures/tiles.png` names
-/// `game/textures/tiles.png`, which is nothing: the tilemap inspector showed a
+/// Joined onto the project root, Gather's `textures/ground.png` names
+/// `game/textures/ground.png`, which is nothing: the tilemap inspector showed a
 /// missing-file message instead of the tiles, and the animation preview showed
 /// one instead of the sheet.
 #[test]
@@ -141,7 +141,7 @@ fn the_palette_reads_a_reference_from_where_the_scene_resolves_it() {
     let assets = gather().join("assets");
     let mut palette = SpritePalette::default();
 
-    palette.ensure(Some(&assets), "textures/tiles.png");
+    palette.ensure(Some(&assets), "textures/ground.png");
     assert_eq!(palette.problem(), None);
     assert!(
         !palette.sprites().is_empty(),
@@ -149,7 +149,7 @@ fn the_palette_reads_a_reference_from_where_the_scene_resolves_it() {
     );
 
     let mut from_the_root = SpritePalette::default();
-    from_the_root.ensure(Some(&gather()), "textures/tiles.png");
+    from_the_root.ensure(Some(&gather()), "textures/ground.png");
     assert!(
         from_the_root.problem().is_some(),
         "and the project root is not that directory, which is the whole point"
