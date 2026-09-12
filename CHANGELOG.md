@@ -4,6 +4,33 @@ All notable changes to Sindri Engine will be documented here.
 
 ## [Unreleased]
 
+- **A scene can be loaded without renaming what is in it.**
+  `LoadedScenes::load_keeping_identities` and `enter_keeping_identities`, backed
+  by an empty namespace in `World::add_scene`.
+
+  Found by wiring Gather's host for scenes. Routing its opening scene through
+  the loader renamed every entity in the game — `shrine` became
+  `gather.scene.json/shrine` — and two tests that identify authored entities by
+  stable ID failed. The tests were right. Everything that resolves an entity by
+  stable ID was written against the identities in the *file*: a test, an editor
+  showing a running world, an authoring proposal naming a dozen entities. A
+  runtime that silently renamed them would make the two disagree about what
+  anything is called.
+
+  So a project's own opening scene keeps its authored identities, and guest
+  scenes are namespaced. The cost, stated rather than discovered: an
+  unnamespaced scene has no room for a second one using the same IDs, and that
+  is refused rather than resolved.
+
+- **Gather's host plays scenes rather than a scene.** The session holds every
+  scene the project can reach, which of them are in the world, and which one is
+  being played; a request from `Scene.go` is performed after the frame, never
+  inside it.
+
+  The opening scene is loaded through the same loader as any other, under a root
+  that can be switched off. A world whose first scene had been poured in flat
+  would be the one place a game could never leave.
+
 - **Gather's ground is rebuilt.** One `ground` sheet replaces `tiles`: three
   turf variants, a flowering one, tilled and watered soil, a path, flagstone
   and water. Groundwork for the farming game, and the first art authored

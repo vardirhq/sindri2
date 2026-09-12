@@ -64,11 +64,43 @@ impl LoadedScenes {
     /// The root is an entity of its own rather than the scene's first entity,
     /// so a scene with several roots still has exactly one switch, and so the
     /// switch exists before anything is under it.
+    /// Loads a scene into the world if it is not already there, and returns the
+    /// root it lives under.
+    ///
+    /// The scene's stable IDs are namespaced by `name`. Use
+    /// [`Self::load_keeping_identities`] for a project's own opening scene,
+    /// where the identities in the file are the ones everything else was
+    /// written against.
     pub fn load(
         &mut self,
         world: &mut World,
         name: &str,
         scene: &SceneDocument,
+    ) -> Result<EntityId, WorldError> {
+        self.load_under(world, name, scene, name)
+    }
+
+    /// The same, keeping the identities the scene file spells.
+    ///
+    /// For the scene a project opens on. Everything that resolves an entity by
+    /// stable ID was written against the file, so renaming them at load would
+    /// make the runtime and the file disagree about what anything is called.
+    /// See `World::add_scene` on the cost.
+    pub fn load_keeping_identities(
+        &mut self,
+        world: &mut World,
+        name: &str,
+        scene: &SceneDocument,
+    ) -> Result<EntityId, WorldError> {
+        self.load_under(world, name, scene, "")
+    }
+
+    fn load_under(
+        &mut self,
+        world: &mut World,
+        name: &str,
+        scene: &SceneDocument,
+        namespace: &str,
     ) -> Result<EntityId, WorldError> {
         if let Some(root) = self.roots.get(name) {
             return Ok(*root);
@@ -84,7 +116,7 @@ impl LoadedScenes {
         // If the scene will not load, the root it would have lived under goes
         // away with it: a name that half-exists is worse than one that does
         // not, because `holds` would answer yes for an empty scene.
-        if let Err(error) = world.add_scene(scene, name, Some(root)) {
+        if let Err(error) = world.add_scene(scene, namespace, Some(root)) {
             let _ = world.despawn_recursive(root);
             return Err(error);
         }
@@ -121,8 +153,28 @@ impl LoadedScenes {
         name: &str,
         scene: &SceneDocument,
     ) -> Result<EntityId, SceneSwitchError> {
+        self.enter_under(world, name, scene, name)
+    }
+
+    /// The same, keeping the identities the scene file spells.
+    pub fn enter_keeping_identities(
+        &mut self,
+        world: &mut World,
+        name: &str,
+        scene: &SceneDocument,
+    ) -> Result<EntityId, SceneSwitchError> {
+        self.enter_under(world, name, scene, "")
+    }
+
+    fn enter_under(
+        &mut self,
+        world: &mut World,
+        name: &str,
+        scene: &SceneDocument,
+        namespace: &str,
+    ) -> Result<EntityId, SceneSwitchError> {
         let root = self
-            .load(world, name, scene)
+            .load_under(world, name, scene, namespace)
             .map_err(|source| SceneSwitchError::Load {
                 scene: name.to_owned(),
                 source,

@@ -34,7 +34,8 @@ mod session;
 pub use assets::TEXTURES;
 #[cfg(not(target_arch = "wasm32"))]
 pub use assets::{
-    AUDIO, FONTS, SHEETS, TEXTURE_IDS, bind_fonts, bind_textures, sources, stylesheets, world,
+    AUDIO, FONTS, SHEETS, TEXTURE_IDS, bind_fonts, bind_textures, scenes, sources, stylesheets,
+    world,
 };
 pub use assets::{extractor, presented_world};
 pub use error::GatherError;

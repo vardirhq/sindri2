@@ -62,8 +62,9 @@ async fn capture(path: &Path) -> Result<(), Box<dyn Error>> {
     let (textures, bindings) = sindri_gather::bind_textures(&gpu.device, &gpu.queue)?;
 
     let scene = extractor()?;
-    let mut world = world()?;
-    let mut session = Session::new(scene.components().clone());
+    let (mut world, loaded) = world()?;
+    let mut session =
+        Session::new(scene.components().clone()).with_scenes(sindri_gather::scenes()?, loaded);
     for (keys, steps) in RUN {
         // Rebuilt each leg rather than released, because that is the state the
         // window reports: a key that is down stays down until it comes up.

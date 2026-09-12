@@ -14,6 +14,10 @@ pub enum GatherError {
     #[error("the manifest records no scene, so there is nothing to open")]
     MissingScene,
     #[error(transparent)]
+    SceneSwitch(#[from] sindri_core::SceneSwitchError),
+    #[error("no scene named '{0}' is in this project")]
+    UnknownScene(String),
+    #[error(transparent)]
     Document(#[from] sindri_core::SceneError),
     #[error(transparent)]
     World(#[from] sindri_core::WorldError),

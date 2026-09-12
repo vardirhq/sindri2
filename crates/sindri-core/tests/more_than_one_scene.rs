@@ -329,3 +329,60 @@ fn unloading_takes_a_scene_out_of_the_world() {
         "unloading what is not there is not an error"
     );
 }
+
+/// A project's own opening scene keeps the identities its file spells.
+///
+/// Everything that resolves an entity by stable ID was written against the
+/// file: an editor showing a running world, an authoring proposal naming a
+/// dozen entities. A runtime that renamed them would make the two disagree
+/// about what anything is called.
+#[test]
+fn an_empty_namespace_keeps_the_authored_identities() {
+    let mut world = World::default();
+    let added = world
+        .add_scene(&cottage("door"), "", None)
+        .expect("the scene loads");
+    assert_eq!(added.source_ids[&id("door")], id("door"));
+    assert_eq!(
+        world.entity_for_source_id(&id("door")),
+        Some(added.entity_map[&id("door")]),
+        "and is reachable by the identity the file gave it"
+    );
+    assert!(
+        world.entity_for_source_id(&id("/door")).is_none(),
+        "with no separator left behind"
+    );
+}
+
+/// The cost of that, said out loud: an unnamespaced scene has no room for a
+/// second one using the same IDs, and it is refused rather than resolved.
+#[test]
+fn an_unnamespaced_scene_still_refuses_a_collision() {
+    let mut world = World::default();
+    world
+        .add_scene(&cottage("door"), "", None)
+        .expect("the first load");
+    assert!(
+        world.add_scene(&cottage("door"), "", None).is_err(),
+        "two scenes cannot both own the authored identities"
+    );
+}
+
+/// And the two can live side by side: the opening scene keeps its names, a
+/// guest scene is namespaced, and neither treads on the other.
+#[test]
+fn an_opening_scene_and_a_guest_scene_coexist() {
+    let mut world = World::default();
+    let opening = world
+        .add_scene(&cottage("door"), "", None)
+        .expect("the opening scene");
+    let guest = world
+        .add_scene(&cottage("door"), "house", None)
+        .expect("a guest scene");
+    assert_eq!(opening.source_ids[&id("door")], id("door"));
+    assert_eq!(guest.source_ids[&id("door")], id("house/door"));
+    assert_ne!(
+        opening.entity_map[&id("door")],
+        guest.entity_map[&id("door")]
+    );
+}

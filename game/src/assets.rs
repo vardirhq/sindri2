@@ -68,9 +68,17 @@ pub const TEXTURE_IDS: &[&str] = &[
     "textures/tree.png",
 ];
 
-/// The scene and scripts are embedded only in native builds.
+/// The scenes and scripts are embedded only in native builds.
+///
+/// Every scene the project declares, the one it opens on first, which is the
+/// order `sindri.toml` lists them in and the order the session enters them.
+/// A game with interiors reaches them by name, so all of them have to be here
+/// — a browser build fetches the same IDs through the real asset pipeline.
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) const SCENE: &str = include_str!("../assets/gather.scene.json");
+pub(crate) const SCENES: &[(&str, &str)] = &[(
+    "gather.scene.json",
+    include_str!("../assets/gather.scene.json"),
+)];
 
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) const SCRIPTS: &[(&str, &str)] = &[
@@ -283,11 +291,33 @@ pub fn extractor() -> Result<SceneExtractor, GatherError> {
     Ok(extractor)
 }
 
-/// The embedded native scene as a world, ready to run.
+/// Every embedded scene, parsed, in the order a session should enter them.
 #[cfg(not(target_arch = "wasm32"))]
-pub fn world() -> Result<World, GatherError> {
-    let document = SceneDocument::from_json(SCENE)?;
-    Ok(World::from_scene(&document)?.world)
+pub fn scenes() -> Result<Vec<(String, SceneDocument)>, GatherError> {
+    SCENES
+        .iter()
+        .map(|(id, json)| Ok(((*id).to_owned(), SceneDocument::from_json(json)?)))
+        .collect()
+}
+
+/// A world with the opening scene in it, ready to run.
+///
+/// Loaded through [`sindri_core::LoadedScenes`] rather than straight into the
+/// world, so the opening scene is a scene like any other: it sits under a root
+/// that can be switched off when the player walks somewhere else. A world whose
+/// first scene had been poured in flat would be the one place a game could
+/// never leave.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn world() -> Result<(World, sindri_core::LoadedScenes), GatherError> {
+    let mut world = World::default();
+    let mut loaded = sindri_core::LoadedScenes::new();
+    let scenes = scenes()?;
+    let (name, document) = scenes.first().ok_or(GatherError::MissingScene)?;
+    // The opening scene keeps the identities its file spells: everything that
+    // names an entity by stable ID -- a test, an editor showing a running
+    // world, an authoring proposal -- was written against those.
+    loaded.enter_keeping_identities(&mut world, name, document)?;
+    Ok((world, loaded))
 }
 
 /// The native equivalent of the stylesheet graph the browser fetches.

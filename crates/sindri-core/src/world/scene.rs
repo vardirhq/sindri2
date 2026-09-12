@@ -84,6 +84,14 @@ impl World {
     /// `house/door`. A collision after that is a caller giving two scenes the
     /// same namespace, and is refused rather than resolved.
     ///
+    /// An **empty** namespace keeps the authored identities exactly as the file
+    /// spells them. That is for a project's own opening scene: everything that
+    /// resolves an entity by stable ID — an editor showing a running world, an
+    /// authoring proposal naming a dozen entities — was written against the
+    /// identities in the file, and a runtime that silently renamed them would
+    /// make the two disagree. The cost is that an unnamespaced scene can
+    /// collide with another, which is refused the same way.
+    ///
     /// This is a runtime capability. [`World::to_scene`] writes one document,
     /// so a world holding several scenes does not round-trip back into the
     /// files it came from — the editor still edits one scene at a time.
@@ -109,7 +117,11 @@ impl World {
         // holding a scene nobody asked for.
         let mut namespaced = HashMap::with_capacity(scene.entities.len());
         for entity in &scene.entities {
-            let id = SceneEntityId::new(format!("{namespace}/{}", entity.id.as_str()))?;
+            let id = if namespace.is_empty() {
+                entity.id.clone()
+            } else {
+                SceneEntityId::new(format!("{namespace}/{}", entity.id.as_str()))?
+            };
             if taken.contains(&id) {
                 return Err(WorldError::DuplicateSourceId(id));
             }
