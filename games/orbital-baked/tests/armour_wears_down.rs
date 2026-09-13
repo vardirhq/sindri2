@@ -147,9 +147,9 @@ fn spine_builds_its_nine_segment_body_at_runtime() {
 fn every_spine_section_replays_one_cardinal_route() {
     let mut run = isolated_run();
     let boss = spawn_spine(&mut run);
-    for _ in 0..6 {
-        step(&mut run);
-    }
+    // Build the body, then seed each predecessor's implied pre-spawn trail
+    // while all ten sections still lie on the head's first cardinal lane.
+    step(&mut run);
 
     let mut segments = tagged(&run, "spine_segment");
     segments.sort_by(|left, right| {
@@ -165,7 +165,7 @@ fn every_spine_section_replays_one_cardinal_route() {
         .map(|leader| initial[leader..].iter().rev().copied().collect())
         .collect();
 
-    for _ in 0..240 {
+    for frame in 0..240 {
         step(&mut run);
         let positions: Vec<_> = chain.iter().map(|entity| position(&run, *entity)).collect();
         for (index, entity) in chain.iter().copied().enumerate() {
@@ -181,7 +181,7 @@ fn every_spine_section_replays_one_cardinal_route() {
             if index > 0 {
                 assert!(
                     point_is_on_route(positions[index], &routes[index - 1]),
-                    "Spine section {entity:?} left the exact route of its predecessor"
+                    "Spine section {entity:?} left its predecessor's exact route on frame {frame}"
                 );
             }
         }
@@ -206,12 +206,19 @@ fn destroying_a_middle_segment_severs_and_promotes_the_rear_chain() {
         0,
         "Spine follows a cardinal predecessor route rather than behaving as a rope"
     );
-    let target = run
+    let mut target = run
         .world
         .get(cut)
         .and_then(|data| data.transform_3d.as_ref())
         .expect("the middle section has a transform")
         .position;
+    let velocity = run
+        .physics
+        .world()
+        .linear_velocity(cut)
+        .expect("the middle section has a physics body");
+    target[0] += velocity[0] * STEP;
+    target[1] += velocity[1] * STEP;
     let bullet = run
         .prefabs
         .get("prefabs/bullet.prefab.json")
