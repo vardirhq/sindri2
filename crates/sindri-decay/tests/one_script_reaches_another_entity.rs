@@ -125,8 +125,7 @@ fn runtime_signals_accumulate_for_one_recipient_and_are_consumed() {
     assert!(world.get(sender).is_some());
     let signal_result = position(&world, receiver);
     assert!(
-        (signal_result[0] - 2.0).abs() < f32::EPSILON
-            && signal_result[1].abs() < f32::EPSILON,
+        (signal_result[0] - 2.0).abs() < f32::EPSILON && signal_result[1].abs() < f32::EPSILON,
         "the receiver should take the accumulated signal exactly once, and is at {signal_result:?}"
     );
 }
