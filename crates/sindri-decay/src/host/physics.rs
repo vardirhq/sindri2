@@ -32,6 +32,9 @@ impl WorldHost<'_> {
         if call.is_event() {
             return self.physics_events(call, path);
         }
+        if matches!(call, PhysicsCall::ConnectDistance) {
+            return self.connect_distance(path, args);
+        }
         let entity = self.entity_argument(path, args, 0, "the body")?;
         // Whether the entity authored physics at all, asked before the physics
         // world is borrowed. A body that is authored but not yet built is the
@@ -93,8 +96,44 @@ impl WorldHost<'_> {
                 outcome.map_err(|error| body_error(path, &error))?;
                 Ok(Value::Unit)
             }
+            PhysicsCall::ConnectDistance => unreachable!("answered before the one-body path"),
             _ => unreachable!("event calls answered above"),
         }
+    }
+
+    fn connect_distance(&mut self, path: &Path, args: &[Value]) -> Result<Value, RuntimeError> {
+        let first = self.entity_argument(path, args, 0, "the first body")?;
+        let second = self.entity_argument(path, args, 1, "the second body")?;
+        let distance = number(path, args.get(2).unwrap_or(&Value::Null))?;
+        #[allow(clippy::cast_possible_truncation)]
+        let distance = distance as f32;
+
+        let first_authored = self
+            .world
+            .get(first)
+            .is_some_and(|data| data.components.contains_key(COLLIDER));
+        let second_authored = self
+            .world
+            .get(second)
+            .is_some_and(|data| data.components.contains_key(COLLIDER));
+        let Some(physics) = self.physics.as_mut() else {
+            return Err(no_physics(path));
+        };
+        let outcome = match physics.world.connect_distance(first, second, distance) {
+            // A chain is normally created in one script pass: all its entities
+            // exist immediately, while their backend bodies appear at the next
+            // scene synchronization. Queue exactly that valid lifecycle window.
+            Err(sindri_physics::PhysicsError::MissingEntity(_))
+                if first_authored && second_authored =>
+            {
+                physics
+                    .world
+                    .remember_distance_joint(first, second, distance)
+            }
+            other => other,
+        };
+        outcome.map_err(|error| body_error(path, &error))?;
+        Ok(Value::Unit)
     }
 
     /// What this entity started or stopped touching during the last step.
