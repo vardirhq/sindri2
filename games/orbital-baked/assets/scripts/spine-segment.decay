@@ -1,0 +1,144 @@
+// One physical section of Spine's body. Sections follow the section in front
+// of them until one is destroyed; the severed rear chain promotes its first
+// surviving section into a new head and keeps moving on its own.
+script SpineSegment {
+    @export let slot: f32 = 0.0;
+    @export let group: f32 = 0.0;
+    @export let head: f32 = 0.0;
+    @export let health: f32 = 10.0;
+    @export let spacing: f32 = 0.72;
+
+    var hp: f32 = 0.0;
+    var clock: f32 = 0.0;
+    var state: f32 = 0.0;
+
+    fn start() {
+        this.hp = this.health;
+        this.clock = this.slot * 0.31;
+    }
+
+    fn spine() -> Entity {
+        for boss in World.with_tag("boss") {
+            if World.exists(boss) && World.property_number(boss, "spine_marker", 0.0) > 0.0 {
+                return boss;
+            }
+        }
+        return null;
+    }
+
+    fn leader() -> Entity {
+        if this.head > 0.0 { return null; }
+        if this.group == 0.0 && this.slot == 0.0 { return spine(); }
+        let wanted = this.slot - 1.0;
+        for part in World.with_tag("spine_segment") {
+            if part == this.entity || !World.exists(part) { continue; }
+            if World.property_number(part, "group", -1.0) == this.group &&
+               World.property_number(part, "slot", -99.0) == wanted {
+                return part;
+            }
+        }
+        return null;
+    }
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 1.0 {
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+            return;
+        }
+        this.clock += dt;
+        receive_hits();
+        if !World.exists(this.entity) { return; }
+
+        if this.head > 0.0 { hunt_player(); return; }
+        let ahead = leader();
+        if ahead == null {
+            // A predecessor vanished without getting to perform its split pass.
+            // Promote rather than leaving an immortal decorative vertebra.
+            this.head = 1.0;
+            hunt_player();
+            return;
+        }
+        follow(ahead);
+    }
+
+    fn follow(ahead: Entity) {
+        let dx = ahead.transform.position.x - this.transform.position.x;
+        let dy = ahead.transform.position.y - this.transform.position.y;
+        let far = sqrt(dx * dx + dy * dy);
+        if far <= 0.001 {
+            Physics.set_velocity(this.entity, 0.0, 0.0);
+            return;
+        }
+        // The spring term keeps the chain compact while velocity ownership keeps
+        // the collider exactly where the player sees the segment.
+        let error = far - this.spacing;
+        let speed = max(-1.4, min(5.8, error * 8.0));
+        Physics.set_velocity(this.entity, dx / far * speed, dy / far * speed);
+        this.transform.rotation_z = atan2(dy, dx);
+    }
+
+    fn hunt_player() {
+        let player = World.find("Player");
+        if player == null { return; }
+        let dx = player.transform.position.x - this.transform.position.x;
+        let dy = player.transform.position.y - this.transform.position.y;
+        let far = sqrt(dx * dx + dy * dy);
+        if far <= 0.001 { return; }
+        let nx = dx / far;
+        let ny = dy / far;
+        let weave = sin(this.clock * 2.4 + this.slot * 0.7) * 0.72;
+        Physics.set_velocity(this.entity,
+            nx * 1.35 - ny * weave,
+            ny * 1.35 + nx * weave);
+        this.transform.rotation_z = atan2(dy, dx);
+    }
+
+    fn receive_hits() {
+        for hit in Physics.sensor_entered() {
+            if !World.exists(hit) { continue; }
+            if World.has_tag(hit, "player_damage") {
+                this.hp -= World.property_number(hit, "damage", 0.0);
+                World.despawn(hit);
+            } else if World.has_tag(hit, "player") {
+                Game.set("player_damage_taken",
+                         max(Game.get("player_damage_taken", 0.0), 1.7));
+            }
+        }
+        if this.hp <= 0.0 { split(); return; }
+
+        let share = this.hp / max(this.health, 0.001);
+        if share < 0.34 && this.state < 2.0 {
+            this.state = 2.0;
+            this.shape.fill.r = 1.0;
+            this.shape.fill.g = 0.24;
+            this.shape.fill.b = 0.34;
+        } else if share < 0.67 && this.state < 1.0 {
+            this.state = 1.0;
+            this.shape.fill.r = 1.0;
+            this.shape.fill.g = 0.42;
+            this.shape.fill.b = 0.52;
+        }
+    }
+
+    fn split() {
+        let old_group = this.group;
+        let new_group = this.slot + 1.0;
+        var promoted: f32 = 0.0;
+        for part in World.with_tag("spine_segment") {
+            if part == this.entity || !World.exists(part) { continue; }
+            let part_group = World.property_number(part, "group", -1.0);
+            let part_slot = World.property_number(part, "slot", -1.0);
+            if part_group == old_group && part_slot > this.slot {
+                World.set_property(part, "group", new_group);
+                if promoted == 0.0 && part_slot == this.slot + 1.0 {
+                    World.set_property(part, "head", 1.0);
+                    promoted = 1.0;
+                }
+            }
+        }
+        Effects.burst(this.entity);
+        Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.22));
+        Audio.play("audio/kill.wav", 0.25);
+        World.despawn(this.entity);
+    }
+}
