@@ -83,7 +83,10 @@ fn spine_builds_its_nine_segment_body_at_runtime() {
         step(&mut run);
     }
 
-    assert!(run.world.get(boss).is_some(), "Spine disappeared during startup");
+    assert!(
+        run.world.get(boss).is_some(),
+        "Spine disappeared during startup"
+    );
     let segments = tagged(&run, "spine_segment");
     assert_eq!(
         segments.len(),
@@ -117,7 +120,11 @@ fn every_armour_clip_names_frames_the_sheet_holds() {
     let clips = json["entities"][0]["components"]["sindri.animation.sprite"]["clips"]
         .as_object()
         .expect("the boss has clips");
-    assert_eq!(clips.len(), 5, "the baked head still ships five clips: {clips:?}");
+    assert_eq!(
+        clips.len(),
+        5,
+        "the baked head still ships five clips: {clips:?}"
+    );
     for (name, clip) in clips {
         let frames = clip["frames"].as_array().expect("frames");
         assert!(!frames.is_empty(), "clip {name} has no frames");
