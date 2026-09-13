@@ -217,7 +217,10 @@ script SpineSegment {
             this.dir_x = 0.0;
             this.dir_y = 1.0; if dy < 0.0 { this.dir_y = -1.0; }
         }
-        this.turn_clock = 0.55;
+        // A severed chain uses the same deliberate corner cadence as the main
+        // Spine, so its own followers can finish each saved corner before a new
+        // one is introduced.
+        this.turn_clock = 1.1;
     }
 
     fn grid_hunt() {
