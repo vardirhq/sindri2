@@ -22,6 +22,13 @@ impl SceneExtractor {
         batches: &mut SpriteBatches,
     ) -> Result<(), SceneExtractError> {
         for (entity, volume) in self.components.query::<TileVolumeComponent>(world)? {
+            // A freshly added volume is intentionally empty and has no tile-set
+            // reference yet. There is nothing to render, so requiring a grid or
+            // asset before the author has had a chance to choose either would
+            // turn Add Component into an immediate scene error.
+            if volume.cells.is_empty() && volume.tileset.is_empty() {
+                continue;
+            }
             let grid = self
                 .components
                 .get::<TileGridComponent>(world, entity)?
