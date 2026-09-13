@@ -19,10 +19,10 @@
     },
     {
       "id": "lab-player", "name": "Player", "parent": null,
-      "transform_3d": { "position": [0.0,-2.3,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [0.55,0.55,1.0] },
+      "transform_3d": { "position": [0.0,-2.3,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [0.42,0.42,1.0] },
       "components": {
         "sindri.tags": { "tags": ["player", "combat_lab_player"] },
-        "sindri.shape": { "kind": "polygon", "count": 3.0, "fill": [0.25,0.95,0.82,0.8], "stroke": [0.7,1.0,0.95,1.0], "stroke_width": 0.05, "corner_radius": 0.0, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "add", "layer": 10 },
+        "sindri.sprite": { "texture": "textures/player.png#hull-0", "tint": [1.0,1.0,1.0,1.0], "layer": 10 },
         "sindri.physics2d.rigid_body": { "kind": "dynamic", "pose": { "position": [0.0,-2.3], "rotation": 0.0 }, "linear_velocity": [0.0,0.0], "angular_velocity": 0.0, "gravity_scale": 0.0, "linear_damping": 0.0, "angular_damping": 0.0, "lock_rotation": true },
         "sindri.physics2d.collider": { "shape": { "shape": "circle", "radius": 0.28 }, "offset": [0.0,0.0], "rotation": 0.0, "sensor": true, "layers": { "memberships": 4, "filter": 2 }, "friction": 0.0, "restitution": 0.0 },
         "sindri.script": { "source": "scripts/combat-lab-player.decay", "script": "CombatLabPlayer", "properties": { "speed": 5.2, "view_size": 11.0 } }
@@ -39,7 +39,8 @@
             "gas_cloud": "prefabs/attack-gas-cloud.prefab.json",
             "hostile_mine": "prefabs/attack-hostile-mine.prefab.json",
             "shockwave": "prefabs/attack-shockwave.prefab.json",
-            "gravity_well": "prefabs/attack-gravity-well.prefab.json"
+            "gravity_well": "prefabs/attack-gravity-well.prefab.json",
+            "target": "prefabs/combat-lab-target.prefab.json"
           }
         }
       }

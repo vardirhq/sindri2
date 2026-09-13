@@ -14,7 +14,8 @@
           "gas_cloud": "prefabs/attack-gas-cloud.prefab.json",
           "hostile_mine": "prefabs/attack-hostile-mine.prefab.json",
           "shockwave": "prefabs/attack-shockwave.prefab.json",
-          "gravity_well": "prefabs/attack-gravity-well.prefab.json"
+          "gravity_well": "prefabs/attack-gravity-well.prefab.json",
+          "target": "prefabs/combat-lab-target.prefab.json"
         }
       }
     }

@@ -22,6 +22,10 @@ script GasCloud {
     fn update(dt: f32) {
         if Game.get("run_state", 0.0) != 1.0 { return; }
         this.age += dt;
+        if World.property_number(this.entity, "ignite", 0.0) > 0.0 {
+            ignite();
+            return;
+        }
         this.tick -= dt;
         this.transform.position.x += this.drift_x * dt;
         this.transform.position.y += this.drift_y * dt;
@@ -36,10 +40,43 @@ script GasCloud {
                 Game.set("player_damage_taken", max(Game.get("player_damage_taken", 0.0), this.damage));
                 Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.12));
             }
+            damage_targets(this.damage);
             this.tick = this.tick_gap;
         }
 
         if this.age >= this.lifetime { World.despawn(this.entity); }
+    }
+
+    fn damage_targets(amount: f32) {
+        for target in World.with_tag("attack_damageable") {
+            if !World.exists(target) { continue; }
+            let dx = target.transform.position.x - this.transform.position.x;
+            let dy = target.transform.position.y - this.transform.position.y;
+            if dx * dx + dy * dy <= this.current_radius * this.current_radius {
+                let pending = World.property_number(target, "hazard_damage", 0.0);
+                World.set_property(target, "hazard_damage", pending + amount);
+            }
+        }
+    }
+
+    fn ignite() {
+        let blast = this.current_radius * 1.3;
+        this.current_radius = blast;
+        damage_targets(this.damage * 3.0);
+        let player = World.find("Player");
+        if player != null {
+            let dx = player.transform.position.x - this.transform.position.x;
+            let dy = player.transform.position.y - this.transform.position.y;
+            if dx * dx + dy * dy <= blast * blast {
+                Game.set("player_damage_taken", max(Game.get("player_damage_taken", 0.0), this.damage * 1.7));
+            }
+        }
+        this.transform.scale.x = blast * 2.0;
+        this.transform.scale.y = blast * 2.0;
+        Effects.burst(this.entity);
+        Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.34));
+        Audio.play("audio/boss.wav", 0.24);
+        World.despawn(this.entity);
     }
 
     fn sync_visual() {

@@ -16,6 +16,11 @@ script HostileMine {
         this.age += dt;
         this.transform.rotation_z += dt * 1.7;
 
+        if World.property_number(this.entity, "detonate_now", 0.0) > 0.0 {
+            detonate();
+            return;
+        }
+
         let player = World.find("Player");
         if player != null && this.age >= this.arm_delay && this.countdown < 0.0 {
             let dx = player.transform.position.x - this.transform.position.x;
@@ -49,11 +54,50 @@ script HostileMine {
                 Game.set("player_damage_taken", max(Game.get("player_damage_taken", 0.0), this.damage));
             }
         }
+        damage_targets();
+        chain_mines();
+        ignite_gas();
         this.transform.scale.x = this.blast_radius * 2.0;
         this.transform.scale.y = this.blast_radius * 2.0;
         Effects.burst(this.entity);
         Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.38));
         Audio.play("audio/boss.wav", 0.32);
         World.despawn(this.entity);
+    }
+
+    fn damage_targets() {
+        for target in World.with_tag("attack_damageable") {
+            if !World.exists(target) { continue; }
+            let dx = target.transform.position.x - this.transform.position.x;
+            let dy = target.transform.position.y - this.transform.position.y;
+            if dx * dx + dy * dy <= this.blast_radius * this.blast_radius {
+                let pending = World.property_number(target, "hazard_damage", 0.0);
+                World.set_property(target, "hazard_damage", pending + this.damage);
+            }
+        }
+    }
+
+    fn chain_mines() {
+        let reach = this.blast_radius * 1.15;
+        for mine in World.with_tag("attack_mine") {
+            if mine == this.entity || !World.exists(mine) { continue; }
+            let dx = mine.transform.position.x - this.transform.position.x;
+            let dy = mine.transform.position.y - this.transform.position.y;
+            if dx * dx + dy * dy <= reach * reach {
+                World.set_property(mine, "detonate_now", 1.0);
+            }
+        }
+    }
+
+    fn ignite_gas() {
+        let reach = this.blast_radius * 1.25;
+        for cloud in World.with_tag("attack_gas") {
+            if !World.exists(cloud) { continue; }
+            let dx = cloud.transform.position.x - this.transform.position.x;
+            let dy = cloud.transform.position.y - this.transform.position.y;
+            if dx * dx + dy * dy <= reach * reach {
+                World.set_property(cloud, "ignite", 1.0);
+            }
+        }
     }
 }
