@@ -8,6 +8,9 @@ script GasCloud {
     @export let drift_x: f32 = 0.0;
     @export let drift_y: f32 = 0.0;
     @export let grow: f32 = 0.18;
+    // External reaction input. Mines and future fire attacks can ignite the
+    // cloud without knowing anything about its implementation.
+    @export let ignite: f32 = 0.0;
 
     var age: f32 = 0.0;
     var tick: f32 = 0.0;

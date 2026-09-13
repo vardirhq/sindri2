@@ -6,6 +6,8 @@ script HostileMine {
     @export let fuse: f32 = 0.7;
     @export let lifetime: f32 = 8.0;
     @export let damage: f32 = 1.4;
+    // External reaction input used by shockwaves and neighbouring mines.
+    @export let detonate_now: f32 = 0.0;
 
     var age: f32 = 0.0;
     var countdown: f32 = -1.0;

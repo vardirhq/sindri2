@@ -71,7 +71,9 @@ fn shot_for(name: &str) -> Shot {
         // Opening the scene directly keeps this deterministic and ensures the
         // capture proves the attack prefabs rather than title-screen input.
         "lab" => Shot {
-            seconds: 1.4,
+            // Long enough for the telegraphs to establish, but before the
+            // shockwave reaches the mines and resolves the whole composition.
+            seconds: 0.32,
             clicks: Vec::new(),
         },
         // The title screen, which is what a player sees first and what every

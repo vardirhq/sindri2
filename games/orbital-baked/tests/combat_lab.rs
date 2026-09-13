@@ -128,8 +128,16 @@ fn the_stress_preset_has_real_cross_attack_reactions() {
         step(&mut run);
     }
 
-    assert_eq!(run.count("attack_mine"), 0, "the wave did not start the chain");
-    assert_eq!(run.count("attack_gas"), 0, "the mine blast did not ignite the gas");
+    assert_eq!(
+        run.count("attack_mine"),
+        0,
+        "the wave did not start the chain"
+    );
+    assert_eq!(
+        run.count("attack_gas"),
+        0,
+        "the mine blast did not ignite the gas"
+    );
     assert!(
         run.count("lab_target") < 4,
         "composed attacks did not affect their reactive environment"
