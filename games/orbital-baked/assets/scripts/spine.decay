@@ -111,14 +111,14 @@ script Spine {
 
     fn half_x() -> f32 {
         let aspect = max(Viewport.aspect, 0.001);
-        if aspect >= 1.0 { return this.view_size * 0.5 * aspect - 0.75; }
-        return this.view_size * 0.5 - 0.75;
+        if aspect >= 1.0 { return this.view_size * 0.5 * aspect - 0.9; }
+        return this.view_size * 0.5 - 0.9;
     }
 
     fn half_y() -> f32 {
         let aspect = max(Viewport.aspect, 0.001);
-        if aspect >= 1.0 { return this.view_size * 0.5 - 0.75; }
-        return this.view_size * 0.5 / aspect - 0.75;
+        if aspect >= 1.0 { return this.view_size * 0.5 - 0.9; }
+        return this.view_size * 0.5 / aspect - 0.9;
     }
 
     fn choose_turn(player: Entity) {
@@ -139,6 +139,12 @@ script Spine {
     fn grid_move(player: Entity) {
         let hx = half_x();
         let hy = half_y();
+
+        // Kinematic velocity can overshoot an edge between frames. Clamp first,
+        // then choose the next cardinal direction from a position guaranteed to
+        // be inside the visible arena.
+        this.transform.position.x = max(-hx, min(hx, this.transform.position.x));
+        this.transform.position.y = max(-hy, min(hy, this.transform.position.y));
         let x = this.transform.position.x;
         let y = this.transform.position.y;
         var must_turn: f32 = 0.0;
@@ -148,7 +154,6 @@ script Spine {
         if this.dir_y < 0.0 && y <= -hy { must_turn = 1.0; }
         if this.turn_clock <= 0.0 || must_turn > 0.0 { choose_turn(player); }
 
-        // Never choose a direction that points through the arena boundary.
         if x >= hx && this.dir_x > 0.0 { this.dir_x = 0.0; this.dir_y = -1.0; }
         if x <= -hx && this.dir_x < 0.0 { this.dir_x = 0.0; this.dir_y = 1.0; }
         if y >= hy && this.dir_y > 0.0 { this.dir_y = 0.0; this.dir_x = 1.0; }
