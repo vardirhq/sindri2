@@ -14,17 +14,16 @@ script Spine {
     var hp: f32 = 0.0;
     var phase: f32 = 1.0;
     var previous_phase: f32 = 1.0;
-    var attack: f32 = 0.7;
-    var special: f32 = 2.5;
     var clock: f32 = 0.0;
     var built: f32 = 0.0;
     var death_burst_damage: f32 = 0.0;
+    var dir_x: f32 = 1.0;
+    var dir_y: f32 = 0.0;
+    var turn_clock: f32 = 0.0;
 
     fn start() {
         let elapsed = Game.get("elapsed", 0.0);
         let scale = 1.0 + min(1.35, max(0.0, elapsed - 60.0) * 0.0025);
-        // The body sections carry a large share of the encounter durability, so
-        // the head itself is deliberately lighter than the old monolithic boss.
         this.hp = 118.0 * scale;
         Game.set("boss_max", this.hp);
         Game.set("boss_hp", this.hp);
@@ -38,13 +37,13 @@ script Spine {
         var slot: f32 = 0.0;
         while slot < 9.0 {
             let part = World.spawn(this.segment);
-            part.transform.position.x = this.transform.position.x - (slot + 1.0) * 0.72;
+            part.transform.position.x = this.transform.position.x - (slot + 1.0) * 0.62;
             part.transform.position.y = this.transform.position.y;
             World.set_property(part, "slot", slot);
             World.set_property(part, "group", 0.0);
             World.set_property(part, "head", 0.0);
             World.set_property(part, "health", 11.0);
-            World.set_property(part, "spacing", 0.72);
+            World.set_property(part, "spacing", 0.62);
             slot += 1.0;
         }
     }
@@ -71,14 +70,9 @@ script Spine {
         if player == null { return; }
 
         this.clock += dt;
+        this.turn_clock -= dt;
         update_phase();
-        let dx = player.transform.position.x - this.transform.position.x;
-        let dy = player.transform.position.y - this.transform.position.y;
-        let far = sqrt(dx * dx + dy * dy);
-
-        if is_visible() { act(dt, dx, dy, far); }
-        else { chase(dx, dy, far, 1.0); }
-
+        grid_move(player);
         receive_hits(player);
         Game.set("boss_hp", max(this.hp, 0.0));
         if this.hp <= 0.0 { die(); }
@@ -92,8 +86,6 @@ script Spine {
 
         if this.phase != this.previous_phase {
             this.previous_phase = this.phase;
-            this.attack = 0.2;
-            this.special = 0.5;
             Effects.burst(this.entity);
             Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.35));
             Audio.play("audio/boss.wav", 0.5);
@@ -117,111 +109,59 @@ script Spine {
         }
     }
 
-    fn chase(dx: f32, dy: f32, far: f32, scale: f32) {
-        if far <= 0.001 { return; }
-        Physics.set_velocity(this.entity,
-            dx / far * 1.15 * scale,
-            dy / far * 1.15 * scale);
-        this.transform.rotation_z = atan2(dy, dx);
-    }
-
-    fn snake(dx: f32, dy: f32, far: f32) {
-        if far <= 0.001 { return; }
-        let nx = dx / far;
-        let ny = dy / far;
-        var speed: f32 = 1.0;
-        var bend: f32 = 0.62;
-        if this.phase == 2.0 { speed = 1.18; bend = 0.82; }
-        if this.phase == 3.0 { speed = 1.38; bend = 1.05; }
-        let weave = sin(this.clock * (1.8 + this.phase * 0.35)) * bend;
-        Physics.set_velocity(this.entity,
-            nx * speed - ny * weave,
-            ny * speed + nx * weave);
-        this.transform.rotation_z = atan2(dy, dx);
-    }
-
-    fn fire_at(angle: f32, velocity: f32, damage: f32) {
-        let bolt = World.spawn(this.shot);
-        bolt.transform.position.x = this.transform.position.x + cos(angle) * 0.65;
-        bolt.transform.position.y = this.transform.position.y + sin(angle) * 0.65;
-        World.set_property(bolt, "dir_x", cos(angle));
-        World.set_property(bolt, "dir_y", sin(angle));
-        World.set_property(bolt, "speed", velocity);
-        World.set_property(bolt, "damage", damage);
-    }
-
-    fn fire_fan(dx: f32, dy: f32, count: f32, velocity: f32, spread: f32) {
-        let base = atan2(dy, dx);
-        let half = (count - 1.0) * 0.5;
-        var slot: f32 = 0.0;
-        while slot < count {
-            fire_at(base + (slot - half) * spread, velocity, 1.0);
-            slot += 1.0;
-        }
-        Audio.play("audio/boss.wav", 0.34);
-    }
-
-    fn fire_body_wave() {
-        // Each surviving section contributes a shot. As the body fragments the
-        // volume falls, but the independent heads make movement less predictable.
-        for part in World.with_tag("spine_segment") {
-            if !World.exists(part) { continue; }
-            let angle = this.clock * 0.9 + World.property_number(part, "slot", 0.0) * 0.55;
-            let bolt = World.spawn(this.shot);
-            bolt.transform.position.x = part.transform.position.x;
-            bolt.transform.position.y = part.transform.position.y;
-            World.set_property(bolt, "dir_x", cos(angle));
-            World.set_property(bolt, "dir_y", sin(angle));
-            World.set_property(bolt, "speed", 3.2 + this.phase * 0.35);
-            World.set_property(bolt, "damage", 1.0);
-        }
-        Audio.play("audio/boss.wav", 0.42);
-    }
-
-    fn act(dt: f32, dx: f32, dy: f32, far: f32) {
-        snake(dx, dy, far);
-        this.attack -= dt;
-        this.special -= dt;
-
-        if this.attack <= 0.0 {
-            var count: f32 = 3.0;
-            var speed: f32 = 4.0;
-            if this.phase == 2.0 { count = 5.0; speed = 4.5; }
-            if this.phase == 3.0 { count = 7.0; speed = 5.0; }
-            fire_fan(dx, dy, count, speed, 0.16);
-            this.attack = max(0.62, 1.18 - this.phase * 0.16);
-        }
-
-        if this.special <= 0.0 {
-            fire_body_wave();
-            this.special = max(1.55, 3.15 - this.phase * 0.48);
-        }
-    }
-
-    fn visible_half_x() -> f32 {
+    fn half_x() -> f32 {
         let aspect = max(Viewport.aspect, 0.001);
-        if aspect >= 1.0 { return this.view_size * 0.5 * aspect; }
-        return this.view_size * 0.5;
+        if aspect >= 1.0 { return this.view_size * 0.5 * aspect - 0.75; }
+        return this.view_size * 0.5 - 0.75;
     }
 
-    fn visible_half_y() -> f32 {
+    fn half_y() -> f32 {
         let aspect = max(Viewport.aspect, 0.001);
-        if aspect >= 1.0 { return this.view_size * 0.5; }
-        return this.view_size * 0.5 / aspect;
+        if aspect >= 1.0 { return this.view_size * 0.5 - 0.75; }
+        return this.view_size * 0.5 / aspect - 0.75;
     }
 
-    fn is_visible() -> bool {
-        let half_x = visible_half_x();
-        let half_y = visible_half_y();
-        let radius = max(abs(this.transform.scale.x), abs(this.transform.scale.y)) * 0.5;
-        return this.transform.position.x + radius >= -half_x &&
-               this.transform.position.x - radius <= half_x &&
-               this.transform.position.y + radius >= -half_y &&
-               this.transform.position.y - radius <= half_y;
+    fn choose_turn(player: Entity) {
+        let dx = player.transform.position.x - this.transform.position.x;
+        let dy = player.transform.position.y - this.transform.position.y;
+        if abs(dx) > abs(dy) {
+            this.dir_x = 1.0;
+            if dx < 0.0 { this.dir_x = -1.0; }
+            this.dir_y = 0.0;
+        } else {
+            this.dir_x = 0.0;
+            this.dir_y = 1.0;
+            if dy < 0.0 { this.dir_y = -1.0; }
+        }
+        this.turn_clock = 0.48;
+    }
+
+    fn grid_move(player: Entity) {
+        let hx = half_x();
+        let hy = half_y();
+        let x = this.transform.position.x;
+        let y = this.transform.position.y;
+        var must_turn: f32 = 0.0;
+        if this.dir_x > 0.0 && x >= hx { must_turn = 1.0; }
+        if this.dir_x < 0.0 && x <= -hx { must_turn = 1.0; }
+        if this.dir_y > 0.0 && y >= hy { must_turn = 1.0; }
+        if this.dir_y < 0.0 && y <= -hy { must_turn = 1.0; }
+        if this.turn_clock <= 0.0 || must_turn > 0.0 { choose_turn(player); }
+
+        // Never choose a direction that points through the arena boundary.
+        if x >= hx && this.dir_x > 0.0 { this.dir_x = 0.0; this.dir_y = -1.0; }
+        if x <= -hx && this.dir_x < 0.0 { this.dir_x = 0.0; this.dir_y = 1.0; }
+        if y >= hy && this.dir_y > 0.0 { this.dir_y = 0.0; this.dir_x = 1.0; }
+        if y <= -hy && this.dir_y < 0.0 { this.dir_y = 0.0; this.dir_x = -1.0; }
+
+        var speed: f32 = 3.0;
+        if this.phase == 2.0 { speed = 3.45; }
+        if this.phase == 3.0 { speed = 3.9; }
+        Physics.set_velocity(this.entity, this.dir_x * speed, this.dir_y * speed);
+        this.transform.rotation_z = atan2(this.dir_y, this.dir_x);
     }
 
     fn die() {
-        // The head dying kills the encounter, including any severed rear chains.
         for part in World.with_tag("spine_segment") {
             if World.exists(part) { Effects.burst(part); World.despawn(part); }
         }
