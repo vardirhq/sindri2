@@ -1,0 +1,31 @@
+// Persistent damage-state effect for Aegis' exposed core. The particles are
+// pooled flecks from sindri.effect.burst, so the desperation phase can look
+// properly broken without turning every ember into an entity.
+script AegisCoreFire {
+    @export let pulse: f32 = 0.09;
+    var clock: f32 = 0.0;
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 1.0 {
+            World.despawn(this.entity);
+            return;
+        }
+
+        var boss: Entity = null;
+        for candidate in World.with_tag("boss") {
+            if World.exists(candidate) { boss = candidate; }
+        }
+        if boss == null {
+            World.despawn(this.entity);
+            return;
+        }
+
+        this.transform.position.x = boss.transform.position.x;
+        this.transform.position.y = boss.transform.position.y;
+        this.clock -= dt;
+        if this.clock <= 0.0 {
+            this.clock = this.pulse;
+            Effects.burst(this.entity);
+        }
+    }
+}
