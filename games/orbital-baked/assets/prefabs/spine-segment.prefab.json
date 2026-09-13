@@ -8,7 +8,7 @@
       "transform_3d": {
         "position": [0.0, 0.0, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.72, 0.52, 1.0]
+        "scale": [0.58, 0.58, 1.0]
       },
       "components": {
         "sindri.tags": { "tags": ["enemy", "spine_segment"] },
@@ -31,19 +31,21 @@
           "friction": 0.0,
           "restitution": 0.0
         },
-        "sindri.shape": {
-          "kind": "polygon",
-          "count": 6.0,
-          "fill": [1.0, 0.56, 0.66, 0.95],
-          "stroke": [1.0, 0.82, 0.87, 1.0],
-          "stroke_width": 0.08,
-          "corner_radius": 0.0,
-          "dashes": 0.0,
-          "dash_duty": 0.5,
-          "sweep_start": 0.0,
-          "sweep_turns": 1.0,
-          "blend": "over",
+        "sindri.sprite": {
+          "texture": "textures/spine.png#armour10-0",
+          "tint": [1.0, 0.58, 0.72, 0.92],
           "layer": 3
+        },
+        "sindri.animation.sprite": {
+          "clips": {
+            "body": {
+              "frames": ["armour10-0", "armour10-1", "armour10-2", "armour10-3"],
+              "seconds_per_frame": 0.12,
+              "looping": true
+            }
+          },
+          "playing": "body",
+          "speed": 1.0
         },
         "sindri.effect.burst": {
           "texture": "textures/fleck.png",
