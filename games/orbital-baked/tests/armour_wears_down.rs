@@ -80,8 +80,12 @@ fn segment_at(run: &Run, wanted_slot: f64) -> EntityId {
                 .get::<ScriptComponent>(&run.world, *entity)
                 .ok()
                 .flatten()
-                .and_then(|script| script.properties.get("slot"))
-                .and_then(serde_json::Value::as_f64)
+                .and_then(|script| {
+                    script
+                        .properties
+                        .get("slot")
+                        .and_then(serde_json::Value::as_f64)
+                })
                 == Some(wanted_slot)
         })
         .unwrap_or_else(|| panic!("Spine segment {wanted_slot} exists"))
