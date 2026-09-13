@@ -106,16 +106,14 @@ fn point_is_on_route(point: [f32; 2], route: &[[f32; 2]]) -> bool {
     const EPSILON: f32 = 0.002;
     route.windows(2).any(|edge| {
         let [from, to] = [edge[0], edge[1]];
-        let within_x = point[0] >= from[0].min(to[0]) - EPSILON
-            && point[0] <= from[0].max(to[0]) + EPSILON;
-        let within_y = point[1] >= from[1].min(to[1]) - EPSILON
-            && point[1] <= from[1].max(to[1]) + EPSILON;
-        let vertical = (from[0] - to[0]).abs() <= EPSILON
-            && (point[0] - from[0]).abs() <= EPSILON
-            && within_y;
-        let horizontal = (from[1] - to[1]).abs() <= EPSILON
-            && (point[1] - from[1]).abs() <= EPSILON
-            && within_x;
+        let within_x =
+            point[0] >= from[0].min(to[0]) - EPSILON && point[0] <= from[0].max(to[0]) + EPSILON;
+        let within_y =
+            point[1] >= from[1].min(to[1]) - EPSILON && point[1] <= from[1].max(to[1]) + EPSILON;
+        let vertical =
+            (from[0] - to[0]).abs() <= EPSILON && (point[0] - from[0]).abs() <= EPSILON && within_y;
+        let horizontal =
+            (from[1] - to[1]).abs() <= EPSILON && (point[1] - from[1]).abs() <= EPSILON && within_x;
         vertical || horizontal
     })
 }
