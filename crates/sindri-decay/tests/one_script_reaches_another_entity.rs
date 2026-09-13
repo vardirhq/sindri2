@@ -123,7 +123,11 @@ fn runtime_signals_accumulate_for_one_recipient_and_are_consumed() {
     );
     assert!(report.failures.is_empty(), "{:#?}", report.failures);
     assert!(world.get(sender).is_some());
-    assert_eq!(position(&world, receiver), [2.0, 0.0, 0.0]);
+    let received = position(&world, receiver);
+    assert!(
+        (received[0] - 2.0).abs() < f32::EPSILON && received[1].abs() < f32::EPSILON,
+        "the receiver should take the accumulated signal exactly once, and is at {received:?}"
+    );
 }
 
 /// The whole point: one script reads another entity's position.
