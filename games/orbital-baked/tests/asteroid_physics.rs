@@ -1,9 +1,7 @@
 use serde_json::Value;
 
 fn asteroid_prefab(name: &str) -> Value {
-    let path = orbital_baked::project()
-        .join("assets/prefabs")
-        .join(name);
+    let path = orbital_baked::project().join("assets/prefabs").join(name);
     let text = std::fs::read_to_string(&path).expect("asteroid prefab reads");
     serde_json::from_str(&text).expect("asteroid prefab parses")
 }
