@@ -136,7 +136,11 @@ script Spine {
             this.dir_y = 1.0;
             if dy < 0.0 { this.dir_y = -1.0; }
         }
-        this.turn_clock = 0.48;
+        // Give the whole nine-section body enough time to clear a corner before
+        // the head introduces another one. The trail follower stores a small
+        // fixed corner queue, so turning faster than the chain can propagate a
+        // corner makes middle sections overwrite route history.
+        this.turn_clock = 1.1;
     }
 
     fn grid_move(player: Entity) {
