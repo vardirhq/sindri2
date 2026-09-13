@@ -1,21 +1,20 @@
 // One physical section of Spine's body. Sections follow the section in front
 // of them until one is destroyed; the severed rear chain promotes its first
-// surviving section into a new head and keeps moving on its own.
+// surviving section into a new cardinal-moving head.
 script SpineSegment {
     @export let slot: f32 = 0.0;
     @export var group: f32 = 0.0;
     @export var head: f32 = 0.0;
     @export let health: f32 = 10.0;
-    @export let spacing: f32 = 0.72;
+    @export let spacing: f32 = 0.62;
 
     var hp: f32 = 0.0;
-    var clock: f32 = 0.0;
     var state: f32 = 0.0;
+    var dir_x: f32 = 1.0;
+    var dir_y: f32 = 0.0;
+    var turn_clock: f32 = 0.0;
 
-    fn start() {
-        this.hp = this.health;
-        this.clock = this.slot * 0.31;
-    }
+    fn start() { this.hp = this.health; }
 
     fn spine() -> Entity {
         for boss in World.with_tag("boss") {
@@ -45,17 +44,14 @@ script SpineSegment {
             Physics.set_velocity(this.entity, 0.0, 0.0);
             return;
         }
-        this.clock += dt;
+        this.turn_clock -= dt;
         receive_hits();
         if !World.exists(this.entity) { return; }
-
-        if this.head > 0.0 { hunt_player(); return; }
+        if this.head > 0.0 { grid_hunt(); return; }
         let ahead = leader();
         if ahead == null {
-            // A predecessor vanished without getting to perform its split pass.
-            // Promote rather than leaving an immortal decorative vertebra.
             this.head = 1.0;
-            hunt_player();
+            grid_hunt();
             return;
         }
         follow(ahead);
@@ -65,32 +61,68 @@ script SpineSegment {
         let dx = ahead.transform.position.x - this.transform.position.x;
         let dy = ahead.transform.position.y - this.transform.position.y;
         let far = sqrt(dx * dx + dy * dy);
-        if far <= 0.001 {
+        if far <= this.spacing * 0.72 {
             Physics.set_velocity(this.entity, 0.0, 0.0);
             return;
         }
-        // The spring term keeps the chain compact while velocity ownership keeps
-        // the collider exactly where the player sees the segment.
-        let error = far - this.spacing;
-        let speed = max(-1.4, min(5.8, error * 8.0));
-        Physics.set_velocity(this.entity, dx / far * speed, dy / far * speed);
-        this.transform.rotation_z = atan2(dy, dx);
+        // Followers take the dominant axis only. This keeps the body visibly
+        // connected while preserving the blocky up/down/left/right character.
+        var vx: f32 = 0.0;
+        var vy: f32 = 0.0;
+        let speed = min(6.4, max(3.2, (far - this.spacing) * 10.0 + 3.2));
+        if abs(dx) > abs(dy) {
+            if dx > 0.0 { vx = speed; } else { vx = -speed; }
+        } else {
+            if dy > 0.0 { vy = speed; } else { vy = -speed; }
+        }
+        Physics.set_velocity(this.entity, vx, vy);
+        this.transform.rotation_z = atan2(vy, vx);
     }
 
-    fn hunt_player() {
-        let player = World.find("Player");
-        if player == null { return; }
+    fn half_x() -> f32 {
+        let aspect = max(Viewport.aspect, 0.001);
+        if aspect >= 1.0 { return 11.0 * 0.5 * aspect - 0.75; }
+        return 11.0 * 0.5 - 0.75;
+    }
+
+    fn half_y() -> f32 {
+        let aspect = max(Viewport.aspect, 0.001);
+        if aspect >= 1.0 { return 11.0 * 0.5 - 0.75; }
+        return 11.0 * 0.5 / aspect - 0.75;
+    }
+
+    fn choose_turn(player: Entity) {
         let dx = player.transform.position.x - this.transform.position.x;
         let dy = player.transform.position.y - this.transform.position.y;
-        let far = sqrt(dx * dx + dy * dy);
-        if far <= 0.001 { return; }
-        let nx = dx / far;
-        let ny = dy / far;
-        let weave = sin(this.clock * 2.4 + this.slot * 0.7) * 0.72;
-        Physics.set_velocity(this.entity,
-            nx * 1.35 - ny * weave,
-            ny * 1.35 + nx * weave);
-        this.transform.rotation_z = atan2(dy, dx);
+        if abs(dx) > abs(dy) {
+            this.dir_x = 1.0; if dx < 0.0 { this.dir_x = -1.0; }
+            this.dir_y = 0.0;
+        } else {
+            this.dir_x = 0.0;
+            this.dir_y = 1.0; if dy < 0.0 { this.dir_y = -1.0; }
+        }
+        this.turn_clock = 0.55;
+    }
+
+    fn grid_hunt() {
+        let player = World.find("Player");
+        if player == null { return; }
+        let hx = half_x();
+        let hy = half_y();
+        let x = this.transform.position.x;
+        let y = this.transform.position.y;
+        var edge: f32 = 0.0;
+        if this.dir_x > 0.0 && x >= hx { edge = 1.0; }
+        if this.dir_x < 0.0 && x <= -hx { edge = 1.0; }
+        if this.dir_y > 0.0 && y >= hy { edge = 1.0; }
+        if this.dir_y < 0.0 && y <= -hy { edge = 1.0; }
+        if this.turn_clock <= 0.0 || edge > 0.0 { choose_turn(player); }
+        if x >= hx && this.dir_x > 0.0 { this.dir_x = 0.0; this.dir_y = -1.0; }
+        if x <= -hx && this.dir_x < 0.0 { this.dir_x = 0.0; this.dir_y = 1.0; }
+        if y >= hy && this.dir_y > 0.0 { this.dir_y = 0.0; this.dir_x = 1.0; }
+        if y <= -hy && this.dir_y < 0.0 { this.dir_y = 0.0; this.dir_x = -1.0; }
+        Physics.set_velocity(this.entity, this.dir_x * 3.55, this.dir_y * 3.55);
+        this.transform.rotation_z = atan2(this.dir_y, this.dir_x);
     }
 
     fn receive_hits() {
@@ -105,18 +137,13 @@ script SpineSegment {
             }
         }
         if this.hp <= 0.0 { split(); return; }
-
         let share = this.hp / max(this.health, 0.001);
         if share < 0.34 && this.state < 2.0 {
             this.state = 2.0;
-            this.shape.fill.r = 1.0;
-            this.shape.fill.g = 0.24;
-            this.shape.fill.b = 0.34;
+            this.shape.fill.r = 1.0; this.shape.fill.g = 0.24; this.shape.fill.b = 0.34;
         } else if share < 0.67 && this.state < 1.0 {
             this.state = 1.0;
-            this.shape.fill.r = 1.0;
-            this.shape.fill.g = 0.42;
-            this.shape.fill.b = 0.52;
+            this.shape.fill.r = 1.0; this.shape.fill.g = 0.42; this.shape.fill.b = 0.52;
         }
     }
 
