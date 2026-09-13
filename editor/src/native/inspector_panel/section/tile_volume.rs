@@ -6,7 +6,7 @@ use eframe::egui;
 use serde_json::Value;
 use sindri_core::TileSetDocument;
 
-use crate::tile_volume::{self, TileVolumeTool};
+use crate::tile_volume::{self, TilePlacement, TileVolumeTool};
 use crate::ui::icons;
 use crate::ui::widgets::{panel, property, section};
 
@@ -26,8 +26,16 @@ pub(super) fn tile_volume_section(
     section::group(ui, icons::TILEMAP, "Build");
     property::toggle(ui, "Brush", &mut tool.enabled, "Building", "Off");
     ui.horizontal(|ui| {
+        ui.label("Target");
+        ui.selectable_value(&mut tool.placement, TilePlacement::Surface, "Surface");
+        ui.selectable_value(&mut tool.placement, TilePlacement::Level, "Level");
+    });
+    ui.horizontal(|ui| {
         ui.label("Level");
-        ui.add(egui::DragValue::new(&mut tool.level).speed(0.1));
+        ui.add_enabled(
+            tool.placement == TilePlacement::Level,
+            egui::DragValue::new(&mut tool.level).speed(0.1),
+        );
     });
     ui.horizontal(|ui| {
         if ui.selectable_label(!tool.erase, "Place").clicked() {
@@ -37,10 +45,11 @@ pub(super) fn tile_volume_section(
             tool.erase = true;
         }
     });
-    section::caption(
-        ui,
-        "Primary click or drag edits this Z level. Middle or Shift-drag pans.",
-    );
+    let help = match tool.placement {
+        TilePlacement::Surface => "Click a top face to stack or remove one block.",
+        TilePlacement::Level => "Click or drag to paint the selected Z level.",
+    };
+    section::caption(ui, help);
 
     section::group(ui, icons::SPRITE, "Blocks");
     match tile_ids(assets_root, &volume.tileset) {

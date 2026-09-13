@@ -23,6 +23,7 @@ use super::overlay::{
 use super::pointer::TilemapHover;
 use super::scene_io::SceneSource;
 use super::{EditorApp, INITIAL_VIEWPORT_HEIGHT, INITIAL_VIEWPORT_WIDTH, WorkspaceTab};
+use crate::tile_volume::TilePlacement;
 use crate::ui::theme::{color, text};
 
 enum PaintHover<'a> {
@@ -216,26 +217,6 @@ impl EditorApp {
         );
     }
 
-    fn paint_tile_volume_hover(&self, ui: &egui::Ui, hover: &TileVolumeHover) {
-        let tint = if self.tile_volume_tool.erase {
-            color::DANGER
-        } else {
-            color::FORGE
-        };
-        ui.painter().add(Shape::convex_polygon(
-            hover.outline.to_vec(),
-            tint.gamma_multiply(0.16),
-            Stroke::new(2.0, tint),
-        ));
-        ui.painter().text(
-            hover.outline[0],
-            Align2::LEFT_BOTTOM,
-            format!("{}, {}, {}", hover.coord.x, hover.coord.y, hover.coord.z),
-            FontId::proportional(text::NOTE),
-            color::TEXT,
-        );
-    }
-
     /// Remembers where a view was drawn, for the two things that need it.
     ///
     /// A script's pointer coordinates are in the Game view's own pixels, and an
@@ -414,14 +395,17 @@ impl EditorApp {
         volume: Option<&TileVolumeHover>,
         tilemap: Option<&TilemapHover>,
     ) {
-        if !(response.clicked_by(egui::PointerButton::Primary)
-            || response.dragged_by(egui::PointerButton::Primary))
-        {
-            return;
-        }
         if let Some(hover) = volume {
-            self.apply_volume_brush(hover);
-        } else if let Some(hover) = tilemap {
+            let requested = response.clicked_by(egui::PointerButton::Primary)
+                || (self.tile_volume_tool.placement == TilePlacement::Level
+                    && response.dragged_by(egui::PointerButton::Primary));
+            if requested {
+                self.apply_volume_brush(hover);
+            }
+        } else if let Some(hover) = tilemap
+            && (response.clicked_by(egui::PointerButton::Primary)
+                || response.dragged_by(egui::PointerButton::Primary))
+        {
             self.apply_tile_brush(hover);
         }
     }

@@ -1,10 +1,11 @@
 //! Pointer projection and command-backed edits for stackable block volumes.
 
-use eframe::egui::{Pos2, Rect};
+use eframe::egui::{self, Align2, FontId, Pos2, Rect, Shape, Stroke};
 use sindri_core::{CommandBuffer, EntityId, WorldCommand};
 use sindri_scene::{CameraView, TileGridComponent};
 
-use crate::tile_volume::{self, TileBrush, paint as paint_block};
+use crate::tile_volume::{self, TileBrush, TilePlacement, paint as paint_block};
+use crate::ui::theme::{color, text};
 
 use super::EditorApp;
 
@@ -15,6 +16,26 @@ pub(super) struct TileVolumeHover {
 }
 
 impl EditorApp {
+    pub(super) fn paint_tile_volume_hover(&self, ui: &egui::Ui, hover: &TileVolumeHover) {
+        let tint = if self.tile_volume_tool.erase {
+            color::DANGER
+        } else {
+            color::FORGE
+        };
+        ui.painter().add(Shape::convex_polygon(
+            hover.outline.to_vec(),
+            tint.gamma_multiply(0.16),
+            Stroke::new(2.0, tint),
+        ));
+        ui.painter().text(
+            hover.outline[0],
+            Align2::LEFT_BOTTOM,
+            format!("{}, {}, {}", hover.coord.x, hover.coord.y, hover.coord.z),
+            FontId::proportional(text::NOTE),
+            color::TEXT,
+        );
+    }
+
     pub(super) fn tile_volume_hover(
         &self,
         rect: Rect,
@@ -25,7 +46,7 @@ impl EditorApp {
         let pointer = pointer.filter(|pointer| rect.contains(*pointer))?;
         let entity = self.selection.primary()?;
         let data = self.world.get(entity)?;
-        data.components.get(tile_volume::TYPE_NAME)?;
+        let volume = tile_volume::component(data.components.get(tile_volume::TYPE_NAME)?).ok()?;
         let grid: TileGridComponent =
             serde_json::from_value(data.components.get(tile_volume::GRID_TYPE_NAME)?.clone())
                 .ok()?;
@@ -40,13 +61,24 @@ impl EditorApp {
             (pointer.x - rect.min.x) / rect.width().max(1.0),
             (pointer.y - rect.min.y) / rect.height().max(1.0),
         ];
-        let coord = tile_volume::cell_at_viewport(
-            &grid,
-            transform,
-            camera.view_projection,
-            normalized,
-            self.tile_volume_tool.level,
-        )?;
+        let coord = match self.tile_volume_tool.placement {
+            TilePlacement::Surface => tile_volume::surface_target_at_viewport(
+                &grid,
+                transform,
+                camera.view_projection,
+                normalized,
+                &volume,
+                self.tile_volume_tool.erase,
+                self.tile_volume_tool.level,
+            ),
+            TilePlacement::Level => tile_volume::cell_at_viewport(
+                &grid,
+                transform,
+                camera.view_projection,
+                normalized,
+                self.tile_volume_tool.level,
+            ),
+        }?;
         let projected = tile_volume::cell_outline(&grid, transform, camera.view_projection, coord)?;
         let outline = projected.map(|point| {
             Pos2::new(
