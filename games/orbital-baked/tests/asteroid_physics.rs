@@ -67,7 +67,11 @@ fn two_asteroids_actually_bounce_in_the_game_runtime() {
         .get("prefabs/hazard-asteroid-large.prefab.json")
         .expect("large asteroid prefab ships")
         .clone();
-    let left = run.world.spawn_prefab(&prefab).expect("left asteroid spawns").root;
+    let left = run
+        .world
+        .spawn_prefab(&prefab)
+        .expect("left asteroid spawns")
+        .root;
     let right = run
         .world
         .spawn_prefab(&prefab)
