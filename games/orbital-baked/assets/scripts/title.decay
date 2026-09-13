@@ -35,13 +35,19 @@ script Title {
         }
         Ui.set_number(this.best, Save.number("best_score", 0.0));
 
-        // The logo is already a real laid-out UI image, so it doubles as the
-        // development doorway without adding a second title-screen hierarchy.
-        // This works with mouse and touch through the normal ScreenUi hit test.
-        if Ui.is_pressed(this.logo) {
-            Audio.play("audio/click.wav", 0.3);
-            Scene.go("combat-lab.scene.json");
-            return;
+        // Images are laid out UI but intentionally are not pressable unless
+        // they carry a button component. The title logo predates the lab, so
+        // use the same overlay coordinates ScreenUi uses instead of mutating
+        // the large authored scene only to add one hit target.
+        if Pointer.just_pressed("Left") && Pointer.inside && !Pointer.over_ui {
+            let dx = Pointer.overlay_x - this.logo.transform.position.x;
+            let dy = Pointer.overlay_y - this.logo.transform.position.y;
+            if abs(dx) <= this.logo.transform.scale.x * 0.5 &&
+               abs(dy) <= this.logo.transform.scale.y * 0.5 {
+                Audio.play("audio/click.wav", 0.3);
+                Scene.go("combat-lab.scene.json");
+                return;
+            }
         }
 
         // Only when it changes: `Ui.set_text` every frame is work for nothing,
