@@ -108,6 +108,31 @@ fn the_file_is_ordered_by_asset_id() {
     assert!(text.find("alpha.png") < text.find("zebra.png"), "{text}");
 }
 
+/// Asset IDs stay sorted in the file, but scene iteration must preserve the
+/// configured entry scene. Project export inserts the configured main scene
+/// first, and the browser opens the first scene returned by `ids_of`.
+#[test]
+fn the_first_inserted_scene_remains_the_entry_scene() {
+    let mut manifest = AssetManifest::new();
+    manifest.insert(id("orbital.scene.json"), b"main");
+    manifest.insert(id("combat-lab.scene.json"), b"lab");
+
+    let text = manifest.to_canonical_json().expect("manifest serializes");
+    assert!(
+        text.find("combat-lab.scene.json") < text.find("orbital.scene.json"),
+        "the asset map should still be canonical and sorted: {text}"
+    );
+
+    let restored = AssetManifest::from_json(&text).expect("manifest round trips");
+    assert_eq!(
+        restored
+            .ids_of(AssetKind::Scene)
+            .map(AssetId::as_str)
+            .collect::<Vec<_>>(),
+        ["orbital.scene.json", "combat-lab.scene.json"]
+    );
+}
+
 /// A manifest written by a later Sindri is refused rather than
 /// misunderstood.
 #[test]
