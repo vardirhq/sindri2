@@ -263,7 +263,7 @@ pub(crate) const GRID_CALLS: &[(&str, GridCall)] = &[
     ("rows", GridCall::Rows),
 ];
 
-/// What a script can do to a body, and ask about what it touched.
+/// What a script can do to a body, connect bodies with, and ask about what it touched.
 ///
 /// The velocity pair is split for the reason `Grid.position_x` and
 /// `position_y` are: Decay has no vector value yet. Setting takes both at once,
@@ -275,6 +275,9 @@ pub(crate) enum PhysicsCall {
     VelocityY,
     SetVelocity,
     ApplyImpulse,
+    /// Keeps two bodies no farther apart than a world-space distance while
+    /// leaving their rotation and closer motion unconstrained.
+    ConnectDistance,
     /// The entities this one started touching during the last step.
     ///
     /// A query rather than a callback, because Decay now has a value that can
@@ -295,6 +298,7 @@ pub(crate) const PHYSICS_CALLS: &[(&str, PhysicsCall)] = &[
     ("velocity_y", PhysicsCall::VelocityY),
     ("set_velocity", PhysicsCall::SetVelocity),
     ("apply_impulse", PhysicsCall::ApplyImpulse),
+    ("connect_distance", PhysicsCall::ConnectDistance),
     ("collision_started", PhysicsCall::CollisionStarted),
     ("collision_stopped", PhysicsCall::CollisionStopped),
     ("sensor_entered", PhysicsCall::SensorEntered),
