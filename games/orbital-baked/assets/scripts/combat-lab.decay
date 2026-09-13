@@ -44,10 +44,10 @@ script CombatLab {
     }
 
     fn keyboard() {
-        if Input.just_pressed("1") { spawn_kind(1.0); }
-        if Input.just_pressed("2") { spawn_kind(2.0); }
-        if Input.just_pressed("3") { spawn_kind(3.0); }
-        if Input.just_pressed("4") { spawn_kind(4.0); }
+        if Input.just_pressed("Digit1") { spawn_kind(1.0); }
+        if Input.just_pressed("Digit2") { spawn_kind(2.0); }
+        if Input.just_pressed("Digit3") { spawn_kind(3.0); }
+        if Input.just_pressed("Digit4") { spawn_kind(4.0); }
         if Input.just_pressed("C") {
             this.combo_step = (this.combo_step % 3.0) + 1.0;
             spawn_combo(this.combo_step);
