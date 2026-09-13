@@ -51,8 +51,121 @@
     },
     {
       "id": "lab-help", "name": "LabHelp", "parent": null,
-      "transform_3d": { "position": [0.0,0.82,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [1.0,1.0,1.0] },
-      "components": { "sindri.ui.text": { "anchor": "center", "color": [0.45,0.65,0.72,1.0], "font": "fonts/IBMPlexMono-Regular.ttf", "font_size": 0.028, "layer": 140, "line_height": 0.032, "text": "AUTOPLAY  |  1 GAS  2 MINE  3 WAVE  4 GRAVITY  C COMBO  R CLEAR  I DAMAGE", "bounds": [1.65,0.12], "wrap": "word", "line_align": "center", "case": "as_written", "letter_spacing": 0.001, "bold": false } }
+      "transform_3d": { "position": [0.0,0.81,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [1.0,1.0,1.0] },
+      "components": { "sindri.ui.text": { "anchor": "center", "color": [0.45,0.65,0.72,1.0], "font": "fonts/IBMPlexMono-Regular.ttf", "font_size": 0.026, "layer": 140, "line_height": 0.03, "text": "DRAG THE ARENA TO MOVE  •  TAP CONTROLS BELOW  •  KEYBOARD: 1-4 / C / R / I", "bounds": [0.88,0.12], "wrap": "word", "line_align": "center", "case": "as_written", "letter_spacing": 0.001, "bold": false } }
+    },
+
+    { "id": "lab-exit", "name": "LabExit", "parent": null,
+      "transform_3d": { "position": [0.0,0.68,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [0.34,0.085,1.0] },
+      "components": {
+        "sindri.script": { "source": "scripts/combat-lab-button.decay", "script": "CombatLabButton", "properties": { "action": 9.0 } },
+        "sindri.ui.button": { "label": "lab-exit" },
+        "sindri.ui.shape": { "kind": "rect", "count": 6.0, "fill": [0.03,0.045,0.07,0.96], "stroke": [0.45,0.65,0.72,1.0], "stroke_width": 0.012, "corner_radius": 0.02, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "over", "anchor": "center", "layer": 110 }
+      }
+    },
+    { "id": "lab-exit-text", "name": "LabExitText", "parent": null,
+      "transform_3d": { "position": [0.0,0.68,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [1.0,1.0,1.0] },
+      "components": { "sindri.ui.text": { "anchor": "center", "color": [0.75,0.95,1.0,1.0], "font": "fonts/ChakraPetch-Bold.ttf", "font_size": 0.035, "layer": 140, "line_height": 0.038, "text": "BACK", "bounds": [0.3,0.06], "wrap": "none", "case": "as_written", "letter_spacing": 0.001, "bold": false } }
+    },
+
+    { "id": "lab-gas", "name": "LabGas", "parent": null,
+      "transform_3d": { "position": [-0.22,-0.86,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [0.4,0.12,1.0] },
+      "components": {
+        "sindri.script": { "source": "scripts/combat-lab-button.decay", "script": "CombatLabButton", "properties": { "action": 1.0 } },
+        "sindri.ui.button": { "label": "lab-gas" },
+        "sindri.ui.shape": { "kind": "rect", "count": 6.0, "fill": [0.03,0.11,0.08,0.96], "stroke": [0.25,0.95,0.82,1.0], "stroke_width": 0.014, "corner_radius": 0.02, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "over", "anchor": "center", "layer": 110 }
+      }
+    },
+    { "id": "lab-gas-text", "name": "LabGasText", "parent": null,
+      "transform_3d": { "position": [-0.22,-0.86,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [1.0,1.0,1.0] },
+      "components": { "sindri.ui.text": { "anchor": "center", "color": [0.75,1.0,0.92,1.0], "font": "fonts/ChakraPetch-Bold.ttf", "font_size": 0.034, "layer": 140, "line_height": 0.038, "text": "GAS", "bounds": [0.34,0.06], "wrap": "none", "case": "as_written", "letter_spacing": 0.001, "bold": false } }
+    },
+    { "id": "lab-mine", "name": "LabMine", "parent": null,
+      "transform_3d": { "position": [0.22,-0.86,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [0.4,0.12,1.0] },
+      "components": {
+        "sindri.script": { "source": "scripts/combat-lab-button.decay", "script": "CombatLabButton", "properties": { "action": 2.0 } },
+        "sindri.ui.button": { "label": "lab-mine" },
+        "sindri.ui.shape": { "kind": "rect", "count": 6.0, "fill": [0.11,0.04,0.03,0.96], "stroke": [1.0,0.35,0.24,1.0], "stroke_width": 0.014, "corner_radius": 0.02, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "over", "anchor": "center", "layer": 110 }
+      }
+    },
+    { "id": "lab-mine-text", "name": "LabMineText", "parent": null,
+      "transform_3d": { "position": [0.22,-0.86,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [1.0,1.0,1.0] },
+      "components": { "sindri.ui.text": { "anchor": "center", "color": [1.0,0.75,0.68,1.0], "font": "fonts/ChakraPetch-Bold.ttf", "font_size": 0.034, "layer": 140, "line_height": 0.038, "text": "MINE", "bounds": [0.34,0.06], "wrap": "none", "case": "as_written", "letter_spacing": 0.001, "bold": false } }
+    },
+
+    { "id": "lab-wave", "name": "LabWave", "parent": null,
+      "transform_3d": { "position": [-0.22,-0.70,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [0.4,0.12,1.0] },
+      "components": {
+        "sindri.script": { "source": "scripts/combat-lab-button.decay", "script": "CombatLabButton", "properties": { "action": 3.0 } },
+        "sindri.ui.button": { "label": "lab-wave" },
+        "sindri.ui.shape": { "kind": "rect", "count": 6.0, "fill": [0.025,0.075,0.11,0.96], "stroke": [0.3,0.85,1.0,1.0], "stroke_width": 0.014, "corner_radius": 0.02, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "over", "anchor": "center", "layer": 110 }
+      }
+    },
+    { "id": "lab-wave-text", "name": "LabWaveText", "parent": null,
+      "transform_3d": { "position": [-0.22,-0.70,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [1.0,1.0,1.0] },
+      "components": { "sindri.ui.text": { "anchor": "center", "color": [0.7,0.95,1.0,1.0], "font": "fonts/ChakraPetch-Bold.ttf", "font_size": 0.034, "layer": 140, "line_height": 0.038, "text": "WAVE", "bounds": [0.34,0.06], "wrap": "none", "case": "as_written", "letter_spacing": 0.001, "bold": false } }
+    },
+    { "id": "lab-gravity", "name": "LabGravity", "parent": null,
+      "transform_3d": { "position": [0.22,-0.70,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [0.4,0.12,1.0] },
+      "components": {
+        "sindri.script": { "source": "scripts/combat-lab-button.decay", "script": "CombatLabButton", "properties": { "action": 4.0 } },
+        "sindri.ui.button": { "label": "lab-gravity" },
+        "sindri.ui.shape": { "kind": "rect", "count": 6.0, "fill": [0.07,0.025,0.12,0.96], "stroke": [0.72,0.38,1.0,1.0], "stroke_width": 0.014, "corner_radius": 0.02, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "over", "anchor": "center", "layer": 110 }
+      }
+    },
+    { "id": "lab-gravity-text", "name": "LabGravityText", "parent": null,
+      "transform_3d": { "position": [0.22,-0.70,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [1.0,1.0,1.0] },
+      "components": { "sindri.ui.text": { "anchor": "center", "color": [0.88,0.72,1.0,1.0], "font": "fonts/ChakraPetch-Bold.ttf", "font_size": 0.031, "layer": 140, "line_height": 0.035, "text": "GRAVITY", "bounds": [0.34,0.06], "wrap": "none", "case": "as_written", "letter_spacing": 0.0005, "bold": false } }
+    },
+
+    { "id": "lab-combo", "name": "LabCombo", "parent": null,
+      "transform_3d": { "position": [-0.22,-0.54,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [0.4,0.12,1.0] },
+      "components": {
+        "sindri.script": { "source": "scripts/combat-lab-button.decay", "script": "CombatLabButton", "properties": { "action": 5.0 } },
+        "sindri.ui.button": { "label": "lab-combo" },
+        "sindri.ui.shape": { "kind": "rect", "count": 6.0, "fill": [0.07,0.075,0.1,0.96], "stroke": [0.9,0.8,0.3,1.0], "stroke_width": 0.014, "corner_radius": 0.02, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "over", "anchor": "center", "layer": 110 }
+      }
+    },
+    { "id": "lab-combo-text", "name": "LabComboText", "parent": null,
+      "transform_3d": { "position": [-0.22,-0.54,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [1.0,1.0,1.0] },
+      "components": { "sindri.ui.text": { "anchor": "center", "color": [1.0,0.9,0.5,1.0], "font": "fonts/ChakraPetch-Bold.ttf", "font_size": 0.032, "layer": 140, "line_height": 0.036, "text": "COMBO", "bounds": [0.34,0.06], "wrap": "none", "case": "as_written", "letter_spacing": 0.0007, "bold": false } }
+    },
+    { "id": "lab-clear", "name": "LabClear", "parent": null,
+      "transform_3d": { "position": [0.22,-0.54,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [0.4,0.12,1.0] },
+      "components": {
+        "sindri.script": { "source": "scripts/combat-lab-button.decay", "script": "CombatLabButton", "properties": { "action": 6.0 } },
+        "sindri.ui.button": { "label": "lab-clear" },
+        "sindri.ui.shape": { "kind": "rect", "count": 6.0, "fill": [0.08,0.04,0.04,0.96], "stroke": [1.0,0.45,0.4,1.0], "stroke_width": 0.014, "corner_radius": 0.02, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "over", "anchor": "center", "layer": 110 }
+      }
+    },
+    { "id": "lab-clear-text", "name": "LabClearText", "parent": null,
+      "transform_3d": { "position": [0.22,-0.54,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [1.0,1.0,1.0] },
+      "components": { "sindri.ui.text": { "anchor": "center", "color": [1.0,0.75,0.7,1.0], "font": "fonts/ChakraPetch-Bold.ttf", "font_size": 0.032, "layer": 140, "line_height": 0.036, "text": "CLEAR", "bounds": [0.34,0.06], "wrap": "none", "case": "as_written", "letter_spacing": 0.0007, "bold": false } }
+    },
+
+    { "id": "lab-auto", "name": "LabAuto", "parent": null,
+      "transform_3d": { "position": [-0.22,-0.38,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [0.4,0.12,1.0] },
+      "components": {
+        "sindri.script": { "source": "scripts/combat-lab-button.decay", "script": "CombatLabButton", "properties": { "action": 7.0 } },
+        "sindri.ui.button": { "label": "lab-auto" },
+        "sindri.ui.shape": { "kind": "rect", "count": 6.0, "fill": [0.04,0.06,0.08,0.96], "stroke": [0.45,0.65,0.72,1.0], "stroke_width": 0.014, "corner_radius": 0.02, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "over", "anchor": "center", "layer": 110 }
+      }
+    },
+    { "id": "lab-auto-text", "name": "LabAutoText", "parent": null,
+      "transform_3d": { "position": [-0.22,-0.38,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [1.0,1.0,1.0] },
+      "components": { "sindri.ui.text": { "anchor": "center", "color": [0.75,0.9,0.95,1.0], "font": "fonts/ChakraPetch-Bold.ttf", "font_size": 0.03, "layer": 140, "line_height": 0.034, "text": "AUTOPLAY", "bounds": [0.34,0.06], "wrap": "none", "case": "as_written", "letter_spacing": 0.0004, "bold": false } }
+    },
+    { "id": "lab-damage", "name": "LabDamage", "parent": null,
+      "transform_3d": { "position": [0.22,-0.38,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [0.4,0.12,1.0] },
+      "components": {
+        "sindri.script": { "source": "scripts/combat-lab-button.decay", "script": "CombatLabButton", "properties": { "action": 8.0 } },
+        "sindri.ui.button": { "label": "lab-damage" },
+        "sindri.ui.shape": { "kind": "rect", "count": 6.0, "fill": [0.05,0.05,0.07,0.96], "stroke": [0.65,0.55,0.9,1.0], "stroke_width": 0.014, "corner_radius": 0.02, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "over", "anchor": "center", "layer": 110 }
+      }
+    },
+    { "id": "lab-damage-text", "name": "LabDamageText", "parent": null,
+      "transform_3d": { "position": [0.22,-0.38,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [1.0,1.0,1.0] },
+      "components": { "sindri.ui.text": { "anchor": "center", "color": [0.88,0.8,1.0,1.0], "font": "fonts/ChakraPetch-Bold.ttf", "font_size": 0.029, "layer": 140, "line_height": 0.033, "text": "DAMAGE", "bounds": [0.34,0.06], "wrap": "none", "case": "as_written", "letter_spacing": 0.0004, "bold": false } }
     }
   ]
 }
