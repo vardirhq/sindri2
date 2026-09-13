@@ -9,6 +9,8 @@ script Title {
     var best: Entity = null;
     var notice: Entity = null;
     var pick_label: Entity = null;
+    var logo: Entity = null;
+    var hint: Entity = null;
     var shown_pick: f32 = -1.0;
 
 
@@ -16,12 +18,15 @@ script Title {
         this.best = World.find("TitleBest");
         this.notice = World.find("TitleNotice");
         this.pick_label = World.find("TitlePickText");
+        this.logo = World.find("Logo");
+        this.hint = World.find("TitleHint");
         // A run started from the title is an ordinary run unless the rush
         // button says otherwise, and the button sets this the moment it is
         // pressed. Clearing it here means quitting a rush and pressing START
         // gives you a game rather than another rush.
         Game.set("mode", 0.0);
         World.set_active(this.notice, Save.is_damaged());
+        Ui.set_text(this.hint, "Move with WASD, or drag anywhere to steer. Tap the logo for Combat Lab.");
     }
 
     fn update(dt: f32) {
@@ -29,6 +34,15 @@ script Title {
             return;
         }
         Ui.set_number(this.best, Save.number("best_score", 0.0));
+
+        // The logo is already a real laid-out UI image, so it doubles as the
+        // development doorway without adding a second title-screen hierarchy.
+        // This works with mouse and touch through the normal ScreenUi hit test.
+        if Ui.is_pressed(this.logo) {
+            Audio.play("audio/click.wav", 0.3);
+            Scene.go("combat-lab.scene.json");
+            return;
+        }
 
         // Only when it changes: `Ui.set_text` every frame is work for nothing,
         // and the label is a button's worth of state rather than a readout.
