@@ -253,6 +253,15 @@ pub struct AssetManifest {
     /// points at can be cached for ever.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     content_root: String,
+    /// The first scene inserted by the project export.
+    ///
+    /// Project gathering deliberately visits the configured main scene before
+    /// any additional scenes. The asset map is sorted for stable manifests, so
+    /// without preserving that first scene separately a browser would open the
+    /// alphabetically first scene instead. Optional keeps older hand-written
+    /// manifests valid; they retain their historical sorted-scene fallback.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    entry_scene: Option<AssetId>,
     assets: BTreeMap<AssetId, ManifestEntry>,
 }
 
@@ -261,6 +270,7 @@ impl Default for AssetManifest {
         Self {
             format_version: MANIFEST_FORMAT_VERSION,
             content_root: String::new(),
+            entry_scene: None,
             assets: BTreeMap::new(),
         }
     }
@@ -291,7 +301,7 @@ impl AssetManifest {
     /// It used to record every asset as `Other`, which was harmless while
     /// nothing read kinds and became a trap the moment a host asked for its
     /// assets by kind: a manifest of nothing but `Other` describes a project
-    /// with no scene, and the host that read one loaded nothing at all.
+    /// with no scene, and the host that reads one loaded nothing at all.
     pub fn insert(&mut self, id: AssetId, bytes: &[u8]) -> Option<ManifestEntry> {
         let kind = AssetKind::for_id(id.as_str());
         self.insert_as(id, kind, bytes)
@@ -304,6 +314,9 @@ impl AssetManifest {
         kind: AssetKind,
         bytes: &[u8],
     ) -> Option<ManifestEntry> {
+        if kind == AssetKind::Scene && self.entry_scene.is_none() {
+            self.entry_scene = Some(id.clone());
+        }
         self.assets.insert(
             id,
             ManifestEntry {
@@ -330,16 +343,24 @@ impl AssetManifest {
         self.assets.iter()
     }
 
-    /// Every asset of one kind, in the manifest's own order.
+    /// Every asset of one kind, in the order a host should consume it.
     ///
-    /// This is what lets a host open a project it was not compiled against: it
-    /// asks the manifest what textures there are rather than being handed a
-    /// list by whoever wrote the game.
+    /// Scenes are the one kind where order is semantic: the configured main
+    /// scene has to come first even though the manifest's asset map is sorted by
+    /// ID. Other kinds remain in stable manifest order. Older manifests without
+    /// an entry scene naturally keep the previous sorted behavior.
     pub fn ids_of(&self, kind: AssetKind) -> impl Iterator<Item = &AssetId> {
-        self.assets
-            .iter()
-            .filter(move |(_, entry)| entry.kind == kind)
-            .map(|(id, _)| id)
+        let entry_scene = if kind == AssetKind::Scene {
+            self.entry_scene.as_ref()
+        } else {
+            None
+        };
+        entry_scene.into_iter().chain(
+            self.assets
+                .iter()
+                .filter(move |(id, entry)| entry.kind == kind && entry_scene != Some(*id))
+                .map(|(id, _)| id),
+        )
     }
 
     /// Checks bytes that arrived against what was promised.
@@ -351,7 +372,7 @@ impl AssetManifest {
     ///
     /// The length is checked first because it is free and it is what a truncated
     /// response fails on, so the common failure names itself without hashing a
-    /// megabyte to reach the same conclusion.
+    /// megabyte to say the same conclusion.
     pub fn verify(&self, id: &AssetId, bytes: &[u8]) -> Result<(), AssetLoadError> {
         let Some(entry) = self.assets.get(id) else {
             return Ok(());
