@@ -222,9 +222,11 @@ fn register_tiles(components: &mut ComponentSchemaRegistry) -> Result<(), SceneE
             "projection": "orthogonal"
         }),
     )?;
-    // A tile set is a project asset; there is no honest path the engine can
-    // invent for a fresh volume, so the editor completes this component.
-    components.register_with_fields::<TileVolumeComponent>(
+    // A new volume has no blocks, so it does not need a tile set until the
+    // author starts building. Keeping that empty state valid makes Tile Volume
+    // addable from the editor instead of presenting a permanently disabled
+    // menu item just because the engine cannot guess a project asset path.
+    components.register_with_default::<TileVolumeComponent>(
         "Tile Volume",
         serde_json::json!({
             "tileset": "",
@@ -392,7 +394,7 @@ mod tests {
     /// a decision rather than an omission.
     ///
     /// Each of these names something only a project can supply — a font, a
-    /// sheet, another entity, a clip. They inspect like any other component;
+    /// sheet, another entity, or a clip. They inspect like any other component;
     /// they simply cannot be created without a host that knows what is lying
     /// beside the scene.
     #[test]
@@ -409,9 +411,21 @@ mod tests {
                 "sindri.animation.sprite",
                 "sindri.audio.source",
                 "sindri.grid.occupant",
-                "sindri.tile_volume",
                 "sindri.ui.text",
             ])
         );
+    }
+
+    #[test]
+    fn a_fresh_tile_volume_is_an_empty_addable_component() {
+        let components = builtin_components().expect("the built-in schemas register");
+        let payload = components
+            .default_payload("sindri.tile_volume")
+            .expect("tile volume is addable");
+        assert_eq!(payload["tileset"], "");
+        assert_eq!(payload["cells"], serde_json::json!([]));
+        components
+            .validate_payload("sindri.tile_volume", payload)
+            .expect("the blank tile volume is valid");
     }
 }

@@ -512,8 +512,12 @@
       "type_name": "sindri.tile_grid"
     },
     {
-      "addable": false,
-      "default_payload": null,
+      "addable": true,
+      "default_payload": {
+        "cells": [],
+        "layer": 0,
+        "tileset": ""
+      },
       "display_name": "Tile Volume",
       "fields": {
         "cells": [],

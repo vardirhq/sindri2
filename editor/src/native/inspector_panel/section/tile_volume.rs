@@ -51,6 +51,10 @@ pub(super) fn tile_volume_section(
     section::caption(ui, help);
 
     section::group(ui, icons::SPRITE, "Blocks");
+    if volume.tileset.trim().is_empty() {
+        panel::note(ui, "Choose a Tile Set below before building.");
+        return;
+    }
     tool.palette.ensure(assets_root, &volume.tileset);
     let tiles = tool.palette.tiles().to_vec();
     if !tool.erase
