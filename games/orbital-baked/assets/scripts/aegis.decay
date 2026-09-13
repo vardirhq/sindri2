@@ -25,7 +25,10 @@ script Aegis {
     fn start() {
         let elapsed = Game.get("elapsed", 0.0);
         let scale = 1.0 + min(1.35, max(0.0, elapsed - 60.0) * 0.0025);
-        this.hp = 196.0 * scale;
+        // The plates are part of Aegis's effective durability. Keep the exposed
+        // hull below the other heavy bosses so dismantling the ring feels like
+        // real progress instead of revealing a second full health bar.
+        this.hp = 150.0 * scale;
         this.offset = Random.range(0.0, 6.2831853);
         Game.set("boss_max", this.hp);
         Game.set("boss_hp", this.hp);
@@ -72,7 +75,7 @@ script Aegis {
         if is_visible() { act(dt, dx, dy, far); }
         else { chase(dx, dy, far, 1.0); }
 
-        receive_hits(player, dx, dy, far);
+        receive_hits(player);
         Game.set("boss_hp", max(this.hp, 0.0));
         if this.hp <= 0.0 { die(); }
     }
@@ -112,13 +115,13 @@ script Aegis {
         } else { tint(); }
     }
 
-    fn receive_hits(player: Entity, dx: f32, dy: f32, far: f32) {
+    fn receive_hits(player: Entity) {
         for hit in Physics.sensor_entered() {
             if hit == player {
                 Game.set("player_damage_taken", max(Game.get("player_damage_taken", 0.0), 2.4));
             } else if World.exists(hit) && World.has_tag(hit, "player_damage") {
                 var damage: f32 = World.property_number(hit, "damage", 0.0);
-                damage = taken(damage, dx, dy, far);
+                damage = taken(hit, damage);
                 this.hp -= damage;
                 if this.hp <= 0.0 && World.property_number(hit, "nova", 0.0) > 0.0 {
                     this.death_burst_damage = damage * 0.3;
@@ -127,12 +130,35 @@ script Aegis {
         }
     }
 
-    // Re-check the incoming lane so a projectile cannot damage both a plate and
-    // the hull in one physics frame. Actual gaps remain valid firing lanes.
-    fn taken(damage: f32, dx: f32, dy: f32, far: f32) -> f32 {
-        if shield_count() <= 0.0 || far <= 0.001 { return damage; }
-        let px = this.transform.position.x + dx / far * 1.55;
-        let py = this.transform.position.y + dy / far * 1.55;
+    // Sensor events for the plate and hull can be produced in the same physics
+    // step. The plate consumes ordinary projectiles immediately, but the hull
+    // also validates the projectile's actual incoming lane so script update
+    // order cannot leak damage through a surviving plate.
+    fn taken(hit: Entity, damage: f32) -> f32 {
+        if shield_count() <= 0.0 { return damage; }
+
+        var nx = World.property_number(hit, "dir_x", 0.0);
+        var ny = World.property_number(hit, "dir_y", 0.0);
+        var length = sqrt(nx * nx + ny * ny);
+
+        // Some player-damage effects are not Bullet instances. Their current
+        // position still tells us which side of the hull they approached from.
+        if length <= 0.001 {
+            nx = this.transform.position.x - hit.transform.position.x;
+            ny = this.transform.position.y - hit.transform.position.y;
+            length = sqrt(nx * nx + ny * ny);
+        }
+        if length <= 0.001 {
+            // An undirected hit at the exact core cannot bypass intact armour.
+            return 0.0;
+        }
+        nx /= length;
+        ny /= length;
+
+        // Walk backwards along the projectile's travel direction to the shield
+        // ring and test that crossing point against the surviving plates.
+        let px = this.transform.position.x - nx * 1.55;
+        let py = this.transform.position.y - ny * 1.55;
         for plate in World.with_tag("aegis_shield") {
             if !World.exists(plate) { continue; }
             let sx = plate.transform.position.x - px;
