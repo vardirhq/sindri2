@@ -27,6 +27,8 @@ script Spine {
         Game.set("boss_max", this.hp);
         Game.set("boss_hp", this.hp);
         Game.set("boss_kind", 8.0);
+        let player = World.find("Player");
+        if player != null { choose_turn(player); }
         build_body();
     }
 
@@ -36,8 +38,10 @@ script Spine {
         var slot: f32 = 0.0;
         while slot < 9.0 {
             let part = World.spawn(this.segment);
-            part.transform.position.x = this.transform.position.x - (slot + 1.0) * 0.62;
-            part.transform.position.y = this.transform.position.y;
+            part.transform.position.x =
+                this.transform.position.x - this.dir_x * (slot + 1.0) * 0.62;
+            part.transform.position.y =
+                this.transform.position.y - this.dir_y * (slot + 1.0) * 0.62;
             World.set_property(part, "slot", slot);
             World.set_property(part, "group", 0.0);
             World.set_property(part, "head", 0.0);

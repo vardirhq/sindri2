@@ -1,6 +1,7 @@
-// One physical section of Spine's body. Every section is joined to the one in
-// front by a real distance constraint; steering only decides how the chain
-// travels, while physics guarantees it remains a chain.
+// One section of Spine's body. A section replays the cardinal route taken by
+// the one in front. This is deliberately deterministic snake movement rather
+// than a physical rope: every section visits the same corners without joint
+// forces dragging it diagonally across the arena.
 script SpineSegment {
     @export let slot: f32 = 0.0;
     @export var group: f32 = 0.0;
@@ -16,12 +17,6 @@ script SpineSegment {
 
     fn start() {
         this.hp = this.health;
-        let ahead = leader();
-        if ahead != null {
-            // This call may happen on the same pass the prefab was spawned.
-            // Sindri queues the joint until both backend bodies materialize.
-            Physics.connect_distance(ahead, this.entity, this.spacing);
-        }
     }
 
     fn spine() -> Entity {
@@ -64,43 +59,46 @@ script SpineSegment {
             grid_hunt();
             return;
         }
-        follow(ahead);
+        follow(ahead, dt);
     }
 
-    fn follow(ahead: Entity) {
+    fn axis_velocity(distance: f32, dt: f32, speed: f32) -> f32 {
+        if abs(distance) <= 0.0001 { return 0.0; }
+        return max(-speed, min(speed, distance / max(dt, 0.0001)));
+    }
+
+    fn follow(ahead: Entity, dt: f32) {
         let ax = ahead.transform.position.x;
         let ay = ahead.transform.position.y;
         let avx = Physics.velocity_x(ahead);
         let avy = Physics.velocity_y(ahead);
         let speed = 5.4;
-        let snap = 0.07;
+        let aligned = 0.0001;
         var vx: f32 = 0.0;
         var vy: f32 = 0.0;
 
-        // Steering follows the leader's lane so corners stay orthogonal. The
-        // distance joint is authoritative for connectivity; this code no longer
-        // teleports transforms in an attempt to fake a physical connection.
+        // Finish the predecessor's old lane before entering its new one. Only
+        // one velocity component is ever non-zero, and the final step is sized
+        // to land exactly on the coordinate rather than leaving a snap error.
         if abs(avx) >= abs(avy) && abs(avx) > 0.01 {
             let cross = ay - this.transform.position.y;
-            if abs(cross) > snap {
-                if cross > 0.0 { vy = speed; } else { vy = -speed; }
+            if abs(cross) > aligned {
+                vy = axis_velocity(cross, dt, speed);
             } else {
                 var target_x = ax - this.spacing;
                 if avx < 0.0 { target_x = ax + this.spacing; }
                 let along = target_x - this.transform.position.x;
-                if along > snap { vx = speed; }
-                if along < -snap { vx = -speed; }
+                vx = axis_velocity(along, dt, speed);
             }
         } else if abs(avy) > 0.01 {
             let cross = ax - this.transform.position.x;
-            if abs(cross) > snap {
-                if cross > 0.0 { vx = speed; } else { vx = -speed; }
+            if abs(cross) > aligned {
+                vx = axis_velocity(cross, dt, speed);
             } else {
                 var target_y = ay - this.spacing;
                 if avy < 0.0 { target_y = ay + this.spacing; }
                 let along = target_y - this.transform.position.y;
-                if along > snap { vy = speed; }
-                if along < -snap { vy = -speed; }
+                vy = axis_velocity(along, dt, speed);
             }
         } else {
             let dx = ax - this.transform.position.x;
@@ -196,8 +194,6 @@ script SpineSegment {
         Effects.burst(this.entity);
         Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.22));
         Audio.play("audio/kill.wav", 0.25);
-        // Removing this body removes its attached distance joints in the physics
-        // world, physically severing the chain at exactly the destroyed link.
         // On its own update, the next section sees that its predecessor is gone
         // and promotes its own live `head` field. A running script owns that
         // field; another script cannot rewrite its authored starting properties.
