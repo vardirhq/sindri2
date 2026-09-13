@@ -1,0 +1,15 @@
+{
+  "format_version": 1,
+  "metadata": { "name": "Aegis Laser" },
+  "entities": [{
+    "id": "aegis-laser",
+    "name": "Aegis Laser",
+    "transform_3d": { "position": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0] },
+    "components": {
+      "sindri.tags": { "tags": ["hostile_shot", "aegis_laser"] },
+      "sindri.shape": { "kind": "rect", "count": 4.0, "fill": [1.0, 0.12, 0.06, 0.3], "stroke": [1.0, 0.62, 0.22, 0.72], "stroke_width": 0.055, "corner_radius": 0.02, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "add", "layer": 8 },
+      "sindri.effect.burst": { "texture": "textures/fleck.png", "count": 24, "speed": 4.0, "spread": 6.2831853, "lifetime": 0.32, "size": 0.07, "tint": [1.0, 0.36, 0.08, 1.0], "fade": true, "drag": 1.8, "layer": 9 },
+      "sindri.script": { "source": "scripts/aegis-laser.decay", "script": "AegisLaser", "properties": { "angle": 0.0, "length": 13.0, "telegraph": 0.62, "live_time": 0.24, "damage": 2.8 } }
+    }
+  }]
+}

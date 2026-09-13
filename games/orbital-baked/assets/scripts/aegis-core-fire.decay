@@ -22,6 +22,8 @@ script AegisCoreFire {
 
         this.transform.position.x = boss.transform.position.x;
         this.transform.position.y = boss.transform.position.y;
+        if Game.get("aegis_core_exposed", 0.0) <= 0.0 { return; }
+
         this.clock -= dt;
         if this.clock <= 0.0 {
             this.clock = this.pulse;

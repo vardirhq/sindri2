@@ -1,6 +1,6 @@
-// Telegraph first, then become a lethal beam. Aegis spawns these only after
-// its shield ring is gone, so the final phase reads as a damaged core dumping
-// unstable energy into the arena instead of simply shooting faster bullets.
+// A desperation beam with a readable warning line. It does not become lethal
+// until the telegraph expires, so random directions are threatening rather
+// than cheap.
 script AegisLaser {
     @export let angle: f32 = 0.0;
     @export let length: f32 = 13.0;
@@ -26,7 +26,6 @@ script AegisLaser {
             World.despawn(this.entity);
             return;
         }
-
         this.age += dt;
         if !this.fired && this.age >= this.telegraph {
             this.fired = true;
@@ -34,7 +33,6 @@ script AegisLaser {
             Effects.burst(this.entity);
             Audio.play("audio/boss.wav", 0.52);
         }
-
         if this.fired {
             hit_player();
             if this.age >= this.telegraph + this.live_time {
@@ -58,26 +56,14 @@ script AegisLaser {
 
     fn telegraph_visual() {
         this.transform.scale.y = 0.035;
-        this.shape.fill.r = 1.0;
-        this.shape.fill.g = 0.18;
-        this.shape.fill.b = 0.12;
-        this.shape.fill.a = 0.3;
-        this.shape.stroke.r = 1.0;
-        this.shape.stroke.g = 0.58;
-        this.shape.stroke.b = 0.28;
-        this.shape.stroke.a = 0.72;
+        this.shape.fill.r = 1.0; this.shape.fill.g = 0.12; this.shape.fill.b = 0.06; this.shape.fill.a = 0.3;
+        this.shape.stroke.r = 1.0; this.shape.stroke.g = 0.62; this.shape.stroke.b = 0.22; this.shape.stroke.a = 0.72;
     }
 
     fn fire_visual() {
         this.transform.scale.y = 0.24;
-        this.shape.fill.r = 1.0;
-        this.shape.fill.g = 0.88;
-        this.shape.fill.b = 0.62;
-        this.shape.fill.a = 0.94;
-        this.shape.stroke.r = 1.0;
-        this.shape.stroke.g = 0.25;
-        this.shape.stroke.b = 0.1;
-        this.shape.stroke.a = 1.0;
+        this.shape.fill.r = 1.0; this.shape.fill.g = 0.88; this.shape.fill.b = 0.62; this.shape.fill.a = 0.94;
+        this.shape.stroke.r = 1.0; this.shape.stroke.g = 0.2; this.shape.stroke.b = 0.06; this.shape.stroke.a = 1.0;
         Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.22));
     }
 
@@ -94,8 +80,7 @@ script AegisLaser {
         let sideways = abs(-dx * ny + dy * nx);
         if sideways <= 0.22 {
             this.dealt = true;
-            Game.set("player_damage_taken",
-                     max(Game.get("player_damage_taken", 0.0), this.damage));
+            Game.set("player_damage_taken", max(Game.get("player_damage_taken", 0.0), this.damage));
         }
     }
 }
