@@ -117,12 +117,16 @@ fn the_first_inserted_scene_remains_the_entry_scene() {
     manifest.insert(id("orbital.scene.json"), b"main");
     manifest.insert(id("combat-lab.scene.json"), b"lab");
 
-    let text = manifest.to_canonical_json().expect("manifest serializes");
-    assert!(
-        text.find("combat-lab.scene.json") < text.find("orbital.scene.json"),
-        "the asset map should still be canonical and sorted: {text}"
+    assert_eq!(
+        manifest
+            .assets()
+            .map(|(asset, _)| asset.as_str())
+            .collect::<Vec<_>>(),
+        ["combat-lab.scene.json", "orbital.scene.json"],
+        "the asset map should remain canonical and sorted"
     );
 
+    let text = manifest.to_canonical_json().expect("manifest serializes");
     let restored = AssetManifest::from_json(&text).expect("manifest round trips");
     assert_eq!(
         restored
@@ -178,7 +182,7 @@ fn a_directory_becomes_the_names_a_scene_would_write() {
 
 /// A manifest is read by a host that asks for its assets *by kind*, so one
 /// that calls everything `Other` describes a project with no scene, no
-/// scripts, and no textures — and the host that reads it loads nothing at all.
+/// scripts, and no textures — and the host that read one loads nothing at all.
 ///
 /// This is not hypothetical: the site's pages were built from a directory scan
 /// that did exactly this, and the game it served stopped opening the moment
