@@ -3,9 +3,11 @@
 //! A volume remains one component payload so a stroke is one undoable command.
 //! These helpers edit only `cells`; unknown future fields survive unchanged.
 
+use std::path::{Path, PathBuf};
+
 use glam::{Mat4, Quat, Vec3};
 use serde_json::{Value, json};
-use sindri_core::Transform3D;
+use sindri_core::{TileSetDocument, Transform3D};
 use sindri_grid::GridCoord3;
 use sindri_scene::{TileGridComponent, TileProjection, TileVolumeComponent};
 
@@ -29,6 +31,53 @@ pub struct TileVolumeTool {
     pub tile: Option<String>,
     pub level: i32,
     pub placement: TilePlacement,
+    pub palette: TileSetPalette,
+}
+
+/// Tile IDs from one validated tile-set asset, read once per selected asset.
+#[derive(Default)]
+pub struct TileSetPalette {
+    key: Option<(PathBuf, String)>,
+    tiles: Vec<String>,
+    problem: Option<String>,
+}
+
+impl TileSetPalette {
+    pub fn ensure(&mut self, root: Option<&Path>, reference: &str) {
+        let Some(root) = root else {
+            self.clear();
+            self.problem = Some("Save the scene before loading its tile set".to_owned());
+            return;
+        };
+        let key = (root.to_path_buf(), reference.to_owned());
+        if self.key.as_ref() == Some(&key) {
+            return;
+        }
+        self.clear();
+        self.key = Some(key);
+        let path = root.join(reference);
+        let result = std::fs::read_to_string(&path)
+            .map_err(|error| format!("{}: {error}", path.display()))
+            .and_then(|json| TileSetDocument::from_json(&json).map_err(|error| error.to_string()));
+        match result {
+            Ok(set) => self.tiles.extend(set.tiles.keys().cloned()),
+            Err(error) => self.problem = Some(error),
+        }
+    }
+
+    pub fn tiles(&self) -> &[String] {
+        &self.tiles
+    }
+
+    pub fn problem(&self) -> Option<&str> {
+        self.problem.as_deref()
+    }
+
+    fn clear(&mut self) {
+        self.key = None;
+        self.tiles.clear();
+        self.problem = None;
+    }
 }
 
 impl TileVolumeTool {

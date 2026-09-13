@@ -4,7 +4,6 @@ use std::path::Path;
 
 use eframe::egui;
 use serde_json::Value;
-use sindri_core::TileSetDocument;
 
 use crate::tile_volume::{self, TilePlacement, TileVolumeTool};
 use crate::ui::icons;
@@ -52,35 +51,33 @@ pub(super) fn tile_volume_section(
     section::caption(ui, help);
 
     section::group(ui, icons::SPRITE, "Blocks");
-    match tile_ids(assets_root, &volume.tileset) {
-        Ok(tiles) => {
-            if !tool.erase
-                && tool
-                    .tile
-                    .as_ref()
-                    .is_none_or(|chosen| !tiles.contains(chosen))
-            {
-                tool.tile = tiles.first().cloned();
-            }
-            ui.horizontal_wrapped(|ui| {
-                for tile in tiles {
-                    if ui
-                        .selectable_label(!tool.erase && tool.tile.as_deref() == Some(&tile), &tile)
-                        .clicked()
-                    {
-                        tool.erase = false;
-                        tool.tile = Some(tile);
-                    }
-                }
-            });
-        }
-        Err(error) => panel::problem(ui, &error),
+    tool.palette.ensure(assets_root, &volume.tileset);
+    let tiles = tool.palette.tiles().to_vec();
+    if !tool.erase
+        && tool
+            .tile
+            .as_ref()
+            .is_none_or(|chosen| !tiles.contains(chosen))
+    {
+        tool.tile = tiles.first().cloned();
     }
-}
-
-fn tile_ids(root: Option<&Path>, reference: &str) -> Result<Vec<String>, String> {
-    let root = root.ok_or_else(|| "Save the scene before loading its tile set".to_owned())?;
-    let text = std::fs::read_to_string(root.join(reference)).map_err(|error| error.to_string())?;
-    let set = TileSetDocument::from_json(&text).map_err(|error| error.to_string())?;
-    Ok(set.tiles.keys().cloned().collect())
+    ui.horizontal_wrapped(|ui| {
+        for tile in &tiles {
+            if ui
+                .selectable_label(
+                    !tool.erase && tool.tile.as_deref() == Some(tile.as_str()),
+                    tile,
+                )
+                .clicked()
+            {
+                tool.erase = false;
+                tool.tile = Some(tile.clone());
+            }
+        }
+    });
+    if let Some(problem) = tool.palette.problem() {
+        panel::problem(ui, problem);
+    } else if tiles.is_empty() {
+        panel::note(ui, "Add at least one block definition to this tile set.");
+    }
 }
