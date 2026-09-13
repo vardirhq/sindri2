@@ -45,6 +45,7 @@ script SpineSegment {
             return;
         }
         this.turn_clock -= dt;
+        clamp_inside();
         receive_hits();
         if !World.exists(this.entity) { return; }
         if this.head > 0.0 { grid_hunt(); return; }
@@ -58,37 +59,85 @@ script SpineSegment {
     }
 
     fn follow(ahead: Entity) {
-        let dx = ahead.transform.position.x - this.transform.position.x;
-        let dy = ahead.transform.position.y - this.transform.position.y;
-        let far = sqrt(dx * dx + dy * dy);
-        if far <= this.spacing * 0.72 {
-            Physics.set_velocity(this.entity, 0.0, 0.0);
-            return;
-        }
-        // Followers take the dominant axis only. This keeps the body visibly
-        // connected while preserving the blocky up/down/left/right character.
+        let ax = ahead.transform.position.x;
+        let ay = ahead.transform.position.y;
+        let avx = Physics.velocity_x(ahead);
+        let avy = Physics.velocity_y(ahead);
+        let speed = 5.4;
+        let snap = 0.055;
         var vx: f32 = 0.0;
         var vy: f32 = 0.0;
-        let speed = min(6.4, max(3.2, (far - this.spacing) * 10.0 + 3.2));
-        if abs(dx) > abs(dy) {
-            if dx > 0.0 { vx = speed; } else { vx = -speed; }
+
+        // Follow the leader's lane, not its diagonal displacement. When a leader
+        // turns, the follower first reaches the same corner coordinate and only
+        // then takes the new axis. That creates proper Snake-like right angles.
+        if abs(avx) >= abs(avy) && abs(avx) > 0.01 {
+            let target_y = ay;
+            var target_x = ax - this.spacing;
+            if avx < 0.0 { target_x = ax + this.spacing; }
+            let cross = target_y - this.transform.position.y;
+            if abs(cross) > snap {
+                if cross > 0.0 { vy = speed; } else { vy = -speed; }
+            } else {
+                this.transform.position.y = target_y;
+                let along = target_x - this.transform.position.x;
+                if abs(along) > snap {
+                    if along > 0.0 { vx = speed; } else { vx = -speed; }
+                } else {
+                    this.transform.position.x = target_x;
+                }
+            }
+        } else if abs(avy) > 0.01 {
+            let target_x = ax;
+            var target_y = ay - this.spacing;
+            if avy < 0.0 { target_y = ay + this.spacing; }
+            let cross = target_x - this.transform.position.x;
+            if abs(cross) > snap {
+                if cross > 0.0 { vx = speed; } else { vx = -speed; }
+            } else {
+                this.transform.position.x = target_x;
+                let along = target_y - this.transform.position.y;
+                if abs(along) > snap {
+                    if along > 0.0 { vy = speed; } else { vy = -speed; }
+                } else {
+                    this.transform.position.y = target_y;
+                }
+            }
         } else {
-            if dy > 0.0 { vy = speed; } else { vy = -speed; }
+            let dx = ax - this.transform.position.x;
+            let dy = ay - this.transform.position.y;
+            if abs(dx) > abs(dy) {
+                if dx > this.spacing { vx = speed; }
+                if dx < -this.spacing { vx = -speed; }
+            } else {
+                if dy > this.spacing { vy = speed; }
+                if dy < -this.spacing { vy = -speed; }
+            }
         }
+
         Physics.set_velocity(this.entity, vx, vy);
-        this.transform.rotation_z = atan2(vy, vx);
+        if abs(vx) + abs(vy) > 0.01 {
+            this.transform.rotation_z = atan2(vy, vx);
+        }
     }
 
     fn half_x() -> f32 {
         let aspect = max(Viewport.aspect, 0.001);
-        if aspect >= 1.0 { return 11.0 * 0.5 * aspect - 0.75; }
-        return 11.0 * 0.5 - 0.75;
+        if aspect >= 1.0 { return 11.0 * 0.5 * aspect - 0.9; }
+        return 11.0 * 0.5 - 0.9;
     }
 
     fn half_y() -> f32 {
         let aspect = max(Viewport.aspect, 0.001);
-        if aspect >= 1.0 { return 11.0 * 0.5 - 0.75; }
-        return 11.0 * 0.5 / aspect - 0.75;
+        if aspect >= 1.0 { return 11.0 * 0.5 - 0.9; }
+        return 11.0 * 0.5 / aspect - 0.9;
+    }
+
+    fn clamp_inside() {
+        let hx = half_x();
+        let hy = half_y();
+        this.transform.position.x = max(-hx, min(hx, this.transform.position.x));
+        this.transform.position.y = max(-hy, min(hy, this.transform.position.y));
     }
 
     fn choose_turn(player: Entity) {
@@ -109,6 +158,7 @@ script SpineSegment {
         if player == null { return; }
         let hx = half_x();
         let hy = half_y();
+        clamp_inside();
         let x = this.transform.position.x;
         let y = this.transform.position.y;
         var edge: f32 = 0.0;
@@ -140,10 +190,14 @@ script SpineSegment {
         let share = this.hp / max(this.health, 0.001);
         if share < 0.34 && this.state < 2.0 {
             this.state = 2.0;
-            this.shape.fill.r = 1.0; this.shape.fill.g = 0.24; this.shape.fill.b = 0.34;
+            this.sprite.tint.r = 1.0;
+            this.sprite.tint.g = 0.30;
+            this.sprite.tint.b = 0.40;
         } else if share < 0.67 && this.state < 1.0 {
             this.state = 1.0;
-            this.shape.fill.r = 1.0; this.shape.fill.g = 0.42; this.shape.fill.b = 0.52;
+            this.sprite.tint.r = 1.0;
+            this.sprite.tint.g = 0.46;
+            this.sprite.tint.b = 0.60;
         }
     }
 
