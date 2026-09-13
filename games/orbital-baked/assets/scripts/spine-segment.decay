@@ -20,6 +20,9 @@ script SpineSegment {
     var corner_y: f32 = 0.0;
     var next_corner_x: f32 = 0.0;
     var next_corner_y: f32 = 0.0;
+    var observed_ahead_x: f32 = 0.0;
+    var observed_ahead_y: f32 = 0.0;
+    var has_observed_ahead: f32 = 0.0;
 
     fn start() {
         this.hp = this.health;
@@ -90,20 +93,37 @@ script SpineSegment {
         if this.seen_dir_x == 0.0 && this.seen_dir_y == 0.0 {
             this.seen_dir_x = next_x;
             this.seen_dir_y = next_y;
+            this.observed_ahead_x = ax;
+            this.observed_ahead_y = ay;
+            this.has_observed_ahead = 1.0;
             return;
         }
-        if this.seen_dir_x == next_x && this.seen_dir_y == next_y { return; }
+        if this.seen_dir_x == next_x && this.seen_dir_y == next_y {
+            this.observed_ahead_x = ax;
+            this.observed_ahead_y = ay;
+            this.has_observed_ahead = 1.0;
+            return;
+        }
 
-        // The predecessor may already have travelled part-way down its new lane
-        // when this script observes the direction change. Recover the actual
-        // corner as the intersection of that new lane and the lane this follower
-        // is still travelling.
+        // Reconstruct the predecessor's actual corner from two observations of
+        // the predecessor, never from this follower's own coordinate. Using the
+        // follower's lane here looked plausible for the first links, but tiny
+        // accumulated drift meant middle links eventually invented a corner the
+        // predecessor had never visited. The old and new predecessor lanes have
+        // one exact intersection, so combine the old observation with the new
+        // one to recover it independent of script/physics update ordering.
         var turn_x: f32 = ax;
         var turn_y: f32 = ay;
-        if abs(this.seen_dir_x) > 0.01 {
-            turn_y = this.transform.position.y;
-        } else if abs(this.seen_dir_y) > 0.01 {
-            turn_x = this.transform.position.x;
+        if this.has_observed_ahead > 0.0 {
+            if abs(next_x) > 0.01 {
+                // Old lane was vertical, new lane is horizontal.
+                turn_x = this.observed_ahead_x;
+                turn_y = ay;
+            } else if abs(next_y) > 0.01 {
+                // Old lane was horizontal, new lane is vertical.
+                turn_x = ax;
+                turn_y = this.observed_ahead_y;
+            }
         }
 
         if this.corner_count <= 0.0 {
@@ -117,6 +137,9 @@ script SpineSegment {
         }
         this.seen_dir_x = next_x;
         this.seen_dir_y = next_y;
+        this.observed_ahead_x = ax;
+        this.observed_ahead_y = ay;
+        this.has_observed_ahead = 1.0;
     }
 
     fn follow_corner(dt: f32, speed: f32) -> bool {
