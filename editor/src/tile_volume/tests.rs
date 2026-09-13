@@ -104,11 +104,9 @@ fn surface_pick_chooses_the_exposed_top_of_a_stack() {
     let volume = component(&payload).unwrap();
     let upper = GridCoord3::new(1, 1, 1);
     let outline = cell_outline(&grid, Transform3D::default(), view, upper).unwrap();
-    let point = outline
-        .into_iter()
-        .fold([0.0, 0.0], |sum, point| {
-            [sum[0] + point[0] * 0.25, sum[1] + point[1] * 0.25]
-        });
+    let point = outline.into_iter().fold([0.0, 0.0], |sum, point| {
+        [sum[0] + point[0] * 0.25, sum[1] + point[1] * 0.25]
+    });
 
     assert_eq!(
         surface_cell_at_viewport(&grid, Transform3D::default(), view, point, &volume),
@@ -127,15 +125,7 @@ fn surface_pick_chooses_the_exposed_top_of_a_stack() {
         Some(GridCoord3::new(1, 1, 2))
     );
     assert_eq!(
-        surface_target_at_viewport(
-            &grid,
-            Transform3D::default(),
-            view,
-            point,
-            &volume,
-            true,
-            0,
-        ),
+        surface_target_at_viewport(&grid, Transform3D::default(), view, point, &volume, true, 0,),
         Some(upper)
     );
 }
@@ -147,11 +137,9 @@ fn empty_surface_space_can_start_a_foundation_but_cannot_erase_it() {
     let volume = component(&volume()).unwrap();
     let empty = GridCoord3::new(3, 3, 0);
     let outline = cell_outline(&grid, Transform3D::default(), view, empty).unwrap();
-    let point = outline
-        .into_iter()
-        .fold([0.0, 0.0], |sum, point| {
-            [sum[0] + point[0] * 0.25, sum[1] + point[1] * 0.25]
-        });
+    let point = outline.into_iter().fold([0.0, 0.0], |sum, point| {
+        [sum[0] + point[0] * 0.25, sum[1] + point[1] * 0.25]
+    });
 
     assert_eq!(
         surface_target_at_viewport(
@@ -166,15 +154,7 @@ fn empty_surface_space_can_start_a_foundation_but_cannot_erase_it() {
         Some(empty)
     );
     assert_eq!(
-        surface_target_at_viewport(
-            &grid,
-            Transform3D::default(),
-            view,
-            point,
-            &volume,
-            true,
-            0,
-        ),
+        surface_target_at_viewport(&grid, Transform3D::default(), view, point, &volume, true, 0,),
         None
     );
 }

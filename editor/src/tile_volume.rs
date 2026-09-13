@@ -213,8 +213,7 @@ pub fn surface_target_at_viewport(
     erase: bool,
     foundation_level: i32,
 ) -> Option<GridCoord3> {
-    if let Some(surface) =
-        surface_cell_at_viewport(grid, transform, view_projection, point, volume)
+    if let Some(surface) = surface_cell_at_viewport(grid, transform, view_projection, point, volume)
     {
         return if erase {
             Some(surface)
@@ -225,13 +224,7 @@ pub fn surface_target_at_viewport(
     if erase {
         None
     } else {
-        cell_at_viewport(
-            grid,
-            transform,
-            view_projection,
-            point,
-            foundation_level,
-        )
+        cell_at_viewport(grid, transform, view_projection, point, foundation_level)
     }
 }
 

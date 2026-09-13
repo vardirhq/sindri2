@@ -316,11 +316,12 @@ impl EditorApp {
             // Measured before the chrome is drawn, because measuring a string
             // shapes it and the painter takes only a shared borrow.
             let text_rect = self.selected_text_rect(camera);
+            let hover = interaction.hover();
             self.paint_scene_chrome(
                 ui,
                 rect,
                 camera,
-                interaction.hover(),
+                hover.as_ref(),
                 interaction.painting,
                 text_rect,
             );
@@ -357,11 +358,11 @@ impl EditorApp {
         let camera_before_input = self.scene_camera();
         let gizmo_owned = editing
             && !painting
-            && self
-                .gizmo_visual(rect, camera_before_input)
-                .is_some_and(|(camera, anchoring, visual)| {
+            && self.gizmo_visual(rect, camera_before_input).is_some_and(
+                |(camera, anchoring, visual)| {
                     self.interact_gizmo(rect, response, camera, anchoring, &visual)
-                });
+                },
+            );
         if editing {
             self.move_camera(context, response, rect.height(), painting || gizmo_owned);
         }
@@ -468,7 +469,7 @@ impl EditorApp {
         ui: &egui::Ui,
         rect: Rect,
         camera: CameraView,
-        hover: Option<PaintHover<'_>>,
+        hover: Option<&PaintHover<'_>>,
         painting: bool,
         text_rect: Option<([f32; 2], [f32; 2])>,
     ) {
