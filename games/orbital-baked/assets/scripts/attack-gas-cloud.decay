@@ -8,9 +8,6 @@ script GasCloud {
     @export let drift_x: f32 = 0.0;
     @export let drift_y: f32 = 0.0;
     @export let grow: f32 = 0.18;
-    // External reaction input. Mines and future fire attacks can ignite the
-    // cloud without knowing anything about its implementation.
-    @export let ignite: f32 = 0.0;
 
     var age: f32 = 0.0;
     var tick: f32 = 0.0;
@@ -25,8 +22,8 @@ script GasCloud {
     fn update(dt: f32) {
         if Game.get("run_state", 0.0) != 1.0 { return; }
         this.age += dt;
-        if World.property_number(this.entity, "ignite", 0.0) > 0.0 {
-            ignite();
+        if World.take_signal("ignite") > 0.0 {
+            explode();
             return;
         }
         this.tick -= dt;
@@ -56,13 +53,12 @@ script GasCloud {
             let dx = target.transform.position.x - this.transform.position.x;
             let dy = target.transform.position.y - this.transform.position.y;
             if dx * dx + dy * dy <= this.current_radius * this.current_radius {
-                let pending = World.property_number(target, "hazard_damage", 0.0);
-                World.set_property(target, "hazard_damage", pending + amount);
+                World.send_signal(target, "hazard_damage", amount);
             }
         }
     }
 
-    fn ignite() {
+    fn explode() {
         let blast = this.current_radius * 1.3;
         this.current_radius = blast;
         damage_targets(this.damage * 3.0);

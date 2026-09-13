@@ -224,6 +224,10 @@ pub(super) fn add_world_surface(environment: &mut Environment) {
                     WorldCall::PropertyNumber => {
                         vec![Type::Named(ENTITY.to_owned()), Type::String, Type::F32]
                     }
+                    WorldCall::SendSignal => {
+                        vec![Type::Named(ENTITY.to_owned()), Type::String, Type::F32]
+                    }
+                    WorldCall::TakeSignal => vec![Type::String],
                 },
                 return_type: match call {
                     WorldCall::Find | WorldCall::Spawn | WorldCall::SpawnChild => {
@@ -234,9 +238,10 @@ pub(super) fn add_world_surface(environment: &mut Environment) {
                     | WorldCall::SetParent
                     | WorldCall::SetShapePoint
                     | WorldCall::SetProperty
+                    | WorldCall::SendSignal
                     | WorldCall::SetActive => Type::Unit,
                     WorldCall::Exists | WorldCall::IsActive | WorldCall::HasTag => Type::Bool,
-                    WorldCall::PropertyNumber => Type::F32,
+                    WorldCall::PropertyNumber | WorldCall::TakeSignal => Type::F32,
                 },
             },
         );

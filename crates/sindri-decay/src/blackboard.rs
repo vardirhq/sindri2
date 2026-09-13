@@ -10,6 +10,7 @@ use std::collections::BTreeMap;
 #[derive(Clone, Debug, Default)]
 pub struct Blackboard {
     notes: BTreeMap<String, f64>,
+    signals: BTreeMap<(u64, String), f64>,
 }
 
 impl Blackboard {
@@ -28,6 +29,22 @@ impl Blackboard {
         self.notes.insert(name.into(), value);
     }
 
+    /// Adds a numeric signal addressed to one live entity.
+    pub fn send_signal(&mut self, entity: u64, name: impl Into<String>, value: f64) {
+        *self.signals.entry((entity, name.into())).or_default() += value;
+    }
+
+    /// Takes the accumulated signal for one entity, leaving zero behind.
+    pub fn take_signal(&mut self, entity: u64, name: &str) -> f64 {
+        self.signals
+            .remove(&(entity, name.to_owned()))
+            .unwrap_or_default()
+    }
+
+    pub(crate) fn retain_signals(&mut self, mut keep: impl FnMut(u64) -> bool) {
+        self.signals.retain(|(entity, _), _| keep(*entity));
+    }
+
     /// Whether anything has been left under a name.
     #[must_use]
     pub fn has(&self, name: &str) -> bool {
@@ -43,5 +60,6 @@ impl Blackboard {
 
     pub fn clear(&mut self) {
         self.notes.clear();
+        self.signals.clear();
     }
 }

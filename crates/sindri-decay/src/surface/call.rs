@@ -144,6 +144,10 @@ pub(crate) enum WorldCall {
     /// The fallback is required so an optional property and a misspelling do
     /// not both silently become zero.
     PropertyNumber,
+    /// Sends an accumulating numeric runtime signal to one entity.
+    SendSignal,
+    /// Takes this entity's accumulated signal, or zero when none is pending.
+    TakeSignal,
     /// Every active entity carrying an authored tag, in world order.
     ///
     /// The answer to "a game cannot hold a reference to each of three hundred
@@ -185,6 +189,8 @@ pub(crate) const WORLD_CALLS: &[(&str, WorldCall)] = &[
     ("set_shape_point", WorldCall::SetShapePoint),
     ("set_property", WorldCall::SetProperty),
     ("property_number", WorldCall::PropertyNumber),
+    ("send_signal", WorldCall::SendSignal),
+    ("take_signal", WorldCall::TakeSignal),
     ("with_tag", WorldCall::WithTag),
     ("has_tag", WorldCall::HasTag),
     ("set_active", WorldCall::SetActive),

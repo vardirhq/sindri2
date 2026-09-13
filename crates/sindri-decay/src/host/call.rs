@@ -115,6 +115,8 @@ impl WorldHost<'_> {
             WorldCall::SetShapePoint => self.set_shape_point_call(path, args),
             WorldCall::SetProperty => self.set_property_call(path, args),
             WorldCall::PropertyNumber => self.property_number_call(path, args),
+            WorldCall::SendSignal => self.send_signal_call(path, args),
+            WorldCall::TakeSignal => self.take_signal_call(path, args),
             WorldCall::WithTag => self.with_tag_call(path, args),
             WorldCall::HasTag => self.has_tag_call(path, args),
             WorldCall::SetActive => {
@@ -435,6 +437,36 @@ impl WorldHost<'_> {
             .and_then(serde_json::Value::as_f64)
             .unwrap_or(*fallback);
         Ok(Value::Number(value))
+    }
+
+    /// Sends runtime data to a live entity without rewriting authored fields.
+    fn send_signal_call(&mut self, path: &Path, args: &[Value]) -> Result<Value, RuntimeError> {
+        let entity = self.entity_argument(path, args, 0, "the signal recipient")?;
+        let Some(Value::String(name)) = args.get(1) else {
+            return Err(RuntimeError::Host(format!(
+                "{} names the signal, as text",
+                path.dotted()
+            )));
+        };
+        let value = args
+            .get(2)
+            .ok_or_else(|| RuntimeError::Host(format!("{} needs a signal value", path.dotted())))
+            .and_then(|value| number(path, value))?;
+        self.blackboard.send_signal(entity.to_bits(), name, value);
+        Ok(Value::Unit)
+    }
+
+    /// Takes this script entity's pending signal. Multiple sends accumulate.
+    fn take_signal_call(&mut self, path: &Path, args: &[Value]) -> Result<Value, RuntimeError> {
+        let Some(Value::String(name)) = args.first() else {
+            return Err(RuntimeError::Host(format!(
+                "{} names the signal, as text",
+                path.dotted()
+            )));
+        };
+        Ok(Value::Number(
+            self.blackboard.take_signal(self.entity.to_bits(), name),
+        ))
     }
 
     /// Removes `entity` and everything under it.

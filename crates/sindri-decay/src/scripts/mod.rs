@@ -381,6 +381,9 @@ impl Scripts {
         Self::start_spawned(&mut report, &mut live, &mut at, components, delta_seconds);
 
         at.running.retain(|entity, _| live.contains(entity));
+        let world = &*at.world;
+        at.blackboard
+            .retain_signals(|bits| world.get(EntityId::from_bits(bits)).is_some());
         report
     }
 

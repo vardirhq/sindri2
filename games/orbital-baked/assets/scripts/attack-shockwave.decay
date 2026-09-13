@@ -51,8 +51,7 @@ script Shockwave {
             let dy = target.transform.position.y - this.transform.position.y;
             let distance = sqrt(dx * dx + dy * dy);
             if crossed(distance, previous) {
-                let pending = World.property_number(target, "hazard_damage", 0.0);
-                World.set_property(target, "hazard_damage", pending + this.damage);
+                World.send_signal(target, "hazard_damage", this.damage);
                 if World.has_tag(target, "attack_pushable") {
                     let safe = max(0.1, distance);
                     Physics.set_velocity(target,
@@ -69,7 +68,7 @@ script Shockwave {
             let dx = mine.transform.position.x - this.transform.position.x;
             let dy = mine.transform.position.y - this.transform.position.y;
             if crossed(sqrt(dx * dx + dy * dy), previous) {
-                World.set_property(mine, "detonate_now", 1.0);
+                World.send_signal(mine, "detonate", 1.0);
             }
         }
     }

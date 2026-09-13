@@ -10,7 +10,7 @@
       "sindri.shape": { "kind": "ellipse", "count": 18.0, "fill": [0.5,0.05,0.04,0.08], "stroke": [1.0,0.34,0.2,0.72], "stroke_width": 0.035, "corner_radius": 0.0, "dashes": 12.0, "dash_duty": 0.46, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "add", "layer": 2 },
       "sindri.sprite": { "texture": "textures/attack-mine.png#armed", "tint": [1.0,1.0,1.0,1.0], "layer": 3 },
       "sindri.effect.burst": { "texture": "textures/fleck.png", "count": 26, "speed": 5.2, "spread": 6.2, "lifetime": 0.55, "size": 0.09, "tint": [1.0,0.32,0.12,1.0], "fade": true, "drag": 1.3, "layer": 6 },
-      "sindri.script": { "source": "scripts/attack-hostile-mine.decay", "script": "HostileMine", "properties": { "trigger_radius": 1.25, "blast_radius": 1.75, "arm_delay": 0.55, "fuse": 0.7, "lifetime": 8.0, "damage": 1.4, "detonate_now": 0.0 } }
+      "sindri.script": { "source": "scripts/attack-hostile-mine.decay", "script": "HostileMine", "properties": { "trigger_radius": 1.25, "blast_radius": 1.75, "arm_delay": 0.55, "fuse": 0.7, "lifetime": 8.0, "damage": 1.4 } }
     }
   }]
 }

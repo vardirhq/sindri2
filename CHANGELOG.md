@@ -8,7 +8,9 @@ All notable changes to Sindri Engine will be documented here.
   shockwaves trigger mine chains and push reactive props, explosions ignite gas,
   and all four primitives affect explicitly tagged environment targets. Replace
   the mine and gravity-core placeholders with reproducible baker art and use the
-  real baked player ship in the playground.
+  real baked player ship in the playground. Add addressed, accumulating
+  `World.send_signal` / `World.take_signal` runtime events so those reactions
+  communicate with live scripts rather than rewriting authoring properties.
 
 - **Tile System 2 begins with correct global painter ordering and a stackable
   volume contract.** Transparent sprites are ordered across texture boundaries

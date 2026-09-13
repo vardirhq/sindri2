@@ -1,8 +1,7 @@
 // A visible, destructible stand-in for scenery, summons and neutral props.
-// Production attacks know only its capability tags and hazard_damage property.
+// Production attacks know only its capability tags and hazard_damage signal.
 script CombatLabTarget {
     @export let health: f32 = 2.4;
-    @export var hazard_damage: f32 = 0.0;
     var hp: f32 = 0.0;
 
     fn start() {
@@ -13,9 +12,9 @@ script CombatLabTarget {
     }
 
     fn update(dt: f32) {
-        if this.hazard_damage > 0.0 {
-            this.hp -= this.hazard_damage;
-            this.hazard_damage = 0.0;
+        let damage = World.take_signal("hazard_damage");
+        if damage > 0.0 {
+            this.hp -= damage;
             this.sprite.tint.r = 1.0;
             this.sprite.tint.g = 0.72;
             this.sprite.tint.b = 0.5;

@@ -6,8 +6,6 @@ script HostileMine {
     @export let fuse: f32 = 0.7;
     @export let lifetime: f32 = 8.0;
     @export let damage: f32 = 1.4;
-    // External reaction input used by shockwaves and neighbouring mines.
-    @export let detonate_now: f32 = 0.0;
 
     var age: f32 = 0.0;
     var countdown: f32 = -1.0;
@@ -18,7 +16,7 @@ script HostileMine {
         this.age += dt;
         this.transform.rotation_z += dt * 1.7;
 
-        if World.property_number(this.entity, "detonate_now", 0.0) > 0.0 {
+        if World.take_signal("detonate") > 0.0 {
             detonate();
             return;
         }
@@ -73,8 +71,7 @@ script HostileMine {
             let dx = target.transform.position.x - this.transform.position.x;
             let dy = target.transform.position.y - this.transform.position.y;
             if dx * dx + dy * dy <= this.blast_radius * this.blast_radius {
-                let pending = World.property_number(target, "hazard_damage", 0.0);
-                World.set_property(target, "hazard_damage", pending + this.damage);
+                World.send_signal(target, "hazard_damage", this.damage);
             }
         }
     }
@@ -86,7 +83,7 @@ script HostileMine {
             let dx = mine.transform.position.x - this.transform.position.x;
             let dy = mine.transform.position.y - this.transform.position.y;
             if dx * dx + dy * dy <= reach * reach {
-                World.set_property(mine, "detonate_now", 1.0);
+                World.send_signal(mine, "detonate", 1.0);
             }
         }
     }
@@ -98,7 +95,7 @@ script HostileMine {
             let dx = cloud.transform.position.x - this.transform.position.x;
             let dy = cloud.transform.position.y - this.transform.position.y;
             if dx * dx + dy * dy <= reach * reach {
-                World.set_property(cloud, "ignite", 1.0);
+                World.send_signal(cloud, "ignite", 1.0);
             }
         }
     }
