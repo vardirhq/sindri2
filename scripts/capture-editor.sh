@@ -2,7 +2,7 @@
 
 set -eu
 
-output_path=${1:?"usage: capture-editor.sh OUTPUT.png [SCENE.json] [ENTITY_FILTER]"}
+output_path=${1:?"usage: capture-editor.sh OUTPUT.png [SCENE.json] [ENTITY_FILTER] [TOOL]"}
 output_dir=$(dirname "$output_path")
 mkdir -p "$output_dir"
 
@@ -13,6 +13,7 @@ mkdir -p "$output_dir"
 # scene is of interest, and passing none photographs the one this always did.
 scene=${2:-examples/cube/assets/demo.scene.json}
 entity_filter=${3:-}
+tool=${4:-}
 
 # Built before it is launched, so the wait below times the editor starting up
 # rather than rustc. The loop that follows gives the window thirty seconds to
@@ -70,6 +71,15 @@ if [ -n "$entity_filter" ]; then
     xdotool type --window "$window_id" --delay 20 "$entity_filter"
     sleep 1
     xdotool mousemove --window "$window_id" 85 158 click 1
+    sleep 2
+fi
+
+# The Tile Volume proof should show the feature in use, not merely present.
+# Enable its brush and hover the top block so the target diamond is visible.
+if [ "$tool" = "tile-volume" ]; then
+    xdotool mousemove --window "$window_id" 1290 429 click 1
+    sleep 1
+    xdotool mousemove --window "$window_id" 720 340
     sleep 2
 fi
 
