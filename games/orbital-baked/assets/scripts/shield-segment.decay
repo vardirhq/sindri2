@@ -1,9 +1,9 @@
-// One plate of a boss's rotating shield.
+// One independent plate of Aegis's rotating shield.
 //
-// The mechanic this exists for is entirely physical. A projectile that reaches
-// a plate is consumed by that plate immediately, before the same physics step can
-// also report the hull behind it. Destroy one and the gap it leaves is a real
-// firing lane because there is nothing there to consume the projectile anymore.
+// Each plate owns its own script, health, collider and kinematic body. The
+// script drives the physics body around the boss instead of moving only the
+// visible transform. That keeps sprite and collider on the same entity and in
+// the same place, so a shot that visually reaches a plate actually hits it.
 script ShieldSegment {
     @export let angle: f32 = 0.0;
     @export let radius: f32 = 1.5;
@@ -16,30 +16,53 @@ script ShieldSegment {
 
     fn start() {
         this.hp = this.health;
+        place_on_ring();
         wear(2.0, "whole");
     }
 
-    fn update(dt: f32) {
-        var cx: f32 = 0.0;
-        var cy: f32 = 0.0;
-        var found: f32 = 0.0;
+    fn boss() -> Entity {
         for boss in World.with_tag("boss") {
-            if World.exists(boss) {
-                cx = boss.transform.position.x;
-                cy = boss.transform.position.y;
-                found = 1.0;
-            }
+            if World.exists(boss) { return boss; }
         }
-        if found == 0.0 {
+        return null;
+    }
+
+    // Spawn directly on the ring before the physics body is materialised on the
+    // following synchronization pass. This avoids eight plates briefly existing
+    // at the world origin and gives the kinematic body the right initial pose.
+    fn place_on_ring() {
+        let hull = boss();
+        if hull == null { return; }
+        let a = this.angle + this.turn;
+        this.transform.position.x = hull.transform.position.x + cos(a) * this.radius;
+        this.transform.position.y = hull.transform.position.y + sin(a) * this.radius;
+        this.transform.rotation_z = a;
+    }
+
+    fn update(dt: f32) {
+        let hull = boss();
+        if hull == null {
             World.despawn(this.entity);
             return;
         }
 
         this.turn += this.spin * dt;
         let a = this.angle + this.turn;
-        this.transform.position.x = cx + cos(a) * this.radius;
-        this.transform.position.y = cy + sin(a) * this.radius;
-        this.transform.rotation_z = a;
+        let target_x = hull.transform.position.x + cos(a) * this.radius;
+        let target_y = hull.transform.position.y + sin(a) * this.radius;
+
+        // The body is velocity-kinematic, so physics owns its actual world pose.
+        // Correct toward the exact orbital target while also carrying the plate
+        // tangentially around the ring. The correction term makes the ring stay
+        // attached while Aegis itself moves.
+        let error_x = target_x - this.transform.position.x;
+        let error_y = target_y - this.transform.position.y;
+        let tangent_x = -sin(a) * this.radius * this.spin;
+        let tangent_y = cos(a) * this.radius * this.spin;
+        Physics.set_velocity(this.entity,
+            error_x * 12.0 + tangent_x,
+            error_y * 12.0 + tangent_y);
+
         receive_hits();
     }
 
@@ -47,9 +70,8 @@ script ShieldSegment {
         for hit in Physics.sensor_entered() {
             if World.exists(hit) && World.has_tag(hit, "player_damage") {
                 this.hp -= World.property_number(hit, "damage", 0.0);
-                // Do not leave the projectile alive until its own next update.
-                // That allowed one fast shot to register on both plate and hull
-                // during the same physics step.
+                // The plate is authoritative. A projectile that reached it is
+                // gone now, not on the bullet script's next update.
                 World.despawn(hit);
             }
         }
@@ -66,9 +88,7 @@ script ShieldSegment {
     }
 
     fn wear(next: f32, clip: String) {
-        if next == this.state {
-            return;
-        }
+        if next == this.state { return; }
         this.state = next;
         Animation.play(this.entity, clip);
     }
