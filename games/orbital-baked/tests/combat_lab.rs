@@ -13,7 +13,9 @@ fn step(run: &mut Run) {
 
 fn lab_run() -> Run {
     let mut run = Run::open().expect("the project opens");
-    for _ in 0..6 { step(&mut run); }
+    for _ in 0..6 {
+        step(&mut run);
+    }
     run.click("TitleStart");
     step(&mut run);
 
@@ -21,7 +23,10 @@ fn lab_run() -> Run {
     // make counts nondeterministic and, more importantly, hide whether an attack
     // works on its own.
     let director = run.find("Director").expect("the director exists");
-    run.world.get_mut(director).expect("director remains").disabled = true;
+    run.world
+        .get_mut(director)
+        .expect("director remains")
+        .disabled = true;
 
     let document = run
         .prefabs
@@ -38,10 +43,9 @@ fn lab_run() -> Run {
 
 #[test]
 fn the_standalone_lab_scene_is_a_real_scene() {
-    let text = std::fs::read_to_string(
-        orbital_baked::project().join("assets/combat-lab.scene.json"),
-    )
-    .expect("the lab scene reads");
+    let text =
+        std::fs::read_to_string(orbital_baked::project().join("assets/combat-lab.scene.json"))
+            .expect("the lab scene reads");
     let scene: SceneDocument = serde_json::from_str(&text).expect("the lab scene parses");
     scene.validate().expect("the lab scene validates");
 }
@@ -88,5 +92,7 @@ fn combo_presets_use_the_same_attack_entities() {
 
     // Let the combination actually run. A preset that merely spawns but starts
     // throwing script/physics errors a frame later is not a usable playground.
-    for _ in 0..120 { step(&mut run); }
+    for _ in 0..120 {
+        step(&mut run);
+    }
 }
