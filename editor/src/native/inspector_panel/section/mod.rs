@@ -66,23 +66,32 @@ pub(super) fn components_sections(
         .get(crate::tilemap::TYPE_NAME)
         .and_then(|payload| crate::tilemap::component(payload).ok())
         .map(|map| (map.columns, map.rows));
+    let mut names = components.keys().cloned().collect::<Vec<_>>();
+    names.sort_by(|left, right| {
+        component_priority(left)
+            .cmp(&component_priority(right))
+            .then_with(|| left.cmp(right))
+    });
     let mut removed = None;
-    for (name, payload) in components.iter_mut() {
+    for name in names {
         // Drawn above as presentation metadata rather than as an opaque
         // component with an uneditable array readout.
         if name == weave::TYPE_NAME {
             continue;
         }
-        let title = component_label(name);
+        let payload = components
+            .get_mut(&name)
+            .expect("the component name came from this map");
+        let title = component_label(&name);
         // The same icons the hierarchy gives these entities, so a row and its
         // component are recognisably the same thing.
         let open = section::component(
             ui,
             egui::Id::new(("inspector-component", name.as_str())),
-            icons::for_component(name),
+            icons::for_component(&name),
             &title,
             |ui| {
-                if inspector::is_removable(name)
+                if inspector::is_removable(&name)
                     && button::row_icon(
                         ui,
                         icons::REMOVE,
@@ -129,8 +138,17 @@ pub(super) fn components_sections(
         // The registry's field template is what says which fields this
         // component has, so an instance that wrote none of them still shows all
         // of them.
-        object_rows(ui, name, payload, registry, assets, name == "sindri.script");
+        object_rows(ui, &name, payload, registry, assets, name == "sindri.script");
         ui.add_space(5.0);
     }
     removed
+}
+
+/// Authoring tools precede the geometry they operate on.
+///
+/// Alphabetical component order put Tile Grid before Tile Volume, pushing the
+/// Build controls below the inspector fold. All other components keep their
+/// stable lexical order.
+fn component_priority(name: &str) -> u8 {
+    u8::from(name != crate::tile_volume::TYPE_NAME)
 }
