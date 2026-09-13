@@ -31,8 +31,7 @@ script HazardField {
             return;
         }
         if this.kind == 1.0 {
-            bend("bullet", dt);
-            bend("hostile_shot", dt);
+            bend(dt);
             this.phase += dt * 0.45;
             this.transform.rotation_z = this.phase;
             let pulse = 1.0 + sin(Game.get("elapsed", 0.0) * 2.0 + this.phase) * 0.035;
@@ -45,15 +44,13 @@ script HazardField {
         }
     }
 
-    fn bend(tag: String, dt: f32) {
-        for shot in World.with_tag(tag) {
+    fn bend(dt: f32) {
+        // Gravity acts on an explicit capability tag rather than broad gameplay
+        // categories such as `hostile_shot`. Some hostile attacks are scripted
+        // beams with no rigid body, so asking physics for their velocity is a
+        // category error rather than an interesting special case.
+        for shot in World.with_tag("gravity_bendable") {
             if !World.exists(shot) {
-                continue;
-            }
-            // `hostile_shot` is a gameplay classification, not a promise that
-            // the entity owns a rigid body. Aegis' laser is deliberately a
-            // scripted beam and therefore cannot be curved by a gravity well.
-            if World.has_tag(shot, "aegis_laser") {
                 continue;
             }
             let dx = this.transform.position.x - shot.transform.position.x;
