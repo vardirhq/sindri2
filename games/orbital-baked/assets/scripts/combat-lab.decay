@@ -9,19 +9,23 @@ script CombatLab {
     @export let gravity_well: Prefab;
     @export let target: Prefab;
 
-    var autoplay_clock: f32 = 1.0;
+    var autoplay_clock: f32 = 4.5;
     var autoplay_step: f32 = 0.0;
     var combo_step: f32 = 0.0;
 
     fn start() {
         Game.set("lab_active", 1.0);
-        Game.set("lab_autoplay", 1.0);
+        // A playground must never start doing things the user did not ask for.
+        // Autoplay is useful for demos, but is deliberately opt-in.
+        Game.set("lab_autoplay", 0.0);
         Game.set("lab_invulnerable", 1.0);
         Game.set("lab_spawn", 0.0);
         Game.set("lab_combo", 0.0);
         Game.set("lab_clear", 0.0);
         Game.set("lab_last", 0.0);
+        Game.set("lab_touch_combo", 0.0);
         spawn_targets();
+        publish_ui();
     }
 
     fn update(dt: f32) {
@@ -35,28 +39,35 @@ script CombatLab {
         keyboard();
         requests();
 
-        if Game.get("lab_autoplay", 1.0) > 0.0 {
+        if Game.get("lab_autoplay", 0.0) > 0.0 {
             this.autoplay_clock -= dt;
             if this.autoplay_clock <= 0.0 {
                 this.autoplay_clock = 4.5;
                 autoplay();
             }
+        } else {
+            // Turning autoplay on always gives the player a full interval
+            // before the first automatic spawn instead of inheriting a stale timer.
+            this.autoplay_clock = 4.5;
         }
         publish_count();
+        publish_ui();
     }
 
     fn keyboard() {
-        if Input.just_pressed("Digit1") { spawn_kind(1.0); }
-        if Input.just_pressed("Digit2") { spawn_kind(2.0); }
-        if Input.just_pressed("Digit3") { spawn_kind(3.0); }
-        if Input.just_pressed("Digit4") { spawn_kind(4.0); }
+        if Input.just_pressed("Digit1") { stop_autoplay(); spawn_kind(1.0); }
+        if Input.just_pressed("Digit2") { stop_autoplay(); spawn_kind(2.0); }
+        if Input.just_pressed("Digit3") { stop_autoplay(); spawn_kind(3.0); }
+        if Input.just_pressed("Digit4") { stop_autoplay(); spawn_kind(4.0); }
         if Input.just_pressed("C") {
+            stop_autoplay();
             this.combo_step = (this.combo_step % 3.0) + 1.0;
+            Game.set("lab_touch_combo", this.combo_step);
             spawn_combo(this.combo_step);
         }
-        if Input.just_pressed("R") { clear(); }
+        if Input.just_pressed("R") { stop_autoplay(); clear(); }
         if Input.just_pressed("Space") {
-            if Game.get("lab_autoplay", 1.0) > 0.0 { Game.set("lab_autoplay", 0.0); }
+            if Game.get("lab_autoplay", 0.0) > 0.0 { Game.set("lab_autoplay", 0.0); }
             else { Game.set("lab_autoplay", 1.0); }
         }
         if Input.just_pressed("I") {
@@ -65,23 +76,30 @@ script CombatLab {
         }
     }
 
-    // UI and tests can drive the same board commands as the keyboard. That is
-    // what will let the eventual touch panel use this without duplicating logic.
+    // UI and tests drive the same board commands as the keyboard. Manual
+    // commands stop autoplay so a deliberate experiment stays deterministic.
     fn requests() {
         let request = Game.get("lab_spawn", 0.0);
         if request > 0.0 {
             Game.set("lab_spawn", 0.0);
+            stop_autoplay();
             spawn_kind(request);
         }
         let combo = Game.get("lab_combo", 0.0);
         if combo > 0.0 {
             Game.set("lab_combo", 0.0);
+            stop_autoplay();
             spawn_combo(combo);
         }
         if Game.get("lab_clear", 0.0) > 0.0 {
             Game.set("lab_clear", 0.0);
+            stop_autoplay();
             clear();
         }
+    }
+
+    fn stop_autoplay() {
+        Game.set("lab_autoplay", 0.0);
     }
 
     fn autoplay() {
@@ -173,6 +191,7 @@ script CombatLab {
             if World.exists(target) { World.despawn(target); }
         }
         spawn_targets();
+        Game.set("lab_last", 0.0);
     }
 
     fn spawn_targets() {
@@ -188,5 +207,36 @@ script CombatLab {
             if World.exists(attack) { count += 1.0; }
         }
         Game.set("lab_attack_count", count);
+    }
+
+    fn publish_ui() {
+        let auto_text = World.find("LabAutoText");
+        if auto_text != null {
+            if Game.get("lab_autoplay", 0.0) > 0.0 { Ui.set_text(auto_text, "AUTO: ON"); }
+            else { Ui.set_text(auto_text, "AUTO: OFF"); }
+        }
+
+        let damage_text = World.find("LabDamageText");
+        if damage_text != null {
+            if Game.get("lab_invulnerable", 1.0) > 0.0 { Ui.set_text(damage_text, "DAMAGE: OFF"); }
+            else { Ui.set_text(damage_text, "DAMAGE: ON"); }
+        }
+
+        let combo_text = World.find("LabComboText");
+        if combo_text != null {
+            let next = (Game.get("lab_touch_combo", 0.0) % 3.0) + 1.0;
+            if next == 1.0 { Ui.set_text(combo_text, "ZONE+GRAV"); }
+            else if next == 2.0 { Ui.set_text(combo_text, "MINES+WAVE"); }
+            else { Ui.set_text(combo_text, "STRESS"); }
+        }
+
+        let help = World.find("LabHelp");
+        if help != null {
+            if Game.get("lab_autoplay", 0.0) > 0.0 {
+                Ui.set_text(help, "AUTOPLAY RUNNING  •  SPAWNS EVERY 4.5s  •  TAP AUTO TO STOP");
+            } else {
+                Ui.set_text(help, "MANUAL MODE  •  TAP AN ATTACK OR PRESET  •  DRAG TO MOVE");
+            }
+        }
     }
 }
