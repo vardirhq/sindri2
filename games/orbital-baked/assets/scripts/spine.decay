@@ -1,6 +1,6 @@
-// Spine is a body, not a hull with a health bar. Its head pulls a chain of
-// breakable sections through the arena; destroying one severs the rear chain
-// and turns that chain into a new moving threat.
+// Spine is a body, not a hull with a health bar. Its head owns the route and
+// its independent body sections replay that route. Sections never have to
+// reverse-engineer a corner from another body's velocity.
 script Spine {
     @export let view_size: f32 = 11.0;
     @export let shot: Prefab;
@@ -18,6 +18,7 @@ script Spine {
     var death_burst_damage: f32 = 0.0;
     var dir_x: f32 = 1.0;
     var dir_y: f32 = 0.0;
+    var turn_serial: f32 = 0.0;
 
     fn start() {
         let elapsed = Game.get("elapsed", 0.0);
@@ -37,10 +38,15 @@ script Spine {
         var slot: f32 = 0.0;
         while slot < 9.0 {
             let part = World.spawn(this.segment);
-            part.transform.position.x =
-                this.transform.position.x - this.dir_x * (slot + 1.0) * 0.62;
-            part.transform.position.y =
-                this.transform.position.y - this.dir_y * (slot + 1.0) * 0.62;
+            // Match the pattern that made Aegis reliable: the independent
+            // section receives its authored start pose and places itself in
+            // start(), before its kinematic physics body is materialised.
+            World.set_property(part, "spawn_x",
+                this.transform.position.x - this.dir_x * (slot + 1.0) * 0.62);
+            World.set_property(part, "spawn_y",
+                this.transform.position.y - this.dir_y * (slot + 1.0) * 0.62);
+            World.set_property(part, "initial_dir_x", this.dir_x);
+            World.set_property(part, "initial_dir_y", this.dir_y);
             World.set_property(part, "slot", slot);
             World.set_property(part, "group", 0.0);
             World.set_property(part, "head", 0.0);
@@ -56,6 +62,18 @@ script Spine {
             if World.exists(part) { count += 1.0; }
         }
         return count;
+    }
+
+    fn publish_turn(x: f32, y: f32) {
+        this.turn_serial += 1.0;
+        for part in World.with_tag("spine_segment") {
+            if !World.exists(part) { continue; }
+            if World.property_number(part, "group", -1.0) != 0.0 { continue; }
+            if World.property_number(part, "head", 0.0) > 0.0 { continue; }
+            World.set_property(part, "turn_x", x);
+            World.set_property(part, "turn_y", y);
+            World.set_property(part, "turn_serial", this.turn_serial);
+        }
     }
 
     fn update(dt: f32) {
@@ -156,15 +174,17 @@ script Spine {
         let x = this.transform.position.x;
         let y = this.transform.position.y;
         let margin = 0.12;
+        var turning: f32 = 0.0;
 
-        // Spine now changes lanes only at arena edges. Mid-lane turns were the
-        // source of overlapping corner history: later sections could still be
-        // consuming one corner while the head introduced another. Edge-only
-        // turns give the full body one unambiguous cardinal route to replay.
-        if this.dir_x > 0.0 && x >= hx - margin { turn_from_horizontal_edge(player); }
-        else if this.dir_x < 0.0 && x <= -hx + margin { turn_from_horizontal_edge(player); }
-        else if this.dir_y > 0.0 && y >= hy - margin { turn_from_vertical_edge(player); }
-        else if this.dir_y < 0.0 && y <= -hy + margin { turn_from_vertical_edge(player); }
+        if this.dir_x > 0.0 && x >= hx - margin { turning = 1.0; turn_from_horizontal_edge(player); }
+        else if this.dir_x < 0.0 && x <= -hx + margin { turning = 1.0; turn_from_horizontal_edge(player); }
+        else if this.dir_y > 0.0 && y >= hy - margin { turning = 1.0; turn_from_vertical_edge(player); }
+        else if this.dir_y < 0.0 && y <= -hy + margin { turning = 1.0; turn_from_vertical_edge(player); }
+
+        // The head is the route authority. It publishes the exact point where
+        // its velocity changes, so every independent section replays a fact
+        // rather than inferring a corner from later observations.
+        if turning > 0.0 { publish_turn(x, y); }
 
         var speed: f32 = 3.0;
         if this.phase == 2.0 { speed = 3.45; }
