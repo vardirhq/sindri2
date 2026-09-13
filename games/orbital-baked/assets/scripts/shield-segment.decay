@@ -36,6 +36,8 @@ script ShieldSegment {
         let a = this.angle + this.turn;
         this.transform.position.x = hull.transform.position.x + cos(a) * this.radius;
         this.transform.position.y = hull.transform.position.y + sin(a) * this.radius;
+        // The artwork is authored facing away from the core at rotation 0, so
+        // its visual rotation should always match its current radial angle.
         this.transform.rotation_z = a;
     }
 
@@ -62,6 +64,12 @@ script ShieldSegment {
         Physics.set_velocity(this.entity,
             error_x * 12.0 + tangent_x,
             error_y * 12.0 + tangent_y);
+
+        // Position is physics-owned, but the plate still has to turn with the
+        // orbit visually. Previously this was only set once at spawn, so after
+        // a few seconds each plate had moved around the ring while still facing
+        // its original direction.
+        this.transform.rotation_z = a;
 
         receive_hits();
     }
