@@ -809,6 +809,7 @@ a person who has not clicked yet.
 | `Physics.velocity_y(entity)` | `f32` |
 | `Physics.set_velocity(entity, x, y)` | nothing |
 | `Physics.apply_impulse(entity, x, y)` | nothing |
+| `Physics.connect_distance(first, second, max_distance)` | nothing |
 | `Physics.collision_started()` | `Array<Entity>` |
 | `Physics.collision_stopped()` | `Array<Entity>` |
 | `Physics.sensor_entered()` | `Array<Entity>` |
@@ -822,6 +823,11 @@ A body is authored, not created here: an entity carries `sindri.physics2d.collid
 and optionally `sindri.physics2d.rigid_body`, and `ScenePhysics2d` keeps the
 simulation in step with what the scene says. A prefab carrying those components
 spawns with them, which is how a bullet gets a body.
+
+`Physics.connect_distance` creates a maximum-distance connection between two
+authored 2D bodies. They may move closer and rotate freely, but their centres
+cannot separate beyond `max_distance`. Calls made while freshly spawned bodies
+are waiting for synchronization are resolved before the next physics step.
 
 ```rust
 script Bullet {
