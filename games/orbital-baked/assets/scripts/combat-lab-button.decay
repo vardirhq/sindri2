@@ -3,7 +3,7 @@
 // The buttons only translate presses into the same board commands used by the
 // keyboard and tests. Attack logic stays in CombatLab and the attack prefabs.
 script CombatLabButton {
-    /// 1-4 spawn primitives, 5 cycles combos, 6 clears, 7 toggles autoplay,
+    /// 1-4 spawn primitives, 5 cycles presets, 6 clears, 7 toggles autoplay,
     /// 8 toggles damage, 9 returns to the normal Orbital scene.
     @export let action: f32 = 0.0;
 
@@ -12,15 +12,18 @@ script CombatLabButton {
         Audio.play("audio/click.wav", 0.3);
 
         if this.action >= 1.0 && this.action <= 4.0 {
+            Game.set("lab_autoplay", 0.0);
             Game.set("lab_spawn", this.action);
         } else if this.action == 5.0 {
+            Game.set("lab_autoplay", 0.0);
             let next = (Game.get("lab_touch_combo", 0.0) % 3.0) + 1.0;
             Game.set("lab_touch_combo", next);
             Game.set("lab_combo", next);
         } else if this.action == 6.0 {
+            Game.set("lab_autoplay", 0.0);
             Game.set("lab_clear", 1.0);
         } else if this.action == 7.0 {
-            if Game.get("lab_autoplay", 1.0) > 0.0 { Game.set("lab_autoplay", 0.0); }
+            if Game.get("lab_autoplay", 0.0) > 0.0 { Game.set("lab_autoplay", 0.0); }
             else { Game.set("lab_autoplay", 1.0); }
         } else if this.action == 8.0 {
             if Game.get("lab_invulnerable", 1.0) > 0.0 { Game.set("lab_invulnerable", 0.0); }
