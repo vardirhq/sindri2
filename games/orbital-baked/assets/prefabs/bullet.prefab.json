@@ -29,7 +29,8 @@
         "sindri.tags": {
           "tags": [
             "bullet",
-            "player_damage"
+            "player_damage",
+            "gravity_bendable"
           ]
         },
         "sindri.physics2d.rigid_body": {

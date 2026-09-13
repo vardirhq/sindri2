@@ -1,0 +1,55 @@
+// Persistent area-denial attack. The cloud is an entity, not a boss special case:
+// anything can spawn it, move it and tune its radius/damage/lifetime.
+script GasCloud {
+    @export let radius: f32 = 1.45;
+    @export let lifetime: f32 = 6.0;
+    @export let damage: f32 = 0.7;
+    @export let tick_gap: f32 = 0.45;
+    @export let drift_x: f32 = 0.0;
+    @export let drift_y: f32 = 0.0;
+    @export let grow: f32 = 0.18;
+
+    var age: f32 = 0.0;
+    var tick: f32 = 0.0;
+    var current_radius: f32 = 0.0;
+
+    fn start() {
+        this.current_radius = this.radius * 0.58;
+        this.tick = 0.1;
+        sync_visual();
+    }
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 1.0 { return; }
+        this.age += dt;
+        this.tick -= dt;
+        this.transform.position.x += this.drift_x * dt;
+        this.transform.position.y += this.drift_y * dt;
+        this.current_radius = min(this.radius, this.current_radius + this.grow * dt);
+        sync_visual();
+
+        let player = World.find("Player");
+        if player != null && this.tick <= 0.0 {
+            let dx = player.transform.position.x - this.transform.position.x;
+            let dy = player.transform.position.y - this.transform.position.y;
+            if dx * dx + dy * dy <= this.current_radius * this.current_radius {
+                Game.set("player_damage_taken", max(Game.get("player_damage_taken", 0.0), this.damage));
+                Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.12));
+            }
+            this.tick = this.tick_gap;
+        }
+
+        if this.age >= this.lifetime { World.despawn(this.entity); }
+    }
+
+    fn sync_visual() {
+        let pulse = 1.0 + sin(this.age * 3.2) * 0.045;
+        this.transform.scale.x = this.current_radius * 2.0 * pulse;
+        this.transform.scale.y = this.current_radius * 2.0 * pulse;
+        this.transform.rotation_z += 0.006;
+        let fade_in = min(1.0, this.age * 2.5);
+        let fade_out = min(1.0, max(0.0, this.lifetime - this.age) * 1.8);
+        this.shape.fill.a = 0.16 * min(fade_in, fade_out);
+        this.shape.stroke.a = 0.62 * min(fade_in, fade_out);
+    }
+}

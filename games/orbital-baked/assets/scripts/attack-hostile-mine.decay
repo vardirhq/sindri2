@@ -1,0 +1,59 @@
+// Proximity mine attack primitive. It arms, warns, then detonates as its own entity.
+script HostileMine {
+    @export let trigger_radius: f32 = 1.25;
+    @export let blast_radius: f32 = 1.75;
+    @export let arm_delay: f32 = 0.55;
+    @export let fuse: f32 = 0.7;
+    @export let lifetime: f32 = 8.0;
+    @export let damage: f32 = 1.4;
+
+    var age: f32 = 0.0;
+    var countdown: f32 = -1.0;
+    var exploded: bool = false;
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 1.0 { return; }
+        this.age += dt;
+        this.transform.rotation_z += dt * 1.7;
+
+        let player = World.find("Player");
+        if player != null && this.age >= this.arm_delay && this.countdown < 0.0 {
+            let dx = player.transform.position.x - this.transform.position.x;
+            let dy = player.transform.position.y - this.transform.position.y;
+            if dx * dx + dy * dy <= this.trigger_radius * this.trigger_radius {
+                this.countdown = this.fuse;
+            }
+        }
+
+        if this.countdown >= 0.0 {
+            this.countdown -= dt;
+            let urgency = 1.0 - max(0.0, this.countdown) / max(0.01, this.fuse);
+            let pulse = 1.0 + sin(this.age * (10.0 + urgency * 18.0)) * (0.08 + urgency * 0.12);
+            this.transform.scale.x = pulse;
+            this.transform.scale.y = pulse;
+            this.shape.stroke.a = 0.65 + urgency * 0.35;
+            if this.countdown <= 0.0 { detonate(); return; }
+        }
+
+        if this.age >= this.lifetime { detonate(); }
+    }
+
+    fn detonate() {
+        if this.exploded { return; }
+        this.exploded = true;
+        let player = World.find("Player");
+        if player != null {
+            let dx = player.transform.position.x - this.transform.position.x;
+            let dy = player.transform.position.y - this.transform.position.y;
+            if dx * dx + dy * dy <= this.blast_radius * this.blast_radius {
+                Game.set("player_damage_taken", max(Game.get("player_damage_taken", 0.0), this.damage));
+            }
+        }
+        this.transform.scale.x = this.blast_radius * 2.0;
+        this.transform.scale.y = this.blast_radius * 2.0;
+        Effects.burst(this.entity);
+        Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.38));
+        Audio.play("audio/boss.wav", 0.32);
+        World.despawn(this.entity);
+    }
+}

@@ -1,0 +1,15 @@
+{
+  "format_version": 1,
+  "metadata": { "name": "Attack Gas Cloud" },
+  "entities": [{
+    "id": "attack-gas-cloud",
+    "name": "Attack Gas Cloud",
+    "transform_3d": { "position": [0.0,0.0,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [1.0,1.0,1.0] },
+    "components": {
+      "sindri.tags": { "tags": ["hazard", "lab_attack", "attack_gas"] },
+      "sindri.shape": { "kind": "ellipse", "count": 18.0, "fill": [0.18,0.72,0.24,0.16], "stroke": [0.46,1.0,0.55,0.62], "stroke_width": 0.035, "corner_radius": 0.0, "dashes": 14.0, "dash_duty": 0.45, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "add", "layer": 2 },
+      "sindri.effect.burst": { "texture": "textures/fleck.png", "count": 10, "speed": 0.8, "spread": 6.2, "lifetime": 0.65, "size": 0.08, "tint": [0.45,1.0,0.55,0.8], "fade": true, "drag": 2.0, "layer": 3 },
+      "sindri.script": { "source": "scripts/attack-gas-cloud.decay", "script": "GasCloud", "properties": { "radius": 1.45, "lifetime": 6.0, "damage": 0.7, "tick_gap": 0.45, "drift_x": 0.0, "drift_y": 0.0, "grow": 0.18 } }
+    }
+  }]
+}

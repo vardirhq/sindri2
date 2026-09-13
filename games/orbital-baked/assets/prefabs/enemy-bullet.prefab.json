@@ -28,7 +28,8 @@
       "components": {
         "sindri.tags": {
           "tags": [
-            "hostile_shot"
+            "hostile_shot",
+            "gravity_bendable"
           ]
         },
         "sindri.physics2d.rigid_body": {

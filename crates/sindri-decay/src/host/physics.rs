@@ -46,10 +46,19 @@ impl WorldHost<'_> {
         };
         match call {
             PhysicsCall::VelocityX | PhysicsCall::VelocityY => {
-                let velocity = physics
-                    .world
-                    .linear_velocity(entity)
-                    .map_err(|error| body_error(path, &error))?;
+                let velocity = match physics.world.linear_velocity(entity) {
+                    Ok(velocity) => velocity,
+                    // A prefab becomes visible to other scripts as soon as it
+                    // is spawned, but its physics body is materialized at the
+                    // next synchronize. Until then its authored starting
+                    // velocity is effectively zero unless a script has already
+                    // queued another value, which `linear_velocity` returns via
+                    // `pending_velocity`. Treating this short, valid lifecycle
+                    // window as "no physics body" made systems such as gravity
+                    // fields race freshly spawned projectiles.
+                    Err(sindri_physics::PhysicsError::MissingEntity(_)) if authored => [0.0, 0.0],
+                    Err(error) => return Err(body_error(path, &error)),
+                };
                 Ok(Value::Number(f64::from(
                     if matches!(call, PhysicsCall::VelocityX) {
                         velocity[0]

@@ -1,0 +1,45 @@
+// Expanding ring attack. Crossing the moving band hurts once; the empty middle is safe.
+script Shockwave {
+    @export let start_radius: f32 = 0.35;
+    @export let max_radius: f32 = 6.2;
+    @export let speed: f32 = 3.0;
+    @export let width: f32 = 0.42;
+    @export let damage: f32 = 1.0;
+
+    var radius: f32 = 0.0;
+    var hit_player: bool = false;
+
+    fn start() {
+        this.radius = this.start_radius;
+        sync_visual();
+    }
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 1.0 { return; }
+        this.radius += this.speed * dt;
+        sync_visual();
+
+        if !this.hit_player {
+            let player = World.find("Player");
+            if player != null {
+                let dx = player.transform.position.x - this.transform.position.x;
+                let dy = player.transform.position.y - this.transform.position.y;
+                let distance = sqrt(dx * dx + dy * dy);
+                if abs(distance - this.radius) <= this.width * 0.5 {
+                    this.hit_player = true;
+                    Game.set("player_damage_taken", max(Game.get("player_damage_taken", 0.0), this.damage));
+                    Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.28));
+                }
+            }
+        }
+
+        if this.radius >= this.max_radius { World.despawn(this.entity); }
+    }
+
+    fn sync_visual() {
+        this.transform.scale.x = this.radius * 2.0;
+        this.transform.scale.y = this.radius * 2.0;
+        this.shape.stroke_width = max(0.018, this.width / max(0.5, this.radius) * 0.16);
+        this.shape.stroke.a = 0.9 - min(0.55, this.radius / max(this.max_radius, 0.01) * 0.55);
+    }
+}

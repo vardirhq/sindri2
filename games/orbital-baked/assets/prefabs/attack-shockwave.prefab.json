@@ -1,0 +1,14 @@
+{
+  "format_version": 1,
+  "metadata": { "name": "Attack Shockwave" },
+  "entities": [{
+    "id": "attack-shockwave",
+    "name": "Attack Shockwave",
+    "transform_3d": { "position": [0.0,0.0,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [1.0,1.0,1.0] },
+    "components": {
+      "sindri.tags": { "tags": ["hazard", "lab_attack", "attack_shockwave"] },
+      "sindri.shape": { "kind": "ellipse", "count": 24.0, "fill": [0.0,0.0,0.0,0.0], "stroke": [0.35,0.85,1.0,0.9], "stroke_width": 0.045, "corner_radius": 0.0, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "add", "layer": 3 },
+      "sindri.script": { "source": "scripts/attack-shockwave.decay", "script": "Shockwave", "properties": { "start_radius": 0.35, "max_radius": 6.2, "speed": 3.0, "width": 0.42, "damage": 1.0 } }
+    }
+  }]
+}

@@ -1,0 +1,22 @@
+{
+  "format_version": 1,
+  "metadata": { "name": "Combat Lab" },
+  "entities": [{
+    "id": "combat-lab",
+    "name": "CombatLab",
+    "transform_3d": { "position": [0.0,0.0,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [1.0,1.0,1.0] },
+    "components": {
+      "sindri.tags": { "tags": ["combat_lab"] },
+      "sindri.script": {
+        "source": "scripts/combat-lab.decay",
+        "script": "CombatLab",
+        "properties": {
+          "gas_cloud": "prefabs/attack-gas-cloud.prefab.json",
+          "hostile_mine": "prefabs/attack-hostile-mine.prefab.json",
+          "shockwave": "prefabs/attack-shockwave.prefab.json",
+          "gravity_well": "prefabs/attack-gravity-well.prefab.json"
+        }
+      }
+    }
+  }]
+}
