@@ -13,7 +13,6 @@ script SpineSegment {
     var state: f32 = 0.0;
     var dir_x: f32 = 1.0;
     var dir_y: f32 = 0.0;
-    var turn_clock: f32 = 0.0;
     var seen_dir_x: f32 = 0.0;
     var seen_dir_y: f32 = 0.0;
     var corner_count: f32 = 0.0;
@@ -54,7 +53,6 @@ script SpineSegment {
             Physics.set_velocity(this.entity, 0.0, 0.0);
             return;
         }
-        this.turn_clock -= dt;
         receive_hits();
         if !World.exists(this.entity) { return; }
         if this.head > 0.0 { grid_hunt(); return; }
@@ -63,6 +61,8 @@ script SpineSegment {
             // If the predecessor disappeared for any reason, this becomes a
             // genuine severed head instead of freezing as an orphaned link.
             this.head = 1.0;
+            let player = World.find("Player");
+            if player != null { choose_initial_direction(player); }
             grid_hunt();
             return;
         }
@@ -97,8 +97,7 @@ script SpineSegment {
         // The predecessor may already have travelled part-way down its new lane
         // when this script observes the direction change. Recover the actual
         // corner as the intersection of that new lane and the lane this follower
-        // is still travelling. Unlike rewinding by dt, this is independent of
-        // script/physics update ordering and lands on the predecessor's route.
+        // is still travelling.
         var turn_x: f32 = ax;
         var turn_y: f32 = ay;
         if abs(this.seen_dir_x) > 0.01 {
@@ -154,9 +153,6 @@ script SpineSegment {
         remember_turn(ax, ay, avx, avy);
         if follow_corner(dt, speed) { return; }
 
-        // Finish the predecessor's old lane before entering its new one. Only
-        // one velocity component is ever non-zero, and the final step is sized
-        // to land exactly on the coordinate rather than leaving a snap error.
         if abs(avx) >= abs(avy) && abs(avx) > 0.01 {
             let cross = ay - this.transform.position.y;
             if abs(cross) > aligned {
@@ -207,7 +203,7 @@ script SpineSegment {
         return 11.0 * 0.5 / aspect - 0.9;
     }
 
-    fn choose_turn(player: Entity) {
+    fn choose_initial_direction(player: Entity) {
         let dx = player.transform.position.x - this.transform.position.x;
         let dy = player.transform.position.y - this.transform.position.y;
         if abs(dx) > abs(dy) {
@@ -217,10 +213,20 @@ script SpineSegment {
             this.dir_x = 0.0;
             this.dir_y = 1.0; if dy < 0.0 { this.dir_y = -1.0; }
         }
-        // A severed chain uses the same deliberate corner cadence as the main
-        // Spine, so its own followers can finish each saved corner before a new
-        // one is introduced.
-        this.turn_clock = 1.1;
+    }
+
+    fn turn_from_vertical_edge(player: Entity) {
+        let dx = player.transform.position.x - this.transform.position.x;
+        this.dir_x = 1.0;
+        if dx < 0.0 { this.dir_x = -1.0; }
+        this.dir_y = 0.0;
+    }
+
+    fn turn_from_horizontal_edge(player: Entity) {
+        let dy = player.transform.position.y - this.transform.position.y;
+        this.dir_x = 0.0;
+        this.dir_y = 1.0;
+        if dy < 0.0 { this.dir_y = -1.0; }
     }
 
     fn grid_hunt() {
@@ -230,16 +236,13 @@ script SpineSegment {
         let hy = half_y();
         let x = this.transform.position.x;
         let y = this.transform.position.y;
-        var edge: f32 = 0.0;
-        if this.dir_x > 0.0 && x >= hx { edge = 1.0; }
-        if this.dir_x < 0.0 && x <= -hx { edge = 1.0; }
-        if this.dir_y > 0.0 && y >= hy { edge = 1.0; }
-        if this.dir_y < 0.0 && y <= -hy { edge = 1.0; }
-        if this.turn_clock <= 0.0 || edge > 0.0 { choose_turn(player); }
-        if x >= hx && this.dir_x > 0.0 { this.dir_x = 0.0; this.dir_y = -1.0; }
-        if x <= -hx && this.dir_x < 0.0 { this.dir_x = 0.0; this.dir_y = 1.0; }
-        if y >= hy && this.dir_y > 0.0 { this.dir_y = 0.0; this.dir_x = 1.0; }
-        if y <= -hy && this.dir_y < 0.0 { this.dir_y = 0.0; this.dir_x = -1.0; }
+        let margin = 0.12;
+
+        if this.dir_x > 0.0 && x >= hx - margin { turn_from_horizontal_edge(player); }
+        else if this.dir_x < 0.0 && x <= -hx + margin { turn_from_horizontal_edge(player); }
+        else if this.dir_y > 0.0 && y >= hy - margin { turn_from_vertical_edge(player); }
+        else if this.dir_y < 0.0 && y <= -hy + margin { turn_from_vertical_edge(player); }
+
         Physics.set_velocity(this.entity, this.dir_x * 3.55, this.dir_y * 3.55);
         this.transform.rotation_z = atan2(this.dir_y, this.dir_x);
     }
@@ -275,9 +278,6 @@ script SpineSegment {
         Effects.burst(this.entity);
         Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.22));
         Audio.play("audio/kill.wav", 0.25);
-        // On its own update, the next section sees that its predecessor is gone
-        // and promotes its own live `head` field. A running script owns that
-        // field; another script cannot rewrite its authored starting properties.
         World.despawn(this.entity);
     }
 }
