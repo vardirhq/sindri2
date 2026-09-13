@@ -258,10 +258,12 @@ The host names this type but has not described its members.
 - `has_tag(Entity, String)` → `bool`
 - `is_active(Entity)` → `bool`
 - `property_number(Entity, String, f32)` → `f32`
+- `send_signal(Entity, String, f32)` → `unit`
 - `set_active(Entity, bool)` → `unit`
 - `set_parent(Entity, Entity)` → `unit`
 - `set_property(Entity, String, unknown)` → `unit`
 - `set_shape_point(f32, f32, f32)` → `unit`
 - `spawn(Prefab)` → `Entity`
 - `spawn_child(Prefab, Entity)` → `Entity`
+- `take_signal(String)` → `f32`
 - `with_tag(String)` → `Array<Entity>`
