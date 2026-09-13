@@ -534,6 +534,16 @@
         },
         {
           "kind": "function",
+          "name": "connect_distance",
+          "parameters": [
+            "Entity",
+            "Entity",
+            "f32"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
           "name": "sensor_entered",
           "parameters": [],
           "returns": "Array<Entity>"
