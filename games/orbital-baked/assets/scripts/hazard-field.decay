@@ -50,6 +50,12 @@ script HazardField {
             if !World.exists(shot) {
                 continue;
             }
+            // `hostile_shot` is a gameplay classification, not a promise that
+            // the entity owns a rigid body. Aegis' laser is deliberately a
+            // scripted beam and therefore cannot be curved by a gravity well.
+            if World.has_tag(shot, "aegis_laser") {
+                continue;
+            }
             let dx = this.transform.position.x - shot.transform.position.x;
             let dy = this.transform.position.y - shot.transform.position.y;
             let distance = max(0.2, sqrt(dx * dx + dy * dy));
