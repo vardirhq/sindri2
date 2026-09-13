@@ -1,5 +1,6 @@
 {
   "format_version": 1,
+  "entry_scene": "demo.scene.json",
   "assets": {
     "demo.scene.json": {
       "kind": "scene",
