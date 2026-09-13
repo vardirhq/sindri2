@@ -28,7 +28,6 @@ script Spine {
         Game.set("boss_max", this.hp);
         Game.set("boss_hp", this.hp);
         Game.set("boss_kind", 8.0);
-        build_body();
     }
 
     fn build_body() {
@@ -37,7 +36,10 @@ script Spine {
         var slot: f32 = 0.0;
         while slot < 9.0 {
             let part = World.spawn(this.segment);
-            part.transform.position.x = this.transform.position.x - (slot + 1.0) * 0.62;
+            // Start the chain on the head itself. The hard tether in the segment
+            // script unfolds it behind the moving head without ever beginning as
+            // a disconnected off-screen row.
+            part.transform.position.x = this.transform.position.x;
             part.transform.position.y = this.transform.position.y;
             World.set_property(part, "slot", slot);
             World.set_property(part, "group", 0.0);
@@ -73,6 +75,8 @@ script Spine {
         this.turn_clock -= dt;
         update_phase();
         grid_move(player);
+        // Build only after grid_move has clamped the head inside the arena.
+        build_body();
         receive_hits(player);
         Game.set("boss_hp", max(this.hp, 0.0));
         if this.hp <= 0.0 { die(); }
@@ -139,10 +143,6 @@ script Spine {
     fn grid_move(player: Entity) {
         let hx = half_x();
         let hy = half_y();
-
-        // Kinematic velocity can overshoot an edge between frames. Clamp first,
-        // then choose the next cardinal direction from a position guaranteed to
-        // be inside the visible arena.
         this.transform.position.x = max(-hx, min(hx, this.transform.position.x));
         this.transform.position.y = max(-hy, min(hy, this.transform.position.y));
         let x = this.transform.position.x;
