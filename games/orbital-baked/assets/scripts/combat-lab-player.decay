@@ -1,0 +1,47 @@
+// Lightweight player used only by the combat playground. The attacks are real;
+// this ship is intentionally tiny so the lab does not boot the whole campaign.
+script CombatLabPlayer {
+    @export let speed: f32 = 5.2;
+    @export let view_size: f32 = 11.0;
+    var mercy: f32 = 0.0;
+
+    fn start() {
+        Game.set("run_state", 1.0);
+        Game.set("hp", 10.0);
+        Game.set("max_hp", 10.0);
+        Game.set("player_damage_taken", 0.0);
+    }
+
+    fn update(dt: f32) {
+        move();
+        if this.mercy > 0.0 { this.mercy -= dt; }
+        let raw = Game.get("player_damage_taken", 0.0);
+        if raw > 0.0 {
+            Game.set("player_damage_taken", 0.0);
+            if Game.get("lab_invulnerable", 1.0) <= 0.0 && this.mercy <= 0.0 {
+                Game.set("hp", max(0.0, Game.get("hp", 10.0) - raw));
+                this.mercy = 0.28;
+            }
+        }
+        Game.set("lab_player_hp", Game.get("hp", 10.0));
+    }
+
+    fn move() {
+        var dx: f32 = Input.axis("A", "D") + Input.axis("ArrowLeft", "ArrowRight");
+        var dy: f32 = Input.axis("S", "W") + Input.axis("ArrowDown", "ArrowUp");
+        if dx == 0.0 && dy == 0.0 && Stick.held && !Pointer.over_ui {
+            dx = Stick.x;
+            dy = -Stick.y;
+        }
+        let length = sqrt(dx * dx + dy * dy);
+        if length > 1.0 { dx /= length; dy /= length; }
+        Physics.set_velocity(this.entity, dx * this.speed, dy * this.speed);
+
+        let aspect = max(Viewport.aspect, 0.001);
+        var half_x = this.view_size * 0.5;
+        var half_y = this.view_size * 0.5;
+        if aspect >= 1.0 { half_x *= aspect; } else { half_y /= aspect; }
+        this.transform.position.x = max(-half_x + 0.3, min(half_x - 0.3, this.transform.position.x));
+        this.transform.position.y = max(-half_y + 0.3, min(half_y - 0.3, this.transform.position.y));
+    }
+}

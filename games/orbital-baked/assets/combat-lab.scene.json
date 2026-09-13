@@ -1,0 +1,58 @@
+{
+  "format_version": 9,
+  "metadata": { "name": "Orbital Combat Lab" },
+  "entities": [
+    {
+      "id": "lab-backdrop", "name": "LabBackdrop", "parent": null,
+      "transform_3d": { "position": [0.0,0.0,-10.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [60.0,60.0,1.0] },
+      "components": { "sindri.shape": { "kind": "rect", "count": 6.0, "fill": [0.00152,0.00212,0.00439,1.0], "stroke": [0.0,0.0,0.0,0.0], "stroke_width": 0.0, "corner_radius": 0.0, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "over", "layer": -200 } }
+    },
+    {
+      "id": "lab-grid", "name": "LabGrid", "parent": null,
+      "transform_3d": { "position": [0.0,0.0,-9.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [60.0,60.0,1.0] },
+      "components": { "sindri.shape": { "kind": "grid", "count": 52.0, "fill": [0.0,0.0,0.0,0.0], "stroke": [0.00852,0.0343,0.02445,1.0], "stroke_width": 0.0004, "corner_radius": 0.0, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "over", "layer": -199 } }
+    },
+    {
+      "id": "lab-camera", "name": "Camera", "parent": null,
+      "transform_3d": { "position": [0.0,0.0,10.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [1.0,1.0,1.0] },
+      "components": { "sindri.camera": { "far": 100.0, "near": 0.1, "projection": "orthographic", "vertical_size": 11.0, "fit": "shorter" } }
+    },
+    {
+      "id": "lab-player", "name": "Player", "parent": null,
+      "transform_3d": { "position": [0.0,-2.3,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [0.55,0.55,1.0] },
+      "components": {
+        "sindri.tags": { "tags": ["player", "combat_lab_player"] },
+        "sindri.shape": { "kind": "polygon", "count": 3.0, "fill": [0.25,0.95,0.82,0.8], "stroke": [0.7,1.0,0.95,1.0], "stroke_width": 0.05, "corner_radius": 0.0, "dashes": 0.0, "dash_duty": 0.5, "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "add", "layer": 10 },
+        "sindri.physics2d.rigid_body": { "kind": "dynamic", "pose": { "position": [0.0,-2.3], "rotation": 0.0 }, "linear_velocity": [0.0,0.0], "angular_velocity": 0.0, "gravity_scale": 0.0, "linear_damping": 0.0, "angular_damping": 0.0, "lock_rotation": true },
+        "sindri.physics2d.collider": { "shape": { "shape": "circle", "radius": 0.28 }, "offset": [0.0,0.0], "rotation": 0.0, "sensor": true, "layers": { "memberships": 4, "filter": 2 }, "friction": 0.0, "restitution": 0.0 },
+        "sindri.script": { "source": "scripts/combat-lab-player.decay", "script": "CombatLabPlayer", "properties": { "speed": 5.2, "view_size": 11.0 } }
+      }
+    },
+    {
+      "id": "combat-lab", "name": "CombatLab", "parent": null,
+      "transform_3d": { "position": [0.0,0.0,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [1.0,1.0,1.0] },
+      "components": {
+        "sindri.tags": { "tags": ["combat_lab"] },
+        "sindri.script": {
+          "source": "scripts/combat-lab.decay", "script": "CombatLab",
+          "properties": {
+            "gas_cloud": "prefabs/attack-gas-cloud.prefab.json",
+            "hostile_mine": "prefabs/attack-hostile-mine.prefab.json",
+            "shockwave": "prefabs/attack-shockwave.prefab.json",
+            "gravity_well": "prefabs/attack-gravity-well.prefab.json"
+          }
+        }
+      }
+    },
+    {
+      "id": "lab-title", "name": "LabTitle", "parent": null,
+      "transform_3d": { "position": [0.0,0.9,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [1.0,1.0,1.0] },
+      "components": { "sindri.ui.text": { "anchor": "center", "color": [0.75,0.95,1.0,1.0], "font": "fonts/ChakraPetch-Bold.ttf", "font_size": 0.065, "layer": 140, "line_height": 0.07, "text": "COMBAT LAB", "bounds": [0.8,0.09], "wrap": "none", "case": "as_written", "letter_spacing": 0.002, "bold": false } }
+    },
+    {
+      "id": "lab-help", "name": "LabHelp", "parent": null,
+      "transform_3d": { "position": [0.0,0.82,0.0], "rotation": [0.0,0.0,0.0,1.0], "scale": [1.0,1.0,1.0] },
+      "components": { "sindri.ui.text": { "anchor": "center", "color": [0.45,0.65,0.72,1.0], "font": "fonts/IBMPlexMono-Regular.ttf", "font_size": 0.028, "layer": 140, "line_height": 0.032, "text": "AUTOPLAY  |  1 GAS  2 MINE  3 WAVE  4 GRAVITY  C COMBO  R CLEAR  I DAMAGE", "bounds": [1.65,0.12], "wrap": "word", "line_align": "center", "case": "as_written", "letter_spacing": 0.001, "bold": false } }
+    }
+  ]
+}

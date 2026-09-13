@@ -1,0 +1,177 @@
+// Developer playground for reusable Orbital attack primitives.
+//
+// The lab is intentionally just another gameplay entity. It spawns the exact
+// prefabs bosses will use, so proving a combination here proves the real thing.
+script CombatLab {
+    @export let gas_cloud: Prefab;
+    @export let hostile_mine: Prefab;
+    @export let shockwave: Prefab;
+    @export let gravity_well: Prefab;
+
+    var autoplay_clock: f32 = 1.0;
+    var autoplay_step: f32 = 0.0;
+    var combo_step: f32 = 0.0;
+
+    fn start() {
+        Game.set("lab_active", 1.0);
+        Game.set("lab_autoplay", 1.0);
+        Game.set("lab_invulnerable", 1.0);
+        Game.set("lab_spawn", 0.0);
+        Game.set("lab_combo", 0.0);
+        Game.set("lab_clear", 0.0);
+        Game.set("lab_last", 0.0);
+    }
+
+    fn update(dt: f32) {
+        if Game.get("run_state", 0.0) != 1.0 { return; }
+
+        if Game.get("lab_invulnerable", 1.0) > 0.0 {
+            Game.set("hp", max(Game.get("hp", 5.0), 5.0));
+            Game.set("player_damage_taken", 0.0);
+        }
+
+        keyboard();
+        requests();
+
+        if Game.get("lab_autoplay", 1.0) > 0.0 {
+            this.autoplay_clock -= dt;
+            if this.autoplay_clock <= 0.0 {
+                this.autoplay_clock = 4.5;
+                autoplay();
+            }
+        }
+        publish_count();
+    }
+
+    fn keyboard() {
+        if Input.just_pressed("1") { spawn_kind(1.0); }
+        if Input.just_pressed("2") { spawn_kind(2.0); }
+        if Input.just_pressed("3") { spawn_kind(3.0); }
+        if Input.just_pressed("4") { spawn_kind(4.0); }
+        if Input.just_pressed("C") {
+            this.combo_step = (this.combo_step % 3.0) + 1.0;
+            spawn_combo(this.combo_step);
+        }
+        if Input.just_pressed("R") { clear(); }
+        if Input.just_pressed("Space") {
+            if Game.get("lab_autoplay", 1.0) > 0.0 { Game.set("lab_autoplay", 0.0); }
+            else { Game.set("lab_autoplay", 1.0); }
+        }
+        if Input.just_pressed("I") {
+            if Game.get("lab_invulnerable", 1.0) > 0.0 { Game.set("lab_invulnerable", 0.0); }
+            else { Game.set("lab_invulnerable", 1.0); }
+        }
+    }
+
+    // UI and tests can drive the same board commands as the keyboard. That is
+    // what will let the eventual touch panel use this without duplicating logic.
+    fn requests() {
+        let request = Game.get("lab_spawn", 0.0);
+        if request > 0.0 {
+            Game.set("lab_spawn", 0.0);
+            spawn_kind(request);
+        }
+        let combo = Game.get("lab_combo", 0.0);
+        if combo > 0.0 {
+            Game.set("lab_combo", 0.0);
+            spawn_combo(combo);
+        }
+        if Game.get("lab_clear", 0.0) > 0.0 {
+            Game.set("lab_clear", 0.0);
+            clear();
+        }
+    }
+
+    fn autoplay() {
+        this.autoplay_step = (this.autoplay_step % 7.0) + 1.0;
+        if this.autoplay_step <= 4.0 { spawn_kind(this.autoplay_step); }
+        else { spawn_combo(this.autoplay_step - 4.0); }
+    }
+
+    fn spawn_kind(kind: f32) {
+        let player = World.find("Player");
+        var x: f32 = 0.0;
+        var y: f32 = 1.8;
+        if player != null {
+            x = player.transform.position.x;
+            y = player.transform.position.y + 1.8;
+        }
+
+        if kind == 1.0 {
+            let attack = World.spawn(this.gas_cloud);
+            attack.transform.position.x = x;
+            attack.transform.position.y = y;
+        } else if kind == 2.0 {
+            let attack = World.spawn(this.hostile_mine);
+            attack.transform.position.x = x;
+            attack.transform.position.y = y;
+        } else if kind == 3.0 {
+            let attack = World.spawn(this.shockwave);
+            attack.transform.position.x = x;
+            attack.transform.position.y = y;
+        } else {
+            let attack = World.spawn(this.gravity_well);
+            attack.transform.position.x = x;
+            attack.transform.position.y = y;
+            World.set_property(attack, "kind", 1.0);
+            World.set_property(attack, "radius", 1.65);
+            World.set_property(attack, "pull", 3.2);
+        }
+        Game.set("lab_last", kind);
+    }
+
+    fn spawn_combo(kind: f32) {
+        clear();
+        let player = World.find("Player");
+        var px: f32 = 0.0;
+        var py: f32 = 0.0;
+        if player != null { px = player.transform.position.x; py = player.transform.position.y; }
+
+        if kind == 1.0 {
+            // Area denial + forced projectile curvature.
+            spawn_at(this.gas_cloud, px + 0.8, py + 1.0);
+            let well = spawn_at(this.gravity_well, px - 0.9, py + 0.6);
+            World.set_property(well, "kind", 1.0);
+            World.set_property(well, "radius", 1.8);
+            World.set_property(well, "pull", 4.0);
+        } else if kind == 2.0 {
+            // A moving danger front crossing a minefield.
+            spawn_at(this.hostile_mine, px - 1.5, py + 1.2);
+            spawn_at(this.hostile_mine, px + 1.5, py + 1.2);
+            spawn_at(this.hostile_mine, px, py + 2.2);
+            spawn_at(this.shockwave, px, py + 2.8);
+        } else {
+            // Deliberate stress preset: persistent zone + gravity + wave + mines.
+            spawn_at(this.gas_cloud, px, py + 1.4);
+            let well = spawn_at(this.gravity_well, px, py + 1.4);
+            World.set_property(well, "kind", 1.0);
+            World.set_property(well, "radius", 2.1);
+            World.set_property(well, "pull", 4.5);
+            spawn_at(this.hostile_mine, px - 1.8, py + 0.8);
+            spawn_at(this.hostile_mine, px + 1.8, py + 0.8);
+            spawn_at(this.shockwave, px, py + 1.4);
+        }
+        Game.set("lab_last", 10.0 + kind);
+    }
+
+    fn spawn_at(prefab: Prefab, x: f32, y: f32) -> Entity {
+        let attack = World.spawn(prefab);
+        attack.transform.position.x = x;
+        attack.transform.position.y = y;
+        return attack;
+    }
+
+    fn clear() {
+        for attack in World.with_tag("lab_attack") {
+            if World.exists(attack) { World.despawn(attack); }
+        }
+    }
+
+    fn publish_count() {
+        var count: f32 = 0.0;
+        for attack in World.with_tag("lab_attack") {
+            if World.exists(attack) { count += 1.0; }
+        }
+        Game.set("lab_attack_count", count);
+    }
+}
