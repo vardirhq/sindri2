@@ -38,9 +38,6 @@ script Spine {
         var slot: f32 = 0.0;
         while slot < 9.0 {
             let part = World.spawn(this.segment);
-            // Match the pattern that made Aegis reliable: the independent
-            // section receives its authored start pose and places itself in
-            // start(), before its kinematic physics body is materialised.
             World.set_property(part, "spawn_x",
                 this.transform.position.x - this.dir_x * (slot + 1.0) * 0.62);
             World.set_property(part, "spawn_y",
@@ -68,11 +65,13 @@ script Spine {
         this.turn_serial += 1.0;
         for part in World.with_tag("spine_segment") {
             if !World.exists(part) { continue; }
-            if World.property_number(part, "group", -1.0) != 0.0 { continue; }
-            if World.property_number(part, "head", 0.0) > 0.0 { continue; }
-            World.set_property(part, "turn_x", x);
-            World.set_property(part, "turn_y", y);
-            World.set_property(part, "turn_serial", this.turn_serial);
+            // Runtime script fields are deliberately not authorable after
+            // start(). Signals are the live message channel: every section
+            // receives the turn and decides locally whether group 0 owns it.
+            World.send_signal(part, "spine_turn_group", 0.0);
+            World.send_signal(part, "spine_turn_x", x);
+            World.send_signal(part, "spine_turn_y", y);
+            World.send_signal(part, "spine_turn_serial", this.turn_serial);
         }
     }
 
@@ -181,9 +180,6 @@ script Spine {
         else if this.dir_y > 0.0 && y >= hy - margin { turning = 1.0; turn_from_vertical_edge(player); }
         else if this.dir_y < 0.0 && y <= -hy + margin { turning = 1.0; turn_from_vertical_edge(player); }
 
-        // The head is the route authority. It publishes the exact point where
-        // its velocity changes, so every independent section replays a fact
-        // rather than inferring a corner from later observations.
         if turning > 0.0 { publish_turn(x, y); }
 
         var speed: f32 = 3.0;
