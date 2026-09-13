@@ -2,7 +2,7 @@
 
 set -eu
 
-output_path=${1:?"usage: capture-editor.sh OUTPUT.png [SCENE.json]"}
+output_path=${1:?"usage: capture-editor.sh OUTPUT.png [SCENE.json] [ENTITY_FILTER]"}
 output_dir=$(dirname "$output_path")
 mkdir -p "$output_dir"
 
@@ -12,6 +12,7 @@ mkdir -p "$output_dir"
 # rather than left to a default: passing a second argument photographs whichever
 # scene is of interest, and passing none photographs the one this always did.
 scene=${2:-examples/cube/assets/demo.scene.json}
+entity_filter=${3:-}
 
 # Built before it is launched, so the wait below times the editor starting up
 # rather than rustc. The loop that follows gives the window thirty seconds to
@@ -59,6 +60,18 @@ xdotool windowmap --sync "$window_id"
 xdotool windowmove --sync "$window_id" 0 0
 xdotool windowraise "$window_id"
 sleep 3
+
+# A feature capture may name an entity. Filter the hierarchy and select its
+# first result so the screenshot proves the real inspector rather than merely
+# proving that the scene opens. Coordinates are relative to the fixed CI window
+# and deliberately target the hierarchy controls, not scene content.
+if [ -n "$entity_filter" ]; then
+    xdotool mousemove --window "$window_id" 135 104 click 1
+    xdotool type --window "$window_id" --delay 20 "$entity_filter"
+    sleep 1
+    xdotool mousemove --window "$window_id" 85 158 click 1
+    sleep 2
+fi
 
 # A window that exists but has not drawn yet grabs as a uniform black image.
 # Accepting one would upload an empty screenshot as the editor's artifact and

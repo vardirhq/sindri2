@@ -1,6 +1,7 @@
 # Tile System 2
 
-Status: accepted direction, implementation in progress.
+Status: block-volume foundation implemented; terrain rules, collision, and
+navigation remain in progress.
 
 Gather reached the limit of `sindri.tilemap`. The grid arithmetic held up; the
 representation around it did not. One component currently owns logical cells,
@@ -106,6 +107,26 @@ not submitted as runtime 3D geometry.
 
 ## Authoring
 
+The editor's first complete block workflow is now available on an entity that
+carries both `sindri.tile_grid` and `sindri.tile_volume`. Its Build inspector
+loads the volume's validated tile set and offers two undoable tools:
+
+- **Surface** picks the frontmost exposed top diamond. Place stacks one block
+  above it; Remove deletes the block that produced it. Empty space starts a
+  foundation at level zero. Surface gestures are click-only so holding a drag
+  cannot accidentally grow or drill an entire column.
+- **Level** addresses one explicit integer Z level and supports click-drag
+  painting for floors, shelves, and deliberate overhangs.
+
+Both modes preview the exact target cell in the Scene view, keep cell ordering
+deterministic, preserve unknown component fields, and commit through the
+editor's command history so a stroke can be undone and saved normally. Tile-set
+choices are cached for the selected asset rather than reread every frame.
+
+This is intentionally the block half of the authoring contract. Side-face
+picking, terrain-name painting, automatic supporting strata, slice/isolation
+views, and generated collision/navigation are still later Tile System 2 work.
+
 The primary terrain tool paints a terrain ID on a column. A height gesture
 raises or lowers its surface and the terrain rule fills or removes supporting
 tiles. A block tool and level/slice control edit one exact `(x, y, z)` cell for
@@ -113,11 +134,13 @@ construction, caves, and overhangs. Neighbour rules update the preview without
 rewriting cells into edge variants. An advanced override may pin a visual
 variant, and clearing it returns the cell to automatic resolution.
 
-Block authoring follows a "LEGO, not CAD" rule. Clicking a visible face places
-the selected block in the adjacent cell; dragging places a snapped run or
-plane; removing targets the source cell. Slice and isolation views reveal
-hidden levels without making authors type coordinates. Every gesture previews
-the same derived baked faces the running game will draw.
+Block authoring follows a "LEGO, not CAD" rule. The implemented top-face tool
+places the selected block above that face and removal targets its source cell;
+the explicit-level tool paints snapped planes. Extending that same contract to
+side faces will place blocks in their horizontal adjacent cells. Slice and
+isolation views will reveal hidden levels without making authors type
+coordinates. Every gesture previews the same derived baked faces the running
+game draws.
 
 Picking tests emitted faces front-to-back and returns the 3D cell and face that
 caused the hit. Selection may inspect a derived face, but edits the source cell.

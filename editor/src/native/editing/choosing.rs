@@ -59,6 +59,7 @@ impl EditorApp {
             self.history.break_merge_run();
             self.gizmo_drag = None;
             self.tilemap_tool.reset();
+            self.tile_volume_tool.reset();
             self.animation_tool.reset();
             // A half-typed stable ID belongs to the entity it was being typed
             // for. Carried over, it would appear in the next entity's field
@@ -133,6 +134,7 @@ impl EditorApp {
         }
         self.selection.clear();
         self.tilemap_tool.reset();
+        self.tile_volume_tool.reset();
         self.animation_tool.reset();
     }
 }

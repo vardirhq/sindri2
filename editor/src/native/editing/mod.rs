@@ -520,6 +520,7 @@ impl EditorApp {
                 self.saved_revision = self.history.revision();
                 self.selection.clear();
                 self.tilemap_tool.reset();
+                self.tile_volume_tool.reset();
                 self.animation_tool.reset();
                 self.lifecycle = initialized_lifecycle();
                 // A cursor belongs to the world it was advanced against, and

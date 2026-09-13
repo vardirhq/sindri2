@@ -34,11 +34,13 @@ use crate::{
     scripts::SceneScripts,
     slicer::Slicer,
     textures::SceneTextures,
+    tile_volume::TileVolumeTool,
     tilemap::TilemapTool,
     weave_styles::ProjectStyles,
 };
 
 mod assistant_view;
+mod block_pointer;
 mod camera;
 mod chrome;
 mod console_view;
@@ -230,6 +232,8 @@ struct EditorApp {
     /// stores what was painted; it does not store which brush the author last
     /// held or whether the Scene view currently belongs to that brush.
     tilemap_tool: TilemapTool,
+    /// The block, height and place/remove mode held by the volume brush.
+    tile_volume_tool: TileVolumeTool,
     /// Clip selection and playback cursor for the inspector's animation
     /// preview. Like runtime animation state, none of this is scene data.
     animation_tool: AnimationTool,
@@ -496,6 +500,7 @@ impl EditorApp {
             asset_search: String::new(),
             slicer: None,
             tilemap_tool: TilemapTool::default(),
+            tile_volume_tool: TileVolumeTool::default(),
             animation_tool: AnimationTool::default(),
             browser: BrowserState::default(),
             project,

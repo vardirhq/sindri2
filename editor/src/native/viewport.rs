@@ -12,6 +12,7 @@ use sindri_render::{
 use sindri_scene::{CameraView, SceneRuntime, UiCanvas};
 use weave::Viewport as WeaveViewport;
 
+use super::block_pointer::TileVolumeHover;
 use super::camera::{EditorCamera, camera_for};
 use super::frame::physical_viewport_dimension;
 use super::hierarchy::row::entity_name;
@@ -22,7 +23,30 @@ use super::overlay::{
 use super::pointer::TilemapHover;
 use super::scene_io::SceneSource;
 use super::{EditorApp, INITIAL_VIEWPORT_HEIGHT, INITIAL_VIEWPORT_WIDTH, WorkspaceTab};
+use crate::tile_volume::TilePlacement;
 use crate::ui::theme::{color, text};
+
+enum PaintHover<'a> {
+    Tilemap(&'a TilemapHover),
+    TileVolume(&'a TileVolumeHover),
+}
+
+struct ViewInteraction {
+    editing: bool,
+    painting: bool,
+    camera: CameraView,
+    tilemap_hover: Option<TilemapHover>,
+    volume_hover: Option<TileVolumeHover>,
+}
+
+impl ViewInteraction {
+    fn hover(&self) -> Option<PaintHover<'_>> {
+        self.tilemap_hover
+            .as_ref()
+            .map(PaintHover::Tilemap)
+            .or_else(|| self.volume_hover.as_ref().map(PaintHover::TileVolume))
+    }
+}
 
 /// The GPU pipelines every viewport draws with.
 ///
@@ -225,50 +249,20 @@ impl EditorApp {
     /// drift into being two renderers.
     pub(super) fn render_view(&mut self, ui: &mut egui::Ui, tab: WorkspaceTab) {
         let context = ui.ctx().clone();
-        let editing = tab == WorkspaceTab::Scene;
         let (panel, response) = ui.allocate_exact_size(ui.available_size(), viewport_sense());
         // The Game view is drawn at the shape of the screen it is standing in
         // for, which is the panel's own unless someone chose otherwise. The
         // Scene view is always the panel: it is a place to work, not a picture
         // of a device.
-        let rect = if editing {
+        let rect = if tab == WorkspaceTab::Scene {
             panel
         } else {
             self.game_device.fit(panel)
         };
-        self.record_view_rect(editing, rect);
-        let painting = editing && self.tilemap_tool.brush().is_some();
-        let camera_before_input = self.scene_camera();
-        let gizmo_owned = if editing && !painting {
-            self.gizmo_visual(rect, camera_before_input).is_some_and(
-                |(camera, anchoring, visual)| {
-                    self.interact_gizmo(rect, &response, camera, anchoring, &visual)
-                },
-            )
-        } else {
-            false
-        };
-        if editing {
-            self.move_camera(&context, &response, rect.height(), painting || gizmo_owned);
-        }
+        let interaction = self.interact_view(&context, &response, rect, tab);
+        let editing = interaction.editing;
+        let camera = interaction.camera;
         let scale = context.pixels_per_point();
-        let camera = if editing {
-            self.scene_camera()
-        } else {
-            camera_for(tab, EditorCamera::default())
-        };
-        let hover = editing
-            .then(|| self.tilemap_hover(rect, response.hover_pos(), camera))
-            .flatten();
-        if let Some(hover) = &hover
-            && (response.clicked_by(egui::PointerButton::Primary)
-                || response.dragged_by(egui::PointerButton::Primary))
-        {
-            self.apply_tile_brush(hover);
-        }
-        if editing {
-            self.select_viewport_click(rect, &response, camera, painting || gizmo_owned);
-        }
         // Worked out before the viewport is borrowed: the canvas and Weave
         // viewport are facts about the project's screen, not about the GPU
         // surface being drawn into.
@@ -322,7 +316,15 @@ impl EditorApp {
             // Measured before the chrome is drawn, because measuring a string
             // shapes it and the painter takes only a shared borrow.
             let text_rect = self.selected_text_rect(camera);
-            self.paint_scene_chrome(ui, rect, camera, hover.as_ref(), painting, text_rect);
+            let hover = interaction.hover();
+            self.paint_scene_chrome(
+                ui,
+                rect,
+                camera,
+                hover.as_ref(),
+                interaction.painting,
+                text_rect,
+            );
         } else {
             // The unused space is painted out rather than left showing the
             // panel, so the shape being previewed reads as the screen and not
@@ -340,6 +342,73 @@ impl EditorApp {
             paint_viewport_border(ui.painter(), rect, self.problem());
         }
         context.request_repaint();
+    }
+
+    fn interact_view(
+        &mut self,
+        context: &egui::Context,
+        response: &egui::Response,
+        rect: Rect,
+        tab: WorkspaceTab,
+    ) -> ViewInteraction {
+        let editing = tab == WorkspaceTab::Scene;
+        self.record_view_rect(editing, rect);
+        let volume_painting = editing && self.tile_volume_tool.brush().is_some();
+        let painting = volume_painting || (editing && self.tilemap_tool.brush().is_some());
+        let camera_before_input = self.scene_camera();
+        let gizmo_owned = editing
+            && !painting
+            && self.gizmo_visual(rect, camera_before_input).is_some_and(
+                |(camera, anchoring, visual)| {
+                    self.interact_gizmo(rect, response, camera, anchoring, &visual)
+                },
+            );
+        if editing {
+            self.move_camera(context, response, rect.height(), painting || gizmo_owned);
+        }
+        let camera = if editing {
+            self.scene_camera()
+        } else {
+            camera_for(tab, EditorCamera::default())
+        };
+        let volume_hover = editing
+            .then(|| self.tile_volume_hover(rect, response.hover_pos(), camera))
+            .flatten();
+        let tilemap_hover = (!volume_painting && editing)
+            .then(|| self.tilemap_hover(rect, response.hover_pos(), camera))
+            .flatten();
+        self.apply_paint_input(response, volume_hover.as_ref(), tilemap_hover.as_ref());
+        if editing {
+            self.select_viewport_click(rect, response, camera, painting || gizmo_owned);
+        }
+        ViewInteraction {
+            editing,
+            painting,
+            camera,
+            tilemap_hover,
+            volume_hover,
+        }
+    }
+
+    fn apply_paint_input(
+        &mut self,
+        response: &egui::Response,
+        volume: Option<&TileVolumeHover>,
+        tilemap: Option<&TilemapHover>,
+    ) {
+        if let Some(hover) = volume {
+            let requested = response.clicked_by(egui::PointerButton::Primary)
+                || (self.tile_volume_tool.placement == TilePlacement::Level
+                    && response.dragged_by(egui::PointerButton::Primary));
+            if requested {
+                self.apply_volume_brush(hover);
+            }
+        } else if let Some(hover) = tilemap
+            && (response.clicked_by(egui::PointerButton::Primary)
+                || response.dragged_by(egui::PointerButton::Primary))
+        {
+            self.apply_tile_brush(hover);
+        }
     }
 
     /// Resolves the authored world through the project's Weave presentation.
@@ -400,7 +469,7 @@ impl EditorApp {
         ui: &egui::Ui,
         rect: Rect,
         camera: CameraView,
-        hover: Option<&TilemapHover>,
+        hover: Option<&PaintHover<'_>>,
         painting: bool,
         text_rect: Option<([f32; 2], [f32; 2])>,
     ) {
@@ -408,8 +477,10 @@ impl EditorApp {
         if !painting && let Some((centre, size)) = text_rect {
             self.paint_text_rect(ui, rect, camera, centre, size);
         }
-        if let Some(hover) = hover {
-            self.paint_tilemap_hover(ui, hover);
+        match hover {
+            Some(PaintHover::Tilemap(hover)) => self.paint_tilemap_hover(ui, hover),
+            Some(PaintHover::TileVolume(hover)) => self.paint_tile_volume_hover(ui, hover),
+            None => {}
         }
         if !painting {
             paint_selection_marks(ui.painter(), &self.selection_marks(rect, camera));

@@ -151,7 +151,7 @@ is why it earns a section rather than a footnote.
 | Sheet-declared ground anchor | ✅ | ✅ | — | ✅ | **Ahead** | Says where a sprite meets the ground, so sorting is authored rather than guessed |
 | Procedural shapes | ✅ | 🟡 | ✅ | ✅ | **Ahead** | Instanced with sprites; Unity needs a plugin or a mesh. No point-handle authoring |
 | Tilemaps (ortho + iso, overhang) | ✅ | ✅ | ✅ | ✅ | **Par** | `Grid.tile`/`set_tile` read and write cells; `Grid.columns`/`rows` give the size |
-| Stackable tile volumes | 🟡 | ❌ | ❌ | ❌ | **Behind** | Integer XYZ storage and projection exist; tilesets, visible-face rendering, LEGO-style authoring, collision/navigation, and Gather proof remain |
+| Stackable tile volumes | ✅ | 🟡 | ❌ | ✅ | **Behind** | Sparse XYZ storage, tilesets, face culling/rendering, Gather proof, and undoable surface/level block painting work; side picking, terrain rules, collision/navigation, and slice views remain |
 | **Autotiling / rule tiles** | ❌ | ❌ | ❌ | ❌ | **Absent** | Unity and Godot both ship it. Painting a wall run by hand is the daily cost |
 | **Tilemap collision** | ❌ | ❌ | ❌ | ❌ | **Absent** | Grid walls serve pathfinding, not physics. A tilemap generates no colliders |
 | **2D lights and shadows** | ❌ | ❌ | ❌ | ❌ | **Absent** | URP 2D lights, Godot's CanvasModulate + Light2D. Nothing here |

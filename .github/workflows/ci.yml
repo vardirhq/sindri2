@@ -166,7 +166,9 @@ jobs:
       - name: Capture native editor runtime viewport
         env:
           WGPU_BACKEND: vulkan
-        run: timeout 60s xvfb-run --auto-servernum --server-args="-screen 0 1600x1200x24" ./scripts/capture-editor.sh target/render-artifacts/editor-runtime-viewport.png
+        run: |
+          timeout 60s xvfb-run --auto-servernum --server-args="-screen 0 1600x1200x24" ./scripts/capture-editor.sh target/render-artifacts/editor-runtime-viewport.png
+          timeout 60s xvfb-run --auto-servernum --server-args="-screen 0 1600x1200x24" ./scripts/capture-editor.sh target/render-artifacts/editor-tile-volume.png game/assets/tile-volume-editor.scene.json Blocks
       - name: Capture scene-driven frame pipeline
         env:
           WGPU_BACKEND: vulkan
@@ -195,6 +197,7 @@ jobs:
           name: visual-test-captures
           path: |
             target/render-artifacts/editor-runtime-viewport.png
+            target/render-artifacts/editor-tile-volume.png
             target/render-artifacts/scene-frame-pipeline.png
             target/render-artifacts/gather.png
             target/render-artifacts/orbital-spectacle-desktop.png

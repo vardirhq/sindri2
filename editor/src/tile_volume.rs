@@ -3,9 +3,11 @@
 //! A volume remains one component payload so a stroke is one undoable command.
 //! These helpers edit only `cells`; unknown future fields survive unchanged.
 
+use std::path::{Path, PathBuf};
+
 use glam::{Mat4, Quat, Vec3};
 use serde_json::{Value, json};
-use sindri_core::Transform3D;
+use sindri_core::{TileSetDocument, Transform3D};
 use sindri_grid::GridCoord3;
 use sindri_scene::{TileGridComponent, TileProjection, TileVolumeComponent};
 
@@ -15,12 +17,67 @@ mod tests;
 pub const GRID_TYPE_NAME: &str = "sindri.tile_grid";
 pub const TYPE_NAME: &str = "sindri.tile_volume";
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum TilePlacement {
+    #[default]
+    Surface,
+    Level,
+}
+
 #[derive(Default)]
 pub struct TileVolumeTool {
     pub enabled: bool,
     pub erase: bool,
     pub tile: Option<String>,
     pub level: i32,
+    pub placement: TilePlacement,
+    pub palette: TileSetPalette,
+}
+
+/// Tile IDs from one validated tile-set asset, read once per selected asset.
+#[derive(Default)]
+pub struct TileSetPalette {
+    key: Option<(PathBuf, String)>,
+    tiles: Vec<String>,
+    problem: Option<String>,
+}
+
+impl TileSetPalette {
+    pub fn ensure(&mut self, root: Option<&Path>, reference: &str) {
+        let Some(root) = root else {
+            self.clear();
+            self.problem = Some("Save the scene before loading its tile set".to_owned());
+            return;
+        };
+        let key = (root.to_path_buf(), reference.to_owned());
+        if self.key.as_ref() == Some(&key) {
+            return;
+        }
+        self.clear();
+        self.key = Some(key);
+        let path = root.join(reference);
+        let result = std::fs::read_to_string(&path)
+            .map_err(|error| format!("{}: {error}", path.display()))
+            .and_then(|json| TileSetDocument::from_json(&json).map_err(|error| error.to_string()));
+        match result {
+            Ok(set) => self.tiles.extend(set.tiles.keys().cloned()),
+            Err(error) => self.problem = Some(error),
+        }
+    }
+
+    pub fn tiles(&self) -> &[String] {
+        &self.tiles
+    }
+
+    pub fn problem(&self) -> Option<&str> {
+        self.problem.as_deref()
+    }
+
+    fn clear(&mut self) {
+        self.key = None;
+        self.tiles.clear();
+        self.problem = None;
+    }
 }
 
 impl TileVolumeTool {
@@ -162,6 +219,83 @@ pub fn cell_outline(
         projected[index] = [(ndc.x + 1.0) * 0.5, (1.0 - ndc.y) * 0.5];
     }
     Some(projected)
+}
+
+/// Resolve the visible top face under a viewport point.
+///
+/// Shared top faces are ignored, and overlapping diamonds use the same stable
+/// cell ordering as the renderer so the face the author sees wins the pick.
+pub fn surface_cell_at_viewport(
+    grid: &TileGridComponent,
+    transform: Transform3D,
+    view_projection: Mat4,
+    point: [f32; 2],
+    volume: &TileVolumeComponent,
+) -> Option<GridCoord3> {
+    if !(0.0..=1.0).contains(&point[0]) || !(0.0..=1.0).contains(&point[1]) {
+        return None;
+    }
+    volume
+        .occupied()
+        .filter(|(coord, _)| {
+            coord
+                .checked_offset(0, 0, 1)
+                .is_none_or(|above| volume.tile(above).is_none())
+        })
+        .filter_map(|(coord, _)| {
+            let outline = cell_outline(grid, transform, view_projection, coord)?;
+            point_in_convex_quad(point, outline).then_some(coord)
+        })
+        .max_by_key(|coord| (coord.x.saturating_add(coord.y), coord.z, coord.y, coord.x))
+}
+
+/// Pick the exact cell changed by the surface brush.
+///
+/// Placing targets the cell above an occupied top. Empty screen space falls
+/// back to the chosen foundation level, while removal requires a real block.
+pub fn surface_target_at_viewport(
+    grid: &TileGridComponent,
+    transform: Transform3D,
+    view_projection: Mat4,
+    point: [f32; 2],
+    volume: &TileVolumeComponent,
+    erase: bool,
+    foundation_level: i32,
+) -> Option<GridCoord3> {
+    if let Some(surface) = surface_cell_at_viewport(grid, transform, view_projection, point, volume)
+    {
+        return if erase {
+            Some(surface)
+        } else {
+            surface.checked_offset(0, 0, 1)
+        };
+    }
+    if erase {
+        None
+    } else {
+        cell_at_viewport(grid, transform, view_projection, point, foundation_level)
+    }
+}
+
+fn point_in_convex_quad(point: [f32; 2], outline: [[f32; 2]; 4]) -> bool {
+    let mut winding = 0.0_f32;
+    for (start, end) in outline
+        .iter()
+        .zip(outline.iter().cycle().skip(1))
+        .take(outline.len())
+    {
+        let cross = (end[0] - start[0]) * (point[1] - start[1])
+            - (end[1] - start[1]) * (point[0] - start[0]);
+        if cross.abs() <= f32::EPSILON {
+            continue;
+        }
+        if winding == 0.0 {
+            winding = cross;
+        } else if winding.signum() != cross.signum() {
+            return false;
+        }
+    }
+    true
 }
 
 fn transform_matrix(transform: Transform3D) -> Mat4 {
