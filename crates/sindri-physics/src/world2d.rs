@@ -211,9 +211,14 @@ impl PhysicsWorld2d {
     }
 
     pub fn linear_velocity(&self, entity: EntityId) -> Result<[f32; 2], PhysicsError> {
-        let record = self.record(entity)?;
-        let velocity = self.backend.bodies[record.body].linvel();
-        Ok([velocity.x, velocity.y])
+        if let Some(record) = self.bodies.get(&entity) {
+            let velocity = self.backend.bodies[record.body].linvel();
+            return Ok([velocity.x, velocity.y]);
+        }
+        if let Some(velocity) = self.pending_velocity.get(&entity) {
+            return Ok(*velocity);
+        }
+        Err(PhysicsError::MissingEntity(entity))
     }
 
     pub fn set_linear_velocity(
