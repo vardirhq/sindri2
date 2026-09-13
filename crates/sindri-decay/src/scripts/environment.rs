@@ -261,6 +261,9 @@ pub(super) fn add_physics_surface(environment: &mut Environment) {
                     PhysicsCall::SetVelocity | PhysicsCall::ApplyImpulse => {
                         vec![entity(), Type::F32, Type::F32]
                     }
+                    PhysicsCall::ConnectDistance => {
+                        vec![entity(), entity(), Type::F32]
+                    }
                     // An event query is about the entity the script is on, so
                     // it takes nothing: an event is about a pair, and the pair
                     // a script cares about is the one it is half of.
@@ -268,7 +271,9 @@ pub(super) fn add_physics_surface(environment: &mut Environment) {
                 },
                 return_type: match call {
                     PhysicsCall::VelocityX | PhysicsCall::VelocityY => Type::F32,
-                    PhysicsCall::SetVelocity | PhysicsCall::ApplyImpulse => Type::Unit,
+                    PhysicsCall::SetVelocity
+                    | PhysicsCall::ApplyImpulse
+                    | PhysicsCall::ConnectDistance => Type::Unit,
                     _ => Type::array_of(entity()),
                 },
             },
