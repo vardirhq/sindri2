@@ -257,6 +257,15 @@ decidable now.
 ## Releases
 
 There is no release process yet, and therefore nothing to validate against.
-`CHANGELOG.md` accumulates entries under `## [Unreleased]`; the first release
-turns that heading into a version and date. Release and changelog validation is
-an open `ROADMAP.md` item deliberately left for when a release exists to check.
+`CHANGELOG.md` accumulates concise, release-oriented entries under
+`## [Unreleased]`; the first release turns that heading into a version and date.
+
+The changelog is deliberately not a development journal. Detailed design
+rationale, debugging history, test narratives, and implementation notes belong
+in pull requests, commit history, or subsystem documentation. A changelog entry
+should describe the externally meaningful result in a few lines and should
+normally be grouped under Added, Changed, Fixed, or another Keep a Changelog
+category.
+
+Release and changelog validation remains an open `ROADMAP.md` item until a real
+release process exists to validate.
