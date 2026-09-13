@@ -3,8 +3,8 @@
 // surviving section into a new head and keeps moving on its own.
 script SpineSegment {
     @export let slot: f32 = 0.0;
-    @export let group: f32 = 0.0;
-    @export let head: f32 = 0.0;
+    @export var group: f32 = 0.0;
+    @export var head: f32 = 0.0;
     @export let health: f32 = 10.0;
     @export let spacing: f32 = 0.72;
 
