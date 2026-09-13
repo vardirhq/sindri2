@@ -25,8 +25,8 @@ script SpineSegment {
     }
 
     fn spine() -> Entity {
-        for boss in World.with_tag("boss") {
-            if World.exists(boss) && World.property_number(boss, "spine_marker", 0.0) > 0.0 {
+        for boss in World.with_tag("spine") {
+            if World.exists(boss) {
                 return boss;
             }
         }

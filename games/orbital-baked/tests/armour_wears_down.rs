@@ -126,6 +126,11 @@ fn destroying_a_middle_segment_severs_and_promotes_the_rear_chain() {
 
     let cut = segment_at(&run, 4.0);
     let new_head = segment_at(&run, 5.0);
+    assert_eq!(
+        run.physics.world().joint_count(),
+        9,
+        "the head and all nine sections begin as one tethered body"
+    );
     let target = run
         .world
         .get(cut)
