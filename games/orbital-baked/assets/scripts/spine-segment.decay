@@ -1,6 +1,6 @@
-// One physical section of Spine's body. Sections follow the section in front
-// of them until one is destroyed; the severed rear chain promotes its first
-// surviving section into a new cardinal-moving head.
+// One physical section of Spine's body. Every section is joined to the one in
+// front by a real distance constraint; steering only decides how the chain
+// travels, while physics guarantees it remains a chain.
 script SpineSegment {
     @export let slot: f32 = 0.0;
     @export var group: f32 = 0.0;
@@ -14,7 +14,15 @@ script SpineSegment {
     var dir_y: f32 = 0.0;
     var turn_clock: f32 = 0.0;
 
-    fn start() { this.hp = this.health; }
+    fn start() {
+        this.hp = this.health;
+        let ahead = leader();
+        if ahead != null {
+            // This call may happen on the same pass the prefab was spawned.
+            // Sindri queues the joint until both backend bodies materialize.
+            Physics.connect_distance(ahead, this.entity, this.spacing);
+        }
+    }
 
     fn spine() -> Entity {
         for boss in World.with_tag("boss") {
@@ -45,12 +53,13 @@ script SpineSegment {
             return;
         }
         this.turn_clock -= dt;
-        clamp_inside();
         receive_hits();
         if !World.exists(this.entity) { return; }
         if this.head > 0.0 { grid_hunt(); return; }
         let ahead = leader();
         if ahead == null {
+            // If the predecessor disappeared for any reason, this becomes a
+            // genuine severed head instead of freezing as an orphaned link.
             this.head = 1.0;
             grid_hunt();
             return;
@@ -64,44 +73,34 @@ script SpineSegment {
         let avx = Physics.velocity_x(ahead);
         let avy = Physics.velocity_y(ahead);
         let speed = 5.4;
-        let snap = 0.055;
+        let snap = 0.07;
         var vx: f32 = 0.0;
         var vy: f32 = 0.0;
 
-        // Follow the leader's lane, not its diagonal displacement. When a leader
-        // turns, the follower first reaches the same corner coordinate and only
-        // then takes the new axis. That creates proper Snake-like right angles.
+        // Steering follows the leader's lane so corners stay orthogonal. The
+        // distance joint is authoritative for connectivity; this code no longer
+        // teleports transforms in an attempt to fake a physical connection.
         if abs(avx) >= abs(avy) && abs(avx) > 0.01 {
-            let target_y = ay;
-            var target_x = ax - this.spacing;
-            if avx < 0.0 { target_x = ax + this.spacing; }
-            let cross = target_y - this.transform.position.y;
+            let cross = ay - this.transform.position.y;
             if abs(cross) > snap {
                 if cross > 0.0 { vy = speed; } else { vy = -speed; }
             } else {
-                this.transform.position.y = target_y;
+                var target_x = ax - this.spacing;
+                if avx < 0.0 { target_x = ax + this.spacing; }
                 let along = target_x - this.transform.position.x;
-                if abs(along) > snap {
-                    if along > 0.0 { vx = speed; } else { vx = -speed; }
-                } else {
-                    this.transform.position.x = target_x;
-                }
+                if along > snap { vx = speed; }
+                if along < -snap { vx = -speed; }
             }
         } else if abs(avy) > 0.01 {
-            let target_x = ax;
-            var target_y = ay - this.spacing;
-            if avy < 0.0 { target_y = ay + this.spacing; }
-            let cross = target_x - this.transform.position.x;
+            let cross = ax - this.transform.position.x;
             if abs(cross) > snap {
                 if cross > 0.0 { vx = speed; } else { vx = -speed; }
             } else {
-                this.transform.position.x = target_x;
+                var target_y = ay - this.spacing;
+                if avy < 0.0 { target_y = ay + this.spacing; }
                 let along = target_y - this.transform.position.y;
-                if abs(along) > snap {
-                    if along > 0.0 { vy = speed; } else { vy = -speed; }
-                } else {
-                    this.transform.position.y = target_y;
-                }
+                if along > snap { vy = speed; }
+                if along < -snap { vy = -speed; }
             }
         } else {
             let dx = ax - this.transform.position.x;
@@ -133,13 +132,6 @@ script SpineSegment {
         return 11.0 * 0.5 / aspect - 0.9;
     }
 
-    fn clamp_inside() {
-        let hx = half_x();
-        let hy = half_y();
-        this.transform.position.x = max(-hx, min(hx, this.transform.position.x));
-        this.transform.position.y = max(-hy, min(hy, this.transform.position.y));
-    }
-
     fn choose_turn(player: Entity) {
         let dx = player.transform.position.x - this.transform.position.x;
         let dy = player.transform.position.y - this.transform.position.y;
@@ -158,7 +150,6 @@ script SpineSegment {
         if player == null { return; }
         let hx = half_x();
         let hy = half_y();
-        clamp_inside();
         let x = this.transform.position.x;
         let y = this.transform.position.y;
         var edge: f32 = 0.0;
@@ -220,6 +211,8 @@ script SpineSegment {
         Effects.burst(this.entity);
         Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.22));
         Audio.play("audio/kill.wav", 0.25);
+        // Removing this body removes its attached distance joints in the physics
+        // world, physically severing the chain at exactly the destroyed link.
         World.despawn(this.entity);
     }
 }
