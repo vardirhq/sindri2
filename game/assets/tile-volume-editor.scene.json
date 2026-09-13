@@ -1,0 +1,79 @@
+{
+  "format_version": 9,
+  "metadata": {
+    "name": "Tile Volume Editor Proof"
+  },
+  "entities": [
+    {
+      "id": "blocks",
+      "name": "Blocks",
+      "components": {
+        "sindri.tile_grid": {
+          "cell_size": [1.1, 0.55],
+          "columns": 5,
+          "level_step": [0.0, 0.55],
+          "projection": "isometric",
+          "rows": 5
+        },
+        "sindri.tile_volume": {
+          "cells": [
+            { "position": [0, 0, 0], "tile": "grass" },
+            { "position": [1, 0, 0], "tile": "grass" },
+            { "position": [2, 0, 0], "tile": "grass" },
+            { "position": [3, 0, 0], "tile": "grass" },
+            { "position": [4, 0, 0], "tile": "grass" },
+            { "position": [0, 1, 0], "tile": "grass" },
+            { "position": [1, 1, 0], "tile": "grass" },
+            { "position": [2, 1, 0], "tile": "grass" },
+            { "position": [3, 1, 0], "tile": "grass" },
+            { "position": [4, 1, 0], "tile": "grass" },
+            { "position": [0, 2, 0], "tile": "grass" },
+            { "position": [1, 2, 0], "tile": "grass" },
+            { "position": [2, 2, 0], "tile": "grass" },
+            { "position": [3, 2, 0], "tile": "grass" },
+            { "position": [4, 2, 0], "tile": "grass" },
+            { "position": [0, 3, 0], "tile": "grass" },
+            { "position": [1, 3, 0], "tile": "grass" },
+            { "position": [2, 3, 0], "tile": "grass" },
+            { "position": [3, 3, 0], "tile": "grass" },
+            { "position": [4, 3, 0], "tile": "grass" },
+            { "position": [0, 4, 0], "tile": "grass" },
+            { "position": [1, 4, 0], "tile": "grass" },
+            { "position": [2, 4, 0], "tile": "grass" },
+            { "position": [3, 4, 0], "tile": "grass" },
+            { "position": [4, 4, 0], "tile": "grass" },
+            { "position": [1, 1, 1], "tile": "grass" },
+            { "position": [2, 1, 1], "tile": "grass" },
+            { "position": [3, 1, 1], "tile": "grass" },
+            { "position": [1, 2, 1], "tile": "grass" },
+            { "position": [2, 2, 1], "tile": "stone" },
+            { "position": [3, 2, 1], "tile": "grass" },
+            { "position": [1, 3, 1], "tile": "grass" },
+            { "position": [2, 3, 1], "tile": "grass" },
+            { "position": [3, 3, 1], "tile": "grass" },
+            { "position": [2, 2, 2], "tile": "stone" }
+          ],
+          "layer": 4,
+          "tileset": "gather.tileset.json"
+        }
+      }
+    },
+    {
+      "id": "world-camera",
+      "name": "World Camera",
+      "transform_3d": {
+        "position": [0.0, 0.0, 9.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "components": {
+        "sindri.camera": {
+          "far": 60.0,
+          "near": 0.1,
+          "projection": "orthographic",
+          "vertical_size": 5.5
+        }
+      }
+    }
+  ]
+}
