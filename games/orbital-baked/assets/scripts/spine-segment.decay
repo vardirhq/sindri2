@@ -63,55 +63,79 @@ script SpineSegment {
         let ay = ahead.transform.position.y;
         let avx = Physics.velocity_x(ahead);
         let avy = Physics.velocity_y(ahead);
-        let speed = 5.4;
+        let speed = 5.8;
         let snap = 0.055;
+        var target_x: f32 = ax;
+        var target_y: f32 = ay;
+
+        // Target one body-length behind the leader on the leader's actual travel
+        // axis. No diagonal target exists anywhere in this system.
+        if abs(avx) >= abs(avy) && abs(avx) > 0.01 {
+            if avx > 0.0 { target_x = ax - this.spacing; }
+            else { target_x = ax + this.spacing; }
+        } else if abs(avy) > 0.01 {
+            if avy > 0.0 { target_y = ay - this.spacing; }
+            else { target_y = ay + this.spacing; }
+        }
+
+        let dx = target_x - this.transform.position.x;
+        let dy = target_y - this.transform.position.y;
+        let far = sqrt(dx * dx + dy * dy);
+
+        // This is the invariant the previous versions lacked: a body section is
+        // never allowed to drift far enough away to stop reading as connected.
+        // If physics/order-of-update creates a gap, repair it immediately rather
+        // than asking nine independent followers to eventually catch up.
+        if far > this.spacing * 1.55 {
+            this.transform.position.x = target_x;
+            this.transform.position.y = target_y;
+            Physics.set_velocity(this.entity, avx, avy);
+            if abs(avx) + abs(avy) > 0.01 {
+                this.transform.rotation_z = atan2(avy, avx);
+            }
+            return;
+        }
+
         var vx: f32 = 0.0;
         var vy: f32 = 0.0;
-
-        // Follow the leader's lane, not its diagonal displacement. When a leader
-        // turns, the follower first reaches the same corner coordinate and only
-        // then takes the new axis. That creates proper Snake-like right angles.
+        // Reach the leader's lane first, then travel along it. At the exact
+        // target inherit the leader velocity instead of stopping for a frame;
+        // that old zero-velocity state cascaded down the chain and could freeze it.
         if abs(avx) >= abs(avy) && abs(avx) > 0.01 {
-            let target_y = ay;
-            var target_x = ax - this.spacing;
-            if avx < 0.0 { target_x = ax + this.spacing; }
-            let cross = target_y - this.transform.position.y;
-            if abs(cross) > snap {
-                if cross > 0.0 { vy = speed; } else { vy = -speed; }
+            if abs(dy) > snap {
+                if dy > 0.0 { vy = speed; } else { vy = -speed; }
             } else {
                 this.transform.position.y = target_y;
-                let along = target_x - this.transform.position.x;
-                if abs(along) > snap {
-                    if along > 0.0 { vx = speed; } else { vx = -speed; }
+                if abs(dx) > snap {
+                    if dx > 0.0 { vx = speed; } else { vx = -speed; }
                 } else {
                     this.transform.position.x = target_x;
+                    vx = avx;
+                    vy = avy;
                 }
             }
         } else if abs(avy) > 0.01 {
-            let target_x = ax;
-            var target_y = ay - this.spacing;
-            if avy < 0.0 { target_y = ay + this.spacing; }
-            let cross = target_x - this.transform.position.x;
-            if abs(cross) > snap {
-                if cross > 0.0 { vx = speed; } else { vx = -speed; }
+            if abs(dx) > snap {
+                if dx > 0.0 { vx = speed; } else { vx = -speed; }
             } else {
                 this.transform.position.x = target_x;
-                let along = target_y - this.transform.position.y;
-                if abs(along) > snap {
-                    if along > 0.0 { vy = speed; } else { vy = -speed; }
+                if abs(dy) > snap {
+                    if dy > 0.0 { vy = speed; } else { vy = -speed; }
                 } else {
                     this.transform.position.y = target_y;
+                    vx = avx;
+                    vy = avy;
                 }
             }
         } else {
-            let dx = ax - this.transform.position.x;
-            let dy = ay - this.transform.position.y;
+            // A leader can report zero velocity for a single update around a
+            // clamp/turn. Keep closing the tether rather than freezing.
             if abs(dx) > abs(dy) {
-                if dx > this.spacing { vx = speed; }
-                if dx < -this.spacing { vx = -speed; }
+                if dx > snap { vx = speed; }
+                else if dx < -snap { vx = -speed; }
             } else {
-                if dy > this.spacing { vy = speed; }
-                if dy < -this.spacing { vy = -speed; }
+                if dy > snap { vy = speed; }
+                else if dy < -snap { vy = -speed; }
             }
         }
 
