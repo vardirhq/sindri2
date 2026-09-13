@@ -19,6 +19,7 @@
     {
       "id": "aegis-core-fire",
       "name": "Aegis Core Fire",
+      "parent": "aegis",
       "transform_3d": { "position":[0.0,0.0,0.0], "rotation":[0.0,0.0,0.0,1.0], "scale":[1.0,1.0,1.0] },
       "components": {
         "sindri.effect.burst": { "texture":"textures/fleck.png", "count":10, "speed":2.4, "spread":6.2831853, "lifetime":0.42, "size":0.085, "tint":[1.0,0.34,0.08,1.0], "fade":true, "drag":2.0, "layer":7 },
