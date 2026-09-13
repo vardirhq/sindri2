@@ -1,11 +1,8 @@
-//! The boss visibly loses armour as it is damaged.
+//! Spine is now a segmented boss rather than a baked armour-state boss.
 //!
-//! The vector game shed a polygon side per damage tier, driven by
-//! `this.shape.count`. A sprite sheet has fixed geometry, so the tiers are baked
-//! as five sets of frames and chosen by clip. That is a mechanic hiding in an
-//! asset pipeline: nothing about a sheet, a prefab or a script fails visibly if
-//! the wiring is wrong, and the boss simply wears its full armour to the grave.
-//! So the wiring is checked here rather than looked at.
+//! Keep the old sheet-wiring check because the head still uses that baked art,
+//! but prove the encounter's new identity at runtime: spawning Spine must build
+//! its full independent body without Decay errors.
 
 use orbital_baked::Run;
 use sindri_core::EntityId;
@@ -17,8 +14,8 @@ fn step(run: &mut Run) {
     assert!(notes.is_empty(), "{notes:#?}");
 }
 
-/// A run with the director off and the field cleared, so the only thing alive
-/// is the boss this test spawns.
+/// A run with the director off and the field cleared, so the only hostile
+/// entities are the boss and the body it deliberately creates.
 fn isolated_run() -> Run {
     let mut run = Run::open().expect("the project opens");
     for _ in 0..6 {
@@ -49,8 +46,6 @@ fn isolated_run() -> Run {
 }
 
 fn spawn_spine(run: &mut Run) -> EntityId {
-    // The Spine is the one boss whose armour thins as it is damaged, and it is
-    // now its own prefab rather than a `kind` selected out of a shared one.
     let document = run
         .prefabs
         .get("prefabs/spine.prefab.json")
@@ -61,70 +56,48 @@ fn spawn_spine(run: &mut Run) -> EntityId {
     entity
 }
 
-/// Which clip the boss is playing, which is which armour tier it is wearing.
-fn clip(run: &Run, entity: EntityId) -> String {
+fn tagged(run: &Run, tag: &str) -> Vec<EntityId> {
     run.world
-        .get(entity)
-        .and_then(|data| data.components.get("sindri.animation.sprite"))
-        .and_then(|animation| animation.get("playing"))
-        .and_then(serde_json::Value::as_str)
-        .unwrap_or_default()
-        .to_owned()
+        .entities()
+        .filter_map(|(entity, _)| {
+            run.components
+                .get::<sindri_core::TagsComponent>(&run.world, entity)
+                .ok()
+                .flatten()
+                .is_some_and(|tags| tags.has(tag))
+                .then_some(entity)
+        })
+        .collect()
 }
 
 #[test]
-fn the_boss_sheds_armour_as_its_health_falls() {
+fn spine_builds_its_nine_segment_body_at_runtime() {
     let mut run = isolated_run();
     let boss = spawn_spine(&mut run);
-    step(&mut run);
-    step(&mut run);
 
-    assert_eq!(
-        clip(&run, boss),
-        "armour10",
-        "a fresh boss wears its full ring of plates"
-    );
-
-    // Every threshold the vector outline used, in the order it used them.
-    //
-    // Driven through `boss_max` rather than by damaging the boss. The script
-    // reads `share` as its own health over that board, and sets the board once
-    // at spawn, so raising it is the same arithmetic the boss would see after
-    // taking a beating -- and it does not depend on a weapon, a hit box, or how
-    // long a fight takes. Writing the script's `hp` property directly does not
-    // work at all: the value is copied into script state at start, and the
-    // property is not read again.
-    let full = run.board("boss_max");
-    assert!(full > 0.0, "the boss reports no maximum health");
-    for (share, expected) in [
-        (0.70, "armour9"),
-        (0.50, "armour8"),
-        (0.30, "armour7"),
-        (0.10, "armour5"),
-    ] {
-        run.set_board("boss_max", full / share);
+    // One frame lets the head's start/update path construct the body; a few
+    // more exercise the segment follower logic as real runtime entities. This
+    // catches immutable exported chain state and similar errors that static
+    // prefab validation cannot see.
+    for _ in 0..6 {
         step(&mut run);
-        assert_eq!(
-            clip(&run, boss),
-            expected,
-            "at {share} of its health the boss should be wearing {expected}"
-        );
     }
 
-    // And back up: the tier follows health rather than only ever falling, so a
-    // boss that heals wears its plates again.
-    run.set_board("boss_max", full);
-    step(&mut run);
+    assert!(
+        run.world.get(boss).is_some(),
+        "Spine disappeared during startup"
+    );
+    let segments = tagged(&run, "spine_segment");
     assert_eq!(
-        clip(&run, boss),
-        "armour10",
-        "a healed boss is armoured again"
+        segments.len(),
+        9,
+        "Spine should enter the fight with nine independent body sections"
     );
 }
 
-/// The clips have to exist, and name frames the sheet actually holds. A clip
-/// naming a missing frame is the failure this pipeline makes easiest to write
-/// and hardest to see.
+/// The legacy armour clips still back the head's baked animation. Even though
+/// health no longer selects them as armour tiers, every referenced frame must
+/// remain valid so the existing Spine art cannot silently rot.
 #[test]
 fn every_armour_clip_names_frames_the_sheet_holds() {
     let run = Run::open().expect("the project opens");
@@ -147,7 +120,11 @@ fn every_armour_clip_names_frames_the_sheet_holds() {
     let clips = json["entities"][0]["components"]["sindri.animation.sprite"]["clips"]
         .as_object()
         .expect("the boss has clips");
-    assert_eq!(clips.len(), 5, "one clip per armour tier: {clips:?}");
+    assert_eq!(
+        clips.len(),
+        5,
+        "the baked head still ships five clips: {clips:?}"
+    );
     for (name, clip) in clips {
         let frames = clip["frames"].as_array().expect("frames");
         assert!(!frames.is_empty(), "clip {name} has no frames");

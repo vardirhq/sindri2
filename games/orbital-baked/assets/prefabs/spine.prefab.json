@@ -1,50 +1,21 @@
 {
   "format_version": 1,
-  "metadata": {
-    "name": "Spine"
-  },
+  "metadata": { "name": "Spine" },
   "entities": [
     {
       "id": "spine",
       "name": "Spine",
       "transform_3d": {
-        "position": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0,
-          1.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
       },
       "components": {
-        "sindri.tags": {
-          "tags": [
-            "enemy",
-            "boss"
-          ]
-        },
+        "sindri.tags": { "tags": ["enemy", "boss"] },
         "sindri.physics2d.rigid_body": {
           "kind": "dynamic",
-          "pose": {
-            "position": [
-              0.0,
-              0.0
-            ],
-            "rotation": 0.0
-          },
-          "linear_velocity": [
-            0.0,
-            0.0
-          ],
+          "pose": { "position": [0.0, 0.0], "rotation": 0.0 },
+          "linear_velocity": [0.0, 0.0],
           "angular_velocity": 0.0,
           "gravity_scale": 0.0,
           "linear_damping": 1.4,
@@ -52,20 +23,11 @@
           "lock_rotation": true
         },
         "sindri.physics2d.collider": {
-          "shape": {
-            "shape": "circle",
-            "radius": 0.5
-          },
-          "offset": [
-            0.0,
-            0.0
-          ],
+          "shape": { "shape": "circle", "radius": 0.5 },
+          "offset": [0.0, 0.0],
           "rotation": 0.0,
           "sensor": true,
-          "layers": {
-            "memberships": 2,
-            "filter": 5
-          },
+          "layers": { "memberships": 2, "filter": 5 },
           "friction": 0.0,
           "restitution": 0.0
         },
@@ -76,12 +38,7 @@
           "spread": 0.65,
           "lifetime": 1.05,
           "size": 0.16,
-          "tint": [
-            1.0,
-            0.5,
-            0.62,
-            1.0
-          ],
+          "tint": [1.0, 0.5, 0.62, 1.0],
           "fade": true,
           "drag": 1.6,
           "layer": 6
@@ -93,71 +50,22 @@
             "shot": "prefabs/enemy-bullet.prefab.json",
             "core": "prefabs/core.prefab.json",
             "drop_roll": "prefabs/drop-roll.prefab.json",
-            "death_burst": "prefabs/nova.prefab.json"
+            "death_burst": "prefabs/nova.prefab.json",
+            "segment": "prefabs/spine-segment.prefab.json"
           }
         },
         "sindri.sprite": {
           "texture": "textures/spine.png#armour10-0",
-          "tint": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ],
+          "tint": [1.0, 1.0, 1.0, 1.0],
           "layer": 3
         },
         "sindri.animation.sprite": {
           "clips": {
-            "armour10": {
-              "frames": [
-                "armour10-0",
-                "armour10-1",
-                "armour10-2",
-                "armour10-3"
-              ],
-              "seconds_per_frame": 0.12,
-              "looping": true
-            },
-            "armour9": {
-              "frames": [
-                "armour9-0",
-                "armour9-1",
-                "armour9-2",
-                "armour9-3"
-              ],
-              "seconds_per_frame": 0.12,
-              "looping": true
-            },
-            "armour8": {
-              "frames": [
-                "armour8-0",
-                "armour8-1",
-                "armour8-2",
-                "armour8-3"
-              ],
-              "seconds_per_frame": 0.12,
-              "looping": true
-            },
-            "armour7": {
-              "frames": [
-                "armour7-0",
-                "armour7-1",
-                "armour7-2",
-                "armour7-3"
-              ],
-              "seconds_per_frame": 0.12,
-              "looping": true
-            },
-            "armour5": {
-              "frames": [
-                "armour5-0",
-                "armour5-1",
-                "armour5-2",
-                "armour5-3"
-              ],
-              "seconds_per_frame": 0.12,
-              "looping": true
-            }
+            "armour10": { "frames": ["armour10-0", "armour10-1", "armour10-2", "armour10-3"], "seconds_per_frame": 0.12, "looping": true },
+            "armour9": { "frames": ["armour9-0", "armour9-1", "armour9-2", "armour9-3"], "seconds_per_frame": 0.12, "looping": true },
+            "armour8": { "frames": ["armour8-0", "armour8-1", "armour8-2", "armour8-3"], "seconds_per_frame": 0.12, "looping": true },
+            "armour7": { "frames": ["armour7-0", "armour7-1", "armour7-2", "armour7-3"], "seconds_per_frame": 0.12, "looping": true },
+            "armour5": { "frames": ["armour5-0", "armour5-1", "armour5-2", "armour5-3"], "seconds_per_frame": 0.12, "looping": true }
           },
           "playing": "armour10",
           "speed": 1.0
