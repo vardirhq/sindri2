@@ -19,6 +19,7 @@ use super::overlay::{
     ViewportStatus, paint_runtime_overlay, paint_selection_marks, paint_transform_gizmo,
     paint_viewport_border,
 };
+use super::block_pointer::TileVolumeHover;
 use super::pointer::TilemapHover;
 use super::scene_io::SceneSource;
 use super::{EditorApp, INITIAL_VIEWPORT_HEIGHT, INITIAL_VIEWPORT_WIDTH, WorkspaceTab};
@@ -193,6 +194,26 @@ impl EditorApp {
         );
     }
 
+    fn paint_tile_volume_hover(&self, ui: &egui::Ui, hover: &TileVolumeHover) {
+        let tint = if self.tile_volume_tool.erase {
+            color::DANGER
+        } else {
+            color::FORGE
+        };
+        ui.painter().add(Shape::convex_polygon(
+            hover.outline.to_vec(),
+            tint.gamma_multiply(0.16),
+            Stroke::new(2.0, tint),
+        ));
+        ui.painter().text(
+            hover.outline[0],
+            Align2::LEFT_BOTTOM,
+            format!("{}, {}, {}", hover.coord.x, hover.coord.y, hover.coord.z),
+            FontId::proportional(text::NOTE),
+            color::TEXT,
+        );
+    }
+
     /// Remembers where a view was drawn, for the two things that need it.
     ///
     /// A script's pointer coordinates are in the Game view's own pixels, and an
@@ -237,7 +258,8 @@ impl EditorApp {
             self.game_device.fit(panel)
         };
         self.record_view_rect(editing, rect);
-        let painting = editing && self.tilemap_tool.brush().is_some();
+        let volume_painting = editing && self.tile_volume_tool.brush().is_some();
+        let painting = volume_painting || (editing && self.tilemap_tool.brush().is_some());
         let camera_before_input = self.scene_camera();
         let gizmo_owned = if editing && !painting {
             self.gizmo_visual(rect, camera_before_input).is_some_and(
@@ -257,10 +279,18 @@ impl EditorApp {
         } else {
             camera_for(tab, EditorCamera::default())
         };
-        let hover = editing
+        let volume_hover = editing
+            .then(|| self.tile_volume_hover(rect, response.hover_pos(), camera))
+            .flatten();
+        let hover = (!volume_painting && editing)
             .then(|| self.tilemap_hover(rect, response.hover_pos(), camera))
             .flatten();
-        if let Some(hover) = &hover
+        if let Some(hover) = &volume_hover
+            && (response.clicked_by(egui::PointerButton::Primary)
+                || response.dragged_by(egui::PointerButton::Primary))
+        {
+            self.apply_volume_brush(hover);
+        } else if let Some(hover) = &hover
             && (response.clicked_by(egui::PointerButton::Primary)
                 || response.dragged_by(egui::PointerButton::Primary))
         {
@@ -322,7 +352,15 @@ impl EditorApp {
             // Measured before the chrome is drawn, because measuring a string
             // shapes it and the painter takes only a shared borrow.
             let text_rect = self.selected_text_rect(camera);
-            self.paint_scene_chrome(ui, rect, camera, hover.as_ref(), painting, text_rect);
+            self.paint_scene_chrome(
+                ui,
+                rect,
+                camera,
+                hover.as_ref(),
+                volume_hover.as_ref(),
+                painting,
+                text_rect,
+            );
         } else {
             // The unused space is painted out rather than left showing the
             // panel, so the shape being previewed reads as the screen and not
@@ -401,6 +439,7 @@ impl EditorApp {
         rect: Rect,
         camera: CameraView,
         hover: Option<&TilemapHover>,
+        volume_hover: Option<&TileVolumeHover>,
         painting: bool,
         text_rect: Option<([f32; 2], [f32; 2])>,
     ) {
@@ -410,6 +449,9 @@ impl EditorApp {
         }
         if let Some(hover) = hover {
             self.paint_tilemap_hover(ui, hover);
+        }
+        if let Some(hover) = volume_hover {
+            self.paint_tile_volume_hover(ui, hover);
         }
         if !painting {
             paint_selection_marks(ui.painter(), &self.selection_marks(rect, camera));

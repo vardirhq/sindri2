@@ -10,6 +10,7 @@ pub(super) mod grid;
 pub(super) mod script;
 pub(super) mod text;
 pub(super) mod tilemap;
+pub(super) mod tile_volume;
 pub(super) mod weave;
 
 use std::collections::BTreeMap;
@@ -23,6 +24,7 @@ use self::grid::{grid_navigation_section, grid_occupant_section};
 use self::script::{script_choice_row, script_exports_section};
 use self::text::text_section;
 use self::tilemap::tilemap_section;
+use self::tile_volume::tile_volume_section;
 use self::weave::weave_style_section;
 use crate::inspector;
 use crate::ui::icons;
@@ -114,6 +116,9 @@ pub(super) fn components_sections(
         }
         if name == crate::tilemap::TYPE_NAME {
             tilemap_section(ui, payload, assets_root, tools.tilemap);
+        }
+        if name == crate::tile_volume::TYPE_NAME {
+            tile_volume_section(ui, payload, assets_root, tools.tile_volume);
         }
         if name == GRID_NAVIGATION_COMPONENT {
             grid_navigation_section(ui, payload, grid_size);

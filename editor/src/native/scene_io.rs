@@ -178,6 +178,7 @@ impl EditorApp {
                 self.history.clear();
                 self.selection.clear();
                 self.tilemap_tool.reset();
+                self.tile_volume_tool.reset();
                 self.animation_tool.reset();
                 self.saved_revision = self.history.revision();
                 self.lifecycle = initialized_lifecycle();

@@ -43,7 +43,11 @@ use crate::ui::icons;
 use crate::ui::theme::color;
 use crate::ui::widgets::{panel, toolbar};
 use crate::{
-    animation::AnimationTool, scripts::SceneScripts, space::declared_space, tilemap::TilemapTool,
+    animation::AnimationTool,
+    scripts::SceneScripts,
+    space::declared_space,
+    tile_volume::TileVolumeTool,
+    tilemap::TilemapTool,
 };
 
 use super::editing::reparent_choices;
@@ -69,6 +73,7 @@ fn drawable_textures(project: &ProjectTree) -> Vec<String> {
 pub(super) struct InspectorTools<'a> {
     animation: &'a mut AnimationTool,
     tilemap: &'a mut TilemapTool,
+    tile_volume: &'a mut TileVolumeTool,
 }
 
 /// Everything the panel reads off the project and the registry before it draws
@@ -503,6 +508,7 @@ impl EditorApp {
             let mut tools = InspectorTools {
                 animation: &mut self.animation_tool,
                 tilemap: &mut self.tilemap_tool,
+                tile_volume: &mut self.tile_volume_tool,
             };
             egui::ScrollArea::vertical()
                 .auto_shrink([false; 2])
