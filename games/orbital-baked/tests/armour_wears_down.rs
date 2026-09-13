@@ -206,19 +206,16 @@ fn destroying_a_middle_segment_severs_and_promotes_the_rear_chain() {
         0,
         "Spine follows a cardinal predecessor route rather than behaving as a rope"
     );
-    let mut target = run
+    let target = run
         .world
         .get(cut)
         .and_then(|data| data.transform_3d.as_ref())
         .expect("the middle section has a transform")
         .position;
-    let velocity = run
-        .physics
-        .world()
-        .linear_velocity(cut)
-        .expect("the middle section has a physics body");
-    target[0] += velocity[0] * STEP;
-    target[1] += velocity[1] * STEP;
+    run.physics
+        .world_mut()
+        .set_linear_velocity(cut, [0.0, 0.0])
+        .expect("the target can pause for one contact frame");
     let bullet = run
         .prefabs
         .get("prefabs/bullet.prefab.json")

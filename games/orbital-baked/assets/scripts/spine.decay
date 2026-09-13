@@ -143,11 +143,10 @@ script Spine {
         let hx = half_x();
         let hy = half_y();
 
-        // Kinematic velocity can overshoot an edge between frames. Clamp first,
-        // then choose the next cardinal direction from a position guaranteed to
-        // be inside the visible arena.
-        this.transform.position.x = max(-hx, min(hx, this.transform.position.x));
-        this.transform.position.y = max(-hy, min(hy, this.transform.position.y));
+        // Turn from the physics body's actual coordinate. Writing a visual
+        // transform here would not teleport that body; doing so would create a
+        // false corner which followers visit while the head continues from a
+        // different position.
         let x = this.transform.position.x;
         let y = this.transform.position.y;
         var must_turn: f32 = 0.0;
