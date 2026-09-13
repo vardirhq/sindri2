@@ -13,7 +13,7 @@
       "components": {
         "sindri.tags": { "tags": ["enemy", "spine_segment"] },
         "sindri.physics2d.rigid_body": {
-          "kind": "dynamic",
+          "kind": "kinematic_velocity",
           "pose": { "position": [0.0, 0.0], "rotation": 0.0 },
           "linear_velocity": [0.0, 0.0],
           "angular_velocity": 0.0,
