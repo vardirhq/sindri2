@@ -11,7 +11,7 @@
         "scale": [1.0, 1.0, 1.0]
       },
       "components": {
-        "sindri.tags": { "tags": ["enemy", "boss"] },
+        "sindri.tags": { "tags": ["enemy", "boss", "spine"] },
         "sindri.physics2d.rigid_body": {
           "kind": "dynamic",
           "pose": { "position": [0.0, 0.0], "rotation": 0.0 },

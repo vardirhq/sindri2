@@ -9,7 +9,6 @@ script Spine {
     @export let death_burst: Prefab;
     @export let segment: Prefab;
     @export let hazard_damage: f32 = 0.0;
-    @export let spine_marker: f32 = 1.0;
 
     var hp: f32 = 0.0;
     var phase: f32 = 1.0;

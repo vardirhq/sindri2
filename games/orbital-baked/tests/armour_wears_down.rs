@@ -5,7 +5,9 @@
 //! its full independent body without Decay errors.
 
 use orbital_baked::Run;
+use serde_json::json;
 use sindri_core::EntityId;
+use sindri_decay::{ScriptComponent, ScriptValue};
 
 const STEP: f32 = 1.0 / 60.0;
 
@@ -70,6 +72,25 @@ fn tagged(run: &Run, tag: &str) -> Vec<EntityId> {
         .collect()
 }
 
+fn segment_at(run: &Run, wanted_slot: f64) -> EntityId {
+    tagged(run, "spine_segment")
+        .into_iter()
+        .find(|entity| {
+            run.components
+                .get::<ScriptComponent>(&run.world, *entity)
+                .ok()
+                .flatten()
+                .and_then(|script| {
+                    script
+                        .properties
+                        .get("slot")
+                        .and_then(serde_json::Value::as_f64)
+                })
+                == Some(wanted_slot)
+        })
+        .unwrap_or_else(|| panic!("Spine segment {wanted_slot} exists"))
+}
+
 #[test]
 fn spine_builds_its_nine_segment_body_at_runtime() {
     let mut run = isolated_run();
@@ -92,6 +113,76 @@ fn spine_builds_its_nine_segment_body_at_runtime() {
         segments.len(),
         9,
         "Spine should enter the fight with nine independent body sections"
+    );
+}
+
+#[test]
+fn destroying_a_middle_segment_severs_and_promotes_the_rear_chain() {
+    let mut run = isolated_run();
+    spawn_spine(&mut run);
+    for _ in 0..6 {
+        step(&mut run);
+    }
+
+    let cut = segment_at(&run, 4.0);
+    let new_head = segment_at(&run, 5.0);
+    assert_eq!(
+        run.physics.world().joint_count(),
+        9,
+        "the head and all nine sections begin as one tethered body"
+    );
+    let target = run
+        .world
+        .get(cut)
+        .and_then(|data| data.transform_3d.as_ref())
+        .expect("the middle section has a transform")
+        .position;
+    let bullet = run
+        .prefabs
+        .get("prefabs/bullet.prefab.json")
+        .expect("the bullet prefab ships")
+        .clone();
+    let shot = run.world.spawn_prefab(&bullet).expect("a shot spawns").root;
+    let shot_data = run.world.get_mut(shot).expect("the shot remains");
+    shot_data
+        .transform_3d
+        .as_mut()
+        .expect("the shot has a transform")
+        .position = target;
+    let properties = shot_data
+        .components
+        .get_mut("sindri.script")
+        .and_then(|script| script.get_mut("properties"))
+        .and_then(serde_json::Value::as_object_mut)
+        .expect("the shot has script properties");
+    properties.insert("damage".to_owned(), json!(20.0));
+    properties.insert("speed".to_owned(), json!(0.0));
+
+    // The hit removes the selected body. The following physics pass retires
+    // both joints attached to it, and the rear section promotes itself without
+    // trying to mutate another running script's authored properties.
+    for _ in 0..3 {
+        step(&mut run);
+    }
+
+    assert!(
+        run.world.get(cut).is_none(),
+        "the struck section was destroyed"
+    );
+    assert_eq!(
+        run.count("spine_segment"),
+        8,
+        "only the struck section is lost"
+    );
+    assert_eq!(
+        run.physics.world().joint_count(),
+        7,
+        "the cut removes its two joints"
+    );
+    assert_eq!(
+        run.scripts.field(new_head, "head"),
+        Some(&ScriptValue::Number(1.0)),
+        "the first surviving rear section becomes an autonomous head"
     );
 }
 

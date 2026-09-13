@@ -62,6 +62,8 @@ requests, commit history, and subsystem documentation rather than this file.
 - Fixed gameplay/runtime bugs involving input edges, inactive scene lookups,
   scene identity handling, projectile hit ordering, camera activation, enemy
   placement, hazard persistence, and physics interactions.
+- Fixed Spine sections failing at runtime when a destroyed middle section
+  severed and promoted the surviving rear chain.
 - Fixed the isometric baker's authored rotations, which had been supplied in
   radians while the baker interpreted them as degrees.
 

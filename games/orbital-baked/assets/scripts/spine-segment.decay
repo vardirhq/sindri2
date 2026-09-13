@@ -25,8 +25,8 @@ script SpineSegment {
     }
 
     fn spine() -> Entity {
-        for boss in World.with_tag("boss") {
-            if World.exists(boss) && World.property_number(boss, "spine_marker", 0.0) > 0.0 {
+        for boss in World.with_tag("spine") {
+            if World.exists(boss) {
                 return boss;
             }
         }
@@ -193,26 +193,14 @@ script SpineSegment {
     }
 
     fn split() {
-        let old_group = this.group;
-        let new_group = this.slot + 1.0;
-        var promoted: f32 = 0.0;
-        for part in World.with_tag("spine_segment") {
-            if part == this.entity || !World.exists(part) { continue; }
-            let part_group = World.property_number(part, "group", -1.0);
-            let part_slot = World.property_number(part, "slot", -1.0);
-            if part_group == old_group && part_slot > this.slot {
-                World.set_property(part, "group", new_group);
-                if promoted == 0.0 && part_slot == this.slot + 1.0 {
-                    World.set_property(part, "head", 1.0);
-                    promoted = 1.0;
-                }
-            }
-        }
         Effects.burst(this.entity);
         Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.22));
         Audio.play("audio/kill.wav", 0.25);
         // Removing this body removes its attached distance joints in the physics
         // world, physically severing the chain at exactly the destroyed link.
+        // On its own update, the next section sees that its predecessor is gone
+        // and promotes its own live `head` field. A running script owns that
+        // field; another script cannot rewrite its authored starting properties.
         World.despawn(this.entity);
     }
 }
