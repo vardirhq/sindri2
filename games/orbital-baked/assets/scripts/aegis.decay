@@ -1,7 +1,6 @@
-// A hull nobody can reach, behind eight plates that turn.
-//
-// Its hull is baked from `textures/aegis.isobake.json`; everything this
-// script does to it beyond that is motion.
+// A fortress you dismantle one plate at a time. Every opening is both a way
+// in and a way out. When the ring is gone, the damaged core becomes a desperate
+// bullet-hell weapon.
 script Aegis {
     @export let view_size: f32 = 11.0;
     @export let shot: Prefab;
@@ -10,6 +9,7 @@ script Aegis {
     @export let death_burst: Prefab;
     @export let hazard_damage: f32 = 0.0;
     @export let shield_segment: Prefab;
+    @export let desperation_laser: Prefab;
 
     var hp: f32 = 0.0;
     var phase: f32 = 1.0;
@@ -23,26 +23,27 @@ script Aegis {
     var ring_built: f32 = 0.0;
 
     fn start() {
-        // Bosses that arrive later in a run are the same boss with more to
-        // chew through, which is the reference game's curve rather than a
-        // second set of numbers per boss.
         let elapsed = Game.get("elapsed", 0.0);
         let scale = 1.0 + min(1.35, max(0.0, elapsed - 60.0) * 0.0025);
         this.hp = 196.0 * scale;
         this.offset = Random.range(0.0, 6.2831853);
         Game.set("boss_max", this.hp);
         Game.set("boss_hp", this.hp);
-        // The roster index, which is what the HUD and the title's picker
-        // count in: the Warden is zero, so every boss here is its old kind
-        // plus one and the Aegis is eleven.
         Game.set("boss_kind", 11.0);
+        Game.set("aegis_core_exposed", 0.0);
         tint();
     }
 
     fn tint() {
-        this.sprite.tint.r = 1.0;
-        this.sprite.tint.g = 1.0;
-        this.sprite.tint.b = 1.0;
+        if this.phase == 3.0 {
+            this.sprite.tint.r = 1.0;
+            this.sprite.tint.g = 0.62;
+            this.sprite.tint.b = 0.38;
+        } else {
+            this.sprite.tint.r = 1.0;
+            this.sprite.tint.g = 1.0;
+            this.sprite.tint.b = 1.0;
+        }
     }
 
     fn update(dt: f32) {
@@ -58,61 +59,87 @@ script Aegis {
         let player = World.find("Player");
         if player == null { return; }
 
+        build_shield_ring();
         this.clock += dt;
-        this.transform.rotation_z = this.offset + this.clock * 0.3;
         update_phase(dt);
+        var spin: f32 = 0.3;
+        if this.phase == 3.0 { spin = 0.72; }
+        this.transform.rotation_z = this.offset + this.clock * spin;
 
         let dx = player.transform.position.x - this.transform.position.x;
         let dy = player.transform.position.y - this.transform.position.y;
         let far = sqrt(dx * dx + dy * dy);
-
-        // Off-screen it may approach, but it cannot aim, wind up, or fire.
-        if is_visible() {
-            act(dt, player, dx, dy, far);
-        } else {
-            chase(dx, dy, far, 1.0);
-        }
+        if is_visible() { act(dt, dx, dy, far); }
+        else { chase(dx, dy, far, 1.0); }
 
         receive_hits(player, dx, dy, far);
         Game.set("boss_hp", max(this.hp, 0.0));
         if this.hp <= 0.0 { die(); }
     }
 
+    fn shield_count() -> f32 {
+        var count: f32 = 0.0;
+        for plate in World.with_tag("aegis_shield") {
+            if World.exists(plate) { count += 1.0; }
+        }
+        return count;
+    }
+
     fn update_phase(dt: f32) {
+        let shields = shield_count();
         let share = this.hp / max(Game.get("boss_max", 1.0), 1.0);
-        if share <= 0.56 { this.phase = 2.0; } else { this.phase = 1.0; }
+        if shields <= 0.0 { this.phase = 3.0; }
+        else if shields <= 4.0 || share <= 0.56 { this.phase = 2.0; }
+        else { this.phase = 1.0; }
+
         if this.phase != this.previous_phase {
             this.previous_phase = this.phase;
             this.phase_flash = 0.55;
-            this.attack = 0.28;
-            this.special = 0.75;
+            this.attack = 0.24;
+            this.special = 0.7;
+            if this.phase == 3.0 {
+                Game.set("aegis_core_exposed", 1.0);
+                Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.75));
+            }
             Effects.burst(this.entity);
-            Audio.play("audio/boss.wav", 0.55);
+            Audio.play("audio/boss.wav", 0.6);
         }
         if this.phase_flash > 0.0 {
             this.phase_flash -= dt;
             this.sprite.tint.r = 1.0;
             this.sprite.tint.g = 1.0;
             this.sprite.tint.b = 1.0;
-        } else {
-            tint();
-        }
+        } else { tint(); }
     }
 
     fn receive_hits(player: Entity, dx: f32, dy: f32, far: f32) {
         for hit in Physics.sensor_entered() {
             if hit == player {
-                Game.set("player_damage_taken",
-                         max(Game.get("player_damage_taken", 0.0), 2.4));
+                Game.set("player_damage_taken", max(Game.get("player_damage_taken", 0.0), 2.4));
             } else if World.exists(hit) && World.has_tag(hit, "player_damage") {
                 var damage: f32 = World.property_number(hit, "damage", 0.0);
-                damage = taken(damage, player, dx, dy, far);
+                damage = taken(damage, dx, dy, far);
                 this.hp -= damage;
                 if this.hp <= 0.0 && World.property_number(hit, "nova", 0.0) > 0.0 {
                     this.death_burst_damage = damage * 0.3;
                 }
             }
         }
+    }
+
+    // Re-check the incoming lane so a projectile cannot damage both a plate and
+    // the hull in one physics frame. Actual gaps remain valid firing lanes.
+    fn taken(damage: f32, dx: f32, dy: f32, far: f32) -> f32 {
+        if shield_count() <= 0.0 || far <= 0.001 { return damage; }
+        let px = this.transform.position.x + dx / far * 1.55;
+        let py = this.transform.position.y + dy / far * 1.55;
+        for plate in World.with_tag("aegis_shield") {
+            if !World.exists(plate) { continue; }
+            let sx = plate.transform.position.x - px;
+            let sy = plate.transform.position.y - py;
+            if sx * sx + sy * sy <= 0.30 { return 0.0; }
+        }
+        return damage;
     }
 
     fn chase(dx: f32, dy: f32, far: f32, scale: f32) {
@@ -134,24 +161,12 @@ script Aegis {
             (ny * radial + nx * tangent) * 0.72);
     }
 
-    fn anchor_move(target_y: f32) {
-        let dx = -this.transform.position.x;
-        let dy = target_y - this.transform.position.y;
-        let far = sqrt(dx * dx + dy * dy);
-        if far > 0.15 {
-            Physics.set_velocity(this.entity, dx / far * 0.72, dy / far * 0.72);
-        } else {
-            Physics.set_velocity(this.entity, 0.0, 0.0);
-        }
-    }
-
     fn fire_fan(nx: f32, ny: f32, count: f32, velocity: f32, spread: f32) {
         let base = atan2(ny, nx);
         let half = (count - 1.0) * 0.5;
         var slot: f32 = 0.0;
         while slot < count {
-            fire_at(this.transform.position.x, this.transform.position.y,
-                    base + (slot - half) * spread, velocity, 1.0);
+            fire_at(base + (slot - half) * spread, velocity, 1.0);
             slot += 1.0;
         }
         Audio.play("audio/boss.wav", 0.38);
@@ -163,22 +178,37 @@ script Aegis {
         while slot < count {
             let distance = abs(slot - gap);
             if gaps <= 0.0 || (distance > gaps && distance < count - gaps) {
-                fire_at(this.transform.position.x, this.transform.position.y,
-                        slot / count * 6.2831853 - this.clock * 0.65, velocity, 1.0);
+                fire_at(slot / count * 6.2831853 - this.clock * 0.65, velocity, 1.0);
             }
             slot += 1.0;
         }
         Audio.play("audio/boss.wav", 0.4);
     }
 
-    fn fire_at(x: f32, y: f32, angle: f32, velocity: f32, damage: f32) {
+    fn fire_at(angle: f32, velocity: f32, damage: f32) {
         let bolt = World.spawn(this.shot);
-        bolt.transform.position.x = x + cos(angle) * 0.65;
-        bolt.transform.position.y = y + sin(angle) * 0.65;
+        bolt.transform.position.x = this.transform.position.x + cos(angle) * 0.65;
+        bolt.transform.position.y = this.transform.position.y + sin(angle) * 0.65;
         World.set_property(bolt, "dir_x", cos(angle));
         World.set_property(bolt, "dir_y", sin(angle));
         World.set_property(bolt, "speed", velocity);
         World.set_property(bolt, "damage", damage);
+    }
+
+    fn fire_laser(angle: f32) {
+        let beam = World.spawn(this.desperation_laser);
+        beam.transform.position.x = this.transform.position.x;
+        beam.transform.position.y = this.transform.position.y;
+        World.set_property(beam, "angle", angle);
+    }
+
+    fn laser_burst() {
+        let first = Random.range(0.0, 6.2831853);
+        fire_laser(first);
+        fire_laser(first + Random.range(1.15, 2.15));
+        if Random.range(0.0, 1.0) > 0.45 {
+            fire_laser(first + Random.range(3.4, 5.1));
+        }
     }
 
     fn visible_half_x() -> f32 {
@@ -203,7 +233,60 @@ script Aegis {
                this.transform.position.y - radius <= half_y;
     }
 
+    fn act(dt: f32, dx: f32, dy: f32, far: f32) {
+        if this.phase == 1.0 { orbit(dx, dy, far, 4.15, 0.27); }
+        else if this.phase == 2.0 { orbit(dx, dy, far, 3.7, 0.39); }
+        else { orbit(dx, dy, far, 3.25, 0.58); }
+
+        this.attack -= dt;
+        this.special -= dt;
+
+        if this.attack <= 0.0 {
+            if this.phase == 1.0 {
+                fire_ring(8.0, 3.9, 1.0);
+                this.attack = 1.45;
+            } else if this.phase == 2.0 {
+                if (this.clock % 2.0) < 1.0 { fire_ring(10.0, 4.4, 1.0); }
+                else { fire_fan(dx, dy, 5.0, 5.0, 0.16); }
+                this.attack = 0.92;
+            } else {
+                fire_ring(14.0, 5.0, 1.0);
+                fire_fan(dx, dy, 5.0, 5.8, 0.13);
+                this.attack = 0.72;
+            }
+        }
+
+        if this.special <= 0.0 {
+            if this.phase == 1.0 {
+                fire_fan(dx, dy, 5.0, 4.5, 0.18);
+                this.special = 3.1;
+            } else if this.phase == 2.0 {
+                fire_ring(12.0, 4.7, 0.0);
+                fire_fan(dx, dy, 7.0, 5.0, 0.14);
+                this.special = 2.35;
+            } else {
+                laser_burst();
+                this.special = Random.range(1.55, 2.15);
+            }
+        }
+    }
+
+    fn build_shield_ring() {
+        if this.ring_built > 0.0 { return; }
+        this.ring_built = 1.0;
+        var slot: f32 = 0.0;
+        while slot < 8.0 {
+            let plate = World.spawn(this.shield_segment);
+            World.set_property(plate, "angle", slot / 8.0 * 6.2831853);
+            World.set_property(plate, "radius", 1.55);
+            World.set_property(plate, "spin", 0.55);
+            World.set_property(plate, "health", 7.0);
+            slot += 1.0;
+        }
+    }
+
     fn die() {
+        Game.set("aegis_core_exposed", 0.0);
         if this.death_burst_damage > 0.0 {
             let wave = World.spawn(this.death_burst);
             wave.transform.position.x = this.transform.position.x;
@@ -214,7 +297,7 @@ script Aegis {
         Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.9));
         Audio.play("audio/kill.wav", 0.6);
         Game.set("kills", Game.get("kills", 0.0) + 1.0);
-        Game.set("score", Game.get("score", 0.0) + 92.0 * 10.0);
+        Game.set("score", Game.get("score", 0.0) + 920.0);
         Game.set("boss_hp", 0.0);
         Game.set("boss_max", 0.0);
         var made: f32 = 0.0;
@@ -231,41 +314,5 @@ script Aegis {
         roll.transform.position.y = this.transform.position.y;
         World.set_property(roll, "boss", 1.0);
         World.despawn(this.entity);
-    }
-
-    // What this boss is. Everything above is plumbing every boss shares.
-    fn act(dt: f32, player: Entity, dx: f32, dy: f32, far: f32) {
-        build_shield_ring();
-        orbit(dx, dy, far, 3.9, 0.30);
-        this.attack -= dt;
-        if this.attack > 0.0 { return; }
-        // Fires outward through its own ring, so a plate you have destroyed is
-        // also the hole its shots come out of. Opening a way in opens a way out.
-        fire_ring(8.0, 3.9, 1.0);
-        if this.phase == 2.0 { this.attack = 1.05; } else { this.attack = 1.5; }
-    }
-
-    // What it does to damage on the way in.
-    fn taken(damage: f32, player: Entity, dx: f32, dy: f32, far: f32) -> f32 {
-        return damage;
-    }
-
-    // The plates are spawned beside this boss rather than under it. See
-    // `shield-segment.decay`: a parent's transform reaches neither the sprite
-    // nor the collider, so a plate has to say where it is in the same
-    // coordinates everything else is reading.
-    fn build_shield_ring() {
-        if this.ring_built > 0.0 { return; }
-        this.ring_built = 1.0;
-        let plates = 8.0;
-        var slot: f32 = 0.0;
-        while slot < plates {
-            let plate = World.spawn(this.shield_segment);
-            World.set_property(plate, "angle", slot / plates * 6.2831853);
-            World.set_property(plate, "radius", 1.55);
-            World.set_property(plate, "spin", 0.55);
-            World.set_property(plate, "health", 7.0);
-            slot += 1.0;
-        }
     }
 }
