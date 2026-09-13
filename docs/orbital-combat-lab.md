@@ -22,6 +22,10 @@ The attack prefabs are the same assets future bosses should spawn:
 
 `assets/combat-lab.scene.json` is an alternate development scene. It intentionally does not replace the game's main scene.
 
+The offscreen capture can open it directly and stage the stress preset with
+`cargo run -p orbital-baked --bin orbital-baked-capture -- out.png 1000 700 lab`.
+CI uploads that real frame with the other visual-test captures.
+
 It starts in autoplay and cycles through each primitive followed by three combination presets. The lightweight lab player exists only to move around and receive damage; the attack entities themselves are production assets.
 
 Keyboard controls:
