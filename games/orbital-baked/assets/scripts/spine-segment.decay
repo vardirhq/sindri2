@@ -14,6 +14,13 @@ script SpineSegment {
     var dir_x: f32 = 1.0;
     var dir_y: f32 = 0.0;
     var turn_clock: f32 = 0.0;
+    var seen_dir_x: f32 = 0.0;
+    var seen_dir_y: f32 = 0.0;
+    var corner_count: f32 = 0.0;
+    var corner_x: f32 = 0.0;
+    var corner_y: f32 = 0.0;
+    var next_corner_x: f32 = 0.0;
+    var next_corner_y: f32 = 0.0;
 
     fn start() {
         this.hp = this.health;
@@ -67,6 +74,63 @@ script SpineSegment {
         return max(-speed, min(speed, distance / max(dt, 0.0001)));
     }
 
+    fn remember_turn(ax: f32, ay: f32, avx: f32, avy: f32) {
+        var next_x: f32 = 0.0;
+        var next_y: f32 = 0.0;
+        if abs(avx) > 0.01 {
+            next_x = 1.0;
+            if avx < 0.0 { next_x = -1.0; }
+        } else if abs(avy) > 0.01 {
+            next_y = 1.0;
+            if avy < 0.0 { next_y = -1.0; }
+        } else {
+            return;
+        }
+
+        if this.seen_dir_x == 0.0 && this.seen_dir_y == 0.0 {
+            this.seen_dir_x = next_x;
+            this.seen_dir_y = next_y;
+            return;
+        }
+        if this.seen_dir_x == next_x && this.seen_dir_y == next_y { return; }
+
+        // The predecessor changes velocity while it is exactly on the corner.
+        // Remember that coordinate until this section arrives, even if the
+        // predecessor has made another turn by then.
+        if this.corner_count <= 0.0 {
+            this.corner_x = ax;
+            this.corner_y = ay;
+            this.corner_count = 1.0;
+        } else {
+            this.next_corner_x = ax;
+            this.next_corner_y = ay;
+            this.corner_count = 2.0;
+        }
+        this.seen_dir_x = next_x;
+        this.seen_dir_y = next_y;
+    }
+
+    fn follow_corner(dt: f32, speed: f32) -> bool {
+        while this.corner_count > 0.0 {
+            let dx = this.corner_x - this.transform.position.x;
+            let dy = this.corner_y - this.transform.position.y;
+            var vx: f32 = 0.0;
+            var vy: f32 = 0.0;
+            if abs(dx) > 0.0001 { vx = axis_velocity(dx, dt, speed); }
+            else if abs(dy) > 0.0001 { vy = axis_velocity(dy, dt, speed); }
+            else {
+                this.corner_count -= 1.0;
+                this.corner_x = this.next_corner_x;
+                this.corner_y = this.next_corner_y;
+                continue;
+            }
+            Physics.set_velocity(this.entity, vx, vy);
+            this.transform.rotation_z = atan2(vy, vx);
+            return true;
+        }
+        return false;
+    }
+
     fn follow(ahead: Entity, dt: f32) {
         let ax = ahead.transform.position.x;
         let ay = ahead.transform.position.y;
@@ -76,6 +140,9 @@ script SpineSegment {
         let aligned = 0.0001;
         var vx: f32 = 0.0;
         var vy: f32 = 0.0;
+
+        remember_turn(ax, ay, avx, avy);
+        if follow_corner(dt, speed) { return; }
 
         // Finish the predecessor's old lane before entering its new one. Only
         // one velocity component is ever non-zero, and the final step is sized
@@ -165,6 +232,7 @@ script SpineSegment {
     }
 
     fn receive_hits() {
+        this.hp -= World.take_signal("hazard_damage");
         for hit in Physics.sensor_entered() {
             if !World.exists(hit) { continue; }
             if World.has_tag(hit, "player_damage") {

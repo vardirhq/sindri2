@@ -5,7 +5,6 @@
 //! its full independent body without Decay errors.
 
 use orbital_baked::Run;
-use serde_json::json;
 use sindri_core::EntityId;
 use sindri_decay::{ScriptComponent, ScriptValue};
 
@@ -206,40 +205,13 @@ fn destroying_a_middle_segment_severs_and_promotes_the_rear_chain() {
         0,
         "Spine follows a cardinal predecessor route rather than behaving as a rope"
     );
-    let target = run
-        .world
-        .get(cut)
-        .and_then(|data| data.transform_3d.as_ref())
-        .expect("the middle section has a transform")
-        .position;
-    run.physics
-        .world_mut()
-        .set_linear_velocity(cut, [0.0, 0.0])
-        .expect("the target can pause for one contact frame");
-    let bullet = run
-        .prefabs
-        .get("prefabs/bullet.prefab.json")
-        .expect("the bullet prefab ships")
-        .clone();
-    let shot = run.world.spawn_prefab(&bullet).expect("a shot spawns").root;
-    let shot_data = run.world.get_mut(shot).expect("the shot remains");
-    shot_data
-        .transform_3d
-        .as_mut()
-        .expect("the shot has a transform")
-        .position = target;
-    let properties = shot_data
-        .components
-        .get_mut("sindri.script")
-        .and_then(|script| script.get_mut("properties"))
-        .and_then(serde_json::Value::as_object_mut)
-        .expect("the shot has script properties");
-    properties.insert("damage".to_owned(), json!(20.0));
-    properties.insert("speed".to_owned(), json!(0.0));
+    run.scripts
+        .blackboard_mut()
+        .send_signal(cut.to_bits(), "hazard_damage", 20.0);
 
-    // The hit removes the selected section, and the rear section promotes
-    // itself without trying to mutate another running script's authored
-    // properties.
+    // Runtime damage removes the selected section, and the rear section
+    // promotes itself without trying to mutate another running script's
+    // authored properties.
     for _ in 0..3 {
         step(&mut run);
     }
