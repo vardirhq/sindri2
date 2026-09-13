@@ -1,4 +1,4 @@
-//! The 2D data model: bodies, colliders, and where they are.
+//! The 2D data model: bodies, colliders, joints, and where they are.
 
 use serde::{Deserialize, Serialize};
 use sindri_core::EntityId;
@@ -34,6 +34,29 @@ impl Default for RigidBody2d {
             linear_damping: 0.0,
             angular_damping: 0.0,
             lock_rotation: false,
+        }
+    }
+}
+
+/// A hard maximum-distance connection between two 2D bodies.
+///
+/// This is Sindri's contract, not Rapier's. The current backend implements it
+/// with a rope joint, but scenes and scripts only need to know that the two
+/// entities may move and rotate freely while their centres cannot separate by
+/// more than `max_distance`.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct DistanceJoint2d {
+    pub first: EntityId,
+    pub second: EntityId,
+    pub max_distance: f32,
+}
+
+impl DistanceJoint2d {
+    pub const fn new(first: EntityId, second: EntityId, max_distance: f32) -> Self {
+        Self {
+            first,
+            second,
+            max_distance,
         }
     }
 }

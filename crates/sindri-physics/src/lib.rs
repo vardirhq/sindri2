@@ -16,7 +16,8 @@ mod tests;
 
 pub use shared::{CollisionLayers, RigidBodyKind};
 pub use types2d::{
-    Collider2d, ColliderShape2d, PhysicsEvent2d, PhysicsEventKind, PhysicsPose2d, RigidBody2d,
+    Collider2d, ColliderShape2d, DistanceJoint2d, PhysicsEvent2d, PhysicsEventKind, PhysicsPose2d,
+    RigidBody2d,
 };
 pub use types3d::{Collider3d, ColliderShape3d, RigidBody3d};
 pub use validate::PhysicsError;

@@ -118,6 +118,7 @@ Names in scope without qualification. Decay has no imports, so each of these is 
 - `apply_impulse(Entity, f32, f32)` → `unit`
 - `collision_started()` → `Array<Entity>`
 - `collision_stopped()` → `Array<Entity>`
+- `connect_distance(Entity, Entity, f32)` → `unit`
 - `sensor_entered()` → `Array<Entity>`
 - `sensor_exited()` → `Array<Entity>`
 - `set_velocity(Entity, f32, f32)` → `unit`

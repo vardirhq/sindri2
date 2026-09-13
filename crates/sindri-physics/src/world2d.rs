@@ -11,10 +11,11 @@ use sindri_core::EntityId;
 
 use crate::shared::RigidBodyKind;
 use crate::types2d::{
-    Collider2d, ColliderShape2d, PhysicsEvent2d, PhysicsEventKind, PhysicsPose2d, RigidBody2d,
+    Collider2d, ColliderShape2d, DistanceJoint2d, PhysicsEvent2d, PhysicsEventKind, PhysicsPose2d,
+    RigidBody2d,
 };
 use crate::validate::{
-    PhysicsError, finite2, validate_body2d, validate_colliders2d, validate_pose2d,
+    PhysicsError, finite2, positive, validate_body2d, validate_colliders2d, validate_pose2d,
 };
 
 #[derive(Clone)]
@@ -32,7 +33,7 @@ struct BodyRecord2d {
 }
 
 /// The first runtime physics world. It owns Rapier completely and exposes only
-/// Sindri entities, values, and events.
+/// Sindri entities, values, events, and joints.
 pub struct PhysicsWorld2d {
     backend: r2::PhysicsWorld,
     bodies: HashMap<EntityId, BodyRecord2d>,
@@ -49,8 +50,12 @@ pub struct PhysicsWorld2d {
     ///
     /// Only ever holds entities that were asked about between a spawn and the
     /// next synchronize: anything still here after that never had a body
-    /// authored, and is discarded by `forget_pending`.
+    /// authored, and is discarded by `finish_synchronize`.
     pending_velocity: HashMap<EntityId, [f32; 2]>,
+    /// Runtime joints requested while one or both freshly spawned bodies have
+    /// not reached the physics world yet. They are resolved after the scene has
+    /// synchronized every body for the frame.
+    pending_distance_joints: Vec<DistanceJoint2d>,
 }
 
 impl PhysicsWorld2d {
@@ -63,6 +68,7 @@ impl PhysicsWorld2d {
             bodies: HashMap::new(),
             collider_entities: HashMap::new(),
             pending_velocity: HashMap::new(),
+            pending_distance_joints: Vec::new(),
         })
     }
 
@@ -134,12 +140,68 @@ impl PhysicsWorld2d {
         Ok(())
     }
 
-    /// Drops anything remembered for an entity that never got a body.
+    /// Connects two bodies with a hard maximum-distance joint.
     ///
-    /// Called once a synchronize has had its chance to build them, so a
-    /// mistaken write cannot sit in the map for the rest of the run.
+    /// The bodies may move closer and rotate freely, but the solver will not
+    /// allow their centres to separate beyond `max_distance`. The backend uses
+    /// Rapier's rope joint today; callers see only Sindri entities and units.
+    pub fn connect_distance(
+        &mut self,
+        first: EntityId,
+        second: EntityId,
+        max_distance: f32,
+    ) -> Result<(), PhysicsError> {
+        validate_distance_joint(first, second, max_distance)?;
+        let first_body = self.record(first)?.body;
+        let second_body = self.record(second)?.body;
+        self.backend.impulse_joints.insert(
+            first_body,
+            second_body,
+            r2::RopeJointBuilder::new(max_distance).contacts_enabled(false),
+            true,
+        );
+        Ok(())
+    }
+
+    /// Queues a distance joint whose bodies are authored but not both built yet.
+    ///
+    /// This is the joint equivalent of `remember_linear_velocity`: a prefab may
+    /// spawn a chain and connect it in one script pass, while physics materializes
+    /// all those bodies at the next scene synchronization.
+    pub fn remember_distance_joint(
+        &mut self,
+        first: EntityId,
+        second: EntityId,
+        max_distance: f32,
+    ) -> Result<(), PhysicsError> {
+        validate_distance_joint(first, second, max_distance)?;
+        self.pending_distance_joints
+            .push(DistanceJoint2d::new(first, second, max_distance));
+        Ok(())
+    }
+
+    /// Finishes the lifecycle window opened by scripts before synchronization.
+    ///
+    /// Every body has now had a chance to materialize. Pending joints whose two
+    /// endpoints exist are created; requests whose endpoint vanished are simply
+    /// discarded because there is no longer anything useful to connect.
+    pub fn finish_synchronize(&mut self) -> Result<(), PhysicsError> {
+        let pending = std::mem::take(&mut self.pending_distance_joints);
+        for joint in pending {
+            if self.contains(joint.first) && self.contains(joint.second) {
+                self.connect_distance(joint.first, joint.second, joint.max_distance)?;
+            }
+        }
+        self.pending_velocity.clear();
+        Ok(())
+    }
+
+    /// Drops remembered work without resolving it.
+    ///
+    /// Kept for callers that deliberately abandon a synchronization pass.
     pub fn forget_pending(&mut self) {
         self.pending_velocity.clear();
+        self.pending_distance_joints.clear();
     }
 
     /// Inserts an entity with no authored rigid-body as static collision
@@ -163,14 +225,18 @@ impl PhysicsWorld2d {
     }
 
     pub fn remove(&mut self, entity: EntityId) -> bool {
+        self.pending_velocity.remove(&entity);
+        self.pending_distance_joints
+            .retain(|joint| joint.first != entity && joint.second != entity);
         let Some(record) = self.bodies.remove(&entity) else {
             return false;
         };
         for handle in &record.colliders {
             self.collider_entities.remove(handle);
         }
-        // Rapier drops a body's colliders with it, so the pieces need no
-        // separate removal — only the entity mapping above is ours to clear.
+        // Rapier drops a body's colliders and attached joints with it. That is
+        // important for breakable chains: removing one link severs both sides
+        // without a stale constraint surviving on behalf of a dead entity.
         let _ = self.backend.remove_body(record.body);
         true
     }
@@ -185,6 +251,14 @@ impl PhysicsWorld2d {
 
     pub fn is_empty(&self) -> bool {
         self.bodies.is_empty()
+    }
+
+    /// Number of runtime impulse joints currently owned by the backend.
+    ///
+    /// Distance joints are the first public kind, so this is primarily a small
+    /// proof/debugging surface rather than an attempt to expose backend handles.
+    pub fn joint_count(&self) -> usize {
+        self.backend.impulse_joints.len()
     }
 
     pub fn body_kind(&self, entity: EntityId) -> Result<RigidBodyKind, PhysicsError> {
@@ -327,6 +401,17 @@ impl PhysicsWorld2d {
             kind,
         })
     }
+}
+
+fn validate_distance_joint(
+    first: EntityId,
+    second: EntityId,
+    max_distance: f32,
+) -> Result<(), PhysicsError> {
+    if first == second {
+        return Err(PhysicsError::JointToSelf(first));
+    }
+    positive("distance_joint_max_distance", max_distance)
 }
 
 fn body_builder(body: RigidBody2d) -> r2::RigidBodyBuilder {
