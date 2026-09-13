@@ -123,10 +123,12 @@ impl ScenePhysics2d {
             return Err(PhysicsSyncError::BadStep(delta));
         }
         self.synchronize(world, components)?;
-        // Anything a script set a velocity for that never got a body: it had
-        // its chance above, and keeping it would mean a mistaken write sitting
-        // in the map for the rest of the run.
-        self.world.forget_pending();
+        // Scripts may set velocity or connect two freshly spawned bodies before
+        // either backend body exists. Synchronization above gave every authored
+        // body its chance to materialize; resolve those deferred operations now
+        // so the coming fixed step sees the intended chain rather than one frame
+        // of independent pieces.
+        self.world.finish_synchronize()?;
         self.events = self.world.step(delta)?;
         self.write_back(world);
         Ok(())
