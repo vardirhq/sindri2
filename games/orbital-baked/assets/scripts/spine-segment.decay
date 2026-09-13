@@ -74,7 +74,7 @@ script SpineSegment {
         return max(-speed, min(speed, distance / max(dt, 0.0001)));
     }
 
-    fn remember_turn(ax: f32, ay: f32, avx: f32, avy: f32, dt: f32) {
+    fn remember_turn(ax: f32, ay: f32, avx: f32, avy: f32) {
         var next_x: f32 = 0.0;
         var next_y: f32 = 0.0;
         if abs(avx) > 0.01 {
@@ -94,13 +94,19 @@ script SpineSegment {
         }
         if this.seen_dir_x == next_x && this.seen_dir_y == next_y { return; }
 
-        // By the time this follower observes the new velocity, physics has
-        // already advanced the predecessor one fixed step down the new lane.
-        // Rewind that step to recover the actual corner instead of recording a
-        // point slightly beyond it, which would make every follower leave the
-        // predecessor's historical route at each turn.
-        let turn_x = ax - avx * dt;
-        let turn_y = ay - avy * dt;
+        // The predecessor may already have travelled part-way down its new lane
+        // when this script observes the direction change. Recover the actual
+        // corner as the intersection of that new lane and the lane this follower
+        // is still travelling. Unlike rewinding by dt, this is independent of
+        // script/physics update ordering and lands on the predecessor's route.
+        var turn_x: f32 = ax;
+        var turn_y: f32 = ay;
+        if abs(this.seen_dir_x) > 0.01 {
+            turn_y = this.transform.position.y;
+        } else if abs(this.seen_dir_y) > 0.01 {
+            turn_x = this.transform.position.x;
+        }
+
         if this.corner_count <= 0.0 {
             this.corner_x = turn_x;
             this.corner_y = turn_y;
@@ -145,7 +151,7 @@ script SpineSegment {
         var vx: f32 = 0.0;
         var vy: f32 = 0.0;
 
-        remember_turn(ax, ay, avx, avy, dt);
+        remember_turn(ax, ay, avx, avy);
         if follow_corner(dt, speed) { return; }
 
         // Finish the predecessor's old lane before entering its new one. Only
