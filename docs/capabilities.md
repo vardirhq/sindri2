@@ -1154,6 +1154,9 @@ second entity can read a numeric authored value through
 the running script's private mutable state. Orbital Last Stand uses that seam
 for projectile-local damage: ordinary shots, criticals, arcs, novas, mines and
 beams all use the same collision path without a global damage race. A
+running entity receives addressed numeric events through `World.send_signal`
+and consumes their accumulated value through `World.take_signal`; this keeps
+live combat reactions out of both authored properties and the global board. A
 spawned script starts within the same pass, so a bullet fired during an update
 moves during that update. Both the cascade that allows and the number of
 entities one pass may create are bounded and reported rather than run.

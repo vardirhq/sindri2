@@ -96,3 +96,58 @@ fn combo_presets_use_the_same_attack_entities() {
         step(&mut run);
     }
 }
+
+#[test]
+fn a_shockwave_triggers_the_minefield() {
+    let mut run = lab_run();
+    run.set_board("lab_combo", 2.0);
+    step(&mut run);
+    assert_eq!(run.count("attack_mine"), 3);
+
+    for _ in 0..100 {
+        step(&mut run);
+    }
+
+    assert_eq!(
+        run.count("attack_mine"),
+        0,
+        "the wave crossed the mines without triggering the chain"
+    );
+}
+
+#[test]
+fn the_stress_preset_has_real_cross_attack_reactions() {
+    let mut run = lab_run();
+    run.set_board("lab_combo", 3.0);
+    step(&mut run);
+    assert_eq!(run.count("attack_gas"), 1);
+    assert_eq!(run.count("attack_mine"), 2);
+    assert_eq!(run.count("lab_target"), 4);
+
+    for _ in 0..110 {
+        step(&mut run);
+    }
+
+    assert_eq!(
+        run.count("attack_mine"),
+        0,
+        "the wave did not start the chain"
+    );
+    assert_eq!(
+        run.count("attack_gas"),
+        0,
+        "the mine blast did not ignite the gas"
+    );
+    assert!(
+        run.count("lab_target") < 4,
+        "composed attacks did not affect their reactive environment"
+    );
+
+    run.set_board("lab_clear", 1.0);
+    step(&mut run);
+    assert_eq!(
+        run.count("lab_target"),
+        4,
+        "clearing the lab did not restore its destructible targets"
+    );
+}

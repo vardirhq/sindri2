@@ -223,6 +223,8 @@ question from a lookup of one thing somebody already knows the name of.
 | `World.set_shape_point(index, x, y)` | nothing |
 | `World.set_property(entity, name, value)` | nothing |
 | `World.property_number(entity, name, fallback)` | `f32` |
+| `World.send_signal(entity, name, value)` | nothing |
+| `World.take_signal(name)` | `f32` |
 | `World.with_tag(tag)` | `Array<Entity>` |
 | `World.has_tag(entity, tag)` | `bool` |
 | `World.set_active(entity, on)` | nothing |
@@ -324,6 +326,19 @@ property the scene or spawner supplied, which makes an immutable per-instance
 fact such as a projectile's damage available to the entity it hits. The
 fallback is required and is returned when the entity has no script, no property
 by that name, or a property that is not numeric.
+
+**Runtime interaction is a signal, not a property rewrite.**
+`World.send_signal(entity, name, value)` addresses a number to one live entity;
+repeated sends accumulate. That entity consumes the total with
+`World.take_signal(name)`, which returns zero once the value has been taken.
+Signals are runtime state and never rewrite a scene or prefab. Delivery order is
+the world's deterministic script order: a receiver later in the pass can react
+immediately, while one that already ran reacts on the next pass.
+
+This is deliberately numeric and addressed. A mine can send `ignite` to the gas
+cloud it overlaps, and several attacks can add `hazard_damage` to one prop,
+without publishing per-entity facts on the global `Game` board or pretending
+that `World.set_property` mutates a running script.
 
 **A spawned script starts in the same pass.** A bullet created during an update
 moves during that update rather than standing still for a frame. It cannot start

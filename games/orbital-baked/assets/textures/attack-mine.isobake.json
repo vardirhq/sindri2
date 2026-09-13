@@ -1,0 +1,44 @@
+{
+  "format_version": 1,
+  "id": "attack-mine",
+  "texture": "textures/attack-mine.png",
+  "view": "top-down",
+  "pixels_per_unit": 128,
+  "directions": 1,
+  "render": {
+    "supersample": 4,
+    "padding": 4,
+    "palette_snap": true,
+    "alpha_cutoff": 128,
+    "outline": { "enabled": true, "colour": "#120b12" },
+    "shading": {
+      "light": [-0.42, 0.8, 0.43],
+      "thresholds": [0.26, 0.52, 0.8]
+    }
+  },
+  "variants": [{
+    "name": "armed",
+    "model": {
+      "kind": "primitives",
+      "materials": {
+        "shell": { "colour": "#7a1825" },
+        "edge": { "colour": "#d43b35" },
+        "dark": { "colour": "#2c1018" },
+        "hot": { "colour": "#ff7a3d" },
+        "core": { "colour": "#ffd46a" }
+      },
+      "parts": [
+        { "type": "cylinder", "material": "dark", "position": [0, 0.08, 0], "radius": 0.34, "height": 0.16, "segments": 12 },
+        { "type": "cylinder", "material": "shell", "position": [0, 0.17, 0], "radius": 0.27, "radius_top": 0.2, "height": 0.18, "segments": 12 },
+        { "type": "box", "material": "edge", "position": [0.34, 0.1, 0], "rotation": [0, 0, 0], "size": [0.25, 0.09, 0.1] },
+        { "type": "box", "material": "edge", "position": [0.17, 0.1, 0.294], "rotation": [0, 60, 0], "size": [0.25, 0.09, 0.1] },
+        { "type": "box", "material": "edge", "position": [-0.17, 0.1, 0.294], "rotation": [0, 120, 0], "size": [0.25, 0.09, 0.1] },
+        { "type": "box", "material": "edge", "position": [-0.34, 0.1, 0], "rotation": [0, 180, 0], "size": [0.25, 0.09, 0.1] },
+        { "type": "box", "material": "edge", "position": [-0.17, 0.1, -0.294], "rotation": [0, 240, 0], "size": [0.25, 0.09, 0.1] },
+        { "type": "box", "material": "edge", "position": [0.17, 0.1, -0.294], "rotation": [0, 300, 0], "size": [0.25, 0.09, 0.1] },
+        { "type": "cylinder", "material": "hot", "position": [0, 0.3, 0], "radius": 0.12, "height": 0.09, "segments": 10 },
+        { "type": "sphere", "material": "core", "position": [0, 0.39, 0], "radius": 0.085, "segments": 10 }
+      ]
+    }
+  }]
+}

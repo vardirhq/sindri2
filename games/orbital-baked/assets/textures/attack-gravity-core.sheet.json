@@ -1,0 +1,23 @@
+{
+  "format_version": 1,
+  "anchor": "center",
+  "grid": {
+    "columns": 1,
+    "rows": 1,
+    "names": [
+      "core"
+    ],
+    "size": [
+      130,
+      118
+    ],
+    "margin": [
+      2,
+      2
+    ],
+    "spacing": [
+      4,
+      4
+    ]
+  }
+}

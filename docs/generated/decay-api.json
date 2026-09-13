@@ -1211,6 +1211,16 @@
         },
         {
           "kind": "function",
+          "name": "send_signal",
+          "parameters": [
+            "Entity",
+            "String",
+            "f32"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
           "name": "set_active",
           "parameters": [
             "Entity",
@@ -1263,6 +1273,14 @@
             "Entity"
           ],
           "returns": "Entity"
+        },
+        {
+          "kind": "function",
+          "name": "take_signal",
+          "parameters": [
+            "String"
+          ],
+          "returns": "f32"
         },
         {
           "kind": "function",

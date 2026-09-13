@@ -6,10 +6,17 @@ The rule is simple: a boss composes attack entities. It does not own their colli
 
 ## First attack set
 
-- **Gas Cloud** — persistent drifting area denial with periodic damage.
-- **Hostile Mine** — arms, telegraphs, then detonates when the player enters its trigger radius.
-- **Shockwave** — an expanding damaging ring. The empty middle remains safe after the wave passes.
-- **Gravity Well** — the existing projectile-bending hazard, repackaged as a lab attack so it can be combined with the new primitives.
+- **Gas Cloud** — persistent drifting area denial with periodic damage. An
+  explosion inside it ignites the whole cloud into a larger, short blast.
+- **Hostile Mine** — arms, telegraphs, then detonates when the player enters its
+  trigger radius. Its blast damages reactive props, chains nearby mines and
+  ignites nearby gas.
+- **Shockwave** — an expanding damaging ring. The empty middle remains safe
+  after the wave passes; its advancing edge pushes reactive bodies and triggers
+  mines without tunnelling across them between frames.
+- **Gravity Well** — the existing capability-tagged force field, repackaged as
+  a lab attack. It bends projectiles and pulls any physical prop that explicitly
+  opts into `gravity_bendable`.
 
 The attack prefabs are the same assets future bosses should spawn:
 
@@ -21,6 +28,10 @@ The attack prefabs are the same assets future bosses should spawn:
 ## Playground
 
 `assets/combat-lab.scene.json` is an alternate development scene. It intentionally does not replace the game's main scene.
+
+The offscreen capture can open it directly and stage the stress preset with
+`cargo run -p orbital-baked --bin orbital-baked-capture -- out.png 1000 700 lab`.
+CI uploads that real frame with the other visual-test captures.
 
 It starts in autoplay and cycles through each primitive followed by three combination presets. The lightweight lab player exists only to move around and receive damage; the attack entities themselves are production assets.
 
@@ -49,11 +60,18 @@ The controller can also be driven without input through the shared game board. T
 
 ## Combination presets
 
-1. **Gas + gravity** — area denial combined with a field that bends projectiles.
-2. **Minefield + shockwave** — the wave forces movement through a constrained arena.
-3. **Stress preset** — gas, gravity, mines and a shockwave at once.
+1. **Gas + gravity** — the field pulls reactive props toward the damaging zone
+   while bending tagged projectiles.
+2. **Minefield + shockwave** — the moving front triggers the minefield, whose
+   overlapping blasts chain through neighbouring mines and props.
+3. **Stress preset** — gas, gravity, mines and a shockwave react together: the
+   wave starts the chain, explosions ignite gas, and gravity moves surviving
+   physical targets through the hazards.
 
-The point is not that these three combinations are boss designs. They are interaction tests. Good boss patterns can be discovered here first and then composed into phase logic.
+The point is not that these three combinations are boss designs. They are
+interaction tests. The baked mine and gravity core communicate identity; the
+procedural rings communicate live radius and timing. Good boss patterns can be
+discovered here first and then composed into phase logic.
 
 ## Next primitives
 

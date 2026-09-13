@@ -7,6 +7,7 @@ script CombatLab {
     @export let hostile_mine: Prefab;
     @export let shockwave: Prefab;
     @export let gravity_well: Prefab;
+    @export let target: Prefab;
 
     var autoplay_clock: f32 = 1.0;
     var autoplay_step: f32 = 0.0;
@@ -20,6 +21,7 @@ script CombatLab {
         Game.set("lab_combo", 0.0);
         Game.set("lab_clear", 0.0);
         Game.set("lab_last", 0.0);
+        spawn_targets();
     }
 
     fn update(dt: f32) {
@@ -165,6 +167,19 @@ script CombatLab {
         for attack in World.with_tag("lab_attack") {
             if World.exists(attack) { World.despawn(attack); }
         }
+        // A playground should be repeatable. Rebuild destructible scenery as
+        // well as removing attacks so CLEAR and every preset start cleanly.
+        for target in World.with_tag("lab_target") {
+            if World.exists(target) { World.despawn(target); }
+        }
+        spawn_targets();
+    }
+
+    fn spawn_targets() {
+        spawn_at(this.target, -2.4, 1.2);
+        spawn_at(this.target, 2.4, 1.2);
+        spawn_at(this.target, -1.35, -0.25);
+        spawn_at(this.target, 1.35, -0.25);
     }
 
     fn publish_count() {

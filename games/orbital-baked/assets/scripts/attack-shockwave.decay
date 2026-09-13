@@ -16,6 +16,7 @@ script Shockwave {
 
     fn update(dt: f32) {
         if Game.get("run_state", 0.0) != 1.0 { return; }
+        let previous = this.radius;
         this.radius += this.speed * dt;
         sync_visual();
 
@@ -25,7 +26,7 @@ script Shockwave {
                 let dx = player.transform.position.x - this.transform.position.x;
                 let dy = player.transform.position.y - this.transform.position.y;
                 let distance = sqrt(dx * dx + dy * dy);
-                if abs(distance - this.radius) <= this.width * 0.5 {
+                if crossed(distance, previous) {
                     this.hit_player = true;
                     Game.set("player_damage_taken", max(Game.get("player_damage_taken", 0.0), this.damage));
                     Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.28));
@@ -33,7 +34,43 @@ script Shockwave {
             }
         }
 
+        hit_targets(previous);
+        trigger_mines(previous);
+
         if this.radius >= this.max_radius { World.despawn(this.entity); }
+    }
+
+    fn crossed(distance: f32, previous: f32) -> bool {
+        return distance > previous && distance <= this.radius;
+    }
+
+    fn hit_targets(previous: f32) {
+        for target in World.with_tag("attack_damageable") {
+            if !World.exists(target) { continue; }
+            let dx = target.transform.position.x - this.transform.position.x;
+            let dy = target.transform.position.y - this.transform.position.y;
+            let distance = sqrt(dx * dx + dy * dy);
+            if crossed(distance, previous) {
+                World.send_signal(target, "hazard_damage", this.damage);
+                if World.has_tag(target, "attack_pushable") {
+                    let safe = max(0.1, distance);
+                    Physics.set_velocity(target,
+                        Physics.velocity_x(target) + dx / safe * 2.2,
+                        Physics.velocity_y(target) + dy / safe * 2.2);
+                }
+            }
+        }
+    }
+
+    fn trigger_mines(previous: f32) {
+        for mine in World.with_tag("attack_mine") {
+            if !World.exists(mine) { continue; }
+            let dx = mine.transform.position.x - this.transform.position.x;
+            let dy = mine.transform.position.y - this.transform.position.y;
+            if crossed(sqrt(dx * dx + dy * dy), previous) {
+                World.send_signal(mine, "detonate", 1.0);
+            }
+        }
     }
 
     fn sync_visual() {

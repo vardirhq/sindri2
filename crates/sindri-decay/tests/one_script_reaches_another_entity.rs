@@ -70,6 +70,66 @@ fn position(world: &World, entity: EntityId) -> [f32; 3] {
         .position
 }
 
+#[test]
+fn runtime_signals_accumulate_for_one_recipient_and_are_consumed() {
+    let mut world = World::default();
+    let sender = world.spawn(EntityData {
+        name: Some("Sender".to_owned()),
+        transform_3d: Some(Transform3D::default()),
+        components: [(
+            ScriptComponent::TYPE_NAME.to_owned(),
+            json!({ "source": "signals.decay", "script": "Sender" }),
+        )]
+        .into_iter()
+        .collect(),
+        ..EntityData::default()
+    });
+    let receiver = world.spawn(EntityData {
+        name: Some("Receiver".to_owned()),
+        transform_3d: Some(Transform3D::default()),
+        components: [(
+            ScriptComponent::TYPE_NAME.to_owned(),
+            json!({ "source": "signals.decay", "script": "Receiver" }),
+        )]
+        .into_iter()
+        .collect(),
+        ..EntityData::default()
+    });
+    let mut sources = ScriptSources::new();
+    sources.insert(
+        "signals.decay",
+        r#"
+        script Sender {
+            fn update(dt: f32) {
+                let receiver = World.find("Receiver");
+                World.send_signal(receiver, "impact", 1.25);
+                World.send_signal(receiver, "impact", 0.75);
+            }
+        }
+        script Receiver {
+            fn update(dt: f32) {
+                this.transform.position.x = World.take_signal("impact");
+                this.transform.position.y = World.take_signal("impact");
+            }
+        }
+    "#,
+    );
+
+    let mut scripts = Scripts::new();
+    let report = scripts.advance(
+        &mut world,
+        &registry(),
+        ScriptFrame::new(&sources, &InputState::default(), 1.0 / 60.0),
+    );
+    assert!(report.failures.is_empty(), "{:#?}", report.failures);
+    assert!(world.get(sender).is_some());
+    let signal_result = position(&world, receiver);
+    assert!(
+        (signal_result[0] - 2.0).abs() < f32::EPSILON && signal_result[1].abs() < f32::EPSILON,
+        "the receiver should take the accumulated signal exactly once, and is at {signal_result:?}"
+    );
+}
+
 /// The whole point: one script reads another entity's position.
 #[test]
 fn a_script_reads_another_entitys_transform() {

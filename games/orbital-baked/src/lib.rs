@@ -65,6 +65,19 @@ impl Run {
         Self::open_from(&project().join("assets"), "orbital.scene.json")
     }
 
+    /// Opens one of the project's authored scenes directly.
+    ///
+    /// This is primarily useful to deterministic tools and tests. It avoids
+    /// reproducing scene-transition input merely to inspect a development
+    /// playground, while still loading the scene through the same host path as
+    /// the normal game.
+    ///
+    /// # Errors
+    /// If the named scene will not read, parse, validate, or load.
+    pub fn open_scene(scene: &str) -> Result<Self, String> {
+        Self::open_from(&project().join("assets"), scene)
+    }
+
     /// Opens a build rather than a source tree.
     ///
     /// Everything is read by the logical ID the manifest names, out of the

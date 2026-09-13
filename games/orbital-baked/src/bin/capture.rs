@@ -67,6 +67,15 @@ fn shot_for(name: &str) -> Shot {
             seconds: 5.0,
             clicks: vec!["TitleStart".to_owned()],
         },
+        // The real development playground with its stress combination active.
+        // Opening the scene directly keeps this deterministic and ensures the
+        // capture proves the attack prefabs rather than title-screen input.
+        "lab" => Shot {
+            // Long enough for the telegraphs to establish, but before the
+            // shockwave reaches the mines and resolves the whole composition.
+            seconds: 0.32,
+            clicks: Vec::new(),
+        },
         // The title screen, which is what a player sees first and what every
         // layout mistake shows up on.
         _ => Shot {
@@ -128,7 +137,12 @@ async fn capture(
     canvas: UiCanvas,
     view: CameraView,
 ) -> Result<(), Box<dyn Error>> {
-    let mut run = Run::open().map_err(|error| -> Box<dyn Error> { error.into() })?;
+    let mut run = if what == "lab" {
+        Run::open_scene("combat-lab.scene.json")
+    } else {
+        Run::open()
+    }
+    .map_err(|error| -> Box<dyn Error> { error.into() })?;
     run.viewport = (width as f32, height as f32);
 
     let instance = wgpu::Instance::default();
@@ -143,6 +157,11 @@ async fn capture(
     let shot = shot_for(what);
     for _ in 0..8 {
         run.step(1.0 / 60.0);
+    }
+    if what == "lab" {
+        run.set_board("lab_autoplay", 0.0);
+        run.set_board("lab_combo", 3.0);
+        run.set_board("lab_invulnerable", 1.0);
     }
     for element in &shot.clicks {
         run.click(element);
