@@ -167,6 +167,12 @@ script CombatLab {
         for attack in World.with_tag("lab_attack") {
             if World.exists(attack) { World.despawn(attack); }
         }
+        // A playground should be repeatable. Rebuild destructible scenery as
+        // well as removing attacks so CLEAR and every preset start cleanly.
+        for target in World.with_tag("lab_target") {
+            if World.exists(target) { World.despawn(target); }
+        }
+        spawn_targets();
     }
 
     fn spawn_targets() {

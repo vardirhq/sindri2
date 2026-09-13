@@ -142,4 +142,12 @@ fn the_stress_preset_has_real_cross_attack_reactions() {
         run.count("lab_target") < 4,
         "composed attacks did not affect their reactive environment"
     );
+
+    run.set_board("lab_clear", 1.0);
+    step(&mut run);
+    assert_eq!(
+        run.count("lab_target"),
+        4,
+        "clearing the lab did not restore its destructible targets"
+    );
 }
