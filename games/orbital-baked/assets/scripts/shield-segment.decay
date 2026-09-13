@@ -1,18 +1,10 @@
 // One plate of a boss's rotating shield.
 //
-// The mechanic this exists for is entirely physical, which is why the script is
-// this short. A bullet spends itself on the first sensor it enters, and these
-// orbit outside the hull's own collider, so a plate does not need to know it is
-// blocking anything -- it is simply in the way, and the boss is not. Destroy one
-// and the gap it leaves is a real gap: bullets fly through it to the hull
-// because there is nothing there any more.
-//
-// So the fight is about the opening. The ring turns, so the player either moves
-// with the gap to keep firing through it, or stands still and opens another.
+// The mechanic this exists for is entirely physical. A projectile that reaches
+// a plate is consumed by that plate immediately, before the same physics step can
+// also report the hull behind it. Destroy one and the gap it leaves is a real
+// firing lane because there is nothing there to consume the projectile anymore.
 script ShieldSegment {
-    // Where on the ring this plate sits, and how fast the ring turns. Both are
-    // set by the boss when it builds the ring, so a boss can have a fast thin
-    // shield or a slow heavy one without a second prefab.
     @export let angle: f32 = 0.0;
     @export let radius: f32 = 1.5;
     @export let spin: f32 = 0.5;
@@ -20,9 +12,6 @@ script ShieldSegment {
 
     var hp: f32 = 0.0;
     var state: f32 = -1.0;
-    // `angle` is where this plate was set on the ring and stays that way: an
-    // export is immutable, and the ring's rotation is shared by every plate, so
-    // the turn is kept separately and added.
     var turn: f32 = 0.0;
 
     fn start() {
@@ -31,15 +20,6 @@ script ShieldSegment {
     }
 
     fn update(dt: f32) {
-        // The ring follows the boss by reading where it is, not by hanging off
-        // it. Parenting would be the obvious way to say this and it is what the
-        // first version did, but a world sprite and a collider both read an
-        // entity's own transform and nothing composes a parent's into it, so
-        // eight plates authored at a local radius drew and blocked in a neat
-        // ring around the origin while the boss flew around somewhere else --
-        // a shield that looked right in a screenshot and stopped nothing.
-        // Tracking the boss states the same intent in coordinates both the
-        // renderer and the physics world already agree about.
         var cx: f32 = 0.0;
         var cy: f32 = 0.0;
         var found: f32 = 0.0;
@@ -50,8 +30,6 @@ script ShieldSegment {
                 found = 1.0;
             }
         }
-        // A plate outlives nothing. Without a boss there is no ring to be part
-        // of, and a plate left behind would be an invisible wall in the arena.
         if found == 0.0 {
             World.despawn(this.entity);
             return;
@@ -61,7 +39,6 @@ script ShieldSegment {
         let a = this.angle + this.turn;
         this.transform.position.x = cx + cos(a) * this.radius;
         this.transform.position.y = cy + sin(a) * this.radius;
-        // Face outward, so the lit edge of the plate is the side being shot at.
         this.transform.rotation_z = a;
         receive_hits();
     }
@@ -70,6 +47,10 @@ script ShieldSegment {
         for hit in Physics.sensor_entered() {
             if World.exists(hit) && World.has_tag(hit, "player_damage") {
                 this.hp -= World.property_number(hit, "damage", 0.0);
+                // Do not leave the projectile alive until its own next update.
+                // That allowed one fast shot to register on both plate and hull
+                // during the same physics step.
+                World.despawn(hit);
             }
         }
         if this.hp <= 0.0 {
@@ -84,7 +65,6 @@ script ShieldSegment {
         else { wear(0.0, "failing"); }
     }
 
-    // Only on a change, because `Animation.play` restarts the clip.
     fn wear(next: f32, clip: String) {
         if next == this.state {
             return;
