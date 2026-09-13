@@ -16,6 +16,16 @@
         "sindri.tags": {
           "tags": ["shield", "aegis_shield"]
         },
+        "sindri.physics2d.rigid_body": {
+          "kind": "kinematic_position",
+          "pose": { "position": [0.0, 0.0], "rotation": 0.0 },
+          "linear_velocity": [0.0, 0.0],
+          "angular_velocity": 0.0,
+          "gravity_scale": 0.0,
+          "linear_damping": 0.0,
+          "angular_damping": 0.0,
+          "lock_rotation": false
+        },
         "sindri.physics2d.collider": {
           "shape": { "shape": "circle", "radius": 0.42 },
           "offset": [0.0, 0.0],
