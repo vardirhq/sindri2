@@ -3,6 +3,7 @@ format_version = 1
 [project]
 name = "Orbital Last Stand (Baked)"
 main_scene = "assets/orbital.scene.json"
+scenes = ["assets/combat-lab.scene.json"]
 
 # What the scene does not name. Every clip below is played by a script at the
 # moment it happens — `Audio.play("audio/kill.wav", 0.3)` is a string inside a
