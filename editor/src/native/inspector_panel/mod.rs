@@ -43,11 +43,8 @@ use crate::ui::icons;
 use crate::ui::theme::color;
 use crate::ui::widgets::{panel, toolbar};
 use crate::{
-    animation::AnimationTool,
-    scripts::SceneScripts,
-    space::declared_space,
-    tile_volume::TileVolumeTool,
-    tilemap::TilemapTool,
+    animation::AnimationTool, scripts::SceneScripts, space::declared_space,
+    tile_volume::TileVolumeTool, tilemap::TilemapTool,
 };
 
 use super::editing::reparent_choices;

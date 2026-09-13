@@ -17,7 +17,10 @@ pub(super) fn tile_volume_section(
     tool: &mut TileVolumeTool,
 ) {
     let Ok(volume) = tile_volume::component(payload) else {
-        panel::problem(ui, "This tile volume cannot be read; repair its stored fields first");
+        panel::problem(
+            ui,
+            "This tile volume cannot be read; repair its stored fields first",
+        );
         return;
     };
     section::group(ui, icons::TILEMAP, "Build");
@@ -42,7 +45,12 @@ pub(super) fn tile_volume_section(
     section::group(ui, icons::SPRITE, "Blocks");
     match tile_ids(assets_root, &volume.tileset) {
         Ok(tiles) => {
-            if !tool.erase && tool.tile.as_ref().is_none_or(|chosen| !tiles.contains(chosen)) {
+            if !tool.erase
+                && tool
+                    .tile
+                    .as_ref()
+                    .is_none_or(|chosen| !tiles.contains(chosen))
+            {
                 tool.tile = tiles.first().cloned();
             }
             ui.horizontal_wrapped(|ui| {

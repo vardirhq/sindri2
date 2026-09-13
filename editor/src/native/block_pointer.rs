@@ -26,10 +26,9 @@ impl EditorApp {
         let entity = self.selection.primary()?;
         let data = self.world.get(entity)?;
         data.components.get(tile_volume::TYPE_NAME)?;
-        let grid: TileGridComponent = serde_json::from_value(
-            data.components.get(tile_volume::GRID_TYPE_NAME)?.clone(),
-        )
-        .ok()?;
+        let grid: TileGridComponent =
+            serde_json::from_value(data.components.get(tile_volume::GRID_TYPE_NAME)?.clone())
+                .ok()?;
         let transform = data.transform_3d.unwrap_or_default();
         let aspect = rect.width() / rect.height().max(1.0);
         let camera = self

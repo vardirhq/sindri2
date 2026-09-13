@@ -34,8 +34,8 @@ use crate::{
     scripts::SceneScripts,
     slicer::Slicer,
     textures::SceneTextures,
-    tilemap::TilemapTool,
     tile_volume::TileVolumeTool,
+    tilemap::TilemapTool,
     weave_styles::ProjectStyles,
 };
 
