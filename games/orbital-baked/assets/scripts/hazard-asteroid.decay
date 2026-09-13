@@ -4,9 +4,6 @@
 script HazardAsteroid {
     @export let health: f32 = 5.0;
     @export let impact_damage: f32 = 0.7;
-    // `var`, not `let`: the host authors the drift, and `knock_from` changes
-    // it when the rock is shoved off the player. As `let` that shove raised
-    // `Immutable("this.vx")` and killed the script mid-run.
     @export var vx: f32 = 0.0;
     @export var vy: f32 = 0.5;
     @export let child_count: f32 = 2.0;
@@ -21,6 +18,7 @@ script HazardAsteroid {
     var age: f32 = 0.0;
     var impact_cd: f32 = 0.0;
     var hit_flash: f32 = 0.0;
+    var suspended: bool = false;
 
     fn start() {
         this.hp = this.health;
@@ -28,23 +26,33 @@ script HazardAsteroid {
         this.drift_y = this.vy;
         this.spin = Random.range(-0.55, 0.55);
         this.phase = Random.range(0.0, 6.2831853);
+        this.suspended = false;
         author_rock();
         Physics.set_velocity(this.entity, this.drift_x, this.drift_y);
     }
 
     fn update(dt: f32) {
         if Game.get("run_state", 0.0) != 1.0 || Game.get("sector", 0.0) != 1.0 {
+            // Preserve whatever momentum physics produced before freezing for an
+            // overlay/sector transition. Resume from that momentum once play returns.
+            if !this.suspended {
+                this.drift_x = Physics.velocity_x(this.entity);
+                this.drift_y = Physics.velocity_y(this.entity);
+                this.suspended = true;
+            }
             Physics.set_velocity(this.entity, 0.0, 0.0);
-            // Physics also restores the body's authored zero rotation. Keep
-            // the current authored phase visible through overlays so every
-            // rock does not appear to be replaced when gameplay resumes.
             this.transform.rotation_z = this.phase + this.age * this.spin;
             return;
         }
 
-        // Pausing sets the dynamic body to rest. Restore its authored drift
-        // when play resumes instead of leaving a preserved asteroid frozen.
-        Physics.set_velocity(this.entity, this.drift_x, this.drift_y);
+        if this.suspended {
+            Physics.set_velocity(this.entity, this.drift_x, this.drift_y);
+            this.suspended = false;
+        }
+
+        // During active play physics owns velocity. Do not re-author drift every
+        // frame: impacts between asteroids, player shoves and future forces must
+        // be allowed to change their momentum naturally.
         this.age += dt;
         this.impact_cd = max(0.0, this.impact_cd - dt);
         this.hit_flash = max(0.0, this.hit_flash - dt);
@@ -53,28 +61,33 @@ script HazardAsteroid {
         wrap();
         let player = World.find("Player");
         for hit in Physics.sensor_entered() {
-            if hit == player {
-                if this.impact_cd <= 0.0 {
-                    Game.set("player_damage_taken",
-                             max(Game.get("player_damage_taken", 0.0), this.impact_damage));
-                    this.impact_cd = 0.55;
-                    knock_from(player);
-                }
-                continue;
-            }
-            if !World.exists(hit) {
-                continue;
-            }
-            if World.has_tag(hit, "player_damage") {
-                this.hp -= World.property_number(hit, "damage", 0.0);
-                this.hit_flash = 0.14;
-            }
+            handle_hit(hit, player);
+        }
+        for hit in Physics.collision_started() {
+            handle_hit(hit, player);
         }
 
         if this.hp <= 0.0 {
             split();
             Effects.burst(this.entity);
             World.despawn(this.entity);
+        }
+    }
+
+    fn handle_hit(hit: Entity, player: Entity) {
+        if hit == player {
+            if this.impact_cd <= 0.0 {
+                Game.set("player_damage_taken",
+                         max(Game.get("player_damage_taken", 0.0), this.impact_damage));
+                this.impact_cd = 0.55;
+                knock_from(player);
+            }
+            return;
+        }
+        if !World.exists(hit) { return; }
+        if World.has_tag(hit, "player_damage") {
+            this.hp -= World.property_number(hit, "damage", 0.0);
+            this.hit_flash = 0.14;
         }
     }
 
@@ -88,9 +101,7 @@ script HazardAsteroid {
     }
 
     fn split() {
-        if this.child_count <= 0.0 {
-            return;
-        }
+        if this.child_count <= 0.0 { return; }
         var total: f32 = this.child_count;
         if total > 2.0 { total = Random.int(2.0, 3.0); }
         var made: f32 = 0.0;
@@ -127,8 +138,7 @@ script HazardAsteroid {
         let dx = this.transform.position.x - player.transform.position.x;
         let dy = this.transform.position.y - player.transform.position.y;
         let far = max(0.1, sqrt(dx * dx + dy * dy));
-        this.drift_x += dx / far * 1.1;
-        this.drift_y += dy / far * 1.1;
+        Physics.apply_impulse(this.entity, dx / far * 1.1, dy / far * 1.1);
     }
 
     fn visible_half_x() -> f32 {
