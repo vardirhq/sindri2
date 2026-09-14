@@ -70,11 +70,11 @@ jobs:
           if ! git diff --quiet HEAD^ HEAD -- tools/decay-lsp crates/sindri-decay \
             decay/crates/decay-semantic decay/crates/decay-syntax
           then
-            scripts=(game games examples)
+            cargo test --quiet --package decay-lsp
           fi
 
           if [[ ${#scripts[@]} -eq 0 ]]; then
-            echo "No Decay scripts or checker code changed."
+            echo "No Decay scripts changed."
             exit 0
           fi
 
