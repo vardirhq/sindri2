@@ -159,9 +159,8 @@ impl ProjectLoaders {
             ProfileAssetDecoder,
         )?
         .with_manifest(manifest.clone());
-        let mut styles =
-            AssetLoader::new(source, config(AssetKind::Other), TextAssetDecoder)?
-                .with_manifest(manifest.clone());
+        let mut styles = AssetLoader::new(source, config(AssetKind::Other), TextAssetDecoder)?
+            .with_manifest(manifest.clone());
 
         // From the manifest rather than from a list compiled into this binary.
         // Those lists were the thing that made a project's host something
