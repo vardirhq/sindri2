@@ -11,6 +11,8 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Added
 
+- Added a typed batch preflight and agent-facing runtime-contract guidance for
+  Decay gameplay scripts.
 - Added multi-scene projects and runtime scene switching, including persistent
   scene state, exported secondary scenes, and Decay scene navigation.
 - Added reusable profile assets with runtime, editor, Decay, and export support.
@@ -48,41 +50,3 @@ requests, commit history, and subsystem documentation rather than this file.
 - Reworked Orbital's baked assets and bosses so authored rotations, silhouettes,
   attacks, reactions, and environment interactions survive the baking pipeline.
 - Raised the Rust MSRV as required by current `wgpu` and `egui` releases.
-
-### Fixed
-
-- Fixed numerous editor issues involving selection, unsaved changes, undo/redo,
-  viewport color handling, hierarchy layout, project browsing, asset loading,
-  console reporting, and controls that previously did nothing.
-- Fixed browser/export failures involving missing scripts, incorrect asset kinds,
-  manifest handling, startup errors, and project-relative asset paths.
-- Fixed rendering bugs involving multi-batch cameras, transparent ordering,
-  sprite-sheet frames, world/screen sprite behavior, viewport color spaces, and
-  multi-mesh clears.
-- Fixed gameplay/runtime bugs involving input edges, inactive scene lookups,
-  scene identity handling, projectile hit ordering, camera activation, enemy
-  placement, hazard persistence, and physics interactions.
-- Fixed Spine sections failing at runtime when a destroyed middle section
-  severed and promoted the surviving rear chain.
-- Reworked Spine's body to follow one exact cardinal route instead of being
-  dragged around corners like a physics rope, including after a severed rear
-  chain becomes independent; Spine now hunts through the arena rather than
-  circling its boundary.
-- Fixed the isometric baker's authored rotations, which had been supplied in
-  radians while the baker interpreted them as degrees.
-
-## Changelog policy
-
-Keep entries release-oriented and readable:
-
-- Record changes that matter to users, game authors, plugin/tool authors, or
-  downstream integrators.
-- Group entries under `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`,
-  or `Security` where useful.
-- Prefer one concise entry for a feature or behavior change. Do not append a
-  debugging diary, implementation essay, test narrative, or commit-by-commit
-  history.
-- Put detailed rationale and technical history in the pull request, relevant
-  documentation, or architecture decision record.
-- When the first release is cut, rename `Unreleased` to that version and date,
-  then add a fresh empty `Unreleased` section above it.
