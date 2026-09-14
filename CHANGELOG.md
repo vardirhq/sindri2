@@ -65,7 +65,9 @@ requests, commit history, and subsystem documentation rather than this file.
 - Fixed Spine sections failing at runtime when a destroyed middle section
   severed and promoted the surviving rear chain.
 - Reworked Spine's body to follow one exact cardinal route instead of being
-  dragged around corners like a physics rope.
+  dragged around corners like a physics rope, including after a severed rear
+  chain becomes independent; Spine now hunts through the arena rather than
+  circling its boundary.
 - Fixed the isometric baker's authored rotations, which had been supplied in
   radians while the baker interpreted them as degrees.
 
