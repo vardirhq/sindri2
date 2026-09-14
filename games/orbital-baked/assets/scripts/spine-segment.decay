@@ -51,8 +51,7 @@ script SpineSegment {
         let wanted = this.slot - 1.0;
         for part in World.with_tag("spine_segment") {
             if part == this.entity || !World.exists(part) { continue; }
-            if World.property_number(part, "slot", -99.0) == wanted &&
-               World.property_number(part, "group", -1.0) == this.group {
+            if World.property_number(part, "slot", -99.0) == wanted {
                 return part;
             }
         }
@@ -63,8 +62,7 @@ script SpineSegment {
         let wanted = this.slot + 1.0;
         for part in World.with_tag("spine_segment") {
             if part == this.entity || !World.exists(part) { continue; }
-            if World.property_number(part, "slot", -99.0) == wanted &&
-               World.property_number(part, "group", -1.0) == this.group {
+            if World.property_number(part, "slot", -99.0) == wanted {
                 return part;
             }
         }
@@ -79,6 +77,8 @@ script SpineSegment {
             // queued corner. Those points are the surviving rear chain's route
             // through turns it has not reached yet.
             this.consumed_turn_serial = 0.0;
+            let next = next_member();
+            if next != null { World.send_signal(next, "spine_rekey", new_group); }
         }
 
         let promote = World.take_signal("spine_promote");
@@ -339,22 +339,13 @@ script SpineSegment {
 
     fn split() {
         let new_group = this.slot + 1.0;
-        let next_slot = this.slot + 1.0;
-
-        for part in World.with_tag("spine_segment") {
-            if part == this.entity || !World.exists(part) { continue; }
-            let part_slot = World.property_number(part, "slot", -99.0);
-            let part_group = World.property_number(part, "group", -1.0);
-            if part_group == this.group && part_slot > this.slot {
-                // Neighbour discovery reads authored properties while the
-                // signal updates the already-running script field. Keep both
-                // views in sync so this fragment remains a coherent chain.
-                World.set_property(part, "group", new_group);
-                World.send_signal(part, "spine_rekey", new_group);
-                if part_slot == next_slot {
-                    World.send_signal(part, "spine_promote", new_group);
-                }
-            }
+        let next = next_member();
+        if next != null {
+            // Rekeying walks rearward one surviving neighbour at a time. A
+            // missing slot is the physical cut, so propagation cannot cross
+            // into a fragment that was already separated earlier.
+            World.send_signal(next, "spine_rekey", new_group);
+            World.send_signal(next, "spine_promote", new_group);
         }
 
         Effects.burst(this.entity);
