@@ -178,9 +178,20 @@ fn every_spine_section_replays_one_cardinal_route() {
                 "Spine section {entity:?} moved diagonally at ({vx:.4}, {vy:.4})"
             );
             if index > 0 {
+                let route_tail = routes[index - 1]
+                    .iter()
+                    .rev()
+                    .take(6)
+                    .copied()
+                    .collect::<Vec<_>>();
                 assert!(
                     point_is_on_route(positions[index], &routes[index - 1]),
-                    "Spine section {entity:?} left its predecessor's exact route on frame {frame}"
+                    "Spine section {entity:?} (slot {:?}) left its predecessor's exact route \
+                     on frame {frame}: point {:?}, predecessor {:?}, recent route {:?}",
+                    segment_slot(&run, entity),
+                    positions[index],
+                    positions[index - 1],
+                    route_tail,
                 );
             }
         }
