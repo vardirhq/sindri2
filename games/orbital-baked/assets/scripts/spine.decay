@@ -19,6 +19,7 @@ script Spine {
     var dir_x: f32 = 1.0;
     var dir_y: f32 = 0.0;
     var turn_serial: f32 = 0.0;
+    var turn_clock: f32 = 0.0;
 
     fn start() {
         let elapsed = Game.get("elapsed", 0.0);
@@ -29,6 +30,8 @@ script Spine {
         Game.set("boss_kind", 8.0);
         let player = World.find("Player");
         if player != null { choose_initial_direction(player); }
+        // Leave the spawn edge quickly; later turns use the chain-safe delay.
+        this.turn_clock = 0.55;
         build_body();
     }
 
@@ -101,7 +104,7 @@ script Spine {
 
         this.clock += dt;
         update_phase();
-        grid_move(player);
+        grid_move(player, dt);
         receive_hits(player);
         Game.set("boss_hp", max(this.hp, 0.0));
         if this.hp <= 0.0 { die(); }
@@ -164,34 +167,53 @@ script Spine {
         }
     }
 
-    fn turn_from_vertical_edge(player: Entity) {
+    fn turn_from_vertical_lane(player: Entity) {
         let dx = player.transform.position.x - this.transform.position.x;
         this.dir_x = 1.0;
         if dx < 0.0 { this.dir_x = -1.0; }
         this.dir_y = 0.0;
     }
 
-    fn turn_from_horizontal_edge(player: Entity) {
+    fn turn_from_horizontal_lane(player: Entity) {
         let dy = player.transform.position.y - this.transform.position.y;
         this.dir_x = 0.0;
         this.dir_y = 1.0;
         if dy < 0.0 { this.dir_y = -1.0; }
     }
 
-    fn grid_move(player: Entity) {
+    fn turn_delay() -> f32 {
+        // Leave enough time for the last surviving section to reach a corner
+        // before the two-slot corner relay receives another one.
+        if this.phase == 3.0 { return 0.72; }
+        if this.phase == 2.0 { return 1.35; }
+        return 2.10;
+    }
+
+    fn grid_move(player: Entity, dt: f32) {
         let hx = half_x();
         let hy = half_y();
         let x = this.transform.position.x;
         let y = this.transform.position.y;
         let margin = 0.12;
         var turning: f32 = 0.0;
+        this.turn_clock -= dt;
 
-        if this.dir_x > 0.0 && x >= hx - margin { turning = 1.0; turn_from_horizontal_edge(player); }
-        else if this.dir_x < 0.0 && x <= -hx + margin { turning = 1.0; turn_from_horizontal_edge(player); }
-        else if this.dir_y > 0.0 && y >= hy - margin { turning = 1.0; turn_from_vertical_edge(player); }
-        else if this.dir_y < 0.0 && y <= -hy + margin { turning = 1.0; turn_from_vertical_edge(player); }
+        if this.dir_x > 0.0 && x >= hx - margin { turning = 1.0; turn_from_horizontal_lane(player); }
+        else if this.dir_x < 0.0 && x <= -hx + margin { turning = 1.0; turn_from_horizontal_lane(player); }
+        else if this.dir_y > 0.0 && y >= hy - margin { turning = 1.0; turn_from_vertical_lane(player); }
+        else if this.dir_y < 0.0 && y <= -hy + margin { turning = 1.0; turn_from_vertical_lane(player); }
+        else if this.turn_clock <= 0.0 {
+            turning = 1.0;
+            // Regular perpendicular turns make Spine cross the arena and hunt
+            // the player instead of tracing the outer boundary forever.
+            if abs(this.dir_x) > 0.0 { turn_from_horizontal_lane(player); }
+            else { turn_from_vertical_lane(player); }
+        }
 
-        if turning > 0.0 { publish_turn(x, y); }
+        if turning > 0.0 {
+            publish_turn(x, y);
+            this.turn_clock = turn_delay();
+        }
 
         var speed: f32 = 3.0;
         if this.phase == 2.0 { speed = 3.45; }
