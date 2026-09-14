@@ -63,6 +63,8 @@ These documents govern the work:
   its generated capability documents follow.
 - `docs/project-format.md` — what a project is, and what `sindri.toml` holds.
 - `docs/scripting.md` and `decay/LANGUAGE.md` — scripting contracts.
+- `docs/decay-agent-guide.md` — mandatory preflight and runtime-contract checklist
+  before changing Decay scripts or their host APIs.
 - `docs/capabilities.md` — detailed evidence for what actually works.
 - `docs/parity.md` — what an engine is expected to do, what Sindri does, and the
   distance between them; carries the Engine / Editor / Decay / proof status that
@@ -144,6 +146,11 @@ check that can reasonably be reproduced locally. When a check fails, inspect the
 whole affected path rather than patching only the first diagnostic and pushing
 again.
 
+Before editing a `.decay` file, a scripted prefab, or the Decay host surface,
+read `docs/decay-agent-guide.md`. Run the typed batch preflight for every changed
+script before pushing; its runtime-contract reminders must be reviewed even
+though only syntax and semantic diagnostics make the command fail.
+
 Do not introduce temporary self-modifying workflows or repository automation to
 work around ordinary development problems. If the implementation approach starts
 requiring machinery whose only purpose is to repair the branch, stop and reassess
@@ -175,6 +182,16 @@ output must keep the deterministic captures and colour verification green.
 Changes affecting browser behaviour must run the real browser smoke tests, not
 only compile WASM. Changes affecting dependencies must satisfy `cargo deny` and
 the repository dependency policy.
+
+For Sindri gameplay scripts (pass every changed file, or a project directory):
+
+```bash
+cargo run --quiet --package decay-lsp -- --check path/to/changed.decay
+```
+
+This compiles against Sindri's real host environment. It does not replace the
+runtime regression required to prove frame ordering, signals, spawning, or
+movement behavior.
 
 For the separate Decay workspace:
 

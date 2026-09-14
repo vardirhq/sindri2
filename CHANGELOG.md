@@ -11,6 +11,8 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Added
 
+- Added a typed batch preflight and agent-facing runtime-contract guidance for
+  Decay gameplay scripts.
 - Added multi-scene projects and runtime scene switching, including persistent
   scene state, exported secondary scenes, and Decay scene navigation.
 - Added reusable profile assets with runtime, editor, Decay, and export support.

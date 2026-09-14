@@ -1,3 +1,4 @@
+mod check;
 mod project;
 mod protocol;
 mod support;
@@ -380,6 +381,31 @@ fn symbol_type(symbol: ExternalSymbol) -> decay_semantic::Type {
 }
 
 fn main() -> io::Result<()> {
+    let mut arguments = std::env::args().skip(1);
+    match arguments.next().as_deref() {
+        Some("--check") => {
+            let paths = arguments.map(PathBuf::from).collect::<Vec<_>>();
+            let paths = if paths.is_empty() {
+                vec![PathBuf::from(".")]
+            } else {
+                paths
+            };
+            if !check::run(&paths)? {
+                std::process::exit(1);
+            }
+            Ok(())
+        }
+        Some(argument) => Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!(
+                "unknown argument {argument:?}; usage: decay-lsp [--check <file-or-directory> ...]"
+            ),
+        )),
+        None => run_server(),
+    }
+}
+
+fn run_server() -> io::Result<()> {
     let stdin = io::stdin();
     let stdout = io::stdout();
     let mut input = stdin.lock();
