@@ -206,48 +206,27 @@ script SpineSegment {
     }
 
     fn follow(ahead: Entity, dt: f32) {
-        let ax = ahead.transform.position.x;
-        let ay = ahead.transform.position.y;
         let avx = Physics.velocity_x(ahead);
         let avy = Physics.velocity_y(ahead);
-        let speed = 5.4;
-        let aligned = 0.0001;
-        var vx: f32 = 0.0;
-        var vy: f32 = 0.0;
+        let speed = max(abs(avx), abs(avy));
 
         if follow_corner(dt, speed) { return; }
 
-        if abs(avx) >= abs(avy) && abs(avx) > 0.01 {
-            let cross = ay - this.transform.position.y;
-            if abs(cross) > aligned {
-                vy = axis_velocity(cross, dt, speed);
-            } else {
-                var target_x = ax - this.spacing;
-                if avx < 0.0 { target_x = ax + this.spacing; }
-                vx = axis_velocity(target_x - this.transform.position.x, dt, speed);
-            }
-        } else if abs(avy) > 0.01 {
-            let cross = ax - this.transform.position.x;
-            if abs(cross) > aligned {
-                vx = axis_velocity(cross, dt, speed);
-            } else {
-                var target_y = ay - this.spacing;
-                if avy < 0.0 { target_y = ay + this.spacing; }
-                vy = axis_velocity(target_y - this.transform.position.y, dt, speed);
-            }
-        }
-
-        Physics.set_velocity(this.entity, vx, vy);
-        if abs(vx) > 0.01 {
+        // The spawn offset already establishes the gap. Copying the leader's
+        // cardinal velocity preserves that gap along a straight lane. Trying
+        // to reconstruct a point `spacing` behind the leader after a corner
+        // sends the follower backwards into space the leader never visited.
+        Physics.set_velocity(this.entity, avx, avy);
+        if abs(avx) > 0.01 {
             this.dir_x = 1.0;
-            if vx < 0.0 { this.dir_x = -1.0; }
+            if avx < 0.0 { this.dir_x = -1.0; }
             this.dir_y = 0.0;
-            this.transform.rotation_z = atan2(vy, vx);
-        } else if abs(vy) > 0.01 {
+            this.transform.rotation_z = atan2(avy, avx);
+        } else if abs(avy) > 0.01 {
             this.dir_x = 0.0;
             this.dir_y = 1.0;
-            if vy < 0.0 { this.dir_y = -1.0; }
-            this.transform.rotation_z = atan2(vy, vx);
+            if avy < 0.0 { this.dir_y = -1.0; }
+            this.transform.rotation_z = atan2(avy, avx);
         }
     }
 
