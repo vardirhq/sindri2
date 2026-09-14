@@ -46,6 +46,39 @@ jobs:
       - name: Check file sizes
         run: scripts/check-file-size.py
 
+  # Compile changed gameplay scripts against the same typed Sindri host surface
+  # the editor uses. This gate stays ahead of the expensive native, WASM, and
+  # browser jobs so a script typo does not consume their runners first.
+  decay_preflight:
+    name: Decay project preflight
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Check changed Decay scripts
+        shell: bash
+        run: |
+          mapfile -t scripts < <(
+            git diff --name-only --diff-filter=ACMRT HEAD^ HEAD -- '*.decay'
+          )
+
+          if ! git diff --quiet HEAD^ HEAD --             tools/decay-lsp crates/sindri-decay             decay/crates/decay-semantic decay/crates/decay-syntax
+          then
+            scripts=(game games examples)
+          fi
+
+          if [[ ${#scripts[@]} -eq 0 ]]; then
+            echo "No Decay scripts or checker code changed."
+            exit 0
+          fi
+
+          cargo run --quiet --package decay-lsp -- --check "${scripts[@]}"
+
   # The isometric baker is a Node tool with no dependencies, so this is the
   # whole of its build: run its tests, then re-bake its fixture and check that
   # nothing about the result moved. A baked asset is checked into the
@@ -87,6 +120,7 @@ jobs:
           done
 
   clippy:
+    needs: [quick, decay_preflight]
     name: Clippy
     runs-on: ubuntu-latest
     steps:
@@ -109,6 +143,7 @@ jobs:
       - run: cargo clippy --workspace --all-targets --all-features
 
   test:
+    needs: [quick, decay_preflight]
     name: Test and render captures
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -208,6 +243,7 @@ jobs:
           retention-days: 14
 
   wasm:
+    needs: [quick, decay_preflight]
     name: Browser target
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -257,6 +293,7 @@ jobs:
   # nothing but a blank canvas is what that looked like before the engine
   # started announcing it.
   browser:
+    needs: [quick, decay_preflight]
     name: Run the engine in a browser
     runs-on: ubuntu-latest
     timeout-minutes: 25
