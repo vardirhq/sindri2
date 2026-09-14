@@ -61,18 +61,29 @@ script Spine {
         return count;
     }
 
-    fn publish_turn(x: f32, y: f32) {
-        this.turn_serial += 1.0;
+    fn first_section() -> Entity {
         for part in World.with_tag("spine_segment") {
             if !World.exists(part) { continue; }
-            // Runtime script fields are deliberately not authorable after
-            // start(). Signals are the live message channel: every section
-            // receives the turn and decides locally whether group 0 owns it.
-            World.send_signal(part, "spine_turn_group", 0.0);
-            World.send_signal(part, "spine_turn_x", x);
-            World.send_signal(part, "spine_turn_y", y);
-            World.send_signal(part, "spine_turn_serial", this.turn_serial);
+            if World.property_number(part, "slot", -99.0) == 0.0 &&
+               World.property_number(part, "group", -1.0) == 0.0 &&
+               World.property_number(part, "head", 0.0) <= 0.0 {
+                return part;
+            }
         }
+        return null;
+    }
+
+    fn publish_turn(x: f32, y: f32) {
+        let part = first_section();
+        if part == null { return; }
+        this.turn_serial += 1.0;
+        // Only the first body section learns the corner from the boss. It will
+        // hand that exact corner to the next section only after it reaches it,
+        // and so on down the body. Broadcasting to all nine at once let rear
+        // sections turn before their predecessors had ever visited the new lane.
+        World.send_signal(part, "spine_turn_x", x);
+        World.send_signal(part, "spine_turn_y", y);
+        World.send_signal(part, "spine_turn_serial", this.turn_serial);
     }
 
     fn update(dt: f32) {
