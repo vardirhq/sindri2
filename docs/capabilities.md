@@ -402,7 +402,10 @@ event loop and canvas attachment, and headless in a test.
 
 `DesktopApp` supplies the window, event loop, and input translation once, so an
 application does not rewrite them. Target-specific code is confined to the
-crates that must have it.
+crates that must have it. Application failures retain their complete
+`std::error::Error` source chain when logged natively or announced through the
+browser's `sindri:failed` event, rather than exposing only the outer host error.
+
 ### GPU
 
 Adapter, device, and queue negotiation is shared, with conservative
