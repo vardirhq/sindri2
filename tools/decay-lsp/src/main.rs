@@ -397,7 +397,9 @@ fn main() -> io::Result<()> {
         }
         Some(argument) => Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            format!("unknown argument {argument:?}; usage: decay-lsp [--check <file-or-directory> ...]"),
+            format!(
+                "unknown argument {argument:?}; usage: decay-lsp [--check <file-or-directory> ...]"
+            ),
         )),
         None => run_server(),
     }
