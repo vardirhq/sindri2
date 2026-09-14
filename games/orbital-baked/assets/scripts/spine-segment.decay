@@ -1,34 +1,45 @@
-// One physical section of Spine's body. Every section is joined to the one in
-// front by a real distance constraint; steering only decides how the chain
-// travels, while physics guarantees it remains a chain.
+// One independent section of Spine's body.
+//
+// Like an Aegis shield plate, every section owns its own script, health,
+// collider and kinematic body. What connects Spine is a runtime cardinal trail:
+// each section receives a corner from the piece ahead, reaches that coordinate,
+// then hands the same corner to the next piece. The route therefore propagates
+// through the body instead of being broadcast ahead of the body itself.
 script SpineSegment {
     @export let slot: f32 = 0.0;
     @export var group: f32 = 0.0;
     @export var head: f32 = 0.0;
     @export let health: f32 = 10.0;
     @export let spacing: f32 = 0.62;
+    @export var spawn_x: f32 = 0.0;
+    @export var spawn_y: f32 = 0.0;
+    @export var initial_dir_x: f32 = 1.0;
+    @export var initial_dir_y: f32 = 0.0;
 
     var hp: f32 = 0.0;
     var state: f32 = 0.0;
     var dir_x: f32 = 1.0;
     var dir_y: f32 = 0.0;
-    var turn_clock: f32 = 0.0;
+    var consumed_turn_serial: f32 = 0.0;
+    var issued_turn_serial: f32 = 0.0;
+    var corner_count: f32 = 0.0;
+    var corner_x: f32 = 0.0;
+    var corner_y: f32 = 0.0;
+    var next_corner_x: f32 = 0.0;
+    var next_corner_y: f32 = 0.0;
 
     fn start() {
         this.hp = this.health;
-        let ahead = leader();
-        if ahead != null {
-            // This call may happen on the same pass the prefab was spawned.
-            // Sindri queues the joint until both backend bodies materialize.
-            Physics.connect_distance(ahead, this.entity, this.spacing);
-        }
+        this.dir_x = this.initial_dir_x;
+        this.dir_y = this.initial_dir_y;
+        this.transform.position.x = this.spawn_x;
+        this.transform.position.y = this.spawn_y;
+        this.transform.rotation_z = atan2(this.dir_y, this.dir_x);
     }
 
     fn spine() -> Entity {
         for boss in World.with_tag("spine") {
-            if World.exists(boss) {
-                return boss;
-            }
+            if World.exists(boss) { return boss; }
         }
         return null;
     }
@@ -39,12 +50,86 @@ script SpineSegment {
         let wanted = this.slot - 1.0;
         for part in World.with_tag("spine_segment") {
             if part == this.entity || !World.exists(part) { continue; }
-            if World.property_number(part, "group", -1.0) == this.group &&
-               World.property_number(part, "slot", -99.0) == wanted {
+            if World.property_number(part, "slot", -99.0) == wanted {
                 return part;
             }
         }
         return null;
+    }
+
+    fn next_member() -> Entity {
+        let wanted = this.slot + 1.0;
+        for part in World.with_tag("spine_segment") {
+            if part == this.entity || !World.exists(part) { continue; }
+            if World.property_number(part, "slot", -99.0) == wanted &&
+               World.property_number(part, "group", -1.0) == this.group {
+                return part;
+            }
+        }
+        return null;
+    }
+
+    fn adopt_split_messages() {
+        let new_group = World.take_signal("spine_rekey");
+        if new_group > 0.0 {
+            this.group = new_group;
+            // A severed chain starts a new local route stream. Old serials from
+            // the original head must not make the new head's first corner look stale.
+            this.consumed_turn_serial = 0.0;
+            this.corner_count = 0.0;
+        }
+
+        let promote = World.take_signal("spine_promote");
+        if promote > 0.0 {
+            this.group = promote;
+            this.head = 1.0;
+            this.issued_turn_serial = 0.0;
+            this.consumed_turn_serial = 0.0;
+            this.corner_count = 0.0;
+
+            let vx = Physics.velocity_x(this.entity);
+            let vy = Physics.velocity_y(this.entity);
+            if abs(vx) > 0.01 {
+                this.dir_x = 1.0;
+                if vx < 0.0 { this.dir_x = -1.0; }
+                this.dir_y = 0.0;
+            } else if abs(vy) > 0.01 {
+                this.dir_x = 0.0;
+                this.dir_y = 1.0;
+                if vy < 0.0 { this.dir_y = -1.0; }
+            } else {
+                let player = World.find("Player");
+                if player != null { choose_initial_direction(player); }
+            }
+        }
+    }
+
+    fn consume_turn_signal() {
+        let serial = World.take_signal("spine_turn_serial");
+        if serial <= 0.0 { return; }
+        let x = World.take_signal("spine_turn_x");
+        let y = World.take_signal("spine_turn_y");
+        if serial <= this.consumed_turn_serial { return; }
+        this.consumed_turn_serial = serial;
+
+        if this.corner_count <= 0.0 {
+            this.corner_x = x;
+            this.corner_y = y;
+            this.corner_count = 1.0;
+        } else {
+            this.next_corner_x = x;
+            this.next_corner_y = y;
+            this.corner_count = 2.0;
+        }
+    }
+
+    fn forward_corner(x: f32, y: f32) {
+        let next = next_member();
+        if next == null { return; }
+        this.issued_turn_serial += 1.0;
+        World.send_signal(next, "spine_turn_x", x);
+        World.send_signal(next, "spine_turn_y", y);
+        World.send_signal(next, "spine_turn_serial", this.issued_turn_serial);
     }
 
     fn update(dt: f32) {
@@ -52,72 +137,106 @@ script SpineSegment {
             Physics.set_velocity(this.entity, 0.0, 0.0);
             return;
         }
-        this.turn_clock -= dt;
+
+        adopt_split_messages();
+        consume_turn_signal();
         receive_hits();
         if !World.exists(this.entity) { return; }
         if this.head > 0.0 { grid_hunt(); return; }
+
         let ahead = leader();
         if ahead == null {
-            // If the predecessor disappeared for any reason, this becomes a
-            // genuine severed head instead of freezing as an orphaned link.
             this.head = 1.0;
+            this.group = this.slot + 1.0;
+            this.issued_turn_serial = 0.0;
+            this.consumed_turn_serial = 0.0;
+            this.corner_count = 0.0;
+            let player = World.find("Player");
+            if player != null { choose_initial_direction(player); }
             grid_hunt();
             return;
         }
-        follow(ahead);
+        follow(ahead, dt);
     }
 
-    fn follow(ahead: Entity) {
-        let ax = ahead.transform.position.x;
-        let ay = ahead.transform.position.y;
+    fn axis_velocity(distance: f32, dt: f32, speed: f32) -> f32 {
+        if abs(distance) <= 0.0001 { return 0.0; }
+        return max(-speed, min(speed, distance / max(dt, 0.0001)));
+    }
+
+    fn follow_corner(dt: f32, speed: f32) -> bool {
+        while this.corner_count > 0.0 {
+            let dx = this.corner_x - this.transform.position.x;
+            let dy = this.corner_y - this.transform.position.y;
+            var vx: f32 = 0.0;
+            var vy: f32 = 0.0;
+            // Finish the lane we entered on before taking the corner.
+            // Choosing X merely because of tiny cross-axis drift lets a vertical
+            // follower peel sideways before it has reached the recorded point.
+            if abs(this.dir_x) > abs(this.dir_y) {
+                if abs(dx) > 0.0001 { vx = axis_velocity(dx, dt, speed); }
+                else if abs(dy) > 0.0001 { vy = axis_velocity(dy, dt, speed); }
+            } else {
+                if abs(dy) > 0.0001 { vy = axis_velocity(dy, dt, speed); }
+                else if abs(dx) > 0.0001 { vx = axis_velocity(dx, dt, speed); }
+            }
+            if abs(vx) <= 0.0001 && abs(vy) <= 0.0001 {
+                // This section has now genuinely visited the predecessor's
+                // corner. Only now may the next section learn about that corner.
+                forward_corner(this.corner_x, this.corner_y);
+                this.corner_count -= 1.0;
+                this.corner_x = this.next_corner_x;
+                this.corner_y = this.next_corner_y;
+                continue;
+            }
+            Physics.set_velocity(this.entity, vx, vy);
+            if abs(vx) > 0.0001 {
+                this.dir_x = 1.0;
+                if vx < 0.0 { this.dir_x = -1.0; }
+                this.dir_y = 0.0;
+            } else {
+                this.dir_x = 0.0;
+                this.dir_y = 1.0;
+                if vy < 0.0 { this.dir_y = -1.0; }
+            }
+            this.transform.rotation_z = atan2(vy, vx);
+            return true;
+        }
+        return false;
+    }
+
+    fn follow(ahead: Entity, dt: f32) {
         let avx = Physics.velocity_x(ahead);
         let avy = Physics.velocity_y(ahead);
-        let speed = 5.4;
-        let snap = 0.07;
-        var vx: f32 = 0.0;
-        var vy: f32 = 0.0;
+        let speed = max(abs(avx), abs(avy));
 
-        // Steering follows the leader's lane so corners stay orthogonal. The
-        // distance joint is authoritative for connectivity; this code no longer
-        // teleports transforms in an attempt to fake a physical connection.
-        if abs(avx) >= abs(avy) && abs(avx) > 0.01 {
-            let cross = ay - this.transform.position.y;
-            if abs(cross) > snap {
-                if cross > 0.0 { vy = speed; } else { vy = -speed; }
-            } else {
-                var target_x = ax - this.spacing;
-                if avx < 0.0 { target_x = ax + this.spacing; }
-                let along = target_x - this.transform.position.x;
-                if along > snap { vx = speed; }
-                if along < -snap { vx = -speed; }
-            }
+        if follow_corner(dt, speed) { return; }
+
+        // The spawn offset already establishes the gap. Copying the leader's
+        // cardinal velocity preserves that gap along a straight lane. Trying
+        // to reconstruct a point `spacing` behind the leader after a corner
+        // sends the follower backwards into space the leader never visited.
+        Physics.set_velocity(this.entity, avx, avy);
+        if abs(avx) > 0.01 {
+            this.dir_x = 1.0;
+            if avx < 0.0 { this.dir_x = -1.0; }
+            this.dir_y = 0.0;
+            this.transform.rotation_z = atan2(avy, avx);
         } else if abs(avy) > 0.01 {
-            let cross = ax - this.transform.position.x;
-            if abs(cross) > snap {
-                if cross > 0.0 { vx = speed; } else { vx = -speed; }
-            } else {
-                var target_y = ay - this.spacing;
-                if avy < 0.0 { target_y = ay + this.spacing; }
-                let along = target_y - this.transform.position.y;
-                if along > snap { vy = speed; }
-                if along < -snap { vy = -speed; }
-            }
-        } else {
-            let dx = ax - this.transform.position.x;
-            let dy = ay - this.transform.position.y;
-            if abs(dx) > abs(dy) {
-                if dx > this.spacing { vx = speed; }
-                if dx < -this.spacing { vx = -speed; }
-            } else {
-                if dy > this.spacing { vy = speed; }
-                if dy < -this.spacing { vy = -speed; }
-            }
+            this.dir_x = 0.0;
+            this.dir_y = 1.0;
+            if avy < 0.0 { this.dir_y = -1.0; }
+            this.transform.rotation_z = atan2(avy, avx);
         }
+    }
 
-        Physics.set_velocity(this.entity, vx, vy);
-        if abs(vx) + abs(vy) > 0.01 {
-            this.transform.rotation_z = atan2(vy, vx);
-        }
+    fn publish_group_turn(x: f32, y: f32) {
+        let next = next_member();
+        if next == null { return; }
+        this.issued_turn_serial += 1.0;
+        World.send_signal(next, "spine_turn_x", x);
+        World.send_signal(next, "spine_turn_y", y);
+        World.send_signal(next, "spine_turn_serial", this.issued_turn_serial);
     }
 
     fn half_x() -> f32 {
@@ -132,7 +251,7 @@ script SpineSegment {
         return 11.0 * 0.5 / aspect - 0.9;
     }
 
-    fn choose_turn(player: Entity) {
+    fn choose_initial_direction(player: Entity) {
         let dx = player.transform.position.x - this.transform.position.x;
         let dy = player.transform.position.y - this.transform.position.y;
         if abs(dx) > abs(dy) {
@@ -142,7 +261,20 @@ script SpineSegment {
             this.dir_x = 0.0;
             this.dir_y = 1.0; if dy < 0.0 { this.dir_y = -1.0; }
         }
-        this.turn_clock = 0.55;
+    }
+
+    fn turn_from_vertical_edge(player: Entity) {
+        let dx = player.transform.position.x - this.transform.position.x;
+        this.dir_x = 1.0;
+        if dx < 0.0 { this.dir_x = -1.0; }
+        this.dir_y = 0.0;
+    }
+
+    fn turn_from_horizontal_edge(player: Entity) {
+        let dy = player.transform.position.y - this.transform.position.y;
+        this.dir_x = 0.0;
+        this.dir_y = 1.0;
+        if dy < 0.0 { this.dir_y = -1.0; }
     }
 
     fn grid_hunt() {
@@ -152,21 +284,21 @@ script SpineSegment {
         let hy = half_y();
         let x = this.transform.position.x;
         let y = this.transform.position.y;
-        var edge: f32 = 0.0;
-        if this.dir_x > 0.0 && x >= hx { edge = 1.0; }
-        if this.dir_x < 0.0 && x <= -hx { edge = 1.0; }
-        if this.dir_y > 0.0 && y >= hy { edge = 1.0; }
-        if this.dir_y < 0.0 && y <= -hy { edge = 1.0; }
-        if this.turn_clock <= 0.0 || edge > 0.0 { choose_turn(player); }
-        if x >= hx && this.dir_x > 0.0 { this.dir_x = 0.0; this.dir_y = -1.0; }
-        if x <= -hx && this.dir_x < 0.0 { this.dir_x = 0.0; this.dir_y = 1.0; }
-        if y >= hy && this.dir_y > 0.0 { this.dir_y = 0.0; this.dir_x = 1.0; }
-        if y <= -hy && this.dir_y < 0.0 { this.dir_y = 0.0; this.dir_x = -1.0; }
+        let margin = 0.12;
+        var turning: f32 = 0.0;
+
+        if this.dir_x > 0.0 && x >= hx - margin { turning = 1.0; turn_from_horizontal_edge(player); }
+        else if this.dir_x < 0.0 && x <= -hx + margin { turning = 1.0; turn_from_horizontal_edge(player); }
+        else if this.dir_y > 0.0 && y >= hy - margin { turning = 1.0; turn_from_vertical_edge(player); }
+        else if this.dir_y < 0.0 && y <= -hy + margin { turning = 1.0; turn_from_vertical_edge(player); }
+
+        if turning > 0.0 { publish_group_turn(x, y); }
         Physics.set_velocity(this.entity, this.dir_x * 3.55, this.dir_y * 3.55);
         this.transform.rotation_z = atan2(this.dir_y, this.dir_x);
     }
 
     fn receive_hits() {
+        this.hp -= World.take_signal("hazard_damage");
         for hit in Physics.sensor_entered() {
             if !World.exists(hit) { continue; }
             if World.has_tag(hit, "player_damage") {
@@ -193,14 +325,23 @@ script SpineSegment {
     }
 
     fn split() {
+        let new_group = this.slot + 1.0;
+        let next_slot = this.slot + 1.0;
+
+        for part in World.with_tag("spine_segment") {
+            if part == this.entity || !World.exists(part) { continue; }
+            let part_slot = World.property_number(part, "slot", -99.0);
+            if part_slot > this.slot {
+                World.send_signal(part, "spine_rekey", new_group);
+                if part_slot == next_slot {
+                    World.send_signal(part, "spine_promote", new_group);
+                }
+            }
+        }
+
         Effects.burst(this.entity);
         Game.set("screen_trauma", max(Game.get("screen_trauma", 0.0), 0.22));
         Audio.play("audio/kill.wav", 0.25);
-        // Removing this body removes its attached distance joints in the physics
-        // world, physically severing the chain at exactly the destroyed link.
-        // On its own update, the next section sees that its predecessor is gone
-        // and promotes its own live `head` field. A running script owns that
-        // field; another script cannot rewrite its authored starting properties.
         World.despawn(this.entity);
     }
 }

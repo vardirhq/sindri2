@@ -5,7 +5,6 @@
 //! its full independent body without Decay errors.
 
 use orbital_baked::Run;
-use serde_json::json;
 use sindri_core::EntityId;
 use sindri_decay::{ScriptComponent, ScriptValue};
 
@@ -75,20 +74,47 @@ fn tagged(run: &Run, tag: &str) -> Vec<EntityId> {
 fn segment_at(run: &Run, wanted_slot: f64) -> EntityId {
     tagged(run, "spine_segment")
         .into_iter()
-        .find(|entity| {
-            run.components
-                .get::<ScriptComponent>(&run.world, *entity)
-                .ok()
-                .flatten()
-                .and_then(|script| {
-                    script
-                        .properties
-                        .get("slot")
-                        .and_then(serde_json::Value::as_f64)
-                })
-                == Some(wanted_slot)
-        })
+        .find(|entity| segment_slot(run, *entity) == Some(wanted_slot))
         .unwrap_or_else(|| panic!("Spine segment {wanted_slot} exists"))
+}
+
+fn segment_slot(run: &Run, entity: EntityId) -> Option<f64> {
+    run.components
+        .get::<ScriptComponent>(&run.world, entity)
+        .ok()
+        .flatten()
+        .and_then(|script| {
+            script
+                .properties
+                .get("slot")
+                .and_then(serde_json::Value::as_f64)
+        })
+}
+
+fn position(run: &Run, entity: EntityId) -> [f32; 2] {
+    let position = run
+        .world
+        .get(entity)
+        .and_then(|data| data.transform_3d.as_ref())
+        .expect("every Spine section has a transform")
+        .position;
+    [position[0], position[1]]
+}
+
+fn point_is_on_route(point: [f32; 2], route: &[[f32; 2]]) -> bool {
+    const EPSILON: f32 = 0.002;
+    route.windows(2).any(|edge| {
+        let [from, to] = [edge[0], edge[1]];
+        let within_x =
+            point[0] >= from[0].min(to[0]) - EPSILON && point[0] <= from[0].max(to[0]) + EPSILON;
+        let within_y =
+            point[1] >= from[1].min(to[1]) - EPSILON && point[1] <= from[1].max(to[1]) + EPSILON;
+        let vertical =
+            (from[0] - to[0]).abs() <= EPSILON && (point[0] - from[0]).abs() <= EPSILON && within_y;
+        let horizontal =
+            (from[1] - to[1]).abs() <= EPSILON && (point[1] - from[1]).abs() <= EPSILON && within_x;
+        vertical || horizontal
+    })
 }
 
 #[test]
@@ -117,6 +143,65 @@ fn spine_builds_its_nine_segment_body_at_runtime() {
 }
 
 #[test]
+fn every_spine_section_replays_one_cardinal_route() {
+    let mut run = isolated_run();
+    let boss = spawn_spine(&mut run);
+    // Build the body, then seed each predecessor's implied pre-spawn trail
+    // while all ten sections still lie on the head's first cardinal lane.
+    step(&mut run);
+
+    let mut segments = tagged(&run, "spine_segment");
+    segments.sort_by(|left, right| {
+        segment_slot(&run, *left)
+            .partial_cmp(&segment_slot(&run, *right))
+            .expect("every section has an ordered slot")
+    });
+    let chain: Vec<_> = std::iter::once(boss)
+        .chain(segments.iter().copied())
+        .collect();
+    let initial: Vec<_> = chain.iter().map(|entity| position(&run, *entity)).collect();
+    let mut routes: Vec<Vec<[f32; 2]>> = (0..chain.len())
+        .map(|leader| initial[leader..].iter().rev().copied().collect())
+        .collect();
+
+    for frame in 0..240 {
+        step(&mut run);
+        let positions: Vec<_> = chain.iter().map(|entity| position(&run, *entity)).collect();
+        for (index, entity) in chain.iter().copied().enumerate() {
+            let [vx, vy] = run
+                .physics
+                .world()
+                .linear_velocity(entity)
+                .expect("every Spine section has a physics body");
+            assert!(
+                vx.abs() <= 0.0001 || vy.abs() <= 0.0001,
+                "Spine section {entity:?} moved diagonally at ({vx:.4}, {vy:.4})"
+            );
+            if index > 0 {
+                let route_tail = routes[index - 1]
+                    .iter()
+                    .rev()
+                    .take(6)
+                    .copied()
+                    .collect::<Vec<_>>();
+                assert!(
+                    point_is_on_route(positions[index], &routes[index - 1]),
+                    "Spine section {entity:?} (slot {:?}) left its predecessor's exact route \
+                     on frame {frame}: point {:?}, predecessor {:?}, recent route {:?}",
+                    segment_slot(&run, entity),
+                    positions[index],
+                    positions[index - 1],
+                    route_tail,
+                );
+            }
+        }
+        for (route, point) in routes.iter_mut().zip(positions) {
+            route.push(point);
+        }
+    }
+}
+
+#[test]
 fn destroying_a_middle_segment_severs_and_promotes_the_rear_chain() {
     let mut run = isolated_run();
     spawn_spine(&mut run);
@@ -128,39 +213,16 @@ fn destroying_a_middle_segment_severs_and_promotes_the_rear_chain() {
     let new_head = segment_at(&run, 5.0);
     assert_eq!(
         run.physics.world().joint_count(),
-        9,
-        "the head and all nine sections begin as one tethered body"
+        0,
+        "Spine follows a cardinal predecessor route rather than behaving as a rope"
     );
-    let target = run
-        .world
-        .get(cut)
-        .and_then(|data| data.transform_3d.as_ref())
-        .expect("the middle section has a transform")
-        .position;
-    let bullet = run
-        .prefabs
-        .get("prefabs/bullet.prefab.json")
-        .expect("the bullet prefab ships")
-        .clone();
-    let shot = run.world.spawn_prefab(&bullet).expect("a shot spawns").root;
-    let shot_data = run.world.get_mut(shot).expect("the shot remains");
-    shot_data
-        .transform_3d
-        .as_mut()
-        .expect("the shot has a transform")
-        .position = target;
-    let properties = shot_data
-        .components
-        .get_mut("sindri.script")
-        .and_then(|script| script.get_mut("properties"))
-        .and_then(serde_json::Value::as_object_mut)
-        .expect("the shot has script properties");
-    properties.insert("damage".to_owned(), json!(20.0));
-    properties.insert("speed".to_owned(), json!(0.0));
+    run.scripts
+        .blackboard_mut()
+        .send_signal(cut.to_bits(), "hazard_damage", 20.0);
 
-    // The hit removes the selected body. The following physics pass retires
-    // both joints attached to it, and the rear section promotes itself without
-    // trying to mutate another running script's authored properties.
+    // Runtime damage removes the selected section, and the rear section
+    // promotes itself without trying to mutate another running script's
+    // authored properties.
     for _ in 0..3 {
         step(&mut run);
     }
@@ -173,11 +235,6 @@ fn destroying_a_middle_segment_severs_and_promotes_the_rear_chain() {
         run.count("spine_segment"),
         8,
         "only the struck section is lost"
-    );
-    assert_eq!(
-        run.physics.world().joint_count(),
-        7,
-        "the cut removes its two joints"
     );
     assert_eq!(
         run.scripts.field(new_head, "head"),
