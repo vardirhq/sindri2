@@ -27,6 +27,7 @@ script SpineSegment {
     var corner_y: f32 = 0.0;
     var next_corner_x: f32 = 0.0;
     var next_corner_y: f32 = 0.0;
+    var turn_clock: f32 = 0.0;
 
     fn start() {
         this.hp = this.health;
@@ -50,7 +51,8 @@ script SpineSegment {
         let wanted = this.slot - 1.0;
         for part in World.with_tag("spine_segment") {
             if part == this.entity || !World.exists(part) { continue; }
-            if World.property_number(part, "slot", -99.0) == wanted {
+            if World.property_number(part, "slot", -99.0) == wanted &&
+               World.property_number(part, "group", -1.0) == this.group {
                 return part;
             }
         }
@@ -73,10 +75,10 @@ script SpineSegment {
         let new_group = World.take_signal("spine_rekey");
         if new_group > 0.0 {
             this.group = new_group;
-            // A severed chain starts a new local route stream. Old serials from
-            // the original head must not make the new head's first corner look stale.
+            // Accept the promoted head's new serial stream, but keep every
+            // queued corner. Those points are the surviving rear chain's route
+            // through turns it has not reached yet.
             this.consumed_turn_serial = 0.0;
-            this.corner_count = 0.0;
         }
 
         let promote = World.take_signal("spine_promote");
@@ -86,6 +88,7 @@ script SpineSegment {
             this.issued_turn_serial = 0.0;
             this.consumed_turn_serial = 0.0;
             this.corner_count = 0.0;
+            this.turn_clock = 1.50;
 
             let vx = Physics.velocity_x(this.entity);
             let vy = Physics.velocity_y(this.entity);
@@ -142,7 +145,7 @@ script SpineSegment {
         consume_turn_signal();
         receive_hits();
         if !World.exists(this.entity) { return; }
-        if this.head > 0.0 { grid_hunt(); return; }
+        if this.head > 0.0 { grid_hunt(dt); return; }
 
         let ahead = leader();
         if ahead == null {
@@ -151,9 +154,10 @@ script SpineSegment {
             this.issued_turn_serial = 0.0;
             this.consumed_turn_serial = 0.0;
             this.corner_count = 0.0;
+            this.turn_clock = 1.50;
             let player = World.find("Player");
             if player != null { choose_initial_direction(player); }
-            grid_hunt();
+            grid_hunt(dt);
             return;
         }
         follow(ahead, dt);
@@ -263,21 +267,21 @@ script SpineSegment {
         }
     }
 
-    fn turn_from_vertical_edge(player: Entity) {
+    fn turn_from_vertical_lane(player: Entity) {
         let dx = player.transform.position.x - this.transform.position.x;
         this.dir_x = 1.0;
         if dx < 0.0 { this.dir_x = -1.0; }
         this.dir_y = 0.0;
     }
 
-    fn turn_from_horizontal_edge(player: Entity) {
+    fn turn_from_horizontal_lane(player: Entity) {
         let dy = player.transform.position.y - this.transform.position.y;
         this.dir_x = 0.0;
         this.dir_y = 1.0;
         if dy < 0.0 { this.dir_y = -1.0; }
     }
 
-    fn grid_hunt() {
+    fn grid_hunt(dt: f32) {
         let player = World.find("Player");
         if player == null { return; }
         let hx = half_x();
@@ -286,13 +290,22 @@ script SpineSegment {
         let y = this.transform.position.y;
         let margin = 0.12;
         var turning: f32 = 0.0;
+        this.turn_clock -= dt;
 
-        if this.dir_x > 0.0 && x >= hx - margin { turning = 1.0; turn_from_horizontal_edge(player); }
-        else if this.dir_x < 0.0 && x <= -hx + margin { turning = 1.0; turn_from_horizontal_edge(player); }
-        else if this.dir_y > 0.0 && y >= hy - margin { turning = 1.0; turn_from_vertical_edge(player); }
-        else if this.dir_y < 0.0 && y <= -hy + margin { turning = 1.0; turn_from_vertical_edge(player); }
+        if this.dir_x > 0.0 && x >= hx - margin { turning = 1.0; turn_from_horizontal_lane(player); }
+        else if this.dir_x < 0.0 && x <= -hx + margin { turning = 1.0; turn_from_horizontal_lane(player); }
+        else if this.dir_y > 0.0 && y >= hy - margin { turning = 1.0; turn_from_vertical_lane(player); }
+        else if this.dir_y < 0.0 && y <= -hy + margin { turning = 1.0; turn_from_vertical_lane(player); }
+        else if this.turn_clock <= 0.0 {
+            turning = 1.0;
+            if abs(this.dir_x) > 0.0 { turn_from_horizontal_lane(player); }
+            else { turn_from_vertical_lane(player); }
+        }
 
-        if turning > 0.0 { publish_group_turn(x, y); }
+        if turning > 0.0 {
+            publish_group_turn(x, y);
+            this.turn_clock = 1.50;
+        }
         Physics.set_velocity(this.entity, this.dir_x * 3.55, this.dir_y * 3.55);
         this.transform.rotation_z = atan2(this.dir_y, this.dir_x);
     }
@@ -331,7 +344,12 @@ script SpineSegment {
         for part in World.with_tag("spine_segment") {
             if part == this.entity || !World.exists(part) { continue; }
             let part_slot = World.property_number(part, "slot", -99.0);
-            if part_slot > this.slot {
+            let part_group = World.property_number(part, "group", -1.0);
+            if part_group == this.group && part_slot > this.slot {
+                // Neighbour discovery reads authored properties while the
+                // signal updates the already-running script field. Keep both
+                // views in sync so this fragment remains a coherent chain.
+                World.set_property(part, "group", new_group);
                 World.send_signal(part, "spine_rekey", new_group);
                 if part_slot == next_slot {
                     World.send_signal(part, "spine_promote", new_group);
