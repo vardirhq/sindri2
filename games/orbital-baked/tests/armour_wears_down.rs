@@ -170,10 +170,7 @@ fn spine_turns_inside_the_arena_to_hunt_the_player() {
     for _ in 0..180 {
         step(&mut run);
         let current_axis = movement_axis(velocity(&run, boss));
-        if previous_axis.is_some()
-            && current_axis.is_some()
-            && current_axis != previous_axis
-        {
+        if previous_axis.is_some() && current_axis.is_some() && current_axis != previous_axis {
             let point = position(&run, boss);
             if point[0].abs() < 4.0 && point[1].abs() < 4.0 {
                 interior_turn = Some(point);
@@ -318,11 +315,10 @@ fn a_severed_rear_chain_keeps_its_unvisited_route() {
         }
         step(&mut run);
         let positions: Vec<_> = chain.iter().map(|entity| position(&run, *entity)).collect();
-        promoted |=
-            run.scripts.field(chain[0], "head") == Some(&ScriptValue::Number(1.0));
+        promoted |= run.scripts.field(chain[0], "head") == Some(&ScriptValue::Number(1.0));
         if promoted {
-            delayed_turn |= movement_axis(velocity(&run, chain[0]))
-                != movement_axis(velocity(&run, chain[1]));
+            delayed_turn |=
+                movement_axis(velocity(&run, chain[0])) != movement_axis(velocity(&run, chain[1]));
         }
 
         for index in 1..chain.len() {
