@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use decay_semantic::{DiagnosticPhase, Environment};
+use decay_semantic::DiagnosticPhase;
 
 const SKIPPED_DIRECTORIES: &[&str] = &[".git", "node_modules", "target"];
 
