@@ -192,3 +192,53 @@ pub enum DesktopError<E: std::error::Error + 'static> {
     #[error("the application failed")]
     App(#[source] E),
 }
+
+impl<E: std::error::Error + 'static> DesktopError<E> {
+    /// Formats this failure and every source retained beneath it.
+    ///
+    /// `Display` remains concise for callers that only need the host-level
+    /// category. Diagnostics cross a process boundary in the browser, however,
+    /// so dropping the source there leaves the page unable to explain why the
+    /// application stopped.
+    pub fn diagnostic(&self) -> String {
+        let mut messages = vec![self.to_string()];
+        let mut source = std::error::Error::source(self);
+        while let Some(error) = source {
+            let message = error.to_string();
+            if messages.last().is_none_or(|previous| previous != &message) {
+                messages.push(message);
+            }
+            source = error.source();
+        }
+        messages.join(": ")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DesktopError;
+    use thiserror::Error;
+
+    #[derive(Debug, Error)]
+    #[error("main scene is missing")]
+    struct MissingScene;
+
+    #[derive(Debug, Error)]
+    #[error("could not load project")]
+    struct ProjectError {
+        #[source]
+        source: MissingScene,
+    }
+
+    #[test]
+    fn application_diagnostic_preserves_the_source_chain() {
+        let error = DesktopError::App(ProjectError {
+            source: MissingScene,
+        });
+
+        assert_eq!(
+            error.diagnostic(),
+            "the application failed: could not load project: main scene is missing"
+        );
+    }
+}
