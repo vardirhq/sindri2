@@ -101,6 +101,23 @@ fn position(run: &Run, entity: EntityId) -> [f32; 2] {
     [position[0], position[1]]
 }
 
+fn velocity(run: &Run, entity: EntityId) -> [f32; 2] {
+    run.physics
+        .world()
+        .linear_velocity(entity)
+        .expect("every Spine section has a physics body")
+}
+
+fn movement_axis([vx, vy]: [f32; 2]) -> Option<usize> {
+    if vx.abs() > 0.01 {
+        Some(0)
+    } else if vy.abs() > 0.01 {
+        Some(1)
+    } else {
+        None
+    }
+}
+
 fn point_is_on_route(point: [f32; 2], route: &[[f32; 2]]) -> bool {
     const EPSILON: f32 = 0.002;
     route.windows(2).any(|edge| {
@@ -139,6 +156,36 @@ fn spine_builds_its_nine_segment_body_at_runtime() {
         segments.len(),
         9,
         "Spine should enter the fight with nine independent body sections"
+    );
+}
+
+#[test]
+fn spine_turns_inside_the_arena_to_hunt_the_player() {
+    let mut run = isolated_run();
+    let boss = spawn_spine(&mut run);
+    step(&mut run);
+
+    let mut previous_axis = movement_axis(velocity(&run, boss));
+    let mut interior_turn = None;
+    for _ in 0..180 {
+        step(&mut run);
+        let current_axis = movement_axis(velocity(&run, boss));
+        if previous_axis.is_some()
+            && current_axis.is_some()
+            && current_axis != previous_axis
+        {
+            let point = position(&run, boss);
+            if point[0].abs() < 4.0 && point[1].abs() < 4.0 {
+                interior_turn = Some(point);
+                break;
+            }
+        }
+        previous_axis = current_axis;
+    }
+
+    assert!(
+        interior_turn.is_some(),
+        "Spine should turn through the playable interior instead of waiting for an arena edge"
     );
 }
 
@@ -240,6 +287,61 @@ fn destroying_a_middle_segment_severs_and_promotes_the_rear_chain() {
         run.scripts.field(new_head, "head"),
         Some(&ScriptValue::Number(1.0)),
         "the first surviving rear section becomes an autonomous head"
+    );
+}
+
+#[test]
+fn a_severed_rear_chain_keeps_its_unvisited_route() {
+    let mut run = isolated_run();
+    spawn_spine(&mut run);
+    step(&mut run);
+
+    let cut = segment_at(&run, 4.0);
+    let chain = [
+        segment_at(&run, 5.0),
+        segment_at(&run, 6.0),
+        segment_at(&run, 7.0),
+        segment_at(&run, 8.0),
+    ];
+    let initial: Vec<_> = chain.iter().map(|entity| position(&run, *entity)).collect();
+    let mut routes: Vec<Vec<[f32; 2]>> = (0..chain.len())
+        .map(|leader| initial[leader..].iter().rev().copied().collect())
+        .collect();
+    let mut promoted = false;
+    let mut delayed_turn = false;
+
+    for frame in 0..270 {
+        if frame == 90 {
+            run.scripts
+                .blackboard_mut()
+                .send_signal(cut.to_bits(), "hazard_damage", 20.0);
+        }
+        step(&mut run);
+        let positions: Vec<_> = chain.iter().map(|entity| position(&run, *entity)).collect();
+        promoted |=
+            run.scripts.field(chain[0], "head") == Some(&ScriptValue::Number(1.0));
+        if promoted {
+            delayed_turn |= movement_axis(velocity(&run, chain[0]))
+                != movement_axis(velocity(&run, chain[1]));
+        }
+
+        for index in 1..chain.len() {
+            assert!(
+                point_is_on_route(positions[index], &routes[index - 1]),
+                "rear Spine slot {} abandoned its predecessor's route after the split on frame \
+                 {frame}",
+                index + 5,
+            );
+        }
+        for (route, point) in routes.iter_mut().zip(positions) {
+            route.push(point);
+        }
+    }
+
+    assert!(promoted, "the rear chain gained its own head");
+    assert!(
+        delayed_turn,
+        "a rear follower should finish the old lane before copying its promoted head's turn"
     );
 }
 
