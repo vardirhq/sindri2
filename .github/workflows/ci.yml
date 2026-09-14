@@ -67,7 +67,8 @@ jobs:
             git diff --name-only --diff-filter=ACMRT HEAD^ HEAD -- '*.decay'
           )
 
-          if ! git diff --quiet HEAD^ HEAD --             tools/decay-lsp crates/sindri-decay             decay/crates/decay-semantic decay/crates/decay-syntax
+          if ! git diff --quiet HEAD^ HEAD -- tools/decay-lsp crates/sindri-decay \
+            decay/crates/decay-semantic decay/crates/decay-syntax
           then
             scripts=(game games examples)
           fi
