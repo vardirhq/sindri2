@@ -116,26 +116,52 @@ impl ProjectLoaders {
             format!("assets/{}", manifest.content_root())
         };
         let source = FetchAssetSource::new(&root)?;
-        let mut scene = AssetLoader::new(source.clone(), queue_config(&manifest, AssetKind::Scene), SceneAssetDecoder)?
-            .with_manifest(manifest.clone());
-        let mut scripts = AssetLoader::new(source.clone(), queue_config(&manifest, AssetKind::Script), TextAssetDecoder)?
-            .with_manifest(manifest.clone());
-        let mut textures = AssetLoader::new(source.clone(), queue_config(&manifest, AssetKind::Texture), TextureAssetDecoder)?
-            .with_manifest(manifest.clone());
-        let mut fonts = AssetLoader::new(source.clone(), queue_config(&manifest, AssetKind::Font), FontAssetDecoder)?
-            .with_manifest(manifest.clone());
-        let mut audio = AssetLoader::new(source.clone(), queue_config(&manifest, AssetKind::Audio), AudioAssetDecoder)?
-            .with_manifest(manifest.clone());
-        let mut sheets = AssetLoader::new(source.clone(), queue_config(&manifest, AssetKind::Sheet), SpriteSheetAssetDecoder)?
-            .with_manifest(manifest.clone());
-        let mut tile_sets = AssetLoader::new(source.clone(), queue_config(&manifest, AssetKind::TileSet), TileSetAssetDecoder)?
-            .with_manifest(manifest.clone());
-        let mut prefabs = AssetLoader::new(source.clone(), queue_config(&manifest, AssetKind::Prefab), PrefabAssetDecoder)?
-            .with_manifest(manifest.clone());
-        let mut profiles = AssetLoader::new(source.clone(), queue_config(&manifest, AssetKind::Profile), ProfileAssetDecoder)?
-            .with_manifest(manifest.clone());
+        let config = |kind| queue_config(&manifest, kind);
+        let mut scene =
+            AssetLoader::new(source.clone(), config(AssetKind::Scene), SceneAssetDecoder)?
+                .with_manifest(manifest.clone());
+        let mut scripts =
+            AssetLoader::new(source.clone(), config(AssetKind::Script), TextAssetDecoder)?
+                .with_manifest(manifest.clone());
+        let mut textures = AssetLoader::new(
+            source.clone(),
+            config(AssetKind::Texture),
+            TextureAssetDecoder,
+        )?
+        .with_manifest(manifest.clone());
+        let mut fonts =
+            AssetLoader::new(source.clone(), config(AssetKind::Font), FontAssetDecoder)?
+                .with_manifest(manifest.clone());
+        let mut audio =
+            AssetLoader::new(source.clone(), config(AssetKind::Audio), AudioAssetDecoder)?
+                .with_manifest(manifest.clone());
+        let mut sheets = AssetLoader::new(
+            source.clone(),
+            config(AssetKind::Sheet),
+            SpriteSheetAssetDecoder,
+        )?
+        .with_manifest(manifest.clone());
+        let mut tile_sets = AssetLoader::new(
+            source.clone(),
+            config(AssetKind::TileSet),
+            TileSetAssetDecoder,
+        )?
+        .with_manifest(manifest.clone());
+        let mut prefabs = AssetLoader::new(
+            source.clone(),
+            config(AssetKind::Prefab),
+            PrefabAssetDecoder,
+        )?
+        .with_manifest(manifest.clone());
+        let mut profiles = AssetLoader::new(
+            source.clone(),
+            config(AssetKind::Profile),
+            ProfileAssetDecoder,
+        )?
+        .with_manifest(manifest.clone());
         let mut styles =
-            AssetLoader::new(source, queue_config(&manifest, AssetKind::Other), TextAssetDecoder)?.with_manifest(manifest.clone());
+            AssetLoader::new(source, config(AssetKind::Other), TextAssetDecoder)?
+                .with_manifest(manifest.clone());
 
         // From the manifest rather than from a list compiled into this binary.
         // Those lists were the thing that made a project's host something
@@ -332,10 +358,7 @@ mod tests {
             manifest.insert_as(id, AssetKind::Texture, b"texture");
         }
 
-        assert_eq!(
-            queue_config(&manifest, AssetKind::Texture).capacity,
-            65
-        );
+        assert_eq!(queue_config(&manifest, AssetKind::Texture).capacity, 65);
         assert_eq!(queue_config(&manifest, AssetKind::Scene).capacity, 1);
     }
 }
