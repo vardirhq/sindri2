@@ -121,9 +121,10 @@ impl<A: DesktopApp> Host<A> {
     /// which is the same arrangement as the canvas it is handed rather than
     /// creates.
     fn fail(&mut self, event_loop: &ActiveEventLoop, error: DesktopError<A::Error>) {
-        log::error!("{error}");
+        let diagnostic = error.diagnostic();
+        log::error!("{diagnostic}");
         #[cfg(target_arch = "wasm32")]
-        announce_failure(&error.to_string());
+        announce_failure(&diagnostic);
         if self.failure.is_none() {
             self.failure = Some(error);
         }

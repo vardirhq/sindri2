@@ -53,6 +53,8 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Fixed
 
+- Fixed native and browser hosts discarding the underlying cause of application
+  failures at their reporting boundary.
 - Fixed numerous editor issues involving selection, unsaved changes, undo/redo,
   viewport color handling, hierarchy layout, project browsing, asset loading,
   console reporting, and controls that previously did nothing.

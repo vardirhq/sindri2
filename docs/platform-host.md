@@ -48,6 +48,12 @@ Every hook returns a `Result`. A failure stops the host and comes back out of
 `run` rather than being logged and drawn over, which is what the examples used to
 do with `expect` in the middle of a frame.
 
+The host preserves the complete standard-error source chain when it reports that
+failure. Native logging and the browser's `sindri:failed` event receive the same
+diagnostic, so an application error cannot be reduced to its host-level category
+at the platform boundary. The event detail remains a string owned by the page;
+the host provides the explanation without deciding how it is presented.
+
 ## Time
 
 The host reads a clock and derives a delta, rather than letting each application
