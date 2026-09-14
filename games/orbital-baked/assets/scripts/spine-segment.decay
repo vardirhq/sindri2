@@ -2,7 +2,9 @@
 //
 // Like an Aegis shield plate, every section owns its own script, health,
 // collider and kinematic body. What connects Spine is a runtime cardinal trail:
-// heads broadcast exact corners and sections update their own state locally.
+// each section receives a corner from the piece ahead, reaches that coordinate,
+// then hands the same corner to the next piece. The route therefore propagates
+// through the body instead of being broadcast ahead of the body itself.
 script SpineSegment {
     @export let slot: f32 = 0.0;
     @export var group: f32 = 0.0;
@@ -55,18 +57,36 @@ script SpineSegment {
         return null;
     }
 
+    fn next_member() -> Entity {
+        let wanted = this.slot + 1.0;
+        for part in World.with_tag("spine_segment") {
+            if part == this.entity || !World.exists(part) { continue; }
+            if World.property_number(part, "slot", -99.0) == wanted &&
+               World.property_number(part, "group", -1.0) == this.group {
+                return part;
+            }
+        }
+        return null;
+    }
+
     fn adopt_split_messages() {
         let new_group = World.take_signal("spine_rekey");
-        if new_group > 0.0 { this.group = new_group; }
+        if new_group > 0.0 {
+            this.group = new_group;
+            // A severed chain starts a new local route stream. Old serials from
+            // the original head must not make the new head's first corner look stale.
+            this.consumed_turn_serial = 0.0;
+            this.corner_count = 0.0;
+        }
 
         let promote = World.take_signal("spine_promote");
         if promote > 0.0 {
             this.group = promote;
             this.head = 1.0;
             this.issued_turn_serial = 0.0;
+            this.consumed_turn_serial = 0.0;
+            this.corner_count = 0.0;
 
-            // Continue along the route already being travelled. Becoming a
-            // head changes ownership of the chain, not the current path.
             let vx = Physics.velocity_x(this.entity);
             let vy = Physics.velocity_y(this.entity);
             if abs(vx) > 0.01 {
@@ -87,10 +107,8 @@ script SpineSegment {
     fn consume_turn_signal() {
         let serial = World.take_signal("spine_turn_serial");
         if serial <= 0.0 { return; }
-        let turn_group = World.take_signal("spine_turn_group");
         let x = World.take_signal("spine_turn_x");
         let y = World.take_signal("spine_turn_y");
-        if turn_group != this.group { return; }
         if serial <= this.consumed_turn_serial { return; }
         this.consumed_turn_serial = serial;
 
@@ -103,6 +121,15 @@ script SpineSegment {
             this.next_corner_y = y;
             this.corner_count = 2.0;
         }
+    }
+
+    fn forward_corner(x: f32, y: f32) {
+        let next = next_member();
+        if next == null { return; }
+        this.issued_turn_serial += 1.0;
+        World.send_signal(next, "spine_turn_x", x);
+        World.send_signal(next, "spine_turn_y", y);
+        World.send_signal(next, "spine_turn_serial", this.issued_turn_serial);
     }
 
     fn update(dt: f32) {
@@ -119,10 +146,11 @@ script SpineSegment {
 
         let ahead = leader();
         if ahead == null {
-            // This is only a fallback for unusual despawns. Normal combat
-            // severing promotes the correct rear piece explicitly in split().
             this.head = 1.0;
             this.group = this.slot + 1.0;
+            this.issued_turn_serial = 0.0;
+            this.consumed_turn_serial = 0.0;
+            this.corner_count = 0.0;
             let player = World.find("Player");
             if player != null { choose_initial_direction(player); }
             grid_hunt();
@@ -145,6 +173,9 @@ script SpineSegment {
             if abs(dx) > 0.0001 { vx = axis_velocity(dx, dt, speed); }
             else if abs(dy) > 0.0001 { vy = axis_velocity(dy, dt, speed); }
             else {
+                // This section has now genuinely visited the predecessor's
+                // corner. Only now may the next section learn about that corner.
+                forward_corner(this.corner_x, this.corner_y);
                 this.corner_count -= 1.0;
                 this.corner_x = this.next_corner_x;
                 this.corner_y = this.next_corner_y;
@@ -169,8 +200,6 @@ script SpineSegment {
 
         if follow_corner(dt, speed) { return; }
 
-        // Between authoritative corners this member only maintains spacing on
-        // its predecessor's current lane. It never infers a turn.
         if abs(avx) >= abs(avy) && abs(avx) > 0.01 {
             let cross = ay - this.transform.position.y;
             if abs(cross) > aligned {
@@ -198,14 +227,12 @@ script SpineSegment {
     }
 
     fn publish_group_turn(x: f32, y: f32) {
+        let next = next_member();
+        if next == null { return; }
         this.issued_turn_serial += 1.0;
-        for part in World.with_tag("spine_segment") {
-            if part == this.entity || !World.exists(part) { continue; }
-            World.send_signal(part, "spine_turn_group", this.group);
-            World.send_signal(part, "spine_turn_x", x);
-            World.send_signal(part, "spine_turn_y", y);
-            World.send_signal(part, "spine_turn_serial", this.issued_turn_serial);
-        }
+        World.send_signal(next, "spine_turn_x", x);
+        World.send_signal(next, "spine_turn_y", y);
+        World.send_signal(next, "spine_turn_serial", this.issued_turn_serial);
     }
 
     fn half_x() -> f32 {
@@ -297,9 +324,6 @@ script SpineSegment {
         let new_group = this.slot + 1.0;
         let next_slot = this.slot + 1.0;
 
-        // The dying section performs the cut while it still knows exactly
-        // which pieces are behind it. Runtime messages let each surviving
-        // section mutate its own script state, which is the supported model.
         for part in World.with_tag("spine_segment") {
             if part == this.entity || !World.exists(part) { continue; }
             let part_slot = World.property_number(part, "slot", -99.0);
