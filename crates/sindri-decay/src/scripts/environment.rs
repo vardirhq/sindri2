@@ -339,10 +339,9 @@ pub(super) fn add_ui_surface(environment: &mut Environment) {
                 },
                 return_type: match call {
                     UiCall::SliderValue => Type::F32,
-                    UiCall::Hovered
-                    | UiCall::Pressed
-                    | UiCall::Held
-                    | UiCall::SliderChanged => Type::Bool,
+                    UiCall::Hovered | UiCall::Pressed | UiCall::Held | UiCall::SliderChanged => {
+                        Type::Bool
+                    }
                     _ => Type::Unit,
                 },
             },
