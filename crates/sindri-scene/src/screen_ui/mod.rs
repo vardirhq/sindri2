@@ -11,7 +11,6 @@ mod slider;
 use std::collections::BTreeMap;
 
 use crate::{UiAnchor, UiImageComponent, UiTextComponent};
-use serde::Deserialize;
 use sindri_core::{
     ComponentRegistryError, ComponentSchemaRegistry, EntityId, PressId, PressPhase, Presses,
     SceneComponent, World,
@@ -170,7 +169,11 @@ impl ScreenUi {
         };
         if press.began_now() {
             if let Some(entity) = self.hovered
-                && world.get(entity).and_then(|data| data.components.get(UiSliderComponent::TYPE_NAME)).and_then(|payload| serde_json::from_value::<UiSliderComponent>(payload.clone()).ok()).is_some_and(|slider| !slider.disabled)
+                && world
+                    .get(entity)
+                    .and_then(|data| data.components.get(UiSliderComponent::TYPE_NAME))
+                    .and_then(|payload| serde_json::from_value::<UiSliderComponent>(payload.clone()).ok())
+                    .is_some_and(|slider| !slider.disabled)
             {
                 self.slider_drag = Some((entity, press.id()));
                 self.pressing = None;
@@ -208,6 +211,9 @@ impl ScreenUi {
         let Some(payload) = data.components.get_mut(UiSliderComponent::TYPE_NAME) else { return; };
         let Ok(slider) = serde_json::from_value::<UiSliderComponent>(payload.clone()) else { return; };
         if slider.disabled { return; }
+        if element.rect.size[0] <= 0.0 || element.rect.size[1] <= 0.0 {
+            return;
+        }
         let normalized = match slider.orientation {
             UiSliderOrientation::Horizontal => {
                 let low = element.rect.center[0] - element.rect.size[0] / 2.0;
