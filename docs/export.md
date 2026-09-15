@@ -104,6 +104,12 @@ used to carry a list of asset IDs per kind, compiled in — which meant adding a
 texture meant editing Rust, and a project the host crate had never heard of
 could not be exported at all. `AssetKind` in the manifest is what replaced that.
 
+Each kind has its own bounded asynchronous queue. The host sizes that queue from
+the manifest before requesting the kind, while keeping the number of concurrent
+fetches small. The bound therefore limits the project described by the manifest
+instead of imposing the asset pipeline's default queue size as an undocumented
+maximum number of textures, scripts, or other assets in an exported game.
+
 ## What a browser is told when it cannot run this
 
 The page checks for a canvas, for `navigator.gpu`, and for an adapter that

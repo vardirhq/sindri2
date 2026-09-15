@@ -98,6 +98,12 @@ pub(super) struct ProjectLoaders {
     manifest: AssetManifest,
 }
 
+fn queue_config(manifest: &AssetManifest, kind: AssetKind) -> AssetLoadQueueConfig {
+    let defaults = AssetLoadQueueConfig::default();
+    let capacity = manifest.ids_of(kind).count().max(1);
+    AssetLoadQueueConfig::new(defaults.max_concurrent, capacity)
+}
+
 impl ProjectLoaders {
     pub(super) fn new(manifest: AssetManifest) -> Result<Self, GatherError> {
         // Where the export put the assets, which the manifest names because it
@@ -110,27 +116,51 @@ impl ProjectLoaders {
             format!("assets/{}", manifest.content_root())
         };
         let source = FetchAssetSource::new(&root)?;
-        let config = AssetLoadQueueConfig::default();
-        let mut scene = AssetLoader::new(source.clone(), config, SceneAssetDecoder)?
+        let config = |kind| queue_config(&manifest, kind);
+        let mut scene =
+            AssetLoader::new(source.clone(), config(AssetKind::Scene), SceneAssetDecoder)?
+                .with_manifest(manifest.clone());
+        let mut scripts =
+            AssetLoader::new(source.clone(), config(AssetKind::Script), TextAssetDecoder)?
+                .with_manifest(manifest.clone());
+        let mut textures = AssetLoader::new(
+            source.clone(),
+            config(AssetKind::Texture),
+            TextureAssetDecoder,
+        )?
+        .with_manifest(manifest.clone());
+        let mut fonts =
+            AssetLoader::new(source.clone(), config(AssetKind::Font), FontAssetDecoder)?
+                .with_manifest(manifest.clone());
+        let mut audio =
+            AssetLoader::new(source.clone(), config(AssetKind::Audio), AudioAssetDecoder)?
+                .with_manifest(manifest.clone());
+        let mut sheets = AssetLoader::new(
+            source.clone(),
+            config(AssetKind::Sheet),
+            SpriteSheetAssetDecoder,
+        )?
+        .with_manifest(manifest.clone());
+        let mut tile_sets = AssetLoader::new(
+            source.clone(),
+            config(AssetKind::TileSet),
+            TileSetAssetDecoder,
+        )?
+        .with_manifest(manifest.clone());
+        let mut prefabs = AssetLoader::new(
+            source.clone(),
+            config(AssetKind::Prefab),
+            PrefabAssetDecoder,
+        )?
+        .with_manifest(manifest.clone());
+        let mut profiles = AssetLoader::new(
+            source.clone(),
+            config(AssetKind::Profile),
+            ProfileAssetDecoder,
+        )?
+        .with_manifest(manifest.clone());
+        let mut styles = AssetLoader::new(source, config(AssetKind::Other), TextAssetDecoder)?
             .with_manifest(manifest.clone());
-        let mut scripts = AssetLoader::new(source.clone(), config, TextAssetDecoder)?
-            .with_manifest(manifest.clone());
-        let mut textures = AssetLoader::new(source.clone(), config, TextureAssetDecoder)?
-            .with_manifest(manifest.clone());
-        let mut fonts = AssetLoader::new(source.clone(), config, FontAssetDecoder)?
-            .with_manifest(manifest.clone());
-        let mut audio = AssetLoader::new(source.clone(), config, AudioAssetDecoder)?
-            .with_manifest(manifest.clone());
-        let mut sheets = AssetLoader::new(source.clone(), config, SpriteSheetAssetDecoder)?
-            .with_manifest(manifest.clone());
-        let mut tile_sets = AssetLoader::new(source.clone(), config, TileSetAssetDecoder)?
-            .with_manifest(manifest.clone());
-        let mut prefabs = AssetLoader::new(source.clone(), config, PrefabAssetDecoder)?
-            .with_manifest(manifest.clone());
-        let mut profiles = AssetLoader::new(source.clone(), config, ProfileAssetDecoder)?
-            .with_manifest(manifest.clone());
-        let mut styles =
-            AssetLoader::new(source, config, TextAssetDecoder)?.with_manifest(manifest.clone());
 
         // From the manifest rather than from a list compiled into this binary.
         // Those lists were the thing that made a project's host something
@@ -310,4 +340,24 @@ where
             Ok((asset_id, asset))
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::queue_config;
+    use sindri_assets::{AssetKind, AssetManifest};
+    use sindri_core::AssetId;
+
+    #[test]
+    fn a_project_kind_can_exceed_the_default_queue_capacity() {
+        let mut manifest = AssetManifest::new();
+        for index in 0..65 {
+            let id = AssetId::new(format!("textures/asset-{index}.png"))
+                .expect("generated IDs are valid");
+            manifest.insert_as(id, AssetKind::Texture, b"texture");
+        }
+
+        assert_eq!(queue_config(&manifest, AssetKind::Texture).capacity, 65);
+        assert_eq!(queue_config(&manifest, AssetKind::Scene).capacity, 1);
+    }
 }

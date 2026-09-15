@@ -588,7 +588,10 @@ SHA-256 of its stored bytes — as a versioned, ID-ordered file. A loader given 
 holds arriving bytes to it, so a truncated response or a stale cache entry is an
 error naming the asset rather than a picture from last week; an asset the
 manifest does not list still loads. The editor picks one up from the directory a
-scene lives in.
+scene lives in. The generic browser host sizes each kind's bounded request queue
+from that manifest, so projects with more than the asset pipeline's default 64
+textures or other same-kind assets still load without increasing fetch
+concurrency.
 
 A corpus of deliberately awkward images — every PNG colour type, sixteen bits per
 channel, an interlaced encoding, and a JPEG — is decoded and checked pixel by
