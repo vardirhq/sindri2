@@ -332,13 +332,17 @@ pub(super) fn add_ui_surface(environment: &mut Environment) {
                 params: match call {
                     UiCall::Text => vec![entity(), Type::String],
                     UiCall::Numbers => vec![entity(), Type::F32, Type::F32],
-                    UiCall::Number | UiCall::Fill => vec![entity(), Type::F32],
+                    UiCall::Number | UiCall::Fill | UiCall::SliderSetValue => {
+                        vec![entity(), Type::F32]
+                    }
                     _ => vec![entity()],
                 },
-                return_type: if call.is_query() {
-                    Type::Bool
-                } else {
-                    Type::Unit
+                return_type: match call {
+                    UiCall::SliderValue => Type::F32,
+                    UiCall::Hovered | UiCall::Pressed | UiCall::Held | UiCall::SliderChanged => {
+                        Type::Bool
+                    }
+                    _ => Type::Unit,
                 },
             },
         );

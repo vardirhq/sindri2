@@ -13,7 +13,7 @@ use decay_ir::Path;
 use decay_runtime::{RuntimeError, Value};
 use serde_json::json;
 use sindri_core::{EntityId, SceneComponent};
-use sindri_scene::{UiImageComponent, UiTextComponent};
+use sindri_scene::{UiImageComponent, UiSliderComponent, UiTextComponent};
 
 use crate::surface::UiCall;
 
@@ -41,7 +41,9 @@ impl WorldHost<'_> {
             return Ok(Value::Bool(match call {
                 UiCall::Hovered => screen.is_hovered(entity),
                 UiCall::Pressed => screen.is_pressed(entity),
-                _ => screen.is_held(entity),
+                UiCall::Held => screen.is_held(entity),
+                UiCall::SliderChanged => screen.slider_changed(entity),
+                _ => unreachable!("only boolean UI queries are handled here"),
             }));
         }
         match call {
@@ -87,8 +89,48 @@ impl WorldHost<'_> {
                 payload["fill"]["amount"] = json!(amount);
                 Ok(Value::Unit)
             }
+            UiCall::SliderValue => {
+                let data = self.world.get(entity).ok_or_else(|| gone(path, entity))?;
+                let payload = data
+                    .components
+                    .get(UiSliderComponent::TYPE_NAME)
+                    .ok_or_else(|| not_a(path, entity, "a slider"))?;
+                let slider = serde_json::from_value::<UiSliderComponent>(payload.clone()).map_err(
+                    |error| {
+                        RuntimeError::Host(format!(
+                            "{}: slider payload is invalid: {error}",
+                            path.dotted()
+                        ))
+                    },
+                )?;
+                Ok(Value::Number(f64::from(slider.value)))
+            }
+            UiCall::SliderSetValue => {
+                #[allow(clippy::cast_possible_truncation)]
+                let requested = number(path, args.get(1).unwrap_or(&Value::Null))? as f32;
+                let data = self
+                    .world
+                    .get_mut(entity)
+                    .ok_or_else(|| gone(path, entity))?;
+                let payload = data
+                    .components
+                    .get_mut(UiSliderComponent::TYPE_NAME)
+                    .ok_or_else(|| not_a(path, entity, "a slider"))?;
+                let slider = serde_json::from_value::<UiSliderComponent>(payload.clone()).map_err(
+                    |error| {
+                        RuntimeError::Host(format!(
+                            "{}: slider payload is invalid: {error}",
+                            path.dotted()
+                        ))
+                    },
+                )?;
+                payload["value"] = json!(slider.coerce_value(requested));
+                Ok(Value::Unit)
+            }
             // Answered above, before the entity was even resolved to a payload.
-            UiCall::Hovered | UiCall::Pressed | UiCall::Held => unreachable!("handled as a query"),
+            UiCall::Hovered | UiCall::Pressed | UiCall::Held | UiCall::SliderChanged => {
+                unreachable!("handled as a query")
+            }
         }
     }
 
