@@ -234,7 +234,10 @@ The host names this type but has not described its members.
 - `set_fill(Entity, f32)` → `unit`
 - `set_number(Entity, f32)` → `unit`
 - `set_numbers(Entity, f32, f32)` → `unit`
+- `set_slider_value(Entity, f32)` → `unit`
 - `set_text(Entity, String)` → `unit`
+- `slider_changed(Entity)` → `bool`
+- `slider_value(Entity)` → `f32`
 
 ### `UiImage`
 
