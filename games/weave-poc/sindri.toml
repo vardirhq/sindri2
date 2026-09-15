@@ -2,7 +2,7 @@ format_version = 1
 
 [project]
 name = "Weave POC"
-main_scene = "assets/demo.scene.json"
+main_scene = "assets/slider-demo.scene.json"
 
 [assets]
-include = ["demo.weave", "fonts/Fonts-OFL.txt"]
+include = ["demo.weave", "slider-demo.weave", "fonts/Fonts-OFL.txt"]
