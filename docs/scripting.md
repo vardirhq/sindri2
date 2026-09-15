@@ -630,9 +630,12 @@ disqualifying for anything else.
 | `Ui.set_number(entity, value)` | nothing |
 | `Ui.set_numbers(entity, first, second)` | nothing |
 | `Ui.set_fill(entity, amount)` | nothing |
+| `Ui.set_slider_value(entity, value)` | nothing |
 | `Ui.is_hovered(entity)` | `bool` |
 | `Ui.is_pressed(entity)` | `bool` |
 | `Ui.is_held(entity)` | `bool` |
+| `Ui.slider_value(entity)` | `f32` |
+| `Ui.slider_changed(entity)` | `bool` |
 
 **The scene owns the words and the script owns the numbers.** Decay has no
 string concatenation, no interpolation and no formatting library — `+` is
