@@ -1111,12 +1111,37 @@
         },
         {
           "kind": "function",
+          "name": "set_slider_value",
+          "parameters": [
+            "Entity",
+            "f32"
+          ],
+          "returns": "unit"
+        },
+        {
+          "kind": "function",
           "name": "set_text",
           "parameters": [
             "Entity",
             "String"
           ],
           "returns": "unit"
+        },
+        {
+          "kind": "function",
+          "name": "slider_changed",
+          "parameters": [
+            "Entity"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "slider_value",
+          "parameters": [
+            "Entity"
+          ],
+          "returns": "f32"
         }
       ],
       "name": "Ui"

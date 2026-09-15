@@ -135,6 +135,11 @@ const KNOWN: &[Known] = &[
         icon: icons::BUTTON,
     },
     Known {
+        type_name: "sindri.ui.slider",
+        family: Family::Ui,
+        icon: icons::SLIDER,
+    },
+    Known {
         type_name: "sindri.ui.layout",
         family: Family::Ui,
         icon: icons::LAYOUT,

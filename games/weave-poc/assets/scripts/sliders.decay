@@ -1,0 +1,15 @@
+script SliderDemo {
+    fn update(dt: f32) {
+        let red = World.find("Red Slider");
+        let green = World.find("Green Slider");
+        let blue = World.find("Blue Slider");
+
+        if red == null || green == null || blue == null {
+            return;
+        }
+
+        Ui.set_number(World.find("Red Value"), Ui.slider_value(red));
+        Ui.set_number(World.find("Green Value"), Ui.slider_value(green));
+        Ui.set_number(World.find("Blue Value"), Ui.slider_value(blue));
+    }
+}

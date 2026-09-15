@@ -1,0 +1,166 @@
+#slider-demo {
+    width: 760px;
+    height: 680px;
+    padding: 42px;
+    direction: column;
+    gap: 22px;
+    justify-content: center;
+    align-items: center;
+    background: #0b1220;
+    border-color: #263449;
+    border-width: 2px;
+    border-radius: 28px;
+}
+
+.slider-title {
+    width: 620px;
+    height: 48px;
+    color: #f8fafc;
+    font-size: 30px;
+    line-height: 36px;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+.slider-subtitle {
+    width: 620px;
+    height: 38px;
+    color: #94a3b8;
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: 1px;
+}
+
+.rgb-controls {
+    width: 520px;
+    height: 390px;
+    direction: row;
+    gap: 54px;
+    justify-content: center;
+    align-items: center;
+}
+
+.channel-column {
+    width: 110px;
+    height: 370px;
+    direction: column;
+    gap: 14px;
+    justify-content: center;
+    align-items: center;
+}
+
+.channel-label {
+    width: 70px;
+    height: 28px;
+    font-size: 20px;
+    line-height: 24px;
+    font-weight: 700;
+}
+
+.red-text { color: #fb7185; }
+.green-text { color: #4ade80; }
+.blue-text { color: #60a5fa; }
+
+sindri.ui.slider {
+    width: 54px;
+    height: 250px;
+    border-width: 2px;
+    border-radius: 18px;
+}
+
+.red-track {
+    background: #4c1822;
+    border-color: #fb7185;
+}
+
+.green-track {
+    background: #12351f;
+    border-color: #4ade80;
+}
+
+.blue-track {
+    background: #142b4c;
+    border-color: #60a5fa;
+}
+
+.channel-value {
+    width: 90px;
+    height: 30px;
+    color: #f8fafc;
+    font-size: 18px;
+    line-height: 22px;
+    font-weight: 700;
+}
+
+.slider-hint {
+    width: 650px;
+    height: 30px;
+    color: #5eead4;
+    font-size: 12px;
+    line-height: 16px;
+    letter-spacing: 1px;
+}
+
+@media (orientation: portrait) {
+    #slider-demo {
+        width: 92vw;
+        height: 150vw;
+        padding: 5vw;
+        gap: 4vw;
+        justify-content: start;
+        border-radius: 5vw;
+    }
+
+    .slider-title {
+        width: 82vw;
+        height: 10vw;
+        font-size: 5vw;
+        line-height: 6vw;
+    }
+
+    .slider-subtitle {
+        width: 82vw;
+        height: 12vw;
+        font-size: 3vw;
+        line-height: 4vw;
+    }
+
+    .rgb-controls {
+        width: 82vw;
+        height: 94vw;
+        gap: 6vw;
+    }
+
+    .channel-column {
+        width: 22vw;
+        height: 90vw;
+        gap: 3vw;
+    }
+
+    .channel-label {
+        width: 16vw;
+        height: 7vw;
+        font-size: 5vw;
+        line-height: 6vw;
+    }
+
+    sindri.ui.slider {
+        width: 12vw;
+        height: 62vw;
+        border-radius: 4vw;
+    }
+
+    .channel-value {
+        width: 18vw;
+        height: 7vw;
+        font-size: 4vw;
+        line-height: 5vw;
+    }
+
+    .slider-hint {
+        width: 82vw;
+        height: 10vw;
+        font-size: 2.5vw;
+        line-height: 3.5vw;
+    }
+}

@@ -40,7 +40,7 @@ pub use physics::{Collider2dComponent, RigidBody2dComponent, RigidBodyKind};
 pub use physics_sync::{PhysicsSyncError, ScenePhysics2d};
 pub use screen_ui::{
     SafeArea, ScreenExtent, ScreenRect, ScreenUi, UiButtonComponent, UiDirection, UiHierarchy,
-    UiLayoutComponent, UiPlaced,
+    UiLayoutComponent, UiPlaced, UiSliderComponent, UiSliderOrientation,
 };
 pub use textures::{
     FONT_NAMING_COMPONENTS, PROCEDURAL_TEXTURES, ProceduralTexture, SheetBindError,

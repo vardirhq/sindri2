@@ -814,6 +814,39 @@
       "type_name": "sindri.ui.shape"
     },
     {
+      "addable": true,
+      "default_payload": {
+        "disabled": false,
+        "label": "",
+        "max": 1.0,
+        "min": 0.0,
+        "orientation": "horizontal",
+        "step": 0.0,
+        "value": 0.0
+      },
+      "display_name": "UI Slider",
+      "fields": {
+        "disabled": false,
+        "label": "",
+        "max": 1.0,
+        "min": 0.0,
+        "orientation": "horizontal",
+        "step": 0.0,
+        "value": 0.0
+      },
+      "meanings": {
+        "orientation": {
+          "kind": "choice",
+          "options": [
+            "horizontal",
+            "vertical"
+          ]
+        }
+      },
+      "schema_version": 1,
+      "type_name": "sindri.ui.slider"
+    },
+    {
       "addable": false,
       "default_payload": null,
       "display_name": "UI Text",

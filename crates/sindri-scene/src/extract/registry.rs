@@ -29,7 +29,7 @@ use crate::components::{
 };
 use crate::effects::EffectBurstComponent;
 use crate::physics::{Collider2dComponent, RigidBody2dComponent};
-use crate::screen_ui::{UiButtonComponent, UiLayoutComponent};
+use crate::screen_ui::{UiButtonComponent, UiLayoutComponent, UiSliderComponent};
 use crate::textures::PROCEDURAL_TEXTURES;
 
 use super::SceneExtractError;
@@ -144,6 +144,18 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
     components.register_with_default::<UiButtonComponent>(
         "UI Button",
         serde_json::json!({ "label": "" }),
+    )?;
+    components.register_with_default::<UiSliderComponent>(
+        "UI Slider",
+        serde_json::json!({
+            "label": "",
+            "orientation": "horizontal",
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.0,
+            "value": 0.0,
+            "disabled": false
+        }),
     )?;
     // A centred column preserves the layout behavior scenes had before
     // alignment/distribution became authorable.
