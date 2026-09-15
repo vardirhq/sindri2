@@ -17,6 +17,7 @@ pub const SPRITE: MaterialIcon = icons::ICON_IMAGE;
 pub const UI_ELEMENT: MaterialIcon = icons::ICON_WEB_ASSET;
 pub const TEXT: MaterialIcon = icons::ICON_TITLE;
 pub const BUTTON: MaterialIcon = icons::ICON_SMART_BUTTON;
+pub const SLIDER: MaterialIcon = icons::ICON_TUNE;
 pub const LAYOUT: MaterialIcon = icons::ICON_VIEW_COLUMN;
 pub const STEP: MaterialIcon = icons::ICON_SKIP_NEXT;
 pub const EFFECT: MaterialIcon = icons::ICON_AUTO_AWESOME;
