@@ -13,8 +13,8 @@ use std::collections::BTreeMap;
 use crate::{UiAnchor, UiImageComponent, UiTextComponent};
 use serde::Deserialize;
 use sindri_core::{
-    ComponentRegistryError, ComponentSchemaRegistry, EntityId, PressPhase, Presses, SceneComponent,
-    World,
+    ComponentRegistryError, ComponentSchemaRegistry, EntityId, PressId, PressPhase, Presses,
+    SceneComponent, World,
 };
 
 pub use hierarchy::{UiHierarchy, UiPlaced};
@@ -41,6 +41,8 @@ pub struct ScreenUi {
     pressing: Option<EntityId>,
     clicked: Option<EntityId>,
     pointer_overlay: Option<[f32; 2]>,
+    slider_drag: Option<(EntityId, PressId)>,
+    slider_changed: Option<EntityId>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -56,14 +58,14 @@ impl ScreenUi {
 
     pub fn update(
         &mut self,
-        world: &World,
+        world: &mut World,
         components: &ComponentSchemaRegistry,
         extent: ScreenExtent,
         presses: &Presses,
     ) -> Result<(), ComponentRegistryError> {
         self.viewport_half = extent.half();
         self.rects = Self::place(world, components, extent)?;
-        self.read_presses(extent, presses);
+        self.read_presses(world, extent, presses);
         Ok(())
     }
 
@@ -80,7 +82,9 @@ impl ScreenUi {
     pub const fn hovered(&self) -> Option<EntityId> { self.hovered }
 
     #[must_use]
-    pub const fn captures_pointer(&self) -> bool { self.hovered.is_some() }
+    pub const fn captures_pointer(&self) -> bool {
+        self.hovered.is_some() || self.slider_drag.is_some()
+    }
 
     #[must_use]
     pub fn is_hovered(&self, entity: EntityId) -> bool { self.hovered == Some(entity) }
@@ -90,7 +94,13 @@ impl ScreenUi {
 
     #[must_use]
     pub fn is_held(&self, entity: EntityId) -> bool {
-        self.pressing == Some(entity) && self.hovered == Some(entity)
+        self.slider_drag.is_some_and(|(dragged, _)| dragged == entity)
+            || (self.pressing == Some(entity) && self.hovered == Some(entity))
+    }
+
+    #[must_use]
+    pub fn slider_changed(&self, entity: EntityId) -> bool {
+        self.slider_changed == Some(entity)
     }
 
     #[must_use]
@@ -147,17 +157,37 @@ impl ScreenUi {
         }).collect())
     }
 
-    fn read_presses(&mut self, extent: ScreenExtent, presses: &Presses) {
+    fn read_presses(&mut self, world: &mut World, extent: ScreenExtent, presses: &Presses) {
         self.clicked = None;
+        self.slider_changed = None;
         self.pointer_overlay = presses.focus().and_then(|position| extent.pointer(position));
         self.hovered = self.pointer_overlay.and_then(|point| self.topmost_at(point));
 
         let Some(press) = presses.primary() else {
             self.pressing = None;
+            self.slider_drag = None;
             return;
         };
         if press.began_now() {
-            self.pressing = self.hovered;
+            if let Some(entity) = self.hovered
+                && world.get(entity).and_then(|data| data.components.get(UiSliderComponent::TYPE_NAME)).and_then(|payload| serde_json::from_value::<UiSliderComponent>(payload.clone()).ok()).is_some_and(|slider| !slider.disabled)
+            {
+                self.slider_drag = Some((entity, press.id()));
+                self.pressing = None;
+            } else {
+                self.pressing = self.hovered;
+            }
+        }
+        if let Some((entity, id)) = self.slider_drag
+            && id == press.id()
+        {
+            if let Some(point) = extent.pointer(press.position()) {
+                self.update_slider(world, entity, point);
+            }
+            if !matches!(press.phase(), PressPhase::Live) {
+                self.slider_drag = None;
+            }
+            return;
         }
         match press.phase() {
             PressPhase::Live => {}
@@ -169,6 +199,29 @@ impl ScreenUi {
             }
             PressPhase::Cancelled => self.pressing = None,
         }
+    }
+
+
+    fn update_slider(&mut self, world: &mut World, entity: EntityId, point: [f32; 2]) {
+        let Some(element) = self.rects.get(&entity) else { return; };
+        let Some(data) = world.get_mut(entity) else { return; };
+        let Some(payload) = data.components.get_mut(UiSliderComponent::TYPE_NAME) else { return; };
+        let Ok(slider) = serde_json::from_value::<UiSliderComponent>(payload.clone()) else { return; };
+        if slider.disabled { return; }
+        let normalized = match slider.orientation {
+            UiSliderOrientation::Horizontal => {
+                let low = element.rect.center[0] - element.rect.size[0] / 2.0;
+                ((point[0] - low) / element.rect.size[0]).clamp(0.0, 1.0)
+            }
+            UiSliderOrientation::Vertical => {
+                let low = element.rect.center[1] - element.rect.size[1] / 2.0;
+                (1.0 - (point[1] - low) / element.rect.size[1]).clamp(0.0, 1.0)
+            }
+        };
+        let value = slider.value_at(normalized);
+        if (value - slider.value).abs() <= f32::EPSILON { return; }
+        payload["value"] = serde_json::json!(value);
+        self.slider_changed = Some(entity);
     }
 
     fn topmost_at(&self, point: [f32; 2]) -> Option<EntityId> {
