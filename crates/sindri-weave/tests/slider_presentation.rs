@@ -70,7 +70,11 @@ fn slider_and_authored_parts_are_styleable_without_a_parallel_control_model() {
         styled
             .world()
             .entities()
-            .find(|(_, data)| data.source_id.as_ref().is_some_and(|source| source.as_str() == id))
+            .find(|(_, data)| {
+                data.source_id
+                    .as_ref()
+                    .is_some_and(|source| source.as_str() == id)
+            })
             .map(|(_, data)| data)
             .expect("styled entity")
     };
@@ -92,12 +96,20 @@ fn slider_and_authored_parts_are_styleable_without_a_parallel_control_model() {
     let thumb_scale = thumb.transform_3d.expect("thumb transform").scale_2d();
     assert!((thumb_scale[0] - 0.05).abs() < f32::EPSILON);
     assert!((thumb_scale[1] - 0.09).abs() < f32::EPSILON);
-    assert!(thumb.components["sindri.ui.shape"]["corner_radius"].as_f64().is_some());
+    assert!(
+        thumb.components["sindri.ui.shape"]["corner_radius"]
+            .as_f64()
+            .is_some()
+    );
 
     // Presentation is disposable: styling must not rewrite the authored value.
     let authored = source
         .entities()
-        .find(|(_, data)| data.source_id.as_ref().is_some_and(|source| source.as_str() == "volume"))
+        .find(|(_, data)| {
+            data.source_id
+                .as_ref()
+                .is_some_and(|source| source.as_str() == "volume")
+        })
         .map(|(_, data)| data)
         .expect("authored slider");
     assert_eq!(authored.components["sindri.ui.slider"]["value"], 128.0);
