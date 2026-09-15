@@ -192,7 +192,7 @@ impl Run {
             notes.push(error.to_string());
         }
         if let Err(error) = self.screen_ui.update(
-            &self.world,
+            &mut self.world,
             &self.components,
             ScreenExtent::new(self.viewport.0, self.viewport.1),
             self.input.presses(),

@@ -278,7 +278,7 @@ impl EditorApp {
         let (view_width, view_height) = view_size.unwrap_or((0.0, 0.0));
         let input_state = self.input.state();
         if let Err(error) = self.screen_ui.update(
-            &self.world,
+            &mut self.world,
             components,
             sindri_scene::ScreenExtent::new(view_width, view_height),
             input_state.presses(),

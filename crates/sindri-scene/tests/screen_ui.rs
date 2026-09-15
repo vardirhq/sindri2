@@ -109,7 +109,7 @@ fn at(x: f32, y: f32) -> Hand {
     hand
 }
 
-fn updated(world: &World, hand: &Hand) -> ScreenUi {
+fn updated(world: &mut World, hand: &Hand) -> ScreenUi {
     let mut screen = ScreenUi::new();
     screen
         .update(world, &registry(), extent(), &hand.presses)
@@ -121,7 +121,7 @@ fn updated(world: &World, hand: &Hand) -> ScreenUi {
 fn the_pointer_over_a_button_hovers_it() {
     let mut world = World::default();
     let entity = button(&mut world, [0.0, 0.0], [0.5, 0.2]);
-    let screen = updated(&world, &at(WIDTH / 2.0, HEIGHT / 2.0));
+    let screen = updated(&mut world, &at(WIDTH / 2.0, HEIGHT / 2.0));
     assert!(screen.is_hovered(entity));
     assert!(screen.captures_pointer());
 }
@@ -130,7 +130,7 @@ fn the_pointer_over_a_button_hovers_it() {
 fn the_pointer_beside_a_button_does_not() {
     let mut world = World::default();
     let entity = button(&mut world, [0.0, 0.0], [0.5, 0.2]);
-    let screen = updated(&world, &at(10.0, 10.0));
+    let screen = updated(&mut world, &at(10.0, 10.0));
     assert!(!screen.is_hovered(entity));
     assert!(!screen.captures_pointer());
 }
@@ -142,9 +142,9 @@ fn a_click_is_a_press_and_a_release_on_the_same_button() {
     let entity = button(&mut world, [0.0, 0.0], [0.5, 0.2]);
     let middle = [WIDTH / 2.0, HEIGHT / 2.0];
     let components = registry();
-    let step = |hand: &Hand, screen: &mut ScreenUi| {
+    let step = |world: &mut World, hand: &Hand, screen: &mut ScreenUi| {
         screen
-            .update(&world, &components, extent(), &hand.presses)
+            .update(world, &components, extent(), &hand.presses)
             .expect("registered");
     };
 
@@ -153,13 +153,13 @@ fn a_click_is_a_press_and_a_release_on_the_same_button() {
     for mut hand in [Hand::mouse(), Hand::finger()] {
         let mut screen = ScreenUi::new();
         hand.press(middle);
-        step(&hand, &mut screen);
+        step(&mut world, &hand, &mut screen);
         assert!(!screen.is_pressed(entity), "a press alone is not a click");
         assert!(screen.is_held(entity), "but it is a hold");
 
         hand.frame();
         hand.release();
-        step(&hand, &mut screen);
+        step(&mut world, &hand, &mut screen);
         assert!(screen.is_pressed(entity), "release completes the click");
     }
 }
@@ -177,7 +177,7 @@ fn a_press_and_a_release_in_the_same_frame_is_still_a_click() {
         hand.press([WIDTH / 2.0, HEIGHT / 2.0]);
         hand.release();
         screen
-            .update(&world, &components, extent(), &hand.presses)
+            .update(&mut world, &components, extent(), &hand.presses)
             .expect("registered");
         assert!(
             screen.is_pressed(entity),
@@ -196,14 +196,14 @@ fn letting_go_somewhere_else_is_not_a_click() {
     let mut hand = Hand::mouse();
     hand.press([WIDTH / 2.0, HEIGHT / 2.0]);
     screen
-        .update(&world, &components, extent(), &hand.presses)
+        .update(&mut world, &components, extent(), &hand.presses)
         .expect("registered");
 
     hand.frame();
     hand.move_to([10.0, 10.0]);
     hand.release();
     screen
-        .update(&world, &components, extent(), &hand.presses)
+        .update(&mut world, &components, extent(), &hand.presses)
         .expect("registered");
     assert!(!screen.is_pressed(entity));
 }
@@ -219,21 +219,21 @@ fn a_press_that_never_ended_does_not_survive_the_pointer_leaving() {
     let mut hand = Hand::mouse();
     hand.press([WIDTH / 2.0, HEIGHT / 2.0]);
     screen
-        .update(&world, &components, extent(), &hand.presses)
+        .update(&mut world, &components, extent(), &hand.presses)
         .expect("registered");
 
     // The interaction is taken away: no release ever arrives.
     hand.frame();
     hand.cancel();
     screen
-        .update(&world, &components, extent(), &hand.presses)
+        .update(&mut world, &components, extent(), &hand.presses)
         .expect("registered");
     assert!(!screen.is_held(entity));
 
     hand.frame();
     hand.release();
     screen
-        .update(&world, &components, extent(), &hand.presses)
+        .update(&mut world, &components, extent(), &hand.presses)
         .expect("registered");
     assert!(!screen.is_pressed(entity), "a stale press became a click");
 }
@@ -245,7 +245,7 @@ fn a_disabled_button_is_not_hit_tested() {
     let mut world = World::default();
     let entity = button(&mut world, [0.0, 0.0], [0.5, 0.2]);
     world.get_mut(entity).expect("there").disabled = true;
-    let screen = updated(&world, &at(WIDTH / 2.0, HEIGHT / 2.0));
+    let screen = updated(&mut world, &at(WIDTH / 2.0, HEIGHT / 2.0));
     assert!(!screen.is_hovered(entity));
     assert!(!screen.captures_pointer());
 }
@@ -264,7 +264,7 @@ fn a_button_under_a_disabled_screen_is_not_hit_tested() {
         .set_parent(entity, Some(screen_root))
         .expect("parented");
     world.get_mut(screen_root).expect("there").disabled = true;
-    let screen = updated(&world, &at(WIDTH / 2.0, HEIGHT / 2.0));
+    let screen = updated(&mut world, &at(WIDTH / 2.0, HEIGHT / 2.0));
     assert!(!screen.is_hovered(entity));
 }
 
@@ -280,7 +280,7 @@ fn the_top_element_takes_the_click() {
             json!({ "texture": "panel.png", "layer": layer }),
         );
     }
-    let screen = updated(&world, &at(WIDTH / 2.0, HEIGHT / 2.0));
+    let screen = updated(&mut world, &at(WIDTH / 2.0, HEIGHT / 2.0));
     assert!(screen.is_hovered(over));
     assert!(!screen.is_hovered(under));
 }
@@ -307,7 +307,7 @@ fn a_column_closes_up_around_a_hidden_entry() {
         })
         .collect();
 
-    let all = updated(&world, &Hand::mouse());
+    let all = updated(&mut world, &Hand::mouse());
     let spread = |screen: &ScreenUi, of: &[EntityId]| {
         of.iter()
             .filter_map(|entity| screen.rect(*entity))
@@ -317,7 +317,7 @@ fn a_column_closes_up_around_a_hidden_entry() {
     let three = spread(&all, &entries);
 
     world.get_mut(entries[1]).expect("there").disabled = true;
-    let two = updated(&world, &Hand::mouse());
+    let two = updated(&mut world, &Hand::mouse());
     assert!(
         spread(&two, &entries) < three,
         "the remaining entries did not close up"
@@ -343,12 +343,12 @@ fn a_safe_area_moves_a_top_anchored_button_down() {
     let components = registry();
     let mut plain = ScreenUi::new();
     plain
-        .update(&world, &components, extent(), &Presses::default())
+        .update(&mut world, &components, extent(), &Presses::default())
         .expect("registered");
     let mut inset = ScreenUi::new();
     inset
         .update(
-            &world,
+            &mut world,
             &components,
             extent().with_safe_area(SafeArea {
                 top: 60.0,
@@ -379,7 +379,7 @@ fn a_corner_button_is_reachable_in_portrait_and_landscape() {
         let mut screen = ScreenUi::new();
         screen
             .update(
-                &world,
+                &mut world,
                 &components,
                 shape,
                 // The pointer at the bottom-right corner of that window.
@@ -407,7 +407,7 @@ fn an_image_that_is_not_a_button_does_not_take_the_pointer() {
         .collect(),
         ..EntityData::default()
     });
-    let screen = updated(&world, &at(WIDTH / 2.0, HEIGHT / 2.0));
+    let screen = updated(&mut world, &at(WIDTH / 2.0, HEIGHT / 2.0));
     assert!(!screen.is_hovered(entity));
     assert!(!screen.captures_pointer(), "a HUD swallowed the pointer");
 }
