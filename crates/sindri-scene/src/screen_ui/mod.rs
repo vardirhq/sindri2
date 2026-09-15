@@ -6,6 +6,7 @@
 mod hierarchy;
 mod layout;
 mod rect;
+mod slider;
 
 use std::collections::BTreeMap;
 
@@ -19,6 +20,7 @@ use sindri_core::{
 pub use hierarchy::{UiHierarchy, UiPlaced};
 pub use layout::{UiAlign, UiDirection, UiJustify, UiLayoutComponent};
 pub use rect::{SafeArea, ScreenExtent, ScreenRect};
+pub use slider::{UiSliderComponent, UiSliderOrientation};
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct UiButtonComponent {
@@ -30,39 +32,6 @@ impl SceneComponent for UiButtonComponent {
     const TYPE_NAME: &'static str = "sindri.ui.button";
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-pub struct UiSliderComponent {
-    #[serde(default)]
-    pub label: String,
-    #[serde(default)]
-    pub orientation: UiSliderOrientation,
-    #[serde(default)]
-    pub min: f32,
-    #[serde(default = "UiSliderComponent::default_max")]
-    pub max: f32,
-    #[serde(default)]
-    pub step: f32,
-    #[serde(default)]
-    pub value: f32,
-    #[serde(default)]
-    pub disabled: bool,
-}
-
-impl UiSliderComponent {
-    const fn default_max() -> f32 { 1.0 }
-}
-
-impl SceneComponent for UiSliderComponent {
-    const TYPE_NAME: &'static str = "sindri.ui.slider";
-}
-
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum UiSliderOrientation {
-    #[default]
-    Horizontal,
-    Vertical,
-}
 
 #[derive(Debug, Default)]
 pub struct ScreenUi {
