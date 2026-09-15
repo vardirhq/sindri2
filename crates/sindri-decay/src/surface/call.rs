@@ -339,6 +339,12 @@ pub(crate) enum UiCall {
     Numbers,
     /// How much of a bar is drawn, in `[0, 1]`.
     Fill,
+    /// The current value of an authored slider.
+    SliderValue,
+    /// Writes a slider value through the slider's clamp and step rules.
+    SliderSetValue,
+    /// Whether pointer interaction changed this slider during this frame.
+    SliderChanged,
     /// Whether the pointer is over this element.
     Hovered,
     /// Whether this element was clicked during this frame.
@@ -354,7 +360,10 @@ pub(crate) enum UiCall {
 impl UiCall {
     /// Whether this asks about the pointer rather than changing the element.
     pub(crate) const fn is_query(self) -> bool {
-        matches!(self, Self::Hovered | Self::Pressed | Self::Held)
+        matches!(
+            self,
+            Self::Hovered | Self::Pressed | Self::Held | Self::SliderChanged
+        )
     }
 }
 
@@ -363,6 +372,9 @@ pub(crate) const UI_CALLS: &[(&str, UiCall)] = &[
     ("set_number", UiCall::Number),
     ("set_numbers", UiCall::Numbers),
     ("set_fill", UiCall::Fill),
+    ("slider_value", UiCall::SliderValue),
+    ("set_slider_value", UiCall::SliderSetValue),
+    ("slider_changed", UiCall::SliderChanged),
     ("is_hovered", UiCall::Hovered),
     ("is_pressed", UiCall::Pressed),
     ("is_held", UiCall::Held),
