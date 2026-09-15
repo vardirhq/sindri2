@@ -139,10 +139,7 @@ impl ScreenUi {
                 entity,
                 Element {
                     rect: ScreenRect {
-                        center: [
-                            origin[0] + placed.offset.x,
-                            origin[1] + placed.offset.y,
-                        ],
+                        center: [origin[0] + placed.offset.x, origin[1] + placed.offset.y],
                         size,
                     },
                     layer,
