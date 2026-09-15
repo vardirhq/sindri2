@@ -95,11 +95,14 @@ impl WorldHost<'_> {
                     .components
                     .get(UiSliderComponent::TYPE_NAME)
                     .ok_or_else(|| not_a(path, entity, "a slider"))?;
-                let slider = serde_json::from_value::<UiSliderComponent>(payload.clone())
-                    .map_err(|error| RuntimeError::Host(format!(
-                        "{}: slider payload is invalid: {error}",
-                        path.dotted()
-                    )))?;
+                let slider = serde_json::from_value::<UiSliderComponent>(payload.clone()).map_err(
+                    |error| {
+                        RuntimeError::Host(format!(
+                            "{}: slider payload is invalid: {error}",
+                            path.dotted()
+                        ))
+                    },
+                )?;
                 Ok(Value::Number(f64::from(slider.value)))
             }
             UiCall::SliderSetValue => {
@@ -113,11 +116,14 @@ impl WorldHost<'_> {
                     .components
                     .get_mut(UiSliderComponent::TYPE_NAME)
                     .ok_or_else(|| not_a(path, entity, "a slider"))?;
-                let slider = serde_json::from_value::<UiSliderComponent>(payload.clone())
-                    .map_err(|error| RuntimeError::Host(format!(
-                        "{}: slider payload is invalid: {error}",
-                        path.dotted()
-                    )))?;
+                let slider = serde_json::from_value::<UiSliderComponent>(payload.clone()).map_err(
+                    |error| {
+                        RuntimeError::Host(format!(
+                            "{}: slider payload is invalid: {error}",
+                            path.dotted()
+                        ))
+                    },
+                )?;
                 payload["value"] = json!(slider.coerce_value(requested));
                 Ok(Value::Unit)
             }
