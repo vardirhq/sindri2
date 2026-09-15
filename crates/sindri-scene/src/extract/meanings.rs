@@ -30,7 +30,7 @@ use crate::components::{
 use crate::components::{UiAnchor, UiTextCase, UiTextLineAlign, UiTextWrap};
 use crate::effects::EffectBurstComponent;
 use crate::physics::{Collider2dComponent, RigidBody2dComponent};
-use crate::screen_ui::{UiAlign, UiDirection, UiJustify, UiLayoutComponent};
+use crate::screen_ui::{UiAlign, UiDirection, UiJustify, UiLayoutComponent, UiSliderComponent, UiSliderOrientation};
 
 use super::SceneExtractError;
 
@@ -109,6 +109,10 @@ fn describe_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
         ("stroke", COLOUR),
         ("sweep_start", FieldMeaning::Angle),
     ])?;
+    components.describe::<UiSliderComponent>([(
+        "orientation",
+        FieldMeaning::choice(UiSliderOrientation::ALL.into_iter().map(UiSliderOrientation::as_str)),
+    )])?;
     components.describe::<UiLayoutComponent>([
         (
             "direction",
