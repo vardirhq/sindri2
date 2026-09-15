@@ -193,9 +193,29 @@ impl ScreenUi {
             .pointer_overlay
             .and_then(|point| self.topmost_at(point));
 
+        // A slider owns the exact press that began its drag. Follow that press
+        // by identity rather than whichever press is currently primary, so a
+        // second finger cannot steal or prematurely end an interaction.
+        if let Some((entity, id)) = self.slider_drag {
+            let Some(press) = presses.get(id) else {
+                self.slider_drag = None;
+                return;
+            };
+            if press.phase() == PressPhase::Cancelled {
+                self.slider_drag = None;
+                return;
+            }
+            if let Some(point) = extent.pointer(press.position()) {
+                self.update_slider(world, entity, point);
+            }
+            if press.phase() == PressPhase::Ended {
+                self.slider_drag = None;
+            }
+            return;
+        }
+
         let Some(press) = presses.primary() else {
             self.pressing = None;
-            self.slider_drag = None;
             return;
         };
         if press.began_now() {
@@ -210,20 +230,17 @@ impl ScreenUi {
             {
                 self.slider_drag = Some((entity, press.id()));
                 self.pressing = None;
-            } else {
-                self.pressing = self.hovered;
+                if press.phase() != PressPhase::Cancelled
+                    && let Some(point) = extent.pointer(press.position())
+                {
+                    self.update_slider(world, entity, point);
+                }
+                if press.phase() != PressPhase::Live {
+                    self.slider_drag = None;
+                }
+                return;
             }
-        }
-        if let Some((entity, id)) = self.slider_drag
-            && id == press.id()
-        {
-            if let Some(point) = extent.pointer(press.position()) {
-                self.update_slider(world, entity, point);
-            }
-            if !matches!(press.phase(), PressPhase::Live) {
-                self.slider_drag = None;
-            }
-            return;
+            self.pressing = self.hovered;
         }
         match press.phase() {
             PressPhase::Live => {}
@@ -262,8 +279,10 @@ impl ScreenUi {
                 ((point[0] - low) / element.rect.size[0]).clamp(0.0, 1.0)
             }
             UiSliderOrientation::Vertical => {
+                // Overlay Y grows upward, so bottom is minimum and top is
+                // maximum without reversing the normalized coordinate.
                 let low = element.rect.center[1] - element.rect.size[1] / 2.0;
-                (1.0 - (point[1] - low) / element.rect.size[1]).clamp(0.0, 1.0)
+                ((point[1] - low) / element.rect.size[1]).clamp(0.0, 1.0)
             }
         };
         let value = slider.value_at(normalized);
