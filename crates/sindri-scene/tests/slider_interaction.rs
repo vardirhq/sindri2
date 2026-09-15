@@ -43,10 +43,8 @@ fn slider(world: &mut World, orientation: UiSliderOrientation) -> EntityId {
 }
 
 fn value(world: &World, entity: EntityId) -> f32 {
-    let payload = &world
-        .get(entity)
-        .expect("slider exists")
-        .components[UiSliderComponent::TYPE_NAME];
+    let payload =
+        &world.get(entity).expect("slider exists").components[UiSliderComponent::TYPE_NAME];
     serde_json::from_value::<UiSliderComponent>(payload.clone())
         .expect("valid slider")
         .value
