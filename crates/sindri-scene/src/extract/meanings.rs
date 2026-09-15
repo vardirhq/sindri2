@@ -23,9 +23,9 @@ use sindri_physics::{ColliderShape2d, RigidBodyKind};
 use crate::animation::SpriteAnimationComponent;
 use crate::audio::AudioSourceComponent;
 use crate::components::{
-    CameraComponent, GridNavigationComponent, GridOccupantComponent, MeshComponent, ShapeComponent,
-    SpriteComponent, TileGridComponent, TileProjection, TileVolumeComponent, TilemapComponent,
-    UiImageComponent, UiShapeBlend, UiShapeComponent, UiShapeKind, UiTextComponent,
+    CameraComponent, GridOccupantComponent, MeshComponent, ShapeComponent, SpriteComponent,
+    TileGridComponent, TileProjection, TileVolumeComponent, TilemapComponent, UiImageComponent,
+    UiShapeBlend, UiShapeComponent, UiShapeKind, UiTextComponent,
 };
 use crate::components::{UiAnchor, UiTextCase, UiTextLineAlign, UiTextWrap};
 use crate::effects::EffectBurstComponent;
