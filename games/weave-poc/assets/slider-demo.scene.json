@@ -1,0 +1,168 @@
+{
+  "format_version": 9,
+  "metadata": { "name": "Weave Slider POC" },
+  "entities": [
+    {
+      "id": "slider-demo",
+      "name": "Slider Demo",
+      "transform_3d": { "scale": [1.6, 1.5, 1.0] },
+      "components": {
+        "weave.style": { "classes": ["slider-panel"] },
+        "sindri.ui.shape": { "kind": "rect", "fill": [0.0, 0.0, 0.0, 1.0], "anchor": "center", "layer": 1 },
+        "sindri.ui.layout": { "direction": "column", "spacing": 0.08, "justify": "center", "align": "center" },
+        "sindri.script": { "source": "scripts/sliders.decay", "script": "SliderDemo", "properties": {}, "enabled": true }
+      }
+    },
+    {
+      "id": "slider-title",
+      "name": "Slider Title",
+      "parent": "slider-demo",
+      "components": {
+        "weave.style": { "classes": ["slider-title"] },
+        "sindri.ui.text": { "text": "NATIVE SLIDERS / WEAVE", "font": "fonts/ChakraPetch-Regular.ttf", "font_size": 0.07, "bounds": [1.2, 0.12], "anchor": "center", "layer": 4 }
+      }
+    },
+    {
+      "id": "slider-subtitle",
+      "name": "Slider Subtitle",
+      "parent": "slider-demo",
+      "components": {
+        "weave.style": { "classes": ["slider-subtitle"] },
+        "sindri.ui.text": { "text": "DRAG THE RGB CHANNELS. SAME CONTROL MUJAFFA WILL USE.", "font": "fonts/ChakraPetch-Regular.ttf", "font_size": 0.035, "bounds": [1.3, 0.1], "anchor": "center", "layer": 4 }
+      }
+    },
+    {
+      "id": "rgb-controls",
+      "name": "RGB Controls",
+      "parent": "slider-demo",
+      "transform_3d": { "scale": [1.2, 0.9, 1.0] },
+      "components": {
+        "weave.style": { "classes": ["rgb-controls"] },
+        "sindri.ui.layout": { "direction": "row", "spacing": 0.16, "justify": "center", "align": "center" }
+      }
+    },
+    {
+      "id": "red-column",
+      "name": "Red Column",
+      "parent": "rgb-controls",
+      "components": {
+        "weave.style": { "classes": ["channel-column"] },
+        "sindri.ui.layout": { "direction": "column", "spacing": 0.04, "justify": "center", "align": "center" }
+      }
+    },
+    {
+      "id": "red-label",
+      "name": "Red Label",
+      "parent": "red-column",
+      "components": {
+        "weave.style": { "classes": ["channel-label", "red-text"] },
+        "sindri.ui.text": { "text": "R", "font": "fonts/ChakraPetch-Regular.ttf", "font_size": 0.05, "bounds": [0.18, 0.08], "anchor": "center", "layer": 4 }
+      }
+    },
+    {
+      "id": "red-slider",
+      "name": "Red Slider",
+      "parent": "red-column",
+      "transform_3d": { "scale": [0.16, 0.62, 1.0] },
+      "components": {
+        "weave.style": { "classes": ["channel-slider", "red-track"] },
+        "sindri.ui.shape": { "kind": "rect", "fill": [0.0, 0.0, 0.0, 1.0], "anchor": "center", "layer": 3 },
+        "sindri.ui.slider": { "label": "Red", "orientation": "vertical", "min": 0.0, "max": 255.0, "step": 1.0, "value": 128.0, "disabled": false }
+      }
+    },
+    {
+      "id": "red-value",
+      "name": "Red Value",
+      "parent": "red-column",
+      "components": {
+        "weave.style": { "classes": ["channel-value"] },
+        "sindri.ui.text": { "text": "128", "font": "fonts/ChakraPetch-Regular.ttf", "font_size": 0.04, "bounds": [0.2, 0.08], "anchor": "center", "layer": 4 }
+      }
+    },
+    {
+      "id": "green-column",
+      "name": "Green Column",
+      "parent": "rgb-controls",
+      "components": {
+        "weave.style": { "classes": ["channel-column"] },
+        "sindri.ui.layout": { "direction": "column", "spacing": 0.04, "justify": "center", "align": "center" }
+      }
+    },
+    {
+      "id": "green-label",
+      "name": "Green Label",
+      "parent": "green-column",
+      "components": {
+        "weave.style": { "classes": ["channel-label", "green-text"] },
+        "sindri.ui.text": { "text": "G", "font": "fonts/ChakraPetch-Regular.ttf", "font_size": 0.05, "bounds": [0.18, 0.08], "anchor": "center", "layer": 4 }
+      }
+    },
+    {
+      "id": "green-slider",
+      "name": "Green Slider",
+      "parent": "green-column",
+      "transform_3d": { "scale": [0.16, 0.62, 1.0] },
+      "components": {
+        "weave.style": { "classes": ["channel-slider", "green-track"] },
+        "sindri.ui.shape": { "kind": "rect", "fill": [0.0, 0.0, 0.0, 1.0], "anchor": "center", "layer": 3 },
+        "sindri.ui.slider": { "label": "Green", "orientation": "vertical", "min": 0.0, "max": 255.0, "step": 1.0, "value": 96.0, "disabled": false }
+      }
+    },
+    {
+      "id": "green-value",
+      "name": "Green Value",
+      "parent": "green-column",
+      "components": {
+        "weave.style": { "classes": ["channel-value"] },
+        "sindri.ui.text": { "text": "96", "font": "fonts/ChakraPetch-Regular.ttf", "font_size": 0.04, "bounds": [0.2, 0.08], "anchor": "center", "layer": 4 }
+      }
+    },
+    {
+      "id": "blue-column",
+      "name": "Blue Column",
+      "parent": "rgb-controls",
+      "components": {
+        "weave.style": { "classes": ["channel-column"] },
+        "sindri.ui.layout": { "direction": "column", "spacing": 0.04, "justify": "center", "align": "center" }
+      }
+    },
+    {
+      "id": "blue-label",
+      "name": "Blue Label",
+      "parent": "blue-column",
+      "components": {
+        "weave.style": { "classes": ["channel-label", "blue-text"] },
+        "sindri.ui.text": { "text": "B", "font": "fonts/ChakraPetch-Regular.ttf", "font_size": 0.05, "bounds": [0.18, 0.08], "anchor": "center", "layer": 4 }
+      }
+    },
+    {
+      "id": "blue-slider",
+      "name": "Blue Slider",
+      "parent": "blue-column",
+      "transform_3d": { "scale": [0.16, 0.62, 1.0] },
+      "components": {
+        "weave.style": { "classes": ["channel-slider", "blue-track"] },
+        "sindri.ui.shape": { "kind": "rect", "fill": [0.0, 0.0, 0.0, 1.0], "anchor": "center", "layer": 3 },
+        "sindri.ui.slider": { "label": "Blue", "orientation": "vertical", "min": 0.0, "max": 255.0, "step": 1.0, "value": 192.0, "disabled": false }
+      }
+    },
+    {
+      "id": "blue-value",
+      "name": "Blue Value",
+      "parent": "blue-column",
+      "components": {
+        "weave.style": { "classes": ["channel-value"] },
+        "sindri.ui.text": { "text": "192", "font": "fonts/ChakraPetch-Regular.ttf", "font_size": 0.04, "bounds": [0.2, 0.08], "anchor": "center", "layer": 4 }
+      }
+    },
+    {
+      "id": "slider-hint",
+      "name": "Slider Hint",
+      "parent": "slider-demo",
+      "components": {
+        "weave.style": { "classes": ["slider-hint"] },
+        "sindri.ui.text": { "text": "MOUSE + TOUCH / DRAG OUTSIDE THE TRACK / 0–255 STEP 1", "font": "fonts/ChakraPetch-Regular.ttf", "font_size": 0.03, "bounds": [1.3, 0.08], "anchor": "center", "layer": 4 }
+      }
+    }
+  ]
+}
