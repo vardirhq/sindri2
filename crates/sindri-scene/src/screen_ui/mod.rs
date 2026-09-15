@@ -11,6 +11,7 @@ mod slider;
 use std::collections::BTreeMap;
 
 use crate::{UiAnchor, UiImageComponent, UiTextComponent};
+use serde::Deserialize;
 use sindri_core::{
     ComponentRegistryError, ComponentSchemaRegistry, EntityId, PressId, PressPhase, Presses,
     SceneComponent, World,
@@ -30,7 +31,6 @@ pub struct UiButtonComponent {
 impl SceneComponent for UiButtonComponent {
     const TYPE_NAME: &'static str = "sindri.ui.button";
 }
-
 
 #[derive(Debug, Default)]
 pub struct ScreenUi {
@@ -53,7 +53,9 @@ struct Element {
 
 impl ScreenUi {
     #[must_use]
-    pub fn new() -> Self { Self::default() }
+    pub fn new() -> Self {
+        Self::default()
+    }
 
     pub fn update(
         &mut self,
@@ -69,7 +71,9 @@ impl ScreenUi {
     }
 
     #[must_use]
-    pub const fn pointer_overlay(&self) -> Option<[f32; 2]> { self.pointer_overlay }
+    pub const fn pointer_overlay(&self) -> Option<[f32; 2]> {
+        self.pointer_overlay
+    }
 
     #[must_use]
     pub fn viewport_aspect(&self) -> f32 {
@@ -78,7 +82,9 @@ impl ScreenUi {
     }
 
     #[must_use]
-    pub const fn hovered(&self) -> Option<EntityId> { self.hovered }
+    pub const fn hovered(&self) -> Option<EntityId> {
+        self.hovered
+    }
 
     #[must_use]
     pub const fn captures_pointer(&self) -> bool {
@@ -86,14 +92,19 @@ impl ScreenUi {
     }
 
     #[must_use]
-    pub fn is_hovered(&self, entity: EntityId) -> bool { self.hovered == Some(entity) }
+    pub fn is_hovered(&self, entity: EntityId) -> bool {
+        self.hovered == Some(entity)
+    }
 
     #[must_use]
-    pub fn is_pressed(&self, entity: EntityId) -> bool { self.clicked == Some(entity) }
+    pub fn is_pressed(&self, entity: EntityId) -> bool {
+        self.clicked == Some(entity)
+    }
 
     #[must_use]
     pub fn is_held(&self, entity: EntityId) -> bool {
-        self.slider_drag.is_some_and(|(dragged, _)| dragged == entity)
+        self.slider_drag
+            .is_some_and(|(dragged, _)| dragged == entity)
             || (self.pressing == Some(entity) && self.hovered == Some(entity))
     }
 
@@ -115,19 +126,29 @@ impl ScreenUi {
         let mut placements = BTreeMap::new();
         let hierarchy = UiHierarchy::of(world, components)?;
         for (entity, anchor, layer, pressable) in Self::elements(world, components)? {
-            if !world.is_active(entity) { continue; }
-            let Some(data) = world.get(entity) else { continue; };
+            if !world.is_active(entity) {
+                continue;
+            }
+            let Some(data) = world.get(entity) else {
+                continue;
+            };
             let placed = hierarchy.placement_or(entity, anchor);
             let origin = extent.anchor_origin(placed.anchor.unit_offset());
             let size = data.transform_3d.unwrap_or_default().scale_2d();
-            placements.insert(entity, Element {
-                rect: ScreenRect {
-                    center: [origin[0] + placed.offset.x, origin[1] + placed.offset.y],
-                    size,
+            placements.insert(
+                entity,
+                Element {
+                    rect: ScreenRect {
+                        center: [
+                            origin[0] + placed.offset.x,
+                            origin[1] + placed.offset.y,
+                        ],
+                        size,
+                    },
+                    layer,
+                    pressable,
                 },
-                layer,
-                pressable,
-            });
+            );
         }
         Ok(placements)
     }
@@ -141,26 +162,39 @@ impl ScreenUi {
             found.insert(entity, (image.anchor, image.layer, false));
         }
         for (entity, text) in components.query::<UiTextComponent>(world)? {
-            found.entry(entity).or_insert((text.anchor, text.layer, false));
+            found
+                .entry(entity)
+                .or_insert((text.anchor, text.layer, false));
         }
         for (entity, _) in components.query::<UiButtonComponent>(world)? {
-            found.entry(entity).or_insert((UiAnchor::Center, 0, false)).2 = true;
+            found
+                .entry(entity)
+                .or_insert((UiAnchor::Center, 0, false))
+                .2 = true;
         }
         for (entity, slider) in components.query::<UiSliderComponent>(world)? {
             if !slider.disabled {
-                found.entry(entity).or_insert((UiAnchor::Center, 0, false)).2 = true;
+                found
+                    .entry(entity)
+                    .or_insert((UiAnchor::Center, 0, false))
+                    .2 = true;
             }
         }
-        Ok(found.into_iter().map(|(entity, (anchor, layer, pressable))| {
-            (entity, anchor, layer, pressable)
-        }).collect())
+        Ok(found
+            .into_iter()
+            .map(|(entity, (anchor, layer, pressable))| (entity, anchor, layer, pressable))
+            .collect())
     }
 
     fn read_presses(&mut self, world: &mut World, extent: ScreenExtent, presses: &Presses) {
         self.clicked = None;
         self.slider_changed = None;
-        self.pointer_overlay = presses.focus().and_then(|position| extent.pointer(position));
-        self.hovered = self.pointer_overlay.and_then(|point| self.topmost_at(point));
+        self.pointer_overlay = presses
+            .focus()
+            .and_then(|position| extent.pointer(position));
+        self.hovered = self
+            .pointer_overlay
+            .and_then(|point| self.topmost_at(point));
 
         let Some(press) = presses.primary() else {
             self.pressing = None;
@@ -172,7 +206,9 @@ impl ScreenUi {
                 && world
                     .get(entity)
                     .and_then(|data| data.components.get(UiSliderComponent::TYPE_NAME))
-                    .and_then(|payload| serde_json::from_value::<UiSliderComponent>(payload.clone()).ok())
+                    .and_then(|payload| {
+                        serde_json::from_value::<UiSliderComponent>(payload.clone()).ok()
+                    })
                     .is_some_and(|slider| !slider.disabled)
             {
                 self.slider_drag = Some((entity, press.id()));
@@ -204,13 +240,22 @@ impl ScreenUi {
         }
     }
 
-
     fn update_slider(&mut self, world: &mut World, entity: EntityId, point: [f32; 2]) {
-        let Some(element) = self.rects.get(&entity) else { return; };
-        let Some(data) = world.get_mut(entity) else { return; };
-        let Some(payload) = data.components.get_mut(UiSliderComponent::TYPE_NAME) else { return; };
-        let Ok(slider) = serde_json::from_value::<UiSliderComponent>(payload.clone()) else { return; };
-        if slider.disabled { return; }
+        let Some(element) = self.rects.get(&entity) else {
+            return;
+        };
+        let Some(data) = world.get_mut(entity) else {
+            return;
+        };
+        let Some(payload) = data.components.get_mut(UiSliderComponent::TYPE_NAME) else {
+            return;
+        };
+        let Ok(slider) = serde_json::from_value::<UiSliderComponent>(payload.clone()) else {
+            return;
+        };
+        if slider.disabled {
+            return;
+        }
         if element.rect.size[0] <= 0.0 || element.rect.size[1] <= 0.0 {
             return;
         }
@@ -225,7 +270,9 @@ impl ScreenUi {
             }
         };
         let value = slider.value_at(normalized);
-        if (value - slider.value).abs() <= f32::EPSILON { return; }
+        if (value - slider.value).abs() <= f32::EPSILON {
+            return;
+        }
         payload["value"] = serde_json::json!(value);
         self.slider_changed = Some(entity);
     }
