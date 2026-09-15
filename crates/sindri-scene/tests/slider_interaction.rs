@@ -23,7 +23,10 @@ fn registry() -> sindri_core::ComponentSchemaRegistry {
 fn slider(world: &mut World, orientation: UiSliderOrientation) -> EntityId {
     world.spawn(EntityData {
         transform_3d: Some(Transform3D {
-            scale: [1.0, 1.0, 1.0],
+            // Screen UI transforms are authored in overlay units, not pixels.
+            // Cover the full test viewport so pixel positions expressed as a
+            // percentage of WIDTH/HEIGHT map to the same slider percentage.
+            scale: [2.0 * WIDTH / HEIGHT, 2.0, 1.0],
             ..Transform3D::default()
         }),
         components: [(
