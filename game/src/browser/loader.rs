@@ -21,7 +21,12 @@ use weave::Stylesheet;
 use crate::error::GatherError;
 
 pub(super) struct BrowserProjectAssets {
-    pub(super) scene: SceneDocument,
+    /// Every scene the manifest ships, entry scene first.
+    ///
+    /// Keeping the whole set is what makes `Scene.go` meaningful in an exported
+    /// browser project. The loader used to retain only the first document even
+    /// though it had fetched and verified all of them.
+    pub(super) scenes: Vec<(String, SceneDocument)>,
     pub(super) scripts: ScriptSources,
     pub(super) prefabs: PrefabSources,
     pub(super) profiles: ProfileSources,
@@ -236,10 +241,13 @@ impl ProjectLoaders {
                 .collect::<Vec<String>>()
         };
         let scene_ids = ids(AssetKind::Scene);
-        let Some(scene_id) = scene_ids.first() else {
+        if scene_ids.is_empty() {
             return Err(GatherError::MissingScene);
-        };
-        let scene = loaded(&self.scene, scene_id)?;
+        }
+        let scenes = scene_ids
+            .iter()
+            .map(|id| loaded(&self.scene, id).map(|scene| (id.clone(), scene)))
+            .collect::<Result<Vec<_>, _>>()?;
         let mut scripts = ScriptSources::new();
         for id in ids(AssetKind::Script) {
             let source = loaded(&self.scripts, &id)?;
@@ -275,7 +283,7 @@ impl ProjectLoaders {
             .collect();
         let asset_count = self.manifest.len();
         Ok(Some(BrowserProjectAssets {
-            scene,
+            scenes,
             scripts,
             prefabs,
             profiles,
