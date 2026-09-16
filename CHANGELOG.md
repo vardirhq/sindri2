@@ -56,6 +56,10 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Fixed
 
+- Fixed exports dropping a sprite sheet whose texture is named from the project
+  root rather than from `assets/`, which shipped the texture with no slices and
+  drew an animated sprite as its whole sheet in one quad.
+
 - Fixed native and browser hosts discarding the underlying cause of application
   failures at their reporting boundary.
 - Fixed exported browser projects failing before asset fetch when one asset kind
