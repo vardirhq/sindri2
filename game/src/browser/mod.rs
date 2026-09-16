@@ -120,7 +120,8 @@ impl BrowserGatherApp {
         // all but the entry document. Enter the entry through LoadedScenes, just
         // like native does, and give the session the complete scene set so a
         // Decay `Scene.go` request has somewhere real to go.
-        let (entry_name, entry_document) = project.scenes.first().ok_or(GatherError::MissingScene)?;
+        let (entry_name, entry_document) =
+            project.scenes.first().ok_or(GatherError::MissingScene)?;
         let mut world = World::default();
         let mut loaded_scenes = LoadedScenes::new();
         loaded_scenes.enter_keeping_identities(&mut world, entry_name, entry_document)?;
@@ -166,11 +167,12 @@ impl BrowserGatherApp {
     }
 
     fn clear_loading(&self, context: &AppContext<'_>, view: &wgpu::TextureView) {
-        let mut encoder = context
-            .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Sindri Gather loading encoder"),
-            });
+        let mut encoder =
+            context
+                .device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Sindri Gather loading encoder"),
+                });
         {
             let _pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Sindri Gather loading pass"),
@@ -314,11 +316,12 @@ impl DesktopApp for BrowserGatherApp {
                 .with_effects(engine.game().effects())
                 .with_tile_sets(&self.tile_sets),
         )?;
-        let mut encoder = context
-            .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Sindri gather browser encoder"),
-            });
+        let mut encoder =
+            context
+                .device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Sindri gather browser encoder"),
+                });
         encode_prepared_frame(
             FrameRenderers {
                 cube: &mut self.cubes,
