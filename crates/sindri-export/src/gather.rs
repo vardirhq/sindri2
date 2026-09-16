@@ -235,7 +235,12 @@ impl ProjectExport {
                     .and_then(|texture| sindri_core::sheet_id_for(&texture))
             })
             .map(|id| id.as_str().to_owned())
-            .filter(|id| project.join("assets").join(id).exists())
+            // Resolved the same way every other asset is: a project that keeps
+            // its art outside `assets/` and names it from the root still has
+            // its sheets found. Looking only under `assets/` shipped those
+            // textures with no slices, so an animated sprite drew its whole
+            // sheet squeezed into one quad.
+            .filter(|id| resolve(project, id).exists())
             .collect();
         for id in sheets {
             wanted.insert(id, AssetKind::Sheet);
