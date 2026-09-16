@@ -10,7 +10,7 @@ mod slider;
 
 use std::collections::BTreeMap;
 
-use crate::{UiAnchor, UiImageComponent, UiTextComponent};
+use crate::{UiAnchor, UiImageComponent, UiShapeComponent, UiTextComponent};
 use serde::Deserialize;
 use sindri_core::{
     ComponentRegistryError, ComponentSchemaRegistry, EntityId, PressId, PressPhase, Presses,
@@ -158,6 +158,11 @@ impl ScreenUi {
         for (entity, image) in components.query::<UiImageComponent>(world)? {
             found.insert(entity, (image.anchor, image.layer, false));
         }
+        for (entity, shape) in components.query::<UiShapeComponent>(world)? {
+            found
+                .entry(entity)
+                .or_insert((shape.anchor, shape.layer, false));
+        }
         for (entity, text) in components.query::<UiTextComponent>(world)? {
             found
                 .entry(entity)
@@ -214,32 +219,45 @@ impl ScreenUi {
             return;
         }
 
+        // A touch has no hover, and hosts may report more than one pointer
+        // device for the same physical gesture. Start from the press that
+        // actually began over a slider instead of asking `primary()` and then
+        // borrowing the global focus position. The latter silently ignores a
+        // valid touch whenever another press happens to sort first.
+        for press in presses.began() {
+            if press.phase() == PressPhase::Cancelled {
+                continue;
+            }
+            let Some(point) = extent.pointer(press.position()) else {
+                continue;
+            };
+            let Some(entity) = self.topmost_at(point) else {
+                continue;
+            };
+            let is_slider = world
+                .get(entity)
+                .and_then(|data| data.components.get(UiSliderComponent::TYPE_NAME))
+                .and_then(|payload| {
+                    serde_json::from_value::<UiSliderComponent>(payload.clone()).ok()
+                })
+                .is_some_and(|slider| !slider.disabled);
+            if !is_slider {
+                continue;
+            }
+            self.slider_drag = Some((entity, press.id()));
+            self.pressing = None;
+            self.update_slider(world, entity, point);
+            if press.phase() != PressPhase::Live {
+                self.slider_drag = None;
+            }
+            return;
+        }
+
         let Some(press) = presses.primary() else {
             self.pressing = None;
             return;
         };
         if press.began_now() {
-            if let Some(entity) = self.hovered
-                && world
-                    .get(entity)
-                    .and_then(|data| data.components.get(UiSliderComponent::TYPE_NAME))
-                    .and_then(|payload| {
-                        serde_json::from_value::<UiSliderComponent>(payload.clone()).ok()
-                    })
-                    .is_some_and(|slider| !slider.disabled)
-            {
-                self.slider_drag = Some((entity, press.id()));
-                self.pressing = None;
-                if press.phase() != PressPhase::Cancelled
-                    && let Some(point) = extent.pointer(press.position())
-                {
-                    self.update_slider(world, entity, point);
-                }
-                if press.phase() != PressPhase::Live {
-                    self.slider_drag = None;
-                }
-                return;
-            }
             self.pressing = self.hovered;
         }
         match press.phase() {
