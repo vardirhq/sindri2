@@ -23,7 +23,7 @@ pub mod ui_text_template;
 pub use camera::{CameraComponent, CameraFit};
 pub use grid::{GridNavigationComponent, GridOccupantComponent, GridWallDocument};
 pub use mesh::{MeshComponent, MeshPrimitive};
-pub use sprite::SpriteComponent;
+pub use sprite::{SpriteColorTransform, SpriteComponent};
 pub use tile_volume::{
     TileCellDocument, TileGridComponent, TileGridError, TileVolumeComponent, TileVolumeError,
 };
