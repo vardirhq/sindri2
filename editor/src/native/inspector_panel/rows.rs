@@ -13,12 +13,10 @@ use serde_json::Value;
 
 use sindri_core::{ComponentSchemaRegistry, FieldMeaning};
 
-use crate::components::{self, Family};
 use crate::inspector;
 use crate::ui::theme::{color, metric, text};
 use crate::ui::widgets::{property, vector};
 
-use super::draft::Offer;
 use super::field::{FieldAssets, asset_list, colour_row};
 use super::list;
 
@@ -158,6 +156,13 @@ pub(crate) fn value_row(
             }
         }
         inspector::ValueKind::Object => {
+            let advanced = at
+                .described
+                .is_some_and(|described| inspector::is_advanced(described.type_name, key));
+            if advanced {
+                advanced_object(ui, at, &label, value, indent);
+                return;
+            }
             ui.horizontal(|ui| {
                 ui.add_space(metric::GUTTER + indent);
                 ui.label(
@@ -166,27 +171,7 @@ pub(crate) fn value_row(
                         .color(color::TEXT_FAINT),
                 );
             });
-            // A field that decides what the rest of this object holds is
-            // drawn first, and applied to the object rather than to itself:
-            // that is the edit it actually is.
-            let tag = variant_row(ui, at, value, indent + 10.0);
-            let Value::Object(nested) = value else {
-                return;
-            };
-            for (key, value) in nested.iter_mut() {
-                if Some(key.as_str()) == tag.as_deref() {
-                    continue;
-                }
-                let nested_path = join(at.path, key);
-                value_row(
-                    ui,
-                    at.into(&nested_path),
-                    key,
-                    value,
-                    indent + 10.0,
-                    Authored::Default,
-                );
-            }
+            object_rows(ui, at, value, indent);
         }
         // Shown as stored and left alone. A text field over a tilemap's tiles
         // or a clip table is a way to break a scene, not a way to edit one —
@@ -210,6 +195,77 @@ pub(crate) fn value_row(
 }
 
 /// One dotted path, extended by one step.
+/// The rows of a nested object, under whatever heading drew it.
+///
+/// A field that decides what the rest of this object holds is drawn first, and
+/// applied to the object rather than to itself: that is the edit it actually
+/// is.
+fn object_rows(ui: &mut egui::Ui, at: At<'_>, value: &mut Value, indent: f32) {
+    let tag = variant_row(ui, at, value, indent + 10.0);
+    let Value::Object(nested) = value else {
+        return;
+    };
+    for (key, value) in nested.iter_mut() {
+        if Some(key.as_str()) == tag.as_deref() {
+            continue;
+        }
+        let nested_path = join(at.path, key);
+        value_row(
+            ui,
+            at.into(&nested_path),
+            key,
+            value,
+            indent + 10.0,
+            Authored::Default,
+        );
+    }
+}
+
+/// An advanced object: folded away until asked for, and restorable.
+///
+/// Collapsed by default so the panel opens on the ordinary path through the
+/// component, and open already when the scene has said something — a value
+/// somebody authored should not be hidden behind a fold nothing marks. The
+/// reset is what makes opening it safe: eight number boxes are easy to wander
+/// away from and hard to put back by hand, and the schema already knows what
+/// "nobody has said" looks like here.
+fn advanced_object(ui: &mut egui::Ui, at: At<'_>, label: &str, value: &mut Value, indent: f32) {
+    let identity = at.exemplar().cloned();
+    let modified = identity.as_ref().is_some_and(|blank| blank != value);
+    let heading = if modified {
+        format!("{label} (edited)")
+    } else {
+        label.to_owned()
+    };
+    let tint = if modified {
+        color::TEXT
+    } else {
+        color::TEXT_FAINT
+    };
+    ui.horizontal(|ui| {
+        ui.add_space(metric::GUTTER + indent);
+        egui::CollapsingHeader::new(RichText::new(heading).size(text::LABEL).color(tint))
+            .id_salt((at.path, "advanced"))
+            .default_open(modified)
+            .show(ui, |ui| {
+                object_rows(ui, at, value, indent);
+                let Some(identity) = identity else {
+                    return;
+                };
+                ui.horizontal(|ui| {
+                    ui.add_space(metric::GUTTER + indent + 10.0);
+                    if ui
+                        .add_enabled(modified, egui::Button::new("Reset"))
+                        .on_hover_text("Put every channel back to what it is when nobody has said")
+                        .clicked()
+                    {
+                        *value = identity;
+                    }
+                });
+            });
+    });
+}
+
 pub(crate) fn join(path: &str, key: &str) -> String {
     if path.is_empty() {
         key.to_owned()
@@ -444,126 +500,4 @@ fn labelled_drag(
             .prefix(format!("{letter} ")),
     )
     .changed()
-}
-
-/// The Add Component menu, offering only what can actually be added.
-///
-/// Absent entirely when there is nothing to add, rather than shown disabled: an
-/// entity that already has everything is not a state worth drawing a greyed-out
-/// control for.
-pub(crate) fn add_component_button(ui: &mut egui::Ui, addable: &[Offer]) -> Option<String> {
-    if addable.is_empty() {
-        return None;
-    }
-    let mut chosen = None;
-    ui.add_space(10.0);
-    ui.vertical_centered(|ui| {
-        // Words rather than a bare "+", because an inspector has several things
-        // it could plausibly be adding. Given the panel's width so it reads as
-        // the one thing left to do at the bottom of the list. The label is
-        // plain text: the bundled Inter subset carries 192 glyphs, and a
-        // decorative plus sign outside it draws as a missing-glyph box.
-        let width = (ui.available_width() - 2.0 * metric::GUTTER).max(120.0);
-        ui.allocate_ui(egui::vec2(width, metric::CONTROL_HEIGHT + 6.0), |ui| {
-            ui.menu_button(
-                RichText::new("Add Component")
-                    .size(text::BODY)
-                    .color(color::TEXT),
-                |ui| {
-                    ui.set_min_width(200.0);
-                    chosen = component_families(ui, addable);
-                },
-            );
-        });
-    });
-    ui.add_space(10.0);
-    chosen
-}
-
-/// The offers, under the families they belong to.
-///
-/// A flat list of thirteen is a list you read rather than a menu you use, and
-/// it only grows. Grouping is by [`crate::components::family`] rather than by
-/// splitting the type name on its dots: the namespace is a naming scheme, not a
-/// taxonomy, and splitting it yields two one-entry submenus and five components
-/// with no family at all.
-///
-/// A family holding one offer here is *not* given a submenu — it is listed at
-/// the top level with the ungrouped ones. Which family holds one depends on the
-/// entity: a UI element is offered no Rendering components at all, and hiding a
-/// lone entry behind a heading is a click that buys nothing.
-fn component_families(ui: &mut egui::Ui, addable: &[Offer]) -> Option<String> {
-    let mut chosen = None;
-    let mut loose: Vec<&Offer> = Vec::new();
-    for family in Family::ALL {
-        let held = held_by(addable, Some(family));
-        match held.len() {
-            0 => {}
-            1 => loose.extend(held),
-            _ => {
-                ui.menu_button(
-                    RichText::new(family.label())
-                        .size(text::BODY)
-                        .color(color::TEXT),
-                    |ui| {
-                        ui.set_min_width(200.0);
-                        for offer in held {
-                            if component_entry(ui, offer) {
-                                chosen = Some(offer.metadata.type_name.clone());
-                            }
-                        }
-                    },
-                );
-            }
-        }
-    }
-    // Anything the table has never heard of, which a scene from a newer tool
-    // can carry. Listed rather than dropped, and at the top level rather than
-    // under a family invented to hold it.
-    loose.extend(held_by(addable, None));
-    for offer in loose {
-        if component_entry(ui, offer) {
-            chosen = Some(offer.metadata.type_name.clone());
-        }
-    }
-    chosen
-}
-
-/// The offers in one family, in the order they are listed.
-///
-/// By display name, because that is what the menu shows: sorted by type name a
-/// reader sees Collider 2D under Rigid Body 2D for a reason nothing on screen
-/// explains.
-fn held_by(addable: &[Offer], family: Option<Family>) -> Vec<&Offer> {
-    let mut held: Vec<&Offer> = addable
-        .iter()
-        .filter(|offer| components::family(&offer.metadata.type_name) == family)
-        .collect();
-    held.sort_by(|left, right| left.metadata.display_name.cmp(&right.metadata.display_name));
-    held
-}
-
-/// One offer as an entry, answering whether it was chosen.
-///
-/// Listed either way. An entry that cannot be used says what to go and make;
-/// absent, it said nothing, and the menu was simply shorter than the
-/// documentation.
-fn component_entry(ui: &mut egui::Ui, offer: &Offer) -> bool {
-    let entry = ui.add_enabled(
-        offer.withheld.is_none(),
-        egui::Button::new(
-            RichText::new(&offer.metadata.display_name)
-                .size(text::BODY)
-                .color(color::TEXT),
-        ),
-    );
-    if let Some(reason) = offer.withheld {
-        entry.on_disabled_hover_text(reason);
-        return false;
-    }
-    if entry.clicked() {
-        ui.close();
-        return true;
-    }
-    false
 }

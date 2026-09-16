@@ -35,24 +35,30 @@ pub struct SpriteInstance {
     model: [[f32; 4]; 4],
     tint: [f32; 4],
     uv_rect: [f32; 4],
+    color_multiply: [f32; 4],
+    color_offset: [f32; 4],
 }
 
 impl SpriteInstance {
-    const ATTRIBUTES: [wgpu::VertexAttribute; 6] = wgpu::vertex_attr_array![
+    const ATTRIBUTES: [wgpu::VertexAttribute; 8] = wgpu::vertex_attr_array![
         2 => Float32x4,
         3 => Float32x4,
         4 => Float32x4,
         5 => Float32x4,
         6 => Float32x4,
-        7 => Float32x4
+        7 => Float32x4,
+        8 => Float32x4,
+        9 => Float32x4
     ];
 
-    /// A sprite drawn from the whole of its texture.
+    /// A sprite drawn from the whole of its texture with identity colour math.
     pub fn new(model: Mat4, tint: [f32; 4]) -> Self {
         Self {
             model: model.to_cols_array_2d(),
             tint,
             uv_rect: UvRect::FULL.to_array(),
+            color_multiply: [1.0; 4],
+            color_offset: [0.0; 4],
         }
     }
 
@@ -68,6 +74,14 @@ impl SpriteInstance {
         self
     }
 
+    /// Applies advanced per-channel colour math without changing batch keys.
+    #[must_use]
+    pub const fn with_color_transform(mut self, multiply: [f32; 4], offset: [f32; 4]) -> Self {
+        self.color_multiply = multiply;
+        self.color_offset = offset;
+        self
+    }
+
     /// The part of the texture this instance draws.
     pub fn uv_rect(self) -> UvRect {
         UvRect::from_array(self.uv_rect)
@@ -76,6 +90,16 @@ impl SpriteInstance {
     /// The per-instance tint in straight `[r, g, b, a]` order.
     pub const fn tint(self) -> [f32; 4] {
         self.tint
+    }
+
+    /// The per-channel multiplier applied after the tint.
+    pub const fn color_multiply(self) -> [f32; 4] {
+        self.color_multiply
+    }
+
+    /// The per-channel offset added after the multiply.
+    pub const fn color_offset(self) -> [f32; 4] {
+        self.color_offset
     }
 
     /// The per-instance model transform.

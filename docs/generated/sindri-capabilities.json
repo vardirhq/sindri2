@@ -425,6 +425,20 @@
     {
       "addable": true,
       "default_payload": {
+        "color_transform": {
+          "multiply": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "offset": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
         "layer": 0,
         "texture": "procedural:checkerboard",
         "tint": [
@@ -436,6 +450,20 @@
       },
       "display_name": "Sprite",
       "fields": {
+        "color_transform": {
+          "multiply": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "offset": [
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
         "layer": 0,
         "texture": "procedural:checkerboard",
         "tint": [

@@ -3,7 +3,9 @@
 use glam::Vec2;
 use sindri_core::{SpriteAnchor, SpriteSheetDocument};
 use sindri_render::{FrameCommand, RenderStage, SpriteDepth, TextureId};
-use sindri_scene::{CameraView, SceneExtractor, TextureBindings, WorldProjection};
+use sindri_scene::{
+    CameraView, SceneExtractError, SceneExtractor, TextureBindings, WorldProjection,
+};
 
 use crate::support::{VIEWPORT, close, document, scene, world_from};
 
@@ -257,5 +259,148 @@ fn an_anchored_sheet_stands_its_sprite_on_the_entity() {
     assert!(
         close(footed.y, 4.5) && close(footed.x, 1.0),
         "the anchored sprite centres at {footed:?} rather than standing at 2.0"
+    );
+}
+
+/// An authored colour transform reaches the instance the shader reads.
+///
+/// The multiply and offset are per instance rather than per batch so that two
+/// sprites recoloured differently still share one draw call when they share a
+/// texture and a layer — which is the whole reason the values travel here
+/// rather than in the batch key.
+#[test]
+fn an_authored_colour_transform_reaches_the_instance() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "recoloured", "transform_3d": { "position": [0.0, 0.0, 0.0] },
+          "components": { "sindri.sprite": {
+            "texture": "b",
+            "color_transform": {
+              "multiply": [0.25, 0.5, 0.75, 1.0],
+              "offset": [0.1, -0.2, 0.3, 0.0] } } } }"#,
+    ));
+
+    let frame = SceneExtractor::new()
+        .unwrap()
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
+        .expect("the scene extracts");
+
+    let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[0].command else {
+        panic!("expected a sprite batch");
+    };
+    let multiply = instances[0].color_multiply();
+    let offset = instances[0].color_offset();
+    assert!(
+        close(multiply[0], 0.25)
+            && close(multiply[1], 0.5)
+            && close(multiply[2], 0.75)
+            && close(multiply[3], 1.0),
+        "the multiply arrived as {multiply:?}"
+    );
+    assert!(
+        close(offset[0], 0.1)
+            && close(offset[1], -0.2)
+            && close(offset[2], 0.3)
+            && close(offset[3], 0.0),
+        "the offset arrived as {offset:?}"
+    );
+}
+
+/// A sprite that says nothing about colour draws exactly as it did before the
+/// transform existed.
+///
+/// This is what makes the feature safe to add to a scene format that is
+/// already in use: every sprite authored before it carries the identity, and
+/// `sample * tint * 1 + 0` is the old `sample * tint`.
+#[test]
+fn a_sprite_without_a_colour_transform_carries_the_identity() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "plain", "transform_3d": { "position": [0.0, 0.0, 0.0] },
+          "components": { "sindri.sprite": { "texture": "b" } } }"#,
+    ));
+
+    let frame = SceneExtractor::new()
+        .unwrap()
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
+        .expect("the scene extracts");
+
+    let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[0].command else {
+        panic!("expected a sprite batch");
+    };
+    let multiply = instances[0].color_multiply();
+    let offset = instances[0].color_offset();
+    assert!(
+        multiply.iter().all(|channel| close(*channel, 1.0)),
+        "an unauthored multiply should be the identity, not {multiply:?}"
+    );
+    assert!(
+        offset.iter().all(|channel| close(*channel, 0.0)),
+        "an unauthored offset should be the identity, not {offset:?}"
+    );
+}
+
+/// A colour transform that is not a number is refused rather than drawn.
+///
+/// JSON has no way to spell a NaN and `serde_json` refuses a literal too large
+/// for an `f64`, so the way one actually arrives is narrowing: `1e39` is an
+/// ordinary `f64` and an infinity once it is an `f32`. It then spreads through
+/// `sample * tint * multiply + offset` and leaves the pixel no value at all, so
+/// it is refused here rather than drawn. Values merely outside zero to one are
+/// a different matter and are left alone: an offset is signed by definition,
+/// and the render target clips what it cannot show.
+#[test]
+fn a_colour_transform_that_is_not_finite_is_refused() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "broken", "transform_3d": { "position": [0.0, 0.0, 0.0] },
+          "components": { "sindri.sprite": {
+            "texture": "b",
+            "color_transform": { "multiply": [1.0, 1.0, 1.0, 1e39] } } } }"#,
+    ));
+
+    let refused = SceneExtractor::new().unwrap().extract(
+        &world,
+        VIEWPORT,
+        CameraView::default(),
+        &TextureBindings::new(),
+    );
+    assert!(
+        matches!(refused, Err(SceneExtractError::InvalidColorTransform)),
+        "an infinite multiply should be refused, not drawn"
+    );
+
+    // A wide but finite transform is somebody's authoring choice, not an
+    // error: the render target clips what it cannot show.
+    let wide = world_from(&scene(
+        r#",
+        { "id": "wide", "transform_3d": { "position": [0.0, 0.0, 0.0] },
+          "components": { "sindri.sprite": {
+            "texture": "b",
+            "color_transform": {
+              "multiply": [4.0, 4.0, 4.0, 1.0],
+              "offset": [-2.0, 0.0, 2.0, 0.0] } } } }"#,
+    ));
+    assert!(
+        SceneExtractor::new()
+            .unwrap()
+            .extract(
+                &wide,
+                VIEWPORT,
+                CameraView::default(),
+                &TextureBindings::new()
+            )
+            .is_ok(),
+        "a finite transform outside zero to one is authoring, not an error"
     );
 }

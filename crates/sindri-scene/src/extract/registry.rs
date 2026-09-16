@@ -119,6 +119,10 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
         serde_json::json!({
             "texture": PROCEDURAL_TEXTURES[0].reference,
             "tint": [1.0, 1.0, 1.0, 1.0],
+            "color_transform": {
+                "multiply": [1.0, 1.0, 1.0, 1.0],
+                "offset": [0.0, 0.0, 0.0, 0.0]
+            },
             "layer": 0
         }),
     )?;

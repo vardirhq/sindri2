@@ -5,6 +5,56 @@ use sindri_core::{SceneComponent, SpriteRef, SpriteRefError};
 
 use super::opaque_white;
 
+const fn zero_rgba() -> [f32; 4] {
+    [0.0, 0.0, 0.0, 0.0]
+}
+
+/// Optional per-channel colour math applied after the ordinary sprite tint.
+///
+/// Identity defaults make this safe for every existing scene. Keeping it
+/// separate from `tint` preserves the simple authoring path while allowing
+/// imported art to reproduce Flash-style colour transforms when it needs to.
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+pub struct SpriteColorTransform {
+    #[serde(default = "opaque_white")]
+    pub multiply: [f32; 4],
+    #[serde(default = "zero_rgba")]
+    pub offset: [f32; 4],
+}
+
+impl Default for SpriteColorTransform {
+    fn default() -> Self {
+        Self {
+            multiply: opaque_white(),
+            offset: zero_rgba(),
+        }
+    }
+}
+
+impl SpriteColorTransform {
+    /// The transform that leaves a sprite exactly as its art was drawn.
+    pub const IDENTITY: Self = Self {
+        multiply: [1.0, 1.0, 1.0, 1.0],
+        offset: [0.0, 0.0, 0.0, 0.0],
+    };
+
+    /// Whether every channel is a number the shader can use.
+    ///
+    /// Checked rather than clamped. A channel outside zero to one is a
+    /// legitimate thing to author — an offset is signed by definition, and a
+    /// multiply above one brightens — and the render target clips what it
+    /// cannot show. A NaN is different in kind: it spreads through
+    /// `sample * tint * multiply + offset` and leaves pixels no value at all,
+    /// so it is refused at extraction rather than drawn.
+    #[must_use]
+    pub fn is_finite(&self) -> bool {
+        self.multiply
+            .iter()
+            .chain(self.offset.iter())
+            .all(|channel| channel.is_finite())
+    }
+}
+
 /// An image drawn in the world, like anything else in the scene.
 ///
 /// A sprite is placed by its transform and drawn through the world camera: it
@@ -23,6 +73,8 @@ pub struct SpriteComponent {
     pub texture: String,
     #[serde(default = "opaque_white")]
     pub tint: [f32; 4],
+    #[serde(default)]
+    pub color_transform: SpriteColorTransform,
     /// The explicit override on draw order. Within a layer sprites sort by how
     /// far from the camera they are; a layer beats that, so a sprite in a
     /// higher one draws in front of something nearer the camera.

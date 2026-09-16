@@ -423,7 +423,7 @@ insertion order; stage order is `Opaque3d`, `Transparent2d`, `Overlay`.
 
 What can actually be drawn: a triangle, a coloured cube, a textured cube with
 depth testing, textured sprites with tint, anchor, and layer, and procedural 2D
-shapes. Rectangles, ellipses, grids, and regular polygons remain evaluated in the
+shapes. A sprite may also carry an advanced colour transform: independent RGBA multipliers and offsets evaluated as `sample * tint * multiply + offset`, travelling per instance so two sprites recoloured differently still share a draw call. The identity is `multiply = [1, 1, 1, 1]` and `offset = [0, 0, 0, 0]`, so a sprite authored before the transform existed draws exactly as it did. A transform that is not finite is refused at extraction rather than drawn — the reachable case is narrowing, since `1e39` is an ordinary `f64` and an infinity once it is an `f32` — while a finite value outside zero to one is left alone for the render target to clip. The editor draws the two quadruples as labelled RGBA rows inside an advanced section, collapsed until the scene has authored one and resettable to the identity. No companion game in this repository exercises the capability yet; Mujaffa Remaster is the external proof for this round. Rectangles, ellipses, grids, and regular polygons remain evaluated in the
 shape shader. A polygon may also carry up to eight explicit 2D vertices; those
 points travel in the same instanced payload and the shader measures against the
 actual authored edges, so an irregular hull remains crisp without becoming a

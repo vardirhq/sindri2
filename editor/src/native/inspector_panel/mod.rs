@@ -9,6 +9,7 @@
 //! component type gets, `rows` is what a value falls back to when no section
 //! claims it, and `draft` turns the whole of it into commands.
 
+pub(super) mod add_component;
 pub(super) mod draft;
 pub(super) mod field;
 pub(super) mod header;
@@ -23,6 +24,7 @@ use eframe::egui;
 use serde_json::Value;
 use sindri_core::{CommandBuffer, ComponentSchemaRegistry, EntityId, SpriteRef, WorldCommand};
 
+use self::add_component::add_component_button;
 use self::draft::{
     EntityDraft, Offer, ProjectDefaults, SceneHolds, addable_components, component_commands,
     component_default, draft_commands, identity_commands,
@@ -32,7 +34,6 @@ use self::header::{
     Identity, IdentityEdit, ParentChoice, active_row, inspector_identity, inspector_parent,
     transform_3d_section,
 };
-use self::rows::add_component_button;
 use self::scene::{SceneSummary, scene_section};
 use self::section::components_sections;
 use self::section::grid::grid_choices;

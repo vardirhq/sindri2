@@ -149,6 +149,9 @@ impl SceneExtractor {
         } = drawing;
         for (entity, sprite) in self.components.query::<SpriteComponent>(world)? {
             let reference = sprite.reference()?;
+            if !sprite.color_transform.is_finite() {
+                return Err(SceneExtractError::InvalidColorTransform);
+            }
             let transform = world
                 .get(entity)
                 .and_then(|data| data.transform_3d)
@@ -169,9 +172,14 @@ impl SceneExtractor {
                 space: DrawSpace::World,
                 texture: textures.resolve(reference.texture()),
                 order,
-                sprite: SpriteInstance::new(model, sprite.tint).with_uv_rect(drawn_rect(
-                    entity, &reference, textures, animations, resting,
-                )),
+                sprite: SpriteInstance::new(model, sprite.tint)
+                    .with_color_transform(
+                        sprite.color_transform.multiply,
+                        sprite.color_transform.offset,
+                    )
+                    .with_uv_rect(drawn_rect(
+                        entity, &reference, textures, animations, resting,
+                    )),
             });
         }
         Ok(())

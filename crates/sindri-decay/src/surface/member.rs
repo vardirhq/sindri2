@@ -51,6 +51,73 @@ const TINT: &[(&str, Node)] = &[
     ("a", tint(SPRITE_COMPONENT, 3)),
 ];
 
+/// One channel of a sprite's advanced colour transform.
+///
+/// Separate from [`tint`] because the transform is two quadruples rather than
+/// one, and because only the world sprite carries it: a script that reached
+/// `color_multiply` on a HUD element would be writing a payload nothing reads.
+const fn color_transform(field: bool, index: usize) -> Node {
+    Node::Leaf(Leaf::Component {
+        component: SPRITE_COMPONENT,
+        pointer: match (field, index) {
+            (true, 0) => &[
+                Seg::Field("color_transform"),
+                Seg::Field("multiply"),
+                Seg::Index(0),
+            ],
+            (true, 1) => &[
+                Seg::Field("color_transform"),
+                Seg::Field("multiply"),
+                Seg::Index(1),
+            ],
+            (true, 2) => &[
+                Seg::Field("color_transform"),
+                Seg::Field("multiply"),
+                Seg::Index(2),
+            ],
+            (true, _) => &[
+                Seg::Field("color_transform"),
+                Seg::Field("multiply"),
+                Seg::Index(3),
+            ],
+            (false, 0) => &[
+                Seg::Field("color_transform"),
+                Seg::Field("offset"),
+                Seg::Index(0),
+            ],
+            (false, 1) => &[
+                Seg::Field("color_transform"),
+                Seg::Field("offset"),
+                Seg::Index(1),
+            ],
+            (false, 2) => &[
+                Seg::Field("color_transform"),
+                Seg::Field("offset"),
+                Seg::Index(2),
+            ],
+            (false, _) => &[
+                Seg::Field("color_transform"),
+                Seg::Field("offset"),
+                Seg::Index(3),
+            ],
+        },
+    })
+}
+
+const COLOR_MULTIPLY: &[(&str, Node)] = &[
+    ("r", color_transform(true, 0)),
+    ("g", color_transform(true, 1)),
+    ("b", color_transform(true, 2)),
+    ("a", color_transform(true, 3)),
+];
+
+const COLOR_OFFSET: &[(&str, Node)] = &[
+    ("r", color_transform(false, 0)),
+    ("g", color_transform(false, 1)),
+    ("b", color_transform(false, 2)),
+    ("a", color_transform(false, 3)),
+];
+
 const UI_IMAGE_TINT: &[(&str, Node)] = &[
     ("r", tint(UI_IMAGE_COMPONENT, 0)),
     ("g", tint(UI_IMAGE_COMPONENT, 1)),
@@ -158,6 +225,8 @@ pub(crate) const SHAPE_MEMBERS: &[(&str, Node)] = &[
 
 pub(crate) const SPRITE_MEMBERS: &[(&str, Node)] = &[
     ("tint", Node::Group(RGBA, TINT)),
+    ("color_multiply", Node::Group(RGBA, COLOR_MULTIPLY)),
+    ("color_offset", Node::Group(RGBA, COLOR_OFFSET)),
     (
         "layer",
         Node::Leaf(Leaf::Component {
