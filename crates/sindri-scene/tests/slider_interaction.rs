@@ -23,9 +23,6 @@ fn registry() -> sindri_core::ComponentSchemaRegistry {
 fn slider(world: &mut World, orientation: UiSliderOrientation) -> EntityId {
     world.spawn(EntityData {
         transform_3d: Some(Transform3D {
-            // Screen UI transforms are authored in overlay units, not pixels.
-            // Cover the full test viewport so pixel positions expressed as a
-            // percentage of WIDTH/HEIGHT map to the same slider percentage.
             scale: [2.0 * WIDTH / HEIGHT, 2.0, 1.0],
             ..Transform3D::default()
         }),
@@ -109,6 +106,26 @@ fn second_finger_cannot_steal_an_active_slider_drag() {
     presses.move_to(first, [WIDTH * 0.6, HEIGHT / 2.0]);
     update(&mut screen, &mut world, &presses);
     assert!((value(&world, entity) - 60.0).abs() < f32::EPSILON);
+}
+
+#[test]
+fn a_touch_can_start_a_slider_when_another_device_sorts_first() {
+    let mut world = World::default();
+    let entity = slider(&mut world, UiSliderOrientation::Horizontal);
+    let mouse = PressId::new(PointerDevice::Mouse, 0);
+    let touch = PressId::new(PointerDevice::Touch, 7);
+    let mut presses = Presses::default();
+    let mut screen = ScreenUi::new();
+
+    // A browser may surface more than one pointer device around a touch. The
+    // slider must use the press that actually began over it, not whichever ID
+    // happens to be `Presses::primary()`.
+    presses.begin(mouse, [WIDTH * 2.0, HEIGHT * 2.0]);
+    presses.begin(touch, [WIDTH * 0.75, HEIGHT / 2.0]);
+    update(&mut screen, &mut world, &presses);
+
+    assert!((value(&world, entity) - 75.0).abs() < f32::EPSILON);
+    assert!(screen.is_held(entity));
 }
 
 #[test]
