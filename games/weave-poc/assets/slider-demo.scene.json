@@ -71,6 +71,17 @@
       }
     },
     {
+      "id": "red-fill",
+      "name": "Red Fill",
+      "parent": "red-slider",
+      "transform_3d": { "scale": [0.14, 0.6, 1.0] },
+      "components": {
+        "weave.style": { "classes": ["slider-fill", "red-fill"] },
+        "sindri.ui.shape": { "kind": "rect", "fill": [1.0, 0.2, 0.3, 1.0], "anchor": "center", "layer": 4 },
+        "sindri.script": { "source": "scripts/slider-fill.decay", "script": "SliderFill", "properties": { "channel": 0.0 }, "enabled": true }
+      }
+    },
+    {
       "id": "red-value",
       "name": "Red Value",
       "parent": "red-column",
@@ -109,6 +120,17 @@
       }
     },
     {
+      "id": "green-fill",
+      "name": "Green Fill",
+      "parent": "green-slider",
+      "transform_3d": { "scale": [0.14, 0.6, 1.0] },
+      "components": {
+        "weave.style": { "classes": ["slider-fill", "green-fill"] },
+        "sindri.ui.shape": { "kind": "rect", "fill": [0.2, 1.0, 0.4, 1.0], "anchor": "center", "layer": 4 },
+        "sindri.script": { "source": "scripts/slider-fill.decay", "script": "SliderFill", "properties": { "channel": 1.0 }, "enabled": true }
+      }
+    },
+    {
       "id": "green-value",
       "name": "Green Value",
       "parent": "green-column",
@@ -144,6 +166,17 @@
         "weave.style": { "classes": ["channel-slider", "blue-track"] },
         "sindri.ui.shape": { "kind": "rect", "fill": [0.0, 0.0, 0.0, 1.0], "anchor": "center", "layer": 3 },
         "sindri.ui.slider": { "label": "Blue", "orientation": "vertical", "min": 0.0, "max": 255.0, "step": 1.0, "value": 192.0, "disabled": false }
+      }
+    },
+    {
+      "id": "blue-fill",
+      "name": "Blue Fill",
+      "parent": "blue-slider",
+      "transform_3d": { "scale": [0.14, 0.6, 1.0] },
+      "components": {
+        "weave.style": { "classes": ["slider-fill", "blue-fill"] },
+        "sindri.ui.shape": { "kind": "rect", "fill": [0.2, 0.5, 1.0, 1.0], "anchor": "center", "layer": 4 },
+        "sindri.script": { "source": "scripts/slider-fill.decay", "script": "SliderFill", "properties": { "channel": 2.0 }, "enabled": true }
       }
     },
     {

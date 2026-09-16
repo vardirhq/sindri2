@@ -68,6 +68,12 @@ sindri.ui.slider {
     border-radius: 18px;
 }
 
+.slider-fill {
+    width: 46px;
+    height: 242px;
+    border-radius: 14px;
+}
+
 .red-track {
     background: #4c1822;
     border-color: #fb7185;
@@ -82,6 +88,10 @@ sindri.ui.slider {
     background: #142b4c;
     border-color: #60a5fa;
 }
+
+.red-fill { background: #fb7185; }
+.green-fill { background: #4ade80; }
+.blue-fill { background: #60a5fa; }
 
 .channel-value {
     width: 90px;
@@ -148,6 +158,12 @@ sindri.ui.slider {
         width: 12vw;
         height: 62vw;
         border-radius: 4vw;
+    }
+
+    .slider-fill {
+        width: 10vw;
+        height: 60vw;
+        border-radius: 3vw;
     }
 
     .channel-value {
