@@ -10,7 +10,7 @@ mod loader;
 
 use std::time::Duration;
 
-use sindri_core::{AssetId, EngineState, World, sheet_id_for};
+use sindri_core::{AssetId, EngineState, LoadedScenes, World, sheet_id_for};
 use sindri_desktop::{AppContext, DesktopApp, Flow};
 use sindri_platform::{AudioBackend, AudioClip, BrowserAudioBackend, EngineHost, InputEvent, Key};
 use sindri_render::{
@@ -26,13 +26,6 @@ use crate::assets::{extractor, presented_world};
 use crate::error::GatherError;
 use crate::session::Session;
 
-/// Gather's browser host deliberately starts empty.
-///
-/// The old browser build proved only that `include_bytes!` survives wasm. This
-/// one does not own a scene, script, texture, font, sheet, or sound until the
-/// browser fetch source has returned it through `AssetLoader` and the manifest
-/// has accepted the bytes. Native stays on the embedded path so changing web
-/// delivery cannot quietly destabilise the desktop game.
 pub(super) struct BrowserGatherApp {
     loader: Option<BrowserProjectLoader>,
     pending: Option<BrowserProjectAssets>,
@@ -48,10 +41,7 @@ pub(super) struct BrowserGatherApp {
     text: TextRenderer,
     glyphs: GlyphRenderer,
     shapes: ShapeRenderer,
-    /// The drawing surface's physical size, kept because the engine is built later.
     viewport: [u32; 2],
-    /// The page's logical size. Weave pixels and media queries use CSS-like pixels,
-    /// not the denser physical pixels of a high-DPI drawing surface.
     layout_viewport: [f64; 2],
     page_visible: bool,
     platform_suspended: bool,
@@ -82,7 +72,7 @@ impl BrowserGatherApp {
         context: &AppContext<'_>,
         project: BrowserProjectAssets,
     ) -> Result<(), GatherError> {
-        let mut loaded: Vec<AssetId> = Vec::new();
+        let mut loaded_textures: Vec<AssetId> = Vec::new();
         for (id, asset) in project.textures {
             let texture = Texture2D::from_rgba8(
                 context.device(),
@@ -94,19 +84,10 @@ impl BrowserGatherApp {
             )?;
             self.bindings
                 .bind(id.as_str(), self.textures.insert(texture));
-            loaded.push(id);
+            loaded_textures.push(id);
         }
 
-        // Every texture this project actually loaded, rather than a list of one
-        // game's textures. The host is generic -- it serves whichever project's
-        // manifest it is handed -- and this loop used to walk `TEXTURE_IDS`,
-        // which is Gather's set: tiles, orb, shrine, tree. For any other project
-        // it matched almost nothing, so almost nothing had its sheet bound, and
-        // a sprite asking for one frame of a sheet was drawn as the whole sheet
-        // squeezed into the frame's quad. Three rocks in a row where an asteroid
-        // should be, four drifters in a row where a drifter should be. Nothing
-        // failed: an unbound sheet is indistinguishable from a plain texture.
-        for texture_id in loaded {
+        for texture_id in loaded_textures {
             let Some(sheet_id) = sheet_id_for(&texture_id) else {
                 continue;
             };
@@ -135,16 +116,24 @@ impl BrowserGatherApp {
             ))?;
         }
 
+        // Browser exports used to fetch every declared scene and then discard
+        // all but the entry document. Enter the entry through LoadedScenes, just
+        // like native does, and give the session the complete scene set so a
+        // Decay `Scene.go` request has somewhere real to go.
+        let (entry_name, entry_document) =
+            project.scenes.first().ok_or(GatherError::MissingScene)?;
+        let mut world = World::default();
+        let mut loaded_scenes = LoadedScenes::new();
+        loaded_scenes.enter_keeping_identities(&mut world, entry_name, entry_document)?;
+        world = presented_world(&world, &project.stylesheets, self.weave_viewport())?;
+
         let mut session = Session::with_sources(self.scene.components().clone(), project.scripts)
             .with_prefabs(project.prefabs)
-            .with_profiles(project.profiles);
-        // A named key, because two games sharing an origin must not share a
-        // save.
+            .with_profiles(project.profiles)
+            .with_scenes(project.scenes, loaded_scenes);
         session.keep_saves_in(Box::new(sindri_platform::BrowserSaves::under(
             "sindri.gather.save",
         )));
-        let mut world = World::from_scene(&project.scene)?.world;
-        world = presented_world(&world, &project.stylesheets, self.weave_viewport())?;
 
         let mut engine =
             EngineHost::new_with_audio(session, sindri_core::FixedStepConfig::default(), audio)?;
@@ -230,9 +219,6 @@ impl DesktopApp for BrowserGatherApp {
             text: TextRenderer::new(),
             glyphs: GlyphRenderer::new(context.device(), context.format()),
             shapes: ShapeRenderer::new(context.device(), context.format()),
-            // Remembered because the engine does not exist yet: the project
-            // loads asynchronously, and a resize that arrives before it must
-            // not be the one size nobody ever hears about.
             viewport: [context.width(), context.height()],
             layout_viewport: [context.logical_width(), context.logical_height()],
             page_visible: true,
@@ -247,10 +233,6 @@ impl DesktopApp for BrowserGatherApp {
             engine.queue_input(event);
             return;
         }
-        // A finger counts as the gesture that unlocks audio. Browsers require
-        // one before a sound may play, and a phone is the machine most likely
-        // to be asking — a list that named only keys and mouse buttons would
-        // leave a touch-only device silent for the whole run.
         if matches!(
             event,
             InputEvent::KeyPressed(_)
@@ -285,8 +267,6 @@ impl DesktopApp for BrowserGatherApp {
     fn resize(&mut self, context: &AppContext<'_>) -> Result<(), Self::Error> {
         self.depth
             .resize(context.device(), context.width(), context.height());
-        // A browser window changes shape constantly — a phone rotating, a tab
-        // resizing — and the screen UI is laid out against this.
         self.viewport = [context.width(), context.height()];
         self.layout_viewport = [context.logical_width(), context.logical_height()];
         if let Some(engine) = self.engine.as_mut() {
