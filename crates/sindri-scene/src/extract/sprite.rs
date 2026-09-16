@@ -149,6 +149,9 @@ impl SceneExtractor {
         } = drawing;
         for (entity, sprite) in self.components.query::<SpriteComponent>(world)? {
             let reference = sprite.reference()?;
+            if !sprite.color_transform.is_finite() {
+                return Err(SceneExtractError::InvalidColorTransform);
+            }
             let transform = world
                 .get(entity)
                 .and_then(|data| data.transform_3d)

@@ -31,6 +31,30 @@ impl Default for SpriteColorTransform {
     }
 }
 
+impl SpriteColorTransform {
+    /// The transform that leaves a sprite exactly as its art was drawn.
+    pub const IDENTITY: Self = Self {
+        multiply: [1.0, 1.0, 1.0, 1.0],
+        offset: [0.0, 0.0, 0.0, 0.0],
+    };
+
+    /// Whether every channel is a number the shader can use.
+    ///
+    /// Checked rather than clamped. A channel outside zero to one is a
+    /// legitimate thing to author — an offset is signed by definition, and a
+    /// multiply above one brightens — and the render target clips what it
+    /// cannot show. A NaN is different in kind: it spreads through
+    /// `sample * tint * multiply + offset` and leaves pixels no value at all,
+    /// so it is refused at extraction rather than drawn.
+    #[must_use]
+    pub fn is_finite(&self) -> bool {
+        self.multiply
+            .iter()
+            .chain(self.offset.iter())
+            .all(|channel| channel.is_finite())
+    }
+}
+
 /// An image drawn in the world, like anything else in the scene.
 ///
 /// A sprite is placed by its transform and drawn through the world camera: it

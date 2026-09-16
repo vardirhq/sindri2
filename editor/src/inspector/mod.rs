@@ -115,6 +115,24 @@ pub fn axis_labels(key: &str, len: usize) -> Vec<String> {
         .collect()
 }
 
+/// Whether a field is advanced: real, but not part of the ordinary path
+/// through this component.
+///
+/// An advanced field is drawn collapsed, so the panel opens on what a person
+/// usually came for. A sprite is textured, tinted and layered; its colour
+/// transform is the answer to a narrower question — art whose own channels are
+/// too dark for a tint to reach — and eight more number boxes above the fold
+/// would turn an ordinary tint picker into a cockpit.
+///
+/// Keyed by `(type_name, key)`, which is the same table `docs/parity.md`
+/// argues against: meaning guessed by the consumer rather than declared by the
+/// engine. It is deliberately short, and the case for replacing the guess with
+/// a declared meaning is made in that file rather than answered here.
+#[must_use]
+pub fn is_advanced(type_name: &str, key: &str) -> bool {
+    matches!((type_name, key), ("sindri.sprite", "color_transform"))
+}
+
 /// Whether a field is drawn as a generic row, or belongs to something else.
 ///
 /// The list is only about fields another control already edits, and it is
@@ -155,7 +173,7 @@ pub const fn is_removable(_type_name: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{ValueKind, axis_labels, humanize, value_kind};
+    use super::{ValueKind, axis_labels, humanize, is_advanced, value_kind};
     use serde_json::json;
 
     #[test]
@@ -218,6 +236,23 @@ mod tests {
         assert!(!super::applies("sindri.animation.sprite", "clips"));
         assert!(!super::applies("sindri.animation.sprite", "playing"));
         assert!(super::applies("sindri.animation.sprite", "speed"));
+    }
+
+    #[test]
+    fn a_sprites_colour_transform_is_advanced_and_nothing_else_is() {
+        assert!(is_advanced("sindri.sprite", "color_transform"));
+        assert!(
+            !is_advanced("sindri.sprite", "tint"),
+            "the ordinary path through a sprite stays above the fold"
+        );
+        assert!(
+            !is_advanced("sindri.ui.text", "outline"),
+            "an outline is what a text component is for, not an aside"
+        );
+        assert!(
+            !is_advanced("game.something.new", "color_transform"),
+            "the table is keyed by component, so a game's own field is untouched"
+        );
     }
 
     #[test]

@@ -3,7 +3,9 @@
 use glam::Vec2;
 use sindri_core::{SpriteAnchor, SpriteSheetDocument};
 use sindri_render::{FrameCommand, RenderStage, SpriteDepth, TextureId};
-use sindri_scene::{CameraView, SceneExtractor, TextureBindings, WorldProjection};
+use sindri_scene::{
+    CameraView, SceneExtractError, SceneExtractor, TextureBindings, WorldProjection,
+};
 
 use crate::support::{VIEWPORT, close, document, scene, world_from};
 
@@ -345,5 +347,60 @@ fn a_sprite_without_a_colour_transform_carries_the_identity() {
     assert!(
         offset.iter().all(|channel| close(*channel, 0.0)),
         "an unauthored offset should be the identity, not {offset:?}"
+    );
+}
+
+/// A colour transform that is not a number is refused rather than drawn.
+///
+/// JSON has no way to spell a NaN and `serde_json` refuses a literal too large
+/// for an `f64`, so the way one actually arrives is narrowing: `1e39` is an
+/// ordinary `f64` and an infinity once it is an `f32`. It then spreads through
+/// `sample * tint * multiply + offset` and leaves the pixel no value at all, so
+/// it is refused here rather than drawn. Values merely outside zero to one are
+/// a different matter and are left alone: an offset is signed by definition,
+/// and the render target clips what it cannot show.
+#[test]
+fn a_colour_transform_that_is_not_finite_is_refused() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "broken", "transform_3d": { "position": [0.0, 0.0, 0.0] },
+          "components": { "sindri.sprite": {
+            "texture": "b",
+            "color_transform": { "multiply": [1.0, 1.0, 1.0, 1e39] } } } }"#,
+    ));
+
+    let refused = SceneExtractor::new().unwrap().extract(
+        &world,
+        VIEWPORT,
+        CameraView::default(),
+        &TextureBindings::new(),
+    );
+    assert!(
+        matches!(refused, Err(SceneExtractError::InvalidColorTransform)),
+        "an infinite multiply should be refused, not drawn"
+    );
+
+    // A wide but finite transform is somebody's authoring choice, not an
+    // error: the render target clips what it cannot show.
+    let wide = world_from(&scene(
+        r#",
+        { "id": "wide", "transform_3d": { "position": [0.0, 0.0, 0.0] },
+          "components": { "sindri.sprite": {
+            "texture": "b",
+            "color_transform": {
+              "multiply": [4.0, 4.0, 4.0, 1.0],
+              "offset": [-2.0, 0.0, 2.0, 0.0] } } } }"#,
+    ));
+    assert!(
+        SceneExtractor::new()
+            .unwrap()
+            .extract(
+                &wide,
+                VIEWPORT,
+                CameraView::default(),
+                &TextureBindings::new()
+            )
+            .is_ok(),
+        "a finite transform outside zero to one is authoring, not an error"
     );
 }

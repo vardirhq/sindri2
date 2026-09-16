@@ -158,6 +158,13 @@ pub(crate) fn value_row(
             }
         }
         inspector::ValueKind::Object => {
+            let advanced = at
+                .described
+                .is_some_and(|described| inspector::is_advanced(described.type_name, key));
+            if advanced {
+                advanced_object(ui, at, &label, value, indent);
+                return;
+            }
             ui.horizontal(|ui| {
                 ui.add_space(metric::GUTTER + indent);
                 ui.label(
@@ -166,27 +173,7 @@ pub(crate) fn value_row(
                         .color(color::TEXT_FAINT),
                 );
             });
-            // A field that decides what the rest of this object holds is
-            // drawn first, and applied to the object rather than to itself:
-            // that is the edit it actually is.
-            let tag = variant_row(ui, at, value, indent + 10.0);
-            let Value::Object(nested) = value else {
-                return;
-            };
-            for (key, value) in nested.iter_mut() {
-                if Some(key.as_str()) == tag.as_deref() {
-                    continue;
-                }
-                let nested_path = join(at.path, key);
-                value_row(
-                    ui,
-                    at.into(&nested_path),
-                    key,
-                    value,
-                    indent + 10.0,
-                    Authored::Default,
-                );
-            }
+            object_rows(ui, at, value, indent);
         }
         // Shown as stored and left alone. A text field over a tilemap's tiles
         // or a clip table is a way to break a scene, not a way to edit one —
@@ -210,6 +197,77 @@ pub(crate) fn value_row(
 }
 
 /// One dotted path, extended by one step.
+/// The rows of a nested object, under whatever heading drew it.
+///
+/// A field that decides what the rest of this object holds is drawn first, and
+/// applied to the object rather than to itself: that is the edit it actually
+/// is.
+fn object_rows(ui: &mut egui::Ui, at: At<'_>, value: &mut Value, indent: f32) {
+    let tag = variant_row(ui, at, value, indent + 10.0);
+    let Value::Object(nested) = value else {
+        return;
+    };
+    for (key, value) in nested.iter_mut() {
+        if Some(key.as_str()) == tag.as_deref() {
+            continue;
+        }
+        let nested_path = join(at.path, key);
+        value_row(
+            ui,
+            at.into(&nested_path),
+            key,
+            value,
+            indent + 10.0,
+            Authored::Default,
+        );
+    }
+}
+
+/// An advanced object: folded away until asked for, and restorable.
+///
+/// Collapsed by default so the panel opens on the ordinary path through the
+/// component, and open already when the scene has said something — a value
+/// somebody authored should not be hidden behind a fold nothing marks. The
+/// reset is what makes opening it safe: eight number boxes are easy to wander
+/// away from and hard to put back by hand, and the schema already knows what
+/// "nobody has said" looks like here.
+fn advanced_object(ui: &mut egui::Ui, at: At<'_>, label: &str, value: &mut Value, indent: f32) {
+    let identity = at.exemplar().cloned();
+    let modified = identity.as_ref().is_some_and(|blank| blank != value);
+    let heading = if modified {
+        format!("{label} (edited)")
+    } else {
+        label.to_owned()
+    };
+    let tint = if modified {
+        color::TEXT
+    } else {
+        color::TEXT_FAINT
+    };
+    ui.horizontal(|ui| {
+        ui.add_space(metric::GUTTER + indent);
+        egui::CollapsingHeader::new(RichText::new(heading).size(text::LABEL).color(tint))
+            .id_salt((at.path, "advanced"))
+            .default_open(modified)
+            .show(ui, |ui| {
+                object_rows(ui, at, value, indent);
+                let Some(identity) = identity else {
+                    return;
+                };
+                ui.horizontal(|ui| {
+                    ui.add_space(metric::GUTTER + indent + 10.0);
+                    if ui
+                        .add_enabled(modified, egui::Button::new("Reset"))
+                        .on_hover_text("Put every channel back to what it is when nobody has said")
+                        .clicked()
+                    {
+                        *value = identity;
+                    }
+                });
+            });
+    });
+}
+
 pub(crate) fn join(path: &str, key: &str) -> String {
     if path.is_empty() {
         key.to_owned()

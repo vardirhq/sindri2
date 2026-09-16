@@ -118,6 +118,23 @@ interprets, and `WorldHost` is the only place that gives them a meaning.
 | `this.sprite.tint.{r,g,b,a}` | `f32` | yes | yes |
 | `this.sprite.color_multiply.{r,g,b,a}` | `f32` | yes | yes |
 | `this.sprite.color_offset.{r,g,b,a}` | `f32` | yes | yes |
+
+**`tint` multiplies; `color_offset` adds.** A tint can only scale a channel the
+art already has, so a sprite drawn nearly black stays nearly black whatever
+colour is asked for — `0.05 * 1.0` is still `0.05`. The offset is what reaches
+past that, because it adds light the texture never carried: the whole is
+`sample * tint * color_multiply + color_offset`. Both default to the identity,
+so a script that never touches them changes nothing.
+
+Two things to know before reaching for the offset. It applies to every pixel of
+the sprite equally, so it lifts shadows and highlights alike and flattens
+whatever shading the art has — the same trade Flash's own colour transform
+makes. And `color_offset.a` raises the alpha of pixels the art left
+transparent, which turns the sprite's empty corners into a visible rectangle;
+leave it at zero unless that is the intent. Nothing is clamped: a channel that
+lands outside zero to one is clipped by the render target, while one that is
+not a number at all is refused when the scene is extracted.
+
 | `this.sprite.layer` | `f32` | yes | yes |
 | `this.ui_image.tint.{r,g,b,a}` | `f32` | yes | yes |
 | `this.ui_image.layer` | `f32` | yes | yes |
