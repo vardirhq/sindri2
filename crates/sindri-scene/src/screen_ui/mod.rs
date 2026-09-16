@@ -237,7 +237,9 @@ impl ScreenUi {
             let is_slider = world
                 .get(entity)
                 .and_then(|data| data.components.get(UiSliderComponent::TYPE_NAME))
-                .and_then(|payload| serde_json::from_value::<UiSliderComponent>(payload.clone()).ok())
+                .and_then(|payload| {
+                    serde_json::from_value::<UiSliderComponent>(payload.clone()).ok()
+                })
                 .is_some_and(|slider| !slider.disabled);
             if !is_slider {
                 continue;
