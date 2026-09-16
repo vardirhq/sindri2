@@ -11,7 +11,7 @@ script SliderFill {
     }
 
     fn update(dt: f32) {
-        let slider = World.find("Red Slider");
+        var slider: Entity = World.find("Red Slider");
         if this.channel == 1.0 {
             slider = World.find("Green Slider");
         }
