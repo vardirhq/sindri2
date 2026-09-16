@@ -259,3 +259,91 @@ fn an_anchored_sheet_stands_its_sprite_on_the_entity() {
         "the anchored sprite centres at {footed:?} rather than standing at 2.0"
     );
 }
+
+/// An authored colour transform reaches the instance the shader reads.
+///
+/// The multiply and offset are per instance rather than per batch so that two
+/// sprites recoloured differently still share one draw call when they share a
+/// texture and a layer — which is the whole reason the values travel here
+/// rather than in the batch key.
+#[test]
+fn an_authored_colour_transform_reaches_the_instance() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "recoloured", "transform_3d": { "position": [0.0, 0.0, 0.0] },
+          "components": { "sindri.sprite": {
+            "texture": "b",
+            "color_transform": {
+              "multiply": [0.25, 0.5, 0.75, 1.0],
+              "offset": [0.1, -0.2, 0.3, 0.0] } } } }"#,
+    ));
+
+    let frame = SceneExtractor::new()
+        .unwrap()
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
+        .expect("the scene extracts");
+
+    let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[0].command else {
+        panic!("expected a sprite batch");
+    };
+    let multiply = instances[0].color_multiply();
+    let offset = instances[0].color_offset();
+    assert!(
+        close(multiply[0], 0.25)
+            && close(multiply[1], 0.5)
+            && close(multiply[2], 0.75)
+            && close(multiply[3], 1.0),
+        "the multiply arrived as {multiply:?}"
+    );
+    assert!(
+        close(offset[0], 0.1)
+            && close(offset[1], -0.2)
+            && close(offset[2], 0.3)
+            && close(offset[3], 0.0),
+        "the offset arrived as {offset:?}"
+    );
+}
+
+/// A sprite that says nothing about colour draws exactly as it did before the
+/// transform existed.
+///
+/// This is what makes the feature safe to add to a scene format that is
+/// already in use: every sprite authored before it carries the identity, and
+/// `sample * tint * 1 + 0` is the old `sample * tint`.
+#[test]
+fn a_sprite_without_a_colour_transform_carries_the_identity() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "plain", "transform_3d": { "position": [0.0, 0.0, 0.0] },
+          "components": { "sindri.sprite": { "texture": "b" } } }"#,
+    ));
+
+    let frame = SceneExtractor::new()
+        .unwrap()
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
+        .expect("the scene extracts");
+
+    let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[0].command else {
+        panic!("expected a sprite batch");
+    };
+    let multiply = instances[0].color_multiply();
+    let offset = instances[0].color_offset();
+    assert!(
+        multiply.iter().all(|channel| close(*channel, 1.0)),
+        "an unauthored multiply should be the identity, not {multiply:?}"
+    );
+    assert!(
+        offset.iter().all(|channel| close(*channel, 0.0)),
+        "an unauthored offset should be the identity, not {offset:?}"
+    );
+}

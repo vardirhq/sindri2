@@ -97,6 +97,9 @@ pub fn axis_labels(key: &str, len: usize) -> Vec<String> {
     let size = ["W", "H", "D", "?"];
     let names: &[&str; 4] = match key {
         "tint" | "color" | "colour" => &colour,
+        // A sprite's colour transform holds four channels each; the two-wide
+        // `offset` a shadow or a collider carries is a place, not a colour.
+        "multiply" | "offset" if len == 4 => &colour,
         "uv_rect" => &rect,
         // A text box is a size rather than a place, and labelling it X and Y is
         // how someone types a position into it.
@@ -231,6 +234,13 @@ mod tests {
         assert_eq!(axis_labels("position", 3), ["X", "Y", "Z"]);
         assert_eq!(axis_labels("tint", 4), ["R", "G", "B", "A"]);
         assert_eq!(axis_labels("uv_rect", 4), ["X", "Y", "W", "H"]);
+        assert_eq!(axis_labels("multiply", 4), ["R", "G", "B", "A"]);
+        assert_eq!(axis_labels("offset", 4), ["R", "G", "B", "A"]);
+        assert_eq!(
+            axis_labels("offset", 2),
+            ["X", "Y"],
+            "a shadow's offset is a place, not a colour"
+        );
         assert_eq!(axis_labels("something", 2), ["X", "Y"]);
     }
 }

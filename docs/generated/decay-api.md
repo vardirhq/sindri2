@@ -198,6 +198,8 @@ The host names this type but has not described its members.
 
 ### `Sprite`
 
+- `color_multiply`: `Rgba`
+- `color_offset`: `Rgba`
 - `layer`: `f32`
 - `tint`: `Rgba`
 

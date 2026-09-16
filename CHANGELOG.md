@@ -11,6 +11,9 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Added
 
+- Added an optional advanced sprite colour transform with independent RGBA
+  multiply and offset, alongside the existing simple tint, reachable from
+  scenes, the editor and Decay.
 - Added a typed batch preflight and agent-facing runtime-contract guidance for
   Decay gameplay scripts.
 - Added multi-scene projects and runtime scene switching, including persistent

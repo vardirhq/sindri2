@@ -148,6 +148,7 @@ is why it earns a section rather than a footnote.
 | Feature | Engine | Editor | Decay | Proof | vs. baseline | Gap that matters |
 | --- | :-: | :-: | :-: | :-: | --- | --- |
 | Sprites, sheets, UVs, layers, blending | ✅ | ✅ | 🟡 | ✅ | **Par** | Decay has sprite asset and visibility paths only |
+| **Advanced sprite colour transform** | ✅ | 🟡 | ✅ | ❌ | **Par** | Per-channel multiply and offset beyond tint, as `sample * tint * multiply + offset`. The editor draws the values as labelled rows but not yet behind the collapsed advanced section the design calls for, and no companion game proves it |
 | Sheet-declared ground anchor | ✅ | ✅ | — | ✅ | **Ahead** | Says where a sprite meets the ground, so sorting is authored rather than guessed |
 | Procedural shapes | ✅ | 🟡 | ✅ | ✅ | **Ahead** | Instanced with sprites; Unity needs a plugin or a mesh. No point-handle authoring |
 | Tilemaps (ortho + iso, overhang) | ✅ | ✅ | ✅ | ✅ | **Par** | `Grid.tile`/`set_tile` read and write cells; `Grid.columns`/`rows` give the size |

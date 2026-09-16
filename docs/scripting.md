@@ -116,6 +116,8 @@ interprets, and `WorldHost` is the only place that gives them a meaning.
 | `this.transform.scale.{x,y,z}` | `f32` | yes | yes |
 | `this.transform.rotation_z` | `f32` | yes | yes |
 | `this.sprite.tint.{r,g,b,a}` | `f32` | yes | yes |
+| `this.sprite.color_multiply.{r,g,b,a}` | `f32` | yes | yes |
+| `this.sprite.color_offset.{r,g,b,a}` | `f32` | yes | yes |
 | `this.sprite.layer` | `f32` | yes | yes |
 | `this.ui_image.tint.{r,g,b,a}` | `f32` | yes | yes |
 | `this.ui_image.layer` | `f32` | yes | yes |
@@ -190,6 +192,8 @@ table above lists, reaching the same numbers.
 | `this.entity.transform.scale.{x,y,z}` | `f32` | yes | yes |
 | `this.entity.transform.rotation_z` | `f32` | yes | yes |
 | `this.entity.sprite.tint.{r,g,b,a}` | `f32` | yes | yes |
+| `this.entity.sprite.color_multiply.{r,g,b,a}` | `f32` | yes | yes |
+| `this.entity.sprite.color_offset.{r,g,b,a}` | `f32` | yes | yes |
 | `this.entity.sprite.layer` | `f32` | yes | yes |
 | `this.entity.ui_image.tint.{r,g,b,a}` | `f32` | yes | yes |
 | `this.entity.ui_image.layer` | `f32` | yes | yes |

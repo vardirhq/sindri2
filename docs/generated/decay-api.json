@@ -953,6 +953,16 @@
       "members": [
         {
           "kind": "value",
+          "name": "color_multiply",
+          "type": "Rgba"
+        },
+        {
+          "kind": "value",
+          "name": "color_offset",
+          "type": "Rgba"
+        },
+        {
+          "kind": "value",
           "name": "layer",
           "type": "f32"
         },
