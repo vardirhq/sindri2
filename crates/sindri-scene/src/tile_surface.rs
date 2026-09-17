@@ -14,7 +14,7 @@
 //! same as a surface at level zero: it is a hole, and walking into it is what
 //! navigation refuses.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use sindri_core::TileSetDocument;
 use sindri_grid::{GridCoord, GridCoord3};
@@ -27,6 +27,13 @@ use crate::TileVolumeComponent;
 pub struct TileSurfaces {
     heights: BTreeMap<(i32, i32), f32>,
     tops: BTreeMap<(i32, i32), i32>,
+    /// The columns whose surface a walker can stand on.
+    ///
+    /// A subset of `heights`, because the two questions are different: water
+    /// holds a boat up and will not hold a farmer up, so its column has a
+    /// height and is not in here. Keeping them apart is what stops a pond from
+    /// reading as either a floor or a hole, which is what one flag forced.
+    walkable: BTreeSet<(i32, i32)>,
 }
 
 impl TileSurfaces {
@@ -46,13 +53,14 @@ impl TileSurfaces {
     ) -> Result<Self, TileSurfaceError> {
         let mut heights: BTreeMap<(i32, i32), f32> = BTreeMap::new();
         let mut tops: BTreeMap<(i32, i32), i32> = BTreeMap::new();
+        let mut walkable: BTreeSet<(i32, i32)> = BTreeSet::new();
         for (coord, tile) in volume.occupied() {
             let definition = tile_set
                 .tile(tile)
                 .ok_or_else(|| TileSurfaceError::UnknownTile {
                     tile: tile.to_owned(),
                 })?;
-            if !definition.solid {
+            if !definition.supports {
                 continue;
             }
             let column = (coord.x, coord.y);
@@ -67,8 +75,20 @@ impl TileSurfaces {
             #[allow(clippy::cast_precision_loss)]
             let top = coord.z as f32 + definition.height;
             heights.insert(column, top);
+            if definition.walkable {
+                walkable.insert(column);
+            } else {
+                // A higher unwalkable cell covers a lower walkable one: a pond
+                // sitting on the ground it drowns is not a floor with water on
+                // top of it.
+                walkable.remove(&column);
+            }
         }
-        Ok(Self { heights, tops })
+        Ok(Self {
+            heights,
+            tops,
+            walkable,
+        })
     }
 
     /// The highest solid cell of a column, which is the one you stand on.
@@ -82,19 +102,37 @@ impl TileSurfaces {
             .map(|z| GridCoord3::new(coord.x, coord.y, *z))
     }
 
-    /// How high the ground stands in this column, or `None` where it is a hole.
+    /// How high this column's surface stands, or `None` where it is a hole.
+    ///
+    /// Where something *rests*, which includes water. Placement and draw order
+    /// ask this, because a thing floating on a pond is at the pond's surface
+    /// and a face drawn there is drawn there.
     #[must_use]
     pub fn height(&self, coord: GridCoord) -> Option<f32> {
         self.heights.get(&(coord.x, coord.y)).copied()
     }
 
-    /// Every column that has ground in it, in stable coordinate order.
+    /// How high this column stands if a walker can stand on it.
     ///
-    /// What a sweep walks: one probe per place something can stand.
-    pub fn columns(&self) -> impl Iterator<Item = (GridCoord, f32)> + '_ {
-        self.heights
-            .iter()
-            .map(|((x, y), height)| (GridCoord::new(*x, *y), *height))
+    /// What navigation asks. `None` covers both a hole and a pond, which are
+    /// different places and equally unwalkable.
+    #[must_use]
+    pub fn walkable_height(&self, coord: GridCoord) -> Option<f32> {
+        self.walkable
+            .contains(&(coord.x, coord.y))
+            .then(|| self.height(coord))
+            .flatten()
+    }
+
+    /// Every column a walker can stand on, in stable coordinate order.
+    ///
+    /// What a sweep walks: one probe per place a walker can be. Water is left
+    /// out, because nothing walks there to be drawn over.
+    pub fn walkable_columns(&self) -> impl Iterator<Item = (GridCoord, f32)> + '_ {
+        self.walkable.iter().filter_map(|(x, y)| {
+            let coord = GridCoord::new(*x, *y);
+            self.height(coord).map(|height| (coord, height))
+        })
     }
 
     /// Whether something may walk between two columns given a step limit.
@@ -107,7 +145,7 @@ impl TileSurfaces {
     /// `docs/parity.md` carries the row.
     #[must_use]
     pub fn step_is_walkable(&self, from: GridCoord, to: GridCoord, max_step: f32) -> bool {
-        match (self.height(from), self.height(to)) {
+        match (self.walkable_height(from), self.walkable_height(to)) {
             (Some(from), Some(to)) => (from - to).abs() <= max_step,
             _ => false,
         }

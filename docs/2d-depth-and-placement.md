@@ -185,6 +185,28 @@ forward and the wall wants it left alone, and a single depth answers for one of
 them. It answers for the wall, because a walker drawn through a wall is worse
 than a seam against the ground. `docs/parity.md` carries the row.
 
+## What a placement covers
+
+A placement names a grid the way an occupant does — the same stable scene ID,
+now the same type — and says which cells it covers relative to the one it names.
+One cell is the default and the common case.
+
+What reads the footprint today is a refusal. Every cell a placement covers has
+to hold it up, and one that does not is an error naming that cell. Before this,
+a prop over a hole was quietly placed at height zero: three rocks standing off
+Gather's shore were left on nothing, and the fix was to author a sandbar under
+them rather than to be told. The check is whole-footprint rather than
+anchor-only, because a house whose anchor is on good ground and whose far corner
+is over water is exactly the case an anchor-only check waves through.
+
+Without a tile set there is nothing to ask, and a placement still lands on the
+grid's own plane, which is the same refusal `WorldGridNavigation` makes for the
+same reason.
+
+The footprint is also what ordering will need when draw order stops coming from
+one point per entity. It is authored here first because placement is where an
+author already says where a thing is.
+
 ## Standing everywhere
 
 A rule can be right everywhere anybody thought to look and wrong on the open

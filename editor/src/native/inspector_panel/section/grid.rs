@@ -6,6 +6,7 @@ use eframe::egui;
 use serde_json::Value;
 use sindri_core::World;
 
+use crate::tile_volume;
 use crate::tilemap::{self};
 use crate::ui::icons;
 use crate::ui::theme::metric;
@@ -16,13 +17,24 @@ use crate::ui::widgets::{
 
 use super::super::rows::numbers_row;
 
+/// Every grid an author can name, by stable ID.
+///
+/// Either grid component counts. Columns, rows, cell size and projection mean
+/// the same thing in `sindri.tilemap` and `sindri.tile_grid`, and anything that
+/// only asks *where a cell is* takes either -- which is the seam
+/// `docs/tile-system-2.md` describes, and the reason this list is not about one
+/// of them.
+///
+/// It used to ask for the flat map alone. No scene in the repository has
+/// carried one since Gather moved to a volume, so the chooser offered nothing
+/// and a grid could not be named at all.
 pub(crate) fn grid_choices(world: &World) -> Vec<(String, String)> {
     world
         .entities()
         .filter_map(|(_, data)| {
-            data.components
-                .contains_key(tilemap::TYPE_NAME)
-                .then_some(())?;
+            let on_a_grid = data.components.contains_key(tilemap::TYPE_NAME)
+                || data.components.contains_key(tile_volume::GRID_TYPE_NAME);
+            on_a_grid.then_some(())?;
             let id = data.source_id.as_ref()?.as_str().to_owned();
             let label = data.name.clone().unwrap_or_else(|| id.clone());
             Some((label, id))
@@ -223,5 +235,56 @@ pub(super) fn grid_occupant_section(
     });
     if duplicate {
         panel::problem(ui, "Footprint cells must be unique offsets.");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+    use sindri_core::{EntityData, SceneEntityId, World};
+
+    use super::grid_choices;
+
+    fn grid(world: &mut World, id: &str, component: &str) {
+        let mut data = EntityData {
+            source_id: Some(SceneEntityId::new(id).unwrap()),
+            ..EntityData::default()
+        };
+        data.components.insert(component.to_owned(), json!({}));
+        world.spawn(data);
+    }
+
+    /// The bug this guards: the chooser asked for the flat map alone, and no
+    /// scene in the repository has carried one since Gather moved to a volume,
+    /// so naming a grid was impossible in every scene that exists.
+    #[test]
+    fn a_tile_grid_can_be_named() {
+        let mut world = World::default();
+        grid(&mut world, "floor", "sindri.tile_grid");
+        let choices = grid_choices(&world);
+        assert_eq!(
+            choices
+                .iter()
+                .map(|(_, id)| id.as_str())
+                .collect::<Vec<_>>(),
+            ["floor"],
+            "a volume's grid is a grid: {choices:?}"
+        );
+    }
+
+    /// And the flat map still is one, for as long as it is readable.
+    #[test]
+    fn a_flat_tilemap_can_still_be_named() {
+        let mut world = World::default();
+        grid(&mut world, "old-floor", "sindri.tilemap");
+        assert_eq!(grid_choices(&world).len(), 1);
+    }
+
+    /// Something that is not a grid is not offered as one.
+    #[test]
+    fn an_ordinary_entity_is_not_a_grid() {
+        let mut world = World::default();
+        grid(&mut world, "rock", "sindri.sprite");
+        assert!(grid_choices(&world).is_empty());
     }
 }

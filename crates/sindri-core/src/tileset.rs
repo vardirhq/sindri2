@@ -114,9 +114,27 @@ pub struct TileDefinition {
     /// Whether this tile hides a neighbouring tile's shared face.
     #[serde(default = "yes", skip_serializing_if = "is_true")]
     pub occludes: bool,
-    /// Whether collision generation treats the logical cell as solid.
+    /// Whether this tile's top holds anything up.
+    ///
+    /// Water supports and is not walkable, which is the distinction one flag
+    /// could not make. A pond and a hole are not the same place: a boat, a
+    /// pier or a lily floats on one and falls through the other, and before
+    /// this a pond had no surface at all, so three rocks standing off Gather's
+    /// shore had to be given a sandbar to stand on.
+    ///
+    /// False is decoration: something drawn in a cell that nothing rests on.
     #[serde(default = "yes", skip_serializing_if = "is_true")]
-    pub solid: bool,
+    pub supports: bool,
+    /// Whether a walker can stand on that top.
+    ///
+    /// The narrower question, and the one navigation asks. Implies `supports`,
+    /// because standing on something is resting on it; a tile that is walkable
+    /// and unsupporting is rejected rather than guessed at.
+    ///
+    /// `solid` was the old name for this and still reads, because renaming a
+    /// field is not the same as changing what a document meant.
+    #[serde(default = "yes", alias = "solid", skip_serializing_if = "is_true")]
+    pub walkable: bool,
 }
 
 impl TileDefinition {
@@ -181,6 +199,9 @@ impl TileSetDocument {
                     height: definition.height,
                 });
             }
+            if definition.walkable && !definition.supports {
+                return Err(TileSetError::WalkableWithoutSupport(tile.clone()));
+            }
             for (face, visual) in definition.faces.iter() {
                 validate_visual(tile, face, visual)?;
             }
@@ -206,6 +227,8 @@ pub enum TileSetError {
     Empty,
     #[error("a tile ID cannot be empty")]
     EmptyTileId,
+    #[error("tile `{0}` is walkable but supports nothing; standing on a tile rests on it")]
+    WalkableWithoutSupport(String),
     #[error("tile `{0}` does not define any face visuals")]
     TileWithoutFaces(String),
     #[error("tile `{tile}` has an invalid {face:?} sprite reference `{sprite}`")]
@@ -300,9 +323,56 @@ mod tests {
         )
         .unwrap();
         let grass = set.tile("grass").unwrap();
-        assert!(grass.solid);
+        assert!(grass.supports);
+        assert!(grass.walkable);
         assert!(grass.occludes);
         assert!(grass.faces.get(TileFace::Top).is_some());
+    }
+
+    /// `solid` was the old name for `walkable`, and a document that used it
+    /// still means what it meant.
+    #[test]
+    fn the_old_solid_field_still_reads_as_walkable() {
+        let set = TileSetDocument::from_json(
+            r#"{
+              "format_version": 1,
+              "tiles": {
+                "water": {
+                  "solid": false,
+                  "faces": { "top": { "sprite": "b.png#0", "size": [1.0, 0.5] } }
+                }
+              }
+            }"#,
+        )
+        .unwrap();
+        let water = set.tile("water").unwrap();
+        assert!(!water.walkable, "solid: false meant you cannot stand there");
+        assert!(
+            water.supports,
+            "and said nothing about whether anything rests on it, so the \
+             pond holds a boat up rather than being a hole"
+        );
+    }
+
+    /// Standing on something rests on it, so the pair cannot disagree.
+    #[test]
+    fn a_walkable_tile_that_supports_nothing_is_rejected() {
+        let error = TileSetDocument::from_json(
+            r#"{
+              "format_version": 1,
+              "tiles": {
+                "ghost": {
+                  "supports": false,
+                  "faces": { "top": { "sprite": "b.png#0", "size": [1.0, 0.5] } }
+                }
+              }
+            }"#,
+        )
+        .unwrap_err();
+        assert!(
+            matches!(error, TileSetError::WalkableWithoutSupport(ref tile) if tile == "ghost"),
+            "{error:?}"
+        );
     }
 
     #[test]

@@ -45,6 +45,9 @@ pub mod native;
 pub mod palette;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod picking;
+/// Putting an authored prefab into the open scene.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod prefab;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod preferences;
 /// Looking at a file the project browser lists.

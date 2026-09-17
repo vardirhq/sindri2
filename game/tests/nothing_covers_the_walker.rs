@@ -36,8 +36,9 @@ fn nothing_the_walker_stands_above_is_drawn_over_it() {
         .expect("the farm sweeps");
 
     // Fewer than the volume's six hundred and sixty cells, and it should be:
-    // water is opaque but not solid, so the moat and the pond are holes with no
-    // surface to stand on, and the outcrop stacks two cells into one column.
+    // water supports without being walkable, so the moat and the pond hold a
+    // boat up and nobody stands on them, and the outcrop stacks two cells into
+    // one column.
     assert!(
         report.probes > 350,
         "the sweep should stand everywhere on the island, not in a corner of \

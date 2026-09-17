@@ -55,6 +55,8 @@ mod occlusion_view;
 mod overlay;
 mod palette_view;
 mod pointer;
+mod prefab_panel;
+mod prefab_pointer;
 mod preview_view;
 mod profile_view;
 mod project_open;
@@ -66,6 +68,7 @@ mod shortcuts;
 mod slicer_view;
 mod tools;
 mod unsaved;
+mod view_interaction;
 mod viewport;
 mod welcome;
 mod workspace;
@@ -229,6 +232,11 @@ struct EditorApp {
     /// user's side — "show me this" — so they share the inspector and clear
     /// each other rather than fighting over it.
     slicer: Option<Slicer>,
+    /// The prefab chosen in the browser, and whether a click places it.
+    ///
+    /// Beside the slicer because it is the same idea: an asset somebody is
+    /// pointing at, with a tool attached to it.
+    prefab_brush: Option<crate::prefab::PrefabBrush>,
     /// The tile brush and palette are editor state, not scene state. A map
     /// stores what was painted; it does not store which brush the author last
     /// held or whether the Scene view currently belongs to that brush.
@@ -450,19 +458,26 @@ impl EditorApp {
         }
     }
 
+    /// The world the editor starts with, and what went wrong reaching it.
+    ///
+    /// A scene that will not load must not take the editor down with it. This
+    /// used to unwrap inside the constructor, so a file that parsed and then
+    /// failed validation killed the process before the window existed — and the
+    /// failure it unwrapped was one the editor should not have had in the first
+    /// place.
+    fn opening_world(scene: &SceneExtractor, file: &SceneFile) -> (World, Option<String>) {
+        match load_world(scene, file.document()) {
+            Ok(world) => (world, None),
+            Err(error) => (World::default(), Some(error)),
+        }
+    }
+
     fn new(context: &eframe::CreationContext<'_>) -> Self {
         crate::ui::theme::install(&context.egui_ctx);
         let preferences = Preferences::load(context.storage);
         let scene = scene_extractor();
         let (decided, file, open_error) = Self::opening(&preferences);
-        // A scene that will not load must not take the editor down with it.
-        // This used to unwrap, so a file that parsed and then failed validation
-        // killed the process before the window existed — and the failure it
-        // unwrapped was one the editor should not have had in the first place.
-        let (world, load_error) = match load_world(&scene, file.document()) {
-            Ok(world) => (world, None),
-            Err(error) => (World::default(), Some(error)),
-        };
+        let (world, load_error) = Self::opening_world(&scene, &file);
         // Nothing is selected until something is chosen. This used to name an
         // entity from the demo scene, which selected the cube in that one scene
         // and silently nothing in every other.
@@ -501,6 +516,7 @@ impl EditorApp {
             search: String::new(),
             asset_search: String::new(),
             slicer: None,
+            prefab_brush: None,
             tilemap_tool: TilemapTool::default(),
             tile_volume_tool: TileVolumeTool::default(),
             occlusion: crate::occlusion::OcclusionOverlay::default(),

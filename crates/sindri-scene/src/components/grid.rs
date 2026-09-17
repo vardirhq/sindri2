@@ -71,10 +71,14 @@ impl SceneComponent for GridNavigationComponent {
 /// including the height of the ground in that column and the Z that orders it.
 /// `docs/2d-depth-and-placement.md` carries the reasoning; the short version is
 /// that an author who never writes a depth cannot write a wrong one.
-#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct GridPlacementComponent {
     /// The stable scene ID of the grid this stands on.
-    pub grid: String,
+    ///
+    /// The same kind of reference `sindri.grid.occupant` uses, and the same
+    /// type: two components naming the same grid should not disagree about
+    /// what naming a grid is.
+    pub grid: SceneEntityId,
     /// The cell, or `None` for something that moves.
     ///
     /// With a cell, the whole transform is derived and the entity is pinned.
@@ -92,6 +96,32 @@ pub struct GridPlacementComponent {
     /// trace back to one.
     #[serde(default)]
     pub offset: [f32; 2],
+    /// Which cells this covers, relative to the one it names.
+    ///
+    /// A house is not a point. One cell is the default and the common case, and
+    /// a thing that covers several says so here rather than being placed by its
+    /// anchor and hoping. What reads it today is the refusal to stand something
+    /// over a hole: every cell it covers has to hold it up, and a cell that
+    /// does not is an error naming that cell rather than a prop quietly resting
+    /// at height zero.
+    ///
+    /// Relative offsets, like `sindri.grid.occupant`'s, so moving the anchor
+    /// moves the whole shape.
+    #[serde(default = "single_cell_footprint")]
+    pub footprint: Vec<[i32; 2]>,
+}
+
+impl Default for GridPlacementComponent {
+    /// A single cell on no grid: what `Add Component` starts from, and not a
+    /// thing with no footprint at all, which would cover nothing.
+    fn default() -> Self {
+        Self {
+            grid: SceneEntityId::new("grid").expect("a non-empty literal"),
+            cell: None,
+            offset: [0.0, 0.0],
+            footprint: single_cell_footprint(),
+        }
+    }
 }
 
 impl SceneComponent for GridPlacementComponent {

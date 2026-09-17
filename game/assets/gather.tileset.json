@@ -325,7 +325,8 @@
           ]
         }
       },
-      "solid": false
+      "supports": true,
+      "walkable": false
     },
     "stone-slab": {
       "faces": {

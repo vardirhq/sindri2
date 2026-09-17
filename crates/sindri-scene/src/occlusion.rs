@@ -228,7 +228,7 @@ fn sweep_volume(
         }
     }
 
-    for (standing, feet) in surfaces.columns() {
+    for (standing, feet) in surfaces.walkable_columns() {
         let Some(standing_cell) = surfaces.top(standing) else {
             continue;
         };

@@ -11,6 +11,10 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Fixed
 
+- The editor's grid chooser offers entities carrying `sindri.tile_grid` as well
+  as `sindri.tilemap`. It asked for the flat map alone, and no scene has carried
+  one since Gather moved to a volume, so a grid could not be named at all.
+
 - Flat ground no longer draws over what stands on it. Something placed on a
   grid sorts past ground no higher than its feet, since no face of such a cell
   can cover it; a block raised a step ahead is a wall and still covers it.
@@ -20,11 +24,28 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Changed
 
+- A grid placement names its grid with the same stable-ID type a grid occupant
+  uses, and carries the cells it covers. Standing something over a hole is now
+  an error naming that cell instead of placing it at height zero.
+
+- A tile says whether its top holds anything up (`supports`) and whether a
+  walker can stand on it (`walkable`) instead of one `solid` flag that meant
+  both. Water supports without being walkable, so a pond is no longer
+  indistinguishable from a hole. `solid` still reads as `walkable`.
+
 - Resolving a tile volume indexes its cells once instead of scanning them for
   every neighbour it asks about, and no longer revalidates a bound tile set on
   every frame.
 
 ### Added
+
+- Choosing a `.prefab.json` in the project browser arms it, and clicking a cell
+  in the Scene view puts it there: one undoable step, standing on that cell of
+  that grid, keeping whatever footprint the prefab declares.
+
+- The editor can read a `.prefab.json` and put it into the open scene as one
+  undoable step, with every entity given a stable identity nothing else is
+  using. Distinct from the runtime's spawn, which deliberately gives none.
 
 - `sweep_occlusion` walks a virtual actor over every standable surface of a
   scene and reports where something that cannot cover it is drawn over it

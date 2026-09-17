@@ -63,7 +63,9 @@ Project asset describing semantic terrain:
 
 - stable tile IDs such as `grass`, `earth`, `water`, `soil`, and `stone`
 - how much of its cell each tile fills, from its floor upward
-- navigation and collision metadata
+- whether a tile's top holds anything up, and separately whether a walker can
+  stand on it — water does the first and not the second, and one flag saying
+  "solid" could not tell a pond from a hole
 - face visuals for top, bottom, and four horizontal neighbours
 - adjacency groups and allowed transitions
 - deterministic weighted variants
@@ -214,9 +216,17 @@ the floor kept the variation the scene had already authored — and every filled
 cell became a block at level zero.
 
 Two things the move surfaced that a flat map had made unaskable. Water is opaque
-but not solid, so the moat and the pond became holes and the island is now
-bounded by the shape of its own ground rather than by an authored wall; three
-rocks standing off the shore were left on nothing, and sit on a sandbar. And a
+but not walkable, so the island is bounded by the shape of its own ground
+rather than by an authored wall.
+
+That began as one flag. Water was "not solid", which answered the navigation
+question correctly and took the moat's surface away with it, so three rocks
+standing off the shore were left on nothing and had to be given a sandbar. A
+pond holds a boat up and a hole does not, and `supports` and `walkable` are now
+separate because no single flag can say which of those a cell is. Gather's
+water supports and is unwalkable: 625 columns of the island hold something up,
+387 of them can be stood on, and the 238 between them are the moat and the
+pond. Navigation reads the second number and is unchanged. And a
 volume in a 2D scene needs somewhere to be in the draw order, which is what
 `layer_step` is: viewed straight on there is no depth but the render layer, so a
 volume that interleaves with sprites places its cells along it.
