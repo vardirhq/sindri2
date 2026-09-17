@@ -93,13 +93,5 @@ script Player {
         } else {
             Animation.stop(this.entity);
         }
-
-        // Draw order follows where the player stands, so walking south of the
-        // shrine puts them in front of it and walking north puts them behind.
-        // A layer per row is what makes that possible at all: sprites batch by
-        // layer and texture, so two different textures on one layer are ordered
-        // by which texture they are rather than by where they are. Half rows,
-        // because a wall stands on the edge between two cells.
-        this.sprite.layer = 1.0 + 2.0 * (grid_x + grid_y);
     }
 }

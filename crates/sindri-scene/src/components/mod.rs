@@ -21,7 +21,9 @@ mod ui_text_options;
 pub mod ui_text_template;
 
 pub use camera::{CameraComponent, CameraFit};
-pub use grid::{GridNavigationComponent, GridOccupantComponent, GridWallDocument};
+pub use grid::{
+    GridNavigationComponent, GridOccupantComponent, GridPlacementComponent, GridWallDocument,
+};
 pub use mesh::{MeshComponent, MeshPrimitive};
 pub use sprite::{SpriteColorTransform, SpriteComponent};
 pub use tile_volume::{

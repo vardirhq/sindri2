@@ -2,7 +2,7 @@ mod floor;
 
 use std::collections::BTreeMap;
 
-use sindri_core::{EntityId, SceneComponent, Transform3D, World};
+use sindri_core::{EntityData, EntityId, SceneComponent, Transform3D, World};
 use sindri_grid::{
     FootprintError, GridBounds, GridCoord, GridError, GridFootprint, GridOccupancy, GridPath,
     GridPathError, GridPathfinder, GridPlacementError, GridSpace, GridWallError, GridWalls,
@@ -146,10 +146,19 @@ impl WorldGridNavigation {
             if !transform.position[0].is_finite() || !transform.position[1].is_finite() {
                 return Err(GridNavigationError::InvalidOccupantPosition(entity));
             }
-            let local = world_to_grid_plane(grid_transform, transform.position_2d());
-            let anchor = space.plane_to_grid(local).map_err(|source| {
-                GridNavigationError::InvalidOccupantCoordinate { entity, source }
-            })?;
+            // A cell it was placed on beats a cell derived from where it
+            // ended up. Standing on a raised column lifts a prop up the screen,
+            // and unprojecting that lifted position reads as a cell further
+            // north — so a scene using both components would have the prop
+            // occupying one cell and drawn on another. The authored fact wins.
+            let anchor = if let Some(cell) = placed_cell(data) {
+                cell
+            } else {
+                let local = world_to_grid_plane(grid_transform, transform.position_2d());
+                space.plane_to_grid(local).map_err(|source| {
+                    GridNavigationError::InvalidOccupantCoordinate { entity, source }
+                })?
+            };
             let footprint = GridFootprint::new(occupant.footprint.into_iter().map(coord))
                 .map_err(|source| GridNavigationError::InvalidFootprint { entity, source })?;
             occupancy
@@ -276,6 +285,26 @@ fn world_to_grid_plane(transform: Transform3D, point: [f32; 2]) -> PlanePoint {
 }
 
 /// A world cannot be represented as one complete navigation snapshot.
+/// The cell a `sindri.grid.placement` names, when it names one.
+///
+/// Read from the stored payload rather than through the registry, because
+/// navigation is derived from a world that may carry components this build
+/// registered and this call was not handed a registry for.
+fn placed_cell(data: &EntityData) -> Option<GridCoord> {
+    let cell = data
+        .components
+        .get("sindri.grid.placement")?
+        .get("cell")?
+        .as_array()?;
+    let [column, row] = cell.as_slice() else {
+        return None;
+    };
+    Some(GridCoord::new(
+        i32::try_from(column.as_i64()?).ok()?,
+        i32::try_from(row.as_i64()?).ok()?,
+    ))
+}
+
 #[derive(Debug, Error)]
 pub enum GridNavigationError {
     #[error("grid entity {0:?} does not exist")]

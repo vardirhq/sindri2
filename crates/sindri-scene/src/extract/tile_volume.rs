@@ -81,10 +81,21 @@ impl SceneExtractor {
                 let ground = transform_matrix(transform)
                     * Mat4::from_translation(Vec3::new(ground_x, ground_y, 0.0));
                 let camera = cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?;
-                let depth = camera_distance(
-                    camera.view,
-                    ground.w_axis.truncate().with_z(transform.position[2]),
-                );
+                // The cell's own Z, by the same rule anything standing on this
+                // grid takes: depth is a consequence of position, so a block
+                // and a prop are finally measured on one axis instead of two.
+                // Zero `depth_step` leaves every cell at the volume's own Z,
+                // which is what a backdrop wants and what every scene written
+                // before this did.
+                // Half a step back, because a cell *is* the ground and anything
+                // placed on it rests on top: they share a column, so without
+                // the bias they tie and submission order decides whether a
+                // shrine stands on its flagstone or under it. This is what the
+                // hand-written even-and-odd layers encoded before depth was
+                // derived.
+                let cell_z = transform.position[2]
+                    + grid.depth_z(grid.depth_at(f64::from(coord.x), f64::from(coord.y)) - 0.5);
+                let depth = camera_distance(camera.view, ground.w_axis.truncate().with_z(cell_z));
                 let visible = grid.projection.visible_faces();
                 for (face_index, (face, visual)) in definition.faces.iter().enumerate() {
                     // A face the projection turns away from is not culled by a
@@ -114,7 +125,7 @@ impl SceneExtractor {
                     // along the view.
                     let stable = cell_index.saturating_mul(6).saturating_add(face_index);
                     let order = TransparentOrder::new(
-                        volume.layer_for(&grid, coord),
+                        volume.layer,
                         depth,
                         u32::try_from(stable).unwrap_or(u32::MAX),
                     )?;

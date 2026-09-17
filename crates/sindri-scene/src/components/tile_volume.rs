@@ -5,8 +5,8 @@ use std::collections::BTreeSet;
 use serde::Deserialize;
 use sindri_core::SceneComponent;
 use sindri_grid::{
-    GridBounds, GridCoord, GridCoord3, GridError, GridSpace, PlanePoint, PlaneYAxis, Projection,
-    VolumeSpace,
+    GridBounds, GridCoord, GridCoord3, GridError, GridPoint, GridSpace, PlanePoint, PlaneYAxis,
+    Projection, VolumeSpace,
 };
 use thiserror::Error;
 
@@ -23,6 +23,20 @@ pub struct TileGridComponent {
     pub level_step: [f32; 2],
     #[serde(default)]
     pub projection: TileProjection,
+    /// How much Z one step of projected depth costs.
+    ///
+    /// Zero, the default, derives no depth and leaves every scene ordering
+    /// exactly as it did. Above zero, a cell further into the scene sits at a
+    /// Z nearer the camera, and the ordering `docs/2d-model.md` already
+    /// describes — Z is a position, the camera sorts by it — starts answering
+    /// for this grid without anything authoring a layer.
+    ///
+    /// Small. Under an orthographic camera Z changes nothing but the order, so
+    /// the step only has to survive comparison; the whole map still has to fit
+    /// inside the camera's near and far planes, and a big step is how a far
+    /// corner gets clipped away.
+    #[serde(default)]
+    pub depth_step: f32,
 }
 
 const fn unit_cell() -> [f32; 2] {
@@ -97,6 +111,59 @@ impl TileGridComponent {
         (depth, coord.z, coord.y, coord.x)
     }
 
+    /// How far into the scene a continuous grid point is.
+    ///
+    /// The same quantity `depth_key` orders cells by, kept continuous so a
+    /// walker crossing a boundary changes depth smoothly rather than snapping a
+    /// whole cell when its anchor rounds.
+    #[must_use]
+    pub fn depth_at(&self, column: f64, row: f64) -> f64 {
+        match self.projection {
+            TileProjection::Orthogonal => row,
+            TileProjection::Isometric => column + row,
+        }
+    }
+
+    /// The Z a thing standing at that depth takes.
+    ///
+    /// Positive depth means nearer the viewer, and the camera sorts larger Z in
+    /// front, so the two agree without a sign to remember.
+    #[must_use]
+    pub fn depth_z(&self, depth: f64) -> f32 {
+        if !self.depth_step.is_finite() || self.depth_step <= 0.0 {
+            return 0.0;
+        }
+        #[allow(clippy::cast_possible_truncation)]
+        let z = (depth * f64::from(self.depth_step)) as f32;
+        z
+    }
+
+    /// Where a point on the grid stands when the ground under it is `height`
+    /// cells up.
+    ///
+    /// Column and row are continuous, because a wall stands on the edge between
+    /// two cells rather than in either of them, and rounding it to one decides
+    /// by coin toss which of them it occludes. Height is a fraction for the
+    /// same kind of reason: the top of a slab is half a cell up, and something
+    /// standing on it stands there rather than at the level above or below.
+    #[must_use]
+    pub fn point_to_local_at_height(&self, column: f64, row: f64, height: f32) -> Option<[f32; 2]> {
+        let point = self
+            .grid_space()
+            .ok()?
+            .project(GridPoint::new(column, row))
+            .ok()?;
+        // The plane is computed in f64 and drawn in f32, as every other cell
+        // projection here is; a grid big enough to lose a pixel to the cast is
+        // one whose far corner left the camera long before.
+        #[allow(clippy::cast_possible_truncation)]
+        let (x, y) = (point.x as f32, point.y as f32);
+        Some([
+            x + height * self.level_step[0],
+            y + height * self.level_step[1],
+        ])
+    }
+
     /// The volume's plane mapping without its level step.
     ///
     /// Navigation and the `Grid.*` script calls reason about columns and rows
@@ -162,44 +229,6 @@ pub struct TileVolumeComponent {
     pub cells: Vec<TileCellDocument>,
     #[serde(default)]
     pub layer: i32,
-    /// How many render layers one step of projected depth costs.
-    ///
-    /// Zero, the default, puts the whole volume on `layer`. That is right for a
-    /// backdrop, and wrong the moment anything is meant to walk *between* the
-    /// blocks: the volume becomes one flat sheet that every sprite either
-    /// covers or hides behind, whichever layer it happens to carry.
-    ///
-    /// The reason it has to be said at all is that a 2D scene has no other
-    /// depth axis. Viewed straight on through an orthographic camera every
-    /// world draw sits at the same distance, so the render layer *is* the
-    /// distance, and a volume that has to interleave with sprites has to place
-    /// its cells along it. A step of two is the useful setting: it leaves an
-    /// odd layer between each pair of cells for whatever stands on them, so the
-    /// ground draws under its own props and a block one step nearer draws over
-    /// them.
-    ///
-    /// A perspective or tilted camera sorts by distance on its own and wants
-    /// zero here.
-    #[serde(default)]
-    pub layer_step: i32,
-}
-
-impl TileVolumeComponent {
-    /// Which render layer one cell's faces are drawn on.
-    ///
-    /// Saturating rather than wrapping, because a volume far enough from the
-    /// origin to overflow a layer has bigger problems than its draw order, and
-    /// wrapping would put its far corner underneath the sky.
-    #[must_use]
-    pub fn layer_for(&self, grid: &TileGridComponent, coord: GridCoord3) -> i32 {
-        if self.layer_step == 0 {
-            return self.layer;
-        }
-        let depth = grid.depth_key(coord).0;
-        let offset = depth.saturating_mul(i64::from(self.layer_step));
-        let offset = i32::try_from(offset).unwrap_or(if offset < 0 { i32::MIN } else { i32::MAX });
-        self.layer.saturating_add(offset)
-    }
 }
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
@@ -277,6 +306,7 @@ mod tests {
             cell_size: [1.0, 0.5],
             level_step: [0.0, 0.5],
             projection: TileProjection::Isometric,
+            depth_step: 0.0,
         }
     }
 
@@ -285,7 +315,6 @@ mod tests {
             tileset: "world.tileset.json".to_owned(),
             cells,
             layer: 0,
-            layer_step: 0,
         }
     }
 

@@ -40,8 +40,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [2, 10],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 25,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -62,8 +65,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [3, 13],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 33,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -84,8 +90,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [10, 2],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 25,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -106,8 +115,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [14, 2],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 33,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -128,8 +140,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [22, 11],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 67,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -150,8 +165,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [22, 14],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 73,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -172,8 +190,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [11, 22],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 67,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -194,8 +215,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [14, 22],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 73,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -216,8 +240,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [15, 17],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 65,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -238,8 +265,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [16, 16],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 65,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -260,8 +290,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [20, 16],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 73,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -282,8 +315,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [21, 18],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 79,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -304,8 +340,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [20, 20],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 81,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -326,8 +365,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [3, 4],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 15,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -348,8 +390,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [3, 7],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 21,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -370,8 +415,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [5, 3],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 17,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -392,8 +440,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [7, 3],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 21,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -414,8 +465,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [17, 3],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 41,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -436,8 +490,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [19, 3],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 45,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -458,8 +515,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [21, 5],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 53,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -480,8 +540,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [21, 8],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 59,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -502,8 +565,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [18, 10],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 57,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -524,8 +590,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [3, 16],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 39,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -546,8 +615,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [3, 19],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 45,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -568,8 +640,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [5, 21],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 53,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -590,8 +665,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [8, 21],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 59,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -612,8 +690,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [15, 21],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 73,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -634,8 +715,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [19, 21],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 81,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -656,8 +740,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [21, 19],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 81,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -678,8 +765,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [21, 14],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 71,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -697,8 +787,12 @@
         "scale": [0.95, 1.075, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [3, 4],
+          "grid": "floor",
+          "offset": [0.5, -0.0]
+        },
         "sindri.sprite": {
-          "layer": 16,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -713,8 +807,12 @@
         "scale": [0.95, 1.075, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [3, 6],
+          "grid": "floor",
+          "offset": [0.5, -0.0]
+        },
         "sindri.sprite": {
-          "layer": 20,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -729,8 +827,12 @@
         "scale": [0.95, 1.075, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [3, 8],
+          "grid": "floor",
+          "offset": [0.5, -0.0]
+        },
         "sindri.sprite": {
-          "layer": 24,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -745,8 +847,12 @@
         "scale": [0.95, 1.075, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [9, 4],
+          "grid": "floor",
+          "offset": [0.5, -0.0]
+        },
         "sindri.sprite": {
-          "layer": 28,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -761,8 +867,12 @@
         "scale": [0.95, 1.075, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [9, 6],
+          "grid": "floor",
+          "offset": [0.5, -0.0]
+        },
         "sindri.sprite": {
-          "layer": 32,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -777,8 +887,12 @@
         "scale": [0.95, 1.075, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [9, 8],
+          "grid": "floor",
+          "offset": [0.5, 0.0]
+        },
         "sindri.sprite": {
-          "layer": 36,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -793,8 +907,12 @@
         "scale": [0.95, 1.075, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [3, 16],
+          "grid": "floor",
+          "offset": [0.5, -0.0]
+        },
         "sindri.sprite": {
-          "layer": 40,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -809,8 +927,12 @@
         "scale": [0.95, 1.075, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [3, 18],
+          "grid": "floor",
+          "offset": [0.5, -0.0]
+        },
         "sindri.sprite": {
-          "layer": 44,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -825,8 +947,12 @@
         "scale": [0.95, 1.075, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [3, 20],
+          "grid": "floor",
+          "offset": [0.5, -0.0]
+        },
         "sindri.sprite": {
-          "layer": 48,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -841,8 +967,12 @@
         "scale": [0.95, 1.075, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [9, 16],
+          "grid": "floor",
+          "offset": [0.5, -0.0]
+        },
         "sindri.sprite": {
-          "layer": 52,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -857,8 +987,12 @@
         "scale": [0.95, 1.075, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [9, 18],
+          "grid": "floor",
+          "offset": [0.5, -0.0]
+        },
         "sindri.sprite": {
-          "layer": 56,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -873,8 +1007,12 @@
         "scale": [0.95, 1.075, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [9, 20],
+          "grid": "floor",
+          "offset": [0.5, -0.0]
+        },
         "sindri.sprite": {
-          "layer": 60,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -889,8 +1027,12 @@
         "scale": [0.95, 1.075, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [15, 4],
+          "grid": "floor",
+          "offset": [0.5, -0.0]
+        },
         "sindri.sprite": {
-          "layer": 40,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -905,8 +1047,12 @@
         "scale": [0.95, 1.075, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [15, 6],
+          "grid": "floor",
+          "offset": [0.5, -0.0]
+        },
         "sindri.sprite": {
-          "layer": 44,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -921,8 +1067,12 @@
         "scale": [0.95, 1.075, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [20, 5],
+          "grid": "floor",
+          "offset": [0.5, -0.0]
+        },
         "sindri.sprite": {
-          "layer": 52,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -937,8 +1087,12 @@
         "scale": [0.95, 1.075, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [20, 7],
+          "grid": "floor",
+          "offset": [0.5, -0.0]
+        },
         "sindri.sprite": {
-          "layer": 56,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -953,8 +1107,11 @@
         "scale": [0.8, 1.0, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [12, 3],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 31,
           "texture": "textures/waystone.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -969,8 +1126,11 @@
         "scale": [0.8, 1.0, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [3, 12],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 31,
           "texture": "textures/waystone.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -985,8 +1145,11 @@
         "scale": [0.8, 1.0, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [21, 12],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 67,
           "texture": "textures/waystone.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -1001,8 +1164,11 @@
         "scale": [0.8, 1.0, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [12, 21],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 67,
           "texture": "textures/waystone.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -1040,6 +1206,7 @@
         "sindri.tile_grid": {
           "cell_size": [1.1, 0.55],
           "columns": 25,
+          "depth_step": 0.01,
           "level_step": [0.0, 0.55],
           "projection": "isometric",
           "rows": 25
@@ -3688,7 +3855,6 @@
             }
           ],
           "layer": 0,
-          "layer_step": 2,
           "tileset": "gather.tileset.json"
         }
       }
@@ -3719,6 +3885,9 @@
         "scale": [0.34, 0.34, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "grid": "floor"
+        },
         "sindri.script": {
           "properties": {
             "bob": 0.09,
@@ -3728,7 +3897,6 @@
           "source": "scripts/orb.decay"
         },
         "sindri.sprite": {
-          "layer": 41,
           "texture": "textures/orb.png",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -3743,6 +3911,9 @@
         "scale": [0.34, 0.34, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "grid": "floor"
+        },
         "sindri.script": {
           "properties": {
             "bob": 0.09,
@@ -3752,7 +3923,6 @@
           "source": "scripts/orb.decay"
         },
         "sindri.sprite": {
-          "layer": 49,
           "texture": "textures/orb.png",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -3767,6 +3937,9 @@
         "scale": [0.34, 0.34, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "grid": "floor"
+        },
         "sindri.script": {
           "properties": {
             "bob": 0.09,
@@ -3776,7 +3949,6 @@
           "source": "scripts/orb.decay"
         },
         "sindri.sprite": {
-          "layer": 49,
           "texture": "textures/orb.png",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -3791,6 +3963,9 @@
         "scale": [0.34, 0.34, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "grid": "floor"
+        },
         "sindri.script": {
           "properties": {
             "bob": 0.09,
@@ -3800,7 +3975,6 @@
           "source": "scripts/orb.decay"
         },
         "sindri.sprite": {
-          "layer": 65,
           "texture": "textures/orb.png",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -3815,6 +3989,9 @@
         "scale": [0.34, 0.34, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "grid": "floor"
+        },
         "sindri.script": {
           "properties": {
             "bob": 0.09,
@@ -3824,7 +4001,6 @@
           "source": "scripts/orb.decay"
         },
         "sindri.sprite": {
-          "layer": 41,
           "texture": "textures/orb.png",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -3842,8 +4018,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [8, 11],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 39,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -3864,8 +4043,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [8, 13],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 43,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -3886,8 +4068,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [8, 14],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 45,
           "texture": "textures/standing-stones.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -4121,6 +4306,9 @@
           "playing": "bob",
           "speed": 1.0
         },
+        "sindri.grid.placement": {
+          "grid": "floor"
+        },
         "sindri.script": {
           "properties": {
             "speed": 2.6
@@ -4129,7 +4317,6 @@
           "source": "scripts/player.decay"
         },
         "sindri.sprite": {
-          "layer": 49,
           "texture": "textures/player.png#bob-0",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -4144,8 +4331,12 @@
         "scale": [0.95, 1.075, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [8, 8],
+          "grid": "floor",
+          "offset": [0.5, -0.0]
+        },
         "sindri.sprite": {
-          "layer": 34,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -4160,8 +4351,12 @@
         "scale": [0.95, 1.075, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [9, 9],
+          "grid": "floor",
+          "offset": [0.5, -0.0]
+        },
         "sindri.sprite": {
-          "layer": 38,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -4176,8 +4371,12 @@
         "scale": [0.95, 1.075, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [10, 10],
+          "grid": "floor",
+          "offset": [0.5, -0.0]
+        },
         "sindri.sprite": {
-          "layer": 42,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -4192,8 +4391,12 @@
         "scale": [0.95, 1.075, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "cell": [11, 11],
+          "grid": "floor",
+          "offset": [0.5, -0.0]
+        },
         "sindri.sprite": {
-          "layer": 46,
           "texture": "textures/stone-wall.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -4208,6 +4411,9 @@
         "scale": [1.0, 1.0, 1.0]
       },
       "components": {
+        "sindri.grid.placement": {
+          "grid": "floor"
+        },
         "sindri.script": {
           "properties": {
             "arrive_x": 3.0,
@@ -4219,7 +4425,6 @@
           "source": "scripts/door.decay"
         },
         "sindri.sprite": {
-          "layer": 53,
           "texture": "textures/waystone.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -4237,8 +4442,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [15, 15],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 61,
           "texture": "textures/shrine.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -4314,8 +4522,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [9, 11],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 41,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -4336,8 +4547,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [10, 14],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 49,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -4358,8 +4572,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [11, 14],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 51,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -4380,8 +4597,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [14, 10],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 49,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -4402,8 +4622,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [15, 11],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 53,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -4424,8 +4647,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [15, 12],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 55,
           "texture": "textures/tree.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         },
@@ -4446,8 +4672,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [13, 11],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 49,
           "texture": "textures/waystone.png#south",
           "tint": [0.72, 0.68, 1.0, 1.0]
         },
@@ -4468,8 +4697,11 @@
         "sindri.grid.occupant": {
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "cell": [11, 13],
+          "grid": "floor"
+        },
         "sindri.sprite": {
-          "layer": 49,
           "texture": "textures/waystone.png#south",
           "tint": [0.6, 0.98, 0.9, 1.0]
         },
@@ -4493,6 +4725,9 @@
           ],
           "grid": "floor"
         },
+        "sindri.grid.placement": {
+          "grid": "floor"
+        },
         "sindri.script": {
           "properties": {
             "step_seconds": 0.32
@@ -4501,7 +4736,6 @@
           "source": "scripts/wisp.decay"
         },
         "sindri.sprite": {
-          "layer": 33,
           "texture": "textures/orb.png",
           "tint": [0.45, 0.82, 1.0, 0.72]
         }

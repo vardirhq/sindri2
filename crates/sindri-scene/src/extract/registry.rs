@@ -23,9 +23,10 @@ use sindri_core::{ComponentSchemaRegistry, TagsComponent};
 use crate::animation::SpriteAnimationComponent;
 use crate::audio::AudioSourceComponent;
 use crate::components::{
-    CameraComponent, GridNavigationComponent, GridOccupantComponent, MeshComponent, ShapeComponent,
-    SpriteComponent, TileGridComponent, TileVolumeComponent, TilemapComponent, UiImageComponent,
-    UiShapeBlend, UiShapeComponent, UiShapeKind, UiTextComponent,
+    CameraComponent, GridNavigationComponent, GridOccupantComponent, GridPlacementComponent,
+    MeshComponent, ShapeComponent, SpriteComponent, TileGridComponent, TileVolumeComponent,
+    TilemapComponent, UiImageComponent, UiShapeBlend, UiShapeComponent, UiShapeKind,
+    UiTextComponent,
 };
 use crate::effects::EffectBurstComponent;
 use crate::physics::{Collider2dComponent, RigidBody2dComponent};
@@ -235,6 +236,7 @@ fn register_tiles(components: &mut ComponentSchemaRegistry) -> Result<(), SceneE
             "rows": 1,
             "cell_size": [1.0, 1.0],
             "level_step": [0.0, 0.5],
+            "depth_step": 0.0,
             "projection": "orthogonal"
         }),
     )?;
@@ -247,8 +249,7 @@ fn register_tiles(components: &mut ComponentSchemaRegistry) -> Result<(), SceneE
         serde_json::json!({
             "tileset": "",
             "cells": [],
-            "layer": 0,
-            "layer_step": 0
+            "layer": 0
         }),
     )?;
     Ok(())
@@ -317,6 +318,13 @@ fn register_gameplay(components: &mut ComponentSchemaRegistry) -> Result<(), Sce
     // opinion about what an entity is, and a tag it made up would be one a
     // query silently answered with.
     components.register_with_default::<TagsComponent>("Tags", serde_json::json!({ "tags": [] }))?;
+    // Fields but no default, for the reason the occupant beside it has none: a
+    // placement must name the stable ID of a grid that exists, and a guessed
+    // one is a prop silently pinned to the wrong floor.
+    components.register_with_fields::<GridPlacementComponent>(
+        "Grid Placement",
+        serde_json::json!({ "grid": "", "cell": [0, 0], "offset": [0.0, 0.0] }),
+    )?;
     components.register_with_default::<GridNavigationComponent>(
         "Grid Navigation",
         serde_json::json!({ "walls": [], "max_step": 1.0 }),
@@ -428,6 +436,7 @@ mod tests {
                 "sindri.animation.sprite",
                 "sindri.audio.source",
                 "sindri.grid.occupant",
+                "sindri.grid.placement",
                 "sindri.ui.text",
             ])
         );
