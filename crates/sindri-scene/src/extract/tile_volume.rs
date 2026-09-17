@@ -5,7 +5,9 @@ use sindri_core::{SpriteRef, TileDefinition, TileFace, TileSetDocument, World};
 use sindri_grid::GridCoord3;
 use sindri_render::{SpriteInstance, TransparentOrder};
 
-use crate::{TextureBindings, TileGridComponent, TileSetBindings, TileVolumeComponent};
+use crate::{
+    TextureBindings, TileGridComponent, TileSetBindings, TileVolumeComponent, TileVolumeIndex,
+};
 
 use super::camera::ResolvedCameras;
 use super::camera::view::camera_distance;
@@ -34,11 +36,10 @@ impl SceneExtractor {
                 .get::<TileGridComponent>(world, entity)?
                 .ok_or(SceneExtractError::MissingTileGrid)?;
             grid.validate()?;
-            volume.validate(&grid)?;
+            let occupied = volume.index(&grid)?;
             let tile_set = tile_sets
                 .and_then(|bindings| bindings.get(&volume.tileset))
                 .ok_or_else(|| SceneExtractError::UnboundTileSet(volume.tileset.clone()))?;
-            tile_set.validate()?;
 
             let transform = world
                 .get(entity)
@@ -105,7 +106,14 @@ impl SceneExtractor {
                     if !visible.contains(&face) {
                         continue;
                     }
-                    if face_is_occluded(&volume, tile_set, coord, face, definition)? {
+                    if face_is_occluded(
+                        &occupied,
+                        &volume.tileset,
+                        tile_set,
+                        coord,
+                        face,
+                        definition,
+                    )? {
                         continue;
                     }
                     let reference = SpriteRef::parse(&visual.sprite)?;
@@ -149,7 +157,8 @@ impl SceneExtractor {
 /// face it abuts leaves the rest of that face exposed, which is exactly what
 /// makes a slab beside a block read as a slab rather than as a block.
 fn face_is_occluded(
-    volume: &TileVolumeComponent,
+    occupied: &TileVolumeIndex<'_>,
+    tileset: &str,
     tile_set: &TileSetDocument,
     coord: GridCoord3,
     face: TileFace,
@@ -159,13 +168,13 @@ fn face_is_occluded(
     let Some(neighbour) = coord.checked_offset(x, y, z) else {
         return Ok(false);
     };
-    let Some(tile) = volume.tile(neighbour) else {
+    let Some(tile) = occupied.tile(neighbour) else {
         return Ok(false);
     };
     let neighbour = tile_set
         .tile(tile)
         .ok_or_else(|| SceneExtractError::UnknownTile {
-            tile_set: volume.tileset.clone(),
+            tile_set: tileset.to_owned(),
             tile: tile.to_owned(),
         })?;
     Ok(match face {

@@ -154,6 +154,37 @@ A volume's cells take their Z from grid depth by the same rule, so `layer_step`
 generalised. A block and a prop then sort against each other by position,
 because they are finally measured on the same axis.
 
+## Ground is not a wall
+
+Depth alone put the ground in front of the player standing on it. The column
+ahead of a walker is nearer than the one under their feet, so a flat top face at
+exactly the height they stand at won on depth and drew over their legs.
+
+No single depth fixes it. In an isometric projection a walker on a cell of depth
+`d` has ground a step ahead at `d + 1` and a wall a step ahead at `d + 1` too:
+the first has to lose to them and the second has to beat them, and one number
+cannot do both. Giving top faces and side faces different offsets only moves the
+contradiction — a cell's wall then sorts a full cell ahead of its own top, and
+the wall of a block paints over the ground in front of it.
+
+So the rule is not about the ground. It is about what stands on it: **a cell
+whose surface is no higher than your feet has no face that can cover you.** Not
+its top, and not the walls holding that top up. A walker therefore sorts one
+cell forward, past the ground it is walking into, and terrain keeps the depth it
+always had — cells still sort against each other by the column they stand in,
+and every ordering already established here is untouched.
+
+Only the cells a step ahead are consulted. A diagonal neighbour is two steps of
+depth away and its top never rises far enough to reach the sprite. A step ahead
+that *is* higher takes the forward sort back, because then it is a wall and
+covering the walker is its job.
+
+One case has no answer: standing in the corner between open ground one step
+ahead and a raised block one step ahead. The ground wants the walker moved
+forward and the wall wants it left alone, and a single depth answers for one of
+them. It answers for the wall, because a walker drawn through a wall is worse
+than a seam against the ground. `docs/parity.md` carries the row.
+
 ## What one point per sprite cannot do
 
 A tall sprite has one ground point and therefore one depth. A tree whose trunk

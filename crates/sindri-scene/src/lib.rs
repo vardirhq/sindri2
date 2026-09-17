@@ -29,9 +29,9 @@ pub use components::{
     GridPlacementComponent, GridWallDocument, MeshComponent, MeshPrimitive, ShapeComponent,
     ShapeGeometry, SpriteColorTransform, SpriteComponent, TileCellDocument, TileDraw,
     TileGridComponent, TileGridError, TileProjection, TileVolumeComponent, TileVolumeError,
-    TilemapComponent, TilemapError, UiAnchor, UiFill, UiFillEdge, UiImageComponent, UiShapeBlend,
-    UiShapeComponent, UiShapeKind, UiTextAutoSize, UiTextCase, UiTextComponent, UiTextLineAlign,
-    UiTextOutline, UiTextShadow, UiTextWrap, ui_text_template,
+    TileVolumeIndex, TilemapComponent, TilemapError, UiAnchor, UiFill, UiFillEdge,
+    UiImageComponent, UiShapeBlend, UiShapeComponent, UiShapeKind, UiTextAutoSize, UiTextCase,
+    UiTextComponent, UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap, ui_text_template,
 };
 pub use effects::{EffectBurstComponent, Effects2d, Fleck};
 pub use extract::{

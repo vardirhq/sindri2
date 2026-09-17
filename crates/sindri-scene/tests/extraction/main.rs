@@ -10,6 +10,7 @@ mod cameras;
 mod canvas;
 mod passes;
 mod sprites;
+mod standing_on_ground;
 mod support;
 mod text;
 mod textures;

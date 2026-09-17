@@ -11,9 +11,18 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Fixed
 
+- Flat ground no longer draws over what stands on it. Something placed on a
+  grid sorts past ground no higher than its feet, since no face of such a cell
+  can cover it; a block raised a step ahead is a wall and still covers it.
 - A tile volume's depth is taken from a cell's column rather than from each
   drawn face, so raising a block no longer moves it toward the viewer and a
   block's own faces are no longer sorted against each other.
+
+### Changed
+
+- Resolving a tile volume indexes its cells once instead of scanning them for
+  every neighbour it asks about, and no longer revalidates a bound tile set on
+  every frame.
 
 ### Added
 
