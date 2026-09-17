@@ -185,6 +185,27 @@ forward and the wall wants it left alone, and a single depth answers for one of
 them. It answers for the wall, because a walker drawn through a wall is worse
 than a seam against the ground. `docs/parity.md` carries the row.
 
+## Standing everywhere
+
+A rule can be right everywhere anybody thought to look and wrong on the open
+ground where the player walks, which is how the ground came to be drawn over
+them on a phone rather than in a test.
+
+`sweep_occlusion` puts a virtual actor on every column of a volume that has
+ground in it and asks the two questions the renderer asks — `face_depth` for a
+cell and `standing_depth` for the actor, the functions themselves rather than a
+restatement of them — then reports every cell that cannot cover the actor and is
+drawn after it regardless. Each finding carries the raised step that took the
+actor's clearance away, so the known corner is separated from a fault nothing
+accounts for; `OcclusionReport::unexplained` is the one a test asserts on.
+
+The probe is a size and an anchor rather than a sprite, because how far an actor
+reaches decides which cells can reach it back. A sweep run with the wrong actor
+proves something about a different game.
+
+On Gather: 387 standable columns, the corner reached in 22 of them, all of them
+a walker beside the raised edge of a plot.
+
 ## What one point per sprite cannot do
 
 A tall sprite has one ground point and therefore one depth. A tree whose trunk

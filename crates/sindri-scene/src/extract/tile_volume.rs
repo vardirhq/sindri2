@@ -94,8 +94,7 @@ impl SceneExtractor {
                 // shrine stands on its flagstone or under it. This is what the
                 // hand-written even-and-odd layers encoded before depth was
                 // derived.
-                let cell_z = transform.position[2]
-                    + grid.depth_z(grid.depth_at(f64::from(coord.x), f64::from(coord.y)) - 0.5);
+                let cell_z = transform.position[2] + grid.depth_z(grid.face_depth(coord));
                 let depth = camera_distance(camera.view, ground.w_axis.truncate().with_z(cell_z));
                 let visible = grid.projection.visible_faces();
                 for (face_index, (face, visual)) in definition.faces.iter().enumerate() {
@@ -156,7 +155,7 @@ impl SceneExtractor {
 /// only dropped when nothing of it could be seen: a neighbour shorter than the
 /// face it abuts leaves the rest of that face exposed, which is exactly what
 /// makes a slab beside a block read as a slab rather than as a block.
-fn face_is_occluded(
+pub(crate) fn face_is_occluded(
     occupied: &TileVolumeIndex<'_>,
     tileset: &str,
     tile_set: &TileSetDocument,

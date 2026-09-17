@@ -76,6 +76,15 @@ impl TileSurfaces {
         self.heights.get(&(coord.x, coord.y)).copied()
     }
 
+    /// Every column that has ground in it, in stable coordinate order.
+    ///
+    /// What a sweep walks: one probe per place something can stand.
+    pub fn columns(&self) -> impl Iterator<Item = (GridCoord, f32)> + '_ {
+        self.heights
+            .iter()
+            .map(|((x, y), height)| (GridCoord::new(*x, *y), *height))
+    }
+
     /// Whether something may walk between two columns given a step limit.
     ///
     /// The limit is symmetric, because a wall is. Grid walls block an edge

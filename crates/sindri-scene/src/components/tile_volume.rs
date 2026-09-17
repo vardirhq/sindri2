@@ -124,6 +124,17 @@ impl TileGridComponent {
         }
     }
 
+    /// How deep a cell's faces are drawn.
+    ///
+    /// Half a step back from its own column, because a cell *is* the ground and
+    /// anything placed on it rests on top: they share a column, and without the
+    /// bias they tie and submission order decides whether a shrine stands on
+    /// its flagstone or under it.
+    #[must_use]
+    pub fn face_depth(&self, coord: GridCoord3) -> f64 {
+        self.depth_at(f64::from(coord.x), f64::from(coord.y)) - 0.5
+    }
+
     /// The Z a thing standing at that depth takes.
     ///
     /// Positive depth means nearer the viewer, and the camera sorts larger Z in

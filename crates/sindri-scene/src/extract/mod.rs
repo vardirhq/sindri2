@@ -14,6 +14,7 @@ mod shape;
 mod sprite;
 mod text;
 mod tile_volume;
+pub(crate) use tile_volume::face_is_occluded;
 mod tilemap;
 mod ui;
 
