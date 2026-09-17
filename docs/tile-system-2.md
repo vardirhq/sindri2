@@ -15,6 +15,8 @@ Tile System 2 keeps `sindri-grid` and replaces that mixed representation.
 
 1. A cell coordinate is logical data. It does not move when art changes.
 2. Elevation is an integer Z coordinate. It is never inferred from PNG height.
+   A tile may fill part of its cell, and says so as a number rather than by
+   being drawn shorter; nothing occupies more than the cell it is in.
 3. A visual has an explicit ground anchor and may overflow its cell without
    changing collision, navigation, picking, or elevation.
 4. Painter order is global across textures. Batching may combine adjacent draws
@@ -60,6 +62,7 @@ need no second map system.
 Project asset describing semantic terrain:
 
 - stable tile IDs such as `grass`, `earth`, `water`, `soil`, and `stone`
+- how much of its cell each tile fills, from its floor upward
 - navigation and collision metadata
 - face visuals for top, bottom, and four horizontal neighbours
 - adjacency groups and allowed transitions

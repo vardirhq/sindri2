@@ -96,12 +96,49 @@ impl TileFaces {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct TileDefinition {
     pub faces: TileFaces,
+    /// How much of its cell this tile fills, from its floor upward.
+    ///
+    /// One is the whole cell and the default, so every tile written before
+    /// heights existed keeps meaning exactly what it did. A half fills the
+    /// bottom half: a slab. The value decides what this tile hides, how high
+    /// something standing on it stands, and nothing about the art — a tile's
+    /// faces are baked at its own height, the way a slab in a voxel game is a
+    /// different block rather than a squashed one.
+    ///
+    /// Bounded at one because a taller tile would reach into the cell above,
+    /// and every part of the system that asks what occupies a cell — occlusion,
+    /// collision, the surface a walker walks on — assumes a cell's contents
+    /// stay inside it. Something two blocks tall is two cells.
+    #[serde(default = "full_height", skip_serializing_if = "is_full_height")]
+    pub height: f32,
     /// Whether this tile hides a neighbouring tile's shared face.
     #[serde(default = "yes", skip_serializing_if = "is_true")]
     pub occludes: bool,
     /// Whether collision generation treats the logical cell as solid.
     #[serde(default = "yes", skip_serializing_if = "is_true")]
     pub solid: bool,
+}
+
+impl TileDefinition {
+    /// Whether this tile fills its cell all the way to the top.
+    ///
+    /// The question occlusion asks most often, and asking it here keeps the
+    /// float comparison in one place rather than in every caller.
+    #[must_use]
+    pub fn fills_cell(&self) -> bool {
+        self.height >= 1.0
+    }
+
+    /// Whether this tile hides a face of something `height` tall beside it.
+    ///
+    /// A neighbour hides a side face only when it is at least as tall as the
+    /// face it would cover. A full block beside a slab hides the slab's side;
+    /// a slab beside a full block leaves the block's upper half showing, which
+    /// is the whole reason a slab reads as a slab.
+    #[must_use]
+    pub fn hides_side_of(&self, height: f32) -> bool {
+        self.occludes && self.height >= height
+    }
 }
 
 /// A reusable project asset shared by scenes and tile volumes.
@@ -137,6 +174,13 @@ impl TileSetDocument {
             if definition.faces.iter().next().is_none() {
                 return Err(TileSetError::TileWithoutFaces(tile.clone()));
             }
+            if !definition.height.is_finite() || definition.height <= 0.0 || definition.height > 1.0
+            {
+                return Err(TileSetError::InvalidHeight {
+                    tile: tile.clone(),
+                    height: definition.height,
+                });
+            }
             for (face, visual) in definition.faces.iter() {
                 validate_visual(tile, face, visual)?;
             }
@@ -150,7 +194,9 @@ impl TileSetDocument {
     }
 }
 
-#[derive(Clone, Debug, Error, PartialEq, Eq)]
+// `PartialEq` without `Eq`: an invalid height is reported as the number that
+// was written, and a float has no total equality to offer.
+#[derive(Clone, Debug, Error, PartialEq)]
 pub enum TileSetError {
     #[error("tile set JSON is not valid: {message}")]
     Json { message: String },
@@ -172,6 +218,8 @@ pub enum TileSetError {
     InvalidSize { tile: String, face: TileFace },
     #[error("tile `{tile}` has a non-finite {face:?} visual offset")]
     InvalidOffset { tile: String, face: TileFace },
+    #[error("tile `{tile}` has height {height}, which must be above zero and at most one cell")]
+    InvalidHeight { tile: String, height: f32 },
 }
 
 fn validate_visual(
@@ -207,6 +255,20 @@ fn validate_visual(
 
 const fn yes() -> bool {
     true
+}
+
+const fn full_height() -> f32 {
+    1.0
+}
+
+/// Whether to leave `height` out of the serialized form.
+///
+/// Compared on the bits rather than within a margin: the question is whether
+/// this is the default that can be omitted and read back identically, and a
+/// height a hair under one is a real height that has to be written down.
+#[allow(clippy::trivially_copy_pass_by_ref)]
+fn is_full_height(value: &f32) -> bool {
+    value.to_bits() == full_height().to_bits()
 }
 
 #[allow(clippy::trivially_copy_pass_by_ref)]
