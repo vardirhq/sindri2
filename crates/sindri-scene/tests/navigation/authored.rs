@@ -1,56 +1,14 @@
-use std::collections::BTreeMap;
+//! Walls, footprints and occupancy as a scene authors them.
 
 use serde_json::{Value, json};
-use sindri_core::{
-    SCENE_FORMAT_VERSION, SceneComponent, SceneDocument, SceneEntity, SceneEntityId, Transform3D,
-    World,
-};
+use sindri_core::SceneComponent;
 use sindri_grid::{GridCoord, GridPathfinder};
 use sindri_scene::{
     GridNavigationComponent, GridNavigationError, GridOccupantComponent, SceneExtractor,
     WorldGridNavigation,
 };
 
-fn id(value: &str) -> SceneEntityId {
-    SceneEntityId::new(value).expect("test IDs are non-empty")
-}
-
-fn entity(
-    entity_id: &str,
-    position: Option<[f32; 3]>,
-    components: impl IntoIterator<Item = (&'static str, Value)>,
-) -> SceneEntity {
-    let mut entity = SceneEntity::new(id(entity_id));
-    entity.transform_3d = position.map(|position| Transform3D {
-        position,
-        ..Transform3D::default()
-    });
-    entity.components = components
-        .into_iter()
-        .map(|(name, payload)| (name.to_owned(), payload))
-        .collect::<BTreeMap<_, _>>();
-    entity
-}
-
-fn tilemap(columns: u32, rows: u32) -> Value {
-    json!({
-        "texture": "tiles",
-        "palette": [],
-        "columns": columns,
-        "rows": rows,
-        "tiles": vec![Value::Null; (columns * rows) as usize],
-        "space": "world"
-    })
-}
-
-fn world(entities: Vec<SceneEntity>) -> sindri_core::LoadedScene {
-    World::from_scene(&SceneDocument {
-        format_version: SCENE_FORMAT_VERSION,
-        entities,
-        ..SceneDocument::default()
-    })
-    .expect("test scene loads")
-}
+use crate::support::{entity, id, tilemap, world};
 
 #[test]
 fn built_in_navigation_components_are_registered_with_honest_defaults() {
@@ -59,7 +17,9 @@ fn built_in_navigation_components_are_registered_with_honest_defaults() {
         extractor
             .components()
             .default_payload(GridNavigationComponent::TYPE_NAME),
-        Some(&json!({ "walls": [] }))
+        Some(&json!({ "walls": [], "max_step": 1.0 })),
+        "a fresh grid walks up and down one cell, which is the step a voxel \
+         game gives without being asked"
     );
     assert!(
         extractor
