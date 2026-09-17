@@ -17,7 +17,7 @@
 use std::collections::BTreeMap;
 
 use sindri_core::TileSetDocument;
-use sindri_grid::GridCoord;
+use sindri_grid::{GridCoord, GridCoord3};
 use thiserror::Error;
 
 use crate::TileVolumeComponent;
@@ -26,6 +26,7 @@ use crate::TileVolumeComponent;
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct TileSurfaces {
     heights: BTreeMap<(i32, i32), f32>,
+    tops: BTreeMap<(i32, i32), i32>,
 }
 
 impl TileSurfaces {
@@ -67,13 +68,33 @@ impl TileSurfaces {
             let top = coord.z as f32 + definition.height;
             heights.insert(column, top);
         }
-        Ok(Self { heights })
+        Ok(Self { heights, tops })
+    }
+
+    /// The highest solid cell of a column, which is the one you stand on.
+    ///
+    /// The height says how far up the ground is; this says which cell made it,
+    /// which is what an editor needs to draw a mark on that ground.
+    #[must_use]
+    pub fn top(&self, coord: GridCoord) -> Option<GridCoord3> {
+        self.tops
+            .get(&(coord.x, coord.y))
+            .map(|z| GridCoord3::new(coord.x, coord.y, *z))
     }
 
     /// How high the ground stands in this column, or `None` where it is a hole.
     #[must_use]
     pub fn height(&self, coord: GridCoord) -> Option<f32> {
         self.heights.get(&(coord.x, coord.y)).copied()
+    }
+
+    /// Every column that has ground in it, in stable coordinate order.
+    ///
+    /// What a sweep walks: one probe per place something can stand.
+    pub fn columns(&self) -> impl Iterator<Item = (GridCoord, f32)> + '_ {
+        self.heights
+            .iter()
+            .map(|((x, y), height)| (GridCoord::new(*x, *y), *height))
     }
 
     /// Whether something may walk between two columns given a step limit.

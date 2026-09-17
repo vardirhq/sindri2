@@ -5,6 +5,7 @@ use std::path::Path;
 use eframe::egui;
 use serde_json::Value;
 
+use crate::occlusion::OcclusionOverlay;
 use crate::tile_volume::{self, TilePlacement, TileVolumeTool};
 use crate::ui::icons;
 use crate::ui::widgets::{panel, property, section};
@@ -14,6 +15,7 @@ pub(super) fn tile_volume_section(
     payload: &mut Value,
     assets_root: Option<&Path>,
     tool: &mut TileVolumeTool,
+    occlusion: &mut OcclusionOverlay,
 ) {
     let Ok(volume) = tile_volume::component(payload) else {
         panel::problem(
@@ -83,5 +85,43 @@ pub(super) fn tile_volume_section(
         panel::problem(ui, problem);
     } else if tiles.is_empty() {
         panel::note(ui, "Add at least one block definition to this tile set.");
+    }
+
+    ordering_section(ui, occlusion);
+}
+
+/// Where the ground draws over what stands on it.
+///
+/// Beside the block tools rather than in a view menu, because that is what it
+/// is about: the faults belong to this volume's own cells, and the thing an
+/// author does about one is build differently right here.
+fn ordering_section(ui: &mut egui::Ui, occlusion: &mut OcclusionOverlay) {
+    section::group(ui, icons::TILEMAP, "Ordering");
+    property::toggle(ui, "Faults", &mut occlusion.enabled, "Shown", "Hidden");
+    if !occlusion.enabled {
+        panel::note(
+            ui,
+            "Stands a walker on every surface and marks what draws over it.",
+        );
+        return;
+    }
+    ui.label(occlusion.summary());
+    if let Some(problem) = occlusion.problem() {
+        panel::problem(ui, problem);
+    } else if occlusion.report().is_clean() {
+        panel::note(ui, "Nothing draws over a walker it cannot cover.");
+    } else if occlusion.report().unexplained().next().is_some() {
+        panel::problem(
+            ui,
+            "Red marks are faults nothing accounts for. Amber ones are the \
+             corner between a wall and open ground, which one depth cannot \
+             answer for both of.",
+        );
+    } else {
+        panel::note(
+            ui,
+            "Amber marks are the corner between a wall and open ground, which \
+             one depth cannot answer for both of.",
+        );
     }
 }

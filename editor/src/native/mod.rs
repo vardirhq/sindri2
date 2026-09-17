@@ -51,6 +51,7 @@ mod frame;
 mod hierarchy;
 mod history_view;
 mod inspector_panel;
+mod occlusion_view;
 mod overlay;
 mod palette_view;
 mod pointer;
@@ -234,6 +235,7 @@ struct EditorApp {
     tilemap_tool: TilemapTool,
     /// The block, height and place/remove mode held by the volume brush.
     tile_volume_tool: TileVolumeTool,
+    occlusion: crate::occlusion::OcclusionOverlay,
     /// Clip selection and playback cursor for the inspector's animation
     /// preview. Like runtime animation state, none of this is scene data.
     animation_tool: AnimationTool,
@@ -501,6 +503,7 @@ impl EditorApp {
             slicer: None,
             tilemap_tool: TilemapTool::default(),
             tile_volume_tool: TileVolumeTool::default(),
+            occlusion: crate::occlusion::OcclusionOverlay::default(),
             animation_tool: AnimationTool::default(),
             browser: BrowserState::default(),
             project,

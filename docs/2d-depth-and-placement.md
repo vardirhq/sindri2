@@ -154,6 +154,77 @@ A volume's cells take their Z from grid depth by the same rule, so `layer_step`
 generalised. A block and a prop then sort against each other by position,
 because they are finally measured on the same axis.
 
+## Ground is not a wall
+
+Depth alone put the ground in front of the player standing on it. The column
+ahead of a walker is nearer than the one under their feet, so a flat top face at
+exactly the height they stand at won on depth and drew over their legs.
+
+No single depth fixes it. In an isometric projection a walker on a cell of depth
+`d` has ground a step ahead at `d + 1` and a wall a step ahead at `d + 1` too:
+the first has to lose to them and the second has to beat them, and one number
+cannot do both. Giving top faces and side faces different offsets only moves the
+contradiction — a cell's wall then sorts a full cell ahead of its own top, and
+the wall of a block paints over the ground in front of it.
+
+So the rule is not about the ground. It is about what stands on it: **a cell
+whose surface is no higher than your feet has no face that can cover you.** Not
+its top, and not the walls holding that top up. A walker therefore sorts one
+cell forward, past the ground it is walking into, and terrain keeps the depth it
+always had — cells still sort against each other by the column they stand in,
+and every ordering already established here is untouched.
+
+Only the cells a step ahead are consulted. A diagonal neighbour is two steps of
+depth away and its top never rises far enough to reach the sprite. A step ahead
+that *is* higher takes the forward sort back, because then it is a wall and
+covering the walker is its job.
+
+One case has no answer: standing in the corner between open ground one step
+ahead and a raised block one step ahead. The ground wants the walker moved
+forward and the wall wants it left alone, and a single depth answers for one of
+them. It answers for the wall, because a walker drawn through a wall is worse
+than a seam against the ground. `docs/parity.md` carries the row.
+
+## Standing everywhere
+
+A rule can be right everywhere anybody thought to look and wrong on the open
+ground where the player walks, which is how the ground came to be drawn over
+them on a phone rather than in a test.
+
+`sweep_occlusion` puts a virtual actor on every column of a volume that has
+ground in it and asks the two questions the renderer asks — `face_depth` for a
+cell and `standing_depth` for the actor, the functions themselves rather than a
+restatement of them — then reports every cell that cannot cover the actor and is
+drawn after it regardless. Each finding carries the raised step that took the
+actor's clearance away, so the known corner is separated from a fault nothing
+accounts for; `OcclusionReport::unexplained` is the one a test asserts on.
+
+The probe is a size and an anchor rather than a sprite, because how far an actor
+reaches decides which cells can reach it back. A sweep run with the wrong actor
+proves something about a different game.
+
+The sweep is a property of a grid and a volume rather than of any game: it takes
+a world, whichever projection the grid is in, and an actor's bounds. What it
+does not cover is a scene with no volume in it — a game whose props are sprites
+on no grid has nothing to stand on and gets an empty report rather than a
+guarantee.
+
+Gather is where it is exercised, as the capability rule requires: 387 standable
+columns, the corner reached in 22 of them, all of them a walker beside the
+raised edge of a plot. That count lives in the game's own test, not in the
+engine.
+
+## Seeing it
+
+The editor draws the report on the grid it is about, under Build → Ordering: the
+ground stood on is filled, the cell covering it outlined, and a line joins them.
+On the grid rather than in the view's chrome, because a fault is a fact about two
+cells and projects through the volume's own transform, so moving the grid moves
+the marks. Amber is the wall corner; red is a fault nothing accounts for.
+
+A list of coordinates is not worth reading. Seeing that all of them lie along
+one edge of one plot is what says there is a single cause.
+
 ## What one point per sprite cannot do
 
 A tall sprite has one ground point and therefore one depth. A tree whose trunk

@@ -72,6 +72,7 @@ pub(super) struct InspectorTools<'a> {
     animation: &'a mut AnimationTool,
     tilemap: &'a mut TilemapTool,
     tile_volume: &'a mut TileVolumeTool,
+    occlusion: &'a mut crate::occlusion::OcclusionOverlay,
 }
 
 /// Everything the panel reads off the project and the registry before it draws
@@ -507,6 +508,7 @@ impl EditorApp {
                 animation: &mut self.animation_tool,
                 tilemap: &mut self.tilemap_tool,
                 tile_volume: &mut self.tile_volume_tool,
+                occlusion: &mut self.occlusion,
             };
             egui::ScrollArea::vertical()
                 .auto_shrink([false; 2])

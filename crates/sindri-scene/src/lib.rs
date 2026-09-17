@@ -13,6 +13,7 @@ mod components;
 pub(crate) mod effects;
 mod extract;
 mod navigation;
+mod occlusion;
 mod physics;
 mod physics_sync;
 mod placement;
@@ -29,9 +30,9 @@ pub use components::{
     GridPlacementComponent, GridWallDocument, MeshComponent, MeshPrimitive, ShapeComponent,
     ShapeGeometry, SpriteColorTransform, SpriteComponent, TileCellDocument, TileDraw,
     TileGridComponent, TileGridError, TileProjection, TileVolumeComponent, TileVolumeError,
-    TilemapComponent, TilemapError, UiAnchor, UiFill, UiFillEdge, UiImageComponent, UiShapeBlend,
-    UiShapeComponent, UiShapeKind, UiTextAutoSize, UiTextCase, UiTextComponent, UiTextLineAlign,
-    UiTextOutline, UiTextShadow, UiTextWrap, ui_text_template,
+    TileVolumeIndex, TilemapComponent, TilemapError, UiAnchor, UiFill, UiFillEdge,
+    UiImageComponent, UiShapeBlend, UiShapeComponent, UiShapeKind, UiTextAutoSize, UiTextCase,
+    UiTextComponent, UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap, ui_text_template,
 };
 pub use effects::{EffectBurstComponent, Effects2d, Fleck};
 pub use extract::{
@@ -39,9 +40,14 @@ pub use extract::{
     UiCanvas, ViewCamera, WorldProjection, overlay_for_viewport, overlay_in_scene,
 };
 pub use navigation::{GridNavigationError, GridPlacement, WorldGridNavigation};
+pub use occlusion::{
+    OcclusionError, OcclusionFinding, OcclusionProbe, OcclusionReport, sweep_occlusion,
+};
 pub use physics::{Collider2dComponent, RigidBody2dComponent, RigidBodyKind};
 pub use physics_sync::{PhysicsSyncError, ScenePhysics2d};
-pub use placement::{GridPlacementError, resolve_grid_placements};
+pub use placement::{
+    GridPlacementError, blocking_step_ahead, resolve_grid_placements, standing_depth,
+};
 pub use screen_ui::{
     SafeArea, ScreenExtent, ScreenRect, ScreenUi, UiButtonComponent, UiDirection, UiHierarchy,
     UiLayoutComponent, UiPlaced, UiSliderComponent, UiSliderOrientation,

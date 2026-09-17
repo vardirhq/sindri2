@@ -11,12 +11,26 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Fixed
 
+- Flat ground no longer draws over what stands on it. Something placed on a
+  grid sorts past ground no higher than its feet, since no face of such a cell
+  can cover it; a block raised a step ahead is a wall and still covers it.
 - A tile volume's depth is taken from a cell's column rather than from each
   drawn face, so raising a block no longer moves it toward the viewer and a
   block's own faces are no longer sorted against each other.
 
+### Changed
+
+- Resolving a tile volume indexes its cells once instead of scanning them for
+  every neighbour it asks about, and no longer revalidates a bound tile set on
+  every frame.
+
 ### Added
 
+- `sweep_occlusion` walks a virtual actor over every standable surface of a
+  scene and reports where something that cannot cover it is drawn over it
+  anyway, with the reason attached. Gather's farm is swept in its own test.
+- The editor draws that report on the grid it describes, under Build →
+  Ordering, so a run of faults along one edge reads as one cause.
 - Entities can be placed by naming a grid cell rather than a world position.
   `sindri.grid.placement` derives the transform from the cell, including the
   height of the ground in that column and the Z that orders it, so raising the

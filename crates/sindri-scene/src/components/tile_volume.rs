@@ -1,6 +1,6 @@
 //! Stackable tile-grid geometry and sparse logical cell storage.
 
-use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 
 use serde::Deserialize;
 use sindri_core::SceneComponent;
@@ -124,6 +124,17 @@ impl TileGridComponent {
         }
     }
 
+    /// How deep a cell's faces are drawn.
+    ///
+    /// Half a step back from its own column, because a cell *is* the ground and
+    /// anything placed on it rests on top: they share a column, and without the
+    /// bias they tie and submission order decides whether a shrine stands on
+    /// its flagstone or under it.
+    #[must_use]
+    pub fn face_depth(&self, coord: GridCoord3) -> f64 {
+        self.depth_at(f64::from(coord.x), f64::from(coord.y)) - 0.5
+    }
+
     /// The Z a thing standing at that depth takes.
     ///
     /// Positive depth means nearer the viewer, and the camera sorts larger Z in
@@ -243,12 +254,50 @@ pub enum TileVolumeError {
     DuplicateCell { x: i32, y: i32, z: i32 },
 }
 
+/// A volume's occupied cells, in a shape that can answer for one of them.
+///
+/// The sparse `Vec` a volume is written as is the right thing to serialize and
+/// the wrong thing to ask questions of: finding one cell in it is a scan, and
+/// resolving a volume asks for six neighbours of every cell to decide which
+/// faces are hidden. That is the whole volume walked six times per cell, every
+/// frame -- for Gather's island, a few million coordinate comparisons a frame
+/// spent deciding something that had not changed.
+///
+/// Validation already had to visit every cell and remember which coordinates it
+/// had seen, so the index is what that pass was building and throwing away.
+pub struct TileVolumeIndex<'a> {
+    cells: BTreeMap<GridCoord3, &'a str>,
+}
+
+impl<'a> TileVolumeIndex<'a> {
+    #[must_use]
+    pub fn tile(&self, coord: GridCoord3) -> Option<&'a str> {
+        self.cells.get(&coord).copied()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.cells.is_empty()
+    }
+
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.cells.len()
+    }
+}
+
 impl TileVolumeComponent {
-    pub fn validate(&self, grid: &TileGridComponent) -> Result<(), TileVolumeError> {
+    /// Checks the volume against its grid and indexes it in the same pass.
+    ///
+    /// The checks are exactly the ones `validate` makes, because they are the
+    /// same pass: a volume that cannot be indexed is one that names no tile
+    /// set, leaves a cell without a tile, puts a cell outside the grid, or
+    /// occupies one coordinate twice.
+    pub fn index(&self, grid: &TileGridComponent) -> Result<TileVolumeIndex<'_>, TileVolumeError> {
         if self.tileset.trim().is_empty() {
             return Err(TileVolumeError::MissingTileSet);
         }
-        let mut occupied = BTreeSet::new();
+        let mut cells = BTreeMap::new();
         for cell in &self.cells {
             let coord = cell.coord();
             if cell.tile.trim().is_empty() {
@@ -265,7 +314,7 @@ impl TileVolumeComponent {
                     z: coord.z,
                 });
             }
-            if !occupied.insert(coord) {
+            if cells.insert(coord, cell.tile.as_str()).is_some() {
                 return Err(TileVolumeError::DuplicateCell {
                     x: coord.x,
                     y: coord.y,
@@ -273,9 +322,17 @@ impl TileVolumeComponent {
                 });
             }
         }
-        Ok(())
+        Ok(TileVolumeIndex { cells })
     }
 
+    pub fn validate(&self, grid: &TileGridComponent) -> Result<(), TileVolumeError> {
+        self.index(grid).map(|_| ())
+    }
+
+    /// The tile at one coordinate, by scanning.
+    ///
+    /// Fine for a single question. Anything asking repeatedly -- resolving a
+    /// volume, deriving its surfaces -- wants `index` instead.
     #[must_use]
     pub fn tile(&self, coord: GridCoord3) -> Option<&str> {
         self.cells

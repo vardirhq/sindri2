@@ -107,11 +107,21 @@ fn depth_still_runs_down_the_isometric_diagonal() {
 
     // Sorted by where they stand, Z never goes backwards: further down the
     // diagonal is nearer the camera, which is the whole of the rule.
+    //
+    // Never by more than the clearance, rather than never at all. Something
+    // standing on ground no higher than its feet sorts three quarters of a cell
+    // forward to get out from under it, and whether it does depends on the
+    // terrain a step ahead -- so two props on the same diagonal with different
+    // ground ahead of them sit a fraction apart. They are in different places on
+    // the same diagonal and never overlap; what the rule is about is the order
+    // down the diagonal, and that is what is asserted.
+    // `docs/2d-depth-and-placement.md` carries the reasoning.
+    let clearance = 0.75 * 0.01 + 1.0e-6;
     standing.sort_by(|a, b| a.0.total_cmp(&b.0));
     for pair in standing.windows(2) {
         let (first, second) = (&pair[0], &pair[1]);
         assert!(
-            second.1 >= first.1 - 1.0e-6,
+            second.1 >= first.1 - clearance,
             "{} at depth {:.2} has Z {} but {} at depth {:.2} has {}",
             first.2,
             first.0,

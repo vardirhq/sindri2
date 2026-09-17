@@ -15,6 +15,7 @@
 //! its script and only its depth is answered here.
 
 use sindri_core::{ComponentSchemaRegistry, EntityId, World};
+use sindri_grid::GridCoord;
 use thiserror::Error;
 
 use crate::{
@@ -127,14 +128,14 @@ fn place(
                 f64::from(row) + f64::from(placement.offset[1]),
             );
             let height = surfaces
-                .and_then(|surfaces| surfaces.height(sindri_grid::GridCoord::new(column, row)))
+                .and_then(|surfaces| surfaces.height(GridCoord::new(column, row)))
                 .unwrap_or(0.0);
             let [x, y] = grid
                 .point_to_local_at_height(at.0, at.1, height)
                 .ok_or(GridPlacementError::UnprojectableCell { entity })?;
             transform.position[0] = origin[0] + x;
             transform.position[1] = origin[1] + y;
-            at
+            (at, height)
         }
     } else {
         {
@@ -147,16 +148,128 @@ fn place(
                     f64::from(transform.position[1] - origin[1]),
                 ))
                 .map_err(|_| GridPlacementError::UnprojectableCell { entity })?;
-            (point.x, point.y)
+            // A walker's cell is wherever its script has put it, so the ground
+            // under it is read from the column it is standing in rather than
+            // from an authored cell it does not have.
+            let height = surfaces
+                .and_then(|surfaces| surfaces.height(nearest_cell(point.x, point.y)))
+                .unwrap_or(0.0);
+            ((point.x, point.y), height)
         }
     };
 
-    transform.position[2] = origin[2] + grid.depth_z(grid.depth_at(column_row.0, column_row.1));
+    let (column_row, height) = column_row;
+    let depth = standing_depth(grid, surfaces, column_row, height);
+    transform.position[2] = origin[2] + grid.depth_z(depth);
     if let Some(data) = world.get_mut(entity) {
         data.transform_3d = Some(transform);
     }
     Ok(())
 }
+
+/// The cell a continuous grid point stands in.
+///
+/// `GridSpace` puts the integer coordinate at the centre of its cell, so the
+/// nearest whole column and row are the cell something is standing in.
+fn nearest_cell(column: f64, row: f64) -> GridCoord {
+    #[allow(clippy::cast_possible_truncation)]
+    GridCoord::new(column.round() as i32, row.round() as i32)
+}
+
+/// How deep something standing here is drawn.
+///
+/// The counterpart of `TileGridComponent::face_depth`, and the other half of
+/// the one rule that orders a world against the ground under it. Public because
+/// a sweep that walks every standable surface has to ask the question the
+/// renderer asks rather than a copy of it.
+#[must_use]
+pub fn standing_depth(
+    grid: &TileGridComponent,
+    surfaces: Option<&TileSurfaces>,
+    (column, row): (f64, f64),
+    height: f32,
+) -> f64 {
+    grid.depth_at(column, row) + clearance_ahead(grid, surfaces, (column, row), height)
+}
+
+/// How far forward something standing here has to sort to clear its own ground.
+///
+/// Depth alone put the ground in front of the player standing on it. The column
+/// ahead of a walker is nearer than the one under their feet, so its top face --
+/// flat, at exactly the height they stand at -- won on depth and drew over
+/// their legs. Nothing is in front of a walker at the height they are standing
+/// at, and a cell whose surface is no higher than their feet has no face that
+/// can cover them: not its top, and not the walls holding that top up.
+///
+/// So a walker sorts forward, past the ground it is walking into. How far is
+/// decided by what it must not overtake. A cell sits half a step back from its
+/// own column, so the ground a step ahead is half a step in front of the walker
+/// and has to be cleared; something *standing* on that ground is a whole step
+/// in front and must not be, or a walker would draw through the tree it is
+/// walking behind. Three quarters of a step is between them.
+///
+/// The cells that can reach it are the ones a step ahead -- a diagonal is two
+/// steps of depth away and its top never rises far enough to touch the sprite --
+/// so those are the only ones asked about.
+///
+/// A step ahead that *is* higher gets the walker's place back. A block raised
+/// beside them is a wall rather than ground, it can cover them, and moving the
+/// walker past it would be the original bug with the roles swapped. Standing in
+/// the corner between a wall and open ground is the one case this cannot answer
+/// for both at once, and it answers for the wall.
+fn clearance_ahead(
+    grid: &TileGridComponent,
+    surfaces: Option<&TileSurfaces>,
+    (column, row): (f64, f64),
+    height: f32,
+) -> f64 {
+    if blocking_step_ahead(grid, surfaces, (column, row), height).is_some() {
+        return 0.0;
+    }
+    if surfaces.is_none() {
+        return 0.0;
+    }
+    CLEARANCE
+}
+
+/// The raised step ahead that takes a walker's clearance away, if there is one.
+///
+/// The one case the rule cannot answer for both sides of. A walker beside a
+/// raised block needs the block to cover it and needs the open ground on its
+/// other side not to, and one depth grants exactly one of those. It grants the
+/// block, because a walker drawn through a wall is worse than a seam against
+/// the ground.
+///
+/// Public because that is a fact about the scene rather than about the walker:
+/// a sweep reports where it bites, and the editor can draw it.
+#[must_use]
+pub fn blocking_step_ahead(
+    grid: &TileGridComponent,
+    surfaces: Option<&TileSurfaces>,
+    (column, row): (f64, f64),
+    height: f32,
+) -> Option<GridCoord> {
+    let surfaces = surfaces?;
+    let here = nearest_cell(column, row);
+    let depth = grid.depth_at(f64::from(here.x), f64::from(here.y));
+    [
+        GridCoord::new(here.x + 1, here.y),
+        GridCoord::new(here.x, here.y + 1),
+        GridCoord::new(here.x - 1, here.y),
+        GridCoord::new(here.x, here.y - 1),
+    ]
+    .into_iter()
+    .filter(|cell| grid.depth_at(f64::from(cell.x), f64::from(cell.y)) > depth)
+    // An empty column is a hole rather than a wall, and nothing in it can
+    // cover anything.
+    .find(|cell| surfaces.height(*cell).is_some_and(|top| top > height))
+}
+
+/// How far forward standing on the ground sorts something, in cells.
+///
+/// Above the half step a cell sits back from its column, and below the whole
+/// step to whatever is standing on the next one.
+const CLEARANCE: f64 = 0.75;
 
 #[derive(Debug, Error)]
 pub enum GridPlacementError {
