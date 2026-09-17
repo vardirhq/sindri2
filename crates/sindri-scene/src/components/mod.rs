@@ -28,7 +28,7 @@ pub use mesh::{MeshComponent, MeshPrimitive};
 pub use sprite::{SpriteColorTransform, SpriteComponent};
 pub use tile_volume::{
     TileCellDocument, TileGridComponent, TileGridError, TileVolumeComponent, TileVolumeError,
-    TileVolumeIndex,
+    TileVolumeIndex, cell_to_local_in,
 };
 pub use tilemap::{TileDraw, TileProjection, TilemapComponent, TilemapError};
 pub use ui::{UiAnchor, UiFill, UiFillEdge, UiImageComponent, UiTextComponent};

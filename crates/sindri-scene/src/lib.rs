@@ -32,7 +32,8 @@ pub use components::{
     TileGridComponent, TileGridError, TileProjection, TileVolumeComponent, TileVolumeError,
     TileVolumeIndex, TilemapComponent, TilemapError, UiAnchor, UiFill, UiFillEdge,
     UiImageComponent, UiShapeBlend, UiShapeComponent, UiShapeKind, UiTextAutoSize, UiTextCase,
-    UiTextComponent, UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap, ui_text_template,
+    UiTextComponent, UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap, cell_to_local_in,
+    ui_text_template,
 };
 pub use effects::{EffectBurstComponent, Effects2d, Fleck};
 pub use extract::{

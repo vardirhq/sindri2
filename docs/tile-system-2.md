@@ -68,7 +68,14 @@ Project asset describing semantic terrain:
   "solid" could not tell a pond from a hole
 - face visuals for top, bottom, and four horizontal neighbours
 - adjacency groups and allowed transitions
-- deterministic weighted variants
+- deterministic weighted variants: one tile ID with several looks, chosen from
+  a hash of the cell, the tile's name and the volume's seed. The scene stores
+  what a cell *is* and the renderer decides what it looks like, so variation
+  costs nothing per cell and is the same on every machine and after every
+  reload — which a render capture depends on. A volume's `variant_seed` rerolls
+  the whole thing at once. The hash is written in-repo rather than taken from
+  `std`, whose default hasher may change between releases and would rearrange
+  every scene that used it
 
 Tile sets are assets rather than components so several scenes and volumes can
 share one definition without copying it into every scene. Optional terrain

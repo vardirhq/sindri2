@@ -22,6 +22,7 @@ mod tags;
 mod tileset;
 mod time;
 mod transform;
+mod variant;
 mod world;
 
 pub use asset::{
@@ -61,6 +62,7 @@ pub use tileset::{
 };
 pub use time::{FixedStepClock, FixedStepConfig, FrameSteps, TimeError, TimeScale};
 pub use transform::Transform3D;
+pub use variant::{stable_hash, stable_hash_with, weighted_index};
 pub use world::{AddedScene, EntityData, LoadedScene, SpawnedPrefab, World, WorldError};
 
 /// Common imports for native Sindri game code.

@@ -39,6 +39,11 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Added
 
+- A tile can declare several looks with weights, chosen per cell from a stable
+  hash of where the cell is, the tile's name and the volume's `variant_seed`.
+  One tile ID replaces a family of near-identical ones, and the same field
+  looks the same on every machine and after every reload.
+
 - Choosing a `.prefab.json` in the project browser arms it, and clicking a cell
   in the Scene view puts it there: one undoable step, standing on that cell of
   that grid, keeping whatever footprint the prefab declares.

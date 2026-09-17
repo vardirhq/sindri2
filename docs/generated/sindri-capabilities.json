@@ -573,13 +573,15 @@
       "default_payload": {
         "cells": [],
         "layer": 0,
-        "tileset": ""
+        "tileset": "",
+        "variant_seed": 0
       },
       "display_name": "Tile Volume",
       "fields": {
         "cells": [],
         "layer": 0,
-        "tileset": ""
+        "tileset": "",
+        "variant_seed": 0
       },
       "meanings": {
         "tileset": {

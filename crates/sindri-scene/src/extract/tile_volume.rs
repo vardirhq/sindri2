@@ -1,12 +1,15 @@
 //! Stackable tile volumes, resolved into their visible baked faces.
 
+use std::collections::BTreeMap;
+
 use glam::{Mat4, Vec3};
 use sindri_core::{SpriteRef, TileDefinition, TileFace, TileSetDocument, World};
 use sindri_grid::GridCoord3;
-use sindri_render::{SpriteInstance, TransparentOrder};
+use sindri_render::{SpriteInstance, TextureId, TransparentOrder, UvRect};
 
 use crate::{
-    TextureBindings, TileGridComponent, TileSetBindings, TileVolumeComponent, TileVolumeIndex,
+    TextureBindings, TileGridComponent, TileGridError, TileSetBindings, TileVolumeComponent,
+    TileVolumeIndex, cell_to_local_in,
 };
 
 use super::camera::ResolvedCameras;
@@ -45,6 +48,33 @@ impl SceneExtractor {
                 .get(entity)
                 .and_then(|data| data.transform_3d)
                 .unwrap_or_default();
+            // Once per volume, not once per face. A volume does not move
+            // while it is being resolved, and building this from a transform
+            // costs a quaternion and three composes -- which was being paid
+            // about two thousand times a frame on a farm-sized island.
+            let model = transform_matrix(transform);
+            // Built once. `cell_to_local` builds and validates one of these per
+            // call, which was the per-cell cost: two calls a cell, so thirteen
+            // hundred projections constructed a frame to be told the same
+            // arithmetic.
+            let space = grid.volume_space().map_err(TileGridError::from)?;
+            // Every sprite reference the tile set can name, parsed and resolved
+            // once. There are tens of these and thousands of faces, and the
+            // string does not say anything different the six hundredth time it
+            // is read.
+            let mut resolved: BTreeMap<&str, (TextureId, UvRect)> = BTreeMap::new();
+            for definition in tile_set.tiles.values() {
+                for faces in definition.all_faces() {
+                    for (_, visual) in faces.iter() {
+                        if resolved.contains_key(visual.sprite.as_str()) {
+                            continue;
+                        }
+                        let reference = SpriteRef::parse(&visual.sprite)?;
+                        resolved
+                            .insert(visual.sprite.as_str(), textures.resolve_sprite(&reference));
+                    }
+                }
+            }
             let mut cells = volume.cells.iter().collect::<Vec<_>>();
             cells.sort_by_key(|cell| grid.depth_key(cell.coord()));
 
@@ -57,8 +87,7 @@ impl SceneExtractor {
                             tile_set: volume.tileset.clone(),
                             tile: cell.tile.clone(),
                         })?;
-                let [cell_x, cell_y] = grid
-                    .cell_to_local(coord)
+                let [cell_x, cell_y] = cell_to_local_in(&space, coord)
                     .expect("a validated grid projects finite integer cells");
                 // Depth is a property of the *cell*, taken from where its
                 // column meets the ground, and every face of it shares that one
@@ -76,11 +105,10 @@ impl SceneExtractor {
                 // it. Which face of a cell is drawn first is decided by the
                 // face order, not by arithmetic on where its art happens to
                 // sit.
-                let [ground_x, ground_y] = grid
-                    .cell_to_local(GridCoord3::new(coord.x, coord.y, 0))
-                    .expect("a validated grid projects finite integer cells");
-                let ground = transform_matrix(transform)
-                    * Mat4::from_translation(Vec3::new(ground_x, ground_y, 0.0));
+                let [ground_x, ground_y] =
+                    cell_to_local_in(&space, GridCoord3::new(coord.x, coord.y, 0))
+                        .expect("a validated grid projects finite integer cells");
+                let ground = model * Mat4::from_translation(Vec3::new(ground_x, ground_y, 0.0));
                 let camera = cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?;
                 // The cell's own Z, by the same rule anything standing on this
                 // grid takes: depth is a consequence of position, so a block
@@ -97,7 +125,15 @@ impl SceneExtractor {
                 let cell_z = transform.position[2] + grid.depth_z(grid.face_depth(coord));
                 let depth = camera_distance(camera.view, ground.w_axis.truncate().with_z(cell_z));
                 let visible = grid.projection.visible_faces();
-                for (face_index, (face, visual)) in definition.faces.iter().enumerate() {
+                // Which look this cell has, decided once for the whole cell: a
+                // block whose top came from one variant and whose side came
+                // from another is not a block.
+                let faces = definition.faces_at(
+                    volume.variant_seed,
+                    [coord.x, coord.y, coord.z],
+                    &cell.tile,
+                );
+                for (face_index, (face, visual)) in faces.iter().enumerate() {
                     // A face the projection turns away from is not culled by a
                     // neighbour; there is simply no view of it to draw. An
                     // isometric side in an orthogonal volume would otherwise
@@ -115,15 +151,16 @@ impl SceneExtractor {
                     )? {
                         continue;
                     }
-                    let reference = SpriteRef::parse(&visual.sprite)?;
-                    let (texture, rect) = textures.resolve_sprite(&reference);
+                    let (texture, rect) = *resolved
+                        .get(visual.sprite.as_str())
+                        .expect("every face of a bound tile set was resolved above");
                     let local =
                         Mat4::from_translation(Vec3::new(
                             cell_x + visual.offset[0],
                             cell_y + visual.offset[1],
                             0.0,
                         )) * Mat4::from_scale(Vec3::new(visual.size[0], visual.size[1], 1.0));
-                    let model = transform_matrix(transform) * local;
+                    let model = model * local;
                     // Cells were sorted back to front before this loop, so the
                     // submission index carries that order and the face index
                     // orders the faces inside one cell. It is what decides

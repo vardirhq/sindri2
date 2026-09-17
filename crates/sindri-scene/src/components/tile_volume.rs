@@ -191,11 +191,18 @@ impl TileGridComponent {
             .is_ok_and(|bounds| bounds.contains(GridCoord::new(coord.x, coord.y)))
     }
 
+    /// Where a cell is, building the projection to ask.
+    ///
+    /// Convenient for one question and wrong for a thousand: `volume_space`
+    /// constructs *and validates* a projection every call, so a loop over cells
+    /// pays for that per cell. Anything resolving a whole volume should build
+    /// the space once and use `cell_to_local_in`.
     #[allow(clippy::cast_possible_truncation)]
     #[must_use]
     pub fn cell_to_local(&self, coord: GridCoord3) -> Option<[f32; 2]> {
-        let point = self.volume_space().ok()?.grid_to_plane(coord).ok()?;
-        Some([point.x as f32, point.y as f32])
+        self.volume_space()
+            .ok()
+            .and_then(|space| cell_to_local_in(&space, coord))
     }
 
     #[must_use]
@@ -210,6 +217,18 @@ impl TileGridComponent {
             .ok()?;
         self.contains(coord).then_some(coord)
     }
+}
+
+/// Where a cell is, in a projection somebody already built.
+///
+/// The loop-friendly half of `TileGridComponent::cell_to_local`. Six hundred
+/// cells asking a grid where they are used to build six hundred projections,
+/// and validate each one, to be told the same arithmetic.
+#[allow(clippy::cast_possible_truncation)]
+#[must_use]
+pub fn cell_to_local_in(space: &VolumeSpace, coord: GridCoord3) -> Option<[f32; 2]> {
+    let point = space.grid_to_plane(coord).ok()?;
+    Some([point.x as f32, point.y as f32])
 }
 
 impl SceneComponent for TileGridComponent {
@@ -240,6 +259,16 @@ pub struct TileVolumeComponent {
     pub cells: Vec<TileCellDocument>,
     #[serde(default)]
     pub layer: i32,
+    /// Rerolls every variant choice in this volume.
+    ///
+    /// The choices are a function of where a cell is, so two volumes with the
+    /// same tiles in the same places would otherwise look identical -- fine for
+    /// one map, wrong for two islands meant to feel like different places.
+    /// Changing it rearranges the whole volume at once, which is what an author
+    /// wants from a reroll and is why it is one number rather than a state per
+    /// cell.
+    #[serde(default)]
+    pub variant_seed: u64,
 }
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
@@ -372,6 +401,7 @@ mod tests {
             tileset: "world.tileset.json".to_owned(),
             cells,
             layer: 0,
+            variant_seed: 0,
         }
     }
 
