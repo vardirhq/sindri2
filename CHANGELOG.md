@@ -17,6 +17,10 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Added
 
+- Grid navigation derives what a stacked volume allows: a column with nothing
+  solid in it is a hole, and `sindri.grid.navigation` gains `max_step` deciding
+  how big a step between columns a walker may take, with a slab counting as
+  half. A volume only becomes the floor once the flat map is gone.
 - Tile volumes work in orthogonal projection as well as isometric. The
   projection now decides which faces a view can see and how cells are ordered
   back to front, so one tile set serves both.

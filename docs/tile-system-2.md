@@ -165,9 +165,22 @@ game draws.
 
 Picking tests emitted faces front-to-back and returns the 3D cell and face that
 caused the hit. Selection may inspect a derived face, but edits the source cell.
-Collision rebuilds from occupied cells and tile metadata. Navigation walks
-surfaces with authored climb, drop, and clearance limits rather than flattening
-the volume back into a 2D obstacle map.
+Collision rebuilds from occupied cells and tile metadata.
+
+Navigation walks surfaces rather than flattening the volume back into a 2D
+obstacle map. A column's surface is the top of its highest solid cell, as a
+fraction rather than a level so a slab is half a cell lower than a block, and a
+column with nothing solid in it is a hole rather than ground at level zero. Each
+edge between two columns is then a step a walker can take or a wall, which is a
+thing `sindri-grid` already understands, so the volume contributes walls instead
+of the pathfinder learning about levels.
+
+What is authored is one symmetric `max_step`, not separate climb and drop
+limits: grid walls block an edge rather than a direction, so a rule letting a
+walker fall further than it can climb has nowhere to be recorded. Clearance and
+overhangs are the same gap from the other side — only the highest solid cell of
+a column is consulted, so a cave is a roof over nothing rather than a second
+walkable level. Both wait on directional edges in `sindri-grid`.
 
 ## Migration boundary
 

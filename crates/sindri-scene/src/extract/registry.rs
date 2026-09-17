@@ -318,7 +318,7 @@ fn register_gameplay(components: &mut ComponentSchemaRegistry) -> Result<(), Sce
     components.register_with_default::<TagsComponent>("Tags", serde_json::json!({ "tags": [] }))?;
     components.register_with_default::<GridNavigationComponent>(
         "Grid Navigation",
-        serde_json::json!({ "walls": [] }),
+        serde_json::json!({ "walls": [], "max_step": 1.0 }),
     )?;
     // Fields but no default: an occupant must name the stable ID of the
     // grid it belongs to. Inventing one would create a valid-looking

@@ -135,10 +135,12 @@
     {
       "addable": true,
       "default_payload": {
+        "max_step": 1.0,
         "walls": []
       },
       "display_name": "Grid Navigation",
       "fields": {
+        "max_step": 1.0,
         "walls": []
       },
       "meanings": {},

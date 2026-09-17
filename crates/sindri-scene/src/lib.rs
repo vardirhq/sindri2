@@ -17,6 +17,7 @@ mod physics;
 mod physics_sync;
 pub(crate) mod screen_ui;
 mod textures;
+mod tile_surface;
 mod tilesets;
 
 pub use animation::{AnimationClip, AnimationError, SpriteAnimationComponent, SpriteAnimations};
@@ -48,4 +49,5 @@ pub use textures::{
     TEXTURE_NAMING_COMPONENTS, TextureBindings, referenced_fonts, referenced_sheets,
     referenced_textures, unresolved_sprites, unresolved_textures,
 };
+pub use tile_surface::{TileSurfaceError, TileSurfaces};
 pub use tilesets::{TileSetBindings, referenced_tile_sets, tile_set_sheets, tile_set_textures};

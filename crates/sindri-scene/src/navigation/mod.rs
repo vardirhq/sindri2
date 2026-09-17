@@ -1,6 +1,8 @@
+mod floor;
+
 use std::collections::BTreeMap;
 
-use sindri_core::{EntityData, EntityId, SceneComponent, Transform3D, World};
+use sindri_core::{EntityId, SceneComponent, Transform3D, World};
 use sindri_grid::{
     FootprintError, GridBounds, GridCoord, GridError, GridFootprint, GridOccupancy, GridPath,
     GridPathError, GridPathfinder, GridPlacementError, GridSpace, GridWallError, GridWalls,
@@ -9,9 +11,11 @@ use sindri_grid::{
 use thiserror::Error;
 
 use crate::{
-    GridNavigationComponent, GridOccupantComponent, TileGridComponent, TileGridError,
-    TilemapComponent, TilemapError,
+    GridNavigationComponent, GridOccupantComponent, TileGridError, TileSetBindings,
+    TileSurfaceError, TilemapError,
 };
+
+use self::floor::{GridFloor, block_unwalkable_steps, grid_geometry};
 
 /// One entity's derived placement on a world grid.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -39,7 +43,33 @@ pub struct WorldGridNavigation {
 
 impl WorldGridNavigation {
     /// Derives navigation for one explicitly selected grid entity.
+    ///
+    /// Without tile sets, a stacked volume contributes nothing: what a cell
+    /// holds is a question only its tile set answers, and guessing that every
+    /// cell is solid and full height would quietly disagree with the volume a
+    /// caller holding the asset derives.
     pub fn from_world(world: &World, grid_entity: EntityId) -> Result<Self, GridNavigationError> {
+        Self::derive(world, grid_entity, None)
+    }
+
+    /// The same, with the tile sets that say what a volume's cells are.
+    ///
+    /// Only this form can refuse to walk into a hole or up a wall, because only
+    /// this form knows which cells are solid and how much of their own cell
+    /// they fill.
+    pub fn from_world_with_tile_sets(
+        world: &World,
+        grid_entity: EntityId,
+        tile_sets: &TileSetBindings,
+    ) -> Result<Self, GridNavigationError> {
+        Self::derive(world, grid_entity, Some(tile_sets))
+    }
+
+    fn derive(
+        world: &World,
+        grid_entity: EntityId,
+        tile_sets: Option<&TileSetBindings>,
+    ) -> Result<Self, GridNavigationError> {
         let grid_data = world
             .get(grid_entity)
             .ok_or(GridNavigationError::MissingEntity(grid_entity))?;
@@ -47,26 +77,56 @@ impl WorldGridNavigation {
             .source_id
             .as_ref()
             .ok_or(GridNavigationError::UnstableGrid(grid_entity))?;
-        let (bounds, space) = grid_geometry(grid_entity, grid_data)?;
+        let (bounds, space, floor) = grid_geometry(grid_entity, grid_data)?;
         let grid_transform = grid_data.transform_3d.unwrap_or_default();
         validate_planar_grid(grid_entity, grid_transform)?;
 
+        let authored = grid_data
+            .components
+            .get(GridNavigationComponent::TYPE_NAME)
+            .map(|payload| {
+                serde_json::from_value::<GridNavigationComponent>(payload.clone()).map_err(
+                    |source| GridNavigationError::InvalidNavigationPayload {
+                        grid: grid_entity,
+                        source,
+                    },
+                )
+            })
+            .transpose()?
+            .unwrap_or_default();
+        if !authored.max_step.is_finite() || authored.max_step < 0.0 {
+            return Err(GridNavigationError::InvalidStepLimit {
+                grid: grid_entity,
+                max_step: authored.max_step,
+            });
+        }
+
         let mut walls = GridWalls::new(bounds);
-        if let Some(payload) = grid_data.components.get(GridNavigationComponent::TYPE_NAME) {
-            let navigation: GridNavigationComponent = serde_json::from_value(payload.clone())
-                .map_err(|source| GridNavigationError::InvalidNavigationPayload {
+        for (index, wall) in authored.walls.iter().enumerate() {
+            walls
+                .block(coord(wall.first), coord(wall.second))
+                .map_err(|source| GridNavigationError::InvalidWall {
                     grid: grid_entity,
+                    index,
                     source,
                 })?;
-            for (index, wall) in navigation.walls.into_iter().enumerate() {
-                walls
-                    .block(coord(wall.first), coord(wall.second))
-                    .map_err(|source| GridNavigationError::InvalidWall {
-                        grid: grid_entity,
-                        index,
-                        source,
-                    })?;
-            }
+        }
+
+        // A volume only decides where a walker may go once it *is* the floor.
+        // While the flat map is still there the scene is mid-migration, and a
+        // volume dropped beside an existing floor must not start closing off
+        // the ground the game already walks on.
+        if floor == GridFloor::Volume
+            && let Some(tile_sets) = tile_sets
+        {
+            block_unwalkable_steps(
+                grid_entity,
+                grid_data,
+                tile_sets,
+                bounds,
+                authored.max_step,
+                &mut walls,
+            )?;
         }
 
         let mut occupancy = GridOccupancy::new(bounds);
@@ -216,52 +276,6 @@ fn world_to_grid_plane(transform: Transform3D, point: [f32; 2]) -> PlanePoint {
 }
 
 /// A world cannot be represented as one complete navigation snapshot.
-/// The grid's bounds and plane, from whichever component describes them.
-///
-/// `sindri.tilemap` and `sindri.tile_grid` place cells identically; they differ
-/// in what a cell holds, which navigation does not ask about. Taking either
-/// means a scene can move its floor onto a tile volume without its walls,
-/// occupants, and pathfinding having to move in the same change.
-///
-/// The flat map is tried first, so a scene carrying both — a migration in
-/// progress — navigates exactly as it did before the second component existed.
-fn grid_geometry(
-    grid: EntityId,
-    data: &EntityData,
-) -> Result<(GridBounds, GridSpace), GridNavigationError> {
-    if let Some(payload) = data.components.get(TilemapComponent::TYPE_NAME) {
-        let tilemap: TilemapComponent = serde_json::from_value(payload.clone())
-            .map_err(|source| GridNavigationError::InvalidTilemapPayload { grid, source })?;
-        tilemap
-            .validate()
-            .map_err(|source| GridNavigationError::InvalidTilemap { grid, source })?;
-        return Ok((
-            tilemap
-                .grid_bounds()
-                .map_err(|source| GridNavigationError::InvalidGridGeometry { grid, source })?,
-            tilemap
-                .grid_space()
-                .map_err(|source| GridNavigationError::InvalidGridGeometry { grid, source })?,
-        ));
-    }
-    if let Some(payload) = data.components.get(TileGridComponent::TYPE_NAME) {
-        let tile_grid: TileGridComponent = serde_json::from_value(payload.clone())
-            .map_err(|source| GridNavigationError::InvalidTileGridPayload { grid, source })?;
-        tile_grid
-            .validate()
-            .map_err(|source| GridNavigationError::InvalidTileGrid { grid, source })?;
-        return Ok((
-            tile_grid
-                .bounds()
-                .map_err(|source| GridNavigationError::InvalidGridGeometry { grid, source })?,
-            tile_grid
-                .grid_space()
-                .map_err(|source| GridNavigationError::InvalidGridGeometry { grid, source })?,
-        ));
-    }
-    Err(GridNavigationError::MissingGrid(grid))
-}
-
 #[derive(Debug, Error)]
 pub enum GridNavigationError {
     #[error("grid entity {0:?} does not exist")]
@@ -293,6 +307,30 @@ pub enum GridNavigationError {
         grid: EntityId,
         #[source]
         source: TileGridError,
+    },
+    #[error("grid entity {grid:?} has an invalid tile volume payload: {source}")]
+    InvalidTileVolumePayload {
+        grid: EntityId,
+        #[source]
+        source: serde_json::Error,
+    },
+    #[error("grid entity {grid:?} names tile set `{tile_set}`, which is not bound")]
+    UnboundTileSet { grid: EntityId, tile_set: String },
+    #[error("grid entity {grid:?} has a volume navigation cannot read: {source}")]
+    InvalidTileSurface {
+        grid: EntityId,
+        #[source]
+        source: TileSurfaceError,
+    },
+    #[error(
+        "grid entity {grid:?} has step limit {max_step}, which must be finite and not negative"
+    )]
+    InvalidStepLimit { grid: EntityId, max_step: f32 },
+    #[error("grid entity {grid:?} produced an impossible wall from its volume: {source}")]
+    DerivedWall {
+        grid: EntityId,
+        #[source]
+        source: GridWallError,
     },
     #[error("grid entity {0:?} needs a finite planar XY transform with non-zero XY scale")]
     InvalidGridTransform(EntityId),

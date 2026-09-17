@@ -558,6 +558,30 @@ depth of the column it stands in instead of walking out in front of everything
 south of it, and a block's own faces are ordered by face role rather than sorted
 against one another a fraction of a cell apart.
 
+**Navigation reads the volume's shape.** A volume is three-dimensional and grid
+navigation is not, so the bridge is a *surface*: for each column, the height of
+the ground something walking across it stands on — the top of its highest solid
+cell, which is a fraction rather than a level because a slab's top genuinely
+sits half a cell lower than a block's. A column holding nothing solid has no
+surface at all, which is not the same as ground at level zero: it is a hole.
+
+Every edge between two columns is then either a step something can take or one
+it cannot, and `sindri-grid` already refuses to cross a blocked edge — so the
+volume becomes walls rather than the pathfinder learning about levels.
+`sindri.grid.navigation` carries `max_step`, one cell by default: a walker
+climbs or drops a block the way it does in the voxel games this reads like, a
+two-block wall stops it, and half a cell stops it at anything but a slab. The
+limit is symmetric because a wall is; `sindri-grid` blocks an edge rather than a
+direction, so separate climb and drop limits wait on directional edges.
+
+A volume only decides this once it *is* the floor. A grid still carrying
+`sindri.tilemap` is a migration in progress and navigates by that flat map
+alone, so dropping a volume beside an existing floor never closes ground the
+game already walks on. And only `WorldGridNavigation::from_world_with_tile_sets`
+can answer at all: which cells are solid and how tall they are is a question
+only the tile set answers, and guessing would quietly disagree with a caller
+holding the asset.
+
 Occlusion then has to answer *completely* rather than *at all*. A neighbour
 hides a side face only when it is at least as tall as the face it abuts, so a
 full block beside a slab hides the slab's side while a slab beside a block
