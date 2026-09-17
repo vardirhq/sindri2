@@ -2,12 +2,24 @@
   "format_version": 1,
   "anchor": "center",
   "grid": {
-    "columns": 36,
+    "columns": 48,
     "rows": 1,
     "names": [
       "grass-top",
       "grass-south",
       "grass-east",
+      "grass-b-top",
+      "grass-b-south",
+      "grass-b-east",
+      "grass-c-top",
+      "grass-c-south",
+      "grass-c-east",
+      "grass-tuft-top",
+      "grass-tuft-south",
+      "grass-tuft-east",
+      "grass-bloom-top",
+      "grass-bloom-south",
+      "grass-bloom-east",
       "earth-top",
       "earth-south",
       "earth-east",
@@ -43,7 +55,7 @@
       "grass-slab-east"
     ],
     "size": [
-      3312,
+      4416,
       156
     ],
     "margin": [

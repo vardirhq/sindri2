@@ -130,7 +130,11 @@ impl BrowserGatherApp {
         let mut session = Session::with_sources(self.scene.components().clone(), project.scripts)
             .with_prefabs(project.prefabs)
             .with_profiles(project.profiles)
-            .with_scenes(project.scenes, loaded_scenes);
+            .with_scenes(project.scenes, loaded_scenes)
+            // Cloned rather than moved: the host keeps its own copy for
+            // extraction, and a floor the renderer can draw and the scripts
+            // cannot reach would be the worst of both.
+            .with_tile_sets(self.tile_sets.clone());
         session.keep_saves_in(Box::new(sindri_platform::BrowserSaves::under(
             "sindri.gather.save",
         )));

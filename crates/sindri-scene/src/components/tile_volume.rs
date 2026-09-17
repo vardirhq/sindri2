@@ -162,6 +162,44 @@ pub struct TileVolumeComponent {
     pub cells: Vec<TileCellDocument>,
     #[serde(default)]
     pub layer: i32,
+    /// How many render layers one step of projected depth costs.
+    ///
+    /// Zero, the default, puts the whole volume on `layer`. That is right for a
+    /// backdrop, and wrong the moment anything is meant to walk *between* the
+    /// blocks: the volume becomes one flat sheet that every sprite either
+    /// covers or hides behind, whichever layer it happens to carry.
+    ///
+    /// The reason it has to be said at all is that a 2D scene has no other
+    /// depth axis. Viewed straight on through an orthographic camera every
+    /// world draw sits at the same distance, so the render layer *is* the
+    /// distance, and a volume that has to interleave with sprites has to place
+    /// its cells along it. A step of two is the useful setting: it leaves an
+    /// odd layer between each pair of cells for whatever stands on them, so the
+    /// ground draws under its own props and a block one step nearer draws over
+    /// them.
+    ///
+    /// A perspective or tilted camera sorts by distance on its own and wants
+    /// zero here.
+    #[serde(default)]
+    pub layer_step: i32,
+}
+
+impl TileVolumeComponent {
+    /// Which render layer one cell's faces are drawn on.
+    ///
+    /// Saturating rather than wrapping, because a volume far enough from the
+    /// origin to overflow a layer has bigger problems than its draw order, and
+    /// wrapping would put its far corner underneath the sky.
+    #[must_use]
+    pub fn layer_for(&self, grid: &TileGridComponent, coord: GridCoord3) -> i32 {
+        if self.layer_step == 0 {
+            return self.layer;
+        }
+        let depth = grid.depth_key(coord).0;
+        let offset = depth.saturating_mul(i64::from(self.layer_step));
+        let offset = i32::try_from(offset).unwrap_or(if offset < 0 { i32::MIN } else { i32::MAX });
+        self.layer.saturating_add(offset)
+    }
 }
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]
@@ -247,6 +285,7 @@ mod tests {
             tileset: "world.tileset.json".to_owned(),
             cells,
             layer: 0,
+            layer_step: 0,
         }
     }
 

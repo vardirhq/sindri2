@@ -58,7 +58,19 @@ impl TileSetBindings {
         self.bound.remove(reference)
     }
 
+    /// Whether this host has bound any tile set at all.
+    ///
+    /// The distinction a caller needs before handing these to a script host: no
+    /// bindings means *this host loads no tile sets*, and a volume should be
+    /// left alone. Bindings that do not include the one a volume names is a
+    /// different thing — a misconfigured project — and is worth an error. An
+    /// empty set handed over as though it were populated turns the first into
+    /// the second.
     #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.bound.is_empty()
+    }
+
     pub fn get(&self, reference: &str) -> Option<&TileSetDocument> {
         self.bound.get(reference)
     }

@@ -120,6 +120,18 @@ jobs:
             node src/cli.ts "$recipe" --out ../../games/orbital-baked/assets --check
           done
 
+      # Gather's floor is a tile volume now, so every block on the island comes
+      # out of this one recipe. Art drifting from its source used to cost a
+      # slightly wrong sprite; it now costs the ground.
+      #
+      # This recipe rather than all of Gather's: standing-stones, tree and
+      # waystone are already out of date against their own recipes, which
+      # predates the volume work and is not its to fix. Widen the glob in the
+      # change that re-bakes them.
+      - name: Check Gather's blocks are still what their recipe bakes
+        working-directory: tools/isometric-baker
+        run: node src/cli.ts ../../game/assets/textures/gather-blocks.isobake.json --out ../../game/assets --check
+
   clippy:
     needs: [quick, decay_preflight]
     name: Clippy

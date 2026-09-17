@@ -247,7 +247,8 @@ fn register_tiles(components: &mut ComponentSchemaRegistry) -> Result<(), SceneE
         serde_json::json!({
             "tileset": "",
             "cells": [],
-            "layer": 0
+            "layer": 0,
+            "layer_step": 0
         }),
     )?;
     Ok(())
