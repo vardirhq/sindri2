@@ -972,6 +972,35 @@ named cells instead. Asked of a grid that carries only `sindri.tile_grid`, both
 fail and name the component they would need rather than reporting that a tilemap
 the entity never had holds no tiles.
 
+### Stacked cells
+
+| Call | Returns |
+| --- | --- |
+| `Grid.block(volume, column, row, level)` | `String` |
+| `Grid.set_block(volume, column, row, level, tile)` | nothing |
+
+A volume's cells sit at an integer level as well as a column and row, and they
+name tiles in a tile set several scenes may share rather than indexing a palette
+one map carries. Neither shape fits `tile` and `set_tile`, so these are separate
+calls: a script that asked for a palette index and got a level-shaped answer
+would be a worse outcome than being told the two models differ.
+
+Empty is the empty string, in both directions. A volume stores absence as
+absence — a cell that is not there — so unlike the flat map it needs no sentinel
+number standing in for nothing, and writing `""` removes the cell rather than
+putting something blank in it.
+
+Column, row and level must be whole. A cell between two levels is not a cell,
+and a script computing one from a float it got wrong should hear about it where
+the mistake is rather than land somewhere plausible.
+
+`set_block` refuses a tile the volume's own tile set does not define. Writing an
+unknown name would otherwise fail the next extraction, a frame later and nowhere
+near the call that caused it; the host holds the tile set precisely so the
+refusal lands on the script. A host that has bound no tile sets refuses every
+write for the same reason — it cannot tell whether the name is real, and a host
+binding none is one where nothing could draw the volume either.
+
 `tile` answers with an index into the map's `palette`, or `-1` where the cell
 holds nothing. Reading a cell the map does not have is `-1` as well rather than
 an error, because anything that moves will ask about the edge and every caller

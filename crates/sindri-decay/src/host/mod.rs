@@ -11,6 +11,7 @@
 //! paths exist; it decides only how to reach one.
 
 mod animation;
+mod blocks;
 mod call;
 mod convert;
 mod dispatch;
@@ -22,8 +23,11 @@ mod profile;
 mod random;
 mod save;
 mod scene;
+mod services;
 mod tiles;
 mod ui;
+
+pub use services::WorldServices;
 
 use std::collections::BTreeSet;
 
@@ -97,6 +101,8 @@ pub struct WorldHost<'a> {
     /// Mutable because drawing a number is what advances it: a stream a script
     /// could read without moving would hand out the same number for ever.
     random: Option<&'a mut sindri_core::Rng>,
+    /// What a stacked volume's cells mean, when the host has loaded any.
+    tile_sets: Option<&'a sindri_scene::TileSetBindings>,
     /// Where the screen elements are and what the pointer is doing to them.
     ///
     /// Read-only: hover and click are answers about this frame, computed by the
@@ -332,67 +338,7 @@ impl Host for WorldHost<'_> {
     }
 }
 
-/// Everything a script can reach beyond the world and the frame.
-///
-/// Bundled because the list had reached eight and every capability the scripting
-/// surface grows adds another. `crate::HostServices` is this plus the audio
-/// queue, which is the wrapper's business rather than this host's.
-pub struct WorldServices<'a> {
-    pub spawning: Spawning<'a>,
-    pub profiles: &'a ProfileSources,
-    /// What the game remembers, when the host is keeping a save.
-    pub saves: Option<&'a mut sindri_core::SaveStore>,
-    /// The fleck pool, when the host is running one.
-    pub effects: Option<&'a mut sindri_scene::Effects2d>,
-    pub physics: Option<crate::Physics2d<'a>>,
-    pub screen_ui: Option<&'a sindri_scene::ScreenUi>,
-    pub random: Option<&'a mut sindri_core::Rng>,
-    /// Where each animated sprite has got to, when the host advances any.
-    pub animations: Option<&'a mut sindri_scene::SpriteAnimations>,
-    /// Which scene is being played, and where a script asked to go.
-    ///
-    /// `None` for a host that plays exactly one scene, and then `Scene.go`
-    /// says so rather than accepting a request nothing will perform.
-    pub scenes: Option<&'a mut crate::SceneChannel>,
-}
-
-impl<'a> WorldHost<'a> {
-    pub fn new(
-        world: &'a mut World,
-        entity: EntityId,
-        context: ScriptContext<'a>,
-        blackboard: &'a mut Blackboard,
-        services: WorldServices<'a>,
-    ) -> Self {
-        let WorldServices {
-            spawning,
-            profiles,
-            saves,
-            effects,
-            physics,
-            screen_ui,
-            random,
-            animations,
-            scenes,
-        } = services;
-        Self {
-            world,
-            entity,
-            context,
-            blackboard,
-            spawning,
-            profiles,
-            physics,
-            screen_ui,
-            random,
-            saves,
-            effects,
-            animations,
-            scenes,
-            printed: Vec::new(),
-        }
-    }
-
+impl WorldHost<'_> {
     /// Everything the script printed during the call.
     pub fn take_printed(&mut self) -> Vec<String> {
         std::mem::take(&mut self.printed)

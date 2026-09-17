@@ -383,6 +383,17 @@
       "members": [
         {
           "kind": "function",
+          "name": "block",
+          "parameters": [
+            "Entity",
+            "f32",
+            "f32",
+            "f32"
+          ],
+          "returns": "String"
+        },
+        {
+          "kind": "function",
           "name": "can_reach",
           "parameters": [
             "Entity",
@@ -435,6 +446,18 @@
             "Entity"
           ],
           "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "set_block",
+          "parameters": [
+            "Entity",
+            "f32",
+            "f32",
+            "f32",
+            "String"
+          ],
+          "returns": "unit"
         },
         {
           "kind": "function",

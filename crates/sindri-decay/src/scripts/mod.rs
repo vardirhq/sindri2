@@ -104,6 +104,14 @@ pub struct ScriptFrame<'a> {
     /// clip plays is authored state and is the scene's whether or not anything
     /// is drawing it.
     pub animations: Option<&'a mut sindri_scene::SpriteAnimations>,
+    /// The tile sets a stacked volume's cells name, when the host has loaded
+    /// any.
+    ///
+    /// `None` for a host that binds none, and then a volume says nothing about
+    /// where a walker may go and `Grid.set_block` refuses rather than writing a
+    /// tile name nothing can draw. What a cell holds is the tile set's answer,
+    /// and a host without one has no business guessing it.
+    pub tile_sets: Option<&'a sindri_scene::TileSetBindings>,
     pub delta_seconds: f32,
 }
 
@@ -124,8 +132,16 @@ impl<'a> ScriptFrame<'a> {
             saves: None,
             effects: None,
             animations: None,
+            tile_sets: None,
             delta_seconds,
         }
+    }
+
+    /// The same frame, with the tile sets a volume's cells name.
+    #[must_use]
+    pub fn with_tile_sets(mut self, tile_sets: &'a sindri_scene::TileSetBindings) -> Self {
+        self.tile_sets = Some(tile_sets);
+        self
     }
 
     /// The same frame, with prefabs a script may spawn.
@@ -310,6 +326,7 @@ impl Scripts {
             saves,
             effects,
             animations,
+            tile_sets,
             delta_seconds,
         } = frame;
         let mut report = ScriptReport::default();
@@ -351,6 +368,7 @@ impl Scripts {
             saves,
             effects,
             animations,
+            tile_sets,
             started: BTreeSet::new(),
             spawned: Vec::new(),
         };

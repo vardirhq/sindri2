@@ -53,6 +53,8 @@ pub(super) struct TickWorld<'a> {
     pub(super) effects: Option<&'a mut sindri_scene::Effects2d>,
     /// Where each animated sprite has got to, when the host advances any.
     pub(super) animations: Option<&'a mut sindri_scene::SpriteAnimations>,
+    /// What a stacked volume's cells mean, when the host has loaded any.
+    pub(super) tile_sets: Option<&'a sindri_scene::TileSetBindings>,
 }
 
 pub(super) fn tick(
@@ -127,6 +129,7 @@ pub(super) fn tick(
                 // away from the others would make which script ran first decide
                 // what the rest could see.
                 animations: at.animations.as_deref_mut(),
+                tile_sets: at.tile_sets,
                 audio: &mut *at.audio,
                 // Reborrowed per tick like the rest: one channel for the pass,
                 // so which script ran first does not decide who may ask.

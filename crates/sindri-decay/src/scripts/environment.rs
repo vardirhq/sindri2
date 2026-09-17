@@ -3,6 +3,10 @@
 //! Derived from [`crate::surface`] rather than written out, so what a
 //! script may say and what the host will answer cannot drift apart.
 
+mod grid;
+
+use grid::add_grid_surface;
+
 use std::collections::BTreeSet;
 
 use decay_semantic::{Environment, FunctionType, HostType, Type};
@@ -13,11 +17,11 @@ use crate::{
     audio_host::AUDIO,
     surface::{
         ANIMATION, ANIMATION_CALLS, AnimationCall, EFFECTS, EFFECTS_CALLS, ENTITY, EffectsCall,
-        FUNCTIONS, GAME, GAME_CALLS, GRID, GRID_CALLS, GameCall, GridCall, HostFunction, INPUT,
-        INPUT_QUERIES, Node, PHYSICS, PHYSICS_CALLS, PREFAB, PRINT, PROFILE, PROFILE_CALLS,
-        PROFILES, PhysicsCall, ProfileCall, RANDOM, RANDOM_CALLS, RandomCall, SAVE, SAVE_CALLS,
-        SCENE, SCENE_CALLS, SaveCall, SceneCall, THIS, THROUGH_REFERENCE, TIME, TIME_VALUES, UI,
-        UI_CALLS, UiCall, WORLD, WORLD_CALLS, WorldCall,
+        FUNCTIONS, GAME, GAME_CALLS, GameCall, HostFunction, INPUT, INPUT_QUERIES, Node, PHYSICS,
+        PHYSICS_CALLS, PREFAB, PRINT, PROFILE, PROFILE_CALLS, PROFILES, PhysicsCall, ProfileCall,
+        RANDOM, RANDOM_CALLS, RandomCall, SAVE, SAVE_CALLS, SCENE, SCENE_CALLS, SaveCall,
+        SceneCall, THIS, THROUGH_REFERENCE, TIME, TIME_VALUES, UI, UI_CALLS, UiCall, WORLD,
+        WORLD_CALLS, WorldCall,
     },
 };
 
@@ -451,55 +455,6 @@ pub(super) fn add_effects_surface(environment: &mut Environment) {
     }
     environment.add_type(EFFECTS, effects);
     environment.add_value(EFFECTS, Type::Named(EFFECTS.to_owned()));
-}
-
-pub(super) fn add_grid_surface(environment: &mut Environment) {
-    let mut grid = HostType::new();
-    for (name, call) in GRID_CALLS {
-        grid = grid.with_function(
-            *name,
-            FunctionType {
-                params: match call {
-                    GridCall::PositionX | GridCall::PositionY => vec![
-                        Type::Named(ENTITY.to_owned()),
-                        Type::Named(ENTITY.to_owned()),
-                    ],
-                    GridCall::Place => vec![
-                        Type::Named(ENTITY.to_owned()),
-                        Type::Named(ENTITY.to_owned()),
-                        Type::F32,
-                        Type::F32,
-                    ],
-                    GridCall::CanReach | GridCall::StepToward => vec![
-                        Type::Named(ENTITY.to_owned()),
-                        Type::Named(ENTITY.to_owned()),
-                        Type::Named(ENTITY.to_owned()),
-                    ],
-                    GridCall::Tile => vec![Type::Named(ENTITY.to_owned()), Type::F32, Type::F32],
-                    GridCall::SetTile => vec![
-                        Type::Named(ENTITY.to_owned()),
-                        Type::F32,
-                        Type::F32,
-                        Type::F32,
-                    ],
-                    GridCall::Columns | GridCall::Rows => {
-                        vec![Type::Named(ENTITY.to_owned())]
-                    }
-                },
-                return_type: match call {
-                    GridCall::PositionX
-                    | GridCall::PositionY
-                    | GridCall::Tile
-                    | GridCall::Columns
-                    | GridCall::Rows => Type::F32,
-                    GridCall::Place | GridCall::SetTile => Type::Unit,
-                    GridCall::CanReach | GridCall::StepToward => Type::Bool,
-                },
-            },
-        );
-    }
-    environment.add_type(GRID, grid);
-    environment.add_value(GRID, Type::Named(GRID.to_owned()));
 }
 
 pub(super) fn add_audio_surface(environment: &mut Environment) {

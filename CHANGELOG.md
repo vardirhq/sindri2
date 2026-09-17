@@ -17,6 +17,9 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Added
 
+- Decay reaches a stacked volume: `Grid.block` and `Grid.set_block` read and
+  write the tile in one cell at a column, row and level, and a script's
+  pathfinding now sees the holes and walls a volume floor makes.
 - Grid navigation derives what a stacked volume allows: a column with nothing
   solid in it is a hole, and `sindri.grid.navigation` gains `max_step` deciding
   how big a step between columns a walker may take, with a slab counting as

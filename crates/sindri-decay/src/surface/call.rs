@@ -224,6 +224,14 @@ pub(crate) enum GridCall {
     /// are not there.
     Columns,
     Rows,
+    /// Which tile a stacked volume holds at one exact `(column, row, level)`.
+    ///
+    /// A name rather than an index, because a volume's cells name tiles in a
+    /// shared tile set rather than indexing a palette the map carries. Empty is
+    /// the empty string: absence is what a volume stores, so it needs no
+    /// sentinel number standing in for it.
+    Block,
+    SetBlock,
 }
 
 impl GridCall {
@@ -234,7 +242,7 @@ impl GridCall {
     pub(crate) const fn is_about_a_cell(self) -> bool {
         matches!(
             self,
-            Self::Tile | Self::SetTile | Self::Columns | Self::Rows
+            Self::Tile | Self::SetTile | Self::Columns | Self::Rows | Self::Block | Self::SetBlock
         )
     }
 }
@@ -261,6 +269,8 @@ pub(crate) const GRID_CALLS: &[(&str, GridCall)] = &[
     ("set_tile", GridCall::SetTile),
     ("columns", GridCall::Columns),
     ("rows", GridCall::Rows),
+    ("block", GridCall::Block),
+    ("set_block", GridCall::SetBlock),
 ];
 
 /// What a script can do to a body, connect bodies with, and ask about what it touched.

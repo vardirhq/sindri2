@@ -89,8 +89,16 @@ impl WorldHost<'_> {
         target: EntityId,
         grid: MapGrid,
     ) -> Result<Option<Vec<GridCoord>>, RuntimeError> {
-        let navigation = WorldGridNavigation::from_world(self.world, map)
-            .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
+        // With tile sets, a stacked floor's holes and walls are part of the
+        // answer; without them, only what the scene authored is. A host that
+        // binds none is one where nothing could draw the volume either.
+        let navigation = match self.tile_sets {
+            Some(tile_sets) => {
+                WorldGridNavigation::from_world_with_tile_sets(self.world, map, tile_sets)
+            }
+            None => WorldGridNavigation::from_world(self.world, map),
+        }
+        .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
         let target_world = self
             .transform_of(target)
             .ok_or_else(|| {
