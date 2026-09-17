@@ -582,6 +582,21 @@ can answer at all: which cells are solid and how tall they are is a question
 only the tile set answers, and guessing would quietly disagree with a caller
 holding the asset.
 
+**A script reaches one cell at a time.** `Grid.block(volume, column, row, level)`
+answers with the tile a cell holds and `Grid.set_block` writes one, with the
+empty string meaning absence in both directions — a volume stores a missing cell
+as a missing cell, so unlike the flat map it needs no sentinel number standing
+in for nothing, and writing `""` removes the cell rather than blanking it. The
+column, row and level must be whole, because a cell between two levels is not a
+cell.
+
+A write naming a tile the volume's own tile set does not define is refused at
+the call. Left alone it would fail the next extraction instead — a frame later
+and nowhere near the script that caused it — so the host is handed the tile sets
+precisely to put the refusal where the mistake is. A host that has bound none
+refuses every write for the same reason, and its volumes say nothing about where
+a walker may go.
+
 Occlusion then has to answer *completely* rather than *at all*. A neighbour
 hides a side face only when it is at least as tall as the face it abuts, so a
 full block beside a slab hides the slab's side while a slab beside a block

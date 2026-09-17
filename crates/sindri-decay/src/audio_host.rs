@@ -71,6 +71,8 @@ pub struct HostServices<'a> {
     pub effects: Option<&'a mut sindri_scene::Effects2d>,
     /// Where each animated sprite has got to, when the host advances any.
     pub animations: Option<&'a mut sindri_scene::SpriteAnimations>,
+    /// The tile sets a stacked volume's cells name, when the host binds any.
+    pub tile_sets: Option<&'a sindri_scene::TileSetBindings>,
     /// What the script asked to be played, in order.
     pub audio: &'a mut Vec<AudioCommand>,
     /// Which scene is being played, and which one a script asked for.
@@ -101,6 +103,7 @@ impl<'a> WorldHost<'a> {
             animations,
             audio,
             scenes,
+            tile_sets,
         } = services;
         Self {
             inner: crate::host::WorldHost::new(
@@ -118,6 +121,7 @@ impl<'a> WorldHost<'a> {
                     random,
                     animations,
                     scenes,
+                    tile_sets,
                 },
             ),
             audio,
@@ -291,6 +295,7 @@ mod tests {
                 animations: None,
                 audio: &mut queue,
                 scenes: None,
+                tile_sets: None,
             },
         );
         host.call(
@@ -363,6 +368,7 @@ mod tests {
                 animations: None,
                 audio: &mut queue,
                 scenes: None,
+                tile_sets: None,
             },
         );
         let error = host

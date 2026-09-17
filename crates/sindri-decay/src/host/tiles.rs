@@ -49,6 +49,11 @@ impl WorldHost<'_> {
         path: &Path,
         args: &[Value],
     ) -> Result<Value, RuntimeError> {
+        // A volume's cells are named and stacked rather than indexed and flat,
+        // so they never reach the shape a flat map describes.
+        if matches!(call, GridCall::Block | GridCall::SetBlock) {
+            return self.block_call(call, path, args);
+        }
         let map = self.entity_argument(path, args, 0, "the tilemap")?;
         let shape = self.map_shape(path, map)?;
 
@@ -89,6 +94,9 @@ impl WorldHost<'_> {
             | GridCall::CanReach
             | GridCall::StepToward => {
                 unreachable!("dispatched to the entity-and-grid calls instead")
+            }
+            GridCall::Block | GridCall::SetBlock => {
+                unreachable!("answered above, before a flat map was looked for")
             }
         }
     }
