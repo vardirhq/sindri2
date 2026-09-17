@@ -11,6 +11,10 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Fixed
 
+- The editor's grid chooser offers entities carrying `sindri.tile_grid` as well
+  as `sindri.tilemap`. It asked for the flat map alone, and no scene has carried
+  one since Gather moved to a volume, so a grid could not be named at all.
+
 - Flat ground no longer draws over what stands on it. Something placed on a
   grid sorts past ground no higher than its feet, since no face of such a cell
   can cover it; a block raised a step ahead is a wall and still covers it.
