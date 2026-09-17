@@ -16,6 +16,19 @@ fn registry() -> ComponentSchemaRegistry {
 }
 
 fn scripted_world(script: &str, tilemap: serde_json::Value) -> (World, EntityId, ScriptSources) {
+    scripted_grid(script, "sindri.tilemap", tilemap)
+}
+
+/// The same world, with the floor's geometry carried by a named component.
+///
+/// `sindri.tilemap` and `sindri.tile_grid` both describe where a cell is, and
+/// the point of most of these tests is that a script cannot tell which one it
+/// is standing on.
+fn scripted_grid(
+    script: &str,
+    component: &str,
+    payload: serde_json::Value,
+) -> (World, EntityId, ScriptSources) {
     let mut world = World::default();
     world.spawn(EntityData {
         name: Some("Floor".to_owned()),
@@ -30,9 +43,7 @@ fn scripted_world(script: &str, tilemap: serde_json::Value) -> (World, EntityId,
             scale: [2.0, 3.0, 1.0],
             ..Transform3D::default()
         }),
-        components: [("sindri.tilemap".to_owned(), tilemap)]
-            .into_iter()
-            .collect(),
+        components: [(component.to_owned(), payload)].into_iter().collect(),
         ..EntityData::default()
     });
     let actor = world.spawn(EntityData {
@@ -163,5 +174,111 @@ fn the_grid_argument_is_statically_an_entity() {
             .iter()
             .any(|failure| failure.to_string().contains("Entity")),
         "a number must not compile where a grid entity is required: {failures:?}"
+    );
+}
+
+#[test]
+fn a_tile_grid_places_an_entity_exactly_where_a_tilemap_does() {
+    // The whole point of the seam: a floor that has moved onto a tile volume
+    // answers `Grid.place` with the same world position the flat map gave, so a
+    // script that never mentioned either component keeps working.
+    let script = r#"
+        script Mover {
+            fn update(dt: f32) {
+                let floor = World.find("Floor");
+                Grid.place(this.entity, floor, 2.0, 1.0);
+            }
+        }
+        "#;
+    let placed = |component: &str, payload: serde_json::Value| {
+        let (mut world, actor, sources) = scripted_grid(script, component, payload);
+        assert!(run(&mut world, &sources).is_empty());
+        world
+            .get(actor)
+            .and_then(|data| data.transform_3d)
+            .expect("the actor kept its transform")
+            .position
+    };
+
+    let flat = placed(
+        "sindri.tilemap",
+        json!({
+            "columns": 4,
+            "rows": 4,
+            "projection": "isometric",
+            "space": "world",
+            "tile_size": [2.0, 1.0],
+            "texture": "tiles.png",
+            "palette": ["tile"],
+            "tiles": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        }),
+    );
+    let stacked = placed(
+        "sindri.tile_grid",
+        json!({
+            "columns": 4,
+            "rows": 4,
+            "projection": "isometric",
+            "cell_size": [2.0, 1.0],
+            "level_step": [0.0, 0.5]
+        }),
+    );
+    assert_eq!(
+        flat.map(f32::to_bits),
+        stacked.map(f32::to_bits),
+        "a cell must not move when the component describing it changes"
+    );
+}
+
+#[test]
+fn a_tile_grid_answers_how_big_the_map_is() {
+    let (mut world, actor, sources) = scripted_grid(
+        r#"
+        script Mover {
+            fn update(dt: f32) {
+                let floor = World.find("Floor");
+                this.transform.scale.x = Grid.columns(floor);
+                this.transform.scale.y = Grid.rows(floor);
+            }
+        }
+        "#,
+        "sindri.tile_grid",
+        json!({ "columns": 7, "rows": 5, "cell_size": [1.0, 1.0] }),
+    );
+    assert!(run(&mut world, &sources).is_empty());
+    let scale = world
+        .get(actor)
+        .and_then(|data| data.transform_3d)
+        .expect("the actor kept its transform")
+        .scale;
+    assert!((scale[0] - 7.0).abs() < 1.0e-5 && (scale[1] - 5.0).abs() < 1.0e-5);
+}
+
+#[test]
+fn reading_a_flat_cell_on_a_tile_grid_says_which_component_is_missing() {
+    // A volume's cells are stacked and named, not indices into a palette, so
+    // `Grid.tile` genuinely does not apply. The failure has to say that rather
+    // than report that a tilemap the entity never had has no tiles.
+    let (mut world, _actor, sources) = scripted_grid(
+        r#"
+        script Mover {
+            fn update(dt: f32) {
+                let floor = World.find("Floor");
+                this.transform.scale.x = Grid.tile(floor, 0.0, 0.0);
+            }
+        }
+        "#,
+        "sindri.tile_grid",
+        json!({ "columns": 4, "rows": 4, "cell_size": [1.0, 1.0] }),
+    );
+    let failures = run(&mut world, &sources);
+    let reported = failures
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(
+        reported.contains("sindri.tilemap") && reported.contains("sindri.tile_grid"),
+        "the failure should name both the component needed and the one present: {reported}"
     );
 }

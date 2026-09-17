@@ -1,18 +1,17 @@
-//! A tilemap as a script sees it: logical cells, and where they are in
+//! A gameplay grid as a script sees it: logical cells, and where they are in
 //! the world.
 
 use decay_ir::Path;
 use decay_runtime::{RuntimeError, Value};
 use sindri_core::{EntityId, Transform3D};
-use sindri_grid::{
-    GridCoord, GridPathfinder, GridPoint, GridSpace, PlanePoint, PlaneYAxis, Projection,
-};
+use sindri_grid::{GridCoord, GridPathfinder, GridPoint, GridSpace, PlanePoint};
 use sindri_scene::WorldGridNavigation;
 
-use crate::surface::{GridCall, TILEMAP_COMPONENT};
+use crate::surface::GridCall;
 
 use super::WorldHost;
 use super::convert::{as_f32, number};
+use super::geometry;
 
 /// The renderer-independent grid and the entity transform placing it in world
 /// XY. Kept together because a logical coordinate only means a world position
@@ -63,73 +62,23 @@ pub(super) fn world_to_map(transform: Transform3D, point: [f32; 2]) -> PlanePoin
 }
 
 impl WorldHost<'_> {
-    /// Reads the same tilemap layout convention `sindri-scene` exposes as its
-    /// `GridSpace`, without taking a dependency on that render-facing crate.
-    /// An integration test in the companion game holds the two adapters to the
+    /// Where a cell is, read from whichever grid component the entity carries.
+    ///
+    /// The layout convention matches the `GridSpace` `sindri-scene` exposes,
+    /// arrived at without taking a dependency on that render-facing crate. An
+    /// integration test in the companion game holds the two adapters to the
     /// same answer.
     pub(super) fn map_grid(&self, path: &Path, map: EntityId) -> Result<MapGrid, RuntimeError> {
         let data = self.world.get(map).ok_or_else(|| {
             RuntimeError::Host(format!("{}'s grid no longer exists", path.dotted()))
         })?;
-        let payload = data.components.get(TILEMAP_COMPONENT).ok_or_else(|| {
-            RuntimeError::Host(format!(
-                "{} needs its grid entity to carry {TILEMAP_COMPONENT}",
-                path.dotted()
-            ))
-        })?;
-        let tile_size = payload
-            .get("tile_size")
-            .and_then(serde_json::Value::as_array)
-            .map_or(Ok([1.0, 1.0]), |size| {
-                let [width, height] = size.as_slice() else {
-                    return Err(RuntimeError::Host(format!(
-                        "{} found a tile_size that is not two numbers",
-                        path.dotted()
-                    )));
-                };
-                let Some(width) = width.as_f64() else {
-                    return Err(RuntimeError::Host(format!(
-                        "{} found a tile width that is not a number",
-                        path.dotted()
-                    )));
-                };
-                let Some(height) = height.as_f64() else {
-                    return Err(RuntimeError::Host(format!(
-                        "{} found a tile height that is not a number",
-                        path.dotted()
-                    )));
-                };
-                Ok([width, height])
-            })?;
-        let projection = match payload
-            .get("projection")
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or("orthogonal")
-        {
-            "orthogonal" => Projection::Orthogonal,
-            "isometric" => Projection::Isometric,
-            other => {
-                return Err(RuntimeError::Host(format!(
-                    "{} found an unknown tile projection `{other}`",
-                    path.dotted()
-                )));
-            }
-        };
-        let origin = match projection {
-            Projection::Orthogonal => PlanePoint::new(tile_size[0] * 0.5, -tile_size[1] * 0.5),
-            Projection::Isometric => PlanePoint::default(),
-        };
-        let space = GridSpace::with_origin_and_y_axis(
-            projection,
-            tile_size[0],
-            tile_size[1],
-            origin,
-            PlaneYAxis::Up,
-        )
-        .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
+        let (geometry, _) = geometry::read(path, data)?;
         let transform = data.transform_3d.unwrap_or_default();
         validate_planar_map(path, transform)?;
-        Ok(MapGrid { space, transform })
+        Ok(MapGrid {
+            space: geometry.space,
+            transform,
+        })
     }
 
     pub(super) fn path_to_target(

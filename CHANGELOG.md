@@ -11,6 +11,10 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Added
 
+- Grid position, placement, pathfinding and navigation now accept a floor
+  carrying `sindri.tile_grid` instead of `sindri.tilemap`, so a scene can move
+  onto a stackable tile volume without its scripts, walls or occupants moving
+  with it. `Grid.tile` and `Grid.set_tile` remain flat-map calls and say so.
 - Added an optional advanced sprite colour transform with independent RGBA
   multiply and offset, alongside the existing simple tint, reachable from
   scenes, the editor and Decay.

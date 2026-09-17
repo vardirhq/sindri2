@@ -68,6 +68,16 @@ impl TileGridComponent {
         )
     }
 
+    /// The volume's plane mapping without its level step.
+    ///
+    /// Navigation and the `Grid.*` script calls reason about columns and rows
+    /// and leave levels to the volume, so they want exactly what a flat map's
+    /// `grid_space` gives them. Derived from `volume_space` rather than built
+    /// beside it, so the two can never drift into two different planes.
+    pub fn grid_space(&self) -> Result<GridSpace, GridError> {
+        Ok(self.volume_space()?.grid())
+    }
+
     #[must_use]
     pub fn contains(&self, coord: GridCoord3) -> bool {
         self.bounds()

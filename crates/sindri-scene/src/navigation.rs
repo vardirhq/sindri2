@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use sindri_core::{EntityId, SceneComponent, Transform3D, World};
+use sindri_core::{EntityData, EntityId, SceneComponent, Transform3D, World};
 use sindri_grid::{
     FootprintError, GridBounds, GridCoord, GridError, GridFootprint, GridOccupancy, GridPath,
     GridPathError, GridPathfinder, GridPlacementError, GridSpace, GridWallError, GridWalls,
@@ -8,7 +8,10 @@ use sindri_grid::{
 };
 use thiserror::Error;
 
-use crate::{GridNavigationComponent, GridOccupantComponent, TilemapComponent, TilemapError};
+use crate::{
+    GridNavigationComponent, GridOccupantComponent, TileGridComponent, TileGridError,
+    TilemapComponent, TilemapError,
+};
 
 /// One entity's derived placement on a world grid.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -35,7 +38,7 @@ pub struct WorldGridNavigation {
 }
 
 impl WorldGridNavigation {
-    /// Derives navigation for one explicitly selected tilemap entity.
+    /// Derives navigation for one explicitly selected grid entity.
     pub fn from_world(world: &World, grid_entity: EntityId) -> Result<Self, GridNavigationError> {
         let grid_data = world
             .get(grid_entity)
@@ -44,39 +47,9 @@ impl WorldGridNavigation {
             .source_id
             .as_ref()
             .ok_or(GridNavigationError::UnstableGrid(grid_entity))?;
-        let tilemap_payload = grid_data
-            .components
-            .get(TilemapComponent::TYPE_NAME)
-            .ok_or(GridNavigationError::MissingTilemap(grid_entity))?;
-        let tilemap: TilemapComponent =
-            serde_json::from_value(tilemap_payload.clone()).map_err(|source| {
-                GridNavigationError::InvalidTilemapPayload {
-                    grid: grid_entity,
-                    source,
-                }
-            })?;
-        tilemap
-            .validate()
-            .map_err(|source| GridNavigationError::InvalidTilemap {
-                grid: grid_entity,
-                source,
-            })?;
+        let (bounds, space) = grid_geometry(grid_entity, grid_data)?;
         let grid_transform = grid_data.transform_3d.unwrap_or_default();
         validate_planar_grid(grid_entity, grid_transform)?;
-        let bounds =
-            tilemap
-                .grid_bounds()
-                .map_err(|source| GridNavigationError::InvalidGridGeometry {
-                    grid: grid_entity,
-                    source,
-                })?;
-        let space =
-            tilemap
-                .grid_space()
-                .map_err(|source| GridNavigationError::InvalidGridGeometry {
-                    grid: grid_entity,
-                    source,
-                })?;
 
         let mut walls = GridWalls::new(bounds);
         if let Some(payload) = grid_data.components.get(GridNavigationComponent::TYPE_NAME) {
@@ -243,14 +216,60 @@ fn world_to_grid_plane(transform: Transform3D, point: [f32; 2]) -> PlanePoint {
 }
 
 /// A world cannot be represented as one complete navigation snapshot.
+/// The grid's bounds and plane, from whichever component describes them.
+///
+/// `sindri.tilemap` and `sindri.tile_grid` place cells identically; they differ
+/// in what a cell holds, which navigation does not ask about. Taking either
+/// means a scene can move its floor onto a tile volume without its walls,
+/// occupants, and pathfinding having to move in the same change.
+///
+/// The flat map is tried first, so a scene carrying both — a migration in
+/// progress — navigates exactly as it did before the second component existed.
+fn grid_geometry(
+    grid: EntityId,
+    data: &EntityData,
+) -> Result<(GridBounds, GridSpace), GridNavigationError> {
+    if let Some(payload) = data.components.get(TilemapComponent::TYPE_NAME) {
+        let tilemap: TilemapComponent = serde_json::from_value(payload.clone())
+            .map_err(|source| GridNavigationError::InvalidTilemapPayload { grid, source })?;
+        tilemap
+            .validate()
+            .map_err(|source| GridNavigationError::InvalidTilemap { grid, source })?;
+        return Ok((
+            tilemap
+                .grid_bounds()
+                .map_err(|source| GridNavigationError::InvalidGridGeometry { grid, source })?,
+            tilemap
+                .grid_space()
+                .map_err(|source| GridNavigationError::InvalidGridGeometry { grid, source })?,
+        ));
+    }
+    if let Some(payload) = data.components.get(TileGridComponent::TYPE_NAME) {
+        let tile_grid: TileGridComponent = serde_json::from_value(payload.clone())
+            .map_err(|source| GridNavigationError::InvalidTileGridPayload { grid, source })?;
+        tile_grid
+            .validate()
+            .map_err(|source| GridNavigationError::InvalidTileGrid { grid, source })?;
+        return Ok((
+            tile_grid
+                .bounds()
+                .map_err(|source| GridNavigationError::InvalidGridGeometry { grid, source })?,
+            tile_grid
+                .grid_space()
+                .map_err(|source| GridNavigationError::InvalidGridGeometry { grid, source })?,
+        ));
+    }
+    Err(GridNavigationError::MissingGrid(grid))
+}
+
 #[derive(Debug, Error)]
 pub enum GridNavigationError {
     #[error("grid entity {0:?} does not exist")]
     MissingEntity(EntityId),
     #[error("grid entity {0:?} has no stable scene ID for occupant references")]
     UnstableGrid(EntityId),
-    #[error("grid entity {0:?} does not carry sindri.tilemap")]
-    MissingTilemap(EntityId),
+    #[error("grid entity {0:?} carries neither sindri.tilemap nor sindri.tile_grid")]
+    MissingGrid(EntityId),
     #[error("grid entity {grid:?} has an invalid tilemap payload: {source}")]
     InvalidTilemapPayload {
         grid: EntityId,
@@ -262,6 +281,18 @@ pub enum GridNavigationError {
         grid: EntityId,
         #[source]
         source: TilemapError,
+    },
+    #[error("grid entity {grid:?} has an invalid tile grid payload: {source}")]
+    InvalidTileGridPayload {
+        grid: EntityId,
+        #[source]
+        source: serde_json::Error,
+    },
+    #[error("grid entity {grid:?} has an invalid tile grid: {source}")]
+    InvalidTileGrid {
+        grid: EntityId,
+        #[source]
+        source: TileGridError,
     },
     #[error("grid entity {0:?} needs a finite planar XY transform with non-zero XY scale")]
     InvalidGridTransform(EntityId),
