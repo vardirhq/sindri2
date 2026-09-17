@@ -347,6 +347,28 @@ Nothing is silently withheld from gameplay while a menu is up: which scripts are
 gameplay is not something a host can know. `Pointer.over_ui` is the one line a
 gameplay script writes instead.
 
+`sindri.ui.slider` is the first element a person drags rather than presses. It
+carries `min`, `max`, `step`, a `value`, an orientation and a `disabled` flag,
+and its point is that the two ways of *setting* it agree: a pointer drag and
+`Ui.set_slider_value` from a script both pass through one `coerce_value`, which
+clamps to the range and quantizes to the step. A value therefore cannot enter
+the component off-step from either direction. An authored value is not coerced
+on load — a scene may hold anything — so the read side stays defensive instead:
+a degenerate range, or a value that is not finite, answers `min` rather than
+letting a NaN spread into the layout.
+The drag tracks the pointer along the element's own rect, so an element moved or
+resized by Weave keeps its slider correct without the slider being told. Decay
+reads `Ui.slider_value`, writes `Ui.set_slider_value`, and asks
+`Ui.slider_changed` whether the person moved it during the step. The editor
+offers it as **UI Slider** in Add Component with `orientation` drawn as a
+declared choice; `value` is still a plain number box, because no field yet
+carries a bounded-range meaning tying it to the `min` and `max` beside it.
+
+No game in this repository uses it. `games/weave-poc` demonstrates it, and
+Mujaffa Remaster — an external project — is what asked for it, so by the
+capability rule the slider is implemented and unproven: `docs/parity.md` records
+its proof column as ❌ until Gather or Orbital Last Stand adopts it.
+
 `sindri.ui.layout` places a parent's active children in a row or column. Three
 buttons could be authored as three offsets; what cannot be authored is a menu
 closing up around an entry that was switched off.
@@ -361,7 +383,9 @@ a game combine the viewport with its authored camera framing for responsive
 world-space rules without exposing pixel dimensions or asking the host to pick
 a gameplay camera.
 
-What is not built: no scroll region, and no accessibility surface. A button
+What is not built: no toggle, dropdown or text input — the slider arrived
+alone, so a settings screen still has no checkbox and no typed field — no scroll
+region, and no accessibility surface. A button
 carries a `label`, authored beside the thing it names, but the static web export
 still renders through canvas/WebGPU and has no semantic DOM bridge to expose it.
 
