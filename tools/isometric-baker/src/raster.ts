@@ -22,7 +22,7 @@
 import { type Camera, depthOf, projectToPixels } from './camera.ts';
 import { type RgbaImage, createImage } from './image.ts';
 import { type Mesh } from './model.ts';
-import { type ShadingConfig, lightVector, shadeIndex } from './shading.ts';
+import { type ShadingConfig, grainShift, lightVector, shadeIndex } from './shading.ts';
 import { type Mat3, type Vec3, transform, vec } from './vec.ts';
 
 export interface RasterRequest {
@@ -171,7 +171,7 @@ function drawTriangle(
       if (z <= target.depth[offset]) continue;
       target.depth[offset] = z;
 
-      const shade = material.unlit
+      let shade = material.unlit
         ? 3
         : shadeIndex(
             vec(
@@ -186,6 +186,32 @@ function drawTriangle(
             light,
             thresholds,
           );
+
+      // Grain is read from where the fragment is on the model, not on the
+      // screen, so the pattern belongs to the block. Applied after the band so
+      // it moves a texel relative to its own lighting rather than overriding
+      // it, and clamped, so a grainy material still emits only the four colours
+      // its ramp promised.
+      if (material.grain && !material.unlit) {
+        const positions = mesh.positions;
+        shade = Math.min(
+          material.shades.length - 1,
+          Math.max(
+            0,
+            shade +
+              grainShift(
+                material.grain,
+                ba * positions[ia * 3] + bb * positions[ib * 3] + bc * positions[ic * 3],
+                ba * positions[ia * 3 + 1] +
+                  bb * positions[ib * 3 + 1] +
+                  bc * positions[ic * 3 + 1],
+                ba * positions[ia * 3 + 2] +
+                  bb * positions[ib * 3 + 2] +
+                  bc * positions[ic * 3 + 2],
+              ),
+          ),
+        );
+      }
 
       const colour = material.shades[shade];
       const pixel = offset * 4;

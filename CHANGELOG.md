@@ -17,6 +17,10 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Added
 
+- The isometric baker can give a material grain: a texel grid that shifts each
+  texel a step along the ramp it already has, so a baked block reads as a
+  surface rather than as three flat faces. Gather's blocks are rebaked with it,
+  and the set grows from three tiles to twelve, half-height slabs included.
 - Decay reaches a stacked volume: `Grid.block` and `Grid.set_block` read and
   write the tile in one cell at a column, row and level, and a script's
   pathfinding now sees the holes and walls a volume floor makes.
