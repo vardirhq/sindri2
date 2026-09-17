@@ -39,6 +39,10 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Added
 
+- The editor can read a `.prefab.json` and put it into the open scene as one
+  undoable step, with every entity given a stable identity nothing else is
+  using. Distinct from the runtime's spawn, which deliberately gives none.
+
 - `sweep_occlusion` walks a virtual actor over every standable surface of a
   scene and reports where something that cannot cover it is drawn over it
   anyway, with the reason attached. Gather's farm is swept in its own test.

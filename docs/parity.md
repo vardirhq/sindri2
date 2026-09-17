@@ -122,7 +122,7 @@ is why it earns a section rather than a footnote.
 | --- | :-: | :-: | :-: | :-: | --- | --- |
 | Entities and hierarchy | ✅ | ✅ | ✅ | ✅ | **Par** | Undo entries for script writes |
 | Tags and queries | ✅ | ✅ | ✅ | ✅ | **Par** | Query by more than one tag |
-| Prefabs | ✅ | 🟡 | ✅ | ✅ | **Behind** | Nothing makes a prefab from a selection; editing a prefab does not update its instances |
+| Prefabs | ✅ | 🟡 | ✅ | ✅ | **Behind** | The editor reads a prefab and instantiates it into the open scene as one undoable step, minting a stable identity per entity — which the runtime's spawn deliberately does not, because a prefab's identities are the prefab's and two instances would collide on all of them. Nothing makes a prefab from a selection; editing a prefab does not update its instances; and instantiating by clicking a grid cell is not wired to the Scene view yet |
 | Reusable data profiles | ✅ | ✅ | ✅ | ✅ | **Ahead** | Unity has no native equivalent; ScriptableObject is close but needs code per asset. Optional schemas when a second catalog proves the shape |
 | Transform | ✅ | ✅ | 🟡 | ✅ | **Par** | No structured vector or rotation value in Decay |
 | Scene save / load | ✅ | ✅ | — | ✅ | **Par** | Readable single file, which is **Ahead**; see the advantages table |
